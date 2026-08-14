@@ -107,7 +107,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         // says `/dashboard/integrations`, and this bridge has never been run
         // against a live account (see `CursorFetch`). A door that 404s is worse
         // than one that needs a tab click, so this opens the page that
-        // certainly exists and `setupURLLabel` names the tab to look for.
+        // certainly exists and the first STEP names the tab to look for.
         case .cursor:    URL(string: "https://cursor.com/dashboard")
         // The token page is per-organization and its URL carries the org slug,
         // which isn't known until after the token exists — so this is the
@@ -134,40 +134,39 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         }
     }
 
-    /// The door's words — where you're going, not what you'll do there. The
-    /// host and path, so the button is checkable against the address bar it
-    /// opens.
-    var setupURLLabel: String {
+    /// The door's VERB — what you're going to get, in words short enough that
+    /// no translation wraps them. This replaced `setupURLLabel` ("Open
+    /// dashboard.stripe.com → API keys"), whose one line tried to be both the
+    /// verb and the route map and ran edge to edge inside the slab (reported
+    /// 2026-08-14 as "the words barely fit in the CTA"). The address renders
+    /// beneath the verb (`doorHost`), and a tab trail lives in the step that
+    /// follows — or nowhere, when the URL lands on the tab directly.
+    var doorTitle: String {
         switch self {
-        case .readwise:  "readwise.io/access_token"
-        case .github:    "github.com/settings/tokens"
-        case .todoist:   "Todoist → Integrations → Developer"
-        case .raindrop:  "raindrop.io → For Developers"
-        case .calcom:    "cal.com → API keys"
-        case .calendly:  "Calendly → API & Webhooks"
-        case .notion:    "notion.so/my-integrations"
-        case .linear:    "linear.app → API keys"
-        case .bitrefill: "bitrefill.com → Developers"
-        case .privacy:   "privacy.com → account"
-        case .oneclaw:   "1claw.xyz"
-        case .posthog:   "posthog.com → personal API keys"
-        case .stripe:    "dashboard.stripe.com → API keys"
-        case .trello:    "trello.com → Power-Ups admin"
-        case .cloudflare: "dash.cloudflare.com → API tokens"
-        case .cursor:    "cursor.com → Dashboard → API Keys"
-        case .sentry:    "sentry.io → Settings → Auth Tokens"
-        case .vercel:    "vercel.com → Settings → Tokens"
-        case .pagerduty: "pagerduty.com → Integrations → API Access Keys"
-        case .gitlab:    "gitlab.com → Access Tokens"
-        case .appStoreConnect: "App Store Connect → Users and Access → Integrations"
-        case .jira:      "id.atlassian.com → API tokens"
+        // Notion is the one door here that doesn't hand back a credential on
+        // arrival — you make an integration first, and its secret is the paste.
+        case .notion: String(localized: "Create your integration")
+        case .readwise, .github, .todoist, .raindrop, .calendly, .gitlab,
+             .vercel, .sentry, .jira, .cloudflare:
+            String(localized: "Get your token")
+        case .calcom, .linear, .bitrefill, .privacy, .oneclaw, .posthog,
+             .stripe, .trello, .cursor, .pagerduty, .appStoreConnect:
+            String(localized: "Get your API key")
         }
     }
 
-    /// What's left after the door — stated plainly, step by step, and numbered
-    /// from TWO on screen, because opening the page really was step one.
-    /// Nothing was deleted here: what the old first step said beyond "open
-    /// the page" moved into the step that follows it.
+    /// The address under the verb — DERIVED from `setupURL`, never a second
+    /// table, so the button stays checkable against the address bar it opens
+    /// and can't drift from where the door actually goes.
+    var doorHost: String {
+        guard let host = setupURL?.host else { return "" }
+        return host.hasPrefix("www.") ? String(host.dropFirst(4)) : host
+    }
+
+    /// What's left after the door — stated plainly, step by step. Rendered
+    /// UNNUMBERED on screen (ruling 2026-08-14): the door does step one
+    /// itself, so numerals starting at 2 sent the eye hunting for a missing 1;
+    /// two short lines in reading order need no numbers at all.
     ///
     /// A step never re-types the field beneath it (§220). Cal.com's and 1Claw's
     /// steps used to spell out the key prefix — "it starts with cal_live_",
@@ -184,8 +183,11 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .todoist: [
             "Copy the API token shown there.",
             "Paste it below."]
+        // The tab IS named here — raindrop's door lands on Integrations, and
+        // the token hides one tab over (the trail used to live in the door's
+        // own label, which is a route map no button should carry).
         case .raindrop: [
-            "Create an app, then copy its Test token.",
+            "Under For Developers, create an app and copy its Test token.",
             "Paste it below."]
         case .calcom: [
             "Add a new key.",
@@ -249,7 +251,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         // the line about trust — not repeated here as an instruction nobody
         // can act on (§220).
         case .cursor: [
-            "Create an API key — the one Cloud Agents use.",
+            "In the API Keys tab, create a key — the one Cloud Agents use.",
             "Copy it and paste it below."]
         // The three scopes are NOT named here — Sentry owns its own screen and
         // renders a `DSCheckList` under this step, so naming them twice is
@@ -338,11 +340,15 @@ enum TokenBridge: String, CaseIterable, Identifiable {
         case .vercel:   "Token"
         case .pagerduty: "API key"
         case .gitlab:   "glpat-…"
-        // The field this names is the `.p8` itself. Apple's own marker is
-        // shown rather than an invented prefix, because it is the one string
-        // every one of these files really starts with — and it doubles as the
-        // hint that the whole file goes in, not just its first line.
-        case .appStoreConnect: "-----BEGIN PRIVATE KEY-----"
+        // WAS `-----BEGIN PRIVATE KEY-----`, Apple's own marker, on the theory
+        // that showing the file's first line hinted the whole file goes in. It
+        // did the opposite (report, 2026-08-14): a field whose placeholder is a
+        // PEM header reads as a LABEL for something already there, not as an
+        // empty box waiting for a paste, and the one person who worked it out
+        // had to open the `.p8` in a desktop text editor to find out what to
+        // copy. The screen reads the file directly now, so this field is the
+        // fallback and says so in words.
+        case .appStoreConnect: "Or paste the .p8 contents"
         case .jira:      "API token"
         }
     }
@@ -1057,7 +1063,14 @@ enum TokenIngest {
                 let backfill = backfills[item.source]
                     ?? ArtlessBackfill(context, source: item.source)
                 backfills[item.source] = backfill
-                backfill.patch(ref, image: item.previewImageURL)
+                // The face rides the same patch (2026-08-14). Dedupe never
+                // revisits a known ref, so without this a bridge that starts
+                // stamping an avatar reaches only rows landed from that day
+                // on — and GitHub's stars and watched repos are the same
+                // thirty rows for months, so it would have reached none of
+                // them until you starred something new.
+                backfill.patch(ref, image: item.previewImageURL,
+                               face: item.authorAvatarURL, handle: item.authorHandle)
                 continue
             }
             context.insert(item)

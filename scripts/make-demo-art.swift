@@ -196,6 +196,13 @@ let faces: [Face] = [
     .init(handle: "techcrunch",  initial: "T", top: rgb(0x3ECf7C), bottom: rgb(0x1B8B4C)),
     .init(handle: "smallthings", initial: "S", top: rgb(0x6F8BA8), bottom: rgb(0x445A72)),
     .init(handle: "latencyclub", initial: "L", top: rgb(0xB07BD8), bottom: rgb(0x7448A0)),
+    // Hugging Face's owners (2026-08-14). `HuggingFaceBridge` reads each
+    // org's own avatar off the hub's overview endpoint, so a real hub room
+    // leads every model row with the lab's logo. Monograms for the same
+    // reason the publications above are: an org is not a person, and these
+    // stand in for a logo we have no right to draw.
+    .init(handle: "kyutai",      initial: "K", top: rgb(0x6FA8DC), bottom: rgb(0x3D6FA0)),
+    .init(handle: "espresso-lab", initial: "E", top: rgb(0xC98B5E), bottom: rgb(0x8A5630)),
 ]
 
 let faceSide: CGFloat = 320

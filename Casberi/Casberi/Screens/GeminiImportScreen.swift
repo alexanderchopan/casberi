@@ -61,7 +61,10 @@ struct GeminiImportScreen: View {
     private var setupSection: some View {
         Section {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
-                DSSlabButton(title: "Open takeout.google.com", systemImage: "arrow.up.right") {
+                // Verb over address, the 2026-08-14 anatomy.
+                DSSlabButton(title: "Get your export",
+                             detail: "takeout.google.com",
+                             systemImage: "arrow.up.right") {
                     DSHaptic.tap()
                     if let url = URL(string: "https://takeout.google.com") { openURL(url) }
                 }
@@ -71,9 +74,10 @@ struct GeminiImportScreen: View {
                 // header's own "Import your chats, keep them findable" (§220's
                 // finding, twice; 2026-07-31). The Takeout path stays whole —
                 // nothing else on screen teaches it.
+                // Unnumbered — the door did step one (ruling 2026-08-14).
                 BridgeStepLines(steps: ["Tap Deselect all, then pick My Activity and set it to Gemini Apps only.",
                                      "Under Multiple formats, choose JSON for activity records, then Export.",
-                                     "Google emails a link — unzip it in Files."], startingAt: 2)
+                                     "Google emails a link — unzip it in Files."], numbered: false)
                 DSSlabButton(title: "Choose MyActivity.json", systemImage: "square.and.arrow.down") {
                     DSHaptic.tap()
                     importing = true

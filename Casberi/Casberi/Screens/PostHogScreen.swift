@@ -131,19 +131,23 @@ struct PostHogScreen: View {
         Section {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
                 if let url = TokenBridge.posthog.setupURL {
-                    // Step one, doing itself (prd §218).
-                    DSSlabButton(title: "Open \(TokenBridge.posthog.setupURLLabel)",
+                    // Step one, doing itself (prd §218) — verb over address,
+                    // the 2026-08-14 anatomy.
+                    DSSlabButton(title: TokenBridge.posthog.doorTitle,
+                                 detail: TokenBridge.posthog.doorHost,
                                  systemImage: "arrow.up.right") {
                         DSHaptic.tap()
                         openURL(url)
                     }
                 }
-                // Step 2, then the list step 2 points AT, then step 3 and the
-                // fields. The scopes used to sit below the fields, which is why
-                // step 2 had to name all three in prose to be useful there —
-                // the reorder is what let that sentence lose them (the Stripe
-                // fix, one screen over; 2026-07-31).
-                BridgeStepLines(steps: [TokenBridge.posthog.steps[0]], startingAt: 2)
+                // The next line, then the list it points AT, then the last
+                // line and the fields. The scopes used to sit below the
+                // fields, which is why the first step had to name all three in
+                // prose to be useful there — the reorder is what let that
+                // sentence lose them (the Stripe fix, one screen over;
+                // 2026-07-31). Unnumbered since 2026-08-14 (the door did step
+                // one; a "2" under it read as a missing-1 riddle).
+                BridgeStepLines(steps: [TokenBridge.posthog.steps[0]], numbered: false)
                 // The scopes are the honest ask, and they're the reason this
                 // bridge's read-only promise is STRUCTURAL rather than kept by
                 // conduct (the Privacy.com divergence): a key minted with these
@@ -151,7 +155,7 @@ struct PostHogScreen: View {
                 // list IS the read-only promise, so the gray note that restated
                 // it is gone.
                 DSCheckList(lines: ["query:read", "annotation:read", "event_definition:read"])
-                BridgeStepLines(steps: [TokenBridge.posthog.steps[1]], startingAt: 3)
+                BridgeStepLines(steps: [TokenBridge.posthog.steps[1]], numbered: false)
                 // The host has no verb of its own — SAVE below commits both.
                 // A `BridgeFieldRow` with an empty label still paints its
                 // capsule, and a pre-filled host made it read as a live,

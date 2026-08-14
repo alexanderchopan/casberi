@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import UniformTypeIdentifiers
 
 /// App Store Connect, connected (prd §323) — three fields, then what Apple can
 /// see of your apps.
@@ -12,6 +13,17 @@ import SwiftData
 /// because unlike Trello's the second value is not minted using the first —
 /// all three are printed on the same page of App Store Connect, and asking for
 /// them one at a time would be three round trips to the same tab.
+///
+/// THE FILE IS THE THING SOMEBODY HAS (report, 2026-08-14: *"it asks to paste
+/// the contents of the .p8 file but where am i supposed to put it… you need to
+/// open it on desktop in a text editor, but none of this is clear"*). Apple
+/// hands over a DOWNLOAD, and until this screen read one, every route from
+/// there to a text field ran through a desktop text editor — on a bridge whose
+/// whole point is watching a release from your phone. The picker reads the
+/// `.p8` where it landed, and the filename Apple chose (`AuthKey_<KEYID>.p8`)
+/// fills the second field for free, so three fields became one act and a typed
+/// ten-character ID. Pasting still works and is still offered; it is the
+/// fallback now rather than the only door.
 ///
 /// The issuer ID is the one field that may legitimately be left EMPTY, and the
 /// note beside it says so: empty is how Apple distinguishes an INDIVIDUAL key
@@ -46,6 +58,18 @@ struct AppStoreConnectScreen: View {
 
     @State private var recent: [Thing] = []
     @State private var standings: [ASCStanding] = []
+
+    /// The file picker, and the one observable fact the staging below rests on.
+    /// Not persisted — the screen stays mounted across the hop to Safari, and a
+    /// remembered tap from last week would put the form in a state its owner
+    /// never chose.
+    @State private var pickingKey = false
+    @State private var doorTapped = false
+    /// The file that was read, shown on the row that read it. A key in a secure
+    /// field is dots either way, so this is the only place the screen can say
+    /// WHICH file it holds — and on a screen with three credentials that all
+    /// look alike, that is the difference between proof and a hope.
+    @State private var pickedName = ""
 
     private var hasKey: Bool {
         _ = credentialVersion
@@ -98,10 +122,67 @@ struct AppStoreConnectScreen: View {
         .dsPageBackground()
         .dsSoftScrollEdges()
         .dsScreenTitle("App Store Connect")
+        // `.data` rather than a `.p8` type: the extension is registered with
+        // nobody, so a UTType built from it is a dynamic type no file on disk
+        // conforms to — the picker would open with every file grayed out and
+        // the fix would read as a broken button.
+        .fileImporter(isPresented: $pickingKey, allowedContentTypes: [.data]) { outcome in
+            guard case .success(let url) = outcome else { return }
+            Task { await readKeyFile(url) }
+        }
         .onAppear {
             load()
             if hasKey { Task { await sync() } }
         }
+    }
+
+    /// The pick leads once the door has been tapped and there is still no key —
+    /// the one stretch where choosing the file is genuinely the next act.
+    private var pickLeads: Bool { doorTapped && keyField.isEmpty }
+
+    /// How many steps are PROVABLY done, counted in the numbering the lines
+    /// wear (`startingAt: 2`) even though they no longer SHOW it: a key in the
+    /// field proves it was generated AND downloaded; a Key ID proves the page
+    /// was read. Opening the door proves none of them — it is not a step in
+    /// this list.
+    private var stepsDone: Int {
+        if keyField.isEmpty { return 0 }
+        return keyIDField.isEmpty ? 3 : 4
+    }
+
+    private func openDoor(_ url: URL) {
+        doorTapped = true
+        openURL(url)
+    }
+
+    /// Read the `.p8` where it landed. The security-scoped read is the same
+    /// shape every import screen uses; what is different is the size guard —
+    /// this is a 250-byte file, and a picker that will happily open anything
+    /// must not slurp a 2GB video into a text field before deciding it is not a
+    /// key.
+    private func readKeyFile(_ url: URL) async {
+        let scoped = url.startAccessingSecurityScopedResource()
+        defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+        let name = url.lastPathComponent
+        guard let data = await SecurityScopedFileReader.readData(at: url),
+              data.count <= 64_000,
+              let text = String(data: data, encoding: .utf8),
+              ASCJWT.normalizedPEM(text) != nil else {
+            fail(String(localized: "That file isn't a private key. Choose the AuthKey_….p8 Apple gave you when you created the key."))
+            return
+        }
+        keyField = text
+        pickedName = name
+        resultIsError = false
+        result = nil
+        // Apple's own filename carries the Key ID, so the second field answers
+        // itself. Never overwrites something already typed — a person who
+        // corrected it knows something we don't.
+        if keyIDField.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+           let id = ASCJWT.keyID(fromFilename: name) {
+            keyIDField = id
+        }
+        DSHaptic.tap()
     }
 
     // MARK: - Not connected: the three fields
@@ -110,26 +191,62 @@ struct AppStoreConnectScreen: View {
         Section {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
                 if let url = bridge.setupURL {
-                    // Step one, doing itself (prd §218).
-                    DSSlabButton(title: "Open \(bridge.setupURLLabel)",
-                                 systemImage: "arrow.up.right") {
-                        DSHaptic.tap()
-                        openURL(url)
+                    // Step one, doing itself (prd §218) — and it hands the
+                    // filled slab over to the pick once it has been tapped, the
+                    // import family's `pickLeads` staging (§314). One filled
+                    // block at a time, and it is always the next thing to do.
+                    if doorTapped {
+                        DSSlabDoor(title: bridge.doorTitle,
+                                   detail: bridge.doorHost,
+                                   systemImage: "arrow.up.right") { openDoor(url) }
+                    } else {
+                        // Verb over address, the 2026-08-14 anatomy.
+                        DSSlabButton(title: bridge.doorTitle,
+                                     detail: bridge.doorHost,
+                                     systemImage: "arrow.up.right") {
+                            DSHaptic.tap()
+                            openDoor(url)
+                        }
                     }
                 }
-                BridgeStepLines(steps: [bridge.steps[0]], startingAt: 2)
+                // All three steps together. They used to be split around the
+                // checklist — step 2, a list of four, then steps 3 and 4 —
+                // which broke the one sequence on the screen in half and read
+                // as more text than it was. Unnumbered (ruling 2026-08-14):
+                // the door did step one; `acknowledges` keeps the green check.
+                BridgeStepLines(steps: bridge.steps, startingAt: 2,
+                                numbered: false, acknowledges: true,
+                                doneThrough: stepsDone)
                 // The READ BOUNDARY, and the only place it can be stated before
                 // somebody decides to paste. Unlike Stripe's and PostHog's
                 // checklists this is NOT a set of boxes to tick — Apple grants
                 // a ROLE — so it says what the role lets this app see and what
                 // it will never do, which is the whole substitute for a scope
-                // this API doesn't offer. Four short lines, deliberately not a
-                // second copy of the intro's arrival list.
-                DSCheckList(lines: ["Reads your apps' review status",
-                                    "Reads your reviews and builds",
-                                    "Never your sales or analytics",
-                                    "Never submits, releases or replies"])
-                BridgeStepLines(steps: Array(bridge.steps.dropFirst()), startingAt: 3)
+                // this API doesn't offer. TWO lines, not the four it shipped
+                // with: each pair said one thing across two lines, and on a
+                // screen already carrying a door, three steps and three fields
+                // the halving is the difference between a promise and a wall.
+                DSCheckList(lines: ["Reads review status, reviews and builds",
+                                    "Never submits, releases, replies or sells"])
+                // THE FILE ITSELF (report, 2026-08-14). Apple hands you a
+                // download, and every path from there to a text field runs
+                // through a desktop text editor — which is what the one person
+                // who got this far actually did. The picker is the answer: the
+                // `.p8` is read where it landed, on the device it landed on,
+                // and its own filename answers the Key ID field below.
+                if pickLeads {
+                    DSSlabButton(title: "Choose the .p8 file",
+                                 systemImage: "doc.badge.arrow.up") {
+                        DSHaptic.tap()
+                        pickingKey = true
+                    }
+                } else {
+                    DSSlabDoor(title: "Choose the .p8 file",
+                               detail: pickedName.isEmpty
+                                   ? String(localized: "Already downloaded?")
+                                   : pickedName,
+                               systemImage: "doc.badge.arrow.up") { pickingKey = true }
+                }
                 // Three slabs, ONE verb — `DSSlabField`'s empty-`actionLabel`
                 // form, which exists for exactly this (Steam's profile beside
                 // its key, Mail's address beside its app password). A NEXT on
@@ -238,8 +355,8 @@ struct AppStoreConnectScreen: View {
     private func save() {
         guard let pem = ASCJWT.normalizedPEM(keyField) else {
             fail(keyField.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                 ? String(localized: "Paste the contents of the .p8 file Apple gave you.")
-                 : String(localized: "That doesn't look like a .p8 private key. Paste the whole file, including the BEGIN and END lines."))
+                 ? String(localized: "Choose the .p8 file Apple gave you, or paste its contents.")
+                 : String(localized: "That doesn't look like a .p8 private key. Choose the file itself, or paste all of it including the BEGIN and END lines."))
             return
         }
         let keyID = keyIDField.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -263,7 +380,7 @@ struct AppStoreConnectScreen: View {
             connecting = false
             switch outcome {
             case .ok(let count):
-                keyField = ""; keyIDField = ""; issuerField = ""
+                keyField = ""; keyIDField = ""; issuerField = ""; pickedName = ""
                 credentialVersion += 1
                 resultIsError = false
                 result = count == 1 ? String(localized: "Connected — 1 app")
@@ -278,7 +395,7 @@ struct AppStoreConnectScreen: View {
             // is completely invisible from a 401, which is why it gets named
             // rather than folded into "check the key".
             case .unreadableKey:
-                undo(String(localized: "Apple couldn't read that key. Check you pasted the whole .p8 file, and that it's the one this Key ID names."))
+                undo(String(localized: "Apple couldn't read that key. Check it's the .p8 this Key ID names, and that it arrived whole."))
             case .refused:
                 undo(issuerField.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                      ? String(localized: "Apple refused that key. If it belongs to a team rather than to you personally, it needs the Issuer ID from the same page.")

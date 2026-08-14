@@ -45,7 +45,10 @@ struct OpenRouterSetupScreen: View {
     private var setupSection: some View {
         Section {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
-                DSSlabButton(title: "Open openrouter.ai → Keys", systemImage: "arrow.up.right") {
+                // Verb over address, the 2026-08-14 anatomy.
+                DSSlabButton(title: "Get your API key",
+                             detail: "openrouter.ai",
+                             systemImage: "arrow.up.right") {
                     DSHaptic.tap()
                     if let url = URL(string: "https://openrouter.ai/settings/keys") { openURL(url) }
                 }

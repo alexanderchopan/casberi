@@ -124,10 +124,44 @@ final class HuggingFaceStore {
     func hasSeeded(_ author: String) -> Bool { seeded.contains(author.lowercased()) }
     func markSeeded(_ author: String) { seeded.insert(author.lowercased()) }
 
+    /// An owner's mark, remembered across launches (2026-08-14). An org's
+    /// avatar is not on any payload this bridge already reads — it is its own
+    /// small GET — and it changes about as often as a company rebrands, so
+    /// asking once per owner and keeping the answer is the difference between
+    /// one extra request ever and one per refresh forever.
+    ///
+    /// ONLY A SUCCESS IS CACHED. A miss stays a miss and is re-asked on the
+    /// next pass, which is the `WalletApprovals.tokenFacts` lesson: caching a
+    /// failed read pins "no mark" for the life of the install, so one flaky
+    /// minute costs a room its faces permanently. The re-ask is bounded by the
+    /// watch list, which is a handful of names.
+    private static let avatarsKey = "hf.owner.avatars.v1"
+    var ownerAvatars: [String: String] {
+        get {
+            guard let data = UserDefaults.standard.data(forKey: Self.avatarsKey),
+                  let map = try? JSONDecoder().decode([String: String].self, from: data)
+            else { return [:] }
+            return map
+        }
+        set {
+            guard let data = try? JSONEncoder().encode(newValue) else { return }
+            UserDefaults.standard.set(data, forKey: Self.avatarsKey)
+        }
+    }
+
+    func ownerAvatar(_ owner: String) -> String? { ownerAvatars[owner.lowercased()] }
+
+    func rememberOwnerAvatar(_ url: String, for owner: String) {
+        var map = ownerAvatars
+        map[owner.lowercased()] = url
+        ownerAvatars = map
+    }
+
     func disconnect() {
         authors = []
         seeded = []
         dailyPapers = false
+        UserDefaults.standard.removeObject(forKey: Self.avatarsKey)
     }
 
     private func persist(_ list: [String], _ key: String) {
@@ -259,6 +293,50 @@ enum HuggingFaceIngest {
                            hubTags: Self.hubTags(row["tags"]),
                            gated: Self.isGated(row["gated"]))
         }
+    }
+
+    /// Owner → mark, for the owners this pass reached: the cache first, then
+    /// one small GET each for the ones that aren't in it yet (2026-08-14).
+    ///
+    /// MEASURED 2026-08-14 (curl, no key): `GET
+    /// huggingface.co/api/organizations/<name>/overview` answers 200 with
+    /// `avatarUrl` (a `cdn-avatars.huggingface.co` URL) — and 404 for a name
+    /// that isn't an org, which is why the USER endpoint is tried second
+    /// rather than instead: a watched name can be either, and `/api/users/
+    /// <org>/overview` answers `{"error":"This user does not exist"}` for an
+    /// org just as flatly. The two are asked in that order because a watch
+    /// list is mostly labs.
+    ///
+    /// Not read off the model list: `?full=true` carries no `authorData` for
+    /// these rows (measured the same day, both `google` and an unfiltered
+    /// page), so there is no avatar riding a payload this bridge already has.
+    private static func ownerMarks(for owners: [String],
+                                   store: HuggingFaceStore) async -> [String: String] {
+        var marks: [String: String] = [:]
+        var wanted: [String] = []
+        for owner in Set(owners.map { $0.lowercased() }) {
+            if let cached = store.ownerAvatar(owner) { marks[owner] = cached }
+            else { wanted.append(owner) }
+        }
+        guard !wanted.isEmpty else { return marks }
+        let found = await IngestSupport.boundedGather(wanted, maxConcurrent: 4) {
+            owner -> (String, String)? in
+            guard let escaped = owner.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed)
+            else { return nil }
+            for path in ["organizations", "users"] {
+                guard let root = await IngestSupport.getJSON(
+                    "https://huggingface.co/api/\(path)/\(escaped)/overview") as? [String: Any],
+                      let url = IngestSupport.imageURL(root["avatarUrl"] as? String)
+                else { continue }
+                return (owner, url)
+            }
+            return nil
+        }
+        for case let (owner, url)? in found {
+            marks[owner] = url
+            store.rememberOwnerAvatar(url, for: owner)
+        }
+        return marks
     }
 
     /// A single hub field as a tag — trimmed, and nil when it's empty or
@@ -395,6 +473,11 @@ enum HuggingFaceIngest {
         let papers = store.dailyPapers ? await fetchPapers() : nil
 
         var existing = IngestSupport.existingSourceRefs(context, source: "Hugging Face")
+        // The mark reaches rows that landed BEFORE this bridge had one
+        // (2026-08-14) — dedupe never revisits a known ref, and a room whose
+        // rows are "new model" news would otherwise stay faceless for as long
+        // as the models already in it stay the newest ones.
+        let backfill = ArtlessBackfill(context, source: "Hugging Face")
         var added = 0
         var reachedAny = false
 
@@ -408,6 +491,12 @@ enum HuggingFaceIngest {
         // which is the models the cap had held back).
         var reachedAuthors: Set<String> = []
 
+        // The owners' marks, for the rows below. Asked once per owner ever
+        // (see `HuggingFaceStore.ownerAvatars`), so this is empty work on
+        // every pass after the first.
+        let marks = await ownerMarks(
+            for: results.compactMap { $0.2 == nil ? nil : $0.0 }, store: store)
+
         for (author, repo, releases) in results {
             guard let releases else { continue }
             reachedAny = true
@@ -418,7 +507,12 @@ enum HuggingFaceIngest {
                                                 : Array(releases.prefix(firstSightCap))
             for release in fresh {
                 let ref = "hf:\(repo.rawValue):\(release.id.lowercased())"
-                guard !existing.contains(ref) else { continue }
+                let who = owner(of: release.id)
+                let mark = who.flatMap { marks[$0.lowercased()] }
+                guard !existing.contains(ref) else {
+                    backfill.patch(ref, image: nil, face: mark, handle: who)
+                    continue
+                }
                 let thing = Thing(
                     kind: .link,
                     // Repo ids are author-controlled and can carry anything;
@@ -435,7 +529,13 @@ enum HuggingFaceIngest {
                     tags: release.tags,
                     sourceRef: ref
                 )
-                thing.authorHandle = owner(of: release.id)
+                thing.authorHandle = who
+                // The org's own mark (2026-08-14) — a squircle in the leading
+                // slot, `ShapedRows.publisherMarkSources`, because Google and
+                // Kyutai are publishers, not people. `marks` is filled by
+                // `ownerMarks` from the hub's overview endpoint and cached per
+                // owner, so a steady-state refresh asks for none of them.
+                thing.authorAvatarURL = mark
                 context.insert(thing)
                 existing.insert(ref)
                 SpotlightIndex.index([thing])
@@ -481,7 +581,7 @@ enum HuggingFaceIngest {
             }
         }
 
-        if added > 0 { context.saveHonestly() }
+        if added > 0 || backfill.any { context.saveHonestly() }
         return reachedAny ? added : nil
     }
 

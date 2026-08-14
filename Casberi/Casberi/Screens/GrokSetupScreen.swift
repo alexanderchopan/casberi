@@ -55,12 +55,17 @@ struct GrokSetupScreen: View {
     private var setupSection: some View {
         Section {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
-                DSSlabButton(title: "Open console.x.ai", systemImage: "arrow.up.right") {
+                // Verb over address, the 2026-08-14 anatomy.
+                DSSlabButton(title: "Get your API key",
+                             detail: "console.x.ai",
+                             systemImage: "arrow.up.right") {
                     DSHaptic.tap()
                     if let url = URL(string: "https://console.x.ai/") { openURL(url) }
                 }
+                // Unnumbered — the door did step one (ruling 2026-08-14).
                 BridgeStepLines(steps: ["Create an API key and copy it.",
-                                     "Paste it below — it's checked with xAI before it saves."])
+                                     "Paste it below — it's checked with xAI before it saves."],
+                                numbered: false)
                 DSSlabField(placeholder: AgentProvider.grok.placeholder, text: $keyDraft,
                             actionLabel: checking ? "CHECKING…" : (configured ? "UPDATE" : "CONNECT"),
                             secure: true,

@@ -307,6 +307,33 @@ enum ASCJWT {
         lines.append("-----END PRIVATE KEY-----")
         return lines.joined(separator: "\n")
     }
+
+    /// The Key ID Apple printed in the FILENAME — `AuthKey_<KEYID>.p8`.
+    ///
+    /// It exists because the file is the thing a person actually has (report,
+    /// 2026-08-14: *"you have to paste the contents where it says 'begin
+    /// private key' and you need to open it on desktop in a text editor, but
+    /// none of this is clear"*). Once the screen reads the file directly, the
+    /// second of its three fields is already answered by the file's own name,
+    /// and asking for it again would be asking someone to retype what we just
+    /// read.
+    ///
+    /// STRICT, and deliberately so: exactly ten ASCII alphanumerics after the
+    /// prefix, or nil. A GUESSED Key ID is worse than an empty one — it mints a
+    /// token Apple refuses with a 401 indistinguishable from a wrong key, which
+    /// is the one failure on this screen nobody can diagnose (§83's fake status,
+    /// and the same reasoning as the issuer note). Nil just means the field
+    /// stays empty and the person types the ten characters, which is where they
+    /// started.
+    static func keyID(fromFilename name: String) -> String? {
+        let stem = name.lowercased().hasSuffix(".p8") ? String(name.dropLast(3)) : name
+        let prefix = "AuthKey_"
+        guard stem.hasPrefix(prefix) else { return nil }
+        let id = String(stem.dropFirst(prefix.count))
+        guard id.count == 10,
+              id.allSatisfy({ $0.isASCII && ($0.isLetter || $0.isNumber) }) else { return nil }
+        return id
+    }
 }
 
 // MARK: - What Apple says about a version

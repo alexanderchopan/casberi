@@ -74,7 +74,9 @@ struct MailScreen: View {
         Section {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
                 if let url = provider.setupURL {
-                    DSSlabButton(title: "Open \(provider.setupURLLabel)",
+                    // Verb over address, the 2026-08-14 anatomy.
+                    DSSlabButton(title: provider.doorTitle,
+                                 detail: provider.doorHost,
                                  systemImage: "arrow.up.right") {
                         DSHaptic.tap()
                         openURL(url)

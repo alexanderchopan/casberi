@@ -145,8 +145,19 @@ struct DSSlabField: View {
 }
 
 /// The primary slab — a screen's one filled block, so it reads as THE verb.
+///
+/// A door's label is a VERB, never a route (ruling 2026-08-14, from a report
+/// that "the words barely fit in the CTA": "Open pagerduty.com → Integrations
+/// → API Access Keys" ran edge to edge inside the 56pt slab). The big words
+/// stay short — "Get your API key" — and the address goes to `detail`, quiet
+/// type under the verb, still on the button so the door stays checkable
+/// against the address bar it opens. The tab trail belongs to the step lines
+/// below, or nowhere when the URL lands on the tab directly.
 struct DSSlabButton: View {
     let title: String
+    /// The address under the verb — a fact, not part of the verb. Empty keeps
+    /// the plain single-line slab.
+    var detail: String = ""
     var systemImage: String? = nil
     var busy = false
     var enabled = true
@@ -161,9 +172,23 @@ struct DSSlabButton: View {
                     Image(systemName: systemImage)
                         .dsGlyph(15)
                 }
-                Text(LocalizedStringKey(title))
-                    .dsText(.body17).fontWeight(.semibold)
+                if detail.isEmpty {
+                    verb
+                } else {
+                    VStack(spacing: 1) {
+                        verb
+                        Text(detail)
+                            .dsText(.label12).fontWeight(.medium)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+                            // Quiet against the fill, not a second headline —
+                            // the disabled fill already flattens everything to
+                            // tertiary below, so only the live state dims it.
+                            .opacity(enabled && !busy ? 0.75 : 1)
+                    }
+                }
             }
+            .padding(.horizontal, DS.Space.s4)
             // A hand-rolled fill must swap the FILL when inert, not just dim
             // the label (§83, paid for by a button that read live while dead).
             .foregroundStyle(enabled && !busy ? AnyShapeStyle(.white)
@@ -179,6 +204,19 @@ struct DSSlabButton: View {
         }
         .buttonStyle(.plain)
         .disabled(!enabled || busy)
+    }
+
+    /// One line, shrinking a little before it would ever wrap — a verb the eye
+    /// can't finish reading is worse than one set a point smaller, and German
+    /// and Japanese make a long label out of a short one on every screen at
+    /// once. It never earns a second line: the anatomy above exists so that a
+    /// label long enough to wrap is a label carrying an address that belongs
+    /// in `detail`.
+    private var verb: some View {
+        Text(LocalizedStringKey(title))
+            .dsText(.body17).fontWeight(.semibold)
+            .lineLimit(1)
+            .minimumScaleFactor(0.8)
     }
 }
 

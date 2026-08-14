@@ -31,6 +31,9 @@ FIVE CHECKS, all static — no build, no simulator:
   5. NO FOOTER WALL — `BridgeFooterNote` is deleted and must not come back
      under a new name: a `Section { … } footer:` closure on a setup screen
      carrying more than FOOTER_WORD_FLOOR words is the same wall rebuilt.
+  6. DOOR IS A VERB — a door's big words say what you will GET, never the route
+     you will take. The address rides `detail:` under the verb, and a tab trail
+     belongs in the step that follows. See the DOOR section below.
 
 Run standalone, or via `scripts/verify.sh`'s static head. `--self-test` proves
 each check catches its own shape before it certifies the tree — a check that
@@ -193,6 +196,104 @@ OFFER_MAX_WORDS = 90
 OFFER_MAX_PARAGRAPHS = 3
 CATALOG = os.path.join(ROOT, "Casberi", "Casberi", "Model", "BridgeCatalog.swift")
 
+# ── the door's own budget (check 6, added 2026-08-14) ──────────────────────
+#
+# A door's label is a VERB, never a route. It shipped as both: `setupURLLabel`
+# put the host AND the tab trail inside the button's big words, so the slab
+# read "Open dashboard.stripe.com → API keys" (35 chars) and, at worst,
+# "Open pagerduty.com → Integrations → API Access Keys" (51) — reported by the
+# user as *"a lot of the CTAs barely fit in their button"*, with a screenshot.
+#
+# The fix was anatomical, not a shorter string: `DSSlabButton` gained a
+# `detail:` subline, so the verb stays short on top and the address sits quiet
+# underneath — still on the button, so the door remains checkable against the
+# address bar it opens (the honesty rule `setupURLLabel` existed to serve), and
+# `doorHost` DERIVES it from `setupURL` so it can never drift from where the
+# door goes. The trail moved into the step that follows, or vanished where the
+# URL lands on the tab directly.
+#
+# The check is mechanical for the reason every other rule here is: this family
+# has been de-walled three times now (§218b, §314, §315) and each ruling was
+# re-broken from memory. THREE sub-rules, each naming a distinct way a route
+# gets back into the big words:
+#
+#   · a route ARROW — a trail is navigation, and navigation belongs in a step;
+#   · a HOSTNAME — the address has a slot of its own now (`detail:`);
+#   · LENGTH — the backstop for a label that is neither, and the one that
+#     catches a verb which simply grew.
+#
+# MEASURED, not chosen: over every door on a connect screen today the longest
+# legitimate label is "Choose conversations.json" at 25 characters, so the
+# ceiling is 26 — above every label written to date, which means it flags NEW
+# sprawl and never re-litigates copy that already reads fine. Translations are
+# NOT the reason for the ceiling (German would blow any number, which is what
+# `minimumScaleFactor` is for); the ceiling is about the ENGLISH source being a
+# verb rather than a route.
+#
+# What it deliberately does NOT check: whether the verb is a GOOD one (it
+# cannot tell "Get your API key" from "Do the thing"), and it says nothing
+# about `detail:`, which is derived from a URL in every case that matters and
+# is free to be as long as the address is.
+MAX_DOOR_CHARS = 26
+# A dotted token with a real TLD tail — never a filename, so "Choose
+# conversations.json" and "Choose the .p8 file" stay clean. Extending this list
+# is fine; making it `\.[a-z]{2,}` is not, and would flag both of those.
+DOOR_HOST_RE = re.compile(
+    r"\b[a-z0-9][a-z0-9-]*\.(?:com|org|net|io|ai|app|dev|co|xyz|bot|so|sh|me|gg|tv)\b")
+# Where door verbs live outside the screens: the two tables that serve many
+# screens at once, so one bad entry is many bad buttons.
+DOOR_TABLES = [
+    os.path.join(ROOT, "Casberi", "Casberi", "Model", "TokenBridges.swift"),
+    os.path.join(ROOT, "Casberi", "Casberi", "Model", "MailBridge.swift"),
+]
+
+
+# `\(walletCount)` is 14 characters of SOURCE and one digit on screen. Counting
+# the raw literal made four correct wallet screens the check's first findings —
+# the cry-wolf shape this file's header warns about — so an interpolation is
+# measured as a short substitution instead. Deliberately a guess: what it really
+# renders is unknowable statically, and the ceiling is about the AUTHORED words
+# being a verb rather than about predicting a count's width.
+DOOR_INTERPOLATION_RE = re.compile(r"\\\([^)]*\)")
+DOOR_INTERPOLATION_WIDTH = 3
+
+
+def audit_door_title(where: str, title: str):
+    """The three sub-rules, applied to one door label."""
+    findings = []
+    if "→" in title:
+        findings.append(f"{where}: door says “{title}” — a route trail "
+                        f"belongs in the step below, not in the button's big words")
+    if DOOR_HOST_RE.search(title.lower()):
+        findings.append(f"{where}: door says “{title}” — the address "
+                        f"belongs in `detail:` under the verb, not inside it")
+    rendered = DOOR_INTERPOLATION_RE.sub("x" * DOOR_INTERPOLATION_WIDTH, title)
+    if len(rendered) > MAX_DOOR_CHARS:
+        findings.append(f"{where}: door label is {len(rendered)} chars "
+                        f"(max {MAX_DOOR_CHARS}) — “{title}”")
+    return findings
+
+
+def audit_doors(name: str, body: str):
+    """Door labels written as literals on a screen."""
+    findings = []
+    pattern = (r'(?:DSSlab(?:Button|Door)\(\s*title:|doorTitle:)\s*'
+               r'(?:String\(localized:\s*)?"((?:[^"\\]|\\.)*)"')
+    for m in re.finditer(pattern, body):
+        findings += audit_door_title(name, m.group(1).replace('\\"', '"'))
+    return findings
+
+
+def audit_door_table(name: str, body: str):
+    """Door verbs held in a `doorTitle` property serving many screens."""
+    findings = []
+    m = re.search(r"var doorTitle:\s*String\s*\{", body)
+    if not m:
+        return findings
+    for lit in literals(balanced(body, m.end() - 1)):
+        findings += audit_door_title(name, lit)
+    return findings
+
 
 def audit_catalog(src: str):
     findings = []
@@ -278,6 +379,9 @@ def audit_source(name: str, src: str):
         if total > FOOTER_WORD_FLOOR:
             findings.append(f"{name}: section footer carries {total} words "
                             f"(max {FOOTER_WORD_FLOOR}) — that is the wall again")
+
+    # 6: the door is a verb, not a route.
+    findings += audit_doors(name, body)
 
     return findings
 
@@ -404,6 +508,60 @@ def self_test() -> bool:
     else:
         print("  ✓ passes an ordinary catalog offer")
 
+    # The door's fixtures. Each dirty one is a REAL label this shipped with, so
+    # the check is proven against the exact strings that were reported rather
+    # than against invented ones — and each clean one is a label the tree
+    # carries today, because the way this lint dies is by crying wolf.
+    door_cases = [
+        ("a route arrow in the big words",
+         'DSSlabButton(title: "Open dashboard.stripe.com → API keys", systemImage: "x") { }',
+         "route trail"),
+        ("a host inside the verb",
+         'DSSlabButton(title: "Approve on twitch.tv/activate", systemImage: "x") { }',
+         "belongs in `detail:`"),
+        ("a verb that simply grew",
+         'DSSlabDoor(title: "Open the page where your key lives", systemImage: "x") { }',
+         "chars"),
+        ("a long door passed to the import family",
+         'ImportArchiveSection(source: "X", doorTitle: "Open x.com → Your account", steps: [])',
+         "route trail"),
+    ]
+    for label, src, expect in door_cases:
+        found = audit_doors("fixture.swift", src)
+        if not any(expect in f for f in found):
+            print(f"  SELF-TEST FAIL: '{label}' was not caught "
+                  f"(expected {expect!r}, got {found})")
+            ok = False
+        else:
+            print(f"  ✓ catches {label}")
+
+    # A filename is not a hostname, and a real verb is not sprawl. Both of
+    # these are in the tree right now; flagging either would end this check.
+    clean_doors = ('DSSlabButton(title: "Choose conversations.json", systemImage: "x") { }\n'
+                   'DSSlabButton(title: "Choose the .p8 file", systemImage: "x") { }\n'
+                   'DSSlabDoor(title: "Import a newer archive", systemImage: "x") { }\n'
+                   'DSSlabButton(title: String(localized: "Get your API key")) { }\n'
+                   # 30 chars of source, one digit on screen — the four wallet
+                   # screens this check flagged on its very first run.
+                   'DSSlabDoor(title: "Watching \\(walletCount) wallet") { }\n')
+    f = audit_doors("fixture.swift", clean_doors)
+    if f:
+        print(f"  SELF-TEST FAIL: an ordinary door was flagged — {f}")
+        ok = False
+    else:
+        print("  ✓ passes ordinary doors (a .json filename is not a hostname, "
+              "an interpolation is not its source width)")
+
+    # And the table form, which serves many screens from one entry.
+    f = audit_door_table("fixture.swift",
+                         'var doorTitle: String { switch self {\n'
+                         'case .stripe: "Open dashboard.stripe.com → API keys"\n} }')
+    if not any("route trail" in x for x in f):
+        print(f"  SELF-TEST FAIL: a bad door TABLE entry was not caught — {f}")
+        ok = False
+    else:
+        print("  ✓ catches a bad entry in a door table")
+
     return ok
 
 
@@ -434,7 +592,15 @@ def main() -> int:
     catalog_findings, offers = audit_catalog(strip_comments(open(CATALOG).read()))
     findings += catalog_findings
 
-    print(f"  {screens} connect screens, {offers} catalog offers checked")
+    # The door verbs that serve many screens from one table.
+    tables = 0
+    for path in DOOR_TABLES:
+        tables += 1
+        findings += audit_door_table(os.path.basename(path),
+                                     strip_comments(open(path).read()))
+
+    print(f"  {screens} connect screens, {offers} catalog offers, "
+          f"{tables} door tables checked")
     if findings:
         print(f"\n  {len(findings)} finding(s):")
         for f in findings:

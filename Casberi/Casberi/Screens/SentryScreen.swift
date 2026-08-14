@@ -97,15 +97,21 @@ struct SentryScreen: View {
         Section {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
                 if let url = TokenBridge.sentry.setupURL {
-                    // Step one, doing itself (prd §218).
-                    DSSlabButton(title: "Open \(TokenBridge.sentry.setupURLLabel)",
+                    // Step one, doing itself (prd §218) — verb over address,
+                    // the 2026-08-14 anatomy.
+                    DSSlabButton(title: TokenBridge.sentry.doorTitle,
+                                 detail: TokenBridge.sentry.doorHost,
                                  systemImage: "arrow.up.right") {
                         DSHaptic.tap()
                         doorTapped = true
                         openURL(url)
                     }
                 }
+                // Unnumbered since 2026-08-14 (the door did step one; a "2"
+                // under it read as a missing-1 riddle); `acknowledges` keeps
+                // the confirm-green check when a step provably lands.
                 BridgeStepLines(steps: [TokenBridge.sentry.steps[0]], startingAt: 2,
+                                numbered: false, acknowledges: true,
                                 doneThrough: stepsDone)
                 // The scopes are the honest ask, and they are why this
                 // bridge's read-only promise is STRUCTURAL rather than kept by
@@ -114,6 +120,7 @@ struct SentryScreen: View {
                 // does. The list IS the promise, so no gray note restates it.
                 DSCheckList(lines: ["org:read", "project:read", "event:read"])
                 BridgeStepLines(steps: [TokenBridge.sentry.steps[1]], startingAt: 3,
+                                numbered: false, acknowledges: true,
                                 doneThrough: stepsDone)
                 // The host has no verb of its own — SAVE below commits both.
                 // An empty-verb field still paints its capsule, so a pre-filled

@@ -313,10 +313,7 @@ enum GitHubFeedFetch {
             // and handed us, not text we scraped, so the retrieval-only
             // `enrichedText` ruling (2026-07-15) doesn't apply and putting it
             // there would make it invisible on every screen.
-            if let user = item["user"] as? [String: Any] {
-                t.authorHandle = trimmedString(user["login"])
-                t.authorAvatarURL = IngestSupport.imageURL(user["avatar_url"] as? String)
-            }
+            stampWho(t, item["user"])
             if let body = trimmedString(item["body"]) { t.summary = clampBody(body) }
             // The repo's own labels — real facets to narrow by ("bug",
             // "good first issue"), and the only structured signal an issue
@@ -393,9 +390,21 @@ enum GitHubFeedFetch {
                   let repo = (item["repository"] as? [String: Any])?["full_name"] as? String
             else { return nil }
             let reason = notificationReason(item["reason"] as? String)
-            return thing(.link, title: "\(reason) · \(repo) · \(title)", content: link,
-                        ref: "gh:notif:\(id)", feed: .notifications,
-                        at: IngestSupport.isoDate(item["updated_at"]))
+            let t = thing(.link, title: "\(reason) · \(repo) · \(title)", content: link,
+                          ref: "gh:notif:\(id)", feed: .notifications,
+                          at: IngestSupport.isoDate(item["updated_at"]))
+            // The REPO's owner, and the one place in this file where the face
+            // is not the person who acted: GitHub's notifications payload
+            // names no actor anywhere — not on the notification, not on the
+            // subject — so "who mentioned you" is a second request per row
+            // against the subject's own API url, on the busiest feed here.
+            // The owner is already in hand and answers a real question ("which
+            // project is shouting at me"), which the title states in words and
+            // nothing on the row showed. Honest because the title leads with
+            // the REASON ("Mentioned you · org/repo · …"): the row never
+            // claims this account did anything.
+            stampWho(t, (item["repository"] as? [String: Any])?["owner"])
+            return t
         }
     }
 
@@ -436,11 +445,20 @@ enum GitHubFeedFetch {
             let repo = (item["repo"] as? [String: Any]) ?? item
             guard let id = repo["id"], let full = repo["full_name"] as? String,
                   let link = repo["html_url"] as? String else { return nil }
-            let avatar = (repo["owner"] as? [String: Any])?["avatar_url"] as? String
             let at = IngestSupport.isoDate(item["starred_at"])
                 ?? IngestSupport.isoDate(repo["updated_at"])
             let t = thing(.link, title: full, content: link, ref: "gh:star:\(id)",
-                          feed: .stars, at: at, image: IngestSupport.imageURL(avatar))
+                          feed: .stars, at: at)
+            // The owner's avatar MOVED from the row's art to its identity
+            // (2026-08-14). It was already fetched — the field it landed in
+            // was wrong: `previewImageURL` draws it as a picture beside the
+            // title, which is the slot for a thing's own photograph, while a
+            // repo owner's mark is exactly the "who published this" the
+            // leading circle exists for. Set once, never both: the same image
+            // in both fields draws twice on one row (see
+            // `ArtlessBackfill.patchFace`, which unwinds the rows that already
+            // landed with it in the old slot).
+            stampWho(t, repo["owner"])
             // The stargazer count at star time is the "since you starred"
             // anchor — captured once (dedupe on ref), never back-filled.
             t.starCount = repo["stargazers_count"] as? Int
@@ -502,6 +520,11 @@ enum GitHubFeedFetch {
             let short = full.split(separator: "/").last.map(String.init) ?? full
             let t = thing(.link, title: tag.isEmpty ? short : "\(short) \(tag)",
                           content: url, ref: "gh:release:\(id)", feed: .releases, at: published)
+            // Who cut the release. Often a bot (`rustbot`, `github-actions`),
+            // and that is the honest answer rather than a reason to withhold
+            // it: it is who published, which is what this slot says, and a
+            // release-bot's avatar is a real mark that reads as the project's.
+            stampWho(t, rel["author"])
             // A stable major (not a prerelease) earns the celebration marker.
             if !((rel["prerelease"] as? Bool) ?? false), isMajorRelease(tag) {
                 t.tags.append(majorReleaseTag)
@@ -521,9 +544,13 @@ enum GitHubFeedFetch {
                   let url = item["html_url"] as? String else { return nil }
             let desc = (item["description"] as? String).flatMap { $0.isEmpty ? nil : $0 }
             let firstFile = (item["files"] as? [String: Any])?.keys.sorted().first
-            return thing(.note, title: desc ?? firstFile ?? "Gist", content: url,
-                         ref: "gh:gist:\(id)", feed: .gists,
-                         at: IngestSupport.isoDate(item["updated_at"]))
+            let t = thing(.note, title: desc ?? firstFile ?? "Gist", content: url,
+                          ref: "gh:gist:\(id)", feed: .gists,
+                          at: IngestSupport.isoDate(item["updated_at"]))
+            // You — `/gists` is your own list. Which is the whole point: this
+            // is the feed where "the user's avatar" means yours literally.
+            stampWho(t, item["owner"])
+            return t
         }
     }
 
@@ -545,6 +572,12 @@ enum GitHubFeedFetch {
             let t = thing(.link, title: line, content: "https://github.com/\(repo)",
                          ref: "gh:event:\(id)", feed: .contributions,
                          at: IngestSupport.isoDate(ev["created_at"]))
+            // The event's own actor — you, since this is your events feed.
+            // Measured 2026-08-14: `actor.avatar_url` here comes back as
+            // `…/u/<id>?` with an empty query, unlike the `?v=4` every other
+            // account object serves. It resolves fine and `imageURL` keeps it
+            // as-is; don't "clean" the trailing `?` without re-measuring.
+            stampWho(t, ev["actor"])
             things.append(t)
             if type == "PushEvent", let sha = payload["head"] as? String, !sha.isEmpty {
                 pushTargets.append((t, repo, sha))
@@ -629,10 +662,10 @@ enum GitHubFeedFetch {
         return items.compactMap { repo in
             guard let id = repo["id"], let full = repo["full_name"] as? String,
                   let link = repo["html_url"] as? String else { return nil }
-            let avatar = (repo["owner"] as? [String: Any])?["avatar_url"] as? String
             let t = thing(.link, title: full, content: link, ref: "gh:watch:\(id)",
-                          feed: .following, at: IngestSupport.isoDate(repo["updated_at"]),
-                          image: IngestSupport.imageURL(avatar))
+                          feed: .following, at: IngestSupport.isoDate(repo["updated_at"]))
+            // The owner leads, the `stars` reasoning exactly.
+            stampWho(t, repo["owner"])
             t.repoLanguage = repo["language"] as? String
             t.enrichedText = repoBlurb(repo)
             return t
@@ -790,6 +823,25 @@ enum GitHubFeedFetch {
         guard let s = (raw as? String)?.trimmingCharacters(in: .whitespacesAndNewlines),
               !s.isEmpty else { return nil }
         return s
+    }
+
+    /// WHO a row is about, from any of GitHub's account objects — an issue's
+    /// `user`, an event's `actor`, a release's `author`, a gist's or a repo's
+    /// `owner`. They are the same shape (`login` + `avatar_url`), which is
+    /// what lets one line serve every feed (2026-08-14).
+    ///
+    /// It exists because only the issues feed ever stamped this. `GitHub` has
+    /// been in `ShapedRows.faceSources` since 2026-08-12 — so the leading slot
+    /// has been ready to draw a face for every row in the room — while five of
+    /// the six feeds landed no account at all and one filed the avatar as the
+    /// row's ART instead. The effect was a room where your own commits, the
+    /// releases you follow and your own gists showed the GitHub glyph, and
+    /// only issues and PRs showed anybody. Every account object here rides a
+    /// payload the feed already has in hand: no extra request, on any feed.
+    private static func stampWho(_ t: Thing, _ account: Any?) {
+        guard let account = account as? [String: Any] else { return }
+        t.authorHandle = trimmedString(account["login"])
+        t.authorAvatarURL = IngestSupport.imageURL(account["avatar_url"] as? String)
     }
 
     /// A body clamped to the ceiling the chat/journal imports already use — a

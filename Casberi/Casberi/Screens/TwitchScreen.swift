@@ -128,7 +128,10 @@ struct TwitchScreen: View {
                     // whose tap did nothing — the code well above still shows
                     // what to type, which is the honest fallback.
                     if let url = code.verificationURL {
-                        DSSlabButton(title: "Approve on twitch.tv/activate",
+                        // Verb over address, the 2026-08-14 anatomy — the same
+                        // shape GitHub's device flow wears one screen over.
+                        DSSlabButton(title: "Approve on Twitch",
+                                     detail: "twitch.tv/activate",
                                      systemImage: "arrow.up.right") {
                             DSHaptic.tap()
                             openURL(url)

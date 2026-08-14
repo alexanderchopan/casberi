@@ -106,7 +106,9 @@ struct ExchangeSetupScreen: View {
         Section {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
                 if let url = setupURL {
-                    DSSlabButton(title: "Open \(setupURLLabel)",
+                    // Verb over address, the 2026-08-14 anatomy.
+                    DSSlabButton(title: "Get your API key",
+                                 detail: doorHost,
                                  systemImage: "arrow.up.right") {
                         DSHaptic.tap()
                         openURL(url)
@@ -150,13 +152,11 @@ struct ExchangeSetupScreen: View {
         }
     }
 
-    private var setupURLLabel: String {
-        switch venue {
-        case .kraken:   "kraken.com → API"
-        case .coinbase: "Coinbase developer portal"
-        case .binance:  "binance.com → API Management"
-        case .geminiExchange: "gemini.com → API settings"
-        }
+    /// The address under the door's verb — derived from `setupURL` so it can
+    /// never drift from where the door actually goes (the TokenBridges rule).
+    private var doorHost: String {
+        guard let host = setupURL?.host else { return "" }
+        return host.hasPrefix("www.") ? String(host.dropFirst(4)) : host
     }
 
     /// Kraken/Binance/Gemini all call the identifier an "API key"; only

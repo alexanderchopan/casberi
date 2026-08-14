@@ -228,9 +228,17 @@ struct BridgeStepLines: View {
     var startingAt = 2
     /// Off when what's left after the door isn't a SEQUENCE (prd §220): a lone
     /// bold "2" under an unnumbered button sends the eye hunting for a missing
-    /// 1, and one instruction was never a series of steps. Opt-in, so a screen
-    /// that really does have an ordered list keeps its numerals.
+    /// 1, and one instruction was never a series of steps. Since 2026-08-14
+    /// that reasoning covers every door screen — the door does step one
+    /// itself, so ANY numeral run starting at 2 poses the same missing-1
+    /// riddle; two short lines in reading order need no numbers at all.
     var numbered = true
+    /// Unnumbered lines that still TRACK doneness (`doneThrough`) keep the
+    /// confirm-green check — the 2026-08-04 "that worked" delight — in a slot
+    /// reserved up front, so the first check never re-indents the list.
+    /// Opt-in, because a list that can never complete (the exchanges, Mail)
+    /// would otherwise wear a phantom inset.
+    var acknowledges = false
     /// How many steps are PROVABLY done, counted in the same numbering the
     /// lines wear (so a door that did step one passes 1, even though step one
     /// isn't rendered here). The delight pass, 2026-08-04: a form told you
@@ -272,6 +280,23 @@ struct BridgeStepLines: View {
                                 Text("\(number(i))")
                                     .dsText(.callout15).fontWeight(.bold)
                                     .foregroundStyle(live ? DS.tint : DS.textTertiary)
+                            }
+                        }
+                        .frame(width: 13, alignment: .trailing)
+                    } else if acknowledges {
+                        Group {
+                            if done {
+                                Image(systemName: "checkmark")
+                                    .dsGlyph(12, weight: .bold)
+                                    .foregroundStyle(DS.confirm)
+                                    .transition(.scale.combined(with: .opacity))
+                            } else {
+                                // A hidden numeral, not Color.clear: it keeps
+                                // the numeral's own metrics, so the check lands
+                                // on the same baseline the numbered form uses.
+                                Text("1")
+                                    .dsText(.callout15).fontWeight(.bold)
+                                    .hidden()
                             }
                         }
                         .frame(width: 13, alignment: .trailing)

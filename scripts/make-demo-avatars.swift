@@ -64,6 +64,13 @@ let cast: [Face] = [
           query: "topType=LongHairMiaWallace&accessoriesType=Blank&hairColor=Red&facialHairType=Blank&clotheType=Overall&clotheColor=PastelBlue&eyeType=Happy&eyebrowType=RaisedExcitedNatural&mouthType=Smile&skinColor=Light"),
     .init(handle: "rauno", note: "X — liked",
           query: "topType=ShortHairShortFlat&accessoriesType=Blank&hairColor=SilverGray&facialHairType=Blank&clotheType=ShirtCrewNeck&clotheColor=Black&eyeType=Default&eyebrowType=Default&mouthType=Serious&skinColor=Light"),
+    // Twitch's two channels (2026-08-14). `TwitchIngest` reads the streamer's
+    // own profile picture, so a real Twitch room is a column of faces with a
+    // live frame beside each title.
+    .init(handle: "nova", note: "Twitch — live",
+          query: "topType=LongHairStraightStrand&accessoriesType=Blank&hairColor=BlondeGolden&facialHairType=Blank&clotheType=ShirtCrewNeck&clotheColor=PastelOrange&eyeType=Happy&eyebrowType=RaisedExcited&mouthType=Smile&skinColor=Light"),
+    .init(handle: "kestrel", note: "Twitch — live",
+          query: "topType=WinterHat3&accessoriesType=Prescription02&hairColor=Brown&facialHairType=BeardLight&facialHairColor=Brown&clotheType=Hoodie&clotheColor=Gray02&eyeType=Squint&eyebrowType=DefaultNatural&mouthType=Serious&skinColor=Brown"),
     .init(handle: "tufte_bot", note: "X — liked (a bot account, and it has a face like any other)",
           query: "topType=ShortHairSides&accessoriesType=Round&hairColor=Black&facialHairType=Blank&clotheType=GraphicShirt&clotheColor=White&eyeType=Wink&eyebrowType=Default&mouthType=Twinkle&skinColor=Yellow"),
 ]

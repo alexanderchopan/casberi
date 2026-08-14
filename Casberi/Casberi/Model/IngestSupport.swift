@@ -102,6 +102,20 @@ enum IngestSupport {
         return artless
     }
 
+    /// Same shape as `artlessThings`, for a row whose identity slot is empty
+    /// — no avatar stored, so the leading slot is drawing the app glyph where
+    /// a face belongs (2026-08-14). Read by `ArtlessBackfill.patch(face:)`.
+    static func facelessThings(_ context: ModelContext, source: String) -> [String: Thing] {
+        let descriptor = FetchDescriptor<Thing>(predicate: #Predicate {
+            $0.source == source && $0.authorAvatarURL == nil
+        })
+        var faceless: [String: Thing] = [:]
+        for thing in (try? context.fetch(descriptor)) ?? [] {
+            if let ref = thing.sourceRef { faceless[ref] = thing }
+        }
+        return faceless
+    }
+
     /// Same shape as `artlessThings`, for a row that landed with no per-track
     /// URL (a library play whose `Song.url` was nil at ingest time) — the
     /// "Open in Apple Music" verb falls back to the bare app scheme for these
@@ -453,11 +467,20 @@ enum IngestSupport {
 /// the bridge glyph, the item's image patches it in place. The artless
 /// fetch is LAZY — in the steady state (every row already has its art, or
 /// the duplicates carry no image) a refresh never pays for it.
+///
+/// It patches the FACE on the same terms since 2026-08-14, and that half is
+/// what makes a new avatar reach a room that is already full. Dedupe never
+/// revisits a known ref, so a bridge that starts stamping `authorAvatarURL`
+/// today otherwise reaches only rows landed from today on — which for
+/// GitHub's stars and watched repos, where the same thirty rows sit there for
+/// months, is very nearly nothing at all. The two fetches are separate and
+/// each lazy: a row can have its picture and want a face, or the reverse.
 @MainActor
 final class ArtlessBackfill {
     private let context: ModelContext
     private let source: String
     private var artless: [String: Thing]?
+    private var faceless: [String: Thing]?
     /// True once anything was patched — joins the caller's save condition.
     private(set) var any = false
 
@@ -468,11 +491,40 @@ final class ArtlessBackfill {
 
     /// Patches the stored row for an already-landed ref, when the incoming
     /// item carries a usable image and the row has none.
-    func patch(_ ref: String, image: String?) {
+    ///
+    /// `face`/`handle` are the identity half: the avatar the leading slot
+    /// draws, and the name beside it. Passing them is opt-in per caller, so a
+    /// bridge that has never had a face pays nothing for the second fetch.
+    func patch(_ ref: String, image: String?, face: String? = nil, handle: String? = nil) {
+        patchArt(ref, image: image)
+        patchFace(ref, face: face, handle: handle)
+    }
+
+    private func patchArt(_ ref: String, image: String?) {
         guard let image = IngestSupport.imageURL(image) else { return }
         if artless == nil { artless = IngestSupport.artlessThings(context, source: source) }
         guard let thing = artless?[ref], thing.previewImageURL == nil else { return }
         thing.previewImageURL = image
+        any = true
+    }
+
+    private func patchFace(_ ref: String, face: String?, handle: String?) {
+        guard let face = IngestSupport.imageURL(face) else { return }
+        if faceless == nil { faceless = IngestSupport.facelessThings(context, source: source) }
+        guard let thing = faceless?[ref], (thing.authorAvatarURL ?? "").isEmpty else { return }
+        thing.authorAvatarURL = face
+        if let handle, !handle.isEmpty, (thing.authorHandle ?? "").isEmpty {
+            thing.authorHandle = handle
+        }
+        // The SAME picture cannot be both the identity and the row's art —
+        // it would draw twice on one row, once in the leading circle and once
+        // beside the title (`artRidesBesideIdentity`). This is not a
+        // hypothetical: GitHub's stars and watched-repos feeds filed the repo
+        // owner's avatar as `previewImageURL` from the day they shipped until
+        // this field existed for them, so every such row on every install is
+        // carrying it right now. Clearing it here is what makes the move a
+        // move rather than a duplication.
+        if thing.previewImageURL == face { thing.previewImageURL = nil }
         any = true
     }
 }

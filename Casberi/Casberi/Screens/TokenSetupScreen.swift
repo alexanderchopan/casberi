@@ -188,7 +188,8 @@ struct TokenSetupScreen: View {
         Section {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
                 if let url = bridge.setupURL {
-                    DSSlabButton(title: "Open \(bridge.setupURLLabel)",
+                    DSSlabButton(title: bridge.doorTitle,
+                                 detail: bridge.doorHost,
                                  systemImage: "arrow.up.right") {
                         DSHaptic.tap()
                         openURL(url)
@@ -197,7 +198,7 @@ struct TokenSetupScreen: View {
                 BridgeStepLines(steps: [
                     String(localized: "Create a Power-Up — name it Casberi. Its API key is on the page."),
                     String(localized: "Paste the key below."),
-                ], startingAt: 2)
+                ], numbered: false)
                 DSSlabField(placeholder: String(localized: "API key"),
                             text: $trelloKeyField,
                             actionLabel: trelloKey == nil
@@ -284,10 +285,10 @@ struct TokenSetupScreen: View {
         return bridge.setupURL
     }
 
-    private var doorLabel: String {
+    private var doorTitle: String {
         bridge == .trello
             ? String(localized: "Authorize read-only access")
-            : bridge.setupURLLabel
+            : bridge.doorTitle
     }
 
     /// Door, steps, field, proof, one sentence — in that order, because that
@@ -299,17 +300,25 @@ struct TokenSetupScreen: View {
                     // Step one, doing itself (prd §218). This screen used to
                     // say "Open readwise.io/access_token" in body text and
                     // then leave you to retype it — an instruction the app
-                    // could have followed on your behalf the whole time.
-                    DSSlabButton(title: bridge == .trello
-                                    ? doorLabel : String(localized: "Open \(doorLabel)"),
+                    // could have followed on your behalf the whole time. The
+                    // verb+address anatomy (2026-08-14): the big words stay
+                    // short, the host sits beneath them, and the route trail
+                    // lives in the steps.
+                    DSSlabButton(title: doorTitle,
+                                 detail: bridge.doorHost,
                                  systemImage: "arrow.up.right") {
                         DSHaptic.tap()
                         doorOpened = true
                         openURL(url)
                     }
                 }
+                // Numbered only when there is NO door — then the list really
+                // does start at 1. Under a door, numerals starting at 2 sent
+                // the eye hunting for a missing 1 (ruling 2026-08-14).
                 BridgeStepLines(steps: bridge.steps,
                                 startingAt: doorURL == nil ? 1 : 2,
+                                numbered: doorURL == nil,
+                                acknowledges: true,
                                 doneThrough: tokenStepsDone)
                 DSSlabField(placeholder: bridge.placeholder, text: $tokenField,
                             actionLabel: bridge.connected ? "UPDATE" : "CONNECT",
@@ -391,7 +400,9 @@ struct TokenSetupScreen: View {
                     Text("Enter this code on GitHub — approval lands the token here by itself.")
                         .dsText(.subhead13).foregroundStyle(DS.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
-                    DSSlabButton(title: "Open github.com/login/device",
+                    // Verb over address, the 2026-08-14 anatomy.
+                    DSSlabButton(title: "Enter it on GitHub",
+                                 detail: "github.com/login/device",
                                  systemImage: "arrow.up.right") {
                         DSHaptic.tap()
                         openURL(code.verificationURL)

@@ -188,6 +188,8 @@ enum TwitchIngest {
 
         let existing = IngestSupport.existingSourceRefs(context, source: "Twitch")
         let backfill = ArtlessBackfill(context, source: "Twitch")
+        let faces = await profileImages(
+            userIDs: streams.compactMap { $0["user_id"] as? String }, token: token)
         var added = 0
         var liveNow: [String] = []
 
@@ -195,6 +197,7 @@ enum TwitchIngest {
             guard let id = stream["id"] as? String,
                   let name = stream["user_name"] as? String,
                   let login = stream["user_login"] as? String else { continue }
+            let face = (stream["user_id"] as? String).flatMap { faces[$0] }
             let ref = "twitch:\(id)"
             liveNow.append(ref)
             // A frame of the stream RIGHT NOW — Helix hands a
@@ -207,7 +210,7 @@ enum TwitchIngest {
                 .replacingOccurrences(of: "{width}", with: "320")
                 .replacingOccurrences(of: "{height}", with: "180")
             if existing.contains(ref) {
-                backfill.patch(ref, image: frame)
+                backfill.patch(ref, image: frame, face: face, handle: name)
                 continue
             }
             let game = (stream["game_name"] as? String) ?? ""
@@ -227,6 +230,11 @@ enum TwitchIngest {
             // slot RSS/feed-follow already stamp with their own source's
             // "who/what published this" name.
             thing.authorHandle = name
+            // The streamer's own picture (2026-08-14) — the leading slot draws
+            // it, with the live frame riding after the title. The frame is a
+            // moment and the face is the person; a room of a dozen channels
+            // showed a dozen identical purple Twitch glyphs before this.
+            thing.authorAvatarURL = face
             context.insert(thing)
             SpotlightIndex.index([thing])
             added += 1
@@ -234,6 +242,36 @@ enum TwitchIngest {
         UserDefaults.standard.set(liveNow, forKey: liveKey)
         if added > 0 || backfill.any { context.saveHonestly() }
         return added
+    }
+
+    /// Channel id → profile picture, for the streams in this pass (2026-08-14).
+    ///
+    /// ONE request for the whole pass, never one per channel: `helix/users`
+    /// takes up to 100 `id` parameters and answers with all of them, so a
+    /// refresh that finds twelve channels live pays for a thirteenth request
+    /// and no more. `followed` names a channel and carries no picture of it,
+    /// so this is the only place the face can come from.
+    ///
+    /// A failure here is not a failure of the pass — the streams already read
+    /// fine, and a row without a face is worse-labelled, not wrong (the
+    /// Todoist project-name precedent). Returns empty and the rows keep the
+    /// glyph they have always had.
+    private static func profileImages(userIDs: [String], token: String) async -> [String: String] {
+        let ids = Array(Set(userIDs)).prefix(100)
+        guard !ids.isEmpty else { return [:] }
+        let query = ids.map { "id=\($0)" }.joined(separator: "&")
+        guard let root = await IngestSupport.getJSON(
+            "https://api.twitch.tv/helix/users?\(query)",
+            auth: "Bearer \(token)", headers: ["Client-Id": TwitchAuth.clientID]
+        ) as? [String: Any], let users = root["data"] as? [[String: Any]] else { return [:] }
+        var faces: [String: String] = [:]
+        for user in users {
+            guard let id = user["id"] as? String,
+                  let image = IngestSupport.imageURL(user["profile_image_url"] as? String)
+            else { continue }
+            faces[id] = image
+        }
+        return faces
     }
 
     /// The game a live-stream title names, parsed back out of the exact

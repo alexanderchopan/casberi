@@ -50,10 +50,14 @@ enum MailProvider: String, CaseIterable, Identifiable {
         }
     }
 
-    var setupURLLabel: String {
+    /// The door's verb + the address under it (`DSSlabButton` detail) — the
+    /// 2026-08-14 anatomy: big words stay short, the host stays checkable
+    /// against the address bar the door opens.
+    var doorTitle: String { String(localized: "Get an app password") }
+    var doorHost: String {
         switch self {
         case .icloud: "appleid.apple.com"
-        case .gmail:  "myaccount.google.com/apppasswords"
+        case .gmail:  "myaccount.google.com"
         }
     }
 

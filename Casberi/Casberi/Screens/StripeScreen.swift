@@ -87,18 +87,22 @@ struct StripeScreen: View {
         Section {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
                 if let url = TokenBridge.stripe.setupURL {
-                    // Step one, doing itself (prd §218).
-                    DSSlabButton(title: "Open \(TokenBridge.stripe.setupURLLabel)",
+                    // Step one, doing itself (prd §218) — verb over address,
+                    // the 2026-08-14 anatomy.
+                    DSSlabButton(title: TokenBridge.stripe.doorTitle,
+                                 detail: TokenBridge.stripe.doorHost,
                                  systemImage: "arrow.up.right") {
                         DSHaptic.tap()
                         openURL(url)
                     }
                 }
-                // Step 2, then the list step 2 points AT, then step 3 and the
-                // field. The scopes used to sit below the field, which is why
-                // step 2 had to name all six in prose to be useful there — the
-                // reorder is what let that sentence lose them (2026-07-31).
-                BridgeStepLines(steps: [TokenBridge.stripe.steps[0]], startingAt: 2)
+                // The next line, then the list it points AT, then the last
+                // line and the field. The scopes used to sit below the field,
+                // which is why the first step had to name all six in prose to
+                // be useful there — the reorder is what let that sentence lose
+                // them (2026-07-31). Unnumbered since 2026-08-14: the door did
+                // step one, and a "2" under it read as a missing-1 riddle.
+                BridgeStepLines(steps: [TokenBridge.stripe.steps[0]], numbered: false)
                 // The permissions are the honest ask, and they're why this
                 // bridge's read-only promise is STRUCTURAL rather than kept by
                 // conduct (the Privacy.com divergence): a restricted key with
@@ -111,7 +115,7 @@ struct StripeScreen: View {
                                     "Subscriptions — read",
                                     "Invoices — read",
                                     "Balance — read"])
-                BridgeStepLines(steps: [TokenBridge.stripe.steps[1]], startingAt: 3)
+                BridgeStepLines(steps: [TokenBridge.stripe.steps[1]], numbered: false)
                 // Slabbed with the rest of the family (audit, 2026-07-31) — it
                 // was a `BridgeFieldRow` capsule, the one control on the screen
                 // still wearing the pre-§218 shape.

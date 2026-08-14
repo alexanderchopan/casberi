@@ -2191,15 +2191,29 @@ enum DemoSeedAll {
                 if i == 1 { t.dueAt = at(-5, 17) }
             }
         }
-        let hf: [(String, Double)] = [
-            ("New model · kyutai/moshi-v2", 1), ("Daily paper · Scaling laws for retrieval", 2),
-            ("New dataset · open-espresso-1k", 6),
+        // Titled the way `HuggingFaceBridge` titles a release — "<owner>/<id>
+        // · <noun>", with the OWNER on `authorHandle` and their mark on
+        // `authorAvatarURL` (2026-08-14). The old rows led with the kind ("New
+        // model · …"), a shape that bridge never lands, and named nobody — so
+        // the demo's hub room drew three identical yellow glyphs where a real
+        // one draws each lab's logo. A PAPER carries no mark on purpose: its
+        // `authorHandle` is a human author with no hub account behind it, so
+        // there is no picture to show and inventing one would be a claim.
+        let hf: [(String, String, Double)] = [
+            ("kyutai/moshi-v2 · Model", "kyutai", 1),
+            ("Scaling laws for retrieval · Paper", "", 2),
+            ("espresso-lab/open-espresso-1k · Dataset", "espresso-lab", 6),
         ]
         out += hf.enumerated().map { i, h in
-            row(.link, h.0, source: "Hugging Face", ref: "demo:hf:\(i)", days: h.1, hour: 9) { t in
+            row(.link, h.0, source: "Hugging Face", ref: "demo:hf:\(i)", days: h.2, hour: 9) { t in
+                if !h.1.isEmpty {
+                    t.authorHandle = h.1
+                    t.authorAvatarURL = publisherArt(h.1)
+                }
                 if i == 1 {
                     t.enrichedText = "We study how retrieval quality scales with corpus size."
                     t.previewImageURL = art(i)
+                    t.authorHandle = "Rin Adeyemi"
                 }
             }
         }
@@ -2240,6 +2254,12 @@ enum DemoSeedAll {
                 source: "Twitch", ref: "demo:twitch:\(i)", days: Double(1 + i * 5), hour: 21) { t in
                 t.previewImageURL = "sample:frame-\(i + 1)"
                 t.authorHandle = ["nova", "kestrel"][i]
+                // The streamer's face (2026-08-14). `TwitchIngest` reads it in
+                // one batched `helix/users` call, so a real Twitch room leads
+                // every row with the channel's picture and the live frame
+                // rides after the title — the "both" pattern. Seeded without
+                // it, the demo drew the purple Twitch glyph twice.
+                t.authorAvatarURL = avatarArt(["nova", "kestrel"][i])
             }
         }
         out += (0..<3).map { i in

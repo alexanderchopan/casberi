@@ -85,14 +85,17 @@ struct SteamScreen: View {
     private var setupSection: some View {
         Section {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
-                DSSlabButton(title: "Open Steam's API key page",
+                // Verb over address, the 2026-08-14 anatomy.
+                DSSlabButton(title: "Get your API key",
+                             detail: "steamcommunity.com",
                              systemImage: "arrow.up.right") {
                     DSHaptic.tap()
                     if let url = URL(string: "https://steamcommunity.com/dev/apikey") {
                         openURL(url)
                     }
                 }
-                BridgeStepLines(steps: steps)
+                // Unnumbered — the door did step one (ruling 2026-08-14).
+                BridgeStepLines(steps: steps, numbered: false)
                 // Two inputs, ONE act — so only the second slab wears the
                 // verb, and it stays inert until both are filled.
                 DSSlabField(placeholder: String(localized: "Profile name or SteamID"),

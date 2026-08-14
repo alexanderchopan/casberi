@@ -230,12 +230,29 @@ struct BandRow: View {
     /// the leading slot draw it. So three rooms fetched a face, stored it, and
     /// rendered the app glyph instead, which is the doc note right above:
     /// "the avatar is never redundant — it's who posted."
+    ///
+    /// TWITCH JOINED 2026-08-14, with a bridge change beside it: the streams
+    /// payload names a channel and carries no picture of the person, so the
+    /// avatar is one batched `helix/users` read (`TwitchIngest`). A stream row
+    /// already holds its live FRAME on `previewImageURL`, so this is the
+    /// "both" pattern — the streamer's face leads, the frame rides after the
+    /// title — rather than a swap.
     static let faceSources: Set<String> = [
-        "Bluesky", "Farcaster", "Nostr", "Stocktwits", "GitHub",
+        "Bluesky", "Farcaster", "Nostr", "Stocktwits", "GitHub", "Twitch",
     ]
     /// The sources whose leading slot is a publisher's MARK — a logo, so a
     /// squircle, not a circle.
-    static let publisherMarkSources: Set<String> = ["RSS"]
+    ///
+    /// HUGGING FACE IS A MARK, NOT A FACE (2026-08-14): the name on a model
+    /// row is the org that published it — Google, Kyutai, Meta — and the hub
+    /// serves that org's logo. Drawing a company's logo in a circle would say
+    /// a person posted it, which is the same distinction the RSS entry above
+    /// already draws for a publication. A Daily Paper's `authorHandle` is a
+    /// human author's NAME with no hub account behind it, so those rows carry
+    /// no avatar and keep the glyph — correctly, since we have no picture of
+    /// them and inventing one would be the §83 fake-status rule in the one
+    /// place it is easiest to get away with.
+    static let publisherMarkSources: Set<String> = ["RSS", "Hugging Face"]
 
     private var identityAvatarURL: String? {
         guard let avatar = thing.authorAvatarURL, !avatar.isEmpty else { return nil }
@@ -264,12 +281,27 @@ struct BandRow: View {
         return addr
     }
 
+    /// The sources whose person is NAMED but has no picture we may fetch —
+    /// they lead with an initial circle, the mail treatment below (2026-08-14).
+    ///
+    /// Slack is the case that defines the set, and it is a CONSENT limit
+    /// rather than a missing field: this bridge holds exactly one user scope,
+    /// `search:read`, which its setup screen names out loud. A profile picture
+    /// is `users:read` — a second scope, asked of everyone already connected,
+    /// to decorate a row. The message names who mentioned you; a letter in a
+    /// circle says that much honestly and costs nothing. If the scope is ever
+    /// widened for its own reasons, move "Slack" to `faceSources` and stamp
+    /// `authorAvatarURL` at ingest.
+    static let initialCircleSources: Set<String> = ["Slack"]
+
     /// A mail row's sender — email carries no avatar, so the row leads with
     /// an initial circle instead (2026-07-10; what Mail apps themselves do).
     /// New rows carry the sender in authorHandle; older rows stored it only
     /// as "From …" content, parsed here so they get their circle without a
     /// migration.
     private var mailSender: String? {
+        if Self.initialCircleSources.contains(thing.source),
+           let who = thing.authorHandle, !who.isEmpty { return who }
         guard thing.kind == .mail else { return nil }
         if let from = thing.authorHandle, !from.isEmpty { return from }
         if thing.content.hasPrefix("From ") {

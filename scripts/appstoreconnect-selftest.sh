@@ -419,6 +419,28 @@ check("output wraps at 64 characters",
       fromFile?.components(separatedBy: "\n").dropFirst().dropLast()
         .allSatisfy { $0.count <= 64 } == true)
 
+// ── the Key ID inside the filename ─────────────────────────────────────────
+// The screen reads the `.p8` itself now (2026-08-14), so Apple's own filename
+// answers the second field. This is the one place that could put a WRONG Key
+// ID in front of somebody: a guessed ID mints a token Apple refuses with a 401
+// indistinguishable from a wrong key, and nothing on screen would say why. So
+// the parser refuses everything that is not exactly Apple's shape, and these
+// assertions are about the refusals more than the hit.
+print("ASCJWT.keyID(fromFilename:) — Apple's own filename")
+check("Apple's filename yields its Key ID",
+      ASCJWT.keyID(fromFilename: "AuthKey_2X9R4HXF34.p8") == "2X9R4HXF34")
+check("the extension is optional",
+      ASCJWT.keyID(fromFilename: "AuthKey_2X9R4HXF34") == "2X9R4HXF34")
+check("a copy suffix is refused rather than mangled",
+      ASCJWT.keyID(fromFilename: "AuthKey_2X9R4HXF34 2.p8") == nil)
+check("nine characters → nil",  ASCJWT.keyID(fromFilename: "AuthKey_2X9R4HXF3.p8") == nil)
+check("eleven characters → nil", ASCJWT.keyID(fromFilename: "AuthKey_2X9R4HXF345.p8") == nil)
+check("a renamed file → nil",   ASCJWT.keyID(fromFilename: "my key.p8") == nil)
+check("some other .p8 → nil",   ASCJWT.keyID(fromFilename: "AuthKey.p8") == nil)
+check("punctuation in the id → nil",
+      ASCJWT.keyID(fromFilename: "AuthKey_2X9R4-XF34.p8") == nil)
+check("an empty name → nil",    ASCJWT.keyID(fromFilename: "") == nil)
+
 // ── which verdicts are news ────────────────────────────────────────────────
 print("ASCVersionState — what Apple decided, and what you already knew")
 check("REJECTED is news",           ASCVersionState.rejected.isNews)
@@ -783,6 +805,14 @@ mutate "a .p8 without its markers refused" \
   '        if body.contains(marker) {' \
   '        guard body.contains(marker) else { return nil }
         if body.contains(marker) {'
+
+# 6b. The Key ID guessed from a filename that isn't Apple's. Dropping the length
+#     rule makes "AuthKey_.p8" and "AuthKey_my old key.p8" answer with garbage,
+#     which is then signed into a token Apple refuses with a 401 that names no
+#     cause — the one wrong answer on that screen nobody could diagnose.
+mutate "a Key ID taken from any filename at all" \
+  '        guard id.count == 10,' \
+  '        guard !id.isEmpty,'
 
 # 7. YOUR OWN ACT announced back to you. This is the rule §313 established and
 #    the one a later pass is most likely to "fix" by adding cases.

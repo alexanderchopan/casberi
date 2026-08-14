@@ -162,22 +162,32 @@ struct ImportArchiveSection: View {
     @ViewBuilder
     private var openBlock: some View {
         if let doorTitle, let doorURL {
+            // The address rides UNDER the verb (the 2026-08-14 anatomy) — but
+            // the waiting line wins that slot when there is one: "Requested
+            // Tuesday" is news about your own archive, and the host is a fact
+            // you can read off the address bar a second later either way.
             if pickLeads {
                 DSSlabDoor(title: doorTitle,
-                           detail: waiting ?? "",
+                           detail: waiting ?? host(of: doorURL),
                            systemImage: "arrow.up.right") { tapDoor(doorURL) }
             } else {
-                DSSlabButton(title: doorTitle, systemImage: "arrow.up.right") {
+                DSSlabButton(title: doorTitle,
+                             detail: host(of: doorURL),
+                             systemImage: "arrow.up.right") {
                     DSHaptic.tap()
                     tapDoor(doorURL)
                 }
             }
         }
-        // `doneThrough` counts in the numbering the lines wear, so a door that
-        // did step one passes 1 even though step one is rendered above rather
-        // than in this list — the component's own contract.
+        // Unnumbered under a door (ruling 2026-08-14): the door did step one,
+        // so numerals starting at 2 sent the eye hunting for a missing 1.
+        // `startingAt` still rides, because `doneThrough` counts in that same
+        // numbering — a door that did step one passes 1 even though step one
+        // is rendered above rather than in this list.
         BridgeStepLines(steps: steps,
                         startingAt: doorTitle == nil ? 1 : 2,
+                        numbered: doorTitle == nil,
+                        acknowledges: true,
                         doneThrough: waiting != nil ? 1 : 0)
         if showsMessagesToggle {
             // ABOVE the pick, still: this is a decision to make before the
@@ -208,6 +218,14 @@ struct ImportArchiveSection: View {
         ImportRequestMark.mark(source)
         waiting = ImportRequestMark.waitingLine(source)
         openURL(url)
+    }
+
+    /// The address under the door's verb — DERIVED from the URL, never a
+    /// second string to keep in step, so the button stays checkable against
+    /// the address bar it opens (the `TokenBridge.doorHost` rule).
+    private func host(of url: URL) -> String {
+        guard let host = url.host else { return "" }
+        return host.hasPrefix("www.") ? String(host.dropFirst(4)) : host
     }
 }
 
