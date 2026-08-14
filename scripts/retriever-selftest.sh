@@ -144,7 +144,13 @@ final class Thing {
 }
 
 enum DateQuery {
-    struct Match { let range: ClosedRange<Date>; let words: Set<String> }
+    struct Match {
+        let range: ClosedRange<Date>; let words: Set<String>
+        // Carried since 2026-08-13 so a resolved date can name itself on a
+        // scope chip. Stubbed with the real field so `ranked` compiles as
+        // shipped; still never constructed, since `match` stays inert below.
+        let label: String
+    }
     // Inert: no fixture here asks a WHEN question, and a live date parse would
     // make these assertions depend on the day they run.
     static func match(in query: String) -> Match? { nil }
@@ -443,6 +449,44 @@ check("a kind word filters WITH content terms",
 check("the top-16 cap still holds",
       rank("work", (1...40).map { Thing(title: "work \($0)") }).count == 16)
 
+print("find — the uncapped read, and the filters it admits to")
+// THE CAP IS THE MODEL'S, NOT THE CORPUS'S (2026-08-13). `rank` bounds what a
+// model is handed; Find reads `find` and must be able to say how many things
+// really match. Shipped the other way, a search over a 3,500-post archive
+// reported "16 things match" — a cap presented as a count.
+let forty = (1...40).map { Thing(title: "work \($0)") }
+check("find returns every match, uncapped", Retriever.find("work", in: forty).hits.count == 40)
+check("rank still bounds what a model is handed",
+      rank("work", forty).count == Retriever.groundingLimit)
+
+let photoRow = Thing(title: "Receipt", source: "Photos")
+let yourRow = Thing(title: "Receipt", source: "You")
+check("an honoured source is reported as a scope",
+      Retriever.find("photos receipt", in: [photoRow, yourRow]).scopes
+        == [Retriever.Scope(kind: .source, label: "Photos")])
+check("a dropped source is not reported, and does not scope",
+      Retriever.find("photos receipt", in: [photoRow, yourRow], dropping: [.source])
+        .scopes.isEmpty)
+
+let shotX = Thing(title: "Home screen", kind: .screenshot)
+let noteX = Thing(title: "Grocery list", kind: .note)
+check("an honoured kind is reported as a scope",
+      Retriever.find("screenshots", in: [shotX, noteX]).scopes
+        == [Retriever.Scope(kind: .kind, label: "Screenshots")])
+check("a dropped kind is not reported, and does not filter",
+      Retriever.find("screenshots", in: [shotX, noteX], dropping: [.kind]).scopes.isEmpty)
+
+// A SCOPE THE FALLBACK STOOD DOWN WAS NEVER APPLIED, so reporting it would be
+// a chip explaining a result it had no part in. The scoped pass here empties
+// (the one Photos row says none of these words), §318's fallback re-reads the
+// whole corpus, and the answer comes back with no scope at all.
+let pShot = Thing(title: "IMG_4821", source: "Photos")
+let x402Row = Thing(title: "Onchain alpha, photos flow and analytics", source: "You")
+let stoodDown = Retriever.find("onchain photos analytics", in: [pShot, x402Row])
+check("a scope the empty-result fallback stood down is not reported",
+      stoodDown.scopes.isEmpty)
+check("...and that fallback still answers", stoodDown.hits.map(\.title) == [x402Row.title])
+
 print("idfWeight — the rarity curve itself")
 check("a word ONE thing says gets the ceiling (1.5)",
       abs(Retriever.idfWeight(corpus: 2000, holding: 0) - 1.5) < 0.0001)
@@ -562,9 +606,16 @@ mutate "rarity removed from rank (every word weighs the same)" \
 mutate "the phrase bonus removed from rank" \
   'if entry.titleText.contains(pair) { score += 2.5 }' ''
 mutate "the empty-scope fallback removed (an app-named word walls the answer)" \
-  'honourSource: false)' 'honourSource: true)'
+  'honourSource: false, dropping: dropping)' 'honourSource: true, dropping: dropping)'
 mutate "the fallback fires even when the scope answered (§307 undone)" \
-  'guard scoped.isEmpty else { return scoped }' ''
+  'guard scoped.hits.isEmpty else { return scoped }' ''
+mutate "find re-capped at the grounding limit (a count that is really a cap)" \
+  'return Outcome(hits: hits, scopes: scopes)' \
+  'return Outcome(hits: Array(hits.prefix(groundingLimit)), scopes: scopes)'
+mutate "a scope is reported even when the caller dropped it" \
+  'dropping.contains(.kind)' 'false'
+mutate "an applied source filter goes unreported (a hidden filter returns)" \
+  'if let sourceMatch { scopes.append(Scope(kind: .source, label: sourceMatch.source)) }' ''
 mutate "the relevance floor removed (common-word noise returns)" \
   'if !strongMeaning { return nil }' ''
 mutate "a synonym credited in FULL (a neighbour of one word answers a two-word query)" \

@@ -2046,13 +2046,27 @@ private struct GenRow: View {
     @State private var glinted = false
 
     var body: some View {
+        // Arg 6, when present, is WHY this row is in a result — the passage
+        // that matched (2026-08-13, `KeptAskComposers.snippet`). Absent for
+        // every other emitter, and `str` answers "" past the end of the args,
+        // so a five-arg Row written before this existed is untouched.
+        let snippet = el.str(6)
         let row = HStack(spacing: DS.Space.s3) {
             TagGlyph(tag: el.str(1), size: 24)
-            Text(el.str(0))
-                .dsText(.body17)
-                .foregroundStyle(DS.textPrimary)
-                .lineLimit(1)
-                .frame(maxWidth: .infinity, alignment: .leading)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(el.str(0))
+                    .dsText(.body17)
+                    .foregroundStyle(DS.textPrimary)
+                    .lineLimit(1)
+                if !snippet.isEmpty {
+                    Text(snippet)
+                        .dsText(.subhead13)
+                        .foregroundStyle(DS.textSecondary)
+                        .lineLimit(2)
+                        .multilineTextAlignment(.leading)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
             Text(el.str(3)).dsText(.subhead13).foregroundStyle(DS.textTertiary)
         }
         .padding(.horizontal, DS.Space.s4)

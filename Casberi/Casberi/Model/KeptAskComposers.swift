@@ -20,6 +20,13 @@ enum KeptAskComposers {
         let delta: String
         let digest: String
         let doc: [String]
+        /// What a SEARCH filtered on, and how many things it really matched —
+        /// nil for every other composer (2026-08-13). Carried on the result so
+        /// the composer can draw its scope chips off the pass that just ran,
+        /// rather than re-running the engine to ask it what it did; over a big
+        /// corpus that second pass is the difference between a tap and a
+        /// second of frozen UI. See `Composer.liveReadCeiling`.
+        var find: (scopes: [Retriever.Scope], total: Int)?
 
         /// Every composer's document funnels through here, which is the one
         /// place a DUPLICATE ELEMENT ID can be caught (2026-08-13). `GenParser`
@@ -123,7 +130,8 @@ enum KeptAskComposers {
         if kind == "moneyflow" { return moneyFlow(things) }
         if kind == "spend" { return spend(things) }
         if kind.hasPrefix("search:") {
-            return search(String(kind.dropFirst("search:".count)), things: things)
+            return search(String(kind.dropFirst("search:".count)), things: things,
+                          standing: true)
         }
         return nil
     }
@@ -927,6 +935,14 @@ enum KeptAskComposers {
 
     // MARK: - Kept search
 
+    /// How many matches a find DRAWS. The count it REPORTS is the true total —
+    /// the two were the same number until 2026-08-13, and that is the bug: the
+    /// engine capped at 16 for the model's benefit and this drew 6 of them, so
+    /// a search over a 3,500-post archive said "16 things match" and showed
+    /// six, with no door to the rest. Twelve is a screenful you can scan; the
+    /// remainder is now counted out loud rather than silently discarded.
+    static let searchRowLimit = 12
+
     /// A free-text ask kept as a standing search (docs/agent-brief.md ruling
     /// 13, 2026-07-20) — re-runs `Retriever.rank` EVERY time, the same
     /// deterministic engine `RootShell.answerDocument`'s general retrieval
@@ -941,23 +957,67 @@ enum KeptAskComposers {
     /// schedule — so routing both through one function is what keeps "Find
     /// never synthesizes" true of both by construction rather than by two
     /// implementations agreeing.
-    static func search(_ query: String, things: [Thing]) -> Result? {
-        let hits = Retriever.rank(query, in: things, isPoolRefinement: false)
+    static func search(_ query: String, things: [Thing],
+                       dropping: Set<Retriever.Scope.Kind> = [],
+                       standing: Bool = false) -> Result? {
+        let outcome = Retriever.find(query, in: things, dropping: dropping)
+        let hits = outcome.hits
         guard !hits.isEmpty else {
-            return Result(delta: "", digest: "0",
-                          doc: ["root = Stack([ins])",
-                                "ins = Insight(\"\(genSafe("Nothing matches anymore."))\")"])
+            // A STANDING search that has gone quiet and a fresh find that
+            // never matched are different sentences. "anymore" was written for
+            // the kept chip re-running on a schedule, and reading it after
+            // typing a word for the first time says the search used to work.
+            let line = standing
+                ? String(localized: "Nothing matches anymore.")
+                : String(localized: "Nothing matches.")
+            // An empty result whose filters are visible is explicable; one
+            // whose filters are hidden reads as a broken search. Naming them
+            // costs no second pass — `find` already reported what it applied.
+            let why = outcome.scopes.isEmpty ? nil
+                : String(localized: "Searched only \(scopeList(outcome.scopes)).")
+            var empty = Result(delta: "", digest: "0",
+                               doc: ["root = Stack([ins])",
+                                     "ins = Insight(\"\(genSafe([line, why].compactMap { $0 }.joined(separator: " ")))\")"])
+            // The scopes matter MOST on the empty path — they are the likeliest
+            // reason it is empty, and the only ones the person can act on.
+            empty.find = (outcome.scopes, 0)
+            return empty
         }
-        let line = String(localized: "\(hits.count) thing match.")
+        let shown = Array(hits.prefix(searchRowLimit))
+        // The TRUE total, not the drawn count and not the engine's grounding
+        // cap. `Retriever.find` returns every match for exactly this reason.
+        var line = String(localized: "\(hits.count) thing match.")
+        if !outcome.scopes.isEmpty {
+            line += " " + String(localized: "In \(scopeList(outcome.scopes)).")
+        }
+        if hits.count > shown.count {
+            line += " " + String(localized: "Showing the \(shown.count) closest.")
+        }
         // Bare count, matching `showtag`/`contextRecap`/`overdue`'s digest
         // shape exactly — the pill renders this digest verbatim as its own
         // trailing signal text (`Composer.keptAskPills`), so it has to be
         // display-safe, not just a good change-detection key. (A same-count
         // reshuffle of WHICH things match goes undetected — the same
         // accepted limitation every other count-only composer already has.)
-        return Result(delta: "\(hits.count) things", digest: "\(hits.count)",
-                      doc: ["root = Stack([ins, res])", "ins = Insight(\"\(genSafe(line))\")"]
-                          + rows(Array(hits.prefix(6)), title: "Matches"))
+        var result = Result(delta: "\(hits.count) things", digest: "\(hits.count)",
+                            doc: ["root = Stack([ins, res])",
+                                  "ins = Insight(\"\(genSafe(line))\")"]
+                                + rows(shown, title: "Matches",
+                                       snippetTerms: Retriever.contentTerms(query)))
+        result.find = (outcome.scopes, hits.count)
+        return result
+    }
+
+    /// The applied filters as one readable clause — "X", "X and Replies",
+    /// "X, Replies and 2019".
+    ///
+    /// `ListFormatter` rather than a hand-built join: the first cut glued the
+    /// parts with a standalone `String(localized: "and")`, which is the
+    /// concatenation shape that has no correct translation — the joining word,
+    /// the separator and the Oxford comma all differ by language, and Japanese
+    /// and Chinese do not use a word there at all.
+    private static func scopeList(_ scopes: [Retriever.Scope]) -> String {
+        ListFormatter.localizedString(byJoining: scopes.map(\.label))
     }
 
     // MARK: - Where the money went
@@ -1265,13 +1325,43 @@ enum KeptAskComposers {
     /// (`walletDoc`'s approvals + activity) — the defaults keep every
     /// single-widget caller's doc byte-identical to before.
     private static func rows(_ things: [Thing], title: String,
-                             widgetID: String = "res", rowPrefix: String = "r") -> [String] {
+                             widgetID: String = "res", rowPrefix: String = "r",
+                             snippetTerms: [String] = []) -> [String] {
         let ids = things.indices.map { "\(rowPrefix)\($0)" }
         var lines = ["\(widgetID) = Widget(\"\(title)\", \"\(things.count)\", [\(ids.joined(separator: ", "))])"]
         for (i, t) in things.enumerated() {
-            lines.append("\(rowPrefix)\(i) = Row(\"\(genSafe(t.title))\", \"\(t.kind.typeTag)\", \"\(t.source)\", \"\(shortTime(t.capturedAt))\", \"\(t.id.uuidString)\")")
+            // Arg 6 is the match snippet, and it is empty for every caller but
+            // search (`GenRow` draws the second line only when it is not).
+            let snip = snippetTerms.isEmpty ? "" : genSafe(snippet(of: t, terms: snippetTerms))
+            lines.append("\(rowPrefix)\(i) = Row(\"\(genSafe(t.title))\", \"\(t.kind.typeTag)\", \"\(t.source)\", \"\(shortTime(t.capturedAt))\", \"\(t.id.uuidString)\", \"\", \"\(snip)\")")
         }
         return lines
+    }
+
+    /// WHY a row is in a result — the passage that carried the match.
+    ///
+    /// A search result that shows only a title is a list, not a search: the
+    /// fields this engine scores hardest are the ones NO screen draws
+    /// (`postText` holds a social row's real words, `enrichedText` a link's
+    /// fetched article, `summary` the source's own copy), so a row could match
+    /// on a sentence the person had no way to see (2026-08-13).
+    ///
+    /// `Retriever.matchWindow` returns nil when the hit already sits inside
+    /// the body's head — its doc says the caller's own head excerpt serves
+    /// that case identically and without a misleading leading ellipsis — so
+    /// this falls back to that head rather than dropping the line.
+    private static func snippet(of thing: Thing, terms: [String]) -> String {
+        let body = [thing.content, thing.postText ?? "", thing.summary ?? "",
+                    thing.enrichedText ?? ""]
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .first { !$0.isEmpty && !$0.hasPrefix("http") } ?? ""
+        guard !body.isEmpty else { return "" }
+        // A tighter radius than the model's grounding snippet uses: this is
+        // two lines under a row, not a passage for something to read.
+        if let window = Retriever.matchWindow(in: body, terms: terms, radius: 90) {
+            return window
+        }
+        return String(body.prefix(180))
     }
 
     private static func shortTime(_ date: Date) -> String {

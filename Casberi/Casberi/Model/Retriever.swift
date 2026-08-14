@@ -27,9 +27,70 @@ enum Retriever {
     /// sentence-embedding pass (a narrowed pool carries no new words of its
     /// own to re-embed against).
     static func rank(_ query: String, in corpus: [Thing], isPoolRefinement: Bool) -> [Thing] {
-        let scoped = rank(query, in: corpus, isPoolRefinement: isPoolRefinement,
-                          honourSource: true)
-        guard scoped.isEmpty else { return scoped }
+        Array(find(query, in: corpus, isPoolRefinement: isPoolRefinement)
+            .hits.prefix(groundingLimit))
+    }
+
+    /// How many things a MODEL is handed to rerank. A ceiling on a prompt, not
+    /// on the corpus — which is exactly what it was being mistaken for: Find
+    /// called `rank` and inherited this, so a search over a 3,500-post archive
+    /// could never report more than sixteen matches, and said "16 things
+    /// match" as though that were the count (2026-08-13). A human search reads
+    /// `find` and applies its own display cap; only the model path caps here.
+    static let groundingLimit = 16
+
+    /// One hard filter the engine resolved out of the query and HONOURED —
+    /// what the composer draws as a droppable chip (2026-08-13).
+    ///
+    /// WHY THIS IS PART OF THE ENGINE'S ANSWER. `ranked` applies up to five
+    /// filters that remove things outright, all resolved from the person's own
+    /// sentence and none of them visible: a named source, a facet, a kind, a
+    /// date range, and the writing scope. Every documented failure of this file
+    /// is one of them firing when it shouldn't — §318's "onchain wallet
+    /// analytics" scoped to the Wallet room and returned nothing, §340's "what
+    /// did I post about a wallet" returned that room's transactions — and both
+    /// were patched by GUESSING at intent from English grammar (skip the scope
+    /// after "about", "a", "an"). Those heuristics stay, but they are no longer
+    /// the only recourse: a filter the person can SEE is one they can drop, so
+    /// a wrong resolution costs one tap instead of an unanswerable question.
+    ///
+    /// At most one of each kind ever resolves, which is why `Kind` alone is the
+    /// drop key — there is never a second date range to disambiguate.
+    struct Scope: Equatable {
+        enum Kind: String, CaseIterable { case source, facet, kind, date, writing }
+        let kind: Kind
+        /// What the chip reads. Already localized where it isn't a proper noun.
+        let label: String
+    }
+
+    /// A ranked read and the filters it actually applied.
+    struct Outcome {
+        /// EVERY match, in rank order and uncapped — the caller decides how
+        /// many to draw and can state the true total.
+        let hits: [Thing]
+        /// The filters honoured on the pass that produced `hits`. A scope the
+        /// caller dropped is absent, and so is one the empty-result fallback
+        /// below stood down.
+        let scopes: [Scope]
+    }
+
+    /// The whole read: every match, plus what was filtered on to get there.
+    ///
+    /// `dropping` suppresses a filter the person has waved off in the UI. It is
+    /// deliberately a set of KINDS rather than values: the chip they tapped is
+    /// the one filter of that kind this query resolved, and re-deriving the
+    /// value here to compare it would just be the resolution running twice.
+    ///
+    /// A dropped filter's WORDS go back to scoring as ordinary terms — one
+    /// rule, not five, and it is the same rule the empty-result fallback below
+    /// already applies to a source name. It is also what the tap means: "I
+    /// didn't mean the Wallet room, I meant the word wallet."
+    static func find(_ query: String, in corpus: [Thing],
+                     isPoolRefinement: Bool = false,
+                     dropping: Set<Scope.Kind> = []) -> Outcome {
+        let scoped = ranked(query, in: corpus, isPoolRefinement: isPoolRefinement,
+                            honourSource: true, dropping: dropping)
+        guard scoped.hits.isEmpty else { return scoped }
         // A SOURCE FILTER THAT EMPTIES THE ANSWER IS NOT A FILTER, IT IS A WALL
         // (2026-08-06, prd §318 amendment 2). §307 made a source name scope the
         // search and that ruling stands — "my X stuff" over a 3,500-post archive
@@ -45,14 +106,14 @@ enum Retriever {
         // where the source name scores as the ordinary word it was. Every query
         // §307 fixed is unaffected — those return rows, and a non-empty result
         // never reaches this line.
-        guard let named = Self.sourceFilter(in: query),
+        guard !dropping.contains(.source), let named = Self.sourceFilter(in: query),
               corpus.contains(where: { $0.source == named.source }) else { return scoped }
-        return rank(query, in: corpus, isPoolRefinement: isPoolRefinement,
-                    honourSource: false)
+        return ranked(query, in: corpus, isPoolRefinement: isPoolRefinement,
+                      honourSource: false, dropping: dropping)
     }
 
-    private static func rank(_ query: String, in corpus: [Thing], isPoolRefinement: Bool,
-                             honourSource: Bool) -> [Thing] {
+    private static func ranked(_ query: String, in corpus: [Thing], isPoolRefinement: Bool,
+                               honourSource: Bool, dropping: Set<Scope.Kind>) -> Outcome {
         // A SOURCE word is a filter too (2026-08-05) — the other half of what
         // a thing is, and the half this engine could not see. Resolved off the
         // whole query before it's split, because a source name can be two
@@ -67,10 +128,18 @@ enum Retriever {
         // and the words score normally, so a wrong resolution costs nothing.
         // (The caller may hand us a corpus already scoped to that source; then
         // this is trivially true and the filter is a no-op re-check.)
-        let named = honourSource ? Self.sourceFilter(in: query) : nil
+        let named = (honourSource && !dropping.contains(.source))
+            ? Self.sourceFilter(in: query) : nil
         let sourceMatch = named.flatMap { match in
             corpus.contains { $0.source == match.source } ? match : nil
         }
+        // Every filter below appends here as it is HONOURED — never as it is
+        // merely resolved. A source name that no thing carries, a facet with
+        // nothing behind it and a dropped scope are all filters that did not
+        // run, and a chip for one of those would be a control claiming to
+        // explain a result it had no part in (§83).
+        var scopes: [Scope] = []
+        if let sourceMatch { scopes.append(Scope(kind: .source, label: sourceMatch.source)) }
         // Split the query the SAME way a thing's fields are tokenized below —
         // on every non-alphanumeric, not on spaces (2026-08-06).
         //
@@ -102,13 +171,18 @@ enum Retriever {
         // asking about that room's own halves. Confirmed against the corpus
         // like the source, so a facet with nothing behind it is dropped rather
         // than emptying the answer.
-        let facetMatch: (tag: String, words: Set<String>)? = sourceMatch.flatMap { _ in
-            let named = Self.facetFilter(in: query)
-            return named.flatMap { match in
-                corpus.contains { $0.tags.contains(match.tag) } ? match : nil
+        let facetMatch: (tag: String, words: Set<String>)? = dropping.contains(.facet)
+            ? nil
+            : sourceMatch.flatMap { _ in
+                let named = Self.facetFilter(in: query)
+                return named.flatMap { match in
+                    corpus.contains { $0.tags.contains(match.tag) } ? match : nil
+                }
             }
+        if let facetMatch {
+            terms.removeAll { facetMatch.words.contains($0) }
+            scopes.append(Scope(kind: .facet, label: facetMatch.tag))
         }
-        if let facetMatch { terms.removeAll { facetMatch.words.contains($0) } }
 
         // "everything I wrote" — YOUR words, across every room at once
         // (2026-08-05, prd §310). This is the read that needs the whole corpus
@@ -122,29 +196,39 @@ enum Retriever {
         // explicit claim about authorship with no other reading, so it can
         // safely scope the whole corpus. Confirmed against that corpus like
         // every other filter here.
-        let writingScope = Self.writingScope(in: query).flatMap { match in
-            corpus.contains { !$0.tags.isEmpty && !Self.mine.isDisjoint(with: $0.tags) }
-                ? match : nil
+        let writingScope = dropping.contains(.writing) ? nil
+            : Self.writingScope(in: query).flatMap { match in
+                corpus.contains { !$0.tags.isEmpty && !Self.mine.isDisjoint(with: $0.tags) }
+                    ? match : nil
+            }
+        if let writingScope {
+            terms.removeAll { writingScope.contains($0) }
+            scopes.append(Scope(kind: .writing, label: String(localized: "What you wrote")))
         }
-        if let writingScope { terms.removeAll { writingScope.contains($0) } }
 
         // A kind word is a filter, not a search term.
         var kindFilter: ThingKind?
-        terms.removeAll { term in
-            if let kind = ThingKind.allCases.first(where: {
-                $0.typeTag.lowercased() == term || $0.typeTagPlural.lowercased() == term
-            }) {
-                kindFilter = kind
-                return true
+        if !dropping.contains(.kind) {
+            terms.removeAll { term in
+                if let kind = ThingKind.allCases.first(where: {
+                    $0.typeTag.lowercased() == term || $0.typeTagPlural.lowercased() == term
+                }) {
+                    kindFilter = kind
+                    return true
+                }
+                return false
             }
-            return false
         }
+        if let kindFilter { scopes.append(Scope(kind: .kind, label: kindFilter.typeTagPlural)) }
         terms.removeAll { Self.stops.contains($0) }
 
         // A date phrase ("today", "last week", "thursday") is a WHEN filter,
         // not a text term — things outside the range drop out entirely.
-        let dateMatch = DateQuery.match(in: query)
-        if let dateMatch { terms.removeAll { dateMatch.words.contains($0) } }
+        let dateMatch = dropping.contains(.date) ? nil : DateQuery.match(in: query)
+        if let dateMatch {
+            terms.removeAll { dateMatch.words.contains($0) }
+            scopes.append(Scope(kind: .date, label: dateMatch.label))
+        }
 
         let all = corpus
         // Semantic widening: near-synonyms of the query's words, scored
@@ -295,7 +379,7 @@ enum Retriever {
             if weight >= Self.expansionFloor { expandedIdf[word] = weight }
         }
 
-        return prepared.compactMap { entry -> (Thing, Double)? in
+        let hits = prepared.compactMap { entry -> (Thing, Double)? in
             let thing = entry.thing
             var exact = 0.0
             var matchedTerms = 0
@@ -407,8 +491,11 @@ enum Retriever {
             return (thing, score)
         }
         .sorted { $0.1 > $1.1 }
-        .prefix(16)
         .map(\.0)
+        // UNCAPPED here on purpose (2026-08-13). The old `.prefix(16)` sat at
+        // the bottom of the engine, so every caller inherited a bound written
+        // for one of them — see `groundingLimit`. `rank` still applies it.
+        return Outcome(hits: hits, scopes: scopes)
     }
 
     // MARK: - Scoring primitives (pure — verified by scripts/retriever-selftest.sh)

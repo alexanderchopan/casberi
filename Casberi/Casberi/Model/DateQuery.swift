@@ -9,6 +9,15 @@ enum DateQuery {
         let range: ClosedRange<Date>
         /// The words that named the range — strip them from term scoring.
         let words: Set<String>
+        /// What to CALL this range on screen (2026-08-13) — the composer's
+        /// scope chips show every filter the retriever resolved, and a date
+        /// filter has to be nameable to be droppable.
+        ///
+        /// Authored here, at each construction site, rather than derived from
+        /// `words`: that is an unordered Set, so "last week" renders as
+        /// "week last" about half the time, and a bound's bag carries filler
+        /// ("in", "the", "year") that was never in the person's question.
+        let label: String
     }
 
     /// The first date phrase found in the query, if any.
@@ -21,8 +30,14 @@ enum DateQuery {
             return start...end
         }
 
-        if q.contains("yesterday") { return Match(range: day(-1), words: ["yesterday"]) }
-        if q.contains("today") { return Match(range: day(0), words: ["today"]) }
+        if q.contains("yesterday") {
+            return Match(range: day(-1), words: ["yesterday"],
+                         label: String(localized: "Yesterday"))
+        }
+        if q.contains("today") {
+            return Match(range: day(0), words: ["today"],
+                         label: String(localized: "Today"))
+        }
         // "weekend" before "last week": "last weekend" CONTAINS "last week",
         // and matching the wrong phrase handed it the full prior week
         // (review 2026-07-11).
@@ -32,13 +47,15 @@ enum DateQuery {
             let satBack = today == 7 ? 0 : today % 7   // Sun(1)→1, Mon(2)→2, …, Sat(7)→0
             let start = calendar.startOfDay(for: calendar.date(byAdding: .day, value: -satBack, to: now)!)
             let end = calendar.date(byAdding: .day, value: 2, to: start)!.addingTimeInterval(-1)
-            return Match(range: start...end, words: ["weekend", "this", "the", "last"])
+            return Match(range: start...end, words: ["weekend", "this", "the", "last"],
+                         label: String(localized: "Weekend"))
         }
         if q.contains("last week") {
             let thisWeekStart = calendar.dateInterval(of: .weekOfYear, for: now)!.start
             let start = calendar.date(byAdding: .day, value: -7, to: thisWeekStart)!
             return Match(range: start...thisWeekStart.addingTimeInterval(-1),
-                         words: ["last", "week"])
+                         words: ["last", "week"],
+                         label: String(localized: "Last week"))
         }
         if q.contains("week") {
             // Any remaining "week" phrase means the current one — "last week"
@@ -51,12 +68,14 @@ enum DateQuery {
             // never showed (2026-07-09).
             let week = calendar.dateInterval(of: .weekOfYear, for: now)!
             return Match(range: week.start...week.end.addingTimeInterval(-1),
-                         words: ["this", "the", "my", "week"])
+                         words: ["this", "the", "my", "week"],
+                         label: String(localized: "This week"))
         }
         if q.contains("this month") {
             let month = calendar.dateInterval(of: .month, for: now)!
             return Match(range: month.start...month.end.addingTimeInterval(-1),
-                         words: ["this", "month"])
+                         words: ["this", "month"],
+                         label: String(localized: "This month"))
         }
 
         // A weekday name means the MOST RECENT one (including today) — asks
@@ -67,7 +86,10 @@ enum DateQuery {
             let target = i + 1   // Calendar weekday units are 1-based
             let today = calendar.component(.weekday, from: now)
             let back = (today - target + 7) % 7   // 0 = that name IS today
-            return Match(range: day(-back), words: [name])
+            // `weekdaySymbols` is already the calendar's own localized name,
+            // so the chip reads in the reader's language for free.
+            return Match(range: day(-back), words: [name],
+                         label: calendar.weekdaySymbols[i])
         }
 
         // A YEAR (2026-08-05, prd §307). Last, after every relative phrase
@@ -123,7 +145,12 @@ enum DateQuery {
             guard let a = start(lower), let b = end(upper) else { return nil }
             return Match(range: a...b,
                          words: Set(["between", "from", "to", "and",
-                                     String(lower), String(upper)]))
+                                     String(lower), String(upper)]),
+                         // Plain digits and an en dash — never `String(localized:)`
+                         // with an Int argument, which GROUPS it ("2,015–2,018").
+                         // That defect shipped once already in `XRoom`'s headline
+                         // (prd §375); a year is a name, not a quantity.
+                         label: "\(lower)–\(upper)")
         }
 
         // A BOUND. "before 2020" is exclusive of 2020 and "after 2015"
@@ -134,20 +161,30 @@ enum DateQuery {
         let bounding = ["before", "after", "since", "until", "up to", "prior to"]
         let bound = bounding.first { q.contains($0) }
         if let bound {
-            let bag: Set<String> = [bound, String(first), "in", "the", "year"]
+            // The year as plain digits, so the labels below interpolate a
+            // STRING rather than an Int — see the span's note above.
+            let year = String(first)
+            let bag: Set<String> = [bound, year, "in", "the", "year"]
             switch bound {
             case "before", "until", "up to", "prior to":
                 guard let a = start(plausible.lowerBound), let b = start(first) else { return nil }
-                return Match(range: a...b.addingTimeInterval(-1), words: bag)
+                return Match(range: a...b.addingTimeInterval(-1), words: bag,
+                             label: String(localized: "Before \(year)"))
             default:   // "after", "since"
                 let from = bound == "since" ? first : first + 1
                 guard let a = start(from), let b = end(plausible.upperBound) else { return nil }
-                return Match(range: a...b, words: bag)
+                // The label states the range as RESOLVED, not as typed: "after
+                // 2015" is exclusive, so it really means since 2016, and a chip
+                // that said "After 2015" beside a result holding nothing from
+                // 2015 would read as the filter misfiring.
+                return Match(range: a...b, words: bag,
+                             label: String(localized: "Since \(String(from))"))
             }
         }
 
         // A bare year, or "in 2019".
         guard let a = start(first), let b = end(first) else { return nil }
-        return Match(range: a...b, words: [String(first), "in", "the", "year"])
+        return Match(range: a...b, words: [String(first), "in", "the", "year"],
+                     label: String(first))
     }
 }

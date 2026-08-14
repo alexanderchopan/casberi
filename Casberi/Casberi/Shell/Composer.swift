@@ -419,6 +419,53 @@ struct Composer: View {
     /// answer render without a physical keyboard.
     @State private var didAutoSend = false
 
+    // MARK: - Find's live read (2026-08-13)
+
+    /// The filters `Retriever.find` would apply to the draft as it stands, and
+    /// how many things would match. Recomputed on a debounce, and BOTH are
+    /// honestly absent rather than stale: a superseded pass writes nothing.
+    @State private var liveScopes: [Retriever.Scope] = []
+    @State private var liveCount: Int?
+    /// Filters the person has waved off. Survives editing the draft (so a
+    /// dropped scope stays dropped while you refine the words) and is cleared
+    /// when the field is.
+    ///
+    /// The whole `Scope` is kept, not just the `Kind` the engine needs, so the
+    /// chip can be offered BACK. A control that can only ever be turned off is
+    /// a trap: dropping the wrong one would otherwise mean retyping the query
+    /// to get the filter back, which is the problem this feature exists to end.
+    @State private var droppedScopes: [Retriever.Scope] = []
+    private var droppedKinds: Set<Retriever.Scope.Kind> { Set(droppedScopes.map(\.kind)) }
+    /// Debounce for the live read. 400ms of quiet, because the read is not
+    /// cheap — see `liveReadCeiling`.
+    @State private var liveReadTask: Task<Void, Never>?
+    /// The last query a find actually ran, so refining one search doesn't count
+    /// as asking it several times — see `runFind`.
+    @State private var lastFoundQuery: String?
+
+    /// The corpus size past which the draft's live read is SKIPPED — the chip
+    /// shows its plain "Find" and no scope chips appear until a find has run.
+    ///
+    /// MEASURED 2026-08-13, `-O`, on a synthetic corpus with realistic body
+    /// text: `Retriever.find` costs roughly **77ms per 1,000 things** for a
+    /// two-word query and scales with term count (500 → 38ms, 2,000 → 152ms,
+    /// 5,000 → 384ms, 10,000 → 769ms; six terms over 5,000 things → 1,137ms).
+    /// A phone is slower and this runs on the main actor, where SwiftData
+    /// lives — so per-keystroke ranking over a real archive would freeze
+    /// typing outright, which is a far worse bug than the missing number.
+    ///
+    /// 1,200 keeps a live pass near ~90ms on the measuring machine. It is a
+    /// bound on OUR cost, not a claim about the corpus: above it the feature
+    /// simply says nothing rather than saying something slow or wrong.
+    ///
+    /// TO RAISE IT, make the engine cheaper rather than moving this number:
+    /// the hot spot is the phrase-adjacency bonus, which runs a substring scan
+    /// over every candidate's whole body once PER adjacent query pair (hence
+    /// the term-count scaling above), and the per-thing tokenization, which is
+    /// redone on every call even though the corpus is identical between
+    /// keystrokes.
+    private static let liveReadCeiling = 1_200
+
     /// Empty-field ask suggestions — derived from the live corpus on open
     /// (re-ruling 2026-07-08: the dead GENERIC chips stay dead; these are
     /// asks the corpus can actually answer right now). `kind` is the ask's
@@ -2926,14 +2973,67 @@ struct Composer: View {
     /// exactly the `search:<query>` kind this engine already serves — so a
     /// find that proves useful becomes a standing search with one more tap, and
     /// no new machinery.
+    /// What the draft WOULD find, before you commit to finding it — the match
+    /// count and, more importantly, the filters the engine resolved out of
+    /// your sentence (2026-08-13).
+    ///
+    /// The chips are the point and the count is the confirmation. Five hard
+    /// filters can silently remove things (`Retriever.Scope`), and until now
+    /// the only way to discover one had fired wrongly was to read a result
+    /// that made no sense. Showing them BEFORE the tap is strictly better than
+    /// after: the query is still in the field, so correcting is dropping a
+    /// chip rather than re-deriving what you meant.
+    ///
+    /// Debounced and cancellable, and it writes NOTHING when superseded — a
+    /// count from two keystrokes ago is worse than no count. Skipped entirely
+    /// above `liveReadCeiling`; see that constant for the measurement.
+    private func scheduleLiveRead(immediate: Bool = false) {
+        liveReadTask?.cancel()
+        let query = draft.trimmingCharacters(in: .whitespacesAndNewlines)
+        // A paste is a capture on its way to being kept, not a phrase to
+        // search for — `takeChips` already withholds Find for one, so a live
+        // read would be work nothing displays.
+        guard !query.isEmpty, !pasted else {
+            liveScopes = []
+            liveCount = nil
+            droppedScopes = []
+            return
+        }
+        let dropped = droppedKinds
+        liveReadTask = Task { @MainActor in
+            if !immediate {
+                try? await Task.sleep(for: .milliseconds(400))
+                guard !Task.isCancelled else { return }
+            }
+            // The COUNT first, which SQLite answers without materializing a
+            // single row — so an oversized corpus costs one cheap query
+            // rather than the fetch it is too big for.
+            let total = (try? modelContext.fetchCount(FetchDescriptor<Thing>())) ?? 0
+            guard total > 0, total <= Self.liveReadCeiling else {
+                liveScopes = []
+                liveCount = nil
+                return
+            }
+            let things = ((try? modelContext.fetch(FetchDescriptor<Thing>(
+                sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]
+            ))) ?? []).live
+            guard !Task.isCancelled else { return }
+            let outcome = Retriever.find(query, in: things, dropping: dropped)
+            guard !Task.isCancelled else { return }
+            liveScopes = outcome.scopes
+            liveCount = outcome.hits.count
+        }
+    }
+
     private func runFind() {
         let query = draft.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !query.isEmpty, !inFlight else { return }
         DSHaptic.selection()
-        let things = (try? modelContext.fetch(FetchDescriptor<Thing>(
+        let things = ((try? modelContext.fetch(FetchDescriptor<Thing>(
             sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]
-        ))) ?? []
-        guard let result = KeptAskComposers.search(query, things: things) else { return }
+        ))) ?? []).live
+        guard let result = KeptAskComposers.search(query, things: things,
+                                                   dropping: droppedKinds) else { return }
 
         withAnimation(DS.Motion.standard) {
             // A find lands mid-conversation like any other turn — the one
@@ -2964,13 +3064,36 @@ struct Composer: View {
         // over the matches that just landed.
         askGeneration += 1
         nextAsk = nil
-        draft = ""
+        // THE DRAFT SURVIVES A FIND, unlike a committed ask (2026-08-13).
+        // An ask BECOMES the question, so clearing the field is right there.
+        // A search is refined, not asked once: keeping the words means the
+        // band — Find, the match count, and the scope chips — stays up, so
+        // narrowing is dropping a chip or editing a word rather than
+        // reconstructing the whole query from the transcript. This is the
+        // whole of the refinement story; there is no second mechanism.
         answerStream.paint(result.doc)
         lastFindDoc = result.doc
+        // The pass that just ran is the authority on what it filtered, so the
+        // chips come from it rather than from the debounced live read — which
+        // above `liveReadCeiling` never runs at all. This is the only way a
+        // large-corpus search ever gets droppable chips.
+        if let report = result.find {
+            liveReadTask?.cancel()
+            liveScopes = report.scopes
+            liveCount = report.total
+        }
         // Keepable as a standing search — the kind `KeptAskComposers` already
         // serves, so the Keep pill's whole path exists.
         keepableAskKind = "search:\(query)"
-        AskMemory.asked("search:\(query)")
+        // COUNTED ONCE PER QUERY, not once per tap. `AskMemory.asked` feeds the
+        // mint threshold behind "You ask this a lot — keep it?", and now that
+        // the draft survives a find, refining one search is several taps of the
+        // same words — which would trip that prompt after a single session and
+        // make an offer the person never earned (§95's counter, prd §83's rule).
+        if query != lastFoundQuery {
+            lastFoundQuery = query
+            AskMemory.asked("search:\(query)")
+        }
         DSHaptic.success()
     }
 
@@ -3684,6 +3807,7 @@ struct Composer: View {
                     else if new.count - old.count > 8 { pasted = true }
                     if new.isEmpty { pasted = false }
                     detectDraftDate()
+                    scheduleLiveRead()
                 }
                 .lineLimit(1...5)
 
@@ -3763,6 +3887,56 @@ struct Composer: View {
     ///   carries it (the flash says so). Still sits out for a question, so a
     ///   question's one honest exit stays obvious. A found date earns a
     ///   receipt line — proof the Calendar jump lands on the right day.
+    /// The filters the engine resolved out of the draft, each one droppable —
+    /// and each dropped one offered back (2026-08-13, see `Retriever.Scope`).
+    ///
+    /// Sits ABOVE the verb row on purpose: it describes what the Find beneath
+    /// it will do, and reading it after tapping is the situation this replaces.
+    /// Deliberately quieter than the verbs — tint on tintDim at 28pt against
+    /// their 40pt — because these are a report you may act on, not the action.
+    @ViewBuilder
+    private var scopeChips: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: DS.Space.s2) {
+                ForEach(liveScopes, id: \.kind) { scope in
+                    Button {
+                        DSHaptic.selection()
+                        droppedScopes.append(scope)
+                        scheduleLiveRead(immediate: true)
+                    } label: {
+                        scopeCapsule(scope.label, glyph: "xmark", on: true)
+                    }
+                    .buttonStyle(PressSpring())
+                    .accessibilityLabel("Searching only \(scope.label). Tap to search everything.")
+                }
+                ForEach(droppedScopes, id: \.kind) { scope in
+                    Button {
+                        DSHaptic.selection()
+                        droppedScopes.removeAll { $0.kind == scope.kind }
+                        scheduleLiveRead(immediate: true)
+                    } label: {
+                        scopeCapsule(scope.label, glyph: "plus", on: false)
+                    }
+                    .buttonStyle(PressSpring())
+                    .accessibilityLabel("Not searching only \(scope.label). Tap to narrow to it.")
+                }
+            }
+            .padding(.horizontal, 2)
+        }
+    }
+
+    private func scopeCapsule(_ label: String, glyph: String, on: Bool) -> some View {
+        HStack(spacing: DS.Space.s1) {
+            Text(label).dsText(.label12).fontWeight(.medium).lineLimit(1)
+            Image(systemName: glyph).dsGlyph(9, weight: .semibold).accessibilityHidden(true)
+        }
+        .foregroundStyle(on ? DS.tint : DS.textTertiary)
+        .padding(.horizontal, DS.Space.s2 + 2)
+        .frame(height: 28)
+        .background(on ? DS.tintDim : DS.gray100, in: Capsule(style: .continuous))
+        .dsHover()
+    }
+
     @ViewBuilder
     private var takeChips: some View {
         // Three independent gates, so each is purely ADDITIVE — the older
@@ -3784,6 +3958,7 @@ struct Composer: View {
         let offerKeyed = !pasted && draftIsQuestion && AgentKey.isConfigured
         if isOpen && hasDraft && !isRecording, offerFind || offerSend || offerKeyed {
             VStack(alignment: .leading, spacing: DS.Space.s1) {
+                if offerFind && !liveScopes.isEmpty { scopeChips }
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: DS.Space.s2) {
                         // Find leads, and wears the tint FILL where the other
@@ -3797,6 +3972,18 @@ struct Composer: View {
                                     .dsGlyph(14)
                                 Text("Find")
                                     .dsText(.callout15).fontWeight(.semibold)
+                                // The count, when it is known — the chip says
+                                // whether the tap is worth taking, and with
+                                // the scope chips beside it, WHY it isn't. It
+                                // is simply absent otherwise (a big corpus, a
+                                // pass still in flight): a stale or guessed
+                                // number here would be worse than none.
+                                if let liveCount {
+                                    Text("\(liveCount)")
+                                        .dsText(.callout15)
+                                        .foregroundStyle(.white.opacity(0.7))
+                                        .contentTransition(.numericText())
+                                }
                             }
                             .foregroundStyle(.white)
                             .padding(.horizontal, DS.Space.s3 + 2)
