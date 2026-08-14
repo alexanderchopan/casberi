@@ -111,8 +111,14 @@ grep -q 'connected("x")' Casberi/Casberi/Model/BridgeRefresh.swift \
 # that the shipped importer leads with it. Reverting the composition alone left
 # this harness fully green, which is the Cursor-selftest lesson (a guard must
 # prove the real condition, not that the words appear somewhere).
-grep -qF 'let face = row.replyTo.map { "To @\($0) · \(row.text)" } ?? row.text' "$XARCH" \
+# (2026-08-13: the composition moved into `face(reply:text:wordless:)` so a
+# re-import could rebuild a repaired title with the same rule. It is compiled
+# and asserted below; this guard still has to say the shipped LANDING calls it,
+# because the Swift checks can only prove the function is right.)
+grep -qF 'return reply.map { "To @\($0) · \(text)" } ?? text' "$XARCH" \
   || { echo "✗ a reply's recipient no longer LEADS its title — titleLine's 80-char clamp eats a trailing one (§303)"; exit 1; }
+grep -qF 'face(reply: row.replyTo, text: row.text, wordless: row.wordless)' "$XARCH" \
+  || { echo "✗ the landing no longer builds its title through face(reply:text:wordless:)"; exit 1; }
 # The avatar, same reasoning: `accountAvatarURL` is compiled and tested below,
 # but `landTweets` builds `Thing`s and can't be, so only a text guard can say
 # the face reaches a row at all. Three separate facts, each able to fail alone.
@@ -120,7 +126,7 @@ grep -qF 'thing.authorAvatarURL = avatar' "$XARCH" \
   || { echo "✗ your own posts no longer carry your avatar — every row falls back to the X logo"; exit 1; }
 grep -qF 'let face = accountAvatarURL(under: folder)' "$XARCH" \
   || { echo "✗ the archive's profile.js is no longer read — the avatar is nil for every row"; exit 1; }
-grep -qF 'if row.authorAvatarURL == nil, let avatar { row.authorAvatarURL = avatar }' "$XARCH" \
+grep -qF 'if existingRow.authorAvatarURL == nil, let avatar { existingRow.authorAvatarURL = avatar }' "$XARCH" \
   || { echo "✗ a re-import no longer repairs rows on the dedupe hit — a room imported before the face existed can never get one (the folder is a temporary scoped pick, so no foreground sweep can)"; exit 1; }
 # A liked post's author is somebody else and X publishes no face for them, so
 # `landLikes` must never be handed this.
@@ -190,7 +196,7 @@ grep -q 'await XArchiveImport.healRoom(context: context)' Casberi/Casberi/Model/
 # writing from a post you liked.
 grep -q 'thing.postText = row.text' "$XARCH" \
   || { echo "✗ a post's full sentence is no longer in the field the card renders"; exit 1; }
-grep -qF 'thing.parent = SocialCard(handle: replyTo, text: ""' "$XARCH" \
+grep -qF 'thing.parent = SocialCard(' "$XARCH" \
   || { echo "✗ a reply no longer says who it answers — the card doesn't draw the title's 'To @' lead"; exit 1; }
 grep -q 'thing.socialContext = "liked"' "$XARCH" \
   || { echo "✗ a liked post is no longer marked — half the room stops being distinguishable from your own writing"; exit 1; }
@@ -289,6 +295,82 @@ grep -q 'Corpus.bulkImportSources.contains(source) else { return 0 }' Casberi/Ca
 
 TMP=$(mktemp -d /tmp/x-selftest.XXXXXX)
 trap 'rm -rf "$TMP"' EXIT
+
+# --- 2026-08-13 (prd §375): the enrichment pass -----------------------------
+# Five changes, each of which fails INVISIBLY — every one of them leaves a room
+# that renders perfectly and says less than it knows. The Swift assertions
+# below prove the judgement; these prove the shipped app still reaches it.
+#
+# (1) LONG POSTS. `note-tweet.js` holds the body of every post over 280
+# characters; `tweets.js` holds a copy cut mid-sentence. Reading only the
+# second is what shipped from 2026-08-02, and a clipped post and a whole one
+# are both "1 post" in every count on every screen.
+grep -q 'let notes = noteTexts(under: folder)' "$XARCH" \
+  || { echo "✗ note-tweet.js is no longer read — every long post lands clipped again"; exit 1; }
+grep -qF 'if let long = notes[id], long.count > text.count {' "$XARCH" \
+  || { echo "✗ the long body is no longer preferred (or no longer only when LONGER — a wrong join must never be able to shorten a post)"; exit 1; }
+grep -q 'notes: notes' "$XARCH" \
+  || { echo "✗ the note bodies never reach the landing"; exit 1; }
+# (2) PICTURE POSTS. `wordsWithoutMedia` answering empty is the whole signal.
+grep -q 'let wordless = wordsWithoutMedia(raw, entities: entities).isEmpty' "$XARCH" \
+  || { echo "✗ a wordless post is no longer detected — a photo post lands titled with its own t.co shortlink"; exit 1; }
+grep -q 'pictures.contains(id)' "$XARCH" \
+  || { echo "✗ the wordless test no longer requires a real picture in the export — an empty row would land as a photograph"; exit 1; }
+grep -qF 'if row.wordless { tags.append("Photo")' "$XARCH" \
+  || { echo "✗ a picture post is no longer tagged — the room's grid membership reads that tag"; exit 1; }
+grep -q 'thing.tags.contains("Photo")' "$FEEDSCREEN" \
+  || { echo "✗ the X grid no longer reads the tag (matching the localized title 'Photo' would empty the grid outside English)"; exit 1; }
+grep -q 'photoGridSection(photoTiles)' "$FEEDSCREEN" \
+  || { echo "✗ the X room lost its picture half"; exit 1; }
+# (3) REPLY CONTEXT. Two halves: the free one (a self-reply's parent is in the
+# same file) and the one that costs a request. Either can be lost alone.
+grep -q 'text: parentPreview(row.parentID.flatMap { textByID' "$XARCH" \
+  || { echo "✗ a self-reply no longer carries the post it continues — the free half of the context is gone"; exit 1; }
+grep -q 'url: row.parentID.map { permalink(handle: replyTo, id: \$0) }' "$XARCH" \
+  || { echo "✗ a reply's parent has no permalink — the sheet's door dies and fetchReplyContext has nothing to ask about"; exit 1; }
+grep -q 'static func fetchReplyContext' "$XARCH" \
+  || { echo "✗ the reply-context pass is gone"; exit 1; }
+# A gone parent must lose its DOOR, not gain a tag: "Gone" already means the
+# row itself has died (a liked post), and one facet meaning two things is worse
+# than no facet. Clearing the url is also what takes the row out of the queue.
+grep -q 'card.url = nil' "$XARCH" \
+  || { echo "✗ a deleted parent keeps its door (a control that opens nothing) and is re-asked forever"; exit 1; }
+grep -q 'parent.text.isEmpty && !(parent.url ?? "").isEmpty' "$XARCH" \
+  || { echo "✗ the pending test changed — check it still skips self-replies (already filled) and rows with no permalink"; exit 1; }
+grep -q 'if !words.isEmpty' Casberi/Casberi/Screens/SocialReceptionCard.swift \
+  || { echo "✗ ReplyingToCard no longer draws the parent's words — the pass would fill a field nothing renders"; exit 1; }
+# (4) THE BOARDS. "Whose posts you like" is empty until the face pass runs, so
+# the room's only leaderboard could never render for someone who never tapped
+# it. The reply board needs nothing but the archive.
+grep -q 'case "X":' Casberi/Casberi/Model/FeedInsight.swift \
+  || { echo "✗ X has no leaderboard at all"; exit 1; }
+grep -q 'return xBoard(things)' Casberi/Casberi/Model/FeedInsight.swift \
+  || { echo "✗ X no longer picks between its two boards — the likes board alone is empty until the face pass runs"; exit 1; }
+grep -q 'thing.parent?.handle' Casberi/Casberi/Model/FeedInsight.swift \
+  || { echo "✗ the reply board no longer reads the stored card (parsing the localized 'To @' title back apart is the failure it exists to avoid)"; exit 1; }
+# (5) THE ROOM HEAD. `XRoom` is compiled whole below; these are the three
+# wiring facts it can't prove about itself — that it is asked at all, that the
+# probe mirrors the chain (`-roomInsightProbe`'s own rule), and that the demo
+# check knows about it.
+grep -q 'XRoomSource.compose(things: visible).map { .x(\$0) }' "$FEEDSCREEN" \
+  || { echo "✗ the X room head is never composed"; exit 1; }
+grep -q 'XRoomCard(room: room)' "$FEEDSCREEN" \
+  || { echo "✗ nothing draws the X room head"; exit 1; }
+grep -q 'note("xHead"' Casberi/Casberi/Shell/ProbeHooks.swift \
+  || { echo "✗ -roomInsightProbe doesn't know about the X head — it would report the room as leading with the treemap it displaced"; exit 1; }
+grep -q 'xHead             "X"' scripts/verify.sh \
+  || { echo "✗ the demo room-head coverage check has no X row — a head that stops composing over the demo goes unnoticed"; exit 1; }
+# The agent panel's own chain mirrors `shapedSections`, and this is the first
+# per-source head that is a FIGURE rather than a text hero — so without a
+# branch there the tile previews the treemap while the room draws a year strip,
+# which that chain's contract calls worse than no tile at all.
+grep -q 'XRoomSource.compose(things: things), source == XRoomSource.source' Casberi/Casberi/Shell/Composer.swift \
+  || { echo "✗ the agent panel's X tile no longer mirrors the room's head — it would preview a figure the room doesn't draw"; exit 1; }
+# The displacement itself (§349's rule): this card takes the treemap's slot, so
+# the year ROWS carrying each year's subject are what keeps it from drawing
+# less than what it replaced.
+grep -q 'mostly \\(subject)' Casberi/Casberi/Model/XRoom.swift \
+  || { echo "✗ the year rows no longer name each year's subject — the head now draws LESS than the treemap it displaces (§349)"; exit 1; }
 
 # --- extract the shipped functions -----------------------------------------
 python3 - "$OEMBED" "$XARCH" "$SUPPORT" "$TMP/extracted.swift" "$TOPICS" <<'PY'
@@ -396,6 +478,12 @@ pieces = [
     "}\n",
     # DateQuery is Foundation-only, so it compiles exactly as it ships.
     wholefile("Casberi/Casberi/Model/DateQuery.swift"),
+    # …and so is `XRoom` (2026-08-13, prd §375), by design: the room head's
+    # whole judgement — which year is loudest, what a year was about, which
+    # years are silent — compiled AS SHIPPED. It is the only proof these
+    # numbers are right, since no real archive has ever been imported here and
+    # every failure in it renders as a perfectly good-looking card.
+    wholefile("Casberi/Casberi/Model/XRoom.swift"),
     "\nenum XThreads {",
     grab(xarch, "static func threadTexts"),
     grabline(xarch, "static let threadCap"),
@@ -413,6 +501,19 @@ pieces = [
     grab(xarch, "static func readSeries"),
     grab(xarch, "static func read(_ relative"),
     grab(xarch, "static func clean"),
+    # The 2026-08-13 split of `clean` (prd §375). `wordsWithoutMedia` is the
+    # emptiness test that tells a photo-only post from an empty row, and
+    # `expandedText` is the half both of them share — extracted rather than
+    # stubbed, because a stub would let this harness pass over a `clean` that
+    # no longer expands a t.co link at all.
+    grab(xarch, "static func wordsWithoutMedia"),
+    grab(xarch, "static func expandedText"),
+    grab(xarch, "static func face(reply"),
+    grab(xarch, "static func permalink"),
+    grab(xarch, "static func parentPreview"),
+    grabline(xarch, "static let parentPreviewChars"),
+    grab(xarch, "static func noteTarget"),
+    grab(xarch, "static func noteEntities"),
     grab(xarch, "static func identifier"),
     grab(xarch, "static func created"),
     grabvar(xarch, "static let twitterDateFormatter"),
@@ -826,6 +927,165 @@ check("…and they are gone from the full reader too",
 let folded = ScreenshotTopics.subjects(in: "the dashboards are slow")
 check("an inflected noun folds to the form its singular shares",
       folded == ["dashboard"])
+
+// ── 2026-08-13 (prd §375): the enrichment pass ─────────────────────────────
+print("")
+print("the picture posts — a photo is a photo, not its own shortlink")
+// The archive puts a bare t.co in `full_text` for an attached image and files
+// the image under `entities.media`. With WORDS beside it the post keeps them;
+// with nothing beside it the post is a photograph, and `wordsWithoutMedia`
+// answering EMPTY is the only signal that says so.
+let photoEntities: [String: Any] = ["media": [["url": "https://t.co/pic1"]]]
+check("a photo-only post reads as wordless",
+      XArchiveImport.wordsWithoutMedia("https://t.co/pic1", entities: photoEntities).isEmpty)
+check("…and `clean` still refuses to hand back nothing for it",
+      XArchiveImport.clean("https://t.co/pic1", entities: photoEntities) == "https://t.co/pic1")
+check("a captioned photo keeps its caption and loses the shortlink",
+      XArchiveImport.wordsWithoutMedia("at the studio https://t.co/pic1", entities: photoEntities)
+          == "at the studio")
+check("…and `clean` agrees with it",
+      XArchiveImport.clean("at the studio https://t.co/pic1", entities: photoEntities)
+          == "at the studio")
+// A post with a real LINK in it is not a photo post: `entities.urls` is a
+// different key, and confusing the two would file every link-sharing post as a
+// picture and drop its words.
+let linkOnly: [String: Any] = ["urls": [["url": "https://t.co/abc",
+                                         "expanded_url": "https://example.com/x"]]]
+check("a link-only post is not wordless",
+      XArchiveImport.wordsWithoutMedia("https://t.co/abc", entities: linkOnly)
+          == "https://example.com/x")
+check("the picture post's face is the word, not the URL",
+      XArchiveImport.face(reply: nil, text: "", wordless: true) == "Photo")
+check("a reply's recipient still leads its face",
+      XArchiveImport.face(reply: "lindsey", text: "yes exactly", wordless: false)
+          == "To @lindsey · yes exactly")
+// §303 as a test, kept from the day the lead landed: the clamp is what makes
+// the lead necessary, so both halves are asserted through the SHIPPED clamp.
+let wordyReply = String(repeating: "a considered answer ", count: 8)
+let ledFace = IngestSupport.titleLine(
+    XArchiveImport.face(reply: "lindsey", text: wordyReply, wordless: false))
+let trailingFace = IngestSupport.titleLine(wordyReply + " — to @lindsey")
+check("…and it survives the 80-char clamp where a trailing one would not",
+      ledFace.contains("@lindsey") && !trailingFace.contains("@lindsey"))
+
+print("")
+print("the reply's parent — a permalink, and what it said")
+check("a permalink is built from the two facts the archive states",
+      XArchiveImport.permalink(handle: "lindsey", id: "1701")
+          == "https://x.com/lindsey/status/1701")
+check("a parent with no words in the file stays empty, never guessed",
+      XArchiveImport.parentPreview(nil).isEmpty
+      && XArchiveImport.parentPreview("   ").isEmpty)
+check("a short parent is carried whole",
+      XArchiveImport.parentPreview("the post being answered") == "the post being answered")
+// Clamped, because this text is stored inside the reply's own row: a thread of
+// forty self-replies would otherwise keep thirty-nine copies of its own chain.
+let hugeParent = String(repeating: "x", count: 900)
+check("a long parent is clamped and says it was clamped",
+      XArchiveImport.parentPreview(hugeParent).count == 281
+      && XArchiveImport.parentPreview(hugeParent).hasSuffix("…"))
+
+print("")
+print("note-tweet — the long posts, joined to the right post")
+check("a note joins on lifecycle.initialTweetId",
+      XArchiveImport.noteTarget(["lifecycle": ["initialTweetId": "1701"]]) == "1701")
+// The note's OWN id is not the tweet's, so accepting it would file a body
+// against a post that never had one. This is the assertion that a plausible
+// "fall back to noteTweetId" would break.
+check("a note's own id is NEVER used as the join key",
+      XArchiveImport.noteTarget(["noteTweetId": "999"]) == nil)
+check("a numeric join key survives (a snowflake is past Double's exact range)",
+      XArchiveImport.noteTarget(["lifecycle": ["initialTweetId": UInt64(1701)]]) == "1701")
+check("a shape with no join key at all yields nil rather than a guess",
+      XArchiveImport.noteTarget(["core": ["text": "hi"]]) == nil)
+// note-tweet spells the same fact in camelCase where tweets.js uses snake —
+// the field-case drift these exports are known for. Both must expand.
+let camel: [String: Any] = ["urls": [["url": "https://t.co/n1",
+                                      "expandedUrl": "https://example.com/long"]]]
+check("a note's camelCase link expands like a post's snake_case one",
+      XArchiveImport.clean("see https://t.co/n1",
+                           entities: XArchiveImport.noteEntities(camel)) == "see https://example.com/long")
+let snake: [String: Any] = ["urls": [["url": "https://t.co/n1",
+                                      "expanded_url": "https://example.com/long"]]]
+check("…and so does the snake_case spelling of a note's own links",
+      XArchiveImport.clean("see https://t.co/n1",
+                           entities: XArchiveImport.noteEntities(snake)) == "see https://example.com/long")
+
+print("")
+print("XRoom — the years, and which one was loudest")
+// Built as a table so the expected answers are readable: (year, count).
+func sightings(_ table: [(Int, Int)], terms: [Int: [String]] = [:],
+               likes: [Int: [Int]] = [:]) -> [XRoom.Sighting] {
+    var out: [XRoom.Sighting] = []
+    for (year, count) in table {
+        let yearLikes: [Int] = likes[year] ?? []
+        for i in 0..<count {
+            let like: Int? = i < yearLikes.count ? yearLikes[i] : nil
+            out.append(XRoom.Sighting(ref: "x:tweet:\(year)-\(i)", year: year,
+                                      terms: terms[year] ?? [], likes: like))
+        }
+    }
+    return out
+}
+check("a room under the post floor declines",
+      XRoom.compose(sightings([(2019, 5), (2020, 5), (2021, 5)])) == nil)
+check("a room under the year floor declines, however big",
+      XRoom.compose(sightings([(2019, 400), (2020, 400)])) == nil)
+let deep = XRoom.compose(sightings([(2019, 30), (2021, 12), (2022, 5)]))!
+// The SILENT year is the assertion that matters here: 2020 has no rows, and it
+// must still take its column — dropping it would put 2019 and 2021 side by
+// side and silently rescale the axis.
+check("the span runs first year to last, gaps included",
+      deep.years.map(\.year) == [2019, 2020, 2021, 2022])
+check("a silent year is drawn, at zero",
+      deep.years.first { $0.year == 2020 }?.posts == 0 && deep.silent == 1)
+check("the busiest year is the one with the most posts", deep.busiest.year == 2019)
+check("the total counts every sighting", deep.total == 47)
+check("the headline names the year and its count",
+      XRoom.headline(deep).contains("2019") && XRoom.headline(deep).contains("30"))
+check("the note says how much of the span you wrote in",
+      XRoom.note(deep).contains("3") && XRoom.note(deep).contains("4"))
+// A TOTAL order. Two years tied on posts must resolve the same way every time
+// or the card renames its own headline between two identical opens.
+let tied = XRoom.compose(sightings([(2019, 20), (2020, 20), (2021, 20)]))!
+check("a tie goes to the earlier year, deterministically",
+      tied.busiest.year == 2019
+      && XRoom.compose(sightings([(2021, 20), (2020, 20), (2019, 20)]))!.busiest.year == 2019)
+check("rows are biggest first and never include a silent year",
+      XRoom.rows(deep).map(\.year) == [2019, 2021, 2022])
+// The subject floor — `topicMap`'s recurrence rule in miniature. One mention
+// does not make a year's subject, which is the whole difference between a
+// reading and a label.
+let subjects = XRoom.compose(sightings([(2019, 30), (2020, 30), (2021, 30)],
+                                        terms: [2019: ["Design"], 2020: [], 2021: []]))!
+check("a term said in every post of a year is that year's subject",
+      subjects.years.first { $0.year == 2019 }?.subject == "Design")
+check("a year with no terms has no subject rather than a blank one",
+      subjects.years.first { $0.year == 2020 }?.subject == nil)
+check("one mention in a big year is not a subject",
+      XRoom.subject(["Lisbon": 1], posts: 300) == nil)
+check("…and two mentions in a small year is",
+      XRoom.subject(["Lisbon": 2], posts: 6) == "Lisbon")
+check("a subject tie breaks alphabetically, deterministically",
+      XRoom.subject(["Berlin": 4, "Athens": 4], posts: 10) == "Athens")
+// The tap target. `likes` nil is NOT zero — an archive vintage that recorded
+// no counts must not make the first post it sees the year's loudest.
+let loud = XRoom.compose(sightings([(2019, 8), (2020, 8), (2021, 8)],
+                                    likes: [2019: [4, 91, 7]]))!
+check("a year's loudest post is the one with the most likes",
+      loud.years.first { $0.year == 2019 }?.loudestRef == "x:tweet:2019-1")
+check("a year with no counts names no loudest post rather than picking one",
+      loud.years.first { $0.year == 2020 }?.loudestRef == nil)
+check("a bar is a share of the busiest year, and never divides by nothing",
+      XRoom.share(posts: 15, of: 30) == 0.5 && XRoom.share(posts: 5, of: 0) == 0)
+check("a share can't exceed the axis", XRoom.share(posts: 40, of: 30) == 1)
+// The footnote separates "not read yet" from "nothing recurred", which is the
+// difference between a card that will heal and one that never will.
+check("a card with no subjects at all says the room hasn't been read",
+      XRoom.footnote(deep)?.contains("read") == true)
+check("a card with every subject named has no footnote",
+      XRoom.footnote(XRoom.compose(sightings([(2019, 30), (2020, 30), (2021, 30)],
+                                              terms: [2019: ["A"], 2020: ["B"], 2021: ["C"]]))!) == nil)
 
 print("")
 if failures > 0 { print("x-selftest: ✗ \(failures) assertion(s) failed"); exit(1) }

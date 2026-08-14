@@ -46,6 +46,10 @@ struct XArchiveImportScreen: View {
     @State private var held = 0
     @State private var fetching = false
     @State private var pending = 0
+    /// The other half of the second act (2026-08-13, prd §375) — replies whose
+    /// parent post we have a permalink for and no words.
+    @State private var fetchingContext = false
+    @State private var pendingContext = 0
 
     @Query(xRecentDescriptor) private var recent: [Thing]
 
@@ -62,7 +66,7 @@ struct XArchiveImportScreen: View {
                 mode: .oneTimeImport,
                 intro: "X has no live connection — request your archive, bring it here, and search every post, reply and like you ever made. Bookmarks aren't in it: X has never put them there.")
             archiveSection
-            if pending > 0 { authorsSection }
+            if pending > 0 || pendingContext > 0 { secondActSection }
             if !recent.isEmpty {
                 RecentThingsSection(header: "Imported", things: recent.live)
                     .listRowSeparator(.hidden)
@@ -113,28 +117,46 @@ struct XArchiveImportScreen: View {
     }
 
     /// The second act (2026-08-05), TikTok's split for the same reason: the
-    /// import above is instant and offline, this is one request per liked post.
+    /// import above is instant and offline, each of these is one request per
+    /// row. Two verbs since 2026-08-13, in ONE section under ONE sentence —
+    /// they cost the same thing, they ask the same endpoint, and a section each
+    /// would be two slabs and two notes on the screen §314 exists because of.
     ///
-    /// What it buys is narrower than TikTok's and worth stating plainly — a
-    /// liked post already arrives wearing its own words, because `like.js`
-    /// carries `fullText`. What the archive never carries is WHO WROTE IT, and
-    /// without that the room can't answer whose posts you like, which is the
-    /// one thing a decade of likes is actually shaped to say.
-    private var authorsSection: some View {
+    /// What each buys is narrow and worth stating plainly. A liked post already
+    /// arrives wearing its own words (`like.js` carries `fullText`); what the
+    /// archive never carries is WHO WROTE IT. A reply already names its
+    /// recipient; what it can never name is what they SAID — and a reply
+    /// without that is a sentence answering nothing.
+    ///
+    /// Each button appears only while it has work, so a room that is entirely
+    /// posts, or entirely replies to yourself (filled at import, for free),
+    /// never offers a verb with nothing behind it.
+    private var secondActSection: some View {
         Section {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
-                DSSlabButton(title: fetching ? "Finding authors…" : "Find authors for \(pending) likes",
-                             systemImage: "person.crop.circle",
-                             busy: fetching,
-                             enabled: !fetching) {
-                    DSHaptic.tap()
-                    Task { await runFetch() }
+                if pending > 0 {
+                    DSSlabButton(title: fetching ? "Finding authors…" : "Find authors for \(pending) likes",
+                                 systemImage: "person.crop.circle",
+                                 busy: fetching,
+                                 enabled: !fetching && !fetchingContext) {
+                        DSHaptic.tap()
+                        Task { await runFetch() }
+                    }
+                }
+                if pendingContext > 0 {
+                    DSSlabButton(title: fetchingContext ? "Reading replies…" : "Show what \(pendingContext) replies answered",
+                                 systemImage: "arrowshape.turn.up.left",
+                                 busy: fetchingContext,
+                                 enabled: !fetching && !fetchingContext) {
+                        DSHaptic.tap()
+                        Task { await runContextFetch() }
+                    }
                 }
                 // This section's own sentence, and the screen's only one
-                // outside the footer — it is the sole explanation of a verb
-                // that costs network, so it stays beside the button rather
-                // than moving to the bottom with the fine print.
-                DSSlabNote(text: "The archive names the post but never who wrote it. This asks X. No rush — the posts don't expire.")
+                // outside the footer — it is the sole explanation of verbs
+                // that cost network, so it stays beside them rather than
+                // moving to the bottom with the fine print.
+                DSSlabNote(text: "Your archive names the post, not the person, and your reply, not the one it answered. This asks X for both.")
             }
         }
         .dsSlabSection()
@@ -147,6 +169,7 @@ struct XArchiveImportScreen: View {
         staleness = ImportRemoval.stalenessLine(source: "X", context: modelContext)
         held = ImportRemoval.count(source: "X", context: modelContext)
         pending = XArchiveImport.pendingFaceCount(context: modelContext)
+        pendingContext = XArchiveImport.pendingContextCount(context: modelContext)
     }
 
     // MARK: - Run
@@ -224,6 +247,14 @@ struct XArchiveImportScreen: View {
         if summary.dropped > 0 {
             line += " · \(summary.dropped) older not imported"
         }
+        // The repairs say so (2026-08-13). A long post that arrived whole and
+        // one that arrived clipped both count as one post, so without this the
+        // person has no way to tell that the thing they'd most notice losing
+        // came down intact — and, on a RE-import over a room landed before
+        // this, no way to see that anything happened at all.
+        if summary.longform > 0 {
+            line += " · \(summary.longform) long posts in full"
+        }
         return line
     }
 
@@ -260,6 +291,34 @@ struct XArchiveImportScreen: View {
             line += String(localized: " · \(outcome.missed) unreadable")
         }
         if pending > 0 { line += String(localized: " · \(pending) to go") }
+        result = line
+    }
+
+    /// The reply pass, reported with `runFetch`'s discipline: four outcomes,
+    /// four sentences, and GONE said separately from unreadable — a parent post
+    /// that has been deleted is a fact about your archive worth knowing, while
+    /// an unreadable answer is one to try again later.
+    private func runContextFetch() async {
+        fetchingContext = true
+        defer { fetchingContext = false }
+        let outcome = await XArchiveImport.fetchReplyContext(context: modelContext)
+        pendingContext = XArchiveImport.pendingContextCount(context: modelContext)
+
+        if outcome.unreachable {
+            result = String(localized: "Couldn't reach X — your replies are still here, so try again later.")
+            resultIsError = true
+            return
+        }
+        resultIsError = false
+        DSHaptic.success()
+        var line = String(localized: "\(outcome.filled) replies now show what they answered")
+        if outcome.gone > 0 {
+            line += String(localized: " · \(outcome.gone) answered a post that's gone")
+        }
+        if outcome.missed > 0 {
+            line += String(localized: " · \(outcome.missed) unreadable")
+        }
+        if pendingContext > 0 { line += String(localized: " · \(pendingContext) to go") }
         result = line
     }
 }

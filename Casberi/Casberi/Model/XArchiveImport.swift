@@ -49,6 +49,38 @@ import SwiftData
 /// same one every other picture in this app is. The old decline was to copying
 /// originals into a mirrored store, which is still refused; the export's files
 /// stay exactly where they are. See `ImportMedia`.
+///
+/// ## LONG POSTS ARRIVE WHOLE (2026-08-13, prd §375)
+///
+/// `tweets.js` is not the whole export of your own writing, and until this date
+/// this file behaved as though it were. A post over 280 characters is a NOTE:
+/// X stores a clipped copy in `tweets.js` — cut mid-sentence, ending in a t.co
+/// link back to itself — and the real body in `note-tweet.js`, a file nothing
+/// here read. So the longest and most considered things in an archive were the
+/// ones that landed damaged, silently, with a receipt saying they had arrived.
+/// `noteTexts` reads that file and `landTweets` prefers its body whenever it is
+/// LONGER than what `tweets.js` carried, which is the whole rule: a join that
+/// went wrong can only ever leave the post as it was.
+///
+/// ## A PHOTO POST IS A PHOTO (2026-08-13, prd §375)
+///
+/// A post whose only content is a picture has, in the archive, exactly one
+/// piece of text: the t.co shortlink standing in for the image. `clean` kept it
+/// deliberately, because a row with no text at all was dropped — so those posts
+/// landed titled `https://t.co/aBc123`, which is the naked-URL failure `OEmbed`
+/// exists to fix, committed by us. Now a post with no words AND a picture in
+/// the export lands as a PICTURE: no invented caption, no shortlink, and a tile
+/// in the room's grid beside the Snapchat and Files rooms (`FeedScreen`'s
+/// `.x` shape).
+///
+/// ## WHAT A REPLY WAS ANSWERING (2026-08-13, prd §375)
+///
+/// Most of a long archive is replies, and a reply alone is a non sequitur. Two
+/// halves, in the order they cost: a SELF-reply's parent is already in this
+/// file, so its words are filled in at import for free; a reply to somebody
+/// else is `fetchReplyContext`, a second act like `fetchFaces` — one keyless
+/// oEmbed request per reply, opt-in, resumable, and never a claim about a post
+/// we couldn't read.
 enum XArchiveImport {
 
     static let source = "X"
@@ -67,6 +99,16 @@ enum XArchiveImport {
         /// Private messages, landed only when `ImportOptions.includeMessages`
         /// says so. See that file — the default is off and stays off.
         var messages = 0
+        /// Posts that came down whole because `note-tweet.js` held their real
+        /// body (2026-08-13). Counted rather than folded into `posts` because
+        /// it is the one number that says a truncation was REPAIRED — an
+        /// archive with long posts and a zero here means the join failed, and
+        /// the rows would look completely normal either way.
+        var longform = 0
+        /// Wordless picture posts, landed as pictures rather than as their own
+        /// shortlink. Counted for the same reason: before 2026-08-13 these
+        /// landed titled `https://t.co/…`, which looked like data.
+        var photos = 0
         var failed = false
 
         var imported: Int { posts + replies + liked + messages }
@@ -135,11 +177,23 @@ enum XArchiveImport {
         // X logo, three thousand times, in a room that is entirely your own
         // writing. Same contract as the handle above: nil changes nothing.
         let face = accountAvatarURL(under: folder)
+        // The long-form bodies, read BEFORE the posts because every post wants
+        // to be asked about (2026-08-13). A missing or renamed `note-tweet.js`
+        // yields an empty table and the posts land exactly as they did before,
+        // so this can only ever repair a truncation, never cause one.
+        let notes = noteTexts(under: folder)
+        // The picture index, read ONCE for the whole import and used twice: to
+        // tell a wordless photo post from an empty row while landing, and to
+        // thumbnail the rows afterwards. It used to be built inside `mediaJobs`
+        // — that is a full directory enumeration, and doing it twice for one
+        // import would be the same cost paid for no reason.
+        let pictures = ImportMedia.xMediaIndex(under: folder)
         var tweetFiles = readSeries("tweets", under: folder)
         if tweetFiles.isEmpty { tweetFiles = readSeries("tweet", under: folder) }
         for data in tweetFiles {
             foundAnyCategory = true
-            landTweets(data, mine: mine, avatar: face, existing: existing,
+            landTweets(data, mine: mine, avatar: face, notes: notes,
+                       pictures: Set(pictures.keys), existing: existing,
                        summary: &summary, landed: &landed, seen: &seen)
         }
         for data in readSeries("like", under: folder) {
@@ -161,7 +215,7 @@ enum XArchiveImport {
         // rides the same insert (prd §310). Inside the scoped grant, which is
         // why this can't be a later heal — there is no second chance at a
         // folder the person has stopped granting.
-        let pixels = await ImportMedia.decode(mediaJobs(landed, under: folder))
+        let pixels = await ImportMedia.decode(mediaJobs(landed, index: pictures))
         ImportMedia.apply(pixels, to: landed)
         await finish(&summary, landed: landed, context: context, progress: progress)
         return summary
@@ -362,17 +416,27 @@ enum XArchiveImport {
 
     @MainActor
     private static func landTweets(_ data: Data, mine: String?, avatar: String?,
+                                   notes: [String: String], pictures: Set<String>,
                                    existing: [String: Thing], summary: inout Summary,
                                    landed: inout [Thing], seen: inout Set<String>) {
         guard let entries = parseArray(data) else { return }
 
         struct Row {
             let date: Date; let text: String; let id: String; let replyTo: String?
-            /// The post this one answers, when the archive names it. Only ever
-            /// used to recognise a SELF-reply — see `threadTexts`.
+            /// The post this one answers, when the archive names it. Used to
+            /// recognise a SELF-reply (see `threadTexts`), and since
+            /// 2026-08-13 to build the parent's own permalink.
             let parentID: String?
             let likes: Int?
             let reposts: Int?
+            /// Nothing but a picture — no words of its own. See the type doc.
+            let wordless: Bool
+            /// This post's body came from `note-tweet.js` rather than from the
+            /// clipped copy in `tweets.js`. Carried on the row rather than
+            /// counted where it is discovered, so the count is incremented
+            /// once, where the row actually LANDS or is repaired — a post the
+            /// cap refused never happened, and must not be reported as fixed.
+            let longform: Bool
         }
         var rows: [Row] = []
         for entry in entries {
@@ -388,15 +452,38 @@ enum XArchiveImport {
                 summary.retweets += 1
                 continue
             }
-            let text = clean(raw, entities: tweet["entities"] as? [String: Any])
-            guard !text.isEmpty, let date = created(tweet, id: id) else { continue }
+            let entities = tweet["entities"] as? [String: Any]
+            var text = clean(raw, entities: entities)
+            // THE LONG BODY, when this post is a note (2026-08-13). Taken only
+            // when it is longer than what `tweets.js` carried: `note-tweet.js`
+            // is joined on an id out of a second file, and the one thing a
+            // wrong join must never be able to do is shorten a post.
+            var longform = false
+            if let long = notes[id], long.count > text.count {
+                text = long
+                longform = true
+            }
+            // A PICTURE POST. `wordsWithoutMedia` is empty exactly when the
+            // post's only text was the shortlink standing in for its own
+            // image; paired with a file in the export, that is a photograph
+            // and not an empty row.
+            let wordless = wordsWithoutMedia(raw, entities: entities).isEmpty
+                && pictures.contains(id)
+            guard !text.isEmpty || wordless, let date = created(tweet, id: id) else { continue }
             let replyTo = (tweet["in_reply_to_screen_name"] as? String)
                 .flatMap { $0.isEmpty ? nil : $0 }
-            rows.append(Row(date: date, text: text, id: id, replyTo: replyTo,
+            rows.append(Row(date: date, text: wordless ? "" : text, id: id, replyTo: replyTo,
                             parentID: parentIdentifier(tweet),
                             likes: metric(tweet, "favorite_count"),
-                            reposts: metric(tweet, "retweet_count")))
+                            reposts: metric(tweet, "retweet_count"),
+                            wordless: wordless, longform: longform))
         }
+        // Every post's own words, keyed by id — what fills in a SELF-reply's
+        // parent for free (2026-08-13). Built over the whole file before the
+        // cap, exactly as `threadTexts` is, so a continuation still knows what
+        // it was answering even when the parent itself was capped out.
+        let textByID = Dictionary(rows.map { ($0.id, $0.text) },
+                                  uniquingKeysWith: { a, _ in a })
         // Threads, before the cap so a chain is measured over the whole file.
         let threads = threadTexts(rows.map { ($0.id, $0.parentID, $0.text, $0.date) })
         // Newest first BEFORE the cap — a cap over file order would keep the
@@ -418,9 +505,27 @@ enum XArchiveImport {
                 // healed. Without this a re-import would skip every row it
                 // already had and change nothing, which reads as the fix not
                 // having landed.
-                if let row = existing[ref], row.isLive {
-                    if row.authorHandle == nil, let mine { row.authorHandle = mine }
-                    if row.authorAvatarURL == nil, let avatar { row.authorAvatarURL = avatar }
+                if let existingRow = existing[ref], existingRow.isLive {
+                    if existingRow.authorHandle == nil, let mine { existingRow.authorHandle = mine }
+                    if existingRow.authorAvatarURL == nil, let avatar { existingRow.authorAvatarURL = avatar }
+                    // THE TRUNCATION, repaired in place (2026-08-13). A room
+                    // imported before `note-tweet.js` was read holds every long
+                    // post cut mid-sentence, and — like the avatar above — this
+                    // is the only pass that can ever reach it: the bodies live
+                    // in the archive folder, a temporary scoped pick, so no
+                    // later foreground sweep can go and get them.
+                    //
+                    // Longer only, and the stored vector is dropped with the
+                    // change: a row whose words grew by three paragraphs is
+                    // described by an embedding of its opening sentence.
+                    if row.longform, row.text.count > existingRow.content.count {
+                        existingRow.content = row.text
+                        existingRow.postText = row.text
+                        existingRow.title = IngestSupport.titleLine(
+                            face(reply: row.replyTo, text: row.text, wordless: row.wordless))
+                        existingRow.embedding = nil
+                        summary.longform += 1
+                    }
                 }
                 summary.skipped += 1
                 continue
@@ -439,13 +544,20 @@ enum XArchiveImport {
             // the field the retriever scores highest. Leading with it survives
             // the clamp and costs the tail of a sentence whose full text is on
             // `content` regardless.
-            let face = row.replyTo.map { "To @\($0) · \(row.text)" } ?? row.text
             var tags = [row.replyTo == nil ? "Post" : "Reply"]
             let thread = threads[row.id]
             if thread != nil { tags.append("Thread") }
+            // A §308 facet for the picture posts, so "photos I posted" is a
+            // filter rather than a hope. It rides beside Post/Reply rather than
+            // replacing either: a wordless picture is still a post or still a
+            // reply, and the room's own grid membership reads the pixels, not
+            // this tag.
+            if row.wordless { tags.append("Photo"); summary.photos += 1 }
+            if row.longform { summary.longform += 1 }
             let thing = Thing(
                 kind: .note,
-                title: IngestSupport.titleLine(face),
+                title: IngestSupport.titleLine(
+                    face(reply: row.replyTo, text: row.text, wordless: row.wordless)),
                 content: row.text,
                 source: "X",
                 capturedAt: row.date,
@@ -479,7 +591,12 @@ enum XArchiveImport {
             // the clamped title, where it survives a cut that would eat it at
             // the end. The card has room to say who a reply answers on its own
             // line and shouldn't repeat it inside the sentence.
-            thing.postText = row.text
+            //
+            // Never an EMPTY string on a picture post (2026-08-13): `Verbs`
+            // copies `postText ?? content`, so an empty one there would hand
+            // somebody a blank clipboard where a nil hands them the row —
+            // `healRoom`'s ruling, one field over.
+            if !row.text.isEmpty { thing.postText = row.text }
             // Yours, when the archive said so. Same slot a liked post's author
             // lands in, which is what lets one card render both halves of the
             // room without asking which half it's drawing.
@@ -503,8 +620,25 @@ enum XArchiveImport {
             // `ref` deliberately stays nil: it is what `foldThreadReplies`
             // walks, and X's chains are already handled at import (a head
             // carries its own `enrichedText`).
+            //
+            // TWO FIELDS ADDED 2026-08-13, and they are the difference between
+            // a label and context. `url` is the parent's own permalink, built
+            // from the two things the archive states — who was answered and
+            // which post — which makes the sheet's `ReplyingToCard` a door
+            // rather than a caption, and is what `fetchReplyContext` reads to
+            // ask X what that post said. `text` is filled here, for free, for
+            // a SELF-reply: the post being answered is in this very file, so a
+            // thread continuation carries the sentence it continues with no
+            // request at all. A reply to somebody else keeps an empty `text`
+            // until the second act names it — never a guess, and
+            // `ReplyingToCard` draws no words when there are none.
             if let replyTo = row.replyTo {
-                thing.parent = SocialCard(handle: replyTo, text: "", avatarURL: nil, url: nil, ref: nil)
+                thing.parent = SocialCard(
+                    handle: replyTo,
+                    text: parentPreview(row.parentID.flatMap { textByID[$0] }),
+                    avatarURL: nil,
+                    url: row.parentID.map { permalink(handle: replyTo, id: $0) },
+                    ref: nil)
             }
             // What the post actually did. No new field — `likeCount` and
             // `repostCount` have been on `Thing` since prd 81's social pass,
@@ -695,8 +829,8 @@ enum XArchiveImport {
     /// row that is not in the context, which is what the liveness rules are
     /// about. This shape avoids relying on that being true forever.)
     @MainActor
-    private static func mediaJobs(_ landed: [Thing], under folder: URL) -> [ImportMedia.Job] {
-        let index = ImportMedia.xMediaIndex(under: folder)
+    private static func mediaJobs(_ landed: [Thing],
+                                  index: [String: URL]) -> [ImportMedia.Job] {
         guard !index.isEmpty else { return [] }
         var jobs: [ImportMedia.Job] = []
         for thing in landed where thing.kind == .note {
@@ -827,6 +961,128 @@ enum XArchiveImport {
     private struct Job: Sendable {
         let ref: String
         let url: URL
+    }
+
+    // MARK: - The other second act: what a reply was answering
+
+    struct ContextResult {
+        /// Replies that now carry the words they were answering.
+        var filled = 0
+        /// Parents X says are deleted or private. The reply keeps its
+        /// recipient and loses only the door — see `fetchReplyContext`.
+        var gone = 0
+        var missed = 0
+        /// Every attempt failed WITHOUT a status, and at least one was made —
+        /// `FaceResult.unreachable`'s reasoning exactly, including why
+        /// deletions are excluded from it.
+        var unreachable: Bool { filled == 0 && gone == 0 && missed > 0 }
+    }
+
+    /// Replies still missing the post they answer.
+    @MainActor
+    static func pendingContextCount(context: ModelContext) -> Int {
+        pendingContext(context: context).count
+    }
+
+    /// A reply is pending while its parent card has a permalink and no words.
+    ///
+    /// Three clauses, each load-bearing. A card with no `url` predates
+    /// 2026-08-13 or came from an archive that named no parent id, and there is
+    /// nothing to ask about. A card with words is either a self-reply (filled
+    /// at import, for free) or one this pass already answered. And a card whose
+    /// parent turned out to be gone has had its `url` cleared, which is what
+    /// takes it out of this queue for good — see `fetchReplyContext`.
+    @MainActor
+    private static func pendingContext(context: ModelContext) -> [Thing] {
+        let name = source
+        let descriptor = FetchDescriptor<Thing>(
+            predicate: #Predicate { $0.source == name },
+            sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]
+        )
+        let all = (try? context.fetch(descriptor)) ?? []
+        return all.live.filter {
+            guard $0.kind == .note, let parent = $0.parent else { return false }
+            return parent.text.isEmpty && !(parent.url ?? "").isEmpty
+        }
+    }
+
+    /// Fills in the post each reply was answering, from X's own keyless oEmbed
+    /// endpoint, one request each (2026-08-13, prd §375).
+    ///
+    /// WHY IT IS WORTH A REQUEST. Most of a long-lived account's archive is
+    /// replies, and a reply on its own is a non sequitur: "yes, exactly this"
+    /// filed under your name in 2019 with no way to learn what "this" was. X's
+    /// own product cannot answer it either once the conversation is old. The
+    /// import already names the RECIPIENT — that is free, it is in the file —
+    /// and this names what they SAID, which is the difference between a label
+    /// and context. `ReplyingToCard` in the thing sheet has drawn those words
+    /// since the social pass; there were simply never any to draw.
+    ///
+    /// A SEPARATE, EXPLICIT ACT, like `fetchFaces` and for its reasons: the
+    /// import is instant and offline, this is one request per reply, and
+    /// somebody importing a decade of them should choose to spend that rather
+    /// than discover it. Under no deadline either — a public post does not
+    /// expire — so an unfinished pass simply resumes.
+    ///
+    /// A GONE PARENT LOSES ITS DOOR AND KEEPS ITS NAME. When X answers 404 /
+    /// 410 / 403 the card's `url` is cleared: the row still says who was
+    /// answered (the archive's own fact, still true), the sheet stops offering
+    /// a door onto a post that isn't there (P4 — a control that does nothing),
+    /// and the row leaves this queue permanently. That is deliberately NOT the
+    /// "Gone" tag `fetchFaces` uses: there it is the LIKED POST — the row
+    /// itself — that has died, and tagging your own surviving reply the same
+    /// way would make the facet mean two different things.
+    ///
+    /// UNMEASURED against a real archive. Every failure returns nil and leaves
+    /// the row exactly as it landed.
+    @MainActor
+    @discardableResult
+    static func fetchReplyContext(limit: Int = 200, context: ModelContext) async -> ContextResult {
+        let waiting = pendingContext(context: context).prefix(limit)
+        let jobs: [Job] = waiting.compactMap { thing in
+            guard let ref = thing.sourceRef,
+                  let raw = thing.parent?.url, let url = URL(string: raw) else { return nil }
+            return Job(ref: ref, url: url)
+        }
+        guard !jobs.isEmpty else { return ContextResult() }
+
+        // Four at a time, the shared ceiling every bulk fetch in this app uses.
+        let answers = await IngestSupport.boundedGather(jobs, maxConcurrent: 4) { job in
+            let outcome = await OEmbed.ask(job.url)
+            return (job.ref, outcome.response, outcome.status)
+        }
+
+        let byRef = IngestSupport.thingsByRef(context, source: source)
+        var result = ContextResult()
+        var changed: [Thing] = []
+        for (ref, embed, status) in answers {
+            guard let thing = byRef[ref], thing.isLive, var card = thing.parent else { continue }
+            if OEmbed.meansGone(status) {
+                result.gone += 1
+                card.url = nil
+                thing.parent = card
+                changed.append(thing)
+                continue
+            }
+            guard let embed, let words = embed.title, !words.isEmpty else {
+                result.missed += 1
+                continue
+            }
+            card.text = parentPreview(words)
+            // The handle X answers with beats the one the archive recorded: a
+            // reply from 2016 names whoever that account was called in 2016,
+            // and a renamed account's old handle is a dead link and an
+            // unsearchable name. Only ever an overwrite with something real.
+            if let handle = embed.authorHandle, !handle.isEmpty { card.handle = handle }
+            thing.parent = card
+            result.filled += 1
+            changed.append(thing)
+        }
+        if !changed.isEmpty {
+            context.saveHonestly()
+            SpotlightIndex.index(changed)
+        }
+        return result
     }
 
     /// Writes an oEmbed answer onto a liked row.
@@ -1007,6 +1263,50 @@ enum XArchiveImport {
     /// expansion is left as it is rather than dropped — an opaque link still
     /// opens.
     private static func clean(_ raw: String, entities: [String: Any]?) -> String {
+        let full = expandedText(raw, entities: entities)
+        let stripped = wordsWithoutMedia(raw, entities: entities)
+        return stripped.isEmpty ? full : stripped
+    }
+
+    /// The post with its own picture links taken out — EMPTY exactly when the
+    /// post was nothing but a picture (2026-08-13).
+    ///
+    /// A PICTURE'S OWN SHORTLINK (2026-08-06). An attached photo, video or GIF
+    /// puts a bare `t.co` shortlink in `full_text` and files itself under
+    /// `entities.media` — a DIFFERENT key from the `urls` `expandedText`
+    /// swaps — so that shortlink survived every clean and rode into `content`
+    /// on every post anybody ever attached an image to. X's own client has
+    /// never shown it, and downstream it was worse than ugly: `ScreenshotTopics`
+    /// read `t.co` as a hostname, it cleared `normalize` (four characters,
+    /// three letters, no stoplist entry), it recurred across thousands of rows,
+    /// and `cells` — which credits each row to its single most common
+    /// qualifying term — collapsed the whole room into one cell labelled `t.co`
+    /// under the title "What you post about".
+    ///
+    /// Split out of `clean` rather than folded into it because the two answers
+    /// mean different things and one caller needs both: `clean` must never
+    /// return an empty string for a photo-only post (an empty row was dropped,
+    /// so every picture would stop importing), while `landTweets` needs to know
+    /// that emptiness is exactly what happened, so it can file the row as a
+    /// photograph instead of as its own shortlink.
+    static func wordsWithoutMedia(_ raw: String, entities: [String: Any]?) -> String {
+        let text = expandedText(raw, entities: entities)
+        guard let media = entities?["media"] as? [[String: Any]], !media.isEmpty else {
+            return text
+        }
+        var stripped = text
+        for item in media {
+            guard let short = item["url"] as? String, !short.isEmpty else { continue }
+            stripped = stripped.replacingOccurrences(of: short, with: " ")
+        }
+        return stripped
+            .replacingOccurrences(of: "[ \\t]+", with: " ", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    /// The post's words with its t.co links swapped back and its entities
+    /// decoded — everything `clean` does except the picture-link strip.
+    private static func expandedText(_ raw: String, entities: [String: Any]?) -> String {
         guard !raw.isEmpty else { return "" }
         var text = raw
         if let urls = entities?["urls"] as? [[String: Any]] {
@@ -1017,36 +1317,112 @@ enum XArchiveImport {
                 text = text.replacingOccurrences(of: short, with: full)
             }
         }
-        // A PICTURE'S OWN SHORTLINK (2026-08-06). An attached photo, video or
-        // GIF puts a bare `t.co` shortlink in `full_text` and files itself
-        // under `entities.media` — a DIFFERENT key from the `urls` expanded
-        // above, so that shortlink survived every clean and rode into
-        // `content` on every post anybody ever attached an image to. X's own
-        // client has never shown it, and downstream it was worse than ugly:
-        // `ScreenshotTopics` read `t.co` as a hostname, it cleared `normalize`
-        // (four characters, three letters, no stoplist entry), it recurred
-        // across thousands of rows, and `cells` — which credits each row to
-        // its single most common qualifying term — collapsed the whole room
-        // into one cell labelled `t.co` under the title "What you post about".
-        //
-        // Removed only when WORDS REMAIN. A photo-only post is nothing but its
-        // shortlink, and `landTweets` drops a row whose text is empty, so
-        // stripping unconditionally would silently stop importing exactly the
-        // posts that carry pictures.
-        let decoded = IngestSupport.decodeHTMLEntities(text)
+        return IngestSupport.decodeHTMLEntities(text)
             .trimmingCharacters(in: .whitespacesAndNewlines)
-        guard let media = entities?["media"] as? [[String: Any]], !media.isEmpty else {
-            return decoded
-        }
-        var stripped = text
-        for item in media {
-            guard let short = item["url"] as? String, !short.isEmpty else { continue }
-            stripped = stripped.replacingOccurrences(of: short, with: " ")
-        }
-        let words = IngestSupport.decodeHTMLEntities(stripped)
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-        return words.isEmpty ? decoded : words
     }
+
+    // MARK: - Long-form posts (`note-tweet.js`)
+
+    /// The real body of every post too long for `tweets.js`, keyed by the tweet
+    /// it belongs to (2026-08-13, prd §375).
+    ///
+    /// X files a post over 280 characters as a NOTE: `tweets.js` keeps a copy
+    /// cut mid-sentence with a t.co link back to the note, and the body lives
+    /// here. `landTweets` prefers this text whenever it is LONGER, which is the
+    /// safety property of the whole feature — a join that resolves to the wrong
+    /// id, or to nothing, can only leave the post exactly as it was.
+    ///
+    /// UNMEASURED against a real archive, like everything else in this file.
+    /// Both known spellings of the join key are tried and every step is an
+    /// optional read, so a shape this doesn't recognise contributes nothing.
+    static func noteTexts(under root: URL) -> [String: String] {
+        var out: [String: String] = [:]
+        for data in readSeries("note-tweet", under: root) {
+            guard let entries = parseArray(data) else { continue }
+            for entry in entries {
+                let note = (entry["noteTweet"] as? [String: Any]) ?? entry
+                let core = (note["core"] as? [String: Any]) ?? note
+                guard let raw = core["text"] as? String, !raw.isEmpty,
+                      let id = noteTarget(note) else { continue }
+                let text = clean(raw, entities: noteEntities(core))
+                guard !text.isEmpty else { continue }
+                // Longest wins. A note that was edited appears more than once
+                // in some vintages, and the fullest copy is the one to keep —
+                // the same rule the caller applies against `tweets.js`.
+                if text.count > (out[id]?.count ?? 0) { out[id] = text }
+            }
+        }
+        return out
+    }
+
+    /// Which post a note belongs to. `lifecycle.initialTweetId` is the join X
+    /// documents; `noteTweetId` is the NOTE's own id and is deliberately not
+    /// used as a fallback — it does not equal the tweet id, so accepting it
+    /// would file a body against a post that never had one.
+    private static func noteTarget(_ note: [String: Any]) -> String? {
+        if let lifecycle = note["lifecycle"] as? [String: Any] {
+            if let s = lifecycle["initialTweetId"] as? String, !s.isEmpty { return s }
+            if let n = lifecycle["initialTweetId"] as? UInt64 { return String(n) }
+        }
+        if let s = note["tweetId"] as? String, !s.isEmpty { return s }
+        return nil
+    }
+
+    /// A note's links in the shape `clean` reads.
+    ///
+    /// `note-tweet.js` spells the same fact in camelCase (`expandedUrl`) where
+    /// `tweets.js` uses snake_case (`expanded_url`) — the field-case drift this
+    /// export is already known for (see `TikTokImport`'s two eras). Both are
+    /// accepted; a note with no `urls` at all yields nil and its t.co links are
+    /// left as they are, which is what `clean` already does for a post whose
+    /// link carries no expansion.
+    private static func noteEntities(_ core: [String: Any]) -> [String: Any]? {
+        guard let urls = core["urls"] as? [[String: Any]] else { return nil }
+        let mapped: [[String: Any]] = urls.compactMap { entry in
+            guard let short = entry["url"] as? String, !short.isEmpty,
+                  let full = (entry["expandedUrl"] as? String)
+                    ?? (entry["expanded_url"] as? String), !full.isEmpty
+            else { return nil }
+            return ["url": short, "expanded_url": full]
+        }
+        return mapped.isEmpty ? nil : ["urls": mapped]
+    }
+
+    // MARK: - Small shapes the landing reads
+
+    /// A row's clamped face. The recipient LEADS a reply (the §303 clamp
+    /// ruling, see the call site) and a wordless picture post says so plainly
+    /// rather than wearing the shortlink that used to stand in for its image.
+    static func face(reply: String?, text: String, wordless: Bool) -> String {
+        if wordless { return String(localized: "Photo") }
+        return reply.map { "To @\($0) · \(text)" } ?? text
+    }
+
+    /// A post's own web address, from the two facts the archive states.
+    ///
+    /// X resolves a status by its ID and ignores the handle in the path, so
+    /// this is a real permalink even for an account that has since been
+    /// renamed — and it is also what `fetchReplyContext` hands to oEmbed.
+    static func permalink(handle: String, id: String) -> String {
+        "https://x.com/\(handle)/status/\(id)"
+    }
+
+    /// What a parent card carries of the post it names.
+    ///
+    /// Clamped, because this text is stored inside the reply's own row — a
+    /// thread of forty self-replies would otherwise keep thirty-nine copies of
+    /// its own chain, and the card draws two lines of it. nil or blank in,
+    /// empty out: an empty `text` is what `ReplyingToCard` reads as "we don't
+    /// know what that post said", which is the truth for a reply to somebody
+    /// else until the second act runs.
+    static func parentPreview(_ text: String?) -> String {
+        guard let text = text?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !text.isEmpty else { return "" }
+        guard text.count > parentPreviewChars else { return text }
+        return String(text.prefix(parentPreviewChars)) + "…"
+    }
+
+    private static let parentPreviewChars = 280
 
     /// A tweet's id as a string, from whichever field this archive's vintage
     /// used. `id` may arrive as a JSON number, which for a modern snowflake is

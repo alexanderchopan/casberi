@@ -22359,3 +22359,141 @@ into that line.
 **Not covered, by the user's own ruling:** everything outside the wallet. A
 token price on a chart you watch is public information about a market, not a
 statement about you.
+
+## §375 — The archive reads like an archive (user: "how can we enrich the downloaded twitter experience", then "do all", 2026-08-13)
+
+Five changes to the X room. Two are repairs of things that shipped wrong and
+could not be seen from outside; three are readings the corpus could always have
+supported and never did.
+
+### 1. Long posts arrived clipped, silently, since 2026-08-02
+
+`tweets.js` is not the whole export of your own writing. A post over 280
+characters is a NOTE: X keeps a copy in `tweets.js` cut mid-sentence and ending
+in a t.co link back to itself, and the real body in `note-tweet.js` — a file
+this importer never opened. So the longest and most considered things in an
+archive were the ones that landed damaged, under a receipt saying they had
+arrived, in a room whose whole promise is that it holds what you wrote.
+
+Nothing could have caught it. A clipped post and a whole one are both "1 post"
+in the receipt, on the screen, in every count, and in the room. The rows look
+perfect.
+
+The rule that makes the join safe is that the note's body is taken **only when
+it is LONGER** than what `tweets.js` carried. A join resolving to the wrong id,
+or to nothing, can then only ever leave the post exactly as it was. The join
+key is `lifecycle.initialTweetId` and deliberately never `noteTweetId`, which
+is the note's own id and does not equal the tweet's — accepting it as a
+fallback would file a body against a post that never had one. A re-import
+repairs rows already in the store, on the dedupe hit, because the archive
+folder is a temporary scoped pick and no foreground sweep can go back for it.
+
+### 2. A photo post is a photograph, not its own shortlink
+
+A post whose only content is a picture has exactly one piece of text in the
+archive: the t.co shortlink standing in for the image. `clean` kept it on
+purpose — a row with no text at all was dropped, so stripping unconditionally
+would have stopped importing exactly the posts that carry pictures — and the
+result was rows titled `https://t.co/aBc123`. That is the naked-URL failure
+`OEmbed` exists to fix, committed by us, in the one room where the person
+recognises every row.
+
+`wordsWithoutMedia` splits the two questions apart: `clean` still never returns
+nothing, and the landing can now ask whether the emptiness happened. A post
+with no words AND a file in the export lands as a picture — no invented
+caption, no shortlink, a `Photo` facet — and the room gets a **grid half**, the
+Snapchat and Files split, third instance. A captioned photograph stays a post
+card: the caption is the post, and pulling its picture into a grid would
+separate the two halves of one thing.
+
+### 3. What a reply was answering
+
+Most of a long-lived account's archive is replies, and a reply alone is a non
+sequitur: "yes, exactly this" filed under your name in 2019 with nothing to say
+what "this" was. X's own product cannot answer it either once the conversation
+is old enough.
+
+Two halves, in the order they cost. A **self-reply's parent is in the same
+file**, so its words are filled in at import for free — a thread continuation
+now carries the sentence it continues with no request at all. A reply to
+somebody else is a second act (`fetchReplyContext`), the `fetchFaces` split for
+the same reason: the import is instant and offline, this is one keyless oEmbed
+request per reply, and someone importing a decade of them should choose to
+spend that rather than discover it. Under no deadline, so an unfinished pass
+resumes.
+
+Two rulings inside it. A **gone parent loses its door and keeps its name**: the
+card's permalink is cleared, so the row still says who was answered (the
+archive's own fact, still true), the sheet stops offering a door onto a post
+that isn't there, and the row leaves the queue permanently. That is
+deliberately NOT the `Gone` tag the likes pass uses — there the row ITSELF has
+died, and one facet meaning two things is worse than no facet. And the handle
+X answers with **beats the one the archive recorded**: a reply from 2016 names
+whoever that account was called in 2016.
+
+### 4. "Who you reply to"
+
+The room's only board was "Whose posts you like", which is empty until the face
+pass has run — the archive names no author for a like. So a person who imported
+and never tapped the second act had a leaderboard that could never render.
+"Who you reply to" needs nothing but the file, and for most accounts it is the
+truer statement: a decade of replies is a decade of conversations with a
+handful of people.
+
+Picked by COVERAGE, not by preference — the `bylines` rule. Whichever board
+covers more rows leads, ties to replies. So running the face pass really can
+change the head, which is its payoff, and the room can never silently say less
+than it did.
+
+### 5. The room's head: your years, not your year
+
+An X archive is the deepest corpus this app lands in one tap, and every reading
+the room had described a slice of it. The topic treemap says what fifteen years
+are about with no time in it at all; `FeedHeatmap`'s "Your X year" charts the
+trailing twelve months, which for an account that stopped posting in 2021 is an
+empty grid over four thousand posts. Neither can say the thing that is actually
+true of the object: it spans years, it has a loudest one, and it has years you
+said nothing.
+
+`XRoom` is that card — the whole span as a strip, the busiest year named as a
+sentence, and the top years as rows carrying **each year's own subject**. It
+costs nothing: every fact is already on a landed row (`capturedAt`,
+`ocrTopics`, `likeCount`, `sourceRef`), so no request, no new `Thing` property
+and no CloudKit deploy.
+
+**It is the first head that displaces a card the room already drew**, which is
+why §349's rule ("a head must never draw less than what it displaces") decided
+its shape: the year rows carry the same `ocrTopics` vocabulary the treemap
+ranks, so this is the treemap along time rather than instead of it. And it
+DECLINES under three distinct years or twenty posts, so a shallow archive keeps
+the treemap exactly as before — a two-year account has no eras, and three bars
+over it would be the card claiming a shape the corpus doesn't have.
+
+Three things it may not do. **Silent years are drawn**, at zero, in a fainter
+fill: the gap is the reading, and skipping it would put two bars four years
+apart side by side and quietly rescale the axis. **A year is never called
+biggest on likes** — the archive's counts are frozen at export time, so that
+would be a claim about an audience measured once. And **no colour for more or
+less**: posting more in 2019 than in 2023 is not a win and not a failure, and
+the app has no idea which the person wanted.
+
+### What it is checked by, and what it is not
+
+`XRoom` is Foundation-only and `scripts/x-selftest.sh` compiles it WHOLE and
+unmodified — the only proof these numbers are right, since no real X archive
+has ever been imported on this host and every failure in this card renders as a
+perfectly good-looking one. That harness found a defect before this shipped:
+`String(localized: "\(year) …")` formats an `Int` with the locale's grouping
+separator, so the headline read **"2,019 was your loudest year"** — a year
+printed as a quantity, in the largest type on the card.
+
+The importer half stays UNMEASURED against a real archive, like everything else
+in that file. Every read is optional and every failure returns nil, so a shape
+this build doesn't recognise contributes nothing rather than something wrong.
+
+**Not built, deliberately.** Bookmarks are still not in the export and the copy
+still says so. `personalization.js` — X's own inferred interests about you — is
+a genuinely unique read and a TALLY, so at most a room card and never a thing;
+left for a pass that measures a real file first. DMs remain behind
+`ImportOptions.includeMessages`, off by default. And no filter chips for the
+new `Photo` facet: §269's ruling stands, the tag filter is the agent's.

@@ -1022,6 +1022,16 @@ fi
 # the identical reason — Safe earning its own source in the same pass that
 # gave it a room head.
 #
+# `xHead` (2026-08-13, prd §375) is the THIRTEENTH and the first over an
+# IMPORT rather than a live bridge, which changes what this check is worth
+# for it: every head above composes from bridge state or from rows a sync
+# lands, while this one composes from an archive's own SPAN — so it is also
+# the first whose demo coverage depends on the demo corpus having years in
+# it. `DemoSeedAll.xArchive` was seven posts inside one season until the same
+# commit; the card would have declined correctly and this check would have
+# read that as a gap, which is exactly the conversation worth having in the
+# commit that adds it rather than in a nightly three weeks later.
+#
 # The (name, source) pairs mirror `ProbeHooks.swift`'s `roomInsightProbe`
 # hook and `FeedScreen.sourceHead(_:)`'s switch — change one, change all
 # three (the same acknowledged fragility that hook's own header already
@@ -1047,6 +1057,7 @@ else
     gnosisPayHead     "Gnosis Pay"
     railgunHead       "Railgun"
     safeHead          "Safe"
+    xHead             "X"
   )
   MISSING_HEADS=()
   for name in "${(k)ROOM_HEADS[@]}"; do

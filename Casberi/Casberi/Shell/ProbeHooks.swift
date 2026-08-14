@@ -341,6 +341,17 @@ enum ProbeHooks {
             NSLog("X probe: dropped-by-cap posts=%d likes=%d, %d awaiting authors",
                   summary.droppedPosts, summary.droppedLikes,
                   XArchiveImport.pendingFaceCount(context: context))
+            // The two repairs of 2026-08-13 (prd §375), on their own line and
+            // for the cap's reason: both are INVISIBLE in every other reading
+            // of this probe. A long post that arrived clipped and one that
+            // arrived whole are both "1 post"; a picture post landed as its own
+            // t.co shortlink and one landed as a picture are both "1 post"
+            // too. A zero here on an archive full of long posts means the
+            // `note-tweet.js` join found nothing — which is the bug, and the
+            // rows look perfect either way.
+            NSLog("X probe: longform=%d photoPosts=%d, %d replies awaiting context",
+                  summary.longform, summary.photos,
+                  XArchiveImport.pendingContextCount(context: context))
             }
         },
         // `-xFaces <limit|YES>` runs the oEmbed author pass over the liked
@@ -359,6 +370,25 @@ enum ProbeHooks {
                       outcome.named, outcome.gone, outcome.missed,
                       outcome.unreachable ? 1 : 0,
                       XArchiveImport.pendingFaceCount(context: context))
+            }
+        },
+        // `-xReplyContext <limit|YES>` runs the oEmbed pass that fills in what
+        // each reply was ANSWERING (2026-08-13, prd §375) — the second half of
+        // the same second act, exactly as in the UI.
+        //
+        // `gone` is its own number and not a miss, the faces probe's rule:
+        // there X tells us the post you LIKED has died, here that the post you
+        // ANSWERED has, and only the second leaves your own row intact. The
+        // still-waiting count is what separates "this archive's replies are all
+        // to yourself, already filled for free" from "the pass isn't running".
+        Hook(key: "xReplyContext") { spec, context in
+            Task { @MainActor in
+                let limit = Int(spec) ?? 200
+                let outcome = await XArchiveImport.fetchReplyContext(limit: limit, context: context)
+                NSLog("X reply-context probe: %d filled, %d gone, %d missed, unreachable=%d, %d still waiting",
+                      outcome.filled, outcome.gone, outcome.missed,
+                      outcome.unreachable ? 1 : 0,
+                      XArchiveImport.pendingContextCount(context: context))
             }
         },
         // `-dayoneImport <path>` imports a Day One export .json from disk.
@@ -643,6 +673,25 @@ enum ProbeHooks {
         // these seats "nothing" is usually the HEALTHY answer — most wallets
         // have never touched Peer, never deposited into a pool, and hold no
         // Gnosis Pay card — and only one or two causes per room are bugs.
+        // `-xRoomProbe YES` — the X room's head, year by year (2026-08-13,
+        // prd §375). No key, no network, no bridge state: it composes off the
+        // rows an import already landed, which is why the fetch below takes the
+        // whole room rather than a page of it — a span is not a span if it is
+        // computed over the newest five hundred posts of fifteen years.
+        //
+        // `probeLines` names every cause of an empty head; the one worth the
+        // probe on its own is the pair of coverage numbers it prints, since a
+        // card with no subjects is healthy right after an import (the topic
+        // sweep runs bounded, on foregrounds) and a bug a week later.
+        Hook(key: "xRoomProbe") { _, context in
+            let source = XRoomSource.source
+            let descriptor = FetchDescriptor<Thing>(
+                predicate: #Predicate { $0.source == source })
+            let rows = (try? context.fetch(descriptor)) ?? []
+            for line in XRoomSource.probeLines(things: rows) {
+                NSLog("[Casberi] %@", line)
+            }
+        },
         Hook(key: "peerRoomProbe") { _, context in
             let source = PeerRoomSource.source
             var descriptor = FetchDescriptor<Thing>(
@@ -3667,6 +3716,15 @@ enum ProbeHooks {
                 note("appStoreConnect", source == ASCShape.source
                      ? ASCRoomSource.compose(things: things).map {
                         "\(ASCRoom.headline($0)) · \($0.apps.count) apps"
+                     } : nil)
+                // The thirteenth (2026-08-13, prd §375) — and the first over an
+                // IMPORT rather than a bridge, which is also the first that can
+                // DISPLACE a card below it: when this composes it takes the
+                // slot `topicMap` held for this room. Both lines print either
+                // way, so the trade is visible here rather than inferred.
+                note("xHead", source == XRoomSource.source
+                     ? XRoomSource.compose(things: things).map {
+                        "\(XRoom.headline($0)) · \($0.span) years · \($0.silent) silent"
                      } : nil)
                 // 2. the anniversary — memories room only, and only with pixels
                 let echo = source == "Snapchat"

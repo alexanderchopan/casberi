@@ -695,6 +695,14 @@ enum DemoSeedAll {
     /// are `.link` wearing somebody else's words — the split §308 draws.
     private static func xArchive() -> [Thing] {
         var out: [Thing] = [receipt("X", "412 posts · 180 liked", days: 3)]
+        // AN ARCHIVE HAS DEPTH, and the demo has to have it too (2026-08-13,
+        // prd §375). The room's head is `XRoom` — years, their subjects and
+        // the loudest one — which DECLINES under three distinct years or
+        // twenty posts, so a seven-post table all inside one season made the
+        // demo's biggest room the one place that card could never be seen.
+        // The older years are deliberately thinner than the recent ones and
+        // one year is deliberately silent: a strip where every bar is the same
+        // height demonstrates nothing about a strip whose whole job is shape.
         let posts: [(String, [String], Double)] = [
             ("Shipping is a habit, not an event.", ["Shipping", "Craft"], 4),
             ("The best interface is the one that answers.", ["Craft", "Interfaces"], 9),
@@ -703,6 +711,28 @@ enum DemoSeedAll {
             ("Craft is what survives the deadline.", ["Craft"], 31),
             ("Interfaces that hide state are lying.", ["Interfaces"], 44),
             ("Shipping again this week.", ["Shipping", "Craft"], 58),
+            ("A room should answer the question you walked in with.", ["Interfaces"], 96),
+            ("Every registry drifts. Check the registry.", ["Craft"], 140),
+            ("Shipping is mostly deleting.", ["Shipping"], 190),
+            ("Interfaces are promises you have to keep.", ["Interfaces", "Craft"], 240),
+            ("The demo is the product, briefly.", ["Craft"], 300),
+            // Last year — the busiest, and the one the head names.
+            ("Notes on reading your own archive.", ["Archives"], 430),
+            ("An archive is a corpus, not a feed.", ["Archives", "Craft"], 455),
+            ("Archives outlive the app that made them.", ["Archives"], 480),
+            ("Shipping in public, year three.", ["Shipping"], 505),
+            ("Interfaces that age well say less.", ["Interfaces"], 530),
+            ("Archives are the only honest analytics.", ["Archives"], 560),
+            ("Craft is legible from the outside.", ["Craft"], 590),
+            ("Archives, again, because nobody else keeps them.", ["Archives"], 620),
+            // Two years back — thinner.
+            ("Starting to keep things properly.", ["Archives"], 900),
+            ("Notes to myself, in public.", ["Craft"], 960),
+            ("A feed you can't search isn't a record.", ["Archives"], 1010),
+            // …and the first year, one post. The year between it and the next
+            // is SILENT on purpose — the strip draws a gap, which is the one
+            // reading no other card in this room can make.
+            ("First post. Let's see how this goes.", [], 1830),
         ]
         out += posts.enumerated().map { i, p in
             row(.note, p.0, source: "X", ref: "demo:x:post:\(i)", days: p.2, hour: 12,
@@ -715,8 +745,53 @@ enum DemoSeedAll {
                 // real archive room is a column of faces; without it every
                 // post in the busiest room in the corpus wore the X glyph.
                 t.authorAvatarURL = avatarArt("you")
-                t.likeCount = 40 - i * 4
-                t.replyCount = 6 - i / 2
+                // Floored (2026-08-13): the table is four times longer than it
+                // was, and the old straight-line formula ran negative past the
+                // tenth row — which `XRoom` would have read as a real count and
+                // ranked as this year's loudest post.
+                t.likeCount = max(1, 44 - i * 2)
+                t.replyCount = max(0, 6 - i / 2)
+            }
+        }
+        // The replies, so the room's second board ("Who you reply to") and the
+        // sheet's `ReplyingToCard` both have something real — and so the demo
+        // shows what a self-reply's free context looks like beside a reply to
+        // somebody else, which is the pair `fetchReplyContext` exists for.
+        let replies: [(String, String, String, Double)] = [
+            ("Agreed — and the archive is where you find out.",
+             "lindsey", "The best product decisions are legible a year later.", 12),
+            ("This, but for rooms as well as rows.",
+             "rauno", "Latency is a design problem, not an infrastructure one.", 34),
+            ("Still true.", "lindsey", "", 210),
+        ]
+        out += replies.enumerated().map { i, r in
+            row(.note, "To @\(r.1) · \(r.0)", source: "X", ref: "demo:x:reply:\(i)",
+                days: r.3, hour: 15, content: r.0, tags: ["Reply"]) { t in
+                t.postText = r.0
+                t.ocrTopics = ["Craft"]
+                t.topicsAt = .now
+                t.authorHandle = "you"
+                t.authorAvatarURL = avatarArt("you")
+                t.likeCount = 9 - i
+                // The third has a permalink and NO words — the state a reply
+                // sits in until the second act names what it answered, and the
+                // one `-xReplyContext` reports as pending.
+                t.parent = SocialCard(handle: r.1, text: r.2,
+                                      avatarURL: avatarArt(r.1),
+                                      url: "https://x.com/\(r.1)/status/17\(i)0000000000000000")
+            }
+        }
+        // A wordless picture post — the room's grid half (prd §375). Tagged the
+        // way the importer tags one, since that tag is what `isXPhotoTile`
+        // reads; a demo that faked it with a title would prove nothing about
+        // the room's real membership test.
+        out += (0..<3).map { i in
+            row(.note, "Photo", source: "X", ref: "demo:x:photo:\(i)",
+                days: 20 + Double(i) * 27, hour: 18, tags: ["Post", "Photo"]) { t in
+                t.previewImageData = pixels(i)
+                t.authorHandle = "you"
+                t.authorAvatarURL = avatarArt("you")
+                t.likeCount = 30 - i
             }
         }
         let likes: [(String, String, Double)] = [

@@ -77,7 +77,7 @@ enum FeedInsight {
         // since an X archive has no saves to lead with — `savedAuthors` falls
         // through to it by construction rather than by a special case here.
         case "X":
-            return savedAuthors(things)
+            return xBoard(things)
         // The wallet-riding seats, 2026-08-05 (prd §311). Each earns a room
         // and each led with nothing until now.
         //
@@ -149,6 +149,49 @@ enum FeedInsight {
         }
         return board("Saved", title: "Who you save most", unit: ("save", "saves"))
             ?? board("Liked", title: "Whose posts you like", unit: ("like", "likes"))
+    }
+
+    /// X's two boards, and the one that describes MORE of the room wins
+    /// (2026-08-13, prd §375).
+    ///
+    /// "Whose posts you like" was the room's only board, and it is empty until
+    /// `XArchiveImport.fetchFaces` has run — the archive names no author for a
+    /// like, so a person who imported and never tapped the second act had a
+    /// leaderboard that could never render. "Who you reply to" needs nothing at
+    /// all: `in_reply_to_screen_name` is in the file, on every reply, and has
+    /// been stamped on `parent` since the room got its shape.
+    ///
+    /// It is also, for most accounts, the truer statement. A decade of replies
+    /// is a decade of conversations with a handful of people; likes are a
+    /// wider, shallower set.
+    ///
+    /// PICKED BY COVERAGE, not by preference — the `bylines` rule. Whichever
+    /// board covers more rows leads, ties to replies, so running the face pass
+    /// really can change the head (that is its payoff) and never silently makes
+    /// the room say less than it did. Both are `counted`, so both keep the same
+    /// floor of three rows across two groups; a room that qualifies for neither
+    /// falls through to the cards below exactly as before.
+    private static func xBoard(_ things: [Thing]) -> Leaderboard? {
+        let replies = things.filter { $0.kind == .note && !(repliedTo($0) ?? "").isEmpty }
+        let liked = things.filter { $0.tags.contains("Liked") && !(handle($0) ?? "").isEmpty }
+        let replyBoard = counted(replies, title: "Who you reply to",
+                                 unit: ("reply", "replies"), key: repliedTo)
+        // `savedAuthors` rather than a second `counted` spelled out here: it is
+        // the shared "who wrote the things you kept" board, and X falls through
+        // its saves arm to its likes arm by construction (an X archive has no
+        // saves), so this stays one definition rather than two that can drift.
+        let likeBoard = savedAuthors(things)
+        guard let replyBoard else { return likeBoard }
+        guard let likeBoard else { return replyBoard }
+        return liked.count > replies.count ? likeBoard : replyBoard
+    }
+
+    /// The handle a reply answers — the archive's own `in_reply_to_screen_name`,
+    /// stamped on `parent` at import. Read off the stored card and never parsed
+    /// back out of the title's "To @someone · " lead, which is display copy and
+    /// is localized.
+    private static func repliedTo(_ thing: Thing) -> String? {
+        thing.parent?.handle
     }
 
     /// Who you actually read (2026-08-06) — the PEOPLE behind the stories,

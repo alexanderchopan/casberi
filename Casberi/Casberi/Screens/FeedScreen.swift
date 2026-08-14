@@ -2099,6 +2099,10 @@ struct FeedScreen: View {
                         // lookup, not a newest-of-many match.
                         openBySourceRef(entry.ref, in: visible)
                     }
+                case .x(let room):
+                    XRoomCard(room: room) { year in
+                        openYear(year, in: visible)
+                    }
                 }
             }
         } else if let anniversary {
@@ -2145,6 +2149,23 @@ struct FeedScreen: View {
             // pretending to be a photograph.
             let rest = visible.live.filter { !Self.isMemoryTile($0) }
             if !memoryTiles.isEmpty { photoGridSection(memoryTiles) }
+            let days = chronoGroups(rest)
+            groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
+        case .x:
+            // The mixed room's third instance (2026-08-13, prd §375), and the
+            // one that had to wait for the importer: until a wordless picture
+            // post landed as a PICTURE rather than as the t.co shortlink
+            // standing in for it, this room had no tiles to draw — every
+            // photograph in it was a row whose words were a shortened URL.
+            //
+            // Same honesty rule as Snapchat's and Files': a tile promises a
+            // picture, so only a post with pixels and nothing to say becomes
+            // one. A photograph with a caption stays a post card, because the
+            // caption is the post — extracting its picture into a grid would
+            // separate the two halves of one thing.
+            let photoTiles = visible.live.filter(Self.isXPhotoTile)
+            let rest = visible.live.filter { !Self.isXPhotoTile($0) }
+            if !photoTiles.isEmpty { photoGridSection(photoTiles) }
             let days = chronoGroups(rest)
             groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
         case .files:
@@ -3019,6 +3040,12 @@ struct FeedScreen: View {
         // top-of-file doc, amendment (8)). Ranked by "your turn" rather than
         // a proportion — a Safe has no lead-token/lead-rail shape.
         case safe(SafeRoom)
+        // X (2026-08-13, prd §375) — the first head over an IMPORT rather than
+        // a live bridge, and the first that displaces a card the room already
+        // drew (`FeedInsight.topicMap`). It declines under `XRoom`'s floors so
+        // a shallow archive keeps the treemap; see that type's own note for
+        // why the year rows carry each year's subject.
+        case x(XRoom)
     }
 
     /// Resolve this room's own head, or nil. One `switch` so adding a fourth
@@ -3052,6 +3079,8 @@ struct FeedScreen: View {
             return RailgunRoomSource.compose(things: visible).map { .railgun($0) }
         case SafeRoomSource.source:
             return SafeRoomSource.compose(things: visible).map { .safe($0) }
+        case XRoomSource.source:
+            return XRoomSource.compose(things: visible).map { .x($0) }
         default:
             return nil
         }
@@ -3076,6 +3105,27 @@ struct FeedScreen: View {
         guard let match = visible.first(where: { $0.isLive && $0.sourceRef == ref })
         else { return }
         openThing(match)
+    }
+
+    /// Open a year's loudest post (2026-08-13, prd §375). A year owns hundreds
+    /// of rows, so like every other head that ranks a group this hands back a
+    /// value and the lookup lands here.
+    ///
+    /// Two landings, and the fallback is the point: an archive vintage that
+    /// recorded no `favorite_count` has no loudest post to name, and a card
+    /// whose tap did nothing would be a dead control (P4). So a year with no
+    /// counts opens its NEWEST post instead — still that year, still a real
+    /// row, and never a claim about reach we don't have.
+    private func openYear(_ year: XRoom.Year, in visible: [Thing]) {
+        if let ref = year.loudestRef {
+            openBySourceRef(ref, in: visible)
+            return
+        }
+        let calendar = Calendar.current
+        openNewest(source: XRoomSource.source, in: visible) { thing in
+            thing.kind == .note
+                && calendar.component(.year, from: thing.capturedAt) == year.year
+        }
     }
 
     /// Open a thing by its `id.uuidString`, resolved against the live feed — the
@@ -3943,6 +3993,18 @@ struct FeedScreen: View {
             && FilesIngest.isImageRef(thing.sourceRef)
     }
 
+    /// A wordless picture post in an X archive (2026-08-13, prd §375) — the
+    /// mixed X room's grid membership, `isMemoryTile`'s shape one source over.
+    /// The test is the pixels plus the tag the importer stamps, never the
+    /// title: that title is the localized word "Photo", and matching on it
+    /// would empty this grid on every device that isn't in English. Guarded
+    /// internally for the same corollary-4 reason as its two siblings.
+    private static func isXPhotoTile(_ thing: Thing) -> Bool {
+        thing.isLive && thing.source == XRoomSource.source && thing.kind == .note
+            && thing.previewImageData != nil
+            && thing.tags.contains("Photo")
+    }
+
     /// What a grid tile says across its foot. A screenshot's title is the text
     /// it shows, which is the tile's whole point; a Snapchat memory's title is
     /// its date, which the day pill already carries — so that room says the
@@ -3952,6 +4014,11 @@ struct FeedScreen: View {
         if thing.source == "Snapchat" {
             return SnapchatImport.place(inMemoryNote: thing.content)
         }
+        // An X picture post has no caption BY DEFINITION — that is the whole
+        // test that made it a tile — and its title is the placeholder word the
+        // importer gave it. Printing that under every cell would be a grid of
+        // identical labels saying nothing.
+        if thing.source == XRoomSource.source { return nil }
         return thing.title
     }
 
