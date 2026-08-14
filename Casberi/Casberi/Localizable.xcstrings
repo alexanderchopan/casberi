@@ -13846,6 +13846,34 @@
         }
       }
     },
+    "%lld wouldn't fit.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld no cabían."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld件は追加できませんでした。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld개는 추가하지 못했습니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "有 %lld 个放不下。"
+          }
+        }
+      }
+    },
     "%lld%%": {
       "localizations": {
         "es": {
@@ -18929,6 +18957,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "已经在关注验证者 #%lld。"
+          }
+        }
+      }
+    },
+    "Also found": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "También encontrado"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "その他に見つかったもの"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "추가로 발견됨"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "另外发现"
           }
         }
       }
@@ -24966,6 +25022,34 @@
           "stringUnit": {
             "state": "translated",
             "value": "复制那里显示的 API 令牌。"
+          }
+        }
+      }
+    },
+    "Couldn't check whether you sign on any Safes just now.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Ahora mismo no se pudo comprobar si firmas en algún Safe."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "現在、いずれかのSafeで署名者かどうかを確認できませんでした。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "지금은 Safe에서 서명자인지 확인할 수 없었습니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "目前无法确认你是否是任何 Safe 的签名者。"
           }
         }
       }
@@ -31704,6 +31788,62 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "来自你的内容。"
+          }
+        }
+      }
+    },
+    "From your wallet": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Desde tu monedero"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "ウォレットから"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "지갑에서"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "来自你的钱包"
+          }
+        }
+      }
+    },
+    "From your wallet · %@": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Desde tu monedero · %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "ウォレットから · %@"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "지갑에서 · %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "来自你的钱包 · %@"
           }
         }
       }
@@ -39578,6 +39718,34 @@
         }
       }
     },
+    "No room": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Sin espacio"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "空きがありません"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "자리 없음"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "没有空位"
+          }
+        }
+      }
+    },
     "No sessions in that folder.": {
       "localizations": {
         "es": {
@@ -41604,6 +41772,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "没有可报告的内容"
+          }
+        }
+      }
+    },
+    "Nothing was added.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "No se añadió nada."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "何も追加されませんでした。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "아무것도 추가되지 않았습니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "未添加任何内容。"
           }
         }
       }
@@ -45585,6 +45781,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "选择要打开的内容。"
+          }
+        }
+      }
+    },
+    "Pick what to watch": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Elige qué seguir"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "見るものを選ぶ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "watch할 항목 선택"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "选择要关注的内容"
           }
         }
       }
@@ -51545,6 +51769,40 @@
         }
       }
     },
+    "Room for %lld more — %lld of these can't be watched until you unwatch something.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Room for %1$lld more — %2$lld of these can't be watched until you unwatch something."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Espacio para %1$lld más — %2$lld de estas no se pueden seguir hasta que dejes de seguir alguna."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "あと%1$lld件分の空きがあります — このうち%2$lld件は、何かの追跡を解除するまで追加できません。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%1$lld개 더 추가할 수 있습니다 — 이 중 %2$lld개는 다른 항목을 해제해야 추가할 수 있습니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "还可以再添加 %1$lld 个 — 其中 %2$lld 个需要先取消关注其他项才能添加。"
+          }
+        }
+      }
+    },
     "Running low": {
       "localizations": {
         "es": {
@@ -51709,6 +51967,40 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "Safe"
+          }
+        }
+      }
+    },
+    "Safe on %@ · %@ signs on it": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Safe on %1$@ · %2$@ signs on it"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Safe en %1$@ · %2$@ firma en él"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%1$@上のSafe · %2$@が署名者です"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%1$@의 Safe · %2$@이(가) 서명자"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%1$@ 上的 Safe · %2$@ 是签名者"
           }
         }
       }
@@ -58129,6 +58421,34 @@
         }
       }
     },
+    "This address is named as an owner on more Safes than we checked — these are the ones confirmed live.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Esta dirección figura como propietaria en más Safes de los que comprobamos — estos son los confirmados en vivo."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "このアドレスは、確認した数より多くのSafeで所有者として登録されています — ここに表示しているのは実際に確認できたものです。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "이 주소는 확인한 것보다 많은 Safe에서 소유자로 등록되어 있습니다 — 여기 표시된 것은 실제로 확인된 것입니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "该地址在更多 Safe 中被列为所有者，超出我们检查的范围 — 这里显示的是已确认的部分。"
+          }
+        }
+      }
+    },
     "This app only — your device language stays as it is.": {
       "localizations": {
         "es": {
@@ -60637,6 +60957,34 @@
         }
       }
     },
+    "Watch %lld": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Seguir %lld"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld件を追加"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld개 watch"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "关注 %lld 个"
+          }
+        }
+      }
+    },
     "Watch @%@": {
       "localizations": {
         "es": {
@@ -61346,6 +61694,34 @@
         }
       }
     },
+    "Watching %lld more wallets.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Siguiendo %lld monederos más."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "さらに%lld件のウォレットを追跡します。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "지갑 %lld개를 추가로 watch합니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "再关注 %lld 个钱包。"
+          }
+        }
+      }
+    },
     "Watching %lld of %lld — couldn't find %@": {
       "localizations": {
         "en": {
@@ -61683,6 +62059,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "正在关注另外 1 个账户。"
+          }
+        }
+      }
+    },
+    "Watching 1 more wallet.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Siguiendo 1 monedero más."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "さらに1件のウォレットを追跡します。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "지갑 1개를 추가로 watch합니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "再关注 1 个钱包。"
           }
         }
       }
@@ -64399,6 +64803,34 @@
         }
       }
     },
+    "You're watching %lld already — the cap. Unwatch one first; naming an address stays free.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Ya sigues %lld — el límite. Deja de seguir uno primero; nombrar una dirección sigue siendo gratis."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "すでに%lld件を追跡中です — 上限です。まず1件解除してください。アドレスに名前を付けるのは引き続き無制限です。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "이미 %lld개를 watch 중입니다 — 상한입니다. 먼저 하나를 해제하세요. 주소에 이름을 붙이는 것은 계속 무제한입니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "你已关注 %lld 个 — 已达上限。请先取消关注一个；为地址命名仍然不限量。"
+          }
+        }
+      }
+    },
     "You're watching %lld things": {
       "localizations": {
         "es": {
@@ -66767,6 +67199,62 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "你的钱包现在委托给一个未知合约（%@） — 如果不是你本人操作，这是钓鱼攻击"
+          }
+        }
+      }
+    },
+    "Your wallet shared %lld addresses. Watching is read-only — it can never trade or move funds.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Tu monedero compartió %lld direcciones. Seguir es solo lectura — nunca puede operar ni mover fondos."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "ウォレットが%lld件のアドレスを共有しました。追跡は読み取り専用です — 取引や資金の移動は一切できません。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "지갑이 주소 %lld개를 공유했습니다. watch는 읽기 전용이며 — 거래하거나 자금을 옮길 수 없습니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "你的钱包共享了 %lld 个地址。关注为只读 — 永远无法交易或转移资金。"
+          }
+        }
+      }
+    },
+    "Your wallet shared 1 address. Watching is read-only — it can never trade or move funds.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Tu monedero compartió 1 dirección. Seguir es solo lectura — nunca puede operar ni mover fondos."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "ウォレットが1件のアドレスを共有しました。追跡は読み取り専用です — 取引や資金の移動は一切できません。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "지갑이 주소 1개를 공유했습니다. watch는 읽기 전용이며 — 거래하거나 자금을 옮길 수 없습니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "你的钱包共享了 1 个地址。关注为只读 — 永远无法交易或转移资金。"
           }
         }
       }
