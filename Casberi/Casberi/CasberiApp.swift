@@ -47,6 +47,13 @@ enum LaunchClock {
 /// a quick action can COLD-launch the app and `onOpenURL`'s routing isn't
 /// guaranteed live yet at that instant.
 ///
+/// **Registering an action lives here; HANDLING one does not** (2026-08-14,
+/// user: "long press on the app icon for daily brief takes me to the all
+/// source feed instead of showing me the daily brief"). This is a scene-based
+/// app — every SwiftUI `App` is — so UIKit delivers a quick action to the
+/// window scene delegate, never to `application(_:performActionFor:)`. See
+/// `QuickActions.swift`, which owns both doors.
+///
 /// `UIResponder`, not `NSObject` (2026-07-31): `buildMenu(with:)` is declared
 /// on `UIResponder`, and the app delegate is the last link in the responder
 /// chain UIKit walks when it builds the menu bar — so the Mac menu surgery in
@@ -57,7 +64,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
                      didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         application.shortcutItems = [
             UIApplicationShortcutItem(
-                type: "com.casberi.app.dailyBrief",
+                type: QuickAction.dailyBrief,
                 localizedTitle: "Daily Brief",
                 localizedSubtitle: nil,
                 icon: UIApplicationShortcutIcon(systemImageName: "sparkles"))
@@ -65,12 +72,34 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         return true
     }
 
+    /// Installs `SceneDelegate` — the object UIKit hands quick actions to, and
+    /// the whole fix for a "Daily Brief" that opened the app and did nothing
+    /// (see `QuickActions.swift` for why the app-delegate callback that used to
+    /// stand here could never fire).
+    ///
+    /// The `options.shortcutItem` read here IS the cold-launch half, not a
+    /// duplicate of one: `SceneDelegate` deliberately does not implement
+    /// `scene(_:willConnectTo:options:)`, because that method is where SwiftUI's
+    /// own scene setup lives (see `QuickActions.swift`). Both callbacks receive
+    /// the same `ConnectionOptions`, and this one is called by UIKit directly,
+    /// so reading it here takes nothing over.
+    func application(_ application: UIApplication,
+                     configurationForConnecting connectingSceneSession: UISceneSession,
+                     options: UIScene.ConnectionOptions) -> UISceneConfiguration {
+        QuickAction.receive(options.shortcutItem)
+        let config = UISceneConfiguration(name: nil, sessionRole: connectingSceneSession.role)
+        config.delegateClass = SceneDelegate.self
+        return config
+    }
+
+    /// The pre-scene door. It does NOT fire in this app — UIKit routes to
+    /// `SceneDelegate.windowScene(_:performActionFor:)` instead — and is kept
+    /// only so a future scene-less configuration can't silently lose the
+    /// action the way the scene-based one silently lost it for eleven days.
     func application(_ application: UIApplication,
                      performActionFor shortcutItem: UIApplicationShortcutItem,
                      completionHandler: @escaping (Bool) -> Void) {
-        if shortcutItem.type == "com.casberi.app.dailyBrief" {
-            UserDefaults(suiteName: SharedStore.appGroup)?.set(true, forKey: "brief.request")
-        }
+        QuickAction.receive(shortcutItem)
         completionHandler(true)
     }
 }

@@ -4737,6 +4737,29 @@ enum ProbeHooks {
             NSLog("[Casberi] mcpServe| Catalyst only — there is no listener on this platform")
             #endif
         },
+        // `-quickActionProbe YES` — the "Daily Brief" quick action's LANDING,
+        // without a long press (2026-08-14). Fires `QuickAction.receive` after
+        // the launch activation has already drained everything, so the only
+        // door left is the warm one: the `QuickAction.received` observer on
+        // `RootShell`'s body. A pass logs `quickAction:` then `briefRequest:`
+        // and the agent rises on the brief.
+        //
+        // **A green probe is NOT evidence the quick action works.** It
+        // exercises the half that lives in this process; the half it cannot
+        // reach is UIKit's delivery into `SceneDelegate`, and that delivery is
+        // exactly where this feature was broken from the day it shipped
+        // (2026-08-03) until 2026-08-14 — an app-delegate callback a
+        // scene-based app never calls. No simulator gesture can long-press a
+        // Home Screen icon, so that half is verifiable on a device and nowhere
+        // else. The probe's value is that it makes the OTHER half provable, so
+        // a future report can be narrowed to one side in a single launch.
+        Hook(key: "quickActionProbe") { _, _ in
+            Task { @MainActor in
+                try? await Task.sleep(for: .seconds(3))
+                QuickAction.receive(UIApplicationShortcutItem(
+                    type: QuickAction.dailyBrief, localizedTitle: "Daily Brief"))
+            }
+        },
     ]
 }
 

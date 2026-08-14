@@ -1249,6 +1249,13 @@ struct RootShell: View {
                   UIApplication.shared.applicationState == .active else { return }
             handleActivation()
         }
+        // The quick action's WARM door (2026-08-14). `SceneDelegate` receives
+        // the long-press while this view is alive, so the brief opens on the
+        // press rather than waiting on an activation pass that may already
+        // have run — see `openBriefIfRequested`, which both doors share.
+        .onReceive(NotificationCenter.default.publisher(for: QuickAction.received)) { _ in
+            openBriefIfRequested()
+        }
     }
 
     /// Everything one foreground/activation runs — split from the scenePhase
@@ -1434,15 +1441,10 @@ struct RootShell: View {
             composerOpen = true
         }
         // The "Daily Brief" quick action (icon long-press / Mac Dock menu)
-        // left this flag — same shape as `compose.request` above, and the
-        // same landing the `casberi://brief` route uses (case "brief" below).
-        if group?.bool(forKey: "brief.request") == true {
-            group?.removeObject(forKey: "brief.request")
-            sceneState.filter.source = "All"
-            sceneState.filter.tag = "All"
-            chrome.askRequest = TodayBrief.title
-            composerOpen = true
-        }
+        // left a flag — this is the COLD-launch door for it, since a launch
+        // receives the action long before this view exists. The warm door is
+        // the `QuickAction.received` observer on the body.
+        openBriefIfRequested()
         // A notification was tapped (prd §306). The tap left the link rather
         // than opening it, because a notification can COLD-LAUNCH the app and
         // `onOpenURL` routing isn't guaranteed live at that instant — the same
@@ -1464,6 +1466,31 @@ struct RootShell: View {
             group?.removeObject(forKey: "capture.landed")
             nudgeAfterExternalCapture()
         }
+    }
+
+    /// Land the "Daily Brief" quick action, if one is waiting.
+    ///
+    /// Reached from BOTH activation doors on purpose, and the flag is what
+    /// makes that safe: whichever runs first clears it, so the other returns
+    /// having done nothing. A cold launch is drained by `handleActivation`
+    /// (nothing was listening when the action arrived); a warm one is drained
+    /// by the `QuickAction.received` observer, because `handleActivation` is
+    /// debounced to one pass per two seconds and may already have run — a
+    /// flag with no nudge could otherwise sit until some later foreground and
+    /// raise the brief on an activation the person meant for something else.
+    ///
+    /// The landing is the `casberi://brief` route's, verbatim (see `route`'s
+    /// `case "brief"`): one composer, one door onto the day.
+    @MainActor
+    private func openBriefIfRequested() {
+        let group = UserDefaults(suiteName: SharedStore.appGroup)
+        guard group?.bool(forKey: "brief.request") == true else { return }
+        group?.removeObject(forKey: "brief.request")
+        NSLog("[Casberi] briefRequest: raising the agent on the brief")
+        sceneState.filter.source = "All"
+        sceneState.filter.tag = "All"
+        chrome.askRequest = TodayBrief.title
+        composerOpen = true
     }
 
     /// The leaving half of the scenePhase observer. Unlike the ACTIVATION

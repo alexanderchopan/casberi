@@ -22624,3 +22624,70 @@ describes the deleted bulk-add loop verbatim so the next reader knows what not
 to write, so a guard grepping raw source fires on the prose explaining the bug
 it guards. That is the Obsidian/Cursor lesson, earned again here on this
 guard's first run.
+
+## §377 — A quick action is registered by the app delegate and DELIVERED to the scene delegate (user: "long press on the app icon for daily brief takes me to the all source feed instead of showing me the daily brief", 2026-08-14)
+
+The "Daily Brief" Home Screen quick action (§ the 2026-08-03 replacement for
+"New Thing") had never worked. Not intermittently, not on some devices — it
+could not have worked on any launch since the day it shipped.
+
+Its handler was `UIApplicationDelegate.application(_:performActionFor:
+completionHandler:)`. That is the PRE-SCENE door. Apple's own documentation for
+that method says that when an app has scenes, UIKit calls
+`windowScene(_:performActionFor:completionHandler:)` on the window scene
+delegate instead — and that a COLD launch arrives as
+`UIScene.ConnectionOptions.shortcutItem` rather than in `launchOptions`. Every
+SwiftUI `App` is scene-based. This app had no scene delegate at all, so the
+action was delivered to nobody: the `brief.request` flag was never written,
+`RootShell` found nothing to drain, and the app finished opening the way it
+always opens — which is the All feed. The report describes a correct app doing
+exactly what it does when nothing asked it for anything.
+
+### Why it looked healthy from outside
+
+**REGISTERING a quick action is an app-delegate job; only HANDLING one is a
+scene-delegate job.** `didFinishLaunchingWithOptions` does still fire in a
+scene-based app, so `application.shortcutItems` was set correctly and the menu
+item appeared, wore its title, wore its `sparkles` icon, and opened the app on
+tap. Every visible half worked. The invisible half was the whole feature.
+
+Nothing else in this project could have caught it, and the reasons are worth
+stating because they are permanent: `xcodebuild` compiles a delegate method
+that is never called; the static audits are static; and **no simulator gesture
+can long-press a Home Screen icon**, so the screen sweep never touched this
+path and never will. This is a class the harnesses cannot reach — like
+FinanceKit's unavailable branch (§317) and the on-device model the simulator
+does not ship (§282), it is verifiable on a device or nowhere.
+
+### The fix, and the one part of it that is not obvious
+
+`QuickActions.swift` owns both doors: `SceneDelegate` (cold via
+`scene(_:willConnectTo:options:)`, warm via
+`windowScene(_:performActionFor:)`), installed by returning it from
+`application(_:configurationForConnecting:options:)` — the documented way a
+SwiftUI-lifecycle app takes scene callbacks. That method reads
+`options.shortcutItem` itself as well, belt and braces: UIKit calls it directly,
+so the cold-launch half holds whatever SwiftUI chooses to do with the delegate
+class handed back, and cold launch is the one case with no second chance.
+`QuickAction.receive` is idempotent, so the double delivery costs nothing.
+
+The part that is not obvious is the second half of the landing. **The flag and
+the notification are not redundant; they cover different launches.** The flag in
+the app group is durable, because a cold launch receives its action before
+`RootShell` exists to hear anything. The notification (`QuickAction.received`)
+is immediate, because on a warm delivery `handleActivation` may already have
+run — and it is debounced to one pass per two seconds — so a flag with no nudge
+sits unread until some later foreground. That failure is worse than the one
+being fixed: a brief that raises itself minutes after you asked for it, on an
+activation you meant for something else, is the app acting on its own. Both
+doors call one `openBriefIfRequested`, which guards on the flag, so whichever
+arrives first does the work and the other does nothing.
+
+### The standing lesson
+
+An app-delegate callback that compiles is not an app-delegate callback that
+runs. When a UIKit hook concerns the SCENE — quick actions, state restoration,
+URL and activity continuation on a cold launch — check which delegate the
+current lifecycle actually delivers it to before writing the handler. The
+symptom of getting it wrong is silence, and silence in this app reads as "it
+opened normally".
