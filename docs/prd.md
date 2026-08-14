@@ -22873,3 +22873,86 @@ chooses as the day's landmark was the one row guaranteed quiet: promoted to
 review could see. The anchor is exempt from BOTH quiet reasons, the read
 boundary included, because a landmark is for wayfinding and already-read
 territory needs more of it, not less.
+
+## §379 — The tail says what it was about, and the fold rules become provable (user: "anything else you would do to level up the all feed", then "ok make those changes", 2026-08-14)
+
+Two changes with one thing in common: both came from auditing what had just
+shipped rather than from wanting a new feature.
+
+### 1. A coarse group carries its subject
+
+§218 made the tail SHORT and §254 made it QUIET, and neither made it
+BROWSABLE — "March", "April", "May" are three identical headers, so finding
+last spring still means scrolling into it and reading rows. Each coarse group
+now names what it was mostly about ("March · mostly Tokyo", as a quiet second
+line under the month).
+
+**The rule is `XRoom.subject` CALLED, never re-implemented.** §375 asked exactly
+this question of a YEAR and answered it with a recurrence floor — two mentions
+or a tenth of the group, whichever is larger — that is already compiled whole
+and mutation-proven by `x-selftest.sh`. Asking the same question of a month with
+a second copy of that rule is how the two drift; this is the §255 lesson applied
+before the fact rather than after.
+
+**Terms come from `ocrTopics` ONLY, and tags were considered and declined.**
+Most tags are FACETS (`Post`, `Liked`, `Watchlist`, `Memory` — §308), so a month
+would report its own STRUCTURE as its subject: "mostly Liked" is not what
+anything was about. `ocrTopics` is the deterministic extraction (§313), so every
+subject drawn is a term that literally appears in the things beneath it — the
+§218 grounding rail, one surface over.
+
+**Nil is the normal answer and the header is built for it.** A month of wallet
+transactions and calendar events carries no topic terms at all, and inventing
+one would be the §83 fake status in the one place a person is deciding where to
+look. Scoped to the All room's own renderer (`bundledSections`) rather than
+every coarse group everywhere, which is a smaller blast radius than §254's
+cooling took; widening it is a later pass with a screenshot behind it.
+
+### 2. `Model/FeedFold.swift`, and the harness that proves it
+
+The fold now carries real judgment — strip beats sentence, remote images dedupe
+and stored pixels don't, the two-tile floor, the threshold, the clock carve-out,
+the tier table — and all of it lived as private methods inside a 5,000-line
+SwiftUI view that no harness can compile. So the only thing proving those rules
+were right was that somebody had read them, which is precisely the state §255
+describes: a gate that measured THINGS while the feed drew ROWS, wrong for a
+month, found by eye.
+
+`FeedFold` is Foundation-only and `scripts/feed-fold-selftest.sh` compiles it
+WHOLE and unmodified against an inert `Thing` stub — 45 assertions, **12
+mutations**, 7 drift guards, wired into `verify.sh` (which now fails until a new
+harness is named there WITH its reason, so this one could not have been quietly
+forgotten).
+
+**The seam that makes it possible: a tile is named by INDEX, not by a model.**
+`tileChoices` returns `[TileChoice]` — an index, a remote URL, a shape — so the
+whole decision layer is pure value types and the view maps choices back to
+members. Without that seam the pure logic would drag `StripTile` → `KeyedThing`
+→ `Thing` into the harness and stop being pure at all. The two view-layer
+dependencies are INJECTED for the same reason (`faceSources` from
+`BandRow`, whether a row is live from the bridge), with drift guards asserting
+the app still hands over the real ones — a harness that stubs a value can prove
+the logic and never that the logic is fed correctly.
+
+**Its own validation caught a broken guard before it ever ran**, which is worth
+recording because it is the failure this repo has hit twice already: the guard
+tying the clock carve-out to the live set was written as one pattern spanning
+`carriesAClock(…` and `isLive: isLive(t)`, but that call WRAPS across two lines
+and `grep -E` is line-based — so it matched nothing and certified nothing, while
+reading like a check. It is two guards now. (The same pass also caught the
+validator itself reporting "all guards match" over ZERO parsed guards, which is
+the identical bug one level up.)
+
+**NOT built:** the remaining backlog is unchanged and still waiting on a ruling
+— session seams, the whisper at the divider, month cards as composed tiles,
+unfold-in-place, a date scrubber, adaptive density.
+
+**VERIFIED BY STATIC AUDITS AND A STATIC HARNESS REVIEW ONLY — NOT BUILT, NOT
+RUN, NOT SEEN ON SCREEN.** Same Linux session with no Xcode and no `swiftc`, so
+**`feed-fold-selftest.sh` has never once executed** and its mutations are
+unproven by running: what WAS checked mechanically is that all 12 mutation
+strings match the shipped source exactly once (the stale-mutation class
+`notify-selftest` was bitten by) and that all 7 drift guards match the real
+tree. Treat the harness as unproven until a Mac runs it; a mutation that fails
+to compile or survives is expected fallout of writing it blind, and finding one
+does not mean the fold logic is wrong.
