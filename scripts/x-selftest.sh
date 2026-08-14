@@ -474,6 +474,13 @@ pieces = [
     "  static let offers: [Offer] = [] }\n",
     "enum Retriever {",
     grab(retriever, "static func sourceFilter"),
+    # `facetFilter`'s vocabulary moved out of its body on 2026-08-14 so the
+    # themes treemap could DERIVE its exclusion from it rather than keep a
+    # second copy (`HomeComposition.mechanicalTags`). The table has to come
+    # across with the function or nothing here compiles — and `facetTags` comes
+    # with it, since it is the half the map actually reads.
+    grabvar(retriever, "static let facetTable"),
+    grabline(retriever, "static let facetTags"),
     grab(retriever, "static func facetFilter"),
     "}\n",
     # DateQuery is Foundation-only, so it compiles exactly as it ships.

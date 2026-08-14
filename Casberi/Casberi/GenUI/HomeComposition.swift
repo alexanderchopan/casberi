@@ -42,20 +42,111 @@ enum HomeComposition {
             }
     }
 
+    /// THE TAGS A THEME IS NEVER MADE OF (2026-08-14).
+    ///
+    /// A theme is what your corpus is ABOUT. Until this date the only tags
+    /// `projectClusters` refused were the kind type-tags (`link`, `note`, …),
+    /// so every label a BRIDGE stamps on its own rows clustered as a theme —
+    /// and those out-count real subjects by orders of magnitude the moment an
+    /// archive lands or a few tokens are watched. The map on a real corpus
+    /// read "Post 3,200 · Liked 1,800 · Watchlist 14 · Conversation 9", which
+    /// is a facet inventory of the plumbing, not a reading of the subject
+    /// matter, and it crowded every genuine theme out of all six cells.
+    ///
+    /// TWO HALVES, AND ONLY ONE OF THEM IS A LIST. The facet half is DERIVED
+    /// from `Retriever.facetTags` — that vocabulary already exists, is already
+    /// the app's own definition of "a half of a room rather than a subject in
+    /// it", and deriving means a facet added there is excluded here the same
+    /// day. The status half has no registry to read (a bridge stamps its state
+    /// labels inline, and `Thing.tags` records no provenance), so it is a hand
+    /// list — and therefore guarded: `scripts/theme-tags-audit.py` fails the
+    /// build on any literal tag in the tree that is neither listed here nor
+    /// ruled a real subject, which is the only reason a hand list is allowed
+    /// to sit in this codebase at all.
+    ///
+    /// WHAT WAS CONSIDERED AND DECLINED: "a theme spans ≥2 sources" is a
+    /// tempting derivation needing no list, and it is wrong — `Liked` is
+    /// stamped by X, Instagram AND TikTok, `Watchlist` by Tokens, Stocktwits
+    /// AND PostHog, so the mechanical tags are exactly the ones that span
+    /// sources best. It would have re-admitted every tag this exists to keep
+    /// out while excluding a real single-source subject like "Book club".
+    static let mechanicalTags: Set<String> = {
+        Retriever.facetTags.union([
+            // Bridge state and row-type labels, by the bridge that stamps them.
+            "Agent run", "Session",                       // Cursor, Claude Code
+            "Annotation", "Milestone", "Silence",         // PostHog
+            "Build", "Build failure", "Deploy",           // Vercel
+            "Deadline", "Your turn",                      // reminders, Safe
+            "Deal",                                       // Deals
+            "Delivered", "Module added",                  // Safe, 7579
+            "Deprecated", "Incident", "Issue",
+            "Regression", "Resolved",                     // GitHub, Sentry
+            "Card", "Payment", "Pending", "Settled",      // Apple Wallet, cards
+            "Price drop", "Price rise", "Refund",
+            "Paper",                                      // Hugging Face
+            // X's wordless picture post (prd §375). Note it is NOT in
+            // `Retriever.facetTags` — so it is listed by hand here, and
+            // "photos from X" is a read that room still cannot answer.
+            "Photo",
+            "Runway",                                     // Stripe, Cloudflare
+            "Shielded",                                   // Privacy Pools
+            "Trending", "Watching", "Watchlist",          // discovery, watches
+        ])
+    }()
+
+    /// Everything `projectClusters` refuses, folded once — the kind type-tags
+    /// it always refused plus the mechanical tags above. Built once rather than
+    /// per call: this runs over the whole corpus, and `MCPTools` walks it too.
+    private static let excludedTagKeys: Set<String> =
+        Set(ThingKind.allCases.map { $0.typeTag.lowercased() })
+            .union(mechanicalTags.map { $0.lowercased() })
+
     /// A project is a computed cluster; membership rides a tag (brief §3).
     static func projectClusters(things: [Thing]) -> [Cluster] {
-        let typeTags = Set(ThingKind.allCases.map { $0.typeTag.lowercased() })
+        let excluded = excludedTagKeys
+        // Keyed by FOLDED tag (2026-08-14): the buckets used to key on the raw
+        // string while the exclusion compared lowercased, so `design` and
+        // `Design` were two themes competing for cells — and being split, each
+        // half could fall under the min-2 floor and the subject vanish from a
+        // map that holds the things twice over. `spellings` keeps every
+        // original so the cell can be LABELLED in the spelling the corpus
+        // actually uses most, rather than in whichever case happened to land
+        // first.
         var buckets: [String: [Thing]] = [:]
+        var spellings: [String: [String: Int]] = [:]
         // `where thing.isLive` — build 177's crash site exactly: the themes
         // treemap's lede read `thing.tags` off the All room's stale snapshot.
-        for thing in things where thing.isLive {
-            for tag in thing.tags where !typeTags.contains(tag.lowercased()) {
-                buckets[tag, default: []].append(thing)
+        // `isImportReceipt` — the app's own "you imported N things" row is not
+        // something the person did, so every aggregate over a room excludes it
+        // (see `Corpus.isImportReceipt`); this one had been missing it, and it
+        // carries the source's tags, so it padded a theme by one per import.
+        for thing in things where thing.isLive && !Corpus.isImportReceipt(thing) {
+            for tag in thing.tags {
+                let key = tag.lowercased()
+                guard !excluded.contains(key) else { continue }
+                // One thing counts ONCE per folded tag. `Thing.tags.reduced()`
+                // folds case at init, but plenty of bridges mutate `tags`
+                // afterwards and several test membership with a CASE-SENSITIVE
+                // `contains` — so a row really can end up carrying "Gone" and
+                // "gone", which before folding were two clusters and after it
+                // would be one thing counted twice. Identity against the
+                // bucket's last entry is enough because one thing's tags are
+                // walked consecutively, so a repeat is always the tail.
+                if buckets[key]?.last === thing { continue }
+                buckets[key, default: []].append(thing)
+                spellings[key, default: [:]][tag, default: 0] += 1
             }
         }
         return buckets
             .filter { $0.value.count >= 2 }
-            .map { Cluster(name: $0.key, things: $0.value) }
+            .map { key, things in
+                // Majority spelling, ties broken alphabetically so the label
+                // is stable across passes rather than dictionary-ordered.
+                let name = (spellings[key] ?? [:])
+                    .sorted { $0.value != $1.value ? $0.value > $1.value : $0.key < $1.key }
+                    .first?.key ?? key
+                return Cluster(name: name, things: things)
+            }
             .sorted {
                 // Magnitude, then name — stable. (Project pins died 2026-07-07.)
                 $0.things.count != $1.things.count
@@ -83,8 +174,62 @@ enum HomeComposition {
     /// a second time over the same things just to get it.
     static func themesDocument(clusters: [Cluster]) -> [String]? {
         guard !clusters.isEmpty else { return nil }
-        let items = clusters.prefix(6).map { "\($0.name) \($0.things.count)" }
-        return ["root = TagMap(\(q(String(localized: "Themes"))), null, [\(items.joined(separator: ", "))])"]
+        let items = clusters.prefix(cellCap).map { "\($0.name) \($0.things.count)" }
+        let sub = themesSubline(clusters: clusters)
+        return ["root = TagMap(\(q(String(localized: "Themes"))), \(sub.map(q) ?? "null"), [\(items.joined(separator: ", "))])"]
+    }
+
+    /// How many cells the map draws — `UnitTreemap`'s six-cell layout.
+    private static let cellCap = 6
+
+    /// The map's subline, and the answer to two things it couldn't say
+    /// (2026-08-14). It had none at all — `null` where the wallet's own TagMap
+    /// says "$19K across 13 tokens".
+    ///
+    /// WHAT IT SAYS AND WHY. Counts here run over the WHOLE corpus, so after an
+    /// archive import the map describes 2019 and never moves again; re-ranking
+    /// by recency was declined (magnitude-is-area is the treemap's one honest
+    /// voice, and a map that reshuffles by window stops being a map of your
+    /// corpus) — so the freshness reading goes in the subline instead, where it
+    /// is stated as a fact rather than baked into the geometry. The second half
+    /// is the same honesty valve the topic map's own subtitle already carries:
+    /// the map draws six cells and says nothing when there are eleven themes,
+    /// and a silently truncated map looks exactly like a complete one.
+    ///
+    /// Both halves are plain counts over `capturedAt`, no fetch, no new field.
+    /// A leader must be STRICT and worth naming (≥2 new, and no tie) — "most
+    /// new this week" over a single thing, or over a tie, is a fact that
+    /// changes nothing and would flicker between passes.
+    static func themesSubline(clusters: [Cluster], now: Date = .now) -> String? {
+        var parts: [String] = []
+        let weekAgo = now.addingTimeInterval(-7 * 24 * 3600)
+        // `where $0.isLive` — a shared helper taking `[Thing]`, reached from a
+        // view body; corollary 2's rule for exactly this shape.
+        let fresh = clusters
+            .map { ($0.name, $0.things.filter { $0.isLive && $0.capturedAt >= weekAgo }.count) }
+            .sorted { $0.1 != $1.1 ? $0.1 > $1.1 : $0.0 < $1.0 }
+        if let top = fresh.first, top.1 >= 2,
+           fresh.count == 1 || fresh[1].1 < top.1 {
+            parts.append(String(localized: "Most new this week: \(top.0)"))
+        }
+        if clusters.count > cellCap {
+            parts.append(String(localized: "\(cellCap) of \(clusters.count) shown"))
+        }
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
+    }
+
+    /// The map's SHAPE — its cell names in rank order, and nothing else.
+    ///
+    /// This is what "have I already seen this map?" should compare (2026-08-14).
+    /// The collapse (2026-07-20) digested the rendered document, which carries
+    /// each cluster's COUNT — so a single new thing in any one theme changed the
+    /// digest and re-expanded the full treemap. On an active corpus that is
+    /// every launch, which means the collapse only ever fired on a dormant one,
+    /// where it saves the least. Digesting the shape collapses routine count
+    /// ticks and re-expands on the change actually worth interrupting for: a
+    /// theme entering, leaving, or overtaking another.
+    static func themesShapeDigest(clusters: [Cluster]) -> String {
+        clusters.prefix(cellCap).map(\.name).joined(separator: "\n")
     }
 
     /// Quotes a string for the document; strips embedded quotes rather than

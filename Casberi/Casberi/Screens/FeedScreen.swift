@@ -2996,10 +2996,19 @@ struct FeedScreen: View {
         let themes = themesData(visible)
         if let doc = themes.doc {
             let clusters = themes.clusters
-            let digest = doc.joined(separator: "\n")
+            // The map's SHAPE, not its rendered document (2026-08-14). The doc
+            // carries every cluster's count and its freshness subline, so
+            // digesting it re-expanded the whole treemap on one new thing in
+            // any theme — i.e. on every launch of an active corpus, which is
+            // the only corpus where collapsing is worth anything. See
+            // `HomeComposition.themesShapeDigest`.
+            let digest = HomeComposition.themesShapeDigest(clusters: clusters)
             let unchanged = digest == UserDefaults.standard.string(forKey: Self.themesSeenDigestKey)
             if themesExpanded || !unchanged {
-                let els = perfAccum("themesParse") { GenParser.parse(prefix: digest[...], isComplete: true) }
+                // The DOCUMENT is what renders; `digest` above is only the
+                // seen-check's key and is deliberately not the same string.
+                let rendered = doc.joined(separator: "\n")
+                let els = perfAccum("themesParse") { GenParser.parse(prefix: rendered[...], isComplete: true) }
                 Section {
                     GenRender(id: "root", els: els)
                         // The Themes CARD (2026-07-21, the §160 ruling carried

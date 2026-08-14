@@ -712,9 +712,33 @@ enum Retriever {
     /// Longest phrase first, so "my own posts" reads as the `Post` facet rather
     /// than stopping at the bare word, and plurals and singulars both resolve.
     static func facetFilter(in query: String) -> (tag: String, words: Set<String>)? {
-        // Order matters: the first entry whose phrase appears wins, so the
-        // more specific phrasings lead.
-        let table: [(phrases: [String], tag: String)] = [
+        let haystack = " " + query.lowercased()
+            .components(separatedBy: CharacterSet.alphanumerics.inverted)
+            .filter { !$0.isEmpty }
+            .joined(separator: " ") + " "
+        for entry in facetTable {
+            for phrase in entry.phrases where haystack.contains(" " + phrase + " ") {
+                return (entry.tag, Set(phrase.split(separator: " ").map(String.init)))
+            }
+        }
+        return nil
+    }
+
+    /// Every tag this vocabulary can name, for a caller that needs to know
+    /// whether a tag is a facet rather than which words reach it — the themes
+    /// treemap, which must not draw one (2026-08-14, see
+    /// `HomeComposition.mechanicalTags`). Read off `facetTable` rather than
+    /// re-listed, so a facet added above is excluded from the map the same day.
+    static let facetTags: Set<String> = Set(facetTable.map(\.tag))
+
+    /// The facet vocabulary itself. Hoisted out of `facetFilter` (2026-08-14)
+    /// only so `facetTags` can derive from it; the table and its ordering rule
+    /// are unchanged.
+    ///
+    /// Order matters: the first entry whose phrase appears wins, so the
+    /// more specific phrasings lead.
+    private static let facetTable: [(phrases: [String], tag: String)] = {
+        [
             (["my own posts", "own posts", "my posts", "posts", "post"], "Post"),
             (["my replies", "replies", "reply", "replied"], "Reply"),
             (["what i liked", "i liked", "my likes", "likes", "liked"], "Liked"),
@@ -765,17 +789,7 @@ enum Retriever {
             (["cancelled runs", "cancelled", "canceled"], "Cancelled"),
             (["pull requests", "pull request", "prs"], "PR"),
         ]
-        let haystack = " " + query.lowercased()
-            .components(separatedBy: CharacterSet.alphanumerics.inverted)
-            .filter { !$0.isEmpty }
-            .joined(separator: " ") + " "
-        for entry in table {
-            for phrase in entry.phrases where haystack.contains(" " + phrase + " ") {
-                return (entry.tag, Set(phrase.split(separator: " ").map(String.init)))
-            }
-        }
-        return nil
-    }
+    }()
 
     /// The source a query NAMES, and the words that named it.
     ///

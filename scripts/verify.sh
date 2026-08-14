@@ -63,6 +63,20 @@ step "PRD index audit"
 "$ROOT/scripts/prd-index-audit.py" || fail "the PRD ledger's numbering or citations drifted — see the output above"
 print -P "%F{green}✓ prd index audit%f"
 
+# The Themes treemap draws every tag it isn't told to exclude, so a bridge's own
+# state label ("Post", "Watchlist", "Pending") clusters as a THEME — and being
+# machine-stamped on every row it lands, it outnumbers any real subject by
+# orders of magnitude and takes the cells. Mechanical because the failure is
+# invisible: the map renders perfectly, and only someone who knows what their
+# own corpus is about can see the cell is bookkeeping. `mechanicalTags`'s facet
+# half derives from `Retriever.facetTags`; this is what keeps its hand half —
+# the bridge status labels, which have no registry to read — provably complete.
+step "Theme tags audit"
+"$ROOT/scripts/theme-tags-audit.py" --self-test >/dev/null \
+  || fail "the theme-tags audit's own self-test failed — the check is broken, not the tree"
+"$ROOT/scripts/theme-tags-audit.py" || fail "a stamped tag is ruled neither subject nor mechanical — see the output above"
+print -P "%F{green}✓ theme tags audit%f"
+
 # Keeps the connect pages from regrowing their wall of text (prd §315).
 # Static, no build. It is mechanical for the reason every rule in this file is
 # mechanical: the copy has now been de-walled twice from memory (§218b's "one
