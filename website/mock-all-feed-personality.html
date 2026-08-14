@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>All feed — three personality directions</title>
+<style>
+  :root{
+    --page:#000; --sheet:#111113; --well:#080809;
+    --t1:#fff; --t2:rgba(235,235,245,.60); --t3:rgba(235,235,245,.49); --t4:rgba(235,235,245,.55);
+    --tint:#0A84FF; --fillFaint:rgba(255,255,255,.04); --fillLine:rgba(255,255,255,.10);
+    --shadow:0 8px 24px rgba(0,0,0,.55);
+    --r-card:10px; --r-sheet:16px;
+    --sf:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",Arial,sans-serif;
+    --round:ui-rounded,-apple-system,"SF Pro Rounded",BlinkMacSystemFont,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#0b0b0d;color:var(--t1);font-family:var(--sf);
+       -webkit-font-smoothing:antialiased;padding:40px 24px 80px}
+  .page{max-width:1400px;margin:0 auto}
+  h1{font-family:var(--round);font-size:34px;font-weight:700;letter-spacing:0;margin-bottom:8px}
+  .sub{font-size:16px;color:var(--t2);max-width:74ch;line-height:1.55;margin-bottom:8px}
+  .rulebox{max-width:74ch;font-size:14px;color:var(--t3);line-height:1.6;margin:18px 0 40px;
+           border-radius:var(--r-card);background:var(--sheet);padding:16px 18px;box-shadow:var(--shadow)}
+  .rulebox b{color:var(--t2);font-weight:600}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:40px;align-items:start}
+  .col header{margin-bottom:18px}
+  .num{font-family:var(--round);font-size:14px;font-weight:700;color:var(--tint);margin-bottom:4px}
+  .col h2{font-family:var(--round);font-size:22px;font-weight:700;margin-bottom:6px}
+  .col .idea{font-size:15px;color:var(--t2);line-height:1.55}
+  .notes{margin-top:18px;font-size:13px;color:var(--t3);line-height:1.65}
+  .notes dt{color:var(--t2);font-weight:600;margin-top:10px}
+  .notes dt:first-child{margin-top:0}
+
+  /* ---- phone ---- */
+  .phone{width:390px;max-width:100%;height:800px;background:var(--page);border-radius:44px;
+         padding:0;overflow:hidden;position:relative;box-shadow:0 0 0 2px #1c1c1e,0 20px 50px rgba(0,0,0,.6)}
+  .screen{position:absolute;inset:0;overflow:hidden;display:flex;flex-direction:column}
+  .statusbar{height:54px;display:flex;align-items:flex-end;justify-content:space-between;
+             padding:0 26px 6px;font-size:15px;font-weight:600;color:var(--t1);flex:none}
+  .statusbar .r{display:flex;gap:5px;align-items:center;opacity:.9;font-size:12px}
+  .scroll{flex:1;overflow:hidden;padding:0 0 10px}
+
+  /* chip strip */
+  .chips{display:flex;gap:8px;padding:8px 15px 4px;align-items:center;flex:none}
+  .avatar{display:flex;align-items:center;gap:8px;background:#1c1c1e;border-radius:999px;padding:6px 12px 6px 6px}
+  .avatar .a{width:24px;height:24px;border-radius:999px;background:#3a3a3c}
+  .avatar .g{width:16px;height:16px;border-radius:4px;
+             background:linear-gradient(#0A84FF,#0A84FF) 0 0/6px 6px no-repeat,
+                        linear-gradient(#0A84FF,#0A84FF) 10px 0/6px 6px no-repeat,
+                        linear-gradient(#0A84FF,#0A84FF) 0 10px/6px 6px no-repeat,
+                        linear-gradient(#0A84FF,#0A84FF) 10px 10px/6px 6px no-repeat}
+  .chip{font-size:14px;font-weight:600;padding:8px 15px;border-radius:999px;background:#12233a;color:#dfe9f5;white-space:nowrap}
+  .chip.on{background:var(--tint);color:#fff}
+
+  /* day card */
+  .dayhead{padding:24px 15px 4px;display:flex;align-items:baseline;gap:8px}
+  .dayhead .n{font-family:var(--round);font-size:22px;font-weight:700}
+  .dayhead .c{font-size:14px;color:var(--t3)}
+  .card{margin:0 15px;background:var(--sheet);border-radius:var(--r-card);box-shadow:var(--shadow);overflow:hidden}
+  .row{display:flex;align-items:center;gap:12px;padding:12px 14px;min-height:56px}
+  .lead{width:26px;height:26px;border-radius:6px;flex:none;position:relative;
+        display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff}
+  .lead.big{width:34px;height:34px;border-radius:8px;font-size:13px}
+  .lead .badge{position:absolute;right:-4px;bottom:-4px;width:14px;height:14px;border-radius:4px;
+               border:2px solid var(--sheet);background:#3a3a3c}
+  .rowtext{flex:1;min-width:0}
+  .title{font-size:16px;color:var(--t1);line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .sub2{font-size:13px;color:var(--t3);margin-top:2px}
+  .time{font-size:14px;color:var(--t3);flex:none}
+  .count{text-align:right;flex:none}
+  .count b{display:block;font-family:var(--round);font-size:17px;font-weight:700}
+  .count span{font-size:13px;color:var(--t3)}
+  .thumb{width:26px;height:26px;border-radius:6px;flex:none;object-fit:cover}
+  .footer{padding:24px 15px;text-align:center;font-size:14px;color:var(--t3)}
+
+  /* app marks */
+  .m-cal{background:#e8453c}.m-todo{background:#e44332}.m-gpt{background:#fff;color:#000}
+  .m-aero{background:#2f6df6}.m-gm{background:#fff;color:#c5221f}.m-bsky{background:#0a7aff}
+  .m-rss{background:#f26522}.m-note{background:#f7c948;color:#000}.m-wallet{background:#2c2c2e}
+  .m-git{background:#24292f}.m-fig{background:#a259ff}.m-strp{background:#635bff}
+
+  /* ---- 1: voice ---- */
+  .lede{padding:20px 15px 2px}
+  .lede .day{font-family:var(--round);font-size:34px;font-weight:700;line-height:1.15}
+  .lede p{font-size:18px;line-height:1.5;color:var(--t2);margin-top:8px}
+  .lede p em{font-style:normal;color:var(--t1)}
+  .quiet{padding:22px 15px 2px}
+  .quiet .day{font-family:var(--round);font-size:22px;font-weight:600;color:var(--t1)}
+  .quiet p{font-size:16px;line-height:1.5;color:var(--t3);margin-top:4px}
+
+  /* ---- 2: rhythm ---- */
+  .heroRow{padding:0}
+  .heroArt{height:150px;background:var(--well);position:relative;overflow:hidden}
+  .heroArt .sky{position:absolute;inset:0;background:linear-gradient(160deg,#1d2b4a,#3b2f5e 60%,#5a3f52)}
+  .heroArt .sun{position:absolute;right:44px;top:44px;width:44px;height:44px;border-radius:999px;background:#f0b357;opacity:.9}
+  .heroArt .hill{position:absolute;left:-10%;right:-10%;bottom:-30px;height:90px;border-radius:50% 50% 0 0;background:#141a2b}
+  .heroMeta{padding:12px 14px 14px}
+  .heroMeta .t{font-family:var(--round);font-size:22px;font-weight:700;line-height:1.2}
+  .heroMeta .s{font-size:14px;color:var(--t3);margin-top:6px;display:flex;align-items:center;gap:6px}
+  .dot{width:3px;height:3px;border-radius:999px;background:var(--t3);display:inline-block}
+  .row.quietrow .title{font-size:15px;color:var(--t4)}
+  .row.quietrow{min-height:48px;padding:9px 14px}
+
+  /* ---- 3: hour ---- */
+  .crown{position:absolute;left:0;right:0;top:0;height:230px;pointer-events:none;z-index:0}
+  .screen.evening .crown{background:linear-gradient(180deg,rgba(214,109,58,.34),rgba(120,60,90,.10) 55%,transparent)}
+  .screen.evening{background:#000}
+  .hourmark{display:flex;align-items:center;gap:7px;padding:22px 15px 0;color:var(--t3);font-size:14px}
+  .hourmark .ic{width:15px;height:15px;border-radius:999px;background:linear-gradient(#f0b357,#d66d3a)}
+  .strip{display:flex;gap:8px;margin-top:18px}
+  .swatch{flex:1;border-radius:8px;height:64px;position:relative;overflow:hidden;background:#000;
+          box-shadow:inset 0 0 0 1px rgba(255,255,255,.06)}
+  .swatch i{position:absolute;left:0;right:0;top:0;height:34px;display:block}
+  .swatch span{position:absolute;left:6px;bottom:5px;font-size:11px;color:var(--t3);font-style:normal}
+  .sw-dawn i{background:linear-gradient(180deg,rgba(90,140,200,.40),transparent)}
+  .sw-mid i{background:linear-gradient(180deg,rgba(255,255,255,.10),transparent)}
+  .sw-eve i{background:linear-gradient(180deg,rgba(214,109,58,.40),transparent)}
+  .sw-night i{background:linear-gradient(180deg,rgba(60,70,130,.42),transparent)}
+
+  .flag{display:inline-block;font-size:12px;color:#f0b357;border-radius:6px;
+        background:rgba(240,179,87,.12);padding:3px 8px;margin-top:12px}
+  @media (max-width:820px){.phone{height:760px}}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <h1>Three ways to give the All feed personality</h1>
+  <p class="sub">Same corpus, same rows, same data. Each direction moves one lever only — voice, rhythm, or time — so you can rule on them independently and ship one without the other two.</p>
+  <div class="rulebox">
+    <b>What personality can't come from here.</b> Design law bans decoration as a source of character: no hairlines, no ALL-CAPS eyebrows, no letter-spacing, one tint, and color only ever carries identity, state, or magnitude. So none of these adds ornament — each finds character in something the app already knows and currently renders flatly. <b>Direction 3 is the one that bends a rule</b>, and it's called out on its own card.
+  </div>
+
+  <div class="grid">
+
+    <!-- ============ 1. VOICE ============ -->
+    <section class="col">
+      <header>
+        <div class="num">Direction 1</div>
+        <h2>The feed talks</h2>
+        <p class="idea">Today's group opens with a written sentence instead of a bare count. The app stops labelling your day and starts describing it — and a thin day gets different words from a heavy one.</p>
+      </header>
+
+      <div class="phone"><div class="screen">
+        <div class="statusbar"><span>9:41</span><span class="r">▮▮▮ ⌁ 􀛨</span></div>
+        <div class="chips">
+          <div class="avatar"><div class="a"></div><div class="g"></div></div>
+          <div class="chip on">All</div><div class="chip">Wallet</div><div class="chip">Markets</div>
+        </div>
+        <div class="scroll">
+
+          <div class="lede">
+            <div class="day">Today</div>
+            <p>Twelve in — mostly your feeds, plus a <em>deposit that cleared</em> and four things due before Friday.</p>
+          </div>
+
+          <div class="card" style="margin-top:14px">
+            <div class="row"><div class="lead m-strp">S</div><div class="rowtext"><div class="title">Deposit cleared · £2,400</div></div><div class="time">1h</div></div>
+            <div class="row"><div class="lead m-cal">􀉉</div><div class="rowtext"><div class="title">Calendar</div><div class="sub2">2h</div></div><div class="count"><b>4</b><span>events</span></div></div>
+            <div class="row"><div class="lead m-rss">R</div><div class="rowtext"><div class="title">The quiet death of the RSS reader</div></div><div class="time">3h</div></div>
+            <div class="row"><div class="lead m-gpt">◎</div><div class="rowtext"><div class="title">Trip plan: Lisbon</div></div><div class="time">4h</div></div>
+            <div class="row"><div class="lead m-todo">􀋲</div><div class="rowtext"><div class="title">Todoist</div><div class="sub2">5h</div></div><div class="count"><b>3</b><span>reminders</span></div></div>
+          </div>
+
+          <div class="quiet">
+            <div class="day">Yesterday</div>
+            <p>A quiet one. Three things, all from Calendar.</p>
+          </div>
+          <div class="card" style="margin-top:10px">
+            <div class="row"><div class="lead m-cal">􀉉</div><div class="rowtext"><div class="title">Standup moved to 10:30</div></div><div class="time">18h</div></div>
+            <div class="row"><div class="lead m-cal">􀉉</div><div class="rowtext"><div class="title">Dentist — Thursday</div></div><div class="time">21h</div></div>
+          </div>
+
+          <div class="footer">That's everything · 47 things</div>
+        </div>
+      </div></div>
+
+      <dl class="notes">
+        <dt>Where the words come from</dt>
+        <dd><code>DayBrief</code> already composes exactly this, deterministically, for the whisper capsule — it names the day's lead thing and falls back to a count only when nothing nameable landed. Today that sentence is spent on a capsule you dismiss once a day; this spends it where you actually read.</dd>
+        <dt>Why it stays honest</dt>
+        <dd>A day with nothing to say composes <em>nil</em> today, and would here too — the group falls back to the plain header. No manufactured news, no streaks, no "you're on fire."</dd>
+        <dt>Cost</dt>
+        <dd>Lowest of the three. No new data, no new field, no CloudKit deploy. The risk is tonal, not technical: chattiness. One sentence per day group, never per row.</dd>
+      </dl>
+    </section>
+
+    <!-- ============ 2. RHYTHM ============ -->
+    <section class="col">
+      <header>
+        <div class="num">Direction 2</div>
+        <h2>One thing leads</h2>
+        <p class="idea">Every day promotes its single most substantial thing to a lead card at display scale, and quietens everything below it. Days stop being interchangeable stripes and start having shapes.</p>
+      </header>
+
+      <div class="phone"><div class="screen">
+        <div class="statusbar"><span>9:41</span><span class="r">▮▮▮ ⌁ 􀛨</span></div>
+        <div class="chips">
+          <div class="avatar"><div class="a"></div><div class="g"></div></div>
+          <div class="chip on">All</div><div class="chip">Wallet</div><div class="chip">Markets</div>
+        </div>
+        <div class="scroll">
+
+          <div class="dayhead"><span class="n">Today</span><span class="c">12</span></div>
+          <div class="card">
+            <div class="heroRow">
+              <div class="heroArt"><div class="sky"></div><div class="sun"></div><div class="hill"></div></div>
+              <div class="heroMeta">
+                <div class="t">The quiet death of the RSS reader</div>
+                <div class="s"><span>Feeds</span><i class="dot"></i><span>Sarah Nguyen</span><i class="dot"></i><span>3h</span></div>
+              </div>
+            </div>
+            <div class="row quietrow"><div class="lead m-strp">S</div><div class="rowtext"><div class="title">Deposit cleared · £2,400</div></div><div class="time">1h</div></div>
+            <div class="row quietrow"><div class="lead m-cal">􀉉</div><div class="rowtext"><div class="title">Calendar</div></div><div class="count"><b>4</b><span>events</span></div></div>
+            <div class="row quietrow"><div class="lead m-gpt">◎</div><div class="rowtext"><div class="title">Trip plan: Lisbon</div></div><div class="time">4h</div></div>
+            <div class="row quietrow"><div class="lead m-todo">􀋲</div><div class="rowtext"><div class="title">Todoist</div></div><div class="count"><b>3</b><span>reminders</span></div></div>
+            <div class="row quietrow"><div class="lead m-bsky">􀊫</div><div class="rowtext"><div class="title">"still thinking about that lisbon thread"</div></div><div class="time">6h</div></div>
+          </div>
+
+          <div class="dayhead"><span class="n" style="font-weight:600">Yesterday</span><span class="c">3</span></div>
+          <div class="card">
+            <div class="row"><div class="lead big m-fig">F</div><div class="rowtext"><div class="title">Feed row spec — v4</div><div class="sub2">Figma · 18h</div></div></div>
+            <div class="row quietrow"><div class="lead m-cal">􀉉</div><div class="rowtext"><div class="title">Standup moved to 10:30</div></div><div class="time">21h</div></div>
+          </div>
+
+          <div class="footer">That's everything · 47 things</div>
+        </div>
+      </div></div>
+
+      <dl class="notes">
+        <dt>What picks the lead</dt>
+        <dd>Deterministic and already half-built: <code>wideArt</code> promotes one row per day to art size today. This extends the same gate — a real picture, or the day's one high-signal thing — into a full lead card, and takes the type down a step on everything under it so the promotion actually reads.</dd>
+        <dt>Why it's the strongest of the three</dt>
+        <dd>It's the only one that changes the feed's <em>silhouette</em>. Direction 1 you read; this one you see from across the room. A heavy day and a thin day become visibly different objects, which is what makes scrolling back through weeks feel like a place rather than a log.</dd>
+        <dt>Cost</dt>
+        <dd>Highest. It touches the row anatomy ruling ("one line on a field of its kind's color", 2026-07-06) — a lead card is a second anatomy, so it needs your ruling before it's built, and it needs a rule for the day where nothing deserves promotion (answer: nothing gets promoted; the day is all quiet rows, which is itself information).</dd>
+      </dl>
+    </section>
+
+    <!-- ============ 3. HOUR ============ -->
+    <section class="col">
+      <header>
+        <div class="num">Direction 3</div>
+        <h2>The feed knows the hour</h2>
+        <p class="idea">The crown pour tracks the time of day — cool at dawn, warm at dusk, deep at night — and each day group carries a small mark of when its things actually landed. The app feels awake at the same time you are.</p>
+      </header>
+
+      <div class="phone"><div class="screen evening">
+        <div class="crown"></div>
+        <div class="statusbar"><span>9:41</span><span class="r">▮▮▮ ⌁ 􀛨</span></div>
+        <div class="chips" style="position:relative;z-index:1">
+          <div class="avatar"><div class="a"></div><div class="g"></div></div>
+          <div class="chip on">All</div><div class="chip">Wallet</div><div class="chip">Markets</div>
+        </div>
+        <div class="scroll" style="position:relative;z-index:1">
+
+          <div class="hourmark"><span class="ic"></span><span>This evening</span></div>
+          <div class="dayhead" style="padding-top:4px"><span class="n">Today</span><span class="c">12</span></div>
+          <div class="card">
+            <div class="row"><div class="lead m-strp">S</div><div class="rowtext"><div class="title">Deposit cleared · £2,400</div></div><div class="time">1h</div></div>
+            <div class="row"><div class="lead m-rss">R</div><div class="rowtext"><div class="title">The quiet death of the RSS reader</div></div><div class="time">3h</div></div>
+            <div class="row"><div class="lead m-gpt">◎</div><div class="rowtext"><div class="title">Trip plan: Lisbon</div></div><div class="time">4h</div></div>
+            <div class="row"><div class="lead m-todo">􀋲</div><div class="rowtext"><div class="title">Todoist</div><div class="sub2">5h</div></div><div class="count"><b>3</b><span>reminders</span></div></div>
+          </div>
+
+          <div class="hourmark" style="padding-top:20px"><span class="ic" style="background:linear-gradient(#5a8cc8,#2f4d7a)"></span><span>This morning</span></div>
+          <div class="card" style="margin-top:8px">
+            <div class="row"><div class="lead m-cal">􀉉</div><div class="rowtext"><div class="title">Calendar</div><div class="sub2">8h</div></div><div class="count"><b>4</b><span>events</span></div></div>
+            <div class="row"><div class="lead m-git">􀫓</div><div class="rowtext"><div class="title">casberi · 3 commits pushed</div></div><div class="time">9h</div></div>
+          </div>
+
+          <div class="footer">That's everything · 47 things</div>
+        </div>
+      </div></div>
+
+      <div class="strip">
+        <div class="swatch sw-dawn"><i></i><span>dawn</span></div>
+        <div class="swatch sw-mid"><i></i><span>midday</span></div>
+        <div class="swatch sw-eve"><i></i><span>evening</span></div>
+        <div class="swatch sw-night"><i></i><span>night</span></div>
+      </div>
+
+      <dl class="notes">
+        <dt>What it reuses</dt>
+        <dd>The crown pour already exists (<code>ThemeStore.bleeds</code> / <code>MainSurface.crownPour</code>) and already re-tints for a scoped wallet — so the mechanism, the dose and the precedent for "the crown carries state" are all shipped. This makes the hour one more thing it can carry.</dd>
+        <dt>The rule it bends</dt>
+        <dd class="flag">Color = identity, state, or magnitude. Time of day is arguably state — but it's the app's state, not the corpus's, which is the closest thing here to decoration. Your call. The <em>within-day time grouping</em> (morning / afternoon / evening) breaks no rule at all and could ship alone.</dd>
+        <dt>Cost</dt>
+        <dd>Low, and reversible in one line — it's a hue function of the clock. The real risk is that a warm crown over a red alarm row muddies state color, so the pour has to stand down whenever a row is carrying state, exactly as the dose already drains in a source room.</dd>
+      </dl>
+    </section>
+
+  </div>
+
+  <div class="rulebox" style="margin-top:48px">
+    <b>If you only ship one:</b> Direction 1. It costs almost nothing, it uses a sentence the app already computes and currently throws away after one glance, and it's the only one that can't make the feed look wrong on a bad day. <b>If you want the feed to feel different rather than read different:</b> Direction 2 — but it needs a ruling on the row anatomy first, because a lead card is a second anatomy and that's yours to allow.
+  </div>
+
+</div>
+</body>
+</html>

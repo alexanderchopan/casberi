@@ -38,6 +38,12 @@ const TREE = [
   { s: '+12',  v: '',       x: 81.5, y: 81, w: 18.5, h: 19,  c: 'rgba(255,255,255,.16)', f: 19 },
 ];
 
+const REACH = [
+  { s: 'Wallet',    v: '118 req', x: 0,    y: 0,  w: 62,   h: 100, c: '#2962ef', f: 34 },
+  { s: 'Farcaster', v: '64 req',  x: 63,   y: 0,  w: 37,   h: 56,  c: '#855dcd', f: 26 },
+  { s: 'Photos',    v: '54 req',  x: 63,   y: 57, w: 37,   h: 43,  c: '#0a84ff', f: 24 },
+];
+
 const statusBar = () => `
 <div class="sbar">
   <span class="t">9:41</span>
@@ -72,7 +78,30 @@ const agentBar = (text) => `
   <span class="mic"><svg width="${26*S}" height="${26*S}" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3" fill="${BLUE}"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3" stroke="${BLUE}" stroke-width="2" fill="none" stroke-linecap="round"/></svg></span>
 </div>`;
 
+const STEP = (glyph, hue, title, line) => `
+  <div class="step">
+    <span class="sglyph" style="background:${hue}"><svg width="${24*S}" height="${24*S}" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${glyph}</svg></span>
+    <div class="col"><div class="ttl">${title}</div><div class="sub2" style="white-space:normal">${line}</div></div>
+  </div>`;
+
+const GLYPH_GRID = '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>';
+const GLYPH_FILTER = '<circle cx="12" cy="12" r="9"/><path d="M9 12h6M10.5 15h3"/>';
+const GLYPH_SPARK = '<path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M18 6l-2.5 2.5M8.5 15.5 6 18"/>';
+
 const SCREENS = [
+  {
+    id: '0-onboarding', accent: BLUE, pour: 'rgba(46,99,255,.30)',
+    head: 'How it works.\nNothing to set up.',
+    sub: 'Everything you care about, from every app, in one place that’s yours.',
+    body: `
+      <div class="onb">
+        ${STEP(GLYPH_GRID, '#2962ef', 'Connect your apps', 'Everything you connect lands here on its own — the catalog is top left.')}
+        ${STEP(GLYPH_FILTER, '#ff2d92', 'One feed, or one app', 'Narrow it to one app with the chips up top.')}
+        ${STEP(GLYPH_SPARK, '#855dcd', 'Ask anything', 'Ask the bar at the bottom about anything you’ve saved.')}
+        <div class="onbcta">Try the demo</div>
+        <div class="onbsecondary">Start with my own things</div>
+      </div>`,
+  },
   {
     id: '1-feed', accent: BLUE, pour: 'rgba(46,99,255,.30)',
     head: 'Everything you keep,\nin one feed.',
@@ -133,7 +162,7 @@ const SCREENS = [
     head: 'Connect it once.\nIt keeps landing.',
     sub: 'Photos, Calendar, Health, GitHub, Spotify, Farcaster, Bluesky, wallets — and more join regularly.',
     body: `${chipStrip('All')}
-      <div class="sect">The catalog <em>48</em></div>
+      <div class="sect">The catalog <em>90+</em></div>
       <div class="agrid">${APPS.slice(0,28).map(c=>`<span class="at" style="background:${c}"></span>`).join('')}</div>
       <div class="row" style="margin-top:${px(30)}"><span class="dot" style="background:${GREEN}"></span><div class="col"><div class="ttl">No account. No sign-up.</div><div class="sub2">Public sources need nothing at all</div></div></div>
       ${agentBar()}`,
@@ -150,6 +179,19 @@ const SCREENS = [
       <div class="row"><span class="pic" style="background:${VIOLET}"></span><div class="col"><div class="ttl">Farcaster</div><div class="sub2">Public casts you follow</div><div class="host">api.farcaster.xyz</div></div></div>
       <div class="sect">Only when you tap</div>
       <div class="row"><span class="pic" style="background:rgba(255,255,255,.16)"></span><div class="col"><div class="ttl">Your agent key</div><div class="sub2">Only on "Try with your key" — never otherwise</div></div></div>
+      ${agentBar()}`,
+  },
+  {
+    id: '7-reach', accent: GREEN, pour: 'rgba(63,185,80,.26)',
+    head: 'See exactly\nwhere it reaches.',
+    sub: 'Not a promise — a live receipt. Every host this iPhone actually talked to, and when.',
+    body: `${chipStrip('All')}
+      <div class="ptitle">What it actually reached</div>
+      <div class="reachtop"><span class="reachn">312</span><span class="reachlabel">requests</span><span class="reachpill">All declared</span></div>
+      <div class="tree">${REACH.map(c=>`<span class="tc" style="left:${c.x}%;top:${c.y}%;width:${c.w}%;height:${c.h}%;background:${c.c}"><b style="font-size:${px(c.f)}">${c.s}</b><i style="font-size:${px(c.f*0.55)}">${c.v}</i></span>`).join('')}</div>
+      <div class="sect" style="margin-top:${px(30)}">Reached</div>
+      <div class="row"><span class="pic" style="background:#2962ef"></span><div class="col"><div class="ttl">Wallet</div><div class="host">api.g.alchemy.com · 118 requests</div></div></div>
+      <div class="row"><span class="pic" style="background:${VIOLET}"></span><div class="col"><div class="ttl">Farcaster</div><div class="host">api.farcaster.xyz · 64 requests</div></div></div>
       ${agentBar()}`,
   },
 ];
@@ -219,6 +261,17 @@ html,body{width:${W}px;height:${H}px;overflow:hidden;background:#EEEAE1;
   background:rgba(255,255,255,.11);border-radius:100px;padding:${px(22)} ${px(28)};
   box-shadow:inset 0 0 0 ${px(2)} rgba(255,255,255,.12), 0 ${px(10)} ${px(30)} rgba(0,0,0,.4);
   font-size:${px(26)};font-weight:600;color:rgba(255,255,255,.6);}
+.onb{padding-top:${px(30)};}
+.step{display:flex;align-items:flex-start;gap:${px(20)};margin-bottom:${px(30)};}
+.sglyph{width:${px(56)};height:${px(56)};border-radius:${px(16)};display:flex;align-items:center;justify-content:center;flex:none;}
+.onbcta{margin-top:${px(50)};background:${BLUE};color:#fff;text-align:center;font-size:${px(27)};font-weight:700;
+  border-radius:100px;padding:${px(22)} 0;box-shadow:0 ${px(10)} ${px(30)} rgba(46,99,255,.4);}
+.onbsecondary{margin-top:${px(18)};text-align:center;font-size:${px(23)};font-weight:600;color:rgba(255,255,255,.55);}
+.reachtop{display:flex;align-items:baseline;gap:${px(14)};margin-top:${px(16)};}
+.reachn{font-size:${px(56)};font-weight:800;letter-spacing:-.02em;}
+.reachlabel{font-size:${px(23)};color:rgba(255,255,255,.42);font-weight:600;}
+.reachpill{margin-left:auto;font-size:${px(21)};font-weight:750;padding:${px(9)} ${px(20)};border-radius:100px;
+  background:rgba(63,185,80,.18);color:${GREEN};align-self:center;}
 </style></head><body>
 <div class="grain"></div>
 <div class="mast mono"><span>CASBERI</span><span>casberi.app</span></div>
