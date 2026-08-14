@@ -1149,11 +1149,7 @@ else
   # WHOLE SCRIPT right there — before the validation regex below ever runs.
   # The common case (no reach at all) is the one that was crashing every
   # time. `|| echo 0` on the substitution itself is not optional here.
-  if [[ -f "$REACH_LOG" ]]; then
-    REACHED=$(grep -c "receipt| " "$REACH_LOG" 2>/dev/null || echo 0)
-  else
-    REACHED=""
-  fi
+  REACHED=$(grep -c "receipt| " "$REACH_LOG" 2>/dev/null | head -1 || true)
   [[ "$REACHED" =~ ^[0-9]+$ ]] || REACHED=0
   if [[ "$REACHED" == "0" ]]; then
     print -P "%F{green}✓ demo reaches nothing (4 rooms walked, ledger empty)%f"
@@ -1200,12 +1196,22 @@ else
   sleep 2
   kill $FPID 2>/dev/null || true
   xcrun simctl terminate "$DEVICE" "$BUNDLE" 2>/dev/null || true
-  UNDER=$(grep -c ") UNDER " "$FLOOR_LOG" 2>/dev/null || echo 0)
+  # See the reach check above for the full story: `grep -c` PRINTS "0" and
+  # EXITS 1 on zero matches, so `|| echo 0` appends a SECOND "0" and the
+  # value becomes the literal two-line "0\n0" — which fails the `== "0"`
+  # test below and sends a perfectly healthy run into the warn branch, where
+  # the follow-up `grep -o` finds nothing, exits 1, and kills the whole
+  # script under `set -e`. `head -1` drops the duplicate, and the regex
+  # normalises anything else (empty, missing file) to a real 0.
+  UNDER=$(grep -c ") UNDER " "$FLOOR_LOG" 2>/dev/null | head -1 || true)
+  [[ "$UNDER" =~ ^[0-9]+$ ]] || UNDER=0
   if [[ "$UNDER" == "0" ]]; then
     print -P "%F{green}✓ demo floor coverage (every required control clears its floor)%f"
   else
     print -P "%F{yellow}⚠ $UNDER required control(s) under their floor:%f"
-    grep -o "floor| .*UNDER.*" "$FLOOR_LOG" | sort -u
+    # `|| true`: this is a WARN-only step, so the listing must never be the
+    # thing that fails the run.
+    grep -o "floor| .*UNDER.*" "$FLOOR_LOG" | sort -u || true
   fi
 fi
 
