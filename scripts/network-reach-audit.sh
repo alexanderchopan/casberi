@@ -111,6 +111,18 @@ KNOWN_NON_REACH=(
   # fetched by us.
   picsum.photos www.allbirds.com www.google.com www.nasa.gov
   developer.apple.com developer.mozilla.org www. example.com
+  # X's link shortener — appears ONLY in prose. Three comments in
+  # XArchiveImport/ScreenshotTopics discuss the `https://t.co/…` shape
+  # because handling it correctly is the whole point of those passages: an
+  # X archive stores every link as its t.co shortening, and the importer
+  # swaps in `entities.urls[].expanded_url` so the shortlink never becomes
+  # a title, a topic-map term, or a request. We match against the form and
+  # deliberately never send to it. (This scan reads raw source, comments
+  # included — the "negative guards must read a comment-stripped copy"
+  # lesson CLAUDE.md records for the Obsidian and Cursor self-tests, in a
+  # third place. Stripping comments here would be the more general fix;
+  # this entry is the narrow one.)
+  t.co
 )
 
 # Every host literal the app references (app + shared sources), minus our own
