@@ -1730,7 +1730,15 @@ struct BundleRow: View {
                     }
                     BridgeIcon(name: source, size: DS.Mark.row)
                 }
-                .frame(width: DS.Mark.row + 8, alignment: .leading)
+                // The SEAT stays `Mark.row` and the peek cards OVERHANG it
+                // (2026-08-14, user report with screenshot: "the Wallet entry
+                // has an extra space indented and is not even with the rest").
+                // The old `Mark.row + 8` frame billed the cards' peek to the
+                // layout, so every deck bundle's title started 8pt right of
+                // the column every other row keeps. A ZStack doesn't clip, so
+                // the cards still draw — into the leading gap, where 8pt of
+                // the s3 leaves clear air — and the text column holds.
+                .frame(width: DS.Mark.row, alignment: .leading)
             } else {
                 // The fan: newest on top, each a step behind — the same 26pt
                 // leading seat every band row keeps, grown only by the
@@ -1795,6 +1803,21 @@ struct StripRow: View {
     /// a stack read as the same family seen from two angles.
     private static let gap: CGFloat = 4
 
+    /// Every tile draws at `Mark.list`, faces and pictures alike (2026-08-14,
+    /// user, off the first real screenshots: "i really think they should be
+    /// bigger? you can't really see the image … what would it look like if the
+    /// icons and images are the same size … wouldn't that make things more
+    /// choesive?"). §377 shipped them at `Mark.row` — the seat a lone leader
+    /// occupies — and left the size as its stated open question; the answer
+    /// was already ON the ramp: `Mark.list` is documented as "a taller band
+    /// row … and the size a row's thumbnail already uses, so a mark and a
+    /// picture in the same slot are the same square", which is the user's
+    /// cohesion argument as a token. ONE size for every tile, no `rowCircle`
+    /// optical bump — that compensation is for a circle standing in a MIXED
+    /// column beside squircles (its own doc), and a strip's tiles are a line
+    /// of their own kind.
+    private static let tile: CGFloat = DS.Mark.list
+
     var body: some View {
         HStack(spacing: DS.Space.s3) {
             HStack(spacing: Self.gap) {
@@ -1803,7 +1826,7 @@ struct StripRow: View {
                         // A remote image (a face, a cover, an article's art):
                         // no model read at all, so nothing here can touch a
                         // tombstone.
-                        RemoteThumb(urlString: remote, size: DS.Mark.row,
+                        RemoteThumb(urlString: remote, size: Self.tile,
                                     fallback: source, circular: tile.circular)
                     } else if let thing = tile.item.live {
                         // `.live` INSIDE the closure before the first stored
@@ -1811,10 +1834,10 @@ struct StripRow: View {
                         // this closure is re-evaluated against the array it
                         // already holds when a heal's delete lands, ahead of
                         // any guard `PhotoWell` does for itself.
-                        PhotoWell(thing: thing, size: DS.Mark.row)
-                            .frame(width: DS.Mark.row, height: DS.Mark.row)
+                        PhotoWell(thing: thing, size: Self.tile)
+                            .frame(width: Self.tile, height: Self.tile)
                             .clipShape(RoundedRectangle(
-                                cornerRadius: DS.Radius.appIcon(DS.Mark.row),
+                                cornerRadius: DS.Radius.appIcon(Self.tile),
                                 style: .continuous))
                     }
                 }
