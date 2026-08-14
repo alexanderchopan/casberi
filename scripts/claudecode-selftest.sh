@@ -54,8 +54,20 @@ done
 # the corpus", "a wrong answer here is not a wrong DATE") — a guard grepping
 # raw source fires against the prose explaining it. That lesson is the
 # Obsidian/Cursor one and it has been earned three times.
-STRIPPED=$(mktemp /tmp/claudecode-stripped.XXXXXX.swift)
-trap 'rm -f "$STRIPPED"' EXIT
+# The `XXXXXX` must be the LAST thing in a mktemp template: BSD mktemp (what
+# macOS ships) only substitutes a trailing run of X's, so the old
+# `…stripped.XXXXXX.swift` was taken LITERALLY — it created a real file named
+# with six capital X's, and because a `.swift` suffix is required here (swiftc
+# refuses to compile anything else) the X's could not simply be moved to the
+# end. A run killed before its EXIT trap fires — which is every run this
+# harness's own verify.sh kills, and several were killed this week — then
+# leaves that fixed name behind, and EVERY later run dies on
+# `mkstemp failed: File exists`, reporting a broken import self-test when
+# nothing about the import changed. A temp DIRECTORY takes the trailing X's
+# correctly and the file inside it can keep its required extension.
+STRIPPED_DIR=$(mktemp -d /tmp/claudecode-stripped.XXXXXX)
+STRIPPED="$STRIPPED_DIR/stripped.swift"
+trap 'rm -rf "$STRIPPED_DIR"' EXIT
 python3 - "$SRC" "$STRIPPED" <<'PY'
 import re, sys
 src = open(sys.argv[1]).read()
@@ -144,7 +156,7 @@ if int(m.group(1).replace("_", "")) < 1_000:
 PY
 
 TMP=$(mktemp -d /tmp/claudecode-selftest.XXXXXX)
-trap 'rm -f "$STRIPPED"; rm -rf "$TMP"' EXIT
+trap 'rm -rf "$STRIPPED_DIR" "$TMP"' EXIT
 
 # --- extract the shipped logic ---------------------------------------------
 # `ClaudeCodeSession` is lifted WHOLE from the shipped file by brace matching —
