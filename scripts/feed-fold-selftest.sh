@@ -273,7 +273,7 @@ mutate "a live row folds away" \
        'return false'
 mutate "the art door outranks the face door (a post is drawn as its photo)" \
        'if let face = identityLeader(t, faceSources: faceSources) {' \
-       'if let face: String? = nil, false {'
+       'if let face = identityLeader(t, faceSources: faceSources), false {'
 mutate "RSS becomes a strip identity (a feed logo repeats four times)" \
        'faceSources.contains(t.source) else { return nil }' \
        'true else { return nil }'
@@ -297,7 +297,16 @@ mutate "an unstrippable run swallows its exemptions" \
 strip_comments() { sed -E 's://.*$::' "$1"; }
 guard() {
   local what="$1" file="$2" pat="$3"
-  if strip_comments "$file" | grep -Eq "$pat"; then print "  ok   $what"
+  # `grep -E … >/dev/null`, never `grep -Eq`, in a PIPELINE under this
+  # script's own `set -o pipefail`. `-q` exits at the FIRST match, which
+  # closes the pipe while `sed` is still writing; sed dies of SIGPIPE, the
+  # pipeline inherits 141, and pipefail turns a match that was FOUND into a
+  # failed guard. It presents as drift in code that is perfectly correct, and
+  # it is positional: FeedScreen.swift is ~6,000 lines and this pattern hits
+  # at ~980, so sed always has data left — while a guard whose pattern sits
+  # near the end passes, because sed finishes first. Without `-q`, grep reads
+  # to EOF and nothing gets SIGPIPE.
+  if strip_comments "$file" | grep -E "$pat" >/dev/null; then print "  ok   $what"
   else print -u2 "  DRIFT: $what"; return 1; fi
 }
 

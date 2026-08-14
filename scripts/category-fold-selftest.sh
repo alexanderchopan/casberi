@@ -418,8 +418,14 @@ grep -qE 'compact: chrome\.minimized && !showsRail' "$TMP/main.nc" \
 # that all THREE flags are still in the expression — dropping `walkInPushedRoom`
 # alone compiles, reads fine, and silently hands the shortcuts back to a pushed
 # room, which is the exact hole §357 closed.
+# `grep … >/dev/null` and not `grep -q` as the TAIL of a pipeline: under this
+# script's `set -o pipefail`, `-q` exits at the first match and the upstream
+# grep dies of SIGPIPE (141), which pipefail reports as a failed check even
+# though the pattern was FOUND. Timing-dependent on whether the upstream has
+# finished writing, so it presents as an intermittent failure in correct code
+# — this file flaked twice inside full verify runs while passing standalone.
 grep -A2 'var shellChromeClear' "$TMP/chrome.nc" \
-  | grep -q '!walkModalOpen && !walkSheetOpen && !walkInPushedRoom' \
+  | grep '!walkModalOpen && !walkSheetOpen && !walkInPushedRoom' >/dev/null \
   || { echo "✗ ShellChrome.shellChromeClear no longer tests all three flags — the room-control"; \
        echo "  shortcuts would keep driving a switcher and a rail that a pushed room, a raised"; \
        echo "  agent or an open sheet has covered (§357/§360). It is also canWalk's gate, so"; \
@@ -495,7 +501,7 @@ grep -qE 'padding\(\.leading, showsRail \? PadLayout\.railWidth' "$TMP/topinset.
 # rail is already drawn by `.safeAreaInset(edge: .leading)` on the stack and
 # that inset reaches nothing inside it; reserving the column the same way
 # would compile, read as correct, and change no pixel.
-awk '/func dsRailColumn/,/^}/' "Casberi/Casberi/Design/PadLayout.swift" | grep -q 'padding(.leading' \
+awk '/func dsRailColumn/,/^}/' "Casberi/Casberi/Design/PadLayout.swift" | grep 'padding(.leading' >/dev/null \
   || { echo "✗ dsRailColumn no longer reserves with a padding — a safeAreaInset applied to"; \
        echo "  the stack does not reach its content (measured: leading reads 0 at every"; \
        echo "  width), so the column would silently stop being reserved (§371)."; exit 1; }
