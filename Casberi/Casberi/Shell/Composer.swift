@@ -705,7 +705,15 @@ struct Composer: View {
     /// Everywhere else the full set stands.
     private var dockedSuggestions: [AskOption] {
         guard briefLanding else { return suggestions }
-        return suggestions.filter { !Self.briefAnswers.contains($0.kind) }
+        // `observation` joins the suppressed set under the brief (prd §386e):
+        // §386d put the notice INSIDE the document as its own module, so the
+        // chip beside it now offers to fetch something already on screen —
+        // the same duplication `shownCategoryChips` just stood down for, and
+        // the reason the chip existed (the glint's payoff needed a door) is
+        // exactly what putting it in the page removed.
+        return suggestions.filter {
+            !Self.briefAnswers.contains($0.kind) && $0.kind != "observation"
+        }
     }
 
     /// Tag completions for the word being typed — your real tags, prefix-
@@ -2421,34 +2429,33 @@ struct Composer: View {
                                 .dsAdaptiveContentWidth(
                                     GenFrontPage.qualifies(answerStream.els) ? .wide : .reading)
                             }
-                            // THE PANEL DOCKS UNDER THE BRIEF (2026-08-14, prd
-                            // §386d). The other half of the §336 reversal one
-                            // file over: a bare bar tap now seeds the brief,
-                            // so without this the panel would again be
-                            // unreachable on a normal open — which is exactly
-                            // the bug §336 fixed by refusing to seed.
+                            // THE PANEL DOES NOT DOCK HERE (2026-08-15, prd
+                            // §386e, user: "there is duplicative stuff on the
+                            // composer … there are two of the same wallet
+                            // charts etc. all the old stuff is below it at the
+                            // bottom").
                             //
-                            // INSIDE this scroll rather than beside it: the
-                            // rest-screen mount below carries its own
-                            // `ScrollView`, and two sibling scrolls in one
-                            // column is the layout that has no good answer.
-                            // Here the brief and the figures are one surface —
-                            // read the day, keep scrolling, land in the rooms.
+                            // §386d docked `AgentOpenBoard` under the brief so
+                            // the §336 reversal would not leave the panel
+                            // unreachable. That was the wrong half to keep:
+                            // the panel REPEATS the brief. The brief's money
+                            // hero is a wallet balance curve and the panel's
+                            // `walletCurve` tile is a wallet balance curve;
+                            // the brief's `flow` module is the sankey and the
+                            // panel's `walletFlow` card is the same sankey;
+                            // the brief's themes map and the panel's per-room
+                            // treemaps are the same shapes over the same rows.
+                            // Stacking them put every one of those on screen
+                            // twice, with the second copy reading as leftovers
+                            // from the surface this session spent four rulings
+                            // collapsing.
                             //
-                            // Gated on the SETTLED landing (`briefLanding`
-                            // waits on `answerStream.completed`), so the
-                            // figures never slide in under a document that is
-                            // still painting.
-                            if briefLanding, !composition.isEmpty {
-                                AgentOpenBoard(composition: composition,
-                                               onOpenRoom: { source in
-                                                   ChipMemory.visited(source)
-                                                   filter.source = source
-                                                   filter.tag = "All"
-                                                   close()
-                                               })
-                                    .padding(.top, DS.Space.s6)
-                            }
+                            // So the brief IS the landing, and nothing rides
+                            // below it. The panel stays compiled and still
+                            // mounts on the rest surface (dormant-not-deleted,
+                            // the §386a shape) — see §386e for the open
+                            // question of whether that surface is still
+                            // reachable enough to matter.
                             Color.clear.frame(height: 1).id("bottom")
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -3783,7 +3790,15 @@ struct Composer: View {
         // with the scope chips (prd §386): the one chip left IS the day, so
         // the prepend would mint a duplicate id. A typed scoped ask still
         // shows this row — the door back out to the whole overview.
-        categoryChips
+        //
+        // …and it stands down entirely under the UNSCOPED brief (prd §386e):
+        // the one chip left asks "What's going on?", which is the exact
+        // document already filling the screen. A control offering to fetch
+        // what you are reading is the duplication the user reported, in its
+        // smallest form. A SCOPED brief still gets it, because there it is a
+        // real door — back out to the whole day.
+        if briefLanding, !TodayBrief.matchesScoped(currentQuestion) { return [] }
+        return categoryChips
     }
 
     @ViewBuilder
