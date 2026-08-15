@@ -133,9 +133,10 @@ SKIP_BUMP=1 \
 
    **Demo parity is a REQUIRED step of every ship (user ruling 2026-08-08) —
    never ship without checking it, and never wait to be asked**, the same
-   standing the public-beta handoff itself carries. `verify.sh` runs FOUR
+   standing the public-beta handoff itself carries. `verify.sh` runs THREE
    checks for this now (extended 2026-08-10 to "all parts of the app", user
-   ruling — see CLAUDE.md's demo-mode entry), and they split into two kinds
+   ruling — see CLAUDE.md's demo-mode entry; a fourth retired with the agent
+   panel on 2026-08-15, see below), and they split into two kinds
    depending on whether the surface has runtime ranking to protect against,
    which is worth understanding rather than skimming past:
 
@@ -147,22 +148,26 @@ SKIP_BUMP=1 \
    - **`demo-selftest.py` check F** (static, always hard-fails) — every
      `FeedScreen.Shape` case (the room-rendering taxonomy) has a seeded
      source that maps to it. Shape assignment is a pure function of a
-     source's name with no ranking involved, so unlike the two checks below
-     it can be proven from source text alone.
-   - **The "Demo panel figure-kind coverage" step**, in the simulator tail —
-     runs the real furnished demo through the real agent-panel composer and
-     checks every `AgentPanel.Figure` case actually draws. **WARN-only,
-     never a hard fail**: the panel caps at 20 cards ranked by affinity, so a
-     figure kind that genuinely composes can still lose one run's ranking
-     race (measured: PostHog's `curve` present in two runs, absent in a
-     third, identical build). A warning here is NOT something to skim past
-     and ship anyway — it found a real, shipped-adjacent bug on its first
-     real run (`runway` never drew because `CloudflareRunwaySource.compose`
-     needed a `CloudflareEstateStore` snapshot nothing had ever seeded,
-     2026-08-08). **When it warns:** re-run once to see if the miss is
-     consistent (a real gap warns every time; ranking noise doesn't), and if
-     it's consistent, fix the actual wiring before shipping — don't just
-     re-run until it happens to pass.
+     source's name with no ranking involved, so unlike the check below it
+     can be proven from source text alone.
+   - **~~The "Demo panel figure-kind coverage" step~~ — RETIRED 2026-08-15
+     (prd §386p), and worth knowing it existed.** It ran the furnished demo
+     through the real agent-panel composer and checked every
+     `AgentPanel.Figure` case actually drew — the widest fan-in figure-kind
+     check in the tree, and it found a real bug on its first real run
+     (`runway` never drew because `CloudflareRunwaySource.compose` needed a
+     `CloudflareEstateStore` snapshot nothing had ever seeded, 2026-08-08).
+     It went with the agent panel: with no surface drawing many rooms'
+     figures at once there is nothing left to run it over. The chip peek
+     draws ONE room's figure on long-press, through the same
+     `RoomFigure.roomFigure` chain, which `agent-panel-selftest.sh` compiles
+     whole. **This is a real subtraction in ship coverage, not a cleanup** —
+     if a many-figure surface is ever built again, rebuild this step with it.
+     Its WARN-only design is the lesson to carry forward: the panel ranked
+     and capped its cards, so a kind that genuinely composed could still
+     lose one run's race (measured: PostHog's `curve` present in two runs,
+     absent in a third, identical build), and a hard fail there would have
+     been the cries-wolf class this repo's audits avoid on purpose.
    - **The "Demo room-head coverage" step**, in the simulator tail — runs
      `-roomInsightProbe <Source>` for each of the ten `FeedScreen.SourceHead`
      cases (Cloudflare's runway, Stripe, PostHog, Apple Wallet, Circle x402,
