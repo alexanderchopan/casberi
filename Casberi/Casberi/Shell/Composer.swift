@@ -2160,7 +2160,18 @@ struct Composer: View {
                     if !briefSections.isEmpty {
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: DS.Space.s2) {
-                                ForEach(briefSections, id: \.id) { section in
+                                // The chip's identity is NAMESPACED (prd
+                                // §386n). `ForEach(id: \.id)` gave each chip
+                                // the SAME id as the document module it
+                                // points at, and a `ScrollViewReader` resolves
+                                // `scrollTo` against every scroll view it
+                                // contains — so the proxy found the CHIP in
+                                // this horizontal row first and scrolled the
+                                // NAV into view while the document sat still.
+                                // That is exactly what "the chips don't lead
+                                // anywhere" looked like: something moved, just
+                                // never the thing you were reading.
+                                ForEach(briefSections, id: \.chipID) { section in
                                     let here = section.title == activeSection
                                     Button {
                                         DSHaptic.selection()
@@ -2168,29 +2179,46 @@ struct Composer: View {
                                             proxy.scrollTo(section.id, anchor: .top)
                                         }
                                     } label: {
-                                        HStack(spacing: DS.Space.s1 + 2) {
-                                            Circle()
-                                                .fill(GenSection.hue(section.hue))
-                                                .frame(width: 6, height: 6)
-                                            Text(section.title)
-                                                .dsText(.subhead13)
-                                                // WHERE YOU ARE, in weight
-                                                // rather than in a second
-                                                // colour (prd §386j): the dot
-                                                // already carries this chip's
-                                                // identity, and a fill would
-                                                // make "selected" and
-                                                // "identity" argue on one
-                                                // 90pt capsule.
-                                                .fontWeight(here ? .semibold : .regular)
-                                                .foregroundStyle(here ? DS.textPrimary : DS.textSecondary)
-                                                .lineLimit(1)
-                                        }
-                                        .padding(.horizontal, DS.Space.s3)
-                                        .padding(.vertical, DS.Space.s2)
-                                        .background(here ? DS.fillStrong : DS.gray100,
-                                                    in: Capsule())
-                                        .dsHover()
+                                        // THE CHIP IS THE COLOUR (prd §386n,
+                                        // user: "do you think those chips
+                                        // also need the bullets… or we could
+                                        // make the chips a color to add some
+                                        // engaging design"). The dot was the
+                                        // §386l bullet surviving one surface
+                                        // longer than the ruling that killed
+                                        // it: a 6pt disc beside a word, in a
+                                        // row where every chip already needs
+                                        // to be told apart at a glance. The
+                                        // CAPSULE carries the hue instead —
+                                        // same information, no punctuation,
+                                        // and a row of tinted capsules is the
+                                        // one place in the brief where colour
+                                        // is doing navigation rather than
+                                        // decoration.
+                                        //
+                                        // Text stays on the INK ramp, never
+                                        // the hue: coloured labels at five
+                                        // hues is the ransom note §386l
+                                        // refused, and ink on a 16%-tinted
+                                        // capsule keeps every chip legible at
+                                        // every Dynamic Type size.
+                                        Text(section.title)
+                                            .dsText(.subhead13)
+                                            // WHERE YOU ARE, in weight and in
+                                            // the SAME hue's strength — the
+                                            // chip deepens rather than
+                                            // switching colour, so "selected"
+                                            // and "which section" stay one
+                                            // statement instead of two.
+                                            .fontWeight(here ? .semibold : .regular)
+                                            .foregroundStyle(here ? DS.textPrimary : DS.textSecondary)
+                                            .lineLimit(1)
+                                            .padding(.horizontal, DS.Space.s4)
+                                            .padding(.vertical, DS.Space.s2)
+                                            .background(GenSection.hue(section.hue)
+                                                            .opacity(here ? 0.34 : 0.16),
+                                                        in: Capsule())
+                                            .dsHover()
                                     }
                                     .buttonStyle(.plain)
                                 }
@@ -2976,6 +3004,7 @@ struct Composer: View {
                 if chrome.focusDraftOnOpen {
                     chrome.focusDraftOnOpen = false
                     fieldFocused = true
+                    findMode = true
                 }
                 // Raised by HOLDING the magnifier (prd §384): the mic is
                 // already live when the surface lands. Same verb as the mic
@@ -3154,6 +3183,7 @@ struct Composer: View {
         fieldFocused = false
         withAnimation(DS.Motion.standard) { isOpen = false }
         draft = ""      // close clears the draft (composer spec)
+        findMode = false
         answering = false
         pasted = false
         chipsAppeared = false
@@ -3552,8 +3582,21 @@ struct Composer: View {
     /// On screen when the room is at rest and the day has something to say.
     /// The board is on screen — at rest, with something composed.
     private var boardShowing: Bool {
-        restChrome(keepBrief: false) && !composition.isEmpty
+        restChrome(keepBrief: false) && !composition.isEmpty && !findMode
     }
+
+    /// The composer was raised by the MAGNIFIER (prd §386n, user: "when i
+    /// press the search bar i get the other composer screen is that
+    /// intentional?").
+    ///
+    /// Half of what they saw is intentional and stays: §215 rules that Find
+    /// runs NOTHING until you type, so unlike the berry it does not seed the
+    /// brief. The other half was a leftover — since §386d made a bare tap land
+    /// on the brief, "at rest" only ever happens via Find, so the agent panel
+    /// stopped being the rest surface and became the thing the SEARCH button
+    /// happens to show. Twenty room figures under a search field is noise:
+    /// pressing search should give you a place to search.
+    @State private var findMode = false
 
     /// The day card stands in only where the board doesn't reach: an empty
     /// composition (a new install, a corpus with nothing in the window). Both
@@ -3922,14 +3965,14 @@ struct Composer: View {
     /// Derived from the rendered doc rather than from the section plan, so a
     /// section that DECLINED (no money today, nobody around) has no chip by
     /// construction — the nav can never offer a heading that isn't there.
-    private var briefSections: [(id: String, title: String, hue: String)] {
+    private var briefSections: [(id: String, chipID: String, title: String, hue: String)] {
         guard briefLanding else { return [] }
         let els = answerStream.els
         guard let root = els["root"], root.comp == "Stack" else { return [] }
         return root.refs(0).compactMap { ref in
             guard let el = els[ref], el.comp == "Section", !el.str(0).isEmpty
             else { return nil }
-            return (ref, el.str(0), el.str(2))
+            return (ref, "chip-" + ref, el.str(0), el.str(2))
         }
     }
 

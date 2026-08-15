@@ -4235,6 +4235,21 @@ struct GenFrontPage: View {
         GenRender(id: ref, els: els, slot: inAgentAnswer ? .block : .none)
             .padding(.top, chapters.contains(ref) ? DS.Space.s4 : 0)
             .opacity(quiet.contains(ref) ? 0.68 : 1)
+            // Addressable HERE TOO (prd §386n, user: "the chips at top of the
+            // composer do not lead to anywhere when user presses them").
+            //
+            // §386i put `.id(ref)` on the plain `Stack` branch and the chips
+            // worked. §386i's own AMENDMENT then made `chapters` non-empty so
+            // the Mac would lay out in two columns — and a chapter-carrying
+            // doc routes through THIS view instead, where the ids did not
+            // exist. `scrollTo` on an id nothing claims is a silent no-op, so
+            // the fix for one platform's layout broke the other's navigation
+            // with nothing on screen and nothing in a log to say so.
+            //
+            // Every layout path here funnels through this one function, so
+            // the single column, the head run and the two-column blocks are
+            // all addressable from one line.
+            .id(ref)
     }
 
     /// The refs cut at every chapter opener. Segment 0 is whatever precedes
