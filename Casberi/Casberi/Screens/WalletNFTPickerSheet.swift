@@ -138,7 +138,7 @@ struct WalletNFTPickerSheet: View {
                 // draws no lines (brief §8, no hairlines, zero exceptions).
                 if on {
                     Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 22, weight: .semibold))
+                        .dsGlyph(22)
                         .symbolRenderingMode(.palette)
                         .foregroundStyle(.white, DS.tint)
                         .padding(DS.Space.s1)

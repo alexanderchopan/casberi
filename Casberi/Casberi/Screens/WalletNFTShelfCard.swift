@@ -101,7 +101,7 @@ struct WalletNFTShelfCard: View {
         Button(action: onEdit) {
             HStack(spacing: DS.Space.s2) {
                 Image(systemName: "square.grid.2x2")
-                    .font(.system(size: 15, weight: .medium))
+                    .dsGlyph(15, weight: .medium)
                     .foregroundStyle(DS.textTertiary)
                     .accessibilityHidden(true)
                 Text(String(localized: "Show NFTs from \(label)"))
