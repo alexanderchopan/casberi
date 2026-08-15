@@ -1008,16 +1008,24 @@ enum TodayBrief {
     /// A section is emitted ONLY when it has a member, and its header is a
     /// real element in `ids`, so the whole thing inherits the quiet set, the
     /// front-page columns and the chapter air for free.
-    private static let sectionPlan: [(title: String, ids: [String])] = [
-        ("Needs you", ["alerts"]),
+    ///
+    /// **"Needs you" and "Coming up" sit TOGETHER** (2026-08-15, prd §386i,
+    /// user: "'needs you' and 'coming up' seem like they should go together").
+    /// They are one subject — what you owe, ordered by urgency — and the only
+    /// thing separating them was that one is late and one is not. The cost the
+    /// user named ("but then that puts wallet all the way down") is real and is
+    /// paid by the ANCHOR CHIPS instead: with a nav at the top of the brief,
+    /// what sits third stops being a question of what you can reach.
+    private static let sectionPlan: [(title: String, hue: String, ids: [String])] = [
+        ("Needs you", "attention", ["alerts"]),
+        ("Coming up", "tint", ["axis", "runway"]),
         // `hero` and `spark` are alternatives, never both — the hero carries
         // its own curve, and the spark is what stands in when the live
         // holdings read left the hero unable to compose (§386h).
-        ("Money", ["hero", "spark", "holdmap", "pair", "tmkt", "flow", "spend"]),
-        ("Coming up", ["axis", "runway"]),
-        ("Your day", ["fold", "posts"]),
-        ("Work", ["work"]),
-        ("What it's about", ["map"]),
+        ("Money", "confirm", ["hero", "spark", "holdmap", "pair", "tmkt", "flow", "spend"]),
+        ("Your day", "life", ["fold", "posts"]),
+        ("Work", "work", ["work"]),
+        ("What it's about", "meaning", ["map"]),
     ]
 
     /// Regroups `ids` under `sectionPlan`, prefixing each populated section
@@ -1048,7 +1056,7 @@ enum TodayBrief {
             // real reading — "Needs you · 3" is how many things want you.
             // Nowhere else: "Money · 4" would be counting cards, which is
             // the tally §213 bans.
-            lines.append("\(id) = Section(\"\(genSafe(section.title))\", \"\(genSafe(qualifiers[section.title] ?? ""))\")")
+            lines.append("\(id) = Section(\"\(genSafe(section.title))\", \"\(genSafe(qualifiers[section.title] ?? ""))\", \"\(section.hue)\")")
             out.append(id)
             out.append(contentsOf: members)
             remaining.removeAll { members.contains($0) }

@@ -341,6 +341,12 @@ struct GenRender: View {
                 ForEach(el.refs(0), id: \.self) { ref in
                     GenRender(id: ref, els: els, slot: inAgentAnswer ? .block : .none)
                         .opacity(quiet.contains(ref) ? 0.68 : 1)
+                        // Addressable, so the brief's own section chips can
+                        // scroll to a heading (prd §386i). `ForEach`'s
+                        // `id: \.self` gives the row an identity for DIFFING;
+                        // `ScrollViewProxy` needs an explicit `.id` to have
+                        // something to scroll TO.
+                        .id(ref)
                 }
             } else {
                 GenFrontPage(el: el, els: els, chapters: chapters,
@@ -2170,11 +2176,39 @@ private struct GenFlexThumb: View {
 /// No rule, no line, no background: the design law forbids the divider a
 /// header usually leans on, so the header earns its separation with AIR above
 /// it and weight in the word itself.
-private struct GenSection: View {
+struct GenSection: View {
     let el: GenEl
+
+    /// Arg 2 — the section's identity hue, as a NAME rather than a hex (prd
+    /// §386i, user: "we also need section categories that perhaps are a color
+    /// … this should be super easy to read"). A name because the doc grammar
+    /// is strings and the design law forbids a component inlining a hex; the
+    /// table below is the only place a section's colour is decided.
+    ///
+    /// The colour rides a DOT, never the words: coloured header text at four
+    /// or five hues down one page is a ransom note, and the ink ramp is what
+    /// makes a heading legible at every size. The dot is identity — which
+    /// subject this is — the same job hue does on the panel's tiles.
+    static func hue(_ name: String) -> Color {
+        switch name {
+        case "attention": return DS.attention
+        case "confirm":   return DS.confirm
+        case "tint":      return DS.tint
+        case "life":      return Color.fixed("#bf5af2")
+        case "work":      return Color.fixed("#5e9eff")
+        case "meaning":   return Color.fixed("#ff9f0a")
+        default:          return DS.textTertiary
+        }
+    }
 
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+            if !el.str(2).isEmpty {
+                Circle()
+                    .fill(Self.hue(el.str(2)))
+                    .frame(width: 7, height: 7)
+                    .accessibilityHidden(true)
+            }
             Text(el.str(0))
                 .dsText(.callout15).fontWeight(.semibold)
                 .foregroundStyle(DS.textPrimary)

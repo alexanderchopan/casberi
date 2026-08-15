@@ -1528,8 +1528,13 @@ struct Composer: View {
         // doesn't appear, which is the honest state.
         let map = await semanticMap.value
         if !map.dots.isEmpty, !map.clusters.isEmpty {
-            out.append(card("cross.scatter", String(localized: "Your things, by meaning"),
-                            String(localized: "what sits near what"),
+            // "Your things, by meaning" retired 2026-08-15 (prd §386i, user:
+            // "nobody knows what by meaning means"). It named the METHOD —
+            // an embedding projection — where every other title in the app
+            // names what you get. "What goes together" is the reading itself,
+            // and the subline says how to use it.
+            out.append(card("cross.scatter", String(localized: "What goes together"),
+                            String(localized: "things that sit close are about the same thing"),
                             .scatter(dots: map.dots, clusters: map.clusters)))
         }
         return out
@@ -2139,6 +2144,52 @@ struct Composer: View {
             // gets cut. The scroll keeps the newest in view.
             if !turns.isEmpty || answering {
                 ScrollViewReader { proxy in
+                    VStack(alignment: .leading, spacing: 0) {
+                    // THE BRIEF'S OWN NAV (prd §386i) — pinned above the
+                    // document rather than scrolling with it, because a table
+                    // of contents that leaves the screen is a table of
+                    // contents you have to go back for. Each chip wears its
+                    // section's dot, so the chip and the heading it lands on
+                    // are visibly the same object.
+                    if !briefSections.isEmpty {
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: DS.Space.s2) {
+                                ForEach(briefSections, id: \.id) { section in
+                                    Button {
+                                        DSHaptic.selection()
+                                        withAnimation(DS.Motion.standard) {
+                                            proxy.scrollTo(section.id, anchor: .top)
+                                        }
+                                    } label: {
+                                        HStack(spacing: DS.Space.s1 + 2) {
+                                            Circle()
+                                                .fill(GenSection.hue(section.hue))
+                                                .frame(width: 6, height: 6)
+                                            Text(section.title)
+                                                .dsText(.subhead13)
+                                                .foregroundStyle(DS.textPrimary)
+                                                .lineLimit(1)
+                                        }
+                                        .padding(.horizontal, DS.Space.s3)
+                                        .padding(.vertical, DS.Space.s2)
+                                        .background(DS.gray100,
+                                                    in: Capsule())
+                                        .dsHover()
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
+                            .padding(.horizontal, DS.Space.s4)
+                        }
+                        // The VIEWPORT is inset, not the content — the ✕ is
+                        // pinned top-trailing and a horizontally scrolling row
+                        // would otherwise pass its chips underneath it at
+                        // every scroll position, not just at rest (the
+                        // masthead's own `.padding(.trailing, 64)` lesson,
+                        // which only had to solve the resting case).
+                        .padding(.trailing, 64)
+                        .padding(.bottom, DS.Space.s2)
+                    }
                     ScrollView {
                         VStack(alignment: .leading, spacing: DS.Space.s4) {
                             ForEach(turns) { turn in
@@ -2596,6 +2647,7 @@ struct Composer: View {
                         pendingKeyedFollowUp = false
                         askWithKey()
                     }
+                    }   // the nav + document column (prd §386i)
                 }
                 .padding(.top, DS.Space.s2)
             }
@@ -3836,6 +3888,31 @@ struct Composer: View {
     /// pill only exists for someone who has kept that ask). So the chip appears
     /// exactly where the row would otherwise be a one-way trip, and nowhere
     /// else — at the root the row is still the three tight choices it was.
+    /// The brief's own SECTIONS, as jump targets (2026-08-15, prd §386i,
+    /// user: "maybe we put chips back in but they just take you to the
+    /// section in the same brief where they are?").
+    ///
+    /// The opposite of the chips §386b deleted, and the distinction is the
+    /// whole reason these earn their place: those FIRED ASKS — every one a
+    /// question you had to spend a tap to find out the value of — while these
+    /// only move you inside a document that is already composed and already
+    /// on screen. Nothing runs, nothing is fetched, and no chip can lead
+    /// anywhere the brief isn't.
+    ///
+    /// Derived from the rendered doc rather than from the section plan, so a
+    /// section that DECLINED (no money today, nobody around) has no chip by
+    /// construction — the nav can never offer a heading that isn't there.
+    private var briefSections: [(id: String, title: String, hue: String)] {
+        guard briefLanding else { return [] }
+        let els = answerStream.els
+        guard let root = els["root"], root.comp == "Stack" else { return [] }
+        return root.refs(0).compactMap { ref in
+            guard let el = els[ref], el.comp == "Section", !el.str(0).isEmpty
+            else { return nil }
+            return (ref, el.str(0), el.str(2))
+        }
+    }
+
     private var shownCategoryChips: [CategoryChip] {
         // The scoped-answer special case (prepending a "The day" chip) died
         // with the scope chips (prd §386): the one chip left IS the day, so
