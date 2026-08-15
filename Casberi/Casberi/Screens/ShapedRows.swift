@@ -181,10 +181,56 @@ struct BandRow: View {
         // Falls back to the publisher, unchanged, for the feeds that name
         // nobody (most of them) and for rows that landed before the name was
         // captured — no row loses its label.
-        case "RSS":
+        //
+        // ITS FOUR SIBLINGS JOINED 2026-08-14, and they are not four new rules
+        // — they are this one, finally applied where it always belonged.
+        // Substack, Reddit, Podcasts and YouTube are RSS wearing four
+        // different names: the same parser, the same `<image>` element, the
+        // same `authorHandle = feedName` stamped at creation
+        // (`FeedFollowBridges`). They landed that name for the FILTER and drew
+        // it nowhere, so four of the app's highest-traffic reading rooms said
+        // nothing at all in this slot — a wall of headlines with no way to
+        // tell which subreddit, channel, publication or show any of them came
+        // from.
+        //
+        // Each lands on a different side of the author/publisher fork above,
+        // and the fork handles all four without a case of its own: a Reddit
+        // item names its redditor, a Substack post names its writer when the
+        // publication has several, and a YouTube entry names nobody (its
+        // `<author><name>` IS the channel, so `FeedParser.author` correctly
+        // files nothing) and falls through to the channel — which is the one
+        // fact those rows cannot otherwise carry, since YouTube advertises no
+        // feed icon and its rows lead with the video's own thumbnail.
+        case "RSS", "Substack", "Reddit", "Podcasts", "YouTube":
             if let author = thing.postAuthor?.trimmingCharacters(in: .whitespaces),
                !author.isEmpty { return author }
             let name = thing.authorHandle ?? ""; return name.isEmpty ? nil : name
+        // WHICH ONE IT IS — the container a row belongs to (2026-08-14, user
+        // ruling: "name the thing, not the class").
+        //
+        // A Kindle row's title is the HIGHLIGHT itself and its `authorHandle`
+        // is the work, so without this a shelf of highlights is a wall of
+        // disembodied sentences — the strongest case in this slot, since the
+        // label is what makes the row legible rather than merely richer. A
+        // TikTok row's title is the caption and its handle is the creator,
+        // stamped by the faces pass (`-tiktokFaces`), so the label fills in
+        // when that runs and is simply absent until then.
+        //
+        // The rule these two answer to, and the reason Spotify and Apple Music
+        // are NOT here despite stamping the same field: name a THING that has
+        // a proper name, never a class — and never a fact the row already
+        // tells. Both of those build their title as "Track — Artist", so the
+        // artist here would print it twice; Cursor's repo already LEADS its
+        // title by §303; Steam's title is literally "Played <game>"; an
+        // Instagram save's handle IS its title; and Twitch and Stocktwits both
+        // lead with that person's own avatar, which is the icon's word twin
+        // the RSS fork above exists to avoid. Kalshi is the class case: its
+        // category never reaches the row, and its one stored tag is
+        // "Watchlist" — on every row, which is the noise the 2026-07-23 ruling
+        // removed from this slot in the first place.
+        case "Kindle", "TikTok":
+            let name = thing.authorHandle?.trimmingCharacters(in: .whitespaces) ?? ""
+            return name.isEmpty ? nil : name
         // GitHub carries starCount/repoLanguage but rendered as a plain band
         // like any other link — the contribution hero above the feed was the
         // only place either fact showed (2026-07-21 enrichment, matching the
@@ -743,6 +789,18 @@ struct BandRow: View {
                     let hue = labelHue
                     Text(project)
                         .dsText(.label11)
+                        // Capped so a long value can't eat the title (2026-08-14).
+                        // Every value this slot held before today was short by
+                        // nature — "Main", "Cash App", "★234 · Swift" — and
+                        // nothing bounded it. A Kindle row's label is a WORK
+                        // ("Seeing Like a State — James C. Scott"), which is a
+                        // different order of length, and the trailing stack
+                        // takes its width from content: unbounded, it compresses
+                        // the sentence the row exists to show. Truncating the
+                        // label costs the tail of a book title; not truncating
+                        // costs the row.
+                        .frame(maxWidth: 132, alignment: .trailing)
+                        .truncationMode(.tail)
                         // Weight tracks the tint: at `label11` a hue needs the
                         // extra stroke to read as chosen rather than as a
                         // rendering artifact, and a row with nothing honest to
