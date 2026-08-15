@@ -578,6 +578,20 @@ print -P "%F{green}✓ retriever self-test%f"
 # build, a screen sweep or a landed count can see that: the room renders
 # perfectly and the sync reports success. The parsing half is the same class,
 # one layer up: a note whose excerpt is its YAML frontmatter looks like a note.
+# The picked-NFT shelf (prd §387). This feature's whole justification is that
+# it costs LESS than the shelf it revives — §72/§124a's version was cut on
+# 2026-07-19 as one of the two biggest credit sinks on the wallet path — and
+# that claim rests entirely on wiring no build can check: the spam allowlist and
+# the picker must stay ONE cached read with two projections, and the shelf's
+# read must stay narrowed to picked contracts. Fork either and the app still
+# builds, still renders, and quietly spends double. The pure half is the same
+# silent class: an unsorted contract list is the shelf's own cache key, so it
+# misses its cache at random and re-buys the read the window exists to avoid.
+step "Wallet-NFT pure-logic self-test"
+"$ROOT/scripts/wallet-nft-selftest.sh" >/dev/null \
+  || fail "the wallet-NFT logic self-test failed — run scripts/wallet-nft-selftest.sh"
+print -P "%F{green}✓ wallet-nft self-test%f"
+
 step "Obsidian pure-logic self-test"
 "$ROOT/scripts/obsidian-selftest.sh" >/dev/null \
   || fail "the Obsidian logic self-test failed — run scripts/obsidian-selftest.sh"

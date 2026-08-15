@@ -315,6 +315,12 @@ struct FeedScreen: View {
         /// on a row resolves to the same presenting controller as this one —
         /// the half-open-then-close bug (ruling 2026-07-28).
         case market(PredictionPreview)
+        /// The NFT picker (prd §387). Routed here rather than presented by the
+        /// shelf card, which lives inside this List's rows — a `.sheet` on a row
+        /// resolves to the same presenting controller as this one and the picker
+        /// would rise part way and close again (ruling 2026-07-28). Carries only
+        /// value types, so no `Thing` and no liveness question.
+        case nftPicks(address: String, label: String)
 
         var id: String {
             switch self {
@@ -325,6 +331,7 @@ struct FeedScreen: View {
             case .deposits: "deposits"
             case .locks: "locks"
             case .market(let p): "market:\(p.id)"
+            case .nftPicks(let address, _): "nftPicks:\(address)"
             }
         }
     }
@@ -376,6 +383,10 @@ struct FeedScreen: View {
     /// landed thing: re-read each time this feed comes forward or its scope
     /// changes, exactly as the manage screen used to hold it.
     @State private var walletLive = WalletLiveState()
+    /// Whether the scoped wallet holds any NFT collection at all (prd §387) —
+    /// what decides between the shelf's invitation line and nothing. Owned by
+    /// the room, filled by `loadWalletLive`; see there for why not by the card.
+    @State private var nftHasCollections = false
     /// The combined portfolio behind the treemap (2026-07-21, prd §155) — one
     /// derivation the balance headline, the concentration line, and the
     /// allocation tray all read, so nothing on this screen can disagree with
@@ -2084,6 +2095,8 @@ struct FeedScreen: View {
                 WalletLocksTray(composition: composition)
             case .market(let preview):
                 PredictionPreviewSheet(preview: preview)
+            case .nftPicks(let address, let label):
+                WalletNFTPickerSheet(wallet: address, label: label)
             }
         }
         #if !targetEnvironment(macCatalyst)
@@ -2424,6 +2437,11 @@ struct FeedScreen: View {
             // before the map changes the subject to composition (2026-08-01).
             walletFlowSection
             holdingsBlockSection
+            // What you hold that ISN'T fungible, directly under the map that
+            // says what is (prd §387, restoring §124a's placement). The two are
+            // one "what you hold" pair; everything below changes the subject to
+            // what it's doing and who can reach it.
+            walletNFTSection
             walletRiskSection
             walletDeFiSection
             walletLiquiditySection
@@ -3836,6 +3854,50 @@ struct FeedScreen: View {
         if let selectedWallet { return selectedWallet }
         let watched = wallet.addresses
         return watched.count == 1 ? watched.first?.address : nil
+    }
+
+    /// Whose NFT shelf this room draws (2026-08-15, prd §387) — the scoped
+    /// wallet, or the sole watched one.
+    ///
+    /// nil when several wallets are merged, and the shelf then draws nothing:
+    /// a pick is made PER WALLET, so a merged shelf would have to say whose
+    /// each piece is, and this room already declines to speak for merged
+    /// wallets rather than invent an attribution (`spineWalletAddress`, same
+    /// reasoning applied to a portrait). The wallet switcher is pinned above
+    /// the room, so narrowing to one is a tap away.
+    private var nftShelfWallet: WalletStore.WatchedAddress? {
+        let watched = wallet.addresses
+        if let selectedWallet {
+            return watched.first { WalletWatch.sameAddress($0.address, selectedWallet) }
+        }
+        return watched.count == 1 ? watched.first : nil
+    }
+
+    /// The picked-NFT shelf. Renders nothing at all for a wallet with no picks
+    /// and no collections to pick — which is most wallets, and is why this is
+    /// the one wallet card that can be completely absent without meaning a
+    /// read failed.
+    @ViewBuilder
+    private var walletNFTSection: some View {
+        // Gated on state the ROOM owns (`nftHasCollections`, filled by
+        // `loadWalletLive`), never on state the card would have to be alive to
+        // fetch — see that function for the pruning trap this avoids.
+        if let entry = nftShelfWallet,
+           DemoMode.isActive || nftHasCollections
+            || WalletNFTStore.shared.hasPicks(wallet: entry.address) {
+            Section {
+                WalletNFTShelfCard(
+                    wallet: entry.address,
+                    label: entry.label.isEmpty ? entry.short : entry.label,
+                    onEdit: { feedSheet = .nftPicks(address: entry.address,
+                                                    label: entry.label.isEmpty ? entry.short : entry.label) })
+                    .modifier(RowEntrance(index: 2, wave: shapeWave, style: entranceStyle))
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DS.Space.s4,
+                                              bottom: 0, trailing: DS.Space.s4))
+            }
+        }
     }
 
     /// Every leveraged position on one axis (2026-08-01, `WalletRiskStrip`),
@@ -5958,6 +6020,27 @@ struct FeedScreen: View {
             // animation carries the LAYOUT (rows sliding to make room);
             // each tile's own RowEntrance carries its reveal.
             withAnimation(DS.Motion.standard) { walletLive = state }
+        }
+        // Whether this wallet has anything to PICK (prd §387).
+        //
+        // Read HERE rather than inside the shelf card, and that placement is
+        // the whole fix: the card draws nothing until it knows, so a card that
+        // asked for itself produced an empty row, `List` pruned the row, and
+        // the `.task` that would have answered never ran — the invitation could
+        // never appear on any wallet. Gating a section on state the section
+        // itself has to be alive to fetch is a chicken-and-egg; the owner of
+        // the section owns the question.
+        //
+        // Costs no request: served from the same cached read the wallet refresh
+        // already made for the NFT spam allowlist.
+        if let entry = nftShelfWallet {
+            Task { @MainActor in
+                let any = !(await WalletNFTShelf.collections(for: entry.address)).isEmpty
+                guard scope == selectedWallet else { return }
+                if nftHasCollections != any { nftHasCollections = any }
+            }
+        } else if nftHasCollections {
+            nftHasCollections = false
         }
     }
 

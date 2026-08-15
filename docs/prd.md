@@ -106,6 +106,8 @@ at all.
 | §184 | The manager pattern, generalized — roster for people, ledger f | superseded by §185 |
 | §306 | Notifications — time-sensitive DECLARED but not honoured, copy | amended by §383 |
 | §361 | The top band gets the feed's geometry — it pays for the rail's | amended by §371 |
+| §124a | The Wallet feed carries the treemap AND the NFTs | superseded by §387 |
+| §240 | NFTs in folders, and the eager owned-NFT read behind them | amended by §387 |
 
 ### Known stale, by hand
 
@@ -23780,3 +23782,171 @@ Two AgentBar doc paragraphs that argued FOR keeping the magnifier ("a lone berry
 **Deleting that step is a real subtraction and is recorded as one.** It was the widest fan-in figure-kind check in the tree — it ran the real composer over the real demo corpus and diffed the kinds it saw, and it found the Cloudflare `runway` bug on its first run (2026-08-08). With the panel gone there is no surface that draws many rooms' figures at once, so there is nothing to run it over: a per-room equivalent would need one peek per room, and the peek's own path is a single function this harness already compiles whole. The **room-head** coverage step (hard fail) is untouched and still covers the ten bespoke heads.
 
 **The gate that stayed green and shouldn't have.** `agent-panel-selftest.sh` passed nothing after the move — its guards grepped `Composer.swift` for a chain that had left the file, so five of them were asserting against text that no longer existed anywhere. They failed loudly, which is the correct behaviour and the reason to write guards against a named file rather than a glob. Standing note: **when a guarded function moves files, the guard is part of the move.**
+
+## §387 — The NFT shelf comes back as a picker, and it costs less than the one that was cut (user: "does having them increase our api calls? like make it more of a risk we would hit our limits?", then "what if we gave a way a user could detect their nfts and then click which ones to show? b/c many are spam and so showing them all is lame", then "i'd rather let user pick which nfts to show tbh than hide a bunch in 'junk'", 2026-08-15)
+
+**Amends §240** (which recorded NFTs as "passé" and left both halves unbuilt) and
+**supersedes §124a** (whose show-everything shelf this replaces).
+
+**The question was about cost, and the honest answer was that cost is why they
+went away.** Asked whether showing NFTs would push the app toward its API
+ceiling. The commit that removed them (`a1140aa`, 2026-07-19) says it outright:
+"Alchemy went pay-as-you-go and hit quota, so cut its two biggest credit sinks
+on the wallet path." `getNFTsForOwner` fanned per wallet × per chain on every
+foreground, for a strip whose own commit message notes nobody used. So the
+"passé" ruling in §240 came later and was never the whole story — the shelf was
+cut for spend first.
+
+**Two corrections to the mental model, both from reading rather than guessing.**
+The binding limit today is **Zerion**, not Alchemy (§216 — 60k calls/month on
+one shared key, roughly a couple hundred active wallet users), and Alchemy is
+the fallback plus the odd jobs. And the app was **already paying an NFT-shaped
+cost with no NFTs on screen**: `ownedNFTContracts` has fired
+`getContractsForOwner` on every wallet refresh since 2026-07-15 — five networks
+× every EVM address, paging — to build a spam allowlist whose consumers only
+fire when something NFT-shaped lands. §240 flagged that as wastefully eager and
+left it, for want of a measured number.
+
+**The shape that makes the revival cheaper than the thing it revives, and both
+halves are structural rather than tuned:**
+
+1. **Detection is a read we already make.** `getContractsForOwner` returns each
+   collection's name, artwork and held count in the SAME bytes the allowlist
+   threw away. `WalletNFTShelf.collections` is now the one cached read and
+   `WalletIngest.ownedNFTContracts` is a PROJECTION of it, so opening the picker
+   costs nothing. This is the §240 finding paid off sideways — not by making the
+   eager read lazy, but by giving it a second consumer that makes it earn its
+   place.
+2. **Display is bounded by a choice.** `getNFTsForOwner` is asked only for
+   picked contracts, only on chains carrying a pick, only when the Wallet room
+   renders, behind a 15-minute window. **Nothing picked means the read never
+   happens** — which for most wallets is the permanent state.
+
+Net marginal cost over the previous tree: **zero for anyone who never picks**,
+and one narrow windowed read per wallet-room open for anyone who does.
+
+**§216 applies and lands where it always does.** Both reads report a STATE
+(which collections you hold, which pieces are in them), so both may be windowed.
+Neither rides `WalletIngest.refresh`, where the keyless event sweeps live.
+
+**The rulings, each with the reason that decided it:**
+
+- **No junk fold.** The user's, explicitly. Every collection is listed and every
+  one is pickable. Alchemy's `isSpam` survives as ORDER ALONE — never a filter,
+  never a label — because it is a third party's guess, and printing "spam"
+  beside somebody's own collection states a guess as a fact (§83) on the one
+  screen where they are deciding what they care about. Sorting is reversible
+  when it's wrong; a label isn't.
+- **Nothing preselected.** §87's follow-import ruling in a second place: when
+  the honest alternative is a firehose, the person's taps decide, and a
+  preselected list is a mirror wearing a picker's clothes.
+- **The collection is the unit**, as §240 already said. "Show my Squiggles" is a
+  sentence someone means; picking token ids is the filing §178/§229 retired.
+- **Under the holdings treemap**, not above the transactions. The treemap says
+  what you hold that is fungible and this says what you hold that isn't — one
+  "what you hold" pair, before the room changes the subject to risk, lending and
+  who can reach your money. Five cards deep, below approvals and the coming-up
+  deadlines, a picture strip reads as an afterthought and sits where nobody
+  scrolls. Asserted by ORDER in the harness, since the section list is the only
+  place that decision exists.
+- **No floor price, anywhere.** A floor is a bid on the thinnest book in this
+  app, it moves without you, and it would be a number people believe (§83) beside
+  art somebody keeps for reasons that aren't the number. The crown total is
+  untouched for §240's own reason: this is a composition, not a bigger total.
+- **A merged multi-wallet room draws no shelf.** A pick is filed per wallet, so
+  a merged shelf would have to say whose each piece is; the room already
+  declines to speak for merged wallets rather than invent an attribution
+  (`spineWalletAddress`, the same reasoning applied to a portrait). The wallet
+  switcher is pinned above the room, so narrowing is one tap.
+- **A pick overrides the vendor's guess.** The narrow read deliberately omits
+  `excludeFilters[]=SPAM`, which the old shelf sent: honouring the flag over an
+  explicit pick would empty a shelf somebody built on purpose with nothing on
+  screen to say why.
+- **An unwatch really forgets** (`retain`), or re-watching an address silently
+  restores a previous life's shelf.
+
+**Nothing lands in the corpus.** An NFT is a door, not a `Thing` (§72) — so no
+new stored property, **no CloudKit Production deploy**, and none of the six
+SwiftData liveness corollaries apply anywhere in this feature. Picks live in
+UserDefaults; unpicking the last one removes the key rather than leaving `{}`.
+
+**THE DEMO REACHES NOTHING.** Both reads stand down under `DemoMode.isActive`:
+the seeded wallet address is invented, so a live read would spend real requests
+to be told an address nobody owns holds nothing, and would then paint that
+"nothing" as the honest answer in a room whose whole point is that it looks
+furnished.
+
+**Mechanical, in `scripts/wallet-nft-selftest.sh`** (in `verify.sh`):
+`WalletNFTPicks.swift` is Foundation-only by design and compiled WHOLE — 45
+assertions, 10 mutations, 11 drift guards. The guards are the interesting half,
+because **this feature's entire justification is wiring no build can check**:
+fork the shared read, or drop `contractAddresses[]`, and the app still builds,
+still renders, and quietly spends double. Two harness lessons paid for on its
+first runs, both the same shape — a test that proves the right result for the
+wrong reason. The `split` emptiness guard was **dead code**: Swift's `split`
+drops empty subsequences by DEFAULT, so "|0xabc" was already rejected by the
+count check and deleting the guard ran green (fixed by spelling
+`omittingEmptySubsequences: false`, which makes the guard the thing doing the
+work). And pruning an emptied pick set was **unobservable**, because `isEmpty`
+was written forgivingly as `allSatisfy { $0.value.isEmpty }` — which tolerates
+the broken state instead of failing on it, so nothing could tell the two apart;
+it is strict now, and `persist` reads it.
+
+**MEASURED against a live wallet the same day, and it found two bugs no build,
+audit or harness could have.** Driven on the sim against `vitalik.eth`
+(`chainsRead=6 of 6`, 2,092 collections), then walked by hand: invitation →
+picker → pick → shelf.
+
+1. **The count field was wrong twice** (`-nftCollectionsProbe` printed
+   `count=-1486618624` in its first real run). `totalBalance` is a JSON
+   **STRING**, so a bare `as? Int` yields nil and every collection falls back to
+   1, flattening the entire ranking; and on some chains it arrives as a huge
+   JSON **number**, where `as? Int` on an `NSNumber` backed by a large `Double`
+   truncates to nonsense. Worse than either, it is **the wrong field**: measured
+   on one contract, `totalBalance` 912 against `numDistinctTokensOwned` 80,
+   because `totalBalance` sums ERC-1155 QUANTITIES — so an edition somebody
+   holds many copies of would outrank the collection they actually collect, on
+   the screen whose only job is ranking. `NFTCountField` (Foundation-only,
+   harness-compiled, 12 assertions, 2 mutations) prefers distinct pieces, reads
+   the string form first, and treats an implausible value as UNKNOWN rather than
+   believing it.
+2. **The invitation could never have appeared on any wallet.** The shelf card
+   drew nothing until its own `.task` answered "does this wallet hold
+   collections?" — so it produced an empty row, `List` PRUNED the row, and the
+   task never ran. A chicken-and-egg with no error anywhere: the data path was
+   perfect (the probe proved it), and the feature was invisible. **The rule:
+   never gate a section on state the section has to be alive to fetch — the
+   owner of the section owns the question.** `FeedScreen.nftHasCollections` is
+   filled by `loadWalletLive` and the section is gated on that; the card is now
+   mounted only once there is something to say, so it chooses between the shelf
+   and the invitation, never between something and nothing.
+
+What that leaves genuinely unverified: the doc-derived
+`contractAddresses[]` 45-per-request cap (no wallet here has that many picks on
+one chain), and Robinhood, whose collections read cleanly as one of the six
+chains but which no wallet on hand holds anything on. **No new host**: the reach
+registry already declares these (§289), asserted by the harness.
+
+**Robinhood is IN** (user's ruling, same day). The old allowlist asked five
+chains and skipped it on a guess — "Robinhood's NFT API may 404" — which made a
+Robinhood collection unpickable and, more quietly, never spam-filtered either.
+Including it costs nothing when the guess is right (a failed read leaves the key
+absent and `ownedNFTContracts` fails OPEN exactly as before) and works when it
+is wrong. It gets no OpenSea door, because OpenSea does not list that chain: a
+piece there draws as a picture with no tap rather than a link that 404s (§275).
+
+**The one thing to rule on before this ships.** Ranked by held count, a
+heavily-airdropped wallet leads its picker with airdrops — vitalik.eth's top
+rows were "Chicky Runners" (2,001), "Path to Base Mainnet" (410), "Oracle Patron
+NFT" (400), none flagged `isSpam`. The ordering doctrine says count is "the
+strongest available signal that it was acquired on purpose", and that is simply
+false for a wallet people airdrop AT. Nothing is hidden and everything is
+pickable, so this is a ranking question, not a correctness one — but the
+alternatives (alphabetical, or newest-acquired) are worth a decision rather than
+a default.
+
+**Held open, deliberately:** per-piece trimming inside a picked collection (a
+later question, and only if anyone asks), Solana NFTs (Alchemy's NFT API is
+EVM-only — the picker says so in words rather than showing an empty grid), and
+§240's own lazy-allowlist refactor, which is now less urgent since the eager
+read finally has a second consumer, but is not thereby fixed.

@@ -2095,6 +2095,113 @@ enum ProbeHooks {
             NSLog("Seed-wallet-history probe: %d samples for %@ (composition: %@)",
                   samples.count, entry.address, real == nil ? "synthetic" : "real")
         },
+        // `-nftPicks "<network|contract[,…]>"|clear` seeds the NFT pick book for
+        // the FIRST watched wallet headlessly (prd §387), so the shelf's read
+        // and its card verify without driving the picker. Declared BEFORE
+        // `-nftShelfProbe` — hooks run in list order and the probe must read a
+        // seeded book. Each entry is a pick key exactly as the picker makes one
+        // ("eth-mainnet|0xbc4c…"); a malformed one is REPORTED rather than
+        // dropped, since a silently-ignored seed reads as a broken shelf.
+        Hook(key: "nftPicks") { spec, _ in
+            Task { @MainActor in
+                guard let entry = WalletStore.shared.addresses.first else {
+                    NSLog("nftPicks: no watched wallet — pair with -walletAddress")
+                    return
+                }
+                if spec == "clear" {
+                    WalletNFTStore.shared.clear(wallet: entry.address)
+                    NSLog("nftPicks: cleared %@", entry.address)
+                    return
+                }
+                var ok = 0, bad = 0
+                for raw in spec.split(separator: ",").map(String.init) {
+                    let key = raw.trimmingCharacters(in: .whitespaces)
+                    guard let parts = NFTPickKey.split(key) else { bad += 1; continue }
+                    WalletNFTStore.shared.toggle(
+                        wallet: entry.address,
+                        collection: NFTPickKey.make(network: parts.network, contract: parts.contract))
+                    ok += 1
+                }
+                NSLog("nftPicks: %d picked, %d malformed, %d now on %@",
+                      ok, bad, WalletNFTStore.shared.book.picks(wallet: entry.address).count,
+                      entry.address)
+            }
+        },
+        // `-nftCollectionsProbe YES` reads what the picker would LIST for every
+        // watched wallet (prd §387): one `nftCollection|` line per collection
+        // with its pick key, held count, whether Alchemy flags it spam, whether
+        // artwork resolved, and whether it is currently picked — one NSLog each
+        // (the `-todayProbe` truncation lesson).
+        //
+        // It exists because an empty picker has FIVE causes that render as one
+        // sentence — no watched wallet, a Solana-only wallet (Alchemy's NFT API
+        // is EVM-only, so this is a fact and not a failure), a wallet that holds
+        // nothing on the five chains, every read failing, or the shared
+        // `getContractsForOwner` parse drifting — and only the last two are
+        // bugs. The `read=` line separates them: a chain that answered is listed
+        // even when it holds nothing, a chain that failed is named.
+        //
+        // Spends NOTHING in the common case: this is the same cached read the
+        // wallet refresh already made for the NFT spam allowlist.
+        Hook(key: "nftCollectionsProbe") { _, _ in
+            Task { @MainActor in
+                let watched = WalletStore.shared.addresses
+                guard !watched.isEmpty else {
+                    NSLog("nftCollections: no watched wallet — pair with -walletAddress")
+                    return
+                }
+                for entry in watched {
+                    let resolved = await WalletIngest.resolvedAddresses([entry.address])
+                    let byKey = await WalletNFTShelf.collections(addresses: resolved)
+                    let evm = resolved.filter { ENS.isHexAddress($0) }
+                    NSLog("nftCollections| wallet=%@ resolved=%d evm=%d chainsRead=%d of %d",
+                          entry.address, resolved.count, evm.count,
+                          byKey.count, evm.count * WalletNFTShelf.networks.count)
+                    for collection in NFTCollectionOrder.sorted(byKey.values.flatMap { $0 }) {
+                        NSLog("nftCollection| %@ count=%d spam=%@ art=%@ picked=%@ name=%@",
+                              collection.id, collection.count,
+                              collection.isSpam ? "YES" : "no",
+                              (collection.imageURL?.isEmpty == false) ? "YES" : "no",
+                              WalletNFTStore.shared.isPicked(wallet: entry.address,
+                                                             collection: collection.id) ? "YES" : "no",
+                              collection.name)
+                    }
+                }
+            }
+        },
+        // `-nftShelfProbe YES` composes the shelf the Wallet room would draw
+        // (prd §387) for every watched wallet with picks: the header line, then
+        // one `nftPiece|` line per piece with the OpenSea door it opens.
+        //
+        // `pieces=0` is a REAL state with four causes and only one is a bug —
+        // nothing picked (so no request is made at all, which is the resting
+        // state for most wallets), every picked piece lacking artwork we can
+        // draw, the pieces having moved out since the pick, or the narrow read
+        // failing. The `picks=` count beside it is what separates the first
+        // from the rest.
+        Hook(key: "nftShelfProbe") { _, _ in
+            Task { @MainActor in
+                let watched = WalletStore.shared.addresses
+                guard !watched.isEmpty else {
+                    NSLog("nftShelf: no watched wallet — pair with -walletAddress")
+                    return
+                }
+                let book = WalletNFTStore.shared.book
+                for entry in watched {
+                    let picks = book.picks(wallet: entry.address)
+                    let pieces = await WalletNFTShelf.pieces(for: entry.address, book: book)
+                    NSLog("nftShelf| wallet=%@ picks=%d chains=%@ pieces=%d",
+                          entry.address, picks.count,
+                          book.networks(wallet: entry.address).joined(separator: "+"),
+                          pieces.count)
+                    for piece in pieces {
+                        NSLog("nftPiece| %@ collection=%@ name=%@ door=%@",
+                              piece.id, piece.collection, piece.name,
+                              piece.openSeaURL?.absoluteString ?? "NONE")
+                    }
+                }
+            }
+        },
         // `-approvalProbe <blocksBack|YES>` runs the token-approval sync over
         // the watched wallets and NSLogs the landed count. A numeric spec
         // rewinds every cursor that many blocks first, so real past approvals

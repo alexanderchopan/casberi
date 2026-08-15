@@ -2197,48 +2197,17 @@ enum WalletIngest {
     /// present means that (address, chain) was read successfully — a missing key
     /// is "couldn't read", so the caller fails OPEN (an NFT on an unread chain
     /// is never dropped).
+    /// A PROJECTION of `WalletNFTShelf.collections` since 2026-08-15 (prd §387),
+    /// not a read of its own — same endpoint, same five chains, same
+    /// "address|network" keys, same fail-open contract, and now the same cached
+    /// bytes the NFT picker draws its list from. The response has always
+    /// carried each collection's name, artwork and held count; this arm keeps
+    /// the two fields it needs and the picker keeps the rest, so opening the
+    /// picker costs no request. See that file's header for why the shelf could
+    /// only come back on those terms.
     static func ownedNFTContracts(addresses: [String]) async -> [String: Set<String>] {
-        // The EVM chains getContractsForOwner serves — the five established
-        // ones (Robinhood's NFT API may 404, which just leaves it unfiltered).
-        let nets = ["eth-mainnet", "base-mainnet", "arb-mainnet", "opt-mainnet", "matic-mainnet"]
-        let jobs = addresses.flatMap { a in nets.map { (a, $0) } }
-        let results = await IngestSupport.boundedGather(jobs, maxConcurrent: 4) { job in
-            let (addr, net) = job
-            return ("\(addr.lowercased())|\(net)", await nonSpamContracts(address: addr, network: net))
-        }
-        var out: [String: Set<String>] = [:]
-        for (key, contracts) in results {
-            guard let contracts else { continue }   // failed read → key absent → fail open
-            out[key] = contracts
-        }
-        return out
-    }
-
-    /// The non-spam NFT contracts (lowercased) an address holds on one chain, or
-    /// nil when the read failed. Pages up to ~500 contracts — enough for a real
-    /// collector without unbounded paging.
-    private static func nonSpamContracts(address: String, network: String) async -> Set<String>? {
-        var out = Set<String>()
-        var pageKey: String?
-        var reached = false
-        for _ in 0..<5 {
-            var url = "https://\(network).g.alchemy.com/nft/v3/\(IngestSupport.alchemyKey)"
-                + "/getContractsForOwner?owner=\(address)&pageSize=100"
-            if let pageKey, let enc = pageKey.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) {
-                url += "&pageKey=\(enc)"
-            }
-            guard let root = await IngestSupport.getJSON(url) as? [String: Any],
-                  let contracts = root["contracts"] as? [[String: Any]] else { break }
-            reached = true
-            for c in contracts {
-                guard (c["isSpam"] as? Bool) != true,
-                      let addr = c["address"] as? String else { continue }
-                out.insert(addr.lowercased())
-            }
-            guard let next = root["pageKey"] as? String, !next.isEmpty else { break }
-            pageKey = next
-        }
-        return reached ? out : nil
+        await WalletNFTShelf.collections(addresses: addresses)
+            .mapValues { Set($0.lazy.filter { !$0.isSpam }.map(\.contract)) }
     }
 
     /// Alchemy network ids → the Dexscreener chain slugs TokenChart routes

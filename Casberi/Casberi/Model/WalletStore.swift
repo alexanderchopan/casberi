@@ -740,6 +740,12 @@ final class WalletStore {
 
     func remove(at offsets: IndexSet) {
         addresses.remove(atOffsets: offsets)
+        // An unwatch really forgets (prd §387): NFT picks are filed per wallet,
+        // so leaving them behind would silently restore a previous life's shelf
+        // if the same address is ever watched again — and would grow the book
+        // forever behind a 5-wallet cap.
+        let remaining = addresses.map(\.address)
+        Task { @MainActor in WalletNFTStore.shared.retain(wallets: remaining) }
     }
 
     func move(from source: IndexSet, to destination: Int) {
