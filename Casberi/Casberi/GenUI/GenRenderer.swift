@@ -2192,16 +2192,15 @@ struct GenSection: View {
     let el: GenEl
     @Environment(\.genRoomOpen) private var roomOpen
 
-    /// Arg 2 — the section's identity hue, as a NAME rather than a hex (prd
-    /// §386i, user: "we also need section categories that perhaps are a color
-    /// … this should be super easy to read"). A name because the doc grammar
-    /// is strings and the design law forbids a component inlining a hex; the
-    /// table below is the only place a section's colour is decided.
+    /// Arg 2 — the section's identity hue, as a NAME rather than a hex.
     ///
-    /// The colour rides a DOT, never the words: coloured header text at four
-    /// or five hues down one page is a ransom note, and the ink ramp is what
-    /// makes a heading legible at every size. The dot is identity — which
-    /// subject this is — the same job hue does on the panel's tiles.
+    /// **The DOT is gone (2026-08-15, prd §386l, user: "i want better section
+    /// headers too, no bullets").** A coloured bullet is a legend entry with
+    /// nothing to look up: it sat beside six headings, meant a different
+    /// thing in each, and taught the reader nothing they could not read in
+    /// the word next to it. The hue survives where it does real work — the
+    /// nav chip, where several sections sit side by side and colour is the
+    /// only thing distinguishing them at a glance.
     static func hue(_ name: String) -> Color {
         switch name {
         case "attention": return DS.attention
@@ -2223,28 +2222,38 @@ struct GenSection: View {
     private var room: String { el.str(3) }
 
     var body: some View {
-        let header = HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-            if !el.str(2).isEmpty {
-                Circle()
-                    .fill(Self.hue(el.str(2)))
-                    .frame(width: 7, height: 7)
-                    .accessibilityHidden(true)
+        let header = VStack(alignment: .leading, spacing: 1) {
+            HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                // BIGGER, and the size is the point (prd §386l). At
+                // `callout15` a heading and the card title under it were the
+                // same weight in nearly the same size, so the page read as a
+                // list of cards rather than as a document with movements.
+                // `heading22` is the ramp's own section voice — the day
+                // headers in the feed already use it, so the brief now
+                // matches the surface it summarises.
+                Text(el.str(0))
+                    .dsText(.heading22)
+                    .foregroundStyle(DS.textPrimary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                if !room.isEmpty {
+                    Image(systemName: "chevron.right")
+                        .dsGlyph(13)
+                        .foregroundStyle(DS.textTertiary)
+                        .accessibilityHidden(true)
+                }
+                Spacer(minLength: 0)
             }
-            Text(el.str(0))
-                .dsText(.callout15).fontWeight(.semibold)
-                .foregroundStyle(DS.textPrimary)
+            // The qualifier is a READING, on its own line — "3 late, 1 today"
+            // rather than a bare count clinging to the title. It is the one
+            // thing a header can say that the cards under it cannot say
+            // together, so it earns the line.
             if !el.str(1).isEmpty {
                 Text(el.str(1))
                     .dsText(.subhead13)
                     .foregroundStyle(DS.textTertiary)
+                    .lineLimit(1)
             }
-            if !room.isEmpty {
-                Image(systemName: "chevron.right")
-                    .dsGlyph(11)
-                    .foregroundStyle(DS.textTertiary)
-                    .accessibilityHidden(true)
-            }
-            Spacer(minLength: 0)
         }
         .padding(.horizontal, DS.Space.s4)
         .padding(.top, DS.Space.s6)
@@ -2265,8 +2274,17 @@ struct GenSection: View {
         // scroll view and the two need one shared frame of reference.
         .background {
             GeometryReader { geo in
+                // QUANTIZED to 24pt steps (prd §386k): a raw `minY` changes on
+                // every scroll frame, so every frame republished the
+                // preference and re-ran the reader's closure for the whole
+                // scroll — 120 times a second on ProMotion, to answer a
+                // question ("which section am I in?") whose answer changes a
+                // handful of times per screenful. Rounded, the dict is
+                // byte-equal between steps and SwiftUI doesn't call the
+                // reader at all; 24pt is far finer than any section is tall,
+                // so the spy can't miss a boundary.
                 Color.clear.preference(key: GenSectionOffsetKey.self,
-                                       value: [el.str(0): geo.frame(in: .global).minY])
+                                       value: [el.str(0): (geo.frame(in: .global).minY / 24).rounded() * 24])
             }
         }
     }

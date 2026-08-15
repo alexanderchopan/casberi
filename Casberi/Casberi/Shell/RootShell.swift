@@ -2490,6 +2490,18 @@ struct RootShell: View {
         // theirs.
         if TodayBrief.matches(query) {
             lastAnswerHits = []
+            // THE LAST BRIEF, INSTANTLY (prd §386k). The rise lands on the
+            // brief now (§386d), so every bar tap pays `allThings()` — an
+            // unbounded main-actor hydration, the exact class the 08-13 ask
+            // fix removed from the kept chips — before one pixel of document
+            // paints. Painting this session's previous doc through the
+            // partial channel makes the rise feel instant; the fresh partial
+            // replaces it the moment the corpus half composes, and the
+            // quiet-set then says honestly what didn't change. SESSION-ONLY
+            // (`AgentOpenCache`'s own trade): a doc from a previous launch
+            // could be a day stale, but within a session it is minutes old
+            // and about to be corrected either way.
+            if let cached = TodayBrief.lastPresentedDoc { onPartialDoc(cached) }
             // `presenting: true` — this is the route every way of REACHING the
             // brief funnels through (the typed ask, the whisper's tap, the
             // kept pill), so it's the one place the §214 ledger should record

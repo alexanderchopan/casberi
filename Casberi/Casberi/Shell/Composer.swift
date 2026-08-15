@@ -2529,32 +2529,16 @@ struct Composer: View {
                             // from the surface this session spent four rulings
                             // collapsing.
                             //
-                            // …and then THREE of them came back, by name (prd
-                            // §386f, user: "we want apple wallet where you
-                            // spend / semantic scatter / post hog"). The rule
-                            // that keeps this from becoming §386d again is
-                            // `dockedPanelKeys`: an ALLOWLIST of card keys,
-                            // not a filter of what to drop. A new panel card
-                            // therefore does NOT appear here — it has to be
-                            // asked for — which is the only shape that stays
-                            // de-duplicated as the panel grows.
-                            //
-                            // "What you saw" and "who's around" were asked for
-                            // in the same breath and are deliberately NOT
-                            // here: the brief already draws both (`sheet` at
-                            // four pictures per §386a, and `faces`), so adding
-                            // them would rebuild the exact duplication §386e
-                            // was reported for.
-                            if briefLanding, !dockedPanel.isEmpty {
-                                AgentOpenBoard(composition: dockedPanel,
-                                               onOpenRoom: { source in
-                                                   ChipMemory.visited(source)
-                                                   filter.source = source
-                                                   filter.tag = "All"
-                                                   close()
-                                               })
-                                    .padding(.top, DS.Space.s6)
-                            }
+                            // THE DOCK IS GONE FOR GOOD (prd §386k, user:
+                            // "there is duplicate stuff on the composer wtf").
+                            // §386j made the map a real doc module and this
+                            // session forgot to remove the docked copy — the
+                            // §386e duplication, FOURTH instance, and the
+                            // final proof the §386f allowlist was still a
+                            // second rendering path waiting to disagree. The
+                            // brief is the landing; nothing rides below it,
+                            // and any figure that earns the screen earns it
+                            // as a module.
                             Color.clear.frame(height: 1).id("bottom")
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -3567,37 +3551,6 @@ struct Composer: View {
     /// duplication the brief itself just stopped doing.
     /// On screen when the room is at rest and the day has something to say.
     /// The board is on screen — at rest, with something composed.
-    /// The panel cards allowed to ride under the brief (prd §386f) — named
-    /// one by one by the user, and an ALLOWLIST rather than a denylist on
-    /// purpose: §386d docked the whole panel and every figure the brief
-    /// already drew appeared twice, so the safe default for a card nobody has
-    /// asked about is ABSENT.
-    ///
-    /// Why these three and not the others: each answers something the brief
-    /// does not. `wallet.merchants` is WHO you paid (the brief's money hero is
-    /// how much you hold and the flow is which rails it moved on — neither
-    /// names a merchant). `posthog.metric` is a watched product metric, which
-    /// no brief module reads. `cross.scatter` is the only figure in the app
-    /// whose POSITION carries meaning rather than magnitude.
-    /// Down to ONE since §386g: `wallet.merchants` and `posthog.metric` moved
-    /// INTO the brief (as the Money section's spend bars and the Work
-    /// section's metric curve), so docking them too would be the §386e
-    /// duplication with the halves swapped. The scatter stays docked because
-    /// it has no doc-grammar component yet — it is the "What it's about"
-    /// section's content, rendered below the document until it becomes a real
-    /// module (see §386g's open item).
-    private static let dockedPanelKeys: Set<String> = ["cross.scatter"]
-
-    /// The composed panel, narrowed to the docked set and re-ranked so the
-    /// order is the panel's own (a hand-written order here would drift from
-    /// `AgentPanel.rank` the first time a figure's grade changed).
-    private var dockedPanel: AgentPanel.Composition {
-        var out = AgentPanel.Composition()
-        out.cards = AgentPanel.rank(
-            composition.cards.filter { Self.dockedPanelKeys.contains($0.key) })
-        return out
-    }
-
     private var boardShowing: Bool {
         restChrome(keepBrief: false) && !composition.isEmpty
     }

@@ -432,7 +432,20 @@ enum TodayBrief {
         // things want you. No other section gets one; "Money · 4" would be
         // counting cards, which is the tally §213 bans.
         var sectionQualifiers: [String: String] = [:]
-        if let alerts, alerts.count > 1 { sectionQualifiers["Needs you"] = "\(alerts.count)" }
+        if let alerts, alerts.count > 1 {
+            // A READING, not a tally (prd §386l): "2 late" says something the
+            // rows cannot say together, where "5" only counts the rows you
+            // are already looking at. Silent when nothing is late — then the
+            // count really would be a tally.
+            let late = things.filter {
+                $0.mark != .done && ($0.dueAt ?? .distantFuture) < now
+            }.count
+            if late > 0 {
+                sectionQualifiers["Needs you"] = late == 1
+                    ? String(localized: "1 late")
+                    : String(localized: "\(late) late")
+            }
+        }
 
         // 1. The lede — the day in ONE sentence, in display type, above
         // everything (user, 2026-07-25: "that line should be above wallet").
@@ -730,7 +743,12 @@ enum TodayBrief {
         // Foundation-only over value types), and it reads the embeddings that
         // are already on disk — no model call, so §386a's "the brief no
         // longer awaits a model" holds.
-        if category == nil, let map = await clusterMap(context: context) {
+        // NOT on the partial pass (prd §386k, measured same-day: the PCA cost
+        // ~1,800ms and the partial exists to be FAST — running it there made
+        // the "instant" corpus half slower than the §288 live-read budget it
+        // was built to hide). The final compose draws it; the partial simply
+        // paints without the map for the second it takes to arrive.
+        if category == nil, !skipLiveReads, let map = await clusterMap(context: context) {
             ids.append("map")
             mark("map")
             lines.append(map)
@@ -740,6 +758,13 @@ enum TodayBrief {
             ids.append("fold")
             mark("fold")
             lines.append(fold)
+            // The section says what the day HELD; the card shows it. One
+            // reading the pictures and faces cannot state together.
+            if !landed.isEmpty {
+                sectionQualifiers["Your day"] = landed.count == 1
+                    ? String(localized: "1 new")
+                    : String(localized: "\(landed.count) new")
+            }
         }
 
         if let posts = yourPostsCard(things, windowStart: windowStart) {
@@ -925,6 +950,9 @@ enum TodayBrief {
         // morning because a Money-only compose had touched three of its ids.
         if presenting, category == nil {
             Self.recordModuleDigests(ids: ids, lines: lines)
+            // The session's last presented doc — what the NEXT rise paints
+            // instantly while the fresh compose runs (prd §386k).
+            Self.lastPresentedDoc = doc
         }
         return KeptAskComposers.Result(delta: digest, digest: digest, doc: doc)
     }
@@ -1054,9 +1082,8 @@ enum TodayBrief {
         // its own curve, and the spark is what stands in when the live
         // holdings read left the hero unable to compose (§386h).
         ("Money", "confirm", "Wallet", ["hero", "spark", "holdmap", "pair", "tmkt", "flow", "spend"]),
-        ("Your day", "life", "", ["fold", "posts"]),
+        ("Your day", "life", "", ["fold", "posts", "map"]),
         ("Work", "work", "GitHub", ["work", "ghgraph"]),
-        ("What it's about", "meaning", "", ["map"]),
     ]
 
     /// Regroups `ids` under `sectionPlan`, prefixing each populated section
@@ -2403,15 +2430,36 @@ enum TodayBrief {
     /// names by `ClusterNames` when the librarian has gotten to them — never
     /// awaited here, so a device without Apple Intelligence and a device that
     /// simply hasn't named them yet both draw the same honest map.
+    /// The last projection, keyed by a cheap corpus signature (prd §386k).
+    ///
+    /// Measured the day the module shipped: the PCA cost ~1,800ms per compose
+    /// in Debug — 99% of the whole brief — for a projection whose INPUT barely
+    /// moves within a day (embeddings are written by the backfill sweep, a few
+    /// rows per foreground). `HomeInsightStore`'s signature discipline: the
+    /// newest embedded row's id + the embedded count identify the input, a
+    /// matching signature returns the cached doc line in ~0ms, and a corpus
+    /// that actually moved recomputes. In-memory only — a projection is
+    /// seconds to rebuild after a relaunch and stale cache on disk would
+    /// outlive the rows it plots.
+    @MainActor private static var mapCache: (signature: String, line: String?)?
+
+    /// The doc last shown to a person this session (prd §386k) — painted
+    /// instantly on the next rise while the fresh compose runs. In-memory
+    /// only, written beside `recordModuleDigests` under the same guards.
+    @MainActor static var lastPresentedDoc: [String]?
+
     private static func clusterMap(context: ModelContext) async -> String? {
         var fd = FetchDescriptor<Thing>(
             predicate: #Predicate { $0.embedding != nil },
             sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
         fd.fetchLimit = 600
         guard let rows = try? context.fetch(fd) else { return nil }
-        let entries: [AgentPanelFigures.Entry] = rows
-            .filter { $0.isLive && !Corpus.isImportReceipt($0) }
-            .prefix(300)
+        let live = rows.filter { $0.isLive && !Corpus.isImportReceipt($0) }.prefix(300)
+        let signature = "\(live.count)|\(live.first?.id.uuidString ?? "")"
+        if let cached = mapCache, cached.signature == signature {
+            return cached.line
+        }
+        let entries: [AgentPanelFigures.Entry] = live
             .compactMap { thing in
                 guard let packed = thing.embedding,
                       let vector = EmbeddingIndex.unpack(packed) else { return nil }
@@ -2419,11 +2467,17 @@ enum TodayBrief {
                                                terms: thing.ocrTopics + thing.tags,
                                                vector: vector)
             }
-        guard entries.count >= 12 else { return nil }
+        guard entries.count >= 12 else {
+            mapCache = (signature, nil)
+            return nil
+        }
         let map = await Task.detached(priority: .userInitiated) {
             AgentPanelFigures.scatter(entries)
         }.value
-        guard !map.dots.isEmpty, map.clusters.count >= 2 else { return nil }
+        guard !map.dots.isEmpty, map.clusters.count >= 2 else {
+            mapCache = (signature, nil)
+            return nil
+        }
         let dots = map.dots.map {
             "\(String(format: "%.4f", $0.x))|\(String(format: "%.4f", $0.y))|\(tileSafe($0.source))"
         }
@@ -2434,7 +2488,12 @@ enum TodayBrief {
         // The subtitle is the map's own instruction — the figure is unusual
         // enough that "things that sit close are about the same thing" is
         // information, not decoration (§386i's own naming ruling).
-        return "map = ClusterMap(\"\(String(localized: "What goes together"))\", \"\(String(localized: "things that sit close are about the same thing"))\", \"\(dots.joined(separator: ";"))\", \"\(clusters.joined(separator: ";"))\")"
+        // The card carries its own title again (prd §386l): the map moved
+        // INTO "Your day", so the header no longer says this and §386g's
+        // header-owns-the-name rule hands the name back.
+        let line = "map = ClusterMap(\"\(String(localized: "What goes together"))\", \"\(String(localized: "things that sit close are about the same thing"))\", \"\(dots.joined(separator: ";"))\", \"\(clusters.joined(separator: ";"))\")"
+        mapCache = (signature, line)
+        return line
     }
 
     /// GitHub's contribution calendar as a `Bars` strip of the last 12 weeks

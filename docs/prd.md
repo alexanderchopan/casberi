@@ -23713,3 +23713,22 @@ Five items, and the first one answers the question that opened them.
 **GitHub joined Work** — its contribution calendar existed since the Home board and was reachable only from its own feed room. Twelve weeks at brief scale, not the room's 53 (a year is ~2.7pt cells, the same reasoning the panel's pulse tile already applies), and it reads the store's cache rather than triggering a fetch, so mentioning a room costs nothing.
 
 **Pull to refresh the brief** — it is the daily screen and the daily-screen gesture is a pull; without it the only way to re-read the day was to lower the agent and raise it. Brief only: an ordinary answer is a reply to a question already asked, and re-running it would answer a different question than the one on screen. It invalidates the holdings window first (§216's 10-minute cache), or a pull would re-compose over a cached portfolio and redraw an identical brief, which reads as broken.
+
+## §386k — The map costs nothing, and the dock is gone for good (user: "how would you improve the performance just to make sure we don't lag", then "there is duplicate stuff on the composer wtf", "come on, we need to make this super delightful and stupid simple", "i want better section headers too, no bullets", 2026-08-15)
+
+**PERFORMANCE — measured first, and the number was not where I would have guessed.** `briefModuleMs` on the real corpus: `map=1820ms`, every other module 1–5ms. The §386j cluster map was 99% of the brief. Three fixes, in order of size:
+
+- **The projection is cached** by a corpus signature (newest embedded id + count) — `HomeInsightStore`'s discipline. Embeddings move a few rows per foreground, so the same PCA was being paid on every single compose for an input that had not changed. In-memory only: a projection is seconds to rebuild after a relaunch, and a stale one on disk would outlive the rows it plots.
+- **It is skipped on the PARTIAL pass** (`!skipLiveReads`). The partial exists to be fast; running a 1.8s PCA inside it made the "instant" corpus half slower than the §288 live-read budget it was built to hide.
+- **The last presented doc paints instantly on the next rise.** §386d made every bar tap pay `allThings()` — an unbounded main-actor hydration, the exact class the 08-13 ask fix removed from the kept chips — before one pixel appears. Session-only, replaced by the real partial the moment it composes, and the quiet set then says honestly what did not change.
+- **Scrollspy offsets are quantized to 24pt.** A raw `minY` republished the preference on every scroll frame — 120/second on ProMotion — to answer a question whose answer changes a few times per screenful. Rounded, the dictionary is byte-equal between steps and SwiftUI does not call the reader at all.
+
+Result: `map` leaves `briefModuleMs` entirely; the whole brief composes in single-digit milliseconds.
+
+**THE DOCK IS GONE FOR GOOD — the §386e duplication, FOURTH instance, and my error.** §386j made the map a real doc module and left the docked copy in, so "What goes together" drew twice on one screen. The §386f allowlist was always a second rendering path waiting to disagree, and it has now disagreed. The brief is the landing; nothing rides below it, and any figure that earns the screen earns it as a MODULE. `dockedPanelKeys` and `dockedPanel` are deleted rather than emptied, so there is no third instance to find.
+
+## §386l — The headers stop whispering (user: "i want better section headers too, no bullets", 2026-08-15)
+
+The coloured dot is gone (user: "no bullets") — it was a legend entry with nothing to look up, meaning something different beside each of six headings. The hue survives only on the nav chips, where several sections sit side by side and colour is the one thing telling them apart at a glance. Headers step up to `heading22`, the ramp's own section voice and the size the feed's own day headers use, so the brief reads as a document with movements rather than a list of cards. The qualifier moves to its own line and becomes a READING — "3 late", not "5" — since a count of the rows you are already looking at is the tally §213 bans, while how many are LATE is something the cards cannot say together. Silent when nothing is late.
+
+**"What goes together" moved INTO "Your day"** rather than standing as its own section: the day's things, the people who reacted, and what it was all about are one subject, and six sections was one more than the day has movements.
