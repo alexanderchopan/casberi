@@ -632,6 +632,19 @@ enum TodayBrief {
             lines.append(mix)
         }
 
+        // 4e. WHAT HAPPENED TO YOUR POSTS (user pick, 2026-08-14, prd §386c)
+        // — the inbound half §239 built, finally on the one screen a day
+        // starts from: who liked your posts (names, `SocialLikers`' own
+        // line — never a bare count), who replied, who followed. Composes
+        // only from rows the inbound reads landed (`socialContext` "reply"/
+        // "follow") plus the likers book, so it is silent for anyone with no
+        // account marked "mine" — the honest common case, not a gap.
+        if let posts = yourPostsCard(things, windowStart: windowStart) {
+            ids.append("posts")
+            mark("posts")
+            lines.append(contentsOf: posts)
+        }
+
         // 5 and 6 COMPOSE in the other order than they render (2026-07-31).
         // The leads are the screen's richest statement of a single thing — the
         // post in full, the read with its image and its tap — so an
@@ -2000,6 +2013,53 @@ enum TodayBrief {
     /// too thin to draw", it is one thing that wants you. The ≥2 rule the
     /// runway keeps is about whether a SHAPE is legible; this module has no
     /// shape to be illegible.
+    /// "What happened to your posts" as doc lines — a `Widget` of `Row`s,
+    /// likes first (the rarest and warmest read), then replies, then new
+    /// followers, capped at four. Every row opens a real thing except the
+    /// like roll's, which opens the POST it names. nil when the window holds
+    /// none of it — most days, for most people, and correct.
+    @MainActor
+    private static func yourPostsCard(_ things: [Thing], windowStart: Date) -> [String]? {
+        var rows: [String] = []
+        var refs: [String] = []
+        func add(_ line: String) {
+            let id = "pr\(refs.count)"
+            refs.append(id)
+            rows.append("\(id) = \(line)")
+        }
+        // The newest like roll inside the window, joined back to its post so
+        // the row can open it and quote it. `SocialLikers` keys rolls by the
+        // post's own sourceRef.
+        let byRef = Dictionary(grouping: things.filter { $0.isLive }, by: { $0.sourceRef ?? "" })
+        let roll = SocialLikers.shared.rolls
+            .filter { $0.value.when >= windowStart }
+            .sorted { $0.value.when > $1.value.when }
+            .compactMap { entry -> (SocialLikeRoll, Thing)? in
+                guard let post = byRef[entry.key]?.first, entry.value.line != nil
+                else { return nil }
+                return (entry.value, post)
+            }
+            .first
+        if let (r, post) = roll, let line = r.line {
+            add("Row(\"\(genSafe(line))\", \"\(post.kind.typeTag)\", \"\(post.source)\", \"\(genSafe(shortTime(r.when)))\", \"\(post.id.uuidString)\", \"\", \"\(genSafe(clamp(post.title, max: 60)))\")")
+        }
+        // Replies and follows the inbound reads landed in the window —
+        // `socialContext` is stamped by `SocialInbound` alone, so membership
+        // can't drift into ordinary posts.
+        let inbound = things
+            .filter {
+                $0.isLive && $0.capturedAt >= windowStart
+                    && ($0.socialContext == "reply" || $0.socialContext == "follow")
+            }
+            .sorted { $0.capturedAt > $1.capturedAt }
+        for t in inbound.prefix(4 - refs.count) {
+            add("Row(\"\(genSafe(clamp(t.title, max: 60)))\", \"\(t.kind.typeTag)\", \"\(t.source)\", \"\(genSafe(shortTime(t.capturedAt)))\", \"\(t.id.uuidString)\", \"\", \"\(genSafe(t.socialContext == "reply" ? String(localized: "Replied to you") : String(localized: "Followed you")))\")")
+        }
+        guard !refs.isEmpty else { return nil }
+        return ["posts = Widget(\"\(String(localized: "Your posts"))\", \"\", [\(refs.joined(separator: ", "))])"]
+            + rows
+    }
+
     /// `SourceMix(eyebrow, subline, ["Source N", …])` over the window's
     /// landed rows — nil under 2 sources or 4 things (one cell is a title,
     /// and a two-thing day reads as rows, not a map). Import receipts

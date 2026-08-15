@@ -2668,12 +2668,15 @@ struct Composer: View {
             // in for a synthesis the open couldn't show; the board is that
             // synthesis, so the two never appear together.
             dayCard
-            // Kept asks (docs/agent-brief.md ruling 4/5) — the standing
-            // questions someone chose to keep, leading the empty-field chips
-            // as B1 pills wearing their own one-line signal. The existing
-            // ranked/decayed suggestion grid still follows for asks not yet
-            // kept (user ruling 2026-07-19: both coexist).
-            keptAskPills
+            // The kept-ask pills LEFT the rest surface (user ruling
+            // 2026-08-14, prd §386c: "remove climate links and hows my
+            // watchlist" — the two pills the mockup showed). The FEATURE is
+            // untouched: Keep still mints a standing ask, the store still
+            // refreshes digests, the widget's kept-ask tile still reads it,
+            // and a kept question still re-answers typed. What died is the
+            // pills row at rest — the same chips-to-have-chips reading the
+            // suggestion row got in the same session. `keptAskPills` stays
+            // compiled but unmounted (dormant-not-deleted).
             // Chips sit right by the input — asks/commands you can fire from
             // where you compose (moved down 2026-07-12). The two bands are
             // mutually exclusive: askChips while the field is empty, takeChips

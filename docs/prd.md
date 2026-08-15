@@ -23581,3 +23581,11 @@ The overview's second ruling round, picks applied same-hour.
 **No anniversaries, anywhere**: vetoed twice, so the kind came out of `AgentNoticed` too (shipped for a few hours that morning) — the engine is cross-source echo and fullest-day now.
 
 **Open on the v2 mockup**: Wallet/Markets as separate titled sections (the user's own naming — "instead of 'money' as a title we can just say 'wallet'", "you could have one for 'markets' too"), section eyebrows generally (sentence case if so — the caps in the mock are mock-only; §8's no-caps law holds), and the "what happened to your posts" inbound module.
+
+## §386c — Your posts join the overview; the kept pills leave the rest surface; the typed band keeps its three verbs (user: "add what happened to your posts. also remove climate links and hows my watchlist. for chips, keep send to find and ask agent", 2026-08-14)
+
+**"Your posts" (`TodayBrief.yourPostsCard`)**: §239's inbound half on the one screen a day starts from — the newest like roll inside the window (names via `SocialLikers`' own line, joined back to the post it names so the row opens and quotes it), then replies received and new followers (`socialContext` "reply"/"follow", stamped by `SocialInbound` alone so membership can't drift into ordinary posts). Capped at four rows, likes first. nil when the window holds none of it — most days, for most people, and correct: it composes only for accounts marked "mine".
+
+**The kept pills left the rest surface**: the ruling named the mockup's two example pills, which is the row itself. The FEATURE is untouched — Keep still mints, digests still refresh, the widget's kept-ask tile still reads the store, a kept question still re-answers typed — but the pills row at rest is gone, the same chips-to-have-chips reading the suggestion row got hours earlier (§386b). `keptAskPills` dormant-not-deleted. Consequence worth naming: kept asks now surface through the widget, typed asks and the Keep flow only — if that proves too buried, the pills' return is one mount away.
+
+**The typed band's ruling landed**: Send to, Find, AND Ask-agent all stay — the "maybe one other" resolved as both. No code change; recorded so the §386b open question is closed.
