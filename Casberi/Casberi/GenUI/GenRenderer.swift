@@ -347,6 +347,8 @@ struct GenRender: View {
                              quiet: quiet, inAgentAnswer: inAgentAnswer)
             }
 
+        case "Section":     GenSection(el: el).mountIn()
+        case "DayFold":     GenDayFold(el: el).mountIn()
         case "Hero":        GenHero(el: el).mountIn()
         case "Insight":     GenInsight(el: el).mountIn()
         case "Widget":      GenWidget(id: id, el: el, els: els).mountIn()
@@ -2148,6 +2150,178 @@ private struct GenFlexThumb: View {
     }
 }
 
+/// `Section(title, qualifier)` — a named division of the brief (2026-08-15,
+/// prd §386g, user: "what happened to our section headers or whatever? we had
+/// those too. i don't see those here").
+///
+/// They had never been built: they were drawn in a mockup, flagged as an open
+/// ruling and never chased. Until now the brief separated its movements with
+/// AIR alone (the `Stack`'s chapter gaps), which cannot say WHAT a run of
+/// cards is about — and that is precisely what let the money hero, the movers
+/// and the sankey end up on either side of the deadlines without anyone
+/// noticing they had been split.
+///
+/// **Sentence case, never caps** — §8's ban on ALL-CAPS eyebrows is absolute,
+/// and this is the one place it would have been tempting to break. The
+/// qualifier is a quiet count or window beside the word ("Needs you · 3"),
+/// carried as its own arg so it can never be typed into the title and inherit
+/// its weight.
+///
+/// No rule, no line, no background: the design law forbids the divider a
+/// header usually leans on, so the header earns its separation with AIR above
+/// it and weight in the word itself.
+private struct GenSection: View {
+    let el: GenEl
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+            Text(el.str(0))
+                .dsText(.callout15).fontWeight(.semibold)
+                .foregroundStyle(DS.textPrimary)
+            if !el.str(1).isEmpty {
+                Text(el.str(1))
+                    .dsText(.subhead13)
+                    .foregroundStyle(DS.textTertiary)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, DS.Space.s4)
+        .padding(.top, DS.Space.s6)
+        .padding(.bottom, DS.Space.s1)
+    }
+}
+
+/// `DayFold(shots, faces, marks, subline)` — what today was MADE of, as one
+/// card (2026-08-15, prd §386g, user: "i love the idea of the fold what today
+/// was made of into one card").
+///
+/// Replaces three stacked cards that each answered the same question from a
+/// different angle: `ContactSheet` ("what you saw"), `Faces` ("who's around")
+/// and `SourceMix` ("where today came from"). Three cards for one subject is
+/// the shape this whole pass has been removing everywhere else, and it cost
+/// three of the brief's slots to say one thing.
+///
+/// The pictures lead because they ARE the day rather than an abstraction of
+/// it (`WidgetDayLead`'s own ladder makes the same call); the people and the
+/// rooms share the line beneath, since both are "who and where", and the
+/// subline carries every remainder so nothing is silently dropped.
+private struct GenDayFold: View {
+    let el: GenEl
+    @Environment(\.genThingOpen) private var thingOpen
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    private struct Shot { let url: String, id: String }
+    private struct Person { let handle: String, avatar: String }
+
+    private var shots: [Shot] {
+        el.str(0).split(separator: ";").compactMap { row in
+            let f = row.split(separator: "|", omittingEmptySubsequences: false)
+                .map { $0.trimmingCharacters(in: .whitespaces) }
+            guard let u = f.first, !u.isEmpty else { return nil }
+            return Shot(url: u, id: f.count > 1 ? f[1] : "")
+        }
+    }
+    private var people: [Person] {
+        el.str(1).split(separator: ";").compactMap { row in
+            let f = row.split(separator: "|", omittingEmptySubsequences: false)
+                .map { $0.trimmingCharacters(in: .whitespaces) }
+            guard let h = f.first, !h.isEmpty else { return nil }
+            return Person(handle: h, avatar: f.count > 1 ? f[1] : "")
+        }
+    }
+    private var marks: [String] {
+        el.str(2).split(separator: ";").map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty }
+    }
+
+    var body: some View {
+        let shots = shots, people = people, marks = marks
+        Group {
+            if !shots.isEmpty || !people.isEmpty || !marks.isEmpty {
+                VStack(alignment: .leading, spacing: DS.Space.s3) {
+                    if !shots.isEmpty {
+                        HStack(spacing: 5) {
+                            ForEach(Array(shots.prefix(4).enumerated()), id: \.offset) { i, shot in
+                                Button { thingOpen?(shot.id) } label: {
+                                    RemoteArt(urlString: shot.url, width: 74, height: 74,
+                                              fallback: nil, cornerRadius: DS.Radius.control)
+                                }
+                                .buttonStyle(PressLift())
+                                .disabled(shot.id.isEmpty)
+                                .chartArrival(index: i, reduceMotion: reduceMotion)
+                            }
+                        }
+                    }
+                    if !people.isEmpty || !marks.isEmpty {
+                        HStack(spacing: DS.Space.s2) {
+                            // The faces overlap into a roster the way they do
+                            // in `GenFaces` — smaller here, because this card
+                            // states three things and none may take the page.
+                            HStack(spacing: -8) {
+                                ForEach(Array(people.prefix(4).enumerated()), id: \.offset) { _, p in
+                                    PersonBadge(handle: p.handle, avatar: p.avatar, size: 30)
+                                }
+                            }
+                            Spacer(minLength: DS.Space.s2)
+                            HStack(spacing: 4) {
+                                ForEach(Array(marks.prefix(3).enumerated()), id: \.offset) { _, m in
+                                    BridgeIcon(name: m, size: DS.Face.badge, circular: true)
+                                }
+                            }
+                        }
+                    }
+                    if !el.str(3).isEmpty {
+                        Text(el.str(3))
+                            .dsText(.subhead13)
+                            .foregroundStyle(DS.textTertiary)
+                            .lineLimit(2)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(DS.Space.s4)
+                .dsWidgetSurface()
+                .padding(.horizontal, DS.Space.s4)
+                .padding(.top, DS.Space.s2)
+            }
+        }
+    }
+}
+
+/// One face in the fold — the avatar when there is one, the handle's initial
+/// when there isn't (`AssetMark`'s no-invented-hue rule: a monogram on the
+/// neutral ramp, never a colour we guessed for a person).
+private struct PersonBadge: View {
+    let handle: String
+    let avatar: String
+    let size: CGFloat
+
+    var body: some View {
+        Group {
+            if !avatar.isEmpty {
+                RemoteArt(urlString: avatar, width: size, height: size,
+                          fallback: nil, cornerRadius: size / 2)
+            } else {
+                Circle()
+                    .fill(DS.gray100)
+                    .overlay(
+                        // The SIGIL is not an initial (prd §386g, seen on the
+                        // sim: a roster of "U N S @"). A handle may lead with
+                        // "@" on Bluesky, "u/" on Reddit or "/" on a channel;
+                        // the first LETTER OR DIGIT is the person's, the
+                        // punctuation is the network's.
+                        Text(String(handle.first(where: { $0.isLetter || $0.isNumber })
+                                    ?? handle.first ?? " ").uppercased())
+                            .dsText(.label11).fontWeight(.bold)
+                            .foregroundStyle(DS.textSecondary))
+                    .frame(width: size, height: size)
+            }
+        }
+        .clipShape(Circle())
+        .overlay(Circle().strokeBorder(DS.surfaceSheet, lineWidth: 2))
+        .accessibilityLabel(Text(handle))
+    }
+}
+
 /// Coach(text) — the one-time teaching line: emphasized neutral words on the
 /// page (2026-08-10, was tint — a tip doesn't need a hue to read as a tip),
 /// retired forever by the surface once the lesson is learned (the flag lives
@@ -3604,14 +3778,21 @@ private struct GenAlerts: View {
         Group {
             if !items.isEmpty {
                 VStack(alignment: .leading, spacing: DS.Space.s3) {
-                    HStack(spacing: DS.Space.s2) {
-                        Image(systemName: "exclamationmark.triangle.fill")
-                            .dsGlyph(13)
-                            .foregroundStyle(DS.attention)
-                            .accessibilityHidden(true)
-                        Text(el.str(0))
-                            .dsText(.callout15).fontWeight(.semibold)
-                            .foregroundStyle(DS.textPrimary)
+                    // The eyebrow row goes with its WORDS (prd §386g). Under
+                    // a section header the title is empty, and the glyph alone
+                    // is a warning triangle floating over nothing — punctuation
+                    // with no sentence. The rows below already wear the
+                    // attention hue where they carry it.
+                    if !el.str(0).isEmpty {
+                        HStack(spacing: DS.Space.s2) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .dsGlyph(13)
+                                .foregroundStyle(DS.attention)
+                                .accessibilityHidden(true)
+                            Text(el.str(0))
+                                .dsText(.callout15).fontWeight(.semibold)
+                                .foregroundStyle(DS.textPrimary)
+                        }
                     }
                     ForEach(Array(items.enumerated()), id: \.offset) { _, item in
                         Button { thingOpen?(item.id) } label: {

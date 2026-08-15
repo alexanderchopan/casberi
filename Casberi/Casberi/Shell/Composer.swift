@@ -3460,9 +3460,14 @@ struct Composer: View {
     /// names a merchant). `posthog.metric` is a watched product metric, which
     /// no brief module reads. `cross.scatter` is the only figure in the app
     /// whose POSITION carries meaning rather than magnitude.
-    private static let dockedPanelKeys: Set<String> = [
-        "wallet.merchants", "posthog.metric", "cross.scatter",
-    ]
+    /// Down to ONE since §386g: `wallet.merchants` and `posthog.metric` moved
+    /// INTO the brief (as the Money section's spend bars and the Work
+    /// section's metric curve), so docking them too would be the §386e
+    /// duplication with the halves swapped. The scatter stays docked because
+    /// it has no doc-grammar component yet — it is the "What it's about"
+    /// section's content, rendered below the document until it becomes a real
+    /// module (see §386g's open item).
+    private static let dockedPanelKeys: Set<String> = ["cross.scatter"]
 
     /// The composed panel, narrowed to the docked set and re-ranked so the
     /// order is the panel's own (a hand-written order here would drift from

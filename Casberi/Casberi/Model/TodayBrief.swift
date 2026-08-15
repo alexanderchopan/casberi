@@ -426,7 +426,13 @@ enum TodayBrief {
         // AND the first alert row — the leads-vs-observations rule, one module
         // earlier than it used to reach. Nothing about the render order moved:
         // `ids` still takes `lede` before `alerts`, immediately below.
-        let alerts = alertsCard(things, now: now)
+        let alerts = alertsCard(things, now: now, category: category)
+        // The section header carries the count the card's eyebrow used to
+        // (prd §386g) — the one place a count IS the reading here: how many
+        // things want you. No other section gets one; "Money · 4" would be
+        // counting cards, which is the tally §213 bans.
+        var sectionQualifiers: [String: String] = [:]
+        if let alerts, alerts.count > 1 { sectionQualifiers["Needs you"] = "\(alerts.count)" }
 
         // 1. The lede — the day in ONE sentence, in display type, above
         // everything (user, 2026-07-25: "that line should be above wallet").
@@ -511,11 +517,16 @@ enum TodayBrief {
         // is merely interesting, and both outrank a number that did not move.
         // Unscoped only — a scoped brief asks a narrower question than "did
         // anything interesting happen today".
-        if category == nil, let notice = AgentNoticed.shared.notice {
-            ids.append("noticed")
-            mark("noticed")
-            lines.append("noticed = Insight(\"\(genSafe(notice.line))\", \"\(String(localized: "Noticed"))\", \"\(notice.ids.first ?? "")\")")
-        }
+        // THE NOTICE IS RETIRED FROM THE BRIEF (2026-08-15, prd §386g, user:
+        // "'noticed' seems weak. can we actually provide value there? i don't
+        // think so. i'd rather try to use on device intelligence to visualise
+        // things"). It was a SENTENCE — the form this whole pass has been
+        // cutting — that fired on a minority of days and, when it did, said
+        // something the cluster map now SHOWS ("Farcaster and Obsidian are
+        // both on Onchain today" is a claim; two hulls overlapping is the
+        // evidence). `AgentNoticed` stays compiled and still answers its own
+        // typed ask, so nothing is unreachable; it simply no longer takes a
+        // slot on the day's one screen.
 
         // 2. The money hero — the CROWN (2026-07-25), the day's one fused
         // visualization and the only read where a number is itself the event.
@@ -538,7 +549,8 @@ enum TodayBrief {
         // fact told twice). Below the ≥2 floor, `nextTile` alone is the
         // honest degrade — one deadline is a fact, not a runway.
         let runway = runwayCard(things, excluding: alerts?.ids ?? [],
-                                statedOverdue: lede.statedDeadlines)
+                                statedOverdue: lede.statedDeadlines,
+                                titled: category != nil)
         var tiles: [String] = []
         if let movers = moversTile(moves) {
             tiles.append("tmov")
@@ -590,11 +602,21 @@ enum TodayBrief {
         // user: the themes treemap "is more important than 'what landed' and
         // when"). Same slot, same geometry; a different question — what today
         // was ABOUT, which survives a deluge, where a source tally doesn't.
+        // THE TREEMAP IS RETIRED (2026-08-15, prd §386g, user: "agree then
+        // lets kill treemap"). The semantic cluster map answers the same
+        // question — what your things are ABOUT — with the thing a treemap
+        // structurally cannot carry: adjacency. A treemap's area is a count
+        // and its boxes are unordered, so two themes sitting side by side
+        // means nothing; the map's positions come from the embeddings, so
+        // clusters that sit together really are about similar things. Two
+        // figures answering one question was the duplication §386e was
+        // reported for, and this is the same call made deliberately.
+        //
+        // `themesMap` still composes for the LEDGER (§214's theme continuity
+        // and absence reads are built on `themeNames`), it just no longer
+        // draws — the one place the map's clustering is still the right tool.
         var themeNames: [String] = []
         if let themes = themesMap(things: things, now: now, ledger: ledger, windowStart: windowStart) {
-            ids.append("themes")
-            mark("themes")
-            lines.append(themes.line)
             themeNames = themes.names
         }
 
@@ -616,47 +638,50 @@ enum TodayBrief {
         // scope. It reached Money at all because this shipped ungated: the
         // ≥6-picture floor was doing the scoping by accident, and a corpus
         // with enough screenshots filed under a money source cleared it.
-        if category != "Money", let sheet = contactSheet(things) {
-            ids.append("sheet")
-            mark("sheet")
-            lines.append(sheet)
+        // 4b. WHAT TODAY WAS MADE OF, as ONE card (2026-08-15, prd §386g,
+        // user: "i love the idea of the fold what today was made of into one
+        // card"). `contactSheet` + `faces` + `sourceMixLine` were three
+        // stacked cards answering one question from three angles — the
+        // pictures, the people, the rooms — and they cost three of the
+        // brief's slots to say "here is what your day was". `DayFold` says it
+        // once: pictures lead (they ARE the day rather than an abstraction of
+        // it — `WidgetDayLead`'s own ladder makes the same call), people and
+        // rooms share the line beneath, and the subline carries every
+        // remainder so nothing is silently dropped.
+        //
+        // NOT in Money (§386's own ruling, kept): a wall of photographs above
+        // a balance answers a question nobody asked of that scope.
+        // 4a. WHERE YOU SPEND, in the Money section (prd §386g) — the panel
+        // card moved INTO the brief. It answers what no other money module
+        // does: the hero is how much you hold and the flow is which rails it
+        // moved on; only this names a merchant. Emitted as `Bars` rather than
+        // as a docked panel tile so the whole money story renders through one
+        // system, in one place, under one header.
+        if scopedToMoney, let spend = spendBars(things) {
+            ids.append("spend")
+            mark("spend")
+            lines.append(spend)
         }
 
-        // 4c. Who's around (2026-08-10, user: "life should be rich with
-        // avatars", and "avatars are there for social stuff like farcaster and
-        // bluesky"). Under the sheet, and the three together are the answer to
-        // "the treemap alone is insufficient": subjects, then scenes, then
-        // people. It declines on its own below three names, which is why it
-        // needs no scope test — Money and Work rarely name three people, and
-        // when they genuinely do (a busy GitHub or a Stocktwits watchlist) the
-        // roster is a true reading there too.
-        if let faces = faces(things) {
-            ids.append("faces")
-            mark("faces")
-            lines.append(faces)
+        // 4a-ii. WORK — the section's first real member (prd §386g, user:
+        // "work section isn't only posthog, it would be github for example
+        // which we need to account for"). PostHog's busiest watched metric
+        // leads because it is the one work figure that is a CURVE; GitHub's
+        // contribution calendar and the deploy/incident rooms are the next
+        // members and are not wired yet (stated in §386g rather than left to
+        // look like an oversight).
+        if category == nil, let work = workCurve() {
+            ids.append("work")
+            mark("work")
+            lines.append(work)
         }
 
-        // 4d. The day's SOURCE MIX (user pick, 2026-08-14, prd §386b: "day's
-        // source mix") — where today came from, as the §382a widget's own
-        // third rung at brief scale: one big, two stacked (§194), each cell
-        // wearing its bridge's real mark. Counts size the cells and are never
-        // printed (§213 — `GenSourceMix`'s own contract; its residual line
-        // names what the three cells leave out). Over the WINDOW's landed
-        // rows, so the module answers the same question the lede's count
-        // asks, drawn instead of tallied.
-        if let mix = sourceMixLine(landed) {
-            ids.append("mix")
-            mark("mix")
-            lines.append(mix)
+        if category != "Money", let fold = dayFold(things: things, landed: landed) {
+            ids.append("fold")
+            mark("fold")
+            lines.append(fold)
         }
 
-        // 4e. WHAT HAPPENED TO YOUR POSTS (user pick, 2026-08-14, prd §386c)
-        // — the inbound half §239 built, finally on the one screen a day
-        // starts from: who liked your posts (names, `SocialLikers`' own
-        // line — never a bare count), who replied, who followed. Composes
-        // only from rows the inbound reads landed (`socialContext` "reply"/
-        // "follow") plus the likers book, so it is silent for anyone with no
-        // account marked "mine" — the honest common case, not a gap.
         if let posts = yourPostsCard(things, windowStart: windowStart) {
             ids.append("posts")
             mark("posts")
@@ -742,7 +767,8 @@ enum TodayBrief {
         if let onPartial, presenting, !skipLiveReads, !ids.isEmpty {
             onPartial(Self.assemble(ids: ids, lines: lines,
                                     category: category, leadRefs: leadRefs,
-                                    hour: Calendar.current.component(.hour, from: now)))
+                                    hour: Calendar.current.component(.hour, from: now),
+                                    sectionQualifiers: sectionQualifiers))
         }
         // The `dayread` paragraph's emission stood here until 2026-08-14
         // (prd §386a) — see the retirement note above the leads.
@@ -828,7 +854,8 @@ enum TodayBrief {
         #endif
         let doc = Self.assemble(ids: ids, lines: lines,
                                 category: category, leadRefs: leadRefs,
-                                hour: Calendar.current.component(.hour, from: now))
+                                hour: Calendar.current.component(.hour, from: now),
+                                sectionQualifiers: sectionQualifiers)
         // What each module SAID, for the next brief's quiet set — written
         // last and only when presenting, so a background digest compose can
         // never spend the novelty of a brief nobody saw (`BriefLedger.record`
@@ -852,12 +879,16 @@ enum TodayBrief {
     /// whole pass exists to remove. Pure — no model reads, no `Thing`.
     private static func assemble(ids: [String], lines: [String],
                                  category: String?, leadRefs: [String],
-                                 hour: Int) -> [String] {
+                                 hour: Int,
+                                 sectionQualifiers: [String: String] = [:]) -> [String] {
         var ids = ids
         // The clock's permutation runs FIRST, so the Life ruling below —
         // which is about one scope's subject, not about the hour — gets the
         // last word on the arrangement it cares about.
         ids = timeOrdered(ids, hour: hour)
+        // …then the SUBJECT grouping, which supersedes both for the unscoped
+        // brief (prd §386g). See `sectioned`.
+        var lines = lines
         // LIFE IS PEOPLE-FIRST (2026-08-13, from walking the three scopes on
         // the sim). Every other ordering decision in this file is about rank —
         // what is most consequential — and that ladder is right for a day and
@@ -899,15 +930,92 @@ enum TodayBrief {
         // `dayread`/`notes` left the chapter list with their modules (prd
         // §386a); the filter would have dropped the absent ids anyway, but a
         // list naming retired modules reads as if they might come back.
+        // A SECTION HEADER IS ALREADY A CHAPTER (prd §386g) — it carries its
+        // own `s6` of air above it, so a module that sits under one must not
+        // ALSO take the chapter gap: on the sim that stacked two openings and
+        // left a hole between the header and the card it names. The headers
+        // are the chapters now wherever they exist; the list below survives
+        // for the scoped briefs, which have no headers at all.
+        let headed = Set(sectionPlan.flatMap(\.ids))
         let chapters = ["alerts", "hero", "themes", leadRefs.first]
             .compactMap { $0 }
             .filter { ids.contains($0) && $0 != ids.first }
+            .filter { category != nil || !headed.contains($0) }
+        // The SUBJECT grouping (prd §386g) — unscoped only, and last, so it
+        // has the final word on arrangement. A scoped brief keeps the rank
+        // order: it covers one subject already, so naming sections inside it
+        // would label a room with the name of the building.
+        if category == nil {
+            let grouped = sectioned(ids: ids, qualifiers: sectionQualifiers)
+            ids = grouped.ids
+            lines += grouped.lines
+        }
         // The QUIET set (prd §386d) — modules whose line is byte-identical to
         // the last brief this device SHOWED. Arg 2, absent everywhere else,
         // and an empty arg is a no-op, so every other `Stack` emitter is
         // untouched.
         let quiet = quietIDs(ids: ids, lines: lines)
         return ["root = Stack([\(ids.joined(separator: ", "))], \"\(chapters.joined(separator: ","))\", \"\(quiet.joined(separator: ","))\")"] + lines
+    }
+
+    /// The brief's SUBJECTS, in order, and which module ids belong to each
+    /// (2026-08-15, prd §386g).
+    ///
+    /// The order is the user's own: what NEEDS you, then money, then what is
+    /// coming, then the day itself, then the people reacting to it, then work,
+    /// then what it was all about. It replaces a pure consequence rank whose
+    /// visible symptom was money appearing in three places with the deadlines
+    /// sitting in the middle of it — a split nobody could see precisely
+    /// because nothing was named.
+    ///
+    /// A section is emitted ONLY when it has a member, and its header is a
+    /// real element in `ids`, so the whole thing inherits the quiet set, the
+    /// front-page columns and the chapter air for free.
+    private static let sectionPlan: [(title: String, ids: [String])] = [
+        ("Needs you", ["alerts"]),
+        ("Money", ["hero", "pair", "tmkt", "flow", "spend"]),
+        ("Coming up", ["axis", "runway"]),
+        ("Your day", ["fold", "posts"]),
+        ("Work", ["work"]),
+        ("What it's about", ["map"]),
+    ]
+
+    /// Regroups `ids` under `sectionPlan`, prefixing each populated section
+    /// with its own `Section` line.
+    ///
+    /// Anything the plan does not name keeps its relative order and follows in
+    /// a TRAILING run with no header — the leads, and any module added later
+    /// that nobody has filed yet. That is the safe default: an unfiled module
+    /// still draws, it just draws unlabelled, rather than vanishing because a
+    /// plan forgot it. `lede` is deliberately unfiled — it is the headline,
+    /// above every section.
+    private static func sectioned(ids: [String],
+                                  qualifiers: [String: String]) -> (ids: [String], lines: [String]) {
+        var remaining = ids
+        var out: [String] = []
+        var lines: [String] = []
+        // The headline stays at the very top, outside every section.
+        if let lede = remaining.firstIndex(of: "lede") {
+            out.append(remaining.remove(at: lede))
+        }
+        var n = 0
+        for section in sectionPlan {
+            let members = remaining.filter { section.ids.contains($0) }
+            guard !members.isEmpty else { continue }
+            let id = "sec\(n)"
+            n += 1
+            // The qualifier is the section's own count where a count is a
+            // real reading — "Needs you · 3" is how many things want you.
+            // Nowhere else: "Money · 4" would be counting cards, which is
+            // the tally §213 bans.
+            lines.append("\(id) = Section(\"\(genSafe(section.title))\", \"\(genSafe(qualifiers[section.title] ?? ""))\")")
+            out.append(id)
+            out.append(contentsOf: members)
+            remaining.removeAll { members.contains($0) }
+        }
+        // Whatever the plan didn't name, in its original order.
+        out.append(contentsOf: remaining)
+        return (out, lines)
     }
 
     /// The module order, permuted by TIME OF DAY (2026-08-14, prd §386d).
@@ -2202,6 +2310,117 @@ enum TodayBrief {
             + rows
     }
 
+    /// `Bars` of merchant share — where the card money actually went (prd
+    /// §386g). Reads `AppleWalletRoom`'s own composer, so the brief and the
+    /// room can never disagree about who is biggest; `share` is already the
+    /// fraction of settled spend, so nothing is re-derived here.
+    @MainActor
+    private static func spendBars(_ things: [Thing]) -> String? {
+        let spends = AppleWalletRoomSource.spends(from: things)
+        guard let card = AppleWalletRoom.compose(spends: spends, now: .now),
+              !card.merchants.isEmpty else { return nil }
+        // `AllocBar`, NOT `Bars` (measured on the sim, prd §386g): `Bars`
+        // draws each column as a `Capsule`, which rounds to half its SHORTER
+        // side — right for the 24 narrow hour-bars and the 7-day recap it was
+        // built for, and at four columns across a phone it renders the tallest
+        // merchant as a filled circle and the shortest as a hairline. Share of
+        // a whole is a segmented bar's question anyway, which is what
+        // `AllocBar` already is.
+        let shown = card.merchants.prefix(4)
+        // `,` and `|` are this grammar's two separators — a merchant name
+        // carrying either would shear the line (the `allocSafe` rule).
+        let segs = shown.map { m -> String in
+            let name = tileSafe(m.name)
+            return "\(name)|\(m.share)"
+        }
+        return "spend = AllocBar(\"\(String(localized: "Where you spend"))\", \"\(segs.joined(separator: ","))\")"
+    }
+
+    /// The busiest watched product metric as its own curve (prd §386g) —
+    /// `ValueSpark`, the same component the wallet's balance line uses, so a
+    /// metric and a balance read as the same KIND of fact drawn twice, which
+    /// is what they are. Declines under three readings (a two-point line is a
+    /// slope, not a curve).
+    @MainActor
+    private static func workCurve() -> String? {
+        let metrics = PostHogState.all()
+        guard let busiest = metrics
+            .filter({ $0.value.series.count >= 3 })
+            .max(by: { $0.value.total < $1.value.total })
+        else { return nil }
+        let csv = busiest.value.series.map(String.init).joined(separator: ",")
+        return "work = ValueSpark(\"\(tileSafe(busiest.key))\", \"\", \"\(csv)\")"
+    }
+
+    /// `DayFold(shots, faces, marks, subline)` — the day's pictures, people
+    /// and rooms as ONE card (prd §386g). Each third is optional and the card
+    /// declines only when all three are empty, so a day with photographs and
+    /// nobody in them still draws.
+    ///
+    /// Every remainder is COUNTED into the subline rather than dropped: the
+    /// pictures beyond four, the people beyond four, the rooms beyond three.
+    /// The three cards this replaces each carried their own residual line and
+    /// losing them would be exactly the silent truncation §307 ruled against.
+    @MainActor
+    private static func dayFold(things: [Thing], landed: [Thing]) -> String? {
+        // Pictures — newest first, one per thing, deduped by URL (the demo
+        // placeholder lesson), URL images only (`contactSheet`'s own ceiling:
+        // stored bytes have no URL to hand the doc grammar).
+        var seenArt = Set<String>()
+        var shots: [String] = []
+        var artTotal = 0
+        for t in things.filter({ !($0.previewImageURL ?? "").isEmpty || !$0.imageURLs.isEmpty })
+            .sorted(by: { $0.capturedAt > $1.capturedAt }) {
+            let url = !(t.previewImageURL ?? "").isEmpty
+                ? (t.previewImageURL ?? "") : (t.imageURLs.first ?? "")
+            guard !url.isEmpty, seenArt.insert(url).inserted else { continue }
+            artTotal += 1
+            if shots.count < 4 { shots.append("\(genSafe(url))|\(t.id.uuidString)") }
+        }
+
+        // People — the roster `faces` ranks, reduced to handle + avatar.
+        var counts: [String: Int] = [:]
+        var avatar: [String: String] = [:]
+        let mine = ownHandles()
+        for t in things {
+            // `SocialThread.hasContext` is the app's own answer to "does this
+            // source name a human" — the same gate `faces` uses, so the fold
+            // and the roster it replaces can never disagree about who counts
+            // as a person (RSS and Podcasts stamp a PUBLICATION here).
+            guard SocialThread.hasContext(t.source),
+                  let raw = t.authorHandle ?? t.postAuthor else { continue }
+            let h = raw.trimmingCharacters(in: .whitespaces)
+            guard !h.isEmpty, !mine.contains(h.lowercased()) else { continue }
+            counts[h, default: 0] += 1
+            if avatar[h] == nil, let a = t.previewImageURL, !a.isEmpty { avatar[h] = a }
+        }
+        let ranked = counts.sorted { $0.value == $1.value ? $0.key < $1.key : $0.value > $1.value }
+        let people = ranked.prefix(4).map { "\(tileSafe($0.key))|\(genSafe(avatar[$0.key] ?? ""))" }
+
+        // Rooms — the window's own source mix, biggest first.
+        var roomCounts: [String: Int] = [:]
+        for t in landed where !Corpus.isImportReceipt(t) { roomCounts[t.source, default: 0] += 1 }
+        let rooms = roomCounts.sorted { $0.value == $1.value ? $0.key < $1.key : $0.value > $1.value }
+        let marks = rooms.prefix(3).map { tileSafe($0.key) }
+
+        guard !shots.isEmpty || !people.isEmpty || !marks.isEmpty else { return nil }
+
+        var parts: [String] = []
+        if artTotal > shots.count {
+            parts.append(String(localized: "\(artTotal - shots.count) more"))
+        }
+        if ranked.count > people.count {
+            parts.append(String(localized: "\(ranked.count) people"))
+        } else if !people.isEmpty {
+            parts.append(String(localized: "\(people.count) people"))
+        }
+        if !rooms.isEmpty {
+            parts.append(ListFormatter.localizedString(byJoining: rooms.prefix(3).map(\.key)))
+        }
+        let subline = parts.joined(separator: " · ")
+        return "fold = DayFold(\"\(shots.joined(separator: ";"))\", \"\(people.joined(separator: ";"))\", \"\(marks.joined(separator: ";"))\", \"\(genSafe(subline))\")"
+    }
+
     /// The single strongest "what happened to your posts" line, or nil.
     ///
     /// ONE definition, read by the widget's own lead (prd §386d) and drawn
@@ -2252,7 +2471,8 @@ enum TodayBrief {
         return "mix = SourceMix(\"\(String(localized: "Where today came from"))\", \"\", [\(cells.joined(separator: ", "))])"
     }
 
-    private static func alertsCard(_ things: [Thing], now: Date) -> (line: String, ids: Set<UUID>)? {
+    private static func alertsCard(_ things: [Thing], now: Date,
+                                   category: String?) -> (line: String, ids: Set<UUID>, count: Int)? {
         struct Ranked { let thing: Thing; let kind: NotifyKind }
         let alarms: [Ranked] = things.compactMap { t in
             guard let k = NotifySweep.classify(t, now: now), k.cls == .alarm else { return nil }
@@ -2276,11 +2496,16 @@ enum TodayBrief {
         // task source's past-due row is actionable; a bridge deadline that
         // already passed (an expired grant) is history wearing a clock.
         let alarmIDs = Set(shownAlerts.map { $0.thing.id })
-        let overdue = things
-            .filter {
-                $0.mark != .done && KeptAskComposers.overdueSources.contains($0.source)
-                    && ($0.dueAt ?? .distantFuture) < now && !alarmIDs.contains($0.id)
-            }
+        // DEDUPED (prd §386g, caught on the sim: "Book dentist" and "Book the
+        // dentist" — the same errand from Reminders and Todoist — sat as two
+        // separate things that need you). `dedupeDeadlines` is the same pass
+        // the runway and `nextTile` already take, and this addition had
+        // simply never been given it.
+        let overdueAll = things.filter {
+            $0.mark != .done && KeptAskComposers.overdueSources.contains($0.source)
+                && ($0.dueAt ?? .distantFuture) < now && !alarmIDs.contains($0.id)
+        }
+        let overdue = dedupeDeadlines(overdueAll)
             .sorted { ($0.dueAt ?? now) < ($1.dueAt ?? now) }
             .prefix(2)
         guard !shownAlerts.isEmpty || !overdue.isEmpty else { return nil }
@@ -2300,9 +2525,15 @@ enum TodayBrief {
             return [genSafe(clamp(r.title, max: 46)), genSafe(meta),
                     genSafe(r.source), r.id.uuidString].joined(separator: "|")
         }
-        let eyebrow = shown.count == 1
+        // NO EYEBROW when a section header already says it (prd §386g,
+        // caught on the sim: the header read "Needs you" and the card under
+        // it read "Needs you · 5", which is the duplication these headers
+        // exist to remove, committed by the headers themselves). The count
+        // moves to the section's own qualifier — see `sectionQualifiers`.
+        // Scoped briefs get no headers, so they keep the eyebrow.
+        let eyebrow = category == nil ? "" : (shown.count == 1
             ? String(localized: "Needs you")
-            : String(localized: "Needs you · \(shown.count)")
+            : String(localized: "Needs you · \(shown.count)"))
         // The ids go back to the caller so the runway can SKIP them (2026-08-10).
         // Only the rows actually drawn — an alert past the cap of 3 was never
         // shown, so the runway naming it is the honest place to see it, not a
@@ -2311,8 +2542,18 @@ enum TodayBrief {
         // carries a `dueAt`, which is exactly what `runwayCard` selects on, so
         // without this every dispute appears once as an alarm and again four
         // rows below as an ordinary deadline.
+        // The exclusion set carries every TWIN of a drawn row, not just the
+        // survivor (prd §386g, seen on the sim: "Book dentist" from Reminders
+        // led Needs you while "Book the dentist" from Todoist — the same
+        // errand, collapsed by `dedupeDeadlines` — reappeared four cards
+        // later under Coming up). The runway excludes what this card SPEAKS
+        // FOR, which is the whole collapsed group, not the one row that
+        // happened to win the dedupe.
+        let drawnTitles = Set(overdue.map { deadlineKey($0.title) })
+        let spokenFor = Set(shown.map(\.id))
+            .union(overdueAll.filter { drawnTitles.contains(deadlineKey($0.title)) }.map(\.id))
         return ("alerts = Alerts(\"\(eyebrow)\", \"\(rows.joined(separator: ";"))\")",
-                Set(shown.map(\.id)))
+                spokenFor, shown.count)
     }
 
     /// The runway (user, 2026-08-08: "Work is the only room organized by
@@ -2393,7 +2634,8 @@ enum TodayBrief {
     /// listed: the shape is the point, and truncating it to the visible rows
     /// would understate a pile-up precisely when there is one.
     private static func runwayCard(_ things: [Thing], excluding alerted: Set<UUID> = [],
-                                   statedOverdue: Bool = false) -> [String]? {
+                                   statedOverdue: Bool = false,
+                                   titled: Bool = true) -> [String]? {
         let open = dedupeDeadlines(things.filter {
             $0.mark != .done && $0.dueAt != nil && !alerted.contains($0.id)
         })
@@ -2411,7 +2653,10 @@ enum TodayBrief {
             refs.append("d\(i)")
             doc.append("d\(i) = LeadRow(\"\(genSafe(clamp(item.title, max: 40)))\", \"\(genSafe(meta))\", \"\", \"\(item.id.uuidString)\", \"\(genSafe(item.source))\")")
         }
-        doc[0] = "runway = Widget(\"\(String(localized: "Coming up"))\", \"\", [\(refs.joined(separator: ", "))])"
+        // Untitled under a section header that already says "Coming up"
+        // (prd §386g) — the same de-duplication the alerts card takes.
+        let widgetTitle = titled ? String(localized: "Coming up") : ""
+        doc[0] = "runway = Widget(\"\(genSafe(widgetTitle))\", \"\", [\(refs.joined(separator: ", "))])"
         // The axis, over EVERY deadline (see the note above), plus the two end
         // labels. The far label names the last dot's own day rather than a
         // computed "in N days" — a date is a fact the row can be checked
