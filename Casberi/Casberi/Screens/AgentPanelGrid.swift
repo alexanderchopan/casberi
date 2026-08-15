@@ -899,6 +899,22 @@ private struct ScatterFigure: View {
     /// MEANING — the cluster labels.
     let words: Double
 
+    /// The LEGEND (2026-08-15, prd §386f, user: "semantic scatter was cool if
+    /// you can enrich it"). The dots have been coloured by source since §339
+    /// and nothing ever said which colour was which app — so the map's whole
+    /// cross-room reading ("my screenshots and my notes are in the same
+    /// neighbourhood") was sitting there unreadable. Named in rank order,
+    /// capped at four, and only for sources carrying real weight here: a
+    /// legend longer than the picture is a table with a chart on top.
+    private var legend: [(source: String, count: Int)] {
+        var counts: [String: Int] = [:]
+        for dot in dots { counts[dot.source, default: 0] += 1 }
+        return counts
+            .sorted { $0.value == $1.value ? $0.key < $1.key : $0.value > $1.value }
+            .prefix(4)
+            .map { (source: $0.key, count: $0.value) }
+    }
+
     /// Cluster labels with their collisions RESOLVED (§339).
     ///
     /// The first cut positioned each label at a fixed offset below its own
@@ -973,6 +989,32 @@ private struct ScatterFigure: View {
                         .offset(y: 4 * (1 - words))
                         .position(x: min(w - 30, max(30, px(placement.cluster.x))),
                                   y: placement.y)
+                }
+                // WHICH COLOUR IS WHICH ROOM (prd §386f) — pinned to the
+                // bottom-leading corner, riding the same `words` beat as the
+                // cluster labels, since it is the same kind of information
+                // (what the shapes MEAN, after the shapes have arrived).
+                // Wordless would have been prettier and useless: the dots'
+                // hues are the map's only cross-room signal.
+                if !legend.isEmpty {
+                    HStack(spacing: DS.Space.s2) {
+                        ForEach(legend, id: \.source) { entry in
+                            HStack(spacing: 3) {
+                                Circle()
+                                    .fill(AgentPanelGrid.panelHue(for: entry.source))
+                                    .frame(width: 5, height: 5)
+                                Text(entry.source)
+                                    .dsText(.label11)
+                                    .foregroundStyle(DS.textTertiary)
+                                    .lineLimit(1)
+                            }
+                        }
+                    }
+                    .opacity(words)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity,
+                           alignment: .bottomLeading)
+                    .padding(.leading, 2)
+                    .allowsHitTesting(false)
                 }
             }
         }
