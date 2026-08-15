@@ -104,6 +104,10 @@ struct FeedScreen: View {
     /// Read by `isQuiet` (prd §378): under increased contrast the feed's rows
     /// never recede — that setting exists to refuse exactly this.
     @Environment(\.colorSchemeContrast) private var contrast
+    /// For the Today header's day line (prd §385) — `DayBrief.Whisper
+    /// .detailText` paints the wallet move in its direction's accent, and
+    /// the accent is scheme-keyed (§83's flat-move rule lives in there too).
+    @Environment(\.colorScheme) private var colorScheme
     // This window's stack and detail pane (per-window since `SceneState`).
     @Environment(HomeRoute.self) private var route
     @Environment(PadDetailSelection.self) private var detail
@@ -546,11 +550,20 @@ struct FeedScreen: View {
     /// same project detail door Home's map already opened.
     @State private var openProject: ProjectRoute?
     @State private var openPerson: SocialProfile?
-    /// Themes stays expanded for the rest of THIS session once tapped open
-    /// (2026-07-20) — session-only by design; a fresh mount re-checks the
-    /// digest and may collapse again.
-    @State private var themesExpanded = false
-    private static let themesSeenDigestKey = "feed.themesSeenDigest"
+    /// One scroll-past per mount (prd §385, 2026-08-14): on appear the list
+    /// settles just below the Themes card, so the map lives ABOVE THE FOLD —
+    /// revealed by scrolling up past the top, the way Mail hides search.
+    /// Every source switch re-mounts this screen (`.id(filter.source)` in
+    /// `MainSurface`), which resets this and re-hides the map — the stronger
+    /// form of the digest-collapse behaviour it replaced (the one thing the
+    /// user kept from that design: "i like that it collapses when you
+    /// navigate away and come back").
+    @State private var foldSettled = false
+    /// The zero-height row just below the Themes card that `foldSettled`'s
+    /// scroll targets. `scrollTo` on an id that never rendered is a no-op,
+    /// which is the whole guard: non-All rooms, a filtered All, and an empty
+    /// corpus render no anchor and so never scroll.
+    private static let themesFoldAnchor = "feed.themesFold"
     struct ProjectRoute: Identifiable, Hashable {
         let name: String
         var id: String { name }
@@ -1733,6 +1746,18 @@ struct FeedScreen: View {
     // three things that silently cost.
 
     private var feedList: some View {
+        // ONE extra container on the launch path's deepest tree (see the 8MB
+        // main-stack history before "improving" this) — accepted for §385:
+        // the fold-settle scroll needs a `ScrollViewProxy` enclosing the
+        // List, and this is the shallowest place one can live. Mac already
+        // nests a second reader OUTSIDE for the keyboard walk; nested
+        // readers are fine, `scrollTo` resolves inward.
+        ScrollViewReader { proxy in
+            listCore(proxy)
+        }
+    }
+
+    private func listCore(_ proxy: ScrollViewProxy) -> some View {
         List {
             Group {
                 // The source chips moved to the shell's fixed header
@@ -1808,6 +1833,21 @@ struct FeedScreen: View {
                         .listRowInsets(EdgeInsets())
                 } else {
                     let nextID = nextEventID(visible)
+                    // The Themes treemap, ABOVE THE FOLD of the unfiltered All
+                    // room (prd §385) — called HERE, before `shapedSections`,
+                    // and not inside its `.all` branch where it lived from
+                    // 2026-07-18 to 2026-08-14: the shape chain draws its
+                    // heroes (a live stream above all) before the branch
+                    // runs, and the fold-settle scroll hides EVERYTHING above
+                    // `themesFoldAnchor` — a live hero must stay below the
+                    // anchor or going live would hide it. The condition is
+                    // the `.all` branch's own gate restated (kind-filtered
+                    // All and the pinned room take other branches, and
+                    // neither draws the map).
+                    if shape == .all && filter.tag == "All",
+                       !Pinboard.isPinnedRoom(source) {
+                        themesLedeSection(visible, proxy: proxy)
+                    }
                     // A pin is a HOME pin only (ruling 2026-07-10): the Feed's
                     // own Pinned section doubled what Home already shows and
                     // cluttered the record — pinned things now ride the feed in
@@ -2456,19 +2496,11 @@ struct FeedScreen: View {
             } else if filter.tag != "All" && shape == .all {
                 daySection(filterLabel, visible, nextEventID: nextEventID)
             } else if shape == .all {
-                // The Themes treemap leads the unfiltered All room (2026-07-18,
-                // moved off Home) — a cross-source overview, so it only makes
-                // sense over the WHOLE corpus, not a kind-filtered slice (the
-                // `if` branch above).
-                //
-                // Yields to the cross-source THREAD head when one fired
-                // (2026-08-07): both are cross-source overviews and the design
-                // forbids stacking two (`heroShown`). The thread is the
-                // specific, timely lead; the themes map is the standing one —
-                // so the thread wins the slot, and the map returns on every day
-                // no thread forms. (Also closes a latent double-stack: a live
-                // stream landing in the All feed already set `heroShown`.)
-                if !heroShown { themesLedeSection(visible) }
+                // The Themes treemap no longer renders here — it moved ABOVE
+                // the shape chain entirely (prd §385, see the call site in
+                // `feedList`): it must precede every hero this switch's
+                // preamble draws, or the fold-settle scroll would hide a live
+                // hero above the fold along with the map.
                 // All is where volume floods — bundles + the new-since
                 // divider live here. A single source's shape IS that source;
                 // bundling there would collapse the whole screen into one row.
@@ -2678,6 +2710,16 @@ struct FeedScreen: View {
         let wideArt = memo.wideArt
         let coarse = memo.coarse
         let subjects = memo.subjects
+        // The day header speaks (prd §385, 2026-08-14): the Today header
+        // carries the day's own sentence — `DayBrief`'s whisper, the ONE
+        // implementation of "what today was" (the capsule, the kept pill and
+        // now this header all read it, so no two can disagree). Deliberately
+        // NOT in the memo above: the whisper depends on the away window and
+        // the wallet's day move, both of which change without the corpus
+        // changing, and it is a filter-plus-scan over an already-bounded
+        // array — cheap enough to stay time-fresh. Nil composes to no line
+        // (honesty law: a day with nothing to say says nothing).
+        let dayLine = DayBrief.whisper(things: visible)
         return Group {
         ForEach(groups, id: \.0) { label, rows in
             // Bundles merge into the day card like any row-shaped thing —
@@ -2759,6 +2801,17 @@ struct FeedScreen: View {
                         Text(String(localized: "mostly \(subject)"))
                             .dsText(.subhead13)
                             .foregroundStyle(DS.textTertiary)
+                            .lineLimit(1)
+                    }
+                    // Today's own line (prd §385) — the §379 subject line's
+                    // shape, on the one day it never covers (Today is never
+                    // coarse, so at most one of these two renders). The
+                    // whisper capsule shows this same sentence once a day and
+                    // then clears; this is its standing home, on the divider
+                    // the day already owns.
+                    if label == String(localized: "Today"), let whisper = dayLine {
+                        whisper.detailText(scheme: colorScheme)
+                            .dsText(.subhead13)
                             .lineLimit(1)
                     }
                 }
@@ -3061,97 +3114,80 @@ struct FeedScreen: View {
     /// from (no separate query, so the two can't disagree) — no GenStream
     /// needed, unlike the wallet block, which waits on a real network fetch.
     ///
-    /// Collapses to one line once you've already seen these exact clusters
-    /// (2026-07-20) — a digest of cluster name+count compared against a
-    /// locally-stamped "last seen" digest (its own key, NOT `KeptAskStore`,
-    /// which is scoped to kept ASKS specifically). Tapping expands the full
-    /// treemap for the rest of this session and marks the digest seen.
+    /// ABOVE THE FOLD since 2026-08-14 (prd §385, user: "i'm not sure it
+    /// needs to be a treemap … i like the idea of 1 and 3"): the map is an
+    /// all-time reading that almost never changes, so as a standing head it
+    /// answered "what does my corpus contain" on a surface whose question is
+    /// "what's different since I last looked". It no longer claims the head
+    /// at all — the list opens settled at `themesFoldAnchor` just below it
+    /// (see `foldSettled`), and the map is revealed by scrolling up past the
+    /// top, the way Mail hides search. The digest-collapse machinery this
+    /// replaces (2026-07-20's seen-digest + the collapsed one-line row) is
+    /// deleted, not demoted: hidden-by-geometry does the same job with no
+    /// stored state, and re-hides on every re-mount for free.
+    ///
+    /// Deliberately NOT gated on `heroShown` anymore: the no-stacking rule
+    /// (2026-08-07) was about two cross-source overviews competing for the
+    /// resting open, and above the fold this one isn't present at rest —
+    /// seeing it under a thread head costs an explicit scroll-up, which is a
+    /// request for more, not a stack.
     @ViewBuilder
-    private func themesLedeSection(_ visible: [Thing]) -> some View {
-        // Computed once and shared with the collapsed row below (2026-07-21) —
-        // this used to run `projectClusters` a second time over the same
-        // `visible` set just to build the collapsed summary. Memoized since
-        // 2026-07-31 (see `themesData`), so it no longer walks the corpus on
-        // every launch-window body pass.
+    private func themesLedeSection(_ visible: [Thing], proxy: ScrollViewProxy) -> some View {
+        // Memoized since 2026-07-31 (see `themesData`), so it no longer walks
+        // the corpus on every launch-window body pass.
         let themes = themesData(visible)
         if let doc = themes.doc {
-            let clusters = themes.clusters
-            // The map's SHAPE, not its rendered document (2026-08-14). The doc
-            // carries every cluster's count and its freshness subline, so
-            // digesting it re-expanded the whole treemap on one new thing in
-            // any theme — i.e. on every launch of an active corpus, which is
-            // the only corpus where collapsing is worth anything. See
-            // `HomeComposition.themesShapeDigest`.
-            let digest = HomeComposition.themesShapeDigest(clusters: clusters)
-            let unchanged = digest == UserDefaults.standard.string(forKey: Self.themesSeenDigestKey)
-            if themesExpanded || !unchanged {
-                // The DOCUMENT is what renders; `digest` above is only the
-                // seen-check's key and is deliberately not the same string.
-                let rendered = doc.joined(separator: "\n")
-                let els = perfAccum("themesParse") { GenParser.parse(prefix: rendered[...], isComplete: true) }
-                Section {
-                    GenRender(id: "root", els: els)
-                        // The Themes CARD (2026-07-21, the §160 ruling carried
-                        // to the All room): every other feed-head read — the
-                        // wallet's two parcels, the heatmaps, the leaderboards,
-                        // the mosaics — wears the widget surface; this was the
-                        // last one floating bare on the page. Same recipe as
-                        // the holdings card: GenTagMap self-pads horizontally,
-                        // so only the bottom needs closing.
-                        .padding(.bottom, DS.Space.s3)
-                        .dsWidgetSurface(fillOpacity: Self.walletCardFill)
-                        .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
-                        // The card needs the page gutter the bare map didn't.
-                        .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DS.Space.s4,
-                                                  bottom: 0, trailing: DS.Space.s4))
-                        .environment(\.genProjectTap) { name in
-                            openProject = ProjectRoute(name: name)
-                        }
-                        .onAppear {
-                            // Pin expanded for the rest of this mount too —
-                            // without this, stamping the digest here would
-                            // make the NEXT body re-eval (any unrelated
-                            // state change, still the same visit) read
-                            // `unchanged` true and collapse out from under
-                            // someone mid-visit.
-                            themesExpanded = true
-                            UserDefaults.standard.set(digest, forKey: Self.themesSeenDigestKey)
-                        }
-                }
-            } else {
-                Section {
-                    Button {
-                        DSHaptic.selection()
-                        withAnimation(DS.Motion.standard) { themesExpanded = true }
-                    } label: {
-                        themesCollapsedRow(clusters)
-                    }
-                    .buttonStyle(.plain)
+            let rendered = doc.joined(separator: "\n")
+            let els = perfAccum("themesParse") { GenParser.parse(prefix: rendered[...], isComplete: true) }
+            Section {
+                GenRender(id: "root", els: els)
+                    // The Themes CARD (2026-07-21, the §160 ruling carried
+                    // to the All room): every other feed-head read — the
+                    // wallet's two parcels, the heatmaps, the leaderboards,
+                    // the mosaics — wears the widget surface; this was the
+                    // last one floating bare on the page. Same recipe as
+                    // the holdings card: GenTagMap self-pads horizontally,
+                    // so only the bottom needs closing.
+                    .padding(.bottom, DS.Space.s3)
+                    .dsWidgetSurface(fillOpacity: Self.walletCardFill)
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
-                }
+                    // The card needs the page gutter the bare map didn't.
+                    .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DS.Space.s4,
+                                              bottom: 0, trailing: DS.Space.s4))
+                    .environment(\.genProjectTap) { name in
+                        openProject = ProjectRoute(name: name)
+                    }
+                // The fold anchor — the line the list opens settled at, so
+                // everything above it (the card) sits above the fold. Zero
+                // height on purpose, and `defaultMinListRowHeight` is forced
+                // down PER-ROW because a List otherwise gives any row its
+                // ~44pt minimum, which would render as a mystery gap between
+                // the revealed card and the Today header.
+                //
+                // The settle rides the ANCHOR'S OWN `onAppear`, not the
+                // List's: it fires exactly when this row materialises, so the
+                // `scrollTo` can never race the List's first layout (a
+                // List-level `onAppear` can run before lazy rows register,
+                // and a `scrollTo` no target has heard of is a silent no-op
+                // that would leave the map sitting visibly at the top). It
+                // also self-gates for free — no themes card, no anchor, no
+                // scroll. Unanimated on purpose: this is the room's resting
+                // position, not a motion.
+                Color.clear
+                    .frame(height: 0)
+                    .id(Self.themesFoldAnchor)
+                    .environment(\.defaultMinListRowHeight, 0)
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets())
+                    .onAppear {
+                        guard !foldSettled else { return }
+                        foldSettled = true
+                        proxy.scrollTo(Self.themesFoldAnchor, anchor: .top)
+                    }
             }
         }
-    }
-
-    /// The collapsed Themes row — eyebrow + a one-line cluster-count summary,
-    /// same voice as `daySection`'s header (name in heading weight, the
-    /// count in tertiary).
-    private func themesCollapsedRow(_ clusters: [HomeComposition.Cluster]) -> some View {
-        let names = clusters.prefix(6).map(\.name).joined(separator: ", ")
-        return HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-            Text("Themes").dsText(.heading17).foregroundStyle(DS.textPrimary)
-            Text(names).dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                .lineLimit(1).truncationMode(.tail)
-            Spacer(minLength: 0)
-            Image(systemName: "chevron.down")
-                .accessibilityHidden(true)
-                .dsGlyph(12)
-                .foregroundStyle(DS.textTertiary)
-        }
-        .padding(.horizontal, DS.Space.s4)
-        .padding(.vertical, DS.Space.s3)
     }
 
     /// A room whose head comes from that room's OWN model rather than from a
@@ -4386,9 +4422,11 @@ struct FeedScreen: View {
                                     PhotoCell(thing: thing, dayPill: firstOfDay ? dayLabels[i] : nil,
                                               caption: Self.tileCaption(thing))
                                 }
-                                // The tiles press like tiles (2026-07-10) — the same
-                                // settle the Settings tiles and treemap cells wear.
-                                .buttonStyle(DSTileButtonStyle())
+                                // A photograph LIFTS under the finger (prd
+                                // §384) where every control tile dips — a
+                                // picture is picked up, not pushed. Was
+                                // `DSTileButtonStyle` (2026-07-10).
+                                .buttonStyle(PressLift())
                                 .dsHover()
                                 // Zoom source removed with the thing-open zoom (prd 232, 2026-07-30).
                             }

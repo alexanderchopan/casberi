@@ -169,9 +169,9 @@ enum HomeComposition {
     }
 
     /// Same doc, from clusters already computed — for a caller (FeedScreen's
-    /// Themes lede, 2026-07-21) that also needs the cluster list itself for
-    /// its collapsed-row summary and would otherwise call `projectClusters`
-    /// a second time over the same things just to get it.
+    /// `themesData` memo, 2026-07-21) that computes the cluster list once and
+    /// would otherwise call `projectClusters` a second time over the same
+    /// things just to get it.
     static func themesDocument(clusters: [Cluster]) -> [String]? {
         guard !clusters.isEmpty else { return nil }
         let items = clusters.prefix(cellCap).map { "\($0.name) \($0.things.count)" }
@@ -182,54 +182,22 @@ enum HomeComposition {
     /// How many cells the map draws — `UnitTreemap`'s six-cell layout.
     private static let cellCap = 6
 
-    /// The map's subline, and the answer to two things it couldn't say
-    /// (2026-08-14). It had none at all — `null` where the wallet's own TagMap
-    /// says "$19K across 13 tokens".
+    /// The map's subline — the honesty valve the topic map's own subtitle
+    /// already carries: the map draws six cells and says nothing when there
+    /// are eleven themes, and a silently truncated map looks exactly like a
+    /// complete one. Nil when the map is whole.
     ///
-    /// WHAT IT SAYS AND WHY. Counts here run over the WHOLE corpus, so after an
-    /// archive import the map describes 2019 and never moves again; re-ranking
-    /// by recency was declined (magnitude-is-area is the treemap's one honest
-    /// voice, and a map that reshuffles by window stops being a map of your
-    /// corpus) — so the freshness reading goes in the subline instead, where it
-    /// is stated as a fact rather than baked into the geometry. The second half
-    /// is the same honesty valve the topic map's own subtitle already carries:
-    /// the map draws six cells and says nothing when there are eleven themes,
-    /// and a silently truncated map looks exactly like a complete one.
-    ///
-    /// Both halves are plain counts over `capturedAt`, no fetch, no new field.
-    /// A leader must be STRICT and worth naming (≥2 new, and no tie) — "most
-    /// new this week" over a single thing, or over a tie, is a fact that
-    /// changes nothing and would flicker between passes.
-    static func themesSubline(clusters: [Cluster], now: Date = .now) -> String? {
-        var parts: [String] = []
-        let weekAgo = now.addingTimeInterval(-7 * 24 * 3600)
-        // `where $0.isLive` — a shared helper taking `[Thing]`, reached from a
-        // view body; corollary 2's rule for exactly this shape.
-        let fresh = clusters
-            .map { ($0.name, $0.things.filter { $0.isLive && $0.capturedAt >= weekAgo }.count) }
-            .sorted { $0.1 != $1.1 ? $0.1 > $1.1 : $0.0 < $1.0 }
-        if let top = fresh.first, top.1 >= 2,
-           fresh.count == 1 || fresh[1].1 < top.1 {
-            parts.append(String(localized: "Most new this week: \(top.0)"))
-        }
-        if clusters.count > cellCap {
-            parts.append(String(localized: "\(cellCap) of \(clusters.count) shown"))
-        }
-        return parts.isEmpty ? nil : parts.joined(separator: " · ")
-    }
-
-    /// The map's SHAPE — its cell names in rank order, and nothing else.
-    ///
-    /// This is what "have I already seen this map?" should compare (2026-08-14).
-    /// The collapse (2026-07-20) digested the rendered document, which carries
-    /// each cluster's COUNT — so a single new thing in any one theme changed the
-    /// digest and re-expanded the full treemap. On an active corpus that is
-    /// every launch, which means the collapse only ever fired on a dormant one,
-    /// where it saves the least. Digesting the shape collapses routine count
-    /// ticks and re-expands on the change actually worth interrupting for: a
-    /// theme entering, leaving, or overtaking another.
-    static func themesShapeDigest(clusters: [Cluster]) -> String {
-        clusters.prefix(cellCap).map(\.name).joined(separator: "\n")
+    /// The "Most new this week" freshness leader that briefly lived here is
+    /// GONE, hours after it shipped (prd §385, user: "the 'most new this
+    /// week...' is useless") — the day's freshness reading moved to where the
+    /// day is, the All feed's Today header (`DayBrief.whisper`), and the map
+    /// itself moved above the fold the same pass. What survives from that
+    /// morning's reasoning: re-ranking cells by recency stays declined —
+    /// magnitude-is-area is the treemap's one honest voice, and a map that
+    /// reshuffles by window stops being a map of your corpus.
+    static func themesSubline(clusters: [Cluster]) -> String? {
+        guard clusters.count > cellCap else { return nil }
+        return String(localized: "\(cellCap) of \(clusters.count) shown")
     }
 
     /// Quotes a string for the document; strips embedded quotes rather than
