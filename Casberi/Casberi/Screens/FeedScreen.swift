@@ -1844,10 +1844,18 @@ struct FeedScreen: View {
                     // the `.all` branch's own gate restated (kind-filtered
                     // All and the pinned room take other branches, and
                     // neither draws the map).
-                    if shape == .all && filter.tag == "All",
-                       !Pinboard.isPinnedRoom(source) {
-                        themesLedeSection(visible, proxy: proxy)
-                    }
+                    // The themes lede LEFT the All feed (user ruling
+                    // 2026-08-14, prd §386a: "we could put the treemap of
+                    // themes here [the overview] and get rid of it on the all
+                    // page, i don't think it really works there") — hours
+                    // after §385 moved it above the fold, which is the
+                    // fastest a ruling here has ever been reversed by its own
+                    // author watching it. The treemap's one home is now the
+                    // Today overview's "What you're into" module, where it
+                    // sits beside the other aggregates instead of ahead of
+                    // the chronology it was interrupting.
+                    // `themesLedeSection` and the §385 fold machinery stay
+                    // compiled but unreached (dormant-not-deleted).
                     // A pin is a HOME pin only (ruling 2026-07-10): the Feed's
                     // own Pinned section doubled what Home already shows and
                     // cluttered the record — pinned things now ride the feed in

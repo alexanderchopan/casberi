@@ -642,7 +642,6 @@ enum TodayBrief {
         // unscoped brief is untouched, since its window is the day itself and
         // an empty day should read as an empty day.
         let leadPool = (category != nil && landed.isEmpty) ? Array(things.prefix(24)) : landed
-        let topic = dominantTopic(leadPool)
         var leadIDs: [String] = []
         var leadLines: [String] = []
         var leadRefs: [String] = []
@@ -662,54 +661,19 @@ enum TodayBrief {
             leadLines += people.lines
             leadIDs.append(people.id)
         }
-        if let reading = readingCard(leadPool, topic: topic, told: told, weights: weights) {
-            leadRefs.append("read")
-            leadLines += reading.lines
-            leadIDs.append(reading.id)
-        }
-
-        // The synthesis card (B3) — only the observations that fired. Sits
-        // BELOW the summaries (2026-07-25): it used to open the screen,
-        // which made the agent's read the crown instead of the money.
-        // A scoped brief covers fewer apps, so more of what actually fired
-        // earns a line instead of losing the last seat to the unscoped
-        // brief's cap (spec: "depth scales inversely with scope").
-        let notes = observations(things: things, landed: landed, move: move, moves: moves,
-                                 now: now, ledger: ledger, ledeTookRisk: lede.tookRisk,
-                                 topic: topic, leads: Set(leadIDs),
-                                 cap: category == nil ? 3 : 6)
-        // The agent's READ of the day (2026-08-07) — a genuine model paragraph
-        // leading the synthesis section, where the deterministic notes below are
-        // single facts. The fix for "the brief feels generic": the notes are a
-        // fixed menu of single-field detectors, so the card reads the same shape
-        // every morning; this says what the day was actually ABOUT, and varies.
-        //
-        // PRESENTING-ONLY (the `worstDebt()` precedent, §214) — the
-        // background/widget/digest compose never pays the model's latency, and
-        // this element changes no `digest`, `delta`, or ledger fact, only the
-        // display, so the whisper's changed-dot stays deterministic (ruling 5).
-        // Nil off Apple-Intelligence devices and on a thin day; the notes card
-        // then stands alone exactly as before (zero regression). Grounded on the
-        // day's own facts with the prior briefs' topics as continuity.
-        // The deterministic TAIL is appended BEFORE the model runs
-        // (2026-08-14). These two blocks used to sit below the `dayRead`
-        // await, purely as an artifact of `ids` order — but they are computed
-        // above it and depend on nothing it produces, so every one of them
-        // was held back behind ~2.1s of model latency for no reason. The
-        // notes are single deterministic facts and the leads are the things
-        // themselves; making the day's actual contents wait on a paragraph
-        // ABOUT the day is exactly backwards.
-        //
-        // `dayread` is INSERTED into its rank position afterwards rather than
-        // appended, so the composed order is unchanged — see below.
-        if !notes.isEmpty {
-            ids.append("notes")
-            mark("notes")
-            lines.append("notes = DayNotes([\(notes.indices.map { "n\($0)" }.joined(separator: ", "))])")
-            for (i, n) in notes.enumerated() {
-                lines.append("n\(i) = DayNote(\"\(n.glyph)\", \"\(genSafe(n.text))\", \"\(n.thingID)\")")
-            }
-        }
+        // THE READING CARD, THE NOTES CARD AND THE DAY-READ PARAGRAPH ALL
+        // RETIRED (user ruling 2026-08-14, prd §386a: "i don't like these …
+        // reading … blocks of text facts"). What survives of the synthesis
+        // section is what the user named good: the figures (hero, movers,
+        // flow, runway, themes), the pictures (sheet), the people (faces,
+        // peopleRow) and the mention lead. The paragraph's retirement also
+        // takes the brief's ONLY model await out of the compose path — the
+        // ~2.1s the reveal machinery spent three rulings hiding is simply
+        // gone — and with it the module where the prompt-echo leak lived
+        // (§386's tripwire stays on `dayRead` for any future caller).
+        // `observations`/`readingCard`/`dayReadEvidence` remain compiled but
+        // uncalled (the `PredictionVenueSwitcher` dormant-not-deleted shape),
+        // so re-admitting one is a ruling away rather than a rebuild.
         ids += leadRefs
         lines += leadLines
 
@@ -734,48 +698,14 @@ enum TodayBrief {
             onPartial(Self.assemble(ids: ids, lines: lines,
                                     category: category, leadRefs: leadRefs))
         }
-        #if DEBUG
-        NSLog("[Casberi] composeTimingDEBUG| beforeModelRead=%dms",
-              Int(Date.now.timeIntervalSince(composeT0) * 1000))
-        #endif
-        //
-        // The id is `dayread`, NOT `read` — `readingCard` below already emits
-        // `read = Widget(…)`, and `GenParser.parse` keys elements in a
-        // DICTIONARY, so two lines sharing an id are one element: the later
-        // line wins and every reference to that id draws it. Shipped as
-        // exactly that (user report, 2026-08-13: "the screen shows
-        // duplicative sections"): `ids` carried "read" twice, so the reading
-        // card drew where this paragraph belonged AND again in the leads, and
-        // the model's read of the day — this element's whole reason to
-        // exist — was silently destroyed by a card that renders perfectly.
-        // A duplicate id is also a `ForEach(id: \.self)` collision in
-        // `GenRenderer`'s Stack, so the render is undefined, not merely
-        // doubled. Any new module here takes an id nothing else emits.
-        if presenting,
-           let read = await OnDeviceModel.dayRead(
-               evidence: dayReadEvidence(landed: leadPool, notes: notes, topic: topic),
-               continuity: dayReadContinuity(ledger),
-               scope: category) {
-            // INSERTED above the notes and the leads, which are already in
-            // `ids` — the rank order (…, dayread, notes, leads) is a ruling,
-            // not an accident of append order. Falling back to `append` when
-            // neither is present keeps a notes-less, lead-less day correct.
-            let at = ids.firstIndex(of: "notes")
-                ?? leadRefs.first.flatMap { ids.firstIndex(of: $0) }
-                ?? ids.count
-            ids.insert("dayread", at: at)
-            mark("dayread")
-            lines.append("dayread = Insight(\"\(genSafe(read))\")")
-        }
-        #if DEBUG
-        NSLog("[Casberi] composeTimingDEBUG| afterModelRead=%dms",
-              Int(Date.now.timeIntervalSince(composeT0) * 1000))
-        #endif
+        // The `dayread` paragraph's emission stood here until 2026-08-14
+        // (prd §386a) — see the retirement note above the leads.
         // The SECOND re-filter (2026-08-14) — see the long note at the first
-        // one. `dayRead` above yields the main actor for ~2.1s, and the two
-        // reads still to come (`landed.map(\.source)` in the ledger write,
-        // `DayBrief.detail(things:)` in the digest) both touch stored
-        // properties. Everything after this line is synchronous and
+        // one. The model await that used to sit here is retired, but the live
+        // reads and the partial-paint compose above are still suspensions,
+        // and the two reads still to come (`landed.map(\.source)` in the
+        // ledger write, `DayBrief.detail(things:)` in the digest) both touch
+        // stored properties. Everything after this line is synchronous and
         // `@MainActor`, so this one really is the last word.
         things = things.live
         landed = landed.live
@@ -904,7 +834,10 @@ enum TodayBrief {
         // them (a resolved market is money news), and the second lead stays
         // glued to the first. Composed rather than hard-coded in the renderer
         // because only this file knows which of them actually fired.
-        let chapters = ["alerts", "hero", "themes", "dayread", "notes", leadRefs.first]
+        // `dayread`/`notes` left the chapter list with their modules (prd
+        // §386a); the filter would have dropped the absent ids anyway, but a
+        // list naming retired modules reads as if they might come back.
+        let chapters = ["alerts", "hero", "themes", leadRefs.first]
             .compactMap { $0 }
             .filter { ids.contains($0) && $0 != ids.first }
         return ["root = Stack([\(ids.joined(separator: ", "))], \"\(chapters.joined(separator: ","))\")"] + lines
@@ -2154,7 +2087,10 @@ enum TodayBrief {
             let url = !(t.previewImageURL ?? "").isEmpty ? (t.previewImageURL ?? "") : (t.imageURLs.first ?? "")
             guard !url.isEmpty, seenArt.insert(url).inserted else { continue }
             shown.append("\(genSafe(url))|\(t.id.uuidString)")
-            if shown.count == 12 { break }
+            // FOUR, not twelve (user ruling 2026-08-14, prd §386a: "should
+            // only be 4 images not 8") — one tight row that reads as the
+            // day's four strongest scenes, with "N more" carrying the rest.
+            if shown.count == 4 { break }
         }
         guard shown.count >= 4 else { return nil }
         // Counts the things this sheet stands for, not the pictures it dropped
