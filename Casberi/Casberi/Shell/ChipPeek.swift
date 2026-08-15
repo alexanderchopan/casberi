@@ -13,11 +13,9 @@ import SwiftData
 /// never grows a peek that would have to preview everything.
 ///
 /// WHAT THE PREVIEW SHOWS, in order of what the app already knows:
-///   1. The agent panel's cached card for the landing seat
-///      (`AgentOpenCache.shared.board`) — the room's own figure through the
-///      SAME `FigureView` the panel draws, so the peek can never disagree
-///      with the tile. Cached is honest here: the panel's own doc calls one
-///      arrival behind "a different thing from being wrong".
+///   1. The room's own figure, composed on demand by `RoomFigure` — the same
+///      function the agent panel used before §386p deleted it, so the peek
+///      still shows what the room itself leads with.
 ///   2. Otherwise the room's three newest things by title — real content,
 ///      fetched at peek time (the preview builder is lazy), value-extracted
 ///      immediately so no `Thing` is ever HELD by this view (the liveness
@@ -69,9 +67,12 @@ private struct ChipPeek: View {
     /// Titles + times only — value-extracted at fetch, never held `Thing`s.
     @State private var recent: [(id: UUID, title: String, when: Date)] = []
 
-    private var card: AgentPanel.Card? {
-        AgentOpenCache.shared.board.cards.first { $0.source == landing }
-    }
+    /// Composed ON DEMAND for this one room (prd §386p). It used to read the
+    /// agent panel's cached board, and the panel is gone — but the per-room
+    /// function it used survives as `RoomFigure`, so the peek composes exactly
+    /// the figure it needs instead of reading one of forty somebody else
+    /// built. Cheaper than the cache it replaces, and it can never be stale.
+    @State private var card: AgentPanel.Card?
 
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Space.s3) {
@@ -145,19 +146,23 @@ private struct ChipPeek: View {
         .padding(DS.Space.s4)
         .frame(width: 300, alignment: .leading)
         .background(DS.surfaceSheet)
-        .onAppear { if card == nil { loadRecent() } }
+        .onAppear { loadFigure() }
     }
 
-    /// The three newest things in the landing room, value-extracted in the
-    /// same synchronous pass that fetched them — no `Thing` survives this
-    /// function, so no liveness guard is ever needed here.
-    private func loadRecent() {
+    /// The room's own figure, then its newest rows as the fallback. Both read
+    /// the same bounded fetch, so a peek is one query however it draws.
+    private func loadFigure() {
         let source = landing
-        var descriptor = FetchDescriptor<Thing>(
+        var fd = FetchDescriptor<Thing>(
             predicate: #Predicate<Thing> { $0.source == source },
             sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
-        descriptor.fetchLimit = 3
-        guard let rows = try? context.fetch(descriptor) else { return }
-        recent = rows.map { ($0.id, $0.title, $0.capturedAt) }
+        fd.fetchLimit = 400
+        let rows = (try? context.fetch(fd))?.filter { $0.isLive } ?? []
+        card = RoomFigure.roomFigure(source: source, things: rows)
+        if card == nil {
+            // Value-extracted immediately — no `Thing` survives this call.
+            recent = rows.prefix(3).map { ($0.id, $0.title, $0.capturedAt) }
+        }
     }
+
 }

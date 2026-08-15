@@ -360,12 +360,14 @@ grep -q 'note("xHead"' Casberi/Casberi/Shell/ProbeHooks.swift \
   || { echo "✗ -roomInsightProbe doesn't know about the X head — it would report the room as leading with the treemap it displaced"; exit 1; }
 grep -q 'xHead             "X"' scripts/verify.sh \
   || { echo "✗ the demo room-head coverage check has no X row — a head that stops composing over the demo goes unnoticed"; exit 1; }
-# The agent panel's own chain mirrors `shapedSections`, and this is the first
+# `RoomFigure`'s chain mirrors `shapedSections`, and this is the first
 # per-source head that is a FIGURE rather than a text hero — so without a
-# branch there the tile previews the treemap while the room draws a year strip,
-# which that chain's contract calls worse than no tile at all.
-grep -q 'XRoomSource.compose(things: things), source == XRoomSource.source' Casberi/Casberi/Shell/Composer.swift \
-  || { echo "✗ the agent panel's X tile no longer mirrors the room's head — it would preview a figure the room doesn't draw"; exit 1; }
+# branch there the chip PEEK previews the treemap while the room draws a year
+# strip, which that chain's contract calls worse than no preview at all.
+# (Lived in `Composer.buildPanel` until prd §386p deleted the agent panel; the
+# per-room function survived for the peek, and so does this invariant.)
+grep -q 'XRoomSource.compose(things: things), source == XRoomSource.source' Casberi/Casberi/Model/RoomFigure.swift \
+  || { echo "✗ the X chip peek no longer mirrors the room's head — it would preview a figure the room doesn't draw"; exit 1; }
 # The displacement itself (§349's rule): this card takes the treemap's slot, so
 # the year ROWS carrying each year's subject are what keeps it from drawing
 # less than what it replaced.

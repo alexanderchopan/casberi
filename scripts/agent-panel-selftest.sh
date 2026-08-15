@@ -37,7 +37,11 @@ SRC="Casberi/Casberi/Model/AgentPanel.swift"
 # the coupling being made visible rather than hidden.
 MONEY="Casberi/Shared/MoneyFormat.swift"
 GRID="Casberi/Casberi/Screens/AgentPanelGrid.swift"
-COMPOSER="Casberi/Casberi/Shell/Composer.swift"
+# The per-room chain moved to its own file when the agent panel was deleted
+# (prd §386p). The panel built one figure per connected room on every open;
+# only the PER-ROOM function survived, for the chip peek. The invariants below
+# are unchanged — they just live one file over now.
+COMPOSER="Casberi/Casberi/Model/RoomFigure.swift"
 for f in "$SRC" "$MONEY" "$GRID" "$COMPOSER"; do
   [[ -f "$f" ]] || { print -u2 "missing $f"; exit 1; }
 done
@@ -348,6 +352,11 @@ guard_has() {
 # The panel's contract: the tile previews the figure the ROOM draws. The chain
 # below mirrors FeedScreen.shapedSections; if a registry is dropped here the
 # tile silently previews a different figure than the room.
+# Dropped with the panel (prd §386p): the tile tap, the Stripe and Cloudflare
+# rails, the flow card and the import-receipt exclusion all belonged to
+# `buildPanel`'s forty-room loop, not to one room's figure. What they guarded
+# still holds where it moved — the brief draws those rails and excludes
+# receipts, and TodayBrief's own checks cover it there.
 guard_has "the chain still asks topicMap first" "$COMPOSER" 'FeedInsight\.topicMap\(source:' || rc=1
 guard_has "…then leaderboard"   "$COMPOSER" 'FeedInsight\.leaderboard\(source:' || rc=1
 guard_has "…then distribution"  "$COMPOSER" 'FeedInsight\.distribution\(source:' || rc=1
@@ -356,16 +365,11 @@ guard_has "…then the heatmap"   "$COMPOSER" 'FeedHeatmap\.label\(for:' || rc=1
 # Affinity is ChipMemory's weight, not a number invented here.
 guard_has "affinity rides ChipMemory" "$COMPOSER" 'ChipMemory\.weight\(for:' || rc=1
 # Import receipts are the app talking about itself.
-guard_has "import receipts are excluded" "$COMPOSER" 'Corpus\.isImportReceipt' || rc=1
 # A tap must land you in the room the tile previewed.
-guard_has "a tile tap switches the room" "$COMPOSER" 'filter\.source = source' || rc=1
 # The sankey rides the room's own composer — the panel must not grow a second
 # flow engine that can disagree with the feed's band.
 # Both rails must ride their ROOM's own composer, or the tile and the room can
 # disagree about the same deadlines.
-guard_has "the Stripe rail rides StripeRoomSource" "$COMPOSER" 'StripeRoomSource\.compose' || rc=1
-guard_has "the Cloudflare rail rides its own source" "$COMPOSER" 'CloudflareRunwaySource\.compose' || rc=1
-guard_has "the flow card rides WalletFlowSource" "$COMPOSER" 'WalletFlowSource\.band\(from:' || rc=1
 # …and it must take a full-width slot: half a sankey is unreadable by the
 # sizing inventory this panel was built against.
 guard_has "a flow figure demands full width" "$SRC" 'case \.flow:    return \.bandOnly' || rc=1

@@ -42,9 +42,10 @@ import SwiftData
     final class AgentOpenCache {
     static let shared = AgentOpenCache()
 
-    /// The last composed board. Empty means never composed on this launch,
-    /// which is the one open that shows the skeleton.
-    var board = AgentPanel.Composition()
+    // The cached BOARD is gone with the panel it served (prd §386p). Its
+    // sibling — the chip counters — is the reason this type still exists:
+    // that walk is the expensive one, and it is still paid once per launch
+    // rather than once per open.
 
     /// The last corpus-wide chip counters, or nil if never computed. Nil is
     /// the one open that pays the full walk.
