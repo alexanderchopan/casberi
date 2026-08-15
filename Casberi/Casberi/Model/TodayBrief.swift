@@ -712,6 +712,29 @@ enum TodayBrief {
             mark("work")
             lines.append(work)
         }
+        // GitHub's contribution calendar — built since the Home board and
+        // reachable only from its own feed room until now (prd §386j, user:
+        // "work section isn't only posthog, it would be github for example").
+        // The store fetches on its own schedule and caches; this reads what
+        // is already there and never triggers a fetch, so a brief costs
+        // nothing for a room it merely mentions.
+        if category == nil, let gh = githubCalendar() {
+            ids.append("ghgraph")
+            mark("ghgraph")
+            lines.append(gh)
+        }
+
+        // WHAT GOES TOGETHER (prd §386j) — the semantic map, finally a module
+        // under its own header rather than a card docked below the document.
+        // Composed off the main actor (`AgentPanelFigures.scatter` is
+        // Foundation-only over value types), and it reads the embeddings that
+        // are already on disk — no model call, so §386a's "the brief no
+        // longer awaits a model" holds.
+        if category == nil, let map = await clusterMap(context: context) {
+            ids.append("map")
+            mark("map")
+            lines.append(map)
+        }
 
         if category != "Money", let fold = dayFold(things: things, landed: landed) {
             ids.append("fold")
@@ -1024,16 +1047,16 @@ enum TodayBrief {
     /// user named ("but then that puts wallet all the way down") is real and is
     /// paid by the ANCHOR CHIPS instead: with a nav at the top of the brief,
     /// what sits third stops being a question of what you can reach.
-    private static let sectionPlan: [(title: String, hue: String, ids: [String])] = [
-        ("Needs you", "attention", ["alerts"]),
-        ("Coming up", "tint", ["axis", "runway"]),
+    private static let sectionPlan: [(title: String, hue: String, room: String, ids: [String])] = [
+        ("Needs you", "attention", "", ["alerts"]),
+        ("Coming up", "tint", "Reminders", ["axis", "runway"]),
         // `hero` and `spark` are alternatives, never both — the hero carries
         // its own curve, and the spark is what stands in when the live
         // holdings read left the hero unable to compose (§386h).
-        ("Money", "confirm", ["hero", "spark", "holdmap", "pair", "tmkt", "flow", "spend"]),
-        ("Your day", "life", ["fold", "posts"]),
-        ("Work", "work", ["work"]),
-        ("What it's about", "meaning", ["map"]),
+        ("Money", "confirm", "Wallet", ["hero", "spark", "holdmap", "pair", "tmkt", "flow", "spend"]),
+        ("Your day", "life", "", ["fold", "posts"]),
+        ("Work", "work", "GitHub", ["work", "ghgraph"]),
+        ("What it's about", "meaning", "", ["map"]),
     ]
 
     /// Regroups `ids` under `sectionPlan`, prefixing each populated section
@@ -1066,7 +1089,7 @@ enum TodayBrief {
             // real reading — "Needs you · 3" is how many things want you.
             // Nowhere else: "Money · 4" would be counting cards, which is
             // the tally §213 bans.
-            lines.append("\(id) = Section(\"\(genSafe(section.title))\", \"\(genSafe(qualifiers[section.title] ?? ""))\", \"\(section.hue)\")")
+            lines.append("\(id) = Section(\"\(genSafe(section.title))\", \"\(genSafe(qualifiers[section.title] ?? ""))\", \"\(section.hue)\", \"\(genSafe(section.room))\")")
             sections.append(id)
             out.append(id)
             out.append(contentsOf: members)
@@ -2367,6 +2390,66 @@ enum TodayBrief {
         guard !refs.isEmpty else { return nil }
         return ["posts = Widget(\"\(String(localized: "Your posts"))\", \"\", [\(refs.joined(separator: ", "))])"]
             + rows
+    }
+
+    /// `ClusterMap` over the corpus's stored embeddings (prd §386j).
+    ///
+    /// The projection runs OFF the main actor — it is power iteration over
+    /// N × 512 and `Composer.buildPanel` already learned that lesson the hard
+    /// way (measured at 521 of 707 samples there). The fetch is bounded and
+    /// the entries are value types, so no `Thing` crosses the suspension.
+    ///
+    /// Cluster names are the terms actually present, upgraded to friendlier
+    /// names by `ClusterNames` when the librarian has gotten to them — never
+    /// awaited here, so a device without Apple Intelligence and a device that
+    /// simply hasn't named them yet both draw the same honest map.
+    private static func clusterMap(context: ModelContext) async -> String? {
+        var fd = FetchDescriptor<Thing>(
+            predicate: #Predicate { $0.embedding != nil },
+            sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
+        fd.fetchLimit = 600
+        guard let rows = try? context.fetch(fd) else { return nil }
+        let entries: [AgentPanelFigures.Entry] = rows
+            .filter { $0.isLive && !Corpus.isImportReceipt($0) }
+            .prefix(300)
+            .compactMap { thing in
+                guard let packed = thing.embedding,
+                      let vector = EmbeddingIndex.unpack(packed) else { return nil }
+                return AgentPanelFigures.Entry(source: thing.source, at: thing.capturedAt,
+                                               terms: thing.ocrTopics + thing.tags,
+                                               vector: vector)
+            }
+        guard entries.count >= 12 else { return nil }
+        let map = await Task.detached(priority: .userInitiated) {
+            AgentPanelFigures.scatter(entries)
+        }.value
+        guard !map.dots.isEmpty, map.clusters.count >= 2 else { return nil }
+        let dots = map.dots.map {
+            "\(String(format: "%.4f", $0.x))|\(String(format: "%.4f", $0.y))|\(tileSafe($0.source))"
+        }
+        let named = ClusterNames.shared
+        let clusters = map.clusters.map { c in
+            "\(tileSafe(named.name(for: c.label)))|\(String(format: "%.4f", c.x))|\(String(format: "%.4f", c.y))|\(String(format: "%.4f", c.radius))"
+        }
+        // The subtitle is the map's own instruction — the figure is unusual
+        // enough that "things that sit close are about the same thing" is
+        // information, not decoration (§386i's own naming ruling).
+        return "map = ClusterMap(\"\(String(localized: "What goes together"))\", \"\(String(localized: "things that sit close are about the same thing"))\", \"\(dots.joined(separator: ";"))\", \"\(clusters.joined(separator: ";"))\")"
+    }
+
+    /// GitHub's contribution calendar as a `Bars` strip of the last 12 weeks
+    /// (prd §386j). The full 53-week grid is the room's own hero; at brief
+    /// scale a year is ~2.7pt cells, which is the same reasoning the panel's
+    /// pulse tile already applies to its own window.
+    @MainActor
+    private static func githubCalendar() -> String? {
+        guard let year = GitHubGraphStore.shared.year else { return nil }
+        let weeks = year.weeks.suffix(12)
+        guard weeks.count >= 6 else { return nil }
+        let counts = weeks.map { week in week.days.reduce(0) { $0 + $1.count } }
+        guard counts.contains(where: { $0 > 0 }) else { return nil }
+        let labels = counts.indices.map { _ in "" }
+        return "ghgraph = Bars(\"\(String(localized: "What you shipped"))\", \"\(String(localized: "the last 12 weeks"))\", \"\(counts.map(String.init).joined(separator: ","))\", \"\(labels.joined(separator: ","))\")"
     }
 
     /// The holdings treemap, drawn from the newest RECORDED sample rather

@@ -6325,6 +6325,34 @@
         }
       }
     },
+    "%@ — tap again to ask about it": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@ — toca otra vez para preguntar"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@ — もう一度タップで質問"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@ — 다시 탭하면 질문합니다"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@ — 再次轻点即可提问"
+          }
+        }
+      }
+    },
     "%@ — you're already watching %@": {
       "localizations": {
         "en": {
@@ -38149,6 +38177,34 @@
         }
       }
     },
+    "Money": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Dinero"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "お金"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "자산"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "资金"
+          }
+        }
+      }
+    },
     "Money arrived": {
       "localizations": {
         "es": {
@@ -64473,6 +64529,34 @@
         }
       }
     },
+    "What goes together": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Qué va junto"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "まとまり"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "함께 묶이는 것"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "哪些是一类"
+          }
+        }
+      }
+    },
     "What it does": {
       "localizations": {
         "es": {
@@ -64497,6 +64581,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "它有什么用"
+          }
+        }
+      }
+    },
+    "What it's about": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "De qué trata"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "何についてか"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "무엇에 관한 것인지"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "关于什么"
           }
         }
       }
@@ -64807,6 +64919,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "你看到的内容"
+          }
+        }
+      }
+    },
+    "What you shipped": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Lo que enviaste"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "リリースしたもの"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "내가 배포한 것"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "你发布了什么"
           }
         }
       }
@@ -75738,6 +75878,62 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "十周"
+          }
+        }
+      }
+    },
+    "the last 12 weeks": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "las últimas 12 semanas"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "直近12週間"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "최근 12주"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "最近 12 周"
+          }
+        }
+      }
+    },
+    "things that sit close are about the same thing": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "lo que está cerca trata de lo mismo"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "近くにあるものは同じ話題です"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "가까이 있는 것들은 같은 주제입니다"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "靠得近的内容主题相同"
           }
         }
       }

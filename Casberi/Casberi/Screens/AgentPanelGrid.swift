@@ -889,7 +889,7 @@ private struct RiverFigure: View {
 /// what separates it from the connection card §333 deleted, where a shared word
 /// became a sentence. Here the reader draws the conclusion, and a cluster
 /// holding several hues is a cross-source theme made visible.
-private struct ScatterFigure: View {
+struct ScatterFigure: View {
     let dots: [AgentPanel.Dot]
     let clusters: [AgentPanel.DotCluster]
     /// STRUCTURE — the neighbourhoods exist before their members arrive.

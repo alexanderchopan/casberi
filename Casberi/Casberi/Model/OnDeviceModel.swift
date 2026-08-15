@@ -212,6 +212,24 @@ enum OnDeviceModel {
         """
     }
 
+    // MARK: - Cluster names (prd §386j)
+
+    /// One or two words naming a semantic cluster, or nil.
+    ///
+    /// **The model NAMES, it never narrates** — the §282 librarian doctrine,
+    /// and the exact inverse of the `dayRead` paragraph §386a retired. The
+    /// input is a term the corpus already contains and the output replaces
+    /// that one word, so the worst case is a slightly different word rather
+    /// than a sentence nobody can check.
+    static func clusterName(term: String) async -> String? {
+        #if canImport(FoundationModels)
+        if #available(iOS 26.0, *) {
+            return await FoundationAnswer.clusterName(term: term)
+        }
+        #endif
+        return nil
+    }
+
     // MARK: - Home "Noticed" line
 
     /// One observational sentence for Home's "Noticed" line — a genuine
@@ -628,6 +646,39 @@ enum FoundationAnswer {
     /// exclusive main-thread access — running it off the main actor lets the
     /// caller's `await` suspend for real, freeing the main thread so the
     /// skeleton can actually animate while this runs.
+    /// See `OnDeviceModel.clusterName` for the doctrine. Guarded on LENGTH
+    /// and on inventing: a reply over two words is a description rather than
+    /// a name, and one sharing no prefix with the term it was given has
+    /// wandered off the input — both fall back to the term, which is always a
+    /// true label because the things really do carry it.
+    static func clusterName(term: String) async -> String? {
+        guard OnDeviceModel.isAvailable else { return nil }
+        let trimmed = term.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.count >= 3 else { return nil }
+        let instructions = """
+        You turn one keyword into a short, natural LABEL for a group of \
+        someone's saved things — at most two words, title case, no punctuation, \
+        no explanation. Keep the keyword's own meaning; never invent a topic it \
+        doesn't name. If the keyword is already a good label, reply with it \
+        unchanged. Reply with the label and nothing else.
+        """ + LanguageStore.shared.llmLanguageDirective
+        let session = LanguageModelSession(instructions: instructions)
+        do {
+            let response = try await session.respond(to: "Keyword: \(trimmed)")
+            let text = response.content
+                .trimmingCharacters(in: CharacterSet(charactersIn: " .\"'\n"))
+            guard !text.isEmpty, text.split(separator: " ").count <= 2,
+                  text.count <= 24 else { return nil }
+            let stem = trimmed.lowercased().prefix(4)
+            guard text.lowercased().contains(stem)
+                    || trimmed.lowercased().contains(text.lowercased().prefix(4))
+            else { return nil }
+            return text
+        } catch {
+            return nil
+        }
+    }
+
     static func dayRead(evidence: String, continuity: String?,
                         scope: String? = nil) async -> String? {
         guard OnDeviceModel.isAvailable else { return nil }

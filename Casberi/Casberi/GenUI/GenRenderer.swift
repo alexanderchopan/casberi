@@ -76,6 +76,13 @@ extension EnvironmentValues {
         get { self[GenProseStreamingKey.self] }
         set { self[GenProseStreamingKey.self] = newValue }
     }
+    /// Opens a source's ROOM from a brief section header (prd §386j) — the
+    /// brief as the app's index. nil everywhere the doc is not the brief, so
+    /// a header outside it simply isn't a door.
+    var genRoomOpen: ((String) -> Void)? {
+        get { self[GenRoomOpenKey.self] }
+        set { self[GenRoomOpenKey.self] = newValue }
+    }
     /// True on a live answer's tree — cited rows glint once on mount.
     var genCitationGlint: Bool {
         get { self[GenCitationGlintKey.self] }
@@ -189,6 +196,10 @@ private struct GenProseStreamingKey: EnvironmentKey {
 /// Set true on a LIVE answer's render tree only: rows the answer cites glint
 /// once as they mount — "I went and found these" as a gesture, never
 /// replayed on scroll-back (delight 2026-07-13).
+private struct GenRoomOpenKey: EnvironmentKey {
+    static let defaultValue: ((String) -> Void)? = nil
+}
+
 private struct GenCitationGlintKey: EnvironmentKey {
     static let defaultValue = false
 }
@@ -354,6 +365,7 @@ struct GenRender: View {
             }
 
         case "Section":     GenSection(el: el).mountIn()
+        case "ClusterMap":  GenClusterMap(el: el).mountIn()
         case "DayFold":     GenDayFold(el: el).mountIn()
         case "Hero":        GenHero(el: el).mountIn()
         case "Insight":     GenInsight(el: el).mountIn()
@@ -2178,6 +2190,7 @@ private struct GenFlexThumb: View {
 /// it and weight in the word itself.
 struct GenSection: View {
     let el: GenEl
+    @Environment(\.genRoomOpen) private var roomOpen
 
     /// Arg 2 — the section's identity hue, as a NAME rather than a hex (prd
     /// §386i, user: "we also need section categories that perhaps are a color
@@ -2201,8 +2214,16 @@ struct GenSection: View {
         }
     }
 
+    /// Arg 3 — the room this section summarises, when one exists (prd §386j).
+    /// The brief becomes the app's INDEX: every section that stands for a real
+    /// room gets a door to it, so a summary is one tap from its detail. Empty
+    /// for the sections that summarise no single room ("Your day" spans every
+    /// source; "What goes together" is the corpus itself), and those draw no
+    /// chevron rather than a door that goes nowhere (§83).
+    private var room: String { el.str(3) }
+
     var body: some View {
-        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+        let header = HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
             if !el.str(2).isEmpty {
                 Circle()
                     .fill(Self.hue(el.str(2)))
@@ -2217,11 +2238,172 @@ struct GenSection: View {
                     .dsText(.subhead13)
                     .foregroundStyle(DS.textTertiary)
             }
+            if !room.isEmpty {
+                Image(systemName: "chevron.right")
+                    .dsGlyph(11)
+                    .foregroundStyle(DS.textTertiary)
+                    .accessibilityHidden(true)
+            }
             Spacer(minLength: 0)
         }
         .padding(.horizontal, DS.Space.s4)
         .padding(.top, DS.Space.s6)
         .padding(.bottom, DS.Space.s1)
+
+        Group {
+            if room.isEmpty {
+                header
+            } else {
+                Button { roomOpen?(room) } label: { header.contentShape(Rectangle()) }
+                    .buttonStyle(.plain)
+                    .dsTapCard()
+            }
+        }
+        // SCROLLSPY (prd §386j) — each header reports where it is, so the nav
+        // above can say which section you are actually IN rather than only
+        // where you could jump. `.global` because the nav lives outside this
+        // scroll view and the two need one shared frame of reference.
+        .background {
+            GeometryReader { geo in
+                Color.clear.preference(key: GenSectionOffsetKey.self,
+                                       value: [el.str(0): geo.frame(in: .global).minY])
+            }
+        }
+    }
+}
+
+/// Where each section heading currently sits, keyed by its title. Merged
+/// rather than replaced, so every heading in the document contributes and the
+/// reader sees them all at once (prd §386j).
+struct GenSectionOffsetKey: PreferenceKey {
+    static let defaultValue: [String: CGFloat] = [:]
+    static func reduce(value: inout [String: CGFloat], nextValue: () -> [String: CGFloat]) {
+        value.merge(nextValue()) { _, new in new }
+    }
+}
+
+/// `ClusterMap(title, subtitle, "x|y|source;…", "label|x|y|radius;…")` — the
+/// semantic map as a real BRIEF MODULE (2026-08-15, prd §386j).
+///
+/// It had been a docked panel card floating below the document, which left
+/// its section header ("What goes together") standing over nothing — and an
+/// orphaned header reads as misplaced wherever you put it, which is the real
+/// reason the section felt wrong at the end of the brief rather than an
+/// argument about its position.
+///
+/// **Draws through `ScatterFigure`, the panel's own view**, rather than a
+/// second implementation: the map is the one figure in the app whose POSITION
+/// carries meaning, and two renderers would eventually disagree about what
+/// "near" looks like. The doc grammar's job here is only to carry the
+/// projection across — the maths stays in `AgentPanelFigures.scatter`, which
+/// composes it off the main actor before this line is ever written.
+private struct GenClusterMap: View {
+    let el: GenEl
+    @Environment(\.genAskRequest) private var askRequest
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// The pressed cluster, named in the subtitle's slot — the §384
+    /// press-reveals-a-fact grammar, and the only honest thing a cluster can
+    /// say about itself without threading every thing's id through the doc:
+    /// its own name and how many things sit in it.
+    @State private var picked: AgentPanel.DotCluster?
+    @State private var clear: Task<Void, Never>?
+
+    private var dots: [AgentPanel.Dot] {
+        el.str(2).split(separator: ";").compactMap { row in
+            let f = row.split(separator: "|", omittingEmptySubsequences: false)
+                .map { $0.trimmingCharacters(in: .whitespaces) }
+            guard f.count >= 3, let x = Double(f[0]), let y = Double(f[1]) else { return nil }
+            return AgentPanel.Dot(x: x, y: y, source: f[2])
+        }
+    }
+    private var clusters: [AgentPanel.DotCluster] {
+        el.str(3).split(separator: ";").compactMap { row in
+            let f = row.split(separator: "|", omittingEmptySubsequences: false)
+                .map { $0.trimmingCharacters(in: .whitespaces) }
+            guard f.count >= 4, let x = Double(f[1]), let y = Double(f[2]),
+                  let r = Double(f[3]), !f[0].isEmpty else { return nil }
+            return AgentPanel.DotCluster(label: f[0], x: x, y: y, radius: r)
+        }
+    }
+
+    var body: some View {
+        let dots = dots, clusters = clusters
+        Group {
+            if !dots.isEmpty, !clusters.isEmpty {
+                VStack(alignment: .leading, spacing: DS.Space.s2) {
+                    if !el.str(0).isEmpty {
+                        Text(el.str(0))
+                            .dsText(.callout15).fontWeight(.semibold)
+                            .foregroundStyle(DS.textPrimary)
+                    }
+                    if let subtitle = pickedLine ?? (el.str(1).isEmpty ? nil : el.str(1)) {
+                        Text(subtitle)
+                            .dsText(.subhead13)
+                            .foregroundStyle(picked == nil ? DS.textTertiary : DS.textPrimary)
+                            .lineLimit(2)
+                    }
+                    ScatterFigure(dots: dots, clusters: clusters,
+                                  halos: 1, drift: 1, words: 1)
+                        .frame(height: 236)
+                        // A pressed cluster names itself; a press that lands
+                        // near nothing does nothing rather than guessing.
+                        // The overlay supplies the SIZE the hit test needs —
+                        // `ScatterFigure` positions in its own 0…1 space, so
+                        // without the measured frame there is nothing to
+                        // normalise the touch against.
+                        .overlay {
+                            GeometryReader { geo in
+                                Color.clear
+                                    .contentShape(Rectangle())
+                                    .gesture(SpatialTapGesture().onEnded { value in
+                                        pick(clusters, at: value.location, in: geo.size)
+                                    })
+                            }
+                        }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(DS.Space.s4)
+                .dsWidgetSurface()
+                .padding(.horizontal, DS.Space.s4)
+                .padding(.top, DS.Space.s2)
+            }
+        }
+    }
+
+    private var pickedLine: String? {
+        picked.map { String(localized: "\($0.label) — tap again to ask about it") }
+    }
+
+    /// Nearest cluster CENTRE within reach of the touch. A second press on
+    /// the SAME cluster asks about it (the §225 route the treemap cells
+    /// already take), so one gesture reveals and the next acts.
+    private func pick(_ clusters: [AgentPanel.DotCluster], at point: CGPoint,
+                      in size: CGSize) {
+        // `ScatterFigure` insets by 16 and places at `inset + v * (extent -
+        // 2·inset)`; this is that mapping run forwards so the comparison
+        // happens in POINTS, where "within a finger's reach" is meaningful —
+        // normalised units would make the reach depend on the frame.
+        let inset: CGFloat = 16
+        let px = { (v: Double) in inset + CGFloat(v) * max(1, size.width - inset * 2) }
+        let py = { (v: Double) in inset + CGFloat(v) * max(1, size.height - inset * 2) }
+        let reach: CGFloat = 60
+        let hit = clusters
+            .map { ($0, hypot(px($0.x) - point.x, py($0.y) - point.y)) }
+            .filter { $0.1 <= reach }
+            .min { $0.1 < $1.1 }?.0
+        guard let hit else { return }
+        if picked?.label == hit.label {
+            askRequest?(hit.label)
+            return
+        }
+        DSHaptic.selection()
+        withAnimation(DS.Motion.standard) { picked = hit }
+        clear?.cancel()
+        clear = Task { @MainActor in
+            try? await Task.sleep(for: .seconds(4))
+            guard !Task.isCancelled else { return }
+            withAnimation(DS.Motion.standard) { picked = nil }
+        }
     }
 }
 

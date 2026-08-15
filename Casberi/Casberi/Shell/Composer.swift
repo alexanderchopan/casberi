@@ -611,6 +611,12 @@ struct Composer: View {
     /// .isEmpty`, so `AgentOpenBoard` never even mounts during that window —
     /// this flag exists to show something IN that gap, not after it.
     @State private var panelLoading = false
+    /// Which brief section the reader is currently IN (prd §386j) — the
+    /// heading nearest the top of the viewport without having scrolled past
+    /// it. Updated from the headings' own reported offsets; empty before the
+    /// first frame, so the nav simply shows no active chip rather than
+    /// guessing at one.
+    @State private var activeSection = ""
 
     /// The one predicate for "the composer is idle and showing its rest-screen
     /// chrome" — open, nothing typed, nothing recording, no answer in flight.
@@ -2155,6 +2161,7 @@ struct Composer: View {
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: DS.Space.s2) {
                                 ForEach(briefSections, id: \.id) { section in
+                                    let here = section.title == activeSection
                                     Button {
                                         DSHaptic.selection()
                                         withAnimation(DS.Motion.standard) {
@@ -2167,12 +2174,21 @@ struct Composer: View {
                                                 .frame(width: 6, height: 6)
                                             Text(section.title)
                                                 .dsText(.subhead13)
-                                                .foregroundStyle(DS.textPrimary)
+                                                // WHERE YOU ARE, in weight
+                                                // rather than in a second
+                                                // colour (prd §386j): the dot
+                                                // already carries this chip's
+                                                // identity, and a fill would
+                                                // make "selected" and
+                                                // "identity" argue on one
+                                                // 90pt capsule.
+                                                .fontWeight(here ? .semibold : .regular)
+                                                .foregroundStyle(here ? DS.textPrimary : DS.textSecondary)
                                                 .lineLimit(1)
                                         }
                                         .padding(.horizontal, DS.Space.s3)
                                         .padding(.vertical, DS.Space.s2)
-                                        .background(DS.gray100,
+                                        .background(here ? DS.fillStrong : DS.gray100,
                                                     in: Capsule())
                                         .dsHover()
                                     }
@@ -2308,6 +2324,18 @@ struct Composer: View {
                                             .environment(\.genCitationGlint, true)
                                             .environment(\.genAgentAnswerContext, true)
                                             .environment(\.genAskRequest, askFromAnswer)
+                                            // A section header is a door to
+                                            // the room it summarises (prd
+                                            // §386j) — the brief as the app's
+                                            // index. Same landing the panel's
+                                            // tiles take, so "open a room"
+                                            // means one thing everywhere.
+                                            .environment(\.genRoomOpen) { source in
+                                                ChipMemory.visited(source)
+                                                filter.source = source
+                                                filter.tag = "All"
+                                                close()
+                                            }
                                         // A keyed answer says so, always — the
                                         // badge is the honesty rule applied to
                                         // where the answer was made.
@@ -2530,6 +2558,45 @@ struct Composer: View {
                             Color.clear.frame(height: 1).id("bottom")
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    // PULL TO REFRESH THE BRIEF (prd §386j). It is the app's
+                    // daily screen now, and the daily-screen gesture on iOS is
+                    // a pull — without it the only way to re-read the day was
+                    // to lower the agent and raise it again.
+                    //
+                    // Brief only: an ordinary answer is a REPLY to a question
+                    // that was already asked, and re-running it on a pull
+                    // would either repeat itself or quietly answer a different
+                    // question than the one on screen. `refreshable` attaches
+                    // to the scroll, so the gesture belongs to the document.
+                    .refreshable {
+                        guard briefLanding else { return }
+                        // Straight through `commit()`'s own door rather than a
+                        // shortcut — one composer, one path (§132), so a
+                        // pulled brief and a typed one can never differ.
+                        // The holdings window is what makes a re-read return
+                        // the same number (§216's 10-minute cache) — a pull
+                        // that re-composed over a cached portfolio would
+                        // redraw an identical brief and read as broken.
+                        await WalletIngest.invalidateHoldingsCache()
+                        draft = TodayBrief.title
+                        commit()
+                    }
+                    // SCROLLSPY (prd §386j) — the heading closest to the top
+                    // of the viewport that hasn't scrolled off it. A heading
+                    // just below the fold is where you are ABOUT to be, not
+                    // where you are, so the reader takes the last one at or
+                    // above the anchor and falls back to the first heading
+                    // while the document is still below it.
+                    .onPreferenceChange(GenSectionOffsetKey.self) { offsets in
+                        guard !offsets.isEmpty else { return }
+                        let anchor: CGFloat = 220
+                        let above = offsets.filter { $0.value <= anchor }
+                        let pick = above.max { $0.value < $1.value }?.key
+                            ?? offsets.min { $0.value < $1.value }?.key
+                        if let pick, pick != activeSection {
+                            withAnimation(DS.Motion.standard) { activeSection = pick }
+                        }
                     }
                     // The 300pt cap made sense hugging a SHEET's height; on
                     // the full-screen agent (ruling 3) there's a whole screen
