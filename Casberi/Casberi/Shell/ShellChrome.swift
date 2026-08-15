@@ -231,6 +231,20 @@ final class ShellChrome {
         openComposer()
     }
 
+    /// Hold the bar's magnifier → the composer rises with the mic already
+    /// live (prd §384) — one gesture from anywhere to speaking, the most
+    /// physical form of the app's existing voice verb. Deliberately the SAME
+    /// verb the composer's own mic button starts, never a new one: what
+    /// speaking means (a capture, stop-and-keep) is unchanged, only the
+    /// distance to it. Consumed on read like `focusDraftOnOpen`, so an
+    /// ordinary later open never inherits a live microphone — a mic that
+    /// starts itself unasked is the one thing this flag must never cause.
+    var voiceOnOpen = false
+    func openVoice() {
+        voiceOnOpen = true
+        openComposer()
+    }
+
     /// Bumped by every pull-to-refresh on the main surface (Home board or
     /// feed alike — the per-tab distinction died with the tabs). MainSurface
     /// hangs the refresh delight off it: the avatar door's spin (TopDoors,
@@ -482,7 +496,15 @@ final class ShellChrome {
     /// whatever haptic their own gesture already fired, if any.
     enum Tone { case neutral, success, failure }
 
-    func flash(_ text: String, tone: Tone = .neutral, action: ToastAction? = nil, seconds: Double = 2) {
+    /// The SOURCE whose mark rides the current toast (prd §384) — a moment's
+    /// toast wears the brand it's about ("New high" beside the Wallet mark),
+    /// so a rare arrival reads as whose it is before a word is read. nil for
+    /// ordinary toasts; set and cleared with `toast` so the mark can never
+    /// outlive the words it belongs to.
+    var toastMark: String?
+
+    func flash(_ text: String, tone: Tone = .neutral, action: ToastAction? = nil,
+               mark: String? = nil, seconds: Double = 2) {
         switch tone {
         case .neutral: break
         case .success: DSHaptic.success()
@@ -492,6 +514,7 @@ final class ShellChrome {
         withAnimation(DS.Motion.standard) {
             toast = text
             toastAction = action
+            toastMark = mark
         }
         Task {
             try? await Task.sleep(for: .seconds(seconds))
@@ -499,6 +522,7 @@ final class ShellChrome {
                 if toast == text {
                     toast = nil
                     toastAction = nil
+                    toastMark = nil
                 }
             }
         }

@@ -283,7 +283,10 @@ private struct TileBadge: View {
 /// dots drift home from the centre. All appear-triggered, all collapsing to the
 /// settled state under Reduce Motion — and none of them loop: `repeatForever`
 /// is what the motion audit flagged on `GenTagMap`, so these settle and go still.
-private struct FigureView: View {
+/// Internal, not private, since 2026-08-14 (prd §384): the chip peek draws the
+/// same figure the panel tile does — one renderer, so the peek and the tile
+/// can never disagree about what a room's figure looks like.
+struct FigureView: View {
     let figure: AgentPanel.Figure
     let slot: AgentPanel.Slot
     let hue: Color

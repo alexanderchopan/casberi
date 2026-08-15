@@ -758,6 +758,12 @@ struct SourceChips: View {
             .dsHover()
         }
         .buttonStyle(.plain)
+        // The long-press peek (2026-08-14, prd §384): the room's head floats
+        // up without navigating. "All" sits it out — its room is the whole
+        // feed, and a peek that previews everything previews nothing.
+        .modifier(ChipPeekModifier(label: label, venues: venues,
+                                   enabled: label != "All",
+                                   onOpen: { onTap(label) }))
         // Names the mark on hover, Mac only (2026-08-01) — see `dsTooltip`.
         // Same string the accessibility label uses, so the two can't drift on
         // what a broken connection is called.

@@ -491,8 +491,18 @@ enum KeptAskComposers {
         let line = String(localized: "\(overdue.count) thing overdue.")
         // AgendaRow, not the generic Row — an overdue task has a due date, so
         // it draws on the time rail (the most-overdue leads, emphasized).
+        // The axis leads when there's a spread to show (2026-08-14, prd §384):
+        // four rows can't say whether the lateness is one bad afternoon or a
+        // month of drift — the runway can, and the standing rule above
+        // (`compose`'s own doc) is that an ask backed by a real visualization
+        // always shows it. Over EVERY overdue thing, not the four listed,
+        // for `TodayBrief.runwayCard`'s reason: truncating the shape
+        // understates a pile-up precisely when there is one.
+        let axis = runwayAxis(sorted)
         return Result(delta: delta, digest: "\(overdue.count)",
-                      doc: ["root = Stack([ins, res])", "ins = Insight(\"\(genSafe(line))\")"]
+                      doc: ["root = Stack([\(axis == nil ? "ins, res" : "ins, axis, res")])",
+                            "ins = Insight(\"\(genSafe(line))\")"]
+                          + (axis.map { [$0] } ?? [])
                           + agendaRows(Array(sorted.prefix(4)), title: "Overdue"))
     }
 
@@ -547,9 +557,39 @@ enum KeptAskComposers {
             ? String(localized: "1 thing due in the next week.")
             : String(localized: "\(due.count) things due in the next week.")
         let delta = "\(due.count), \(due.count == 1 ? "1 thing" : "\(due.count) things") due"
+        // The axis leads (2026-08-14, prd §384) — the rows can't show the
+        // SPREAD, which is the one thing "what's due" is really asking: a
+        // clear week with one Friday deadline and a pile-up tomorrow are the
+        // same four rows without it.
+        let axis = runwayAxis(due)
         return Result(delta: delta, digest: "\(due.count)",
-                      doc: ["root = Stack([ins, res])", "ins = Insight(\"\(genSafe(line))\")"]
+                      doc: ["root = Stack([\(axis == nil ? "ins, res" : "ins, axis, res")])",
+                            "ins = Insight(\"\(genSafe(line))\")"]
+                          + (axis.map { [$0] } ?? [])
                           + agendaRows(Array(due.prefix(4)), title: String(localized: "Coming up")))
+    }
+
+    /// The `Runway` axis over date-bearing things, in due order — nil under 2
+    /// dots (`GenRunway`'s own floor: one dot on an axis is a dot). Labels
+    /// carry the ends as DATES, never a count — the Insight line above each
+    /// caller already states the count, and `TodayBrief.runwayCard`'s
+    /// `statedOverdue` lesson is that an axis restating the headline is the
+    /// duplication complaint in miniature. When everything is overdue the
+    /// window ends at now, so the labels swap sides to stay truthful.
+    private static func runwayAxis(_ sorted: [Thing]) -> String? {
+        guard sorted.count >= 2 else { return nil }
+        let now = Date.now
+        let lanes = sorted.map {
+            "\(Int(($0.dueAt ?? now).timeIntervalSince1970))|\(genSafe($0.source))"
+        }
+        let allOverdue = sorted.allSatisfy { ($0.dueAt ?? .distantFuture) < now }
+        let near = allOverdue
+            ? (sorted.first?.dueAt ?? now).formatted(.dateTime.month(.abbreviated).day())
+            : String(localized: "now")
+        let far = allOverdue
+            ? String(localized: "now")
+            : (sorted.last?.dueAt ?? now).formatted(.dateTime.month(.abbreviated).day())
+        return "axis = Runway(\"\", \"\(lanes.joined(separator: ";"))\", \"\(Int(now.timeIntervalSince1970))\", \"\(genSafe(near))\", \"\(genSafe(far))\")"
     }
 
     /// Agenda rows for date-bearing things — the due date on the time rail,
@@ -1084,13 +1124,81 @@ enum KeptAskComposers {
         // display-safe, not just a good change-detection key. (A same-count
         // reshuffle of WHICH things match goes undetected — the same
         // accepted limitation every other count-only composer already has.)
+        // The ROOM, not the list (2026-08-14, prd §384): a result set has a
+        // shape — where the matches live, what they look like — and twelve
+        // uniform rows can't show either. Both figures read EVERY hit, not
+        // the drawn twelve (`TodayBrief.runwayCard`'s rule: truncating the
+        // shape understates it exactly when it matters), and both decline
+        // below their floors so a three-hit find stays a plain list. Still
+        // deterministic, still nothing synthesized — the "Matched on this
+        // iPhone" badge stays true of the map and the sheet too.
+        let map = sourceMapLine(hits)
+        let sheet = contactSheetLine(hits)
+        let kids = (["ins"] + (map == nil ? [] : ["map"])
+                    + (sheet == nil ? [] : ["sheet"]) + ["res"]).joined(separator: ", ")
         var result = Result(delta: "\(hits.count) things", digest: "\(hits.count)",
-                            doc: ["root = Stack([ins, res])",
+                            doc: ["root = Stack([\(kids)])",
                                   "ins = Insight(\"\(genSafe(line))\")"]
+                                + (map.map { [$0] } ?? [])
+                                + (sheet.map { [$0] } ?? [])
                                 + rows(shown, title: "Matches",
                                        snippetTerms: Retriever.contentTerms(query)))
         result.find = (outcome.scopes, hits.count)
         return result
+    }
+
+    /// The source treemap over a find's WHOLE hit set — where the matches
+    /// live, sized by how many live there. nil under 6 hits or 2 sources (one
+    /// cell is a title, and a map over a handful is noise). Mode "source" so
+    /// each cell wears its bridge's own mark; a cell tap stays in the agent
+    /// (`GenTagMap`'s §225 route — it asks the source's own recap). The
+    /// subline is the span of YEARS the matches cover, the one fact neither
+    /// the rows nor the count can show at a glance — `String(min)`, never a
+    /// grouped interpolation (§375: a year printed as "2,019" is a quantity).
+    private static func sourceMapLine(_ hits: [Thing]) -> String? {
+        guard hits.count >= 6 else { return nil }
+        var counts: [String: Int] = [:]
+        for h in hits { counts[h.source, default: 0] += 1 }
+        guard counts.count >= 2 else { return nil }
+        let ranked = counts.sorted { a, b in
+            a.value == b.value ? a.key < b.key : a.value > b.value
+        }
+        let cells = ranked.prefix(6).map { "\(mapSafe($0.key)) \($0.value)" }
+        let years = hits.map { Calendar.current.component(.year, from: $0.capturedAt) }
+        var subline = ""
+        if let lo = years.min(), let hi = years.max(), lo < hi {
+            subline = "\(String(lo))–\(String(hi))"
+        }
+        return "map = TagMap(\"\(String(localized: "Where they live"))\", \"\(genSafe(subline))\", [\(cells.joined(separator: ", "))], \"source\")"
+    }
+
+    /// The matched pictures as a contact-sheet grid, in rank order (the
+    /// closest match's picture first — this is a search, not a diary). URL
+    /// images only, `TodayBrief.contactSheet`'s stated limitation: stored
+    /// bytes have no URL to hand the doc grammar. One picture per thing,
+    /// deduped by URL (the demo-corpus lesson — a shared placeholder drawn
+    /// nine times reads as broken). nil under 4 distinct pictures.
+    private static func contactSheetLine(_ hits: [Thing]) -> String? {
+        var seen = Set<String>()
+        var shots: [String] = []
+        for t in hits {
+            let url = !(t.previewImageURL ?? "").isEmpty
+                ? (t.previewImageURL ?? "") : (t.imageURLs.first ?? "")
+            guard !url.isEmpty, seen.insert(url).inserted else { continue }
+            shots.append("\(genSafe(url))|\(t.id.uuidString)")
+            if shots.count == 12 { break }
+        }
+        guard shots.count >= 4 else { return nil }
+        return "sheet = ContactSheet(\"\(String(localized: "In pictures"))\", \"\", \"\(shots.joined(separator: ";"))\", \"\")"
+    }
+
+    /// `tileSafe`'s treatment for a `TagMap` cell token — the cell list is
+    /// comma-joined and the token's last space-separated word is its count,
+    /// so a comma or pipe inside a source name would shear the grammar.
+    private static func mapSafe(_ s: String) -> String {
+        genSafe(s).replacingOccurrences(of: "|", with: " ")
+            .replacingOccurrences(of: ",", with: " ")
+            .replacingOccurrences(of: ";", with: " ")
     }
 
     /// The applied filters as one readable clause — "X", "X and Replies",
@@ -1277,10 +1385,44 @@ enum KeptAskComposers {
         } ?? String(localized: "\(head) on cards in the last 30 days")
 
         let newest = recent.sorted { $0.capturedAt > $1.capturedAt }
+        // The weekly shape (2026-08-14, prd §384) — a total can't say whether
+        // the month was steady or one bad weekend, which is the first thing a
+        // spend answer gets asked next. Scoped to the DOMINANT currency only,
+        // the same rule as the merchant clause above: bars summing euros and
+        // dollars into one height would be a number nobody holds.
+        let bars = weeklySpendBars(scoped, currency: currency ?? "")
         return Result(delta: lines.first ?? "", digest: lines.joined(separator: "|"),
-                      doc: ["root = Stack([ins, res])",
+                      doc: ["root = Stack([\(bars == nil ? "ins, res" : "ins, bars, res")])",
                             "ins = Insight(\"\(genSafe(line))\")"]
+                          + (bars.map { [$0] } ?? [])
                           + rows(Array(newest.prefix(6)), title: "What you paid for"))
+    }
+
+    /// A `Bars` line of card spend per week across the 30-day window, dominant
+    /// currency only. nil under 4 rows (`dailyBars`' own floor — too few to
+    /// shape). Refunds subtract; a week that nets below zero clamps to the
+    /// zero dot rather than inventing a negative bar height.
+    private static func weeklySpendBars(_ rows: [Thing], currency: String) -> String? {
+        guard rows.count >= 4, !currency.isEmpty else { return nil }
+        let cal = Calendar.current
+        let today = cal.startOfDay(for: .now)
+        let weeks = 5
+        var totals = [Double](repeating: 0, count: weeks)
+        for row in rows {
+            guard let amount = row.priceValue else { continue }
+            let days = cal.dateComponents([.day], from: cal.startOfDay(for: row.capturedAt),
+                                          to: today).day ?? 999
+            guard days >= 0, days < weeks * 7 else { continue }
+            let bucket = weeks - 1 - (days / 7)
+            totals[bucket] += row.tags.contains("Refund") ? -abs(amount) : abs(amount)
+        }
+        let labels = (0..<weeks).map { i -> String in
+            let start = cal.date(byAdding: .day, value: -((weeks - 1 - i) * 7 + 6), to: today) ?? today
+            return start.formatted(.dateTime.month(.abbreviated).day())
+        }
+        let values = totals.map { String(format: "%.0f", max(0, $0)) }
+        let eyebrow = String(localized: "By week · \(currency)")
+        return "bars = Bars(\"\(genSafe(eyebrow))\", \"\", \"\(values.joined(separator: ","))\", \"\(labels.joined(separator: ","))\")"
     }
 
     /// How much of the window's spend must carry a merchant name before the

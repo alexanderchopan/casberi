@@ -43,6 +43,15 @@ struct CloudflareRunwayCard: View {
     /// rows land soonest-first behind it.
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
+    /// A pressed dot names its row (prd §384): the tap picks the nearest mark
+    /// and the row below GLOWS once (`landFlash`), so the axis and the list
+    /// are provably the same facts. The dots are 11pt — far under the 44pt
+    /// floor — so the whole rail catches the tap and the nearest dot wins
+    /// (`TokenChartPlot.nearestMark`'s reach rule). Rows stay the open door;
+    /// the rail press only ANSWERS "which row is this dot".
+    @State private var railPicked: String?
+    @State private var railPickTick = 0
+
     /// The card's one hue: Cloudflare's own orange, read from the brand table
     /// rather than inlined, so the seat's tile, wash and this card can't drift
     /// (`DS.brandHue`'s own rule: components never inline the hex). The
@@ -90,6 +99,9 @@ struct CloudflareRunwayCard: View {
             ForEach(Array(runway.items.enumerated()), id: \.element.id) { index, item in
                 row(item, lead: index == 0)
                     .chartArrival(index: index, reduceMotion: reduceMotion)
+                    // The rail's pick lands HERE — the pressed dot's own row
+                    // glows once, in the card's hue (prd §384).
+                    .landFlash(item.id == railPicked ? railPickTick : 0, tint: Self.mark)
             }
             .padding(.top, DS.Space.s1)
 
@@ -159,6 +171,24 @@ struct CloudflareRunwayCard: View {
             .frame(height: Self.leadDot)
             .overlay(alignment: .bottomLeading) { tick(String(localized: "Today")) }
             .overlay(alignment: .bottomTrailing) { tick(CloudflareRunway.spanLabel(span: span)) }
+            // The dot press (prd §384): nearest mark within a finger's reach
+            // wins — `nearestMark`'s 22pt rule, widened a touch because these
+            // dots sit sparser than chart marks. A miss does nothing.
+            .contentShape(Rectangle())
+            .gesture(SpatialTapGesture().onEnded { value in
+                let hit = items.min(by: { a, b in
+                    abs(CloudflareRunway.position(days: a.days, span: span) * travel
+                        + Self.leadDot / 2 - value.location.x)
+                        < abs(CloudflareRunway.position(days: b.days, span: span) * travel
+                              + Self.leadDot / 2 - value.location.x)
+                })
+                guard let hit,
+                      abs(CloudflareRunway.position(days: hit.days, span: span) * travel
+                          + Self.leadDot / 2 - value.location.x) <= 30 else { return }
+                DSHaptic.selection()
+                railPicked = hit.id
+                railPickTick += 1
+            })
         }
         .frame(height: Self.leadDot + Self.tickRoom)
         .chartWipe(reduceMotion: reduceMotion)

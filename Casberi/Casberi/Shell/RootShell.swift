@@ -1414,6 +1414,11 @@ struct RootShell: View {
                     Corpus.surfaced((try? modelContext.fetch(d)) ?? [])
                 }
                 LaunchPerf.time("HomeInsight.refresh") { HomeInsightStore.shared.refresh(from: surfaced) }
+                // The deterministic notice (prd §384) — its own bounded
+                // fetches, because a newest-600 window structurally cannot
+                // hold a three-years-ago anniversary (the §382 widget
+                // deadline-scan reasoning).
+                LaunchPerf.time("AgentNoticed.refresh") { AgentNoticed.shared.refresh(context: modelContext) }
                 await KeptAskStore.shared.refreshDigests(things: surfaced, context: modelContext)
                 // The widget's rung-1 content (its brief headline) is
                 // published as a side effect of composing "today" — but
@@ -1430,6 +1435,7 @@ struct RootShell: View {
                 #else
                 let surfaced = Corpus.surfaced((try? modelContext.fetch(d)) ?? [])
                 HomeInsightStore.shared.refresh(from: surfaced)
+                AgentNoticed.shared.refresh(context: modelContext)
                 await KeptAskStore.shared.refreshDigests(things: surfaced, context: modelContext)
                 if !KeptAskStore.shared.order.contains("today") {
                     _ = await TodayBrief.compose(things: surfaced, context: modelContext)
@@ -1697,6 +1703,10 @@ struct RootShell: View {
                         .transition(.opacity.combined(with: .move(edge: .bottom)))
                     }
                     AgentBar(hasUnseenSignal: KeptAskStore.shared.anyChanged && !agentEverOpened,
+                             // The notice glint (prd §384): a small tint dot,
+                             // static on purpose — "something unread behind
+                             // this", not an animation begging for a tap.
+                             noticeGlint: AgentNoticed.shared.glint,
                              // Compact at rest (user ruling 2026-07-31, see
                              // `AgentBar`'s own note). The words survive only
                              // as a first-run grace — and `chrome.minimized`,
@@ -1714,6 +1724,13 @@ struct RootShell: View {
                                  chrome.openFind()
                              },
                              onSources: { openSources() },
+                             onVoice: {
+                                 // The hold's own buzz — the same threshold-
+                                 // moment feedback the sources hold gets via
+                                 // `openSources()`.
+                                 DSHaptic.lift()
+                                 chrome.openVoice()
+                             },
                              // The room's hue reaching the bottom of the screen
                              // (2026-08-06) — non-nil only inside a scoped
                              // wallet, which is the one place the crown itself
@@ -1749,6 +1766,9 @@ struct RootShell: View {
                         // seed `askRequest` themselves. The guard below stays
                         // `nil`-checked so any of those still wins if it set an
                         // ask before the bar rose.
+                        // Rising is SEEING — the glint's whole claim is "rise
+                        // and you'll find it", so the rise itself clears it.
+                        AgentNoticed.shared.markSeen()
                         composerOpen = true
                     }
                 }
@@ -2464,6 +2484,26 @@ struct RootShell: View {
                                                           onPartial: onPartialDoc) {
                 return result.doc
             }
+        }
+        // The agent's own deterministic notice (prd §384) — the glint's chip
+        // sends exactly this query. The line plus its EVIDENCE rows, so the
+        // claim is checked rather than believed; a day with no notice says so
+        // honestly instead of falling through to retrieval on the word
+        // "notice".
+        if AgentNoticed.matches(query) {
+            lastAnswerHits = []
+            guard let notice = AgentNoticed.shared.notice else {
+                return proseDoc(String(localized: "Nothing noticed today — the glint only lights for something real."))
+            }
+            let ids = Set(notice.ids)
+            let evidence = allThings().filter { ids.contains($0.id.uuidString) }
+            lastAnswerHits = evidence
+            var doc = ["root = Stack([\(evidence.isEmpty ? "ins" : "ins, res")])",
+                       "ins = Insight(\"\(genSafe(notice.line))\")"]
+            if !evidence.isEmpty {
+                doc += groundingLines(evidence, title: String(localized: "The evidence"))
+            }
+            return doc
         }
         // A watchlist ask ("how's my watchlist") is answered from the same
         // 24h curves the feed pulse draws — computed, current, no model
@@ -3625,6 +3665,10 @@ struct RootShell: View {
             // both are "your first standing X with Casberi" moments.
             if text == "Your first thing" || text.hasPrefix("Your first standing question") {
                 CasberiMark(size: 18)
+            } else if let mark = chrome.toastMark {
+                // A moment's toast wears the brand it's about (prd §384) —
+                // whose news this is, said before a word is read.
+                BridgeIcon(name: mark, size: 18, circular: true)
             }
             Text(text)
                 .dsText(.body17)

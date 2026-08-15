@@ -81,6 +81,25 @@ extension EnvironmentValues {
         get { self[GenCitationGlintKey.self] }
         set { self[GenCitationGlintKey.self] = newValue }
     }
+}
+
+/// Press a sentence, see its evidence (2026-08-14, prd §384): tapping an
+/// answer's prose re-glints the grounding rows beneath it — provenance you
+/// can FEEL by poking the claim, not just a badge to read. A process-wide
+/// tick rather than per-tree plumbing: one answer surface is on screen at a
+/// time, and both ends gate on `genAgentAnswerContext`, so a bump can only
+/// ever reach rows in the agent's own column. (Several settled turns stacked
+/// on screen all answer the same poke — accepted: every glinted row IS
+/// evidence for the prose above it, so nothing false is highlighted.)
+@MainActor
+@Observable
+final class GenEvidenceGlint {
+    static let shared = GenEvidenceGlint()
+    var tick = 0
+    private init() {}
+}
+
+extension EnvironmentValues {
     /// True when rendering inside the AGENT's answer column (Composer sets
     /// it around both its GenRender calls, 2026-07-20). Two renderers read
     /// it: `GenInsight` drops its "Noticed" eyebrow fallback (the question
@@ -592,6 +611,17 @@ private struct GenInsight: View {
                     .dsText(.callout15)
                     .foregroundStyle(DS.textPrimary)
                     .fixedSize(horizontal: false, vertical: true)
+                    // Press the claim, see the evidence (prd §384): inside an
+                    // answer, tapping the prose re-glints the grounding rows
+                    // beneath it. A supplementary gesture, not a control — no
+                    // affordance is drawn, nothing navigates, and a doc with
+                    // no rows simply answers with stillness.
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        guard inAgentAnswer else { return }
+                        DSHaptic.selection()
+                        GenEvidenceGlint.shared.tick += 1
+                    }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -984,6 +1014,10 @@ struct ContributionGraph: View {
     /// (so a sparse corpus or a nil loading state still draws a full year), a
     /// smaller number for a windowed heatmap (the social recent-weeks grid).
     var minColumns: Int = 53
+    /// A pressed cell reports its day (prd §384) — nothing on this grid is
+    /// just a picture. nil (the default) keeps every existing mount exactly
+    /// as it was: no gesture, no hit shape, a Canvas and nothing else.
+    var onPick: ((ContributionDay) -> Void)? = nil
 
     private static let gap: CGFloat = 3
     /// The geometry every heatmap is measured against — a full year. Cell size
@@ -1031,6 +1065,49 @@ struct ContributionGraph: View {
         // early on the trailing edge instead of growing taller.
         .aspectRatio(CGFloat(reference) / 7.0, contentMode: .fit)
         .frame(maxWidth: .infinity, alignment: .leading)
+        // The press (prd §384): a tap names the day under the finger. The
+        // inverse of the Canvas's own cell arithmetic, run against the same
+        // constants — a Canvas has no per-cell views to hit-test, so the
+        // overlay computes (col, row) from the location and the closure gets
+        // the REAL `ContributionDay`, count and date, never a guess. A tap in
+        // a gap resolves to the nearest cell (a 7–11pt square is under the
+        // 44pt floor by construction; forgiveness is the only honest target
+        // here). Only mounted when a caller asked — a display-only grid stays
+        // a Canvas and nothing else.
+        .overlay {
+            if onPick != nil {
+                GeometryReader { geo in
+                    Color.clear
+                        .contentShape(Rectangle())
+                        .gesture(SpatialTapGesture().onEnded { value in
+                            pick(at: value.location, size: geo.size)
+                        })
+                }
+            }
+        }
+    }
+
+    /// The Canvas math, inverted. Any drift between this and the draw loop
+    /// mis-names a day, which is why both read the same `gap`/`reference`
+    /// constants and the same trailing-aligned origin.
+    private func pick(at point: CGPoint, size: CGSize) {
+        guard let onPick else { return }
+        let weeks = year?.weeks ?? []
+        guard !weeks.isEmpty else { return }
+        let cols = max(weeks.count, minColumns)
+        let reference = max(cols, Self.referenceColumns)
+        let gap = Self.gap
+        let cell = min((size.width - gap * CGFloat(reference - 1)) / CGFloat(reference),
+                       (size.height - gap * 6) / 7)
+        guard cell > 0 else { return }
+        let drawnWidth = CGFloat(cols) * cell + gap * CGFloat(cols - 1)
+        let originX = max(0, size.width - drawnWidth)
+        let col = Int(((point.x - originX) / (cell + gap)).rounded(.down))
+        let row = Int((point.y / (cell + gap)).rounded(.down))
+        guard col >= 0, col < weeks.count, row >= 0, row < 7,
+              weeks[col].days.count > row else { return }
+        DSHaptic.selection()
+        onPick(weeks[col].days[row])
     }
 
     /// GitHub green, ramped by quartile; the well for empty days.
@@ -1153,12 +1230,31 @@ struct CalendarHeatmapHero: View {
     /// balance sparkline's own draw-on grammar, at the heatmap's dose.
     /// Reduce Motion renders the full grid on the first frame.
     @State private var drawn: CGFloat = 0
+    /// The pressed day (prd §384) — named IN PLACE, in the subtitle's own
+    /// slot, so the answer appears where the eye already is and the card
+    /// never changes height. Auto-reverts; a fresh press restarts the clock.
+    @State private var picked: ContributionDay?
+    @State private var pickedClear: Task<Void, Never>?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    private var pickedLabel: String? {
+        guard let picked else { return nil }
+        let count = picked.count == 0
+            ? String(localized: "nothing")
+            : "\(picked.count)"
+        guard let date = picked.date else {
+            return picked.count == 0
+                ? String(localized: "Nothing that day")
+                : String(localized: "\(picked.count) that day")
+        }
+        let day = date.formatted(.dateTime.month(.abbreviated).day())
+        return "\(day) · \(count)"
+    }
 
     var body: some View {
         InsightCard {
             HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                InsightHeader(title: title, subtitle: subtitle)
+                InsightHeader(title: title, subtitle: pickedLabel ?? subtitle)
                 Spacer(minLength: DS.Space.s2)
                 // A year worth sharing (delight pass 2026-07-21) — the facts
                 // as a line, the same honest voice the card itself wears; no
@@ -1170,7 +1266,18 @@ struct CalendarHeatmapHero: View {
                 }
                 .accessibilityLabel("Share")
             }
-            ContributionGraph(year: year, minColumns: minColumns)
+            ContributionGraph(year: year, minColumns: minColumns, onPick: { day in
+                // Press a day, read the day (prd §384). The label swaps into
+                // the subtitle slot and reverts on its own — a reading, not a
+                // mode.
+                withAnimation(DS.Motion.standard) { picked = day }
+                pickedClear?.cancel()
+                pickedClear = Task { @MainActor in
+                    try? await Task.sleep(for: .seconds(2.5))
+                    guard !Task.isCancelled else { return }
+                    withAnimation(DS.Motion.standard) { picked = nil }
+                }
+            })
                 .mask(alignment: .leading) {
                     GeometryReader { geo in
                         Rectangle().frame(width: geo.size.width * drawn)
@@ -2040,10 +2147,16 @@ private struct GenRow: View {
     @Environment(\.genThingHandoff) private var thingHandoff
     @Environment(\.genAppRemove) private var appRemove
     @Environment(\.genCitationGlint) private var glintOn
+    @Environment(\.genAgentAnswerContext) private var inAgentAnswer
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// One glint per mount (delight 2026-07-13): a cited row flashes a
     /// whisper of tint as it lands in a live answer, then settles.
     @State private var glinted = false
+    /// The evidence re-glint (prd §384): a pressed sentence replays the flash
+    /// on the rows beneath it — settled turns included, where the mount glint
+    /// never ran. Armed by the press, so the background exists only when a
+    /// glint (either kind) can draw.
+    @State private var replayArmed = false
 
     var body: some View {
         // Arg 6, when present, is WHY this row is in a result — the passage
@@ -2072,7 +2185,7 @@ private struct GenRow: View {
         .padding(.horizontal, DS.Space.s4)
         .padding(.vertical, DS.Space.s3)
         .background {
-            if glintOn {
+            if glintOn || replayArmed {
                 RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous)
                     .fill(DS.tint.opacity(glinted ? 0 : 0.14))
             }
@@ -2083,6 +2196,24 @@ private struct GenRow: View {
             // Motion it simply starts faded (2026-08-04, prd §299).
             guard !reduceMotion else { glinted = true; return }
             withAnimation(.easeOut(duration: 0.9).delay(0.2)) { glinted = true }
+        }
+        .onChange(of: GenEvidenceGlint.shared.tick) {
+            // A pressed sentence re-glints its rows (prd §384). Only rows
+            // that stand for a THING (arg 4) — a decorative row is not
+            // evidence — and only inside the agent's answer column.
+            guard inAgentAnswer, !el.str(4).isEmpty else { return }
+            replayArmed = true
+            glinted = false
+            if reduceMotion {
+                // Less motion, same information: the glow states, then clears
+                // without the fade.
+                Task { @MainActor in
+                    try? await Task.sleep(for: .milliseconds(700))
+                    glinted = true
+                }
+            } else {
+                withAnimation(.easeOut(duration: 0.9).delay(0.15)) { glinted = true }
+            }
         }
         return row.pinnedRowActions(id: el.str(4), openable: el.str(5) == "app",
                              open: thingOpen, unpin: nil, handoff: thingHandoff,
@@ -3685,6 +3816,10 @@ private struct GenValueSpark: View {
     @Environment(\.colorScheme) private var scheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var revealed = false
+    /// Scrub (prd §384): the answer's own curve reads back under the finger —
+    /// the sample's value swaps into the delta pill's slot while pressed, so
+    /// the figure in an answer is interrogable, not an illustration.
+    @State private var scrubIndex: Int?
 
     private var series: [Double] { genCSVDoubles(el.str(2)) }
     private var change: Double {
@@ -3702,9 +3837,22 @@ private struct GenValueSpark: View {
                         Text(el.str(0)).dsText(.callout15).fontWeight(.semibold)
                             .foregroundStyle(DS.textPrimary)
                         Spacer(minLength: DS.Space.s2)
-                        TokenDeltaPill(change: change, label: "")
+                        if let scrubIndex, series.indices.contains(scrubIndex) {
+                            // One claim at a time: mid-scrub the slot states
+                            // the sample, not the range's delta.
+                            Text(TokenChartStyle.priceText(series[scrubIndex]))
+                                .dsText(.callout15).fontWeight(.semibold)
+                                .foregroundStyle(DS.textPrimary)
+                                .contentTransition(.numericText())
+                        } else {
+                            TokenDeltaPill(change: change, label: "")
+                        }
                     }
-                    TokenChartPlot(chart: chart, accent: accent, height: 90, pulses: false)
+                    TokenChartPlot(chart: chart, accent: accent, height: 90, pulses: false,
+                                   cursorIndex: scrubIndex,
+                                   onScrub: { i in
+                                       withAnimation(DS.Motion.standard) { scrubIndex = i }
+                                   })
                         .mask(alignment: .leading) {
                             GeometryReader { geo in
                                 Rectangle().frame(width: revealed ? geo.size.width : 0)

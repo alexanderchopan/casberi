@@ -10,6 +10,11 @@ struct ContributionDay {
     let count: Int
     /// GitHub's own quartile bucket, 0 (none) … 4 (most) — the intensity ramp.
     let level: Int
+    /// The calendar day itself (2026-08-14, prd §384) — what a pressed cell
+    /// NAMES. Optional with a nil default so every existing constructor is
+    /// untouched; a grid built without dates still draws, its cells just
+    /// answer a press with the count alone.
+    var date: Date? = nil
 }
 
 struct ContributionWeek {
@@ -63,7 +68,11 @@ struct ContributionYear {
         for col in 0..<columns {
             let days = (0..<7).map { row -> ContributionDay in
                 let c = counts[col * 7 + row]
-                return ContributionDay(count: c, level: level(c))
+                // The cell's own day, off the same grid arithmetic that
+                // bucketed the counts — so the date a press names is the date
+                // the count was filed under, by construction.
+                let date = calendar.date(byAdding: .day, value: col * 7 + row, to: gridStart)
+                return ContributionDay(count: c, level: level(c), date: date)
             }
             weeks.append(ContributionWeek(days: days))
         }
@@ -91,7 +100,7 @@ struct ContributionYear {
     static func fetch(token: String) async -> ContributionYear? {
         let query = """
         query { viewer { contributionsCollection { contributionCalendar { \
-        totalContributions weeks { contributionDays { contributionCount contributionLevel } } } } } }
+        totalContributions weeks { contributionDays { contributionCount contributionLevel date } } } } } }
         """
         guard let root = await IngestSupport.postJSON(
             "https://api.github.com/graphql", auth: "Bearer \(token)",
@@ -101,10 +110,17 @@ struct ContributionYear {
               let cc = viewer["contributionsCollection"] as? [String: Any],
               let cal = cc["contributionCalendar"] as? [String: Any],
               let weeksRaw = cal["weeks"] as? [[String: Any]] else { return nil }
+        // GitHub's own `date` field ("yyyy-MM-dd"), parsed once with a fixed
+        // formatter — the calendar is UTC-day-keyed on their side, and a
+        // pressed cell naming the day GitHub filed it under is the honest one.
+        let dayFormat = DateFormatter()
+        dayFormat.dateFormat = "yyyy-MM-dd"
+        dayFormat.locale = Locale(identifier: "en_US_POSIX")
         let weeks = weeksRaw.map { w -> ContributionWeek in
             let days = ((w["contributionDays"] as? [[String: Any]]) ?? []).map { d in
                 ContributionDay(count: d["contributionCount"] as? Int ?? 0,
-                                level: level(d["contributionLevel"] as? String))
+                                level: level(d["contributionLevel"] as? String),
+                                date: (d["date"] as? String).flatMap { dayFormat.date(from: $0) })
             }
             return ContributionWeek(days: days)
         }

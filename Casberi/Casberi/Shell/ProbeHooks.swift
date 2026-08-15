@@ -2847,6 +2847,23 @@ enum ProbeHooks {
                 NSLog("[Casberi] sheetShape| %@ = %d", key, n)
             }
         },
+        // `-agentNoticeProbe YES` — today's deterministic notice (prd §384),
+        // or the honest reasons there isn't one. Clears the day stamp first so
+        // a probe run always re-observes; the once-ever ledger is NOT cleared
+        // (that's the behaviour under test — a notice re-firing daily is the
+        // bug this exists to catch). Logs the line, the kind key and the
+        // evidence count; never a full title beyond what the line itself says.
+        Hook(key: "agentNoticeProbe") { _, context in
+            UserDefaults.standard.removeObject(forKey: "agent.noticed.day")
+            AgentNoticed.shared.refresh(context: context)
+            if let n = AgentNoticed.shared.notice {
+                NSLog("[Casberi] agentNotice| line=%@", n.line)
+                NSLog("[Casberi] agentNotice| key=%@ evidence=%d glint=%@",
+                      n.key, n.ids.count, AgentNoticed.shared.glint ? "YES" : "NO")
+            } else {
+                NSLog("[Casberi] agentNotice| none (no anniversary, no cross-source tag today, no record day — or all already shown once)")
+            }
+        },
         Hook(key: "corpusDupeProbe") { _, context in
             let refs = ((try? context.fetch(FetchDescriptor<Thing>())) ?? [])
                 .compactMap(\.sourceRef)

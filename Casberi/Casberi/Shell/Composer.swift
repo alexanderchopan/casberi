@@ -516,7 +516,7 @@ struct Composer: View {
             case "wallet", "watchlist":        return .money
             case "overdue", "upcoming":        return .tasks
             case "away", "pulse", "today", "week": return .recency
-            case "noticed":                    return .insight
+            case "noticed", "observation":     return .insight
             default:                           return .entity  // context/category/showtag/handle
             }
         }
@@ -1008,6 +1008,15 @@ struct Composer: View {
         if let noticed = HomeInsightStore.shared.line, !noticed.isEmpty {
             out.append(AskOption(kind: "noticed", title: "Noticed",
                                  glyph: "sparkle"))
+        }
+        // The deterministic notice behind the bar's glint (prd §384,
+        // `AgentNoticed`) — LEADS while today's observation stands, because it
+        // is the one chip that exists only on a day something real happened.
+        // Its query routes to `RootShell.answerDocument`'s `AgentNoticed`
+        // branch: the line plus its evidence rows, checkable, no model.
+        if AgentNoticed.shared.notice != nil {
+            out.insert(AskOption(kind: "observation", title: "Noticed today",
+                                 glyph: "sparkles"), at: 0)
         }
         if !scan.sourcesSeen.isEmpty {
             out.append(AskOption(kind: "week", title: "What's this week?",
@@ -2766,6 +2775,15 @@ struct Composer: View {
                 if chrome.focusDraftOnOpen {
                     chrome.focusDraftOnOpen = false
                     fieldFocused = true
+                }
+                // Raised by HOLDING the magnifier (prd §384): the mic is
+                // already live when the surface lands. Same verb as the mic
+                // button — `voice.start()` and stop-and-keep — just reached
+                // in one gesture. Cleared on read for the same reason
+                // `focusDraftOnOpen` is: no later open may inherit a live mic.
+                if chrome.voiceOnOpen {
+                    chrome.voiceOnOpen = false
+                    Task { await voice.start() }
                 }
                 #if DEBUG
                 // `-composerDraft "<text>"` pre-fills the field on open —

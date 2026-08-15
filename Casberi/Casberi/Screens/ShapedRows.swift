@@ -3108,8 +3108,19 @@ struct OneClawLede: View {
 struct WalletBalanceLede: View {
     let chart: TokenChart
     @Environment(\.colorScheme) private var scheme
+    /// Scrub (prd §384): press-then-drag reads the line — the headline value
+    /// rolls to the sample under the finger, `WalletBalanceHeadline`'s own
+    /// grammar at the lede's dose. The machinery was already in
+    /// `TokenChartPlot`; this lede just never asked for it.
+    @State private var scrubIndex: Int?
 
     private var accent: Color { TokenChartStyle.accent(change: chart.change, scheme: scheme) }
+    private var displayed: Double {
+        if let scrubIndex, chart.closes.indices.contains(scrubIndex) {
+            return chart.closes[scrubIndex]
+        }
+        return chart.price
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
@@ -3117,11 +3128,20 @@ struct WalletBalanceLede: View {
                 Text("Balance")
                     .dsText(.body17).foregroundStyle(DS.textPrimary)
                 Spacer(minLength: 0)
-                Text(TokenChartStyle.priceText(chart.price))
+                Text(TokenChartStyle.priceText(displayed))
                     .dsText(.body17).fontWeight(.semibold).foregroundStyle(DS.textPrimary)
+                    .contentTransition(.numericText())
                 TokenDeltaPill(change: chart.change, label: "watched", compact: true)
+                    // The pill states the RANGE's change; mid-scrub the number
+                    // beside it states one sample, and the two would read as
+                    // one claim. The pill steps back while the finger is down.
+                    .opacity(scrubIndex == nil ? 1 : 0.35)
             }
-            TokenChartPlot(chart: chart, accent: accent, height: 40, pulses: false)
+            TokenChartPlot(chart: chart, accent: accent, height: 40, pulses: false,
+                           cursorIndex: scrubIndex,
+                           onScrub: { i in
+                               withAnimation(DS.Motion.standard) { scrubIndex = i }
+                           })
         }
         .padding(.vertical, DS.Space.s2)
     }

@@ -1793,7 +1793,19 @@ struct MainSurface: View {
                 Task { @MainActor in
                     for (index, moment) in moments.enumerated() {
                         if index > 0 { try? await Task.sleep(for: .seconds(2.2)) }
-                        chrome.flash(moment.text)
+                        // A moment is the RARE tier of arrival (prd §384): its
+                        // toast wears its source's mark, and the source's chip
+                        // takes the same catch bob an arrival gets — so a new
+                        // high or a personal best lands visibly differently
+                        // from an ordinary row, without re-opening the
+                        // 2026-08-11 rain ruling (the shower stays the pull's
+                        // payoff alone; this is the chip and the toast, the
+                        // two surfaces that already celebrate).
+                        chrome.flash(moment.text, mark: moment.source)
+                        if let source = moment.source {
+                            chrome.chipCaught(CategoryFold.chipLabel(for: source,
+                                                                     folded: chipLabels))
+                        }
                     }
                 }
             }

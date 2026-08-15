@@ -50,6 +50,11 @@ import SwiftUI
 /// is once); what died is the full-width slab it used to say it from.
 struct AgentBar: View {
     var hasUnseenSignal: Bool
+    /// The agent noticed something today and it hasn't been seen (prd §384,
+    /// `AgentNoticed`). A small STATIC tint dot — "something unread behind
+    /// this" — deliberately not an animation: the breathing beside it already
+    /// means "changed", and two live motions on one 20pt mark is a strobe.
+    var noticeGlint: Bool = false
     /// The words. FALSE at rest (see the type's own note) — `RootShell` grants
     /// it only as a teaching grace, until the agent has been raised once on
     /// this device, and `ShellChrome.minimized` folds it away early if that
@@ -77,6 +82,15 @@ struct AgentBar: View {
     /// braces, the safeAreaInset-over-pager arbitration), which is not a place
     /// to stack a second recognizer.
     var onSources: () -> Void = {}
+    /// Hold the magnifier → the composer rises with the mic live (prd §384,
+    /// `ShellChrome.openVoice`) — speaking, one gesture from anywhere. The
+    /// hold FORKED by button in the same pass: it used to cover the whole
+    /// pill for the sources tray alone ("no room to split one hold between
+    /// two targets"), but each control is a full 44pt circle and a 0.45s
+    /// press is already ON one of them — the finger, not a zone boundary,
+    /// decides. The berry keeps the taught sources hold; the magnifier's
+    /// hold is the spoken form of the door it already is.
+    var onVoice: () -> Void = {}
     /// The room's own hue, when standing in a room that HAS one (2026-08-06) —
     /// `ShellChrome.pourHue`, which is non-nil only inside a scoped wallet.
     ///
@@ -126,6 +140,20 @@ struct AgentBar: View {
             // Same words as the label above, verbatim, so the pointer and
             // VoiceOver can never name this glyph two different things.
             .dsTooltip(String(localized: "Find in your things"))
+            // The magnifier's own hold → speak (see `onVoice` above). Its own
+            // recognizer on its own 44pt control — never a second recognizer
+            // stacked on someone else's target (the catalogue door's lesson).
+            .simultaneousGesture(
+                LongPressGesture(minimumDuration: 0.45)
+                    .onChanged { _ in heldForSources = false }
+                    .onEnded { _ in
+                        heldForSources = true
+                        onVoice()
+                    }
+            )
+            // The hold, reachable without holding — the sources hold's own
+            // accessibility reasoning, applied to this button's verb.
+            .accessibilityAction(named: Text("Speak"), onVoice)
 
             Button {
                 guard !consumeHold() else { return }
@@ -138,10 +166,24 @@ struct AgentBar: View {
                             .foregroundStyle(DS.textTertiary)
                             .lineLimit(1)
                     }
-                    if hasUnseenSignal {
-                        CasberiMark(size: 20).breathing()
-                    } else {
-                        CasberiMark(size: 20)
+                    Group {
+                        if hasUnseenSignal {
+                            CasberiMark(size: 20).breathing()
+                        } else {
+                            CasberiMark(size: 20)
+                        }
+                    }
+                    // The notice glint (prd §384): a 6pt tint dot riding the
+                    // berry's shoulder while today's observation is unseen.
+                    // Cleared by the rise itself (`AgentNoticed.markSeen`).
+                    .overlay(alignment: .topTrailing) {
+                        if noticeGlint {
+                            Circle()
+                                .fill(DS.tint)
+                                .frame(width: 6, height: 6)
+                                .offset(x: 2, y: -2)
+                                .transition(.scale.combined(with: .opacity))
+                        }
                     }
                 }
                 .padding(.trailing, DS.Space.s4)
@@ -158,6 +200,31 @@ struct AgentBar: View {
             // accessibility element of its own to be found on, and VoiceOver
             // would simply never offer it.
             .accessibilityAction(named: Text("Your sources"), onSources)
+            // The sources hold, moved from the whole pill onto the berry when
+            // the magnifier's hold became speak (prd §384) — the anchor mark
+            // keeps the taught gesture, and each button now owns exactly one
+            // hold, so a 0.45s press does what the control under the finger
+            // says rather than what the pill decides.
+            .simultaneousGesture(
+                LongPressGesture(minimumDuration: 0.45)
+                    // Cleared when the NEXT press BEGINS, never on a timer. A
+                    // timer has to guess how long a finger stays down, and it
+                    // guesses wrong in the most ordinary case there is: hold
+                    // until the tray appears, look at it, then let go — by
+                    // which time a 900ms clear has already expired and the
+                    // release raises the agent on top of the tray. Press-begin
+                    // is the one moment that is always before the release it
+                    // has to swallow and always after the last one.
+                    .onChanged { _ in heldForSources = false }
+                    .onEnded { _ in
+                        heldForSources = true
+                        // The `DSHaptic.lift()` this used to fire here now
+                        // lives on `RootShell.openSources()`, so the
+                        // accessibility action and the Mac menu get the same
+                        // buzz the hold does.
+                        onSources()
+                    }
+            )
         }
         .padding(.leading, DS.Space.s1)
         // The glass hugs its two controls in BOTH states now (2026-08-07) —
@@ -169,35 +236,11 @@ struct AgentBar: View {
         // the screen answering one move, rather than a hard swap down here
         // under a gradient that glided.
         .animation(DS.Motion.standard, value: roomTint)
-        // The whole pill, not a per-icon zone: at ~110pt there isn't room to
-        // split one hold between two targets, and the tray it opens belongs to
-        // the bar as a whole rather than to asking or to finding.
-        // `simultaneous`, so the two Buttons above keep their own taps — each
-        // guards on `consumeHold()` for the release that follows a hold.
-        .simultaneousGesture(
-            LongPressGesture(minimumDuration: 0.45)
-                // Cleared when the NEXT press BEGINS, never on a timer. A timer
-                // has to guess how long a finger stays down, and it guesses
-                // wrong in the most ordinary case there is: hold until the tray
-                // appears, look at it, then let go — by which time a 900ms
-                // clear has already expired and the release raises the agent on
-                // top of the tray. Press-begin is the one moment that is always
-                // before the release it has to swallow and always after the
-                // last one, so a hold that ends by dragging off (no touch-up
-                // inside, no button action, flag left set) can't eat the next
-                // real tap either.
-                .onChanged { _ in heldForSources = false }
-                .onEnded { _ in
-                    heldForSources = true
-                    // The `DSHaptic.lift()` this used to fire here now lives on
-                    // `RootShell.openSources()`, so the accessibility action
-                    // below and the Mac menu get the same buzz the hold does.
-                    // Timing is unchanged — the closure runs on this same
-                    // threshold, which is the moment a gesture with no visible
-                    // affordance has to say it was received.
-                    onSources()
-                }
-        )
+        // The hold moved OFF the container and onto the buttons (prd §384) —
+        // berry holds for sources, magnifier holds for speaking. Each is a
+        // full 44pt control, so the finger has already chosen; `simultaneous`
+        // on each keeps the buttons' own taps, and both guard on
+        // `consumeHold()` for the release that follows a hold.
         .modifier(BarSecondaryMenu(onSources: onSources, onFind: onFind))
         .modifier(MorphMatch(ns: morphNS))
     }

@@ -564,6 +564,22 @@ struct PressSpring: ButtonStyle {
     }
 }
 
+/// The press feel for a PHOTOGRAPH (2026-08-14, prd §384): the picture LIFTS
+/// under the finger — up a touch, a soft shadow — the Photos-app register,
+/// where every other tile in the app dips. A picture is a thing you pick up;
+/// a control is a thing you push. Same one press clock (`DS.Motion.press`).
+/// The shadow rides `DS.cardShadow` so it belongs to both themes.
+struct PressLift: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 1.04 : 1)
+            .shadow(color: DS.cardShadow.opacity(configuration.isPressed ? 1 : 0),
+                    radius: configuration.isPressed ? 10 : 0,
+                    y: configuration.isPressed ? 4 : 0)
+            .animation(DS.Motion.press, value: configuration.isPressed)
+    }
+}
+
 /// The press feel for a FEED ROW (2026-08-04). Rows can't use `PressSpring`'s
 /// 0.96 dip: their card slab is a `listRowBackground`, which a ButtonStyle
 /// can't reach, so a visible scale would shrink the content inside a
