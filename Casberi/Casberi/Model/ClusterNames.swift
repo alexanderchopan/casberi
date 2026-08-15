@@ -40,6 +40,9 @@ final class ClusterNames {
 
     private var names: [String: String]
     private var asked: Set<String>
+    /// Terms the map has drawn and nobody has named yet. In-memory: the map
+    /// re-notes them on every compose, so a relaunch loses nothing.
+    @ObservationIgnored private var pending: Set<String> = []
     @ObservationIgnored private var running = false
 
     private init() {
@@ -60,19 +63,33 @@ final class ClusterNames {
         }
     }
 
-    /// Names up to `perPass` unnamed terms. Called from the foreground sweep,
+    /// The terms the map actually drew, recorded so the sweep knows what is
+    /// worth naming. Called from `TodayBrief.clusterMap` — cheap, synchronous
+    /// and never a model call, because compose must stay off that path.
+    func note(terms: [String]) {
+        let fresh = terms.map { $0.lowercased() }.filter { !asked.contains($0) }
+        guard !fresh.isEmpty else { return }
+        pending.formUnion(fresh)
+        // Bounded: the map draws at most six clusters, so a runaway pending
+        // set means something upstream changed, not that there is more work.
+        if pending.count > 60 { pending = Set(pending.prefix(60)) }
+    }
+
+    /// Names up to `perPass` pending terms. Called from the foreground sweep,
     /// never from a compose. No-op without the on-device model, so nothing
     /// here can spend anyone's battery on a device that cannot answer.
-    func refresh(terms: [String]) async {
+    func refresh() async {
         guard !running, OnDeviceModel.isAvailable else { return }
-        let pending = terms.map { $0.lowercased() }
+        let pending = self.pending
             .filter { !asked.contains($0) }
+            .sorted()
             .prefix(Self.perPass)
         guard !pending.isEmpty else { return }
         running = true
         defer { running = false }
         for term in pending {
             asked.insert(term)
+            self.pending.remove(term)
             if let named = await OnDeviceModel.clusterName(term: term) {
                 names[term] = named
             }

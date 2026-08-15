@@ -1419,6 +1419,10 @@ struct RootShell: View {
                 // hold a three-years-ago anniversary (the §382 widget
                 // deadline-scan reasoning).
                 LaunchPerf.time("AgentNoticed.refresh") { AgentNoticed.shared.refresh(context: modelContext) }
+                // The librarian names the map's clusters (prd §386m) — off
+                // the compose path by construction, which is the only reason
+                // §386a's "the brief awaits no model" survives the feature.
+                await ClusterNames.shared.refresh()
                 await KeptAskStore.shared.refreshDigests(things: surfaced, context: modelContext)
                 // The widget's rung-1 content (its brief headline) is
                 // published as a side effect of composing "today" — but
@@ -1436,6 +1440,7 @@ struct RootShell: View {
                 let surfaced = Corpus.surfaced((try? modelContext.fetch(d)) ?? [])
                 HomeInsightStore.shared.refresh(from: surfaced)
                 AgentNoticed.shared.refresh(context: modelContext)
+                await ClusterNames.shared.refresh()
                 await KeptAskStore.shared.refreshDigests(things: surfaced, context: modelContext)
                 if !KeptAskStore.shared.order.contains("today") {
                     _ = await TodayBrief.compose(things: surfaced, context: modelContext)

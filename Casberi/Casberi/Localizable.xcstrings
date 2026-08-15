@@ -9137,6 +9137,34 @@
         }
       }
     },
+    "%lld late": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld atrasados"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld件 遅れ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld개 지연"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld 项逾期"
+          }
+        }
+      }
+    },
     "%lld liked": {
       "localizations": {
         "es": {
@@ -11249,6 +11277,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "%lld 笔待处理扣款未计入"
+          }
+        }
+      }
+    },
+    "%lld people": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld personas"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld人"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld명"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld 人"
           }
         }
       }
@@ -15164,6 +15220,34 @@
         }
       }
     },
+    "1 late": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "1 atrasado"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "1件 遅れ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "1개 지연"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "1 项逾期"
+          }
+        }
+      }
+    },
     "1 market": {
       "localizations": {
         "es": {
@@ -15608,6 +15692,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "1 次转移无法读取代币"
+          }
+        }
+      }
+    },
+    "1 new": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "1 nuevo"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "新着 1件"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "새로운 항목 1개"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "1 条新内容"
           }
         }
       }

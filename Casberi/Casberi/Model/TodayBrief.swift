@@ -736,6 +736,17 @@ enum TodayBrief {
             mark("ghgraph")
             lines.append(gh)
         }
+        // The rest of Work (prd §386m) — the deadlines the shipping rooms
+        // carry. `Runway` is the same axis "Coming up" draws, which is the
+        // point: a cert expiry and a dispute deadline are the same KIND of
+        // fact as a reminder, they just belong to a different part of the
+        // day. Both composers already exist for the panel and read landed
+        // rows alone, so this costs no request.
+        if category == nil, let ship = shippingRunway(things) {
+            ids.append("ship")
+            mark("ship")
+            lines.append(ship)
+        }
 
         // WHAT GOES TOGETHER (prd §386j) — the semantic map, finally a module
         // under its own header rather than a card docked below the document.
@@ -1083,7 +1094,7 @@ enum TodayBrief {
         // holdings read left the hero unable to compose (§386h).
         ("Money", "confirm", "Wallet", ["hero", "spark", "holdmap", "pair", "tmkt", "flow", "spend"]),
         ("Your day", "life", "", ["fold", "posts", "map"]),
-        ("Work", "work", "GitHub", ["work", "ghgraph"]),
+        ("Work", "work", "GitHub", ["work", "ghgraph", "ship"]),
     ]
 
     /// Regroups `ids` under `sectionPlan`, prefixing each populated section
@@ -2482,6 +2493,9 @@ enum TodayBrief {
             "\(String(format: "%.4f", $0.x))|\(String(format: "%.4f", $0.y))|\(tileSafe($0.source))"
         }
         let named = ClusterNames.shared
+        // Tell the librarian what to name next — recorded here, named on the
+        // foreground sweep, never awaited by this compose (prd §386m).
+        named.note(terms: map.clusters.map(\.label))
         let clusters = map.clusters.map { c in
             "\(tileSafe(named.name(for: c.label)))|\(String(format: "%.4f", c.x))|\(String(format: "%.4f", c.y))|\(String(format: "%.4f", c.radius))"
         }
@@ -2494,6 +2508,36 @@ enum TodayBrief {
         let line = "map = ClusterMap(\"\(String(localized: "What goes together"))\", \"\(String(localized: "things that sit close are about the same thing"))\", \"\(dots.joined(separator: ";"))\", \"\(clusters.joined(separator: ";"))\")"
         mapCache = (signature, line)
         return line
+    }
+
+    /// Stripe's and Cloudflare's deadlines on ONE axis (prd §386m).
+    ///
+    /// Merged rather than drawn twice: two rails stacked in a section is the
+    /// duplication this pass keeps removing, and a dispute deadline and a
+    /// certificate expiry genuinely share a scale — both are "days until
+    /// somebody needs something from you". Each keeps its own source on the
+    /// dot so the axis can still say WHOSE deadline is which.
+    @MainActor
+    private static func shippingRunway(_ things: [Thing]) -> String? {
+        let now = Date.now
+        var lanes: [(at: Date, source: String)] = []
+        if let stripe = StripeRoomSource.compose(things: things) {
+            for item in stripe.items {
+                lanes.append((now.addingTimeInterval(Double(item.days) * 86_400), "Stripe"))
+            }
+        }
+        if let cf = CloudflareRunwaySource.compose(things: things) {
+            // A certificate with no published expiry has no place on an axis
+            // — dropped rather than pinned somewhere invented.
+            for item in cf.items where item.days != nil {
+                lanes.append((now.addingTimeInterval(Double(item.days ?? 0) * 86_400), "Cloudflare"))
+            }
+        }
+        guard lanes.count >= 2 else { return nil }
+        let sorted = lanes.sorted { $0.at < $1.at }
+        let rows = sorted.map { "\(Int($0.at.timeIntervalSince1970))|\(genSafe($0.source))" }
+        let far = (sorted.last?.at ?? now).formatted(.dateTime.month(.abbreviated).day())
+        return "ship = Runway(\"\(String(localized: "What's due"))\", \"\(rows.joined(separator: ";"))\", \"\(Int(now.timeIntervalSince1970))\", \"\(String(localized: "now"))\", \"\(genSafe(far))\")"
     }
 
     /// GitHub's contribution calendar as a `Bars` strip of the last 12 weeks
