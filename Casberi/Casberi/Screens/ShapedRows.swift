@@ -141,6 +141,19 @@ struct BandRow: View {
         if let wallet = WalletStore.shared.label(forAddress: thing.walletAddress) {
             return wallet
         }
+        // WHO IT'S FROM, for mail (2026-08-14). Keyed on the KIND, not a list
+        // of source names — the wallet check above is keyed on its field for
+        // the same reason, so a second mail bridge is covered the day it lands.
+        //
+        // A mail row leads with an INITIAL CIRCLE, not an avatar (email carries
+        // no picture), and a single letter identifies almost nothing: Amazon,
+        // Anna and an airline all draw "A". So unlike Twitch or Stocktwits —
+        // where the leading avatar really is the person and a name beside it
+        // would be the icon's word twin — the sender's name here is absent
+        // from the row entirely. The title is the subject; the sender lives on
+        // `authorHandle`, or on older rows only inside "From …" on `content`,
+        // which `mailSender` already reads for the circle.
+        if thing.kind == .mail, let sender = mailSender { return sender }
         switch thing.source {
         // WHY a post is here beats WHO posted it in this slot (2026-07-16): a
         // liked cast, a channel cast, and your own post used to read
@@ -228,9 +241,32 @@ struct BandRow: View {
         // category never reaches the row, and its one stored tag is
         // "Watchlist" — on every row, which is the noise the 2026-07-23 ruling
         // removed from this slot in the first place.
-        case "Kindle", "TikTok":
+        case "TikTok":
             let name = thing.authorHandle?.trimmingCharacters(in: .whitespaces) ?? ""
             return name.isEmpty ? nil : name
+        // WHICH BOOK a highlight came from — the two highlight rooms, whose
+        // rows are otherwise disembodied sentences.
+        //
+        // Readwise joined 2026-08-14 for the same reason as Kindle and by a
+        // different field: it builds the identical "Book — Author" string but
+        // puts it on `content` (where it is prose that groups a book's
+        // highlights), so nothing drew it as a word. Its rows DO lead with the
+        // book's cover, but a cover at 26pt is a colored square, not a title —
+        // the initial-circle argument for mail above, one room over.
+        //
+        // THE AUTHOR IS TRIMMED OFF, both rooms. The stored string keeps it —
+        // it is the grouping key the rooms rank by, and this is display only —
+        // but the book alone identifies the work, and the pair is the one
+        // value this slot has ever held that is long enough to truncate. Split
+        // on the separator each importer builds in ONE place (`" — "`), never
+        // parsed out of a localized string; a book whose own title contains
+        // that separator loses its tail, which costs a few characters of a
+        // label rather than a wrong fact.
+        case "Kindle", "Readwise":
+            let work = thing.source == "Readwise" ? thing.content : (thing.authorHandle ?? "")
+            let book = (work.components(separatedBy: " — ").first ?? work)
+                .trimmingCharacters(in: .whitespaces)
+            return book.isEmpty ? nil : book
         // GitHub carries starCount/repoLanguage but rendered as a plain band
         // like any other link — the contribution hero above the feed was the
         // only place either fact showed (2026-07-21 enrichment, matching the
