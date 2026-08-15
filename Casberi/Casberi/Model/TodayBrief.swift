@@ -651,6 +651,43 @@ enum TodayBrief {
         //
         // NOT in Money (§386's own ruling, kept): a wall of photographs above
         // a balance answers a question nobody asked of that scope.
+        // 2b. THE BALANCE LINE, when the hero could not compose (2026-08-15,
+        // prd §386h, user: "you can't just show the sankey we still need the
+        // sparkline and perhaps even the treemap of holdings").
+        //
+        // `moneyHero` requires non-empty HOLDINGS, and holdings are a LIVE
+        // read — so the entire balance block (number, curve and holdings
+        // treemap) disappears whenever that read is empty or times out,
+        // leaving Money as a sankey and a spend bar with nothing saying what
+        // you actually have. That is not a rare state: §288 bounds the read
+        // at 8s and says outright that a read which misses the budget
+        // "contributes no module", and the demo corpus reaches nothing at all
+        // by design.
+        //
+        // The fallback is the RECORDED sample history — the same series the
+        // panel's own wallet curve draws, written by `recordSample` on every
+        // foreground rather than fetched now. It states its own window
+        // ("since Aug 3"), so it never claims a stale number is current, and
+        // it is exactly the shape the hero would have drawn had the read
+        // landed. Never BOTH: the hero already carries a curve.
+        if scopedToMoney, !ids.contains("hero"),
+           let spark = KeptAskComposers.valueSparkLine() {
+            ids.append("spark")
+            mark("spark")
+            lines.append(spark)
+            // …and WHAT IT IS MADE OF, from the same recorded history.
+            // `ValueSample.holdings` snapshots symbol → USD at each sample,
+            // so the newest one draws the composition treemap the hero would
+            // have drawn — off history rather than off a live read, which is
+            // the whole point of this fallback. Nil on samples written before
+            // that field existed, and then the map simply doesn't draw.
+            if let holdings = holdingsMapFromHistory() {
+                ids.append("holdmap")
+                mark("holdmap")
+                lines.append(holdings)
+            }
+        }
+
         // 4a. WHERE YOU SPEND, in the Money section (prd §386g) — the panel
         // card moved INTO the brief. It answers what no other money module
         // does: the hero is how much you hold and the flow is which rails it
@@ -973,7 +1010,10 @@ enum TodayBrief {
     /// front-page columns and the chapter air for free.
     private static let sectionPlan: [(title: String, ids: [String])] = [
         ("Needs you", ["alerts"]),
-        ("Money", ["hero", "pair", "tmkt", "flow", "spend"]),
+        // `hero` and `spark` are alternatives, never both — the hero carries
+        // its own curve, and the spark is what stands in when the live
+        // holdings read left the hero unable to compose (§386h).
+        ("Money", ["hero", "spark", "holdmap", "pair", "tmkt", "flow", "spend"]),
         ("Coming up", ["axis", "runway"]),
         ("Your day", ["fold", "posts"]),
         ("Work", ["work"]),
@@ -2308,6 +2348,56 @@ enum TodayBrief {
         guard !refs.isEmpty else { return nil }
         return ["posts = Widget(\"\(String(localized: "Your posts"))\", \"\", [\(refs.joined(separator: ", "))])"]
             + rows
+    }
+
+    /// The holdings treemap, drawn from the newest RECORDED sample rather
+    /// than from a live read (prd §386h).
+    ///
+    /// `WalletStore.ValueSample.holdings` snapshots symbol → USD every time a
+    /// sample is written, precisely so the combined sheet can attribute a
+    /// move — which means the composition is already on disk and the hero's
+    /// map does not actually need the network. Declines under two symbols
+    /// (one cell is a title, not a map) and on samples written before that
+    /// field existed.
+    ///
+    /// `iconMode` "token" so each cell wears its bundled coin mark, the same
+    /// as the hero's own map — and the cells carry a `@t:` route only in the
+    /// hero, which reads live prices; here they are labels over a snapshot,
+    /// so the map states composition and offers no per-token chart it cannot
+    /// currently price.
+    @MainActor
+    private static func holdingsMapFromHistory() -> String? {
+        let store = WalletStore.shared
+        guard !store.addresses.isEmpty else { return nil }
+        // MERGED PER ADDRESS, never through `combinedValueSamples()` — that
+        // function builds `ValueSample(at:usd:)` with no `holdings` at all,
+        // so it drops the composition on the way to the total. Reading the
+        // map through it meant the map could never draw for anyone watching
+        // more than one wallet, which is silent: an absent module and a
+        // module that declined look identical (found on the sim, prd §386h).
+        var merged: [String: Double] = [:]
+        var asOfDate: Date?
+        for address in store.addresses {
+            guard let newest = store.valueSamples(forAddress: address.address).last,
+                  let holdings = newest.holdings else { continue }
+            for (symbol, usd) in holdings where usd > 0 {
+                merged[symbol, default: 0] += usd
+            }
+            // The map is "as of" the OLDEST of the wallets' newest samples —
+            // the moment every figure in it was true together, which is the
+            // only honest stamp for a merged snapshot.
+            asOfDate = min(asOfDate ?? newest.at, newest.at)
+        }
+        let ranked = merged
+            .sorted { $0.value == $1.value ? $0.key < $1.key : $0.value > $1.value }
+        guard ranked.count >= 2, let stampedAt = asOfDate else { return nil }
+        // `treemapWeight`'s sqrt scaling, the same the hero's map uses — a
+        // wallet that is 95% one coin otherwise draws one cell and a seam.
+        let cells = ranked.prefix(6).map { entry -> String in
+            "\(tileSafe(entry.key)) \(WalletIngest.treemapWeight(entry.value))"
+        }
+        let asOf = stampedAt.formatted(.dateTime.month(.abbreviated).day())
+        return "holdmap = TagMap(\"\(String(localized: "What you hold"))\", \"\(String(localized: "as of \(asOf)"))\", [\(cells.joined(separator: ", "))], \"token\")"
     }
 
     /// `Bars` of merchant share — where the card money actually went (prd

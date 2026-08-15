@@ -333,7 +333,7 @@ enum KeptAskComposers {
     /// section) with fewer than two samples: a one-point line is a dot claiming
     /// a trend. The subline names the anchor date, matching the value line's
     /// "since Jul 18".
-    private static func valueSparkLine() -> String? {
+    static func valueSparkLine() -> String? {
         let store = WalletStore.shared
         guard !store.addresses.isEmpty else { return nil }
         let samples = store.addresses.count > 1
