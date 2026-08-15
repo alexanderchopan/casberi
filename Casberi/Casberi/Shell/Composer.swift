@@ -1152,13 +1152,21 @@ struct Composer: View {
     /// definition four readers now share.
     private static func computeCategoryChips(sourcesSeen present: Set<String>) -> [CategoryChip] {
         guard !present.isEmpty else { return [] }
-        var chips: [CategoryChip] = []
-        for scope in BriefScope.scopes {
-            guard !KeptAskComposers.categorySources(scope).isDisjoint(with: present) else { continue }
-            chips.append(CategoryChip(id: scope, title: scope,
-                                      query: "How's my \(scope) stuff?"))
-        }
-        return chips
+        // ONE overview, not three scoped screens (user, 2026-08-14, prd §386:
+        // "we need one composer screen for money work life day overview, not
+        // three separate ones… we have good stuff in each but each is not all
+        // good"). The unscoped Today brief already carries each scope's good
+        // half — the money hero and movers, the deadlines runway, the alerts,
+        // Life's contact sheet, the themes map — so three doors that each
+        // opened a narrower, weaker version of it were three chances to land
+        // on the junk half (the scoped facts paragraph, which is also where
+        // the prompt-echo leak lived). The scoped composes themselves survive
+        // for a TYPED "how's my money stuff" — capability kept, doors
+        // consolidated. `TodayBrief.title` is the canonical question, the
+        // same string the whisper and the kept pill send, so this chip runs
+        // exactly the pipeline those do.
+        return [CategoryChip(id: "day", title: TodayBrief.title,
+                             query: TodayBrief.title)]
     }
 
     // MARK: - The panel (prd §334)
@@ -1593,6 +1601,18 @@ struct Composer: View {
                         }))
         }
         if let label = FeedHeatmap.label(for: source) {
+            // Only a HABIT earns the pulse tile (user, 2026-08-14, prd §386:
+            // the casts/screenshots/posts grids were "kinda useless"). The
+            // grid is a consistency-over-time reading, which is a real answer
+            // where the acts are YOURS — journaling, writing, training,
+            // chatting — and noise where the room is content that merely
+            // arrived: three identical activity smudges saying "when" about
+            // rooms whose whole point is WHO and WHAT. A content room whose
+            // better figures (topic map, leaderboard, mosaic) all declined
+            // now composes NO tile — an absent tile beats a tile that
+            // answers nothing — while its FEED keeps the year heatmap as the
+            // documented fallback (§247's chain, unchanged).
+            guard Self.pulseWorthy.contains(source) else { return nil }
             let counted = FeedHeatmap.counted(things, label: label)
             // Twelve weeks, not the room's 53. A full year at tile scale is
             // ~2.7pt cells — unreadable — while the windowed grid the social
@@ -1601,6 +1621,16 @@ struct Composer: View {
         }
         return nil
     }
+
+    /// The rooms whose panel tile may be the activity pulse — the subset of
+    /// `FeedHeatmap.labels` where the counted acts are the person's own habit
+    /// (see the guard above). Spelled here rather than as a flag on the
+    /// heatmap registry because the FEED's fallback rightly keeps drawing the
+    /// year grid for every registered room; only the tile declines.
+    private static let pulseWorthy: Set<String> = [
+        "Day One", "Apple Journal", "Obsidian", "Notion",
+        "Apple Health", "Strava", "ChatGPT", "Claude", "Gemini",
+    ]
 
     /// `FeedInsight.Tone` as the plain index `AgentPanel` carries, so the model
     /// layer stays free of SwiftUI's Color.
@@ -3708,23 +3738,21 @@ struct Composer: View {
     /// exactly where the row would otherwise be a one-way trip, and nowhere
     /// else — at the root the row is still the three tight choices it was.
     private var shownCategoryChips: [CategoryChip] {
-        guard answering, TodayBrief.matchesScoped(currentQuestion) else { return categoryChips }
-        // `TodayBrief.title` is the canonical unscoped question — the same
-        // string the whisper and the kept pill send — so this runs the exact
-        // pipeline those do rather than a shortcut that could answer
-        // differently (the `query` rule the scope chips already follow).
-        return [CategoryChip(id: "day", title: String(localized: "The day"),
-                             query: TodayBrief.title)] + categoryChips
+        // The scoped-answer special case (prepending a "The day" chip) died
+        // with the scope chips (prd §386): the one chip left IS the day, so
+        // the prepend would mint a duplicate id. A typed scoped ask still
+        // shows this row — the door back out to the whole overview.
+        categoryChips
     }
 
     @ViewBuilder
     private var categoryChipsRow: some View {
         if restChrome(keepBrief: true), !shownCategoryChips.isEmpty {
             VStack(alignment: .leading, spacing: DS.Space.s1) {
-                Text("What's going on")
-                    .dsText(.subhead13)
-                    .foregroundStyle(DS.textTertiary)
-                    .padding(.horizontal, DS.Space.s4)
+                // The little "What's going on" header died with the scope
+                // chips (prd §386) — the one chip left says those exact words
+                // itself, and a label repeating the button under it is the
+                // §213 restatement in miniature.
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: DS.Space.s2) {
                         ForEach(shownCategoryChips) { chip in

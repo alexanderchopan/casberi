@@ -674,6 +674,23 @@ enum FoundationAnswer {
             #endif
             let stripped = text.trimmingCharacters(in: CharacterSet(charactersIn: ".!\"' "))
             if stripped.isEmpty || stripped.uppercased() == "NONE" || text.count < 20 { return nil }
+            // The ECHO tripwire (2026-08-14, prd §386). Seen live on the Money
+            // brief: the model returned its own prompt — "Today's Money
+            // facts: … Stay on Money. If the facts are not really about
+            // Money, reply NONE…" — followed by arithmetic the instructions
+            // forbid ("therefore you now have 11.80 ZORA"), and the guards
+            // above let it through because an echo is neither empty nor
+            // short. A reply carrying any fragment of the prompt's own
+            // scaffolding is the question handed back, not an answer; and a
+            // compliant reply — two sentences at most, by instruction — never
+            // needs 400 characters, so the ceiling backs the tripwire for
+            // echoes that paraphrase instead of quoting.
+            let scaffolding = ["reply NONE", "Stay on ", "kept returning to",
+                               " facts:", "facts are not really",
+                               "Note a continuation"]
+            if scaffolding.contains(where: { text.contains($0) }) || text.count > 400 {
+                return nil
+            }
             return text
         } catch {
             return nil
