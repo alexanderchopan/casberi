@@ -164,16 +164,18 @@ enum WalletNFTShelf {
         return out
     }
 
-    /// One watched entry's collections, in picker order.
+    /// One watched entry's collections, UNSORTED.
     ///
     /// Takes the entry's own address string (what the person typed — an ENS
     /// name, a hex address) and resolves it here, so callers never have to hold
     /// both forms. Empty for a Solana-only or unresolvable entry.
+    ///
+    /// Ordering is the caller's, because the picker lets somebody CHOOSE it
+    /// (`NFTSort`) — sorting here would mean re-reading to re-sort.
     @MainActor
     static func collections(for watched: String) async -> [NFTCollection] {
         let resolved = await WalletIngest.resolvedAddresses([watched])
-        let byKey = await collections(addresses: resolved)
-        return NFTCollectionOrder.sorted(byKey.values.flatMap { $0 })
+        return (await collections(addresses: resolved)).values.flatMap { $0 }
     }
 
     /// Alchemy's `getContractsForOwner`, parsed for everything the response
@@ -217,12 +219,18 @@ enum WalletNFTShelf {
                 // out of a STRING, with an implausible value treated as unknown.
                 let count = NFTCountField.count(distinct: c["numDistinctTokensOwned"],
                                                 total: c["totalBalance"])
+                // Position in the response IS the recency rank — Alchemy serves
+                // this endpoint in `transferTime` order and publishes no
+                // timestamp (measured 2026-08-15). Captured here because it is
+                // the only place the order still exists; everything downstream
+                // works on a flattened set.
                 out.append(NFTCollection(network: network,
                                          contract: addr.lowercased(),
                                          name: name,
                                          imageURL: art,
                                          count: count,
-                                         isSpam: (c["isSpam"] as? Bool) == true))
+                                         isSpam: (c["isSpam"] as? Bool) == true,
+                                         arrival: out.count))
             }
             guard let next = root["pageKey"] as? String, !next.isEmpty else { break }
             pageKey = next

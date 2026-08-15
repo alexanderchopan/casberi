@@ -211,9 +211,9 @@ func check(_ what: String, _ cond: Bool) {
 }
 
 func col(_ network: String, _ contract: String, name: String = "N",
-         count: Int = 1, spam: Bool = false) -> NFTCollection {
+         count: Int = 1, arrival: Int = 0, spam: Bool = false) -> NFTCollection {
     NFTCollection(network: network, contract: contract, name: name,
-                  imageURL: nil, count: count, isSpam: spam)
+                  imageURL: nil, count: count, isSpam: spam, arrival: arrival)
 }
 
 // MARK: - NFTPickKey
@@ -278,22 +278,49 @@ let mixed = [
     col("eth-mainnet", "0x3", name: "Beta",  count: 40, spam: false),
 ]
 let sorted = NFTCollectionOrder.sorted(mixed)
-// Spam sorts LAST no matter how much of it there is — a wallet dusted ninety
-// times must not have that collection lead the picker.
-check("non-spam leads regardless of count", sorted.map(\.name) == ["Beta", "Zebra", "Alpha"])
+// THE BAND, which is the part doing the work: measured on a real wallet, 81 of
+// 100 contracts were isSpam. A dusted collection must never lead the picker,
+// however much of it there is — and "Alpha" would lead any A–Z list.
+check("non-spam leads, whatever the name or count",
+      sorted.map(\.name) == ["Beta", "Zebra", "Alpha"])
+check("A–Z is the default sort",
+      NFTCollectionOrder.sorted(mixed).map(\.name)
+        == NFTCollectionOrder.sorted(mixed, by: .name).map(\.name))
 
-let byCount = NFTCollectionOrder.sorted([
-    col("eth-mainnet", "0x1", name: "A", count: 3),
-    col("eth-mainnet", "0x2", name: "B", count: 30),
+// COUNT IS NOT A RANK (2026-08-15). It was, and the first live run refuted the
+// reasoning: the picker led with 2,001 airdropped pieces. It stays on the cell
+// as a fact and reaches the order nowhere.
+let counted = NFTCollectionOrder.sorted([
+    col("eth-mainnet", "0x1", name: "Ant",  count: 1),
+    col("eth-mainnet", "0x2", name: "Zebu", count: 2001),
 ])
-check("most-held first", byCount.map(\.name) == ["B", "A"])
+check("a huge count does not outrank a name", counted.map(\.name) == ["Ant", "Zebu"])
 
 let byName = NFTCollectionOrder.sorted([
     col("eth-mainnet", "0x1", name: "beta", count: 5),
     col("eth-mainnet", "0x2", name: "Alpha", count: 5),
 ])
-check("equal counts fall back to name, case-insensitively",
-      byName.map(\.name) == ["Alpha", "beta"])
+check("A–Z is case-insensitive", byName.map(\.name) == ["Alpha", "beta"])
+
+// RECENT. Lower arrival is more recent; the band still wins over it.
+let recent = NFTCollectionOrder.sorted([
+    col("eth-mainnet", "0x1", name: "Older", arrival: 5),
+    col("eth-mainnet", "0x2", name: "Newer", arrival: 0),
+    col("eth-mainnet", "0x3", name: "Fresh spam", arrival: 1, spam: true),
+], by: .recent)
+check("recent puts the newest arrival first", recent.map(\.name) == ["Newer", "Older", "Fresh spam"])
+// Arrival is only meaningful WITHIN a chain (nothing relates two chains'
+// positions), so a cross-chain tie must fall through to something stable or
+// two chains' #0 swap places between opens.
+let crossChain = NFTCollectionOrder.sorted([
+    col("base-mainnet", "0xb", name: "Zeta", arrival: 0),
+    col("eth-mainnet", "0xe", name: "Beta", arrival: 0),
+], by: .recent)
+check("a cross-chain arrival tie is broken by name, not left unstable",
+      crossChain.map(\.name) == ["Beta", "Zeta"])
+check("recent is total across two orderings",
+      NFTCollectionOrder.sorted(recent, by: .recent).map(\.id)
+        == NFTCollectionOrder.sorted(recent.reversed(), by: .recent).map(\.id))
 
 // TOTALITY. A picker that reshuffles between opens over identical data reads as
 // broken, and this is the screen somebody returns to in order to CHANGE a
@@ -466,9 +493,9 @@ mutate "the spam band removed from the order" \
   'if a.isSpam != b.isSpam { return a.isSpam }'
 
 # 4. Least-held first — the picker leading with the airdrops.
-mutate "the count order inverted" \
-  'if a.count != b.count { return a.count > b.count }' \
-  'if a.count != b.count { return a.count < b.count }'
+mutate "the recency direction inverted" \
+  'if a.arrival != b.arrival { return a.arrival < b.arrival }' \
+  'if a.arrival != b.arrival { return a.arrival > b.arrival }'
 
 # 5. A non-total order: the picker reshuffles between opens.
 mutate "the id tiebreak dropped" \

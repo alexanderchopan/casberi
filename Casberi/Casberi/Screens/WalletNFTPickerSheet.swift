@@ -41,6 +41,14 @@ struct WalletNFTPickerSheet: View {
 
     @State private var collections: [NFTCollection] = []
     @State private var loaded = false
+    /// A–Z by default (user's ruling, 2026-08-15). `@State`, so it resets when
+    /// the sheet closes: this is how you are looking right now, not a setting
+    /// you configured — the same lifetime rule the x402 lane filter follows.
+    @State private var sort: NFTSort = .name
+
+    private var ordered: [NFTCollection] {
+        NFTCollectionOrder.sorted(collections, by: sort)
+    }
 
     private static let cell: CGFloat = 104
 
@@ -63,6 +71,7 @@ struct WalletNFTPickerSheet: View {
                 } else if collections.isEmpty {
                     empty
                 } else {
+                    sorter
                     grid
                 }
             }
@@ -106,10 +115,44 @@ struct WalletNFTPickerSheet: View {
         .padding(.top, DS.Space.s4)
     }
 
+    /// Two words, not a menu — there are exactly two orders worth having, and a
+    /// picker for the picker would be one control too many.
+    ///
+    /// "Recent" and not "Newest" on purpose: the API publishes no timestamp,
+    /// only the order it serves, and the six chains are read separately — so
+    /// this is exact within a chain and approximate across them (see
+    /// `NFTCollection.arrival`). The weaker word is the true one.
+    private var sorter: some View {
+        HStack(spacing: DS.Space.s2) {
+            ForEach(NFTSort.allCases, id: \.self) { option in
+                let on = sort == option
+                Button {
+                    withAnimation(reduceMotion ? nil : DS.Motion.standard) { sort = option }
+                } label: {
+                    Text(option == .name
+                         ? String(localized: "A–Z")
+                         : String(localized: "Recent"))
+                        .dsText(.subhead13)
+                        .fontWeight(on ? .semibold : .regular)
+                        .foregroundStyle(on ? DS.textPrimary : DS.textSecondary)
+                        .padding(.horizontal, DS.Space.s3)
+                        .padding(.vertical, DS.Space.s1)
+                        // Selection is a FILL, never a border — the design law
+                        // draws no lines.
+                        .background(on ? DS.gray200.opacity(0.55) : .clear,
+                                    in: Capsule())
+                }
+                .buttonStyle(PressSpring())
+                .accessibilityAddTraits(on ? [.isButton, .isSelected] : [.isButton])
+            }
+            Spacer(minLength: 0)
+        }
+    }
+
     private var grid: some View {
         ScrollView {
             LazyVGrid(columns: columns, spacing: DS.Space.s3) {
-                ForEach(collections) { collection in
+                ForEach(ordered) { collection in
                     Button {
                         picks.toggle(wallet: wallet, collection: collection.id)
                     } label: {

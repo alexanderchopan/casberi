@@ -82,8 +82,23 @@ struct NFTCollection: Identifiable, Sendable, Equatable {
     /// disagree with the wallet.
     let imageURL: String?
     /// How many pieces of it the wallet holds.
+    ///
+    /// SHOWN on every cell, and deliberately NOT what the list is ranked by
+    /// (2026-08-15, see `NFTCollectionOrder`).
     let count: Int
     let isSpam: Bool
+    /// Where this collection sat in the chain's own response — 0 is the most
+    /// recently transferred.
+    ///
+    /// Alchemy serves `getContractsForOwner` in `transferTime` order and
+    /// publishes NO timestamp on the contract itself (measured 2026-08-15:
+    /// `orderBy=transferTime` answers 200 and returns the same order as the
+    /// default). So this is a RANK, not a date, and it is exact only WITHIN a
+    /// chain — the six chains are read separately and nothing relates their
+    /// positions to each other. That limit is why the sort it drives is called
+    /// "Recent" rather than "Newest": the app should not imply a precision the
+    /// API never gave it.
+    var arrival: Int = 0
 
     var id: String { NFTPickKey.make(network: network, contract: contract) }
 }
@@ -139,25 +154,53 @@ enum NFTCountField {
     }
 }
 
+/// How the picker is ordered (user's ruling, 2026-08-15).
+///
+/// `name` is the default and `recent` is the sorter beside it. Count is
+/// deliberately NOT an option — see `NFTCollectionOrder`.
+enum NFTSort: String, CaseIterable, Sendable {
+    case name
+    case recent
+}
+
 enum NFTCollectionOrder {
-    /// The picker's order: what you probably care about first.
+    /// The picker's order, in TWO BANDS: everything Alchemy does not flag, then
+    /// everything it does. The chosen sort applies inside each band.
     ///
-    /// Non-spam ahead of spam, then most-held first, then name, then id. TOTAL
-    /// by construction — the id tiebreak is what makes it so, and it is there
-    /// for the reason every room card in this codebase carries one: a list that
-    /// reshuffles between opens over identical data reads as broken, and this
-    /// list is one somebody returns to in order to CHANGE a decision they made
-    /// against the previous ordering.
+    /// **The band is the part doing the work, and it is measured**: on one page
+    /// of a real wallet, 81 of 100 contracts were `isSpam`. Without the band, an
+    /// A–Z list is 81% airdrops and the collections somebody actually wants are
+    /// scattered through them. Nothing is hidden and everything stays pickable —
+    /// the flag reaches ORDER alone, never a filter and never a label (§83, and
+    /// the user's "no junk fold" ruling).
     ///
-    /// Count leads within each band rather than name, because holding forty of
-    /// something is the strongest available signal that it was acquired on
-    /// purpose — the picker has no other evidence of intent to rank on.
-    static func sorted(_ collections: [NFTCollection]) -> [NFTCollection] {
+    /// **Count was the original rank and is now shown but never ranked on.** The
+    /// first live run refuted the reasoning behind it: "holding forty of
+    /// something means you chose it" is exactly backwards on a wallet people
+    /// airdrop AT, and the picker led with 2,001 Chicky Runners. Count survives
+    /// on each cell as a FACT, which is where it was always honest.
+    ///
+    /// TOTAL by construction under either sort — the id tiebreak is what makes
+    /// it so, and it matters here more than on any room card, because this is a
+    /// list somebody returns to in order to change a decision they made against
+    /// the previous ordering.
+    static func sorted(_ collections: [NFTCollection],
+                       by sort: NFTSort = .name) -> [NFTCollection] {
         collections.sorted { a, b in
             if a.isSpam != b.isSpam { return !a.isSpam }
-            if a.count != b.count { return a.count > b.count }
-            let byName = a.name.localizedCaseInsensitiveCompare(b.name)
-            if byName != .orderedSame { return byName == .orderedAscending }
+            switch sort {
+            case .name:
+                let byName = a.name.localizedCaseInsensitiveCompare(b.name)
+                if byName != .orderedSame { return byName == .orderedAscending }
+            case .recent:
+                // Lower arrival is more recent. Only meaningful within a chain
+                // (see `NFTCollection.arrival`), so ties across chains fall
+                // through to name — which keeps the order total and stops two
+                // chains' #0 from swapping places between opens.
+                if a.arrival != b.arrival { return a.arrival < b.arrival }
+                let byName = a.name.localizedCaseInsensitiveCompare(b.name)
+                if byName != .orderedSame { return byName == .orderedAscending }
+            }
             return a.id < b.id
         }
     }
