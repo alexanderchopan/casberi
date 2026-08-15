@@ -76,7 +76,7 @@ private struct ChipPeek: View {
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Space.s3) {
             HStack(spacing: DS.Space.s2) {
-                BridgeIcon(name: landing, size: 28, circular: true)
+                BridgeIcon(name: landing, size: DS.Face.row, circular: true)
                 VStack(alignment: .leading, spacing: 0) {
                     Text(landing)
                         .dsText(.callout15).fontWeight(.semibold)

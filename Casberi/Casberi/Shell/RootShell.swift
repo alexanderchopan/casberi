@@ -3668,7 +3668,7 @@ struct RootShell: View {
             } else if let mark = chrome.toastMark {
                 // A moment's toast wears the brand it's about (prd §384) —
                 // whose news this is, said before a word is read.
-                BridgeIcon(name: mark, size: 18, circular: true)
+                BridgeIcon(name: mark, size: DS.Face.badge, circular: true)
             }
             Text(text)
                 .dsText(.body17)
