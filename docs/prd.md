@@ -23565,3 +23565,19 @@ The mockup ruling on §386's one-overview screen, applied same-hour.
 **Kept, by name**: the wallet charts (hero/movers/flow), the hour strip, the runway ("i like the coming up you have"), **the contact sheet at FOUR pictures** (was twelve — one tight row of the day's strongest scenes, "N more" carrying the rest), faces/peopleRow, the mention lead, alerts, the lede.
 
 **The themes treemap has ONE home — the overview.** The All feed's themes lede is gone ("get rid of it on the all page, i don't think it really works there"), hours after §385 moved it above the fold — reversed by its own author watching it in use, which is the checkpoint system doing exactly its job. `themesLedeSection` and the §385 fold machinery stay compiled but unreached. The brief's "What you're into" module survives as the treemap's only mount; the "weak" complaint is noted against it and open — candidates if it stays weak: the cells carrying each theme's own newest title as a subline, or the §385 "since I last looked" delta framing moving here with it.
+
+## §386b — Needs-you fills out, the day gets its source mix, the generic ask chips die, and no anniversaries (user: "i think we need 'needs you'", "and the ankey", "day's source mix", "no annierary." then "i do not want anniversary", "the chips we have need to go too, except the 'send to' and maybe one other but beyond that we just had chips to have them", "instead of 'money' as a title we can just say 'wallet'", "you could have one for 'markets' too", 2026-08-14)
+
+The overview's second ruling round, picks applied same-hour.
+
+**Needs you, standing daily** (`TodayBrief.alertsCard`): the card the §386 mockup sold was alarm-class only, which fires rarely — so on most days the overview's most-wanted module stood empty while real past-due tasks sat as runway dots. Up to two OVERDUE tasks now join below the alarms, most-overdue first, scoped to `overdueSources` (the `overdue` composer's own rule: a task source's past-due row is actionable; a bridge deadline that already passed is history wearing a clock). The returned id set covers every drawn row, so the runway's dedupe keeps holding.
+
+**The day's source mix** (`sourceMixLine`): `SourceMix` — the §382a widget's third rung — at brief scale, over the window's landed rows. One big, two stacked, real bridge marks, counts sizing cells and never printed. Declines under 2 sources or 4 things.
+
+**The sankey needed nothing**: the flow module already composes the WEEK's band (`WalletRange.week.flowLabel`), which is also why the liked-but-redundant money-receipt rows idea was dropped — the user's own reading ("sankey kinda covers that").
+
+**The generic ask chips retired** (`Composer.computeSuggestions`): "beyond that we just had chips to have them." The suggestion machine still runs (decay counters, recognizers), but the only chip that renders is the OBSERVATION one — the glint's landing, which exists only on a day something real happened, the opposite of a chip for chips' sake. Kept pills (the person's own standing questions) untouched. The typed band's "one other" (Send to confirmed; Find vs Ask-agent) is an open ruling on the v2 mockup.
+
+**No anniversaries, anywhere**: vetoed twice, so the kind came out of `AgentNoticed` too (shipped for a few hours that morning) — the engine is cross-source echo and fullest-day now.
+
+**Open on the v2 mockup**: Wallet/Markets as separate titled sections (the user's own naming — "instead of 'money' as a title we can just say 'wallet'", "you could have one for 'markets' too"), section eyebrows generally (sentence case if so — the caps in the mock are mock-only; §8's no-caps law holds), and the "what happened to your posts" inbound module.

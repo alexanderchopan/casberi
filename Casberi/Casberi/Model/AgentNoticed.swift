@@ -8,17 +8,16 @@ import Observation
 /// This is the deterministic sibling of `HomeInsightStore`'s model-written
 /// "Noticed" line, and the split is the design: the model's line is a
 /// CONNECTION it composed (and may decline), this is a FACT the corpus can
-/// prove — an anniversary, two rooms speaking about the same subject on the
-/// same day, a fullest-day-ever. Every notice carries the ids of the things
-/// it stands on, so the claim can be checked rather than believed (§83's rule
-/// applied to delight). Three kinds, in priority order:
+/// prove — two rooms speaking about the same subject on the same day, a
+/// fullest-day-ever. Every notice carries the ids of the things it stands
+/// on, so the claim can be checked rather than believed (§83's rule applied
+/// to delight). Two kinds, in priority order (an ANNIVERSARY kind shipped
+/// here for a few hours on 2026-08-14 and was removed the same day — user,
+/// twice: "i do not want anniversary"; prd §386b):
 ///
-///   1. ANNIVERSARY — a thing from exactly N years ago today. The rarest and
-///      the most personal; nil on nearly every day, which is correct — an
-///      anniversary that fires constantly isn't one.
-///   2. CROSS-SOURCE ECHO — two different rooms landed things wearing the
+///   1. CROSS-SOURCE ECHO — two different rooms landed things wearing the
 ///      same tag today. The read only a corpus can make.
-///   3. FULLEST DAY — today holds more captures than any day before it.
+///   2. FULLEST DAY — today holds more captures than any day before it.
 ///      High-water seeded SILENTLY on first sight (`SourceMoments`' own
 ///      convention), so a fresh install's first day is never a fake record.
 ///
@@ -130,46 +129,8 @@ final class AgentNoticed {
     // MARK: - The observations
 
     private func observe(context: ModelContext, ledger: Set<String>) -> Notice? {
-        if let n = anniversary(context: context, ledger: ledger) { return n }
         if let n = crossSourceEcho(context: context, ledger: ledger) { return n }
         return recordDay(context: context, ledger: ledger)
-    }
-
-    /// A thing from exactly N years ago today (N in 1…5). Five one-day
-    /// predicated fetches — a month/day match can't be expressed in a
-    /// predicate, but "this exact historical day" can, and five tiny windows
-    /// beat materializing the corpus. Import receipts excluded — the app's
-    /// own row about a sync is not a memory.
-    private func anniversary(context: ModelContext, ledger: Set<String>) -> Notice? {
-        let cal = Calendar.current
-        for years in 1...5 {
-            guard let day = cal.date(byAdding: .year, value: -years, to: .now) else { continue }
-            let start = cal.startOfDay(for: day)
-            guard let end = cal.date(byAdding: .day, value: 1, to: start) else { continue }
-            var fd = FetchDescriptor<Thing>(
-                predicate: #Predicate<Thing> { $0.capturedAt >= start && $0.capturedAt < end },
-                sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
-            fd.fetchLimit = 12
-            guard let rows = try? context.fetch(fd) else { continue }
-            // Prefer something with a face or real words — a photo, a note, a
-            // saved link — over firehose rows; a transaction anniversary is
-            // nobody's memory.
-            let candidates = rows.filter {
-                !Corpus.isImportReceipt($0) && $0.kind != .transaction
-                    && !$0.title.isEmpty
-            }
-            guard let pick = candidates.first(where: { $0.previewImageURL != nil })
-                    ?? candidates.first else { continue }
-            let key = "anniv:\(pick.id.uuidString):\(years)"
-            guard !ledger.contains(key) else { continue }
-            let title = pick.title.count > 60 ? String(pick.title.prefix(60)) + "…" : pick.title
-            let when = years == 1
-                ? String(localized: "A year ago today")
-                : String(localized: "\(Self.spelled(years)) years ago today")
-            return Notice(line: "\(when): \(title)",
-                          ids: [pick.id.uuidString], key: key)
-        }
-        return nil
     }
 
     /// Two different rooms wearing the same tag today. Tags are filtered in

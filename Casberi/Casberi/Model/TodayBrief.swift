@@ -618,6 +618,20 @@ enum TodayBrief {
             lines.append(faces)
         }
 
+        // 4d. The day's SOURCE MIX (user pick, 2026-08-14, prd §386b: "day's
+        // source mix") — where today came from, as the §382a widget's own
+        // third rung at brief scale: one big, two stacked (§194), each cell
+        // wearing its bridge's real mark. Counts size the cells and are never
+        // printed (§213 — `GenSourceMix`'s own contract; its residual line
+        // names what the three cells leave out). Over the WINDOW's landed
+        // rows, so the module answers the same question the lede's count
+        // asks, drawn instead of tallied.
+        if let mix = sourceMixLine(landed) {
+            ids.append("mix")
+            mark("mix")
+            lines.append(mix)
+        }
+
         // 5 and 6 COMPOSE in the other order than they render (2026-07-31).
         // The leads are the screen's richest statement of a single thing — the
         // post in full, the read with its image and its tap — so an
@@ -1986,6 +2000,25 @@ enum TodayBrief {
     /// too thin to draw", it is one thing that wants you. The ≥2 rule the
     /// runway keeps is about whether a SHAPE is legible; this module has no
     /// shape to be illegible.
+    /// `SourceMix(eyebrow, subline, ["Source N", …])` over the window's
+    /// landed rows — nil under 2 sources or 4 things (one cell is a title,
+    /// and a two-thing day reads as rows, not a map). Import receipts
+    /// excluded, every aggregate's rule. Cells are ranked biggest-first with
+    /// the alphabetical tie so two composes can't disagree.
+    private static func sourceMixLine(_ landed: [Thing]) -> String? {
+        var counts: [String: Int] = [:]
+        for t in landed where !Corpus.isImportReceipt(t) {
+            counts[t.source, default: 0] += 1
+        }
+        let total = counts.values.reduce(0, +)
+        guard counts.count >= 2, total >= 4 else { return nil }
+        let ranked = counts.sorted { a, b in
+            a.value == b.value ? a.key < b.key : a.value > b.value
+        }
+        let cells = ranked.prefix(3).map { "\(tileSafe($0.key)) \($0.value)" }
+        return "mix = SourceMix(\"\(String(localized: "Where today came from"))\", \"\", [\(cells.joined(separator: ", "))])"
+    }
+
     private static func alertsCard(_ things: [Thing], now: Date) -> (line: String, ids: Set<UUID>)? {
         struct Ranked { let thing: Thing; let kind: NotifyKind }
         let alarms: [Ranked] = things.compactMap { t in
@@ -2000,26 +2033,43 @@ enum TodayBrief {
                 ? $0.kind.severity > $1.kind.severity
                 : $0.thing.capturedAt > $1.thing.capturedAt
         }
-        guard !ranked.isEmpty else { return nil }
         let shownAlerts = Array(ranked.prefix(3))
-        let rows = shownAlerts.map { r -> String in
+        // OVERDUE TASKS join the card (user, 2026-08-14, prd §386b: "we need
+        // 'needs you'") — below the alarms, most-overdue first, capped at
+        // two. The alarm class alone fires rarely (a dispute, a rejection),
+        // so the card the mockup sold was standing empty on most days while
+        // real past-due tasks sat only in the runway's attention dots.
+        // Scoped to `overdueSources` — the `overdue` composer's own rule: a
+        // task source's past-due row is actionable; a bridge deadline that
+        // already passed (an expired grant) is history wearing a clock.
+        let alarmIDs = Set(shownAlerts.map { $0.thing.id })
+        let overdue = things
+            .filter {
+                $0.mark != .done && KeptAskComposers.overdueSources.contains($0.source)
+                    && ($0.dueAt ?? .distantFuture) < now && !alarmIDs.contains($0.id)
+            }
+            .sorted { ($0.dueAt ?? now) < ($1.dueAt ?? now) }
+            .prefix(2)
+        guard !shownAlerts.isEmpty || !overdue.isEmpty else { return nil }
+        let shown = shownAlerts.map(\.thing) + Array(overdue)
+        let rows = shown.map { r -> String in
             // A deadline's own clock when it has one, else when it landed —
             // never a manufactured urgency word. `dueAt` is the only real
             // clock any of these carry (§306's own finding).
             let meta: String
-            if let due = r.thing.dueAt {
+            if let due = r.dueAt {
                 meta = due < now
                     ? String(localized: "overdue")
                     : due.formatted(.dateTime.weekday(.abbreviated).hour().minute())
             } else {
-                meta = r.thing.capturedAt.formatted(.dateTime.weekday(.abbreviated).hour().minute())
+                meta = r.capturedAt.formatted(.dateTime.weekday(.abbreviated).hour().minute())
             }
-            return [genSafe(clamp(r.thing.title, max: 46)), genSafe(meta),
-                    genSafe(r.thing.source), r.thing.id.uuidString].joined(separator: "|")
+            return [genSafe(clamp(r.title, max: 46)), genSafe(meta),
+                    genSafe(r.source), r.id.uuidString].joined(separator: "|")
         }
-        let eyebrow = ranked.count == 1
+        let eyebrow = shown.count == 1
             ? String(localized: "Needs you")
-            : String(localized: "Needs you · \(ranked.count)")
+            : String(localized: "Needs you · \(shown.count)")
         // The ids go back to the caller so the runway can SKIP them (2026-08-10).
         // Only the rows actually drawn — an alert past the cap of 3 was never
         // shown, so the runway naming it is the honest place to see it, not a
@@ -2029,7 +2079,7 @@ enum TodayBrief {
         // without this every dispute appears once as an alarm and again four
         // rows below as an ordinary deadline.
         return ("alerts = Alerts(\"\(eyebrow)\", \"\(rows.joined(separator: ";"))\")",
-                Set(shownAlerts.map { $0.thing.id }))
+                Set(shown.map(\.id)))
     }
 
     /// The runway (user, 2026-08-08: "Work is the only room organized by

@@ -1039,7 +1039,17 @@ struct Composer: View {
         // longer costs height, and the brief landing filters several of these
         // back out (`dockedSuggestions` drops what the brief already answers),
         // so a 4-slot set could dock as a single lonely chip.
+        // THE GENERIC ASK CHIPS RETIRED (user ruling 2026-08-14, prd §386b:
+        // "the chips we have need to go too … beyond that we just had chips
+        // to have them"). The whole suggestion machine above still runs — it
+        // feeds the decay counters and the recognizers — but the only chip
+        // that RENDERS is the observation one, because it is the opposite of
+        // a chip-for-chips'-sake: it exists only on a day something real
+        // happened, and it is the glint's landing. Everything evergreen
+        // ("What's this week?", the recaps, the wallet ask) is a typed ask
+        // away, and the kept pills remain the person's own standing set.
         suggestions = selectSuggestions(from: ranked, slots: 7)
+            .filter { $0.kind == "observation" }
         // What this open actually OFFERED, for the decay counters (§175). A
         // handed-off ask (a status chip's question) fills the field and HIDES
         // the chip row — the tiles never had a chance to be tapped, so that
