@@ -100,6 +100,20 @@ KNOWN_EXEMPT = {
     # borrow. A mark's badge size doesn't communicate anything by growing —
     # it's a fixed dot, always the same fraction of the disc it sits on.
     "AssetMark.swift:AssetMark": "badge size is a fixed proportion of `size`, not data",
+    # The check's premise is that a drawing whose PROPORTIONS ARE THE
+    # INFORMATION must grow, or the magnitude is asserted rather than
+    # perceived. DemoNFTArt's proportions are the information about nothing:
+    # every size and position comes from a seeded PRNG, so the shapes carry no
+    # quantity and there is no magnitude to perceive. It is a picture standing
+    # in for an NFT (prd §387), not a chart.
+    #
+    # It also already HAS its one entrance, one level up and shared, which is
+    # the FlowFigure shape above: the tiles ride `WalletNFTShelfCard`, whose
+    # section carries `RowEntrance`. A per-tile entrance would be a second
+    # clock on one card — the double-deal BerryRain's "ONE gesture deals ONE
+    # shower" lesson forbids, and it would animate eight tiles independently
+    # inside a strip that arrives as one object. A conscious ruling.
+    "DemoNFTArt.swift:DemoNFTArt": "seeded decoration, not a magnitude; entrance is the card's RowEntrance",
 }
 
 ENTRANCE_TOKENS = (
