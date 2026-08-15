@@ -578,6 +578,14 @@ private struct GenInsight: View {
         return inAgentAnswer ? nil : String(localized: "Noticed")
     }
 
+    /// Re-glint the grounding rows under this claim (prd §384). Shared by the
+    /// tap gesture and its VoiceOver rotor action so the two can never drift
+    /// into doing different things — both are only attached inside an answer.
+    private func glintEvidence() {
+        DSHaptic.selection()
+        GenEvidenceGlint.shared.tick += 1
+    }
+
     /// ONE eyebrow and ONE paragraph (user 2026-07-18, second pass: the
     /// three-mini-section card "hasn't earned that space" — Home now composes
     /// just-landed + while-you-were-away + the model's connection into a single
@@ -606,7 +614,7 @@ private struct GenInsight: View {
                         .foregroundStyle(DS.textPrimary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
-            } else {
+            } else if inAgentAnswer {
                 Text(el.str(0))
                     .dsText(.callout15)
                     .foregroundStyle(DS.textPrimary)
@@ -617,11 +625,27 @@ private struct GenInsight: View {
                     // affordance is drawn, nothing navigates, and a doc with
                     // no rows simply answers with stillness.
                     .contentShape(Rectangle())
-                    .onTapGesture {
-                        guard inAgentAnswer else { return }
-                        DSHaptic.selection()
-                        GenEvidenceGlint.shared.tick += 1
+                    .onTapGesture { glintEvidence() }
+                    // VoiceOver cannot perform a bare tap gesture, so the same
+                    // move is offered as a rotor ACTION rather than a Button:
+                    // this is supplementary and draws no affordance, and a
+                    // button trait would announce a control that isn't one.
+                    //
+                    // The branch is what scopes it. `inAgentAnswer` is an
+                    // environment flag that is FALSE everywhere else this
+                    // prose renders, so an unconditional action would offer
+                    // every VoiceOver user a rotor entry that does nothing —
+                    // the dead control the honesty rule bans, and the exact
+                    // defect App Store review rejected the Mac build for under
+                    // 2.1(a), one surface over.
+                    .accessibilityAction(named: Text("Show the evidence")) {
+                        glintEvidence()
                     }
+            } else {
+                Text(el.str(0))
+                    .dsText(.callout15)
+                    .foregroundStyle(DS.textPrimary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

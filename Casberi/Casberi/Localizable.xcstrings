@@ -55585,6 +55585,34 @@
         }
       }
     },
+    "Show the evidence": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Mostrar las pruebas"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "根拠を表示"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "근거 보기"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "显示依据"
+          }
+        }
+      }
+    },
     "Showing %lld of %lld": {
       "localizations": {
         "en": {
