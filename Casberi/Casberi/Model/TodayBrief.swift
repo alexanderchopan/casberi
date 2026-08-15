@@ -973,11 +973,9 @@ enum TodayBrief {
         // left a hole between the header and the card it names. The headers
         // are the chapters now wherever they exist; the list below survives
         // for the scoped briefs, which have no headers at all.
-        let headed = Set(sectionPlan.flatMap(\.ids))
-        let chapters = ["alerts", "hero", "themes", leadRefs.first]
+        var chapters = ["alerts", "hero", "themes", leadRefs.first]
             .compactMap { $0 }
             .filter { ids.contains($0) && $0 != ids.first }
-            .filter { category != nil || !headed.contains($0) }
         // The SUBJECT grouping (prd §386g) — unscoped only, and last, so it
         // has the final word on arrangement. A scoped brief keeps the rank
         // order: it covers one subject already, so naming sections inside it
@@ -986,6 +984,16 @@ enum TodayBrief {
             let grouped = sectioned(ids: ids, qualifiers: sectionQualifiers)
             ids = grouped.ids
             lines += grouped.lines
+            // THE SECTION HEADERS ARE THE CHAPTERS (2026-08-15, §386i
+            // amendment). §386g filtered headed modules out of the chapter
+            // list so the air wouldn't stack twice — right on the phone, and
+            // it silently EMPTIED the list, which is the one thing
+            // `GenFrontPage` keys its wide-surface columns on: the Mac brief
+            // fell back to a single narrow column and nothing reported it
+            // (`qualifies` returning false is indistinguishable from a doc
+            // that never had chapters). The headers are the brief's
+            // movements now, so they are the column seams.
+            chapters = grouped.sections.filter { $0 != ids.first }
         }
         // The QUIET set (prd §386d) — modules whose line is byte-identical to
         // the last brief this device SHOWED. Arg 2, absent everywhere else,
@@ -1038,10 +1046,12 @@ enum TodayBrief {
     /// plan forgot it. `lede` is deliberately unfiled — it is the headline,
     /// above every section.
     private static func sectioned(ids: [String],
-                                  qualifiers: [String: String]) -> (ids: [String], lines: [String]) {
+                                  qualifiers: [String: String])
+        -> (ids: [String], lines: [String], sections: [String]) {
         var remaining = ids
         var out: [String] = []
         var lines: [String] = []
+        var sections: [String] = []
         // The headline stays at the very top, outside every section.
         if let lede = remaining.firstIndex(of: "lede") {
             out.append(remaining.remove(at: lede))
@@ -1057,13 +1067,14 @@ enum TodayBrief {
             // Nowhere else: "Money · 4" would be counting cards, which is
             // the tally §213 bans.
             lines.append("\(id) = Section(\"\(genSafe(section.title))\", \"\(genSafe(qualifiers[section.title] ?? ""))\", \"\(section.hue)\")")
+            sections.append(id)
             out.append(id)
             out.append(contentsOf: members)
             remaining.removeAll { members.contains($0) }
         }
         // Whatever the plan didn't name, in its original order.
         out.append(contentsOf: remaining)
-        return (out, lines)
+        return (out, lines, sections)
     }
 
     /// The module order, permuted by TIME OF DAY (2026-08-14, prd §386d).
