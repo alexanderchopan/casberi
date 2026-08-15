@@ -1110,10 +1110,52 @@ xcrun simctl terminate "$DEVICE" "$BUNDLE" 2>/dev/null || true
 # carries; there is no clean way to derive a Swift `case` → source-string
 # mapping from a shell script without hand-parsing the same switch this
 # hook already mirrors by hand).
+# FURNISH THE DEMO — its own step since 2026-08-15, and it has to be.
+#
+# This block used to live inside "Demo panel figure-kind coverage", which was
+# RETIRED with the agent panel the same morning (prd §386p). That step owned the
+# demo entry, the pour wait AND the `POURED` flag — and FIVE later steps read
+# that flag. Deleting it left every one of them dereferencing an unset variable
+# under `set -euo pipefail`, so `verify.sh` aborted at the first of them with
+# `POURED: parameter not set` and could not complete AT ALL. The ship gate was
+# down from that commit until this one, which is the worst possible thing for a
+# gate to be, because a pass that cannot finish looks from outside exactly like
+# a pass nobody has run.
+#
+# The lesson is the one §386p's own entry already states about guards moving
+# files, one level up: **when a step is deleted, whatever LATER steps take from
+# it moves too.** A retired check that was the only producer of shared state is
+# not a subtraction of one step, it is a subtraction of every step downstream.
+#
+# Kept deliberately generic — it furnishes the demo and says whether the pour
+# finished, and nothing about any one surface — so the next coverage check to be
+# retired takes only itself.
+step "Demo pour"
+POUR_LOG="$OUT/demo-pour.log"
+xcrun simctl terminate "$DEVICE" "$BUNDLE" 2>/dev/null || true
+xcrun simctl spawn "$DEVICE" log stream \
+  --predicate 'process == "Casberi" AND eventMessage CONTAINS "demoMode:"' \
+  --style compact > "$POUR_LOG" 2>/dev/null &
+POURPID=$!
+sleep 1
+xcrun simctl launch "$DEVICE" "$BUNDLE" -fresh YES -onboarded YES -demoEnter YES >/dev/null 2>&1 || true
+POURED=""
+for i in {1..25}; do
+  sleep 1
+  grep -q "demoMode: poured" "$POUR_LOG" 2>/dev/null && { POURED=1; break; }
+done
+kill $POURPID 2>/dev/null || true
+if [[ -z "$POURED" ]]; then
+  print -P "%F{yellow}⚠ demo never finished pouring (see $POUR_LOG) — the demo coverage checks below will skip%f"
+else
+  sleep 2
+  print -P "%F{green}✓ demo poured%f"
+fi
+
 step "Demo room-head coverage"
 ROOMHEAD_LOG="$OUT/demo-roomhead-coverage.log"
 if [[ -z "$POURED" ]]; then
-  print -P "%F{yellow}⚠ demo never finished pouring (see the panel-coverage step above) — skipping room-head coverage%f"
+  print -P "%F{yellow}⚠ demo never finished pouring (see the Demo pour step above) — skipping room-head coverage%f"
 else
   xcrun simctl terminate "$DEVICE" "$BUNDLE" 2>/dev/null || true
   typeset -A ROOM_HEADS=(
@@ -1181,6 +1223,18 @@ REACH_LOG="$OUT/demo-reaches-nothing.log"
 if [[ -z "$POURED" ]]; then
   print -P "%F{yellow}⚠ demo never finished pouring (see the panel-coverage step above) — skipping the reach check%f"
 else
+  xcrun simctl terminate "$DEVICE" "$BUNDLE" 2>/dev/null || true
+  # CLEAR THE LEDGER FIRST (2026-08-15). `NetworkLedger` is cumulative and
+  # persisted — correct for the screen it serves, fatal for a check that asks
+  # "did the demo reach anything?", because without a baseline the answer covers
+  # the whole life of the install. On a clean CI container that difference never
+  # showed; on a dev machine that had spent an afternoon syncing a real wallet
+  # this step failed naming 29 hosts, not one of them touched by the demo.
+  # Measured immediately after, on a wiped container: the demo reaches ZERO.
+  # A check that reports someone else's traffic as the demo's is worse than no
+  # check, so the baseline is now established rather than assumed.
+  xcrun simctl launch "$DEVICE" "$BUNDLE" -onboarded YES -receiptsForget YES >/dev/null 2>&1 || true
+  sleep 2
   xcrun simctl terminate "$DEVICE" "$BUNDLE" 2>/dev/null || true
   # Walk the rooms most likely to reach: both prediction books (the per-view
   # fetch that started this), the token room, and a thing sheet (the page

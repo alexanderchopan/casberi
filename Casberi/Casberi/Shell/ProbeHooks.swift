@@ -226,6 +226,30 @@ enum ProbeHooks {
             NSLog("bridgeHealthProbe: attributed=%d shutOut=%d",
                   book.count, BridgeHealth.allNeedingReconnect().count)
         },
+        // `-receiptsForget YES` empties the network receipts ledger, so a
+        // measurement that follows describes only what happened AFTER it
+        // (2026-08-15).
+        //
+        // The ledger is CUMULATIVE and persisted, which is right for the screen
+        // it serves — "what this app has actually reached" is a running record,
+        // not a session. But it makes any "did X reach anything?" check a
+        // statement about the whole life of that install, and `verify.sh`'s
+        // "Demo reaches nothing" step was exactly that check with no way to
+        // establish a baseline. On a clean CI container it was correct; on a
+        // dev machine that had spent an afternoon syncing a real wallet it
+        // failed confidently, naming 29 hosts, none of which the demo had
+        // touched — the cry-wolf class this repo's audits go out of their way
+        // to avoid. Measured the same day: with the ledger cleared first, the
+        // demo reaches ZERO hosts.
+        //
+        // Declared BEFORE `receiptsProbe` — hooks run in list order, so a
+        // launch passing both clears and then dumps an empty ledger, which is
+        // the useful reading ("start from nothing") rather than a dump followed
+        // by a wipe of the thing just read.
+        Hook(key: "receiptsForget") { _, _ in
+            NetworkLedger.shared.forget()
+            NSLog("Receipts probe: ledger cleared")
+        },
         Hook(key: "receiptsProbe") { _, _ in
             let rows = NetworkLedger.shared.snapshot()
             var undeclared = 0
