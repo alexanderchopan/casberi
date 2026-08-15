@@ -220,6 +220,38 @@ struct BandRow: View {
                   let end = thing.title.range(of: " on Peer", range: start.upperBound..<thing.title.endIndex)
             else { return nil }
             return String(thing.title[start.upperBound..<end.lowerBound])
+        // WHICH ACT IT WAS, for the two bulk rooms that mix several and could
+        // say so with none of them (2026-08-14).
+        //
+        // Both stamp the fact already — X's §308 facets and Snapchat's §309
+        // tags — and both landed it for the FILTER, so it reached the ask and
+        // the retriever and never the row. In the All feed that is the whole
+        // difference between a sentence you wrote and a sentence you liked,
+        // shown identically.
+        //
+        // This does NOT reopen the 2026-07-23 ruling that pulled the project
+        // tag out of this slot. That was pulled because a bridge-assigned
+        // literal ("Watchlist", "NFT") sits on EVERY row from its source, so it
+        // stopped distinguishing anything and became noise. These vary WITHIN
+        // their source, which is the property that ruling actually required.
+        //
+        // Each stays silent on its own default, `contextLabel`'s own grammar:
+        // name what's unusual, say nothing for the plain case, where the row
+        // already reads as what it is. So an ordinary X post gets no label —
+        // "Post" on most of an archive is the noise the ruling warned about,
+        // one word further on. Snapchat has no default: a saved chat and a
+        // memory are two different things arriving in one room, so both speak.
+        //
+        // Matched against the RAW tag, never a localized one — the importers
+        // write these as fixed English identifiers (`tags = [row.replyTo == nil
+        // ? "Post" : "Reply"]`), so a translated build must still match.
+        case "X":
+            if let why = SocialThread.contextLabel(for: thing) { return why }
+            return thing.tags.contains("Reply") ? String(localized: "Reply") : nil
+        case "Snapchat":
+            if thing.tags.contains("Memory") { return String(localized: "Memory") }
+            return thing.tags.contains("Conversation")
+                ? String(localized: "Conversation") : nil
         default:          return nil
         }
     }
@@ -2377,8 +2409,15 @@ struct PostCard: View {
                     Text(why)
                         .dsText(.label12).fontWeight(.semibold)
                         // A source with no honest brand color labels itself
-                        // neutral, not blue (2026-08-10).
-                        .foregroundStyle(DS.washHue(for: thing.source) ?? DS.neutralBadge)
+                        // neutral, not blue (2026-08-10) — and the hue it does
+                        // show is now held to the text ramp's contrast bar
+                        // (2026-08-14). This was `washHue`, which is built for
+                        // a field BEHIND content and floors brightness at 0.60:
+                        // as ink on the light page it cleared 4.5:1 for 29 of
+                        // the 85 hues that have one. A post card paints no
+                        // background of its own, so the page is the right thing
+                        // to measure against here, exactly as in `BandRow`.
+                        .foregroundStyle(DS.legibleInk(for: thing.source) ?? DS.textTertiary)
                         .lineLimit(1)
                 }
                 Spacer()
@@ -2601,9 +2640,10 @@ struct SocialThreadCard: View {
                 if let why = SocialThread.contextLabel(for: head) {
                     Text(why)
                         .dsText(.label12).fontWeight(.semibold)
-                        // A source with no honest brand color labels itself
-                        // neutral, not blue (2026-08-10).
-                        .foregroundStyle(DS.washHue(for: head.source) ?? DS.neutralBadge)
+                        // Held to the contrast bar, `PostCard`'s reasoning
+                        // (2026-08-14) — the two draw the same label and must
+                        // not disagree about how it is inked.
+                        .foregroundStyle(DS.legibleInk(for: head.source) ?? DS.textTertiary)
                         .lineLimit(1)
                 }
                 Spacer()
