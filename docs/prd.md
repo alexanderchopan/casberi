@@ -23466,3 +23466,21 @@ WATCHED — the reveal fix is reasoned from `GenStream.stream`'s `els = [:]` and
 from `GenParser` keying elements in a dictionary (so moving `dayread`'s line
 cannot reorder the render), not observed. The source-room columns are likewise
 unmeasured, per the caveat above.
+
+### 382b. The curve says the total moved; the band says what moved it (user: "what are you asking if we want wallet flows to show not just sparklines?", then "ok, do it but we don't need counterparties b/c i dunno how it would fit", 2026-08-14)
+
+**A sparkline raises a question it cannot settle.** The wallet tile's curve answers *did the total move* — and every time it does, the next question is *what moved it*, which nothing on the Home Screen could answer. `WalletFlow.Band` has answered it in the room since it shipped: a week of money in against money out.
+
+**No counterparty names, by ruling.** The room names every lane; at 170pt a name is a truncation. Dropping them also settles a §374-adjacent question the tile would otherwise raise on a lock screen — **who you pay is arguably more exposing than what you hold**, and this way the tile never says.
+
+**What could NOT be dropped with them is the disclosure.** `WalletFlow.Band` carries `unpricedCount` and `predatingCount` separately and states the rule in its own header: "a band drawn from 6 of 9 moves is a different claim from one drawn from all 9, and the no-silent-caps rule says the drawing has to say so." Losing the lane names loses detail; losing the counts would make two bars claim a completeness they don't have. So the counts travel and the tile prints "6 of 9 priced" whenever there is a gap. `owesDisclosure` is the FACT and lives in `Shared/`; the SENTENCE lives in the widget, because that file compiles into the app and the share extension too and a widget-only string declared there lands in all three catalogs where two can never show it.
+
+**§374 forced a structural correction the first draft got wrong.** Zeroing the figures under Hide balances also zeroes the bars, because the widths were derived from them — which would have deleted the shape the ruling explicitly keeps. `inWeight`/`outWeight` are now computed by the publisher from the real figures and travel ALWAYS; `inUSD`/`outUSD` are optional and withheld. Same split the curve above already makes, now made impossible to get wrong.
+
+**Two drawing rules, both about zero.** A side of zero draws NOTHING, never a hairline — "no money went out this week" and "a sliver went out" are different weeks, and a minimum-width stub is how they start looking the same. And `weights` returns (0, 0) rather than dividing when nothing priced.
+
+**Nothing is gated in the widget's publisher**, the same note `TodayBrief.flowBand` carries: `WalletFlow.band` already declines on an unpriceable window, on fewer than two lanes, and on lanes too thin to draw honestly. Re-deciding any of that would be a second opinion that could disagree with the room's.
+
+**It made the publish pass CHEAPER, not more expensive.** `publishAll` now takes the corpus the foreground pass already materialised instead of running its own reads, so the day-lead fetch disappeared and the flow needed none — two fewer main-actor fetches per foreground than before this landed. It is also the array `TodayBrief.flowBand` reads, so the tile and the brief make the same claim about the same week by construction rather than by two reads that could disagree.
+
+Three new mutations in `widget-selftest.sh` (22 total): a partial band that stops disclosing, a total that counts only drawn legs so the disclosure understates the gap, and a zero side drawn as a hairline.

@@ -133,7 +133,7 @@ grep -q 'kind: WidgetWallet.kind' "$TMP/walletw.nc" \
 # whole feature is dead in one configuration if it lands in only one — and the
 # configuration people actually ship is the `#else` half, which no simulator
 # run and no probe here would ever exercise.
-[[ "$(grep -c 'WidgetPublish.publishAll(context:' "$TMP/root.nc")" -ge 2 ]] \
+[[ "$(grep -c 'WidgetPublish.publishAll(things:' "$TMP/root.nc")" -ge 2 ]] \
   || { print -u2 "✗ WidgetPublish.publishAll is not called on both branches of RootShell's DEBUG fork —"; \
        print -u2 "  every tile would be stale in whichever configuration is missing it."; exit 1; }
 
@@ -407,6 +407,46 @@ check(WidgetRunway.positions(for: [], now: now) == nil, "no deadlines, no rail")
 check(WidgetRunway.positions(for: [now], now: now) == nil,
       "a zero-width window has no shape to draw — the rows say it instead")
 
+// ── the flow band ───────────────────────────────────────────────────────────
+// Two bars, no counterparty names (the user's ruling) — but the DISCLOSURE
+// could not be dropped with them: `WalletFlow.Band` states that a band drawn
+// from 6 of 9 moves is a different claim from one drawn from all 9.
+let full = WidgetFlowBand(inWeight: 1, outWeight: 0.5, inUSD: 2400, outUSD: 1200,
+                          unpriced: 0, predating: 0, priced: 9)
+check(!full.owesDisclosure, "a complete band says nothing — there is no gap to disclose")
+check(!full.isPartial, "…and knows it isn't partial")
+eq(full.total, 9, "a complete band's total is its priced legs")
+
+let partial = WidgetFlowBand(inWeight: 1, outWeight: 0.5, inUSD: 2400, outUSD: 1200,
+                             unpriced: 2, predating: 1, priced: 6)
+check(partial.isPartial, "a band missing legs is partial")
+eq(partial.total, 9, "the total counts unpriced AND predating legs, not just drawn ones")
+check(partial.owesDisclosure, "…and SAYS so — the no-silent-caps rule")
+
+// The weights are the shape, and they survive §374 losing the figures.
+let (wIn, wOut) = WidgetFlowBand.weights(inUSD: 2400, outUSD: 1200)
+eq(wIn, 1.0, "the larger side fills the track")
+eq(wOut, 0.5, "and the smaller reads against it")
+let (zIn, zOut) = WidgetFlowBand.weights(inUSD: 0, outUSD: 0)
+eq(zIn, 0.0, "a week with no priced flow draws nothing")
+eq(zOut, 0.0, "…on both sides")
+let (oIn, oOut) = WidgetFlowBand.weights(inUSD: 0, outUSD: 900)
+eq(oIn, 0.0, "a side of ZERO draws nothing, never a hairline —")
+eq(oOut, 1.0, "…while the other still fills the track")
+
+let hiddenBand = WidgetFlowBand(inWeight: 1, outWeight: 0.5, inUSD: nil, outUSD: nil,
+                                unpriced: 0, predating: 0, priced: 4, hidden: true)
+check(hiddenBand.inUSD == nil && hiddenBand.outUSD == nil,
+      "§374 withholds the flow figures, exactly as it withholds the total")
+eq(hiddenBand.inWeight, 1.0, "…and the RATIO stays, because a ratio is a shape")
+eq(hiddenBand.outWeight, 0.5, "…on both bars")
+_ = WidgetPayload.write(hiddenBand, key: WidgetWallet.flowKey,
+                        stampKey: WidgetWallet.flowStampKey, defaults: d)
+check(WidgetWallet.flow(now: now, defaults: d)?.inUSD == nil,
+      "the withheld figures are still absent after a round trip")
+eq(WidgetWallet.flow(now: now, defaults: d)?.outWeight, 0.5,
+   "…and the shape still arrives")
+
 // ── the ask link ────────────────────────────────────────────────────────────
 // A kept ask's title is whatever the person typed, and `CharacterSet
 // .urlQueryAllowed` PERMITS `&` — legal in a query string, fatal inside a query
@@ -559,6 +599,20 @@ mutate "the runway window excludes now — overdue items draw AHEAD of the marke
 mutate "the runway drops its end padding — a dot at either extreme is clipped in half" \
   WidgetPayload.swift \
   'static let pad = 0.05|||static let pad = 0.0' || mfail=1
+
+# The flow band. Dropping the lane names was a ruling; dropping the disclosure
+# would make two bars claim a completeness they don't have.
+mutate "a partial band stops disclosing that legs are missing" \
+  WidgetPayload.swift \
+  'var owesDisclosure: Bool { isPartial && total > 0 }|||var owesDisclosure: Bool { false }' || mfail=1
+mutate "the total counts only the drawn legs, so the disclosure understates the gap" \
+  WidgetPayload.swift \
+  'var total: Int { priced + unpriced + predating }|||var total: Int { priced }' || mfail=1
+mutate "a zero side is drawn as a hairline instead of nothing" \
+  WidgetPayload.swift \
+  'guard scale > 0 else { return (0, 0) }
+        return (inUSD / scale, outUSD / scale)|||guard scale > 0 else { return (0, 0) }
+        return (max(0.08, inUSD / scale), max(0.08, outUSD / scale))' || mfail=1
 
 # The ask link. THE SECOND BUG THIS HARNESS CAUGHT (2026-08-14): the shipped
 # first cut used `.urlQueryAllowed` unmodified, so "What's new with M&S?"

@@ -1426,7 +1426,7 @@ struct RootShell: View {
                     _ = await TodayBrief.compose(things: surfaced, context: modelContext)
                 }
                 LaunchPerf.time("refreshWhisper") { refreshWhisper(things: surfaced) }
-                LaunchPerf.time("widgetPublish") { WidgetPublish.publishAll(context: modelContext) }
+                LaunchPerf.time("widgetPublish") { WidgetPublish.publishAll(things: surfaced, context: modelContext) }
                 #else
                 let surfaced = Corpus.surfaced((try? modelContext.fetch(d)) ?? [])
                 HomeInsightStore.shared.refresh(from: surfaced)
@@ -1437,7 +1437,7 @@ struct RootShell: View {
                 // The whisper's compose rides the same corpus walk this
                 // Task already paid for — never its own fetch.
                 refreshWhisper(things: surfaced)
-                WidgetPublish.publishAll(context: modelContext)
+                WidgetPublish.publishAll(things: surfaced, context: modelContext)
                 #endif
               }
             }

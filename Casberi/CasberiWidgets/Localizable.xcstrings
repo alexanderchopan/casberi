@@ -141,6 +141,40 @@
         }
       }
     },
+    "%lld of %lld priced": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$lld of %2$lld priced"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld de %lld con precio"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld/%lld に価格あり"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld/%lld 가격 확인됨"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld/%lld 已计价"
+          }
+        }
+      }
+    },
     "%lld saved": {
       "localizations": {
         "es": {
@@ -389,6 +423,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "按最近的截止时间排列。"
+          }
+        }
+      }
+    },
+    "In": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Entró"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "入金"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "들어옴"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "流入"
           }
         }
       }
@@ -753,6 +815,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "从控制中心打开你的一天。"
+          }
+        }
+      }
+    },
+    "Out": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Salió"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "出金"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "나감"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "流出"
           }
         }
       }

@@ -182,6 +182,68 @@ struct WidgetDueRow: View {
     }
 }
 
+/// A week of money in against money out, as two bars (2026-08-14, prd §382b).
+///
+/// `GenWalletFlow` at widget scale, minus the counterparty lanes — the room
+/// names every lane, and at 170pt a name is a truncation (user: "we don't need
+/// counterparties b/c i dunno how it would fit"). Dropping them also settles a
+/// §374-adjacent question a lock screen would otherwise raise: who you pay is
+/// arguably more exposing than what you hold, and this way the tile never says.
+///
+/// Two rules the drawing keeps:
+///
+///  * **A side of zero draws nothing**, never a hairline. "No money went out
+///    this week" and "a sliver went out" are different weeks, and a minimum
+///    width stub is how they start looking the same.
+///  * **The widths come from `inWeight`/`outWeight`, not from the figures**,
+///    so Hide balances (§374) takes the numbers and leaves the ratio standing —
+///    the same split the curve above it already makes.
+struct WidgetFlowLanes: View {
+    let band: WidgetFlowBand
+    /// The small family has no room for figures beside the bars; the ratio is
+    /// the reading there, and the total above it is the money.
+    var showsFigures = true
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            lane(weight: band.inWeight, usd: band.inUSD,
+                 label: String(localized: "In"),
+                 fill: AnyShapeStyle(Color.green.opacity(0.85)))
+            lane(weight: band.outWeight, usd: band.outUSD,
+                 label: String(localized: "Out"),
+                 fill: AnyShapeStyle(Color.white.opacity(0.32)))
+        }
+    }
+
+    private func lane(weight: Double, usd: Double?, label: String,
+                      fill: AnyShapeStyle) -> some View {
+        HStack(spacing: 7) {
+            Text(label)
+                .dsText(.widgetSubline11)
+                .foregroundStyle(.white.opacity(0.55))
+                .frame(width: 24, alignment: .leading)
+            GeometryReader { geo in
+                // `weight > 0` and not `>= 0`: see the type's own note — a zero
+                // side is drawn as nothing at all.
+                if weight > 0 {
+                    Capsule()
+                        .fill(fill)
+                        .frame(width: max(3, geo.size.width * weight), height: 12)
+                        .frame(height: geo.size.height, alignment: .center)
+                }
+            }
+            .frame(height: 12)
+            if showsFigures {
+                Text(usd.map { MoneyFormat.compactUSD($0) } ?? WidgetMask.figure)
+                    .dsText(.widgetSubline11)
+                    .foregroundStyle(.white.opacity(0.7))
+                    .monospacedDigit()
+                    .lineLimit(1)
+            }
+        }
+    }
+}
+
 /// How a figure is drawn when "Hide wallet balances" is on (§374).
 ///
 /// §374's rule 2: a hidden value must read as HIDDEN — never as zero and never

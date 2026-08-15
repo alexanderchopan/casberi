@@ -43,6 +43,11 @@ struct WalletWidget: Widget {
 
 struct WalletEntry: TimelineEntry {
     let date: Date
+    /// The week's money in against money out (2026-08-14, prd §382b) — the
+    /// question the curve raises and cannot settle. nil when the band declined,
+    /// which `WalletFlow.band` does on an unpriceable window, on fewer than two
+    /// lanes, and on lanes too thin to draw honestly.
+    var flow: WidgetFlowBand?
     /// nil when there is no watched wallet, or fewer than two aligned samples
     /// across the ones there are — in which case the tile declines rather than
     /// inventing a flat line out of one point.
@@ -60,11 +65,12 @@ struct WalletEntry: TimelineEntry {
 
 struct WalletProvider: TimelineProvider {
     func placeholder(in context: Context) -> WalletEntry {
-        WalletEntry(date: .now, line: nil)
+        WalletEntry(date: .now, flow: nil, line: nil)
     }
 
     func getSnapshot(in context: Context, completion: @escaping (WalletEntry) -> Void) {
-        completion(WalletEntry(date: .now, line: WidgetWallet.published()))
+        completion(WalletEntry(date: .now, flow: WidgetWallet.flow(),
+                               line: WidgetWallet.published()))
     }
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<WalletEntry>) -> Void) {
@@ -74,7 +80,8 @@ struct WalletProvider: TimelineProvider {
         // hasn't opened the app: the figure stays put, the "as of" grows, which
         // is the pair being honest together.
         let next = Calendar.current.date(byAdding: .hour, value: 1, to: now) ?? now
-        completion(Timeline(entries: [WalletEntry(date: now, line: WidgetWallet.published(now: now))],
+        completion(Timeline(entries: [WalletEntry(date: now, flow: WidgetWallet.flow(now: now),
+                                                  line: WidgetWallet.published(now: now))],
                             policy: .after(next)))
     }
 }
@@ -140,10 +147,19 @@ struct WalletWidgetView: View {
                                 .lineLimit(1)
                         }
                         Spacer(minLength: 4)
+                        if let flow = entry.flow {
+                            WidgetFlowLanes(band: flow, showsFigures: family == .systemMedium)
+                            if family == .systemMedium, let note = pricedNote(flow) {
+                                Text(note)
+                                    .dsText(.widgetSubline11)
+                                    .foregroundStyle(.white.opacity(0.45))
+                                    .lineLimit(1)
+                            }
+                        }
                         WidgetSpark(normalized: line.normalizedPoints)
                             .stroke(accent, style: StrokeStyle(lineWidth: 2, lineCap: .round,
                                                                lineJoin: .round))
-                            .frame(height: family == .systemMedium ? 44 : 34)
+                            .frame(height: flowHeight(family))
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                 }
@@ -177,6 +193,25 @@ struct WalletWidgetView: View {
         guard let pct = entry.line?.changePct else { return .white.opacity(0.6) }
         if MoneyFormat.isFlatPercent(pct) { return .white.opacity(0.6) }
         return pct > 0 ? .green : .red
+    }
+
+    /// "6 of 9 priced" — the sentence for `WidgetFlowBand.owesDisclosure`.
+    ///
+    /// Written HERE rather than in the payload because that file compiles into
+    /// the app and the share extension too, and a widget-only sentence declared
+    /// there lands in all three string catalogs where two of them can never
+    /// show it.
+    private func pricedNote(_ band: WidgetFlowBand) -> String? {
+        guard band.owesDisclosure else { return nil }
+        return String(localized: "\(band.priced) of \(band.total) priced")
+    }
+
+    /// The curve gives up height to the lanes when both are drawn — the lanes
+    /// carry a reading the curve cannot, so they win the space rather than the
+    /// tile trying to keep both at full size and clipping.
+    private func flowHeight(_ family: WidgetFamily) -> CGFloat {
+        guard entry.flow != nil else { return family == .systemMedium ? 44 : 34 }
+        return family == .systemMedium ? 26 : 20
     }
 
     /// Two causes, one sentence — and it names the ACTION rather than the

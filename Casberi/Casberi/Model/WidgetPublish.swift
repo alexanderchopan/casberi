@@ -23,18 +23,27 @@ enum WidgetPublish {
     /// Publishes every payload and reloads only the timelines whose bytes
     /// actually changed.
     ///
-    /// `things` is the caller's existing corpus slice (the newest-600 the
-    /// foreground pass already paid for) — used for nothing here, deliberately:
-    /// deadlines run their own fetch because the row most likely to carry one is
-    /// exactly the row that slice can't hold. See `deadlines(context:)`.
-    static func publishAll(context: ModelContext) {
+    /// `things` is the caller's OWN corpus slice — the newest-600 the foreground
+    /// pass already paid for. Reusing it rather than fetching again is both
+    /// cheaper and MORE correct: `TodayBrief.flowBand` computes the brief's own
+    /// band from exactly this array, so the tile and the brief make the same
+    /// claim by construction rather than by two reads that could disagree.
+    ///
+    /// Deadlines are the one payload that still runs its own fetch, and for a
+    /// reason this array cannot fix — see `deadlines(context:)`.
+    static func publishAll(things: [Thing], context: ModelContext) {
         guard let group = UserDefaults(suiteName: SharedStore.appGroup) else { return }
+        let things = things.live
         var stale: [String] = []
 
         if writeAsks(to: group) { stale.append(WidgetAsks.kind) }
-        if WidgetPayload.write(dayLead(context: context), key: WidgetLede.leadKey,
+        if WidgetPayload.write(dayLead(things: things), key: WidgetLede.leadKey,
                                stampKey: WidgetLede.leadStampKey, defaults: group) {
             stale.append(WidgetLede.kind)
+        }
+        if WidgetPayload.write(flow(things: things), key: WidgetWallet.flowKey,
+                               stampKey: WidgetWallet.flowStampKey, defaults: group) {
+            stale.append(WidgetWallet.kind)
         }
         if WidgetPayload.write(deadlines(context: context), key: WidgetDeadlines.key,
                                stampKey: WidgetDeadlines.stampKey, defaults: group) {
@@ -119,22 +128,15 @@ enum WidgetPublish {
     /// already reads the shared store, so it fetches those bytes itself, and
     /// publishing eight JPEGs into UserDefaults on every foreground to save it a
     /// read it is already making would be the worse half of both worlds.
-    static func dayLead(context: ModelContext, now: Date = .now) -> WidgetDayLead? {
+    static func dayLead(things: [Thing], now: Date = .now) -> WidgetDayLead? {
         let dayStart = Calendar.current.startOfDay(for: now)
-        var descriptor = FetchDescriptor<Thing>(
-            predicate: #Predicate { $0.capturedAt >= dayStart },
-            sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
-        // Bounded like every other read in this file. A day past this is a day
-        // whose mix and picture count are already decided many times over.
-        descriptor.fetchLimit = 400
-        descriptor.propertiesToFetch = [\.id, \.source, \.capturedAt, \.previewImageURL]
-        let today = ((try? context.fetch(descriptor)) ?? []).live
+        let today = things.filter { $0.capturedAt >= dayStart }
 
-        // A picture is a thumbnail we HOLD, not one we could fetch — the tile
-        // draws bytes, and a remote URL on a lock screen is a request the
-        // extension can't make. `previewImageData` is deliberately outside
-        // `propertiesToFetch` above: it is external storage, and materializing
-        // every thumbnail just to count them is the cost this whole pass avoids.
+        // Counted from fields already in hand — `previewImageData` is
+        // deliberately NOT touched: it is external storage, so reading it
+        // materializes real bytes off disk, and this only needs to know HOW
+        // MANY. The widget fetches the bytes themselves, and only when the
+        // pictures lead actually won.
         let pictures = today.reduce(into: 0) { count, thing in
             if thing.previewImageURL != nil || thing.kind == .screenshot { count += 1 }
         }
@@ -160,6 +162,43 @@ enum WidgetPublish {
         guard kind != .none else { return nil }
         return WidgetDayLead(kind: kind, pictures: pictures, sources: Array(cells),
                              otherSources: max(0, ranked.count - cells.count))
+    }
+
+    // MARK: - The flow band
+
+    /// The week's money in against money out.
+    ///
+    /// Reads `WalletFlowSource.band` over exactly the array `TodayBrief.flowBand`
+    /// reads, so the tile and the brief cannot disagree about the same week.
+    ///
+    /// **Nothing is gated here**, which is the same note the brief's own composer
+    /// carries: `WalletFlow.band` already declines on an unpriceable window, on
+    /// fewer than two lanes, and on lanes too thin to draw honestly. Re-deciding
+    /// any of that would be a second opinion that could disagree with the room's.
+    ///
+    /// The LANES are dropped — the widget draws totals and a ratio, never
+    /// counterparties (see `WidgetFlowBand`) — but their COUNTS are kept, because
+    /// they are what says how much of the week is actually in the bars.
+    static func flow(things: [Thing], now: Date = .now) -> WidgetFlowBand? {
+        // `span` is a DURATION, not a date — `TodayBrief.flowBand` converts it the
+        // same way, and passing it straight through would silently ask for a
+        // window starting at 1970.
+        guard let span = WalletRange.week.span,
+              let band = WalletFlowSource.band(from: things,
+                                               since: now.addingTimeInterval(-span))
+        else { return nil }
+        let priced = (band.inLanes + band.outLanes).reduce(0) { $0 + $1.count }
+        let hidden = BalancePrivacy.shared.hidden
+        // The weights are computed HERE, from the real figures, and travel
+        // whether or not the figures do — §374 rule 3: figures go, shapes stay.
+        let weights = WidgetFlowBand.weights(inUSD: band.inUSD, outUSD: band.outUSD)
+        return WidgetFlowBand(inWeight: weights.0, outWeight: weights.1,
+                              inUSD: hidden ? nil : band.inUSD,
+                              outUSD: hidden ? nil : band.outUSD,
+                              unpriced: band.unpricedCount,
+                              predating: band.predatingCount,
+                              priced: priced,
+                              hidden: hidden)
     }
 
     // MARK: - Deadlines
@@ -270,7 +309,12 @@ enum WidgetPublish {
     /// what makes this a test of the round trip rather than of the gather.
     static func probe(context: ModelContext) {
         let group = UserDefaults(suiteName: SharedStore.appGroup)
-        publishAll(context: context)
+        // The same slice the foreground pass hands `publishAll`, so the probe
+        // measures what production measures rather than a different corpus.
+        var d = FetchDescriptor<Thing>(sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
+        d.fetchLimit = 600
+        let things = Corpus.surfaced((try? context.fetch(d)) ?? [])
+        publishAll(things: things, context: context)
 
         let asks = WidgetAsks.published(defaults: group)
         NSLog("[Casberi] widgetProbe| lede=%@ themes=%d asks=%d",
@@ -314,6 +358,20 @@ enum WidgetPublish {
                   age * 3600 > WidgetWallet.stampAfter ? "YES" : "no")
         } else {
             NSLog("[Casberi] widgetWallet| none — no watched wallet, or fewer than two aligned samples")
+        }
+
+        // The week's flow. `none` is the HEALTHY answer for most weeks — the
+        // band declines on an unpriceable window, on fewer than two lanes, and
+        // on lanes too thin to draw honestly — so the line names which, and
+        // `priced/total` is the disclosure the bars themselves carry.
+        if let band = WidgetWallet.flow(defaults: group) {
+            NSLog("[Casberi] widgetFlow| in=%@ out=%@ weights=%.2f/%.2f priced=%d of %d note=%@",
+                  band.inUSD.map { String(format: "%.2f", $0) } ?? "withheld",
+                  band.outUSD.map { String(format: "%.2f", $0) } ?? "withheld",
+                  band.inWeight, band.outWeight, band.priced, band.total,
+                  band.owesDisclosure ? "OWED" : "(complete)")
+        } else {
+            NSLog("[Casberi] widgetFlow| none — nothing priced this week, or fewer than two lanes survived")
         }
     }
     #endif

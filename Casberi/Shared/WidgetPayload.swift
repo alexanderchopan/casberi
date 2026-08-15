@@ -265,6 +265,95 @@ extension WidgetDayLead {
     }
 }
 
+// MARK: - The flow band
+
+/// A week of money in against money out (2026-08-14, prd §382b) —
+/// `WalletFlow.Band` reduced to what a tile can draw.
+///
+/// A sparkline answers "did the total move". This answers "what moved it",
+/// which is the question the curve raises and cannot settle.
+///
+/// **NO COUNTERPARTY NAMES, by ruling** (user: "we don't need counterparties
+/// b/c i dunno how it would fit"). The room's band names every lane; at 170pt
+/// a name is a truncation, and dropping them also settles the §374-adjacent
+/// question a lock screen would otherwise raise — who you pay is arguably more
+/// exposing than what you hold, and this way the tile never says.
+///
+/// **What could NOT be dropped with them is the disclosure.** `WalletFlow.Band`
+/// carries two counts on purpose and its own header states the rule: "a band
+/// drawn from 6 of 9 moves is a different claim from one drawn from all 9, and
+/// the no-silent-caps rule says the drawing has to say so". Losing the lane
+/// names loses detail; losing the disclosure would make the bars claim a
+/// completeness they don't have. So the counts travel, and the tile says
+/// "6 of 9 priced" whenever there is a gap.
+struct WidgetFlowBand: Codable, Equatable {
+    /// The two bar widths, 0…1 of the wider side. ALWAYS present, because a
+    /// ratio is a shape and §374 rule 3 keeps shapes — and because deriving
+    /// them from the dollar figures would mean withholding the figures kills
+    /// the bars, which is the trap the first draft of this walked into.
+    let inWeight: Double
+    let outWeight: Double
+    /// The figures, or nil when withheld (§374) — the same shape as
+    /// `WidgetWalletLine.total`, and withheld for the same reason: a Home
+    /// Screen is the most stood-next-to surface the OS has, and a figure that
+    /// was never written cannot be leaked by a rendering bug.
+    let inUSD: Double?
+    let outUSD: Double?
+    /// Legs that reached us with no price — they COULD have been priced and
+    /// weren't. Kept apart from `predating` because only this one says
+    /// anything about how well the read is working.
+    let unpriced: Int
+    /// Legs older than price data itself, which never can be priced. A
+    /// different fact, disclosed for the same reason.
+    let predating: Int
+    /// How many legs are actually IN the bars.
+    let priced: Int
+    /// Hide wallet balances (§374). The figures are withheld exactly as the
+    /// wallet line's are — and the bars keep their proportions, because a
+    /// ratio is a shape.
+    var hidden: Bool = false
+}
+
+extension WidgetFlowBand {
+    /// The two bar widths as 0…1 of the wider side, so the larger flow fills
+    /// the track and the smaller reads against it.
+    ///
+    /// A side of zero draws NOTHING rather than a hairline: "no money went out
+    /// this week" and "a sliver went out" are different weeks, and at this size
+    /// a minimum-width stub is how they start looking the same.
+    ///
+    /// Computed once by the publisher and carried, never recomputed from the
+    /// figures — see `inWeight`.
+    static func weights(inUSD: Double, outUSD: Double) -> (Double, Double) {
+        let scale = max(inUSD, outUSD)
+        guard scale > 0 else { return (0, 0) }
+        return (inUSD / scale, outUSD / scale)
+    }
+
+    /// Every leg the window held, priced or not.
+    var total: Int { priced + unpriced + predating }
+
+    /// Whether the bars are drawn from less than the whole window — the one
+    /// thing the tile must say out loud.
+    var isPartial: Bool { unpriced + predating > 0 }
+
+    /// Whether the tile owes a "6 of 9 priced" line.
+    ///
+    /// The FACT lives here and the SENTENCE lives in the widget (see
+    /// `WalletWidgetView.pricedNote`) — deliberately, because this file compiles
+    /// into the app and the share extension as well as the extension that draws
+    /// tiles, and a `String(localized:)` here puts a widget-only sentence into
+    /// all three string catalogs, where two of them can never show it.
+    ///
+    /// It is the one piece of the room's band that could NOT be dropped along
+    /// with the lane names. `WalletFlow.Band`'s own header states the rule:
+    /// "a band drawn from 6 of 9 moves is a different claim from one drawn from
+    /// all 9, and the no-silent-caps rule says the drawing has to say so".
+    /// Losing the names loses detail; losing this would make two bars claim a
+    /// completeness they don't have.
+    var owesDisclosure: Bool { isPartial && total > 0 }
+}
+
 // MARK: - Deadlines
 
 /// One thing with a real deadline, as a widget draws it.
@@ -427,6 +516,19 @@ enum WidgetWallet {
     static let kind = "casberi.wallet"
     static let key = "widget.wallet"
     static let stampKey = "widget.walletAt"
+    static let flowKey = "widget.flow"
+    static let flowStampKey = "widget.flowAt"
+
+    /// The week's flow band (§382b), or nil when there isn't a fresh one. Shares the
+    /// line's own freshness window: both are readings about the same wallet at
+    /// the same moment, and a band that outlived the figure above it would be
+    /// describing a week the total no longer belongs to.
+    static func flow(now: Date = .now,
+                     defaults: UserDefaults? = UserDefaults(suiteName: SharedStore.appGroup))
+    -> WidgetFlowBand? {
+        WidgetPayload.read(WidgetFlowBand.self, key: flowKey, stampKey: flowStampKey,
+                           freshness: freshness, now: now, defaults: defaults)
+    }
 
     /// Money is the payload with the shortest honest life. Past this the tile
     /// declines rather than showing a two-day-old balance in the largest type
