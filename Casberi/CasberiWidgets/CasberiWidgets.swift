@@ -231,6 +231,7 @@ struct HeroEntry: TimelineEntry {
         switch lead?.kind {
         case .pictures: return !shots.isEmpty
         case .money:    return wallet != nil
+        case .posts:    return !(lead?.postsLine ?? "").isEmpty
         case .sources:  return (lead?.sources.count ?? 0) >= WidgetDayLead.sourceFloor
         default:        return false
         }

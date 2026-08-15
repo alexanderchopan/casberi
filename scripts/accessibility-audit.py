@@ -90,8 +90,24 @@ TOKENS = os.path.join(ROOT, "Casberi", "Casberi", "Design", "DesignTokens.swift"
 
 # A conscious ruling per entry, never a snooze. "file:symbol — why".
 KNOWN_EXEMPT = {
-    # Nothing yet. An entry here is a statement that the control is genuinely
+    # An entry here is a statement that the control is genuinely
     # unreachable-by-design or genuinely decorative, with the reason written out.
+    #
+    # The sankey's lane slabs (2026-08-14, prd §386d). Each slab takes a tap
+    # that names it in the card's summary slot — a sighted-user shortcut — and
+    # is `.accessibilityHidden(true)` on purpose: the diagram that contains it
+    # is a single `.accessibilityElement(children: .combine)` carrying
+    # `spokenDiagram`, which prd §299 ruled is the correct treatment for this
+    # figure ("one figure, one sentence … rather than a dozen stray slab
+    # labels"). Giving each slab a trait would create the dozen stray labels
+    # that ruling exists to prevent, and the press surfaces nothing the spoken
+    # sentence does not already name in full.
+    #
+    # The key is `basename:line` on the COMMENT-STRIPPED source, so it moves
+    # when code (not prose) is added above it. That drifts SAFE: a stale key
+    # stops exempting and the finding comes back loudly, rather than silently
+    # passing something new.
+    "WalletFlowBand.swift:384",
 }
 
 # Size expressions that already encode the floor, so an explicit number is not

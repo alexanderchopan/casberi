@@ -1267,6 +1267,34 @@
         }
       }
     },
+    "Your posts": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Tus publicaciones"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "あなたの投稿"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "내 게시물"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "你的帖子"
+          }
+        }
+      }
+    },
     "Your things go here": {
       "localizations": {
         "es": {

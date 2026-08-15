@@ -2253,6 +2253,34 @@
         }
       }
     },
+    "%@ followed you": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@ te siguió"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@ さんにフォローされました"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@ 님이 나를 팔로우했습니다"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@ 关注了你"
+          }
+        }
+      }
+    },
     "%@ has been building for %@ days.": {
       "localizations": {
         "en": {
@@ -4639,6 +4667,34 @@
         }
       }
     },
+    "%@ replied to you": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@ te respondió"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@ さんが返信しました"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@ 님이 답글을 남겼습니다"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@ 回复了你"
+          }
+        }
+      }
+    },
     "%@ reports %@ used on this key.": {
       "localizations": {
         "en": {
@@ -5673,6 +5729,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "%@ · %@前"
+          }
+        }
+      }
+    },
+    "%@ · %@ over %lld moves": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%1$@ · %2$@ en %3$lld movimientos"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%1$@・%2$@（%3$lld件の移動）"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%1$@ · %2$@, %3$lld회 이동"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%1$@ · %2$@，共 %3$lld 笔"
           }
         }
       }
@@ -65149,6 +65233,34 @@
         }
       }
     },
+    "Where today came from": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "De dónde vino hoy"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "今日の出どころ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "오늘은 어디서 왔나"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "今天来自哪里"
+          }
+        }
+      }
+    },
     "Where you post": {
       "localizations": {
         "es": {
@@ -68696,6 +68808,34 @@
         }
       }
     },
+    "Your posts": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Tus publicaciones"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "あなたの投稿"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "내 게시물"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "你的帖子"
+          }
+        }
+      }
+    },
     "Your reading keeps circling %@ — every read today but one.": {
       "localizations": {
         "es": {
@@ -70303,6 +70443,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "1"
+          }
+        }
+      }
+    },
+    "an address we can't name": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "una dirección que no podemos nombrar"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "名前がわからないアドレス"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "이름을 알 수 없는 주소"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "无法命名的地址"
           }
         }
       }

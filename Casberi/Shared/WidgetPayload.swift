@@ -233,8 +233,15 @@ struct WidgetSourceCell: Codable, Equatable {
 ///      than an empty one, which is the same "decline rather than fill" rule
 ///      every room head in the app already follows.
 struct WidgetDayLead: Codable, Equatable {
-    enum Kind: String, Codable { case pictures, money, sources, none }
+    enum Kind: String, Codable { case pictures, money, posts, sources, none }
     var kind: Kind
+    /// What happened to YOUR posts today, as the one line the overview's own
+    /// card leads with (2026-08-14, prd §386d) — "Liked by @mel and 9 others",
+    /// "@sara replied to you". Names, never a bare count (§330's rule, which
+    /// is also what makes this worth a tile: a number is a tally, a name is a
+    /// person). Empty on every day the inbound reads landed nothing, which is
+    /// most days for most people.
+    var postsLine: String = ""
     /// How many of the day's things carry a picture. The BYTES are not
     /// published — the widget fetches those from the store itself — but the
     /// count is, because it is what decides the lead, and that decision belongs
@@ -257,9 +264,20 @@ extension WidgetDayLead {
     /// is a title with a box around it.
     static let sourceFloor = 2
 
-    static func kind(pictures: Int, moneyMoved: Bool, sources: Int) -> Kind {
+    /// `posts` defaults to false so every existing caller — and the harness's
+    /// own six assertions — reads exactly as it did before the rung existed.
+    ///
+    /// WHERE IT SITS, and why not higher: the overview ranks people above the
+    /// source mix and below the money, and this ladder now says the same
+    /// thing. It is deliberately NOT at the top even though "needs you" leads
+    /// the overview — needs-you owns a widget of its own (`NeedsYouWidget`),
+    /// and a hero that repeats a dedicated tile is a duplicate on the one
+    /// surface where duplicates are most visible: a Home Screen holding both.
+    static func kind(pictures: Int, moneyMoved: Bool, sources: Int,
+                     posts: Bool = false) -> Kind {
         if pictures >= pictureFloor { return .pictures }
         if moneyMoved { return .money }
+        if posts { return .posts }
         if sources >= sourceFloor { return .sources }
         return .none
     }

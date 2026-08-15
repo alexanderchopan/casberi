@@ -325,13 +325,26 @@ struct GenRender: View {
             // column this ForEach always drew; a chapterless doc never
             // routes there at all.
             let chapters = genChapterIDs(el.str(1))
+            // The QUIET set (arg 2, prd §386d) — modules saying exactly what
+            // they said last time this brief was shown, one step back so the
+            // things that MOVED carry the eye. A reading, not a state: the
+            // module is fully legible, fully interactive and fully spoken by
+            // VoiceOver; only its visual weight yields. Absent everywhere but
+            // the brief, and an empty arg is a no-op.
+            //
+            // 0.68 rather than a real fade: the module still has to be
+            // READABLE — a step under half would trade a hierarchy cue for a
+            // contrast failure, which is the wrong trade on the app's one
+            // daily screen.
+            let quiet = Set(genChapterIDs(el.str(2)))
             if chapters.isEmpty {
                 ForEach(el.refs(0), id: \.self) { ref in
                     GenRender(id: ref, els: els, slot: inAgentAnswer ? .block : .none)
+                        .opacity(quiet.contains(ref) ? 0.68 : 1)
                 }
             } else {
                 GenFrontPage(el: el, els: els, chapters: chapters,
-                             inAgentAnswer: inAgentAnswer)
+                             quiet: quiet, inAgentAnswer: inAgentAnswer)
             }
 
         case "Hero":        GenHero(el: el).mountIn()
@@ -3727,6 +3740,10 @@ struct GenFrontPage: View {
     let el: GenEl
     let els: GenEls
     let chapters: Set<String>
+    /// Modules that said exactly this last time (prd §386d) — see the Stack
+    /// branch's own note. Defaulted so the `qualifies`-only callers and any
+    /// non-brief front page need not know about it.
+    var quiet: Set<String> = []
     let inAgentAnswer: Bool
     @State private var width: CGFloat = 0
 
@@ -3802,6 +3819,7 @@ struct GenFrontPage: View {
     private func module(_ ref: String) -> some View {
         GenRender(id: ref, els: els, slot: inAgentAnswer ? .block : .none)
             .padding(.top, chapters.contains(ref) ? DS.Space.s4 : 0)
+            .opacity(quiet.contains(ref) ? 0.68 : 1)
     }
 
     /// The refs cut at every chapter opener. Segment 0 is whatever precedes

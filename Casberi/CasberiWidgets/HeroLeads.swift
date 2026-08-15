@@ -27,6 +27,8 @@ struct HeroLead: View {
                              rows: pictureRows)
         case .money:
             if let line = entry.wallet { HeroMoneyLead(line: line, accent: accent) }
+        case .posts:
+            HeroPostsLead(line: entry.lead?.postsLine ?? "", accent: accent)
         case .sources:
             HeroSourceMix(cells: entry.lead?.sources ?? [], accent: accent)
         default:
@@ -109,6 +111,37 @@ struct HeroContactSheet: View {
 /// fills are the app's own accent at three strengths, so the ranking reads as
 /// one family rather than three unrelated colours.
 ///
+/// What happened to YOUR posts, as the day's lead (2026-08-14, prd §386d).
+///
+/// The one text-forward lead in this family, and the exception is the point:
+/// every other rung draws because its subject is a shape (pictures, a curve,
+/// a mix), while this one's subject is NAMES — "@mel and 9 others liked" is
+/// already the drawing. Abstracting people into a face-count bar would throw
+/// away the only thing §330 fought to keep.
+///
+/// No mark: `Design/` is app-target only, so the extension cannot reach the
+/// bundled brand icons (§382a's own finding), and a monogram beside a
+/// sentence about people would read as a source label rather than as a face.
+struct HeroPostsLead: View {
+    let line: String
+    let accent: Color
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(line)
+                .font(.system(size: 17, weight: .semibold, design: .rounded))
+                .foregroundStyle(.primary)
+                .lineLimit(3)
+                .minimumScaleFactor(0.8)
+                .multilineTextAlignment(.leading)
+            Text("Your posts")
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(accent)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+}
+
 /// No cell prints its count (§213). Area carries the share and nothing else.
 struct HeroSourceMix: View {
     let cells: [WidgetSourceCell]

@@ -157,10 +157,17 @@ enum WidgetPublish {
                                                       share: Double($0.value) / Double(total)) }
             : []
 
+        // What happened to your posts (prd §386d) — the brief's own line, so
+        // the tile and the overview can never say different things about the
+        // same day. Windowed to the day this gather already scoped to.
+        let postsLine = TodayBrief.postsLine(today,
+                                             windowStart: Calendar.current.startOfDay(for: now)) ?? ""
+
         let kind = WidgetDayLead.kind(pictures: pictures, moneyMoved: moneyMoved,
-                                      sources: cells.count)
+                                      sources: cells.count, posts: !postsLine.isEmpty)
         guard kind != .none else { return nil }
-        return WidgetDayLead(kind: kind, pictures: pictures, sources: Array(cells),
+        return WidgetDayLead(kind: kind, postsLine: postsLine,
+                             pictures: pictures, sources: Array(cells),
                              otherSources: max(0, ranked.count - cells.count))
     }
 

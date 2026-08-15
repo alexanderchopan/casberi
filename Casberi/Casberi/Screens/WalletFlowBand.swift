@@ -77,6 +77,15 @@ struct WalletFlowBand: View {
     /// finished moving — two beats off one wipe, not three animations arguing
     /// for attention.
     @State private var entered = false
+    /// The pressed lane (2026-08-14, prd §386d) — named IN PLACE, in the
+    /// summary's own slot, so the answer appears where the eye already is and
+    /// the card never changes height. The §384 press-reveals-a-fact grammar
+    /// reaching the one figure it had skipped: a slab already carries its
+    /// name and value when it is TALL, and carries neither when it is thin,
+    /// which is exactly when a reader most wants to know what it is.
+    /// Auto-reverts; a fresh press restarts the clock.
+    @State private var picked: WalletFlow.Lane?
+    @State private var pickedClear: Task<Void, Never>?
 
     private let bandHeight: CGFloat = 138
     private let laneGap: CGFloat = 2
@@ -94,8 +103,9 @@ struct WalletFlowBand: View {
         VStack(alignment: .leading, spacing: 0) {
             VStack(alignment: .leading, spacing: DS.Space.s1) {
                 WalletSectionLabel(title: String(localized: "Where it moved"))
-                Text(summary)
-                    .dsText(.label12).foregroundStyle(DS.textTertiary)
+                Text(pickedLine ?? summary)
+                    .dsText(.label12)
+                    .foregroundStyle(picked == nil ? DS.textTertiary : DS.textPrimary)
                     .lineLimit(1)
                 netLine
                     .opacity(entered ? 1 : 0)
@@ -363,6 +373,50 @@ struct WalletFlowBand: View {
                     .frame(width: width, height: seg.height,
                            alignment: incoming ? .leading : .trailing)
             )
+            // A pressed slab names itself in the summary slot above (prd
+            // §386d). The whole slab is the target — a thin lane is exactly
+            // the one worth pressing, and its own height is far under the
+            // 44pt floor, so forgiveness has to come from the shape rather
+            // than from the size. No visual affordance is drawn: nothing
+            // navigates, and a figure that looks pressable is a figure
+            // claiming to be a control.
+            .contentShape(Rectangle())
+            .onTapGesture { pick(seg.lane) }
+            // NOT its own VoiceOver element, deliberately — the diagram above
+            // is `.accessibilityElement(children: .combine)` carrying
+            // `spokenDiagram`, which §299 ruled is the right treatment for
+            // this figure ("one figure, one sentence … rather than a dozen
+            // stray slab labels"). A slab that announced itself would undo
+            // that ruling, and the press reveals nothing the spoken sentence
+            // does not already name — it is a sighted-user shortcut to a fact
+            // VoiceOver is given in full, up front. Recorded in the
+            // accessibility audit's `KNOWN_EXEMPT` with this reason.
+            .accessibilityHidden(true)
+    }
+
+    /// The pressed lane as one line — the name it may not have had room for,
+    /// its value, and how many legs folded into it. Nil when nothing is
+    /// pressed, so the summary reads exactly as it always did.
+    private var pickedLine: String? {
+        guard let lane = picked else { return nil }
+        let money = WalletValue.money(lane.usd)
+        let name = lane.name.isEmpty
+            ? String(localized: "an address we can't name") : lane.name
+        if lane.count > 1 {
+            return String(localized: "\(name) · \(money) over \(lane.count) moves")
+        }
+        return "\(name) · \(money)"
+    }
+
+    private func pick(_ lane: WalletFlow.Lane) {
+        DSHaptic.selection()
+        withAnimation(DS.Motion.standard) { picked = lane }
+        pickedClear?.cancel()
+        pickedClear = Task { @MainActor in
+            try? await Task.sleep(for: .seconds(2.5))
+            guard !Task.isCancelled else { return }
+            withAnimation(DS.Motion.standard) { picked = nil }
+        }
     }
 
     @ViewBuilder

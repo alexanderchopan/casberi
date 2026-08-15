@@ -2421,6 +2421,34 @@ struct Composer: View {
                                 .dsAdaptiveContentWidth(
                                     GenFrontPage.qualifies(answerStream.els) ? .wide : .reading)
                             }
+                            // THE PANEL DOCKS UNDER THE BRIEF (2026-08-14, prd
+                            // §386d). The other half of the §336 reversal one
+                            // file over: a bare bar tap now seeds the brief,
+                            // so without this the panel would again be
+                            // unreachable on a normal open — which is exactly
+                            // the bug §336 fixed by refusing to seed.
+                            //
+                            // INSIDE this scroll rather than beside it: the
+                            // rest-screen mount below carries its own
+                            // `ScrollView`, and two sibling scrolls in one
+                            // column is the layout that has no good answer.
+                            // Here the brief and the figures are one surface —
+                            // read the day, keep scrolling, land in the rooms.
+                            //
+                            // Gated on the SETTLED landing (`briefLanding`
+                            // waits on `answerStream.completed`), so the
+                            // figures never slide in under a document that is
+                            // still painting.
+                            if briefLanding, !composition.isEmpty {
+                                AgentOpenBoard(composition: composition,
+                                               onOpenRoom: { source in
+                                                   ChipMemory.visited(source)
+                                                   filter.source = source
+                                                   filter.tag = "All"
+                                                   close()
+                                               })
+                                    .padding(.top, DS.Space.s6)
+                            }
                             Color.clear.frame(height: 1).id("bottom")
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)

@@ -23589,3 +23589,37 @@ The overview's second ruling round, picks applied same-hour.
 **The kept pills left the rest surface**: the ruling named the mockup's two example pills, which is the row itself. The FEATURE is untouched — Keep still mints, digests still refresh, the widget's kept-ask tile still reads the store, a kept question still re-answers typed — but the pills row at rest is gone, the same chips-to-have-chips reading the suggestion row got hours earlier (§386b). `keptAskPills` dormant-not-deleted. Consequence worth naming: kept asks now surface through the widget, typed asks and the Keep flow only — if that proves too buried, the pills' return is one mount away.
 
 **The typed band's ruling landed**: Send to, Find, AND Ask-agent all stay — the "maybe one other" resolved as both. No code change; recorded so the §386b open question is closed.
+
+## §386d — The rise lands on the overview, the day is composed by the clock, and what hasn't changed steps back (session: "how else would you improve it", then "do all", 2026-08-14)
+
+Seven improvements to the screen §386–§386c built, taken in one pass.
+
+### 1. The rise lands on the overview — and this REVERSES §336
+
+A bare bar tap now seeds `TodayBrief.title`, so rising IS reading. §336 forbade exactly this five days ago, and its finding was real: seeding an ask puts the composer in `answering`, so `restChrome(keepBrief: false)` is false and `boardShowing` can never be true — the panel shipped in builds 282 and 284 and could not draw on a single normal open. **The reversal is safe because the other half of that conjunction moved too**: `Composer` renders `AgentOpenBoard` INSIDE the brief landing's own scroll, below the document, gated on `briefLanding` (which waits on `answerStream.completed`, so figures never slide in under a document still painting). Inside that scroll rather than beside it — the rest-screen mount carries its own `ScrollView`, and two sibling scrolls in one column is the layout with no good answer. Why re-open it at all: the overview became the app's one daily screen this session, and it sat one tap behind a rest surface whose chips had just been deleted for being chips-to-have-chips.
+
+### 2. The day is composed by the clock (`timeOrdered`)
+
+A PERMUTATION, the `category == "Life"` precedent's own rules — same modules, same gates, same lines, only the order `ids` names them in. **Morning** (before noon) leads with the day AHEAD: the deadlines (`axis`/`runway`/`pair`) climb above the money. **Evening** (17:00 on) leads with the day BEHIND: `posts`/`sheet`/`faces`/`mix` climb above the deadlines, which by evening are mostly tomorrow's problem. Midday keeps the pure consequence rank every hour used to get. The hour is read once and passed in, so a compose and its partial can never straddle a boundary and reorder mid-paint. The anchor index is re-found AFTER the movers are pulled out — inserting at the stale index drops the group in the wrong place or traps.
+
+### 3. What hasn't changed steps back (`quietIDs`, Stack arg 2)
+
+The comparison is on each module's own DOC LINES, byte for byte, so "unchanged" means what a reader would call unchanged rather than what a hash of some upstream state would. Stored under its own UserDefaults key, NOT on `BriefLedger.Entry`: that type decodes with `try?` onto an empty fallback, and a new key in a synthesized `Codable` is precisely the shape that silently empties a persisted store (the `RSSStore.Feed` lesson). Written only when `presenting` and only unscoped — a background digest must not spend the novelty of a brief nobody saw, and a Money-only compose writing here would make the whole overview read as unchanged the next morning. **Dimming is a CONTRAST device, so it is all-or-nothing**: if nothing changed there is nothing to contrast against, and a wholly dimmed screen reads as a broken render rather than as "you have seen this". The lede is never dim. 0.68, not a real fade — the module stays readable, interactive and fully spoken; only its visual weight yields.
+
+### 4. The sankey answers the finger
+
+A pressed lane names itself in the summary's own slot ("Uniswap · $340 over 3 moves"), reverting after 2.5s — §384's press-reveals-a-fact grammar reaching the one figure it had skipped. The reason it earns a press is specific: a slab carries its name and value when it is TALL and carries neither when it is thin, which is exactly when a reader wants to know what it is. An unnamed counterparty says so ("an address we can't name") rather than showing a hex string.
+
+### 5. The notice is on the page
+
+`AgentNoticed`'s daily observation draws as an `Insight` carrying its first evidence id, below the alerts and above the money: what NEEDS you outranks what is merely interesting, and both outrank a number that did not move. Unscoped only. The glint's payoff no longer requires picking the right chip.
+
+### 6. The two-paint machinery STAYS — the proposal was wrong
+
+The stated premise ("the brief no longer calls the model, so the choreography now hides ~1s of live reads") is **false, and checking beat believing**: the holdings read is gated on `presenting`, measured at 7598ms, and bounded at `liveReadBudget` (8s). The partial paint is what puts the corpus half on screen in well under a second and is more load-bearing now that the rise lands here. What was genuinely model-era already left with the paragraph in §386a (the `dayRead` await, its two timing markers, the insert-at-rank dance). Nothing further was collapsed. Recorded as a finding rather than a change — the standing lesson from §383 earned again in the same week: read the file before shipping the fix, and prefer a measurement to a memory.
+
+### 7. The widget hero gains a posts rung
+
+`WidgetDayLead.Kind` gains `.posts`, between money and sources — the overview ranks people above the mix, and the ladder now says the same thing. `posts:` defaults to false so every existing caller and the harness's six assertions read exactly as before. `TodayBrief.postsLine` is ONE definition read by both the tile and (from the same sources) the overview's card, so they cannot disagree about a day; the tile showing the lead where the card shows four rows is showing less, not disagreeing. **Deliberately NOT at the top of the ladder** even though needs-you leads the overview: needs-you owns `NeedsYouWidget`, and a hero repeating a dedicated tile is a duplicate on the one surface where duplicates are most visible. The one text-forward lead in the family, and the exception is the point — every other rung's subject is a shape, this one's subject is NAMES, and abstracting people into a face-count bar throws away the only thing §330 fought to keep.
+
+**Verification ceiling:** build + full static audits, per the standing no-simulator preference. Unwatched: the panel's dock under a real brief on a real device, the quiet set's 0.68 against a real corpus's second open, and whether the evening permutation reads right at 17:00 on a busy day. The PRD index audit caught this entry's own citations before it existed, which is the check working as designed.

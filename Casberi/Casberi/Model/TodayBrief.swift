@@ -499,6 +499,24 @@ enum TodayBrief {
             lines.append(alerts.line)
         }
 
+        // 1b. THE NOTICE (2026-08-14, prd §386d) — the agent's own daily
+        // observation, on the page rather than only behind a chip beside it.
+        // `AgentNoticed` is ≤1/day, deterministic and shown-once-ever, so it
+        // cannot become furniture; on the ~most days it has nothing, this
+        // composes nothing. Drawn as an `Insight` carrying its first evidence
+        // id, so the claim opens the thing it stands on — the glint's payoff
+        // without having to pick the right chip for it.
+        //
+        // Below the alerts and above the money: what NEEDS you outranks what
+        // is merely interesting, and both outrank a number that did not move.
+        // Unscoped only — a scoped brief asks a narrower question than "did
+        // anything interesting happen today".
+        if category == nil, let notice = AgentNoticed.shared.notice {
+            ids.append("noticed")
+            mark("noticed")
+            lines.append("noticed = Insight(\"\(genSafe(notice.line))\", \"\(String(localized: "Noticed"))\", \"\(notice.ids.first ?? "")\")")
+        }
+
         // 2. The money hero — the CROWN (2026-07-25), the day's one fused
         // visualization and the only read where a number is itself the event.
         if let hero = moneyHero(move: move, holdings: holdings, landed: landed) {
@@ -723,7 +741,8 @@ enum TodayBrief {
         // flash of nothing between the skeleton and the sentence.
         if let onPartial, presenting, !skipLiveReads, !ids.isEmpty {
             onPartial(Self.assemble(ids: ids, lines: lines,
-                                    category: category, leadRefs: leadRefs))
+                                    category: category, leadRefs: leadRefs,
+                                    hour: Calendar.current.component(.hour, from: now)))
         }
         // The `dayread` paragraph's emission stood here until 2026-08-14
         // (prd §386a) — see the retirement note above the leads.
@@ -807,9 +826,20 @@ enum TodayBrief {
                   .map { "\($0.0)=\(Int($0.1))ms" }
                   .joined(separator: " "))
         #endif
-        return KeptAskComposers.Result(delta: digest, digest: digest,
-                                       doc: Self.assemble(ids: ids, lines: lines,
-                                                          category: category, leadRefs: leadRefs))
+        let doc = Self.assemble(ids: ids, lines: lines,
+                                category: category, leadRefs: leadRefs,
+                                hour: Calendar.current.component(.hour, from: now))
+        // What each module SAID, for the next brief's quiet set — written
+        // last and only when presenting, so a background digest compose can
+        // never spend the novelty of a brief nobody saw (`BriefLedger.record`
+        // one screen up takes the same guard for the same reason). Unscoped
+        // only: a scoped brief draws a different subset, and letting it write
+        // here would make the whole overview read as "unchanged" the next
+        // morning because a Money-only compose had touched three of its ids.
+        if presenting, category == nil {
+            Self.recordModuleDigests(ids: ids, lines: lines)
+        }
+        return KeptAskComposers.Result(delta: digest, digest: digest, doc: doc)
     }
 
     /// `ids` + `lines` → the document the Stack reads.
@@ -821,8 +851,13 @@ enum TodayBrief {
     /// the model answered, which is a worse artifact than the latency this
     /// whole pass exists to remove. Pure — no model reads, no `Thing`.
     private static func assemble(ids: [String], lines: [String],
-                                 category: String?, leadRefs: [String]) -> [String] {
+                                 category: String?, leadRefs: [String],
+                                 hour: Int) -> [String] {
         var ids = ids
+        // The clock's permutation runs FIRST, so the Life ruling below —
+        // which is about one scope's subject, not about the hour — gets the
+        // last word on the arrangement it cares about.
+        ids = timeOrdered(ids, hour: hour)
         // LIFE IS PEOPLE-FIRST (2026-08-13, from walking the three scopes on
         // the sim). Every other ordering decision in this file is about rank —
         // what is most consequential — and that ladder is right for a day and
@@ -867,8 +902,115 @@ enum TodayBrief {
         let chapters = ["alerts", "hero", "themes", leadRefs.first]
             .compactMap { $0 }
             .filter { ids.contains($0) && $0 != ids.first }
-        return ["root = Stack([\(ids.joined(separator: ", "))], \"\(chapters.joined(separator: ","))\")"] + lines
+        // The QUIET set (prd §386d) — modules whose line is byte-identical to
+        // the last brief this device SHOWED. Arg 2, absent everywhere else,
+        // and an empty arg is a no-op, so every other `Stack` emitter is
+        // untouched.
+        let quiet = quietIDs(ids: ids, lines: lines)
+        return ["root = Stack([\(ids.joined(separator: ", "))], \"\(chapters.joined(separator: ","))\", \"\(quiet.joined(separator: ","))\")"] + lines
     }
+
+    /// The module order, permuted by TIME OF DAY (2026-08-14, prd §386d).
+    ///
+    /// A PERMUTATION of what already composed, never a different composition —
+    /// the `category == "Life"` reordering above is the precedent and the same
+    /// rules apply: same modules, same gates, same lines, only the order `ids`
+    /// names them in, which is all the `Stack` reads. So no module can appear
+    /// or disappear here.
+    ///
+    /// MORNING (before noon) leads with the day AHEAD: the deadlines climb to
+    /// just under the alerts, above the money. EVENING (17:00 on) leads with
+    /// the day BEHIND: what you saw, who reached you and where it came from
+    /// climb above the deadlines, which by evening are mostly tomorrow's
+    /// problem. The middle of the day keeps the pure consequence rank, which
+    /// is what every hour used to get.
+    ///
+    /// The clock is the DEVICE's, read once and passed in, so a compose and
+    /// its partial can never straddle a boundary and reorder mid-paint.
+    private static func timeOrdered(_ ids: [String], hour: Int) -> [String] {
+        let ahead = ["axis", "runway", "pair"]
+        let behind = ["posts", "sheet", "faces", "mix"]
+        let group: [String], anchor: [String]
+        switch hour {
+        case ..<12:  group = ahead;  anchor = ["hero"]
+        case 17...:  group = behind; anchor = ahead
+        default:     return ids
+        }
+        let moving = ids.filter { group.contains($0) }
+        guard !moving.isEmpty,
+              let at = ids.firstIndex(where: { anchor.contains($0) })
+        else { return ids }
+        // Re-find the anchor AFTER the movers are pulled out — removing an
+        // element ahead of it shifts every later index, and inserting at the
+        // stale one drops the group in the wrong place (or traps).
+        var rest = ids.filter { !group.contains($0) }
+        let insertAt = rest.firstIndex(where: { anchor.contains($0) }) ?? min(at, rest.count)
+        rest.insert(contentsOf: moving, at: insertAt)
+        return rest
+    }
+
+    /// Which of this brief's modules say exactly what they said last time.
+    ///
+    /// The comparison is on the module's own DOC LINES — the rendered facts,
+    /// byte for byte — so "unchanged" means what a reader would call
+    /// unchanged, not what a hash of some upstream state would. Stored in its
+    /// own UserDefaults key rather than on `BriefLedger.Entry`: that type is
+    /// decoded with `try?` onto an empty fallback, and a new key in a
+    /// synthesized `Codable` is exactly the shape that silently empties a
+    /// persisted store (the `RSSStore.Feed` lesson, CLAUDE.md).
+    ///
+    /// **Dimming is a CONTRAST device, so it is all-or-nothing**: if NOTHING
+    /// changed there is nothing to contrast against, and dimming the whole
+    /// screen reads as a broken render rather than as "you have seen this".
+    /// The lede is never dim — a greyed-out headline is the same failure at
+    /// the top of the page.
+    private static func quietIDs(ids: [String], lines: [String]) -> [String] {
+        let now = digests(ids: ids, lines: lines)
+        let shown = ids.filter { $0 != "lede" }
+        let previous = UserDefaults.standard.dictionary(forKey: quietKey) as? [String: String] ?? [:]
+        let unchanged = shown.filter { id in
+            guard let a = now[id], let b = previous[id] else { return false }
+            return a == b
+        }
+        guard unchanged.count < shown.count else { return [] }
+        return unchanged
+    }
+
+    /// Records what each module SAID, for the next brief's quiet set. Written
+    /// only when a person is actually looking (the `BriefLedger.record` rule):
+    /// a background digest compose must not consume the novelty of a brief
+    /// nobody saw.
+    private static func recordModuleDigests(ids: [String], lines: [String]) {
+        UserDefaults.standard.set(digests(ids: ids, lines: lines), forKey: quietKey)
+    }
+
+    /// One module → everything it draws, as one string.
+    ///
+    /// **A module's digest MUST include its CHILD lines.** A widget's own line
+    /// names its refs and nothing else (`posts = Widget("Your posts", "",
+    /// [pr0, pr1])`), so four completely different rows under an unchanged
+    /// header hash identically — the card would dim on the day its contents
+    /// turned over, which is the exact opposite of what this is for. Children
+    /// are emitted immediately after their parent by every composer here
+    /// (`agendaRows`, `yourPostsCard`, `rows`), so a module owns every line
+    /// from its own up to the next line whose id is a module.
+    private static func digests(ids: [String], lines: [String]) -> [String: String] {
+        func head(_ line: String) -> String? {
+            guard let eq = line.firstIndex(of: "=") else { return nil }
+            return line[..<eq].trimmingCharacters(in: .whitespaces)
+        }
+        let moduleIDs = Set(ids)
+        var out: [String: String] = [:]
+        var current: String?
+        for line in lines {
+            if let id = head(line), moduleIDs.contains(id) { current = id }
+            guard let current else { continue }
+            out[current, default: ""] += line
+        }
+        return out
+    }
+
+    private static let quietKey = "brief.module.digests"
 
     // MARK: - Synthesis (direction B3)
 
@@ -2058,6 +2200,37 @@ enum TodayBrief {
         guard !refs.isEmpty else { return nil }
         return ["posts = Widget(\"\(String(localized: "Your posts"))\", \"\", [\(refs.joined(separator: ", "))])"]
             + rows
+    }
+
+    /// The single strongest "what happened to your posts" line, or nil.
+    ///
+    /// ONE definition, read by the widget's own lead (prd §386d) and drawn
+    /// from exactly the sources `yourPostsCard` draws its rows from — so the
+    /// tile and the overview can never disagree about the same day. The card
+    /// shows up to four rows and the tile shows the lead; showing LESS is not
+    /// disagreeing.
+    @MainActor
+    static func postsLine(_ things: [Thing], windowStart: Date) -> String? {
+        let byRef = Dictionary(grouping: things.filter { $0.isLive }, by: { $0.sourceRef ?? "" })
+        let roll = SocialLikers.shared.rolls
+            .filter { $0.value.when >= windowStart && byRef[$0.key] != nil }
+            .sorted { $0.value.when > $1.value.when }
+            .first?.value.line
+        if let roll, !roll.isEmpty { return roll }
+        // No roll — the newest reply or follow, said as what it is.
+        guard let next = things
+            .filter({
+                $0.isLive && $0.capturedAt >= windowStart
+                    && ($0.socialContext == "reply" || $0.socialContext == "follow")
+            })
+            .sorted(by: { $0.capturedAt > $1.capturedAt })
+            .first
+        else { return nil }
+        let who = (next.authorHandle?.isEmpty == false)
+            ? "@\(next.authorHandle ?? "")" : clamp(next.title, max: 40)
+        return next.socialContext == "reply"
+            ? String(localized: "\(who) replied to you")
+            : String(localized: "\(who) followed you")
     }
 
     /// `SourceMix(eyebrow, subline, ["Source N", …])` over the window's

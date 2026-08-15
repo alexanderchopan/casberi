@@ -1749,15 +1749,28 @@ struct RootShell: View {
                         // ask before the bar rose still wins; the masthead
                         // title-travel stays whisper-only (no `risingBriefTitle`
                         // here — a bare tap has no capsule to morph from).
-                        // NO auto-brief on a bare tap (prd §336, 2026-08-07).
-                        // §181 made the Today brief the default landing, and
-                        // that is what made §334's panel unreachable: seeding
-                        // an ask here puts the composer in `answering`, so
-                        // `restChrome` is false and `boardShowing` can NEVER be
-                        // true — the panel shipped in 282 and 284 and could not
-                        // draw on a single normal open, while the person got a
-                        // wall of synthesized text instead. A bare tap now
-                        // opens the agent AT REST, where the panel lives.
+                        // THE RISE LANDS ON THE OVERVIEW (2026-08-14, prd
+                        // §386d) — this REVERSES §336's "no auto-brief on a
+                        // bare tap", and the reversal is safe for a reason
+                        // §336 could not have used: the panel now docks
+                        // BENEATH the brief instead of competing with it.
+                        //
+                        // §336's finding was real — seeding an ask here puts
+                        // the composer in `answering`, so `restChrome(keepBrief:
+                        // false)` is false and `boardShowing` could never be
+                        // true; the panel shipped in 282 and 284 and could not
+                        // draw on a single normal open. The fix then was to
+                        // stop seeding. The fix NOW is the other half of the
+                        // same conjunction: `Composer` renders the panel
+                        // inside the brief landing's own scroll, so both are
+                        // on screen at once and the rise costs no decision.
+                        //
+                        // Why re-open it at all: the overview became the app's
+                        // one daily screen this session (§386–§386c collapsed
+                        // three scoped briefs into it and cut every module
+                        // that wasn't a figure, a picture or a person), and it
+                        // sat one tap behind a rest surface whose chips had
+                        // just been deleted for being chips-to-have-chips.
                         //
                         // Every deliberate route to the brief is untouched: the
                         // whisper capsule, the Daily Brief quick action, the
@@ -1766,6 +1779,9 @@ struct RootShell: View {
                         // seed `askRequest` themselves. The guard below stays
                         // `nil`-checked so any of those still wins if it set an
                         // ask before the bar rose.
+                        if chrome.askRequest == nil {
+                            chrome.ask(TodayBrief.title)
+                        }
                         // Rising is SEEING — the glint's whole claim is "rise
                         // and you'll find it", so the rise itself clears it.
                         AgentNoticed.shared.markSeen()
