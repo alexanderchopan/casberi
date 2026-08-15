@@ -354,28 +354,46 @@ struct BandRow: View {
         return thing.title
     }
 
-    /// The trailing label's ink — the tertiary ramp, for every word this slot
-    /// can carry (2026-07-30).
+    /// The trailing label's ink — the SOURCE's own brand hue, held to the text
+    /// ramp's contrast bar, falling back to the tertiary ramp when there is no
+    /// honest hue to show (2026-08-14, user ruling).
     ///
-    /// It ran through `ProjectHue` until now: a hash-picked hue, from the days
-    /// this slot held the person's own PROJECT TAG, where the color was real
-    /// identity ("Lisbon trip" wearing one hue everywhere). That tag was
-    /// dropped from the row on 2026-07-23 — but the coloring wasn't, so the
-    /// hash kept firing on whatever moved in behind it: "Liked", "/design",
-    /// "Mentions you", "BBC News", "★1.2k · Swift", "Cash App". A stable color
-    /// per arbitrary string is not identity, it's decoration with a memory —
-    /// exactly what §8's color law rules out ("identity, state, or magnitude,
-    /// never decoration").
+    /// THIS SLOT WAS COLORED BEFORE AND THE COLOR WAS PULLED ON 2026-07-30, so
+    /// read why this is not that. It ran through `ProjectHue`: a hash-picked
+    /// hue, from the days this slot held the person's own PROJECT TAG, where
+    /// the color was real identity ("Lisbon trip" wearing one hue everywhere).
+    /// That tag was dropped from the row on 2026-07-23 — but the coloring
+    /// wasn't, so the hash kept firing on whatever moved in behind it: "Liked",
+    /// "/design", "Mentions you", "BBC News", "★1.2k · Swift", "Cash App". A
+    /// stable color per arbitrary string is not identity, it's decoration with
+    /// a memory — exactly what §8's color law rules out ("identity, state, or
+    /// magnitude, never decoration").
     ///
-    /// It also failed the contrast pass this app already made everywhere else:
-    /// at `label11`, light mode mixed the palette only 0.35 toward black, which
-    /// puts the yellow rung near 3.4:1 — under the 4.5:1 bar `DS.textTertiary`
-    /// was raised to meet on 2026-07-21, on the smallest text in the row.
+    /// `DS.legibleInk` is the thing that ruling asked for rather than the thing
+    /// it removed: the hue is the SOURCE's own, so "Liked" on a Farcaster row
+    /// is Farcaster purple because the row is from Farcaster — identity, the
+    /// first item on the color law's own list, and the same treatment
+    /// `PostCard` already gives this exact label inside a social room ("color
+    /// lives in the tag, never in the card itself", 2026-07-27). It reaches the
+    /// All feed here, where a mixed river of sources is the case it helps most.
     ///
-    /// Nothing is lost where identity actually mattered: a multi-wallet row
-    /// already leads with that wallet's own `WalletBlockie` (see
-    /// `identiconAddress`), which is the identity, in the slot built for it.
-    private var labelInk: Color { DS.textTertiary }
+    /// The other half of that ruling was CONTRAST, and it is the reason the ink
+    /// is not simply `DS.washHue`: the old `ProjectHue` measured ~3.4:1 at
+    /// `label11`, under the 4.5:1 bar `DS.textTertiary` was raised to meet on
+    /// 2026-07-21, on the smallest text in the row. `legibleInk` moves each hue
+    /// until it clears that bar (7.0:1 under Increase Contrast) and returns nil
+    /// rather than show one that can't — so this slot cannot regress to the
+    /// measurement that took its color away.
+    ///
+    /// A source with no honest brand color (X's black, ChatGPT's white) and a
+    /// row on a vivid theme both land on `textTertiary`, unchanged — the tint
+    /// is never the only thing carrying the word, it is the word's own source
+    /// said twice.
+    /// Read ONCE per row at the call site, not through a `labelInk`/`labelIsTinted`
+    /// pair: a computed property caches nothing, so a second reader is a second
+    /// solve on the feed's hot path (the 2026-08-13 latency lesson — the source
+    /// rail resolving the same chips four to five times per body pass).
+    private var labelHue: Color? { DS.legibleInk(for: thing.source) }
 
     private var countdown: String? {
         guard emphasized else { return nil }
@@ -690,9 +708,15 @@ struct BandRow: View {
                         .animation(DS.Motion.standard, value: newSinceLastSeen)
                 }
                 if let project {
+                    let hue = labelHue
                     Text(project)
                         .dsText(.label11)
-                        .foregroundStyle(labelInk)
+                        // Weight tracks the tint: at `label11` a hue needs the
+                        // extra stroke to read as chosen rather than as a
+                        // rendering artifact, and a row with nothing honest to
+                        // say stays quiet in both channels rather than one.
+                        .fontWeight(hue != nil ? .semibold : .medium)
+                        .foregroundStyle(hue ?? DS.textTertiary)
                         .lineLimit(1)
                 }
             }

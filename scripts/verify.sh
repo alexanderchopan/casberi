@@ -442,6 +442,23 @@ step "Ask-scope self-test"
   || fail "the ask-scope self-test failed — run scripts/ask-scope-selftest.sh"
 print -P "%F{green}✓ ask-scope self-test%f"
 
+# Whether the All feed's source tint is READABLE (2026-08-14). A `BandRow`'s
+# trailing label wears its source's own brand hue, and this is the second time
+# that slot has been colored: the first ink was pulled on 2026-07-30 having
+# measured ~3.4:1 at `label11`, under the 4.5:1 bar `DS.textTertiary` was raised
+# to meet. Nothing caught it, because nothing here CAN — a contrast failure
+# compiles, launches, screenshots and ships looking exactly like a success, and
+# the type ramp's own audits check size, not legibility. So the arithmetic is
+# extracted from the shipped source and held to the bar on every page the seven
+# themes can produce, in both appearances. Its sharpest assertion is the one a
+# surviving mutation forced: clearing the bar is necessary and NOT sufficient —
+# a search that bails to the identity floor also clears it, while washing Wallet
+# blue, Stripe indigo and Aerodrome blue into the same pale tint.
+step "Legible-ink self-test"
+"$ROOT/scripts/legible-ink-selftest.sh" >/dev/null \
+  || fail "the legible-ink self-test failed — run scripts/legible-ink-selftest.sh"
+print -P "%F{green}✓ legible-ink self-test%f"
+
 # What anatomy a social thing sheet wears, and the reading under it (prd §363,
 # 2026-08-12). INVISIBLE, and shipped invisible for months: the gate asked
 # `SocialThread.isSocial` — three source NAMES — so an X post drew its own

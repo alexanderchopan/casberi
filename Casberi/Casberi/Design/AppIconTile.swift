@@ -261,4 +261,144 @@ extension DS {
         if lum > 0.90 { return DS.gray200 }
         return hue
     }
+
+    /// WCAG relative luminance — sRGB channels gamma-LINEARIZED, which is the
+    /// only form a contrast ratio may be computed from.
+    ///
+    /// Deliberately NOT the same function as `luminance(of:)` above, and the
+    /// two must not be unified: that one is a plain weighted sum over
+    /// gamma-ENCODED channels, and `legibleCardFill`'s 0.12/0.90 thresholds
+    /// were tuned against its numbers — linearizing it would silently re-tune
+    /// a shipped card rule while every call site still compiled. This one is
+    /// read only by `legibleInk`, where 4.5:1 is a real WCAG figure and has to
+    /// be arrived at the way WCAG defines it.
+    private static func wcagLuminance(_ r: Double, _ g: Double, _ b: Double) -> Double {
+        func lin(_ c: Double) -> Double {
+            c <= 0.03928 ? c / 12.92 : pow((c + 0.055) / 1.055, 2.4)
+        }
+        return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b)
+    }
+
+    /// HSB → RGB in plain arithmetic. `Color(hue:saturation:brightness:)` would
+    /// mean a `UIColor` round-trip per probe, and `legibleInk` probes up to ten
+    /// times per row — this keeps the solve to float math on the feed's hot
+    /// path (the 2026-08-13 latency lesson: the source rail resolving chips
+    /// several times per body pass).
+    private static func rgbComponents(hue h: Double, saturation s: Double,
+                                      brightness v: Double) -> (Double, Double, Double) {
+        let c = v * s
+        let hp = (h * 6).truncatingRemainder(dividingBy: 6)
+        let x = c * (1 - abs(hp.truncatingRemainder(dividingBy: 2) - 1))
+        let m = v - c
+        let base: (Double, Double, Double)
+        switch hp {
+        case ..<1: base = (c, x, 0)
+        case ..<2: base = (x, c, 0)
+        case ..<3: base = (0, c, x)
+        case ..<4: base = (0, x, c)
+        case ..<5: base = (x, 0, c)
+        default:   base = (c, 0, x)
+        }
+        return (base.0 + m, base.1 + m, base.2 + m)
+    }
+
+    /// A brand hue as INK ON THE PAGE — the source's own color, moved until it
+    /// clears the contrast bar the text ramp already meets, or nil when it
+    /// can't. `nil` means "no honest tint here", and every caller falls back to
+    /// the neutral ramp.
+    ///
+    /// WHY THIS ISN'T `washHue` (2026-08-14). `washHue` is built for a WASH —
+    /// a field behind content — so it floors brightness at 0.60, which as INK
+    /// is unreadable on a light page: measured across the 85 hues that have
+    /// one, raw `washHue` clears 4.5:1 for 29 of them on the light Default page
+    /// and 51 on the dark one. Snapchat's yellow lands at 1.1:1. Painting the
+    /// row's smallest text in it would re-commit the exact failure that took
+    /// the color OUT of this slot on 2026-07-30 (`BandRow.labelInk` records it:
+    /// the old `ProjectHue` ink measured ~3.4:1 at `label11`).
+    ///
+    /// THE ONE RULE: move away from the page until the ratio is met, and show
+    /// nothing if it can't be. On a dark page the ink brightens and lets
+    /// saturation fall toward white — a deep hue can't get bright on its own,
+    /// since pure blue tops out at 0.07 luminance no matter how bright. On a
+    /// light page it darkens at full saturation, which deepens the hue instead
+    /// of washing it out. Both stop at an IDENTITY FLOOR (saturation 0.25,
+    /// brightness 0.35): past it the result is gray-with-a-tinge rather than
+    /// the brand, and painting that would be the decoration §8's color law
+    /// forbids — so it returns nil and the caller stays neutral.
+    ///
+    /// Vivid themes need no special case and get none. Measured at 4.5:1: the
+    /// Default page tints all 85, while the saturated dark backgrounds tint
+    /// 0–60 and fall to the neutral ramp for the rest — which is the same
+    /// answer `DS.textTertiary`'s own `vividBackground` branch already gives
+    /// ("the quiet ramp washes out against loud color"), arrived at by
+    /// measurement rather than by a second hand-maintained rule.
+    ///
+    /// Increase Contrast raises the bar to 7.0:1, the figure `textTertiary`
+    /// climbs to, so the tint can never be the one thing that ignores the ask.
+    static func legibleInk(for source: String) -> Color? {
+        // A photograph has no single luminance, so no ratio can be promised
+        // against it — and its scrim is a gradient, so even a sampled one
+        // would be true at one end of the screen only.
+        guard ThemeStore.shared.backgroundPhoto == nil else { return nil }
+        guard let brand = brandHue(for: source) else { return nil }
+
+        var h: CGFloat = 0, s: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        UIColor(brand).getHue(&h, saturation: &s, brightness: &b, alpha: &a)
+
+        var pr: CGFloat = 0, pg: CGFloat = 0, pb: CGFloat = 0, pa: CGFloat = 0
+        UIColor(DS.themedPage).getRed(&pr, green: &pg, blue: &pb, alpha: &pa)
+
+        guard let ink = solveInk(hue: Double(h), saturation: Double(s), brightness: Double(b),
+                                 pageLuminance: wcagLuminance(Double(pr), Double(pg), Double(pb)),
+                                 bar: ContrastStore.shared.increased ? 7.0 : 4.5)
+        else { return nil }
+        return Color(hue: ink.hue, saturation: ink.saturation, brightness: ink.brightness)
+    }
+
+    /// `legibleInk`'s arithmetic, with every environment read lifted out — the
+    /// theme, the contrast setting and the brand table are the caller's job, so
+    /// what remains is a pure function of five Doubles and can be compiled and
+    /// checked without a simulator (`scripts/legible-ink-selftest.sh`). That
+    /// split is the point: a contrast failure renders perfectly, so a build and
+    /// a screenshot both pass it, which is precisely how the ink this replaces
+    /// shipped at ~3.4:1 and stayed there until somebody measured it.
+    static func solveInk(hue: Double, saturation: Double, brightness: Double,
+                         pageLuminance: Double,
+                         bar: Double) -> (hue: Double, saturation: Double, brightness: Double)? {
+        // No honest hue, no tint — `washHue`'s own bar, so a near-neutral mark
+        // (X's black, ChatGPT's white) is neutral everywhere it is read.
+        guard saturation >= 0.15 else { return nil }
+
+        func meets(_ sat: Double, _ bright: Double) -> Bool {
+            let (r, g, b) = rgbComponents(hue: hue, saturation: sat, brightness: bright)
+            let lum = wcagLuminance(r, g, b)
+            return (max(lum, pageLuminance) + 0.05) / (min(lum, pageLuminance) + 0.05) >= bar
+        }
+
+        let satFloor = 0.25, brightFloor = 0.35
+        let startSat = max(saturation, 0.65)               // washHue's saturation floor
+        let startBright = min(max(brightness, 0.60), 0.95) // washHue's brightness clamp
+
+        // Brighten (a dark page): brightness pinned, saturation is what moves.
+        if meets(startSat, 1) { return (hue, startSat, 1) }
+        if meets(satFloor, 1) {
+            var pass = satFloor, fail = startSat
+            for _ in 0..<8 {
+                let mid = (pass + fail) / 2
+                if meets(mid, 1) { pass = mid } else { fail = mid }
+            }
+            return (hue, pass, 1)
+        }
+        // Darken (a light page): saturation held, brightness is what moves.
+        if meets(startSat, startBright) { return (hue, startSat, startBright) }
+        if meets(startSat, brightFloor) {
+            var pass = brightFloor, fail = startBright
+            for _ in 0..<8 {
+                let mid = (pass + fail) / 2
+                if meets(startSat, mid) { pass = mid } else { fail = mid }
+            }
+            return (hue, startSat, pass)
+        }
+        return nil
+    }
 }
