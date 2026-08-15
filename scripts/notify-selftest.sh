@@ -97,6 +97,55 @@ guard "the attachment ladder falls to the source mark before nothing" \
 guard "payouts stay unwired while paid and failed are indistinguishable" \
       'NOT WIRED, deliberately' "$SWEEP"
 
+# ── the entitlement and the promise, tied together (prd §306, 2026-08-14) ──
+# `interruptionLevel = .timeSensitive` is a line that COMPILES AND RUNS
+# whether or not the app is allowed to mean it: without the entitlement iOS
+# silently caps it to `.active`, nothing fails, no log line appears, and the
+# notification arrives looking exactly right — it just stops piercing a Focus.
+# That is the §83 fake-status shape in the one surface with no screen to
+# inspect, and it is why the two halves are checked against each other here
+# rather than trusted to stay in step. Nine days of "declared but not
+# honoured" (the §306 amendment) is the measured cost of not having this.
+TS_KEY='com.apple.developer.usernotifications.time-sensitive'
+ENT_IOS="Casberi/Casberi/Casberi.entitlements"
+ENT_MAC="Casberi/Casberi/Casberi-Catalyst.entitlements"
+SETTINGS="Casberi/Casberi/Screens/AccountDetailSheet.swift"
+for f in "$ENT_IOS" "$ENT_MAC" "$SETTINGS"; do
+  [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
+done
+
+# The entitlement must be a real <key>, not a mention in a comment — the
+# mac-parity audit's key regex is naive the same way, and "documenting" a
+# capability by commenting it in would satisfy a lazier check than this.
+ts_key_present() {  # ts_key_present <entitlements-file>
+  grep -qE "^[[:space:]]*<key>${TS_KEY}</key>" "$1"
+}
+declares_ts=$(grep -cE 'interruptionLevel = plan\.isTimeSensitive \? \.timeSensitive' "$NOTIFY" || true)
+if [[ "$declares_ts" -gt 0 ]]; then
+  for pair in "iOS:$ENT_IOS" "Catalyst:$ENT_MAC"; do
+    label="${pair%%:*}"; file="${pair#*:}"
+    if ts_key_present "$file"; then
+      printf '  ✓ %s entitlements carry the time-sensitive key\n' "$label"
+    else
+      printf '  ✗ DRIFT: %s sets .timeSensitive but %s lacks %s — iOS will cap it to .active silently\n' \
+             "$NOTIFY" "$file" "$TS_KEY"; fail=1
+    fi
+  done
+else
+  printf '  ✓ nothing claims .timeSensitive (entitlement not required)\n'
+fi
+
+# And the copy may only promise break-through while the key is really there.
+# This is the half a person can SEE, so it is the half that lies loudest.
+promises=$(grep -cE 'break through' "$SETTINGS" || true)
+if [[ "$promises" -gt 0 ]] && ! ts_key_present "$ENT_IOS"; then
+  printf '  ✗ DRIFT: the quiet-hours row promises break-through with no entitlement (§83)\n'; fail=1
+elif [[ "$promises" -gt 0 ]]; then
+  printf '  ✓ the quiet-hours promise is backed by the entitlement\n'
+else
+  printf '  ✓ the quiet-hours row claims no break-through\n'
+fi
+
 echo "── compiling the shipped file whole ──"
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT

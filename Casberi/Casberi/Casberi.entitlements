@@ -23,6 +23,29 @@
 	<array>
 		<string>financial-data</string>
 	</array>
+	<!-- Time Sensitive Notifications — the key that makes prd §306's two
+	     deadline alarms (a dispute with evidence due, a closing window) able to
+	     break through a Focus. `Notifications.swift` has always SET
+	     `interruptionLevel = .timeSensitive` for those two kinds; without this
+	     key iOS silently caps it to `.active`, which is the §83 fake-status
+	     shape in the one place with no screen to inspect — nothing fails, no
+	     log line appears, and the notification arrives looking exactly right.
+	     HOW IT GOT ONTO THE APP ID, measured 2026-08-14, because the two
+	     obvious routes disagree. `POST /v1/bundleIdCapabilities` with
+	     `TIME_SENSITIVE_NOTIFICATIONS` answers 409 and lists 28 valid
+	     `capabilityType` values, none of them this one — so the App Store
+	     Connect API cannot WRITE it. `xcodebuild -allowProvisioningUpdates`
+	     with an ASC key CAN: it registered the capability and regenerated the
+	     profile in one build. The same API then READS it back under a third
+	     spelling, `USERNOTIFICATIONS_TIMESENSITIVE`, which is why guessing the
+	     write name got nowhere. Present in the Catalyst sibling too, since
+	     macOS honours interruption levels as well — unlike FinanceKit below,
+	     there is no availability reason to split them, and the Catalyst build
+	     is SIGNED, so `verify.sh` fails there the moment the profile lacks
+	     this key. That is the check that caught it: the iOS Simulator build is
+	     unsigned and went green with the profile still missing it. -->
+	<key>com.apple.developer.usernotifications.time-sensitive</key>
+	<true/>
 	<key>aps-environment</key>
 	<string>development</string>
 	<key>com.apple.developer.icloud-container-identifiers</key>

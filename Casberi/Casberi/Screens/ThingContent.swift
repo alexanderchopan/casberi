@@ -2019,7 +2019,25 @@ private struct PostHogMetricContent: View {
         TokenChartStyle.accent(change: chart?.change ?? 0, scheme: scheme)
     }
 
+    // Corollary 5, which this view was missing (2026-08-14) — the only
+    // `Thing`-holding leaf in this file without it, while every sibling chart
+    // view (`TokenChartContent`, `TokenPulseChartContent`, `StockChartContent`)
+    // has carried one since build 188. SwiftUI re-evaluates a leaf's body on
+    // the MODEL'S OWN observation, through this view's own attribute node, so
+    // no guard in the parent that built it can protect a row already in the
+    // tree.
+    //
+    // It slipped the liveness audit's check 5 rather than being exempted:
+    // that check clears a struct when `isLive`/`.live` appears anywhere
+    // inside it, and this struct carries a `.filter(\.isLive)` on its
+    // ANNOTATIONS fetch — an unrelated collection. A guard on one array
+    // reading as a guard on the stored model is the same shape as the
+    // per-identifier tightening the held-Thing check already needed.
     var body: some View {
+        if thing.isLive { liveBody }
+    }
+
+    @ViewBuilder private var liveBody: some View {
         VStack(alignment: .leading, spacing: DS.Space.s3) {
             header
             if let chart {

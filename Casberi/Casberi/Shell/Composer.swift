@@ -2163,7 +2163,23 @@ struct Composer: View {
                                         // clock (`GenSkeletonPulse`), so the
                                         // group breathes like something is
                                         // actually assembling.
-                                        if inFlight {
+                                        //
+                                        // Gated on an EMPTY stream, not on
+                                        // `inFlight` alone (2026-08-14).
+                                        // `inFlight` is only cleared at the
+                                        // settle, while the brief paints its
+                                        // corpus half seconds earlier — so
+                                        // the skeleton went on standing ABOVE
+                                        // a document that had already
+                                        // arrived, pushing the real lede down
+                                        // the screen behind four pulsing
+                                        // placeholders for whatever was still
+                                        // out. The skeleton is the shape of
+                                        // an answer that hasn't come; the
+                                        // moment any of it has, it has done
+                                        // its job and the content speaks for
+                                        // itself.
+                                        if inFlight, answerStream.els.isEmpty {
                                             VStack(alignment: .leading, spacing: DS.Space.s2) {
                                                 GenSkeletonBlock(minHeight: 26)
                                                 GenSkeletonBlock(minHeight: 120)
@@ -4210,8 +4226,26 @@ struct Composer: View {
                 // typewriter-reveal a document the person is already reading;
                 // deliberately NOT `currentStreamed`, which would offer the
                 // Keep-this-text button over an answer that keeps as an ask.
+                //
+                // `painted` is what the settle actually reads (2026-08-14).
+                // The line above claimed `proseStreaming` did that job, and it
+                // never could: `proseStreaming` is reset to false in the
+                // settle's own `withAnimation` BEFORE the reveal branch runs,
+                // and that branch does not consult it in any case. So every
+                // brief took the `stream(finalDoc)` arm — which starts by
+                // clearing `els` — and the document the person had been
+                // reading for several seconds BLANKED and re-typewrote itself
+                // from zero. That is the "it streams for 20-25s and looks
+                // broken" report, and it is a reveal bug, not a compose one.
+                //
+                // Deliberately its own flag rather than reusing `streamed`:
+                // that one means "a live prose synthesis painted its way in",
+                // which also marks the answer keepable as text. A document
+                // snapshot is neither, and one name for both reads as a bug.
+                var painted = false
                 let paintDocument: ([String]) -> Void = { partialDoc in
                     guard gen == askGeneration else { return }
+                    painted = true
                     proseStreaming = true
                     answerStream.paint(partialDoc)
                 }
@@ -4292,7 +4326,9 @@ struct Composer: View {
                 // marks a LIVE prose synthesis (paints as it arrives); this
                 // handles the opposite end — the trivially-short deterministic
                 // doc — and everything between still streams as before.
-                if streamed { answerStream.paint(finalDoc) }
+                // `painted` joins them (2026-08-14): a document already on
+                // screen is SWAPPED for its finished self, never re-revealed.
+                if streamed || painted { answerStream.paint(finalDoc) }
                 else if isInstantDoc(finalDoc) { answerStream.paint(finalDoc) }
                 else { answerStream.stream(finalDoc) }
                 // A TYPED ask readies the field for a follow-up. A TAPPED one

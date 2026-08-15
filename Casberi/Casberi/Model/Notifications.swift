@@ -110,9 +110,10 @@ enum Notifications {
             // NOT `.timeSensitive` here: that authorization option was
             // deprecated in iOS 15 and grants nothing. The level is gated by
             // the `com.apple.developer.usernotifications.time-sensitive`
-            // ENTITLEMENT instead, which this build does not carry — see
-            // `schedule`'s note. Passing the dead option would have read as
-            // "we asked for it" while asking for nothing.
+            // ENTITLEMENT instead, which this build carries as of 2026-08-14
+            // — see `schedule`'s note. Passing the dead option would still
+            // read as "we asked for it" while asking for nothing, so it stays
+            // out even now that the level is honoured.
             let granted = (try? await center.requestAuthorization(
                 options: [.alert, .sound, .badge])) ?? false
             return granted
@@ -196,13 +197,17 @@ enum Notifications {
         content.body = plan.body
         content.sound = .default
         content.threadIdentifier = plan.cls.rawValue        // iOS groups by this
-        // Declared correctly whether or not it is honoured. Without the
-        // time-sensitive ENTITLEMENT (absent from `Casberi.entitlements` — it
-        // needs a capability enabled on the App ID in the developer portal,
-        // which no build step can add for itself) iOS silently caps this to
-        // `.active`, so a dispute does NOT break a Focus today. Nothing
-        // user-facing claims it does; see prd §306's amendment. When the
-        // capability is enabled, this line already does the right thing.
+        // HONOURED as of 2026-08-14: `Casberi.entitlements` and its Catalyst
+        // twin now carry `com.apple.developer.usernotifications.time-sensitive`
+        // (prd §306 amendment's "to finish it"), so a 3am dispute really does
+        // break a Focus and the quiet-hours copy says so again. This line is
+        // unchanged — it was always correct; what changed is that iOS stopped
+        // silently capping it to `.active`.
+        // The failure mode if that key is ever dropped is the reason this is
+        // spelled out: nothing fails, no log line appears, and the
+        // notification arrives looking exactly right — it just stops piercing
+        // a Focus, while the settings row goes on promising it will. Both
+        // halves are tied together mechanically in notify-selftest.sh.
         content.interruptionLevel = plan.isTimeSensitive ? .timeSensitive : .active
         if let link = plan.link { content.userInfo = ["link": link] }
         if let art = await attachment(for: plan, photo: photo) { content.attachments = [art] }

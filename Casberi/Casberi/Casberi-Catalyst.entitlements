@@ -46,6 +46,12 @@
 
 	<key>com.apple.developer.weatherkit</key>
 	<true/>
+	<!-- The iOS file's twin — see the long note there. macOS honours
+	     interruption levels, so unlike FinanceKit this key has no availability
+	     reason to be iOS-only, and the mac-parity audit's entitlement check
+	     wants a DECISION either way rather than silence. -->
+	<key>com.apple.developer.usernotifications.time-sensitive</key>
+	<true/>
 	<key>aps-environment</key>
 	<string>development</string>
 	<key>com.apple.developer.icloud-container-identifiers</key>

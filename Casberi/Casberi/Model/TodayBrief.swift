@@ -396,10 +396,22 @@ enum TodayBrief {
         // fresh) — before that it only ran for someone who had KEPT the
         // "today" ask, which most people never do, so the path was rare.
         //
-        // Re-filtering HERE is sufficient and airtight: this enum is
-        // `@MainActor` and there is no further `await` in `compose`, so the
-        // whole remainder runs with exclusive main-actor access — no delete can
-        // land between this line and the reads that follow.
+        // Re-filtering here covers every module down to the model read. It was
+        // documented as covering the whole remainder — "there is no further
+        // `await` in `compose`, so the whole remainder runs with exclusive
+        // main-actor access" — and that was WRONG from the day `dayRead`
+        // landed (2026-08-07): `OnDeviceModel.dayRead` is awaited below and is
+        // deliberately NOT `@MainActor`, precisely so the main actor is
+        // genuinely yielded while the model runs. It is a ~2.1s suspension,
+        // i.e. a race far wider than the one that produced build 250, and
+        // `BriefLedger.record`'s `landed.map(\.source)` plus `DayBrief.detail`
+        // both read stored properties after it. There is a SECOND re-filter
+        // after that await for exactly this reason (2026-08-14).
+        //
+        // Standing rule for this file: every `await` added to `compose` needs
+        // its own re-filter after it. The guarantee is per-suspension, not
+        // per-function, and a comment asserting otherwise is how this one
+        // survived a year.
         things = things.live
         landed = landed.live
         mark("postAwait.live")
@@ -442,7 +454,29 @@ enum TodayBrief {
         // ask overwriting that with a Work-only sentence would make the
         // Lock Screen lie about the rest of the corpus the next time it's
         // glanced at, unrelated to whether anyone actually opened the widget.
-        if category == nil {
+        //
+        // AND skipped for the draft pass (`skipLiveReads`, 2026-08-14). That
+        // pass exists to paint the corpus half instantly and composes its lede
+        // WITHOUT the risk rung and without live holdings — so leaving it
+        // ungated published a knowingly-incomplete sentence to the Home
+        // Screen and then overwrote it a few seconds later. Two real writes,
+        // because the values genuinely differ, which is two `reloadTimelines`
+        // out of a budget the system meters; and for the window between them
+        // the most-glanced surface in the OS carried the lesser of two ledes
+        // we already knew how to compute. The background/digest compose is
+        // untouched — it does not set `skipLiveReads`, so the widget still
+        // refreshes without anyone opening the brief.
+        //
+        // SECOND CONSEQUENCE, intended and worth naming: `skipLiveReads` is
+        // force-ORed with `DemoMode.isActive`, so the demo no longer publishes
+        // its lede to the Home Screen either. That is the §217 demo doctrine
+        // already applied everywhere else — `BridgeRefresh` returns instantly
+        // and `Notifications.submit` returns `[]` under demo, so that a fake
+        // £240 dispute can never reach a real surface — and a widget is the
+        // most public surface the OS has. Previously a demo lede was published
+        // and, since `DemoMode.exit` unwinds by NAME, nothing was named to
+        // take it back down again.
+        if category == nil, !skipLiveReads {
             publishLedeToWidget(lede.text)
             publishThemesToWidget(things: things, now: now)
         }
@@ -657,6 +691,49 @@ enum TodayBrief {
         // Nil off Apple-Intelligence devices and on a thin day; the notes card
         // then stands alone exactly as before (zero regression). Grounded on the
         // day's own facts with the prior briefs' topics as continuity.
+        // The deterministic TAIL is appended BEFORE the model runs
+        // (2026-08-14). These two blocks used to sit below the `dayRead`
+        // await, purely as an artifact of `ids` order — but they are computed
+        // above it and depend on nothing it produces, so every one of them
+        // was held back behind ~2.1s of model latency for no reason. The
+        // notes are single deterministic facts and the leads are the things
+        // themselves; making the day's actual contents wait on a paragraph
+        // ABOUT the day is exactly backwards.
+        //
+        // `dayread` is INSERTED into its rank position afterwards rather than
+        // appended, so the composed order is unchanged — see below.
+        if !notes.isEmpty {
+            ids.append("notes")
+            mark("notes")
+            lines.append("notes = DayNotes([\(notes.indices.map { "n\($0)" }.joined(separator: ", "))])")
+            for (i, n) in notes.enumerated() {
+                lines.append("n\(i) = DayNote(\"\(n.glyph)\", \"\(genSafe(n.text))\", \"\(n.thingID)\")")
+            }
+        }
+        ids += leadRefs
+        lines += leadLines
+
+        // PAINT TWO: everything deterministic, with the live reads in.
+        //
+        // Paint one (the recursive `skipLiveReads` pass above) is the corpus
+        // half alone. This one adds the holdings hero, the movers tile and
+        // the lede's risk rung — and, crucially, it lands BEFORE the model is
+        // asked anything. Without it the entire finished document arrived in
+        // one lump at `max(live reads) + dayRead`, which is what made the
+        // brief read as a 20-25s skeleton: the corpus half was on screen in
+        // well under a second, and then nothing changed for twenty seconds.
+        //
+        // Guarded exactly as paint one is, so the inner pass (`presenting:
+        // false`, no `onPartial`) can never reach it and the recursion stays
+        // one level deep.
+        // `!ids.isEmpty` matters: the quiet-day early return further down
+        // replaces the whole document with one "nothing has landed" line, and
+        // without this an empty day would paint a bare `Stack([])` first — a
+        // flash of nothing between the skeleton and the sentence.
+        if let onPartial, presenting, !skipLiveReads, !ids.isEmpty {
+            onPartial(Self.assemble(ids: ids, lines: lines,
+                                    category: category, leadRefs: leadRefs))
+        }
         #if DEBUG
         NSLog("[Casberi] composeTimingDEBUG| beforeModelRead=%dms",
               Int(Date.now.timeIntervalSince(composeT0) * 1000))
@@ -679,7 +756,14 @@ enum TodayBrief {
                evidence: dayReadEvidence(landed: leadPool, notes: notes, topic: topic),
                continuity: dayReadContinuity(ledger),
                scope: category) {
-            ids.append("dayread")
+            // INSERTED above the notes and the leads, which are already in
+            // `ids` — the rank order (…, dayread, notes, leads) is a ruling,
+            // not an accident of append order. Falling back to `append` when
+            // neither is present keeps a notes-less, lead-less day correct.
+            let at = ids.firstIndex(of: "notes")
+                ?? leadRefs.first.flatMap { ids.firstIndex(of: $0) }
+                ?? ids.count
+            ids.insert("dayread", at: at)
             mark("dayread")
             lines.append("dayread = Insight(\"\(genSafe(read))\")")
         }
@@ -687,16 +771,14 @@ enum TodayBrief {
         NSLog("[Casberi] composeTimingDEBUG| afterModelRead=%dms",
               Int(Date.now.timeIntervalSince(composeT0) * 1000))
         #endif
-        if !notes.isEmpty {
-            ids.append("notes")
-            mark("notes")
-            lines.append("notes = DayNotes([\(notes.indices.map { "n\($0)" }.joined(separator: ", "))])")
-            for (i, n) in notes.enumerated() {
-                lines.append("n\(i) = DayNote(\"\(n.glyph)\", \"\(genSafe(n.text))\", \"\(n.thingID)\")")
-            }
-        }
-        ids += leadRefs
-        lines += leadLines
+        // The SECOND re-filter (2026-08-14) — see the long note at the first
+        // one. `dayRead` above yields the main actor for ~2.1s, and the two
+        // reads still to come (`landed.map(\.source)` in the ledger write,
+        // `DayBrief.detail(things:)` in the digest) both touch stored
+        // properties. Everything after this line is synchronous and
+        // `@MainActor`, so this one really is the last word.
+        things = things.live
+        landed = landed.live
 
         // What this window's brief showed — the memory every §214 read is
         // built on. Written last, so it records what was actually composed,
@@ -734,6 +816,56 @@ enum TodayBrief {
                 delta: "", digest: String(localized: "quiet"),
                 doc: ["root = Stack([ins])", "ins = Insight(\"\(genSafe(line))\")"])
         }
+        // (The Life permutation and the chapter marks moved into `assemble`
+        // below, 2026-08-14, so the pre-model partial renders through exactly
+        // the same ordering rules as the final document. Two copies of this
+        // would mean the brief could re-order itself under the reader the
+        // moment the model answered.)
+        //
+        // The digest IS the whisper's own detail line for the unscoped brief
+        // — so the kept pill's trailing signal and the capsule that teases
+        // this screen say the same thing, and the changed-dot fires on
+        // exactly the days the whisper would have changed. (The whisper's
+        // TITLE is deliberately not part of it: a pill that already reads
+        // "How's my day?" doesn't need "Your Wednesday brief" repeated after
+        // it.) A scoped brief has no whisper to match, and `DayBrief.detail`
+        // reads whole-corpus wallet state regardless of `things` — so its
+        // digest is built straight from what this window actually composed:
+        // count plus which modules fired, which changes on exactly the asks
+        // that would show something new.
+        let digest = category == nil
+            ? (DayBrief.detail(things: things, now: now) ?? String(localized: "quiet"))
+            : "\(landed.count)|\(ids.joined(separator: ","))"
+        // WHICH MODULES a scope actually composed (2026-08-09). Kept for the
+        // same reason `briefPerf` above is: "the Work brief looks empty" is a
+        // recurring report whose cause is never guessable from the screen —
+        // a module can be missing because its data is thin, because its gate
+        // is scoped out, or because it silently lost a registry entry, and
+        // those look identical. One compact line per compose says which.
+        #if DEBUG
+        NSLog("[Casberi] briefModules| category=%@ ids=%@", category ?? "nil", ids.joined(separator: ","))
+        NSLog("[Casberi] briefModuleMs| category=%@ %@", category ?? "nil",
+              moduleMarks.filter { $0.1 >= 1 }
+                  .sorted { $0.1 > $1.1 }
+                  .map { "\($0.0)=\(Int($0.1))ms" }
+                  .joined(separator: " "))
+        #endif
+        return KeptAskComposers.Result(delta: digest, digest: digest,
+                                       doc: Self.assemble(ids: ids, lines: lines,
+                                                          category: category, leadRefs: leadRefs))
+    }
+
+    /// `ids` + `lines` → the document the Stack reads.
+    ///
+    /// Extracted 2026-08-14 so the pre-model partial and the final return
+    /// render through ONE set of ordering rules. Both the Life permutation and
+    /// the chapter marks live here; with a copy in each caller, the brief
+    /// could legitimately re-order itself under someone mid-read the instant
+    /// the model answered, which is a worse artifact than the latency this
+    /// whole pass exists to remove. Pure — no model reads, no `Thing`.
+    private static func assemble(ids: [String], lines: [String],
+                                 category: String?, leadRefs: [String]) -> [String] {
+        var ids = ids
         // LIFE IS PEOPLE-FIRST (2026-08-13, from walking the three scopes on
         // the sim). Every other ordering decision in this file is about rank —
         // what is most consequential — and that ladder is right for a day and
@@ -759,20 +891,6 @@ enum TodayBrief {
                 ids = reordered
             }
         }
-        // The digest IS the whisper's own detail line for the unscoped brief
-        // — so the kept pill's trailing signal and the capsule that teases
-        // this screen say the same thing, and the changed-dot fires on
-        // exactly the days the whisper would have changed. (The whisper's
-        // TITLE is deliberately not part of it: a pill that already reads
-        // "How's my day?" doesn't need "Your Wednesday brief" repeated after
-        // it.) A scoped brief has no whisper to match, and `DayBrief.detail`
-        // reads whole-corpus wallet state regardless of `things` — so its
-        // digest is built straight from what this window actually composed:
-        // count plus which modules fired, which changes on exactly the asks
-        // that would show something new.
-        let digest = category == nil
-            ? (DayBrief.detail(things: things, now: now) ?? String(localized: "quiet"))
-            : "\(landed.count)|\(ids.joined(separator: ","))"
         // The CHAPTERS (2026-07-31) — which modules open a new movement, so
         // the rank order this file spent three rulings establishing is
         // legible as rhythm rather than only as sequence. Every module
@@ -789,22 +907,7 @@ enum TodayBrief {
         let chapters = ["alerts", "hero", "themes", "dayread", "notes", leadRefs.first]
             .compactMap { $0 }
             .filter { ids.contains($0) && $0 != ids.first }
-        // WHICH MODULES a scope actually composed (2026-08-09). Kept for the
-        // same reason `briefPerf` above is: "the Work brief looks empty" is a
-        // recurring report whose cause is never guessable from the screen —
-        // a module can be missing because its data is thin, because its gate
-        // is scoped out, or because it silently lost a registry entry, and
-        // those look identical. One compact line per compose says which.
-        #if DEBUG
-        NSLog("[Casberi] briefModules| category=%@ ids=%@", category ?? "nil", ids.joined(separator: ","))
-        NSLog("[Casberi] briefModuleMs| category=%@ %@", category ?? "nil",
-              moduleMarks.filter { $0.1 >= 1 }
-                  .sorted { $0.1 > $1.1 }
-                  .map { "\($0.0)=\(Int($0.1))ms" }
-                  .joined(separator: " "))
-        #endif
-        return KeptAskComposers.Result(delta: digest, digest: digest,
-                                       doc: ["root = Stack([\(ids.joined(separator: ", "))], \"\(chapters.joined(separator: ","))\")"] + lines)
+        return ["root = Stack([\(ids.joined(separator: ", "))], \"\(chapters.joined(separator: ","))\")"] + lines
     }
 
     // MARK: - Synthesis (direction B3)

@@ -128,23 +128,7 @@ struct FeedScreen: View {
             // (a cheap local read, once, not per re-fetch). The `.externalStorage`
             // columns (audio/image/embedding) are already lazy and omitted.
             var d = FetchDescriptor<Thing>(sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
-            d.propertiesToFetch = [
-                \.id, \.kind, \.title, \.source, \.createdAt, \.capturedAt, \.mark,
-                \.tags, \.provenance, \.sourceRef, \.previewImageURL, \.walletAddress,
-                \.counterpartyAddress, \.transferDirection, \.transferAmount, \.transferVenue,
-                \.transferCounterparty, \.securityFlag, \.spoofedSymbol, \.authorHandle,
-                \.authorAvatarURL, \.summary, \.dueAt, \.ocrAt, \.ocrTopics, \.topicsAt,
-                \.watchPriceUsd, \.starCount, \.repoLanguage, \.priceValue, \.priceCurrency,
-                \.socialContext, \.channelName, \.likeCount, \.repostCount, \.replyCount,
-                \.quote, \.parent, \.imageURLs, \.postAuthor, \.externalLink, \.wikilinks,
-                \.marketResolvedYes,
-                // The row's context menu reads these per row now (prd §260), so
-                // they belong in the pre-fetch with everything else it reads —
-                // otherwise storing the detection would just trade a detector
-                // pass for a per-row fault, which is the same mistake wearing a
-                // cheaper coat.
-                \.detectedTel, \.detectedPlace, \.detectedMailto,
-            ]
+            d.propertiesToFetch = Self.lightColumns
             // BOUNDED (2026-08-06). `propertiesToFetch` above made each row
             // cheap; it never bounded HOW MANY, so this query materialised the
             // whole corpus — every row, as a real `Thing` object, on the main
@@ -198,10 +182,100 @@ struct FeedScreen: View {
             _things = Query(filter: #Predicate<Thing> { $0.pinnedAt != nil },
                             sort: \Thing.pinnedAt, order: .reverse)
         } else {
-            _things = Query(filter: #Predicate<Thing> { $0.source == source },
-                            sort: \Thing.capturedAt, order: .reverse)
+            // A SOURCE room, bounded and light-columned the same way (2026-08-14).
+            //
+            // This branch had neither, which made it strictly the worse half of
+            // the 2026-08-06 measurement above: the All room was fixed and the
+            // rooms most able to hurt were left alone. A source room is the one
+            // place a single query can be enormous — a bulk import lands
+            // thousands of rows under ONE source in one afternoon (§307 raised
+            // the X caps to 10,000 posts + 5,000 likes, and §309 did the same
+            // for Instagram, TikTok and Snapchat) — so opening that room
+            // materialised every row as a real model object on the main actor,
+            // WITH its heavy inline text (`content`/`enrichedText`/`postText`),
+            // which the All room had stopped doing months earlier.
+            //
+            // `windowed` bounds what RENDERS and never bounded what is FETCHED,
+            // so the cost landed before a single row was drawn — the reason
+            // this reads as "the room takes a moment to open" rather than as a
+            // scrolling problem, and the reason it grew with the imports.
+            //
+            // COLUMNS ONLY — deliberately NOT `fetchLimit` (2026-08-14).
+            //
+            // A row bound was written here and then taken back out, because a
+            // source room's derivations are not the All room's. `sourceHead`
+            // composes from `visible`, so `XRoomSource.compose(things: visible)`
+            // would chart the newest 1,200 posts and present them as the whole
+            // archive — and §375 built that card specifically to draw the FULL
+            // span with silent years at zero, on the grounds that the gap is
+            // the reading. "Your loudest year" computed over a truncated slice
+            // is the §83 fake status, in the room whose entire promise is that
+            // it holds your history. Same exposure for the topic treemap's
+            // "N of M" subtitle and every leaderboard.
+            //
+            // The 2026-08-06 All-room bound came with a user ruling that its
+            // derivations may describe the recent window rather than all-time.
+            // No such ruling covers a source room, so the bound is a question
+            // to ask, not a default to assume — and the columns alone are the
+            // half that needs no ruling, since it changes what each row COSTS
+            // and never what any derivation SEES.
+            var d = FetchDescriptor<Thing>(predicate: #Predicate<Thing> { $0.source == source },
+                                           sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
+            d.propertiesToFetch = Self.lightColumns
+            _things = Query(d)
         }
     }
+
+    /// The columns a room's derivations actually read.
+    ///
+    /// Shared by the All room and every source room since 2026-08-14 — one
+    /// list, because two copies drift and the symptom of drift here is a
+    /// per-row fault storm that looks like a slow room rather than like a
+    /// missing column. The heavy inline text (`content`/`enrichedText`/
+    /// `postText`) is deliberately absent: the derivations that run per save
+    /// (bundling, day-grouping, the themes treemap, the room heads) read only
+    /// light columns, and the few visible rows that DO show prose fault it on
+    /// appearance — a cheap local read, once, not per re-fetch. The
+    /// `.externalStorage` columns (audio/image/embedding) are already lazy.
+    private static let lightColumns: [PartialKeyPath<Thing>] = [
+        \.id, \.kind, \.title, \.source, \.createdAt, \.capturedAt, \.mark,
+        \.tags, \.provenance, \.sourceRef, \.previewImageURL, \.walletAddress,
+        \.counterpartyAddress, \.transferDirection, \.transferAmount, \.transferVenue,
+        \.transferCounterparty, \.securityFlag, \.spoofedSymbol, \.authorHandle,
+        \.authorAvatarURL, \.summary, \.dueAt, \.ocrAt, \.ocrTopics, \.topicsAt,
+        \.watchPriceUsd, \.starCount, \.repoLanguage, \.priceValue, \.priceCurrency,
+        \.socialContext, \.channelName, \.likeCount, \.repostCount, \.replyCount,
+        \.quote, \.parent, \.imageURLs, \.postAuthor, \.externalLink, \.wikilinks,
+        \.marketResolvedYes,
+        // The row's context menu reads these per row now (prd §260), so
+        // they belong in the pre-fetch with everything else it reads —
+        // otherwise storing the detection would just trade a detector
+        // pass for a per-row fault, which is the same mistake wearing a
+        // cheaper coat.
+        \.detectedTel, \.detectedPlace, \.detectedMailto,
+        // `FeedInsight.leaderboard` reads this for EVERY row of a Snapchat
+        // room ("Who you snap with"), and Snapchat is a bulk-import room, so
+        // omitting one `Int?` would trade a cheap column for thousands of
+        // faults — the §260 mistake above in a different coat. Added
+        // 2026-08-14 with the source-room columns.
+        \.messageCount,
+    ]
+
+    // KNOWN AND DELIBERATE: `content` stays OUT, and it is the one omission
+    // that costs something rather than saving it. `FeedInsight` reads it per
+    // row for three leaderboards — Steam hours, the `r/` subreddit, and the
+    // host a link came from — so those rooms now fault once per row where the
+    // old unpredicated fetch had it loaded. It is left out because `content`
+    // is the heavy column for the rooms this change is FOR: a note's whole
+    // body, a chat's transcript, a screenshot's OCR. The three rooms that pay
+    // are feed bridges holding tens to hundreds of rows; the rooms that gain
+    // are bulk imports holding thousands.
+    //
+    // UNMEASURED, and stated as such: the 26.6%-of-main-thread figure behind
+    // the All room's own columns came from `scripts/main-thread-profile.sh` on
+    // a 6,000-row corpus, and no equivalent profile has been run for a source
+    // room. If a Reddit or Steam room ever reads as slow to open, this comment
+    // is the first place to look and `content` is the first thing to try.
 
     /// Only `tag` is read from here now — a kind filter is a cross-page state
     /// (it arrives from Home's kind bar and applies to the All room).
@@ -807,6 +881,12 @@ struct FeedScreen: View {
     /// The room guard lives HERE rather than at the `.task(id:)` below, so a
     /// per-source room doesn't even run the `COUNT` — its own predicated
     /// query already coordinates it, and it has no snapshot to refresh.
+    ///
+    /// That stays true now source rooms are BOUNDED too (2026-08-14): the
+    /// bound caps how many rows the query returns, not whether SwiftData
+    /// re-runs it on save, so the array still tracks arrivals. What the bound
+    /// does break is anything keyed on that array's `.count`, which pins at
+    /// the limit — `listRevision` above is the one such reader and says so.
     private var corpusRevision: Corpus.Revision {
         guard source == "All", filter.tag == "All" else { return .idle }
         return Corpus.revision(in: modelContext)
@@ -5507,9 +5587,11 @@ struct FeedScreen: View {
         // At the fetch bound this is NOT the end of the corpus, and saying
         // "that's everything" there would be the §83 fake status in the one
         // place a person is deciding whether anything older exists. The room
-        // stops fetching at `allRoomFetchLimit`; the copy says which stop this
-        // is. Open the source's own chip to walk past it — a per-source room
-        // carries its own predicated query and no such bound.
+        // stops fetching at `allRoomFetchLimit`; the copy says which stop this is.
+        //
+        // The door this offers stays real: a source room carries its own
+        // predicated query and (2026-08-14) still no row bound, so opening one
+        // genuinely does reach further back than the All room can.
         Text(reachedFetchCeiling
              ? "Showing your most recent \(rows.count) — open a source to go further back"
              : source == "All"
@@ -5553,12 +5635,16 @@ struct FeedScreen: View {
     /// generous; see `windowed` for why the unit is rows and not days).
     private static let windowRowTarget = 30
 
-    /// How many rows the All room's `@Query` will materialise, ever. See the
-    /// long note in `init` for the measurement that produced it: unbounded,
-    /// that query was 26.6% of the main thread on a 6,000-row corpus, because
+    /// How many rows a room's `@Query` will materialise, ever. See the long
+    /// note in `init` for the measurement that produced it: unbounded, that
+    /// query was 26.6% of the main thread on a 6,000-row corpus, because
     /// SwiftData instantiates every row as a real model object on the main
     /// actor. ~40 "Show older" taps of headroom, and constant thereafter no
     /// matter how large the corpus grows.
+    ///
+    /// Still the ALL room's alone: source rooms took the light columns on
+    /// 2026-08-14 and deliberately not this bound, and the pinned room takes
+    /// neither. See `init` for both reasons.
     static let allRoomFetchLimit = 1200
 
     /// True when the window has opened as far as the FETCH will go — the
@@ -5570,6 +5656,9 @@ struct FeedScreen: View {
     /// fetching it. `windowed` reports `more: false` here for exactly the same
     /// reason it does when a room really is exhausted, so nothing downstream
     /// can tell the two apart — which is why this is asked separately.
+    ///
+    /// Still All-room only: it is the only bounded room. Source rooms got the
+    /// light columns on 2026-08-14 but deliberately no row bound — see `init`.
     private var reachedFetchCeiling: Bool {
         source == "All" && filter.tag == "All"
             && windowRowBudget >= Self.allRoomFetchLimit

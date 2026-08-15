@@ -642,7 +642,15 @@ struct AccountDetailSheet: View {
                     .dsText(.body17)
                     .tint(DS.tint)
             }
-            toggleRow("Quiet hours", "Anything that arrives at night waits until morning.",
+            // Restored 2026-08-14 with the time-sensitive entitlement (prd
+            // §306 amendment's "to finish it"). It read "Anything that arrives
+            // at night waits until morning" for nine days, which was the
+            // honest line while iOS was silently capping the level to
+            // `.active`. It names the two kinds rather than saying "a
+            // deadline", because `NotifyKind.isTimeSensitive` is exactly
+            // `disputeOpened || deadlineNear` — and a person reading this row
+            // is deciding whether to trust the switch, not skimming it.
+            toggleRow("Quiet hours", "Anything that arrives at night waits until morning — except a dispute or a deadline, which can break through.",
                       isOn: Binding(get: { notifySettings.quiet.enabled },
                                     set: { notifySettings.quiet.enabled = $0; saveNotify() }))
             // The ceiling, stated rather than hidden. There is no server, so

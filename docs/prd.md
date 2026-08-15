@@ -104,6 +104,7 @@ at all.
 | §162 | Privacy Pools rides the watched wallets — the alert IS the fea | superseded by §207 |
 | §181 | The agent opens on the brief — chips docked, keyboard down | superseded by §336 |
 | §184 | The manager pattern, generalized — roster for people, ledger f | superseded by §185 |
+| §306 | Notifications — time-sensitive DECLARED but not honoured, copy | amended by §383 |
 | §361 | The top band gets the feed's geometry — it pays for the rail's | amended by §371 |
 
 ### Known stale, by hand
@@ -23248,3 +23249,220 @@ Small and free elsewhere: HomeKit gains `manufacturer`/`model` (plain properties
 **"Needs you" gains the runway** (`GenRunway` at widget scale). Four rows say what the next four things are; a rail says the SHAPE — two behind you, three ahead, roughly how far — which is a reading a list cannot give at any size. **Its invariant is inherited verbatim: the window always CONTAINS now.** `WidgetRunway.positions` folds `now` into the window rather than clamping onto it, so the guarantee is structural rather than a rule to remember; get it wrong and late items draw ahead of the marker, which is precisely the distinction the tile exists to make. It draws every published deadline, not only the rows listed beneath it, so the tile stops being a window onto its own top three. The rows drop to 3 (large) and 2 (medium) to pay for it.
 
 Six new mutations in `widget-selftest.sh`, and one of them earned itself immediately: the end-padding mutation SURVIVED the first run, because the assertions checked ordering and bounds and never checked the pad — a dot at either extreme would have rendered as a half-moon clipped by the track, with every test green.
+
+## §383 — Four surfaces where the work was already done and the wiring wasn't (session goal: "how would you improve the app experience", then "lets do 1, 3, 5, 6", 2026-08-14)
+
+Four items picked off a list of six. Three of them turned out to be **wiring
+faults rather than missing features** — the capability existed, was correct, and
+never reached the person — which is the same shape as §377's quick action and
+§320's two features that nothing called. The fourth is a design question left
+open on purpose.
+
+**The standing lesson, earned twice in one session:** two of my own six
+recommendations were STALE — the fix I proposed for the feed had shipped on
+2026-08-06 (`allRoomFetchLimit`), and the early-paint I proposed for the brief
+had shipped on 2026-08-03 (`onPartial`). Both were real problems when last
+written about and both had been fixed since. Read the file before proposing the
+fix, not after; and prefer a map of the current tree over memory of the last one.
+
+### 1. The brief was not slow, it was REVEALED twice
+
+The report this pass began from — the brief "streams for 20-25s and early
+frames read as a broken skeleton" — had nothing to do with compose time. Three
+independent defects, all in the reveal:
+
+**The document blanked and re-typewrote itself from zero.** `Composer`'s settle
+picks between `paint` (swap) and `stream` (typewriter) on a local `streamed`
+flag, which is set ONLY by the prose channel (`paintPartial`). The brief uses
+the DOCUMENT channel (`paintDocument`), which set `proseStreaming` instead — and
+the comment above it says that was so "the settle below doesn't
+typewriter-reveal a document the person is already reading". It could never have
+done that: `proseStreaming` is reset to false inside the settle's own
+`withAnimation` BEFORE the branch runs, and the branch does not read it. So every
+brief took `stream(finalDoc)`, whose first act is `els = [:]`. The person
+watched the corpus half arrive in under a second, read it for several seconds,
+and then watched it be erased and retyped a character at a time. `painted` is a
+flag of its own now — deliberately not `streamed`, which also marks an answer
+keepable as text, and one name for both reads as a bug.
+
+**The skeleton stood on top of the answer.** It was gated on `inFlight`, which
+is cleared only at the settle, while the early paint lands seconds earlier — so
+four pulsing placeholders sat ABOVE the real lede, pushing it down the screen,
+for the whole window they were supposed to be covering. Gated on an EMPTY stream
+now: the skeleton is the shape of an answer that hasn't come, and the moment any
+of it has, it has done its job.
+
+**Everything deterministic waited on the model.** `notes` and the leads are
+computed above the `dayRead` await and appended below it, purely as an artifact
+of `ids` order — so the day's own contents were held back behind ~2.1s of model
+latency to make room for a paragraph ABOUT the day. They are appended before the
+read now, with a second `onPartial` emitted at that point, and `dayread`
+INSERTED into its rank position afterwards so the composed order is unchanged.
+Three paints: corpus half, everything deterministic, then the model's read.
+`assemble` was extracted so the partial and the final render through one set of
+ordering rules — two copies would let the brief re-order itself under a reader
+the instant the model answered.
+
+**A liveness hole the same await had been hiding.** `compose`'s re-filter
+carried the claim that "there is no further `await` in `compose`, so the whole
+remainder runs with exclusive main-actor access". That was wrong from the day
+`dayRead` landed (§334-era, 2026-08-07): `OnDeviceModel.dayRead` is awaited and
+is deliberately NOT `@MainActor`, precisely so the actor is yielded — a ~2.1s
+suspension, far wider than the one that produced build 250's crash, with
+`landed.map(\.source)` and `DayBrief.detail` both reading stored properties
+after it. There is a second re-filter now. **The rule this generalises to: the
+guarantee is per-suspension, not per-function, and a comment asserting otherwise
+is how this one survived a year.** The liveness audit's check 6 could not see it
+— it asks whether a `.live` appears in the function, and one did, before the
+await.
+
+**And the widget was published twice per brief**, once from the draft pass whose
+lede is composed without the risk rung or live holdings. Two real writes,
+because the values genuinely differ, hence two `reloadTimelines` out of a
+metered budget; and in the window between them the most-glanced surface in the
+OS carried the lesser of two ledes we already knew how to compute.
+
+### 2. Time-sensitive, finished (amends §306)
+
+§306's amendment listed three steps "to finish it" and they are done — including
+the one it called the user's, which turned out not to need a human at all. That
+correction is the reusable part, and it took three different names for one
+capability to find:
+
+1. `POST /v1/bundleIdCapabilities` with `TIME_SENSITIVE_NOTIFICATIONS` answers
+   **409**, listing the 28 valid `capabilityType` values. The ASC API cannot
+   WRITE this capability, and no spelling makes it.
+2. **`xcodebuild -allowProvisioningUpdates` with an ASC key CAN** — one Catalyst
+   build registered the capability on the App ID and regenerated the profile.
+3. The same API then READS it back as **`USERNOTIFICATIONS_TIMESENSITIVE`** — a
+   third spelling, which is why guessing at the write name led nowhere. The App
+   ID went from nine capabilities to ten.
+
+**Generalisable: when a capability is absent from the API's write enum, drive it
+through `-allowProvisioningUpdates` before concluding it needs the portal by
+hand.** §306's "needs the portal, so it is the user's step" was true of the API
+and false of the toolchain.
+
+**And the Mac parity gate is what caught the gap, exactly as designed.** Landing
+the entitlement before the capability existed turned the Catalyst build red —
+"Provisioning profile … doesn't include the Time Sensitive Notifications
+capability" — while the iOS Simulator build stayed green, because a simulator
+build is unsigned and checks no entitlement at all. §306 predicted this would
+surface "at ship time, weeks later" against a signed archive; the 2026-08-12
+Catalyst gate pulled it forward to the same session that caused it, which is the
+whole argument for that gate stated as an incident.
+
+The key is now in `Casberi.entitlements` AND its Catalyst twin — unlike
+FinanceKit, macOS honours interruption levels, so there is no availability
+reason to split them and the mac-parity audit wants a decision either way. No
+Swift changed: `Notifications.swift` has always set the level correctly.
+
+**The guard is the point.** `interruptionLevel = .timeSensitive` is a line that
+compiles and runs whether or not the app is allowed to mean it — without the
+entitlement iOS caps it to `.active`, nothing fails, no log line appears, and
+the notification arrives looking exactly right. `notify-selftest.sh` now ties
+the two halves together in both directions: the entitlement must be present in
+both files whenever the code claims the level, and the quiet-hours copy may
+promise break-through only while the key is really there. Mutation-proven by
+commenting the key out — both guards fire, and the commented form is rejected,
+because the mac-parity audit's key regex is naive the same way and
+"documenting" a capability by commenting it in would satisfy a lazier check.
+
+The copy is restored, naming the two kinds rather than "a deadline", because
+`NotifyKind.isTimeSensitive` is exactly `disputeOpened || deadlineNear` and
+someone reading that row is deciding whether to trust the switch.
+
+### 3. Source rooms got the columns and NOT the bound
+
+The 2026-08-06 bound fixed the All room and left the rooms most able to hurt
+alone: a source room had NEITHER `fetchLimit` NOR `propertiesToFetch`, so
+opening one materialised every row as a real model object on the main actor
+WITH its heavy inline text — which the All room had stopped doing months
+earlier. A source room is the one place a single query can be enormous, because
+a bulk import lands thousands of rows under ONE source in an afternoon (§307
+raised X to 10,000 + 5,000; §309 did the same for three more). `windowed` bounds
+what RENDERS and never bounded what is FETCHED, so the cost landed before a
+single row was drawn — which is why it reads as "the room takes a moment to
+open" rather than as a scrolling problem, and why it grew with the imports.
+
+**Only `propertiesToFetch` shipped. A row bound was written, and taken back
+out, and the reason is the more useful half of this entry.** `sourceHead`
+composes from `visible`, so bounding the query to 1,200 would hand
+`XRoomSource.compose(things: visible)` the newest 1,200 posts and let it present
+them as the whole archive — while §375 built that card specifically to draw the
+FULL span with silent years at zero, on the grounds that the gap is the reading.
+"Your loudest year" over a truncated slice is the §83 fake status in the room
+whose entire promise is that it holds your history; the topic treemap's "N of M"
+subtitle and every leaderboard carry the same exposure.
+
+The 2026-08-06 All-room bound shipped WITH a ruling that its derivations may
+describe the recent window rather than all-time. **No such ruling covers a source
+room, so the bound is a question to ask rather than a default to assume** — and
+the columns alone are the half needing no ruling, because they change what each
+row COSTS and never what any derivation SEES.
+
+**The columns are not a free win either, and the ledger should say so.**
+`FeedInsight` reads two omitted columns for every row of a room:
+`messageCount` (Snapchat's "Who you snap with") and `content` (Steam hours, the
+`r/` subreddit, a link's host). `messageCount` is one `Int?` and went into the
+list — omitting it would trade a cheap column for thousands of faults in a
+bulk-import room, which is the §260 mistake in a new coat. `content` stayed OUT
+with eyes open: it is the heavy column for exactly the rooms this change is for
+(a note's body, a chat's transcript, a screenshot's OCR), and the three rooms
+that now fault for it are feed bridges holding tens to hundreds of rows, while
+the rooms that gain hold thousands. **UNMEASURED** — the 26.6% figure behind the
+All room's columns came from `main-thread-profile.sh` on a 6,000-row corpus and
+no equivalent profile was run for a source room, so if a Reddit or Steam room
+ever reads as slow to open, `content` is the first thing to try.
+
+Two things the abandoned bound turned up, worth keeping written down for
+whoever answers that question. `listRevision` falls back to `things.count` for
+source rooms, and a bounded query's count pins at the limit forever — the
+identical failure that froze the All room in build 271, arriving by the
+identical route one branch over; there it would have cost only the insertion
+animation, which is exactly why it would have gone unnoticed. And
+`reachedFetchCeiling` compares `windowRowBudget` against the limit, so a tag
+filter matching 5 of 1,200 fetched rows never grows the budget near the bound
+and the footer claims "that's everything" while rows past the bound could well
+have matched — a hole it has today, unchanged, and one that wants a cheap scoped
+count rather than a second `things.count` (a `@Query` fetches in its getter, so
+that read is a second materialisation of up to 1,200 models in a body that
+already read them once).
+
+### 4. The thin three — OPEN, and deliberately
+
+Money receipts, social posts and screenshots got anatomy passes; a plain
+`.link`, `.note` and `.file` still fall through `ThingContent`'s `default:`
+branch, which draws one 12-line grey paragraph. The thinnest is a `.note` from
+any source outside `NoteSheetSource.sources` — and that file already records
+that widening the six-name allowlist is "a different ruling than this one,
+because it first needs an answer to what `You` means (wrote it, or merely
+brought it)". So it stays open rather than being answered by a session that
+wasn't asked to answer it. Proposal and the three options are in the artifact
+from this session; nothing shipped.
+
+One real defect found while mapping it and fixed: **`PostHogMetricContent` holds
+a `Thing` and its body carried no `isLive` guard** — the only such leaf in
+`ThingContent.swift` without one, while every sibling chart view has had one
+since build 188 (corollary 5). It slipped check 5 rather than being exempted:
+that check clears a struct when `isLive`/`.live` appears anywhere inside it, and
+this struct carries a `.filter(\.isLive)` on its ANNOTATIONS fetch — an
+unrelated collection. A guard on one array reading as a guard on the stored
+model is the same false-negative shape the held-`Thing` check already needed
+tightening for on 2026-08-02.
+
+**What is proven, and what is not.** The entitlement is the strongest-verified
+thing here: `codesign -d --entitlements` on the SIGNED Catalyst app shows
+`com.apple.developer.usernotifications.time-sensitive` present, which is the
+check the entitlements lesson demands (a signed artifact, never a green
+`xcodebuild`), and the App ID now carries the capability that profile was
+issued against. What remains unproven there is only the behaviour itself — a
+real device, in a Focus, at 3am.
+
+Everything else rests on the build, the static audits and
+`notify-selftest.sh`'s new mutations. **Nothing was run on a simulator this
+session** (standing user preference), so the brief's three paints have not been
+WATCHED — the reveal fix is reasoned from `GenStream.stream`'s `els = [:]` and
+from `GenParser` keying elements in a dictionary (so moving `dayread`'s line
+cannot reorder the render), not observed. The source-room columns are likewise
+unmeasured, per the caveat above.
