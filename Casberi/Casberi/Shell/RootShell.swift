@@ -1720,28 +1720,7 @@ struct RootShell: View {
                              // ever asking.
                              expanded: !agentEverRaised && !chrome.minimized,
                              morphNS: agentMorph,
-                             onFind: {
-                                 DSHaptic.tap()
-                                 // No `askRequest`: Find is the door where
-                                 // nothing runs until the person types. One
-                                 // verb, since ⌘F and the bar's right-click
-                                 // menu reach the same door.
-                                 chrome.openFind()
-                             },
                              onSources: { openSources() },
-                             onVoice: {
-                                 // The hold's own buzz — the same threshold-
-                                 // moment feedback the sources hold gets via
-                                 // `openSources()`.
-                                 DSHaptic.lift()
-                                 chrome.openVoice()
-                             },
-                             // The room's hue reaching the bottom of the screen
-                             // (2026-08-06) — non-nil only inside a scoped
-                             // wallet, which is the one place the crown itself
-                             // still pours (§297). Read straight off
-                             // `chrome.pourHue` rather than re-derived, so the
-                             // crown and the bar can never name two colours.
                              roomTint: chrome.pourHue) {
                         DSHaptic.tap()
                         // Open onto the Today brief, not the empty chips (prd

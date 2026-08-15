@@ -26,10 +26,9 @@ import SwiftUI
 /// least-frequent job: this is a corpus you open and READ, and asking is
 /// occasional — capture arrives through the share sheet, the paste chip and the
 /// bridges. Chrome is priced by frequency of use, so the bar now wears the
-/// shape it used to reach only after a scroll. It is NOT the old FAB restored:
-/// the magnifier stays visible beside the berry, because Find was promoted out
-/// of the risen composer on 2026-07-30 precisely for being undiscoverable, and
-/// a lone berry would re-bury it a month later.
+/// shape it used to reach only after a scroll. ONE control (2026-08-15, §386o):
+/// the magnifier is gone — the surface it opened has a text field in it, so
+/// search was never a second door, just the same one with the keyboard up.
 ///
 /// **It rests in the CORNER** (user ruling 2026-08-07). Compact chrome centred
 /// on the bottom edge still sat over the middle of the reading column — the one
@@ -37,13 +36,8 @@ import SwiftUI
 /// symmetrical position for its least-frequent verb. `RootShell` now pins the
 /// whole floating cluster trailing, so this hugs the bottom-right the way a FAB
 /// does, the reading column runs clear beneath it, and the thumb has less
-/// distance to travel on the hand most people hold a phone in. Two things did
-/// NOT change with it, both deliberately: the magnifier stays beside the berry
-/// (see the paragraph above — a corner move is not a reason to re-bury Find,
-/// and it costs one glyph of width in a shape that no longer spans anything),
-/// and the hold still belongs to the whole pill rather than being split between
-/// two corner circles, which at this size would be two targets too small to
-/// aim a 0.45s press at.
+/// distance to travel on the hand most people hold a phone in. The hold belongs to the
+/// whole pill again now that the pill is one control.
 ///
 /// So `expanded` no longer means "span the screen" — it only adds the words.
 /// The teaching grace survives (a bar nobody has used should still say what it
@@ -63,14 +57,22 @@ struct AgentBar: View {
     /// BOTH states, so this adds a line of text and nothing else.
     var expanded: Bool = false
     var morphNS: Namespace.ID?
-    /// The magnifier (2026-07-30). Find is deterministic and writes nothing —
-    /// a genuinely different act from asking — but it existed only as a chip
-    /// that appears AFTER you raise the agent and type, so the person who
-    /// wants to locate a link they saved had to start by asking a question.
-    /// This raises the composer straight into a typed search: no brief, field
-    /// focused, Find one keystroke away. Same surface, same ruling (§215),
-    /// one fewer act of faith.
-    var onFind: () -> Void = {}
+    /// THE MAGNIFIER IS GONE (2026-08-15, prd §386o, user: "search and the
+    /// agent button are the same really, if you click it you have a field you
+    /// can type in… i don't think the fab needs to be the casberi icon AND
+    /// the search icon").
+    ///
+    /// It was added in 2026-07-30 to save an act of faith — Find used to be a
+    /// chip you only met AFTER raising the agent and typing. But the surface
+    /// it opens has a text field in it, so "search" was never a second door:
+    /// it was the same door with the keyboard already up. Two 44pt targets a
+    /// thumb-width apart, opening the same screen in two states, is the kind
+    /// of choice a person has to make before they know what either one does.
+    ///
+    /// What is genuinely different about Find survives untouched: the Find
+    /// CHIP still appears the moment there is a draft, and it still runs the
+    /// deterministic engine that writes nothing (§215). You reach it by
+    /// typing, which is what you were going to do anyway.
     /// Hold the bar → every source at once (`SourcesTray`, 2026-07-31). It
     /// lives HERE rather than on the chip strip's catalogue door for three
     /// reasons: this bar is in the bottom thumb zone and the strip is at the
@@ -82,15 +84,6 @@ struct AgentBar: View {
     /// braces, the safeAreaInset-over-pager arbitration), which is not a place
     /// to stack a second recognizer.
     var onSources: () -> Void = {}
-    /// Hold the magnifier → the composer rises with the mic live (prd §384,
-    /// `ShellChrome.openVoice`) — speaking, one gesture from anywhere. The
-    /// hold FORKED by button in the same pass: it used to cover the whole
-    /// pill for the sources tray alone ("no room to split one hold between
-    /// two targets"), but each control is a full 44pt circle and a 0.45s
-    /// press is already ON one of them — the finger, not a zone boundary,
-    /// decides. The berry keeps the taught sources hold; the magnifier's
-    /// hold is the spoken form of the door it already is.
-    var onVoice: () -> Void = {}
     /// The room's own hue, when standing in a room that HAS one (2026-08-06) —
     /// `ShellChrome.pourHue`, which is non-nil only inside a scoped wallet.
     ///
@@ -115,46 +108,6 @@ struct AgentBar: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            Button {
-                guard !consumeHold() else { return }
-                onFind()
-            } label: {
-                // A satellite, not a twin (2026-08-07): in the corner the berry
-                // is the anchor and Find rides beside it, so the glyph steps
-                // down a size to say which is which. The TARGET does not —
-                // it stays the full 44pt circle below, because a control that
-                // reads as secondary still has to be hittable (HIG's floor,
-                // and the catalogue door's own lesson one line down).
-                Image(systemName: "magnifyingglass")
-                    .dsGlyph(15)
-                    .foregroundStyle(DS.textSecondary)
-                    // The control is the CIRCLE, not the glyph (the catalogue
-                    // door's own 2026-07-26 lesson: a `.frame()` around a small
-                    // symbol leaves everything but its centre falling through).
-                    .frame(width: 44, height: 44)
-                    .contentShape(Circle())
-                    .dsHover()
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(Text("Find in your things"))
-            // Same words as the label above, verbatim, so the pointer and
-            // VoiceOver can never name this glyph two different things.
-            .dsTooltip(String(localized: "Find in your things"))
-            // The magnifier's own hold → speak (see `onVoice` above). Its own
-            // recognizer on its own 44pt control — never a second recognizer
-            // stacked on someone else's target (the catalogue door's lesson).
-            .simultaneousGesture(
-                LongPressGesture(minimumDuration: 0.45)
-                    .onChanged { _ in heldForSources = false }
-                    .onEnded { _ in
-                        heldForSources = true
-                        onVoice()
-                    }
-            )
-            // The hold, reachable without holding — the sources hold's own
-            // accessibility reasoning, applied to this button's verb.
-            .accessibilityAction(named: Text("Speak"), onVoice)
-
             Button {
                 guard !consumeHold() else { return }
                 action()
@@ -241,7 +194,7 @@ struct AgentBar: View {
         // full 44pt control, so the finger has already chosen; `simultaneous`
         // on each keeps the buttons' own taps, and both guard on
         // `consumeHold()` for the release that follows a hold.
-        .modifier(BarSecondaryMenu(onSources: onSources, onFind: onFind))
+        .modifier(BarSecondaryMenu(onSources: onSources))
         .modifier(MorphMatch(ns: morphNS))
     }
 
@@ -268,7 +221,6 @@ struct AgentBar: View {
 /// click only and the two never meet.
 private struct BarSecondaryMenu: ViewModifier {
     let onSources: () -> Void
-    let onFind: () -> Void
 
     func body(content: Content) -> some View {
         #if targetEnvironment(macCatalyst)
@@ -277,11 +229,6 @@ private struct BarSecondaryMenu: ViewModifier {
                 onSources()
             } label: {
                 Label("Your sources", systemImage: "square.grid.2x2")
-            }
-            Button {
-                onFind()
-            } label: {
-                Label("Find in your things", systemImage: "magnifyingglass")
             }
         }
         #else
