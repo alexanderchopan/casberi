@@ -302,34 +302,58 @@ extension DS {
         return skin
     }
 
-    /// A RAMP IS PINNED ONLY OVER A FIXED FILL, and the three branches below
-    /// are that one rule rather than three special cases.
+    /// ONE REGISTER, SOLVED PER HUE — every card lands at the same perceived
+    /// weight (2026-08-15, user, from the built app: "they seem of different
+    /// intensities and now i wonder if too bright").
     ///
-    /// `legibleCardFill` substitutes an ADAPTIVE neutral for the two marks
-    /// that cannot be a card — a near-white one (ChatGPT, Privacy Pools) takes
-    /// `gray200` outright, a near-black one (X, Vercel, Cursor, Grok) is mixed
-    /// toward it — and both substitutes are `#3a3a3c` in dark and `#d1d1d6` in
-    /// light. So the ambient ramp is already correct on them in both themes,
-    /// while a pinned one would be right in exactly one: reusing that
-    /// function's answer and then deciding the ink from the ORIGINAL hue would
-    /// paint ChatGPT's row black-on-dark-gray, which is invisible rather than
-    /// merely wrong, and no build or screenshot in the dark theme could show
-    /// it. Only the middle branch returns a fixed hex, and only it names a
-    /// scheme.
+    /// The first cut used raw brand hexes, which is the mistake `washHue`'s
+    /// own doc already names: "raw brand hexes aren't a designed ramp."
+    /// YouTube's #ff0000 screamed beside Photos' pastel, the yellow cards
+    /// flipped to black ink while their neighbours ran white, and the strip of
+    /// them read as a defect rather than a palette. The fix is the same move
+    /// `legibleInk` makes one surface over: keep the HUE (the identity), pin
+    /// saturation into one vivid band [0.60, 0.85], and binary-search
+    /// brightness until the card sits at WCAG luminance 0.15 — measured, that
+    /// puts every card at a uniform ~5.3:1 under white ink (YouTube lands at
+    /// #d31f1f, Farcaster #7e52cd, Wallet #245ef4), which also answers the
+    /// "too bright" half: 0.15 is the deep end of the Messages register, a
+    /// shade under the raw brights. Turn THIS dial to retune the whole feed;
+    /// never re-introduce per-source fills.
+    ///
+    /// Uniform luminance also means uniform INK — every hued card takes the
+    /// white ramp, so the mixed black-on-yellow/white-on-purple checkerboard
+    /// is gone (a yellow brand becomes a deep gold rather than staying neon
+    /// with black ink; that trade IS the register). A hue that cannot reach
+    /// 0.15 even at full brightness (pure blue tops out near 0.08 — the
+    /// `legibleInk` lesson) solves to its brightest self, which is already
+    /// darker than the target and reads white ink fine.
+    ///
+    /// The neutral branch is unchanged and still pins NO scheme: a mark with
+    /// no honest hue (X's black, ChatGPT's white, Apple Wallet's graphite —
+    /// `washHue`'s own s < 0.15 bar) takes the ADAPTIVE gray, correct in both
+    /// themes under the ambient ramp, where a pinned one would be right in
+    /// exactly one theme and invisible-wrong in the other.
     private static func computeRowSkin(for source: String) -> RowSkin {
-        guard let hue = brandHue(for: source) else {
-            // No honest hue — the neutral says "we don't know this app"
+        guard let brand = brandHue(for: source) else {
+            // No hue at all — the neutral says "we don't know this app"
             // (`legibleCardFill`'s own 2026-08-10 ruling), never the app tint.
             return RowSkin(fill: DS.gray200, ink: nil)
         }
-        let lum = luminance(of: hue)
-        if lum > 0.90 { return RowSkin(fill: DS.gray200, ink: nil) }
-        if lum < 0.12 { return RowSkin(fill: hue.mix(with: DS.gray200, by: 0.6), ink: nil) }
-        // 0.55 rather than 0.5: white ink survives a mid-tone better than black
-        // ink does, so the tie goes to white. Checked against the hues that sit
-        // near the line — Snapchat's #fffc00 and Hugging Face's #ffd21e take
-        // black; Farcaster's #855dcd and RSS's #f26522 take white.
-        return RowSkin(fill: hue, ink: lum > 0.55 ? .light : .dark)
+        var h: CGFloat = 0, s: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        UIColor(brand).getHue(&h, saturation: &s, brightness: &b, alpha: &a)
+        guard s >= 0.15 else { return RowSkin(fill: DS.gray200, ink: nil) }
+
+        let sat = min(max(Double(s), 0.60), 0.85)
+        let target = 0.15
+        var lo = 0.10, hi = 1.0
+        for _ in 0..<12 {
+            let mid = (lo + hi) / 2
+            let (r, g, bl) = rgbComponents(hue: Double(h), saturation: sat, brightness: mid)
+            if wcagLuminance(r, g, bl) < target { lo = mid } else { hi = mid }
+        }
+        return RowSkin(fill: Color(hue: Double(h), saturation: sat,
+                                   brightness: (lo + hi) / 2),
+                       ink: .dark)
     }
 
     /// WCAG relative luminance — sRGB channels gamma-LINEARIZED, which is the
