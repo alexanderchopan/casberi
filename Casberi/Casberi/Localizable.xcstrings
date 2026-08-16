@@ -21107,6 +21107,34 @@
         }
       }
     },
+    "Ask or search": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Pregunta o busca"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "質問または検索"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "질문하거나 검색"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "提问或搜索"
+          }
+        }
+      }
+    },
     "Ask the bar at the bottom about anything you've saved.": {
       "localizations": {
         "es": {
@@ -36379,6 +36407,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "Kalshi 的公开市场目前没有报价。"
+          }
+        }
+      }
+    },
+    "Keep": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Guardar"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "保存"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "저장"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "保存"
           }
         }
       }
@@ -66499,6 +66555,34 @@
         }
       }
     },
+    "When these landed": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Cuándo llegaron estos"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "これらが届いた時期"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "이것들이 도착한 때"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "这些何时到达"
+          }
+        }
+      }
+    },
     "Where it moved": {
       "localizations": {
         "es": {
@@ -66579,6 +66663,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "资金流向"
+          }
+        }
+      }
+    },
+    "Where these came from": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "De dónde vinieron estos"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "これらの出どころ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "이것들은 어디서 왔나"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "这些来自哪里"
           }
         }
       }

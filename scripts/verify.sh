@@ -469,6 +469,27 @@ step "Ask-scope self-test"
   || fail "the ask-scope self-test failed — run scripts/ask-scope-selftest.sh"
 print -P "%F{green}✓ ask-scope self-test%f"
 
+# The deterministic figure above a free-text answer's prose (2026-08-15) — the
+# app's own arithmetic over the rows the model is about to read. Every way it
+# fails renders as a perfectly good-looking answer, and three of them render as
+# a perfectly good-looking CHART: `dailyBars` floors on the count it is HANDED
+# rather than what falls inside its seven-day window, so an archive retrieval
+# clears the floor and draws seven columns of zero (the exact rendering
+# `archiveRecap` cites as its reason to carry no bars at all); a floor that
+# drifts, a ranking that always picks the emitter that declined, or an eyebrow
+# that stops being passed all show up as "no figure", which is indistinguishable
+# from the answer shape we had yesterday; and the splice is string surgery on
+# `root = Stack([…])`, where one wrong bracket makes GenParser drop the prose and
+# the grounding rows along with the chart. Plus the standing promise: the figure
+# is composed BEFORE the model call, so no model output can reach the component
+# grammar and no `Thing` is read across that suspension (build 250's class, in
+# this very function). Unreachable by every other check here — the synthesis
+# branch needs Apple Intelligence, which no simulator has.
+step "Answer-figure self-test"
+"$ROOT/scripts/answer-figure-selftest.sh" >/dev/null \
+  || fail "the answer-figure self-test failed — run scripts/answer-figure-selftest.sh"
+print -P "%F{green}✓ answer-figure self-test%f"
+
 # Whether the All feed's source tint is READABLE (2026-08-14). A `BandRow`'s
 # trailing label wears its source's own brand hue, and this is the second time
 # that slot has been colored: the first ink was pulled on 2026-07-30 having

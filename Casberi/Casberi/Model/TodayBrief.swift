@@ -2752,7 +2752,18 @@ enum TodayBrief {
     /// and a two-thing day reads as rows, not a map). Import receipts
     /// excluded, every aggregate's rule. Cells are ranked biggest-first with
     /// the alphabetical tie so two composes can't disagree.
-    private static func sourceMixLine(_ landed: [Thing]) -> String? {
+    ///
+    /// Internal, and PARAMETERIZED on its eyebrow, since 2026-08-15. This had
+    /// gone dead the day §386g folded `contactSheet` + `faces` + this into one
+    /// `DayFold` card — nothing called it, and `GenSourceMix` was consequently
+    /// an unreachable case in the renderer's switch. `AnswerFigure` is its
+    /// caller now, over a free-text answer's retrieved set, and that set is not
+    /// a day: the eyebrow had "today" welded into it, which over a search
+    /// result is a claim about a wider subject than the data (§83). The default
+    /// keeps the brief's own wording exactly, so reviving this changed nothing
+    /// about what the brief would draw if it drew it again.
+    static func sourceMixLine(_ landed: [Thing],
+                              eyebrow: String = String(localized: "Where today came from")) -> String? {
         var counts: [String: Int] = [:]
         for t in landed where !Corpus.isImportReceipt(t) {
             counts[t.source, default: 0] += 1
@@ -2763,7 +2774,7 @@ enum TodayBrief {
             a.value == b.value ? a.key < b.key : a.value > b.value
         }
         let cells = ranked.prefix(3).map { "\(tileSafe($0.key)) \($0.value)" }
-        return "mix = SourceMix(\"\(String(localized: "Where today came from"))\", \"\", [\(cells.joined(separator: ", "))])"
+        return "mix = SourceMix(\"\(genSafe(eyebrow))\", \"\", [\(cells.joined(separator: ", "))])"
     }
 
     private static func alertsCard(_ things: [Thing], now: Date,

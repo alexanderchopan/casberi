@@ -2833,14 +2833,25 @@ struct RootShell: View {
             }
             return modelDoc(insight: answer.insight, hits: hits, picks: answer.picks, tag: tag, in: allThings())
         case .synthesis:
+            // The app's own arithmetic over the same rows the model is about to
+            // read — where they came from, or when they landed (`AnswerFigure`,
+            // 2026-08-15). Computed HERE, before the await, for two reasons that
+            // both matter: the hits are live at this instant and are not read
+            // across the suspension (only the finished `String` is captured, so
+            // the whole corollary-6 class is out of reach), and the figure is
+            // then stable from the FIRST painted frame — the prose grows
+            // beneath a picture that is already there, rather than a chart
+            // popping in after the typewriter settles.
+            let figure = AnswerFigure.line(for: hits)
             guard let prose = await streamSynthesis(
                 query, over: candidates(hits, terms: Retriever.contentTerms(query)),
-                onProseDoc: onProseDoc) else {
+                onProseDoc: { onProseDoc(AnswerFigure.prepending(figure, to: $0)) }) else {
                 return synthesisEmptyDoc(hits)
             }
-            // The prose, with the retrieved things it was drawn from as
-            // tappable receipts (§175).
-            return appendingGrounding(hits, title: "Drawn from", to: proseDoc(prose))
+            // The figure, the prose, and the retrieved things it was drawn from
+            // as tappable receipts (§175).
+            return appendingGrounding(hits, title: "Drawn from",
+                                      to: AnswerFigure.prepending(figure, to: proseDoc(prose)))
         }
     }
 

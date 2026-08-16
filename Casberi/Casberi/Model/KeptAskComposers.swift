@@ -1040,7 +1040,16 @@ enum KeptAskComposers {
     /// last seven days, labeled by narrow weekday. nil when too few to shape
     /// (a two-item week reads as a list, not a chart). Deterministic,
     /// in-memory over `capturedAt`.
-    private static func dailyBars(_ things: [Thing], eyebrow: String) -> String? {
+    ///
+    /// Internal rather than file-private since 2026-08-15: `AnswerFigure` draws
+    /// the same chart over a free-text answer's retrieved set. Note what that
+    /// caller has to do and this one doesn't — the floor below counts what it is
+    /// HANDED, not what falls inside the window, which is correct here (every
+    /// caller in this file passes an already-window-scoped pool) and would draw
+    /// seven empty columns over an archive. `AnswerFigure` filters to the window
+    /// before calling; do the same for any new caller whose pool isn't already
+    /// scoped, rather than moving the floor and changing this one's behaviour.
+    static func dailyBars(_ things: [Thing], eyebrow: String) -> String? {
         guard things.count >= 4 else { return nil }
         let days = 7
         let cal = Calendar.current
