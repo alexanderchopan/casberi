@@ -4400,16 +4400,35 @@ struct GenFrontPage: View {
                     }
                     if !stat.isEmpty {
                         HStack(alignment: .center, spacing: DS.Space.s3) {
+                            // VALUE AND UNIT ARE SEPARATE (2026-08-16) —
+                            // Apple's summary signature: "96°", "12,482 steps",
+                            // the figure at full weight and its noun small and
+                            // grey beside it. Ours rendered "3 late" as one
+                            // string, which is a sentence in a headline slot
+                            // and reads ragged down a column where every other
+                            // card leads with a bare figure. Split on the
+                            // FIRST space and only when the head is numeric —
+                            // a name-led reading ("mara +12 on your cast")
+                            // must stay whole, since its subject is the name.
+                            let parts = statSplit(stat)
                             // Attention ink ONLY for the late-reading (the
                             // qualifier §386l composes for Needs you) — a
                             // money total in orange would be an alarm about
                             // nothing.
-                            Text(stat)
-                                .dsText(.heading28)
-                                .foregroundStyle(!qualifier.isEmpty && header.str(2) == "attention"
-                                                 ? DS.attention : DS.textPrimary)
-                                .monospacedDigit()
-                                .lineLimit(1).minimumScaleFactor(0.7)
+                            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                                Text(parts.value)
+                                    .dsText(.heading28)
+                                    .foregroundStyle(!qualifier.isEmpty && header.str(2) == "attention"
+                                                     ? DS.attention : DS.textPrimary)
+                                    .monospacedDigit()
+                                    .lineLimit(1).minimumScaleFactor(0.7)
+                                if !parts.unit.isEmpty {
+                                    Text(parts.unit)
+                                        .dsText(.subhead13).fontWeight(.semibold)
+                                        .foregroundStyle(DS.textTertiary)
+                                        .lineLimit(1)
+                                }
+                            }
                             Spacer(minLength: 0)
                             // THE MINIATURE (mockup C, 2026-08-16): no summary
                             // card ships without its picture of the number
@@ -4458,6 +4477,23 @@ struct GenFrontPage: View {
                                        value: [title: (geo.frame(in: .global).minY / 24).rounded() * 24])
             }
         }
+    }
+
+    /// A reading split into its figure and its noun — "3 late" → ("3",
+    /// "late"), "$12,482" → ("$12,482", ""). Splits only when the head is
+    /// genuinely numeric, so a NAME-led reading survives whole: "mara +12 on
+    /// your cast" is a subject, not a measurement, and shrinking "on your
+    /// cast" to a unit would make the card claim a quantity it isn't
+    /// reporting. Purely presentational — the reading itself is unchanged.
+    private func statSplit(_ stat: String) -> (value: String, unit: String) {
+        guard let space = stat.firstIndex(of: " ") else { return (stat, "") }
+        let head = String(stat[stat.startIndex..<space])
+        let tail = String(stat[stat.index(after: space)...])
+        // A head that starts with a digit or a currency mark, and a tail short
+        // enough to BE a noun rather than a clause.
+        let numeric = head.first.map { $0.isNumber || "$€£¥+-".contains($0) } ?? false
+        guard numeric, !tail.contains(" · "), tail.count <= 12 else { return (stat, "") }
+        return (head, tail)
     }
 
     /// The big line, from a member's own structured args. Only the modules
