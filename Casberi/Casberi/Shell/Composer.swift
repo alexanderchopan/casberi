@@ -587,6 +587,11 @@ struct Composer: View {
     /// property's note for why a second `ScrollViewReader` down there would
     /// silently scroll nothing.
     @State private var briefScroll: ScrollViewProxy?
+    /// The docked nav's travelling blob — its own namespace, never the
+    /// bar-morph's `glassNamespace`: two matched pairs sharing a namespace
+    /// with different ids is fine, but keeping them apart means neither can
+    /// ever accidentally pair with the other's id.
+    @Namespace private var briefNavNS
 
     /// The agent's room as composed for this open (prd §332, 2026-08-07) —
     /// the noticing, the kept asks wearing their answers, the threaded window,
@@ -2372,7 +2377,17 @@ struct Composer: View {
         // pipeline. The FAB keeps its glass; the bubble is ink, and the
         // scale animation carries the open. Glass on the floating layer is
         // permitted, not required (§8).
-        .background(embedded ? Color.clear : DS.surfaceSheet.opacity(0.97), in: bubbleShape)
+        // BLACK, not the sheet grey (2026-08-15, user: "make the agent brief
+        // go back to black background too"). `surfaceSheet` is the CARD
+        // token (#111113 dark), and using it as the whole surface's ground
+        // left the section cards — themselves `surfaceRaised` — one tonal
+        // step above a ground that was already one step above black: three
+        // greys and no anchor. `inkGround` is the detail-surface extreme
+        // (2026-08-12 ruling: pure #000 in dark, pure white in light), which
+        // is what the approved reference screenshot shows and what gives the
+        // cards a real floor to sit on. Opaque now too — the 0.97 was
+        // letting the feed glow through a surface that claims to be a room.
+        .background(embedded ? Color.clear : DS.inkGround, in: bubbleShape)
         .clipShape(embedded ? AnyShape(Rectangle()) : AnyShape(bubbleShape))
         .scaleEffect(embedded ? 1 : (isOpen ? 1 : 0.3), anchor: .bottomTrailing)
         // The bar→surface morph (2026-07-20, `glassNamespace`) — a PLAIN
@@ -3510,37 +3525,40 @@ struct Composer: View {
                                 proxy.scrollTo(section.id, anchor: .top)
                             }
                         } label: {
-                            // ONE SOLID CHIP, THE REST NEUTRAL (2026-08-15,
-                            // user on the built row: "the chips are such a
-                            // weird color too"). The §386n treatment this
-                            // replaces tinted EVERY chip with its hue at
-                            // 16%/34% translucency — and a translucent hue
-                            // over ink is mud: orange lands as brown, green
-                            // as swamp, five muddy capsules in a row. The
-                            // approved dock mockup never did that; it filled
-                            // exactly ONE segment solid (where you are) and
-                            // left the rest gray, which is also this pass's
-                            // own rule arriving in the nav — colour only
-                            // where it is information, and here the
-                            // information is "which section am I in".
-                            //
-                            // The active fill goes through `deckFill` so a
-                            // bright section hue (attention orange, confirm
-                            // green) deepens to the register where a white
-                            // label reads — the same solver every other
-                            // colour in the app now passes through.
+                            // THE FEED STRIP'S OWN GRAMMAR (2026-08-15,
+                            // user-approved mock `chip-gradient-mock.html`,
+                            // superseding both the §386n hue tints — mud
+                            // over ink — and the brief solid-hue cut that
+                            // followed them): an unselected chip is BARE
+                            // gradient type with no background at all, and
+                            // the active one carries the glass blob, which
+                            // TRAVELS between chips on a switch via the
+                            // same per-chip matchedGeometryEffect pattern
+                            // `WordChipFill` documents at length. The
+                            // section hues retire from this row entirely —
+                            // the gradient is one shared voice, and "which
+                            // section am I in" is the blob's position.
                             Text(section.title)
                                 .dsText(.subhead13)
                                 .fontWeight(here ? .semibold : .regular)
-                                .foregroundStyle(here ? .white : DS.textSecondary)
+                                .foregroundStyle(here ? AnyShapeStyle(DS.textPrimary)
+                                                      : DS.chipGradient)
                                 .lineLimit(1)
                                 .padding(.horizontal, DS.Space.s4)
                                 .padding(.vertical, DS.Space.s2)
-                                .background(here
-                                            ? (DS.deckFill(for: GenSection.hue(section.hue))
-                                               ?? DS.tint)
-                                            : DS.fillFaint,
-                                            in: Capsule())
+                                .background {
+                                    if here {
+                                        let blob = Capsule(style: .continuous)
+                                            .fill(.ultraThinMaterial)
+                                            .dsGlassBlob()
+                                        if reduceMotion {
+                                            blob
+                                        } else {
+                                            blob.matchedGeometryEffect(
+                                                id: "briefNavBlob", in: briefNavNS)
+                                        }
+                                    }
+                                }
                                 .dsHover()
                         }
                         .buttonStyle(.plain)

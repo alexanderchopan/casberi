@@ -4257,13 +4257,23 @@ struct GenFrontPage: View {
     @ViewBuilder
     private func deckCard(_ seg: [String]) -> some View {
         let isQuiet = seg.count > 1 && seg.dropFirst().allSatisfy { quiet.contains($0) }
+        // BLACK CARDS WITH THEIR SEPARATION (2026-08-15, two user rulings
+        // minutes apart: "it's fine if it is black cards", then "i like the
+        // card separations, but not gray"). The gray was `surfaceRaised`
+        // (#1a1a1c); the fix is one tonal step DOWN to `surfaceSheet`
+        // (#111113) over the composer's new pure-black `inkGround` — a card
+        // that still has an edge but reads as black, not as a gray box. No
+        // new hex: surfaceSheet is the app's own card token, and the pure
+        // black beneath it is what lets the darkest card tone in the ramp
+        // finally do card work. Never a stroke instead — no hairlines, zero
+        // exceptions.
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             ForEach(seg, id: \.self) { module($0, inCard: true) }
         }
         .opacity(isQuiet ? 0.68 : 1)
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(DS.Space.s4)
-        .background(DS.surfaceRaised,
+        .background(DS.surfaceSheet,
                     in: RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
     }
 

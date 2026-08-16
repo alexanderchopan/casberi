@@ -523,12 +523,11 @@ struct SourceChips: View {
         Text(label)
             .dsText(.label12)
             .fontWeight(.semibold)
-            // `.white`, not `DS.textPrimary`: this sits on the accent, which is
-            // a dark blue in BOTH themes, so the label must not follow the
-            // theme's ink the way the unselected chips' does. The app's existing
-            // tint-filled capsules (`NameAddressPrompt`) already spell it this
-            // way — one convention, not a new one.
-            .foregroundStyle(isOn ? .white : DS.textPrimary)
+            // Active: plain primary ink on the glass blob. Unselected: the
+            // subdued gradient (2026-08-15, approved mock) — the words carry
+            // the colour now that the boxes are gone; `DS.chipGradient`
+            // stands down to secondary ink under Increase Contrast.
+            .foregroundStyle(isOn ? AnyShapeStyle(DS.textPrimary) : DS.chipGradient)
             .lineLimit(1)
             // Nothing to scale on the phone: the capsule is what gives, so
             // the word keeps its size all the way up the Dynamic Type ramp
@@ -598,7 +597,10 @@ struct SourceChips: View {
                     // an inert label rather than a door.
                     Text("All").dsText(.label12)
                         .fontWeight(.semibold)
-                        .foregroundStyle(isActive ? .white : DS.textPrimary)
+                        // The same ink rule as `categoryCapsule` — one
+                        // convention across the strip's two word shapes.
+                        .foregroundStyle(isActive ? AnyShapeStyle(DS.textPrimary)
+                                                  : DS.chipGradient)
                         .lineLimit(1)
                         .minimumScaleFactor(0.55)
                         .frame(width: iconSize, height: iconSize)
@@ -936,12 +938,20 @@ private struct WordChipFill: ViewModifier {
     /// the wrong winner, which is exactly why it is written down here instead of
     /// being left to sound convincing again in six weeks.** If you rebuild the
     /// hoisted version, record 60fps and frame-step it before believing it.
+    /// THE RESTING GLASS IS GONE (2026-08-15, user-approved mock: "when not
+    /// selected not have a background") — an unselected word chip is bare
+    /// gradient type on the crown, and only the ACTIVE chip carries a
+    /// surface: the travelling blob, now glass-material rather than the
+    /// solid tint, per the same mock. Everything the long note above
+    /// records about HOW the blob travels is unchanged — one
+    /// matchedGeometryEffect id on a per-chip background, measured against
+    /// every fancier cut — only its paint changed.
     func body(content: Content) -> some View {
         content
             .background {
                 if active {
                     let fill = Capsule(style: .continuous)
-                        .fill(DS.tint)
+                        .fill(.ultraThinMaterial)
                         .dsGlassBlob()
                     if reduceMotion {
                         fill
@@ -950,7 +960,6 @@ private struct WordChipFill: ViewModifier {
                     }
                 }
             }
-            .dsGlass(cornerRadius: cornerRadius, tint: DS.tint)
     }
 }
 

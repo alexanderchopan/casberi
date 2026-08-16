@@ -104,6 +104,29 @@ enum DS {
     static let fillLine   = Color.adaptive(dark: "#ffffff1a", light: "#00000014")
     static let fillStrong = Color.adaptive(dark: "#ffffff29", light: "#00000024")
 
+    /// The unselected chip's INK — a subdued four-stop gradient across the
+    /// glyphs (2026-08-15, user-approved mock `chip-gradient-mock.html`:
+    /// "that apple style color where it's multi colored font", then "need to
+    /// be a bit more subdued"). The Apple Intelligence hue walk (blue →
+    /// violet → rose → sand) pulled toward the ink ramp: saturation roughly
+    /// halved, brightness near secondary ink, so the strip reads quiet until
+    /// looked at. Shared by the feed's source strip and the brief's docked
+    /// nav so the two rows are one voice.
+    ///
+    /// Selection never wears it — the active chip is the travelling blob with
+    /// plain white ink, so the gradient can only ever mean "not here". Under
+    /// Increase Contrast the gradient stands down to plain secondary ink: a
+    /// multi-hue ramp cannot promise one contrast number, and the person who
+    /// asked for contrast outranks the person who asked for delight.
+    static var chipGradient: AnyShapeStyle {
+        ContrastStore.shared.increased
+            ? AnyShapeStyle(textSecondary)
+            : AnyShapeStyle(LinearGradient(
+                colors: [Color.fixed("#7fa6d9"), Color.fixed("#a08cc8"),
+                         Color.fixed("#c48ba0"), Color.fixed("#c9a77e")],
+                startPoint: .leading, endPoint: .trailing))
+    }
+
     // MARK: - Elevation ladder  (2026-07-12 — depth by tone, never by line)
 
     /// A recessed WELL — cover/chart/media backings that sit BELOW the card
