@@ -579,6 +579,9 @@ struct Composer: View {
     /// ruling 4's stat line ("2,481 things, across 14 apps."): the room's
     /// first sentence should be what happened, not how much you own.
     @State private var dayLede = ""
+    /// The day's whisper with its wallet move still separate — what lets the
+    /// card paint the delta in its own direction (2026-08-15).
+    @State private var dayWhisper: DayBrief.Whisper?
 
     /// The agent's room as composed for this open (prd §332, 2026-08-07) —
     /// the noticing, the kept asks wearing their answers, the threaded window,
@@ -849,7 +852,17 @@ struct Composer: View {
         // never publishes one, so the whisper's own line (synchronous, off
         // the fetch just paid for) stands in. Empty = nothing to say today,
         // and the card doesn't draw.
-        dayLede = WidgetLede.current() ?? DayBrief.whisper(things: all)?.detail ?? ""
+        // The WHISPER itself is kept, not just its flattened line (2026-08-15).
+        // `detail` pre-joins the lead and the wallet move into one string, and
+        // a view handed that has no way to find the figure inside it — which
+        // is the exact reason `Whisper.walletPct` travels separately in the
+        // first place (see its own note). `detailText(scheme:)` paints the
+        // move in its direction's accent and returns nil-colored prose when
+        // the wallet can't speak or the move is FLAT, so §83's "a change that
+        // rounds to zero has no direction" is kept by the model, not re-derived
+        // here. Never parsed back out of the sentence — the MoneyReceipt rule.
+        dayWhisper = DayBrief.whisper(things: all)
+        dayLede = WidgetLede.current() ?? dayWhisper?.detail ?? ""
         // One busy-publisher scan per open, shared by the timely chip below
         // and the placeholder examples (both want the same dominant handle).
         // Counted in the single walk above rather than in a pass of its own.
@@ -2457,17 +2470,10 @@ struct Composer: View {
             await autoSendIfProbed()
             await pushIfProbed()
         }
-        // The empty invitation cycles while the field is genuinely idle.
-        .task(id: cyclingActive) {
-            guard cyclingActive else { return }
-            while !Task.isCancelled {
-                try? await Task.sleep(for: .seconds(3))
-                if Task.isCancelled { break }
-                withAnimation(DS.Motion.standard) {
-                    placeholderIndex = (placeholderIndex + 1) % activeInvitations.count
-                }
-            }
-        }
+        // The placeholder cycler retired with the cycle itself (2026-08-15) —
+        // see the field's own note. It was also the composer's one piece of
+        // permanently-looping motion, which the motion law only ever
+        // sanctions while something real is pending; nothing was.
     }
 
     /// A doc trivial enough to land WITHOUT the typewriter — a root `Stack`
@@ -3064,11 +3070,26 @@ struct Composer: View {
                         Text(DayBrief.title())
                             .dsText(.subhead13)
                             .foregroundStyle(DS.textSecondary)
-                        Text(dayLede)
-                            .dsText(.heading17)
-                            .foregroundStyle(DS.textPrimary)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .multilineTextAlignment(.leading)
+                        // The move wears its own direction (2026-08-15, user:
+                        // "take the green delta too from apple"). `detailText`
+                        // is the model's own painter — already shared by the
+                        // whisper capsule and the detail pane — so §83's
+                        // flat-move rule lives in one place and this is a
+                        // third caller, not a third copy. Falls back to the
+                        // flat string when the lede came from `WidgetLede`,
+                        // which is pre-joined and has no separate figure.
+                        Group {
+                            if let dayWhisper, dayLede == dayWhisper.detail {
+                                dayWhisper.detailText(scheme: scheme)
+                                    .dsText(.heading22)
+                            } else {
+                                Text(dayLede)
+                                    .dsText(.heading22)
+                                    .foregroundStyle(DS.textPrimary)
+                            }
+                        }
+                        .fixedSize(horizontal: false, vertical: true)
+                        .multilineTextAlignment(.leading)
                     }
                     Spacer(minLength: DS.Space.s2)
                     Image(systemName: "chevron.right")
@@ -3527,15 +3548,24 @@ struct Composer: View {
                 // is up, it reads "Ask about this…" instead (ruling 8: a
                 // follow-up grounds in the current answer, via the SAME
                 // `lastAnswerHits` mechanism the answer closures already use).
+                // …EXCEPT it doesn't cycle any more (user, 2026-08-15: "in the
+                // bar make it say ask or search", "not 'what did i save'").
+                //
+                // The cycle taught the RANGE by rotating example questions,
+                // which is a different job from naming the two verbs. It also
+                // meant the bar never said the same thing twice, so the one
+                // question it most needed to answer — what happens when I
+                // type here — was answered differently every three seconds.
+                // "Ask or search" names both doors at once and holds still.
+                // The examples aren't lost: the ask chips below are the
+                // corpus-derived specifics, and they're tappable, which a
+                // placeholder never was.
                 .placeholder(when: !hasDraft) {
-                    let pool = activeInvitations
                     Text(answering || !turns.isEmpty ? String(localized: "Ask about this…")
-                                                     : pool[min(placeholderIndex, pool.count - 1)])
+                                                     : String(localized: "Ask or search"))
                         .dsText(.body17).foregroundStyle(DS.textTertiary)
                         .lineLimit(1)
                         .contentTransition(.opacity)
-                        .animation(reduceMotion ? nil : DS.Motion.standard,
-                                   value: placeholderIndex)
                 }
                 .dsText(.body17)
                 .foregroundStyle(DS.textPrimary)
