@@ -4184,6 +4184,10 @@ struct GenFrontPage: View {
     let inAgentAnswer: Bool
     @State private var width: CGFloat = 0
     @Environment(\.colorScheme) private var scheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// The miniature sparkline's draw-on (§299's entrance for a data-shaped
+    /// drawing). One flag for the page: only one section composes a spark.
+    @State private var sparkDrawn: CGFloat = 0
     /// The section header's own door (§386j) — the digest card opens the room
     /// its section stands for, which is what replaced the accordion.
     @Environment(\.genRoomOpen) private var roomOpen
@@ -4535,6 +4539,9 @@ struct GenFrontPage: View {
         }
     }
 
+    /// The sparkline DRAWS ITSELF on, left to right — the same arrival the
+    /// wallet headline's own curve plays, at the miniature's dose. A line
+    /// whose shape is the data must not simply be there (§299).
     private func miniSpark(_ vals: [Double], ink: Color) -> some View {
         let lo = vals.min() ?? 0, hi = vals.max() ?? 1
         let span = max(hi - lo, 0.0001)
@@ -4550,8 +4557,23 @@ struct GenFrontPage: View {
                        style: StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
         }
         .frame(width: 68, height: 28)
+        .mask(alignment: .leading) {
+            GeometryReader { geo in
+                Rectangle().frame(width: geo.size.width * (reduceMotion ? 1 : sparkDrawn))
+            }
+        }
+        .onAppear {
+            guard !reduceMotion else { return }
+            withAnimation(.easeOut(duration: 0.7).delay(0.2)) { sparkDrawn = 1 }
+        }
     }
 
+    /// Bars are SIZED FROM DATA, so they arrive rather than appear — the
+    /// §299 motion law, caught here by its own audit on this pass's first
+    /// full run. `chartArrival` is the shared entrance every other
+    /// data-sized drawing in the app already uses (the exposure card's
+    /// rows, the deposit shares), so the miniature can't drift from them and
+    /// Reduce Motion is honoured inside it rather than re-checked here.
     private func miniBars(_ vals: [Double]) -> some View {
         let hi = max(vals.max() ?? 1, 0.0001)
         let shown = Array(vals.suffix(8))
@@ -4561,6 +4583,7 @@ struct GenFrontPage: View {
                 RoundedRectangle(cornerRadius: 2, style: .continuous)
                     .fill(hue.opacity(i == shown.count - 1 ? 1 : 0.4))
                     .frame(width: 5, height: max(4, 24 * CGFloat(v / hi)))
+                    .chartArrival(index: i, reduceMotion: reduceMotion)
             }
         }
         .frame(height: 26, alignment: .bottom)
