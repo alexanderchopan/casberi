@@ -8,6 +8,11 @@ import SwiftUI
 /// row did. (The Pinned board that used to lead retired 2026-07-20,
 /// docs/agent-brief.md rulings 11-12 — content-first, always.)
 ///
+/// **"All" is PINNED, not merely first (2026-08-16).** It renders in the fixed
+/// head beside the two doors and is filtered out of the scroll, so the way back
+/// to the whole feed is on screen in every room, at every scroll offset. See
+/// `horizontalStrip`'s head for the argument; the cost is stated there too.
+///
 /// TWO SHAPES, ONE GRAMMAR (2026-08-11, the design pass prd §351 called for
 /// and its own ship deferred): **a mark gets a circle, a word gets a capsule.**
 /// The fixed doors, "All" and the pinned room keep the 56pt Stories circle they
@@ -43,7 +48,10 @@ import SwiftUI
 /// otherwise have to be kept in step across two copies, which is exactly how
 /// the old Home/Feed split drifted.
 struct SourceChips: View {
-    /// The full ordered label list — "All", then real sources.
+    /// The full ordered label list — "All", then real sources. Handed in whole
+    /// even though "All" is pinned rather than scrolled: this order is what
+    /// Mac's ⌘1–⌘9 is positional against (`scripts/mac-parity-audit.py` check
+    /// 3), so the strip splits it for LAYOUT and never renumbers it.
     let labels: [String]
     let active: String
     /// `.horizontal` is the iPhone strip; `.vertical` is the iPad rail.
@@ -65,10 +73,19 @@ struct SourceChips: View {
     ///
     /// The strip does NOT leave — that ruling stands and is the whole reason
     /// the tab bar went ("always in reach, never scrolls away with content").
-    /// It gets smaller: the scrolling chips step 56→48, while the two fixed
+    /// It gets smaller: the chips step 56→48, while the two fixed
     /// doors at the head keep their exact size and position, so nothing you
     /// were already reaching for moves. iPad's rail sits it out — it folds a
     /// HEIGHT, and a vertical rail has height to spare.
+    ///
+    /// **The pinned "All" chip folds WITH the chips, not with the doors it now
+    /// sits beside (2026-08-16).** It is a chip — the peer of every category
+    /// word beside it — and holding it at 56 while they stepped to 48 would
+    /// single it out for a reason that is an implementation detail of where it
+    /// is drawn (§358's own finding, that treating one word chip differently
+    /// from the others makes the odd one out read as inert). Its POSITION is
+    /// still fixed, which is the half of the doors' rule that matters: it folds
+    /// in place, and only the scroll inset past it moves.
     var minimized: Bool = false
 
     private var folds: Bool { minimized && axis == .horizontal }
@@ -148,21 +165,31 @@ struct SourceChips: View {
 
     // Leading-dissolve geometry (user, 2026-07-19; widened 2026-07-20 when
     // the avatar joined as a SECOND fixed leading icon ahead of the
-    // catalogue door): avatar sits at `s4`, 46 wide; the catalogue door
-    // sits `iconGap` past it, also 46 wide. The strip runs UNDER both and
-    // is masked — fully clear where an icon covers a chip, a short ramp
-    // back to solid just past the second icon, then solid the rest of the
-    // way. `stripInset` sets the first chip to rest right where the ramp
-    // ends, so nothing is dimmed at rest. Tune `fadeRamp` for a softer/
-    // tighter melt.
+    // catalogue door, and 2026-08-16 when "All" became a THIRD): avatar sits
+    // at `s4`, 46 wide; the catalogue door sits `iconGap` past it, also 46
+    // wide; the "All" chip sits `iconGap` past THAT, `chipSize` wide. The
+    // strip runs UNDER all three and is masked — fully clear where a fixed
+    // element covers a chip, a short ramp back to solid just past the last
+    // one, then solid the rest of the way. `stripInset` sets the first
+    // scrolling chip to rest right where the ramp ends, so nothing is dimmed
+    // at rest. Tune `fadeRamp` for a softer/tighter melt.
     private static let avatarWidth: CGFloat = 46
     private static let catalogueWidth: CGFloat = 46
     private static let iconGap: CGFloat = DS.Space.s3
     private static let catalogueTrailingEdge: CGFloat =
         DS.Space.s4 + avatarWidth + iconGap + catalogueWidth
-    private static let fadeClear: CGFloat = catalogueTrailingEdge - 8
+    /// Where the fixed head ENDS — the doors plus the pinned "All" chip.
+    ///
+    /// Instance rather than `static` because `chipSize` folds with the strip
+    /// (56→48): a static edge measured at the resting size would leave an 8pt
+    /// dead band under the minimized chip where scrolling chips are masked out
+    /// for no reason.
+    private var headTrailingEdge: CGFloat {
+        Self.catalogueTrailingEdge + Self.iconGap + chipSize
+    }
+    private var fadeClear: CGFloat { headTrailingEdge - 8 }
     private static let fadeRamp: CGFloat = 24
-    private static let stripInset: CGFloat = fadeClear + fadeRamp
+    private var stripInset: CGFloat { fadeClear + Self.fadeRamp }
 
     var body: some View {
         switch axis {
@@ -179,10 +206,15 @@ struct SourceChips: View {
     private var verticalRail: some View {
         VStack(spacing: Self.iconGap) {
             headDoors(.vertical)
+            // Pinned here too, and for the same reason as on the phone — the
+            // rail scrolls once a corpus outgrows its height, and `scrollTo`
+            // below actively pushes "All" off the top whenever a chip further
+            // down is active. One grammar on both axes.
+            chip("All", pinned: true)
             ScrollViewReader { proxy in
                 ScrollView(.vertical, showsIndicators: false) {
                     VStack(spacing: DS.Space.s1) {
-                        ForEach(labels, id: \.self) { label in
+                        ForEach(scrollingLabels, id: \.self) { label in
                             chip(label)
                         }
                     }
@@ -193,6 +225,10 @@ struct SourceChips: View {
                     if active != "All" { proxy.scrollTo(active, anchor: .center) }
                 }
                 .onChange(of: active) { _, now in
+                    // "All" is not in this scroll any more, so asking for it is
+                    // a silent no-op rather than a scroll — say so, rather than
+                    // leaving a call that only looks like it does something.
+                    guard now != "All" else { return }
                     withAnimation(DS.Motion.standard) { proxy.scrollTo(now, anchor: .center) }
                 }
             }
@@ -252,15 +288,15 @@ struct SourceChips: View {
                     // sliding under them.
                     DSGlassContainer(spacing: Self.chipGap) {
                         HStack(spacing: Self.chipGap) {
-                            ForEach(labels, id: \.self) { label in
+                            ForEach(scrollingLabels, id: \.self) { label in
                                 chip(label)
                             }
                         }
 
                     }
-                    // Clears the fixed app icon at rest; the strip slides left
+                    // Clears the fixed head at rest; the strip slides left
                     // beneath it — and through the fade — as you scroll.
-                    .padding(.leading, Self.stripInset)
+                    .padding(.leading, stripInset)
                     .padding(.trailing, DS.Space.s4)
                 }
                 .onAppear {
@@ -285,19 +321,42 @@ struct SourceChips: View {
                 // just on it.
                 .onChange(of: active) { _, now in
                     if tapped == now { tapped = nil; return }
+                    // See the rail's twin: "All" is pinned outside this scroll,
+                    // so there is no id here to scroll to and never needs to be.
+                    guard now != "All" else { return }
                     withAnimation(DS.Motion.standard) { proxy.scrollTo(now, anchor: .center) }
                 }
             }
             .mask(alignment: .leading) { leadingFade }
 
-            // Avatar, then the catalogue — BOTH anchor the HEAD of the strip,
-            // FIXED outside the scroll (avatar joined 2026-07-20; the
-            // catalogue's own fixed placement dates to user 2026-07-17):
-            // neither is a filter, and both must stay in reach as the active
-            // source chip re-centers below. They ride ON TOP so chips vanish
-            // into them.
-            headDoors(.horizontal)
-                .padding(.leading, DS.Space.s4)
+            // Avatar, then the catalogue, then "All" — ALL THREE anchor the
+            // HEAD of the strip, FIXED outside the scroll (avatar joined
+            // 2026-07-20; the catalogue's own fixed placement dates to user
+            // 2026-07-17; "All" joined 2026-08-16, user: "can we make it fixed
+            // so it's always showing?"). They ride ON TOP so chips vanish into
+            // them.
+            //
+            // **Why "All" belongs up here even though it IS a filter, unlike
+            // the two doors.** The strip's founding ruling (2026-07-13, the tab
+            // bar's replacement) is that navigation is always in reach and never
+            // scrolls away with content — and "All" is the way back to the whole
+            // feed, the one destination every other chip is a departure from.
+            // It was nonetheless the FIRST thing to leave the screen: the strip
+            // re-centres the active chip (see `onChange` above), so standing in
+            // any room past the second chip pushed "All" off the leading edge,
+            // and the way home was a scroll you had to know was there.
+            //
+            // The seam between the door pair and this chip is a full `iconGap`
+            // ON TOP OF the chip's own slot air, wider than the gap inside the
+            // pair — deliberate. The doors are one fused glass object
+            // (`doorsUnion`) and this is not; an equal gap would read as three
+            // members of one group, and a tap on the third would then be
+            // expected to open something rather than filter.
+            HStack(spacing: Self.iconGap) {
+                headDoors(.horizontal)
+                chip("All", pinned: true)
+            }
+            .padding(.leading, DS.Space.s4)
         }
     }
 
@@ -313,7 +372,8 @@ struct SourceChips: View {
     /// Layout is byte-for-byte what it was — same stacks, same `iconGap` — which
     /// matters more here than it looks: the horizontal strip's leading-dissolve
     /// mask is measured off these two doors' exact widths and gap
-    /// (`catalogueTrailingEdge`), so a container that changed the head's metrics
+    /// (`catalogueTrailingEdge`, and `headTrailingEdge` past it once the pinned
+    /// "All" chip is added), so a container that changed the head's metrics
     /// would put the fade ramp somewhere other than where the chips melt.
     @ViewBuilder
     private func headDoors(_ axis: Axis) -> some View {
@@ -343,11 +403,11 @@ struct SourceChips: View {
                    doorUnion: doorsUnion)
     }
 
-    /// The leading dissolve: transparent where the app icon sits, a soft ramp
+    /// The leading dissolve: transparent where the fixed head sits, a soft ramp
     /// back to opaque just past it, opaque across the rest of the strip.
     private var leadingFade: some View {
         HStack(spacing: 0) {
-            Color.clear.frame(width: Self.fadeClear)
+            Color.clear.frame(width: fadeClear)
             LinearGradient(colors: [.clear, .black],
                            startPoint: .leading, endPoint: .trailing)
                 .frame(width: Self.fadeRamp)
@@ -542,8 +602,22 @@ struct SourceChips: View {
             .wordChipFill(cornerRadius: iconSize / 2, active: isOn, ns: fillNS)
     }
 
+    /// Everything the strip SCROLLS — the full order minus "All", which is
+    /// rendered once, pinned, at the head.
+    ///
+    /// A FILTER, not a `dropFirst()`: `labels` is handed in by the owner and
+    /// "All" leads it by construction today (`MainSurface.computedChips`), but
+    /// an order that ever put it elsewhere would silently render it twice, and
+    /// two chips claiming one selection is worse than either placement.
+    private var scrollingLabels: [String] { labels.filter { $0 != "All" } }
+
+    /// - Parameter pinned: this chip is drawn in the fixed head rather than in
+    ///   the scroll, so it sits out the scroll-edge ease. Everything else about
+    ///   it — the fill, the rings, the peek, the accessibility, the frame it
+    ///   reports for the capture flight — is identical, which is the point of
+    ///   pinning by re-using this function instead of writing a second chip.
     @ViewBuilder
-    private func chip(_ label: String) -> some View {
+    private func chip(_ label: String, pinned: Bool = false) -> some View {
         let isActive = label == active
         // Through the catalog, not against the label: see `SourcesTray.cell`.
         // The strip and the tray it opens must agree about which seats are in
@@ -773,11 +847,8 @@ struct SourceChips: View {
         // edges (Stories grammar). Under Reduce Motion only the fade remains.
         // Follows `axis` so the rail's chips ease at its TOP and BOTTOM edges,
         // which is where its own viewport ends.
-        .scrollTransition(.interactive, axis: axis) { content, phase in
-            content
-                .scaleEffect(reduceMotion || phase.isIdentity ? 1 : 0.88)
-                .opacity(phase.isIdentity ? 1 : 0.6)
-        }
+        .modifier(ChipScrollEase(axis: axis, enabled: !pinned,
+                                 reduceMotion: reduceMotion))
         .id(label)
         .accessibilityLabel(chipAccessibilityLabel(label, broken: broken, isActive: isActive))
         .accessibilityAddTraits(isActive ? .isSelected : [])
@@ -812,6 +883,34 @@ struct SourceChips: View {
         return broken
             ? String(localized: "\(label): \(joined), needs reconnecting")
             : String(localized: "\(label): \(joined)")
+    }
+}
+
+/// The strip's scroll-edge ease, lifted out of `chip` so the PINNED "All" can
+/// decline it (2026-08-16).
+///
+/// Not merely redundant on a chip that never scrolls: `scrollTransition` binds
+/// to the nearest enclosing scroll view, and the pinned chip's nearest one is
+/// whatever the shell happens to put the strip inside. A modifier that is inert
+/// today and dims a fixed chip the day the strip gains an ancestor scroll is
+/// exactly the kind of thing nobody connects back to this line, so the chip
+/// that cannot scroll simply does not ask.
+private struct ChipScrollEase: ViewModifier {
+    let axis: Axis
+    let enabled: Bool
+    let reduceMotion: Bool
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if enabled {
+            content.scrollTransition(.interactive, axis: axis) { content, phase in
+                content
+                    .scaleEffect(reduceMotion || phase.isIdentity ? 1 : 0.88)
+                    .opacity(phase.isIdentity ? 1 : 0.6)
+            }
+        } else {
+            content
+        }
     }
 }
 
