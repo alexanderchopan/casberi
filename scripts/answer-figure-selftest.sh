@@ -113,11 +113,33 @@ AWAIT_LINE=$(awk -v s="$FIG_LINE" 'NR > s && /await streamSynthesis/ { print NR;
 # The streaming painter must carry the figure too, or it pops in only once the
 # typewriter settles — and the partials would paint a document whose shape
 # changes under the reader at the last frame.
-grep -q 'onProseDoc: { onProseDoc(AnswerFigure.prepending(figure, to: \$0)) }' "$NC" \
+grep -q 'onProseDoc(AnswerFigure.prepending(figure, to: \$0))' "$NC" \
   || { print "✗ the streamed partials no longer carry the figure — it would appear only at the end"; exit 1; }
 # …and the settled document.
-grep -q 'AnswerFigure.prepending(figure, to: proseDoc(prose))' "$NC" \
+grep -q 'AnswerFigure.prepending(figure, to: captioned(prose))' "$NC" \
   || { print "✗ the settled synthesis document no longer carries the figure"; exit 1; }
+# The STREAM is captioned too, and this is its own assertion because the two
+# facts are now spelled in two places. `streamSynthesis` shapes each snapshot
+# through `document:`; handing it the bare `proseDoc` there would stream the
+# whole paragraph and cut it only once, at the last frame — the document
+# visibly shrinking under the reader at the moment it settles.
+grep -q 'document: captioned' "$NC" \
+  || { print "✗ the synthesis stream no longer shapes its snapshots through the caption —"; \
+       print "  the prose would grow to full length and be cut at the final frame."; exit 1; }
+
+# THE CAPTION IS CONDITIONAL, and that condition is the whole ruling. With a
+# figure the prose is a remark beside verified arithmetic; with NO figure it is
+# the entire answer, and cutting it there leaves a question answered by a
+# fragment and nothing else. A refactor that clamps unconditionally is invisible
+# — every answer still paints, just shorter — so it is asserted rather than
+# trusted, at all three call sites that can produce one.
+grep -q 'proseDoc(figure == nil ? text : AnswerFigure.caption(text))' "$NC" \
+  || { print "✗ the synthesis caption is no longer conditional on a figure having drawn."; \
+       print "  With no figure the prose IS the answer and must be left whole."; exit 1; }
+grep -q 'toolFigure == nil ? result.prose' "$NC" \
+  || { print "✗ the tools arm clamps its prose without checking that its figure drew"; exit 1; }
+grep -q 'lookupFigure == nil ? answer.insight' "$NC" \
+  || { print "✗ the lookup arm clamps its prose without checking that its figure drew"; exit 1; }
 
 # THE DSL GUARD. `AnswerFigure` may read the rows and nothing else: no query, no
 # prose, no model. A parameter of any of those shapes is the refactor this
@@ -130,10 +152,40 @@ src = re.sub(r"//[^\n]*", "", src)
 src = re.sub(r"^\s*///[^\n]*$", "", src, flags=re.M)
 open(sys.argv[2], "w", encoding="utf-8").write(src)
 PY
-for forbidden in 'OnDeviceModel' 'AgentAnswer' 'AnswerTools' 'prose' 'query'; do
-  grep -q "$forbidden" "$TMP/figure.nc.swift" \
-    && { print "✗ AnswerFigure now names \`$forbidden\` — the figure must be the app's own"; \
+#
+# SCOPED TO `line(for:)` SINCE 2026-08-16, and the narrowing is deliberate. The
+# guard used to read the whole file, which was right while the file did exactly
+# one thing. It now also CUTS the model's prose to a caption, so it necessarily
+# handles prose — and a file-wide grep would have failed on the very function
+# added to keep model text small. The invariant was never "this file is unaware
+# of the model"; it is "the FIGURE is chosen without it", so the guard reads the
+# figure's own declaration and nothing else.
+python3 - "$TMP/figure.nc.swift" "$TMP/figure.line.swift" <<'PY'
+import sys
+src = open(sys.argv[1], encoding="utf-8").read()
+i = src.find("static func line(")
+if i < 0:
+    sys.exit("✗ AnswerFigure.line is gone — the figure is no longer chosen here")
+j = src.index("{", i)
+depth, k = 0, j
+while k < len(src):
+    if src[k] == "{": depth += 1
+    elif src[k] == "}":
+        depth -= 1
+        if depth == 0: break
+    k += 1
+open(sys.argv[2], "w", encoding="utf-8").write(src[i:k + 1])
+PY
+for forbidden in 'OnDeviceModel' 'AgentAnswer' 'AnswerTools' 'prose' 'query' 'insight'; do
+  grep -q "$forbidden" "$TMP/figure.line.swift" \
+    && { print "✗ AnswerFigure.line now names \`$forbidden\` — the figure must be the app's own"; \
          print "  arithmetic over the retrieved rows, never anything the model produced."; exit 1; }
+done
+# …and the file may still never CALL the model, caption or no caption.
+for forbidden in 'OnDeviceModel' 'AgentAnswer' 'AnswerTools'; do
+  grep -q "$forbidden" "$TMP/figure.nc.swift" \
+    && { print "✗ AnswerFigure now reaches \`$forbidden\` — it may cut the model's words,"; \
+         print "  never ask for them."; exit 1; }
 done
 
 # Both emitters must still be reachable. They were file-private until this pass;
@@ -413,6 +465,64 @@ check("the board keeps the room the miniature dropped", board.contains("Notion 1
 check("the board's subline is the span of years, ungrouped", !board.contains("2,0"))
 
 print("")
+print("the caption — the prose, once a figure leads it")
+
+// THE ONE THAT MATTERS MOST. A decimal point is not a full stop, and a text
+// rule that thinks it is produces a WRONG NUMBER — the single class of error
+// this whole feature exists to keep off the screen.
+let decimal = "The wallet moved 1.4% today and the rest held. Nothing settled."
+check("a decimal point doesn't end a sentence",
+      AnswerFigure.caption(decimal).hasPrefix("The wallet moved 1.4% today and the rest held."))
+// TWO GUARDS, and each needs a fixture only IT can save — the first cut of this
+// section had neither, and both mutations survived because the other guard
+// happened to catch the same input.
+//   • whitespace: "U.S. Postal" is a terminator followed by a CAPITAL, so only
+//     the space test stops "The U." from being the whole caption.
+check("an initialism doesn't end a sentence",
+      AnswerFigure.caption("The U.S. Postal notice arrived today. Two more are late.")
+          .hasPrefix("The U.S. Postal notice arrived today."))
+//   • capital: "Aug. 3" is a terminator followed by a SPACE, so only the
+//     capital test stops it. And the fixture needs a THIRD sentence — with two,
+//     splitting at the false break and rejoining with a space reconstructs the
+//     original exactly, so the assertion passes on the broken code.
+let abbrev = "Reviewed on Aug. 3 and cleared. Two are late. Nothing else."
+check("an abbreviated month doesn't end a sentence either",
+      AnswerFigure.caption(abbrev).contains("Two are late"))
+
+// The ordinary shape: one real sentence, and the rest dropped.
+let many = "Mostly policy this month. The rebate screenshot sits beside the IPCC summary. "
+         + "Nothing new from your feeds this week. Two posts mention storage."
+check("one real sentence is the caption",
+      AnswerFigure.caption(many).hasPrefix("Mostly policy this month."))
+check("the rest is dropped", !AnswerFigure.caption(many).contains("Two posts"))
+
+// A PREAMBLE IS NOT AN ANSWER. "Here's what I found." alone is a caption that
+// says nothing, so the substance behind it comes along.
+let preamble = "Here's what I found. Mostly policy, and two of them are receipts."
+check("a preamble takes its substance with it",
+      AnswerFigure.caption(preamble).contains("Mostly policy"))
+check("…and only the one", !AnswerFigure.caption(
+    "Sure. One. Two is here. Three is a longer sentence that keeps going for a while now.")
+    .contains("Three is"))
+
+// A single sentence over budget is cut at a WORD boundary — never mid-word,
+// which reads as a rendering fault rather than an abridgement.
+// NINE characters, not eight, and that is the whole fixture. "storage " divides
+// 200 exactly, so the budget lands on a space and even a mid-word clamp comes
+// out looking right — the mutation survived on that alignment. "storages "
+// leaves the boundary two characters into a word, where the two behaviours
+// differ.
+let runOn = String(repeating: "storages ", count: 40) + "end."
+let cut = AnswerFigure.caption(runOn)
+check("an over-long sentence is clamped", cut.count <= AnswerFigure.captionBudget + 1)
+check("clamped at a word boundary", cut.hasSuffix("…") && !cut.contains("st…"))
+check("a short answer is left exactly alone",
+      AnswerFigure.caption("Mostly policy this month.") == "Mostly policy this month.")
+check("empty prose stays empty", AnswerFigure.caption("   ") == "")
+check("prose with no terminator at all is still returned",
+      AnswerFigure.caption("mostly policy this month") == "mostly policy this month")
+
+print("")
 print("the floors are the EMITTERS' own — this file adds none")
 // sourceMixLine: ≥2 sources AND ≥4 rows. Three rows across two rooms clears
 // the source floor and fails the count floor, and bars fails on the same
@@ -606,6 +716,22 @@ mutate "people rung skipped" \
 # the board, silently dropping every room past the third.
 mutate "the miniature ranked above the board" \
   's/^        if let board = KeptAskComposers.sourceMapLine(rows) { return board }$/        if false, let board = KeptAskComposers.sourceMapLine(rows) { return board }/'
+# ── The caption. Every one of these renders as a perfectly readable sentence.
+# THE EXPENSIVE ONE: any `.` ends a sentence, so "the wallet moved 1.4% today"
+# becomes "the wallet moved 1" — a wrong NUMBER manufactured by a text rule, on
+# the screen whose whole promise is that the arithmetic is the app's own.
+mutate "a decimal point ends a sentence" \
+  's/guard chars\[j\].isWhitespace else { continue }/guard true else { continue }/'
+# The capital-letter test dropped: same class, reached the other way.
+mutate "any character may follow a terminator" \
+  's/guard next.isUppercase || next == "\\u{201C}" || next == "'"'"'" else { continue }/guard true else { continue }/'
+# The ceiling lifted back to the budget — four sentences whenever they fit,
+# which is the paragraph this exists to stop, wearing a smaller number.
+mutate "the caption fills to the budget" \
+  's/if out.count < preambleFloor, parts.count > 1 { out += " " + parts\[1\] }/for p in parts.dropFirst() where out.count + 1 + p.count <= captionBudget { out += " " + p }/'
+# The clamp cutting mid-word.
+mutate "the over-long clamp cuts mid-word" \
+  's/guard let space = head.lastIndex(of: " ") else { return head + "…" }/return head + "…"; guard let space = head.lastIndex(of: " ") else { return head + "…" }/'
 # Receipts counted — the app talking about itself tips a floor and takes a cell.
 mutate "import receipts no longer excluded" \
   's/let rows = hits.live.filter { !Corpus.isImportReceipt(\$0) }/let rows = hits.live/'

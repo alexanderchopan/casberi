@@ -131,6 +131,115 @@ enum AnswerFigure {
                                           eyebrow: String(localized: "When these landed"))
     }
 
+    // MARK: - The prose, once a figure leads it
+
+    /// The longest a caption may run, in characters.
+    ///
+    /// Not a line count: a line is a rendering fact that changes with the type
+    /// size, the language and the width, and this is a budget on how much
+    /// UNVERIFIED text sits above the verified picture.
+    static let captionBudget = 200
+
+    /// A first sentence shorter than this takes ONE more with it.
+    ///
+    /// It does NOT claim to detect a preamble. That was the first cut of this
+    /// rule and it was wrong on its own evidence: "Here's what I found." is 20
+    /// characters and "Mostly policy this month." is 25, so no threshold
+    /// separates a worthless opener from a complete answer, and a rule tuned to
+    /// that five-character gap would be decided by the model's punctuation.
+    ///
+    /// What it actually says is weaker and true: a caption this short has room
+    /// for another sentence and may need one, so take it. A real first sentence
+    /// gains a second and stays well inside the budget; a bare "Sure." gains the
+    /// substance behind it. Two is the ceiling either way.
+    static let preambleFloor = 40
+
+    /// The model's prose cut to a caption (2026-08-16, user: "we can't rely on
+    /// the text to be that specific or accurate").
+    ///
+    /// WHY CUTTING IS THE FIX. The figure above this is the app's own
+    /// arithmetic and cannot be wrong; the prose is the one part of the answer
+    /// that can. Leaving four paragraphs of it above the rows spends the most
+    /// space and the most reading time on the least reliable thing on screen,
+    /// and a wrong sentence at that length reads as the answer. At a sentence
+    /// it reads as a remark beside a picture that disagrees with it — which is
+    /// the failure mode we can live with, because it is the one a person can
+    /// SEE. Nothing is hidden that the answer needed: the figure states the
+    /// shape and the grounding rows are the evidence, both already on screen.
+    ///
+    /// ONLY WHEN A FIGURE LED. With no figure the prose IS the answer and this
+    /// is never called — cutting there would leave a question answered by a
+    /// fragment and nothing else, which is strictly worse than a long answer.
+    /// The call sites make that choice; this function assumes it was made.
+    ///
+    /// A TERMINATOR IS NOT A FULL STOP. `.` inside a decimal is the failure
+    /// this has to survive — "the wallet moved 1.4% today" cut at the first dot
+    /// is a caption that says "the wallet moved 1", a wrong NUMBER produced by
+    /// a text rule, which is the one class of error this whole feature exists
+    /// to keep off the screen. So a terminator only ends a sentence when what
+    /// follows is whitespace-then-a-capital, or nothing at all: "1.4%" fails on
+    /// the digit, "Aug. 3" fails on the digit, and "…this month. The rebate…"
+    /// passes.
+    static func caption(_ prose: String) -> String {
+        let text = prose.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else { return text }
+        let parts = sentences(text)
+        // Always at least one, however long — a caption that declines to say
+        // anything is not a shorter answer, it is a missing one; the clamp
+        // below is what bounds that case.
+        guard var out = parts.first else { return text }
+        if out.count < preambleFloor, parts.count > 1 { out += " " + parts[1] }
+        // TWO IS THE CEILING, by construction rather than by a budget check.
+        // Filling to `captionBudget` was this function's first cut and it read
+        // as working — every caption came out shorter than the prose — while
+        // actually keeping four sentences whenever they fit, which is the
+        // paragraph this exists to stop wearing a smaller number.
+        return out.count <= captionBudget ? out : clamped(out)
+    }
+
+    /// The text split after each real sentence terminator, in order, each piece
+    /// trimmed. A piece may itself be longer than the budget — `caption`'s
+    /// clamp is what bounds that case.
+    private static func sentences(_ text: String) -> [String] {
+        var out: [String] = []
+        var current = ""
+        let chars = Array(text)
+        for (i, c) in chars.enumerated() {
+            current.append(c)
+            guard c == "." || c == "!" || c == "?" else { continue }
+            // What follows decides whether this ended a sentence. End of text
+            // always does; otherwise it must be whitespace, and the next
+            // non-space character must be a capital or an opening quote.
+            var j = i + 1
+            if j >= chars.count {
+                out.append(current.trimmingCharacters(in: .whitespaces)); current = ""; continue
+            }
+            guard chars[j].isWhitespace else { continue }
+            while j < chars.count, chars[j].isWhitespace { j += 1 }
+            guard j < chars.count else {
+                out.append(current.trimmingCharacters(in: .whitespaces)); current = ""; continue
+            }
+            let next = chars[j]
+            guard next.isUppercase || next == "\u{201C}" || next == "'" else { continue }
+            out.append(current.trimmingCharacters(in: .whitespaces))
+            current = ""
+        }
+        let tail = current.trimmingCharacters(in: .whitespaces)
+        if !tail.isEmpty { out.append(tail) }
+        return out
+    }
+
+    /// A single sentence longer than the budget, cut at the last WORD boundary
+    /// inside it. Never mid-word: a caption ending "the wallet moved 1.4% agai…"
+    /// reads as a rendering fault rather than as an abridgement.
+    private static func clamped(_ text: String) -> String {
+        let head = String(text.prefix(captionBudget))
+        guard let space = head.lastIndex(of: " ") else { return head + "…" }
+        let cut = String(head[head.startIndex..<space])
+            .trimmingCharacters(in: .whitespaces)
+        return (cut.isEmpty ? head : cut) + "…"
+    }
+
     /// The root line every answer document opens with. Spelled once so the
     /// splice below and its guard can never disagree about what it is looking
     /// for.

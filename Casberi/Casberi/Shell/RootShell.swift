@@ -2782,6 +2782,7 @@ struct RootShell: View {
             if let prose = await streamSynthesis(query,
                                                  over: candidates(pulse.sample,
                                                                   terms: Retriever.contentTerms(query)),
+                                                 document: proseDoc,
                                                  onProseDoc: onProseDoc) {
                 // Prose, then its away/wallet addenda, then the receipts it
                 // was drawn from — the status synthesis success now shows its
@@ -2871,9 +2872,12 @@ struct RootShell: View {
                 let grounded = things(forIDs: result.hitIDs)
                 if !grounded.isEmpty {
                     lastAnswerHits = grounded
+                    let toolFigure = AnswerFigure.line(for: grounded)
                     return AnswerFigure.prepending(
-                        AnswerFigure.line(for: grounded),
-                        to: modelDoc(insight: result.prose, hits: grounded,
+                        toolFigure,
+                        to: modelDoc(insight: toolFigure == nil ? result.prose
+                                                                : AnswerFigure.caption(result.prose),
+                                     hits: grounded,
                                      picks: Array(grounded.prefix(6).indices),
                                      tag: tag, in: allThings()))
                 }
@@ -2890,8 +2894,9 @@ struct RootShell: View {
             }
             return AnswerFigure.prepending(
                 lookupFigure,
-                to: modelDoc(insight: answer.insight, hits: hits,
-                             picks: answer.picks, tag: tag, in: allThings()))
+                to: modelDoc(insight: lookupFigure == nil ? answer.insight
+                                                         : AnswerFigure.caption(answer.insight),
+                             hits: hits, picks: answer.picks, tag: tag, in: allThings()))
         case .synthesis:
             // The app's own arithmetic over the same rows the model is about to
             // read — where they came from, or when they landed (`AnswerFigure`,
@@ -2903,15 +2908,29 @@ struct RootShell: View {
             // beneath a picture that is already there, rather than a chart
             // popping in after the typewriter settles.
             let figure = AnswerFigure.line(for: hits)
+            // The prose is a CAPTION once a figure leads it (2026-08-16) — the
+            // picture is the app's own arithmetic and the sentence is the one
+            // part of this screen that can be wrong, so it does not get to be
+            // the largest thing on it. With no figure the prose IS the answer
+            // and is left whole; `caption` is never called on that path.
+            //
+            // Applied to the STREAMED snapshots too, not just the settled doc,
+            // and that is the point rather than a side effect: the caption
+            // writes itself and then stops, instead of growing for a paragraph
+            // and being cut at the last frame under the reader's eyes.
+            func captioned(_ text: String) -> [String] {
+                proseDoc(figure == nil ? text : AnswerFigure.caption(text))
+            }
             guard let prose = await streamSynthesis(
                 query, over: candidates(hits, terms: Retriever.contentTerms(query)),
+                document: captioned,
                 onProseDoc: { onProseDoc(AnswerFigure.prepending(figure, to: $0)) }) else {
                 return synthesisEmptyDoc(hits)
             }
             // The figure, the prose, and the retrieved things it was drawn from
             // as tappable receipts (§175).
             return appendingGrounding(hits, title: "Drawn from",
-                                      to: AnswerFigure.prepending(figure, to: proseDoc(prose)))
+                                      to: AnswerFigure.prepending(figure, to: captioned(prose)))
         }
     }
 
@@ -3005,6 +3024,7 @@ struct RootShell: View {
                 lastAnswerHits = capped
                 if let prose = await streamSynthesis(
                     query, over: candidates(capped, terms: Retriever.contentTerms(query)),
+                    document: proseDoc,
                     onProseDoc: onProseDoc) {
                     return answered(appendingGrounding(capped, title: "Drawn from", to: proseDoc(prose)))
                 }
@@ -3368,7 +3388,17 @@ struct RootShell: View {
     /// unavailable, declined, or wrote nothing — the caller then paints its
     /// grounded fallback. One loop for every synthesis path, so a streaming
     /// fix can't miss one.
+    ///
+    /// `document` is how a caller shapes each snapshot (2026-08-16). It
+    /// defaults to `proseDoc`, which is what every caller did inline before —
+    /// the synthesis arm overrides it so the streamed snapshots are CAPTIONED
+    /// as they arrive rather than at the last frame. Passing the raw snapshot
+    /// is what makes that possible at all: the callback used to receive the
+    /// finished document, by which point the prose was already sealed inside an
+    /// `Insight(…)` argument and could only have been cut back out of the
+    /// grammar — the MoneyReceipt refusal, one screen over.
     private func streamSynthesis(_ query: String, over candidates: [OnDeviceModel.Candidate],
+                                 document: @escaping (String) -> [String],
                                  onProseDoc: @escaping ([String]) -> Void) async -> String? {
         guard let stream = OnDeviceModel.synthesisStream(query: query, candidates: candidates) else {
             return nil
@@ -3376,7 +3406,7 @@ struct RootShell: View {
         var last = ""
         for await snapshot in stream {
             last = snapshot
-            onProseDoc(proseDoc(snapshot))
+            onProseDoc(document(snapshot))
         }
         let final = last.trimmingCharacters(in: .whitespacesAndNewlines)
         return final.isEmpty ? nil : final
