@@ -1002,9 +1002,30 @@ struct MainSurface: View {
     // room without dropping the hue. So the pour survives exactly where it
     // carries information and is silent everywhere it was decoration —
     // which is §159's own argument, arriving at the opposite default.
+    // AMENDED A THIRD TIME (2026-08-15, user: "on the wallet screen, i don't
+    // want a crown pour to change color when you select different wallets b/c
+    // it doesn't match the blue card"). THIS REVERSES the wallet-face
+    // carve-out described at length above, and the reversal is recorded rather
+    // than quietly deleted because that carve-out was a real ruling twice
+    // over: §159 introduced it and the §204 amendment deliberately preserved
+    // it as "identity as information".
+    //
+    // What changed underneath it is that the information MOVED. The wallet
+    // room's balance card became a bright `DS.tint` hero the same day, so the
+    // room now states its own identity in the loudest element on the screen —
+    // and a per-wallet hue pouring down the crown above a fixed blue card is
+    // two identity colours on one screen disagreeing, which is worse than
+    // either alone. §297's test still decides it: a pour survives where it
+    // carries information and is silent where it is decoration. It is
+    // decoration now, because the card got there first.
+    //
+    // Scoped to the CROWN on purpose. `chrome.pourHue` still publishes the
+    // scoped wallet's hue, so `AgentBar.roomTint` — which reads the same field
+    // — is untouched: the bottom chrome keeps saying which wallet you are in,
+    // where there is no card beside it to argue with. Killing the field at its
+    // source would have silently un-tinted that bar too.
     private var crownPour: some View {
-        let scoped = chrome.pourHue
-        let hue = scoped ?? DS.bleed
+        let hue = DS.bleed
         // Photo themes force the dark treatment (DS.themedPage's own rule);
         // only a true light page halves the dose — the same field that reads
         // as atmosphere on ink reads as a stain on white.
@@ -1013,7 +1034,10 @@ struct MainSurface: View {
         // fades the field out on the same beat a colour swap re-tints it —
         // and so `crownPour` keeps ONE view identity through the pager's own
         // `.transition(.opacity)`.
-        let dose = (scoped == nil && !ThemeStore.shared.bleed.pours) ? 0 : chrome.pourDose
+        // The scoped-wallet exemption goes with the carve-out above: a wallet
+        // room no longer forces a pour through an Ink theme, so "Ink does not
+        // pour" is now true everywhere without exception.
+        let dose = ThemeStore.shared.bleed.pours ? chrome.pourDose : 0
         return LinearGradient(stops: [
             .init(color: hue.opacity(light ? 0.16 : 0.30), location: 0),
             .init(color: hue.opacity(light ? 0.05 : 0.10), location: 0.5),
