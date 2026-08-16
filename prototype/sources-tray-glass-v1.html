@@ -1,0 +1,374 @@
+<meta charset="utf-8">
+<title>Sources tray — glass?</title>
+<style>
+  /* Real tokens, DesignTokens.swift (values as SHIPPED 2026-08-16)
+     page          #000000 / #ffffff
+     surfaceSheet  #111113 / #ffffff        ← the tray today
+     surfaceRaised #1a1a1c / #f8f8f8        ← the category cards today (§ 2026-08-11)
+     raisedShadow  #00000000 / #0000001f
+     glassBg       #1c1c1e8c / #f9f9f9b8    ← the floating layer: composer, FAB, toasts
+     glassStroke   #ffffff1a / #0000000f
+     glassShadow   #00000066 / #00000017
+     textPrimary   #ffffff / #000000
+     textSecondary #ebebf599 / #3c3c43d6
+     textTertiary  #ebebf57e / #3c3c43bd
+     tint          #0a84ff
+     Space  s1 4  s2 10  s3 14  s4 18  s5 24  s6 32
+     Radius card 10, sheet 16
+     SourcesTray: columns 5, icon 44, chip 52, nameHeight 28,
+                  overline 15 + gap 5, cardPadTop 8, cardPadBottom 6, rowGap 10
+
+     The backdrop is a REAL feed, not the 30%-opacity stand-in tone-v1 used.
+     The whole question about glass is what shows through it, so painting the
+     thing underneath grey would settle the question by rigging it. */
+
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font: 14px/1.5 -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+    background: #0b0b0d; color: #ebebf5cc;
+    padding: 32px 28px 64px; -webkit-font-smoothing: antialiased;
+  }
+  body.light { background: #f2f2f7; color: #3c3c43d6; }
+
+  h1 { font: 700 22px/28px ui-rounded, -apple-system, system-ui; color: #fff; }
+  body.light h1 { color: #000; }
+  .sub { margin-top: 6px; max-width: 92ch; font-size: 13px; opacity: .72; }
+  .sub code { font: 400 12px/1 ui-monospace, SFMono-Regular, monospace; opacity: .85; }
+
+  .bar { display: flex; gap: 10px; align-items: center; margin: 18px 0 26px; flex-wrap: wrap; }
+  .bar .gap { width: 14px; }
+  button {
+    font: 500 13px/1 inherit; color: inherit; cursor: pointer;
+    background: #ffffff14; border: 0; border-radius: 9999px; padding: 9px 15px;
+  }
+  body.light button { background: #00000010; }
+  button.on { background: #0a84ff; color: #fff; }
+
+  .rail { display: flex; gap: 20px; align-items: flex-start; overflow-x: auto; padding-bottom: 18px; }
+  .panel { flex: 0 0 auto; width: 402px; }
+  .panel > h2 { font: 600 13px/18px inherit; color: #fff; margin-bottom: 2px; }
+  body.light .panel > h2 { color: #000; }
+  .panel > .note { font-size: 11.5px; line-height: 16px; opacity: .62; margin-bottom: 8px; min-height: 48px; }
+  .verdict { font-size: 11.5px; line-height: 16px; margin-bottom: 10px; font-weight: 600; }
+  .verdict.bad  { color: #ff6b6b; }
+  .verdict.ok   { color: #30d158; }
+  .verdict.meh  { color: #ffd60a; }
+
+  /* ---- the phone: a real feed behind, tray in front --------------------- */
+
+  .phone {
+    position: relative; width: 402px; height: 762px;
+    border-radius: 30px; overflow: hidden; background: #000;   /* DS.page */
+    isolation: isolate;
+  }
+  body.light .phone { background: #fff; }
+
+  .behind { position: absolute; inset: 0; padding: 54px 18px 0; transition: transform .45s ease; }
+  .phone.nudged .behind { transform: translateY(-96px); }
+
+  .frow {
+    display: flex; gap: 12px; align-items: center;
+    background: #111113; border-radius: 10px; padding: 10px; margin-bottom: 10px;
+  }
+  body.light .frow { background: #fff; box-shadow: 0 1px 3px #0000001f; }
+  .thumb { width: 56px; height: 56px; border-radius: 8px; flex: 0 0 auto; }
+  .fmark { width: 22px; height: 22px; border-radius: 9999px; flex: 0 0 auto;
+           display: grid; place-items: center; font: 700 10px/1 ui-rounded, system-ui; color: #fff; }
+  .flines { flex: 1; min-width: 0; }
+  .fl { height: 9px; border-radius: 4px; background: #ffffff2e; margin-bottom: 7px; }
+  .fl.b { background: #ffffff59; height: 11px; }
+  body.light .fl { background: #00000021; }
+  body.light .fl.b { background: #00000047; }
+
+  /* the quiet corpus: text rows only, no pictures — glass has less to work with */
+  .phone.quiet .thumb { display: none; }
+
+  .scrim { position: absolute; inset: 0; background: #00000059; }
+  body.light .scrim { background: #00000029; }
+  /* a glass tray carries its own dimming in the material, so the sheet scrim
+     under it is the SAME either way — the difference on screen is the tray. */
+
+  .tray {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    border-radius: 16px 16px 0 0;            /* DS.Radius.sheet */
+    padding: 32px 18px 32px;                 /* s6 / s4 / s6 */
+    background: var(--sheet);
+    backdrop-filter: var(--sheetblur, none);
+    -webkit-backdrop-filter: var(--sheetblur, none);
+    box-shadow: var(--sheetstroke, none);
+  }
+  /* A PANEL of glass, not a blurred rectangle. Three things do that work and
+     none of them is the blur: a lit top RIM (the cut edge of the sheet), a
+     SHEEN falling off from the top-left (the light the panel is under), and a
+     touch of extra saturation so what's behind arrives as colour rather than
+     mud. Without the rim the sheet reads as fog; with it, as a pane. */
+  .tray.glassy::before {
+    content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+    background:
+      linear-gradient(160deg, #ffffff1f 0%, #ffffff08 22%, #ffffff00 46%);
+    box-shadow: inset 0 1px 0 #ffffff4d;      /* the cut edge */
+  }
+  body.light .tray.glassy::before {
+    background: linear-gradient(160deg, #ffffff9e 0%, #ffffff42 24%, #ffffff00 50%);
+    box-shadow: inset 0 1px 0 #ffffffe6;
+  }
+  /* the sheen is absolutely positioned, so the in-flow content has to be
+     lifted over it or the panel paints across its own chips */
+  .tray > * { position: relative; z-index: 1; }
+
+  .grabber {
+    position: absolute; top: 8px; left: 50%; transform: translateX(-50%);
+    width: 36px; height: 5px; border-radius: 3px; background: #ffffff40;
+  }
+  body.light .grabber { background: #00000040; }
+
+  .title { font: 700 22px/28px ui-rounded, -apple-system, system-ui; color: #fff; margin-bottom: 18px; }
+  body.light .title { color: #000; }
+
+  /* ---- the grid --------------------------------------------------------- */
+
+  .rows { display: flex; flex-direction: column; gap: var(--rowgap, 10px); }   /* rowGap = s2 */
+  .cardrow { display: flex; gap: 10px; }
+  .card {
+    border-radius: 10px;                                         /* DS.Radius.card */
+    padding: 8px 0 6px;                                          /* cardPadTop / Bottom */
+    background: var(--card);
+    backdrop-filter: var(--cardblur, none);
+    -webkit-backdrop-filter: var(--cardblur, none);
+    box-shadow: var(--cardlift, none);
+  }
+  .card.none { background: transparent; box-shadow: none; backdrop-filter: none; }
+
+  .cat-name {
+    font: 600 11px/15px -apple-system, system-ui;                /* label11 semibold */
+    color: #ebebf57e;                                            /* textTertiary */
+    padding-left: 7px; margin-bottom: 5px; height: 15px; white-space: nowrap;
+  }
+  body.light .cat-name { color: #3c3c43bd; }
+
+  .chips { display: flex; }
+  .chip { width: 65.2px; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .ring { width: 52px; height: 52px; border-radius: 9999px; display: grid; place-items: center; }
+  .ring.active { box-shadow: inset 0 0 0 2.5px #0a84ff; }
+  .icon {
+    width: 44px; height: 44px; border-radius: 9999px; display: grid; place-items: center;
+    font: 700 17px/1 ui-rounded, -apple-system, system-ui; color: #fff;
+  }
+  .chip-name {
+    height: 28px; font: 500 12px/16px -apple-system, system-ui;  /* label12 */
+    color: #ebebf599; text-align: center; padding: 0 1px; hyphens: none;
+  }
+  .chip-name.long { font-size: 10.5px; letter-spacing: -.2px; }
+  body.light .chip-name { color: #3c3c43d6; }
+  .chip.sel .chip-name { color: #fff; font-weight: 600; }
+  body.light .chip.sel .chip-name { color: #000; }
+
+  /* ---- the four treatments --------------------------------------------- */
+
+  /* A — shipping today. Opaque sheet, opaque raised cards. */
+  .t-now   { --sheet: #111113; --card: #1a1a1c; }
+  body.light .t-now { --sheet: #ffffff; --card: #f8f8f8; --cardlift: 0 1px 3px #0000001f; }
+
+  /* B — glass sheet, cards left as they ship. */
+  .t-glass { --sheet: #1c1c1e8c; --sheetblur: blur(30px) saturate(1.7);
+             --sheetstroke: inset 0 1px 0 #ffffff1a, 0 -8px 32px #00000066;
+             --card: #1a1a1c; }
+  body.light .t-glass { --sheet: #f9f9f9b8; --sheetstroke: inset 0 1px 0 #0000000f, 0 -8px 32px #00000017;
+                        --card: #f8f8f8; --cardlift: 0 1px 3px #0000001f; }
+
+  /* C — glass all the way down: sheet AND cards. */
+  .t-full  { --sheet: #1c1c1e8c; --sheetblur: blur(30px) saturate(1.7);
+             --sheetstroke: inset 0 1px 0 #ffffff1a, 0 -8px 32px #00000066;
+             --card: #ffffff14; --cardblur: blur(8px); --cardlift: inset 0 0 0 .5px #ffffff1a; }
+  body.light .t-full { --sheet: #f9f9f9b8; --sheetstroke: inset 0 1px 0 #0000000f, 0 -8px 32px #00000017;
+                       --card: #ffffff8c; --cardlift: inset 0 0 0 .5px #0000000f; }
+
+  /* D — glass sheet with the cards removed, i.e. the only shape where the
+         material has room to be seen. Pre-2026-08-06 flat grid. */
+  .t-bare  { --sheet: #1c1c1e8c; --sheetblur: blur(30px) saturate(1.7);
+             --sheetstroke: inset 0 1px 0 #ffffff1a, 0 -8px 32px #00000066; }
+  body.light .t-bare { --sheet: #f9f9f9b8; --sheetstroke: inset 0 1px 0 #0000000f, 0 -8px 32px #00000017; }
+
+  /* E — D, but the groups are given air instead of a box: rowGap s2 → s5, and
+         the overline steps up to textSecondary so it can carry the grouping
+         alone. Same pixels of glass, more of it visible between groups. */
+  .t-air   { --sheet: #1c1c1e8c; --sheetblur: blur(30px) saturate(1.7);
+             --sheetstroke: inset 0 1px 0 #ffffff1a, 0 -8px 32px #00000066; --rowgap: 24px; }
+  body.light .t-air { --sheet: #f9f9f9b8; --sheetstroke: inset 0 1px 0 #0000000f, 0 -8px 32px #00000017; }
+  .t-air .cat-name { color: #ebebf599; }
+  body.light .t-air .cat-name { color: #3c3c43d6; }
+
+  /* F — the group is CARVED OUT of the material rather than stacked on it: no
+         fill, an inner shadow and a lit bottom edge, so the sheet reads as one
+         piece of glass with recesses in it. This is how the material groups
+         natively — a raised opaque box on glass is the thing it can't do. */
+  .t-carve { --sheet: #1c1c1e8c; --sheetblur: blur(30px) saturate(1.7);
+             --sheetstroke: inset 0 1px 0 #ffffff1a, 0 -8px 32px #00000066;
+             --card: #00000038;
+             --cardlift: inset 0 1px 3px #00000073, inset 0 -1px 0 #ffffff12; }
+  /* the carve is a SHADOW, and light mode has less shadow room — so the light
+     recipe is tuned separately rather than scaled down, or the treatment gets
+     judged on being under-tuned instead of on being wrong. */
+  body.light .t-carve { --sheet: #f9f9f9b8; --sheetstroke: inset 0 1px 0 #0000000f, 0 -8px 32px #00000017;
+                        --card: #0000000f; --cardlift: inset 0 1px 4px #00000024, inset 0 -1px 0 #ffffffe6; }
+
+  /* G — the panel read pushed as far as it goes: F's carved groups, plus a
+     THINNER, more transmissive sheet so the feed arrives as colour, plus more
+     saturation. This is the one to judge "does it look like a panel of glass"
+     on; A–F answer "what does glass cost the tray". */
+  .t-panel { --sheet: #1c1c1e73; --sheetblur: blur(22px) saturate(2.1);
+             --sheetstroke: inset 0 1px 0 #ffffff26, 0 -10px 40px #00000073;
+             --card: #00000038;
+             --cardlift: inset 0 1px 3px #00000073, inset 0 -1px 0 #ffffff12; }
+  body.light .t-panel { --sheet: #f9f9f9a3; --sheetstroke: inset 0 1px 0 #ffffff, 0 -10px 40px #0000001f;
+                        --card: #0000000f; --cardlift: inset 0 1px 4px #00000024, inset 0 -1px 0 #ffffffe6; }
+</style>
+
+<h1>Sources tray — what it looks like as glass</h1>
+<p class="sub">
+  Real tokens and real geometry from <code>SourcesTray.swift</code> / <code>DesignTokens.swift</code>, shipped
+  values as of today: tray <code>surfaceSheet</code>, cards <code>surfaceRaised</code>. Glass is the app's own
+  <code>glassBg</code> / <code>glassStroke</code> — the material the composer, FAB and toasts wear. Same corpus,
+  same biggest-first packing, Wallet active. <b>The feed behind is real</b>, because the whole question is what
+  the blur reveals; <b>Quiet corpus</b> strips the pictures out of it, and <b>Nudge feed</b> moves it under the
+  tray — the thing a modal sheet can never actually do.
+  <br><b>A–C</b> keep the cards and vary the material — what glass COSTS the tray. <b>D–G</b> take the marks off
+  the black cards and float them on the glass instead: D as it stands, E with the grouping carried by air, F with
+  the group carved into the material rather than stacked on top of it, and <b>G</b> with the panel pushed as far
+  as it goes. Judge "does it read as a panel of glass" on G.
+</p>
+
+<div class="bar">
+  <button id="dark" class="on">Dark</button>
+  <button id="light">Light</button>
+  <span class="gap"></span>
+  <button id="rich" class="on">Rich corpus</button>
+  <button id="quiet">Quiet corpus</button>
+  <span class="gap"></span>
+  <button id="nudge">Nudge feed</button>
+</div>
+
+<div class="rail" id="rail"></div>
+
+<script>
+const CORPUS = [
+  [{ cat: "Wallet", apps: [
+      ["Wallet","W","#627eea",1], ["Peer","P","#00c48c"], ["Privacy Pools","0x","#7c5cff"],
+      ["Gnosis Pay","G","#3e6957"], ["Safe","S","#12ff80"] ] }],
+  [{ cat: "Life", apps: [
+      ["Photos","◈","#f5a623"], ["Calendar","31","#ff3b30"], ["Reminders","☰","#ff9500"],
+      ["Files","▤","#1f8fff"], ["Mail","✉","#0a84ff"] ] }],
+  [{ cat: "Work", apps: [
+      ["GitHub","","#2b3137"], ["Linear","L","#5e6ad2"],
+      ["Stripe","S","#635bff"], ["Cursor","C","#3a3a3c"] ] }],
+  [{ cat: "Media", apps: [
+      ["Spotify","♫","#1db954"], ["Twitch","T","#9146ff"], ["YouTube","▶","#ff0000"] ] },
+   { cat: "Social", apps: [
+      ["Bluesky","B","#0085ff"], ["Farcaster","F","#8a63d2"] ] }],
+];
+
+// the feed underneath — thumbnails carry hue, which is what a blur eats
+const FEED = [
+  ["linear-gradient(135deg,#f5a623,#ff3b30)", "#f5a623", "◈"],
+  ["linear-gradient(135deg,#0085ff,#7c5cff)", "#0085ff", "B"],
+  ["linear-gradient(135deg,#1db954,#12ff80)", "#1db954", "♫"],
+  ["linear-gradient(135deg,#627eea,#00c48c)", "#627eea", "W"],
+  ["linear-gradient(135deg,#ff0000,#ff9500)", "#ff0000", "▶"],
+  ["linear-gradient(135deg,#5e6ad2,#635bff)", "#5e6ad2", "L"],
+  ["linear-gradient(135deg,#9146ff,#8a63d2)", "#9146ff", "T"],
+  ["linear-gradient(135deg,#3e6957,#1f8fff)", "#3e6957", "G"],
+  ["linear-gradient(135deg,#ff3b30,#f5a623)", "#ff3b30", "31"],
+  ["linear-gradient(135deg,#0a84ff,#7c5cff)", "#0a84ff", "✉"],
+];
+
+const TREATMENTS = [
+  { cls: "t-now", cards: true, name: "A · Shipping today",
+    note: "Opaque sheet, opaque raised cards. The tray covers the feed outright; every reading here is the one that was ruled on.",
+    verdict: ["ok", "Baseline"] },
+  { cls: "t-glass", cards: true, name: "B · Glass sheet, cards as they ship",
+    note: "The literal answer to the question. The cards are opaque, so they mask the material over ~85% of the tray — the blur survives only in the 10pt gutters, the strip under the title and the outer margin, where it arrives as coloured stains from whatever row is behind. Worse: the sheet's local value now varies, so a raised card reads raised over a dark row and recessed over a bright one.",
+    verdict: ["bad", "Glass only in the gutters, and the card's lift stops being constant"] },
+  { cls: "t-full", cards: true, name: "C · Glass all the way down",
+    note: "Sheet and cards both, so the material finally reads. Over a dark row it is genuinely handsome. Over a picture the card stops separating from the sheet and the category name (textTertiary, the weakest ink in the tray) sits on whatever colour is passing behind — a container whose strength depends on the feed is not a container.",
+    verdict: ["meh", "Handsome over a dark row, dissolves over a picture"] },
+  { cls: "t-bare", cards: false, name: "D · Floating on glass",
+    note: "The marks come off their cards and sit on the material directly, which is the only shape where the glass has room to be seen. It photographs well — and it is exactly the pre-2026-08-06 wall of icons the cards were added to fix: the overline is back to being read rather than seen.",
+    verdict: ["meh", "The material finally reads; the grouping stops reading"] },
+  { cls: "t-air", cards: false, name: "E · Floating, groups given air",
+    note: "D with the grouping carried by space instead of a box — rowGap s2 → s5, overline up to textSecondary. Grouping survives without a container, and the extra 56pt of tray is the price. Nothing here is glass-specific: it would work on the opaque sheet too.",
+    verdict: ["ok", "Grouping survives; costs ~56pt of height"] },
+  { cls: "t-carve", cards: true, name: "F · Groups carved into the glass",
+    note: "The container comes back, but as a RECESS in the material rather than an opaque slab on top of it: no fill, an inner shadow and a lit bottom edge. This is the one shape where a group reads as structure AND the sheet still reads as one piece of glass.",
+    verdict: ["ok", "Structure and material both survive"] },
+  { cls: "t-panel", cards: true, name: "G · The panel, pushed",
+    note: "F with the material turned up: a thinner sheet (#1c1c1e73 against glassBg's 8c), blur 22 instead of 30 so shapes behind stay shapes, saturate 2.1 so they arrive as colour. The rim and sheen are what make it read as a pane rather than as fog — they cost nothing and are the single biggest lever here.",
+    verdict: ["ok", "This is the one that reads as a panel of glass"] },
+];
+
+function chip([name, glyph, hue, active]) {
+  return `<div class="chip${active ? " sel" : ""}">
+    <div class="ring${active ? " active" : ""}">
+      <div class="icon" style="background:${hue}">${glyph}</div>
+    </div>
+    <div class="chip-name${!name.includes(" ") && name.length > 7 ? " long" : ""}">${name}</div>
+  </div>`;
+}
+
+function card(block, withCard) {
+  return `<div class="card${withCard ? "" : " none"}" style="flex:${block.apps.length} 0 0">
+    <div class="cat-name">${block.cat}</div>
+    <div class="chips">${block.apps.map(chip).join("")}</div>
+  </div>`;
+}
+
+function feedRow([grad, hue, glyph]) {
+  return `<div class="frow">
+    <div class="thumb" style="background:${grad}"></div>
+    <div class="fmark" style="background:${hue}">${glyph}</div>
+    <div class="flines"><div class="fl b" style="width:${62 + Math.round(Math.random() * 30)}%"></div>
+      <div class="fl" style="width:${40 + Math.round(Math.random() * 40)}%"></div></div>
+  </div>`;
+}
+
+function panel(t) {
+  const rows = CORPUS.map(r => `<div class="cardrow">${r.map(b => card(b, t.cards)).join("")}</div>`).join("");
+  return `<section class="panel">
+    <h2>${t.name}</h2>
+    <div class="note">${t.note}</div>
+    <div class="verdict ${t.verdict[0]}">${t.verdict[1]}</div>
+    <div class="phone">
+      <div class="behind">${FEED.map(feedRow).join("")}</div>
+      <div class="scrim"></div>
+      <div class="tray ${t.cls}${t.cls === "t-now" ? "" : " glassy"}">
+        <div class="grabber"></div>
+        <div class="title">Your sources</div>
+        <div class="rows">${rows}</div>
+      </div>
+    </div>
+  </section>`;
+}
+
+// ?only=F,G renders a subset and ?theme=light opens light — so a screenshot of
+// one comparison needs no scripted scrolling, which headless Chrome can't do.
+const Q = new URLSearchParams(location.search);
+const ONLY = (Q.get("only") || "").split(",").map(s => s.trim().toUpperCase()).filter(Boolean);
+const SHOWN = ONLY.length ? TREATMENTS.filter(t => ONLY.includes(t.name[0])) : TREATMENTS;
+rail.innerHTML = SHOWN.map(panel).join("");
+if (Q.get("theme") === "light") { document.body.classList.add("light");
+                                  document.documentElement.style.colorScheme = "light"; }
+if (Q.get("corpus") === "quiet") document.querySelectorAll(".phone").forEach(p => p.classList.add("quiet"));
+
+const phones = () => document.querySelectorAll(".phone");
+const set = (btn, others) => { btn.classList.add("on"); others.forEach(b => b.classList.remove("on")); };
+
+dark.onclick  = () => { document.body.classList.remove("light");
+                        document.documentElement.style.colorScheme = "dark"; set(dark, [light]); };
+light.onclick = () => { document.body.classList.add("light");
+                        document.documentElement.style.colorScheme = "light"; set(light, [dark]); };
+rich.onclick  = () => { phones().forEach(p => p.classList.remove("quiet")); set(rich, [quiet]); };
+quiet.onclick = () => { phones().forEach(p => p.classList.add("quiet")); set(quiet, [rich]); };
+nudge.onclick = () => { const on = nudge.classList.toggle("on");
+                        phones().forEach(p => p.classList.toggle("nudged", on)); };
+</script>

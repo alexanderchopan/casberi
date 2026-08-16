@@ -53,25 +53,34 @@ grep -q 'SourceRowPacking.pack(catalog)' "$TRAY" \
 grep -q 'columns = SourceRowPacking.columns' "$TRAY" \
   || { echo "✗ SourcesTray.columns no longer mirrors SourceRowPacking.columns — the view would draw a different grid than the packer packed for"; exit 1; }
 
-# The card is the whole point (a filled container is SEEN rather than read), and
-# a fill that quietly becomes clear is the feature silently reverting to the
-# 2026-08-06 overline-only tray that prompted this work.
+# The card is GONE (2026-08-16, user ruling) and these guards protect what
+# replaced it. The tray's cells now float directly on a glass sheet, so the
+# grouping rests on exactly two things and neither is a container: the sheet is
+# glass, and the eyebrow is textPrimary. Lose either and the tray silently
+# reverts to the 2026-08-06 bare grid that prompted the card in the first place
+# — a wall of icons whose structure has to be read to be seen.
 #
-# 2026-08-11: moved off DS.surfaceWell onto DS.surfaceRaised — a well is read
-# INTO (a chart backing, a media cover), and these cards hold the screen's own
-# primary tappable content, so sitting below the page's own plane inverted the
-# relationship. The invariant this guard protects (a real fill, not clear) is
-# unchanged; only which token supplies it moved.
-grep -q 'UnevenRoundedRectangle' "$TRAY" \
-  || { echo "✗ SourcesTray no longer draws a per-card shape — a spanning card cannot round only its outer corners without one"; exit 1; }
-grep -q 'fill(DS.surfaceRaised)' "$TRAY" \
-  || { echo "✗ the category card has no fill — the grouping is back to being read rather than seen"; exit 1; }
+# History, so this is not re-litigated by someone reading only the code: from
+# 2026-08-10 a category was a filled raised card (DS.surfaceRaised), and that
+# was correct while the sheet was opaque. On glass an opaque slab masks the
+# material over ~85% of the tray, and the sheet's local value varies with the
+# feed behind it, so the same card reads raised over a dark row and recessed
+# over a bright one. See SourcesTray's own "Where the card used to be" note.
+grep -q 'glass: true' "$TRAY" \
+  || { echo "✗ SourcesTray no longer presents on glass — with no cards its marks are a bare grid on an opaque sheet"; exit 1; }
+# Scoped to nameBand, NOT a bare file grep: the chip's own name is textPrimary
+# when it is the active source (line ~441), so an unscoped grep matches whatever
+# the eyebrow does and is a guard that cannot fail.
+awk '/private func nameBand/,/^    }/' "$TRAY" | grep -q 'foregroundStyle(DS.textPrimary)' \
+  || { echo "✗ the category eyebrow is no longer textPrimary — with no card that ink IS the grouping"; exit 1; }
 
-# A spanning card is drawn per slot and bridged across the row gap by NEGATIVE
-# padding. Without it every multi-category card shows a seam at each column
-# boundary, which reads as several small cards rather than one group.
-grep -q 'padding(.leading, opensLeading ? 0 : -DS.Space.s2)' "$TRAY" \
-  || { echo "✗ the card fill no longer bridges the column gap — a 3-chip category would draw as three separate cards"; exit 1; }
+# The tint was refused twice (2026-08-11, re-asked and re-ruled 2026-08-16):
+# DS.tint means SELECTION here (the active chip's ring), so tinted category
+# names put selection's colour on eight unselected things.
+grep -q 'starts\[column\] ?? ""' "$TRAY" \
+  || { echo "✗ the eyebrow band changed shape — check the tint ruling still holds"; exit 1; }
+awk '/private func nameBand/,/^    }/' "$TRAY" | grep -q 'DS.tint' \
+  && { echo "✗ the category eyebrow is tinted — ruled against twice; tint means selection in this tray"; exit 1; }
 
 # --- harness ----------------------------------------------------------------
 # `SourceRowPacking.swift` compiles as-is. The DP and the fixtures are appended.

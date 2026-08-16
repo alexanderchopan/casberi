@@ -20,6 +20,20 @@ struct DSTray<Content: View>: View {
     /// one continuous ink sheet instead of a shade off beside it. See
     /// `dsInk()` in `ThemeStore.swift` for the full rationale.
     var ink: Bool = false
+    /// Present on GLASS instead of the opaque `surfaceSheet` (2026-08-16, user).
+    ///
+    /// The one tray that takes it is `SourcesTray`, and it takes it because its
+    /// cells lost their opaque cards the same day: marks floating on an opaque
+    /// sheet are the bare 2026-08-06 grid, marks floating on a panel of glass
+    /// are a shelf. Everywhere else the opaque sheet stays right — a tray that
+    /// carries text you READ has nothing to gain from a live backdrop and a
+    /// contrast floor to lose.
+    ///
+    /// Deliberately NOT the default, and deliberately not `dsGlass`: that
+    /// modifier is for the floating layer (composer, FAB, toasts) and carries a
+    /// stroke, a shadow and a corner radius of its own — all three wrong for a
+    /// surface the system already rounds, shadows and clips for us.
+    var glass: Bool = false
     /// The detent set. Defaults to the single computed `height` every other
     /// tray already ships — pass a wider set (e.g. `[.height(height), .large]`)
     /// to let a tray with unpredictable content length be dragged open past
@@ -84,8 +98,42 @@ struct DSTray<Content: View>: View {
 
         if ink {
             tray.dsInk()
+        } else if glass {
+            tray.presentationBackground { DSGlassSheet() }.dsColorScheme()
         } else {
             tray.presentationBackground(DS.surfaceSheet).dsColorScheme()
         }
+    }
+}
+
+/// The sheet as a PANEL of glass rather than a blurred rectangle.
+///
+/// The material alone reads as FOG — measured against four alternatives in
+/// `prototype/sources-tray-glass-v1.html`. What makes it read as a pane is the
+/// SHEEN: a fall-off from the top-leading corner, i.e. the light the panel is
+/// under. The mock also carried a 1pt lit rim along the top edge, which is the
+/// single strongest cue of the two and is NOT here on purpose — brief §8's
+/// no-hairlines rule has zero exceptions, and a lit rim is a hairline no matter
+/// what it is standing in for. The gradient carries the same idea with no line.
+///
+/// No shape of its own: `presentationBackground` is already clipped to the
+/// sheet, and an inner `RoundedRectangle` would draw its own corners inside the
+/// system's — two radii, one of which is a guess at what iOS is doing this year.
+private struct DSGlassSheet: View {
+    var body: some View {
+        Rectangle()
+            .fill(.ultraThinMaterial)
+            .overlay {
+                LinearGradient(
+                    stops: [
+                        .init(color: DS.glassSheen, location: 0),
+                        .init(color: DS.glassSheen.opacity(0.25), location: 0.22),
+                        .init(color: .clear, location: 0.46)
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottom
+                )
+            }
+            .ignoresSafeArea()
     }
 }

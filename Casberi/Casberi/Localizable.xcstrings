@@ -70092,6 +70092,34 @@
         }
       }
     },
+    "Your feeds": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Tus fuentes"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "あなたのフィード"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "내 피드"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "你的信息流"
+          }
+        }
+      }
+    },
     "Your first thing": {
       "localizations": {
         "es": {
@@ -70772,34 +70800,6 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "有 1 笔交易需要你的签名"
-          }
-        }
-      }
-    },
-    "Your sources": {
-      "localizations": {
-        "es": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "Tus fuentes"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "あなたのソース"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "내 소스"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "你的来源"
           }
         }
       }

@@ -284,6 +284,15 @@ enum DS {
     static let glassStroke = Color.adaptive(dark: "#ffffff1a", light: "#0000000f")
     static let scrim       = Color.adaptive(dark: "#00000080", light: "#0000004d")
 
+    /// The light a glass PANEL is under — the top-leading fall-off that makes a
+    /// sheet read as a pane rather than as fog (2026-08-16, `DSGlassSheet`).
+    ///
+    /// Much stronger in LIGHT and that is not a typo: on white the material is
+    /// already bright, so a dark-mode dose vanishes into it, while on black the
+    /// same dose would blow the top of the sheet out. Measured as pixels in
+    /// `prototype/sources-tray-glass-v1.html`, not derived from the dark value.
+    static let glassSheen  = Color.adaptive(dark: "#ffffff1f", light: "#ffffff9e")
+
     /// The cast under a floating glass control (composer, FAB, toasts).
     /// Deliberately lighter than `cardShadow` — glass already separates itself
     /// by blur and stroke, so it needs a hint of air, not a card's lift.

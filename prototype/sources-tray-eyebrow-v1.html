@@ -1,0 +1,219 @@
+<meta charset="utf-8">
+<title>Sources tray — the category eyebrow, on glass</title>
+<style>
+  /* D (marks floating on a glass panel, no cards) with four eyebrow
+     treatments. Real tokens, DesignTokens.swift:
+       textPrimary   #ffffff / #000000
+       textSecondary #ebebf599 / #3c3c43d6
+       textTertiary  #ebebf57e / #3c3c43bd     ← shipping
+       tint          #0a84ff                   ← ALSO the active chip's ring
+       glassBg       #1c1c1e8c / #f9f9f9b8
+     Wallet is the ACTIVE source in every panel on purpose: the question is not
+     "is a blue eyebrow legible" (it is) but "what happens when it shares a
+     screen with the one blue that already means something". */
+
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font: 14px/1.5 -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+    background: #0b0b0d; color: #ebebf5cc; padding: 32px 28px 64px; -webkit-font-smoothing: antialiased;
+  }
+  body.light { background: #f2f2f7; color: #3c3c43d6; }
+  h1 { font: 700 22px/28px ui-rounded, -apple-system, system-ui; color: #fff; }
+  body.light h1 { color: #000; }
+  .sub { margin-top: 6px; max-width: 92ch; font-size: 13px; opacity: .74; }
+  .bar { display: flex; gap: 10px; margin: 18px 0 26px; }
+  button { font: 500 13px/1 inherit; color: inherit; cursor: pointer; background: #ffffff14;
+           border: 0; border-radius: 9999px; padding: 9px 15px; }
+  body.light button { background: #00000010; }
+  button.on { background: #0a84ff; color: #fff; }
+
+  .rail { display: flex; gap: 20px; align-items: flex-start; overflow-x: auto; padding-bottom: 18px; }
+  .panel { flex: 0 0 auto; width: 402px; }
+  .panel > h2 { font: 600 13px/18px inherit; color: #fff; margin-bottom: 2px; }
+  body.light .panel > h2 { color: #000; }
+  .panel > .note { font-size: 11.5px; line-height: 16px; opacity: .62; margin-bottom: 8px; min-height: 64px; }
+  .verdict { font-size: 11.5px; line-height: 16px; margin-bottom: 10px; font-weight: 600; }
+  .verdict.bad { color: #ff6b6b; } .verdict.ok { color: #30d158; } .verdict.meh { color: #ffd60a; }
+
+  .phone { position: relative; width: 402px; height: 700px; border-radius: 30px; overflow: hidden;
+           background: #000; isolation: isolate; }
+  body.light .phone { background: #fff; }
+  .behind { position: absolute; inset: 0; padding: 40px 18px 0; }
+  .frow { display: flex; gap: 12px; align-items: center; background: #111113; border-radius: 10px;
+          padding: 10px; margin-bottom: 10px; }
+  body.light .frow { background: #fff; box-shadow: 0 1px 3px #0000001f; }
+  .thumb { width: 56px; height: 56px; border-radius: 8px; flex: 0 0 auto; }
+  .fmark { width: 22px; height: 22px; border-radius: 9999px; flex: 0 0 auto; display: grid;
+           place-items: center; font: 700 10px/1 ui-rounded, system-ui; color: #fff; }
+  .flines { flex: 1; min-width: 0; }
+  .fl { height: 9px; border-radius: 4px; background: #ffffff2e; margin-bottom: 7px; }
+  .fl.b { background: #ffffff59; height: 11px; }
+  body.light .fl { background: #00000021; } body.light .fl.b { background: #00000047; }
+  .scrim { position: absolute; inset: 0; background: #00000059; }
+  body.light .scrim { background: #00000029; }
+
+  /* the glass panel, D's recipe: rim + sheen are what make it a pane */
+  .tray {
+    position: absolute; left: 0; right: 0; bottom: 0; border-radius: 16px 16px 0 0;
+    padding: 32px 18px 32px; background: #1c1c1e8c;
+    backdrop-filter: blur(30px) saturate(1.7); -webkit-backdrop-filter: blur(30px) saturate(1.7);
+    box-shadow: inset 0 1px 0 #ffffff1a, 0 -8px 32px #00000066;
+  }
+  body.light .tray { background: #f9f9f9b8; box-shadow: inset 0 1px 0 #0000000f, 0 -8px 32px #00000017; }
+  .tray::before {
+    content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+    background: linear-gradient(160deg, #ffffff1f 0%, #ffffff08 22%, #ffffff00 46%);
+    box-shadow: inset 0 1px 0 #ffffff4d;
+  }
+  body.light .tray::before {
+    background: linear-gradient(160deg, #ffffff9e 0%, #ffffff42 24%, #ffffff00 50%);
+    box-shadow: inset 0 1px 0 #ffffffe6;
+  }
+  .tray > * { position: relative; z-index: 1; }
+  .grabber { position: absolute; top: 8px; left: 50%; transform: translateX(-50%); width: 36px;
+             height: 5px; border-radius: 3px; background: #ffffff40; z-index: 2; }
+  body.light .grabber { background: #00000040; }
+  .title { font: 700 22px/28px ui-rounded, -apple-system, system-ui; color: #fff; margin-bottom: 18px; }
+  body.light .title { color: #000; }
+
+  .rows { display: flex; flex-direction: column; gap: 10px; }
+  .cardrow { display: flex; gap: 10px; }
+  .group { padding: 8px 0 6px; }
+  .cat-name {
+    font: var(--eyeweight, 600) var(--eyesize, 11px)/15px -apple-system, system-ui;
+    color: var(--eyeink, #ebebf57e);
+    padding-left: 7px; margin-bottom: 5px; height: 15px; white-space: nowrap;
+  }
+  .chips { display: flex; }
+  .chip { width: 65.2px; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .ring { width: 52px; height: 52px; border-radius: 9999px; display: grid; place-items: center; }
+  .ring.active { box-shadow: inset 0 0 0 2.5px #0a84ff; }
+  .icon { width: 44px; height: 44px; border-radius: 9999px; display: grid; place-items: center;
+          font: 700 17px/1 ui-rounded, -apple-system, system-ui; color: #fff; }
+  .chip-name { height: 28px; font: 500 12px/16px -apple-system, system-ui; color: #ebebf599;
+               text-align: center; padding: 0 1px; }
+  .chip-name.long { font-size: 10.5px; letter-spacing: -.2px; }
+  body.light .chip-name { color: #3c3c43d6; }
+  .chip.sel .chip-name { color: #fff; font-weight: 600; }
+  body.light .chip.sel .chip-name { color: #000; }
+
+  /* ---- the four eyebrows ------------------------------------------------ */
+  .e-now  { }                                                   /* textTertiary, 11 semibold */
+  .e-tint { --eyeink: #0a84ff; }                                /* the ask */
+  body.light .e-tint { --eyeink: #0a84ff; }
+  .e-sec  { --eyeink: #ebebf599; }                              /* textSecondary */
+  body.light .e-sec { --eyeink: #3c3c43d6; }
+  .e-white { --eyeink: #ffffff; }                                    /* textPrimary, shipping size */
+  body.light .e-white { --eyeink: #000000; }
+  .e-loud { --eyeink: #ffffff; --eyesize: 12px; --eyeweight: 600; }  /* textPrimary, one step up */
+  body.light .e-loud { --eyeink: #000000; }
+</style>
+
+<h1>The category eyebrow, on D's glass</h1>
+<p class="sub">
+  Same panel, same corpus, four eyebrows. <b>Wallet is the active source in all four</b> — that is the whole test.
+  The tint isn't free here: <code>#0a84ff</code> is already spoken for as SELECTION (the ring around Wallet), so a
+  blue eyebrow says "selected" eight times on a screen where exactly one thing is.
+</p>
+
+<div class="bar">
+  <button id="dark" class="on">Dark</button>
+  <button id="light">Light</button>
+</div>
+
+<div class="rail" id="rail"></div>
+
+<script>
+const CORPUS = [
+  [{ cat: "Wallet", apps: [["Wallet","W","#627eea",1], ["Peer","P","#00c48c"],
+      ["Privacy Pools","0x","#7c5cff"], ["Gnosis Pay","G","#3e6957"], ["Safe","S","#12ff80"]] }],
+  [{ cat: "Life", apps: [["Photos","◈","#f5a623"], ["Calendar","31","#ff3b30"],
+      ["Reminders","☰","#ff9500"], ["Files","▤","#1f8fff"], ["Mail","✉","#0a84ff"]] }],
+  [{ cat: "Work", apps: [["GitHub","","#2b3137"], ["Linear","L","#5e6ad2"],
+      ["Stripe","S","#635bff"], ["Cursor","C","#3a3a3c"]] }],
+  [{ cat: "Media", apps: [["Spotify","♫","#1db954"], ["Twitch","T","#9146ff"], ["YouTube","▶","#ff0000"]] },
+   { cat: "Social", apps: [["Bluesky","B","#0085ff"], ["Farcaster","F","#8a63d2"]] }],
+];
+const FEED = [
+  ["linear-gradient(135deg,#f5a623,#ff3b30)", "#f5a623", "◈"],
+  ["linear-gradient(135deg,#0085ff,#7c5cff)", "#0085ff", "B"],
+  ["linear-gradient(135deg,#1db954,#12ff80)", "#1db954", "♫"],
+  ["linear-gradient(135deg,#627eea,#00c48c)", "#627eea", "W"],
+  ["linear-gradient(135deg,#ff0000,#ff9500)", "#ff0000", "▶"],
+  ["linear-gradient(135deg,#5e6ad2,#635bff)", "#5e6ad2", "L"],
+];
+
+const EYEBROWS = [
+  { cls: "e-now", name: "1 · textTertiary (shipping)",
+    note: "11pt semibold at 49% white. It was tuned to sit under a filled card that was already carrying the grouping — with the card gone it is the only thing left doing that job, and it is the weakest ink in the tray.",
+    verdict: ["meh", "Too quiet once the card is gone"] },
+  { cls: "e-tint", name: "2 · Tint (the ask)",
+    note: "Legible, and it separates instantly. It also puts selection's colour on eight unselected things: look at the Wallet ring and the eight blue words at once. Second cost — the tray already carries twenty saturated marks, so this adds a ninth hue that means nothing.",
+    verdict: ["bad", "Collides with the one blue that means something"] },
+  { cls: "e-sec", name: "3 · textSecondary",
+    note: "Same size and weight, one rung up the ink ladder (49% → 60%). Reads as a heading rather than a caption, costs no colour and no height, and is what E used when it dropped the cards.",
+    verdict: ["ok", "Cheapest fix that actually works"] },
+  { cls: "e-white", name: "4 · White, shipping size (11pt)",
+    note: "textPrimary at the size and weight already shipping. It reads as deliberate rather than as a caption someone forgot to finish — the tray title is 22pt bold, so nothing here competes upward; size does the ranking, which is what the ramp is for (brief §8).",
+    verdict: ["ok", "Purposeful, and still plainly subordinate to the title"] },
+  { cls: "e-loud", name: "5 · White, 12pt",
+    note: "One size up as well as full white, so the eyebrow now matches the chip NAMES in size while beating them in ink. Section headings this strong make the grid read as eight lists rather than one tray.",
+    verdict: ["meh", "The extra point is what tips it into shouting"] },
+];
+
+function chip([name, glyph, hue, active]) {
+  return `<div class="chip${active ? " sel" : ""}">
+    <div class="ring${active ? " active" : ""}"><div class="icon" style="background:${hue}">${glyph}</div></div>
+    <div class="chip-name${!name.includes(" ") && name.length > 7 ? " long" : ""}">${name}</div></div>`;
+}
+function group(b) {
+  return `<div class="group" style="flex:${b.apps.length} 0 0">
+    <div class="cat-name">${b.cat}</div><div class="chips">${b.apps.map(chip).join("")}</div></div>`;
+}
+function feedRow([g, hue, glyph]) {
+  return `<div class="frow"><div class="thumb" style="background:${g}"></div>
+    <div class="fmark" style="background:${hue}">${glyph}</div>
+    <div class="flines"><div class="fl b" style="width:${64 + Math.round(Math.random()*26)}%"></div>
+      <div class="fl" style="width:${42 + Math.round(Math.random()*36)}%"></div></div></div>`;
+}
+function panel(t) {
+  const rows = CORPUS.map(r => `<div class="cardrow">${r.map(group).join("")}</div>`).join("");
+  return `<section class="panel"><h2>${t.name}</h2><div class="note">${t.note}</div>
+    <div class="verdict ${t.verdict[0]}">${t.verdict[1]}</div>
+    <div class="phone"><div class="behind">${FEED.map(feedRow).join("")}</div><div class="scrim"></div>
+      <div class="tray ${t.cls}"><div class="grabber"></div><div class="title">${t.title || "Your sources"}</div>
+        <div class="rows">${rows}</div></div></div></section>`;
+}
+
+// ?titles=1 swaps the comparison: one eyebrow (white, shipping size), four
+// candidate titles — because the title is a separate decision from the ink and
+// comparing both at once compares nothing.
+const TITLES = [
+  { cls: "e-white", title: "Your sources", name: "Your sources (today)",
+    note: "True of every cell, and the word the code uses throughout. Reads slightly like plumbing — nobody says 'let me check my sources'.",
+    verdict: ["meh", "Accurate, a little technical"] },
+  { cls: "e-white", title: "Your apps", name: "Your apps",
+    note: "The most everyday word here — but the catalog screen this shell already carries is CALLED Apps, and it is where you connect them. Two surfaces named apps, one for connecting and one for going. It also isn't true of Wallet, Photos, Files or Voice.",
+    verdict: ["bad", "Collides with the Apps catalog, and half these aren't apps"] },
+  { cls: "e-white", title: "Your feeds", name: "Your feeds",
+    note: "Consumer, and it names the right unit — every cell opens a room of arriving things. Risk: 'feed' has a narrow meaning in this app already (RSS, the feed-follow bridges), and Wallet or Files don't read as feeds.",
+    verdict: ["meh", "Warmest word, but it already means RSS here"] },
+  { cls: "e-white", title: "Your places", name: "Your places",
+    note: "The word SourcesTray's own doc reaches for ('hold opens your places'). True of every cell including Wallet and Photos, names a DESTINATION — which is what a tap does — and collides with nothing else in the shell.",
+    verdict: ["ok", "Consumer and true of all of them"] },
+];
+
+const Q = new URLSearchParams(location.search);
+const SET = Q.get("titles") ? TITLES : EYEBROWS;
+const ONLY = (Q.get("only") || "").split(",").map(s => s.trim()).filter(Boolean);
+rail.innerHTML = (ONLY.length ? SET.filter(t => ONLY.includes(t.name[0])) : SET).map(panel).join("");
+if (Q.get("theme") === "light") { document.body.classList.add("light");
+                                  document.documentElement.style.colorScheme = "light"; }
+dark.onclick  = () => { document.body.classList.remove("light");
+                        document.documentElement.style.colorScheme = "dark";
+                        dark.classList.add("on"); light.classList.remove("on"); };
+light.onclick = () => { document.body.classList.add("light");
+                        document.documentElement.style.colorScheme = "light";
+                        light.classList.add("on"); dark.classList.remove("on"); };
+</script>

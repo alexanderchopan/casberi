@@ -23,58 +23,42 @@ import SwiftUI
 /// free in a grid, so the icon-only strip finally has somewhere to send anyone
 /// who doesn't recognise a mark.
 ///
-/// # A category is a CARD, and a card is never split (2026-08-10, user)
+/// # The tray is a PANEL OF GLASS, and the marks float on it (2026-08-16, user)
 ///
-/// The grid has been grouped by `BridgeCatalog.categories` since 2026-08-06,
-/// but the grouping was carried by an 11pt tertiary overline — against twenty
-/// saturated marks, so the wall of icons still won the first glance and the
-/// structure had to be READ to be seen ("it still looks like just a bunch of
-/// icons", user). Three treatments were mocked
-/// (`prototype/sources-tray-structure-v1.html`): ink the overline in the tint,
-/// give each category a filled card, or give each category a whole card in a
-/// two-up masonry. The card won — a filled container is seen rather than read —
-/// and the masonry lost on the currency this tray has always been judged in,
-/// height (~680pt, past the resting cap, plus 46pt chips that truncate a long
-/// name against prd §201).
+/// The grid has been grouped by `BridgeCatalog.categories` since 2026-08-06.
+/// From 2026-08-10 to 2026-08-16 each category was a filled opaque card, which
+/// was the right answer to "it still looks like just a bunch of icons" — a
+/// filled container is SEEN rather than read — on an OPAQUE sheet. The sheet is
+/// glass now (`DSTray(glass:)`), and on glass an opaque slab is the one thing
+/// the material cannot do; see the "Where the card used to be" note below for
+/// what it cost, measured. Seven treatments were compared as rendered pixels in
+/// `prototype/sources-tray-glass-v1.html` — the marks floating directly on the
+/// panel won.
 ///
-/// **The card RISES, it does not recess (user ruling 2026-08-11).** Its first
-/// cut used `DS.surfaceWell` — the ladder's rung for a nested backing — and the
-/// reading was backwards for what this box is. A well is something you look
-/// INTO (a chart backing, a media cover); these cards hold the primary tappable
-/// content of the screen, so putting them below the plane that content sits on
-/// inverts the relationship. It showed, too: at `#080809` on a `#111113` sheet
-/// over a `#000` page the cards were within 3% of the page and read as holes
-/// punched back through the tray, with twenty saturated marks floating in them
-/// — the container doing the opposite of the job it was added for. They now
-/// take `DS.surfaceRaised` + `DS.raisedShadow`; see those tokens for why the
-/// fill is opaque (the seam) and why the shadow is dark-transparent (the halo).
+/// **The grouping is carried by the eyebrow's INK.** With no container it is the
+/// only thing left doing that job, so it moved `textTertiary` → `textPrimary` at
+/// the same size and weight (`prototype/sources-tray-eyebrow-v1.html`, four
+/// treatments). Two consequences accepted knowingly: the label now sits brighter
+/// than the chip NAMES it labels (survivable — the saturated marks take the
+/// first glance regardless, and the names are support), and 12pt was refused
+/// because ink alone stays subordinate to the 22pt title while ink AND size
+/// makes the grid read as eight lists rather than one tray.
 ///
-/// **Four treatments were compared as rendered pixels, not as argument**
-/// (`prototype/sources-tray-tone-v1.html`): shipping-today, the full flip
-/// (tray to ink, cards to the card plane), the raised card, and a deeper well.
-/// The flip lost on two counts — it inverts the convention every other `DSTray`
-/// in the app follows (`FollowImportSheet`, `StarterPackImportSheet`,
-/// `AgentPanelGrid`, the setup screens all draw containers as wells on a
-/// sheet), and it cannot use `dsInk()`, which forces `.colorScheme(.dark)` and
-/// would paint the tray black in light mode.
+/// **It is still NOT tinted** (ruled 2026-08-11, re-asked and re-ruled
+/// 2026-08-16). One of the original two reasons expired with the card — tinting
+/// lost to the card, and there is no card — but the load-bearing one did not:
+/// `DS.tint` means SELECTION in this tray (the active chip's ring), so eight
+/// blue category names put selection's colour on eight unselected things. It
+/// would also add a ninth hue to a tray that is already twenty saturated brand
+/// marks. Colour is identity, state, or magnitude (brief §8); a heading is none
+/// of the three.
 ///
-/// **The category name stays `textTertiary` — it is NOT tinted** (asked and
-/// ruled 2026-08-11). Tinting the overline was one of the three treatments
-/// mocked in `sources-tray-structure-v1.html` and the card won INSTEAD of it,
-/// so colouring it now restores the thing the card replaced; and tint means
-/// SELECTION in this tray (the active chip's ring), so eight blue category
-/// names would put selection's colour on eight unselected things. If the names
-/// read weak, the fix is weight or size — never hue (brief §8: colour is
-/// identity, state, or magnitude; decoration is banned).
-///
-/// **The first cut of the card let a group straddle a row end, and it was
-/// wrong.** Inheriting the old cell packing meant a group running past column
-/// five arrived on the next row as a card with no title, one chip in it, cut at
-/// the screen edge — you had to look up and diagonally back to learn what it
-/// was, and five of eight groups did it. That is the container doing the
-/// opposite of its job. So the two are reversed here: **cards are placed whole
-/// and only the ROWS are packed.** There is no continuation, therefore no
-/// nameless box, therefore nothing to explain.
+/// **A group is still placed WHOLE, and rows alone are packed.** The card is
+/// gone but its layout rule outlives it, for the reason that was never about the
+/// fill: a group running past column five arrives on the next row as chips with
+/// no name above them, and you have to look up and diagonally back to learn what
+/// they are. There is no continuation, therefore no nameless run, therefore
+/// nothing to explain.
 ///
 /// # The packing rule is BIGGEST FIRST, and that is measured
 ///
@@ -141,9 +125,11 @@ struct SourcesTray: View {
     /// `GeometryReader` here would buy a fraction of a point on the iPad in
     /// exchange for a measurement pass on every source pick.
     private static let overlineInset: CGFloat = 7
-    /// The card's own top and bottom air. Tuned against the resting cap, not
-    /// chosen: at 8/6 a four-row tray lands at 598pt, and every point above
-    /// that is a point closer to a scroll the packing exists to prevent.
+    /// A group's own top and bottom air — the card's padding, kept after the
+    /// card (2026-08-16). Tuned against the resting cap, not chosen: at 8/6 a
+    /// four-row tray lands at 598pt, and every point above that is a point
+    /// closer to a scroll the packing exists to prevent. Holding both means the
+    /// glass pass changed no height arithmetic anywhere.
     private static let cardPadTop: CGFloat = 8
     private static let cardPadBottom: CGFloat = 6
 
@@ -201,8 +187,8 @@ struct SourcesTray: View {
             .map { PackedRow(id: $0.offset, blocks: $0.element) }
     }
 
-    /// A row's height, which varies now: an oversized category's card is two
-    /// chip rows tall.
+    /// A row's height, which varies: an oversized category wraps to two chip
+    /// rows.
     fileprivate static func rowHeight(chipRows: Int) -> CGFloat {
         let unit = chipSize + DS.Space.s1 + nameHeight
         return cardPadTop + overlineHeight + overlineGap
@@ -211,9 +197,12 @@ struct SourcesTray: View {
             + cardPadBottom
     }
 
-    /// Between cards. Tighter than the old bare grid's `s4` because each card
-    /// now carries its own padding — the air is inside the container instead of
-    /// between the rows, which is what pays for the card at no height cost.
+    /// Between rows. Tighter than the 2026-08-06 bare grid's `s4` because each
+    /// group carries its own padding (`cardPadTop`/`Bottom`) — kept at s2 after
+    /// the card went, since the eyebrow's ink now separates the groups and
+    /// paying s4 again would buy a second separator for the same fact. If the
+    /// ink alone stops holding at a larger corpus, this is the next lever
+    /// (`prototype/sources-tray-glass-v1.html`, treatment E).
     private static let rowGap: CGFloat = DS.Space.s2
 
     /// DSTray's own chrome: top clearance, the title, its gap, bottom pad.
@@ -247,8 +236,9 @@ struct SourcesTray: View {
     }
 
     var body: some View {
-        DSTray(title: String(localized: "Your sources"),
+        DSTray(title: String(localized: "Your feeds"),
                height: trayHeight,
+               glass: true,
                detents: [.height(trayHeight), .large]) {
             ScrollView {
                 let rows = packed
@@ -274,19 +264,16 @@ struct SourcesTray: View {
     }
 
     private func rowView(_ row: PackedRow) -> some View {
-        ZStack(alignment: .top) {
-            cardLayer(row)
-            VStack(alignment: .leading, spacing: 0) {
-                nameBand(row)
-                VStack(alignment: .leading, spacing: DS.Space.s2) {
-                    ForEach(0..<row.chipRows, id: \.self) { chipRow in
-                        cellRow(row, chipRow: chipRow)
-                    }
+        VStack(alignment: .leading, spacing: 0) {
+            nameBand(row)
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                ForEach(0..<row.chipRows, id: \.self) { chipRow in
+                    cellRow(row, chipRow: chipRow)
                 }
-                Spacer(minLength: 0)
             }
-            .padding(.top, Self.cardPadTop)
+            Spacer(minLength: 0)
         }
+        .padding(.top, Self.cardPadTop)
         .frame(height: Self.rowHeight(chipRows: row.chipRows))
     }
 
@@ -328,62 +315,27 @@ struct SourcesTray: View {
         return nil
     }
 
-    // MARK: - The card behind the row
+    // MARK: - Where the card used to be
 
-    /// The cards, drawn as a layer of `columns` flexible slots BEHIND the same
-    /// flexible slots the chips use — so a card and the chips it holds share
-    /// one geometry with nothing measured anywhere.
+    /// Nothing. The category CARD was deleted on 2026-08-16 (user ruling) and
+    /// this note is here so the deletion is a decision rather than a gap.
     ///
-    /// A card spanning several columns is drawn per slot and bridged across the
-    /// gap by NEGATIVE padding on its continuing sides: `.background` does not
-    /// clip, so the fill overflows into the `rowGap` and the pieces meet. The
-    /// alternative — one shape per block in an HStack — needs proportional
-    /// widths, which SwiftUI has no flex-grow for, and would have cost the
-    /// `GeometryReader` this file has avoided since it shipped.
+    /// From 2026-08-10 a category was a filled, raised, opaque card — the fix
+    /// for "it still looks like just a bunch of icons", where a filled
+    /// container is SEEN rather than read. That reasoning is intact and the
+    /// card still lost, because the sheet under it changed: on a panel of glass
+    /// an opaque slab is the one thing the material cannot do. It masked the
+    /// blur over ~85% of the tray (so the glass survived only in the gutters,
+    /// arriving as coloured stains from whatever row was behind), and worse,
+    /// the sheet's local value now VARIES with the feed, so the same raised
+    /// card read raised over a dark row and recessed over a bright one — a lift
+    /// that is a property of somebody's feed is not a lift.
     ///
-    /// **The shadow rides the WHOLE LAYER, not each piece** — the one place
-    /// this file departs from `dsElevatedSurface`, and the bridging is why.
-    /// A shadow cast per piece is cast from a piece's own silhouette, so every
-    /// interior seam of a wide card would darken the neighbour drawn beside it:
-    /// a line down the middle of the card, in the app whose no-line rule has
-    /// zero exceptions. Grouped, the overlapping opaque pieces composite to one
-    /// continuous silhouette per card and cast one clean outline; two different
-    /// cards in a row are separated by a real gap, so they still shadow apart.
-    ///
-    /// The offscreen rasterization `dsElevatedSurface` warns about is bought
-    /// cheaply here: this layer holds `Color.clear` and flat shapes — no text,
-    /// no icons, no images — and it is transparent in dark (`raisedShadow`), so
-    /// the cost lands only on a light-mode tray that is mostly at rest anyway.
-    private func cardLayer(_ row: PackedRow) -> some View {
-        let owner = owners(row)
-        return HStack(spacing: DS.Space.s2) {
-            ForEach(0..<Self.columns, id: \.self) { column in
-                Color.clear
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background { slotFill(owner, column) }
-            }
-        }
-        .compositingGroup()
-        .shadow(color: DS.raisedShadow, radius: 6, x: 0, y: 1)
-    }
-
-    @ViewBuilder
-    private func slotFill(_ owner: [Int?], _ column: Int) -> some View {
-        if let mine = owner[column] {
-            let opensLeading = column == 0 || owner[column - 1] != mine
-            let opensTrailing = column == Self.columns - 1 || owner[column + 1] != mine
-            let radius = DS.Radius.card
-            UnevenRoundedRectangle(
-                topLeadingRadius: opensLeading ? radius : 0,
-                bottomLeadingRadius: opensLeading ? radius : 0,
-                bottomTrailingRadius: opensTrailing ? radius : 0,
-                topTrailingRadius: opensTrailing ? radius : 0
-            )
-            .fill(DS.surfaceRaised)
-            .padding(.leading, opensLeading ? 0 : -DS.Space.s2)
-            .padding(.trailing, opensTrailing ? 0 : -DS.Space.s2)
-        }
-    }
+    /// The grouping is carried by the eyebrow's INK instead (see `nameBand`).
+    /// Four treatments were compared as rendered pixels in
+    /// `prototype/sources-tray-eyebrow-v1.html`; a carved recess in the glass
+    /// (`t-carve` in `sources-tray-glass-v1.html`) was the runner-up and stays
+    /// available if the ink alone stops holding at a larger corpus.
 
     // MARK: - Names and chips
 
@@ -408,7 +360,10 @@ struct SourcesTray: View {
                 Text(starts[column] ?? "")
                     .dsText(.label11)
                     .fontWeight(.semibold)
-                    .foregroundStyle(DS.textTertiary)
+                    // textPrimary since 2026-08-16 — with the card gone this ink
+                    // IS the grouping. See the type doc for why not tint and why
+                    // not a size bump as well.
+                    .foregroundStyle(DS.textPrimary)
                     // Names never truncate (prd §201) — the app-tile rule. A
                     // category name is one word, and the longest in the
                     // catalog ("Shopping") clears a phone column at this size,

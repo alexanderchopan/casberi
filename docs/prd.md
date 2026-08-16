@@ -88,6 +88,7 @@ at all.
 | §58h | Board refinements — OPEN (diagnosed 2026-07-11, for a fresh bu | superseded by §58i |
 | §58i | The bento board | superseded by §58j |
 | §58j | A pin is a mark, not a card | superseded by §58k |
+| §357 | The sources tray's category CARD (filled, raised, never split) | superseded by §391 |
 | §61 | The elevation ladder — depth by tone and shadow, never by line | superseded by §97, reversed by §114 |
 | §72 | A pinned wallet's NFTs ride Home by default | amended by §124a |
 | §78 | Two catalog re-shelvings: GeckoTerminal to Onchain, Pinterest  | reversed by §114 |
@@ -24298,3 +24299,75 @@ BEGIN rather than on a timer, and the reason only got sharper — hold until the
 agent rises, look at it, then let go, and a timed clear would open the tray
 under the risen agent; and the bar still hosts on `RootShell`'s own ZStack, so
 both verbs work from Settings, a bridge setup form, anywhere.
+
+## §391 — The sources tray is a panel of glass, and the marks float on it (user: "is the source tray a good candidate to make glass? it's controls", then "i think D is awesome!", "maybe white is better i think… will look more purposeful", "lets do feeds then", 2026-08-16)
+
+**Supersedes §357's card rulings for this tray** (the 2026-08-10 filled category
+card and the 2026-08-11 "the card RISES, it does not recess"), and takes a
+deliberate exception to brief §8's "Liquid Glass on the floating layer only —
+never on content."
+
+**1. The tray presents on glass.** Asked as a question and answered no at first,
+on the standing law: glass is the floating layer (composer, FAB, toasts), it
+reads as glass because content scrolls under it, and a modal sheet covers the
+feed so nothing moves behind it. Seven treatments were then rendered as pixels
+(`prototype/sources-tray-glass-v1.html`, real tokens and real geometry, over a
+REAL feed rather than a grey stand-in) and the ruling went the other way. What
+the mock settled that the argument could not: **the blur is not what makes it
+read as glass.** `backdrop-filter` alone is fog. A lit top rim and a sheen
+falling off the top-leading corner are what turn it into a pane, and they cost
+nothing. The rim is a hairline, so the shipped `DSGlassSheet` carries the sheen
+alone (brief §8's no-hairlines rule has zero exceptions, including this one).
+
+The cost is stated rather than hidden: the tray is modal, so the material will
+look exactly this good and will never do the thing glass is for. This is
+decoration that reads well, not a material doing a job — accepted knowingly, and
+scoped to ONE tray. `DSTray(glass:)` is opt-in and defaults false; a tray
+carrying text you read has nothing to gain from a live backdrop and a contrast
+floor to lose.
+
+**2. The category card is deleted.** Not because §357's reasoning was wrong — a
+filled container is SEEN rather than read, and that was correct on an opaque
+sheet — but because an opaque slab is the one thing glass cannot carry. Measured
+in the mock: opaque cards mask the material over ~85% of the tray, so the blur
+survives only in the gutters, where it arrives as coloured stains from whatever
+row is behind; and the sheet's local value now VARIES with the feed, so the same
+raised card reads raised over a dark row and recessed over a bright one. A lift
+that is a property of somebody's feed is not a lift.
+
+**3. The eyebrow is `textPrimary`.** With no container it is the only thing
+carrying the grouping. Four treatments were rendered
+(`prototype/sources-tray-eyebrow-v1.html`); white at the SHIPPING size won.
+Refused: 12pt as well as white (ink alone stays subordinate to the 22pt title;
+ink and size together make the grid read as eight lists rather than one tray).
+Accepted knowingly: the label now sits brighter than the chip names it labels —
+survivable because twenty saturated marks take the first glance regardless.
+
+**4. Still not tinted** (ruled §357, re-asked and re-ruled here). One of the
+original two reasons expired with the card, and the load-bearing one did not:
+`DS.tint` means SELECTION in this tray, so eight blue category names put
+selection's colour on eight unselected things — plus a ninth hue in a tray that
+is already twenty brand marks. Colour is identity, state, or magnitude; a
+heading is none of the three.
+
+**5. The title is "Your feeds"** (was "Your sources"). Four candidates were
+rendered on the winning eyebrow. "Your apps" was refused on two checkable
+grounds — the shell already carries an Apps catalog, which is where you CONNECT
+things, so two surfaces would be named apps for opposite verbs; and it is untrue
+of Wallet, Photos, Files and Voice. "Your places" was recommended and lost to
+"Your feeds" on warmth, which is the user's call. Known cost, stated: "feed"
+already has a narrow meaning in this app (RSS and the four feed-follow bridges),
+and Wallet does not read as a feed.
+
+**Mechanically guarded** in `scripts/source-packing-selftest.sh`: the sheet must
+stay glass and the eyebrow must stay `textPrimary` — with no container, losing
+either silently reverts the tray to the 2026-08-06 bare grid. The eyebrow guard
+is scoped to `nameBand` rather than grepping the file, because the chip's own
+name is `textPrimary` when active and an unscoped grep would be a guard that
+cannot fail. All three mutations proven caught.
+
+**What did NOT change:** the biggest-first packing and its 39,237-corpus
+measurement, whole-group placement (a group straddling a row end still arrives
+as chips with no name above them, which was never about the fill), every height
+constant (`cardPadTop`/`Bottom`/`rowGap` all kept, so no arithmetic moved), and
+"All" still has no cell.
