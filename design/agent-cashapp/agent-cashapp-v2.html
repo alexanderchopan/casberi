@@ -1,0 +1,214 @@
+<title>The deck, v2 — bright cards</title>
+<style>
+  :root {
+    --page: #0a0b0f; --ink: #f2f4f8; --muted: #99a1b4; --faint: #626b80;
+    --tint: #1673e6; --msgblue: #0a84ff; --confirm: #30d158; --down: #ff453a; --attn: #ff9f0a;
+    --life: #bf5af2; --work: #5e9eff;
+    --money: ui-rounded, -apple-system, system-ui, sans-serif;
+    --text: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { background: var(--page); }
+  body { font-family: var(--text); color: var(--ink);
+         background: radial-gradient(900px 420px at 18% -8%, rgba(22,115,230,.10), transparent 62%), var(--page);
+         padding: 48px 28px 72px; }
+  .wrap { max-width: 1040px; margin: 0 auto; }
+  header { max-width: 800px; margin-bottom: 36px; }
+  .eyebrow { font-size: 12px; font-weight: 600; color: #4d8dff; margin-bottom: 10px; }
+  h1 { font-size: clamp(26px,3.4vw,36px); font-weight: 800; letter-spacing: -.02em; line-height: 1.1; margin-bottom: 12px; }
+  header p { font-size: 15px; line-height: 1.55; color: var(--muted); max-width: 72ch; margin-bottom: 8px; }
+  header p b { color: var(--ink); font-weight: 600; }
+
+  .row { display: flex; flex-wrap: wrap; gap: 40px; align-items: flex-start; justify-content: center; }
+  .option { width: 336px; }
+  .optName { font-size: 13px; font-weight: 800; margin: 0 4px 4px; }
+  .optName span { color: var(--faint); font-weight: 600; }
+  .optWhy { font-size: 12.5px; line-height: 1.5; color: var(--muted); margin: 12px 4px 0; }
+  .optWhy b { color: var(--ink); font-weight: 600; }
+  .phone { width: 336px; border-radius: 46px; padding: 10px; background: #15171c; box-shadow: 0 30px 70px rgba(0,0,0,.55); margin-top: 10px; }
+  .screen { border-radius: 38px; overflow: hidden; min-height: 740px; background: #000; position: relative;
+            display: flex; flex-direction: column; }
+
+  .berry { width: 20px; height: 20px; border-radius: 50%; flex: none;
+           background: radial-gradient(circle at 32% 28%, #6ea8ff, #1673e6 58%, #0c3f85); }
+  .x { margin-left: auto; width: 28px; height: 28px; border-radius: 50%; background: rgba(255,255,255,.08);
+       display: flex; align-items: center; justify-content: center; font-size: 12px; color: var(--muted); flex: none; }
+  .mast { display: flex; align-items: baseline; gap: 8px; padding: 18px 18px 6px; }
+  .mastTitle { font-family: var(--money); font-size: 24px; font-weight: 800; letter-spacing: -.02em; }
+  .mastDate { font-size: 12.5px; font-weight: 600; color: var(--faint); }
+  .mast .x { align-self: center; }
+
+  .scroll { flex: 1; padding: 2px 0 0; }
+
+  /* the lede — heading22, the move in its own direction (b32ce19) */
+  .lede { font-family: var(--money); font-size: 21px; font-weight: 800; letter-spacing: -.015em; line-height: 1.25;
+          padding: 2px 18px 12px; }
+  .lede em { font-style: normal; color: var(--confirm); }
+
+  /* panels — BRIGHT, Messages-blue register (user ruling 2026-08-15):
+     a section that CHANGED wears its full hue; a quiet one falls back to ink.
+     Colour is information — the wash IS the change signal. */
+  .panel { border-radius: 24px; margin: 0 12px 10px; padding: 15px 16px 14px; color: #fff; }
+  .p1 { background: linear-gradient(160deg, #ff9f0a, #f07800); }
+  .p2 { background: linear-gradient(160deg, #2a8cff, #0a5fd6); }
+  .p4 { background: linear-gradient(160deg, #c664f5, #9a34d6); }
+  .pquiet { background: #16181d; color: var(--ink); }
+  .pquiet .ph b { color: var(--muted); }
+  .pquiet .statSub { color: var(--muted); }
+  .ph { display: flex; align-items: baseline; gap: 8px; }
+  .ph b { font-size: 13px; font-weight: 700; color: rgba(255,255,255,.85); }
+  .ph .chev { margin-left: auto; color: rgba(255,255,255,.6); font-size: 13px; }
+  .pquiet .ph .chev { color: var(--faint); }
+  .stat { font-family: var(--money); font-size: 37px; font-weight: 800; letter-spacing: -.03em; line-height: 1.05; margin-top: 5px;
+          font-variant-numeric: tabular-nums; display: flex; align-items: center; gap: 10px; color: #fff; }
+  .pillup { font-family: var(--money); font-size: 12px; font-weight: 800; padding: 4px 9px; border-radius: 999px;
+            background: #fff; color: #1d9e43; font-variant-numeric: tabular-nums; }
+  .statSub { font-size: 12px; color: rgba(255,255,255,.8); margin-top: 4px; }
+  .li { display: flex; align-items: center; gap: 9px; padding: 7px 0 0; }
+  .li b { font-size: 13px; font-weight: 700; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #fff; }
+  .li .v { font-family: var(--money); font-size: 12px; font-weight: 800; color: #fff; background: rgba(255,255,255,.22);
+           padding: 3px 8px; border-radius: 999px; }
+  .dotline { width: 7px; height: 7px; border-radius: 50%; flex: none; background: rgba(255,255,255,.75); }
+  .sheet4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; margin-top: 10px; }
+  .sheet4 div { aspect-ratio: 1; border-radius: 10px; }
+
+  /* the dock — chips ABOVE the bar, the bar last */
+  .dock { padding: 4px 14px 16px; }
+  .seg { display: flex; gap: 5px; background: rgba(28,30,37,.92); border-radius: 999px; padding: 5px; margin-bottom: 8px; }
+  .seg span { flex: 1; text-align: center; font-size: 11px; font-weight: 700; padding: 8px 0; border-radius: 999px; color: var(--muted); }
+  .seg .on1 { background: var(--attn); color: #fff; }
+  .seg .on2 { background: var(--msgblue); color: #fff; }
+  .askbar { display: flex; align-items: center; gap: 10px;
+            background: rgba(28,30,37,.9); border-radius: 999px; padding: 13px 16px; }
+  .askbar s { text-decoration: none; font-size: 14px; color: var(--faint); flex: 1; }
+  .askbar .mic { color: var(--muted); font-size: 14px; }
+
+  .coh { max-width: 800px; margin: 44px auto 0; }
+  .coh h2 { font-size: 18px; font-weight: 800; margin-bottom: 10px; }
+  .coh .r { display: flex; gap: 14px; padding: 10px 0; }
+  .coh .r b { flex: 0 0 300px; font-size: 13px; font-weight: 700; }
+  .coh .r p { font-size: 13px; line-height: 1.5; color: var(--muted); }
+  .coh .r p em { font-style: normal; color: var(--ink); font-weight: 600; }
+</style>
+
+<div class="wrap">
+<header>
+  <div class="eyebrow">Casberi · the deck, v2 — bright cards</div>
+  <h1>The deck, in the Messages register</h1>
+  <p>Revised per your ruling: the cards go <b>bright</b> — full saturated hues in the Apple Messages voice, not washes. The twist that keeps b32ce19's "colour is information" true: <b>a section that changed today wears its full hue; a quiet one falls back to an ink slab</b> — so the brief's quiet-set step-back survives as the absence of colour, which is a stronger reading than a dim. No berry on the masthead; the greeting is composed by the clock ("Good morning / afternoon / evening"), with the date beside it in the quiet voice. Nav chips above the ask bar; the bar says "Ask or search".</p>
+</header>
+
+<div class="row">
+
+<div class="option">
+  <div class="optName">The landing <span>— berry pressed, morning</span></div>
+  <div class="phone"><div class="screen">
+    <div class="mast"><span class="mastTitle">Good morning</span><span class="mastDate">Fri, Aug 15</span><span class="x">✕</span></div>
+    <div class="lede">14 new things. Two need you, wallet <em>+1.8%</em>.</div>
+    <div class="scroll">
+
+      <div class="panel p1">
+        <div class="ph"><b>Needs you</b><span class="chev">›</span></div>
+        <div class="stat">3 late</div>
+        <div class="statSub">$240 dispute leads · evidence due Tuesday</div>
+        <div class="li"><span class="dotline"></span><b>USDC approval · unlimited</b><span class="v">revoke</span></div>
+        <div class="li"><span class="dotline"></span><b>Build 324 expires</b><span class="v">9d</span></div>
+      </div>
+
+      <div class="panel p2">
+        <div class="ph"><b>Wallet</b><span class="chev">›</span></div>
+        <div class="stat">$12,482 <span class="pillup">+1.8%</span></div>
+        <div class="statSub">Mostly ETH · Gnosis Pay spent $128</div>
+        <svg width="100%" height="38" viewBox="0 0 300 38" preserveAspectRatio="none" style="margin-top:8px;display:block">
+          <path d="M0,30 C30,26 55,32 85,24 C115,16 140,22 170,14 C200,9 235,13 265,7 L300,5"
+                fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" opacity=".9"/>
+        </svg>
+      </div>
+
+      <div class="panel pquiet">
+        <div class="ph"><b>Work</b><span class="chev">›</span></div>
+        <div class="statSub" style="margin-top:6px"><b style="color:var(--ink);font-size:13px">signed_up +18%</b> · cert renews itself Aug 29 · nothing new since yesterday</div>
+      </div>
+
+      <div class="panel p4">
+        <div class="ph"><b>Your day</b></div>
+        <div class="statSub" style="margin-top:4px">Made of 6 sources — mostly Farcaster and Photos. mara, jb + 10 liked your cast.</div>
+        <div class="sheet4">
+          <div style="background:linear-gradient(135deg,#3b4c68,#22293a)"></div>
+          <div style="background:linear-gradient(135deg,#5a4a3a,#2e2620)"></div>
+          <div style="background:linear-gradient(135deg,#2f5548,#1a2f28)"></div>
+          <div style="background:linear-gradient(135deg,#4a3a58,#241c30)"></div>
+        </div>
+      </div>
+
+    </div>
+    <div class="dock">
+      <div class="seg"><span class="on1">Needs you</span><span>Wallet</span><span>Work</span><span>Day</span></div>
+      <div class="askbar"><s>Ask or search</s><span class="mic">🎙︎</span><span class="berry"></span></div>
+    </div>
+  </div></div>
+  <p class="optWhy"><b>Bright means something.</b> Needs you, Wallet and Your day all moved today, so all three wear their full hue; Work is quiet and sits in ink. On a morning where nothing happened, the whole deck is ink and the one card with news is the one in colour — the eye lands there before a word is read.</p>
+</div>
+
+<div class="option">
+  <div class="optName">Scrolled <span>— Wallet under the fold, evening open</span></div>
+  <div class="phone"><div class="screen">
+    <div class="mast"><span class="mastTitle">Good evening</span><span class="mastDate">Fri, Aug 15</span><span class="x">✕</span></div>
+    <div class="scroll">
+
+      <div class="panel p2">
+        <div class="ph"><b>Wallet</b><span class="chev">›</span></div>
+        <div class="stat">$12,482 <span class="pillup">+1.8%</span></div>
+        <div class="statSub">Mostly ETH · as of just now</div>
+        <div style="display:grid;gap:3px;height:72px;margin-top:10px;grid-template-columns:1.6fr 1fr .8fr">
+          <div style="border-radius:9px;padding:6px 8px;font-family:var(--money);font-weight:800;font-size:11px;background:rgba(255,255,255,.24)">ETH<span style="display:block;font-size:9.5px;opacity:.75">62%</span></div>
+          <div style="border-radius:9px;padding:6px 8px;font-family:var(--money);font-weight:800;font-size:11px;background:rgba(255,255,255,.16)">USDC</div>
+          <div style="border-radius:9px;padding:6px 8px;font-family:var(--money);font-weight:800;font-size:11px;background:rgba(255,255,255,.10)">SOL</div>
+        </div>
+      </div>
+
+      <div class="panel pquiet">
+        <div class="ph"><b>Work</b><span class="chev">›</span></div>
+        <div class="stat" style="font-size:24px;color:var(--ink)">signed_up <span style="color:var(--confirm)">+18%</span></div>
+        <div class="statSub">PostHog · 214 of 500 to the next rung</div>
+        <div style="display:grid;grid-template-columns:repeat(12,1fr);gap:3px;margin-top:10px">
+          <i style="aspect-ratio:1;border-radius:3px;background:rgba(94,158,255,.12)"></i><i style="aspect-ratio:1;border-radius:3px;background:rgba(94,158,255,.35)"></i><i style="aspect-ratio:1;border-radius:3px;background:rgba(94,158,255,.12)"></i><i style="aspect-ratio:1;border-radius:3px;background:rgba(94,158,255,.65)"></i><i style="aspect-ratio:1;border-radius:3px;background:rgba(94,158,255,.35)"></i><i style="aspect-ratio:1;border-radius:3px;background:rgba(94,158,255,.12)"></i><i style="aspect-ratio:1;border-radius:3px;background:#5e9eff"></i><i style="aspect-ratio:1;border-radius:3px;background:rgba(94,158,255,.35)"></i><i style="aspect-ratio:1;border-radius:3px;background:rgba(94,158,255,.65)"></i><i style="aspect-ratio:1;border-radius:3px;background:rgba(94,158,255,.12)"></i><i style="aspect-ratio:1;border-radius:3px;background:rgba(94,158,255,.35)"></i><i style="aspect-ratio:1;border-radius:3px;background:#5e9eff"></i>
+        </div>
+      </div>
+
+      <div class="panel p4">
+        <div class="ph"><b>Your day</b></div>
+        <div class="sheet4" style="margin-top:8px">
+          <div style="background:linear-gradient(135deg,#3b4c68,#22293a)"></div>
+          <div style="background:linear-gradient(135deg,#5a4a3a,#2e2620)"></div>
+          <div style="background:linear-gradient(135deg,#2f5548,#1a2f28)"></div>
+          <div style="background:linear-gradient(135deg,#4a3a58,#241c30)"></div>
+        </div>
+        <div class="statSub" style="margin-top:8px">9 more in Photos · busiest at 2pm</div>
+        <div style="display:flex;gap:7px;margin-top:10px">
+          <span style="display:flex;align-items:center;gap:6px;padding:5px 10px 5px 5px;border-radius:999px;background:rgba(255,255,255,.2)"><span style="width:20px;height:20px;border-radius:50%;background:radial-gradient(circle at 32% 30%, #e86a6a, #7d6adf 60%, #3a3160)"></span><b style="font-size:11px;color:#fff">mara +12</b></span>
+          <span style="display:flex;align-items:center;gap:6px;padding:5px 10px 5px 5px;border-radius:999px;background:rgba(255,255,255,.2)"><span style="width:20px;height:20px;border-radius:50%;background:radial-gradient(circle at 32% 30%, #5ad1c4, #2f7de0 60%, #1c3b6e)"></span><b style="font-size:11px;color:#fff">jb</b></span>
+          <span style="display:flex;align-items:center;gap:6px;padding:5px 10px 5px 5px;border-radius:999px;background:rgba(255,255,255,.2)"><span style="width:20px;height:20px;border-radius:50%;background:radial-gradient(circle at 32% 30%, #f0b86a, #d0685a 60%, #6e2c1c)"></span><b style="font-size:11px;color:#fff">amelia</b></span>
+        </div>
+      </div>
+
+    </div>
+    <div class="dock">
+      <div class="seg"><span>Needs you</span><span class="on2">Wallet</span><span>Work</span><span>Day</span></div>
+      <div class="askbar"><s>Ask or search</s><span class="mic">🎙︎</span><span class="berry"></span></div>
+    </div>
+  </div></div>
+  <p class="optWhy"><b>The nav says where you are</b> — the active segment fills solid with its section's hue (Messages-blue for Wallet), white label, matching the card it points at. On-card figures go white (the sparkline, the treemap's translucent white cells) so the hue stays the card's one statement.</p>
+</div>
+
+</div>
+
+<div class="coh">
+  <h2>The rulings this build carries</h2>
+  <div class="r"><b>Bright cards, not washes</b><p>Your ruling, superseding the v2 washes: full saturated fills in the <em>Messages register</em> — bright blue for Wallet, the section hues at full strength elsewhere. White text and white figures on colour.</p></div>
+  <div class="r"><b>Colour is still information</b><p>The way b32ce19's principle survives the brightness: <em>a quiet section falls back to ink</em> instead of dimming. Changed = colour, unchanged = ink. The deck self-ranks by hue at a glance.</p></div>
+  <div class="r"><b>No berry on the masthead</b><p>Gone. The greeting is composed by the clock — <em>"Good morning / Good afternoon / Good evening"</em> — with the date beside it in the quiet voice ("Fri, Aug 15"). Chosen over "Your Friday" because the clock already composes the deck's order (§386d), so the greeting and the ordering come from the same fact; the date keeps the day-name legible.</p></div>
+  <div class="r"><b>The delta stays legible on blue</b><p>b32ce19's warning ("a green delta on a saturated blue card is illegible") is answered with a <em>solid white pill carrying the green figure</em> — the delta keeps its semantic direction without fighting the card's hue. On ink (the lede, quiet cards) it paints green directly, as the shipped day card does.</p></div>
+  <div class="r"><b>Chips above the bar · "Ask or search"</b><p>Unchanged from your last note: nav segments ride directly above the ask bar, input pinned last, shipped bar copy, static.</p></div>
+</div>
+</div>

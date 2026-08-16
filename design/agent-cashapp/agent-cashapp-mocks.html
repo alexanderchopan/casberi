@@ -1,0 +1,339 @@
+<title>The rise — the Cash App test</title>
+<style>
+  :root {
+    --page: #0a0b0f; --ink: #f2f4f8; --muted: #99a1b4; --faint: #626b80;
+    --tint: #1673e6; --confirm: #30d158; --down: #ff453a; --attn: #ff9f0a;
+    --life: #bf5af2; --work: #5e9eff; --meaning: #ff9f0a;
+    --slab: #16181d; --well: #101216; --card: rgba(28,30,37,.82);
+    --money: ui-rounded, -apple-system, system-ui, sans-serif;
+    --text: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { background: var(--page); }
+  body { font-family: var(--text); color: var(--ink);
+         background: radial-gradient(900px 420px at 18% -8%, rgba(22,115,230,.10), transparent 62%), var(--page);
+         padding: 48px 28px 72px; }
+  .wrap { max-width: 1180px; margin: 0 auto; }
+  header { max-width: 820px; margin-bottom: 36px; }
+  .eyebrow { font-size: 12px; font-weight: 600; color: #4d8dff; margin-bottom: 10px; }
+  h1 { font-size: clamp(26px,3.4vw,36px); font-weight: 800; letter-spacing: -.02em; line-height: 1.1; margin-bottom: 12px; }
+  header p { font-size: 15px; line-height: 1.55; color: var(--muted); max-width: 72ch; margin-bottom: 8px; }
+  header p b { color: var(--ink); font-weight: 600; }
+
+  .row { display: flex; flex-wrap: wrap; gap: 36px; align-items: flex-start; justify-content: center; }
+  .option { width: 336px; }
+  .optName { font-size: 13px; font-weight: 800; margin: 0 4px 4px; }
+  .optName span { color: var(--faint); font-weight: 600; }
+  .optWhy { font-size: 12.5px; line-height: 1.5; color: var(--muted); margin: 10px 4px 0; }
+  .optWhy b { color: var(--ink); font-weight: 600; }
+  .phone { width: 336px; border-radius: 46px; padding: 10px; background: #15171c; box-shadow: 0 30px 70px rgba(0,0,0,.55); margin-top: 10px; }
+  .screen { border-radius: 38px; overflow: hidden; min-height: 740px; background: #000; position: relative;
+            display: flex; flex-direction: column; }
+  .scroll { padding: 16px 16px 8px; flex: 1; }
+
+  /* shared bits */
+  .berry { width: 20px; height: 20px; border-radius: 50%; flex: none;
+           background: radial-gradient(circle at 32% 28%, #6ea8ff, #1673e6 58%, #0c3f85); }
+  .x { margin-left: auto; width: 28px; height: 28px; border-radius: 50%; background: rgba(255,255,255,.08);
+       display: flex; align-items: center; justify-content: center; font-size: 12px; color: var(--muted); flex: none; }
+  .askbar { margin: 10px 14px 16px; display: flex; align-items: center; gap: 10px;
+            background: rgba(28,30,37,.9); border-radius: 999px; padding: 12px 16px; }
+  .askbar s { text-decoration: none; font-size: 14px; color: var(--faint); flex: 1; }
+  .askbar .mic { color: var(--muted); font-size: 14px; }
+  .spark { display: block; }
+  .pillup { font-family: var(--money); font-size: 12px; font-weight: 800; padding: 3px 8px; border-radius: 999px;
+            background: rgba(48,209,88,.16); color: var(--confirm); font-variant-numeric: tabular-nums; }
+  .quiet { opacity: .55; }
+
+  /* ============ A — the tape ============ */
+  .a .mast { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
+  .a .mast .day { font-size: 12px; font-weight: 600; color: var(--faint); }
+  .a .lede { font-family: var(--money); font-size: 27px; font-weight: 800; letter-spacing: -.02em; line-height: 1.16; margin: 2px 2px 4px; }
+  .a .lede em { font-style: normal; color: var(--confirm); }
+  .a .lede u { text-decoration: none; color: var(--attn); }
+  .a .sub { font-size: 12.5px; color: var(--faint); margin: 0 2px 6px; }
+  .a .h { display: flex; align-items: baseline; gap: 8px; margin: 22px 2px 8px; }
+  .a .h b { font-family: var(--money); font-size: 21px; font-weight: 800; letter-spacing: -.02em; }
+  .a .h u { text-decoration: none; font-family: var(--money); font-size: 13px; font-weight: 800; }
+  .a .h .chev { margin-left: auto; color: var(--faint); font-size: 14px; }
+  .a .li { display: flex; align-items: center; gap: 11px; padding: 8px 2px; }
+  .a .g { width: 32px; height: 32px; border-radius: 50%; flex: none; display: flex; align-items: center;
+          justify-content: center; font-size: 13px; background: rgba(255,255,255,.08); }
+  .a .g.attn { background: rgba(255,159,10,.16); color: var(--attn); }
+  .a .g.work { background: rgba(94,158,255,.16); color: var(--work); }
+  .a .li .t { min-width: 0; flex: 1; }
+  .a .li b { display: block; font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .a .li s { display: block; text-decoration: none; font-size: 11.5px; color: var(--faint); }
+  .a .li .v { font-family: var(--money); font-size: 13px; font-weight: 800; color: var(--attn); flex: none; }
+  .a .big { font-family: var(--money); font-size: 44px; font-weight: 800; letter-spacing: -.03em; line-height: 1.02;
+            font-variant-numeric: tabular-nums; display: flex; align-items: center; gap: 10px; margin: 2px 2px 0; }
+  .a .why { font-size: 11.5px; color: var(--faint); margin: 4px 2px 0; }
+  .a .facepile { display: flex; align-items: center; gap: 8px; padding: 8px 2px; }
+  .a .facepile .fs { display: flex; }
+  .a .facepile .f { width: 26px; height: 26px; border-radius: 50%; border: 2px solid #000; margin-right: -7px; }
+  .a .facepile b { font-size: 13.5px; font-weight: 700; }
+  .a .facepile s { text-decoration: none; font-size: 11.5px; color: var(--faint); display: block; }
+  .a .sheet4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; margin: 6px 0 2px; }
+  .a .sheet4 div { aspect-ratio: 1; border-radius: 10px; }
+  .a .more { font-size: 11.5px; color: var(--faint); margin: 5px 2px; }
+
+  /* ============ B — movements ============ */
+  .b .mast { display: flex; align-items: center; gap: 8px; padding: 16px 16px 10px; }
+  .b .mastTitle { font-family: var(--money); font-size: 22px; font-weight: 800; letter-spacing: -.02em; }
+  .b .nav { display: flex; gap: 6px; padding: 0 16px 12px; }
+  .b .nav span { font-size: 11.5px; font-weight: 700; padding: 7px 12px; border-radius: 999px; white-space: nowrap; }
+  .b .nav .n1 { background: rgba(255,159,10,.34); color: #ffc46a; }
+  .b .nav .n2 { background: rgba(22,115,230,.20); color: #77b0ff; }
+  .b .nav .n3 { background: rgba(94,158,255,.16); color: #9cc0ff; }
+  .b .nav .n4 { background: rgba(191,90,242,.16); color: #d79bf5; }
+  .b .lede { font-size: 14px; line-height: 1.45; color: var(--muted); margin: 0 2px 6px; }
+  .b .lede b { color: var(--ink); font-weight: 700; }
+  .b .sect { margin-top: 18px; }
+  .b .sh { display: flex; align-items: baseline; gap: 8px; margin: 0 2px 2px; }
+  .b .sh b { font-family: var(--money); font-size: 24px; font-weight: 800; letter-spacing: -.02em; }
+  .b .sh .chev { margin-left: auto; color: var(--faint); font-size: 14px; }
+  .b .reading { font-family: var(--money); font-size: 15px; font-weight: 800; margin: 0 2px 8px; }
+  .b .reading.late { color: var(--attn); }
+  .b .slabc { background: var(--slab); border-radius: 22px; padding: 13px 14px; margin-bottom: 8px; }
+  .b .li { display: flex; align-items: center; gap: 10px; padding: 6px 0; }
+  .b .li .g { width: 28px; height: 28px; border-radius: 50%; flex: none; display: flex; align-items: center;
+              justify-content: center; font-size: 12px; background: rgba(255,255,255,.08); }
+  .b .li .g.attn { background: rgba(255,159,10,.16); color: var(--attn); }
+  .b .li .t { min-width: 0; flex: 1; }
+  .b .li b { display: block; font-size: 13.5px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .b .li s { display: block; text-decoration: none; font-size: 11px; color: var(--faint); }
+  .b .li .v { font-family: var(--money); font-size: 12.5px; font-weight: 800; color: var(--attn); flex: none; }
+  .b .rail { position: relative; height: 26px; margin: 8px 2px 0; }
+  .b .rail .track { position: absolute; left: 0; right: 0; top: 12px; height: 3px; border-radius: 2px; background: rgba(255,255,255,.10); }
+  .b .rail .now { position: absolute; top: 6px; left: 18%; width: 2.5px; height: 15px; border-radius: 2px; background: var(--ink); }
+  .b .rail i { position: absolute; top: 9px; width: 9px; height: 9px; border-radius: 50%; }
+  .b .rail em { position: absolute; top: -4px; font-style: normal; font-size: 9.5px; font-weight: 700; color: var(--faint); }
+  .b .hero { display: flex; align-items: center; gap: 10px; }
+  .b .hero b { font-family: var(--money); font-size: 34px; font-weight: 800; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+  .b .why { font-size: 11px; color: var(--faint); margin-top: 2px; }
+  .b .map { display: grid; gap: 3px; height: 76px; margin-top: 10px; grid-template-columns: 1.6fr 1fr .8fr; }
+  .b .map div { border-radius: 9px; padding: 6px 8px; font-family: var(--money); font-weight: 800; font-size: 11px; }
+  .b .gh { display: grid; grid-template-columns: repeat(12, 1fr); gap: 3px; margin-top: 8px; }
+  .b .gh i { aspect-ratio: 1; border-radius: 3px; background: rgba(94,158,255,.12); }
+  .b .gh i.l2 { background: rgba(94,158,255,.35); } .b .gh i.l3 { background: rgba(94,158,255,.65); } .b .gh i.l4 { background: #5e9eff; }
+  .b .sheet4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; }
+  .b .sheet4 div { aspect-ratio: 1; border-radius: 10px; }
+  .b .facerow { display: flex; gap: 7px; margin-top: 10px; }
+  .b .fchip { display: flex; align-items: center; gap: 6px; padding: 5px 10px 5px 5px; border-radius: 999px; background: rgba(255,255,255,.06); }
+  .b .fchip .f { width: 20px; height: 20px; border-radius: 50%; }
+  .b .fchip b { font-size: 11px; font-weight: 700; }
+
+  /* ============ C — the deck ============ */
+  .c .mast { display: flex; align-items: center; gap: 8px; padding: 16px 16px 8px; }
+  .c .mastTitle { font-family: var(--money); font-size: 22px; font-weight: 800; letter-spacing: -.02em; }
+  .c .panel { border-radius: 26px; margin: 0 12px 10px; padding: 16px 16px 14px; }
+  .c .p1 { background: linear-gradient(180deg, rgba(255,159,10,.16), rgba(255,159,10,.05)), #101013; }
+  .c .p2 { background: linear-gradient(180deg, rgba(22,115,230,.18), rgba(22,115,230,.05)), #0f1116; }
+  .c .p3 { background: linear-gradient(180deg, rgba(94,158,255,.14), rgba(94,158,255,.04)), #0f1116; }
+  .c .p4 { background: linear-gradient(180deg, rgba(191,90,242,.14), rgba(191,90,242,.04)), #111015; }
+  .c .ph { display: flex; align-items: baseline; gap: 8px; }
+  .c .ph b { font-family: var(--money); font-size: 17px; font-weight: 800; letter-spacing: -.01em; }
+  .c .ph .chev { margin-left: auto; color: var(--faint); font-size: 13px; }
+  .c .stat { font-family: var(--money); font-size: 38px; font-weight: 800; letter-spacing: -.03em; line-height: 1.05; margin-top: 6px;
+             font-variant-numeric: tabular-nums; display: flex; align-items: center; gap: 10px; }
+  .c .p1 .stat { color: #ffc46a; }
+  .c .statSub { font-size: 12px; color: var(--muted); margin-top: 3px; }
+  .c .li { display: flex; align-items: center; gap: 9px; padding: 6px 0; }
+  .c .li b { font-size: 13px; font-weight: 700; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .c .li .v { font-family: var(--money); font-size: 12px; font-weight: 800; color: var(--attn); }
+  .c .dotline { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+  .c .sheet4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; margin-top: 10px; }
+  .c .sheet4 div { aspect-ratio: 1; border-radius: 10px; }
+  .c .dock { padding: 0 14px 16px; }
+  .c .seg { display: flex; gap: 5px; background: rgba(28,30,37,.92); border-radius: 999px; padding: 5px; margin-top: 8px; }
+  .c .seg span { flex: 1; text-align: center; font-size: 11px; font-weight: 700; padding: 8px 0; border-radius: 999px; color: var(--muted); }
+  .c .seg .on { background: rgba(255,159,10,.30); color: #ffc46a; }
+  .c .seg .s2 { color: #77b0ff; } .c .seg .s3 { color: #9cc0ff; } .c .seg .s4 { color: #d79bf5; }
+  .c .askbar { margin: 0; }
+</style>
+
+<div class="wrap">
+<header>
+  <div class="eyebrow">Casberi · the agent rise, Cash App test</div>
+  <h1>Same brief, three presentations</h1>
+  <p>Press the berry and the rise lands on the overview brief. All three keep <b>exactly today's content</b> — the lede, Needs you + Coming up, Wallet, Work, Your day (fold, contact sheet, who's around, what goes together), the section doors, and the ask field. What changes is the register: how loudly the numbers speak, where the nav sits, and how much chrome each module wears.</p>
+  <p><b>A</b> is the pure Cash App borrow — one flat tape, no cards, display numerals. <b>B</b> keeps today's document and turns the volume up. <b>C</b> moves the nav to the thumb and gives each movement its own colour-washed panel.</p>
+</header>
+
+<div class="row">
+
+<!-- ================= OPTION A ================= -->
+<div class="option a">
+  <div class="optName">A · The tape <span>— the pure borrow</span></div>
+  <div class="phone"><div class="screen">
+    <div class="scroll">
+      <div class="mast"><span class="berry"></span><span class="day">Your Friday · Aug 15</span><span class="x">✕</span></div>
+
+      <div class="lede">14 new things.<br><u>Two need you</u>, wallet <em>+1.8%</em>.</div>
+      <div class="sub">Since last night · mostly Farcaster and Photos</div>
+
+      <div class="h"><b>Needs you</b><u style="color:var(--attn)">3 late</u><span class="chev">›</span></div>
+      <div class="li"><span class="g attn">⚠︎</span><div class="t"><b>Stripe dispute · $240</b><s>Evidence due Tuesday</s></div><span class="v">4d</span></div>
+      <div class="li"><span class="g attn">∞</span><div class="t"><b>USDC approval · unlimited</b><s>Granted to 0x7a2… in March</s></div><span class="v">old</span></div>
+      <div class="li"><span class="g work">◇</span><div class="t"><b>Build 324 expires</b><s>TestFlight · then nobody can install</s></div><span class="v">9d</span></div>
+
+      <div class="h"><b>Wallet</b><span class="chev">›</span></div>
+      <div class="big">$12,482 <span class="pillup">+1.8%</span></div>
+      <div class="why">Mostly ETH · Gnosis Pay spent $128 today</div>
+      <svg class="spark" width="100%" height="44" viewBox="0 0 300 44" preserveAspectRatio="none">
+        <path d="M0,34 C30,30 55,36 85,28 C115,20 140,26 170,18 C200,12 235,16 265,10 L300,8"
+              fill="none" stroke="#30d158" stroke-width="2.5" stroke-linecap="round"/>
+      </svg>
+      <div class="li"><span class="g" style="background:rgba(22,115,230,.2);color:#77b0ff;font-family:var(--money);font-weight:800;font-size:10px">ETH</span><div class="t"><b>ETH did the lifting</b><s>+2.4% · ZORA −6.1%</s></div></div>
+
+      <div class="h"><b>Work</b><span class="chev">›</span></div>
+      <div class="li"><span class="g work">▲</span><div class="t"><b>signed_up +18% this week</b><s>PostHog · 214 of 500 to the next rung</s></div></div>
+      <div class="li"><span class="g work">✓</span><div class="t"><b>Cert renews itself Aug 29</b><s>Cloudflare · nothing needed</s></div></div>
+
+      <div class="h"><b>Your day</b></div>
+      <div class="sheet4">
+        <div style="background:linear-gradient(135deg,#3b4c68,#22293a)"></div>
+        <div style="background:linear-gradient(135deg,#5a4a3a,#2e2620)"></div>
+        <div style="background:linear-gradient(135deg,#2f5548,#1a2f28)"></div>
+        <div style="background:linear-gradient(135deg,#4a3a58,#241c30)"></div>
+      </div>
+      <div class="more">9 more in Photos</div>
+      <div class="facepile">
+        <span class="fs">
+          <span class="f" style="background:radial-gradient(circle at 32% 30%, #e86a6a, #7d6adf 60%, #3a3160)"></span>
+          <span class="f" style="background:radial-gradient(circle at 32% 30%, #5ad1c4, #2f7de0 60%, #1c3b6e)"></span>
+          <span class="f" style="background:radial-gradient(circle at 32% 30%, #f0b86a, #d0685a 60%, #6e2c1c)"></span>
+        </span>
+        <div><b>mara, jb + 10 liked your cast</b><s>amelia replied on Farcaster</s></div>
+      </div>
+    </div>
+    <div class="askbar"><s>Ask your things…</s><span class="mic">🎙︎</span><span class="berry"></span></div>
+  </div></div>
+  <p class="optWhy"><b>Cash App's balance screen, worn by a day.</b> No cards, no slabs — one flat tape where the section headers and the numbers do all the separating. The lede becomes the hero the way $-balance does there; every figure flattens into a row with a leading disc. Cheapest to read, but the figures (sankey, treemap, cluster map) have to shrink into sparklines and rows — it trades the brief's visual richness for pace.</p>
+</div>
+
+<!-- ================= OPTION B ================= -->
+<div class="option b">
+  <div class="optName">B · Movements <span>— today's document, louder</span></div>
+  <div class="phone"><div class="screen">
+    <div class="mast"><span class="berry"></span><span class="mastTitle">Your Friday</span><span class="x">✕</span></div>
+    <div class="nav"><span class="n1">Needs you</span><span class="n2">Wallet</span><span class="n3">Work</span><span class="n4">Your day</span></div>
+    <div class="scroll" style="padding-top:0">
+      <div class="lede"><b>14 new things</b> since last night. Two need you, and the wallet is up <b>1.8%</b>.</div>
+
+      <div class="sect">
+        <div class="sh"><b>Needs you</b><span class="chev">›</span></div>
+        <div class="reading late">3 late</div>
+        <div class="slabc">
+          <div class="li"><span class="g attn">⚠︎</span><div class="t"><b>Stripe dispute · $240</b><s>Evidence due Tuesday</s></div><span class="v">4d</span></div>
+          <div class="li"><span class="g attn">∞</span><div class="t"><b>USDC approval · unlimited</b><s>0x7a2… · reaches $4,120</s></div><span class="v">revoke</span></div>
+          <div class="rail">
+            <span class="track"></span><span class="now"></span>
+            <i style="left:30%;background:var(--attn)"></i><em style="left:27%">Tue</em>
+            <i style="left:58%;background:var(--work)"></i><em style="left:55%">b324</em>
+            <i style="left:84%;background:var(--work)"></i><em style="left:80%">cert</em>
+          </div>
+        </div>
+      </div>
+
+      <div class="sect">
+        <div class="sh"><b>Wallet</b><span class="chev">›</span></div>
+        <div class="slabc">
+          <div class="hero"><b>$12,482</b><span class="pillup">+1.8%</span></div>
+          <div class="why">Mostly ETH · as of just now</div>
+          <svg class="spark" width="100%" height="40" viewBox="0 0 300 40" preserveAspectRatio="none">
+            <path d="M0,32 C30,28 55,34 85,26 C115,18 140,24 170,16 C200,10 235,14 265,8 L300,6"
+                  fill="none" stroke="#30d158" stroke-width="2.5" stroke-linecap="round"/>
+          </svg>
+          <div class="map">
+            <div style="grid-row:span 1;background:#1e5fc4">ETH<span style="display:block;font-size:9.5px;opacity:.62">62%</span></div>
+            <div style="background:#2f7de0">USDC</div>
+            <div style="background:#37527a">SOL</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sect quiet">
+        <div class="sh"><b>Work</b><span class="chev">›</span></div>
+        <div class="slabc">
+          <div class="li"><span class="g" style="background:rgba(94,158,255,.16);color:var(--work)">▲</span><div class="t"><b>signed_up +18%</b><s>PostHog · quiet since yesterday</s></div></div>
+          <div class="gh">
+            <i></i><i class="l2"></i><i></i><i class="l3"></i><i class="l2"></i><i></i><i class="l4"></i><i class="l2"></i><i class="l3"></i><i></i><i class="l2"></i><i class="l4"></i>
+          </div>
+        </div>
+      </div>
+
+      <div class="sect">
+        <div class="sh"><b>Your day</b></div>
+        <div class="slabc">
+          <div class="sheet4">
+            <div style="background:linear-gradient(135deg,#3b4c68,#22293a)"></div>
+            <div style="background:linear-gradient(135deg,#5a4a3a,#2e2620)"></div>
+            <div style="background:linear-gradient(135deg,#2f5548,#1a2f28)"></div>
+            <div style="background:linear-gradient(135deg,#4a3a58,#241c30)"></div>
+          </div>
+          <div class="facerow">
+            <span class="fchip"><span class="f" style="background:radial-gradient(circle at 32% 30%, #e86a6a, #7d6adf 60%, #3a3160)"></span><b>mara +12</b></span>
+            <span class="fchip"><span class="f" style="background:radial-gradient(circle at 32% 30%, #5ad1c4, #2f7de0 60%, #1c3b6e)"></span><b>jb</b></span>
+            <span class="fchip"><span class="f" style="background:radial-gradient(circle at 32% 30%, #f0b86a, #d0685a 60%, #6e2c1c)"></span><b>amelia</b></span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="askbar"><s>Ask your things…</s><span class="mic">🎙︎</span><span class="berry"></span></div>
+  </div></div>
+  <p class="optWhy"><b>The §212 move: keep the boxes, cut the noise.</b> Today's structure survives whole — pinned tinted nav, sections in today's order, every figure intact — but headers step up to display weight, each section leads with its one reading ("3 late" where the count used to whisper), slabs go to 22px radius, and the quiet-set dim is visible (Work hasn't changed). Least risk: it's a volume pass on the shipped brief, not a new screen.</p>
+</div>
+
+<!-- ================= OPTION C ================= -->
+<div class="option c">
+  <div class="optName">C · The deck <span>— nav in the thumb, colour as place</span></div>
+  <div class="phone"><div class="screen">
+    <div class="mast"><span class="berry"></span><span class="mastTitle">Your Friday</span><span class="x">✕</span></div>
+    <div class="scroll" style="padding:4px 0 0">
+
+      <div class="panel p1">
+        <div class="ph"><b>Needs you</b><span class="chev">›</span></div>
+        <div class="stat">3 late</div>
+        <div class="statSub">$240 dispute leads · evidence due Tuesday</div>
+        <div class="li"><span class="dotline" style="background:var(--attn)"></span><b>USDC approval · unlimited</b><span class="v">revoke</span></div>
+        <div class="li"><span class="dotline" style="background:var(--work)"></span><b>Build 324 expires</b><span class="v">9d</span></div>
+      </div>
+
+      <div class="panel p2">
+        <div class="ph"><b>Wallet</b><span class="chev">›</span></div>
+        <div class="stat" style="color:#8fc1ff">$12,482 <span class="pillup">+1.8%</span></div>
+        <div class="statSub">Mostly ETH · Gnosis Pay spent $128</div>
+        <svg class="spark" width="100%" height="38" viewBox="0 0 300 38" preserveAspectRatio="none" style="margin-top:8px">
+          <path d="M0,30 C30,26 55,32 85,24 C115,16 140,22 170,14 C200,9 235,13 265,7 L300,5"
+                fill="none" stroke="#30d158" stroke-width="2.5" stroke-linecap="round"/>
+        </svg>
+      </div>
+
+      <div class="panel p3 quiet">
+        <div class="ph"><b>Work</b><span class="chev">›</span></div>
+        <div class="statSub" style="margin-top:6px"><b style="color:var(--ink)">signed_up +18%</b> · cert renews itself Aug 29 · nothing changed since yesterday</div>
+      </div>
+
+      <div class="panel p4">
+        <div class="ph"><b>Your day</b></div>
+        <div class="statSub" style="margin-top:4px">Made of 6 sources — mostly Farcaster and Photos. mara, jb + 10 liked your cast.</div>
+        <div class="sheet4">
+          <div style="background:linear-gradient(135deg,#3b4c68,#22293a)"></div>
+          <div style="background:linear-gradient(135deg,#5a4a3a,#2e2620)"></div>
+          <div style="background:linear-gradient(135deg,#2f5548,#1a2f28)"></div>
+          <div style="background:linear-gradient(135deg,#4a3a58,#241c30)"></div>
+        </div>
+      </div>
+
+    </div>
+    <div class="dock">
+      <div class="askbar"><s>Ask your things…</s><span class="mic">🎙︎</span><span class="berry"></span></div>
+      <div class="seg"><span class="on">Needs you</span><span class="s2">Wallet</span><span class="s3">Work</span><span class="s4">Day</span></div>
+    </div>
+  </div></div>
+  <p class="optWhy"><b>The nav moves to where the finger already is.</b> The berry lives bottom-right, so the hand that raised the agent is at the bottom — yet today's jump chips sit at the top, the hardest reach on the phone. Here the TOC is a segmented pager docked above the home indicator (each segment in its section's hue, active one filled), the ask pill rides just above it, and each movement is a full-width panel washed in its own colour — the §386i hue doing PLACE instead of decoration. Boldest departure; the risk is that four washes on one screen fight the "colour only where it works" ruling.</p>
+</div>
+
+</div>
+</div>
