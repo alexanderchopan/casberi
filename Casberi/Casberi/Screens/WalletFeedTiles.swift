@@ -274,14 +274,25 @@ struct WalletBalanceHeadline: View {
                     DSHaptic.tap()
                     onPickRange(r)
                 } label: {
+                    // SELECTED-ON-COLOUR IS THE WHITE PILL (2026-08-15, the
+                    // wallet cohesion pass) — the grammar the delta pill and
+                    // the day card already speak. The fillFaint form this
+                    // replaces was near-invisible on the bright hero: white
+                    // at 4% over the tint is a selection nobody can see,
+                    // which is a dead control by sight. On an ink ground
+                    // (`onColor` false) the old form is correct and stays.
                     Text(r.rawValue)
                         .dsText(.label12)
                         .lineLimit(1)
                         .fixedSize()
-                        .foregroundStyle(r == range ? DS.textPrimary : DS.textSecondary)
+                        .foregroundStyle(r == range
+                                         ? (onColor ? DS.tint : DS.textPrimary)
+                                         : DS.textSecondary)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 4)
-                        .background(r == range ? DS.fillFaint : .clear,
+                        .background(r == range
+                                    ? (onColor ? Color.white : DS.fillFaint)
+                                    : Color.clear,
                                     in: Capsule(style: .continuous))
                 }
                 .buttonStyle(.plain)
@@ -433,20 +444,45 @@ struct WalletCompositionStrip: View {
     var onOpenLocks: (() -> Void)? = nil
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
+    /// The section's ONE READING (2026-08-15, wallet cohesion pass): the
+    /// deposited money when any exists, else the locked units in their own
+    /// native voice — never Owed, because a debt in display type is an alarm
+    /// this row already refuses to raise ("a debt you opened on purpose isn't
+    /// an alarm", the minus-sign note below). The promoted row DROPS its
+    /// trailing value so the figure is said once (§213's tally rule): the row
+    /// keeps its places and its door, the reading carries the number.
+    private var reading: (text: String, promotes: String)? {
+        if composition.hasDeposited {
+            return (WalletValue.money(composition.deposited), "Deposited")
+        }
+        if composition.hasLocked { return (lockedValue, "Locked") }
+        return nil
+    }
+
     var body: some View {
         if !composition.isEmpty {
+            let r = reading
             VStack(alignment: .leading, spacing: DS.Space.s2) {
                 WalletSectionLabel(title: String(localized: "In protocols"))
+                if let r {
+                    Text(r.text)
+                        .dsText(.heading22)
+                        .foregroundStyle(DS.textPrimary)
+                        .monospacedDigit()
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                }
                 if composition.hasDeposited {
                     line(title: String(localized: "Deposited"),
                          places: composition.depositedPlaces,
-                         value: WalletValue.money(composition.deposited),
+                         value: r?.promotes == "Deposited"
+                             ? "" : WalletValue.money(composition.deposited),
                          onOpen: onOpenDeposits)
                 }
                 if composition.hasLocked {
                     line(title: String(localized: "Locked"),
                          places: composition.lockedPlaces,
-                         value: lockedValue,
+                         value: r?.promotes == "Locked" ? "" : lockedValue,
                          onOpen: onOpenLocks,
                          melt: composition.soleMelt)
                 }
@@ -524,11 +560,16 @@ struct WalletCompositionStrip: View {
                 }
             }
             Spacer(minLength: DS.Space.s2)
-            Text(value)
-                .dsText(.price16).foregroundStyle(DS.textPrimary)
-                .monospacedDigit()
-                .lineLimit(1)
-                .fixedSize(horizontal: true, vertical: false)
+            // Empty when the reading above already carries this row's figure
+            // — the row keeps its title, places and door, and says the number
+            // zero more times.
+            if !value.isEmpty {
+                Text(value)
+                    .dsText(.price16).foregroundStyle(DS.textPrimary)
+                    .monospacedDigit()
+                    .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)
+            }
         }
     }
 }
@@ -552,9 +593,18 @@ struct WalletDepositsTray: View {
 
     var body: some View {
         DSTray(title: String(localized: "Deposited"),
-               height: min(560, CGFloat(170 + composition.deposits.count * 64))) {
+               height: min(560, CGFloat(206 + composition.deposits.count * 64))) {
             ScrollView {
                 VStack(spacing: DS.Space.s1) {
+                    // The tray's one figure, first (2026-08-15, wallet
+                    // cohesion pass — the money receipt sheet's grammar,
+                    // reading before rows). The rows then explain a number
+                    // already stated instead of asking the reader to sum.
+                    Text(WalletValue.money(composition.deposited))
+                        .dsText(.heading28).foregroundStyle(DS.textPrimary)
+                        .monospacedDigit()
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.bottom, DS.Space.s2)
                     // Enumerated for the entrance stagger only — the rows
                     // arrive in the order the model already sorted them, so
                     // the biggest deposit's bar grows first.
@@ -619,9 +669,20 @@ struct WalletLocksTray: View {
 
     var body: some View {
         DSTray(title: String(localized: "Locked"),
-               height: min(560, CGFloat(170 + composition.locks.count * 74))) {
+               height: min(560, CGFloat(206 + composition.locks.count * 74))) {
             ScrollView {
                 VStack(spacing: DS.Space.s1) {
+                    // The tray's one figure, first — in NATIVE units, the
+                    // strip's own no-dollars rule ("pricing an illiquid lock
+                    // at spot is the accounting opinion §240 refused").
+                    Text(composition.lockedTotals
+                            .map { WalletValue.token($0.amount, $0.symbol) }
+                            .joined(separator: " · "))
+                        .dsText(.heading28).foregroundStyle(DS.textPrimary)
+                        .monospacedDigit()
+                        .lineLimit(1).minimumScaleFactor(0.6)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.bottom, DS.Space.s2)
                     ForEach(Array(composition.locks.enumerated()), id: \.element.id) { index, lock in
                         row(lock, index: index)
                     }
@@ -848,10 +909,41 @@ struct WalletLendingCard: View {
     /// 2026-07-21 ruling, kept).
     private static let riskMargin: Double = 1.5
 
+    /// The section's ONE READING (2026-08-15, the wallet cohesion pass —
+    /// every wallet section leads with its figure in the display voice, the
+    /// brief's "3 late" grammar; the approvals card has had this shape since
+    /// §292 and was the model). Ranked by what a lender actually needs first:
+    /// a position near its floor beats a health figure beats a supplied
+    /// total. The health shown is the WORST across every protocol on the
+    /// card — the same `min` each row already takes, one level up — because a
+    /// reading that averaged would hide exactly the position the margin rule
+    /// exists to surface. Attention ink only on the at-risk form: orange on a
+    /// healthy 2.1 would spend the room's alarm colour on good news.
+    private var reading: (text: String, risk: Bool) {
+        let healths = aave.compactMap(\.healthFactor)
+            + morpho.positions.compactMap(\.healthFactor)
+        let atRisk = healths.filter { $0 < Self.riskMargin }.count
+        if atRisk > 0 {
+            return (atRisk == 1
+                    ? String(localized: "1 position near its floor")
+                    : String(localized: "\(atRisk) positions near their floor"), true)
+        }
+        if let worst = healths.min() {
+            return (String(localized: "Health \(String(format: "%.1f", worst))"), false)
+        }
+        let supplied = aave.reduce(0) { $0 + $1.totalCollateralUSD } + morphoDeposits
+        return (String(localized: "\(WalletValue.money(supplied)) supplied"), false)
+    }
+
     var body: some View {
         if !aave.isEmpty || !morpho.isEmpty {
             VStack(alignment: .leading, spacing: DS.Space.s1) {
                 WalletSectionLabel(title: String(localized: "Lending"))
+                let r = reading
+                Text(r.text)
+                    .dsText(.heading22)
+                    .foregroundStyle(r.risk ? DS.attention : DS.textPrimary)
+                    .fixedSize(horizontal: false, vertical: true)
                     .padding(.bottom, 2)
                 if !aavePositions.isEmpty { aaveRow }
                 if !sparkPositions.isEmpty { sparkRow }

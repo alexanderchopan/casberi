@@ -3727,7 +3727,15 @@ struct FeedScreen: View {
                 .environment(\.colorScheme, .dark)
                 }
 
-                // …and the caution presses back in ink. GUARDED as a whole,
+                // …and the caution presses back in ink. ORDERING IS
+                // LOAD-BEARING (2026-08-15, wallet cohesion pass): this ink
+                // card sits BETWEEN the bright hero above and the holdings
+                // treemap below, and that is not incidental — the hero is the
+                // room's one bright object, the treemap is a large blue-ish
+                // figure, and without ink between them the two read as one
+                // oversized blue mass. A future reshuffle that puts the
+                // treemap directly under the hero should re-litigate that
+                // adjacency, not inherit it. GUARDED as a whole,
                 // which it never had to be while it shared the balance's card:
                 // an unguarded empty stack used to cost nothing, and now it
                 // would draw a surface with nothing on it for every wallet
@@ -4983,39 +4991,33 @@ struct FeedScreen: View {
     /// the argument list of the row builder, so it runs before `shapedRow`'s
     /// own guard, and `thing.source` is a stored property that fault-resolves
     /// against the store (corollary 3, build 176).
-    /// The skin for a row that already KNOWS its source as a plain string —
-    /// the bundle and strip rows, which is most of what the All room actually
-    /// draws (2026-08-15, reported from the built app: "it doesn't have each
-    /// row in a color, it only has two rows in one").
-    ///
-    /// The first cut skinned only `shapedListRow`, i.e. a row that stands for
-    /// ONE `Thing`. But the All room's whole job is folding a day's volume:
-    /// three or more things from one source collapse into a `BundleRow` or a
-    /// `StripRow`, and those take a different path with a different background
-    /// call. So on a real corpus the feature reached only the handful of rows
-    /// too few to fold — which is exactly what a screenshot of two coloured
-    /// mail rows above six ink ones shows.
-    ///
-    /// A bundle is one source BY CONSTRUCTION (it is what folded them
-    /// together), so it needs no liveness guard and no per-thing test: the
-    /// source is already a `String` here, never a stored property read.
-    private func rowSkin(forSource source: String) -> DS.RowSkin? {
-        guard roomMixesSources else { return nil }
-        return DS.rowSkin(for: source)
-    }
+    /// NIL like its sibling below — see that function's note for the ruling.
+    /// Kept (rather than deleted with its call sites) for the same
+    /// dormant-not-deleted reason, and because its one historical lesson is
+    /// worth the lines: when the rows DID wear colour, the first cut skinned
+    /// only `shapedListRow` and missed this path entirely — the bundle and
+    /// strip rows are most of what the All room actually draws, and a
+    /// feature keyed off "a row" has to reach every row BUILDER, of which
+    /// this screen has three.
+    private func rowSkin(forSource source: String) -> DS.RowSkin? { nil }
 
-    private func rowSkin(_ thing: Thing) -> DS.RowSkin? {
-        guard roomMixesSources, thing.modelContext != nil else { return nil }
-        // THE CONSENT CARD REFUSES IT. `ApprovalCard` carries no surface of
-        // its own — it renders straight onto this background — so a skin would
-        // put Approve and Deny on a saturated ground, and the row where a
-        // one-slip yes matters most is the one row whose surface must not
-        // compete with the decision. It is the same refusal the wallet's risk
-        // cards make (a bright card under "reaches $4,120" dresses a warning
-        // as a celebration), arriving in the feed.
-        if thing.kind == .approval, thing.mark != .done { return nil }
-        return DS.rowSkin(for: thing.source)
-    }
+    /// NIL, ALWAYS, AND ON PURPOSE (2026-08-15, the user's final ruling of
+    /// the colour night: "i now feel like they all looked better solid
+    /// black, including the all feed"). The row-colour experiment ran its
+    /// full arc in one evening — raw brand fills, a solved uniform register,
+    /// a 14% wash — and every strength was worse than the black it replaced,
+    /// which is the 2026-07-22 "lists are air" ruling re-earned with three
+    /// builds of evidence instead of taste. Rows are content on ink;
+    /// provenance is the source name (`legibleInk`) and the icon; the app's
+    /// colour budget is spent on ONE bright object per screen (the wallet
+    /// hero, the brief's lede card) and on selection.
+    ///
+    /// The machinery stays (`DS.rowSkin`, the `skin:` plumbing through
+    /// `runBackground`) — dormant-not-deleted, because the full arc is
+    /// recorded in `computeRowSkin`'s own doc and deleting the plumbing would
+    /// orphan that record. DO NOT re-enable without reading it: three
+    /// strengths were built, shipped and rejected the same night.
+    private func rowSkin(_ thing: Thing) -> DS.RowSkin? { nil }
 
     /// Rooms that hold more than one source. "All" is the one that always
     /// does; Pinboard is selected by `pinnedAt` rather than by source, so it

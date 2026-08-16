@@ -5203,6 +5203,34 @@
         }
       }
     },
+    "%@ supplied": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@ suministrado"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@ 供給済み"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@ 공급됨"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "已存入 %@"
+          }
+        }
+      }
+    },
     "%@ things": {
       "localizations": {
         "es": {
@@ -11532,6 +11560,34 @@
         }
       }
     },
+    "%lld positions near their floor": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld posiciones cerca de su límite"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld件のポジションが清算ラインに接近"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "청산선에 근접한 포지션 %lld개"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld 个仓位接近清算线"
+          }
+        }
+      }
+    },
     "%lld posts": {
       "localizations": {
         "es": {
@@ -16118,6 +16174,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "1 件"
+          }
+        }
+      }
+    },
+    "1 position near its floor": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "1 posición cerca de su límite"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "1件のポジションが清算ラインに接近"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "청산선에 근접한 포지션 1개"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "1 个仓位接近清算线"
           }
         }
       }

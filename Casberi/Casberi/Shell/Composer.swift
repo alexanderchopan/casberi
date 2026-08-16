@@ -3510,22 +3510,36 @@ struct Composer: View {
                                 proxy.scrollTo(section.id, anchor: .top)
                             }
                         } label: {
-                            // THE CHIP IS THE COLOUR (prd §386n) — the
-                            // capsule carries the hue, no bullet, and the
-                            // active chip DEEPENS its own hue rather than
-                            // switching colour, so "selected" and "which
-                            // section" stay one statement. Text stays on the
-                            // ink ramp: coloured labels at five hues is the
-                            // ransom note §386l refused.
+                            // ONE SOLID CHIP, THE REST NEUTRAL (2026-08-15,
+                            // user on the built row: "the chips are such a
+                            // weird color too"). The §386n treatment this
+                            // replaces tinted EVERY chip with its hue at
+                            // 16%/34% translucency — and a translucent hue
+                            // over ink is mud: orange lands as brown, green
+                            // as swamp, five muddy capsules in a row. The
+                            // approved dock mockup never did that; it filled
+                            // exactly ONE segment solid (where you are) and
+                            // left the rest gray, which is also this pass's
+                            // own rule arriving in the nav — colour only
+                            // where it is information, and here the
+                            // information is "which section am I in".
+                            //
+                            // The active fill goes through `deckFill` so a
+                            // bright section hue (attention orange, confirm
+                            // green) deepens to the register where a white
+                            // label reads — the same solver every other
+                            // colour in the app now passes through.
                             Text(section.title)
                                 .dsText(.subhead13)
                                 .fontWeight(here ? .semibold : .regular)
-                                .foregroundStyle(here ? DS.textPrimary : DS.textSecondary)
+                                .foregroundStyle(here ? .white : DS.textSecondary)
                                 .lineLimit(1)
                                 .padding(.horizontal, DS.Space.s4)
                                 .padding(.vertical, DS.Space.s2)
-                                .background(GenSection.hue(section.hue)
-                                                .opacity(here ? 0.34 : 0.16),
+                                .background(here
+                                            ? (DS.deckFill(for: GenSection.hue(section.hue))
+                                               ?? DS.tint)
+                                            : DS.fillFaint,
                                             in: Capsule())
                                 .dsHover()
                         }

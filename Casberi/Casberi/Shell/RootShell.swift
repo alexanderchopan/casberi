@@ -1660,10 +1660,13 @@ struct RootShell: View {
                     // brief's headline, first open of the day only. Tap
                     // raises the agent, same move as the bar's own.
                     if let whisper {
+                        // roomTint nil since 2026-08-15 — see the bar's own
+                        // note below; the capsule follows the bar so the
+                        // bottom cluster stays one untinted pair.
                         WhisperCapsule(title: whisper.title, lead: whisper.lead,
                                        walletPct: whisper.walletPct,
                                        morphNS: agentMorph,
-                                       roomTint: chrome.pourHue) {
+                                       roomTint: nil) {
                             DSHaptic.tap()
                             // The capsule's promise kept (prd §166): the tap
                             // lands on the Today brief itself, not the rest
@@ -1721,7 +1724,20 @@ struct RootShell: View {
                              expanded: !agentEverRaised && !chrome.minimized,
                              morphNS: agentMorph,
                              onSources: { openSources() },
-                             roomTint: chrome.pourHue) {
+                             // NIL since 2026-08-15, the crown-pour ruling's
+                             // other half. The user killed the per-wallet
+                             // crown pour because it argued with the wallet
+                             // hero's fixed blue ("it doesn't match the blue
+                             // card"), and this glass tint was the same fact
+                             // at a smaller dose: scope to a green-faced
+                             // wallet and the bar goes green under a room
+                             // whose one bright object is blue. The wallet's
+                             // identity lives in the face rail and the hero's
+                             // own caption now; the bar is plain glass in
+                             // every room. `AgentBar.roomTint` keeps its
+                             // parameter — the mechanism is sound, this is a
+                             // ruling about what feeds it.
+                             roomTint: nil) {
                         DSHaptic.tap()
                         // Open onto the Today brief, not the empty chips (prd
                         // §181, user: "make daily brief be the default when a
