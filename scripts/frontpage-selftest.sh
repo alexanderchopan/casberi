@@ -58,6 +58,14 @@ extract() {  # extract <signature-regex>
 
 {
   echo "import Foundation"
+  # INERT stub of the parser's element type (2026-08-16). `headSegmentCount`
+  # gained an `els:` argument when a Section stopped being pulled into the
+  # head, and GenParser.swift cannot be compiled here for the same reason
+  # GenRenderer.swift can't. Only `comp` is read by the extracted function, so
+  # only `comp` is modelled — a stub that grew `args`/`isComplete` would
+  # invite assertions this harness has no parser to ground.
+  echo "struct GenEl { let comp: String }"
+  echo "typealias GenEls = [String: GenEl]"
   extract '^func genChapterIDs'
   echo "enum FP {"
   extract '    private static func segments.refs:' | sed 's/private static func/static func/'
@@ -100,6 +108,23 @@ check(fullSegs.count - FP.headSegmentCount(fullSegs) >= 2,
       "full brief qualifies (>=2 column blocks)")
 check(fullSegs.prefix(2).flatMap { $0 } == ["lede", "hero", "pair", "tmkt"],
       "head = lede + the whole money story (never split)")
+
+// ── a Section never joins the head (2026-08-16) ────────────────────────────
+// The device shot behind the rule: the brief's FIRST section drew as a bare
+// header with its module loose beneath it, while every later section drew as
+// a card — one screen, two grammars. The pull-up predates the cards, so the
+// segments after the head ARE the cards now and promoting one un-cards it.
+//
+// Both cases run the SAME segments, so only `els` differs — which is the
+// whole claim, and a fixture that also moved the refs could pass for the
+// wrong reason.
+let sectioned: GenEls = ["hero": GenEl(comp: "Section")]
+check(FP.headSegmentCount(fullSegs, els: sectioned) == 1,
+      "a sectioned doc takes the lede alone — the first Section stays a card")
+check(FP.headSegmentCount(fullSegs, els: ["hero": GenEl(comp: "MoneyHero")]) == 2,
+      "a chapter that is NOT a Section still joins the head (scoped briefs)")
+check(FP.headSegmentCount(fullSegs, els: [:]) == FP.headSegmentCount(fullSegs),
+      "an empty element map is the defaulted argument — no silent divergence")
 
 // ── segments: no lede (brief opens on the hero) ────────────────────────────
 let noLede = ["hero", "pair", "themes", "notes", "l1"]
