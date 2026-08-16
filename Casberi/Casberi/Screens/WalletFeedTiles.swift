@@ -166,8 +166,18 @@ struct WalletBalanceHeadline: View {
                 // it hugs the top of its box and a 0.30 fill under it paints a
                 // solid slab rather than a glow. 2.6pt of line reads as
                 // confidence; a heavy fill just reads as a rectangle.
-                TokenChartPlot(chart: chart, accent: accent, height: 52, pulses: false,
-                               lineWidth: 2.6, fillOpacity: 0.16, endpointDot: true,
+                // THE CHART IS THE ROOM'S BIGGEST ELEMENT (2026-08-16, the
+                // Apple redraw): 52 → 170. For Stocks the chart IS the
+                // product, and this room had its best asset drawn as a
+                // garnish under the number. The fill rises with it (0.16 →
+                // 0.24): the 2026-07-21 note below measured a heavy fill as a
+                // "solid slab" — true at 52pt, where a nearly-flat portfolio
+                // line hugs the top of its box; at 170 there is real height
+                // beneath the line for a gradient to fall through, which is
+                // the shape Stocks draws and the reason the taller plot needs
+                // it (a 170pt box with a hairline of fill reads as empty).
+                TokenChartPlot(chart: chart, accent: accent, height: 170, pulses: false,
+                               lineWidth: 2.6, fillOpacity: 0.24, endpointDot: true,
                                marks: marks,
                                onTapMark: marks.isEmpty ? nil : { onOpenMark($0.id) },
                                // Wait out the draw-on below, then land (§171).
@@ -224,34 +234,36 @@ struct WalletBalanceHeadline: View {
                                 .foregroundStyle(DS.textTertiary)
                         }
                     }
-                    HStack(alignment: .firstTextBaseline, spacing: DS.Space.s3) {
-                        // The app's money voice ($19.9K), not a token price — this is
-                        // a portfolio total, and `WalletValue.money` is what the
-                        // combined sheet and the wallet row sublines already speak
-                        // (`TokenStats.compact` behind the §374 privacy gate; a
-                        // view never calls that formatter directly).
-                        // The digits ROLL between values (a scope switch re-keys the
-                        // number, and $20K odometer-rolling to $4.2K says "same
-                        // instrument, new reading"). Direction rides the value, so
-                        // the roll runs the way the money moved. `price40` is the
-                        // sanctioned big-money rung (prd §102), so it scales with
-                        // Dynamic Type like everything else.
-                        Text(WalletValue.money(displayed ?? 0))
-                            .dsText(.price48).foregroundStyle(DS.textPrimary)
-                            .monospacedDigit()
-                            .contentTransition(reduceMotion ? .identity
-                                               : .numericText(value: displayed ?? 0))
-                            .lineLimit(1).minimumScaleFactor(0.6)
-                        // The window the delta is measured over, named — the
-                        // record's own span ("watched") or a calendar window
-                        // it actually covers. Nothing to measure yet, no pill.
-                        if let chart {
-                            TokenDeltaPill(change: chart.change,
-                                           label: range.deltaLabel, compact: true,
-                                           onColor: onColor)
-                                .scaleEffect(pillShown ? 1 : 0.6)
-                                .opacity(pillShown ? 1 : 0)
-                        }
+                    // The app's money voice ($19.9K), not a token price — this is
+                    // a portfolio total, and `WalletValue.money` is what the
+                    // combined sheet and the wallet row sublines already speak
+                    // (`TokenStats.compact` behind the §374 privacy gate; a
+                    // view never calls that formatter directly).
+                    // The digits ROLL between values (a scope switch re-keys the
+                    // number, and $20K odometer-rolling to $4.2K says "same
+                    // instrument, new reading"). Direction rides the value, so
+                    // the roll runs the way the money moved. `price40` is the
+                    // sanctioned big-money rung (prd §102), so it scales with
+                    // Dynamic Type like everything else.
+                    Text(WalletValue.money(displayed ?? 0))
+                        .dsText(.price48).foregroundStyle(DS.textPrimary)
+                        .monospacedDigit()
+                        .contentTransition(reduceMotion ? .identity
+                                           : .numericText(value: displayed ?? 0))
+                        .lineLimit(1).minimumScaleFactor(0.6)
+                    // DIRECTION AS A SENTENCE, not a pill (2026-08-16, the
+                    // Apple redraw). Apple Card and Stocks both state the move
+                    // in words under the figure — and the sentence carries what
+                    // the pill structurally could not: the DOLLARS as well as
+                    // the percent. The dollar move is last-minus-first over the
+                    // very series the line draws, so the words and the curve
+                    // can never disagree; the window name it is measured over
+                    // stays, in the quiet ink. §83 holds through
+                    // `TokenChartStyle.isFlat`: a move that rounds to nothing
+                    // gets no arrow, no colour and no claim.
+                    if let chart {
+                        moveLine(chart)
+                            .opacity(pillShown ? 1 : 0)
                     }
                     if let mover {
                         // WHY it moved, in the quietest ink on the screen: the
@@ -264,6 +276,41 @@ struct WalletBalanceHeadline: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
+    /// "▲ $224.51 (1.8%) today" — the move stated the way Apple states it.
+    ///
+    /// The dollars come from the plotted series (last − first), never from a
+    /// second source: the line is what the reader is looking at, so any other
+    /// derivation could contradict it on screen. Gated through
+    /// `WalletValue.exactMoney`, so §374 hides the figure here exactly as it
+    /// hides the total above — a privacy control that covered the crown and
+    /// left the delta legible would be no control at all.
+    @ViewBuilder
+    private func moveLine(_ chart: TokenChart) -> some View {
+        let flat = TokenChartStyle.isFlat(chart.change)
+        let delta = (chart.closes.last ?? 0) - (chart.closes.first ?? 0)
+        let ink = flat ? DS.textSecondary
+                       : TokenChartStyle.accent(change: chart.change, scheme: scheme)
+        HStack(spacing: 5) {
+            if !flat {
+                Image(systemName: chart.change >= 0 ? "arrowtriangle.up.fill"
+                                                    : "arrowtriangle.down.fill")
+                    .dsGlyph(9)
+                    .foregroundStyle(ink)
+            }
+            Text(flat
+                 ? String(localized: "No change")
+                 : "\(WalletValue.exactMoney(abs(delta))) (\(TokenChartStyle.changeText(chart.change)))")
+                .dsText(.callout15).fontWeight(.semibold)
+                .foregroundStyle(ink)
+                .monospacedDigit()
+            Text(range.deltaLabel)
+                .dsText(.callout15)
+                .foregroundStyle(DS.textTertiary)
+            Spacer(minLength: 0)
+        }
+        .lineLimit(1).minimumScaleFactor(0.7)
+    }
+
     /// The window chips — the token chart's own grammar, at the wallet's dose.
     /// Only drawn with a real choice to make (see `WalletRange.offered`).
     private var rangeChips: some View {
@@ -274,31 +321,30 @@ struct WalletBalanceHeadline: View {
                     DSHaptic.tap()
                     onPickRange(r)
                 } label: {
-                    // SELECTED-ON-COLOUR IS THE WHITE PILL (2026-08-15, the
-                    // wallet cohesion pass) — the grammar the delta pill and
-                    // the day card already speak. The fillFaint form this
-                    // replaces was near-invisible on the bright hero: white
-                    // at 4% over the tint is a selection nobody can see,
-                    // which is a dead control by sight. On an ink ground
-                    // (`onColor` false) the old form is correct and stays.
+                    // STOCKS' SEGMENTED BOX (2026-08-16, the Apple redraw) —
+                    // the chips share one recessed track and the selected one
+                    // is a raised tile inside it, rather than a lone capsule
+                    // floating in space. It also retires the white-pill
+                    // variant this control carried for one day: there is no
+                    // saturated ground left under it to need one.
                     Text(r.rawValue)
                         .dsText(.label12)
+                        .fontWeight(r == range ? .semibold : .regular)
                         .lineLimit(1)
                         .fixedSize()
-                        .foregroundStyle(r == range
-                                         ? (onColor ? DS.tint : DS.textPrimary)
-                                         : DS.textSecondary)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 4)
-                        .background(r == range
-                                    ? (onColor ? Color.white : DS.fillFaint)
-                                    : Color.clear,
-                                    in: Capsule(style: .continuous))
+                        .foregroundStyle(r == range ? DS.textPrimary : DS.textSecondary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 5)
+                        .background(r == range ? DS.fillStrong : .clear,
+                                    in: RoundedRectangle(cornerRadius: 7, style: .continuous))
                 }
                 .buttonStyle(.plain)
             }
         }
-        .padding(.top, 2)
+        .padding(3)
+        .background(DS.fillFaint,
+                    in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .padding(.top, DS.Space.s2)
     }
 
     private func draw(redraw: Bool = false) {

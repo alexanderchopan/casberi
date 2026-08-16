@@ -41550,6 +41550,34 @@
         }
       }
     },
+    "No change": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Sin cambios"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "変動なし"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "변동 없음"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "无变化"
+          }
+        }
+      }
+    },
     "No collections were found on Ethereum, Base, Arbitrum, Optimism, Polygon or Robinhood. Solana NFTs can't be read yet.": {
       "localizations": {
         "es": {

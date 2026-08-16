@@ -3685,7 +3685,14 @@ struct FeedScreen: View {
                                 r.remember()
                             },
                             onOpen: nil,
-                            onColor: true,
+                            // FALSE again (2026-08-16): the hero has no
+                            // coloured ground to sit on, so the line takes
+                            // back its own direction accent — the whole
+                            // reason `onColor` whitened it was that red on
+                            // saturated blue measured ~1.35:1, and there is
+                            // no blue now. The flag survives for any future
+                            // caller that does paint a ground.
+                            onColor: false,
                             onOpenMark: { id in
                                 feedSheet = visible.first { $0.id == id }.map(FeedSheetRoute.thing)
                             })
@@ -3701,30 +3708,19 @@ struct FeedScreen: View {
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(DS.Space.s4)
-                // THE HERO'S GROUND. `DS.tint` flat, never a gradient: the
-                // ruling was the Messages register, and that register is a
-                // solid fill — a gradient reads as a graphic where this has to
-                // read as a surface. The whole subtree's ink is re-pointed by
-                // pinning the scheme, since every text token in the app is a
-                // `Color.adaptive` resolved against the trait: one line moves
-                // primary, secondary, tertiary and every glyph, instead of
-                // teaching the headline, the face chips and the range chips
-                // about a foreground they have never taken.
-                //
-                // NOT the scoped wallet's own pour hue, though the pass that
-                // proposed this asked for it. That hue is chosen for a
-                // low-opacity wash at the top of the screen and carries no
-                // contrast guarantee at all (`DS.themedBleed`'s own note), so
-                // painting a card with it would make the crown number's
-                // legibility depend on which wallet you tapped — and it would
-                // fail on exactly the pale ones, silently, in a way no build
-                // or audit here can see. The wallet's identity is already on
-                // the face rail above and the pour above that.
-                .background(DS.tint,
-                            in: RoundedRectangle(cornerRadius: DS.Radius.widget,
-                                                 style: .continuous))
-                .environment(\.colorScheme, .dark)
+                .padding(.horizontal, DS.Space.s4)
+                .padding(.vertical, DS.Space.s2)
+                // NO GROUND AT ALL (2026-08-16, the Apple redraw — retiring
+                // the `DS.tint` card this carried for a day). Apple has never
+                // shipped a balance inside a coloured card: Apple Card's sits
+                // on a plain surface, Stocks' quote on black. The figure, the
+                // move and the chart ARE the hero; a container around them was
+                // the app claiming emphasis the content already had. It also
+                // ends the two-blues problem by deletion — the only blue left
+                // in the room is chrome — and it restores something the card
+                // structurally prevented: on a DOWN day this hero is red, top
+                // to bottom, because every colour on it now comes from the
+                // data rather than from the surface.
                 }
 
                 // …and the caution presses back in ink. ORDERING IS
