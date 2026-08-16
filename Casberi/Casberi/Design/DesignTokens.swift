@@ -37,7 +37,7 @@ enum DS {
     /// its own token because the brief is the only surface standing on
     /// `inkGround` — the feed's cards keep `surfaceSheet` over the page
     /// tone, where this value would vanish.
-    static let inkCard = Color.adaptive(dark: "#0c0c0e", light: "#f2f2f7")
+    static let inkCard = Color.adaptive(dark: "#08080a", light: "#f2f2f7")
 
     /// The neutral tone for an `IconChip` badge with no real identity or
     /// state to preview (2026-08-10 — the same "unknown gets no invented

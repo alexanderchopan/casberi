@@ -2201,6 +2201,22 @@ struct GenSection: View {
     /// the word next to it. The hue survives where it does real work — the
     /// nav chip, where several sections sit side by side and colour is the
     /// only thing distinguishing them at a glance.
+    /// The section's SF Symbol, keyed off the same hue name so the glyph and
+    /// the tint can never disagree about which section this is (2026-08-16).
+    /// One table, read by the digest card; a name with no entry gets the
+    /// neutral dot rather than a wrong noun.
+    static func symbol(_ hue: String) -> String {
+        switch hue {
+        case "attention": return "exclamationmark.triangle.fill"
+        case "confirm":   return "checkmark.circle.fill"
+        case "tint":      return "chart.line.uptrend.xyaxis"
+        case "life":      return "sun.max.fill"
+        case "work":      return "hammer.fill"
+        case "meaning":   return "sparkles"
+        default:          return "circle.fill"
+        }
+    }
+
     static func hue(_ name: String) -> Color {
         switch name {
         case "attention": return DS.attention
@@ -4167,12 +4183,10 @@ struct GenFrontPage: View {
     var quiet: Set<String> = []
     let inAgentAnswer: Bool
     @State private var width: CGFloat = 0
-    /// Sections whose full modules are open (the digest's tap) — collapsed by
-    /// default, per the mock this implements. Per-view state on purpose: a
-    /// re-compose starts the brief folded again, which is the landing the
-    /// mock shows.
-    @State private var expandedSections: Set<String> = []
     @Environment(\.colorScheme) private var scheme
+    /// The section header's own door (§386j) — the digest card opens the room
+    /// its section stands for, which is what replaced the accordion.
+    @Environment(\.genRoomOpen) private var roomOpen
 
     /// Two readable columns (≥ ~390pt each) plus the gutter. Below this the
     /// single column is the better page, whatever the idiom says.
@@ -4336,30 +4350,53 @@ struct GenFrontPage: View {
                             members: [String], quietCard: Bool) -> some View {
         let title = header.str(0)
         let qualifier = header.str(1)
-        let expanded = expandedSections.contains(headerRef)
+        // THE ACCORDION IS GONE (2026-08-16, user: "why does the daily brief
+        // have accordians that is so weird"). Correct, and it was named as
+        // wrong in this pass's own Apple analysis before being built anyway:
+        // Apple never unfolds a summary card — Health, Fitness and Weather
+        // all NAVIGATE from the summary to a detail. So the card is a door
+        // where it has somewhere to send you (the section's own room, an arg
+        // it has carried since §386j), and where it doesn't — "Your day"
+        // spans every source — its modules render INLINE beneath the digest,
+        // because a section with nowhere to go must not hide its contents
+        // behind a control that goes nowhere (§83).
+        let room = header.str(3)
+        let hasDoor = !room.isEmpty
         let stat = qualifier.isEmpty ? digestStat(members) : qualifier
         let sub = digestSub(members)
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             Button {
+                guard hasDoor else { return }
                 DSHaptic.selection()
-                withAnimation(DS.Motion.standard) {
-                    if expanded { expandedSections.remove(headerRef) }
-                    else { expandedSections.insert(headerRef) }
-                }
+                roomOpen?(room)
             } label: {
                 VStack(alignment: .leading, spacing: 3) {
                     HStack(spacing: DS.Space.s2) {
+                        // THE TINTED GLYPH (2026-08-16) — the element that
+                        // makes a Health card read as a Health card, named in
+                        // this pass's own analysis and then left out of the
+                        // build, which is most of why the result "still
+                        // doesn't look like the mockups". Identity lives HERE
+                        // now: a small symbol in the section's hue, so the
+                        // card itself stays ink and colour annotates rather
+                        // than contains.
+                        Image(systemName: GenSection.symbol(header.str(2)))
+                            .dsGlyph(11)
+                            .foregroundStyle(GenSection.hue(header.str(2)))
+                            .frame(width: 22, height: 22)
+                            .background(GenSection.hue(header.str(2)).opacity(0.14),
+                                        in: RoundedRectangle(cornerRadius: 7, style: .continuous))
                         Text(title)
                             .dsText(.subhead13).fontWeight(.semibold)
                             .foregroundStyle(DS.textSecondary)
                         Spacer(minLength: 0)
-                        // The one chevron: says the card OPENS. Rotates
-                        // rather than swaps, so collapse is visibly the
-                        // same door.
-                        Image(systemName: "chevron.down")
-                            .dsGlyph(11)
-                            .foregroundStyle(DS.textTertiary)
-                            .rotationEffect(.degrees(expanded ? 180 : 0))
+                        // Points RIGHT — it navigates. No chevron at all when
+                        // there is nowhere to go.
+                        if hasDoor {
+                            Image(systemName: "chevron.right")
+                                .dsGlyph(11)
+                                .foregroundStyle(DS.textTertiary)
+                        }
                     }
                     if !stat.isEmpty {
                         HStack(alignment: .center, spacing: DS.Space.s3) {
@@ -4395,7 +4432,11 @@ struct GenFrontPage: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            if expanded {
+            .disabled(!hasDoor)
+            // A roomless section shows its own modules — see the door note
+            // above. These are the visual ones ("Your day"'s contact sheet,
+            // faces, the map), so inline is also where they read best.
+            if !hasDoor {
                 ForEach(members, id: \.self) { module($0, inCard: true) }
             }
         }
