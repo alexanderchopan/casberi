@@ -1,0 +1,291 @@
+<title>Cover Faces</title>
+<style>
+/* ============================================================
+   TOKENS. The deck grounds are COMPUTED, not picked: each is
+   DS.deckFill(for: DS.brandHue(for: source)) — the WCAG solve at
+   luminance target 0.12, which lands every one at 6.2:1 under white
+   ink. Recomputed in Python from the shipped algorithm, not eyeballed.
+   ============================================================ */
+:root {
+  color-scheme: light dark;
+  --ground: #f2f1f5;
+  --ink:  #15141a;
+  --ink2: #56535f;
+  --ink3: #85818e;
+  --mark: #6d28d9;
+
+  --appSheet:  #ffffff;
+  --appRaised: #f8f8f8;
+  --appText:   #000000;
+  --appText2:  #3c3c43d6;
+  --appText3:  #3c3c43bd;
+  --fillFaint: #00000008;
+  --raisedShadow: 0 2px 10px #0000001f;
+  --phoneShadow:  0 24px 70px #00000029;
+
+  --rCard: 10px; --rPill: 9999px;
+  --s1: 4px; --s2: 8px; --s3: 12px; --s4: 15px; --s6: 24px;
+  --inset: 27px;
+  --rounded: ui-rounded, "SF Pro Rounded", -apple-system, sans-serif;
+
+  /* solved deck grounds */
+  --deckReminders: #875714;
+  --deckCalendar:  #b82b23;
+  --deckWallet:    #2155dc;
+  --deckClaude:    #914f3a;
+  --deckDayOne:    #256789;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ground:#0b0b0f; --ink:#eeecf3; --ink2:#a29ead; --ink3:#726e7c; --mark:#a78bfa;
+    --appSheet:#111113; --appRaised:#1a1a1c; --appText:#ffffff;
+    --appText2:#ebebf599; --appText3:#ebebf57e; --fillFaint:#ffffff0a;
+    --raisedShadow:none; --phoneShadow:0 24px 70px #00000080;
+  }
+}
+:root[data-theme="dark"] {
+  --ground:#0b0b0f; --ink:#eeecf3; --ink2:#a29ead; --ink3:#726e7c; --mark:#a78bfa;
+  --appSheet:#111113; --appRaised:#1a1a1c; --appText:#ffffff;
+  --appText2:#ebebf599; --appText3:#ebebf57e; --fillFaint:#ffffff0a;
+  --raisedShadow:none; --phoneShadow:0 24px 70px #00000080;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  background: var(--ground); color: var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",sans-serif;
+  -webkit-font-smoothing:antialiased; padding:56px 32px 80px;
+}
+.head { max-width:1180px; margin:0 auto 40px; }
+.head h1 { font-size:28px; font-weight:700; font-family:var(--rounded); margin-bottom:8px; }
+.head p { font-size:15px; color:var(--ink2); line-height:1.55; max-width:720px; }
+.head code { font-size:13px; background:var(--fillFaint); padding:1px 5px; border-radius:5px; }
+
+.grid { max-width:1180px; margin:0 auto; display:flex; gap:36px; flex-wrap:wrap; justify-content:center; }
+.col { width:360px; }
+.rung { padding:0 4px 14px; }
+.rung .n {
+  display:inline-flex; align-items:center; justify-content:center;
+  width:22px; height:22px; border-radius:var(--rPill);
+  background:var(--mark); color:#fff; font-size:12px; font-weight:700;
+  margin-right:8px; vertical-align:middle;
+}
+.rung h2 { display:inline; font-size:18px; font-weight:700; font-family:var(--rounded); }
+.rung p { font-size:13px; color:var(--ink2); line-height:1.5; margin-top:8px; }
+
+/* the card frame — a real feed row width */
+.stage { background:var(--appSheet); border-radius:28px; padding:var(--s4) var(--inset) var(--s6); box-shadow:var(--phoneShadow); }
+.stage .hdr { font-family:var(--rounded); font-size:22px; font-weight:700; line-height:28px; color:var(--appText); padding:var(--s2) 0 var(--s3); }
+
+.card { border-radius:var(--rCard); overflow:hidden; box-shadow:var(--raisedShadow); }
+.card.neutral { background:var(--appRaised); }
+.pad { padding:var(--s4); }
+.eyebrow { display:flex; align-items:center; gap:var(--s2); margin-bottom:var(--s1); }
+.eyebrow .m { width:14px; height:14px; border-radius:4px; flex:none; display:flex;
+  align-items:center; justify-content:center; font-size:8px; font-weight:700; color:#fff; }
+.eyebrow .src { font-size:12px; font-weight:500; line-height:16px; }
+.eyebrow .t   { font-size:12px; font-weight:500; line-height:16px; opacity:.72; }
+.title { font-family:var(--rounded); font-size:22px; font-weight:700; line-height:28px; }
+.note  { font-size:14px; line-height:21px; margin-top:var(--s1); opacity:.78; }
+
+/* deck cards: white ink pinned, per deckFill's "fill and ink are one decision" */
+.deck { color:#fff; }
+.deck .eyebrow .src { color:#fff; }
+.deck .title { color:#fff; }
+.deck .note  { color:#fff; }
+
+/* the clock reading — stat24 */
+.clock { font-family:var(--rounded); font-size:24px; font-weight:700; line-height:28px; margin-bottom:2px; }
+
+/* money */
+.amount { font-family:var(--rounded); font-size:24px; font-weight:700; line-height:28px; }
+.tear { height:8px; background:
+  radial-gradient(circle at 6px 0, transparent 0 5px, currentColor 5px) repeat-x;
+  background-size:12px 8px; opacity:.001; }
+
+.art { height:176px; }
+.p1 { background:linear-gradient(135deg,#4a6b3a,#2e4a5e); }
+
+.neutralnote { padding:12px 4px 0; font-size:12.5px; color:var(--ink3); line-height:1.55; }
+.neutralnote b { color:var(--ink2); }
+</style>
+
+<div class="head">
+  <h1>The cover always draws — five faces, no decline</h1>
+  <p>The pictureless case isn't an empty card, it's a different face. Grounds are
+     <code>DS.deckFill(for:)</code> — the WCAG solver built 2026-08-15 and currently
+     <b>uncalled</b>, whose own doc reserves the full-strength register for
+     "one bright object per screen (the wallet hero, the brief's lede card)".
+     Every ground below solves to <b>6.2:1</b> under white ink; Increase Contrast
+     takes it to 7.0:1.</p>
+</div>
+
+<div class="grid">
+
+  <!-- 1 · PICTURE -->
+  <div class="col">
+    <div class="rung">
+      <span class="n">1</span><h2>Picture</h2>
+      <p>What ships today. 27 bridges stamp art — RSS, every social network,
+         media, tokens, NFTs, saved links — plus 8 that carry stored pixels.</p>
+    </div>
+    <div class="stage">
+      <div class="hdr">Since you left</div>
+      <div class="card neutral">
+        <div class="art p1"></div>
+        <div class="pad">
+          <div class="eyebrow">
+            <span class="m" style="background:#f26522">R</span>
+            <span class="src" style="color:var(--appText2)">RSS</span>
+            <span class="t" style="color:var(--appText3)">1 hr ago</span>
+          </div>
+          <div class="title" style="color:var(--appText)">Local-first sync is finally practical — a field report</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2 · CLOCK -->
+  <div class="col">
+    <div class="rung">
+      <span class="n">2</span><h2>Clock</h2>
+      <p>Your "Dentist 3pm" case. The countdown <em>is</em> the payload, so it
+         leads at <code>stat24</code> and the title sits under it — §35's rule
+         that a perishable shows its countdown everywhere.</p>
+    </div>
+    <div class="stage">
+      <div class="hdr">Since you left</div>
+      <div class="card deck" style="background:var(--deckReminders)">
+        <div class="pad">
+          <div class="eyebrow">
+            <span class="m" style="background:#ff9500">R</span>
+            <span class="src">Reminders</span><span class="t">due today</span>
+          </div>
+          <div class="clock">In 4 hours</div>
+          <div class="title">Dentist</div>
+          <div class="note">3:00 PM · you set this on Tuesday</div>
+        </div>
+      </div>
+    </div>
+    <div class="neutralnote">Ground <b>#875714</b> — Reminders' orange solved to the
+      register, not the raw brand hex.</div>
+  </div>
+
+  <!-- 3 · MONEY -->
+  <div class="col">
+    <div class="rung">
+      <span class="n">3</span><h2>Money</h2>
+      <p><code>MoneyReceipt.receipt(for:)</code> already composes this for nine
+         sources. A wallet arrival as a cover beats any photograph we could
+         have fetched for it.</p>
+    </div>
+    <div class="stage">
+      <div class="hdr">Since you left</div>
+      <div class="card deck" style="background:var(--deckWallet)">
+        <div class="pad">
+          <div class="eyebrow">
+            <span class="m" style="background:#2461ff">W</span>
+            <span class="src">Wallet</span><span class="t">8:40 AM</span>
+          </div>
+          <div class="amount">+1,250 USDC</div>
+          <div class="title" style="font-size:18px;line-height:26px;font-weight:600;margin-top:2px;">
+            from vitalik.eth on Base</div>
+          <div class="note">First from this sender since May.</div>
+        </div>
+      </div>
+    </div>
+    <div class="neutralnote">Ground <b>#2155dc</b>. The receipt's torn/flat edge
+      still carries finality (§363) — omitted here for width.</div>
+  </div>
+
+  <!-- 4 · WORDS -->
+  <div class="col">
+    <div class="rung">
+      <span class="n">4</span><h2>Words</h2>
+      <p>A note, a work item, an article with no art. The source's ground
+         gives it presence; the words are the content and stay the content.</p>
+    </div>
+    <div class="stage">
+      <div class="hdr">Today</div>
+      <div class="card deck" style="background:var(--deckDayOne)">
+        <div class="pad">
+          <div class="eyebrow">
+            <span class="m" style="background:#44c0ff">D</span>
+            <span class="src">Day One</span><span class="t">22 min ago</span>
+          </div>
+          <div class="title">The bit I keep missing is that the feed is the product</div>
+          <div class="note">Ask/answer is a side utility. Weight reading polish first —
+            everything else follows from that one call.</div>
+        </div>
+      </div>
+    </div>
+    <div class="neutralnote">Ground <b>#256789</b>.</div>
+  </div>
+
+  <!-- 5 · NEUTRAL -->
+  <div class="col">
+    <div class="rung">
+      <span class="n">5</span><h2>Neutral</h2>
+      <p>Not a decline — the fallback when the brand hue is near-neutral and
+         <code>deckFill</code> returns nil by design (X, ChatGPT, 0xBow: a white
+         or black field carries no signal). The card still draws.</p>
+    </div>
+    <div class="stage">
+      <div class="hdr">Today</div>
+      <div class="card neutral">
+        <div class="pad">
+          <div class="eyebrow">
+            <span class="m" style="background:#000">X</span>
+            <span class="src" style="color:var(--appText2)">X</span>
+            <span class="t" style="color:var(--appText3)">6 min ago</span>
+          </div>
+          <div class="title" style="color:var(--appText)">"the best feed is the one that ends"</div>
+        </div>
+      </div>
+    </div>
+    <div class="neutralnote">Three sources hit this today. It reads as
+      restraint rather than absence <b>because the other four faces exist</b> —
+      a neutral card among coloured ones is a choice, a lone neutral card is a
+      failure.</div>
+  </div>
+
+  <!-- the rejected thing, stated -->
+  <div class="col">
+    <div class="rung">
+      <span class="n">!</span><h2>What this is not</h2>
+      <p>Colour on <b>rows</b> was built three ways and rejected on 2026-08-15
+         ("they all looked better solid black"). This is not that: it is
+         <b>one</b> bright object at the top of the feed, which is exactly the
+         carve-out that ruling wrote down.</p>
+    </div>
+    <div class="stage">
+      <div class="hdr">Today</div>
+      <div class="card deck" style="background:var(--deckCalendar)">
+        <div class="pad">
+          <div class="eyebrow">
+            <span class="m" style="background:#ff3b30">C</span>
+            <span class="src">Calendar</span><span class="t">starts soon</span>
+          </div>
+          <div class="clock">In 25 minutes</div>
+          <div class="title">Standup</div>
+          <div class="note">9:30–9:45 AM</div>
+        </div>
+      </div>
+      <div style="height:var(--s4)"></div>
+      <div style="display:flex;align-items:center;gap:var(--s3);padding:var(--s2) 0">
+        <div style="width:26px;height:26px;border-radius:6px;background:#24292f;flex:none;
+          display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;font-weight:700">G</div>
+        <div style="flex:1;font-size:18px;line-height:26px;color:var(--appText)">casberi/site · pages build fixed on main</div>
+        <div style="font-size:12px;color:var(--appText3)">7:48 AM</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:var(--s3);padding:var(--s2) 0">
+        <div style="width:26px;height:26px;border-radius:6px;background:#635bff;flex:none;
+          display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;font-weight:700">S</div>
+        <div style="flex:1;font-size:18px;line-height:26px;color:var(--appText)">Dispute opened · £240</div>
+        <div style="font-size:12px;color:var(--appText3)">8:12 AM</div>
+      </div>
+    </div>
+    <div class="neutralnote">One coloured object, ordinary rows beneath it.</div>
+  </div>
+
+</div>

@@ -24055,3 +24055,82 @@ picture. Left alone deliberately — the cover is a bigger picture than the anch
 would have been, so the day still opens on something to look at, and
 recomputing per render costs more than the promotion is worth on the screen with
 this app's worst perf history.
+
+### 389a. The cover never declines for want of a picture (user: "wdym decline if no cover at all, we should still show it but in a nice card somehow", then "color is fine now that it has a reason and isn't everywhere", 2026-08-16)
+
+§389 shipped the cover with two faces — a picture, or the words — and the words
+face is thin for exactly the things least likely to have a picture. The
+question that surfaced it was the right one ("we have ones that don't really
+[show something], what is our plan"), and the first answer was wrong: a decline
+rung, no cover at all on a weak day. Overruled.
+
+**Enriching our way out was measured and rejected first.** 27 bridges already
+stamp `previewImageURL` and 8 stamp `previewImageData` — the reading, media and
+social half of the corpus is covered, and `LinkTitle.enrich`/`OEmbed` is what
+covers it. The other half CANNOT be: a wallet transfer, a Stripe dispute, a
+calendar event, a Trello card, a Cursor run, an Obsidian note have no
+photograph to fetch. Chasing them means inventing art, which is §83, and it
+would multiply declared network reaches (§205) for the sources least likely to
+benefit. So "shows something" was separated from "shows a photograph".
+
+**Four faces** (`Model/FeedLedeFace.swift`, pure and separated from the
+gathering the way `WidgetDayLead.kind` is, because the ladder is the part that
+goes silently wrong): **money** (`MoneyReceiptSource.receipt` — nine sources
+already compose it; beats `picture` because an NFT purchase can carry both and
+the figure is what the row is FOR), **picture**, **clock** (a `dueAt` leads at
+`stat24` with the title under it — §35's "a perishable shows its countdown
+everywhere", on the one surface with room to say it at size), **words**. There
+is no `none`: the decision to have a cover belongs to `ledeID`, which declines
+four ways before the face is ever asked; once a cover draws, it draws
+something.
+
+**THE COLOUR, and why it is allowed here.** The three pictureless faces take
+`DS.deckFill` — the WCAG solver built on 2026-08-15 and, until now, **never
+called**. That night built source colour on ROWS three ways and rejected all
+three ("they all looked better solid black"), and the ruling it left behind
+reserved the full-strength register for "one bright object per screen (the
+wallet hero, the brief's lede card)". One cover per feed is that one object.
+The user's ruling: "color is fine now that it has a reason and isn't
+everywhere" — which also settles the scope question, since only one cover is
+ever on screen, so every pictureless face may take the ground.
+
+The fill and the ink are ONE decision (`deckFill`'s own doc): the solver always
+returns the DARK register, so a coloured face pins `.dark` on its subtree and
+the whole token ramp re-points in one line — `shapedListRow`'s skinned-row
+mechanic. Every brand hue solves to **6.2:1** under white ink, 7.0:1 under
+Increase Contrast. A near-neutral brand (X, ChatGPT, 0xBow) returns nil BY
+DESIGN and lands on the neutral card: restraint, not failure, and it reads that
+way only because the coloured faces exist around it.
+
+**Measured caveat, stated rather than discovered later:** warm brands land
+muddy. Reminders' orange solves to `#875714` and Notes' yellow to `#736011` —
+brown and olive, because that is what those hues ARE when darkened enough for
+white ink. There is no light-ground escape without changing the solver, and the
+solver is shared with the surfaces the colour night settled.
+
+**The money face drops the tone COLOUR.** `MoneyReceiptCard` greens an arrival
+against the page's own ramp; this ground is an arbitrary brand hue solved for
+white ink, so nothing guarantees `confirm` clears contrast on it. Direction is
+not lost — the sign is a glyph inside `Amount.number` (U+2212 / "+"), which is
+§363's own rule and the reason its spoken form spells the sign out.
+
+`FeedScreen.dueLine` forwards to `FeedLedeFace.dueLine` so the cover's
+countdown and the feed's are one formatting. They sit on the same screen, often
+about the same thing.
+
+**The promoted row does not also appear below** (user, confirming: "it
+shouldn't show in the list of rows below it until the next item comes in and
+replaces it"). It was already so — `bundledSections` drops the lede from its
+group before the run positions are computed — and when something newer lands it
+takes the cover while the previous one falls back into the rows.
+
+**HELD, for the user's ruling: §374 and the money face.** The cover can now put
+a money figure at `stat24` on the app's opening screen. This is consistent with
+what the feed already does — `WalletIngest` interpolates the amount into every
+transfer TITLE and the band row has always shown it unmasked, and §374's stated
+scope is "the WALLET only" — so it discloses nothing the feed did not already
+disclose. But it is LOUDER, and the All feed is the most shoulder-surfable
+surface in the app, which is the exact threat §374 names. Two related gaps
+found while checking: `MoneyReceiptCard` (§363) neither references
+`BalancePrivacy` nor appears in `hide-balances-audit.py`'s `WALLET_VIEWS`, so
+the receipt has never been covered either. Not decided here.

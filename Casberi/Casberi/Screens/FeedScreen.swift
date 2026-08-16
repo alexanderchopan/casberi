@@ -4363,9 +4363,14 @@ struct FeedScreen: View {
     /// grain that's actually useful at that distance. Guarded internally
     /// because it takes a raw `Thing` from a call site that may re-evaluate
     /// (corollary 4's rule for shared helpers).
+    ///
+    /// Forwards to `FeedLedeFace.dueLine` (prd §389 amendment) so the cover's
+    /// countdown and this one are the same formatting — they sit on the same
+    /// screen, often about the same thing, and two copies is where a countdown
+    /// quietly starts disagreeing with itself depending on where you read it.
     private static func dueLine(_ thing: Thing) -> String? {
         guard thing.isLive, let due = thing.dueAt else { return nil }
-        return due.formatted(.relative(presentation: .named))
+        return FeedLedeFace.dueLine(due)
     }
 
     /// The wallet stream's preview rows, with routine transfers folded
