@@ -4172,6 +4172,7 @@ struct GenFrontPage: View {
     /// re-compose starts the brief folded again, which is the landing the
     /// mock shows.
     @State private var expandedSections: Set<String> = []
+    @Environment(\.colorScheme) private var scheme
 
     /// Two readable columns (≥ ~390pt each) plus the gutter. Below this the
     /// single column is the better page, whatever the idiom says.
@@ -4204,10 +4205,33 @@ struct GenFrontPage: View {
                 // after it renders as a card. Same segments the two-column
                 // page cuts, so the phone and the Mac disagree about layout
                 // and never about grouping.
+                // QUIET SECTIONS PAIR UP (mockup C, 2026-08-16): two
+                // consecutive sections whose every module said what it said
+                // last time share one row at half width — Health's Favorites
+                // rhythm, and the honest form of the step-back: a section
+                // that changed gets the full slab it earned, a quiet one
+                // stops costing a screenful. Consecutive only, so the
+                // pairing can never reorder the clock's own permutation.
+                let blocks = Array(segs.dropFirst(headCount))
+                let rows: [[[String]]] = blocks.reduce(into: []) { acc, seg in
+                    if segIsQuiet(seg), let last = acc.last, last.count == 1,
+                       let prev = last.first, segIsQuiet(prev) {
+                        acc[acc.count - 1].append(seg)
+                    } else {
+                        acc.append([seg])
+                    }
+                }
                 VStack(alignment: .leading, spacing: DS.Space.s3) {
                     ForEach(segs.prefix(headCount).flatMap { $0 }, id: \.self) { module($0) }
-                    ForEach(Array(segs.dropFirst(headCount).enumerated()), id: \.offset) {
-                        deckCard($0.element)
+                    ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
+                        if row.count == 2 {
+                            HStack(alignment: .top, spacing: DS.Space.s3) {
+                                deckCard(row[0])
+                                deckCard(row[1])
+                            }
+                        } else {
+                            deckCard(row[0])
+                        }
                     }
                 }
                 .frame(maxWidth: PadLayout.readingMaxWidth, alignment: .leading)
@@ -4240,6 +4264,13 @@ struct GenFrontPage: View {
             ForEach(Array(blocks.enumerated()), id: \.offset) { deckCard($0.element) }
         }
         .frame(maxWidth: .infinity, alignment: .topLeading)
+    }
+
+    /// A headed section whose every module is in the quiet set — the pairing
+    /// test AND the card-dim test, one definition so the two can't disagree.
+    private func segIsQuiet(_ seg: [String]) -> Bool {
+        guard let first = seg.first, els[first]?.comp == "Section" else { return false }
+        return seg.count > 1 && seg.dropFirst().allSatisfy { quiet.contains($0) }
     }
 
     /// One chapter block as a DECK CARD — ON INK (2026-08-15, second ruling
@@ -4294,7 +4325,7 @@ struct GenFrontPage: View {
             .opacity(isQuiet ? 0.68 : 1)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(DS.Space.s4)
-            .background(DS.surfaceSheet,
+            .background(DS.inkCard,
                         in: RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
         }
     }
@@ -4331,15 +4362,27 @@ struct GenFrontPage: View {
                             .rotationEffect(.degrees(expanded ? 180 : 0))
                     }
                     if !stat.isEmpty {
-                        // Attention ink ONLY for the late-reading (the
-                        // qualifier §386l composes for Needs you) — a money
-                        // total in orange would be an alarm about nothing.
-                        Text(stat)
-                            .dsText(.heading28)
-                            .foregroundStyle(!qualifier.isEmpty && header.str(2) == "attention"
-                                             ? DS.attention : DS.textPrimary)
-                            .monospacedDigit()
-                            .lineLimit(1).minimumScaleFactor(0.7)
+                        HStack(alignment: .center, spacing: DS.Space.s3) {
+                            // Attention ink ONLY for the late-reading (the
+                            // qualifier §386l composes for Needs you) — a
+                            // money total in orange would be an alarm about
+                            // nothing.
+                            Text(stat)
+                                .dsText(.heading28)
+                                .foregroundStyle(!qualifier.isEmpty && header.str(2) == "attention"
+                                                 ? DS.attention : DS.textPrimary)
+                                .monospacedDigit()
+                                .lineLimit(1).minimumScaleFactor(0.7)
+                            Spacer(minLength: 0)
+                            // THE MINIATURE (mockup C, 2026-08-16): no summary
+                            // card ships without its picture of the number
+                            // moving — Health's own rule, and the reason the
+                            // three-line digest read as a settings list. Drawn
+                            // from the modules' STRUCTURED args the digest
+                            // already holds; a section with no honest
+                            // miniature draws none (never a decorative one).
+                            digestMini(members)
+                        }
                     }
                     if !sub.isEmpty {
                         Text(sub)
@@ -4360,7 +4403,7 @@ struct GenFrontPage: View {
         .opacity(quietCard ? 0.68 : 1)
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(DS.Space.s4)
-        .background(DS.surfaceSheet,
+        .background(DS.inkCard,
                     in: RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
         // The nav's scroll target AND its where-am-I spy — the header module
         // is no longer mounted, so the card takes over both of the jobs it
@@ -4384,6 +4427,66 @@ struct GenFrontPage: View {
             if el.comp == "MoneyHero" { return el.str(0) }
         }
         return ""
+    }
+
+    /// The trailing miniature — a shrunk chart from a member's own args.
+    /// Three honest shapes and no fourth: a sparkline where a series exists
+    /// (MoneyHero's CSV, ValueSpark's CSV), a count of attention dots where
+    /// only a count exists (the alerts — their rows carry no dates, and
+    /// placing invented positions on a time rail would be §83's fake status
+    /// in miniature). Direction ink comes from the composed delta's own
+    /// sign, a structured arg, not parsed prose.
+    @ViewBuilder
+    private func digestMini(_ members: [String]) -> some View {
+        if let el = members.compactMap({ els[$0] }).first(where: { $0.comp == "MoneyHero" }),
+           genCSVDoubles(el.str(2)).count >= 2 {
+            let vals = genCSVDoubles(el.str(2))
+            let up = el.str(1).hasPrefix("+")
+            let flat = el.str(1).isEmpty
+            miniSpark(vals, ink: flat ? DS.textTertiary
+                      : TokenChartStyle.accent(change: up ? 1 : -1, scheme: scheme))
+        } else if let el = members.compactMap({ els[$0] }).first(where: { $0.comp == "ValueSpark" }),
+                  genCSVDoubles(el.str(2)).count >= 2 {
+            miniBars(genCSVDoubles(el.str(2)))
+        } else if let el = members.compactMap({ els[$0] }).first(where: { $0.comp == "Alerts" }) {
+            let n = min(el.str(1).split(separator: ";").count, 4)
+            HStack(spacing: 5) {
+                ForEach(0..<max(n, 1), id: \.self) { _ in
+                    Circle().fill(DS.attention).frame(width: 7, height: 7)
+                }
+            }
+        }
+    }
+
+    private func miniSpark(_ vals: [Double], ink: Color) -> some View {
+        let lo = vals.min() ?? 0, hi = vals.max() ?? 1
+        let span = max(hi - lo, 0.0001)
+        return Canvas { ctx, size in
+            var path = Path()
+            for (i, v) in vals.enumerated() {
+                let x = size.width * CGFloat(i) / CGFloat(max(vals.count - 1, 1))
+                let y = size.height * (1 - CGFloat((v - lo) / span)) * 0.86 + size.height * 0.07
+                if i == 0 { path.move(to: CGPoint(x: x, y: y)) }
+                else { path.addLine(to: CGPoint(x: x, y: y)) }
+            }
+            ctx.stroke(path, with: .color(ink),
+                       style: StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
+        }
+        .frame(width: 68, height: 28)
+    }
+
+    private func miniBars(_ vals: [Double]) -> some View {
+        let hi = max(vals.max() ?? 1, 0.0001)
+        let shown = Array(vals.suffix(8))
+        let hue = GenSection.hue("work")
+        return HStack(alignment: .bottom, spacing: 3) {
+            ForEach(Array(shown.enumerated()), id: \.offset) { i, v in
+                RoundedRectangle(cornerRadius: 2, style: .continuous)
+                    .fill(hue.opacity(i == shown.count - 1 ? 1 : 0.4))
+                    .frame(width: 5, height: max(4, 24 * CGFloat(v / hi)))
+            }
+        }
+        .frame(height: 26, alignment: .bottom)
     }
 
     /// The quiet line under it — first member that carries one.
@@ -5009,42 +5112,67 @@ private struct GenDayLede: View {
             + Text(String(text[range.upperBound...]))
     }
 
+    /// The monument's annotation ink — semantic, resolved from the composed
+    /// tone, never parsed out of the figure.
+    private func toneInk(_ tone: String) -> Color {
+        switch tone {
+        case "attention": return DS.attention
+        case "up":        return TokenChartStyle.accent(change: 1, scheme: scheme)
+        case "down":      return TokenChartStyle.accent(change: -1, scheme: scheme)
+        default:          return DS.textSecondary
+        }
+    }
+
     var body: some View {
-        // THE SCREEN'S ONE BRIGHT OBJECT (2026-08-15, user: "it all looks
-        // vibecoded now", against their own reference screenshot — a black
-        // screen whose single saturated element is the blue day card). The
-        // lede is the day in one sentence and the brief's only always-shown,
-        // never-dim module, so it is the right holder of the whole page's
-        // colour budget: everything below it returns to ink, and this card is
-        // what makes that read as restraint rather than absence.
+        // THE MONUMENT (2026-08-16, mockup C — retires the blue lede card of
+        // the night before). The brief now opens the way Weather opens: the
+        // day's one figure enormous and thin, its annotation word in the
+        // semantic ink, and the sentence demoted to the quiet line beneath.
+        // Blue returns to being chrome only (chips, berry, send) so the
+        // monument owns the screen. args 4/5/6 are composed by TodayBrief's
+        // clock; when they're empty the sentence stands alone at heading28 —
+        // never a padded figure.
         //
-        // The figure's semantic accent stands down ON the card — green on
-        // saturated blue is b32ce19's own illegibility case, and the approved
-        // reference renders the whole sentence white with direction carried by
-        // the words. The bare `el.str(0)` and not `sentence`: an inner Text
-        // segment's own foregroundStyle beats any outer repaint, so routing
-        // through the accented form would put the green back on the blue.
-        // `sentence` survives for any future ink-ground caller.
-        //
-        // Self-padded, like every other component in this file (the answer
-        // column doesn't inset its children — each owns its margin).
+        // The raw `.font(.system(size:))` on TEXT is deliberate and lawful —
+        // the ramp audit's own doc scopes itself to glyphs ("the type ramp is
+        // not" frozen) — because 74pt is a MONUMENT, a rung the reading ramp
+        // should not carry: nothing else may ever borrow it without this
+        // comment moving too.
         VStack(alignment: .leading, spacing: 2) {
-            if !el.str(1).isEmpty {
-                Text(el.str(1))
+            if !el.str(4).isEmpty {
+                HStack(alignment: .firstTextBaseline, spacing: DS.Space.s3) {
+                    Text(el.str(4))
+                        .font(.system(size: 74, weight: .light, design: .rounded))
+                        .monospacedDigit()
+                        .foregroundStyle(DS.textPrimary)
+                        .lineLimit(1).minimumScaleFactor(0.5)
+                    if !el.str(5).isEmpty {
+                        Text(el.str(5))
+                            .dsText(.heading17).fontWeight(.semibold)
+                            .foregroundStyle(toneInk(el.str(6)))
+                    }
+                }
+                sentence
                     .dsText(.subhead13)
-                    .foregroundStyle(.white.opacity(0.85))
-                    .lineLimit(1)
+                    .foregroundStyle(DS.textTertiary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, 4)
+            } else {
+                if !el.str(1).isEmpty {
+                    Text(el.str(1))
+                        .dsText(.subhead13)
+                        .foregroundStyle(DS.textTertiary)
+                        .lineLimit(1)
+                }
+                sentence
+                    .dsText(.heading28)
+                    .foregroundStyle(DS.textPrimary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
-            Text(el.str(0))
-                .dsText(.heading28)
-                .foregroundStyle(.white)
-                .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(DS.Space.s4)
-        .background(DS.tint,
-                    in: RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
         .padding(.horizontal, DS.Space.s4)
+        .padding(.vertical, DS.Space.s2)
     }
 }
 

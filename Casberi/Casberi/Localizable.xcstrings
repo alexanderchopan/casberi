@@ -74645,6 +74645,34 @@
         }
       }
     },
+    "need you": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "te necesitan"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "要対応"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "확인 필요"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "待处理"
+          }
+        }
+      }
+    },
     "needs attention": {
       "localizations": {
         "es": {
@@ -74669,6 +74697,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "需要处理"
+          }
+        }
+      }
+    },
+    "needs you": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "te necesita"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "要対応"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "확인 필요"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "待处理"
           }
         }
       }
@@ -74809,6 +74865,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "新模型"
+          }
+        }
+      }
+    },
+    "new things": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "cosas nuevas"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "新着"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "새 항목"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "新内容"
           }
         }
       }

@@ -29,6 +29,16 @@ enum DS {
     /// The one sheet-surface token — cards, tiles, trays. Brief §8.
     static let surfaceSheet   = Color.adaptive(dark: "#111113", light: "#ffffff")
 
+    /// The brief's card tone on the pure-black composer ground (2026-08-16,
+    /// user: "our cards on the day brief now are too gray too" — said of
+    /// `surfaceSheet`, one night after `surfaceRaised` drew the same
+    /// complaint). One more step toward black: enough edge to group a
+    /// section on an OLED, not enough body to read as a gray box. Exists as
+    /// its own token because the brief is the only surface standing on
+    /// `inkGround` — the feed's cards keep `surfaceSheet` over the page
+    /// tone, where this value would vanish.
+    static let inkCard = Color.adaptive(dark: "#0c0c0e", light: "#f2f2f7")
+
     /// The neutral tone for an `IconChip` badge with no real identity or
     /// state to preview (2026-08-10 — the same "unknown gets no invented
     /// color" ruling `TokenHue`/`brandHue` follow, one level up). FIXED

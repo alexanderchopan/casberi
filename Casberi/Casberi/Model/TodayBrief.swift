@@ -454,10 +454,42 @@ enum TodayBrief {
         // no lede and the brief opens on the hero instead.
         let lede = ledeLine(move: move, risk: risk, landed: landed, things: things,
                             now: now, alerted: alerts?.ids ?? [])
+        // THE MONUMENT (2026-08-16, mockup C, user: "ok do c") — the day's one
+        // figure at display scale, with the sentence demoted to its support
+        // line. Chosen by the CLOCK, §386d's own permutation rule reaching the
+        // lede: neither Apple's Weather nor Cash App leads with a sentence in
+        // a box, but Cash App gets to assume money is always the subject and
+        // this corpus cannot — a morning with three late things leads with the
+        // THREE, an evening with a real wallet move leads with the MOVE, and a
+        // day that is neither leads with what arrived. Empty on a day with
+        // nothing to say, and then the sentence stands alone (never a padded
+        // figure — the ladder's own no-padding rule).
+        let monumentHour = Calendar.current.component(.hour, from: now)
+        let monumentLate = things.filter {
+            $0.mark != .done && ($0.dueAt ?? .distantFuture) < now
+        }.count
+        var monument: (figure: String, word: String, tone: String) = ("", "", "")
+        if category == nil {
+            if monumentHour < 12, monumentLate > 0 {
+                monument = ("\(monumentLate)",
+                            monumentLate == 1 ? String(localized: "needs you")
+                                              : String(localized: "need you"),
+                            "attention")
+            } else if let move, abs(move.pct) >= 0.05 {
+                monument = (String(format: "%+.1f%%", move.pct),
+                            String(localized: "today"),
+                            move.pct >= 0 ? "up" : "down")
+            } else if !landed.isEmpty {
+                monument = ("\(landed.count)",
+                            monumentHour < 12 ? String(localized: "overnight")
+                                              : String(localized: "new things"),
+                            "plain")
+            }
+        }
         if !lede.text.isEmpty {
             ids.append("lede")
             mark("lede")
-            lines.append("lede = DayLede(\"\(genSafe(lede.text))\", \"\(genSafe(dateline(now: now)))\", \"\(genSafe(lede.figure))\", \"\(lede.direction)\")")
+            lines.append("lede = DayLede(\"\(genSafe(lede.text))\", \"\(genSafe(dateline(now: now)))\", \"\(genSafe(lede.figure))\", \"\(lede.direction)\", \"\(genSafe(monument.figure))\", \"\(genSafe(monument.word))\", \"\(monument.tone)\")")
         }
         // The home/Lock Screen widget carries this SAME sentence (2026-07-25).
         // Published here rather than at a display route so it refreshes on
