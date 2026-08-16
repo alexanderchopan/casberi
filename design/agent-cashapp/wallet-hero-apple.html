@@ -1,0 +1,114 @@
+<title>The wallet hero, as Apple would</title>
+<style>
+  :root {
+    --page: #0a0b0f; --ink: #f2f4f8; --muted: #99a1b4; --faint: #626b80;
+    --tint: #1673e6; --confirm: #30d158; --attn: #ff9f0a;
+    --money: ui-rounded, -apple-system, system-ui, sans-serif;
+    --text: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { background: var(--page); }
+  body { font-family: var(--text); color: var(--ink);
+         background: radial-gradient(900px 420px at 18% -8%, rgba(22,115,230,.10), transparent 62%), var(--page);
+         padding: 48px 28px 72px; }
+  .wrap { max-width: 900px; margin: 0 auto; }
+  header { max-width: 800px; margin-bottom: 34px; }
+  .eyebrow { font-size: 12px; font-weight: 600; color: #4d8dff; margin-bottom: 10px; }
+  h1 { font-size: clamp(26px,3.4vw,36px); font-weight: 800; letter-spacing: -.02em; line-height: 1.1; margin-bottom: 12px; }
+  header p { font-size: 15px; line-height: 1.55; color: var(--muted); max-width: 74ch; }
+  header p b { color: var(--ink); font-weight: 600; }
+  .row { display: flex; flex-wrap: wrap; gap: 40px; align-items: flex-start; justify-content: center; }
+  .option { width: 360px; }
+  .optName { font-size: 13px; font-weight: 800; margin: 0 4px 4px; }
+  .optName span { color: var(--faint); font-weight: 600; }
+  .optWhy { font-size: 12.5px; line-height: 1.5; color: var(--muted); margin: 12px 4px 0; }
+  .optWhy b { color: var(--ink); font-weight: 600; }
+  .phone { width: 360px; border-radius: 46px; padding: 10px; background: #15171c; box-shadow: 0 30px 70px rgba(0,0,0,.55); margin-top: 10px; }
+  .screen { border-radius: 38px; overflow: hidden; min-height: 760px; background: #000;
+            display: flex; flex-direction: column; }
+  .scroll { flex: 1; padding: 16px 18px 12px; }
+  .faces { display: flex; align-items: center; gap: 8px; margin-bottom: 18px; }
+  .face { width: 30px; height: 30px; border-radius: 50%; }
+  .face.on { outline: 2.5px solid var(--ink); outline-offset: 2px; }
+  .card { border-radius: 18px; padding: 13px 14px; background: #0c0c0e; }
+  .caprow { display: flex; align-items: center; gap: 7px; }
+  .caprow b { font-size: 12.5px; font-weight: 700; color: var(--muted); }
+  .glyph { width: 22px; height: 22px; border-radius: 7px; display: inline-flex; align-items: center;
+           justify-content: center; font-size: 12px; flex: none; }
+  .num { font-family: var(--money); font-weight: 700; font-size: 21px; letter-spacing: -.02em; margin-top: 6px;
+         font-variant-numeric: tabular-nums; }
+  .sub { font-size: 11.5px; color: var(--faint); margin-top: 4px; }
+  .seg { display: flex; gap: 4px; background: rgba(255,255,255,.06); border-radius: 10px; padding: 3px; margin-top: 14px; }
+  .seg span { flex: 1; text-align: center; font-size: 12px; font-weight: 600; color: var(--muted); padding: 6px 0; border-radius: 8px; }
+  .seg .on { background: rgba(255,255,255,.16); color: var(--ink); font-weight: 700; }
+</style>
+
+<div class="wrap">
+<header>
+  <div class="eyebrow">Casberi · the wallet hero, as Apple would design it</div>
+  <h1>Stocks' chart, Health's cards, no blue rectangle</h1>
+  <p>Apple has never once shipped a balance inside a coloured card — Apple Card's balance sits on a plain surface, Stocks' quote sits on black. Their grammar for "here is a number that moves": the <b>figure as the monument</b>, the <b>direction as a sentence in semantic ink</b>, and then the biggest element on the screen is <b>the chart itself</b>, tall and touchable with a gradient falling away beneath the line. Colour comes from the DATA (green because it's up today, red when it isn't) — never from a container.</p>
+</header>
+
+<div class="row">
+<div class="option">
+  <div class="optName">The hero <span>— monument, chart, then the measurement cards</span></div>
+  <div class="phone"><div class="screen">
+    <div class="scroll">
+      <div class="faces">
+        <span class="face on" style="background:radial-gradient(circle at 32% 30%, #e86a6a, #7d6adf 60%, #3a3160)"></span>
+        <span class="face" style="background:radial-gradient(circle at 32% 30%, #5ad1c4, #2f7de0 60%, #1c3b6e)"></span>
+        <span class="face" style="background:radial-gradient(circle at 32% 30%, #f0b86a, #d0685a 60%, #6e2c1c)"></span>
+        <span style="font-size:12px;font-weight:700;color:var(--faint);margin-left:2px">alex.eth</span>
+      </div>
+
+      <div style="font-size:12px;font-weight:600;color:var(--faint)">Across your accounts</div>
+      <div style="font-family:var(--money);font-size:54px;font-weight:600;letter-spacing:-.03em;line-height:1.05;margin-top:2px">$12,482<span style="font-size:30px;color:var(--muted)">.16</span></div>
+      <div style="font-size:14px;font-weight:600;color:var(--confirm);margin-top:6px">▲ $224.51 (1.8%) <span style="color:var(--faint);font-weight:600">today</span></div>
+
+      <!-- the chart is the biggest thing on screen -->
+      <svg width="100%" height="190" viewBox="0 0 324 190" preserveAspectRatio="none" style="margin-top:12px">
+        <defs>
+          <linearGradient id="fade" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#30d158" stop-opacity=".28"/>
+            <stop offset="1" stop-color="#30d158" stop-opacity="0"/>
+          </linearGradient>
+        </defs>
+        <path d="M0,150 C24,142 40,158 62,146 C86,132 100,140 122,122 C146,102 160,116 184,96 C208,80 224,88 248,64 C270,44 292,52 324,34 L324,190 L0,190 Z" fill="url(#fade)"/>
+        <path d="M0,150 C24,142 40,158 62,146 C86,132 100,140 122,122 C146,102 160,116 184,96 C208,80 224,88 248,64 C270,44 292,52 324,34" fill="none" stroke="#30d158" stroke-width="2.6" stroke-linecap="round"/>
+        <circle cx="324" cy="34" r="4.5" fill="#30d158"/>
+        <line x1="184" y1="10" x2="184" y2="182" stroke="rgba(255,255,255,.18)" stroke-width="1.5"/>
+        <circle cx="184" cy="96" r="5" fill="#fff"/>
+      </svg>
+      <div style="display:flex;justify-content:space-between;font-size:10.5px;color:var(--faint);margin-top:2px">
+        <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+      </div>
+
+      <div class="seg"><span>1D</span><span class="on">1W</span><span>1M</span><span>3M</span><span>Y</span></div>
+
+      <div style="display:flex;gap:9px;margin-top:16px">
+        <div class="card" style="flex:1">
+          <div class="caprow"><span class="glyph" style="background:rgba(48,209,88,.14);color:var(--confirm)">◍</span><b>Deposited</b></div>
+          <div class="num">$3,140</div>
+          <div class="sub">Aave · Morpho</div>
+        </div>
+        <div class="card" style="flex:1">
+          <div class="caprow"><span class="glyph" style="background:rgba(255,159,10,.14);color:var(--attn)">!</span><b>Approvals</b></div>
+          <div class="num" style="color:var(--attn)">$4,120</div>
+          <div class="sub">1 unlimited · revoke first</div>
+        </div>
+      </div>
+      <div class="card" style="margin-top:9px">
+        <div class="caprow"><span class="glyph" style="background:rgba(22,115,230,.16);color:#77b0ff">◧</span><b>Holdings</b><span style="margin-left:auto;color:var(--faint);font-size:12px">›</span></div>
+        <div style="display:flex;gap:3px;height:54px;margin-top:9px">
+          <div style="flex:6.2;background:#1e5fc4;border-radius:8px;padding:5px 7px;font-family:var(--money);font-size:10.5px;font-weight:800">ETH</div>
+          <div style="flex:2.4;background:#2f7de0;border-radius:8px;padding:5px 7px;font-family:var(--money);font-size:10.5px;font-weight:800">USDC</div>
+          <div style="flex:1.4;background:#37527a;border-radius:8px;padding:5px 7px;font-family:var(--money);font-size:10.5px;font-weight:800">SOL</div>
+        </div>
+      </div>
+    </div>
+  </div></div>
+  <p class="optWhy"><b>What changed from ours:</b> the blue card is gone — the number sits on black at 54pt with its cents faded, the way Apple Card writes money. Direction is a green sentence ("▲ $224.51 (1.8%) today"), not a pill. The chart grows from a 52pt strip into the screen's dominant element — gradient under the line, scrub cursor, day axis — because for Apple the chart IS the product. The range control becomes Stocks' compact segmented box. Below, the room's readings arrive as Health-style measurement cards: Deposited and Approvals half-width (orange only on the risk figure), Holdings keeping the treemap inside a card with a door. The wallet identity lives where it already lives — the face rail — and colour is exclusively semantic: green because it's up. On a down day this entire screen would be red-accented, which is the honesty Apple's grammar buys.</p>
+</div>
+</div>
+</div>
