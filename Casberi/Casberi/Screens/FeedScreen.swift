@@ -5602,7 +5602,8 @@ struct FeedScreen: View {
         } else if source == "RSS" {
             tryItButton(label: "Follow NASA's feed") {
                 guard RSSStore.shared.add("https://www.nasa.gov/feed/") else { return }
-                let added = await RSSIngest.refresh(context: modelContext)
+                let added = await RSSIngest.refresh(context: modelContext,
+                                                    waitForInFlight: true)
                 bridges.registerConnected(id: "rss", name: "RSS",
                     proof: (added ?? 0) > 0
                         ? String(localized: "\(added ?? 0) posts in")

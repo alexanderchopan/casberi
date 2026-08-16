@@ -349,6 +349,21 @@ step "Feed-fold self-test"
   || fail "the feed-fold self-test failed — run scripts/feed-fold-selftest.sh"
 print -P "%F{green}✓ feed-fold self-test%f"
 
+# "Is this address a feed?" — the discriminator every RSS follow hangs off
+# (2026-08-16), from a user report of following a site that publishes none.
+# Every failure it catches is invisible to a build, a screen sweep AND a landed
+# count, because the address answers 200 with zero failures: a follow that can
+# never produce a post reading as perfectly healthy forever (§83), a web page's
+# own `<title>` adopted as the feed's name, a real-but-empty feed sending an
+# eight-request crawl off its host on every refresh, and a crawl cut short by
+# its own time budget muting a good address for a week. It also guards the two
+# bounds — a per-candidate timeout and a total crawl budget — that keep one
+# slow host from pinning the whole bridge, which is the reported symptom.
+step "RSS discovery self-test"
+"$ROOT/scripts/rss-discovery-selftest.sh" >/dev/null \
+  || fail "the RSS discovery self-test failed — run scripts/rss-discovery-selftest.sh"
+print -P "%F{green}✓ RSS discovery self-test%f"
+
 # Pure-logic self-test for the Cloudflare DNS change detector (prd §296). Same
 # reasoning as the X harness above: the bridge was authored against Cloudflare's
 # published API reference with no token and no authenticated access, and every

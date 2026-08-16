@@ -40,16 +40,35 @@ final class RSSStore {
         }
     }
 
-    /// Adds a pasted URL. Scheme-forgiving — people paste bare domains.
-    /// `title` carries a name already known at add time (an OPML file's own
-    /// `text`/`title` attribute) so a row reads right away instead of
-    /// waiting on the first fetch to learn the feed's name.
+    /// A pasted string as it would be FOLLOWED, or nil when it isn't an
+    /// address at all. Scheme-forgiving — people paste bare domains.
+    ///
+    /// Split out of `add` (2026-08-16) so a caller can tell the two ways a
+    /// follow gets refused apart. They read identically from `add`'s `Bool`,
+    /// and the screen showed nothing for either, so a typo and a feed already
+    /// in the list both landed as a FOLLOW button that did precisely nothing.
+    func normalized(_ raw: String) -> String? {
+        var text = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else { return nil }
+        if !text.contains("://") { text = "https://" + text }
+        // `URL(string:)` is RFC 3986-strict on iOS 17+, so a pasted address
+        // carrying a space or a stray character is nil here rather than a URL
+        // that fails later.
+        guard let url = URL(string: text), url.host()?.isEmpty == false else { return nil }
+        return text
+    }
+
+    func isFollowing(_ raw: String) -> Bool {
+        guard let text = normalized(raw) else { return false }
+        return feeds.contains { $0.url.lowercased() == text.lowercased() }
+    }
+
+    /// Adds a pasted URL. `title` carries a name already known at add time (an
+    /// OPML file's own `text`/`title` attribute) so a row reads right away
+    /// instead of waiting on the first fetch to learn the feed's name.
     @discardableResult
     func add(_ raw: String, title: String = "") -> Bool {
-        var text = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !text.isEmpty else { return false }
-        if !text.contains("://") { text = "https://" + text }
-        guard URL(string: text) != nil,
+        guard let text = normalized(raw),
               !feeds.contains(where: { $0.url.lowercased() == text.lowercased() })
         else { return false }
         feeds.append(Feed(url: text, title: title.trimmingCharacters(in: .whitespacesAndNewlines)))
@@ -109,6 +128,12 @@ enum RSSIngest {
     /// racing the foreground refresh). Overlapping calls bail.
     @MainActor private static var running = false
 
+    /// How long a caller that asked to WAIT will wait for the pass in flight
+    /// before giving up, and how often it looks. Bounded so a wedged pass can
+    /// never wedge its caller too.
+    private static let waitPoll: Duration = .milliseconds(150)
+    private static let waitLimit: TimeInterval = 8
+
     /// One feed's fetch-and-parse outcome — everything the sequential
     /// bookkeeping loop below needs, computed off the main actor.
     private struct Fetched {
@@ -121,6 +146,11 @@ enum RSSIngest {
         let parsed: FeedParser.Parsed?
         /// Set when autodiscovery resolved a pasted SITE to its real feed.
         let resolvedURL: String?
+        /// The address answered, and there is no feed at it — not a failure
+        /// (nothing went wrong on the wire) and not a success (nothing can
+        /// ever land). Carried out separately because every OTHER signal this
+        /// struct has reads as healthy for exactly this case.
+        let noFeed: Bool
     }
 
     /// The network fetch and XML parse are both stateless — no reason either
@@ -143,22 +173,37 @@ enum RSSIngest {
             data = body
         case .notModified:
             // Reached, unchanged. Not a failure, and not a parse.
-            return Fetched(feed: feed, parsed: nil, resolvedURL: nil)
+            return Fetched(feed: feed, parsed: nil, resolvedURL: nil, noFeed: false)
         case .failed:
             return nil
         }
         var parsed = FeedParser.parse(data)
         var resolvedURL: String?
+        var noFeed = false
         // People paste a SITE, not a feed URL (the field even invites it) —
-        // its homepage is HTML, so XML parsing yields no items and nothing
-        // ever lands. Autodiscover the feed the page points to (its
-        // <link rel="alternate">, then common feed paths) and remember it.
-        if parsed.items.isEmpty,
-           let (feedURL, discovered) = await FeedDiscovery.find(from: data, site: url) {
-            parsed = discovered
-            resolvedURL = feedURL.absoluteString
+        // its homepage is HTML, so there is nothing to land. Autodiscover the
+        // feed the page points to (its <link rel="alternate">, then common
+        // feed paths) and remember it.
+        //
+        // Gated on the body not being a feed DOCUMENT rather than on it
+        // carrying no items (2026-08-16) — see `Parsed.isFeed`. A real feed
+        // that happens to be empty no longer sends a crawl off its host on
+        // every pass, and a page that is not a feed is now SAID so instead of
+        // sitting in the list looking healthy forever.
+        if !parsed.isFeed {
+            if let (feedURL, discovered) = await FeedDiscovery.find(from: data, site: url) {
+                parsed = discovered
+                resolvedURL = feedURL.absoluteString
+            } else {
+                noFeed = FeedFreshness.noFeedFound(at: feed.url)
+            }
+        } else {
+            // It is a feed today. Clear any verdict from back when it wasn't,
+            // so a site that has since added one is picked up by this ordinary
+            // fetch rather than by waiting out `noFeedRecheckAfter`.
+            FeedFreshness.noteFeedFound(feed.url)
         }
-        return Fetched(feed: feed, parsed: parsed, resolvedURL: resolvedURL)
+        return Fetched(feed: feed, parsed: parsed, resolvedURL: resolvedURL, noFeed: noFeed)
     }
 
     /// The mark a landed row leads with: the feed's own logo when it
@@ -173,10 +218,29 @@ enum RSSIngest {
         return "https://\(host)/favicon.ico"
     }
 
+    /// `waitForInFlight` is for a pass the PERSON asked for — following a new
+    /// feed. Dropping an overlapping call is right for the periodic sweep (the
+    /// next one is minutes away and nothing is waiting on it) and wrong for a
+    /// tap: a feed followed while any other pass happened to be mid-flight was
+    /// simply never fetched, so its posts didn't appear and the screen said
+    /// "Up to date" about a feed it had not read. That is one half of "I can
+    /// add two feeds and then it stops working" — the other half is how long a
+    /// pass could take, which `FeedDiscovery`'s budget now bounds.
     @MainActor
-    static func refresh(context: ModelContext) async -> Int? {
+    static func refresh(context: ModelContext, waitForInFlight: Bool = false) async -> Int? {
         let store = RSSStore.shared
-        guard !store.feeds.isEmpty, !running else { return running ? 0 : nil }
+        guard !store.feeds.isEmpty else { return nil }
+        if running {
+            guard waitForInFlight else { return 0 }
+            let until = Date().addingTimeInterval(waitLimit)
+            while running, Date() < until {
+                try? await Task.sleep(for: waitPoll)
+            }
+            // Still going after the limit — the in-flight pass covers most of
+            // what ours would do anyway, so report it rather than run a second
+            // one alongside and re-open the double-insert race this guards.
+            if running { return 0 }
+        }
         running = true
         defer { running = false }
 
@@ -205,6 +269,9 @@ enum RSSIngest {
         for case let f? in fetched {
             reachedAny = true
             let feed = f.feed
+            // Answered, and publishes nothing to follow. The row says so
+            // (`FeedFreshness.trouble`); there is no body to land or heal from.
+            if f.noFeed { continue }
             // A 304 — the publisher answered and nothing changed. Counted as
             // reached above (a sync that got five 304s is up to date, not
             // offline), then skipped: there is no body to land or heal from.
@@ -341,42 +408,99 @@ enum FeedDiscovery {
     /// follow (a page that advertises no feed and answers no common path)
     /// would otherwise re-run the whole probe storm on every screen visit and
     /// app foreground, since a no-items parse re-triggers discovery each time.
+    /// The DURABLE half of the same fact lives in `FeedFreshness.noFeedAt`
+    /// (2026-08-16) — this set alone was per-launch, so every cold start paid
+    /// the whole crawl again for a follow that had already been proved dead.
     @MainActor private static var deadEnds: Set<String> = []
+
+    /// How long one speculative probe may go silent. Deliberately far tighter
+    /// than `FeedFreshness`'s own fetch timeout: that one is the feed the
+    /// person actually asked for and is worth waiting on, these are guesses.
+    private static let probeTimeout: TimeInterval = 8
+
+    /// The most wall-clock ONE site's crawl may spend, across every candidate.
+    ///
+    /// The per-request timeout alone does not bound this: there are up to
+    /// eight candidates and they are tried IN ORDER, so a host that stalls
+    /// every connection costs eight timeouts back to back. `RSSIngest.running`
+    /// and the RSS screen's own `syncing` flag are both held for that whole
+    /// stretch, which is what turned a slow site into a bridge that looked
+    /// frozen and silently dropped every feed followed in the meantime.
+    private static let crawlBudget: TimeInterval = 20
+
+    /// Conventional feed paths off a site root (WordPress, Ghost, Hugo, …).
+    private static let commonPaths = ["/feed", "/rss", "/feed.xml", "/rss.xml",
+                                      "/atom.xml", "/index.xml", "/feed/"]
 
     /// Returns the resolved feed URL and its parsed contents, or nil when the
     /// page advertises no feed and none of the common paths answer with one.
     @MainActor
     static func find(from data: Data, site: URL) async -> (URL, FeedParser.Parsed)? {
-        if deadEnds.contains(site.absoluteString) { return nil }
+        let key = site.absoluteString
+        if deadEnds.contains(key) { return nil }
+        if FeedFreshness.noFeedFound(at: key) {
+            // Proved dead on an earlier launch. Mirror it into this session's
+            // set so the store isn't asked again for every feed, every pass.
+            deadEnds.insert(key)
+            return nil
+        }
+        let deadline = Date().addingTimeInterval(crawlBudget)
+        /// True when the budget cut the crawl short — we stopped looking
+        /// rather than finished looking, so nothing may be concluded.
+        var ranOut = false
+
         // 1) The page's own declared feed links, XML types first (FeedParser
         // is RSS/Atom only — a JSON Feed link would fetch and fail to parse,
         // so trying just the first declared link would strand a site that
         // lists a JSON or comments feed ahead of its real RSS one).
         if let html = String(data: data, encoding: .utf8) {
             for href in declaredFeedHrefs(in: html) {
+                if Date() >= deadline { ranOut = true; break }
                 guard let url = URL(string: href, relativeTo: site)?.absoluteURL,
-                      let parsed = await fetch(url), !parsed.items.isEmpty else { continue }
+                      let parsed = await fetch(url), parsed.isFeed else { continue }
+                FeedFreshness.noteFeedFound(key)
                 return (url, parsed)
             }
         }
-        // 2) Conventional paths off the site root (WordPress, Ghost, Hugo, …).
-        if let scheme = site.scheme, let host = site.host() {
+        // 2) Conventional paths off the site root.
+        if !ranOut, let scheme = site.scheme, let host = site.host() {
             let root = "\(scheme)://\(host)"
-            for path in ["/feed", "/rss", "/feed.xml", "/rss.xml",
-                         "/atom.xml", "/index.xml", "/feed/"] {
+            for path in commonPaths {
+                if Date() >= deadline { ranOut = true; break }
                 guard let url = URL(string: root + path) else { continue }
-                if let parsed = await fetch(url), !parsed.items.isEmpty {
+                if let parsed = await fetch(url), parsed.isFeed {
+                    FeedFreshness.noteFeedFound(key)
                     return (url, parsed)
                 }
             }
         }
-        deadEnds.insert(site.absoluteString)
+        // Only a crawl that RAN OUT of candidates has proved anything. One
+        // that ran out of time has not, and must not put a week of silence on
+        // an address that may well publish a feed — nor even this session's
+        // silence, so it isn't filed as a dead end either.
+        if !ranOut {
+            deadEnds.insert(key)
+            FeedFreshness.noteNoFeed(key)
+        }
         return nil
     }
 
+    /// One speculative probe. A candidate is adopted only when it answers with
+    /// a feed DOCUMENT (`Parsed.isFeed`) — the check used to be "did it parse
+    /// any items", which a site that answers 200 for every path (a soft 404,
+    /// which every SPA-routed site is) satisfies by accident on neither side:
+    /// it never yields items, so all seven candidates were tried and all seven
+    /// downloaded in full.
     private static func fetch(_ url: URL) async -> FeedParser.Parsed? {
+        var request = URLRequest(url: url)
+        request.timeoutInterval = probeTimeout
+        request.setValue(FeedFreshness.userAgent, forHTTPHeaderField: "User-Agent")
         NetworkLedger.shared.record(url, as: "RSS")
-        guard let (data, _) = try? await URLSession.shared.data(from: url) else { return nil }
+        guard let (data, response) = try? await URLSession.shared.data(for: request) else { return nil }
+        // A soft 404 answers 200, so the status is not enough on its own — but
+        // a hard one is free to reject before parsing a page.
+        if let http = response as? HTTPURLResponse,
+           !(200..<300).contains(http.statusCode) { return nil }
         return FeedParser.parse(data)
     }
 
@@ -470,6 +594,11 @@ enum FeedParser {
     }
 
     struct Parsed {
+        /// The document's ROOT element, qualified as it arrived (namespace
+        /// processing is off) — `rss`, `feed`, `rdf:RDF` for the three feed
+        /// formats, `html` for a web page, empty when nothing parsed at all.
+        /// Read only through `isFeed`.
+        var root = ""
         var title = ""
         /// The feed's OWN mark — the publisher's logo (Reuters, a blog), from
         /// the RSS `<channel><image><url>`, an `<itunes:image>`, or an Atom
@@ -483,6 +612,24 @@ enum FeedParser {
         /// (see `FeedFollowIngest.refresh`). Empty when the feed declares none.
         var categories: [String] = []
         var items: [Item] = []
+
+        /// Whether this body is a feed DOCUMENT — asked of the root element,
+        /// never of the item count (2026-08-16).
+        ///
+        /// "Has no items" was standing in for "is not a feed", and the two are
+        /// different in both directions. A brand-new feed with nothing posted
+        /// yet is a real feed, and treating it as a site sent an eight-request
+        /// autodiscovery crawl off its host on every single refresh, forever.
+        /// The other direction is worse and is why this can't lean on the
+        /// title either: `XMLParser` walks a good way into an HTML page before
+        /// it gives up, so a web page arrives here carrying its `<title>` —
+        /// the page's own headline, which would then be adopted as the feed's
+        /// name on a follow that is not a feed at all.
+        var isFeed: Bool {
+            // `rdf` is RSS 1.0, whose root is `<rdf:RDF>`.
+            let local = (root.split(separator: ":").last.map(String.init) ?? root).lowercased()
+            return local == "rss" || local == "feed" || local == "rdf"
+        }
     }
 
     /// The item's own author, when the feed names someone the feed itself
@@ -526,6 +673,7 @@ enum FeedParser {
         func parser(_ parser: XMLParser, didStartElement name: String,
                     namespaceURI: String?, qualifiedName: String?,
                     attributes: [String: String] = [:]) {
+            if elementPath.isEmpty { result.root = name }
             elementPath.append(name)
             text = ""
             switch name {

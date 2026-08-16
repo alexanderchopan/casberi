@@ -26,6 +26,12 @@ struct RSSScreen: View {
     @Bindable private var rss = RSSStore.shared
     @State private var newFeed = ""
     @State private var syncing = false
+    /// An address followed while a pass was already in flight, held so the
+    /// pass that follows can read it (2026-08-16). One slot, not a queue: a
+    /// second follow arriving in the same window supersedes the first, and the
+    /// re-run reads EVERY feed anyway — the address is only carried so the
+    /// status row can name the right one.
+    @State private var pendingAdd: String?
     @State private var lastResult: String?
     @State private var resultIsError = false
     @State private var importingOPML = false
@@ -242,13 +248,30 @@ struct RSSScreen: View {
 
     // MARK: - Actions
 
+    /// A refused follow SAYS why (2026-08-16). It used to `return` on `add`'s
+    /// `false` and leave everything exactly as it was — field still full, no
+    /// message, no haptic — so the two ordinary ways to be refused (a typo, and
+    /// a feed already in the list, which is easy to hit since a followed site
+    /// gets rewritten to its resolved feed URL and no longer matches what you
+    /// pasted) both read as a dead button.
     private func addFeed(){
-        guard rss.add(newFeed) else { return }
+        let typed = newFeed
+        guard rss.normalized(typed) != nil else {
+            resultIsError = true
+            lastResult = String(localized: "That doesn't look like a web address.")
+            return
+        }
+        guard rss.add(typed) else {
+            resultIsError = true
+            lastResult = String(localized: "You already follow that.")
+            return
+        }
+        let followed = rss.normalized(typed)
         newFeed = ""
         fieldFocused = false
         resultIsError = false
         DSHaptic.success()
-        Task { await sync() }
+        Task { await sync(justAdded: followed) }
     }
 
     /// Reads a picked OPML file into a preview — never lands anything on its
@@ -320,18 +343,44 @@ struct RSSScreen: View {
     }
 
     /// Fetch + land; the status row carries the proof.
-    private func sync() async {
-        guard !rss.feeds.isEmpty, !syncing else { return }
+    ///
+    /// `justAdded` is the address the person just followed, when this sync was
+    /// their doing. Two things hang off knowing that: the pass waits its turn
+    /// instead of being dropped by one already in flight, and a page that
+    /// turns out to publish no feed is named on the spot rather than reported
+    /// as "Up to date" — which is what a site whose every path answers 200 got
+    /// before, since by every other measure it is a perfectly healthy follow.
+    private func sync(justAdded: String? = nil) async {
+        guard !rss.feeds.isEmpty else { return }
+        guard !syncing else {
+            // Don't drop the person's own request — run it once this pass ends.
+            if justAdded != nil { pendingAdd = justAdded }
+            return
+        }
         syncing = true
-        let added = await RSSIngest.refresh(context: modelContext)
+        let added = await RSSIngest.refresh(context: modelContext,
+                                            waitForInFlight: justAdded != nil)
         syncing = false
+        if let queued = pendingAdd {
+            pendingAdd = nil
+            await sync(justAdded: queued)
+            return
+        }
         guard let added else {
             lastResult = String(localized: "Couldn't reach your feeds — check your connection.")
             resultIsError = true
             return
         }
-        resultIsError = false
-        lastResult = added > 0 ? String(localized: "\(added) new") : String(localized: "Up to date")
+        // Reported, but NOT returned on: the bridge is still connected and its
+        // other feeds still landed — one address publishing nothing is a fact
+        // about that address, not a failed sync.
+        if let justAdded, FeedFreshness.noFeedFound(at: justAdded) {
+            resultIsError = true
+            lastResult = String(localized: "No feed at that address — that page doesn't publish one.")
+        } else {
+            resultIsError = false
+            lastResult = added > 0 ? String(localized: "\(added) new") : String(localized: "Up to date")
+        }
         let proof = added > 0
             ? String(localized: "\(added) posts in")
             : String(localized: "Synced just now")

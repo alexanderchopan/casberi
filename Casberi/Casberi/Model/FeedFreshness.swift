@@ -96,6 +96,13 @@ enum FeedFreshness {
         var failures: Int
         /// The status of the most recent failure (0 = transport).
         var lastStatus: Int
+        /// When a full autodiscovery crawl of this address last came back with
+        /// no feed at all (2026-08-16). The one fact none of the fields above
+        /// can carry: a site that answers 200 with an ordinary web page is
+        /// PERFECTLY HEALTHY by every HTTP measure here — `successAt` is now,
+        /// `failures` is 0 — and publishes nothing to follow. See
+        /// `noFeedFound(at:)` for why it is a date rather than a flag.
+        var noFeedAt: Date?
 
         init() {
             failures = 0
@@ -110,6 +117,7 @@ enum FeedFreshness {
             successAt = try c.decodeIfPresent(Date.self, forKey: .successAt)
             failures = try c.decodeIfPresent(Int.self, forKey: .failures) ?? 0
             lastStatus = try c.decodeIfPresent(Int.self, forKey: .lastStatus) ?? 0
+            noFeedAt = try c.decodeIfPresent(Date.self, forKey: .noFeedAt)
         }
     }
 
@@ -151,6 +159,36 @@ enum FeedFreshness {
     /// Days without an answer before a feed that used to work says so. Feeds
     /// are polled many times a day, so three days is dozens of misses.
     private static let quietDays = 3
+
+    /// How long a "this address publishes no feed" verdict stands before the
+    /// crawl is worth paying for again (2026-08-16).
+    ///
+    /// A DATE, not a flag, and re-checked rather than permanent, because a
+    /// site really can add a feed later — but the crawl behind the verdict is
+    /// up to eight requests (see `FeedDiscovery`), and re-running it on every
+    /// foreground for a follow that will never work is the cost this exists to
+    /// stop. Cleared outright the moment the address answers with a real feed
+    /// document, so a site that adds one is picked up by the ORDINARY fetch on
+    /// the very next pass, never by waiting this out.
+    static let noFeedRecheckAfter: TimeInterval = 7 * 86400
+
+    /// How long a feed fetch may go silent before it is abandoned (2026-08-16).
+    ///
+    /// `URLRequest.timeoutInterval` is an IDLE timeout — time with no data
+    /// moving — not a total, so this does not cap a slow large feed on a slow
+    /// connection; thirty seconds of complete silence is a dead connection.
+    /// It exists because the default is SIXTY, and both feed ingests hold a
+    /// single-flight flag for the whole pass: one stalled host pinned the
+    /// entire RSS bridge, and its screen's status row, for a full minute per
+    /// request while every feed followed in the meantime was dropped.
+    private static let fetchTimeout: TimeInterval = 30
+
+    /// The agent every feed path sends. Shared with `FeedDiscovery` so a
+    /// speculative crawl introduces itself exactly the way the fetch that
+    /// follows it will — Reddit answers the default `URLSession` agent with a
+    /// 429, and a crawl that gets throttled reports "no feed" for a site that
+    /// has one.
+    static let userAgent = "Mozilla/5.0 (compatible; Casberi/1.0; +https://casberi.app)"
 
     // MARK: - The store
 
@@ -226,8 +264,8 @@ enum FeedFreshness {
     /// must (prd §289).
     static func fetch(_ url: URL, as service: String) async -> FeedFetchOutcome {
         var request = URLRequest(url: url)
-        request.setValue("Mozilla/5.0 (compatible; Casberi/1.0; +https://casberi.app)",
-                         forHTTPHeaderField: "User-Agent")
+        request.timeoutInterval = fetchTimeout
+        request.setValue(userAgent, forHTTPHeaderField: "User-Agent")
         let record = all()[key(url.absoluteString)]
         // Validators only while the last full body is recent — see
         // `revalidateAfter`. A record with no `bodyAt` at all predates this
@@ -298,6 +336,40 @@ enum FeedFreshness {
         write(records)
     }
 
+    // MARK: - The autodiscovery verdict
+
+    /// Whether a full crawl of this address recently found no feed, and the
+    /// verdict is still worth trusting (see `noFeedRecheckAfter`).
+    static func noFeedFound(at url: String) -> Bool {
+        guard let at = all()[key(url)]?.noFeedAt else { return false }
+        return at.timeIntervalSinceNow > -noFeedRecheckAfter
+    }
+
+    /// Records that a crawl of this address found nothing to follow. Only ever
+    /// called after the crawl ran to COMPLETION — a crawl cut short by its own
+    /// time budget has not proved anything, and recording a verdict there
+    /// would turn one bad minute of network into a week of silence.
+    static func noteNoFeed(_ url: String) {
+        lock.lock(); defer { lock.unlock() }
+        var records = loaded()
+        var record = records[key(url)] ?? Record()
+        record.noFeedAt = .now
+        records[key(url)] = record
+        write(records)
+    }
+
+    /// Clears the verdict — this address answered with a real feed. Cheap and
+    /// unconditional on the write path, since a record with no verdict is the
+    /// overwhelmingly common case and returns before touching the store.
+    static func noteFeedFound(_ url: String) {
+        lock.lock(); defer { lock.unlock() }
+        var records = loaded()
+        guard var record = records[key(url)], record.noFeedAt != nil else { return }
+        record.noFeedAt = nil
+        records[key(url)] = record
+        write(records)
+    }
+
     // MARK: - Health
 
     /// What a feed's row should say about the feed itself, or nil when there
@@ -315,7 +387,18 @@ enum FeedFreshness {
     /// on YouTube's throttle-404) — only that it has not answered, and for how
     /// long.
     static func trouble(for url: String) -> String? {
-        guard let record = all()[key(url)], record.failures >= troubleAfter else { return nil }
+        guard let record = all()[key(url)] else { return nil }
+        // Checked BEFORE the failure gate, and it is the whole reason this
+        // verdict is stored (2026-08-16): a site that answers 200 with an
+        // ordinary web page passes every check below — `failures` is 0,
+        // `successAt` is now — so a follow that can never land anything read
+        // as perfectly healthy, forever, in the one place a person would look
+        // to find out why nothing was arriving. Says what was OBSERVED (we
+        // looked and found none), never that the site is broken.
+        if let at = record.noFeedAt, at.timeIntervalSinceNow > -noFeedRecheckAfter {
+            return String(localized: "No feed at this address")
+        }
+        guard record.failures >= troubleAfter else { return nil }
         guard let successAt = record.successAt else {
             // Never once answered. This is the strong case: the address is
             // probably wrong, and saying so is more useful than a day count
@@ -333,11 +416,14 @@ enum FeedFreshness {
     /// Counts and dates only; a validator is an opaque publisher token and
     /// there is no reason to print one.
     static func census() -> [(url: String, successAt: Date?, failures: Int,
-                              lastStatus: Int, conditional: Bool)] {
+                              lastStatus: Int, conditional: Bool, noFeed: Bool)] {
         all().map {
             (url: $0.key, successAt: $0.value.successAt, failures: $0.value.failures,
              lastStatus: $0.value.lastStatus,
-             conditional: $0.value.etag != nil || $0.value.lastModified != nil)
+             conditional: $0.value.etag != nil || $0.value.lastModified != nil,
+             // The row a bare status code cannot explain: 200, zero failures,
+             // and nothing to follow.
+             noFeed: $0.value.noFeedAt.map { $0.timeIntervalSinceNow > -noFeedRecheckAfter } ?? false)
         }
         .sorted { ($0.successAt ?? .distantPast) > ($1.successAt ?? .distantPast) }
     }

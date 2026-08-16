@@ -580,7 +580,11 @@ struct StartFollowScreen: View {
                 landed = await FarcasterIngest.refresh(context: modelContext)
             case .feed:
                 RSSStore.shared.add(handle)
-                landed = await RSSIngest.refresh(context: modelContext)
+                // A follow the person just made, so it waits its turn rather
+                // than being dropped by a foreground sweep that happens to be
+                // mid-pass — the onboarding fork's whole job is to show
+                // something arriving.
+                landed = await RSSIngest.refresh(context: modelContext, waitForInFlight: true)
             }
             working = false
             NSLog("[Casberi] startFollow: %@ %@ → %@", network.rawValue, handle,

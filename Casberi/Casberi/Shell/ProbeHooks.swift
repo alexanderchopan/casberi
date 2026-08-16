@@ -4481,11 +4481,21 @@ enum ProbeHooks {
             NSLog("seedMailBody: landed")
         },
         // `-rssFeed <url>` follows a feed and syncs — headless bridge test.
+        //
+        // Reports the address's own VERDICT beside the count (2026-08-16):
+        // "0 new things" has always had two very different causes, and a
+        // pasted page that publishes no feed at all is one of them — the case
+        // this probe would most likely be run to check.
         Hook(key: "rssFeed") { url, context in
+            let followed = RSSStore.shared.normalized(url)
             RSSStore.shared.add(url)
             Task { @MainActor in
-                let n = await RSSIngest.refresh(context: context)
-                NSLog("RSS probe: %@ new things", n.map(String.init) ?? "FAILED")
+                // `waitForInFlight`, or a launch whose foreground sweep is
+                // still going reports 0 for a feed it never read.
+                let n = await RSSIngest.refresh(context: context, waitForInFlight: true)
+                let verdict = followed.map { FeedFreshness.noFeedFound(at: $0) ? "NO FEED AT THAT ADDRESS" : "is a feed" }
+                NSLog("RSS probe: %@ new things | %@", n.map(String.init) ?? "FAILED",
+                      verdict ?? "not a web address")
             }
         },
         // `-feedFollow "<Substack|Reddit|YouTube|Podcasts>:<name[,name]>"` —
@@ -4549,16 +4559,21 @@ enum ProbeHooks {
         // token and there is no reason to print one.
         Hook(key: "feedHealthProbe") { _, _ in
             let census = FeedFreshness.census()
-            NSLog("feedHealthProbe: %d feeds tracked | %d conditional | %d failing",
+            // `noFeed` is the column a status code cannot explain (2026-08-16):
+            // a soft-404 site answers 200 with zero failures forever, so it is
+            // indistinguishable here from a healthy feed that is merely quiet.
+            NSLog("feedHealthProbe: %d feeds tracked | %d conditional | %d failing | %d with no feed",
                   census.count, census.filter(\.conditional).count,
-                  census.filter { $0.failures > 0 }.count)
+                  census.filter { $0.failures > 0 }.count,
+                  census.filter(\.noFeed).count)
             for row in census.prefix(60) {
                 let ago = row.successAt.map { Int(-$0.timeIntervalSinceNow / 3600) }
-                NSLog("feedHealth| %@ | lastOK=%@ | fails=%d | status=%d | cond=%@ | says=%@",
+                NSLog("feedHealth| %@ | lastOK=%@ | fails=%d | status=%d | cond=%@ | noFeed=%@ | says=%@",
                       row.url,
                       ago.map { "\($0)h ago" } ?? "never",
                       row.failures, row.lastStatus,
                       row.conditional ? "YES" : "NO",
+                      row.noFeed ? "YES" : "NO",
                       FeedFreshness.trouble(for: row.url) ?? "-")
             }
         },
