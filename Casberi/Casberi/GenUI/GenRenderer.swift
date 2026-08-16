@@ -2206,7 +2206,13 @@ struct GenSection: View {
         case "attention": return DS.attention
         case "confirm":   return DS.confirm
         case "tint":      return DS.tint
-        case "life":      return Color.fixed("#bf5af2")
+        // Green, not the old purple "#bf5af2" (user ruling 2026-08-15, on the
+        // deck mockups: "that pink looks like its from a different place").
+        // Deliberately a hex of its own rather than `DS.confirm`: this is an
+        // IDENTITY hue (which section), confirm is a SEMANTIC one (something
+        // went right), and aliasing them would weld the two so a future
+        // confirm retune silently recolors the day's whole section.
+        case "life":      return Color.fixed("#30d158")
         case "work":      return Color.fixed("#5e9eff")
         case "meaning":   return Color.fixed("#ff9f0a")
         default:          return DS.textTertiary

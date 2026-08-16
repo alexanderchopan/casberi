@@ -3069,38 +3069,64 @@ struct Composer: View {
                     VStack(alignment: .leading, spacing: 3) {
                         Text(DayBrief.title())
                             .dsText(.subhead13)
-                            .foregroundStyle(DS.textSecondary)
-                        // The move wears its own direction (2026-08-15, user:
-                        // "take the green delta too from apple"). `detailText`
-                        // is the model's own painter — already shared by the
-                        // whisper capsule and the detail pane — so §83's
-                        // flat-move rule lives in one place and this is a
-                        // third caller, not a third copy. Falls back to the
-                        // flat string when the lede came from `WidgetLede`,
-                        // which is pre-joined and has no separate figure.
+                            .foregroundStyle(.white.opacity(0.85))
+                        // THE CARD IS BRIGHT NOW (2026-08-15, user ruling on
+                        // the deck mockups: "the blue that is used in the
+                        // composer is a bright blue like in apple messages…
+                        // it's not a washed thing"). Full `DS.tint` ground,
+                        // white words — which SUPERSEDES the tintDim wash
+                        // b32ce19 kept, and forces the delta out of the
+                        // sentence: b32ce19's own warning ("a green delta on
+                        // a saturated blue card is illegible") now applies to
+                        // this card, so the move moves to a solid WHITE pill
+                        // below, where its direction color is legible again.
+                        // `Whisper.walletPct` travelling separately from
+                        // `lead` is what makes the split possible — the exact
+                        // reason that field exists. A `WidgetLede` line is
+                        // pre-joined with no separate figure, so it renders
+                        // whole with no pill, same fallback as before. §83's
+                        // flat-move rule still lives in the model: a flat day
+                        // composes `walletPct` nil, so no pill can claim a
+                        // direction that isn't there.
                         Group {
                             if let dayWhisper, dayLede == dayWhisper.detail {
-                                dayWhisper.detailText(scheme: scheme)
+                                Text(dayWhisper.lead)
                                     .dsText(.heading22)
+                                    .foregroundStyle(.white)
                             } else {
                                 Text(dayLede)
                                     .dsText(.heading22)
-                                    .foregroundStyle(DS.textPrimary)
+                                    .foregroundStyle(.white)
                             }
                         }
                         .fixedSize(horizontal: false, vertical: true)
                         .multilineTextAlignment(.leading)
+                        if let dayWhisper, dayLede == dayWhisper.detail,
+                           let pct = dayWhisper.walletPct {
+                            // Light-scheme accent regardless of theme: the
+                            // pill is white in both, so the dark theme's
+                            // brighter accent would be the washed-out one.
+                            (Text(String(localized: "Wallet "))
+                             + Text(String(format: "%+.1f%%", pct)))
+                                .dsText(.subhead13).fontWeight(.semibold)
+                                .foregroundStyle(TokenChartStyle.accent(change: pct / 100,
+                                                                        scheme: .light))
+                                .padding(.horizontal, DS.Space.s3)
+                                .padding(.vertical, 4)
+                                .background(.white, in: Capsule())
+                                .padding(.top, DS.Space.s2)
+                        }
                     }
                     Spacer(minLength: DS.Space.s2)
                     Image(systemName: "chevron.right")
                         .dsGlyph(12)
-                        .foregroundStyle(DS.textTertiary)
+                        .foregroundStyle(.white.opacity(0.7))
                         .padding(.top, 4)
                         .accessibilityHidden(true)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(DS.Space.s4)
-                .background(DS.tintDim,
+                .background(DS.tint,
                             in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
                 .contentShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
                 .dsHover()
