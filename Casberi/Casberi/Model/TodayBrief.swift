@@ -484,6 +484,22 @@ enum TodayBrief {
                             monumentHour < 12 ? String(localized: "overnight")
                                               : String(localized: "new things"),
                             "plain")
+            } else if let people = dayPeopleCount(things, now: now), people > 0 {
+                // A QUIET WINDOW IS NOT AN EMPTY DAY (2026-08-16, from a
+                // device shot: a Sunday-morning open showed no monument at
+                // all, on a corpus whose own fold card was saying "950 more ·
+                // 176 people"). The three rungs above all measure what
+                // arrived SINCE YOU LOOKED, which on a second open of the
+                // morning is legitimately nothing — and the screen then led
+                // with a blank where its largest element should be.
+                //
+                // This rung measures the DAY rather than the window, so it
+                // can still speak when the window can't. It is not padding:
+                // the figure is a real count of distinct people in the day's
+                // things, the same set the fold card draws faces from. Nil
+                // when there are none, and then the sentence stands alone —
+                // the ladder's no-padding rule survives at the bottom.
+                monument = ("\(people)", String(localized: "people"), "plain")
             }
         }
         if !lede.text.isEmpty {
@@ -2699,6 +2715,24 @@ enum TodayBrief {
     /// The three cards this replaces each carried their own residual line and
     /// losing them would be exactly the silent truncation §307 ruled against.
     @MainActor
+    /// How many distinct PEOPLE the day's things name — the monument's
+    /// bottom rung (2026-08-16), counted through `SocialThread.hasContext`,
+    /// the app's own answer to "does this source name a human", which is the
+    /// same gate `dayFold` and `faces` use. One definition, so the monument
+    /// and the faces it sits above can never disagree about who counts.
+    private static func dayPeopleCount(_ things: [Thing], now: Date) -> Int? {
+        let mine = ownHandles()
+        var who = Set<String>()
+        for t in things {
+            guard SocialThread.hasContext(t.source),
+                  let raw = t.authorHandle ?? t.postAuthor else { continue }
+            let h = raw.trimmingCharacters(in: .whitespaces).lowercased()
+            guard !h.isEmpty, !mine.contains(h) else { continue }
+            who.insert(h)
+        }
+        return who.isEmpty ? nil : who.count
+    }
+
     private static func dayFold(things: [Thing], landed: [Thing]) -> String? {
         // Pictures — newest first, one per thing, deduped by URL (the demo
         // placeholder lesson), URL images only (`contactSheet`'s own ceiling:
@@ -2822,8 +2856,26 @@ enum TodayBrief {
     private static func alertsCard(_ things: [Thing], now: Date,
                                    category: String?) -> (line: String, ids: Set<UUID>, count: Int)? {
         struct Ranked { let thing: Thing; let kind: NotifyKind }
+        // AN ALARM NEEDS A CLOCK OR IT NEEDS TO BE NEW (2026-08-16, reported
+        // from a device: an App Store Connect rejection from FRIDAY was still
+        // leading "Needs you" on Sunday — and would have led it next week
+        // too, since nothing here ever aged it out).
+        //
+        // `NotifySweep.classify` answers "what KIND of thing is this", not
+        // "is this still news" — the sweep applies `newsWindow` itself before
+        // it ever calls classify, and this card, which borrowed the
+        // classifier without the window, inherited none of it.
+        //
+        // The rule is the doctrine already stated for the runway: a row stays
+        // because it has a FUTURE DEADLINE (a dispute whose evidence is due
+        // Tuesday is not stale on Wednesday-minus-one), otherwise it stays
+        // only while it is news. Past that it is history wearing an alarm's
+        // clothes, and the honest place to find it is its own room.
         let alarms: [Ranked] = things.compactMap { t in
             guard let k = NotifySweep.classify(t, now: now), k.cls == .alarm else { return nil }
+            let hasFutureClock = (t.dueAt ?? .distantPast) > now
+            let isNews = t.capturedAt > now.addingTimeInterval(-NotifySweep.newsWindow)
+            guard hasFutureClock || isNews else { return nil }
             return Ranked(thing: t, kind: k)
         }
         // Severity first, then newest — the same total order `NotifySweep`

@@ -3071,8 +3071,27 @@ struct Composer: View {
     /// With the panel gone (§386p) this is simply "at rest with a day to
     /// state" — the `composition.isEmpty` term it used to carry was the
     /// board's own stand-down condition.
+    /// NOT ON THE FOCUS DOOR (2026-08-16, reported: "as soon as i enter the
+    /// search bar, it automatically shows 'not much mostly contributions' as
+    /// though i asked it what's going on. also that response has an arrow to
+    /// touch, and when i do it does nothing").
+    ///
+    /// Both halves are this card appearing in a state it was never designed
+    /// for. It is an INVITATION on an empty composer — "here is your day,
+    /// tap to read it" — and the focus door added a second way to reach that
+    /// surface: touching the field while the brief is already answered. In
+    /// that state the card reads as an unrequested reply, because everything
+    /// around it is a conversation; and its tap re-asks the question already
+    /// on screen, which after `commit()` leaves the field focused, leaves
+    /// `askSurfaceShowing` true, and so changes nothing visible — a dead
+    /// control by sight, which the honesty rule forbids outright.
+    ///
+    /// So the card belongs only to the genuine rest state: an open with no
+    /// answer behind it. Reaching for the field when a brief IS behind it
+    /// gets the greeting, the chips and the keyboard, and nothing that
+    /// pretends to be an answer.
     private var dayCardShowing: Bool {
-        restChrome(keepBrief: false) && !dayLede.isEmpty
+        restChrome(keepBrief: false) && !dayLede.isEmpty && !askSurfaceShowing
     }
 
     /// The kept kinds as actually docked — minus `today` while the card above
@@ -3102,6 +3121,13 @@ struct Composer: View {
                 // Harmless when `today` isn't kept: the key is per-kind.
                 let store = KeptAskStore.shared
                 store.markSeen("today", digest: store.currentDigests["today"] ?? "")
+                // Belt and braces for the dead-arrow report (2026-08-16): the
+                // card is already gated off the focus door above, and this
+                // makes the tap survive any future path that reaches it with
+                // the field live — a commit that leaves focus up would leave
+                // `askSurfaceShowing` true and hide the very answer it just
+                // asked for.
+                fieldFocused = false
                 draft = TodayBrief.title
                 commit()
             } label: {

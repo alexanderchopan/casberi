@@ -4286,8 +4286,18 @@ struct GenFrontPage: View {
 
     /// A headed section whose every module is in the quiet set — the pairing
     /// test AND the card-dim test, one definition so the two can't disagree.
+    ///
+    /// A section that renders ITS OWN MODULES is never quiet (2026-08-16,
+    /// device shot: "Your day" sat dimmed at 0.68 with a row of photographs
+    /// inside it, and dimmed photographs read as a failed image load, not as
+    /// "you have seen this"). The step-back is a contrast device for a
+    /// DIGEST — three lines of text whose point is that they haven't
+    /// changed; applied to visible content it just looks broken. A roomless
+    /// section is exactly the one that shows its contents (see `deckCard`'s
+    /// door note), so the two rules are already the same test.
     private func segIsQuiet(_ seg: [String]) -> Bool {
-        guard let first = seg.first, els[first]?.comp == "Section" else { return false }
+        guard let first = seg.first, let header = els[first],
+              header.comp == "Section", !header.str(3).isEmpty else { return false }
         return seg.count > 1 && seg.dropFirst().allSatisfy { quiet.contains($0) }
     }
 
@@ -4526,15 +4536,21 @@ struct GenFrontPage: View {
     /// sign, a structured arg, not parsed prose.
     @ViewBuilder
     private func digestMini(_ members: [String]) -> some View {
+        // FOUR SAMPLES MINIMUM (2026-08-16, device shot: the Money card's
+        // spark drew as a flat run with one drop — two points make a
+        // straight line and three make a tick, neither of which is a
+        // sparkline, and both read as a broken graphic rather than a quiet
+        // week). Under the floor the card shows no miniature at all, which
+        // is the same refusal `digestMini` makes everywhere else.
         if let el = members.compactMap({ els[$0] }).first(where: { $0.comp == "MoneyHero" }),
-           genCSVDoubles(el.str(2)).count >= 2 {
+           genCSVDoubles(el.str(2)).count >= 4 {
             let vals = genCSVDoubles(el.str(2))
             let up = el.str(1).hasPrefix("+")
             let flat = el.str(1).isEmpty
             miniSpark(vals, ink: flat ? DS.textTertiary
                       : TokenChartStyle.accent(change: up ? 1 : -1, scheme: scheme))
         } else if let el = members.compactMap({ els[$0] }).first(where: { $0.comp == "ValueSpark" }),
-                  genCSVDoubles(el.str(2)).count >= 2 {
+                  genCSVDoubles(el.str(2)).count >= 4 {
             miniBars(genCSVDoubles(el.str(2)))
         } else if let el = members.compactMap({ els[$0] }).first(where: { $0.comp == "Alerts" }) {
             let n = min(el.str(1).split(separator: ";").count, 4)
