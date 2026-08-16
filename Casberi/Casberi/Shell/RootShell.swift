@@ -2846,6 +2846,20 @@ struct RootShell: View {
             // it to lean on the agent, lower it to lean on speed.
             let followUp = isFollowUp(query) && !lastAnswerHits.isEmpty
             let retrievalThin = hits.count < 4
+            // A lookup gets a figure too (2026-08-16). `.synthesis` has led with
+            // one since §384 and this branch never did, which made the picture
+            // an accident of which mode the router happened to pick rather than
+            // a property of having retrieved something. Computed HERE for the
+            // same two reasons the synthesis arm states: the rows are live at
+            // this instant and only the finished `String` crosses the await
+            // (corollary 6 out of reach), and the figure is stable from the
+            // first painted frame.
+            //
+            // The tools arm re-derives its own below, because it answers over
+            // `grounded` — a DIFFERENT set, found by the agent's own search —
+            // and a figure drawn from the pre-retrieval would be a picture of
+            // rows that are not the ones underneath it.
+            let lookupFigure = AnswerFigure.line(for: hits)
             #if DEBUG
             NSLog("[Casberi] lookup route: %d hits, followUp=%@ → %@", hits.count,
                   followUp ? "yes" : "no",
@@ -2857,8 +2871,11 @@ struct RootShell: View {
                 let grounded = things(forIDs: result.hitIDs)
                 if !grounded.isEmpty {
                     lastAnswerHits = grounded
-                    return modelDoc(insight: result.prose, hits: grounded,
-                                    picks: Array(grounded.prefix(6).indices), tag: tag, in: allThings())
+                    return AnswerFigure.prepending(
+                        AnswerFigure.line(for: grounded),
+                        to: modelDoc(insight: result.prose, hits: grounded,
+                                     picks: Array(grounded.prefix(6).indices),
+                                     tag: tag, in: allThings()))
                 }
                 // Tools found nothing the pre-retrieval didn't — fall through to
                 // compose over `hits` (the stronger semantic retriever's set).
@@ -2866,9 +2883,15 @@ struct RootShell: View {
             guard let answer = await OnDeviceModel.compose(
                 query: query,
                 candidates: candidates(hits, terms: Retriever.contentTerms(query))) else {
-                return retrievalDoc(hits, tag: tag, in: allThings())   // model declined or errored — fall back
+                // The fallback keeps its figure: the model declining is exactly
+                // when the app's own arithmetic is the whole answer.
+                return AnswerFigure.prepending(
+                    lookupFigure, to: retrievalDoc(hits, tag: tag, in: allThings()))
             }
-            return modelDoc(insight: answer.insight, hits: hits, picks: answer.picks, tag: tag, in: allThings())
+            return AnswerFigure.prepending(
+                lookupFigure,
+                to: modelDoc(insight: answer.insight, hits: hits,
+                             picks: answer.picks, tag: tag, in: allThings()))
         case .synthesis:
             // The app's own arithmetic over the same rows the model is about to
             // read — where they came from, or when they landed (`AnswerFigure`,

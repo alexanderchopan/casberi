@@ -576,7 +576,10 @@ enum KeptAskComposers {
     /// `statedOverdue` lesson is that an axis restating the headline is the
     /// duplication complaint in miniature. When everything is overdue the
     /// window ends at now, so the labels swap sides to stay truthful.
-    private static func runwayAxis(_ sorted: [Thing]) -> String? {
+    /// Internal rather than private since 2026-08-16 (`AnswerFigure`'s time
+    /// rung). Callers must hand it rows that really carry a `dueAt`, in due
+    /// order — the `?? now` below is a formatting fallback, not a filter.
+    static func runwayAxis(_ sorted: [Thing]) -> String? {
         guard sorted.count >= 2 else { return nil }
         let now = Date.now
         let lanes = sorted.map {
@@ -1164,7 +1167,9 @@ enum KeptAskComposers {
     /// subline is the span of YEARS the matches cover, the one fact neither
     /// the rows nor the count can show at a glance — `String(min)`, never a
     /// grouped interpolation (§375: a year printed as "2,019" is a quantity).
-    private static func sourceMapLine(_ hits: [Thing]) -> String? {
+    /// Internal rather than private since 2026-08-16 (`AnswerFigure`'s richer
+    /// WHERE rung, above `sourceMixLine`'s miniature).
+    static func sourceMapLine(_ hits: [Thing]) -> String? {
         guard hits.count >= 6 else { return nil }
         var counts: [String: Int] = [:]
         for h in hits { counts[h.source, default: 0] += 1 }
@@ -1187,7 +1192,9 @@ enum KeptAskComposers {
     /// bytes have no URL to hand the doc grammar. One picture per thing,
     /// deduped by URL (the demo-corpus lesson — a shared placeholder drawn
     /// nine times reads as broken). nil under 4 distinct pictures.
-    private static func contactSheetLine(_ hits: [Thing]) -> String? {
+    /// Internal rather than private since 2026-08-16: `AnswerFigure` leads its
+    /// ladder with this, so a free-text answer over pictures opens on them too.
+    static func contactSheetLine(_ hits: [Thing]) -> String? {
         var seen = Set<String>()
         var shots: [String] = []
         for t in hits {

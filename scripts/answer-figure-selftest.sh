@@ -3,10 +3,21 @@
 # a free-text answer's prose.
 #
 #   Casberi/Casberi/Model/AnswerFigure.swift        — compiled WHOLE, unmodified
-#   Casberi/Casberi/Model/TodayBrief.swift          — sourceMixLine (extracted)
-#   Casberi/Casberi/Model/KeptAskComposers.swift    — dailyBars (extracted)
+#   Casberi/Casberi/Model/TodayBrief.swift          — sourceMixLine, faces, ownHandles
+#   Casberi/Casberi/Model/KeptAskComposers.swift    — dailyBars, contactSheetLine,
+#                                                     runwayAxis, sourceMapLine
+#   Casberi/Casberi/Model/SocialBridge.swift        — the person gate (extracted)
 #   Casberi/Shared/Thing.swift                      — the receipt rule (extracted)
 #   Casberi/Casberi/Shell/RootShell.swift           — drift guards on the call site
+#
+# THE LADDER GREW FROM TWO RUNGS TO SIX (2026-08-16), which changes what this
+# harness has to prove. With two emitters, "the ranking" was one comparison. With
+# six it is an ORDER, and an order is only tested by fixtures where the losing
+# rungs could also have drawn — so every fixture in the ladder section is one
+# that clears several floors at once. Two of the four new rungs
+# (`contactSheetLine`, `faces`) were unreachable before this pass, `faces` with
+# no caller anywhere, so their floors had never been exercised through any
+# caller at all.
 #
 # WHY A HARNESS. Every failure this feature can have renders as a perfectly
 # good-looking answer, and three of them render as a perfectly good-looking
@@ -59,8 +70,9 @@ BRIEF="Casberi/Casberi/Model/TodayBrief.swift"
 COMPOSERS="Casberi/Casberi/Model/KeptAskComposers.swift"
 THING="Casberi/Shared/Thing.swift"
 ROOTSHELL="Casberi/Casberi/Shell/RootShell.swift"
+SOCIAL="Casberi/Casberi/Model/SocialBridge.swift"
 
-for f in "$FIGURE" "$BRIEF" "$COMPOSERS" "$THING" "$ROOTSHELL"; do
+for f in "$FIGURE" "$BRIEF" "$COMPOSERS" "$THING" "$ROOTSHELL" "$SOCIAL"; do
   [[ -f "$f" ]] || { print "✗ missing source $f"; exit 1; }
 done
 
@@ -132,11 +144,33 @@ grep -qE '^\s*static func sourceMixLine\(' "$BRIEF" \
   || { print "✗ TodayBrief.sourceMixLine is no longer reachable — the mix half is dead"; exit 1; }
 grep -qE '^\s*static func dailyBars\(' "$COMPOSERS" \
   || { print "✗ KeptAskComposers.dailyBars is no longer reachable — the bars half is dead"; exit 1; }
+# The four rungs added 2026-08-16. Each was file-private before that pass and
+# `faces` had no caller AT ALL, so re-privatising one is a one-word change that
+# silently drops the ladder back to where it started — the answer still paints,
+# just never with that figure again.
+grep -qE '^\s*static func contactSheetLine\(' "$COMPOSERS" \
+  || { print "✗ KeptAskComposers.contactSheetLine is no longer reachable — the pictures rung is dead"; exit 1; }
+grep -qE '^\s*static func runwayAxis\(' "$COMPOSERS" \
+  || { print "✗ KeptAskComposers.runwayAxis is no longer reachable — the time rung is dead"; exit 1; }
+grep -qE '^\s*static func sourceMapLine\(' "$COMPOSERS" \
+  || { print "✗ KeptAskComposers.sourceMapLine is no longer reachable — the board rung is dead"; exit 1; }
+grep -qE '^\s*static func faces\(' "$BRIEF" \
+  || { print "✗ TodayBrief.faces is no longer reachable — the people rung is dead, and this"; \
+       print "  figure has already spent one release orphaned with no caller at all."; exit 1; }
+
+# THE DEADLINE FILTER. `runwayAxis` formats a nil `dueAt` as `now`, so handing
+# it undated rows draws a rail claiming every match is due this second. The
+# filter lives at the call site, one file from the fallback it is correcting —
+# the same shape as the bars window, and invisible for the same reason.
+grep -q 'rows.filter { $0.dueAt != nil }' "$TMP/figure.nc.swift" \
+  || { print "✗ the time rung no longer filters to rows carrying a real deadline —"; \
+       print "  runwayAxis formats a nil dueAt as now, so undated matches would pile"; \
+       print "  onto the marker and read as all due this instant."; exit 1; }
 
 # ── Extract the shipped logic ───────────────────────────────────────────────
-python3 - "$BRIEF" "$COMPOSERS" "$THING" "$TMP/extracted.swift" <<'PY'
+python3 - "$BRIEF" "$COMPOSERS" "$THING" "$TMP/extracted.swift" "$SOCIAL" <<'PY'
 import sys
-brief, composers, thing, out = sys.argv[1:5]
+brief, composers, thing, out, social = sys.argv[1:6]
 
 def grab(path, signature):
     """The whole declaration whose line contains `signature`, brace-matched
@@ -177,17 +211,43 @@ pieces = [
     # below is the emitters' own and cannot be a model-graph accident.
     """
 final class Thing {
+    var id = UUID()
     var capturedAt: Date
     var source: String
     var sourceRef: String?
     var isLive: Bool
-    init(capturedAt: Date, source: String, sourceRef: String? = nil, isLive: Bool = true) {
+    var title: String
+    var dueAt: Date?
+    var previewImageURL: String?
+    var imageURLs: [String]
+    var authorHandle: String?
+    var postAuthor: String?
+    var authorAvatarURL: String?
+    init(capturedAt: Date, source: String, sourceRef: String? = nil, isLive: Bool = true,
+         title: String = "", dueAt: Date? = nil,
+         previewImageURL: String? = nil, imageURLs: [String] = [],
+         authorHandle: String? = nil, postAuthor: String? = nil,
+         authorAvatarURL: String? = nil) {
         self.capturedAt = capturedAt
         self.source = source
         self.sourceRef = sourceRef
         self.isLive = isLive
+        self.title = title
+        self.dueAt = dueAt
+        self.previewImageURL = previewImageURL
+        self.imageURLs = imageURLs
+        self.authorHandle = authorHandle
+        self.postAuthor = postAuthor
+        self.authorAvatarURL = authorAvatarURL
     }
 }
+
+/// The social stores `ownHandles` reads, inert — no account is marked yours, so
+/// the "you are excluded" rule is exercised through the literal "you" the demo
+/// stamps. A real store here would make the assertion depend on device state.
+struct StubAccount { var username = ""; var handle = ""; var mine = false }
+enum FarcasterStore { static let shared = Self.self; static var accounts: [StubAccount] { [] } }
+enum BlueskyStore { static let shared = Self.self; static var accounts: [StubAccount] { [] } }
 
 extension Array where Element == Thing {
     var live: [Thing] { filter(\\.isLive) }
@@ -200,13 +260,28 @@ extension Array where Element == Thing {
     grab(thing, "static func importReceiptRef"),
     grab(thing, "static func isImportReceipt"),
     "}\n",
+    # The person gate, shipped — `faces` refuses a source that names a
+    # masthead rather than a human, and that set is maintained in one place for
+    # exactly this distinction. A stub here would let the roster drift back to
+    # drawing "The Verge" as somebody in your life.
+    "enum SocialThread {",
+    grabline(social, "static let sources: Set<String>"),
+    grabline(social, "static let contextSources: Set<String>"),
+    grabline(social, "static func hasContext"),
+    "}\n",
     "enum TodayBrief {",
     grab(brief, "static func sourceMixLine"),
+    grab(brief, "static func faces"),
+    grab(brief, "static func ownHandles"),
     grab(brief, "static func tileSafe"),
     grab(brief, "static func genSafe"),
     "}\n",
     "enum KeptAskComposers {",
     grab(composers, "static func dailyBars"),
+    grab(composers, "static func contactSheetLine"),
+    grab(composers, "static func runwayAxis"),
+    grab(composers, "static func sourceMapLine"),
+    grab(composers, "static func mapSafe"),
     grab(composers, "static func genSafe"),
     "}\n",
 ]
@@ -262,6 +337,80 @@ let oneRoom = [thing("GitHub", 0), thing("GitHub", 1), thing("GitHub", 2), thing
 check("one room → the bars draw", comp(AnswerFigure.line(for: oneRoom, now: now)) == "Bars")
 check("the bars eyebrow says 'these' too",
       AnswerFigure.line(for: oneRoom, now: now)?.contains("When these landed") == true)
+
+print("")
+print("the ladder — six rungs, each outranking everything beneath it")
+
+func pic(_ source: String, _ n: Int, _ url: String) -> Thing {
+    Thing(capturedAt: daysAgo(n), source: source, previewImageURL: url)
+}
+func due(_ source: String, _ inDays: Int) -> Thing {
+    Thing(capturedAt: daysAgo(1), source: source,
+          dueAt: cal.date(byAdding: .day, value: inDays, to: now))
+}
+func person(_ handle: String, _ n: Int) -> Thing {
+    Thing(capturedAt: daysAgo(n), source: "Bluesky",
+          authorHandle: handle, authorAvatarURL: "https://x/\(handle).jpg")
+}
+
+// 1 — PICTURES. Every fixture in this section is one where the rungs BELOW it
+// would also have drawn; a ladder tested on sets only one rung can answer
+// proves the floors and nothing about the order.
+let shots = [pic("Photos", 1, "a"), pic("Photos", 1, "b"),
+             pic("Bluesky", 2, "c"), pic("Bluesky", 2, "d")]
+check("four pictures → the sheet leads", comp(AnswerFigure.line(for: shots, now: now)) == "ContactSheet")
+check("three pictures → it yields to the rung below",
+      comp(AnswerFigure.line(for: Array(shots.prefix(3)), now: now)) != "ContactSheet")
+// One picture per THING, deduped by URL: four rows sharing a placeholder are
+// one picture, not four — the demo-corpus lesson, asserted through this caller.
+let placeholder = (0..<4).map { _ in pic("Photos", 1, "same") }
+check("four rows sharing one URL are not four pictures",
+      comp(AnswerFigure.line(for: placeholder, now: now)) != "ContactSheet")
+
+// 2 — TIME.
+let deadlines = [due("Reminders", 2), due("Stripe", 5), due("Reminders", 9), due("Linear", 12)]
+check("dated rows → the rail leads", comp(AnswerFigure.line(for: deadlines, now: now)) == "Runway")
+check("one dot per deadline",
+      (AnswerFigure.line(for: deadlines, now: now) ?? "").filter { $0 == ";" }.count == 3)
+// THE FILTER, and the assertion the guard above cannot make: a single dated row
+// among undated ones must not become a four-dot rail with three of them pinned
+// to now. `runwayAxis` floors at 2, so the correct answer here is a DIFFERENT
+// figure — which is only true if the undated rows never reached it.
+let oneDated = [due("Reminders", 2), thing("GitHub", 1), thing("GitHub", 2), thing("Notion", 1)]
+check("one deadline among undated rows → no rail at all",
+      comp(AnswerFigure.line(for: oneDated, now: now)) != "Runway")
+
+// 3 — PEOPLE.
+let people = [person("mira", 1), person("mira", 2), person("sam", 1), person("lena", 3)]
+check("three people → the roster leads", comp(AnswerFigure.line(for: people, now: now)) == "Faces")
+check("the busiest person leads it",
+      (AnswerFigure.line(for: people, now: now) ?? "").contains("mira|"))
+// A MASTHEAD IS NOT A PERSON. `authorHandle` is stamped by RSS, Substack,
+// Podcasts and YouTube too, where it holds a publication — the roster's gate is
+// `SocialThread.hasContext`, extracted from the shipped set rather than stubbed
+// so this can't drift back to drawing "The Verge" as somebody in your life.
+let bylines = [Thing(capturedAt: daysAgo(1), source: "RSS", authorHandle: "The Verge"),
+               Thing(capturedAt: daysAgo(1), source: "RSS", authorHandle: "Ars"),
+               Thing(capturedAt: daysAgo(2), source: "Substack", authorHandle: "Platformer"),
+               Thing(capturedAt: daysAgo(2), source: "Substack", authorHandle: "Garbage Day")]
+check("RSS/Substack bylines are not a roster",
+      comp(AnswerFigure.line(for: bylines, now: now)) != "Faces")
+// YOU are excluded: every social bridge stamps your own handle on your own
+// posts, so an unfiltered roster ranks you first in every corpus.
+let withYou = [person("you", 1), person("you", 2), person("mira", 1), person("sam", 2)]
+check("your own handle doesn't count toward the roster",
+      comp(AnswerFigure.line(for: withYou, now: now)) != "Faces")
+
+// 4/5 — the same question at two scales. This is the eight-row fixture that
+// used to test the miniature, moved here: at six hits the board is what should
+// answer it, and the cell the miniature had to drop is the proof.
+let wide = [thing("Zulip", 1), thing("Zulip", 1), thing("Zulip", 2),
+            thing("Apple", 1), thing("Apple", 2),
+            thing("Bluesky", 1), thing("Bluesky", 2), thing("Notion", 1)]
+let board = AnswerFigure.line(for: wide, now: now) ?? ""
+check("six or more hits → the full board", comp(AnswerFigure.line(for: wide, now: now)) == "TagMap")
+check("the board keeps the room the miniature dropped", board.contains("Notion 1"))
+check("the board's subline is the span of years, ungrouped", !board.contains("2,0"))
 
 print("")
 print("the floors are the EMITTERS' own — this file adds none")
@@ -329,13 +478,16 @@ print("")
 print("the mix's own ordering, through this caller")
 // Biggest first with the alphabetical tie, and capped at three cells — the
 // emitter's rules, asserted here because this caller is now its only one.
-let ranked = [thing("Zulip", 1), thing("Zulip", 1), thing("Zulip", 2),
-              thing("Apple", 1), thing("Apple", 2),
-              thing("Bluesky", 1), thing("Bluesky", 2),
-              thing("Notion", 1)]
+// FIVE rows, not eight: at six the richer board outranks the miniature (see
+// the pair below), so a set large enough to test the mix's own 3-cell cap has
+// to stay under the board's floor. The original eight-row fixture moved down
+// to the board section, where it now belongs.
+let ranked = [thing("Zulip", 1), thing("Zulip", 2),
+              thing("Apple", 1), thing("Bluesky", 2), thing("Notion", 1)]
 let mix = AnswerFigure.line(for: ranked, now: now) ?? ""
-check("the biggest room leads", mix.contains("[Zulip 3, "))
-check("a tie breaks alphabetically", mix.contains("Zulip 3, Apple 2, Bluesky 2"))
+check("the mix draws under the board's floor", comp(AnswerFigure.line(for: ranked, now: now)) == "SourceMix")
+check("the biggest room leads", mix.contains("[Zulip 2, "))
+check("a tie breaks alphabetically", mix.contains("Zulip 2, Apple 1, Bluesky 1"))
 check("the fourth room is left out", !mix.contains("Notion"))
 
 print("")
@@ -405,8 +557,13 @@ swiftc -O -o "$TMP/run" "$TMP/extracted.swift" "$FIGURE" "$TMP/main.swift" 2>&1 
 print ""
 print "mutation pass — each of these must FAIL"
 MUT=0
+# Counted rather than spelled: the summary said "8 mutations" for as long as
+# there were eight, and a harness that misreports its own coverage is the shape
+# of problem it exists to catch.
+MUT_RUN=0
 mutate() {  # name, sed-expression over AnswerFigure.swift
   local name="$1" expr="$2"
+  MUT_RUN=$((MUT_RUN + 1))
   sed "$expr" "$FIGURE" > "$TMP/mutant.swift"
   cmp -s "$FIGURE" "$TMP/mutant.swift" \
     && { print "  ✗ mutation '$name' changed nothing — it is testing the shipped code"; MUT=$((MUT + 1)); return; }
@@ -430,6 +587,25 @@ mutate "bars ranked above the mix" \
 # The window widened by one day: an 8-day-old row starts counting, which is the
 # boundary that decides whether a chart draws at all.
 mutate "window widened to 8 days" 's/static let barsWindowDays = 7/static let barsWindowDays = 8/'
+# ── The 2026-08-16 rungs. Each renders as a perfectly good figure; what breaks
+# is WHICH one, or what it is drawn over.
+# The pictures rung demoted: a set of photographs would answer with a treemap of
+# the rooms they came from, which is a true sentence about the wrong subject.
+mutate "pictures rung skipped" \
+  's/^        if let sheet = KeptAskComposers.contactSheetLine(rows) { return sheet }$/        if false, let sheet = KeptAskComposers.contactSheetLine(rows) { return sheet }/'
+# THE ONE WITH NO VISIBLE SYMPTOM. Undated rows reach the axis, `runwayAxis`
+# formats their nil `dueAt` as `now`, and the rail draws a dot per match piled
+# on the marker — a chart claiming everything you matched is due this second.
+mutate "the deadline filter dropped" \
+  's/let dated = rows.filter { \$0.dueAt != nil }/let dated = rows.filter { _ in true }/'
+# The people rung demoted — the roster this pass un-orphaned goes straight back
+# to having no caller, and nothing anywhere says so.
+mutate "people rung skipped" \
+  's/^        if let roster = TodayBrief.faces(rows) { return roster }$/        if false, let roster = TodayBrief.faces(rows) { return roster }/'
+# The two WHERE scales swapped: the miniature would answer sets big enough for
+# the board, silently dropping every room past the third.
+mutate "the miniature ranked above the board" \
+  's/^        if let board = KeptAskComposers.sourceMapLine(rows) { return board }$/        if false, let board = KeptAskComposers.sourceMapLine(rows) { return board }/'
 # Receipts counted — the app talking about itself tips a floor and takes a cell.
 mutate "import receipts no longer excluded" \
   's/let rows = hits.live.filter { !Corpus.isImportReceipt(\$0) }/let rows = hits.live/'
@@ -448,7 +624,7 @@ mutate "the duplicate-ref guard removed" \
 
 print ""
 if (( MUT == 0 )); then
-  print "✓ answer-figure self-test: assertions + 8 mutations all held"
+  print "✓ answer-figure self-test: assertions + $MUT_RUN mutations all held"
 else
   print "✗ answer-figure self-test: $MUT mutation(s) not caught"
   exit 1

@@ -22,20 +22,48 @@ import Foundation
 /// visible disagreement; a model-authored chart is a wrong number nobody can
 /// see is wrong.
 ///
-/// THE RANKING — mix, then bars, and the order is the point.
+/// THE RANKING — six rungs, and the order is the point (2026-08-16, user: "i
+/// want the composer to respond mostly in visuals since we can't rely on the
+/// text to be that specific or accurate"). It shipped as two, which meant a
+/// typed question — the shape a person actually lands on most — could reach two
+/// of the roughly eighteen figures this app knows how to draw, while the two
+/// most legible of them sat fully built with no caller at all.
 ///
-///   • `sourceMixLine` answers WHERE, which holds for any retrieved set. A
-///     search is not a time window: its matches can be from this morning or
-///     from a 2014 archive, and provenance is true of both.
-///   • `dailyBars` answers WHEN, which §247 already ruled the weakest lead when
-///     it moved the heatmap to the end of `shapedSections` for exactly this
-///     reason. It leads here only when the mix declined — a set that all came
-///     from one room has no mix to draw, and then WHEN is the only thing left
-///     that is both true and not already in the rows.
+///   • PICTURES (`contactSheetLine`) leads because when the matches are
+///     photographs the matches ARE the answer: a grid of the things themselves
+///     outranks any abstraction over them. `WidgetDayLead.kind` already ranks
+///     its own ladder this way for the Home Screen tile.
+///   • TIME (`runwayAxis`) is next, and only the rows carrying a real `dueAt`
+///     reach it. The rows can show four dates; only the rail shows the SPREAD,
+///     which is what "what's coming up" is actually asking.
+///   • PEOPLE (`faces`) — a set dominated by humans is about who. Its own gate
+///     is `SocialThread.hasContext`, so a masthead can never be drawn as a
+///     person.
+///   • WHERE, twice, at two scales. `sourceMapLine` is the full 4×3 board and
+///     carries the span of years as its subline; `sourceMixLine` is the 1-big-
+///     2-stacked miniature. They answer the same question, so the richer one
+///     goes first and the compact one catches the sets too small for it — a
+///     figure sized to its evidence rather than two different claims.
+///   • WHEN (`dailyBars`) last, which §247 already ruled the weakest lead when
+///     it moved the heatmap to the end of `shapedSections` for this exact
+///     reason. It leads only when everything above declined.
 ///
-/// NEITHER FLOOR IS THIS FILE'S. Both emitters decline on their own terms
-/// (`sourceMixLine`: ≥2 sources and ≥4 rows; `dailyBars`: ≥4 rows), and a
-/// figure that declines twice means no figure — never a smaller or a faked one.
+/// NO FLOOR HERE IS THIS FILE'S. Every emitter declines on its own terms
+/// (`contactSheetLine`: ≥4 distinct pictures; `runwayAxis`: ≥2 dots;
+/// `faces`: ≥3 people; `sourceMapLine`: ≥6 hits and ≥2 sources;
+/// `sourceMixLine`: ≥2 sources and ≥4 rows; `dailyBars`: ≥4 rows), and a set
+/// that declines all six means no figure — never a smaller or a faked one.
+///
+/// THREE RUNGS ARE DELIBERATELY ABSENT, each for a stated reason rather than an
+/// oversight. MONEY: `valueSparkLine` draws the wallet's own recorded balance
+/// samples and takes no rows at all, so it would answer about the wallet rather
+/// than about the matches — a figure whose subject isn't the set beneath it is
+/// the §83 fake status. MEANING: `TodayBrief.clusterMap` is `async` and needs a
+/// `ModelContext` for the vectors plus a PCA projection, and this function is
+/// synchronous by design so the figure beats the model to the screen. SUBJECTS:
+/// there is no emitter that maps `ocrTopics`/`tags` over an arbitrary hit set —
+/// `FeedInsight.topicMap` is per-room and takes a source. Each is a build, not
+/// a wiring.
 ///
 /// THE ONE THING THIS FILE ADDS, and it is a correction rather than a floor:
 /// `dailyBars` charts the last seven days but floors on the TOTAL count of what
@@ -75,6 +103,21 @@ enum AnswerFigure {
     static func line(for hits: [Thing], now: Date = .now) -> String? {
         let rows = hits.live.filter { !Corpus.isImportReceipt($0) }
         guard !rows.isEmpty else { return nil }
+        // 1 — the matches themselves, when they are pictures.
+        if let sheet = KeptAskComposers.contactSheetLine(rows) { return sheet }
+        // 2 — the spread of what's due. Only rows carrying a REAL deadline are
+        // handed over: `runwayAxis` falls back to `now` for a nil `dueAt`, so an
+        // unfiltered set would pile every undated match onto the marker and draw
+        // a rail claiming they are all due this second.
+        let dated = rows.filter { $0.dueAt != nil }
+                        .sorted { ($0.dueAt ?? now) < ($1.dueAt ?? now) }
+        if let axis = KeptAskComposers.runwayAxis(dated) { return axis }
+        // 3 — who these are from.
+        if let roster = TodayBrief.faces(rows) { return roster }
+        // 4/5 — where they live, the full board first and the miniature for the
+        // sets too small to fill one. See the type comment: one question, two
+        // scales, never two claims.
+        if let board = KeptAskComposers.sourceMapLine(rows) { return board }
         if let mix = TodayBrief.sourceMixLine(
             rows, eyebrow: String(localized: "Where these came from")) {
             return mix

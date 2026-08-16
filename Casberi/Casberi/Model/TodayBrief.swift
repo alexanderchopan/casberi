@@ -3192,7 +3192,11 @@ enum TodayBrief {
     /// corpus — a roster of yourself is not "who's around". Matched on the
     /// literal handle "you" (what the demo seeds) plus every watched account
     /// the social stores know to be yours.
-    private static func faces(_ things: [Thing]) -> String? {
+    /// Internal rather than private since 2026-08-16, and no longer orphaned:
+    /// §386g folded this into `DayFold` and left it with no caller at all, so
+    /// one of the app's most legible figures was fully built, fully tested and
+    /// unreachable. `AnswerFigure`'s people rung is its route back.
+    static func faces(_ things: [Thing]) -> String? {
         var counts: [String: Int] = [:]
         var newest: [String: Thing] = [:]
         var avatar: [String: String] = [:]
