@@ -23950,3 +23950,29 @@ later question, and only if anyone asks), Solana NFTs (Alchemy's NFT API is
 EVM-only — the picker says so in words rather than showing an empty grid), and
 §240's own lazy-allowlist refactor, which is now less urgent since the eager
 read finally has a second consumer, but is not thereby fixed.
+
+## §388 — The gear stays undrawn: a room does not get a settings door (user: "it should not be in the strip of source chips, that is confusing", then "it doesn't work there because we have the bar that is the source rail and it's confusing if that is for the one you are on or the what. i don't think we have solved this problem. and maybe it's fine user goes to app catalogue since that is where everything is, and for now we tolerate it", 2026-08-16)
+
+The problem: tending a source from inside its own room (add an RSS feed, check
+a key) is a trek — catalogue door, scroll the grid, open the seat. §359 removed
+the header capsule that used to carry a Manage door, and the "+" went with it.
+
+Three placements for a per-room gear were considered on mockups and each was
+rejected on its own defect, not on taste. A third fixed door at the strip's
+trailing edge: confusing inside the strip, whose two head doors are global while
+this one would be about the room — two grammars in one row. Trailing the
+room-controls row: ambiguous binding — beside a venue switcher (or the wallet
+face rail) a lone gear does not say WHICH of the capsules it configures, and a
+control whose object can't be read is worse than a trek. The head card's
+corner: costs no chrome but scrolls away and moves with whichever card leads
+the room that day — the §359 capsule's own instability, back.
+
+THE RULING: tolerate the trek, for now. The catalogue remains the app's one
+manage door — §359 reaffirmed with the cost now measured and accepted rather
+than unnoticed. No gear, no "+", no new room chrome.
+
+If the trek keeps hurting, the first move is cheapening the catalogue, not
+adding chrome: connected seats lead the grid, or entering the catalogue from a
+source room lands scrolled to that seat. Both were sketched this session and
+neither is built. A per-room door may return only with a placement whose OBJECT
+is unambiguous — nothing sketched so far has one.
