@@ -1366,6 +1366,12 @@ struct RootShell: View {
             #else
             BridgeRefresh.refreshAllConnected(context: modelContext, store: bridges)
             #endif
+            // Tracked money records, brought up to date (prd §369 amendment).
+            // HERE and not in the background sweep, deliberately: this is the
+            // pass that really re-read the sources, and a Live Activity's
+            // "checked 2h ago" is a claim about the SOURCE, not about our own
+            // store. See `MoneyActivityDriver.sync`.
+            Task { await MoneyActivityDriver.sync(context: modelContext) }
             // Build the on-device semantic index for anything new or
             // not yet embedded — a bounded background sweep, so Ask can
             // retrieve by meaning, not just shared words.

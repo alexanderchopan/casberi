@@ -83,8 +83,31 @@ struct ThingSheetView: View {
     /// Walking the thread in-app (2026-07-16) — the parent this post answers,
     /// opened as a post sheet rather than kicked out to the browser.
     @State private var walkingTo: SocialCard?
-    /// The person behind a tapped face — the profile card.
-    @State private var profileTarget: SocialProfile?
+    /// Whoever is behind a tapped face — a person's profile card, or the
+    /// address card for a wallet (prd §369 amendment).
+    ///
+    /// **One route, not two states, and deliberately so.** The money receipt's
+    /// subject face became a door in the same pass, and its destination is
+    /// `AddressCard`. Giving it a `.sheet` of its own would have made a FOURTH
+    /// sibling presentation on this view — the exact count the standing
+    /// one-screen-one-`.sheet` rule exists to prevent, and which the
+    /// `fullScreenCover` below already went out of its way not to become. A
+    /// tapped face has one destination whichever kind of face it is, so the
+    /// two share the slot that already existed for the question.
+    @State private var faceTarget: FaceTarget?
+
+    /// Where a tapped face leads.
+    enum FaceTarget: Identifiable {
+        case person(SocialProfile)
+        case address(AddressBook.Entry)
+
+        var id: String {
+            switch self {
+            case .person(let profile): return "person:\(profile.id)"
+            case .address(let entry):  return "address:\(entry.id)"
+            }
+        }
+    }
     /// An approval thing's prepare card (prd §112) — the grant's LIVE state,
     /// the fee to revoke, the doors out. Fetched on open like replies; the
     /// section renders only when the check answered.
@@ -97,6 +120,9 @@ struct ThingSheetView: View {
     /// since a Safe receipt's stamp and its signer sentence both read it.
     @State private var moneyReceipt: MoneyReceipt?
     @State private var moneySays: MoneyCommentary?
+    /// Mirrors `MoneyActivityDriver.isTracking` for this record, so the control
+    /// re-labels itself the moment it is used.
+    @State private var tracking = false
     /// The same link, saved earlier from a different source (2026-07-21) —
     /// `CrossSourceEcho` was built for this and briefly wired into a row
     /// anatomy (`ThingRow.swift`) nothing actually rendered, which would
@@ -278,7 +304,13 @@ struct ThingSheetView: View {
                     && (thing.kind == .screenshot
                         || FilesIngest.isStoredPicture(thing.sourceRef))
                 if let moneyReceipt {
-                    MoneyReceiptCard(receipt: moneyReceipt)
+                    // The subject face is a door (prd §369 amendment): the
+                    // history this sheet already draws belongs to that address,
+                    // and the gesture people try first is a tap on the face.
+                    // The dial keeps its own verbs at parity, so nothing here
+                    // is reachable ONLY by tapping a picture.
+                    MoneyReceiptCard(receipt: moneyReceipt,
+                                     onSubject: openAddressCard)
                         .padding(.horizontal, DS.Space.s4)
                         .padding(.top, DS.Space.s4)
                         .settleIn(delay: 0.06)
@@ -302,6 +334,16 @@ struct ThingSheetView: View {
                             .padding(.horizontal, DS.Space.s4)
                             .padding(.top, DS.Space.s3)
                             .settleIn(delay: 0.1)
+                    }
+                    // A record still in the machine can be watched from the
+                    // lock screen (prd §369 amendment). THE FLAT EDGE EARNS THE
+                    // CONTROL: it appears only while `finality == .open`, and
+                    // it is the tear that ends it.
+                    if moneyReceipt.finality == .open {
+                        trackRecordControl(moneyReceipt)
+                            .padding(.horizontal, DS.Space.s4)
+                            .padding(.top, DS.Space.s3)
+                            .settleIn(delay: 0.11)
                     }
                     VerbDial(thing: thing, verbs: walletVerbs,
                              onVerb: runVerb,
@@ -365,10 +407,10 @@ struct ThingSheetView: View {
                         source: thing.source,
                         recent: personPosts,
                         onOpenProfile: {
-                            profileTarget = SocialProfile(
+                            faceTarget = .person(SocialProfile(
                                 source: thing.source, handle: thing.authorHandle ?? "",
                                 displayName: nil, bio: nil,
-                                avatarURL: thing.authorAvatarURL)
+                                avatarURL: thing.authorAvatarURL))
                         },
                         onOpenThing: { walkingToNote = KeyedThing($0) })
                         .padding(.top, DS.Space.s3)
@@ -650,6 +692,22 @@ struct ThingSheetView: View {
         // setup and never again once something pushes on top. `dsInk()`'s
         // real `.background()` can't lose that race — it always covers.
         .dsInk()
+        // The haptics this sheet has always fired, made audible (2026-08-16).
+        //
+        // `Haptics.swift` states the rule and this view was the standing
+        // counter-example: the bus is global but the MAPPING is a view
+        // modifier, and a `.sheet` covers the one `RootShell` attached — so
+        // every `DSHaptic` call from in here bumped a counter nothing was
+        // listening to. Six of them: two `.success` (a saved edit, a landed
+        // write) and four `.tap`. None had ever been felt, and nothing about
+        // that is visible from outside, which is exactly why the rule is
+        // written down.
+        //
+        // Attached only when this view IS the presentation — `onBack` means it
+        // was pushed inside the Worth-a-look tray, which carries `DSTray`'s
+        // own, and `inlineRest` means it is rendered in place under the root's.
+        // A second listener in one presentation buzzes twice.
+        .modifier(SheetHaptics(active: onBack == nil && !inlineRest))
         .presentationDetents([.medium, .large], selection: $detent)
         .presentationDragIndicator(.visible)
         .presentationCornerRadius(DS.Radius.sheet)
@@ -779,9 +837,13 @@ struct ThingSheetView: View {
         .sheet(item: $walkingTo) { card in
             SocialPostSheet(post: card, source: thing.source)
         }
-        // The person behind a tapped face — theirs to watch from here.
-        .sheet(item: $profileTarget) { p in
-            SocialProfileCard(profile: p)
+        // Whoever is behind a tapped face — a person theirs to watch from
+        // here, or the address card for a wallet (prd §369 amendment).
+        .sheet(item: $faceTarget) { target in
+            switch target {
+            case .person(let profile): SocialProfileCard(profile: profile)
+            case .address(let entry):  AddressCard(entry: entry)
+            }
         }
         // Walking a vault's own wikilink graph (2026-07-28) — a plain
         // re-presentation of this same sheet over the linked note.
@@ -1036,9 +1098,9 @@ struct ThingSheetView: View {
             // The face is a door to the person (2026-07-16) — tap it and you
             // can watch them, wherever you met them.
             Button {
-                profileTarget = SocialProfile(
+                faceTarget = .person(SocialProfile(
                     source: thing.source, handle: thing.authorHandle ?? "",
-                    displayName: nil, bio: nil, avatarURL: thing.authorAvatarURL)
+                    displayName: nil, bio: nil, avatarURL: thing.authorAvatarURL))
             } label: {
                 faceMark
             }
@@ -1436,7 +1498,17 @@ struct ThingSheetView: View {
     /// inside `MoneyReceiptSource`, at the boundary where the models are read.
     private func loadReceipt() {
         guard thing.isLive else { return }
-        moneyReceipt = MoneyReceiptSource.receipt(for: thing, safe: safeCheck)
+        let next = MoneyReceiptSource.receipt(for: thing, safe: safeCheck)
+        // A RE-compose is a moment; the first one is just the sheet opening
+        // (prd §369 amendment). Animating only the second is what lets the
+        // figure's `.numericText` roll to a settled amount and the teeth cut
+        // in — while a receipt that opens already final still simply appears,
+        // under `settleIn`'s own entrance.
+        if moneyReceipt != nil && next != moneyReceipt {
+            withAnimation(DS.Motion.standard) { moneyReceipt = next }
+        } else {
+            moneyReceipt = next
+        }
         guard moneyReceipt != nil else { moneySays = nil; return }
         moneySays = MoneyReceiptSource.commentary(for: thing, in: modelContext,
                                                   safe: safeCheck)
@@ -1698,6 +1770,81 @@ struct ThingSheetView: View {
         } else {
             Task { await perform(verb) }
         }
+    }
+
+    /// Watching an unfinished record from the lock screen (prd §369
+    /// amendment).
+    ///
+    /// **Opt-in, one record at a time, and only where there is something to
+    /// wait for.** Starting an activity automatically for every pending row
+    /// would hand a card user four of them they never asked for — the same
+    /// "did you already know?" test that keeps §313's card charges from
+    /// notifying at all. So the person picks the one they are actually waiting
+    /// on, which also means this never spends attention on their behalf.
+    ///
+    /// Absent entirely when Live Activities are switched off for the app: a
+    /// control that cannot do its job must not be drawn saying it can (§83).
+    @ViewBuilder
+    private func trackRecordControl(_ receipt: MoneyReceipt) -> some View {
+        if MoneyActivityDriver.available {
+            let id = thing.id.uuidString
+            Button {
+                Task {
+                    if MoneyActivityDriver.isTracking(id) {
+                        await MoneyActivityDriver.stop(id: id)
+                    } else {
+                        // The lock-screen title is the receipt's own lead and
+                        // party — never its figure (see the attributes' rule 3
+                        // and §374).
+                        let title = [receipt.lead, receipt.party]
+                            .compactMap { $0 }.joined(separator: " ")
+                        MoneyActivityDriver.start(
+                            id: id, title: title,
+                            stamp: receipt.stamp?.word ?? "")
+                    }
+                    tracking = MoneyActivityDriver.isTracking(id)
+                }
+            } label: {
+                HStack(spacing: DS.Space.s2) {
+                    Image(systemName: tracking ? "bell.badge.slash" : "bell.badge")
+                        .accessibilityHidden(true)
+                        .dsGlyph(14, weight: .regular)
+                    Text(tracking
+                         ? "Stop watching it"
+                         : "Watch it from the lock screen")
+                        .dsText(.label12)
+                }
+                .foregroundStyle(tracking ? DS.textTertiary : DS.textPrimary)
+                .padding(.horizontal, DS.Space.s3)
+                .frame(minHeight: 32)
+                .background(DS.fillFaint, in: Capsule(style: .continuous))
+            }
+            .buttonStyle(PressSpring())
+            .dsHover()
+            .frame(maxWidth: .infinity)
+            .onAppear { tracking = MoneyActivityDriver.isTracking(id) }
+        }
+    }
+
+    /// Opening the address behind the receipt's subject face (prd §369
+    /// amendment) — what this app knows about it: the history you share, what
+    /// it can move, and the name you gave it.
+    ///
+    /// An address that is not in the book still opens, on a TRANSIENT entry.
+    /// That is the point rather than an oversight: naming is a deliberate act
+    /// (prd §169 — naming is free, watching is the capped upgrade), so a tap on
+    /// a face must not quietly file a stranger's address in your book. The card
+    /// reads `book.entry(for:) ?? entry`, so it upgrades itself the moment the
+    /// address really is named from inside it.
+    private func openAddressCard(_ address: String) {
+        guard !address.isEmpty else { return }
+        faceTarget = .address(
+            AddressBook.shared.entry(for: address)
+                ?? AddressBook.Entry(
+                    address: address,
+                    name: WalletIngest.knownLabel(for: address)
+                        ?? WalletStore.shortAddress(address),
+                    addedAt: .now))
     }
 
     /// The naming flow, when there's an address to name — nil keeps the

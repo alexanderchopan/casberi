@@ -28,6 +28,7 @@ struct CasberiWidgets: WidgetBundle {
         #if !targetEnvironment(macCatalyst)
         VoiceRecordingActivity()
         ImportActivity()
+        MoneyActivity()
         #endif
     }
 }

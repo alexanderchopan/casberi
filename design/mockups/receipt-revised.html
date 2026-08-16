@@ -1,0 +1,1599 @@
+<title>Receipt, Revised</title>
+<style>
+/* ============================================================
+   TOKENS
+   The app half is lifted verbatim from Design/DesignTokens.swift.
+   The page half is its own quiet frame: a violet-biased neutral
+   borrowed from receiptPour(.wallet), so the writing sits in the
+   same world as the thing it is writing about.
+   ============================================================ */
+:root {
+  color-scheme: light dark;
+
+  /* --- page frame (light) --- */
+  --ground: #f2f1f5;
+  --panel:  #ffffff;
+  --well:   #e4e3ea;
+  --ink:    #15141a;
+  --ink2:   #56535f;
+  --ink3:   #85818e;
+  --mark:   #6d28d9;
+  --markSoft: #6d28d914;
+  --focus:  #6d28d9;
+
+  /* --- app tokens (light values) --- */
+  --appSheet:    #ffffff;
+  --appRaised:   #f8f8f8;
+  --appWell:     #e9e9ef;
+  --appText:     #000000;
+  --appText2:    #3c3c43d6;
+  --appText3:    #3c3c43bd;
+  --fillFaint:   #00000008;
+  --fillLine:    #00000014;
+  --fillStrong:  #00000024;
+  --confirm:     #34c759;
+  --attention:   #ff9500;
+  --pourOpacity: 0.13;
+  --raisedShadow: 0 2px 10px #0000001f;
+  --sheetShadow:  0 18px 50px #0000001f;
+
+  /* --- pour hues (identical in both themes) --- */
+  --pourWallet:  #7c3aed;
+  --pourShield:  #8b7bd8;
+  --pourCard:    #2f6f56;
+
+  /* --- radii, from DS.Radius --- */
+  --rCard: 10px;
+  --rPaper: 14px;   /* card + 4 */
+  --rSheet: 16px;
+  --rControl: 12px;
+
+  /* --- spacing, from DS.Space (iOS column) --- */
+  --s1: 4px; --s2: 8px; --s3: 12px; --s4: 15px; --s6: 24px;
+
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ground: #0b0b0f;
+    --panel:  #16161b;
+    --well:   #060608;
+    --ink:    #eeecf3;
+    --ink2:   #a29ead;
+    --ink3:   #726e7c;
+    --mark:   #a78bfa;
+    --markSoft: #a78bfa1f;
+    --focus:  #a78bfa;
+
+    --appSheet:   #111113;
+    --appRaised:  #1a1a1c;
+    --appWell:    #080809;
+    --appText:    #ffffff;
+    --appText2:   #ebebf599;
+    --appText3:   #ebebf57e;
+    --fillFaint:  #ffffff0a;
+    --fillLine:   #ffffff1a;
+    --fillStrong: #ffffff29;
+    --confirm:    #30d158;
+    --attention:  #ff9f0a;
+    --pourOpacity: 0.20;
+    --raisedShadow: none;
+    --sheetShadow:  0 18px 50px #00000066;
+  }
+}
+
+:root[data-theme="dark"] {
+  --ground: #0b0b0f;
+  --panel:  #16161b;
+  --well:   #060608;
+  --ink:    #eeecf3;
+  --ink2:   #a29ead;
+  --ink3:   #726e7c;
+  --mark:   #a78bfa;
+  --markSoft: #a78bfa1f;
+  --focus:  #a78bfa;
+
+  --appSheet:   #111113;
+  --appRaised:  #1a1a1c;
+  --appWell:    #080809;
+  --appText:    #ffffff;
+  --appText2:   #ebebf599;
+  --appText3:   #ebebf57e;
+  --fillFaint:  #ffffff0a;
+  --fillLine:   #ffffff1a;
+  --fillStrong: #ffffff29;
+  --confirm:    #30d158;
+  --attention:  #ff9f0a;
+  --pourOpacity: 0.20;
+  --raisedShadow: none;
+  --sheetShadow:  0 18px 50px #00000066;
+}
+
+@property --toothGrow {
+  syntax: '<length>';
+  inherits: true;
+  initial-value: 0px;
+}
+
+/* ============================================================
+   PAGE
+   No rules, no borders, no hairlines — the app's law, kept here
+   too. Everything is separated by ground, fill and space.
+   ============================================================ */
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--ink);
+  font-family: ui-serif, "New York", Iowan Old Style, Georgia, serif;
+  font-size: 17px;
+  line-height: 1.62;
+  -webkit-font-smoothing: antialiased;
+}
+
+.wrap {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: clamp(32px, 6vw, 88px) clamp(20px, 4vw, 48px) 96px;
+}
+
+/* --- utility face: labels, spec data, captions --- */
+.mono {
+  font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
+  font-size: 12.5px;
+  line-height: 1.5;
+  letter-spacing: 0;
+}
+
+h1 {
+  font-size: clamp(38px, 6.2vw, 62px);
+  line-height: 1.04;
+  font-weight: 600;
+  letter-spacing: -0.018em;
+  margin: 0 0 var(--s4);
+  text-wrap: balance;
+}
+
+h2 {
+  font-size: clamp(25px, 2.6vw, 31px);
+  line-height: 1.14;
+  font-weight: 600;
+  letter-spacing: -0.012em;
+  margin: 0 0 var(--s3);
+  text-wrap: balance;
+}
+
+h3 {
+  font-size: 20px;
+  line-height: 1.25;
+  font-weight: 600;
+  margin: 0 0 var(--s2);
+}
+
+p { margin: 0 0 var(--s3); }
+p:last-child { margin-bottom: 0; }
+
+.standfirst {
+  font-size: clamp(18px, 1.9vw, 21px);
+  line-height: 1.52;
+  color: var(--ink2);
+  max-width: 60ch;
+}
+
+.eyebrow {
+  color: var(--ink3);
+  margin: 0 0 var(--s3);
+}
+
+/* ============================================================
+   PLATE + MARGIN
+   Each proposal is an argument in the margin and a specimen on
+   a plate. The specimen sits in a recessed well so it reads as
+   an object under glass rather than as page furniture.
+   ============================================================ */
+.row {
+  display: grid;
+  grid-template-columns: minmax(0, 0.78fr) minmax(0, 1fr);
+  gap: clamp(28px, 4vw, 64px);
+  align-items: start;
+  padding: clamp(40px, 5vw, 68px) 0 0;
+}
+
+.row.flip { grid-template-columns: minmax(0, 1fr) minmax(0, 0.78fr); }
+.row.flip .margin { order: 2; }
+.row.flip .plate { order: 1; }
+
+.margin { position: sticky; top: 32px; }
+
+.index {
+  color: var(--mark);
+  margin: 0 0 var(--s2);
+}
+
+.lede { color: var(--ink2); max-width: 46ch; }
+
+.spec {
+  display: grid;
+  gap: var(--s2);
+  margin: var(--s6) 0 0;
+  padding: 0;
+}
+.spec > div {
+  display: grid;
+  grid-template-columns: 82px minmax(0, 1fr);
+  gap: var(--s3);
+  align-items: baseline;
+}
+.spec dt { color: var(--ink3); }
+.spec dd { margin: 0; color: var(--ink); }
+
+.plate { min-width: 0; }
+
+.well {
+  background: var(--well);
+  border-radius: 22px;
+  padding: clamp(20px, 3vw, 36px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s4);
+}
+
+.caption {
+  color: var(--ink3);
+  margin: var(--s3) 0 0;
+  max-width: 54ch;
+}
+
+/* ============================================================
+   THE SHEET  — one specimen of the app's thing sheet
+   ============================================================ */
+.sheet {
+  width: 340px;
+  max-width: 100%;
+  background: var(--appSheet);
+  border-radius: var(--rSheet) var(--rSheet) 6px 6px;
+  padding: var(--s2) 0 var(--s6);
+  box-shadow: var(--sheetShadow);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  color: var(--appText);
+  overflow: hidden;
+}
+
+.grabber {
+  width: 36px; height: 5px;
+  border-radius: 999px;
+  background: var(--fillStrong);
+  margin: 0 auto var(--s2);
+}
+
+.sheetPad { padding: 0 var(--s4); }
+
+/* --- the receipt paper --- */
+.paperWrap { padding: var(--s4) var(--s4) 0; filter: drop-shadow(var(--raisedShadow)); }
+:root[data-theme="dark"] .paperWrap { filter: none; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .paperWrap { filter: none; }
+}
+
+.paper {
+  position: relative;
+  background: var(--appRaised);
+  border-radius: var(--rPaper);
+  padding: var(--s6) var(--s4) var(--s6);
+  isolation: isolate;
+  /* Stated here, not inherited from .sheet — the comparison specimens
+     stand on their own and would otherwise pick up the page's serif. */
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  color: var(--appText);
+}
+
+/* the pour — identity as colour, clipped to the paper */
+.paper::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 150px;
+  border-radius: var(--rPaper) var(--rPaper) 0 0;
+  background: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--pour) calc(var(--pourOpacity) * 100%), transparent),
+    transparent);
+  z-index: -1;
+}
+
+.paper { --pour: var(--pourWallet); }
+.paper.shield { --pour: var(--pourShield); }
+.paper.card   { --pour: var(--pourCard); }
+
+/* the tear: the exact ReceiptPaper geometry — tooth 10, period 20,
+   quad control 1.5 x tooth above the baseline, so the bite peaks
+   7.5 above the tips. */
+.paper.torn {
+  padding-bottom: calc(var(--s6) + 12px);
+  --toothGrow: 17.5px;
+  -webkit-mask-image:
+    linear-gradient(#000, #000),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='17.5' viewBox='0 0 20 17.5' preserveAspectRatio='none'%3E%3Cpath d='M0,0 L0,7.5 Q10,-7.5 20,7.5 L20,0 Z' fill='%23000'/%3E%3C/svg%3E");
+  -webkit-mask-size: 100% calc(100% - var(--toothGrow)), 20px var(--toothGrow);
+  -webkit-mask-position: top left, bottom left;
+  -webkit-mask-repeat: no-repeat, repeat-x;
+  mask-image:
+    linear-gradient(#000, #000),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='17.5' viewBox='0 0 20 17.5' preserveAspectRatio='none'%3E%3Cpath d='M0,0 L0,7.5 Q10,-7.5 20,7.5 L20,0 Z' fill='%23000'/%3E%3C/svg%3E");
+  mask-size: 100% calc(100% - var(--toothGrow)), 20px var(--toothGrow);
+  mask-position: top left, bottom left;
+  mask-repeat: no-repeat, repeat-x;
+}
+
+.paper.tearing {
+  --toothGrow: 0px;
+  transition: --toothGrow 420ms cubic-bezier(0.2, 0.9, 0.25, 1);
+}
+.paper.tearing.cut { --toothGrow: 17.5px; }
+
+/* --- receipt anatomy --- */
+.rHead { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--s3); }
+
+.disc {
+  width: 56px; height: 56px;
+  border-radius: 999px;
+  position: relative;
+  flex: none;
+  overflow: visible;
+}
+.disc svg { display: block; border-radius: 999px; }
+
+.void {
+  width: 56px; height: 56px;
+  border-radius: 999px;
+  background: var(--appWell);
+  box-shadow: inset 0 2px 7px #00000073, inset 0 -1px 2px #ffffff0d;
+}
+
+.monogram {
+  width: 56px; height: 56px;
+  border-radius: 999px;
+  background: var(--fillStrong);
+  display: grid; place-items: center;
+  font-size: 21px; font-weight: 600;
+  color: var(--appText2);
+  font-family: ui-rounded, -apple-system, system-ui, sans-serif;
+}
+
+.pip {
+  position: absolute;
+  right: -3px; bottom: -3px;
+  width: 26px; height: 26px;
+  border-radius: 999px;
+  box-shadow: 0 0 0 3px var(--appRaised);
+  overflow: hidden;
+}
+
+.stamp {
+  height: 24px;
+  border-radius: 999px;
+  display: inline-flex; align-items: center;
+  padding: 0 var(--s2);
+  font-size: 12px; font-weight: 500; line-height: 16px;
+  flex: none;
+  white-space: nowrap;
+}
+.stamp.good     { color: var(--confirm);   background: color-mix(in srgb, var(--confirm) 16%, transparent); }
+.stamp.waiting  { color: var(--attention); background: color-mix(in srgb, var(--attention) 16%, transparent); }
+.stamp.urgent   { color: var(--attention); background: color-mix(in srgb, var(--attention) 16%, transparent); }
+.stamp.quiet    { color: var(--appText3);  background: var(--fillFaint); }
+.stamp.private_ { color: var(--pourShield); background: color-mix(in srgb, var(--pourShield) 16%, transparent); }
+
+.rLead   { margin-top: var(--s3); font-size: 16px; line-height: 23px; color: var(--appText2); }
+.rParty  {
+  font-family: ui-rounded, -apple-system, system-ui, sans-serif;
+  font-size: 22px; line-height: 28px; font-weight: 700;
+  color: var(--appText);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.rAmount {
+  margin-top: var(--s3);
+  display: flex; align-items: baseline; gap: 6px;
+}
+.rNumber {
+  font-family: ui-rounded, -apple-system, system-ui, sans-serif;
+  font-size: 40px; line-height: 44px; font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+.rNumber.gain { color: var(--confirm); }
+.rNumber.warn { color: var(--attention); }
+.rUnit {
+  font-family: ui-rounded, -apple-system, system-ui, sans-serif;
+  font-size: 22px; line-height: 28px; font-weight: 700;
+  color: var(--appText2);
+}
+.rSecond { font-size: 16px; line-height: 23px; color: var(--appText2); margin-top: 2px; }
+.rSentence { font-size: 16px; line-height: 23px; color: var(--appText2); margin-top: var(--s4); }
+
+/* --- commentary --- */
+.says {
+  margin: var(--s3) var(--s4) 0;
+  background: var(--fillFaint);
+  border-radius: var(--rPaper);
+  padding: var(--s4);
+}
+.saysHead { font-size: 18px; line-height: 24px; font-weight: 600; }
+.saysSub  { font-size: 14px; line-height: 21px; color: var(--appText3); margin-top: 1px; }
+
+.strip { display: flex; gap: 5px; align-items: flex-end; height: 54px; margin-top: var(--s3); }
+.strip .col { flex: 1; height: 54px; display: flex; flex-direction: column; }
+.strip .bar { border-radius: 3px; }
+.strip .up   { margin-top: auto; background: var(--confirm); }
+.strip .down { background: var(--fillStrong); }
+.strip .half { height: 26px; flex: none; }
+.strip .col.pos { justify-content: flex-end; }
+.strip .last { box-shadow: inset 0 0 0 3px color-mix(in srgb, var(--confirm) 35%, transparent); }
+.strip .bar.playing { background: var(--mark); }
+
+/* --- the dial --- */
+.dial {
+  display: flex; justify-content: center; gap: 17px;
+  margin-top: var(--s6);
+}
+.dialItem {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  background: none; border: 0; padding: 0; cursor: pointer;
+  font: inherit;
+}
+.dialDisc {
+  width: 52px; height: 52px; border-radius: 999px;
+  background: var(--fillLine);
+  display: grid; place-items: center;
+  transition: transform 160ms ease, background 160ms ease;
+}
+.dialItem:hover .dialDisc { background: var(--fillStrong); }
+.dialItem:active .dialDisc { transform: scale(0.94); }
+.dialDisc svg { width: 19px; height: 19px; fill: none; stroke: var(--appText); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.dialWord {
+  font-size: 12px; line-height: 16px; font-weight: 500;
+  color: var(--appText3);
+  font-family: -apple-system, system-ui, sans-serif;
+}
+
+/* ============================================================
+   CONTROLS — page-level, never inside a specimen
+   ============================================================ */
+.controls { display: flex; flex-wrap: wrap; gap: var(--s2); align-items: center; justify-content: center; }
+
+button.act {
+  font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
+  font-size: 12.5px;
+  color: var(--ink);
+  background: var(--panel);
+  border: 0;
+  border-radius: 999px;
+  padding: 9px 16px;
+  cursor: pointer;
+  transition: background 140ms ease, color 140ms ease, transform 140ms ease;
+}
+button.act:hover { background: var(--markSoft); color: var(--mark); }
+button.act:active { transform: scale(0.97); }
+button.act[aria-pressed="true"] { background: var(--mark); color: var(--panel); }
+
+:where(button, a, [tabindex]):focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+/* ============================================================
+   ITEM 1 — VoiceOver
+   ============================================================ */
+.vo { position: relative; }
+
+/* The VoiceOver cursor. It lives on the WRAPPER, never on .paper —
+   a masked element clips its own outline and box-shadow, so a ring
+   drawn on torn paper renders as nothing at all. */
+.voRing {
+  outline: 3px solid #ffffff;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 6px #000000;
+  border-radius: 8px;
+}
+.paperWrap.voRing { border-radius: calc(var(--rPaper) + 4px); }
+.vo .paperWrap { padding-top: var(--s6); }
+
+.speech {
+  background: var(--panel);
+  border-radius: var(--rControl);
+  padding: var(--s3) var(--s4);
+  width: 340px; max-width: 100%;
+  color: var(--ink2);
+  font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
+  font-size: 12.5px; line-height: 1.62;
+  min-height: 76px;
+}
+.speech b { color: var(--ink); font-weight: 500; }
+.speechLabel { color: var(--ink3); display: block; margin-bottom: 4px; }
+
+.fragments { display: grid; gap: 5px; }
+.fragments span {
+  background: var(--markSoft);
+  color: var(--mark);
+  border-radius: 5px;
+  padding: 2px 7px;
+  display: inline-block;
+  justify-self: start;
+}
+
+/* ============================================================
+   ITEM 3 — Dynamic Island + lock screen
+   ============================================================ */
+.phone {
+  width: 300px;
+  border-radius: 44px;
+  background: #000;
+  padding: 12px;
+  box-shadow: var(--sheetShadow);
+}
+.screen {
+  border-radius: 33px;
+  background: linear-gradient(165deg, #1d1b2e 0%, #2b2440 42%, #14121f 100%);
+  padding: 14px 12px 22px;
+  min-height: 380px;
+  display: flex; flex-direction: column; gap: 14px;
+  font-family: -apple-system, system-ui, sans-serif;
+  color: #fff;
+}
+
+.islandRow { display: flex; justify-content: center; padding-top: 2px; }
+.island {
+  background: #000;
+  border-radius: 999px;
+  color: #fff;
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 14px;
+  cursor: pointer;
+  border: 0;
+  transition: border-radius 300ms cubic-bezier(0.2,0.9,0.25,1), padding 300ms cubic-bezier(0.2,0.9,0.25,1);
+  font-family: -apple-system, system-ui, sans-serif;
+  max-width: 100%;
+}
+.island.big { border-radius: 30px; padding: 14px; width: 100%; flex-direction: column; align-items: stretch; gap: 12px; }
+.islandDot { width: 10px; height: 10px; border-radius: 999px; background: var(--attention); flex: none; }
+.islandDot.pulse { animation: breathe 1.9s ease-in-out infinite; }
+@keyframes breathe { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
+.islandText { font-size: 13px; font-weight: 500; white-space: nowrap; }
+.islandNum { font-family: ui-rounded, -apple-system, system-ui, sans-serif; font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+.clock {
+  text-align: center;
+  font-family: ui-rounded, -apple-system, system-ui, sans-serif;
+  color: #fff;
+}
+.clockTime { font-size: 62px; line-height: 1; font-weight: 600; letter-spacing: -0.02em; }
+.clockDate { font-size: 14px; opacity: 0.72; margin-top: 2px; }
+
+.la {
+  margin-top: auto;
+  background: #1c1c1eee;
+  border-radius: 20px;
+  padding: 14px;
+  display: grid; gap: 10px;
+}
+.laHead { display: flex; align-items: center; gap: 9px; }
+.laTitle { font-size: 13px; font-weight: 600; }
+.laSub { font-size: 12px; color: #ffffff8c; }
+.laRung { display: flex; gap: 6px; }
+.laRung i {
+  height: 4px; border-radius: 999px; flex: 1; background: #ffffff29;
+}
+.laRung i.done { background: var(--confirm); }
+.laRung i.now  { background: var(--attention); }
+
+/* ============================================================
+   ITEM 4 — the face as a door
+   ============================================================ */
+.pressable { cursor: pointer; border: 0; background: none; padding: 0; border-radius: 999px; transition: transform 170ms cubic-bezier(0.2,0.9,0.25,1); }
+.pressable:active { transform: scale(0.93); }
+.pressable.armed { animation: nudge 2.4s ease-in-out infinite; }
+@keyframes nudge {
+  0%, 88%, 100% { transform: scale(1); }
+  92% { transform: scale(1.06); }
+}
+
+.addrCard {
+  margin: var(--s3) var(--s4) 0;
+  background: var(--fillFaint);
+  border-radius: var(--rPaper);
+  padding: var(--s4);
+  display: grid; gap: var(--s3);
+  transform-origin: top center;
+}
+.addrCard[hidden] { display: none; }
+.addrCard.in { animation: rise 320ms cubic-bezier(0.2,0.9,0.25,1); }
+@keyframes rise {
+  from { opacity: 0; transform: translateY(10px) scale(0.98); }
+  to   { opacity: 1; transform: none; }
+}
+.addrTop { display: flex; align-items: center; gap: var(--s3); }
+.addrName { font-family: ui-rounded, -apple-system, system-ui, sans-serif; font-size: 18px; font-weight: 700; }
+.addrMeta { font-size: 14px; line-height: 21px; color: var(--appText3); }
+.addrStat { display: flex; gap: var(--s6); }
+.addrStat div { display: grid; gap: 1px; }
+.addrStat b {
+  font-family: ui-rounded, -apple-system, system-ui, sans-serif;
+  font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums;
+}
+.addrStat span { font-size: 12px; color: var(--appText3); }
+
+/* ============================================================
+   ITEM 5 — the rolling figure
+   ============================================================ */
+.roll { display: inline-flex; overflow: hidden; height: 44px; align-items: baseline; }
+.rollDigit { display: inline-block; height: 44px; overflow: hidden; position: relative; width: 0.62em; }
+.rollDigit .lane {
+  display: block;
+  transition: transform 620ms cubic-bezier(0.22, 1, 0.32, 1);
+}
+.rollDigit .lane b { display: block; height: 44px; font-weight: 700; }
+.rollFixed { display: inline-block; }
+
+/* ============================================================
+   THE REFUSAL — material vs pour
+   ============================================================ */
+.ab {
+  position: relative;
+  border-radius: 22px;
+  overflow: hidden;
+  padding: clamp(24px, 3vw, 44px);
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: clamp(20px, 3vw, 40px);
+  justify-items: center;
+}
+.abBed { position: absolute; inset: 0; z-index: 0; transition: opacity 400ms ease; }
+.abBed.dim  { background: #0d0d10; }
+.abBed.busy {
+  background:
+    radial-gradient(circle at 18% 22%, #ff9f0a 0 12%, transparent 42%),
+    radial-gradient(circle at 78% 18%, #30d158 0 14%, transparent 44%),
+    radial-gradient(circle at 62% 78%, #ffffff 0 10%, transparent 40%),
+    radial-gradient(circle at 24% 82%, #7c3aed 0 16%, transparent 46%),
+    #f4f2ee;
+}
+.abCol { position: relative; z-index: 1; display: grid; gap: var(--s3); justify-items: center; }
+.abTag {
+  font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
+  font-size: 12.5px;
+  color: #fff;
+  background: #00000073;
+  border-radius: 999px;
+  padding: 5px 12px;
+  backdrop-filter: blur(8px);
+}
+
+/* the material variant — deliberately NOT a token, it is the thing being refused */
+.paper.material {
+  background: color-mix(in srgb, var(--appRaised) 55%, transparent);
+  -webkit-backdrop-filter: blur(26px) saturate(180%);
+  backdrop-filter: blur(26px) saturate(180%);
+}
+.paper.material::before { opacity: 0.35; }
+.paper.material .rLead,
+.paper.material .rSecond,
+.paper.material .rSentence { color: color-mix(in srgb, var(--appText) 62%, transparent); }
+.paper.material .rNumber { color: color-mix(in srgb, var(--appText) 88%, transparent); }
+.paper.material .rParty  { color: color-mix(in srgb, var(--appText) 92%, transparent); }
+
+.abNote {
+  grid-column: 1 / -1;
+  position: relative; z-index: 1;
+  background: #000000a6;
+  color: #fff;
+  border-radius: var(--rControl);
+  padding: var(--s3) var(--s4);
+  font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
+  font-size: 12.5px; line-height: 1.6;
+  max-width: 62ch;
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+
+/* ============================================================
+   CLOSE
+   ============================================================ */
+.order { display: grid; gap: var(--s3); margin-top: var(--s6); }
+.orderRow {
+  display: grid;
+  grid-template-columns: 128px minmax(0, 1fr);
+  gap: var(--s4);
+  align-items: baseline;
+  background: var(--panel);
+  border-radius: var(--rControl);
+  padding: var(--s3) var(--s4);
+}
+.orderRow b { color: var(--mark); font-weight: 500; }
+
+.foot { color: var(--ink3); margin-top: 64px; max-width: 60ch; }
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media (max-width: 900px) {
+  .row, .row.flip { grid-template-columns: 1fr; }
+  .row.flip .margin { order: 1; }
+  .row.flip .plate { order: 2; }
+  .margin { position: static; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+</style>
+
+<div class="wrap">
+
+  <header>
+    <p class="mono eyebrow">Casberi · the money receipt · prd §363, §369</p>
+    <h1>Receipt, revised</h1>
+    <p class="standfirst">
+      The receipt already does the hard part. It is one object rather than a
+      labelled stack, and it carries finality in the shape of the paper — which
+      is a more Apple idea than most things Apple ships. Five changes would
+      finish it. Every specimen below is drawn from the real values in
+      <span class="mono">DesignTokens.swift</span>, at the real sizes.
+    </p>
+  </header>
+
+  <!-- ===================== CONTROL ===================== -->
+  <section class="row" aria-labelledby="h-today">
+    <div class="margin">
+      <p class="mono index">Control</p>
+      <h2 id="h-today">What it draws today</h2>
+      <p class="lede">
+        A settled send. Subject disc with the watched wallet tucked in its
+        corner, the lead and the party, the signed figure, one sentence in place
+        of a spec table, the stamp, and the torn edge saying this is history.
+        The commentary card underneath has already read the chart it sits above.
+      </p>
+      <dl class="spec mono">
+        <div><dt>File</dt><dd>MoneyReceiptCard.swift</dd></div>
+        <div><dt>Covers</dt><dd>Nine money sources</dd></div>
+        <div><dt>Hue</dt><dd>receiptPour(.wallet)</dd></div>
+      </dl>
+    </div>
+    <div class="plate">
+      <div class="well">
+        <div class="sheet">
+          <div class="grabber"></div>
+          <div class="paperWrap">
+            <div class="paper torn">
+              <div class="rHead">
+                <div class="disc">
+                  <span data-identicon="0x9f2c4a8b7e1d6053" data-size="56"></span>
+                  <span class="pip"><span data-identicon="0x41ab77e0" data-size="26"></span></span>
+                </div>
+                <span class="stamp good">Settled</span>
+              </div>
+              <p class="rLead" style="margin-bottom:0">Sent to</p>
+              <p class="rParty" style="margin:0">maria.eth</p>
+              <div class="rAmount">
+                <span class="rNumber">−0.50</span>
+                <span class="rUnit">ETH</span>
+              </div>
+              <p class="rSecond" style="margin-bottom:0">$1,684.20 at the time</p>
+              <p class="rSentence" style="margin-bottom:0">
+                From Main, on Base, on Friday at 4:12 pm.
+              </p>
+            </div>
+          </div>
+          <div class="says">
+            <p class="saysHead" style="margin:0">Your fourth send to maria.eth</p>
+            <p class="saysSub" style="margin:0">The largest so far, by roughly double</p>
+            <div class="strip" aria-hidden="true">
+              <div class="col pos"><div class="bar up" style="height:9px"></div><div class="half"></div></div>
+              <div class="col"><div class="half"></div><div class="bar down" style="height:7px"></div></div>
+              <div class="col pos"><div class="bar up" style="height:14px"></div><div class="half"></div></div>
+              <div class="col pos"><div class="bar up" style="height:11px"></div><div class="half"></div></div>
+              <div class="col"><div class="half"></div><div class="bar down" style="height:13px"></div></div>
+              <div class="col pos"><div class="bar up" style="height:27px"></div><div class="half"></div></div>
+              <div class="col"><div class="half"></div><div class="bar down" style="height:27px"></div></div>
+            </div>
+          </div>
+          <div class="dial">
+            <button class="dialItem" type="button">
+              <span class="dialDisc"><svg viewBox="0 0 24 24"><path d="M7 17 17 7M9 7h8v8"/></svg></span>
+              <span class="dialWord">Basescan</span>
+            </button>
+            <button class="dialItem" type="button">
+              <span class="dialDisc"><svg viewBox="0 0 24 24"><path d="M4 17.5V20h2.5L18 8.5 15.5 6 4 17.5zM15.5 6 18 3.5 20.5 6 18 8.5"/></svg></span>
+              <span class="dialWord">Name</span>
+            </button>
+            <button class="dialItem" type="button">
+              <span class="dialDisc"><svg viewBox="0 0 24 24"><path d="M12 15V4m0 0L8.5 7.5M12 4l3.5 3.5M5 14v5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-5"/></svg></span>
+              <span class="dialWord">Share</span>
+            </button>
+          </div>
+        </div>
+      </div>
+      <p class="caption mono">
+        Specimen is live HTML at the app's own metrics — paper radius 14, tooth
+        10, figure at 40/44 rounded, discs at 52.
+      </p>
+    </div>
+  </section>
+
+  <!-- ===================== 1 ===================== -->
+  <section class="row flip" aria-labelledby="h1">
+    <div class="margin">
+      <p class="mono index">1 of 5</p>
+      <h2 id="h1">The tear should be audible</h2>
+      <p class="lede">
+        Torn means final; flat means the paper is still in the machine. It is the
+        sharpest idea on the card and VoiceOver never hears it — the receipt
+        reads out as eight loose fragments, not one of which mentions finality.
+      </p>
+      <p class="lede">
+        Make the card a single accessibility element whose value carries the
+        state, and give the strip an <span class="mono">AXChartDescriptor</span>
+        so the history plays as an Audio Graph instead of sitting there as
+        decoration.
+      </p>
+      <dl class="spec mono">
+        <div><dt>Effort</dt><dd>An afternoon</dd></div>
+        <div><dt>Touches</dt><dd>MoneyReceiptCard</dd></div>
+        <div><dt>Risk</dt><dd>None — additive</dd></div>
+      </dl>
+    </div>
+    <div class="plate">
+      <div class="well">
+        <div class="controls">
+          <button class="act" type="button" id="voToday" aria-pressed="true">Today</button>
+          <button class="act" type="button" id="voFixed" aria-pressed="false">Composed</button>
+          <button class="act" type="button" id="voGraph">Play the graph</button>
+        </div>
+        <div class="sheet vo" id="voSheet">
+          <div class="grabber"></div>
+          <div class="paperWrap">
+            <div class="paper torn">
+              <div class="rHead">
+                <div class="disc">
+                  <span data-identicon="0x9f2c4a8b7e1d6053" data-size="56"></span>
+                  <span class="pip"><span data-identicon="0x41ab77e0" data-size="26"></span></span>
+                </div>
+                <span class="stamp good">Settled</span>
+              </div>
+              <p class="rLead" style="margin-bottom:0">Sent to</p>
+              <p class="rParty" style="margin:0">maria.eth</p>
+              <div class="rAmount">
+                <span class="rNumber">−0.50</span>
+                <span class="rUnit">ETH</span>
+              </div>
+              <p class="rSentence" style="margin-bottom:0">From Main, on Base, on Friday at 4:12 pm.</p>
+            </div>
+          </div>
+          <div class="says">
+            <p class="saysHead" style="margin:0">Your fourth send to maria.eth</p>
+            <p class="saysSub" style="margin:0">The largest so far, by roughly double</p>
+            <div class="strip" id="voStrip" aria-hidden="true">
+              <div class="col pos"><div class="bar up" data-v="0.15" style="height:9px"></div><div class="half"></div></div>
+              <div class="col"><div class="half"></div><div class="bar down" data-v="-0.11" style="height:7px"></div></div>
+              <div class="col pos"><div class="bar up" data-v="0.24" style="height:14px"></div><div class="half"></div></div>
+              <div class="col pos"><div class="bar up" data-v="0.19" style="height:11px"></div><div class="half"></div></div>
+              <div class="col"><div class="half"></div><div class="bar down" data-v="-0.22" style="height:13px"></div></div>
+              <div class="col pos"><div class="bar up" data-v="0.47" style="height:27px"></div><div class="half"></div></div>
+              <div class="col"><div class="half"></div><div class="bar down" data-v="-0.50" style="height:27px"></div></div>
+            </div>
+          </div>
+        </div>
+        <div class="speech" id="voSpeech" aria-live="polite">
+          <span class="speechLabel">VoiceOver says</span>
+          <div id="voBody"></div>
+        </div>
+      </div>
+      <p class="caption mono">
+        The Audio Graph preview is silent and visual — the real one plays tones
+        and is driven by the same series the strip draws.
+      </p>
+    </div>
+  </section>
+
+  <!-- ===================== 2 ===================== -->
+  <section class="row" aria-labelledby="h2b">
+    <div class="margin">
+      <p class="mono index">2 of 5</p>
+      <h2 id="h2b">Becoming final is a moment</h2>
+      <p class="lede">
+        The sheet already recomposes when the Safe queue read lands, which means
+        somebody can be looking at the paper at the instant it tears. Today it
+        swaps. Apple Pay's whole identity is that instant — the mark, the
+        haptic, the sound.
+      </p>
+      <p class="lede">
+        Cut the teeth in over about four hundred milliseconds, with a success
+        haptic on the same frame. Under Reduce Motion it lands torn, which §299
+        requires anyway.
+      </p>
+      <dl class="spec mono">
+        <div><dt>Effort</dt><dd>A day</dd></div>
+        <div><dt>Touches</dt><dd>MoneyReceiptCard, MoneyReceiptSource</dd></div>
+        <div><dt>Watch</dt><dd>The Reduce Motion path</dd></div>
+      </dl>
+    </div>
+    <div class="plate">
+      <div class="well">
+        <div class="controls">
+          <button class="act" type="button" id="tearPlay">Settle it</button>
+          <button class="act" type="button" id="tearReset">Reset</button>
+        </div>
+        <div class="sheet">
+          <div class="grabber"></div>
+          <div class="paperWrap">
+            <div class="paper tearing safe" id="tearPaper" style="--pour:#12ff80">
+              <div class="rHead">
+                <div class="disc"><span class="monogram">S</span></div>
+                <span class="stamp waiting" id="tearStamp">Your turn</span>
+              </div>
+              <p class="rLead" style="margin-bottom:0">Safe transaction</p>
+              <p class="rParty" style="margin:0">Treasury</p>
+              <div class="rAmount">
+                <span class="rNumber">−12,000</span>
+                <span class="rUnit">USDC</span>
+              </div>
+              <p class="rSentence" style="margin-bottom:0" id="tearSentence">
+                Two of three signatures collected. Yours is needed.
+              </p>
+            </div>
+          </div>
+          <div class="dial">
+            <button class="dialItem" type="button">
+              <span class="dialDisc"><svg viewBox="0 0 24 24"><path d="M7 17 17 7M9 7h8v8"/></svg></span>
+              <span class="dialWord">Safe</span>
+            </button>
+            <button class="dialItem" type="button">
+              <span class="dialDisc"><svg viewBox="0 0 24 24"><path d="M12 15V4m0 0L8.5 7.5M12 4l3.5 3.5M5 14v5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-5"/></svg></span>
+              <span class="dialWord">Share</span>
+            </button>
+          </div>
+        </div>
+      </div>
+      <p class="caption mono" id="tearCaption">
+        Flat edge, waiting stamp. The third signature has not landed.
+      </p>
+    </div>
+  </section>
+
+  <!-- ===================== 3 ===================== -->
+  <section class="row flip" aria-labelledby="h3">
+    <div class="margin">
+      <p class="mono index">3 of 5</p>
+      <h2 id="h3">A flat edge belongs in the Island</h2>
+      <p class="lede">
+        If the paper is still in the machine, the machine should be visible
+        without opening the app. A pending authorization, a deposit in
+        screening, an unsigned Safe transaction — each is a bounded state with a
+        known endpoint, which is exactly the shape ActivityKit wants.
+      </p>
+      <p class="lede">
+        You already have the widget target, the payload contract and two Live
+        Activities. It also fits the three-lifetimes rule cleanly: a pending
+        record is a reading with a shelf life, and this one expires by tearing.
+      </p>
+      <dl class="spec mono">
+        <div><dt>Effort</dt><dd>A pass of its own</dd></div>
+        <div><dt>Touches</dt><dd>CasberiWidgets, WidgetPayload</dd></div>
+        <div><dt>Needs</dt><dd>Its own prd entry</dd></div>
+      </dl>
+    </div>
+    <div class="plate">
+      <div class="well">
+        <div class="controls">
+          <button class="act" type="button" id="islandToggle">Expand the Island</button>
+        </div>
+        <div class="phone">
+          <div class="screen">
+            <div class="islandRow">
+              <button class="island" type="button" id="island" aria-expanded="false">
+                <span class="islandDot pulse"></span>
+                <span class="islandText" id="islandCompact">Screening · 0.07 ETH</span>
+                <span class="islandNum" id="islandTrail">2d</span>
+              </button>
+            </div>
+            <div class="clock">
+              <div class="clockTime">9:41</div>
+              <div class="clockDate">Friday, 16 August</div>
+            </div>
+            <div class="la">
+              <div class="laHead">
+                <span class="void" style="width:28px;height:28px;box-shadow:inset 0 1px 4px #00000073"></span>
+                <div>
+                  <div class="laTitle">Privacy Pools · being screened</div>
+                  <div class="laSub">0.07 ETH in since Wednesday</div>
+                </div>
+              </div>
+              <div class="laRung" aria-hidden="true">
+                <i class="done"></i><i class="now"></i><i></i>
+              </div>
+              <div class="laSub">Clear to withdraw is the third rung. You'll get this back when it tears.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="caption mono">
+        The compact form states the rung and how long it has been there. The
+        expanded form is the receipt's own ladder, at Island scale.
+      </p>
+    </div>
+  </section>
+
+  <!-- ===================== 4 ===================== -->
+  <section class="row" aria-labelledby="h4">
+    <div class="margin">
+      <p class="mono index">4 of 5</p>
+      <h2 id="h4">The face is a door</h2>
+      <p class="lede">
+        In Apple Wallet you tap the merchant and get your history with them. This
+        sheet has that history — it is drawn eighty points further down — but the
+        disc is inert, and naming lives at the bottom in the dial.
+      </p>
+      <p class="lede">
+        Make the subject and the corner pip open the address card. It is the
+        gesture people try first, which is exactly why the framed screenshot
+        became tappable in the first place. Keep the dial at parity so nothing
+        is only reachable by a tap on a picture.
+      </p>
+      <dl class="spec mono">
+        <div><dt>Effort</dt><dd>Half a day</dd></div>
+        <div><dt>Touches</dt><dd>MoneyReceiptCard, ThingSheetView</dd></div>
+        <div><dt>Watch</dt><dd>Dial parity, hit target ≥ 44</dd></div>
+      </dl>
+    </div>
+    <div class="plate">
+      <div class="well">
+        <div class="sheet">
+          <div class="grabber"></div>
+          <div class="paperWrap">
+            <div class="paper torn">
+              <div class="rHead">
+                <button class="pressable armed disc" type="button" id="faceBtn"
+                        aria-expanded="false" aria-controls="addrCard"
+                        aria-label="maria.eth — open the address card">
+                  <span data-identicon="0x9f2c4a8b7e1d6053" data-size="56"></span>
+                  <span class="pip"><span data-identicon="0x41ab77e0" data-size="26"></span></span>
+                </button>
+                <span class="stamp good">Settled</span>
+              </div>
+              <p class="rLead" style="margin-bottom:0">Sent to</p>
+              <p class="rParty" style="margin:0">maria.eth</p>
+              <div class="rAmount">
+                <span class="rNumber">−0.50</span>
+                <span class="rUnit">ETH</span>
+              </div>
+              <p class="rSentence" style="margin-bottom:0">From Main, on Base, on Friday at 4:12 pm.</p>
+            </div>
+          </div>
+          <div class="addrCard" id="addrCard" hidden>
+            <div class="addrTop">
+              <span class="disc" style="width:44px;height:44px">
+                <span data-identicon="0x9f2c4a8b7e1d6053" data-size="44"></span>
+              </span>
+              <div>
+                <div class="addrName">maria.eth</div>
+                <div class="addrMeta">0x9f2c…6053 · named by you</div>
+              </div>
+            </div>
+            <div class="addrStat">
+              <div><b>7</b><span>transfers</span></div>
+              <div><b>1.34</b><span>ETH out</span></div>
+              <div><b>Mar</b><span>first seen</span></div>
+            </div>
+          </div>
+          <div class="dial">
+            <button class="dialItem" type="button">
+              <span class="dialDisc"><svg viewBox="0 0 24 24"><path d="M7 17 17 7M9 7h8v8"/></svg></span>
+              <span class="dialWord">Basescan</span>
+            </button>
+            <button class="dialItem" type="button">
+              <span class="dialDisc"><svg viewBox="0 0 24 24"><path d="M4 17.5V20h2.5L18 8.5 15.5 6 4 17.5zM15.5 6 18 3.5 20.5 6 18 8.5"/></svg></span>
+              <span class="dialWord">Name</span>
+            </button>
+            <button class="dialItem" type="button">
+              <span class="dialDisc"><svg viewBox="0 0 24 24"><path d="M12 15V4m0 0L8.5 7.5M12 4l3.5 3.5M5 14v5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-5"/></svg></span>
+              <span class="dialWord">Share</span>
+            </button>
+          </div>
+        </div>
+      </div>
+      <p class="caption mono">Tap the face. The pip is the same door for your own wallet.</p>
+    </div>
+  </section>
+
+  <!-- ===================== 5 ===================== -->
+  <section class="row flip" aria-labelledby="h5">
+    <div class="margin">
+      <p class="mono index">5 of 5</p>
+      <h2 id="h5">The figure is a number, not a string</h2>
+      <p class="lede">
+        <span class="mono">amount.number</span> is preformatted text, so the
+        locale never gets to decide the separators — and a pending amount that
+        changes simply blinks to the new one.
+      </p>
+      <p class="lede">
+        Push a <span class="mono">FormatStyle</span> down into the view and give
+        the figure <span class="mono">numericText</span>. An authorization that
+        settles higher then counts to its new value, which is the one place on
+        this card where a change deserves to be watchable.
+      </p>
+      <dl class="spec mono">
+        <div><dt>Effort</dt><dd>An afternoon</dd></div>
+        <div><dt>Touches</dt><dd>MoneyReceipt.Amount, MoneyReceiptCard</dd></div>
+        <div><dt>Ships with</dt><dd>Change 1</dd></div>
+      </dl>
+    </div>
+    <div class="plate">
+      <div class="well">
+        <div class="controls">
+          <button class="act" type="button" id="settlePlay">Settle the tip</button>
+          <button class="act" type="button" id="settleReset">Reset</button>
+        </div>
+        <div class="sheet">
+          <div class="grabber"></div>
+          <div class="paperWrap">
+            <div class="paper tearing card" id="rollPaper">
+              <div class="rHead">
+                <div class="disc"><span class="monogram">T</span></div>
+                <span class="stamp waiting" id="rollStamp">Pending</span>
+              </div>
+              <p class="rLead" style="margin-bottom:0">Card at</p>
+              <p class="rParty" style="margin:0">Tartine Bakery</p>
+              <div class="rAmount">
+                <span class="rNumber" id="rollFigure"></span>
+              </div>
+              <p class="rSecond" style="margin-bottom:0" id="rollSecond">Authorization can still change</p>
+              <p class="rSentence" style="margin-bottom:0">
+                Apple Card, this afternoon at 2:38 pm.
+              </p>
+            </div>
+          </div>
+          <div class="dial">
+            <button class="dialItem" type="button">
+              <span class="dialDisc"><svg viewBox="0 0 24 24"><path d="M4 17.5V20h2.5L18 8.5 15.5 6 4 17.5zM15.5 6 18 3.5 20.5 6 18 8.5"/></svg></span>
+              <span class="dialWord">Name</span>
+            </button>
+            <button class="dialItem" type="button">
+              <span class="dialDisc"><svg viewBox="0 0 24 24"><path d="M12 15V4m0 0L8.5 7.5M12 4l3.5 3.5M5 14v5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-5"/></svg></span>
+              <span class="dialWord">Share</span>
+            </button>
+          </div>
+        </div>
+      </div>
+      <p class="caption mono">
+        Only the digits that changed move. The tear and the stamp land on the
+        same frame, which is change 2 arriving for free.
+      </p>
+    </div>
+  </section>
+
+  <!-- ===================== THE REFUSAL ===================== -->
+  <section style="padding-top: clamp(56px, 7vw, 96px)" aria-labelledby="hRefuse">
+    <div style="max-width: 62ch; margin-bottom: var(--s6)">
+      <p class="mono index">One to refuse</p>
+      <h2 id="hRefuse">Frosted paper is the wrong paper</h2>
+      <p class="lede">
+        Apple would reach for a material here — a frosted surface with vibrant
+        ink, the environment showing through. It is tempting, because the card's
+        whole metaphor is paper and the pour is you hand-painting the very thing
+        a material gives you for free.
+      </p>
+      <p class="lede">
+        Keep the pour. Translucency is a semantic claim in Apple's own grammar:
+        it means chrome hovering over content you can still scroll underneath.
+        The receipt is not hovering over anything — it is the record. Watch what
+        happens to the figure when the background changes.
+      </p>
+    </div>
+
+    <div class="ab" id="abBox">
+      <div class="abBed dim" id="bedDim"></div>
+      <div class="abBed busy" id="bedBusy" style="opacity:0"></div>
+
+      <div class="abCol">
+        <span class="abTag">Material · what Apple would try</span>
+        <div class="paper torn material" style="width:300px;--pour:var(--pourWallet)">
+          <div class="rHead">
+            <div class="disc"><span data-identicon="0x9f2c4a8b7e1d6053" data-size="56"></span></div>
+            <span class="stamp good">Settled</span>
+          </div>
+          <p class="rLead" style="margin-bottom:0">Sent to</p>
+          <p class="rParty" style="margin:0">maria.eth</p>
+          <div class="rAmount"><span class="rNumber">−0.50</span><span class="rUnit">ETH</span></div>
+          <p class="rSentence" style="margin-bottom:0">From Main, on Base, on Friday at 4:12 pm.</p>
+        </div>
+      </div>
+
+      <div class="abCol">
+        <span class="abTag">Pour · what you ship</span>
+        <div class="paper torn" style="width:300px">
+          <div class="rHead">
+            <div class="disc"><span data-identicon="0x9f2c4a8b7e1d6053" data-size="56"></span></div>
+            <span class="stamp good">Settled</span>
+          </div>
+          <p class="rLead" style="margin-bottom:0">Sent to</p>
+          <p class="rParty" style="margin:0">maria.eth</p>
+          <div class="rAmount"><span class="rNumber">−0.50</span><span class="rUnit">ETH</span></div>
+          <p class="rSentence" style="margin-bottom:0">From Main, on Base, on Friday at 4:12 pm.</p>
+        </div>
+      </div>
+
+      <div class="abNote">
+        <div class="controls" style="justify-content:flex-start;margin-bottom:10px">
+          <button class="act" type="button" id="bedA" aria-pressed="true">Dark ground</button>
+          <button class="act" type="button" id="bedB" aria-pressed="false">Bright ground</button>
+        </div>
+        On the material card, how legible the figure is depends on what happens
+        to be behind the sheet. For decoration that is charming. For a money
+        figure it is the one place you never want legibility to be weather. And
+        a frosted edge is a soft edge, so the torn silhouette — your only
+        glanceable state signal — goes mushy. The pour keeps the same
+        environmental tint but makes it deterministic and informational: the hue
+        names the rail, and it is the same colour every time.
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== CLOSE ===================== -->
+  <section style="padding-top: clamp(56px, 7vw, 96px)" aria-labelledby="hOrder">
+    <div style="max-width: 62ch">
+      <p class="mono index">Sequence</p>
+      <h2 id="hOrder">The order I'd take them</h2>
+      <p class="lede">
+        One and five are the same afternoon and touch one file. Four is the next
+        cheapest and the most felt. Two is a day and pays for itself the first
+        time somebody watches a Safe transaction settle. Three is a real pass
+        and wants its own ruling in the ledger.
+      </p>
+    </div>
+    <div class="order mono">
+      <div class="orderRow"><b>An afternoon</b><span>Composed accessibility element, chart descriptor, and the figure as a formatted number that rolls.</span></div>
+      <div class="orderRow"><b>Half a day</b><span>The subject disc and the pip become doors onto the address card.</span></div>
+      <div class="orderRow"><b>A day</b><span>The teeth cut in with a success haptic, landing torn under Reduce Motion.</span></div>
+      <div class="orderRow"><b>Its own pass</b><span>A Live Activity for every flat-edged record, with a prd entry to match.</span></div>
+    </div>
+
+    <p class="foot mono">
+      Specimens are HTML standing in for SwiftUI, so the tear is a mask rather
+      than a Shape and the identicons are decorative rather than derived from a
+      real address. Every colour, radius, type size and spacing value is the
+      shipped token.
+    </p>
+  </section>
+
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  /* ---------- identicons ----------------------------------------------
+     Decorative stand-ins for WalletFace: a deterministic 5x5 mirrored
+     block pattern, hue from the same hash. Real ones are derived from
+     the address bytes.                                                  */
+  function hash(str) {
+    var h = 2166136261;
+    for (var i = 0; i < str.length; i++) {
+      h ^= str.charCodeAt(i);
+      h = (h * 16777619) >>> 0;
+    }
+    return h;
+  }
+
+  function identicon(seed, size) {
+    var h = hash(seed);
+    var hue = h % 360;
+    var ns = "http://www.w3.org/2000/svg";
+    var svg = document.createElementNS(ns, "svg");
+    svg.setAttribute("width", size);
+    svg.setAttribute("height", size);
+    svg.setAttribute("viewBox", "0 0 5 5");
+    svg.setAttribute("aria-hidden", "true");
+
+    var bg = document.createElementNS(ns, "rect");
+    bg.setAttribute("width", "5");
+    bg.setAttribute("height", "5");
+    bg.setAttribute("fill", "hsl(" + hue + " 62% 28%)");
+    svg.appendChild(bg);
+
+    var fg = "hsl(" + ((hue + 32) % 360) + " 72% 66%)";
+    var bits = h;
+    for (var x = 0; x < 3; x++) {
+      for (var y = 0; y < 5; y++) {
+        bits = (bits * 1103515245 + 12345) >>> 0;
+        if ((bits >>> 16) % 100 < 47) continue;
+        [x, 4 - x].forEach(function (col) {
+          var r = document.createElementNS(ns, "rect");
+          r.setAttribute("x", col);
+          r.setAttribute("y", y);
+          r.setAttribute("width", "1.02");
+          r.setAttribute("height", "1.02");
+          r.setAttribute("fill", fg);
+          svg.appendChild(r);
+        });
+      }
+    }
+    return svg;
+  }
+
+  Array.prototype.forEach.call(
+    document.querySelectorAll("[data-identicon]"),
+    function (slot) {
+      var size = parseInt(slot.getAttribute("data-size"), 10) || 56;
+      slot.appendChild(identicon(slot.getAttribute("data-identicon"), size));
+    }
+  );
+
+  /* ---------- 1 · VoiceOver -------------------------------------------- */
+  var voBody = document.getElementById("voBody");
+  var voSheet = document.getElementById("voSheet");
+  var voToday = document.getElementById("voToday");
+  var voFixed = document.getElementById("voFixed");
+  var voGraph = document.getElementById("voGraph");
+
+  var TODAY = ["image", "Sent to", "maria.eth", "minus 0 point 5 0",
+               "E T H", "Settled", "From Main, on Base, on Friday at 4:12 pm.",
+               "image"];
+
+  var FIXED = "Sent 0.5 ETH to maria.eth from Main. Settled and final, " +
+              "Friday at 4:12 pm on Base.";
+
+  function drawToday() {
+    voBody.innerHTML = "";
+    var wrap = document.createElement("div");
+    wrap.className = "fragments";
+    TODAY.forEach(function (frag) {
+      var s = document.createElement("span");
+      s.textContent = frag;
+      wrap.appendChild(s);
+    });
+    voBody.appendChild(wrap);
+    var note = document.createElement("p");
+    note.style.margin = "10px 0 0";
+    note.textContent = "Eight stops. Finality is never spoken.";
+    voBody.appendChild(note);
+  }
+
+  function drawFixed() {
+    voBody.innerHTML = "";
+    var b = document.createElement("b");
+    b.textContent = FIXED;
+    voBody.appendChild(b);
+    var note = document.createElement("p");
+    note.style.margin = "10px 0 0";
+    note.textContent = "One stop. The tear is in the value.";
+    voBody.appendChild(note);
+  }
+
+  var voWrap  = voSheet.querySelector(".paperWrap");
+  var voParty = voSheet.querySelector(".rParty");
+
+  function setMode(fixed) {
+    voToday.setAttribute("aria-pressed", String(!fixed));
+    voFixed.setAttribute("aria-pressed", String(fixed));
+    // Today: the cursor lands on one fragment at a time — so it rings a
+    // single label. Composed: it rings the whole card, which is the change.
+    voWrap.classList.toggle("voRing", fixed);
+    voParty.classList.toggle("voRing", !fixed);
+    if (fixed) { drawFixed(); } else { drawToday(); }
+  }
+
+  voToday.addEventListener("click", function () { setMode(false); });
+  voFixed.addEventListener("click", function () { setMode(true); });
+  setMode(false);
+
+  var graphTimer = null;
+  voGraph.addEventListener("click", function () {
+    var bars = document.querySelectorAll("#voStrip .bar");
+    if (graphTimer) { clearInterval(graphTimer); graphTimer = null; }
+    Array.prototype.forEach.call(bars, function (b) { b.classList.remove("playing"); });
+    var i = 0;
+    voBody.innerHTML = "";
+    var line = document.createElement("b");
+    voBody.appendChild(line);
+    var note = document.createElement("p");
+    note.style.margin = "10px 0 0";
+    note.textContent = "Audio Graph, silent preview — the real one plays a tone per bar.";
+    voBody.appendChild(note);
+
+    function step() {
+      Array.prototype.forEach.call(bars, function (b) { b.classList.remove("playing"); });
+      if (i >= bars.length) {
+        clearInterval(graphTimer);
+        graphTimer = null;
+        line.textContent = "Seven transfers. Highest 0.47 out, lowest 0.11 in. This one, 0.50 out.";
+        return;
+      }
+      bars[i].classList.add("playing");
+      var v = parseFloat(bars[i].getAttribute("data-v"));
+      line.textContent = (i + 1) + " of 7 — " + Math.abs(v).toFixed(2) + " ETH " +
+                         (v >= 0 ? "in" : "out");
+      i++;
+    }
+    step();
+    graphTimer = setInterval(step, reduce ? 120 : 420);
+  });
+
+  /* ---------- 2 · the tear --------------------------------------------- */
+  var tearPaper = document.getElementById("tearPaper");
+  var tearStamp = document.getElementById("tearStamp");
+  var tearSentence = document.getElementById("tearSentence");
+  var tearCaption = document.getElementById("tearCaption");
+
+  document.getElementById("tearPlay").addEventListener("click", function () {
+    tearPaper.classList.add("torn");
+    // reflow so the transition has a start value to run from
+    void tearPaper.offsetWidth;
+    tearPaper.classList.add("cut");
+    tearStamp.className = "stamp good";
+    tearStamp.textContent = "Settled";
+    tearSentence.textContent = "All three signatures collected. Executed on Base.";
+    tearCaption.textContent =
+      "The teeth cut in over 420ms with a success haptic on the same frame.";
+    if (window.navigator && navigator.vibrate) { navigator.vibrate(12); }
+  });
+
+  document.getElementById("tearReset").addEventListener("click", function () {
+    tearPaper.classList.remove("cut");
+    tearPaper.classList.remove("torn");
+    tearStamp.className = "stamp waiting";
+    tearStamp.textContent = "Your turn";
+    tearSentence.textContent = "Two of three signatures collected. Yours is needed.";
+    tearCaption.textContent =
+      "Flat edge, waiting stamp. The third signature has not landed.";
+  });
+
+  /* ---------- 3 · Dynamic Island --------------------------------------- */
+  var island = document.getElementById("island");
+  var islandBtn = document.getElementById("islandToggle");
+  var compact = document.getElementById("islandCompact");
+  var trail = document.getElementById("islandTrail");
+
+  function toggleIsland() {
+    var open = island.classList.toggle("big");
+    island.setAttribute("aria-expanded", String(open));
+    islandBtn.textContent = open ? "Collapse the Island" : "Expand the Island";
+    if (open) {
+      compact.textContent = "Privacy Pools · being screened";
+      compact.style.whiteSpace = "normal";
+      trail.textContent = "0.07 ETH in since Wednesday";
+      trail.style.opacity = "0.6";
+      trail.style.fontWeight = "400";
+    } else {
+      compact.textContent = "Screening · 0.07 ETH";
+      compact.style.whiteSpace = "nowrap";
+      trail.textContent = "2d";
+      trail.style.opacity = "1";
+      trail.style.fontWeight = "700";
+    }
+  }
+  island.addEventListener("click", toggleIsland);
+  islandBtn.addEventListener("click", toggleIsland);
+
+  /* ---------- 4 · the face as a door ------------------------------------ */
+  var faceBtn = document.getElementById("faceBtn");
+  var addrCard = document.getElementById("addrCard");
+
+  faceBtn.addEventListener("click", function () {
+    var open = addrCard.hasAttribute("hidden");
+    if (open) {
+      addrCard.removeAttribute("hidden");
+      addrCard.classList.add("in");
+      faceBtn.classList.remove("armed");
+    } else {
+      addrCard.setAttribute("hidden", "");
+      addrCard.classList.remove("in");
+    }
+    faceBtn.setAttribute("aria-expanded", String(open));
+  });
+
+  /* ---------- 5 · the rolling figure ------------------------------------ */
+  var figure = document.getElementById("rollFigure");
+  var rollStamp = document.getElementById("rollStamp");
+  var rollSecond = document.getElementById("rollSecond");
+  var rollPaper = document.getElementById("rollPaper");
+
+  var FROM = "−$48.20";
+  var TO   = "−$52.06";
+
+  function paintFigure(text) {
+    figure.innerHTML = "";
+    var roll = document.createElement("span");
+    roll.className = "roll";
+    for (var i = 0; i < text.length; i++) {
+      var ch = text[i];
+      if (ch >= "0" && ch <= "9") {
+        var d = document.createElement("span");
+        d.className = "rollDigit";
+        d.setAttribute("data-target", ch);
+        var lane = document.createElement("span");
+        lane.className = "lane";
+        for (var n = 0; n <= 9; n++) {
+          var b = document.createElement("b");
+          b.textContent = String(n);
+          lane.appendChild(b);
+        }
+        lane.style.transform = "translateY(" + (-44 * parseInt(ch, 10)) + "px)";
+        d.appendChild(lane);
+        roll.appendChild(d);
+      } else {
+        var f = document.createElement("span");
+        f.className = "rollFixed";
+        f.textContent = ch;
+        roll.appendChild(f);
+      }
+    }
+    roll.setAttribute("aria-hidden", "true");
+    figure.appendChild(roll);
+    // Each digit is a 0–9 lane clipped to one row, so the element's text
+    // content is every numeral at once. Rendered it is correct and spoken
+    // it is nonsense — the exact split this page's first change is about.
+    figure.setAttribute("role", "img");
+    figure.setAttribute("aria-label", text.replace("−", "minus "));
+  }
+
+  function rollTo(text) {
+    var digits = figure.querySelectorAll(".rollDigit");
+    var idx = 0;
+    for (var i = 0; i < text.length; i++) {
+      var ch = text[i];
+      if (ch >= "0" && ch <= "9") {
+        var d = digits[idx];
+        if (d) {
+          d.querySelector(".lane").style.transform =
+            "translateY(" + (-44 * parseInt(ch, 10)) + "px)";
+        }
+        idx++;
+      }
+    }
+    figure.setAttribute("aria-label", text.replace("−", "minus "));
+  }
+
+  paintFigure(FROM);
+
+  document.getElementById("settlePlay").addEventListener("click", function () {
+    rollTo(TO);
+    rollStamp.className = "stamp good";
+    rollStamp.textContent = "Settled";
+    rollSecond.textContent = "Tip added at the counter";
+    rollPaper.classList.add("torn");
+    void rollPaper.offsetWidth;
+    rollPaper.classList.add("cut");
+  });
+
+  document.getElementById("settleReset").addEventListener("click", function () {
+    rollTo(FROM);
+    rollStamp.className = "stamp waiting";
+    rollStamp.textContent = "Pending";
+    rollSecond.textContent = "Authorization can still change";
+    rollPaper.classList.remove("cut");
+    rollPaper.classList.remove("torn");
+  });
+
+  /* ---------- the refusal ----------------------------------------------- */
+  var bedDim = document.getElementById("bedDim");
+  var bedBusy = document.getElementById("bedBusy");
+  var bedA = document.getElementById("bedA");
+  var bedB = document.getElementById("bedB");
+
+  function bed(busy) {
+    bedBusy.style.opacity = busy ? "1" : "0";
+    bedA.setAttribute("aria-pressed", String(!busy));
+    bedB.setAttribute("aria-pressed", String(busy));
+  }
+  bedA.addEventListener("click", function () { bed(false); });
+  bedB.addEventListener("click", function () { bed(true); });
+})();
+</script>

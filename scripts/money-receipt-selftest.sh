@@ -62,8 +62,92 @@ trap 'rm -rf "$TMP"' EXIT
 # assertion below still passes.
 grep -q 'if let moneyReceipt {' "$SHEET" \
   || { echo "✗ ThingSheetView no longer draws MoneyReceiptCard as its hero"; exit 1; }
-grep -q 'MoneyReceiptCard(receipt: moneyReceipt)' "$SHEET" \
+# Argument-tolerant since the card gained `onSubject:` (prd §369 amendment) —
+# it asserts the CALL, not one spelling of its argument list.
+grep -q 'MoneyReceiptCard(receipt: moneyReceipt' "$SHEET" \
   || { echo "✗ ThingSheetView's hero branch no longer builds MoneyReceiptCard"; exit 1; }
+
+# --- the §369 amendment (2026-08-16) ----------------------------------------
+# Four changes whose failure mode is, in every case, that the card looks
+# EXACTLY as it does today. None of them can be seen by a build, a screen
+# sweep, or any assertion below.
+
+# 1. The card is ONE spoken element carrying finality. Without this the paper's
+#    torn edge — the sharpest thing this card says — reaches nobody using
+#    VoiceOver, and the receipt reads out as eight loose fragments.
+grep -q 'accessibilityLabel(Text(receipt.spokenLabel))' "$CARD" \
+  || { echo "✗ the receipt is no longer composed into one spoken label"; exit 1; }
+grep -q 'accessibilityValue(Text(receipt.spokenValue))' "$CARD" \
+  || { echo "✗ finality is no longer spoken as the receipt's accessibility value"; exit 1; }
+# Both strips play as Audio Graphs. A chart with no descriptor is not silent —
+# it is WORSE: Swift Charts falls back to one element per mark, so a 14-bar
+# history reads out as fourteen coordinate pairs.
+[[ $(grep -c 'accessibilityChartDescriptor(self)' "$CARD") -eq 2 ]] \
+  || { echo "✗ ReceiptFlowStrip/ReceiptBars no longer carry an AXChartDescriptor"; exit 1; }
+
+# 2. The tear ANIMATES. `ReceiptPaper.tear` must stay a fraction with
+#    `animatableData` — as a Bool the teeth appear between two frames, which is
+#    the swap this change exists to replace, and every assertion still passes.
+grep -q 'var animatableData: CGFloat' "$CARD" \
+  || { echo "✗ ReceiptPaper is no longer animatable — the teeth would snap in"; exit 1; }
+grep -q 'withAnimation(DS.Motion.tear)' "$CARD" \
+  || { echo "✗ the tear no longer runs on DS.Motion.tear"; exit 1; }
+grep -q 'static let tear = Animation' "$TOKENS" \
+  || { echo "✗ DS.Motion.tear is gone — the tear would hold raw timing in a view"; exit 1; }
+# Reduce Motion lands it torn (prd §299), and the HAPTIC still fires: it is a
+# motion preference, and the feedback is the half that does not move.
+grep -q 'accessibilityReduceMotion' "$CARD" \
+  || { echo "✗ the tear no longer honours Reduce Motion (prd §299)"; exit 1; }
+# The haptic has somewhere to land. The bus is global but the MAPPING is a view
+# modifier, and a `.sheet` covers the one RootShell attaches — so without this
+# every DSHaptic call in the thing sheet bumps a counter nothing listens to,
+# which is exactly how six of them shipped silent (2026-08-16).
+grep -q 'SheetHaptics(active:' "$SHEET" \
+  || { echo "✗ ThingSheetView no longer attaches its own haptic listener — its DSHaptic calls are silent"; exit 1; }
+
+# 3. The subject face is a door, and only ever onto a real address.
+grep -q 'onSubject: openAddressCard' "$SHEET" \
+  || { echo "✗ the receipt's subject face is no longer a door"; exit 1; }
+# A FOURTH sibling `.sheet` on this view is the one-screen-one-sheet failure
+# the file's own `fullScreenCover` comment went out of its way to avoid, so the
+# address card shares the face route rather than adding one.
+[[ $(grep -c '^\s*\.sheet(item:' "$SHEET") -le 3 ]] \
+  || { echo "✗ ThingSheetView grew a fourth sibling .sheet (one-screen-one-sheet)"; exit 1; }
+
+# 4. The figure counts rather than blinking.
+grep -q 'contentTransition(amount.numeric.map' "$CARD" \
+  || { echo "✗ the figure no longer rolls when a pending amount settles"; exit 1; }
+
+# 5. The flat edge on the lock screen. Every failure here is a lock screen that
+#    looks completely normal while overclaiming — the hardest kind to notice,
+#    because the person who would notice is not holding the phone.
+ACTATTR="Casberi/Shared/MoneyActivityAttributes.swift"
+ACTDRV="Casberi/Casberi/Model/MoneyActivityDriver.swift"
+ACTVIEW="Casberi/CasberiWidgets/MoneyActivity.swift"
+BUNDLE="Casberi/CasberiWidgets/CasberiWidgets.swift"
+for f in "$ACTATTR" "$ACTDRV" "$ACTVIEW"; do
+  [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
+done
+# It is registered, or none of the rest of this exists at runtime.
+grep -q 'MoneyActivity()' "$BUNDLE" \
+  || { echo "✗ MoneyActivity is not in the widget bundle — it would never appear"; exit 1; }
+# The age is on screen. This is the entire honesty rail: a Live Activity's
+# grammar implies "now", and the app only knows what the last sweep told it.
+grep -q 'checkedAt' "$ACTVIEW" \
+  || { echo "✗ the activity no longer shows when the state was last checked"; exit 1; }
+grep -q 'staleDate: .now + staleAfter' "$ACTDRV" \
+  || { echo "✗ the activity no longer goes stale — it would state old news in the present tense"; exit 1; }
+# Only a FLAT record earns the control, and the tear is what ends it.
+grep -q 'moneyReceipt.finality == .open' "$SHEET" \
+  || { echo "✗ the lock-screen control is no longer gated on an unfinished record"; exit 1; }
+# `sync` runs off the pass that really re-read the sources. The background
+# sweep deliberately does not drive a bridge refresh, so moving `checkedAt`
+# there would claim a check that never happened.
+grep -q 'MoneyActivityDriver.sync(context:' "Casberi/Casberi/Shell/RootShell.swift" \
+  || { echo "✗ tracked records are no longer synced after the foreground bridge sweep"; exit 1; }
+if grep -q 'MoneyActivityDriver' "Casberi/Casberi/Model/WalletBackgroundRefresh.swift"; then
+  echo "✗ the background sweep moves checkedAt — it does not re-read the sources (see MoneyActivityDriver.sync)"; exit 1
+fi
 
 # A receipt suppresses the content area. Without this the sheet draws the
 # receipt AND the old `default:` branch under it — which for ten families is a
@@ -122,6 +206,16 @@ strip_comments "$SOURCE" > "$TMP/source-bare.swift"
 if grep -qE 'title\.(hasPrefix|contains|range\(of:)' "$TMP/source-bare.swift"; then
   echo "✗ MoneyReceiptSource parses the title — facts come off stamped fields"; exit 1
 fi
+
+# NO FIGURE ON THE LOCK SCREEN (§374). Comment-stripped, because all three of
+# these files explain the rule by naming exactly what they must not carry — the
+# Obsidian/Cursor lesson, earned a fifth time.
+for f in "$ACTATTR" "$ACTVIEW"; do
+  strip_comments "$f" > "$TMP/act-bare.swift"
+  if grep -qE '\b(amount|figure|priceValue|balance)\b' "$TMP/act-bare.swift"; then
+    echo "✗ $f carries a money figure — the lock screen is the one surface §374 is about"; exit 1
+  fi
+done
 
 # --- the harness ------------------------------------------------------------
 cat > "$TMP/main.swift" <<'SWIFT'
@@ -540,6 +634,102 @@ do {
     check(MoneyCommentary.number("12 USDC") == nil, "a number with a word does not")
 }
 
+// MARK: said out loud — the tear, reachable by ear (prd §369 amendment)
+
+do {
+    // A settled send. The sign is a GLYPH in `number` (U+2212), and a screen
+    // reader is free to skip a glyph — so direction, the one thing on a
+    // receipt that must never be lost, has to be spelled.
+    var sent = MoneyReceipt.Facts(source: "Wallet", title: "Sent 0.5 ETH")
+    sent.direction = "sent"
+    sent.amount = "0.5 ETH"
+    sent.counterparty = "maria.eth"
+    sent.capturedAt = realAt(0, hour: 16)
+    guard let s = MoneyReceipt.compose(sent) else {
+        print("  ✗ no receipt for a send"); exit(1)
+    }
+    check(s.spokenLabel.contains("minus 0.5 ETH"),
+          "the sign is spelled, not left as a glyph")
+    check(!s.spokenLabel.contains("−"),
+          "no bare minus glyph survives into the spoken label")
+    check(s.spokenLabel.contains("Sent to maria.eth"),
+          "the lead and the party are spoken as one clause")
+    check(s.spokenLabel.contains(s.sentence),
+          "the sentence is spoken too")
+    // THE POINT OF THE WHOLE CHANGE: finality is drawn as the shape of the
+    // paper and nowhere else, so if it isn't in the value it reaches nobody.
+    check(s.spokenValue.contains("Final"), "a torn receipt says it is final")
+    check(s.spokenValue.contains("Settled"), "the stamp is spoken with it")
+
+    // A received transfer says "plus", not nothing.
+    var got = sent
+    got.direction = "received"
+    guard let r = MoneyReceipt.compose(got) else {
+        print("  ✗ no receipt for a receive"); exit(1)
+    }
+    check(r.spokenLabel.contains("plus 0.5 ETH"), "a receive is spoken as plus")
+
+    // A PENDING card authorization is the case that must never say "final" —
+    // the amount can still change, and this is the half of the tear a
+    // listener would otherwise never learn.
+    var pending = MoneyReceipt.Facts(source: "Apple Wallet", title: "Tartine")
+    pending.priceValue = 48.20
+    pending.priceCurrency = "USD"
+    pending.counterparty = "Tartine Bakery"
+    pending.tags = ["Card", "Pending"]
+    pending.capturedAt = realAt(0, hour: 14)
+    guard let p = MoneyReceipt.compose(pending) else {
+        print("  ✗ no receipt for a pending card charge"); exit(1)
+    }
+    check(p.spokenValue.contains("Not final yet"),
+          "a pending authorization is NOT spoken as final")
+    check(!p.spokenValue.contains("Final."),
+          "…and does not contain the final phrasing at all")
+    // The metaphor stays on screen: somebody listening has never seen the
+    // paper, so "torn"/"flat" would describe a picture they don't have.
+    check(!p.spokenValue.lowercased().contains("torn")
+          && !s.spokenValue.lowercased().contains("torn"),
+          "finality is spoken in words, never as the drawing's metaphor")
+
+    // `numeric` is what `.numericText(value:)` counts between, and it may be
+    // filled ONLY when the figure on screen really is that Double formatted.
+    check(p.amount?.numeric == 48.20,
+          "a card charge carries its Double for the roll")
+    check(s.amount?.numeric == nil,
+          "a chain transfer's bridge-stamped string carries no invented Double")
+
+    // The case that actually pins the rule, and the reason the first version
+    // of this block could not: a card charge whose currency CODE is missing,
+    // so `currency()` refuses and the figure falls back to the amount string.
+    // The two numbers are deliberately different — if `numeric` were filled
+    // from `priceValue` regardless, the figure would roll toward 12.99 while
+    // showing 9.40, which is a number counting to a value it is not
+    // displaying, and nothing on screen would look wrong.
+    var noCode = MoneyReceipt.Facts(source: "Apple Wallet", title: "Corner Shop")
+    noCode.priceValue = 12.99
+    noCode.priceCurrency = nil
+    noCode.amount = "9.40 USD"
+    noCode.counterparty = "Corner Shop"
+    noCode.tags = ["Card"]
+    noCode.capturedAt = realAt(0, hour: 11)
+    guard let n = MoneyReceipt.compose(noCode) else {
+        print("  ✗ no receipt for a card charge with no currency code"); exit(1)
+    }
+    check(n.amount?.number.contains("9.40") == true,
+          "with no currency code the figure is the fallback string")
+    check(n.amount?.numeric == nil,
+          "…and carries no Double, since that is not the number it is showing")
+
+    // A receipt with no stamped figure still speaks, leading with its title.
+    var bare = MoneyReceipt.Facts(source: "Wallet", title: "Voted on Aerodrome")
+    bare.capturedAt = realAt(1)
+    guard let b = MoneyReceipt.compose(bare) else {
+        print("  ✗ no receipt for a figureless row"); exit(1)
+    }
+    check(b.spokenLabel.contains("Voted on Aerodrome"),
+          "a figureless receipt speaks its title")
+}
+
 if failures > 0 {
     print("\(failures) assertion(s) failed")
     exit(1)
@@ -675,4 +865,40 @@ mutate "a zero leg is divided by" says \
   'outValue >= 0, inValue >= 0 else { return nil }'
 
 echo ""
+
+# --- the §369 amendment's own mutations -------------------------------------
+# Each is a change that leaves the receipt looking EXACTLY as it does now and
+# makes it lie, or go silent, to somebody who cannot see it.
+
+# The tear stops being spoken. This is the whole change reverting: the card
+# still draws its scalloped edge, every assertion above still passes, and the
+# one fact only the SHAPE carries becomes unreachable by ear again.
+mutate "finality drops out of the spoken value" receipt \
+  'let state = finality == .torn
+            ? String(localized: "Final")
+            : String(localized: "Not final yet")' \
+  'let state = ""'
+
+# A pending authorization spoken as final — the listening half of the mutation
+# already covered visually above ("a pending card charge is torn off").
+mutate "everything is spoken as final" receipt \
+  '? String(localized: "Final")
+            : String(localized: "Not final yet")' \
+  '? String(localized: "Final")
+            : String(localized: "Final")'
+
+# The sign left as a glyph. Reads correctly on screen and is exactly the
+# character a screen reader may skip, so "minus 0.5" becomes "0.5" — a send
+# announced as a receipt.
+mutate "the spoken sign stops being spelled" receipt \
+  'said = String(localized: "minus ") + said.dropFirst()' \
+  'said = String(said.dropFirst())'
+
+# `numeric` filled from the fallback string's Double. The figure would then
+# count toward a value it is not showing, which is the one thing this field
+# was added carefully enough to avoid.
+mutate "the roll's value is filled even when the figure isn't that Double" receipt \
+  'numeric: priced == nil ? nil : f.priceValue.map(abs)' \
+  'numeric: f.priceValue.map(abs)'
+
 echo "money-receipt-selftest: OK"

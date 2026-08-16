@@ -58,6 +58,37 @@ enum DSHaptic {
     static func lift() { HapticBus.shared.lift += 1 }
 }
 
+/// `dsSensoryFeedback()` behind a condition, for a view that is sometimes the
+/// presentation and sometimes rendered inside somebody else's (2026-08-16).
+///
+/// It exists because the choice cannot be made with an `if` around the
+/// modifier: two branches of a `ViewBuilder` are two different view types, so
+/// SwiftUI tears down and rebuilds the whole subtree when the flag changes —
+/// on `ThingSheetView` that would drop every `@State` on the sheet. A
+/// `ViewModifier` keeps one identity and turns the listener off inside it.
+struct SheetHaptics: ViewModifier {
+    let active: Bool
+
+    func body(content: Content) -> some View {
+        content
+            .sensoryFeedback(trigger: HapticBus.shared.selection) { _, _ in
+                active ? .selection : nil
+            }
+            .sensoryFeedback(trigger: HapticBus.shared.tap) { _, _ in
+                active ? .impact(weight: .light) : nil
+            }
+            .sensoryFeedback(trigger: HapticBus.shared.success) { _, _ in
+                active ? .success : nil
+            }
+            .sensoryFeedback(trigger: HapticBus.shared.failure) { _, _ in
+                active ? .error : nil
+            }
+            .sensoryFeedback(trigger: HapticBus.shared.lift) { _, _ in
+                active ? .impact(weight: .medium) : nil
+            }
+    }
+}
+
 extension View {
     /// Attach once at the shell root — the app's whole haptic grammar,
     /// declared in one place.

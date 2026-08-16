@@ -128,6 +128,43 @@ struct MoneyReceipt: Equatable {
         var number: String
         var unit: String?
         var tone: Tone
+        /// The figure as a NUMBER, where one was actually stamped — what
+        /// `contentTransition(.numericText(value:))` counts between when a
+        /// pending authorization settles at a different amount (prd §369
+        /// amendment).
+        ///
+        /// Optional and usually nil, deliberately. `number` is the display
+        /// string and stays authoritative: for a card spend it came from
+        /// `.formatted(.currency(code:))` and is already locale-correct, and
+        /// for a chain transfer it is the bridge's own stamped string, which
+        /// this file may not re-parse (see the type's doc). So this is filled
+        /// only from a Double the bridge really stamped — never by reading
+        /// `number` back — and a nil simply means the figure cross-fades the
+        /// way it always did.
+        var numeric: Double?
+
+        init(number: String, unit: String? = nil, tone: Tone,
+             numeric: Double? = nil) {
+            self.number = number
+            self.unit = unit
+            self.tone = tone
+            self.numeric = numeric
+        }
+
+        /// The figure said out loud. The sign is a GLYPH in `number` (U+2212
+        /// MINUS SIGN, and a bare "+"), which is exactly the kind of character
+        /// a screen reader is free to skip — so direction, the one thing on a
+        /// receipt that must never be lost, is spelled.
+        var spoken: String {
+            var said = number
+            if said.hasPrefix("−") {
+                said = String(localized: "minus ") + said.dropFirst()
+            } else if said.hasPrefix("+") {
+                said = String(localized: "plus ") + said.dropFirst()
+            }
+            guard let unit, !unit.isEmpty else { return said }
+            return "\(said) \(unit)"
+        }
     }
 
     // MARK: - The receipt
@@ -157,6 +194,53 @@ struct MoneyReceipt: Equatable {
     var stamp: Stamp?
     var finality: Finality
     var hue: Hue
+
+    // MARK: - Said out loud
+
+    /// The whole receipt as ONE spoken sentence (prd §369 amendment).
+    ///
+    /// **Why this is here and not in the view.** The card reads out as eight
+    /// separate stops otherwise — "image", "Sent to", "maria.eth", "minus 0
+    /// point 5 0", "E T H", "Settled", the sentence, "image" — which is the
+    /// same eight facts in the order they happen to be laid out, with the
+    /// relationships between them thrown away. Worse, `finality` is drawn as
+    /// the SHAPE OF THE PAPER and nothing else, so the sharpest thing this
+    /// card says is the one thing a screen reader could never reach.
+    ///
+    /// It lives beside `compose` because it can be wrong in exactly the way
+    /// everything else in this file can be wrong — fluently, while the screen
+    /// still looks perfect — and here the harness compiles it.
+    var spokenLabel: String {
+        var said: [String] = []
+        if let party, !party.isEmpty {
+            said.append("\(lead) \(party)")
+        } else {
+            said.append(lead)
+        }
+        if let amount {
+            said.append(amount.spoken)
+        } else if let titleFallback, !titleFallback.isEmpty {
+            said.append(titleFallback)
+        }
+        if let secondary, !secondary.isEmpty { said.append(secondary) }
+        said.append(sentence)
+        return said.joined(separator: ". ")
+    }
+
+    /// The state, as the accessibility VALUE rather than part of the label —
+    /// so a rotor pass hears what changed without re-reading the whole card,
+    /// and so the tear survives being spoken.
+    ///
+    /// Finality is stated in words that do not lean on the metaphor: "final"
+    /// and "not final yet", never "torn" or "flat", which describe a picture
+    /// somebody listening has never seen.
+    var spokenValue: String {
+        let state = finality == .torn
+            ? String(localized: "Final")
+            : String(localized: "Not final yet")
+        guard let stamp else { return state }
+        return "\(stamp.word). \(state)"
+    }
 
     // MARK: - Input
 
@@ -304,8 +388,12 @@ struct MoneyReceipt: Equatable {
         let refund = f.tags.contains("Refund")
         let pending = f.tags.contains("Pending")
         let merchant = f.counterparty
-        let money = currency(f.priceValue, code: f.priceCurrency)
-            ?? split(f.amount).number
+        // Kept apart so `numeric` is filled ONLY when the figure on screen
+        // really is this Double formatted — a fallback string parsed out of
+        // `amount` has no number behind it, and pairing the two would let the
+        // figure count toward a value it isn't showing.
+        let priced = currency(f.priceValue, code: f.priceCurrency)
+        let money = priced ?? split(f.amount).number
         let onchain = f.source == "Gnosis Pay" || f.source == "ether.fi"
         return MoneyReceipt(
             subject: merchant.map { Subject.named($0) }
@@ -318,7 +406,8 @@ struct MoneyReceipt: Equatable {
             titleFallback: money.isEmpty ? f.title : nil,
             amount: money.isEmpty ? nil
                 : Amount(number: (refund ? "+" : "−") + money, unit: nil,
-                         tone: refund ? .gain : .plain),
+                         tone: refund ? .gain : .plain,
+                         numeric: priced == nil ? nil : f.priceValue.map(abs)),
             secondary: cardLine(f),
             sentence: cardSentence(f, pending: pending, refund: refund),
             stamp: refund ? .refund : (pending ? .pending : .settled),
