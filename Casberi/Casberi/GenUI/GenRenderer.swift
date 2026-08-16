@@ -4206,13 +4206,13 @@ struct GenFrontPage: View {
         let chapters = genChapterIDs(root.str(1))
         guard !chapters.isEmpty else { return false }
         let segs = segments(refs: root.refs(0), chapters: chapters)
-        return segs.count - headSegmentCount(segs) >= 2
+        return segs.count - headSegmentCount(segs, els: els) >= 2
     }
 
     var body: some View {
         let refs = el.refs(0)
         let segs = Self.segments(refs: refs, chapters: chapters)
-        let headCount = Self.headSegmentCount(segs)
+        let headCount = Self.headSegmentCount(segs, els: els)
         Group {
             if width >= Self.columnsFloor, segs.count - headCount >= 2 {
                 frontPage(segs: segs, headCount: headCount)
@@ -4444,7 +4444,14 @@ struct GenFrontPage: View {
                             digestMini(members)
                         }
                     }
-                    if !sub.isEmpty {
+                    // SILENT when the modules are right below (2026-08-16,
+                    // device shot: "950 more · 176 people" appeared twice,
+                    // once as this line and once on the fold card an inch
+                    // beneath it). The sub is a STAND-IN for contents you
+                    // cannot see — a roomless section shows its own, so the
+                    // stand-in becomes an echo. Never the same fact told
+                    // twice (§386g's own leads-vs-observations rule).
+                    if !sub.isEmpty, hasDoor {
                         Text(sub)
                             .dsText(.subhead13)
                             .foregroundStyle(DS.textTertiary)
@@ -4663,8 +4670,23 @@ struct GenFrontPage: View {
     /// lead story — the first chapter joins it, which in the brief is the
     /// money hero and everything glued to it (`pair`, `tmkt` — one story,
     /// never split, ruling 2026-07-23).
-    private static func headSegmentCount(_ segs: [[String]]) -> Int {
+    private static func headSegmentCount(_ segs: [[String]], els: GenEls = [:]) -> Int {
         guard let first = segs.first else { return 0 }
+        // A SECTION IS NEVER IN THE HEAD (2026-08-16, from a device shot: the
+        // brief's FIRST section rendered as a bare header with its module
+        // loose beneath it, while every later section drew as a proper card —
+        // one screen, two grammars).
+        //
+        // The rule below predates the cards: when the head was "masthead plus
+        // the money story", a lone first segment pulled the next one up to
+        // join it so the lead story spanned the page. Now the segments after
+        // the head ARE the cards, so pulling one up silently un-cards it.
+        // Sectioned docs take head = 1 (the lede alone); the old behaviour
+        // survives for a doc whose chapters carry no `Section` — the scoped
+        // briefs, which have no headers at all.
+        if segs.count > 1, let opener = segs[1].first, els[opener]?.comp == "Section" {
+            return 1
+        }
         return first.count == 1 && segs.count > 1 ? 2 : 1
     }
 }
