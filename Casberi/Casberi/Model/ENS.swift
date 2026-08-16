@@ -24,7 +24,19 @@ enum ENS {
 
     /// Resolves an ENS name to its `0x` address, or nil (not a name, no record,
     /// or the resolver was unreachable). A no-op for input that's already hex.
+    ///
+    /// THE DEMO REACHES NOTHING (2026-08-15) — gated HERE, at the function that
+    /// does the read, the same pattern `WalletIngest.holdings()` already uses.
+    /// It was not: `WalletScreen.onAppear` calls `WalletStore.loadAvatars()`
+    /// directly, bypassing `BridgeRefresh`'s demo early-return entirely, and
+    /// nothing downstream caught it — `verify.sh`'s "Demo reaches nothing"
+    /// check found `api.ensideas.com` reached for the demo's fabricated
+    /// address, once its own false-positive noise (a dirty NetworkLedger) was
+    /// fixed the same day. A gate on the one caller would leave every future
+    /// caller exposed to the same miss; gating the three functions here closes
+    /// it structurally.
     static func resolve(_ raw: String) async -> String? {
+        guard !DemoMode.isActive else { return nil }
         let name = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         guard looksLikeName(name),
               let encoded = name.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed),
@@ -47,6 +59,7 @@ enum ENS {
 
     @MainActor
     static func reverseName(for hexAddress: String) async -> String? {
+        guard !DemoMode.isActive else { return nil }
         let addr = hexAddress.lowercased()
         guard isHexAddress(addr) else { return nil }
         if let cached = reverseCache[addr] { return cached }
@@ -74,6 +87,7 @@ enum ENS {
 
     @MainActor
     static func avatar(for hexOrName: String) async -> String? {
+        guard !DemoMode.isActive else { return nil }
         let key = hexOrName.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         guard !key.isEmpty else { return nil }
         if let cached = avatarCache[key] { return cached }

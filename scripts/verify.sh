@@ -37,6 +37,33 @@ step "Network-reach audit"
 "$ROOT/scripts/network-reach-audit.sh" || fail "a network host isn't disclosed — see scripts/network-reach-audit.sh"
 print -P "%F{green}✓ network-reach audit%f"
 
+# THE DEMO REACHES NOTHING, checked at the function that reads the network,
+# not at whichever caller happens to be gated today (2026-08-15). This is
+# ENS.swift's own version of the rule `WalletIngest.holdings()` already
+# follows: `resolve`/`reverseName`/`avatar` are the ONLY doors to
+# api.ensideas.com, and every one of them must refuse before its network
+# read when `DemoMode.isActive`. Caught live: `WalletScreen.onAppear` calls
+# `WalletStore.loadAvatars()` directly, bypassing `BridgeRefresh`'s demo
+# early-return, and nothing downstream noticed until the dynamic "Demo
+# reaches nothing" step (further down) had its own false-positive fixed —
+# a dirty NetworkLedger from real testing had been hiding a real leak
+# behind 29 lines of noise. This static check is cheap insurance against
+# a FOURTH caller doing the same thing silently: it can't prove the demo
+# reaches nothing (only the dynamic step, on-device, can), but it can prove
+# the one choke point every caller goes through still refuses.
+step "ENS demo gate"
+ENS_FILE="$ROOT/Casberi/Casberi/Model/ENS.swift"
+for fn in "static func resolve" "static func reverseName" "static func avatar"; do
+  # The guard must appear in the ~3 lines after the signature — right at the
+  # top, before any network read, not merely somewhere in the function body.
+  if ! awk -v fn="$fn" 'index($0, fn) { found=1; count=0 }
+       found && count<=3 { if (index($0, "DemoMode.isActive")) { print "OK"; exit }; count++ }' \
+       "$ENS_FILE" | grep -q OK; then
+    fail "ENS.$(echo "$fn" | awk '{print $NF}') has no DemoMode.isActive guard at its top — see scripts/verify.sh's own comment above this check"
+  fi
+done
+print -P "%F{green}✓ ens demo gate (resolve/reverseName/avatar all refuse in demo)%f"
+
 # Keeps every catalogued Info.plist key carrying a real source-language value
 # (ITMS-90738). Static, no build — and the only gate that can see this class:
 # a key with no `en` entry compiles to its own key NAME in en.lproj and
