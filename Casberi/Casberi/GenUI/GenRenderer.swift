@@ -4193,12 +4193,17 @@ struct GenFrontPage: View {
             if width >= Self.columnsFloor, segs.count - headCount >= 2 {
                 frontPage(segs: segs, headCount: headCount)
             } else {
-                // The single column, exactly as the plain Stack draws it —
-                // capped back to the reading column and centered, so a
-                // qualifying doc in a `.wide` container on a narrow window
-                // renders indistinguishably from the pre-§274 brief.
-                VStack(alignment: .leading, spacing: DS.Space.s2) {
-                    ForEach(refs, id: \.self) { module($0) }
+                // The single column — THE DECK since 2026-08-15 (user, on the
+                // approved mockups: "i want what was mocked up"). The head run
+                // (masthead, lede) stays bare on the ink; every chapter block
+                // after it renders as a card. Same segments the two-column
+                // page cuts, so the phone and the Mac disagree about layout
+                // and never about grouping.
+                VStack(alignment: .leading, spacing: DS.Space.s3) {
+                    ForEach(segs.prefix(headCount).flatMap { $0 }, id: \.self) { module($0) }
+                    ForEach(Array(segs.dropFirst(headCount).enumerated()), id: \.offset) {
+                        deckCard($0.element)
+                    }
                 }
                 .frame(maxWidth: PadLayout.readingMaxWidth, alignment: .leading)
                 .frame(maxWidth: .infinity)
@@ -4216,7 +4221,7 @@ struct GenFrontPage: View {
         // Alternation by index — see the stability rule in the header doc.
         let left = blocks.indices.filter { $0.isMultiple(of: 2) }.map { blocks[$0] }
         let right = blocks.indices.filter { !$0.isMultiple(of: 2) }.map { blocks[$0] }
-        return VStack(alignment: .leading, spacing: DS.Space.s2) {
+        return VStack(alignment: .leading, spacing: DS.Space.s3) {
             ForEach(head, id: \.self) { module($0) }
             HStack(alignment: .top, spacing: DS.Space.s4) {
                 column(left)
@@ -4226,21 +4231,60 @@ struct GenFrontPage: View {
     }
 
     private func column(_ blocks: [[String]]) -> some View {
-        VStack(alignment: .leading, spacing: DS.Space.s2) {
-            ForEach(blocks.flatMap { $0 }, id: \.self) { module($0) }
+        VStack(alignment: .leading, spacing: DS.Space.s3) {
+            ForEach(Array(blocks.enumerated()), id: \.offset) { deckCard($0.element) }
         }
         .frame(maxWidth: .infinity, alignment: .topLeading)
     }
 
-    /// One module, wearing the same chapter air the single column gives it.
-    /// The column-topping chapters keep theirs too — the two columns open
-    /// level with each other, and dropping it would put the first module of
-    /// each column at a different distance from the head than every later
-    /// chapter sits from its predecessor.
-    private func module(_ ref: String) -> some View {
+    /// One chapter block as a DECK CARD (2026-08-15, the approved mockup made
+    /// real): the section's identity hue as a full card ground, solved to the
+    /// same luminance register the feed's row cards use (`DS.deckFill`), with
+    /// the white ramp pinned — the fill and the ink are one decision.
+    ///
+    /// **A quiet section falls back to an ink slab**, which is how §386d's
+    /// step-back survives the brightness: dimming a saturated card reads as a
+    /// rendering bug, while colour-vs-ink makes "changed" the thing the eye
+    /// sorts by before a word is read. A section is quiet only when EVERY
+    /// module in it said exactly what it said last time; the per-module 0.68
+    /// dim is retired inside cards (the ground carries the contrast now), and
+    /// the all-or-nothing rule from §386d still holds one level up — if no
+    /// section earns colour, `quiet` arrives empty and every card is bright.
+    ///
+    /// A section whose header names no hue (or a neutral one — `deckFill`'s
+    /// own nil) takes the ink slab too, rather than a grey card pretending to
+    /// be an identity.
+    @ViewBuilder
+    private func deckCard(_ seg: [String]) -> some View {
+        let headerHue: Color? = seg.first.flatMap { ref in
+            guard let header = els[ref], header.comp == "Section" else { return nil }
+            let name = header.str(2)
+            return name.isEmpty ? nil : GenSection.hue(name)
+        }
+        let isQuiet = !seg.isEmpty && seg.dropFirst().allSatisfy { quiet.contains($0) }
+            && seg.count > 1
+        let fill = isQuiet ? nil : headerHue.flatMap { DS.deckFill(for: $0) }
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            ForEach(seg, id: \.self) { module($0, inCard: true) }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(DS.Space.s4)
+        .background(fill ?? DS.surfaceRaised,
+                    in: RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
+        .environment(\.colorScheme, fill != nil ? .dark : scheme)
+    }
+    @Environment(\.colorScheme) private var scheme
+
+    /// One module. Inside a DECK CARD the chapter's top air and the
+    /// per-module quiet dim both stand down: the card's own margin is the air
+    /// now, and the card's ink-vs-hue ground carries the whole quiet contrast
+    /// (dimming white words on a saturated fill reads as a rendering bug, not
+    /// as "you have seen this"). The head run — outside any card — keeps
+    /// both behaviours exactly as §386d shipped them.
+    private func module(_ ref: String, inCard: Bool = false) -> some View {
         GenRender(id: ref, els: els, slot: inAgentAnswer ? .block : .none)
-            .padding(.top, chapters.contains(ref) ? DS.Space.s4 : 0)
-            .opacity(quiet.contains(ref) ? 0.68 : 1)
+            .padding(.top, !inCard && chapters.contains(ref) ? DS.Space.s4 : 0)
+            .opacity(!inCard && quiet.contains(ref) ? 0.68 : 1)
             // Addressable HERE TOO (prd §386n, user: "the chips at top of the
             // composer do not lead to anywhere when user presses them").
             //

@@ -582,6 +582,11 @@ struct Composer: View {
     /// The day's whisper with its wallet move still separate — what lets the
     /// card paint the delta in its own direction (2026-08-15).
     @State private var dayWhisper: DayBrief.Whisper?
+    /// The brief document's own scroll proxy, published so the DOCKED nav
+    /// (`briefNav`, mounted above the input bar) can scroll it — see that
+    /// property's note for why a second `ScrollViewReader` down there would
+    /// silently scroll nothing.
+    @State private var briefScroll: ScrollViewProxy?
 
     /// The agent's room as composed for this open (prd §332, 2026-08-07) —
     /// the noticing, the kept asks wearing their answers, the threaded window,
@@ -1411,6 +1416,18 @@ struct Composer: View {
         return "\(weekday) \(moment)."
     }
 
+    /// The brief masthead's greeting (2026-08-15, the deck mockup's ruling —
+    /// see the masthead's own note for the ruling-4 override). Whole phrases,
+    /// never a composed "Good " + word: a translator needs the sentence.
+    /// Before 5am the evening word holds — "Good night" is a farewell, and a
+    /// 3am open is a late evening, not a greeted dawn.
+    private func clockGreeting(now: Date = .now) -> String {
+        let hour = Calendar.current.component(.hour, from: now)
+        return hour >= 5 && hour < 12 ? String(localized: "Good morning")
+             : hour >= 12 && hour < 18 ? String(localized: "Good afternoon")
+             : String(localized: "Good evening")
+    }
+
     /// One conversation turn — the question as the answer's own TITLE, then
     /// its answer. Heading weight (was subhead-muted, fixed 2026-07-20):
     /// ruling 8 calls each answer a "sovereign screen", and its question is
@@ -1431,11 +1448,19 @@ struct Composer: View {
                     // the window the brief actually covers, which no other
                     // answer needs to say.
                     if TodayBrief.matches(question) {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(briefWindowLine())
-                                .dsText(.subhead13)
-                                .foregroundStyle(DS.textTertiary)
-                            Text(DayBrief.title())
+                        // THE GREETING LEADS (2026-08-15, the approved deck
+                        // mockup: "Good morning · Fri, Aug 15"). This
+                        // OVERRIDES agent-brief ruling 4's "no 'Good…'
+                        // prefix, the period IS the warmth" for this masthead
+                        // — the user approved the mock's greeting twice, and
+                        // the clock that picks the word is the same clock
+                        // §386d already lets compose the deck's order, so the
+                        // greeting and the ordering come from one fact. The
+                        // date rides beside it in the quiet voice;
+                        // `briefWindowLine`'s window fact lives on in the
+                        // lede, which already counts what arrived since.
+                        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                            Text(clockGreeting())
                                 .dsText(.heading22)
                                 .foregroundStyle(DS.textPrimary)
                                 // The capsule's words travel here (prd §167 item 1)
@@ -1445,6 +1470,10 @@ struct Composer: View {
                                 // simply takes over the geometry pairing and
                                 // the proxy quietly fades away underneath it.
                                 .modifier(WhisperTitleMorph(ns: glassNamespace))
+                            Text(Date.now.formatted(.dateTime.weekday(.abbreviated)
+                                                        .month(.abbreviated).day()))
+                                .dsText(.subhead13)
+                                .foregroundStyle(DS.textTertiary)
                         }
                     } else {
                         Text(question)
@@ -1648,89 +1677,26 @@ struct Composer: View {
             if !turns.isEmpty || answering {
                 ScrollViewReader { proxy in
                     VStack(alignment: .leading, spacing: 0) {
-                    // THE BRIEF'S OWN NAV (prd §386i) — pinned above the
-                    // document rather than scrolling with it, because a table
-                    // of contents that leaves the screen is a table of
-                    // contents you have to go back for. Each chip wears its
-                    // section's dot, so the chip and the heading it lands on
-                    // are visibly the same object.
-                    if !briefSections.isEmpty {
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: DS.Space.s2) {
-                                // The chip's identity is NAMESPACED (prd
-                                // §386n). `ForEach(id: \.id)` gave each chip
-                                // the SAME id as the document module it
-                                // points at, and a `ScrollViewReader` resolves
-                                // `scrollTo` against every scroll view it
-                                // contains — so the proxy found the CHIP in
-                                // this horizontal row first and scrolled the
-                                // NAV into view while the document sat still.
-                                // That is exactly what "the chips don't lead
-                                // anywhere" looked like: something moved, just
-                                // never the thing you were reading.
-                                ForEach(briefSections, id: \.chipID) { section in
-                                    let here = section.title == activeSection
-                                    Button {
-                                        DSHaptic.selection()
-                                        withAnimation(DS.Motion.standard) {
-                                            proxy.scrollTo(section.id, anchor: .top)
-                                        }
-                                    } label: {
-                                        // THE CHIP IS THE COLOUR (prd §386n,
-                                        // user: "do you think those chips
-                                        // also need the bullets… or we could
-                                        // make the chips a color to add some
-                                        // engaging design"). The dot was the
-                                        // §386l bullet surviving one surface
-                                        // longer than the ruling that killed
-                                        // it: a 6pt disc beside a word, in a
-                                        // row where every chip already needs
-                                        // to be told apart at a glance. The
-                                        // CAPSULE carries the hue instead —
-                                        // same information, no punctuation,
-                                        // and a row of tinted capsules is the
-                                        // one place in the brief where colour
-                                        // is doing navigation rather than
-                                        // decoration.
-                                        //
-                                        // Text stays on the INK ramp, never
-                                        // the hue: coloured labels at five
-                                        // hues is the ransom note §386l
-                                        // refused, and ink on a 16%-tinted
-                                        // capsule keeps every chip legible at
-                                        // every Dynamic Type size.
-                                        Text(section.title)
-                                            .dsText(.subhead13)
-                                            // WHERE YOU ARE, in weight and in
-                                            // the SAME hue's strength — the
-                                            // chip deepens rather than
-                                            // switching colour, so "selected"
-                                            // and "which section" stay one
-                                            // statement instead of two.
-                                            .fontWeight(here ? .semibold : .regular)
-                                            .foregroundStyle(here ? DS.textPrimary : DS.textSecondary)
-                                            .lineLimit(1)
-                                            .padding(.horizontal, DS.Space.s4)
-                                            .padding(.vertical, DS.Space.s2)
-                                            .background(GenSection.hue(section.hue)
-                                                            .opacity(here ? 0.34 : 0.16),
-                                                        in: Capsule())
-                                            .dsHover()
-                                    }
-                                    .buttonStyle(.plain)
-                                }
-                            }
-                            .padding(.horizontal, DS.Space.s4)
-                        }
-                        // The VIEWPORT is inset, not the content — the ✕ is
-                        // pinned top-trailing and a horizontally scrolling row
-                        // would otherwise pass its chips underneath it at
-                        // every scroll position, not just at rest (the
-                        // masthead's own `.padding(.trailing, 64)` lesson,
-                        // which only had to solve the resting case).
-                        .padding(.trailing, 64)
-                        .padding(.bottom, DS.Space.s2)
-                    }
+                    // THE NAV MOVED TO THE DOCK (2026-08-15, the approved
+                    // mockup). It is rendered near the input bar now — see
+                    // `briefNav`, mounted just above it — because the berry
+                    // that opens this surface sits in the bottom-right corner,
+                    // so the hand is already at the bottom while these chips
+                    // were at the top, the hardest reach on a phone. The
+                    // proxy is published to `briefScroll` on appear so the
+                    // docked row can still resolve `scrollTo` against THIS
+                    // reader; a second `ScrollViewReader` down there would
+                    // resolve against its own scroll views and scroll nothing
+                    // (§386n's own bug, which is why the id namespacing
+                    // exists).
+                    //
+                    // The §386i reasoning it keeps: pinned rather than
+                    // scrolling with the document, because a table of contents
+                    // that leaves the screen is one you have to go back for.
+                    // Only the EDGE it is pinned to changed.
+                    Color.clear.frame(height: 0)
+                        .onAppear { briefScroll = proxy }
+                        .onDisappear { briefScroll = nil }
                     ScrollView {
                         VStack(alignment: .leading, spacing: DS.Space.s4) {
                             ForEach(turns) { turn in
@@ -2223,9 +2189,22 @@ struct Composer: View {
                         pendingKeyedFollowUp = false
                         askWithKey()
                     }
-                    }   // the nav + document column (prd §386i)
+                    }   // the document column
                 }
                 .padding(.top, DS.Space.s2)
+                // THE DOCUMENT ENDS ABOVE THE CHROME (2026-08-15). This scroll
+                // had no bottom inset at all, so the last section rendered
+                // UNDER the input bar and the reader could not scroll it clear
+                // — reported on a device as the closing card being sliced. It
+                // was already wrong before this pass and the nav dock below
+                // makes the overlap taller, so the inset lands with the move
+                // rather than after the next report. `safeAreaInset` and not
+                // padding: it extends the SCROLLABLE region, so the last card
+                // can actually travel above the bar instead of merely starting
+                // higher.
+                .safeAreaInset(edge: .bottom, spacing: 0) {
+                    Color.clear.frame(height: DS.Space.s4)
+                }
             }
 
             // Recording — the red dot, the clock, and the words arriving live.
@@ -2319,6 +2298,10 @@ struct Composer: View {
             // the last band before it, always offered rather than competing
             // with `askChips`'/`takeChips`' own ranked/typed rows.
             categoryChipsRow
+            // The brief's table of contents (2026-08-15) — the LAST band
+            // before the field, where the mockup put it and where the
+            // composer's own stacking already sends a chip row.
+            briefNav
             // The input, pinned to the bottom — a friendly rounded bar.
             inputBar
         }
@@ -3446,6 +3429,75 @@ struct Composer: View {
     /// Derived from the rendered doc rather than from the section plan, so a
     /// section that DECLINED (no money today, nobody around) has no chip by
     /// construction — the nav can never offer a heading that isn't there.
+    /// THE BRIEF'S NAV, DOCKED (2026-08-15, the approved deck mockup) — the
+    /// table of contents, moved from above the document to just above the
+    /// input bar.
+    ///
+    /// The berry that opens this surface rests in the bottom-right corner, so
+    /// the hand that raised the agent is already at the bottom of the phone
+    /// while these chips sat at the top — the hardest place to reach one-handed
+    /// — and the composer's own stacking already says where a chip row goes:
+    /// `askChips` → `categoryChipsRow` → `inputBar`, the field always last.
+    /// This joins that run.
+    ///
+    /// It resolves `scrollTo` against the DOCUMENT's `ScrollViewReader` via
+    /// the published `briefScroll` proxy rather than wrapping itself in a
+    /// second reader — a reader resolves against the scroll views it contains,
+    /// so a local one here would find nothing to scroll and the chips would go
+    /// dead again in a new way (§386n's bug, whose fix is the `chip-` id
+    /// namespace that also survives this move).
+    @ViewBuilder
+    private var briefNav: some View {
+        if !briefSections.isEmpty, let proxy = briefScroll {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: DS.Space.s2) {
+                    // The chip's identity is NAMESPACED (prd §386n).
+                    // `ForEach(id: \.id)` gave each chip the SAME id as the
+                    // document module it points at, and a `ScrollViewReader`
+                    // resolves `scrollTo` against every scroll view it
+                    // contains — so the proxy found the CHIP first and
+                    // scrolled the NAV into view while the document sat
+                    // still. That is exactly what "the chips don't lead
+                    // anywhere" looked like: something moved, just never the
+                    // thing you were reading.
+                    ForEach(briefSections, id: \.chipID) { section in
+                        let here = section.title == activeSection
+                        Button {
+                            DSHaptic.selection()
+                            withAnimation(DS.Motion.standard) {
+                                proxy.scrollTo(section.id, anchor: .top)
+                            }
+                        } label: {
+                            // THE CHIP IS THE COLOUR (prd §386n) — the
+                            // capsule carries the hue, no bullet, and the
+                            // active chip DEEPENS its own hue rather than
+                            // switching colour, so "selected" and "which
+                            // section" stay one statement. Text stays on the
+                            // ink ramp: coloured labels at five hues is the
+                            // ransom note §386l refused.
+                            Text(section.title)
+                                .dsText(.subhead13)
+                                .fontWeight(here ? .semibold : .regular)
+                                .foregroundStyle(here ? DS.textPrimary : DS.textSecondary)
+                                .lineLimit(1)
+                                .padding(.horizontal, DS.Space.s4)
+                                .padding(.vertical, DS.Space.s2)
+                                .background(GenSection.hue(section.hue)
+                                                .opacity(here ? 0.34 : 0.16),
+                                            in: Capsule())
+                                .dsHover()
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.horizontal, DS.Space.s4)
+            }
+            // No trailing inset any more: the ✕ this row used to pass under
+            // is pinned TOP-trailing, and down here nothing overlaps it.
+            .padding(.bottom, DS.Space.s2)
+        }
+    }
+
     private var briefSections: [(id: String, chipID: String, title: String, hue: String)] {
         guard briefLanding else { return [] }
         let els = answerStream.els

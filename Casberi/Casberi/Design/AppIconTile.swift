@@ -339,21 +339,39 @@ extension DS {
             // (`legibleCardFill`'s own 2026-08-10 ruling), never the app tint.
             return RowSkin(fill: DS.gray200, ink: nil)
         }
+        guard let fill = deckFill(for: brand) else {
+            return RowSkin(fill: DS.gray200, ink: nil)
+        }
+        return RowSkin(fill: fill, ink: .dark)
+    }
+
+    /// The register itself, callable for ANY identity hue — the feed's row
+    /// cards and the brief's section cards go through this one solver, so the
+    /// two surfaces can never drift to different weights (2026-08-15). Nil for
+    /// a near-neutral hue (`washHue`'s own s < 0.15 bar): no honest colour, no
+    /// card, and the caller falls back to its neutral surface. The result is
+    /// always the DARK register, so a caller painting it pins `.dark` on the
+    /// subtree's `colorScheme` — the fill and the ink are one decision.
+    static func deckFill(for hue: Color) -> Color? {
         var h: CGFloat = 0, s: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
-        UIColor(brand).getHue(&h, saturation: &s, brightness: &b, alpha: &a)
-        guard s >= 0.15 else { return RowSkin(fill: DS.gray200, ink: nil) }
+        UIColor(hue).getHue(&h, saturation: &s, brightness: &b, alpha: &a)
+        guard s >= 0.15 else { return nil }
 
         let sat = min(max(Double(s), 0.60), 0.85)
-        let target = 0.15
-        var lo = 0.10, hi = 1.0
+        // THE ONE DIAL for how loud the whole surface is. 0.12 puts every card
+        // at ~6.2:1 under white ink — deeper than the 0.15 first cut, which
+        // the user still read as "a bit too bright" (2026-08-15). Increase
+        // Contrast takes it to 0.10 (~7.0:1), the same figure `textTertiary`
+        // climbs to under that setting, so the person who asked for contrast
+        // gets it from the ground as well as the ink.
+        let target = ContrastStore.shared.increased ? 0.10 : 0.12
+        var lo = 0.08, hi = 1.0
         for _ in 0..<12 {
             let mid = (lo + hi) / 2
             let (r, g, bl) = rgbComponents(hue: Double(h), saturation: sat, brightness: mid)
             if wcagLuminance(r, g, bl) < target { lo = mid } else { hi = mid }
         }
-        return RowSkin(fill: Color(hue: Double(h), saturation: sat,
-                                   brightness: (lo + hi) / 2),
-                       ink: .dark)
+        return Color(hue: Double(h), saturation: sat, brightness: (lo + hi) / 2)
     }
 
     /// WCAG relative luminance — sRGB channels gamma-LINEARIZED, which is the

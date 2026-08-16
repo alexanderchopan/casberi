@@ -1087,12 +1087,22 @@ enum TodayBrief {
     /// paid by the ANCHOR CHIPS instead: with a nav at the top of the brief,
     /// what sits third stops being a question of what you can reach.
     private static let sectionPlan: [(title: String, hue: String, room: String, ids: [String])] = [
+        // THE THREE CARDS, BY NAME (2026-08-15, user, against the approved
+        // deck mockup: "needs you was yellow… wallet… probably blue b/c
+        // wallet is money… your day… opposite of wallet").
+        //
+        // Needs you and Coming up now share the ATTENTION hue rather than
+        // holding two — §386i already ruled them one subject ("what you owe,
+        // ordered by urgency"; the only thing separating them is that one is
+        // late), and once the hue is a whole card ground rather than a chip
+        // tint, giving one subject two colours says they are two. Money takes
+        // the blue that Coming up vacates.
         ("Needs you", "attention", "", ["alerts"]),
-        ("Coming up", "tint", "Reminders", ["axis", "runway"]),
+        ("Coming up", "attention", "Reminders", ["axis", "runway"]),
         // `hero` and `spark` are alternatives, never both — the hero carries
         // its own curve, and the spark is what stands in when the live
         // holdings read left the hero unable to compose (§386h).
-        ("Money", "confirm", "Wallet", ["hero", "spark", "holdmap", "pair", "tmkt", "flow", "spend"]),
+        ("Money", "tint", "Wallet", ["hero", "spark", "holdmap", "pair", "tmkt", "flow", "spend"]),
         ("Your day", "life", "", ["fold", "posts", "map"]),
         ("Work", "work", "GitHub", ["work", "ghgraph", "ship"]),
     ]
