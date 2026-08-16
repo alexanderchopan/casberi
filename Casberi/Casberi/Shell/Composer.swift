@@ -3106,8 +3106,15 @@ struct Composer: View {
                             // Light-scheme accent regardless of theme: the
                             // pill is white in both, so the dark theme's
                             // brighter accent would be the washed-out one.
-                            (Text(String(localized: "Wallet "))
-                             + Text(String(format: "%+.1f%%", pct)))
+                            //
+                            // ONE interpolated key, not a label `Text` plus a
+                            // figure `Text`. The two-part form needed a
+                            // trailing space inside the localized string —
+                            // invisible to a translator, and it pins the label
+                            // before the figure in every language. The pill is
+                            // a single colour, so there was never a rendering
+                            // reason to split it.
+                            Text(String(localized: "Wallet \(String(format: "%+.1f%%", pct))"))
                                 .dsText(.subhead13).fontWeight(.semibold)
                                 .foregroundStyle(TokenChartStyle.accent(change: pct / 100,
                                                                         scheme: .light))
