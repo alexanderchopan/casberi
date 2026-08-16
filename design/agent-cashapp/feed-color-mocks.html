@@ -1,0 +1,306 @@
+<title>The feed in colour — three takes</title>
+<style>
+  :root {
+    --page: #0a0b0f; --ink: #f2f4f8; --muted: #99a1b4; --faint: #626b80;
+    --tint: #1673e6; --confirm: #30d158; --down: #ff453a; --attn: #ff9f0a;
+    --fc: #855dcd; --bsky: #0085ff; --rss: #f26522; --gh: #8b949e; --spot: #1db954;
+    --money: ui-rounded, -apple-system, system-ui, sans-serif;
+    --text: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { background: var(--page); }
+  body { font-family: var(--text); color: var(--ink);
+         background: radial-gradient(900px 420px at 18% -8%, rgba(22,115,230,.10), transparent 62%), var(--page);
+         padding: 48px 28px 72px; }
+  .wrap { max-width: 1180px; margin: 0 auto; }
+  header { max-width: 820px; margin-bottom: 36px; }
+  .eyebrow { font-size: 12px; font-weight: 600; color: #4d8dff; margin-bottom: 10px; }
+  h1 { font-size: clamp(26px,3.4vw,36px); font-weight: 800; letter-spacing: -.02em; line-height: 1.1; margin-bottom: 12px; }
+  header p { font-size: 15px; line-height: 1.55; color: var(--muted); max-width: 72ch; margin-bottom: 8px; }
+  header p b { color: var(--ink); font-weight: 600; }
+
+  .row { display: flex; flex-wrap: wrap; gap: 36px; align-items: flex-start; justify-content: center; }
+  .option { width: 336px; }
+  .optName { font-size: 13px; font-weight: 800; margin: 0 4px 4px; }
+  .optName span { color: var(--faint); font-weight: 600; }
+  .optWhy { font-size: 12.5px; line-height: 1.5; color: var(--muted); margin: 12px 4px 0; }
+  .optWhy b { color: var(--ink); font-weight: 600; }
+  .phone { width: 336px; border-radius: 46px; padding: 10px; background: #15171c; box-shadow: 0 30px 70px rgba(0,0,0,.55); margin-top: 10px; }
+  .screen { border-radius: 38px; overflow: hidden; min-height: 740px; background: #000; position: relative;
+            display: flex; flex-direction: column; }
+  .scroll { flex: 1; padding: 12px 12px 8px; }
+
+  /* chip strip — selection is a SOLID fill now (the deck's grammar) */
+  .chips { display: flex; gap: 6px; margin-bottom: 14px; padding: 2px 2px 0; overflow: hidden; }
+  .chip { font-size: 11.5px; font-weight: 700; padding: 7px 12px; border-radius: 999px;
+          background: rgba(255,255,255,.07); color: var(--muted); white-space: nowrap; }
+  .chip.on { background: var(--tint); color: #fff; }
+
+  .dayh { display: flex; align-items: baseline; gap: 8px; margin: 4px 4px 10px; }
+  .dayh b { font-family: var(--money); font-size: 22px; font-weight: 800; letter-spacing: -.02em; }
+  .dayh s { text-decoration: none; font-size: 12px; font-weight: 600; color: var(--faint); }
+
+  /* rows — shared skeleton, three skins */
+  .card { border-radius: 18px; padding: 12px 13px; margin-bottom: 8px; }
+  .rh { display: flex; align-items: center; gap: 7px; margin-bottom: 6px; }
+  .av { width: 24px; height: 24px; border-radius: 50%; flex: none; }
+  .rh b { font-size: 12px; font-weight: 700; }
+  .rh s { text-decoration: none; font-size: 11px; margin-left: auto; flex: none; }
+  .body13 { font-size: 13.5px; line-height: 1.4; }
+  .metaline { font-size: 11px; margin-top: 6px; }
+  .thumbrow { display: flex; gap: 8px; }
+  .thumbrow .t { min-width: 0; flex: 1; }
+  .thumb { width: 52px; height: 52px; border-radius: 10px; flex: none; }
+  .grid4 { display: grid; grid-template-columns: repeat(4,1fr); gap: 4px; margin-top: 2px; }
+  .grid4 div { aspect-ratio: 1; border-radius: 8px; }
+  .amount { font-family: var(--money); font-weight: 800; font-variant-numeric: tabular-nums; }
+
+  /* skin A — ink rows (today, friendlier radius) */
+  .a .card { background: #131519; }
+  .a .rh b { color: var(--muted); }
+  .a .rh s { color: var(--faint); }
+  .a .body13 { color: var(--ink); }
+  .a .metaline { color: var(--faint); }
+
+  /* skin B — every row full source hue */
+  .b .card { color: #fff; }
+  .b .rh b { color: rgba(255,255,255,.9); }
+  .b .rh s { color: rgba(255,255,255,.65); }
+  .b .metaline { color: rgba(255,255,255,.75); }
+  .b .fc   { background: linear-gradient(160deg, #9268e0, #6a41b5); }
+  .b .bsky { background: linear-gradient(160deg, #2196ff, #005ec4); }
+  .b .rss  { background: linear-gradient(160deg, #ff7a3c, #d6490e); }
+  .b .ph   { background: linear-gradient(160deg, #4a4f66, #2c3044); }
+  .b .wal  { background: linear-gradient(160deg, #2a8cff, #0a5fd6); }
+  .b .gh   { background: linear-gradient(160deg, #3b4048, #23262c); }
+
+  /* skin C — soft source tint, ink words */
+  .c .card { background: #131519; }
+  .c .fc   { background: rgba(133,93,205,.16); }
+  .c .bsky { background: rgba(0,133,255,.14); }
+  .c .rss  { background: rgba(242,101,34,.13); }
+  .c .ph   { background: rgba(255,255,255,.06); }
+  .c .wal  { background: rgba(22,115,230,.15); }
+  .c .gh   { background: rgba(139,148,158,.10); }
+  .c .rh b { font-weight: 700; }
+  .c .fc .rh b { color: #b79aee; }
+  .c .bsky .rh b { color: #64b2ff; }
+  .c .rss .rh b { color: #ff9c6b; }
+  .c .ph .rh b { color: var(--muted); }
+  .c .wal .rh b { color: #77b0ff; }
+  .c .gh .rh b { color: var(--gh); }
+  .c .rh s { color: var(--faint); }
+  .c .body13 { color: var(--ink); }
+  .c .metaline { color: var(--faint); }
+
+  .berrycorner { position: absolute; right: 14px; bottom: 14px; width: 44px; height: 44px; border-radius: 50%;
+                 background: rgba(28,30,37,.92); display: flex; align-items: center; justify-content: center; }
+  .berrycorner i { width: 20px; height: 20px; border-radius: 50%; display: block;
+                   background: radial-gradient(circle at 32% 28%, #6ea8ff, #1673e6 58%, #0c3f85); }
+
+  /* wallet opinion frame */
+  .w .facerail { display: flex; gap: 8px; margin-bottom: 12px; align-items: center; }
+  .w .face { width: 34px; height: 34px; border-radius: 50%; }
+  .w .face.on { outline: 3px solid var(--tint); outline-offset: 2px; }
+  .w .hero { border-radius: 24px; padding: 16px; color: #fff; background: linear-gradient(160deg, #2a8cff, #0a5fd6); margin-bottom: 8px; }
+  .w .hero .cap { font-size: 12px; font-weight: 700; color: rgba(255,255,255,.85); }
+  .w .hero .big { font-family: var(--money); font-size: 40px; font-weight: 800; letter-spacing: -.03em;
+                  font-variant-numeric: tabular-nums; display: flex; align-items: center; gap: 10px; margin-top: 4px; }
+  .w .pillup { font-family: var(--money); font-size: 12px; font-weight: 800; padding: 4px 9px; border-radius: 999px;
+               background: #fff; color: #1d9e43; }
+  .w .inkcard { border-radius: 18px; padding: 13px 14px; margin-bottom: 8px; background: #131519; }
+  .w .inkcard .cap { font-size: 11px; font-weight: 700; color: var(--faint); margin-bottom: 6px; }
+  .w .li { display: flex; align-items: center; gap: 9px; padding: 5px 0; font-size: 13px; font-weight: 600; }
+  .w .li s { text-decoration: none; margin-left: auto; font-family: var(--money); font-weight: 800; font-size: 12.5px; }
+
+  .coh { max-width: 820px; margin: 48px auto 0; }
+  .coh h2 { font-size: 18px; font-weight: 800; margin-bottom: 10px; }
+  .coh p { font-size: 13.5px; line-height: 1.6; color: var(--muted); margin-bottom: 10px; }
+  .coh p b { color: var(--ink); font-weight: 700; }
+</style>
+
+<div class="wrap">
+<header>
+  <div class="eyebrow">Casberi · the All feed, in the new register</div>
+  <h1>The feed in colour — three takes, one wallet opinion</h1>
+  <p>No loud card (your ruling — gimmicky, unreliable). What's left of the grammar for the feed: <b>selection goes solid</b> (the active chip is a full tint fill with a white word, matching the deck's nav), rows get the friendlier radius, and then the question you asked: <b>what if every row wore its source's colour?</b> B is that, honestly rendered at full strength. C is the livable version — the source's hue as a quiet ground, ink words on top.</p>
+</header>
+
+<div class="row">
+
+<!-- A — grammar only -->
+<div class="option a">
+  <div class="optName">A · Solid selection, ink rows <span>— the safe transplant</span></div>
+  <div class="phone"><div class="screen">
+    <div class="scroll">
+      <div class="chips"><span class="chip on">All</span><span class="chip">Farcaster</span><span class="chip">Photos</span><span class="chip">Wallet</span><span class="chip">Markets</span><span class="chip">Git…</span></div>
+      <div class="dayh"><b>Today</b><s>14 new</s></div>
+
+      <div class="card">
+        <div class="rh"><span class="av" style="background:radial-gradient(circle at 32% 30%, #e86a6a, #7d6adf 60%, #3a3160)"></span><b>mara · Farcaster</b><s>2h</s></div>
+        <div class="body13">Shipped the new onboarding today. The fork card idea from last week made it in — costs a tap less than the old flow.</div>
+        <div class="metaline">12 likes · /design</div>
+      </div>
+
+      <div class="card">
+        <div class="rh"><b>The Verge · RSS</b><s>4h</s></div>
+        <div class="thumbrow"><div class="t body13">Solid-state batteries finally hit a shipping laptop, and the math is wild</div><span class="thumb" style="background:linear-gradient(135deg,#3b4c68,#22293a)"></span></div>
+      </div>
+
+      <div class="card">
+        <div class="rh"><b>Photos</b><s>2pm</s></div>
+        <div class="grid4">
+          <div style="background:linear-gradient(135deg,#3b4c68,#22293a)"></div>
+          <div style="background:linear-gradient(135deg,#5a4a3a,#2e2620)"></div>
+          <div style="background:linear-gradient(135deg,#2f5548,#1a2f28)"></div>
+          <div style="background:linear-gradient(135deg,#4a3a58,#241c30)"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="rh"><b>Wallet</b><s>11am</s></div>
+        <div class="body13">Received 120 USDC <span class="amount" style="color:var(--confirm)">+$120</span></div>
+      </div>
+
+      <div class="card">
+        <div class="rh"><b>jb · Bluesky</b><s>9am</s></div>
+        <div class="body13">The trick with local-first sync is admitting the server was never the source of truth.</div>
+        <div class="metaline">Reposted</div>
+      </div>
+    </div>
+    <div class="berrycorner"><i></i></div>
+  </div></div>
+  <p class="optWhy"><b>What changed:</b> the active chip is a solid tint fill with a white label — selection reads instantly and matches the deck's nav. Rows keep the calm ink ground; provenance stays in the header line. This ships tomorrow with zero risk to reading.</p>
+</div>
+
+<!-- B — full source colour -->
+<div class="option b">
+  <div class="optName">B · Every row bright <span>— your question, at full strength</span></div>
+  <div class="phone"><div class="screen">
+    <div class="scroll">
+      <div class="chips"><span class="chip on">All</span><span class="chip">Farcaster</span><span class="chip">Photos</span><span class="chip">Wallet</span><span class="chip">Markets</span><span class="chip">Git…</span></div>
+      <div class="dayh"><b>Today</b><s>14 new</s></div>
+
+      <div class="card fc">
+        <div class="rh"><span class="av" style="background:radial-gradient(circle at 32% 30%, #e86a6a, #7d6adf 60%, #3a3160)"></span><b>mara · Farcaster</b><s>2h</s></div>
+        <div class="body13">Shipped the new onboarding today. The fork card idea from last week made it in — costs a tap less than the old flow.</div>
+        <div class="metaline">12 likes · /design</div>
+      </div>
+
+      <div class="card rss">
+        <div class="rh"><b>The Verge · RSS</b><s>4h</s></div>
+        <div class="thumbrow"><div class="t body13">Solid-state batteries finally hit a shipping laptop, and the math is wild</div><span class="thumb" style="background:linear-gradient(135deg,#3b4c68,#22293a)"></span></div>
+      </div>
+
+      <div class="card ph">
+        <div class="rh"><b>Photos</b><s>2pm</s></div>
+        <div class="grid4">
+          <div style="background:linear-gradient(135deg,#3b4c68,#22293a)"></div>
+          <div style="background:linear-gradient(135deg,#5a4a3a,#2e2620)"></div>
+          <div style="background:linear-gradient(135deg,#2f5548,#1a2f28)"></div>
+          <div style="background:linear-gradient(135deg,#4a3a58,#241c30)"></div>
+        </div>
+      </div>
+
+      <div class="card wal">
+        <div class="rh"><b>Wallet</b><s>11am</s></div>
+        <div class="body13">Received 120 USDC <span class="amount" style="background:#fff;color:#1d9e43;padding:2px 7px;border-radius:999px;font-size:12px">+$120</span></div>
+      </div>
+
+      <div class="card bsky">
+        <div class="rh"><b>jb · Bluesky</b><s>9am</s></div>
+        <div class="body13">The trick with local-first sync is admitting the server was never the source of truth.</div>
+        <div class="metaline">Reposted</div>
+      </div>
+    </div>
+    <div class="berrycorner"><i></i></div>
+  </div></div>
+  <p class="optWhy"><b>Rendered honestly so you can judge it.</b> My read: when every row is loud, none is — colour stops meaning "something happened" and starts meaning nothing, five hues per screenful fight each other, and long text on saturated grounds tires fast. It also spends the bright register the day card and selection just claimed. Great for a screenshot, hard to read daily.</p>
+</div>
+
+<!-- C — soft source tint -->
+<div class="option c">
+  <div class="optName">C · Source-tinted rows <span>— the livable version</span></div>
+  <div class="phone"><div class="screen">
+    <div class="scroll">
+      <div class="chips"><span class="chip on">All</span><span class="chip">Farcaster</span><span class="chip">Photos</span><span class="chip">Wallet</span><span class="chip">Markets</span><span class="chip">Git…</span></div>
+      <div class="dayh"><b>Today</b><s>14 new</s></div>
+
+      <div class="card fc">
+        <div class="rh"><span class="av" style="background:radial-gradient(circle at 32% 30%, #e86a6a, #7d6adf 60%, #3a3160)"></span><b>mara · Farcaster</b><s>2h</s></div>
+        <div class="body13">Shipped the new onboarding today. The fork card idea from last week made it in — costs a tap less than the old flow.</div>
+        <div class="metaline">12 likes · /design</div>
+      </div>
+
+      <div class="card rss">
+        <div class="rh"><b>The Verge · RSS</b><s>4h</s></div>
+        <div class="thumbrow"><div class="t body13">Solid-state batteries finally hit a shipping laptop, and the math is wild</div><span class="thumb" style="background:linear-gradient(135deg,#3b4c68,#22293a)"></span></div>
+      </div>
+
+      <div class="card ph">
+        <div class="rh"><b>Photos</b><s>2pm</s></div>
+        <div class="grid4">
+          <div style="background:linear-gradient(135deg,#3b4c68,#22293a)"></div>
+          <div style="background:linear-gradient(135deg,#5a4a3a,#2e2620)"></div>
+          <div style="background:linear-gradient(135deg,#2f5548,#1a2f28)"></div>
+          <div style="background:linear-gradient(135deg,#4a3a58,#241c30)"></div>
+        </div>
+      </div>
+
+      <div class="card wal">
+        <div class="rh"><b>Wallet</b><s>11am</s></div>
+        <div class="body13">Received 120 USDC <span class="amount" style="color:var(--confirm)">+$120</span></div>
+      </div>
+
+      <div class="card bsky">
+        <div class="rh"><b>jb · Bluesky</b><s>9am</s></div>
+        <div class="body13">The trick with local-first sync is admitting the server was never the source of truth.</div>
+        <div class="metaline">Reposted</div>
+      </div>
+    </div>
+    <div class="berrycorner"><i></i></div>
+  </div></div>
+  <p class="optWhy"><b>The same idea at a strength that reads.</b> Each card's ground is its source's hue at ~13–16% — the day card's old wash recipe, now doing PROVENANCE — with the source name in the hue's bright form and the words in ink. You can tell a Farcaster day from a Photos day at arm's length, reading is untouched, and the bright register stays reserved for selection and the composer. If rows get colour, this is the version I'd ship.</p>
+</div>
+
+</div>
+
+<div class="coh">
+  <h2>Should the Wallet get this flavor?</h2>
+  <p><b>Yes in exactly two places, no everywhere else.</b> The wallet room is the one screen in the app that IS a Cash App screen — one hero number over one list (§212 built exactly that) — so the balance hero is the most natural home the bright register has: full tint ground, white figure at display scale, the white delta pill it already shares with the day card. And when the room is SCOPED to one wallet, the hero wears that wallet's own pour hue instead of the tint — which is colour as information (which wallet am I looking at), the same fact the crown pour already states, now stated where the money is.</p>
+  <p><b>The refusals matter more.</b> Approvals, the exposure card, DeFi health, the acting-parties inventory — the risk surfaces — stay ink. A bright card on a screen that says "this grant reaches $4,120" dresses a warning as a celebration; orange stays a semantic accent on ink, per §83. The transactions list stays ink for the feed's own reason (content is the product), and the treemap keeps its magnitude blues — it already carries colour that means something. The face rail's selection goes solid, same rule as the chips.</p>
+  <div class="row" style="justify-content:flex-start">
+    <div class="option w">
+      <div class="optName">The wallet transplant <span>— hero bright, risk ink</span></div>
+      <div class="phone" style="width:336px"><div class="screen" style="min-height:560px">
+        <div class="scroll">
+          <div class="facerail">
+            <span class="face on" style="background:radial-gradient(circle at 32% 30%, #e86a6a, #7d6adf 60%, #3a3160)"></span>
+            <span class="face" style="background:radial-gradient(circle at 32% 30%, #5ad1c4, #2f7de0 60%, #1c3b6e)"></span>
+            <span class="face" style="background:radial-gradient(circle at 32% 30%, #f0b86a, #d0685a 60%, #6e2c1c)"></span>
+            <span style="font-size:11.5px;font-weight:700;color:var(--faint);margin-left:4px">alex.eth</span>
+          </div>
+          <div class="hero">
+            <div class="cap">alex.eth</div>
+            <div class="big">$12,482 <span class="pillup">+1.8%</span></div>
+            <svg width="100%" height="36" viewBox="0 0 300 36" preserveAspectRatio="none" style="margin-top:8px;display:block">
+              <path d="M0,28 C30,24 55,30 85,22 C115,15 140,20 170,13 C200,8 235,12 265,6 L300,5"
+                    fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" opacity=".9"/>
+            </svg>
+          </div>
+          <div class="inkcard">
+            <div class="cap">In protocols</div>
+            <div class="li">Deposited · Aave, Morpho<s style="color:var(--ink)">$3,140</s></div>
+            <div class="li">Locked · veAERO<s style="color:var(--muted)">12,977 AERO</s></div>
+          </div>
+          <div class="inkcard">
+            <div class="cap">Approvals</div>
+            <div class="li"><span style="color:var(--attn)">⚠︎</span> USDC · unlimited · reaches $4,120<s style="color:var(--attn)">revoke</s></div>
+          </div>
+        </div>
+      </div></div>
+      <p class="optWhy"><b>One bright thing per screen.</b> The hero speaks in the new register; everything below it — protocols, approvals — presses back in ink, so the room reads top-down as "here's the money, here's the machinery, here's the risk." Scoped, the hero would wear alex.eth's own hue.</p>
+    </div>
+  </div>
+</div>
+</div>
