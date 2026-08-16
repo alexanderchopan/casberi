@@ -617,8 +617,43 @@ struct Composer: View {
     /// that KEEPS its chips — for the two that dock beside the brief; the
     /// placeholder cycle passes `false`, deliberately, because the landing's
     /// field already reads a static "Ask about this…" rather than cycling.
+    /// **FOCUSING THE FIELD IS THE SECOND DOOR** (2026-08-15, user: "tapping
+    /// the berry should bring up the brief… typing in the search bar should
+    /// bring up the chat cashapp style interface").
+    ///
+    /// This is what makes the ask surface reachable AT ALL. §386d made a bare
+    /// berry tap seed `TodayBrief.title`, which sets `answering` for the life
+    /// of the open — and `answering` is only cleared by `close()`. So
+    /// `restChrome(keepBrief: false)` could never return true on a normal
+    /// open, and the greeting, the day card and the chip beneath it were dead
+    /// code on every device: §386e predicted exactly this and parked it as a
+    /// ruling nobody had been asked for. Two sessions then spent a night
+    /// polishing a screen no tap could produce, which is how it was finally
+    /// noticed ("it's as if we never changed it" — correct, and not the
+    /// commits' fault).
+    ///
+    /// The ruling resolves it WITHOUT a second control, which matters because
+    /// §386o deleted the magnifier hours earlier on the reasoning that two
+    /// buttons opening one screen is a choice made before you know what either
+    /// does. The field was always the other door; it just never behaved like
+    /// one. Tap the berry to READ the day, touch the field to ASK — and the
+    /// gesture that says "I am about to type" is exactly the one that should
+    /// clear the document out of the way.
+    ///
+    /// `!hasDraft` still guards it, so the moment a character lands the rest
+    /// chrome yields to the typed-draft bands (Find / Ask / Send to) — this
+    /// state is the empty-handed invitation, never a layer over real typing.
     private func restChrome(keepBrief: Bool) -> Bool {
-        isOpen && !hasDraft && !isRecording && (!answering || (keepBrief && briefLanding))
+        isOpen && !hasDraft && !isRecording
+            && (!answering || (keepBrief && briefLanding) || fieldFocused)
+    }
+
+    /// The ask surface is standing IN PLACE of a document — the focus door
+    /// above, seen from the document's side. Separate from `restChrome` so the
+    /// two can't disagree about when the brief yields: this is the one
+    /// condition where an answer exists and is deliberately not drawn.
+    private var askSurfaceShowing: Bool {
+        answering && fieldFocused && !hasDraft && !isRecording
     }
 
     /// The invitation cycles only while the field is genuinely idle and empty —
@@ -1674,7 +1709,14 @@ struct Composer: View {
             // can keep following up on. The last answer stays LIVE (answerStream)
             // until you ask the next one or close — so a typewriter reveal never
             // gets cut. The scroll keeps the newest in view.
-            if !turns.isEmpty || answering {
+            // The document STEPS ASIDE for the ask surface (2026-08-15). Both
+            // are gated on `answering`, so without this the greeting and the
+            // day card would render stacked on top of a brief that is still
+            // there — and the mockup this implements is deliberately empty
+            // above the card. Touching the field means "I want to ask", and
+            // the answer comes back the moment focus leaves with nothing
+            // typed, so nothing is lost: the turns are still in `turns`.
+            if (!turns.isEmpty || answering), !askSurfaceShowing {
                 ScrollViewReader { proxy in
                     VStack(alignment: .leading, spacing: 0) {
                     // THE NAV MOVED TO THE DOCK (2026-08-15, the approved
