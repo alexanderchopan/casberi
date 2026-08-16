@@ -1,0 +1,342 @@
+<meta charset="utf-8">
+<title>Sources tray — degray the glass</title>
+<style>
+  /* Real tokens, DesignTokens.swift (values as SHIPPED 2026-08-16)
+     page          #000000 / #ffffff
+     surfaceSheet  #111113 / #ffffff
+     glassSheen    #ffffff1f / #ffffff9e     ← the sheen DSGlassSheet paints
+     textPrimary   #ffffff / #000000
+     textSecondary #ebebf599 / #3c3c43d6
+     tint          #0a84ff
+     Space  s1 4  s2 10  s3 14  s4 18  s6 24
+     SourcesTray: columns 5, icon 44, chip 52, nameHeight 28,
+                  overline 15 + gap 5, cardPadTop 8, cardPadBottom 6, rowGap 10
+
+     WHAT SHIPS TODAY (DSTray.swift, DSGlassSheet):
+       Rectangle().fill(.ultraThinMaterial)
+         .overlay(LinearGradient(glassSheen 0 → glassSheen·0.25 @0.22 → clear @0.46,
+                                 topLeading → bottom))
+     No rim (brief §8, no hairlines), no cards (deleted 2026-08-16).
+
+     THE APPROXIMATION, stated rather than hidden: SwiftUI's `.ultraThinMaterial`
+     has no CSS equivalent and no knobs of its own. It is modelled here as a
+     translucent fill + blur + saturation, tuned so treatment A looks like what
+     the app looks like. Every reading below is therefore RELATIVE — how much
+     the sheen and the scrim move the panel — which is exactly the question, and
+     is why the fill alpha is a variable rather than a constant.
+
+     THE COMPLAINT: "a little too gray". In dark mode the grey has two sources
+     and only one of them is the material — the sheen is 12% WHITE laid over the
+     top 46% of the sheet, i.e. an achromatic wash across half the panel, which
+     is precisely where the eye lands first. */
+
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font: 14px/1.5 -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+    background: #0b0b0d; color: #ebebf5cc;
+    padding: 28px 24px 56px; -webkit-font-smoothing: antialiased;
+  }
+  body.light { background: #f2f2f7; color: #3c3c43d6; }
+
+  h1 { font: 700 22px/28px ui-rounded, -apple-system, system-ui; color: #fff; }
+  body.light h1 { color: #000; }
+  h3 { font: 700 15px/20px ui-rounded, system-ui; color: #fff; margin: 30px 0 4px; }
+  body.light h3 { color: #000; }
+  .sub { margin-top: 6px; max-width: 96ch; font-size: 13px; opacity: .74; }
+  .sub code { font: 400 12px/1 ui-monospace, SFMono-Regular, monospace; opacity: .85; }
+
+  .bar { display: flex; gap: 10px; align-items: center; margin: 16px 0 22px; flex-wrap: wrap; }
+  .bar .gap { width: 14px; }
+  button {
+    font: 500 13px/1 inherit; color: inherit; cursor: pointer;
+    background: #ffffff14; border: 0; border-radius: 9999px; padding: 9px 15px;
+  }
+  body.light button { background: #00000010; }
+  button.on { background: #0a84ff; color: #fff; }
+
+  .rail { display: flex; gap: 18px; align-items: flex-start; overflow-x: auto; padding-bottom: 14px; }
+  .panel { flex: 0 0 auto; width: 402px; }
+  .panel > h2 { font: 600 13px/18px inherit; color: #fff; margin-bottom: 2px; }
+  body.light .panel > h2 { color: #000; }
+  .panel > .note { font-size: 11.5px; line-height: 16px; opacity: .64; margin-bottom: 7px; min-height: 64px; }
+  .verdict { font-size: 11.5px; line-height: 16px; margin-bottom: 9px; font-weight: 600; }
+  .verdict.bad  { color: #ff6b6b; }
+  .verdict.ok   { color: #30d158; }
+  .verdict.meh  { color: #ffd60a; }
+
+  /* ---- the phone: a real feed behind, tray in front --------------------- */
+
+  .phone {
+    position: relative; width: 402px; height: 700px;
+    border-radius: 30px; overflow: hidden; background: #000;
+    isolation: isolate;
+  }
+  body.light .phone { background: #fff; }
+
+  .behind { position: absolute; inset: 0; padding: 44px 18px 0; }
+
+  .frow {
+    display: flex; gap: 12px; align-items: center;
+    background: #111113; border-radius: 10px; padding: 10px; margin-bottom: 10px;
+  }
+  body.light .frow { background: #fff; box-shadow: 0 1px 3px #0000001f; }
+  .thumb { width: 56px; height: 56px; border-radius: 8px; flex: 0 0 auto; }
+  .fmark { width: 22px; height: 22px; border-radius: 9999px; flex: 0 0 auto;
+           display: grid; place-items: center; font: 700 10px/1 ui-rounded, system-ui; color: #fff; }
+  .flines { flex: 1; min-width: 0; }
+  .fl { height: 9px; border-radius: 4px; background: #ffffff2e; margin-bottom: 7px; }
+  .fl.b { background: #ffffff59; height: 11px; }
+  body.light .fl { background: #00000021; }
+  body.light .fl.b { background: #00000047; }
+
+  /* A BRIGHT feed — the case the sheen has least room in, and the case a
+     darkening scrim is judged on. Pictures edge to edge, no dark row between. */
+  .phone.bright .behind { padding: 44px 0 0; }
+  .phone.bright .frow { background: transparent; box-shadow: none; padding: 0; margin-bottom: 6px;
+                        border-radius: 0; gap: 6px; }
+  .phone.bright .thumb { width: 100%; height: 96px; border-radius: 0; }
+  .phone.bright .fmark, .phone.bright .flines { display: none; }
+
+  .scrim { position: absolute; inset: 0; background: #00000059; }
+  body.light .scrim { background: #00000029; }
+
+  .tray {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    border-radius: 16px 16px 0 0;
+    padding: 24px 18px 24px;                 /* s6 / s4 / s6 */
+    background: rgba(42,42,44,var(--fill, .62));
+    backdrop-filter: blur(30px) saturate(var(--sat, 1.8));
+    -webkit-backdrop-filter: blur(30px) saturate(var(--sat, 1.8));
+  }
+  body.light .tray { background: rgba(246,246,248,var(--fill, .62)); }
+
+  /* the SHEEN — the light the panel is under. topLeading → bottom. */
+  .tray::before {
+    content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+    background: linear-gradient(160deg,
+      var(--sheen0) 0%, var(--sheen1) var(--sheenmid), #ffffff00 var(--sheenend));
+  }
+  /* the DEPTH scrim — dark glass should read DEEPER than its backdrop, not
+     milkier. Bottom-weighted, so it lands where the sheen has already faded. */
+  .tray::after {
+    content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+    background: linear-gradient(to top, var(--deep, #00000000) 0%, #00000000 var(--deepend, 50%));
+  }
+  .tray > * { position: relative; z-index: 1; }
+
+  .grabber {
+    position: absolute; top: 8px; left: 50%; transform: translateX(-50%);
+    width: 36px; height: 5px; border-radius: 3px; background: #ffffff40; z-index: 2;
+  }
+  body.light .grabber { background: #00000040; }
+
+  .title { font: 700 22px/28px ui-rounded, -apple-system, system-ui; color: #fff; margin-bottom: 18px; }
+  body.light .title { color: #000; }
+
+  /* ---- the grid --------------------------------------------------------- */
+
+  .rows { display: flex; flex-direction: column; gap: var(--rowgap, 10px); }
+  .cardrow { display: flex; gap: 10px; }
+  .card { padding: var(--padtop, 8px) 0 var(--padbot, 6px); }
+
+  .cat-name {
+    font: 600 11px/15px -apple-system, system-ui;                /* label11 semibold */
+    color: #ffffff;                                              /* textPrimary — 2026-08-16 */
+    padding-left: 7px; margin-bottom: 5px; height: 15px; white-space: nowrap;
+  }
+  body.light .cat-name { color: #000; }
+
+  .chips { display: flex; }
+  .chip { width: 65.2px; display: flex; flex-direction: column; align-items: center;
+          gap: var(--icongap, 4px); }
+  .ring { width: 52px; height: 52px; border-radius: 9999px; display: grid; place-items: center; }
+  .ring.active { box-shadow: inset 0 0 0 2.5px #0a84ff; }
+  .icon {
+    width: 44px; height: 44px; border-radius: 9999px; display: grid; place-items: center;
+    font: 700 17px/1 ui-rounded, -apple-system, system-ui; color: #fff;
+  }
+  .chip-name {
+    height: 28px; font: 500 12px/16px -apple-system, system-ui;
+    color: #ebebf599; text-align: center; padding: 0 1px; hyphens: none;
+  }
+  .chip-name.long { font-size: 10.5px; letter-spacing: -.2px; }
+  body.light .chip-name { color: #3c3c43d6; }
+  .chip.sel .chip-name { color: #fff; font-weight: 600; }
+  body.light .chip.sel .chip-name { color: #000; }
+
+  /* ---- glass treatments ------------------------------------------------- */
+
+  /* A — SHIPPING TODAY. glassSheen #ffffff1f, ·0.25 at 22%, clear at 46%. */
+  .g-now  { --sheen0: #ffffff1f; --sheen1: #ffffff08; --sheenmid: 22%; --sheenend: 46%; }
+  body.light .g-now { --sheen0: #ffffff9e; --sheen1: #ffffff28; --sheenmid: 22%; --sheenend: 46%; }
+
+  /* B — VEIL TRIMMED. Same idea, less of it: the light still falls from the
+     top-leading corner, but it stops being a wash over half the panel. */
+  .g-trim { --sheen0: #ffffff17; --sheen1: #ffffff05; --sheenmid: 12%; --sheenend: 30%; }
+  body.light .g-trim { --sheen0: #ffffff75; --sheen1: #ffffff1d; --sheenmid: 12%; --sheenend: 30%; }
+
+  /* C — TRIMMED + DEPTH. The scrim is the actual degrayer: white lightens the
+     backdrop toward grey, black deepens it and lets its hue survive as hue. */
+  .g-deep { --sheen0: #ffffff17; --sheen1: #ffffff05; --sheenmid: 12%; --sheenend: 30%;
+            --deep: #00000024; --deepend: 55%; }
+  body.light .g-deep { --sheen0: #ffffff75; --sheen1: #ffffff1d; --sheenmid: 12%; --sheenend: 30%;
+                       --deep: #0000000f; --deepend: 55%; }
+
+  /* D — C + a more TRANSMISSIVE panel: the material's own fill stepped back so
+     the feed arrives as colour. In Swift this is `.opacity()` on the material,
+     the only knob a `Material` actually has. */
+  .g-thin { --sheen0: #ffffff17; --sheen1: #ffffff05; --sheenmid: 12%; --sheenend: 30%;
+            --deep: #00000024; --deepend: 55%; --fill: .50; --sat: 2.1; }
+  body.light .g-thin { --sheen0: #ffffff75; --sheen1: #ffffff1d; --sheenmid: 12%; --sheenend: 30%;
+                       --deep: #0000000f; --deepend: 55%; --fill: .52; --sat: 2.1; }
+
+  /* ---- spacing variants (drawn on the winning glass) -------------------- */
+  .s-now  { --rowgap: 10px; --padtop: 8px;  --padbot: 6px;  --icongap: 4px; }
+  .s-gap  { --rowgap: 14px; --padtop: 8px;  --padbot: 6px;  --icongap: 4px; }
+  .s-pad  { --rowgap: 14px; --padtop: 10px; --padbot: 8px;  --icongap: 4px; }
+  .s-full { --rowgap: 14px; --padtop: 10px; --padbot: 8px;  --icongap: 6px; }
+</style>
+
+<h1>Sources tray — degray the glass, rebalance the grid</h1>
+<p class="sub">
+  Real tokens and real geometry from <code>SourcesTray.swift</code> / <code>DSTray.swift</code>. The tray is the
+  shipped shape: glass sheet, no cards, eyebrow at <code>textPrimary</code>. <b>The feed behind is real</b>,
+  and <b>Bright feed</b> replaces it with edge-to-edge pictures — the case a white sheen has least room in.
+  <br><b>Rail 1</b> varies the glass only; geometry is identical in all four. <b>Rail 2</b> varies the spacing
+  only, on the winning glass. They interact — more vertical air exposes more panel — so the pair is judged
+  together at the end.
+</p>
+
+<div class="bar">
+  <button id="dark" class="on">Dark</button>
+  <button id="light">Light</button>
+  <span class="gap"></span>
+  <button id="rich" class="on">Rich feed</button>
+  <button id="bright">Bright feed</button>
+</div>
+
+<h3>Rail 1 — the material</h3>
+<div class="rail" id="rail1"></div>
+
+<h3>Rail 2 — the spacing (on treatment C)</h3>
+<div class="rail" id="rail2"></div>
+
+<script>
+const CORPUS = [
+  [{ cat: "Wallet", apps: [
+      ["Wallet","W","#627eea",1], ["Peer","P","#00c48c"], ["Privacy Pools","0x","#7c5cff"],
+      ["Gnosis Pay","G","#3e6957"], ["Safe","S","#12ff80"] ] }],
+  [{ cat: "Life", apps: [
+      ["Photos","◈","#f5a623"], ["Calendar","31","#ff3b30"], ["Reminders","☰","#ff9500"],
+      ["Files","▤","#1f8fff"], ["Mail","✉","#0a84ff"] ] }],
+  [{ cat: "Work", apps: [
+      ["GitHub","","#2b3137"], ["Linear","L","#5e6ad2"],
+      ["Stripe","S","#635bff"], ["Cursor","C","#3a3a3c"] ] }],
+  [{ cat: "Media", apps: [
+      ["Spotify","♫","#1db954"], ["Twitch","T","#9146ff"], ["YouTube","▶","#ff0000"] ] },
+   { cat: "Social", apps: [
+      ["Bluesky","B","#0085ff"], ["Farcaster","F","#8a63d2"] ] }],
+];
+
+const FEED = [
+  ["linear-gradient(135deg,#f5a623,#ff3b30)", "#f5a623", "◈"],
+  ["linear-gradient(135deg,#0085ff,#7c5cff)", "#0085ff", "B"],
+  ["linear-gradient(135deg,#1db954,#12ff80)", "#1db954", "♫"],
+  ["linear-gradient(135deg,#627eea,#00c48c)", "#627eea", "W"],
+  ["linear-gradient(135deg,#ff0000,#ff9500)", "#ff0000", "▶"],
+  ["linear-gradient(135deg,#5e6ad2,#635bff)", "#5e6ad2", "L"],
+  ["linear-gradient(135deg,#9146ff,#8a63d2)", "#9146ff", "T"],
+  ["linear-gradient(135deg,#3e6957,#1f8fff)", "#3e6957", "G"],
+  ["linear-gradient(135deg,#ff3b30,#f5a623)", "#ff3b30", "31"],
+  ["linear-gradient(135deg,#0a84ff,#7c5cff)", "#0a84ff", "✉"],
+];
+
+const GLASS = [
+  { cls: "g-now", name: "A · Shipping today",
+    note: "glassSheen 12% white from the top-leading corner, still at a quarter strength by 22%, gone at 46%. Half the panel wears an achromatic wash, and it is the half the eye lands on first — the title, the first group, the brightest marks.",
+    verdict: ["meh", "Baseline — this is the grey"] },
+  { cls: "g-trim", name: "B · Veil trimmed",
+    note: "The same light from the same corner, over a third of the distance: stops 0 / 12% / 30%, and the peak stepped 1f → 17. The pane cue survives (it is a fall-off, not a flood) and the wash stops reaching the grid.",
+    verdict: ["ok", "Sheen stops owning the grid; panel still reads lit"] },
+  { cls: "g-deep", name: "C · Trimmed + depth",
+    note: "B plus a bottom-weighted black scrim, 14% at the floor and gone by 55%. This is the actual degrayer: white lightens whatever is behind TOWARD grey, black deepens it and lets the hue arrive as hue. It also buys back the contrast the chip names spend over a bright feed.",
+    verdict: ["ok", "Colour survives the blur; names hold over pictures"] },
+  { cls: "g-thin", name: "D · C + thinner panel",
+    note: "C with the material's own fill stepped back (.50 against .62) and more saturation — in Swift, `.opacity()` on the Material, the one knob it has. The feed reads through as shapes. It is also the treatment that stops being a PANEL: at this transmission the sheet is a window, and the marks lose their ground.",
+    verdict: ["bad", "Transmissive to the point the marks lose their ground"] },
+];
+
+const SPACING = [
+  { cls: "s-now", name: "1 · Shipping today",
+    note: "rowGap s2 (10), pads 8/6, icon→name s1 (4). Horizontal clear gap between icons measures ~31pt at 402pt wide — the grid is airy sideways and tight up-down.",
+    verdict: ["meh", "31pt across, 16pt between groups"] },
+  { cls: "s-gap", name: "2 · rowGap s2 → s3",
+    note: "The cheapest lever, and the one the file itself names as next. Group-to-group separation goes 10 → 14, i.e. 24pt of clear air once the pads are counted.",
+    verdict: ["ok", "Groups separate; +12pt of tray"] },
+  { cls: "s-pad", name: "3 · rowGap s3 + pads 10/8",
+    note: "The eyebrow gets room above it and the last name row room below. Four rows land at 598 + 12 + 16 = 626pt, which is 6pt past the 620 resting cap — so this is the variant that costs a snap unless the cap moves.",
+    verdict: ["ok", "Best balance; 6pt past the cap"] },
+  { cls: "s-full", name: "4 · + icon→name 4 → 6",
+    note: "Also loosens the chip's own internals. The name stops being part of the mark and starts being a caption under it — which reads looser, and at the same time makes each chip taller for no grouping gain.",
+    verdict: ["bad", "Loosens the chip itself, not the grid"] },
+];
+
+function chip([name, glyph, hue, active]) {
+  return `<div class="chip${active ? " sel" : ""}">
+    <div class="ring${active ? " active" : ""}">
+      <div class="icon" style="background:${hue}">${glyph}</div>
+    </div>
+    <div class="chip-name${!name.includes(" ") && name.length > 7 ? " long" : ""}">${name}</div>
+  </div>`;
+}
+function card(block) {
+  return `<div class="card" style="flex:${block.apps.length} 0 0">
+    <div class="cat-name">${block.cat}</div>
+    <div class="chips">${block.apps.map(chip).join("")}</div>
+  </div>`;
+}
+function feedRow([grad, hue, glyph]) {
+  return `<div class="frow">
+    <div class="thumb" style="background:${grad}"></div>
+    <div class="fmark" style="background:${hue}">${glyph}</div>
+    <div class="flines"><div class="fl b" style="width:78%"></div>
+      <div class="fl" style="width:54%"></div></div>
+  </div>`;
+}
+function panel(t, extra) {
+  const rows = CORPUS.map(r => `<div class="cardrow">${r.map(card).join("")}</div>`).join("");
+  return `<section class="panel">
+    <h2>${t.name}</h2>
+    <div class="note">${t.note}</div>
+    <div class="verdict ${t.verdict[0]}">${t.verdict[1]}</div>
+    <div class="phone">
+      <div class="behind">${FEED.map(feedRow).join("")}</div>
+      <div class="scrim"></div>
+      <div class="tray ${t.cls} ${extra}">
+        <div class="grabber"></div>
+        <div class="title">Your feeds</div>
+        <div class="rows">${rows}</div>
+      </div>
+    </div>
+  </section>`;
+}
+
+const Q = new URLSearchParams(location.search);
+rail1.innerHTML = GLASS.map(t => panel(t, "s-now")).join("");
+rail2.innerHTML = SPACING.map(t => panel(t, "g-deep")).join("");
+
+if (Q.get("theme") === "light") { document.body.classList.add("light");
+                                  document.documentElement.style.colorScheme = "light"; }
+if (Q.get("feed") === "bright") document.querySelectorAll(".phone").forEach(p => p.classList.add("bright"));
+
+const phones = () => document.querySelectorAll(".phone");
+const set = (b, o) => { b.classList.add("on"); o.forEach(x => x.classList.remove("on")); };
+dark.onclick   = () => { document.body.classList.remove("light");
+                         document.documentElement.style.colorScheme = "dark"; set(dark, [light]); };
+light.onclick  = () => { document.body.classList.add("light");
+                         document.documentElement.style.colorScheme = "light"; set(light, [dark]); };
+rich.onclick   = () => { phones().forEach(p => p.classList.remove("bright")); set(rich, [bright]); };
+bright.onclick = () => { phones().forEach(p => p.classList.add("bright")); set(bright, [rich]); };
+</script>

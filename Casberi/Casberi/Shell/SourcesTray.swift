@@ -127,9 +127,10 @@ struct SourcesTray: View {
     private static let overlineInset: CGFloat = 7
     /// A group's own top and bottom air — the card's padding, kept after the
     /// card (2026-08-16). Tuned against the resting cap, not chosen: at 8/6 a
-    /// four-row tray lands at 598pt, and every point above that is a point
-    /// closer to a scroll the packing exists to prevent. Holding both means the
-    /// glass pass changed no height arithmetic anywhere.
+    /// four-row tray lands at 610pt (598 before `rowGap` went s2 → s3 later the
+    /// same day), and every point above that is a point closer to a scroll the
+    /// packing exists to prevent. 10/8 was measured and refused for exactly
+    /// that — it lands at 626, past the cap; see `rowGap`.
     private static let cardPadTop: CGFloat = 8
     private static let cardPadBottom: CGFloat = 6
 
@@ -198,12 +199,31 @@ struct SourcesTray: View {
     }
 
     /// Between rows. Tighter than the 2026-08-06 bare grid's `s4` because each
-    /// group carries its own padding (`cardPadTop`/`Bottom`) — kept at s2 after
-    /// the card went, since the eyebrow's ink now separates the groups and
-    /// paying s4 again would buy a second separator for the same fact. If the
-    /// ink alone stops holding at a larger corpus, this is the next lever
-    /// (`prototype/sources-tray-glass-v1.html`, treatment E).
-    private static let rowGap: CGFloat = DS.Space.s2
+    /// group carries its own padding (`cardPadTop`/`Bottom`).
+    ///
+    /// **s2 → s3 on 2026-08-16** (user: "perhaps we can space the icons
+    /// better"), and the interesting part is that the grid was never uniformly
+    /// tight — it was tight in ONE axis. Measured on a 402pt phone: the content
+    /// is 366pt over five flexible slots, so a 44pt mark sits in a ~65pt slot
+    /// and the clear gap between two marks is **~31pt**. Vertically the same
+    /// grid paid 8 + 6 of group padding and 10 between rows, i.e. 24pt from a
+    /// name row to the next eyebrow — noticeably less than the air across, on a
+    /// layout whose whole job is to read as groups.
+    ///
+    /// s3 is the ceiling here, not a first guess: the next variant
+    /// (`prototype/sources-tray-glass-v2.html`, rail 2) also raised the group
+    /// pads to 10/8 and looked marginally better, and it puts a four-row tray at
+    /// **626pt against a 620 `restingCap`** — so it buys a little air by
+    /// snapping a whole category off the resting height, which is the opposite
+    /// of the trade. Loosening the chip's own icon→name gap was refused for a
+    /// different reason: it detaches a name from its mark and reads as a caption
+    /// rather than a label, while costing height in every chip row.
+    ///
+    /// Budget, since every point here is spent against that cap: four rows go
+    /// **598 → 610pt**, and the row that fits at rest is unchanged (a five-row
+    /// corpus was 726 and is now 742 — over either way, so it still rests at
+    /// four and scrolls).
+    private static let rowGap: CGFloat = DS.Space.s3
 
     /// DSTray's own chrome: top clearance, the title, its gap, bottom pad.
     private static let chromeHeight: CGFloat = DS.Space.s6 + 30 + DS.Space.s4 + DS.Space.s6

@@ -116,6 +116,36 @@ struct DSTray<Content: View>: View {
 /// no-hairlines rule has zero exceptions, and a lit rim is a hairline no matter
 /// what it is standing in for. The gradient carries the same idea with no line.
 ///
+/// # The sheen was a WASH, and the reach was the bigger half (2026-08-16, user)
+///
+/// Reported as "a little too gray" the day it shipped. The first cut ran the
+/// sheen to `0.46` — so a 12% white gradient covered the top HALF of the sheet,
+/// which is the half the eye lands on first: the title, the first category, the
+/// brightest marks. That is not a highlight, it is a veil, and a veil is
+/// achromatic by construction — it spends whatever the blur just pulled through
+/// from the feed and gives back grey.
+///
+/// Two changes, compared as rendered pixels over a real feed AND over an
+/// edge-to-edge bright one in `prototype/sources-tray-glass-v2.html`:
+///
+/// - **The reach**, `0.22/0.46` → `0.12/0.30`. This is the fix. The pane cue is
+///   a FALL-OFF, not a flood — it survives at a third of the distance, and it
+///   stops reaching the grid at all.
+/// - **The dose**, stepped back in the token itself.
+///
+/// **`glassDepth` is the other half, and it is what actually removes grey.**
+/// Lightening and deepening are not symmetric over a blur: white pulls the
+/// hues behind the sheet toward grey, black pulls them toward themselves. So
+/// the panel now falls off INTO its own depth rather than into nothing.
+///
+/// Rejected in the same comparison, so it is not re-proposed: making the
+/// material more transmissive (`.opacity()` on the `Material`, the only knob a
+/// `Material` has). At the transmission where the feed reads through as shapes,
+/// the sheet stops being a panel and becomes a window — the marks lose their
+/// ground, and the tray's own contents start competing with somebody's feed.
+/// The material stays `.ultraThinMaterial` at full strength, which is already
+/// the most transmissive one Apple ships.
+///
 /// No shape of its own: `presentationBackground` is already clipped to the
 /// sheet, and an inner `RoundedRectangle` would draw its own corners inside the
 /// system's — two radii, one of which is a guess at what iOS is doing this year.
@@ -124,13 +154,28 @@ private struct DSGlassSheet: View {
         Rectangle()
             .fill(.ultraThinMaterial)
             .overlay {
+                // The light the panel is under. Short on purpose — see the doc.
                 LinearGradient(
                     stops: [
                         .init(color: DS.glassSheen, location: 0),
-                        .init(color: DS.glassSheen.opacity(0.25), location: 0.22),
-                        .init(color: .clear, location: 0.46)
+                        .init(color: DS.glassSheen.opacity(0.25), location: 0.12),
+                        .init(color: .clear, location: 0.30)
                     ],
                     startPoint: .topLeading,
+                    endPoint: .bottom
+                )
+            }
+            .overlay {
+                // The depth it sits in. Straight down rather than from the
+                // corner: the sheen is a light SOURCE and has a direction, this
+                // is the panel's own body and has none — leaning it would read
+                // as a second light coming up from the floor.
+                LinearGradient(
+                    stops: [
+                        .init(color: .clear, location: 0.45),
+                        .init(color: DS.glassDepth, location: 1)
+                    ],
+                    startPoint: .top,
                     endPoint: .bottom
                 )
             }

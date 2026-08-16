@@ -291,7 +291,31 @@ enum DS {
     /// already bright, so a dark-mode dose vanishes into it, while on black the
     /// same dose would blow the top of the sheet out. Measured as pixels in
     /// `prototype/sources-tray-glass-v1.html`, not derived from the dark value.
-    static let glassSheen  = Color.adaptive(dark: "#ffffff1f", light: "#ffffff9e")
+    ///
+    /// **Stepped back the same day it shipped** (1f → 17 dark, 9e → 75 light;
+    /// `prototype/sources-tray-glass-v2.html`), reported as "a little too
+    /// gray". The dose was never the whole story — see `DSGlassSheet` for why
+    /// the gradient's REACH was the larger half of that fix — but a white wash
+    /// is achromatic by definition, so every point of it spends the backdrop's
+    /// colour to buy brightness the panel did not need.
+    static let glassSheen  = Color.adaptive(dark: "#ffffff17", light: "#ffffff75")
+
+    /// The depth under a glass panel — the bottom-weighted counterpart to
+    /// `glassSheen` (2026-08-16, `DSGlassSheet`).
+    ///
+    /// It exists because lightening and deepening are not symmetric over a
+    /// blur. White laid on a blurred backdrop pulls every hue behind it toward
+    /// grey; black pulls the same hues toward themselves, so the feed arrives
+    /// as colour rather than as mud. A panel that reads DEEPER than what it
+    /// covers is the one that reads like glass.
+    ///
+    /// It also buys back contrast exactly where the tray spends it: the chip
+    /// names are `textSecondary`, they sit in the lower half of the sheet, and
+    /// over a bright feed that is the one pairing in this tray with no margin.
+    /// Deliberately small — this is a floor under the material, not a scrim
+    /// (`DS.scrim` is four times heavier and means "the thing behind is
+    /// dismissed", which is a different claim).
+    static let glassDepth  = Color.adaptive(dark: "#00000024", light: "#0000000f")
 
     /// The cast under a floating glass control (composer, FAB, toasts).
     /// Deliberately lighter than `cardShadow` — glass already separates itself
