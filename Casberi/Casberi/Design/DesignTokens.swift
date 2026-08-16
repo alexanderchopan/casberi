@@ -298,7 +298,11 @@ enum DS {
     /// the gradient's REACH was the larger half of that fix — but a white wash
     /// is achromatic by definition, so every point of it spends the backdrop's
     /// colour to buy brightness the panel did not need.
-    static let glassSheen  = Color.adaptive(dark: "#ffffff17", light: "#ffffff75")
+    /// The dark dose took a second step (17 → 10) when the panel was measured
+    /// ON DEVICE rather than in the mock: over a dark feed the page behind the
+    /// tray is near-black, so the sheen is the only literally-grey pigment on
+    /// the whole sheet — every point of white spent there is a point of fog.
+    static let glassSheen  = Color.adaptive(dark: "#ffffff10", light: "#ffffff75")
 
     /// The depth under a glass panel — the bottom-weighted counterpart to
     /// `glassSheen` (2026-08-16, `DSGlassSheet`).
@@ -312,10 +316,12 @@ enum DS {
     /// It also buys back contrast exactly where the tray spends it: the chip
     /// names are `textSecondary`, they sit in the lower half of the sheet, and
     /// over a bright feed that is the one pairing in this tray with no margin.
-    /// Deliberately small — this is a floor under the material, not a scrim
-    /// (`DS.scrim` is four times heavier and means "the thing behind is
-    /// dismissed", which is a different claim).
-    static let glassDepth  = Color.adaptive(dark: "#00000024", light: "#0000000f")
+    /// Stepped UP (24 → 38 dark) in the same on-device pass that faded the
+    /// material's plate to 0.55 — the fade and the depth are one trade, the
+    /// plate's grey exchanged for the panel's own black. Still lighter than
+    /// `DS.scrim`, which means "the thing behind is dismissed", a different
+    /// claim.
+    static let glassDepth  = Color.adaptive(dark: "#00000038", light: "#00000014")
 
     /// The cast under a floating glass control (composer, FAB, toasts).
     /// Deliberately lighter than `cardShadow` — glass already separates itself

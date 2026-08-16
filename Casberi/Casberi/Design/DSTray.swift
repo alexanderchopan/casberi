@@ -138,13 +138,25 @@ struct DSTray<Content: View>: View {
 /// hues behind the sheet toward grey, black pulls them toward themselves. So
 /// the panel now falls off INTO its own depth rather than into nothing.
 ///
-/// Rejected in the same comparison, so it is not re-proposed: making the
-/// material more transmissive (`.opacity()` on the `Material`, the only knob a
-/// `Material` has). At the transmission where the feed reads through as shapes,
-/// the sheet stops being a panel and becomes a window — the marks lose their
-/// ground, and the tray's own contents start competing with somebody's feed.
-/// The material stays `.ultraThinMaterial` at full strength, which is already
-/// the most transmissive one Apple ships.
+/// # The material itself is faded, and the mock could not have said so (2026-08-16, user)
+///
+/// The first degray pass trimmed only OUR additions and shipped the material at
+/// full strength, on the prototype's evidence — and the prototype models the
+/// material as a CSS backdrop blur with `saturate(1.8)`, a boost Apple's dark
+/// material does not perform. On device `.ultraThinMaterial`'s own dark plate
+/// is the dominant grey, so the build stayed fog while the mock read as glass
+/// ("the actual build is still not transparent like it is in the picture").
+/// `.opacity()` is the one public knob a `Material` has, and the earlier note
+/// here refusing it was reasoning about the MOCK's fill — on the real material
+/// the blur keeps owning the backdrop far below where the CSS model dissolves.
+/// Walked down 0.82 → 0.72 → 0.62 → **0.55** against simulator screenshots
+/// over the demo feed (`scratchpad` shots tray-dark-1…4, 2026-08-16): at 0.82
+/// the plate still won and the panel read as the same grey slab; at 0.55 the
+/// feed's colour reads through both themes and a dark feed reads DEEP rather
+/// than grey, which is the whole complaint. The floor under legibility is
+/// `glassDepth`, which is also why the depth overlay sits OUTSIDE the faded
+/// fill: the panel's own shading must not fade with the plate it compensates
+/// for.
 ///
 /// No shape of its own: `presentationBackground` is already clipped to the
 /// sheet, and an inner `RoundedRectangle` would draw its own corners inside the
@@ -153,6 +165,10 @@ private struct DSGlassSheet: View {
     var body: some View {
         Rectangle()
             .fill(.ultraThinMaterial)
+            // The plate fade — see the doc. Before the overlays on purpose:
+            // the sheen and depth are the panel's own light and shading and
+            // must render at full strength over the faded material.
+            .opacity(0.55)
             .overlay {
                 // The light the panel is under. Short on purpose — see the doc.
                 LinearGradient(
@@ -172,7 +188,7 @@ private struct DSGlassSheet: View {
                 // as a second light coming up from the floor.
                 LinearGradient(
                     stops: [
-                        .init(color: .clear, location: 0.45),
+                        .init(color: .clear, location: 0.32),
                         .init(color: DS.glassDepth, location: 1)
                     ],
                     startPoint: .top,

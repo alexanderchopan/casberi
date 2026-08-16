@@ -35,14 +35,17 @@ import SwiftUI
 /// `prototype/sources-tray-glass-v1.html` — the marks floating directly on the
 /// panel won.
 ///
-/// **The grouping is carried by the eyebrow's INK.** With no container it is the
-/// only thing left doing that job, so it moved `textTertiary` → `textPrimary` at
-/// the same size and weight (`prototype/sources-tray-eyebrow-v1.html`, four
-/// treatments). Two consequences accepted knowingly: the label now sits brighter
-/// than the chip NAMES it labels (survivable — the saturated marks take the
-/// first glance regardless, and the names are support), and 12pt was refused
-/// because ink alone stays subordinate to the 22pt title while ink AND size
-/// makes the grid read as eight lists rather than one tray.
+/// **The grouping is carried by the eyebrow's INK — and, since later the same
+/// day, by its SIZE.** With no container the eyebrow is the only thing doing
+/// that job, so it first moved `textTertiary` → `textPrimary` at the same size
+/// (`prototype/sources-tray-eyebrow-v1.html`), with 12pt refused on the theory
+/// that ink AND size makes the grid read as eight lists. The user looked at
+/// the shipped tray and overturned that: `subhead13` bold now (2026-08-16,
+/// "make the eyebrows bold and larger") — on the more transparent panel the
+/// 11pt ink alone was not holding the groups, and a heading that has to carry
+/// structure by itself is allowed to look like a heading. The one consequence
+/// kept from the first ruling: the eyebrow still sits well under the 22pt
+/// title, so the tray reads as one surface with sections, not eight lists.
 ///
 /// **It is still NOT tinted** (ruled 2026-08-11, re-asked and re-ruled
 /// 2026-08-16). One of the original two reasons expired with the card — tinting
@@ -114,8 +117,15 @@ struct SourcesTray: View {
     /// `AppsScreen.appTile` uses, so a one-word and a two-word name sit on the
     /// same baseline instead of the row jittering per cell.
     private static let nameHeight: CGFloat = 28
-    /// One line of `label11` (its own `lineHeight`), and the gap under it.
-    private static let overlineHeight: CGFloat = 15
+    /// One line of `subhead13` (its own `lineHeight`), and the gap under it.
+    ///
+    /// 15 → 21 on 2026-08-16 (user: "make the eyebrows bold and larger") —
+    /// the eyebrow stepped `label11` semibold → `subhead13` bold. This
+    /// OVERTURNS the same-day ruling below that refused a size bump: that
+    /// ruling weighed ink-plus-size against the grid reading as eight lists,
+    /// and the user looked at the shipped tray and ruled the other way — with
+    /// no card and a more transparent panel, the ink alone was not holding.
+    private static let overlineHeight: CGFloat = 21
     private static let overlineGap: CGFloat = 5
     /// Aligns the category name's first character with the left edge of the
     /// chip ring beneath it — the chip is `chipSize` centred in a slot, so this
@@ -126,11 +136,12 @@ struct SourcesTray: View {
     /// exchange for a measurement pass on every source pick.
     private static let overlineInset: CGFloat = 7
     /// A group's own top and bottom air — the card's padding, kept after the
-    /// card (2026-08-16). Tuned against the resting cap, not chosen: at 8/6 a
-    /// four-row tray lands at 610pt (598 before `rowGap` went s2 → s3 later the
-    /// same day), and every point above that is a point closer to a scroll the
-    /// packing exists to prevent. 10/8 was measured and refused for exactly
-    /// that — it lands at 626, past the cap; see `rowGap`.
+    /// card (2026-08-16). Tuned against the resting cap, not chosen: every
+    /// point here is a point closer to a scroll the packing exists to prevent
+    /// (the running four-row total lives on `rowGap`'s doc). 10/8 was measured
+    /// in `prototype/sources-tray-glass-v2.html` and refused — it spent cap
+    /// budget on air inside the group, where `rowGap` buys separation between
+    /// them, which is the axis that was actually short.
     private static let cardPadTop: CGFloat = 8
     private static let cardPadBottom: CGFloat = 6
 
@@ -219,15 +230,23 @@ struct SourcesTray: View {
     /// different reason: it detaches a name from its mark and reads as a caption
     /// rather than a label, while costing height in every chip row.
     ///
-    /// Budget, since every point here is spent against that cap: four rows go
-    /// **598 → 610pt**, and the row that fits at rest is unchanged (a five-row
-    /// corpus was 726 and is now 742 — over either way, so it still rests at
-    /// four and scrolls).
+    /// Budget, since every point here is spent against that cap: four rows went
+    /// **598 → 610pt** with this change, then **634** when the eyebrow stepped
+    /// to `subhead13` the same day — which is what moved `restingCap` to 660.
+    /// The row count that fits at rest is unchanged throughout: four rows rest,
+    /// five (772) scroll.
     private static let rowGap: CGFloat = DS.Space.s3
 
     /// DSTray's own chrome: top clearance, the title, its gap, bottom pad.
     private static let chromeHeight: CGFloat = DS.Space.s6 + 30 + DS.Space.s4 + DS.Space.s6
-    private static let restingCap: CGFloat = 620
+    /// 620 → 660 on 2026-08-16, alongside the eyebrow's step to `subhead13`:
+    /// four rows went 610 → 634pt, and a cap of 620 would have answered the
+    /// user's "make the eyebrows larger" by snapping a whole category off the
+    /// resting height. 660 keeps the same semantics on real corpora — anything
+    /// from four rows (634) up to five (772) still rests at four — and a
+    /// 660pt sheet leaves over 200pt of feed above it on the smallest phone
+    /// this app targets.
+    private static let restingCap: CGFloat = 660
 
     /// Natural height, capped. Past the cap the grid scrolls and `.large` is
     /// draggable — a 40-source corpus must not clip silently (the "Worth a
@@ -378,8 +397,8 @@ struct SourcesTray: View {
         return HStack(spacing: DS.Space.s2) {
             ForEach(0..<Self.columns, id: \.self) { column in
                 Text(starts[column] ?? "")
-                    .dsText(.label11)
-                    .fontWeight(.semibold)
+                    .dsText(.subhead13)
+                    .fontWeight(.bold)
                     // textPrimary since 2026-08-16 — with the card gone this ink
                     // IS the grouping. See the type doc for why not tint and why
                     // not a size bump as well.
