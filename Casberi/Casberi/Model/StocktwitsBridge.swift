@@ -90,6 +90,10 @@ enum StockWatch {
             tags: ["Watchlist"] + (stock.exchange.isEmpty ? [] : [stock.exchange]),
             sourceRef: ref
         )
+        // The SYMBOL as a stamped field (prd §369 amendment, 2026-08-16) — see
+        // `TokenWatch`'s twin of this line for why it rides `authorHandle`
+        // rather than earning a new `Thing` property.
+        thing.authorHandle = stock.symbol
         context.insert(thing)
         context.saveHonestly()
         SpotlightIndex.index([thing])

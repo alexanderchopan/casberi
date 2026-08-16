@@ -137,6 +137,14 @@ enum TokenWatch {
         // carried the live price — keep it, so the sheet can say "+41% since
         // you watched" against a number that was really true at this moment.
         thing.watchPriceUsd = token.priceUsd.flatMap(Double.init)
+        // The SYMBOL as a stamped field (prd §369 amendment, 2026-08-16).
+        // Until now it existed only inside the joined title, so the price
+        // object would have had to split prose to draw it. An existing field,
+        // so no new `Thing` property and no CloudKit Production deploy —
+        // `authorHandle` already carries this shape of fact for X, Cursor and
+        // Apple Wallet. Rows watched before this fall back to the title split
+        // (`PriceObjectSource.identity`, which says why that is legitimate).
+        thing.authorHandle = token.symbol
         // The coin's own face, for the fat feed row (2026-07-17) — the
         // resolve carried it; tokens watched before this stamp fall back to
         // the Tokens glyph.

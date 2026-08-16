@@ -7,6 +7,18 @@ import Foundation
 enum StockRange: String, CaseIterable, PriceRange {
     case day = "1D", week = "5D", month = "1M"
 
+    /// One grammar with `TokenRange` (2026-08-16). A market week is five
+    /// SESSIONS, which is why the raw value says 5D — but "5D" beside a token's
+    /// "1W" made the same span read as two different things on two sheets, and
+    /// the span is what somebody is choosing. The raw value keeps the sessions.
+    var label: String {
+        switch self {
+        case .day:   "1D"
+        case .week:  "1W"
+        case .month: "1M"
+        }
+    }
+
     /// Yahoo v8 chart params: window + candle size.
     var yahoo: (range: String, interval: String) {
         switch self {

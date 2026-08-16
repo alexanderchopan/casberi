@@ -1740,7 +1740,14 @@ private struct TokenChartContent: View {
 
     @ViewBuilder private var liveBody: some View {
         VStack(alignment: .leading, spacing: DS.Space.s4) {
-            TokenChartView(chain: chain, address: address, since: since, hero: true) {
+            TokenChartView(chain: chain, address: address, since: since,
+                           hero: true,
+                           // The price as one object (prd §369 amendment). The
+                           // sheet's own title stands down for a charted row,
+                           // so this card carries the identity.
+                           object: PriceObjectSource.identity(
+                               title: thing.title,
+                               authorHandle: thing.authorHandle)) {
                 // No pool (dead/illiquid) — the plain link, honestly.
                 if let url = URL(string: "https://dexscreener.com/\(chain)/\(address)") {
                     LinkPreviewCard(url: url)
@@ -1939,7 +1946,16 @@ private struct StockChartContent: View {
                        fetch: { (range: StockRange) in
                            await StockChart.fetch(ticker: ticker, range: range)
                        },
-                       since: since) {
+                       since: since,
+                       // One grammar with tokens (prd §369 amendment). The two
+                       // wore different type ramps for the same fact purely by
+                       // accident — `hero:` was simply never passed here — so a
+                       // watched stock got a 22pt left-aligned price where a
+                       // token got a 40pt centred one. Same object now.
+                       hero: true,
+                       object: PriceObjectSource.identity(
+                           title: thing.title,
+                           authorHandle: thing.authorHandle)) {
             if let url = URL(string: thing.content) {
                 LinkPreviewCard(url: url)
             }

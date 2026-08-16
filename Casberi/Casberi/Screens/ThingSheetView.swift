@@ -464,6 +464,19 @@ struct ThingSheetView: View {
                         .padding(.horizontal, DS.Space.s4)
                         .padding(.top, DS.Space.s3)
                         .settleIn(delay: 0.06)
+                } else if ThingChart.kind(for: thing) != nil {
+                    // A CHARTED row draws no title (prd §369 amendment). The
+                    // price object below states the asset's name and symbol, so
+                    // leaving this on printed "Aerodrome · $AERO" at
+                    // `heading34` immediately above a card saying the same two
+                    // words — the label-for-a-label failure the object exists
+                    // to end, and the same stand-down the note and Work
+                    // anatomies above already make.
+                    //
+                    // Gated on the CHART rather than a source name, so it
+                    // covers tokens, trending rows and stocks alike and cannot
+                    // drift the way the Site row did.
+                    EmptyView()
                 } else {
                     titleBlock
                         .padding(.horizontal, DS.Space.s4)

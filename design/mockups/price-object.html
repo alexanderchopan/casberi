@@ -1,0 +1,685 @@
+<title>The Price Object</title>
+<style>
+/* ============================================================
+   TOKENS — app half lifted from Design/DesignTokens.swift.
+   Frame half: a neutral biased toward the chart's own green,
+   so the writing sits in the world of the thing it writes about.
+   ============================================================ */
+:root {
+  color-scheme: light dark;
+
+  --ground: #f1f4f1;
+  --panel:  #ffffff;
+  --well:   #e2e7e2;
+  --ink:    #14180f;
+  --ink2:   #555c50;
+  --ink3:   #838a7e;
+  --mark:   #1f6b3a;
+  --markSoft: #1f6b3a14;
+  --focus:  #1f6b3a;
+
+  --appSheet:   #ffffff;
+  --appRaised:  #f8f8f8;
+  --appWell:    #e9e9ef;
+  --appText:    #000000;
+  --appText2:   #3c3c43d6;
+  --appText3:   #3c3c43bd;
+  --fillFaint:  #00000008;
+  --fillLine:   #00000014;
+  --fillStrong: #00000024;
+  --up:         #228139;   /* confirm, mixed 35% to black — the light rule */
+  --down:       #a6261f;   /* destructive, same mix */
+  --attention:  #ff9500;
+  --raisedShadow: 0 2px 10px #0000001f;
+  --sheetShadow:  0 18px 50px #0000001f;
+
+  --rCard: 10px;
+  --rObj: 14px;
+  --rSheet: 16px;
+  --rControl: 12px;
+  --s1: 4px; --s2: 8px; --s3: 12px; --s4: 15px; --s6: 24px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ground: #0b0d0b;
+    --panel:  #161a16;
+    --well:   #060706;
+    --ink:    #ebf0e9;
+    --ink2:   #9ea69b;
+    --ink3:   #6f776c;
+    --mark:   #6ee89a;
+    --markSoft: #6ee89a1f;
+    --focus:  #6ee89a;
+
+    --appSheet:   #111113;
+    --appRaised:  #1a1a1c;
+    --appWell:    #080809;
+    --appText:    #ffffff;
+    --appText2:   #ebebf599;
+    --appText3:   #ebebf57e;
+    --fillFaint:  #ffffff0a;
+    --fillLine:   #ffffff1a;
+    --fillStrong: #ffffff29;
+    --up:         #30d158;
+    --down:       #ff453a;
+    --attention:  #ff9f0a;
+    --raisedShadow: none;
+    --sheetShadow:  0 18px 50px #00000066;
+  }
+}
+
+:root[data-theme="dark"] {
+  --ground: #0b0d0b; --panel: #161a16; --well: #060706;
+  --ink: #ebf0e9; --ink2: #9ea69b; --ink3: #6f776c;
+  --mark: #6ee89a; --markSoft: #6ee89a1f; --focus: #6ee89a;
+  --appSheet: #111113; --appRaised: #1a1a1c; --appWell: #080809;
+  --appText: #ffffff; --appText2: #ebebf599; --appText3: #ebebf57e;
+  --fillFaint: #ffffff0a; --fillLine: #ffffff1a; --fillStrong: #ffffff29;
+  --up: #30d158; --down: #ff453a; --attention: #ff9f0a;
+  --raisedShadow: none; --sheetShadow: 0 18px 50px #00000066;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--ink);
+  font-family: ui-serif, "New York", Iowan Old Style, Georgia, serif;
+  font-size: 17px;
+  line-height: 1.62;
+  -webkit-font-smoothing: antialiased;
+}
+
+.wrap { max-width: 1180px; margin: 0 auto; padding: clamp(32px,6vw,88px) clamp(20px,4vw,48px) 96px; }
+
+.mono { font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace; font-size: 12.5px; line-height: 1.5; }
+
+h1 { font-size: clamp(38px,6.2vw,62px); line-height: 1.04; font-weight: 600; letter-spacing: -0.018em; margin: 0 0 var(--s4); text-wrap: balance; }
+h2 { font-size: clamp(25px,2.6vw,31px); line-height: 1.14; font-weight: 600; letter-spacing: -0.012em; margin: 0 0 var(--s3); text-wrap: balance; }
+h3 { font-size: 19px; line-height: 1.3; font-weight: 600; margin: 0 0 var(--s2); }
+p { margin: 0 0 var(--s3); }
+p:last-child { margin-bottom: 0; }
+.standfirst { font-size: clamp(18px,1.9vw,21px); line-height: 1.52; color: var(--ink2); max-width: 60ch; }
+.eyebrow { color: var(--ink3); margin: 0 0 var(--s3); }
+.index { color: var(--mark); margin: 0 0 var(--s2); }
+.lede { color: var(--ink2); max-width: 46ch; }
+
+.row { display: grid; grid-template-columns: minmax(0,0.78fr) minmax(0,1fr); gap: clamp(28px,4vw,64px); align-items: start; padding: clamp(40px,5vw,68px) 0 0; }
+.row.flip { grid-template-columns: minmax(0,1fr) minmax(0,0.78fr); }
+.row.flip .margin { order: 2; } .row.flip .plate { order: 1; }
+.margin { position: sticky; top: 32px; }
+.plate { min-width: 0; }
+
+.well { background: var(--well); border-radius: 22px; padding: clamp(20px,3vw,36px); display: flex; flex-direction: column; align-items: center; gap: var(--s4); }
+.caption { color: var(--ink3); margin: var(--s3) 0 0; max-width: 54ch; }
+
+.duo { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px,1fr)); gap: clamp(20px,3vw,36px); }
+.duoCol { display: grid; gap: var(--s3); justify-items: center; }
+.tag { font-family: ui-monospace,"SF Mono",Menlo,monospace; font-size: 12.5px; color: var(--ink3); }
+
+/* ============================================================
+   THE SHEET
+   ============================================================ */
+.sheet {
+  width: 340px; max-width: 100%;
+  background: var(--appSheet);
+  border-radius: var(--rSheet) var(--rSheet) 6px 6px;
+  padding: var(--s2) 0 var(--s6);
+  box-shadow: var(--sheetShadow);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  color: var(--appText);
+  overflow: hidden;
+}
+.grabber { width: 36px; height: 5px; border-radius: 999px; background: var(--fillStrong); margin: 0 auto var(--s2); }
+.pad { padding: 0 var(--s4); }
+
+.eyebrowRow { display: flex; align-items: center; gap: 6px; font-size: 12px; line-height: 16px; font-weight: 500; color: var(--appText3); padding: 0 var(--s4); }
+
+/* ---- today's stack ---- */
+.bigTitle {
+  font-family: ui-rounded, -apple-system, system-ui, sans-serif;
+  font-size: 30px; line-height: 36px; font-weight: 700;
+  padding: 0 var(--s4); margin-top: var(--s2);
+}
+.stackPrice {
+  font-family: ui-rounded, -apple-system, system-ui, sans-serif;
+  font-size: 40px; line-height: 44px; font-weight: 700;
+  font-variant-numeric: tabular-nums; text-align: center;
+}
+.pill {
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 14px; line-height: 21px; font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  padding: 3px 10px; border-radius: 999px;
+}
+.pill.up   { color: #fff; background: var(--up); }
+.pill.down { color: #fff; background: var(--down); }
+.pill.flat { color: var(--appText2); background: var(--fillStrong); }
+.pill.quiet { color: var(--appText2); background: var(--fillFaint); font-weight: 400; }
+
+.chips { display: flex; gap: var(--s1); justify-content: center; }
+.chip {
+  font-size: 12px; line-height: 16px; font-weight: 500;
+  padding: 4px 10px; border-radius: 999px;
+  color: var(--appText2); background: transparent;
+  border: 0; cursor: pointer; font-family: inherit;
+}
+.chip[aria-pressed="true"] { color: var(--appText); background: var(--fillFaint); }
+
+.specRow { display: flex; gap: var(--s3); padding: 0 var(--s4); font-size: 14px; line-height: 21px; }
+.specRow b { width: 80px; flex: none; color: var(--appText3); font-weight: 500; font-size: 12px; }
+.specRow span { color: var(--appText); }
+
+/* ---- the proposed object ---- */
+.obj {
+  position: relative;
+  background: var(--appRaised);
+  border-radius: var(--rObj);
+  padding: var(--s6) var(--s4);
+  margin: 0 var(--s4);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  color: var(--appText);
+  isolation: isolate;
+  box-shadow: var(--raisedShadow);
+}
+.obj::before {
+  content: ""; position: absolute; inset: 0 0 auto 0; height: 150px;
+  border-radius: var(--rObj) var(--rObj) 0 0;
+  background: linear-gradient(to bottom, var(--pour), transparent);
+  z-index: -1;
+}
+.obj.up   { --pour: color-mix(in srgb, var(--up) 18%, transparent); }
+.obj.down { --pour: color-mix(in srgb, var(--down) 18%, transparent); }
+.obj.flat { --pour: color-mix(in srgb, var(--appText) 6%, transparent); }
+
+.objHead { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--s3); }
+
+.assetMark {
+  width: 56px; height: 56px; border-radius: 999px; flex: none;
+  display: grid; place-items: center;
+  font-family: ui-rounded, -apple-system, system-ui, sans-serif;
+  font-size: 21px; font-weight: 700; color: #fff;
+}
+.assetMark.mono { background: var(--fillStrong); color: var(--appText2); }
+
+.stamp {
+  height: 24px; border-radius: 999px; display: inline-flex; align-items: center;
+  padding: 0 var(--s2); font-size: 12px; font-weight: 500; line-height: 16px;
+  flex: none; white-space: nowrap;
+}
+.stamp.live  { color: var(--up); background: color-mix(in srgb, var(--up) 16%, transparent); }
+.stamp.aged  { color: var(--appText3); background: var(--fillFaint); }
+
+.objLead { margin-top: var(--s3); font-size: 16px; line-height: 23px; color: var(--appText2); }
+.objName {
+  font-family: ui-rounded, -apple-system, system-ui, sans-serif;
+  font-size: 22px; line-height: 28px; font-weight: 700;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.objFigure {
+  margin-top: var(--s3);
+  display: flex; align-items: baseline; gap: var(--s2);
+}
+.objPrice {
+  font-family: ui-rounded, -apple-system, system-ui, sans-serif;
+  font-size: 40px; line-height: 44px; font-weight: 700;
+  font-variant-numeric: tabular-nums; letter-spacing: -0.01em;
+}
+.objSentence { font-size: 16px; line-height: 23px; color: var(--appText2); margin-top: var(--s4); }
+
+/* the chart, as evidence under the sentence */
+.evidence { margin-top: var(--s4); }
+.chartBox { position: relative; }
+.chartBox svg { display: block; width: 100%; height: 116px; }
+.axisLabel {
+  position: absolute; font-size: 12px; line-height: 16px; font-weight: 500;
+  color: var(--appText3); font-family: -apple-system, system-ui, sans-serif;
+}
+.objChips { margin-top: var(--s3); display: flex; gap: var(--s1); justify-content: center; }
+.readLine { margin-top: var(--s2); text-align: center; font-size: 12px; line-height: 16px; font-weight: 500; color: var(--appText3); }
+
+/* ============================================================
+   PAGE CONTROLS
+   ============================================================ */
+.controls { display: flex; flex-wrap: wrap; gap: var(--s2); align-items: center; justify-content: center; }
+button.act {
+  font-family: ui-monospace,"SF Mono",Menlo,monospace; font-size: 12.5px;
+  color: var(--ink); background: var(--panel); border: 0; border-radius: 999px;
+  padding: 9px 16px; cursor: pointer;
+  transition: background 140ms ease, color 140ms ease, transform 140ms ease;
+}
+button.act:hover { background: var(--markSoft); color: var(--mark); }
+button.act:active { transform: scale(0.97); }
+button.act[aria-pressed="true"] { background: var(--mark); color: var(--panel); }
+:where(button,a,[tabindex]):focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; border-radius: 6px; }
+
+/* ============================================================
+   THE SENTENCE TABLE
+   ============================================================ */
+.says { display: grid; gap: var(--s2); margin-top: var(--s6); }
+.saysRow {
+  display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr);
+  gap: var(--s4); align-items: baseline;
+  background: var(--panel); border-radius: var(--rControl); padding: var(--s3) var(--s4);
+}
+.saysRow q { font-style: normal; quotes: none; color: var(--ink); }
+.saysRow span { color: var(--ink3); font-family: ui-monospace,"SF Mono",Menlo,monospace; font-size: 12.5px; }
+.saysRow.refused q { color: var(--ink3); text-decoration: line-through; text-decoration-thickness: 1px; }
+
+.foot { color: var(--ink3); margin-top: 64px; max-width: 60ch; }
+
+@media (max-width: 900px) {
+  .row, .row.flip { grid-template-columns: 1fr; }
+  .row.flip .margin { order: 1; } .row.flip .plate { order: 2; }
+  .margin { position: static; }
+  .saysRow { grid-template-columns: 1fr; gap: 2px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .001ms !important; transition-duration: .001ms !important; }
+}
+</style>
+
+<div class="wrap">
+
+  <header>
+    <p class="mono eyebrow">Casberi · the token &amp; stock sheet · after 49ad11ff</p>
+    <h1>The price object</h1>
+    <p class="standfirst">
+      The receipt pass replaced nine blocks with one piece of paper. The price
+      surface never had that pass: it is still seven independently-padded blocks
+      under a text title, with no container, no subject and nothing the app
+      actually says. This is what the same treatment looks like here — and the
+      one thing a price has that a receipt doesn't.
+    </p>
+  </header>
+
+  <!-- ===================== CONTROL vs PROPOSED ===================== -->
+  <section style="padding-top: clamp(40px,5vw,68px)" aria-labelledby="hDuo">
+    <div style="max-width:62ch">
+      <p class="mono index">The change</p>
+      <h2 id="hDuo">Five labels, or one object</h2>
+      <p class="lede">
+        On the left, what ships today. The sheet title says the name, the eyebrow
+        says how long ago you saved the row, the pill says its window, the chips
+        say the same window again, and the spec table says the site. Five labels
+        and no object — which is the exact failure the receipt's own doc names
+        (&ldquo;three of those blocks were labels for other blocks&rdquo;).
+      </p>
+      <p class="lede">
+        On the right, the same facts as one card: a subject that carries the
+        asset, a name, the figure, a freshness stamp, a sentence, and the chart
+        underneath as its evidence.
+      </p>
+    </div>
+
+    <div class="well" style="margin-top: var(--s6); align-items: stretch">
+      <div class="duo">
+        <div class="duoCol">
+          <span class="tag">Today · seven blocks</span>
+          <div class="sheet">
+            <div class="grabber"></div>
+            <p class="eyebrowRow">Link · 3h ago</p>
+            <p class="bigTitle">Aerodrome · $AERO</p>
+            <div class="pad" style="margin-top:var(--s6)">
+              <div class="stackPrice">$0.9184</div>
+              <div style="text-align:center;margin-top:var(--s2)"><span class="pill up">+4.2% · 1D</span></div>
+              <div style="margin-top:var(--s3)">
+                <div class="chartBox" id="chartA"></div>
+              </div>
+              <div class="chips" style="margin-top:var(--s3)">
+                <button class="chip" aria-pressed="true" type="button">1D</button>
+                <button class="chip" aria-pressed="false" type="button">7D</button>
+                <button class="chip" aria-pressed="false" type="button">30D</button>
+              </div>
+            </div>
+            <div style="margin-top:var(--s6);display:grid;gap:6px">
+              <p class="specRow"><b>Kind</b><span>Link</span></p>
+              <p class="specRow"><b>Site</b><span>dexscreener.com</span></p>
+              <p class="specRow"><b>Saved</b><span>Today, 09:12</span></p>
+            </div>
+          </div>
+        </div>
+
+        <div class="duoCol">
+          <span class="tag">Proposed · one object</span>
+          <div class="sheet">
+            <div class="grabber"></div>
+            <p class="eyebrowRow">Tokens · saved today</p>
+            <div class="obj up" style="margin-top:var(--s3)">
+              <div class="objHead">
+                <span class="assetMark" style="background:#1f6fff">AE</span>
+                <span class="stamp live">Live</span>
+              </div>
+              <p class="objLead" style="margin-bottom:0">Aerodrome</p>
+              <p class="objName" style="margin:0">$AERO</p>
+              <div class="objFigure">
+                <span class="objPrice">$0.9184</span>
+                <span class="pill up">+4.2%</span>
+              </div>
+              <p class="objSentence" style="margin-bottom:0">
+                Its highest in thirty days. You watched at $0.6510, so it's up
+                41% since June 2.
+              </p>
+              <div class="evidence">
+                <div class="chartBox" id="chartB"></div>
+                <div class="objChips">
+                  <button class="chip" aria-pressed="true" type="button">1D</button>
+                  <button class="chip" aria-pressed="false" type="button">7D</button>
+                  <button class="chip" aria-pressed="false" type="button">30D</button>
+                </div>
+                <p class="readLine" style="margin:var(--s2) 0 0">read just now</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="caption mono">
+      Both drawn at the app's real values — object radius 14, figure 40/44
+      rounded, subject 56, the pour at the receipt card's own dose.
+    </p>
+  </section>
+
+  <!-- ===================== THE SENTENCE ===================== -->
+  <section class="row flip" aria-labelledby="hSays">
+    <div class="margin">
+      <p class="mono index">The half that's new</p>
+      <h2 id="hSays">A price that says something</h2>
+      <p class="lede">
+        This is the real difference, and it is the thing the receipt already has
+        that the price surface has no version of. A money row earns a second card
+        by making a claim and putting the chart under it as evidence —
+        &ldquo;Your fourth send to maria.eth&rdquo; over the bars.
+      </p>
+      <p class="lede">
+        Every sentence below is arithmetic on the closes array we already fetch,
+        plus the watch anchor already stored on the thing. Nothing is inferred,
+        nothing is predicted, and none of it needs a model or another request.
+      </p>
+      <dl class="mono" style="margin:var(--s6) 0 0;display:grid;gap:var(--s2)">
+        <div style="display:grid;grid-template-columns:82px 1fr;gap:var(--s3)">
+          <dt style="color:var(--ink3)">Costs</dt><dd style="margin:0">Nothing — no request</dd>
+        </div>
+        <div style="display:grid;grid-template-columns:82px 1fr;gap:var(--s3)">
+          <dt style="color:var(--ink3)">Needs</dt><dd style="margin:0">closes[], the watch anchor</dd>
+        </div>
+        <div style="display:grid;grid-template-columns:82px 1fr;gap:var(--s3)">
+          <dt style="color:var(--ink3)">Harness</dt><dd style="margin:0">Pure — compiles whole</dd>
+        </div>
+      </dl>
+    </div>
+    <div class="plate">
+      <div class="well">
+        <div class="controls">
+          <button class="act" type="button" id="sayHigh" aria-pressed="true">Highest</button>
+          <button class="act" type="button" id="sayQuiet" aria-pressed="false">Quiet</button>
+          <button class="act" type="button" id="sayGave" aria-pressed="false">Gave it back</button>
+          <button class="act" type="button" id="sayNone" aria-pressed="false">Nothing to say</button>
+        </div>
+        <div class="sheet">
+          <div class="grabber"></div>
+          <p class="eyebrowRow">Tokens · saved today</p>
+          <div class="obj up" id="sayObj" style="margin-top:var(--s3)">
+            <div class="objHead">
+              <span class="assetMark" style="background:#1f6fff">AE</span>
+              <span class="stamp live" id="sayStamp">Live</span>
+            </div>
+            <p class="objLead" style="margin-bottom:0">Aerodrome</p>
+            <p class="objName" style="margin:0">$AERO</p>
+            <div class="objFigure">
+              <span class="objPrice" id="sayPrice">$0.9184</span>
+              <span class="pill up" id="sayPill">+4.2%</span>
+            </div>
+            <p class="objSentence" style="margin-bottom:0" id="saySentence">
+              Its highest in thirty days. You watched at $0.6510, so it's up 41%
+              since June 2.
+            </p>
+            <div class="evidence">
+              <div class="chartBox" id="chartC"></div>
+              <div class="objChips">
+                <button class="chip" aria-pressed="true" type="button">1D</button>
+                <button class="chip" aria-pressed="false" type="button">7D</button>
+                <button class="chip" aria-pressed="false" type="button">30D</button>
+              </div>
+              <p class="readLine" style="margin:var(--s2) 0 0" id="sayRead">read just now</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="caption mono">
+        &ldquo;Nothing to say&rdquo; is the healthy answer for most rows most of
+        the time, exactly as it is for the receipt's commentary — the object
+        stands alone and the chart keeps its own seat.
+      </p>
+    </div>
+  </section>
+
+  <!-- ===================== WHAT IT MAY SAY ===================== -->
+  <section style="padding-top: clamp(56px,7vw,96px)" aria-labelledby="hRules">
+    <div style="max-width:62ch">
+      <p class="mono index">The rules</p>
+      <h2 id="hRules">What it may say, and what it may not</h2>
+      <p class="lede">
+        The left column is the sentence; the right is the condition that has to
+        be true before it is allowed. The struck-through rows are ones I'd
+        refuse outright — they are all fluent, and every one of them is a claim
+        this app cannot support.
+      </p>
+    </div>
+    <div class="says">
+      <div class="saysRow"><q>Its highest in thirty days.</q><span>max(closes) is the last close, window ≥ 30d</span></div>
+      <div class="saysRow"><q>You watched at $0.6510, so it's up 41% since June 2.</q><span>watch anchor exists and price &gt; 0</span></div>
+      <div class="saysRow"><q>Quiet — it hasn't moved more than 1% all week.</q><span>peak-to-trough over the window &lt; 1%</span></div>
+      <div class="saysRow"><q>Up 12% this morning and gave most of it back.</q><span>intraday max ≥ 2× the close's own move</span></div>
+      <div class="saysRow"><q>Back where it was a month ago.</q><span>|last − first| is flat over 30d</span></div>
+      <div class="saysRow refused"><q>Looks like it's breaking out.</q><span>a prediction — we don't forecast</span></div>
+      <div class="saysRow refused"><q>Down 8% — might be worth buying.</q><span>advice, in the one domain we must never give it</span></div>
+      <div class="saysRow refused"><q>Your best performer.</q><span>ranks a watchlist the sheet cannot see</span></div>
+      <div class="saysRow refused"><q>Volume is unusually high.</q><span>we don't fetch volume on this path</span></div>
+      <div class="saysRow refused"><q>+41% since you watched — nice call.</q><span>flatters a number that could as easily be red</span></div>
+    </div>
+  </section>
+
+  <!-- ===================== STATES ===================== -->
+  <section style="padding-top: clamp(56px,7vw,96px)" aria-labelledby="hStates">
+    <div style="max-width:62ch">
+      <p class="mono index">States</p>
+      <h2 id="hStates">The stamp is freshness, not finality</h2>
+      <p class="lede">
+        This is the one place the price object must diverge from the receipt.
+        A receipt's stamp says whether it is finished, and its edge tears when it
+        is. A price is never finished — so the slot carries the only state a
+        price really has, which is how recently we read it. That is also the rail
+        that just shipped: past two minutes the halo goes and the object says so.
+      </p>
+    </div>
+    <div class="well" style="margin-top:var(--s6);align-items:stretch">
+      <div class="duo">
+        <div class="duoCol">
+          <span class="tag">Read moments ago</span>
+          <div class="obj up" style="margin:0;width:300px">
+            <div class="objHead">
+              <span class="assetMark" style="background:#1f6fff">AE</span>
+              <span class="stamp live">Live</span>
+            </div>
+            <p class="objLead" style="margin-bottom:0">Aerodrome</p>
+            <p class="objName" style="margin:0">$AERO</p>
+            <div class="objFigure"><span class="objPrice">$0.9184</span><span class="pill up">+4.2%</span></div>
+            <div class="evidence"><div class="chartBox" id="chartD"></div>
+              <p class="readLine" style="margin:var(--s2) 0 0">read just now</p></div>
+          </div>
+        </div>
+        <div class="duoCol">
+          <span class="tag">Left open two hours</span>
+          <div class="obj flat" style="margin:0;width:300px">
+            <div class="objHead">
+              <span class="assetMark mono">AE</span>
+              <span class="stamp aged">2h ago</span>
+            </div>
+            <p class="objLead" style="margin-bottom:0">Aerodrome</p>
+            <p class="objName" style="margin:0">$AERO</p>
+            <div class="objFigure"><span class="objPrice">$0.9184</span><span class="pill quiet">+4.2%</span></div>
+            <div class="evidence"><div class="chartBox" id="chartE"></div>
+              <p class="readLine" style="margin:var(--s2) 0 0">read 2 hours ago</p></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="caption mono">
+      Stale drops the pour to neutral, the halo to a quiet dot, and the delta to
+      an unfilled pill — the direction is still stated, it just stops being
+      shouted about a number we can no longer vouch for.
+    </p>
+  </section>
+
+  <!-- ===================== CLOSE ===================== -->
+  <section style="padding-top: clamp(56px,7vw,96px)" aria-labelledby="hCost">
+    <div style="max-width:62ch">
+      <p class="mono index">Cost</p>
+      <h2 id="hCost">What it would take</h2>
+      <p class="lede">
+        The object itself is a view and a `Shape`-free container — no new field,
+        no request, no CloudKit deploy. The sentence is a new Foundation-only
+        type beside <span class="mono">MoneyCommentary</span>, which means the
+        harness can compile it whole, which is the only way a sentence in this
+        app is allowed to exist.
+      </p>
+    </div>
+    <div class="says" style="margin-top:var(--s6)">
+      <div class="saysRow"><q>PriceObject + PriceObjectCard</q><span>a day — mirrors MoneyReceipt/MoneyReceiptCard</span></div>
+      <div class="saysRow"><q>PriceCommentary + its harness</q><span>a day — pure, mutation-tested</span></div>
+      <div class="saysRow"><q>Sheet hero branch + the title stands down</q><span>half a day</span></div>
+      <div class="saysRow"><q>Stock and token on one grammar</q><span>folded in — they stop diverging by accident</span></div>
+    </div>
+    <p class="foot mono">
+      Specimens are HTML standing in for SwiftUI; the curves are drawn from a
+      fixed series rather than a live fetch, and the asset mark is a stand-in for
+      the bundled artwork <span style="font-style:normal">AssetMark</span> would
+      resolve. Every colour, radius, type size and spacing value is the shipped
+      token.
+    </p>
+  </section>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ---------- the curve ------------------------------------------------- */
+  var SERIES = {
+    high: [58,57,59,61,60,63,62,65,64,67,66,69,71,70,73,72,75,78,77,80,79,83,82,86,88,91],
+    quiet:[62,62,63,62,62,63,62,62,62,63,62,62,63,62,62,62,63,62,62,63,62,62,62,63,62,62],
+    gave: [58,60,64,70,78,86,92,95,91,86,82,78,75,72,70,69,67,66,65,64,64,63,63,62,62,62],
+    none: [62,64,63,66,65,64,67,66,68,67,66,68,67,69,68,67,69,68,70,69,68,70,69,71,70,72]
+  };
+
+  function draw(box, values, tone) {
+    if (!box) return;
+    var w = 300, h = 116, pad = 14;
+    var lo = Math.min.apply(null, values), hi = Math.max.apply(null, values);
+    var span = (hi - lo) || 1;
+    var stepX = (w - pad * 2) / (values.length - 1);
+    var pts = values.map(function (v, i) {
+      return [pad + i * stepX, pad + (1 - (v - lo) / span) * (h - pad * 2)];
+    });
+    var line = pts.map(function (p, i) {
+      return (i ? "L" : "M") + p[0].toFixed(1) + "," + p[1].toFixed(1);
+    }).join(" ");
+    var area = line + " L" + pts[pts.length - 1][0].toFixed(1) + "," + h +
+               " L" + pts[0][0].toFixed(1) + "," + h + " Z";
+    var stroke = tone === "flat" ? "var(--appText3)"
+               : tone === "down" ? "var(--down)" : "var(--up)";
+    var id = "g" + Math.abs(line.length * values.length) + values[0] + values.length;
+    var last = pts[pts.length - 1];
+
+    box.innerHTML =
+      '<svg viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="none" aria-hidden="true">' +
+        '<defs><linearGradient id="' + id + '" x1="0" y1="0" x2="0" y2="1">' +
+          '<stop offset="0%" stop-color="' + stroke + '" stop-opacity="0.22"/>' +
+          '<stop offset="100%" stop-color="' + stroke + '" stop-opacity="0"/>' +
+        '</linearGradient></defs>' +
+        '<path d="' + area + '" fill="url(#' + id + ')"/>' +
+        '<path d="' + line + '" fill="none" stroke="' + stroke +
+          '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' +
+        (tone === "flat"
+          ? '<circle cx="' + last[0].toFixed(1) + '" cy="' + last[1].toFixed(1) +
+            '" r="3.5" fill="var(--appText3)"/>'
+          : '<circle cx="' + last[0].toFixed(1) + '" cy="' + last[1].toFixed(1) +
+            '" r="7.5" fill="' + stroke + '" opacity="0.16"/>' +
+            '<circle cx="' + last[0].toFixed(1) + '" cy="' + last[1].toFixed(1) +
+            '" r="3.5" fill="' + stroke + '"/>') +
+      '</svg>';
+  }
+
+  draw(document.getElementById("chartA"), SERIES.high, "up");
+  draw(document.getElementById("chartB"), SERIES.high, "up");
+  draw(document.getElementById("chartC"), SERIES.high, "up");
+  draw(document.getElementById("chartD"), SERIES.high, "up");
+  draw(document.getElementById("chartE"), SERIES.high, "flat");
+
+  /* ---------- the sentence switcher ------------------------------------- */
+  var STATES = {
+    high: {
+      obj: "up", pill: "up", pillText: "+4.2%", price: "$0.9184", tone: "up",
+      series: "high", stamp: "live", stampText: "Live", read: "read just now",
+      says: "Its highest in thirty days. You watched at $0.6510, so it's up 41% since June 2."
+    },
+    quiet: {
+      obj: "flat", pill: "flat", pillText: "0.0%", price: "$0.6218", tone: "flat",
+      series: "quiet", stamp: "live", stampText: "Live", read: "read just now",
+      says: "Quiet — it hasn't moved more than 1% all week."
+    },
+    gave: {
+      obj: "down", pill: "down", pillText: "−2.1%", price: "$0.6402", tone: "down",
+      series: "gave", stamp: "live", stampText: "Live", read: "read just now",
+      says: "Up 12% this morning and gave most of it back."
+    },
+    none: {
+      obj: "up", pill: "up", pillText: "+1.4%", price: "$0.7050", tone: "up",
+      series: "none", stamp: "live", stampText: "Live", read: "read just now",
+      says: null
+    }
+  };
+
+  var buttons = {
+    high: document.getElementById("sayHigh"),
+    quiet: document.getElementById("sayQuiet"),
+    gave: document.getElementById("sayGave"),
+    none: document.getElementById("sayNone")
+  };
+  var objEl = document.getElementById("sayObj");
+  var priceEl = document.getElementById("sayPrice");
+  var pillEl = document.getElementById("sayPill");
+  var sentEl = document.getElementById("saySentence");
+  var stampEl = document.getElementById("sayStamp");
+  var readEl = document.getElementById("sayRead");
+
+  function show(key) {
+    var s = STATES[key];
+    Object.keys(buttons).forEach(function (k) {
+      buttons[k].setAttribute("aria-pressed", String(k === key));
+    });
+    objEl.className = "obj " + s.obj;
+    priceEl.textContent = s.price;
+    pillEl.className = "pill " + s.pill;
+    pillEl.textContent = s.pillText;
+    stampEl.className = "stamp " + s.stamp;
+    stampEl.textContent = s.stampText;
+    readEl.textContent = s.read;
+    if (s.says) {
+      sentEl.textContent = s.says;
+      sentEl.style.display = "";
+    } else {
+      sentEl.style.display = "none";
+    }
+    draw(document.getElementById("chartC"), SERIES[s.series], s.tone);
+  }
+
+  Object.keys(buttons).forEach(function (k) {
+    buttons[k].addEventListener("click", function () { show(k); });
+  });
+  show("high");
+})();
+</script>

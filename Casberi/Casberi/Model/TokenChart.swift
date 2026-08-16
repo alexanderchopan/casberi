@@ -2,8 +2,11 @@ import Foundation
 
 /// What a price chart's range set must answer (2026-07-15) — the seam that
 /// lets TokenChartView draw stocks (StockRange) with the same anatomy tokens
-/// wear. rawValue is the chip label; honesty rule: the label says what the
-/// window IS ("5D" for five trading days, never rounded to "7D").
+/// wear. `rawValue` is the PERSISTENCE key and `label` is what the chip says —
+/// two jobs since 2026-08-16 (see `label`). The honesty rule still holds on the
+/// raw value: it says what the window IS ("5D" for five trading days, never
+/// rounded to "7D"), which is why a stock's week is stored as five sessions
+/// even though both sheets now read "1W".
 protocol PriceRange: RawRepresentable<String>, CaseIterable, Hashable
     where AllCases: RandomAccessCollection {
     /// Seconds per candle — the scrub's "9h ago" math.
@@ -17,6 +20,23 @@ protocol PriceRange: RawRepresentable<String>, CaseIterable, Hashable
     /// candles skip closed-market hours, so index × step would understate
     /// the age; no label beats a wrong one).
     func agoLabel(indexFromEnd: Int) -> String?
+    /// What the chip SAYS (2026-08-16, user: "instead of 1d 7d 30d make it say
+    /// 1d 1w 1m").
+    ///
+    /// **Deliberately not the `rawValue`.** That string is the persistence key
+    /// — `TokenChartStyle.remember` writes it to UserDefaults and
+    /// `rememberedRange` reads it back through `init(rawValue:)` — so renaming
+    /// the cases would silently orphan every stored preference and drop every
+    /// 7d watcher back to 24h on their next open. The label is what a person
+    /// reads; the raw value is what the device remembers, and after this they
+    /// are two different jobs.
+    var label: String { get }
+}
+
+extension PriceRange {
+    /// The default keeps display and storage identical, which is what every
+    /// range set did before the split.
+    var label: String { rawValue }
 }
 
 extension PriceRange {
@@ -35,6 +55,18 @@ extension PriceRange {
 /// all three for free: hourly candles carry 24h and 7d, daily carry 30d.
 enum TokenRange: String, CaseIterable, PriceRange {
     case day = "1D", week = "7D", month = "30D"
+
+    /// The chips read in DURATIONS rather than candle counts — a week is a
+    /// week whether it holds 7 daily closes or 168 hourly ones, and "30D"
+    /// beside "1D" made the reader do the arithmetic to see that one was a
+    /// month. The raw values above stay put; see `PriceRange.label`.
+    var label: String {
+        switch self {
+        case .day:   "1D"
+        case .week:  "1W"
+        case .month: "1M"
+        }
+    }
 
     /// GeckoTerminal OHLCV path piece + candle count.
     var ohlcv: (timeframe: String, limit: Int) {

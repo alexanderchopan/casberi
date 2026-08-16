@@ -524,6 +524,14 @@ struct TokenChartView<R: PriceRange, Fallback: View>: View {
     /// it, and the range chips move below the plot. False keeps the classic
     /// left-aligned header row — every existing call site unchanged.
     var hero: Bool = false
+    /// Draw as the price OBJECT (prd §369 amendment, 2026-08-16) — one card
+    /// carrying the asset, the figure, a freshness stamp and a sentence, with
+    /// the curve underneath as its evidence.
+    ///
+    /// An option rather than the default: the Home row and the wallet tiles
+    /// want the bare plot, and every existing call site is unchanged by this.
+    /// nil keeps the classic/hero header stack exactly as it was.
+    var object: (name: String?, symbol: String)? = nil
     @ViewBuilder let fallback: () -> Fallback
 
     private enum Phase { case loading, ready, dead }
@@ -545,11 +553,13 @@ struct TokenChartView<R: PriceRange, Fallback: View>: View {
 
     init(memoryKey: String, fetch: @escaping (R) async -> TokenChart?,
          since: (price: Double, date: Date)? = nil, hero: Bool = false,
+         object: (name: String?, symbol: String)? = nil,
          @ViewBuilder fallback: @escaping () -> Fallback) {
         self.memoryKey = memoryKey
         self.fetch = fetch
         self.since = since
         self.hero = hero
+        self.object = object
         self.fallback = fallback
         _range = State(initialValue: TokenChartStyle.rememberedRange(key: memoryKey))
     }
@@ -612,7 +622,24 @@ struct TokenChartView<R: PriceRange, Fallback: View>: View {
     private var awaitingRange: Bool { charts[range] == nil && lastDrawn != nil }
 
     @ViewBuilder private var loaded: some View {
-        if let chart = shown {
+        if let chart = shown, let identity = object {
+            PriceObjectCard(object: priceObject(chart, identity: identity)) {
+                VStack(alignment: .leading, spacing: DS.Space.s3) {
+                    plot(chart)
+                        .opacity(awaitingRange ? 0.35 : 1)
+                        .allowsHitTesting(!awaitingRange)
+                        .animation(reduceMotion ? nil : DS.Motion.standard,
+                                   value: awaitingRange)
+                    chipsOrCoarseLabel(chart)
+                        .frame(maxWidth: .infinity)
+                    readLine(chart)
+                    if let note {
+                        Text(note)
+                            .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                    }
+                }
+            }
+        } else if let chart = shown {
             VStack(alignment: .leading, spacing: DS.Space.s3) {
                 if hero { heroHeader } else { header(chart) }
                 plot(chart)
@@ -635,6 +662,22 @@ struct TokenChartView<R: PriceRange, Fallback: View>: View {
         } else {
             TokenChartSkeleton(hero: hero)
         }
+    }
+
+    /// The object this curve is about. Built here because this view is the one
+    /// place that holds the chart, the selected window and the watch anchor
+    /// together — so the card and its evidence can never describe different
+    /// readings.
+    private func priceObject(_ chart: TokenChart,
+                             identity: (name: String?, symbol: String)) -> PriceObject {
+        PriceObjectSource.object(
+            name: identity.name, symbol: identity.symbol,
+            closes: chart.closes, price: displayPrice, change: displayChange,
+            // The window the FIGURE is about. While a range is still loading
+            // the delta is withheld upstream, so this is never a label over
+            // somebody else's number.
+            window: range.label, fetchedAt: chart.fetchedAt,
+            watched: since, coarse: chart.coarse)
     }
 
     /// When this price was read (2026-08-16, §83). Always drawn, never
@@ -683,7 +726,7 @@ struct TokenChartView<R: PriceRange, Fallback: View>: View {
         guard !awaitingRange else { return price }
         let move = TokenChartStyle.isFlat(displayChange)
             ? String(localized: "unchanged")
-            : String(localized: "\(TokenChartStyle.changeText(displayChange)) over \(range.rawValue)")
+            : String(localized: "\(TokenChartStyle.changeText(displayChange)) over \(range.label)")
         return "\(price), \(move)"
     }
 
@@ -705,7 +748,7 @@ struct TokenChartView<R: PriceRange, Fallback: View>: View {
             // window, and labelling the old window's change with the new
             // window's name is a wrong reading rather than a missing one.
             if !awaitingRange {
-                TokenDeltaPill(change: displayChange, label: range.rawValue, solid: true)
+                TokenDeltaPill(change: displayChange, label: range.label, solid: true)
             }
         }
         .frame(maxWidth: .infinity)
@@ -744,7 +787,7 @@ struct TokenChartView<R: PriceRange, Fallback: View>: View {
                 .contentTransition(.numericText())
                 .animation(DS.Motion.standard, value: displayPrice)
             if !awaitingRange {
-                TokenDeltaPill(change: displayChange, label: range.rawValue)
+                TokenDeltaPill(change: displayChange, label: range.label)
             }
             Spacer(minLength: DS.Space.s2)
             chipsOrCoarseLabel(chart)
@@ -761,7 +804,7 @@ struct TokenChartView<R: PriceRange, Fallback: View>: View {
                     range = r
                     TokenChartStyle.remember(r, key: memoryKey)
                 } label: {
-                    Text(r.rawValue)
+                    Text(r.label)
                         .dsText(.label12)
                         // Never wraps — squeezed, the row gives, not the
                         // label ("24h" once folded into a circled "24/h").
@@ -811,9 +854,9 @@ struct TokenChartView<R: PriceRange, Fallback: View>: View {
             // which is a long-press-then-drag and was never reachable by
             // VoiceOver in the first place.
             .accessibilityElement()
-            .accessibilityLabel(Text("Price over \(range.rawValue)"))
+            .accessibilityLabel(Text("Price over \(range.label)"))
             .accessibilityChartDescriptor(PriceChartDescriptor(
-                closes: chart.closes, window: range.rawValue))
+                closes: chart.closes, window: range.label))
     }
 
     /// The sheet-only plot chrome: anchored high/low (the only numbers on
@@ -919,7 +962,7 @@ struct TokenChartView<R: PriceRange, Fallback: View>: View {
         // The symbol charts at base but this window has no candles — say
         // so and step back rather than fake a curve or strand the card on
         // an empty selection.
-        note = "No \(range.rawValue) prices here yet."
+        note = "No \(range.label) prices here yet."
         noteRange = range
         // The DISPLAY steps back but the remembered preference stays — a
         // transient network failure at 7d must not permanently downgrade a
@@ -949,10 +992,11 @@ extension TokenChartView {
     /// keeps its historical spelling: remembered ranges survive the change.
     init(chain: String, address: String,
          since: (price: Double, date: Date)? = nil, hero: Bool = false,
+         object: (name: String?, symbol: String)? = nil,
          @ViewBuilder fallback: @escaping () -> Fallback) where R == TokenRange {
         self.init(memoryKey: "token.range.\(chain).\(address)",
                   fetch: { await TokenChart.fetch(chain: chain, address: address, range: $0) },
-                  since: since, hero: hero, fallback: fallback)
+                  since: since, hero: hero, object: object, fallback: fallback)
     }
 }
 
