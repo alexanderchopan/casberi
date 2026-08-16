@@ -70,6 +70,20 @@ struct WalletBalanceHeadline: View {
     /// chevron here would open nothing new. Only the multi-wallet "All" view
     /// gets the combined-breakdown sheet behind it.
     let onOpen: (() -> Void)?
+    /// Drawn on a SATURATED card rather than the room's ink (2026-08-15, the
+    /// wallet's half of the bright-card pass). The whole text ramp is handled
+    /// by the caller pinning `colorScheme` — every token here is adaptive — so
+    /// what this flag owns is the two things a scheme flip cannot fix.
+    ///
+    /// **The line goes white, and direction moves to the pill.** The plot's
+    /// accent is the state colour, and on a saturated ground the DOWN case
+    /// fails: system red on the app tint measures about 1.35:1, so a losing
+    /// day would draw a line nobody can see — the failure would appear only on
+    /// the days that matter most, and a rising day would look fine in every
+    /// screenshot. White holds on any hue in the table, and the delta pill
+    /// beside the number still states the direction in colour, so nothing is
+    /// lost but the redundancy.
+    var onColor: Bool = false
     var onOpenMark: (UUID) -> Void = { _ in }
     @Environment(\.colorScheme) private var scheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -104,7 +118,8 @@ struct WalletBalanceHeadline: View {
     @State private var entered = false
 
     private var accent: Color {
-        TokenChartStyle.accent(change: chart?.change ?? 0, scheme: scheme)
+        onColor ? .white
+                : TokenChartStyle.accent(change: chart?.change ?? 0, scheme: scheme)
     }
 
     /// The number in the headline seat: the live total when the holdings read
@@ -232,7 +247,8 @@ struct WalletBalanceHeadline: View {
                         // it actually covers. Nothing to measure yet, no pill.
                         if let chart {
                             TokenDeltaPill(change: chart.change,
-                                           label: range.deltaLabel, compact: true)
+                                           label: range.deltaLabel, compact: true,
+                                           onColor: onColor)
                                 .scaleEffect(pillShown ? 1 : 0.6)
                                 .opacity(pillShown ? 1 : 0)
                         }

@@ -262,6 +262,76 @@ extension DS {
         return hue
     }
 
+    /// A feed row's card, in its source's own colour (2026-08-15, user ruling:
+    /// "what if each row was a colored card from its source").
+    ///
+    /// THE INK COMES WITH THE FILL, and that pairing is the whole reason this
+    /// is one type rather than two calls. A saturated card decides what can be
+    /// read on it: Farcaster's purple needs the white ramp, Hugging Face's
+    /// yellow and Snapchat's need the black one, and a caller that fetched the
+    /// fill and forgot the ink would render white-on-yellow — legible in the
+    /// simulator's dark theme, invisible in the light one, and caught by
+    /// nothing (a contrast failure renders perfectly, `legibleInk`'s own
+    /// lesson).
+    ///
+    /// `ink` is nil for the neutral fallback ON PURPOSE. `legibleCardFill`
+    /// answers `DS.gray200` for a source with no honest hue, and that token is
+    /// already adaptive — so the page's own ramp is correct on it in both
+    /// themes, and pinning a scheme there would be the one row that ignores
+    /// the theme.
+    struct RowSkin {
+        let fill: Color
+        /// The ramp that reads on `fill`; nil keeps the ambient one.
+        let ink: ColorScheme?
+    }
+
+    /// Cached per source — `brandHue` is a switch over 85 cases and the ink
+    /// decision costs a `UIColor` round trip, both of which a feed body pass
+    /// would otherwise pay once per visible row, every pass. That is the
+    /// 2026-08-13 latency lesson exactly (the source rail resolving its chips
+    /// four to five times per body pass), paid before it is measured this time.
+    /// Main-actor because the feed is, and because a static cache with no
+    /// isolation is the other kind of bug.
+    @MainActor private static var rowSkinCache: [String: RowSkin] = [:]
+
+    @MainActor
+    static func rowSkin(for source: String) -> RowSkin {
+        if let hit = rowSkinCache[source] { return hit }
+        let skin = computeRowSkin(for: source)
+        rowSkinCache[source] = skin
+        return skin
+    }
+
+    /// A RAMP IS PINNED ONLY OVER A FIXED FILL, and the three branches below
+    /// are that one rule rather than three special cases.
+    ///
+    /// `legibleCardFill` substitutes an ADAPTIVE neutral for the two marks
+    /// that cannot be a card — a near-white one (ChatGPT, Privacy Pools) takes
+    /// `gray200` outright, a near-black one (X, Vercel, Cursor, Grok) is mixed
+    /// toward it — and both substitutes are `#3a3a3c` in dark and `#d1d1d6` in
+    /// light. So the ambient ramp is already correct on them in both themes,
+    /// while a pinned one would be right in exactly one: reusing that
+    /// function's answer and then deciding the ink from the ORIGINAL hue would
+    /// paint ChatGPT's row black-on-dark-gray, which is invisible rather than
+    /// merely wrong, and no build or screenshot in the dark theme could show
+    /// it. Only the middle branch returns a fixed hex, and only it names a
+    /// scheme.
+    private static func computeRowSkin(for source: String) -> RowSkin {
+        guard let hue = brandHue(for: source) else {
+            // No honest hue — the neutral says "we don't know this app"
+            // (`legibleCardFill`'s own 2026-08-10 ruling), never the app tint.
+            return RowSkin(fill: DS.gray200, ink: nil)
+        }
+        let lum = luminance(of: hue)
+        if lum > 0.90 { return RowSkin(fill: DS.gray200, ink: nil) }
+        if lum < 0.12 { return RowSkin(fill: hue.mix(with: DS.gray200, by: 0.6), ink: nil) }
+        // 0.55 rather than 0.5: white ink survives a mid-tone better than black
+        // ink does, so the tie goes to white. Checked against the hues that sit
+        // near the line — Snapchat's #fffc00 and Hugging Face's #ffd21e take
+        // black; Farcaster's #855dcd and RSS's #f26522 take white.
+        return RowSkin(fill: hue, ink: lum > 0.55 ? .light : .dark)
+    }
+
     /// WCAG relative luminance — sRGB channels gamma-LINEARIZED, which is the
     /// only form a contrast ratio may be computed from.
     ///

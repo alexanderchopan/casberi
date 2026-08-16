@@ -72,10 +72,27 @@ struct TokenDeltaPill: View {
     /// quantity, and the one people read off a market is points. Lives here
     /// rather than in a second pill so the capsule grammar stays in one file.
     var points: Bool = false
+    /// The pill as it reads ON a saturated card (2026-08-15) — a solid WHITE
+    /// capsule carrying the figure in its own direction, which is the grammar
+    /// the day card arrived at in b32ce19 and the reason it arrived there: a
+    /// green delta drawn straight onto a saturated blue is illegible, so the
+    /// figure needs its own ground rather than a lighter ink.
+    ///
+    /// Distinct from `solid`, which is the opposite trade — a LOUD capsule in
+    /// the state colour with white text, for a quiet backing that would
+    /// swallow the 15% fill. Here the backing is the loud thing, so the pill
+    /// answers with the one value no brand hue in the table can collide with.
+    ///
+    /// The accent is resolved for the LIGHT scheme regardless of theme,
+    /// because the capsule is white in both: taking the dark theme's brighter
+    /// green would put the washed-out variant on the one ground that needs the
+    /// deeper one.
+    var onColor: Bool = false
     @Environment(\.colorScheme) private var scheme
 
     var body: some View {
-        let ink = TokenChartStyle.accent(change: change, scheme: scheme)
+        let ink = TokenChartStyle.accent(change: change,
+                                         scheme: onColor ? .light : scheme)
         // Half a point is the smallest move worth a direction, the same job
         // `isFlat`'s 0.05% does for a price.
         let flat = points ? abs(change * 100) < 0.5 : TokenChartStyle.isFlat(change)
@@ -99,10 +116,16 @@ struct TokenDeltaPill: View {
             // 2026-07-17). Loud = full state ink; solid-but-flat = a neutral
             // strong fill: still no direction color (honesty §83), just
             // enough body to survive the wash.
-            .foregroundStyle(loud ? .white : solid ? DS.textPrimary : ink)
+            // A flat move on a white capsule takes a neutral dark ink rather
+            // than `DS.textPrimary`, which is WHITE in the dark theme and
+            // would render the figure invisible on its own ground (§83's
+            // no-direction rule must not cost the number itself).
+            .foregroundStyle(onColor ? (flat ? Color.fixed("#3c3c43") : ink)
+                             : loud ? .white : solid ? DS.textPrimary : ink)
             .padding(.horizontal, compact ? 7 : 9)
             .padding(.vertical, compact ? 2 : 3)
-            .background(loud ? ink
+            .background(onColor ? Color.white
+                        : loud ? ink
                         : solid ? DS.fillStrong
                         : ink.opacity(scheme == .light ? 0.12 : 0.15),
                         in: Capsule(style: .continuous))

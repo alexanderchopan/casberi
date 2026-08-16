@@ -3610,8 +3610,38 @@ struct FeedScreen: View {
                 // until this pass, and they were never three subjects: "what's
                 // it worth", "whose is it", "is it okay" are the questions of a
                 // single glance at a single number.
+                //
+                // **The MONEY half now wears the bright card** (2026-08-15) and
+                // the rest of that card stays ink, which splits §212's single
+                // parcel in two. The reason is the one this pass keeps
+                // arriving at: colour is information, so it may only cover the
+                // rows it is true of. "What's it worth" is the reading this
+                // room exists for and is the app's most natural home for the
+                // Messages register — one hero number over one list is what
+                // §212 built. "Is it okay" is a WARNING, and a saturated card
+                // under "this grant reaches $4,120" dresses it as a
+                // celebration; §83's honesty rule forbids exactly that kind of
+                // true-sounding surface. So the split is not two subjects
+                // after all — it is one subject and one caution about it, and
+                // they were never the same glance.
+                //
+                // The two still read as one system: same corner radius, same
+                // insets, stacked with the section's own spacing, so this is
+                // one card that changed weight partway down rather than the
+                // six parcels §212 collapsed.
+                // ONE list row still, and that outer stack is what keeps it
+                // one: two siblings under a `Section` are two rows, each
+                // taking the List's own background and insets, which would
+                // undo both the card geometry and the entrance below.
                 VStack(alignment: .leading, spacing: DS.Space.s3) {
-                    if chart != nil || total != nil {
+                // Guarded as a whole for the same reason the caution block
+                // below is: the section renders whenever ANY of its four
+                // inputs exist, so a wallet whose money is entirely in
+                // protocols (§240's own case — no priced holdings, no line)
+                // would otherwise paint a bright card with nothing in it.
+                if chart != nil || total != nil {
+                VStack(alignment: .leading, spacing: DS.Space.s3) {
+                    do {
                         // The headline is a READ, not a door (prd §208,
                         // 2026-07-25): the multi-wallet "All" view used to open
                         // a separate "Across your wallets" sheet, but that sheet
@@ -3648,6 +3678,7 @@ struct FeedScreen: View {
                                 r.remember()
                             },
                             onOpen: nil,
+                            onColor: true,
                             onOpenMark: { id in
                                 feedSheet = visible.first { $0.id == id }.map(FeedSheetRoute.thing)
                             })
@@ -3661,6 +3692,42 @@ struct FeedScreen: View {
                             withAnimation(DS.Motion.standard) { selectedWallet = address }
                         }
                     }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(DS.Space.s4)
+                // THE HERO'S GROUND. `DS.tint` flat, never a gradient: the
+                // ruling was the Messages register, and that register is a
+                // solid fill — a gradient reads as a graphic where this has to
+                // read as a surface. The whole subtree's ink is re-pointed by
+                // pinning the scheme, since every text token in the app is a
+                // `Color.adaptive` resolved against the trait: one line moves
+                // primary, secondary, tertiary and every glyph, instead of
+                // teaching the headline, the face chips and the range chips
+                // about a foreground they have never taken.
+                //
+                // NOT the scoped wallet's own pour hue, though the pass that
+                // proposed this asked for it. That hue is chosen for a
+                // low-opacity wash at the top of the screen and carries no
+                // contrast guarantee at all (`DS.themedBleed`'s own note), so
+                // painting a card with it would make the crown number's
+                // legibility depend on which wallet you tapped — and it would
+                // fail on exactly the pale ones, silently, in a way no build
+                // or audit here can see. The wallet's identity is already on
+                // the face rail above and the pour above that.
+                .background(DS.tint,
+                            in: RoundedRectangle(cornerRadius: DS.Radius.widget,
+                                                 style: .continuous))
+                .environment(\.colorScheme, .dark)
+                }
+
+                // …and the caution presses back in ink. GUARDED as a whole,
+                // which it never had to be while it shared the balance's card:
+                // an unguarded empty stack used to cost nothing, and now it
+                // would draw a surface with nothing on it for every wallet
+                // that holds no protocol position and has no warning — which
+                // is most of them.
+                if !composition.isEmpty || !warnings.isEmpty {
+                VStack(alignment: .leading, spacing: DS.Space.s3) {
                     // What the crown doesn't count (prd §240) — every protocol
                     // position the app already reads sits outside that number,
                     // and for Hyperliquid and Aerodrome this is their only
@@ -3686,6 +3753,8 @@ struct FeedScreen: View {
                 // renders bare wherever else it's used.
                 .padding(DS.Space.s4)
                 .dsWidgetSurface(fillOpacity: Self.walletCardFill)
+                }
+                }
                 // Each piece arrives on its own clock — the balance reads off
                 // already-recorded samples (instant) while warnings/holdings/
                 // lending wait on live reads (2026-07-20: "balance shows then
@@ -4842,7 +4911,16 @@ struct FeedScreen: View {
     /// GAPLESS, so a row's shadow falls on the adjacent same-color fill and
     /// vanishes (§61's measured mechanic) — only the run's outer silhouette
     /// casts, one lifted card instead of a stack of shadowed rows.
-    private func dayCardBackground(_ position: RunPosition) -> some View {
+    /// `shadowed: false` for a source-skinned row. §61's mechanic is that a
+    /// RUN casts one silhouette because its middle rows are gapless and their
+    /// shadows fall on an identical fill — a skinned row is always `.only`, so
+    /// every row in the feed would cast its own, which is both forty offscreen
+    /// blurs per screenful on the app's hottest scroll and a lift the colour
+    /// has already done: a card that differs from the page in HUE does not
+    /// need to differ from it in height as well.
+    private func dayCardBackground(_ position: RunPosition,
+                                   fill: Color = DS.surfaceSheet,
+                                   shadowed: Bool = true) -> some View {
         let r = DS.Radius.card
         let top = position == .first || position == .only
         let bottom = position == .last || position == .only
@@ -4851,11 +4929,12 @@ struct FeedScreen: View {
                                       bottomTrailingRadius: bottom ? r : 0,
                                       topTrailingRadius: top ? r : 0,
                                       style: .continuous)
-            .fill(DS.surfaceSheet)
+            .fill(fill)
             .padding(.horizontal, DS.Space.s4)
             .padding(.top, top ? DS.Space.s1 : 0)
             .padding(.bottom, bottom ? DS.Space.s1 : 0)
-            .shadow(color: DS.cardShadow, radius: 18, x: 0, y: 6)
+            .shadow(color: shadowed ? DS.cardShadow : .clear,
+                    radius: shadowed ? 18 : 0, x: 0, y: shadowed ? 6 : 0)
     }
 
     /// Lists are AIR; parcels are for the reads (user ruling 2026-07-22,
@@ -4882,11 +4961,59 @@ struct FeedScreen: View {
     /// FILL and never a stroke: "no hairlines — zero exceptions" makes an
     /// outline the wrong vocabulary, and `DS.tintDim` is already how this app
     /// says "this one".
+    /// The row's card fill when the room mixes sources — nil everywhere else,
+    /// and that nil is the ruling rather than an optimization (2026-08-15,
+    /// user: "what if each row was a colored card from it's source").
+    ///
+    /// **Colour here says WHICH SOURCE, so it may only appear where the answer
+    /// varies.** In the All room a screenful of hues tells you at a glance what
+    /// your day was made of. Inside a source room every row would be the same
+    /// hue — a permanent colour that says nothing, which is §297's own argument
+    /// for draining the crown pour in exactly that room, and §8's colour law
+    /// (identity, state, or nothing) reaching the row surface.
+    ///
+    /// Guards liveness FIRST, `standsAlone`'s reason verbatim: this is read in
+    /// the argument list of the row builder, so it runs before `shapedRow`'s
+    /// own guard, and `thing.source` is a stored property that fault-resolves
+    /// against the store (corollary 3, build 176).
+    private func rowSkin(_ thing: Thing) -> DS.RowSkin? {
+        guard roomMixesSources, thing.modelContext != nil else { return nil }
+        // THE CONSENT CARD REFUSES IT. `ApprovalCard` carries no surface of
+        // its own — it renders straight onto this background — so a skin would
+        // put Approve and Deny on a saturated ground, and the row where a
+        // one-slip yes matters most is the one row whose surface must not
+        // compete with the decision. It is the same refusal the wallet's risk
+        // cards make (a bright card under "reaches $4,120" dresses a warning
+        // as a celebration), arriving in the feed.
+        if thing.kind == .approval, thing.mark != .done { return nil }
+        return DS.rowSkin(for: thing.source)
+    }
+
+    /// Rooms that hold more than one source. "All" is the one that always
+    /// does; Pinboard is selected by `pinnedAt` rather than by source, so it
+    /// mixes too. A folded category (Markets) resolves to a real seat before
+    /// it reaches here, so it is correctly NOT in this set.
+    private var roomMixesSources: Bool {
+        source == "All" || source == Pinboard.room
+    }
+
     @ViewBuilder
     private func runBackground(_ position: RunPosition, bare: Bool,
-                               selected: Bool = false) -> some View {
+                               selected: Bool = false,
+                               skin: DS.RowSkin? = nil) -> some View {
         if selected {
             selectionWash(position, bare: bare)
+        } else if let skin {
+            // A COLOURED ROW IS ALWAYS ITS OWN CARD — the run position is
+            // deliberately ignored rather than threaded through. A run's whole
+            // mechanic is that middle rows go square and GAPLESS so one
+            // silhouette casts one shadow (§61), which is only true while every
+            // row in it shares a fill; with a hue per source, a merged run
+            // renders as butted stripes of different colours and the shadow
+            // falls across the seam. Forcing `.only` here keeps that geometry
+            // in the one function that owns it, instead of making five call
+            // sites pass a breaker predicate they have no reason to know about.
+            dayCardBackground(.only, fill: skin.fill, shadowed: false)
         } else if bare {
             Color.clear
         } else {
@@ -4929,6 +5056,7 @@ struct FeedScreen: View {
         // why not `PressSpring`'s dip). Same single choke point, same one
         // gesture — tap opens the sheet, everything else stays long-press.
         // Zoom source removed with the thing-open zoom (prd 232, 2026-07-30).
+        let skin = rowSkin(thing)
         return Button {
             openThing(thing)
         } label: {
@@ -4937,6 +5065,14 @@ struct FeedScreen: View {
                               replies: replies))
                 .modifier(RowEntrance(index: index, wave: shapeWave, style: entranceStyle))
                 .contentShape(Rectangle())
+                // THE INK FOLLOWS ITS CARD. Every text token in this app is a
+                // `Color.adaptive` resolved against the trait, so overriding
+                // the scheme for the subtree re-points the WHOLE ramp —
+                // primary, secondary, tertiary, glyphs — in one line, instead
+                // of teaching a dozen row anatomies about a foreground colour
+                // they have never taken. Nil (the neutral fills) keeps the
+                // page's own ramp; see `DS.RowSkin.ink`.
+                .environment(\.colorScheme, skin?.ink ?? colorScheme)
         }
         .buttonStyle(RowPress())
             // Mac/pointer polish (2026-07-31): the feed rendered bare rows
@@ -4959,7 +5095,8 @@ struct FeedScreen: View {
             // observes it (see `ShellChrome.canWalk`).
             .listRowBackground(runBackground(position, bare: !standsAlone(thing),
                                              selected: DS.isMac
-                                                && chrome.walkSelected == thing.id.uuidString))
+                                                && chrome.walkSelected == thing.id.uuidString,
+                                             skin: skin))
             // Feed rhythm (2026-07-13): back to s2 — the s3 airy read made
             // every gap the same size, so days never clustered. Rows sit
             // tight within their day; the day header carries the big gap.
