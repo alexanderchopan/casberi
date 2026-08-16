@@ -4237,43 +4237,35 @@ struct GenFrontPage: View {
         .frame(maxWidth: .infinity, alignment: .topLeading)
     }
 
-    /// One chapter block as a DECK CARD (2026-08-15, the approved mockup made
-    /// real): the section's identity hue as a full card ground, solved to the
-    /// same luminance register the feed's row cards use (`DS.deckFill`), with
-    /// the white ramp pinned — the fill and the ink are one decision.
+    /// One chapter block as a DECK CARD — ON INK (2026-08-15, second ruling
+    /// of the night, superseding the hue-ground version shipped hours
+    /// earlier: "it all looks vibecoded now"). The card GROUPING survives —
+    /// it is real structure, and the brief reads as movements because of it —
+    /// but the ground returns to the ink slab for every section, because four
+    /// saturated slabs stacked is colour saying nothing four times. The
+    /// page's whole colour budget now belongs to the lede card above
+    /// (`GenDayLede`), one bright object per screen; section identity stays
+    /// where colour does navigation, the docked nav chips. The modules'
+    /// own internal colours — treemap blues, chart accents, semantic
+    /// green/red — get their ink ground back, which is what they were
+    /// designed against.
     ///
-    /// **A quiet section falls back to an ink slab**, which is how §386d's
-    /// step-back survives the brightness: dimming a saturated card reads as a
-    /// rendering bug, while colour-vs-ink makes "changed" the thing the eye
-    /// sorts by before a word is read. A section is quiet only when EVERY
-    /// module in it said exactly what it said last time; the per-module 0.68
-    /// dim is retired inside cards (the ground carries the contrast now), and
-    /// the all-or-nothing rule from §386d still holds one level up — if no
-    /// section earns colour, `quiet` arrives empty and every card is bright.
-    ///
-    /// A section whose header names no hue (or a neutral one — `deckFill`'s
-    /// own nil) takes the ink slab too, rather than a grey card pretending to
-    /// be an identity.
+    /// Quiet returns to the §386d dim, applied to the CARD's content as one
+    /// piece rather than per module — all the cards share a ground now, so
+    /// opacity is again the only contrast device, and whole-card reads as
+    /// intentional where per-module read as patchy.
     @ViewBuilder
     private func deckCard(_ seg: [String]) -> some View {
-        let headerHue: Color? = seg.first.flatMap { ref in
-            guard let header = els[ref], header.comp == "Section" else { return nil }
-            let name = header.str(2)
-            return name.isEmpty ? nil : GenSection.hue(name)
-        }
-        let isQuiet = !seg.isEmpty && seg.dropFirst().allSatisfy { quiet.contains($0) }
-            && seg.count > 1
-        let fill = isQuiet ? nil : headerHue.flatMap { DS.deckFill(for: $0) }
+        let isQuiet = seg.count > 1 && seg.dropFirst().allSatisfy { quiet.contains($0) }
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             ForEach(seg, id: \.self) { module($0, inCard: true) }
         }
+        .opacity(isQuiet ? 0.68 : 1)
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(DS.Space.s4)
-        .background(fill ?? DS.surfaceRaised,
+        .background(DS.surfaceRaised,
                     in: RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
-        .environment(\.colorScheme, fill != nil ? .dark : scheme)
     }
-    @Environment(\.colorScheme) private var scheme
 
     /// One module. Inside a DECK CARD the chapter's top air and the
     /// per-module quiet dim both stand down: the card's own margin is the air
@@ -4871,24 +4863,40 @@ private struct GenDayLede: View {
     }
 
     var body: some View {
+        // THE SCREEN'S ONE BRIGHT OBJECT (2026-08-15, user: "it all looks
+        // vibecoded now", against their own reference screenshot — a black
+        // screen whose single saturated element is the blue day card). The
+        // lede is the day in one sentence and the brief's only always-shown,
+        // never-dim module, so it is the right holder of the whole page's
+        // colour budget: everything below it returns to ink, and this card is
+        // what makes that read as restraint rather than absence.
+        //
+        // The figure's semantic accent stands down ON the card — green on
+        // saturated blue is b32ce19's own illegibility case, and the approved
+        // reference renders the whole sentence white with direction carried by
+        // the words. The bare `el.str(0)` and not `sentence`: an inner Text
+        // segment's own foregroundStyle beats any outer repaint, so routing
+        // through the accented form would put the green back on the blue.
+        // `sentence` survives for any future ink-ground caller.
+        //
         // Self-padded, like every other component in this file (the answer
-        // column doesn't inset its children — `GenTagMap`, `GenWidget` and the
-        // rest each own their horizontal margin). A bare `maxWidth: .infinity`
-        // ran the sentence off both edges, starting left of the masthead above
-        // it.
+        // column doesn't inset its children — each owns its margin).
         VStack(alignment: .leading, spacing: 2) {
             if !el.str(1).isEmpty {
                 Text(el.str(1))
                     .dsText(.subhead13)
-                    .foregroundStyle(DS.textTertiary)
+                    .foregroundStyle(.white.opacity(0.85))
                     .lineLimit(1)
             }
-            sentence
+            Text(el.str(0))
                 .dsText(.heading28)
-                .foregroundStyle(DS.textPrimary)
+                .foregroundStyle(.white)
                 .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(DS.Space.s4)
+        .background(DS.tint,
+                    in: RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
         .padding(.horizontal, DS.Space.s4)
     }
 }

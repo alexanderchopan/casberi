@@ -302,47 +302,45 @@ extension DS {
         return skin
     }
 
-    /// ONE REGISTER, SOLVED PER HUE — every card lands at the same perceived
-    /// weight (2026-08-15, user, from the built app: "they seem of different
-    /// intensities and now i wonder if too bright").
+    /// A WASH, NOT A FILL (2026-08-15, the night's third and final form —
+    /// user, seeing the bright version live: "it all looks vibecoded now").
     ///
-    /// The first cut used raw brand hexes, which is the mistake `washHue`'s
-    /// own doc already names: "raw brand hexes aren't a designed ramp."
-    /// YouTube's #ff0000 screamed beside Photos' pastel, the yellow cards
-    /// flipped to black ink while their neighbours ran white, and the strip of
-    /// them read as a defect rather than a palette. The fix is the same move
-    /// `legibleInk` makes one surface over: keep the HUE (the identity), pin
-    /// saturation into one vivid band [0.60, 0.85], and binary-search
-    /// brightness until the card sits at WCAG luminance 0.15 — measured, that
-    /// puts every card at a uniform ~5.3:1 under white ink (YouTube lands at
-    /// #d31f1f, Farcaster #7e52cd, Wallet #245ef4), which also answers the
-    /// "too bright" half: 0.15 is the deep end of the Messages register, a
-    /// shade under the raw brights. Turn THIS dial to retune the whole feed;
-    /// never re-introduce per-source fills.
+    /// The arc, kept so nobody walks it again: raw brand hexes first (read as
+    /// different intensities — `washHue`'s own "raw brand hexes aren't a
+    /// designed ramp" lesson, relearned), then one solved luminance register
+    /// (uniform, and uniformly LOUD — a wall of equally-weighted colour
+    /// slabs in which provenance shouted from every row and colour stopped
+    /// being information anywhere). What ships is the option my own feed
+    /// mockups recommended as "the livable version": the source's hue at
+    /// ~14% as the card's ground, the source NAME in the hue's bright form
+    /// (`legibleInk`, already on every row header), and the words on the
+    /// page's own ink ramp. Provenance still reads at arm's length; the row
+    /// is content again; and the full-strength register survives where one
+    /// bright object earns it (the wallet hero, the brief's lede card) via
+    /// `deckFill` below.
     ///
-    /// Uniform luminance also means uniform INK — every hued card takes the
-    /// white ramp, so the mixed black-on-yellow/white-on-purple checkerboard
-    /// is gone (a yellow brand becomes a deep gold rather than staying neon
-    /// with black ink; that trade IS the register). A hue that cannot reach
-    /// 0.15 even at full brightness (pure blue tops out near 0.08 — the
-    /// `legibleInk` lesson) solves to its brightest self, which is already
-    /// darker than the target and reads white ink fine.
-    ///
-    /// The neutral branch is unchanged and still pins NO scheme: a mark with
-    /// no honest hue (X's black, ChatGPT's white, Apple Wallet's graphite —
-    /// `washHue`'s own s < 0.15 bar) takes the ADAPTIVE gray, correct in both
-    /// themes under the ambient ramp, where a pinned one would be right in
-    /// exactly one theme and invisible-wrong in the other.
+    /// `washHue` and not the raw brand: it pins saturation into the vivid
+    /// band and lets the brand's own brightness through, so the washes stay
+    /// even with each other — the 14% is doing the quieting, the solver is
+    /// doing the evenness. No pinned ink ever again: a 14% ground changes no
+    /// contrast decision, so the ambient ramp is correct on every card in
+    /// both themes, and the neutral marks (X, ChatGPT — `washHue`'s nil)
+    /// take the faint neutral fill so the grammar stays one-card-per-row.
     private static func computeRowSkin(for source: String) -> RowSkin {
-        guard let brand = brandHue(for: source) else {
-            // No hue at all — the neutral says "we don't know this app"
-            // (`legibleCardFill`'s own 2026-08-10 ruling), never the app tint.
-            return RowSkin(fill: DS.gray200, ink: nil)
+        guard let wash = brandHue(for: source).flatMap({ washHue2($0) }) else {
+            return RowSkin(fill: DS.fillFaint, ink: nil)
         }
-        guard let fill = deckFill(for: brand) else {
-            return RowSkin(fill: DS.gray200, ink: nil)
-        }
-        return RowSkin(fill: fill, ink: .dark)
+        return RowSkin(fill: wash.opacity(0.14), ink: nil)
+    }
+
+    /// `washHue`'s normalization for a hue already in hand — split out so the
+    /// row skin and the by-source `washHue` share one formula.
+    private static func washHue2(_ brand: Color) -> Color? {
+        var h: CGFloat = 0, s: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        UIColor(brand).getHue(&h, saturation: &s, brightness: &b, alpha: &a)
+        guard s >= 0.15 else { return nil }
+        return Color(hue: h, saturation: max(s, 0.65),
+                     brightness: min(max(b, 0.60), 0.95))
     }
 
     /// The register itself, callable for ANY identity hue — the feed's row
