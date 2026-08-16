@@ -3536,7 +3536,7 @@ struct Composer: View {
                         return
                     }
                     if prefilled { prefilled = false }
-                    else if new.count - old.count > 8 { pasted = true }
+                    else if looksPasted(old: old, new: new) { pasted = true }
                     if new.isEmpty { pasted = false }
                     detectDraftDate()
                     scheduleLiveRead()
@@ -3556,7 +3556,17 @@ struct Composer: View {
             } label: {
                 HStack(spacing: DS.Space.s1) {
                     if hasDraft && !isRecording {
-                        Text("Ask")
+                        // The label names the ACTION, and for a paste that
+                        // action is Keep, not Ask (2026-08-11). It read "Ask"
+                        // in both states while `commit()` routed a paste to
+                        // the capture path — a control that says one thing and
+                        // does another, which is the honesty rule's own first
+                        // clause, on the button whose comment above says it
+                        // exists precisely because "does typing save?" was a
+                        // real question. It answered it wrongly for half its
+                        // states. Now Keep saves and Ask answers, and the word
+                        // is checkable against what happens.
+                        Text(pasted ? "Keep" : "Ask")
                             .dsText(.label12).fontWeight(.semibold)
                     }
                     Image(systemName: "arrow.up")
@@ -3573,7 +3583,7 @@ struct Composer: View {
                 .dsHover()
             }
             .buttonStyle(.plain)
-            .accessibilityLabel(hasDraft && !isRecording ? "Ask" : "Send")
+            .accessibilityLabel(hasDraft && !isRecording ? (pasted ? "Keep" : "Ask") : "Send")
             .modifier(SendTooltip(glyphOnly: !(hasDraft && !isRecording)))
         }
         .padding(.leading, DS.Space.s2)
@@ -3594,6 +3604,56 @@ struct Composer: View {
     /// A question is the Ask button's job — the Send-to band sits out so the
     /// one honest exit is obvious. Conservative: a trailing "?" or a leading
     /// question word.
+    /// Did this edit ARRIVE as a paste, rather than being typed?
+    ///
+    /// It matters more than it looks: `pasted` is what routes `commit()` to
+    /// the capture path, and the capture path SAVES. The standing rule is that
+    /// typed text never saves (things enter only via paste, mic, share,
+    /// screenshots, drop, bridges), so a false positive here breaks that rule
+    /// outright — you ask a question and get a note you never asked for.
+    ///
+    /// The old test was `new.count - old.count > 8`, i.e. "more than eight
+    /// characters appeared at once, so it must be a paste". That is not true of
+    /// any modern iOS keyboard: **QuickPath/swipe typing commits a whole word
+    /// at a time**, predictive-text taps insert a whole word, and autocorrect
+    /// replaces one. Any word over eight characters — "something", "yesterday",
+    /// "screenshots" — flipped this true mid-sentence, and the question was
+    /// then filed as a note instead of answered (reported 2026-08-11: "i just
+    /// typed into the composer a question, and it saved it as a written note
+    /// but didn't answer me").
+    ///
+    /// So the test is now about SHAPE, not size. A keyboard commits one word
+    /// per burst; a paste brings something a keyboard cannot produce in a
+    /// single edit: several words at once, a line break, or a URL. The length
+    /// floor survives only as a backstop for a very long single token, well
+    /// past any word a keyboard would commit.
+    ///
+    /// When in doubt this returns FALSE — answering is non-destructive and
+    /// saving is not, so an ambiguous edit gets asked rather than filed.
+    private func looksPasted(old: String, new: String) -> Bool {
+        guard new.count > old.count else { return false }
+        // The run that just arrived. Common-prefix/suffix rather than a plain
+        // tail slice, because iOS edits mid-string too (autocorrect, or typing
+        // before the caret's end).
+        let head = zip(old, new).prefix { $0 == $1 }.count
+        let tail = zip(old.reversed(), new.reversed()).prefix { $0 == $1 }.count
+        let lower = new.index(new.startIndex, offsetBy: head)
+        let upper = new.index(new.endIndex, offsetBy: -min(tail, new.count - head))
+        guard lower < upper else { return false }
+        let run = String(new[lower..<upper])
+        let trimmed = run.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.count > 8 else { return false }
+        // A line break or a URL is a paste — no keyboard commits either as one
+        // edit (the return key is intercepted above as the SEND gesture).
+        if run.contains("\n") || trimmed.contains("://") { return true }
+        // Several words at once. A swipe-typed word arrives with at most a
+        // trailing space, so the TRIMMED run holds no interior whitespace.
+        if trimmed.contains(where: \.isWhitespace) { return true }
+        // A single token far longer than anything a keyboard commits — a bare
+        // domain, a hash, a long id.
+        return trimmed.count > 40
+    }
+
     private var draftIsQuestion: Bool {
         let text = draft.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         if text.hasSuffix("?") { return true }
