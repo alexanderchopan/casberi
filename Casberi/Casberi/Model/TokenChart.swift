@@ -84,6 +84,26 @@ struct TokenChart {
     var marketCap: Double? = nil
     var fdv: Double? = nil
 
+    /// When this curve was actually READ (2026-08-16).
+    ///
+    /// **Why the type had no clock until now, and what that cost.** Every
+    /// producer builds a `TokenChart` at the moment it parses a response, so
+    /// the default below is the fetch time for free and no producer changes.
+    /// Before it, nothing on the price surface could say when the number was
+    /// true: the view fetches once per range with no timer and no foreground
+    /// refresh, so a sheet left open went stale in silence — and did it while
+    /// drawing a BREATHING endpoint halo, which is the one mark in this file
+    /// that means "live". `TokenChartPlot`'s own doc had already denied the
+    /// Home row that halo for overclaiming; the sheet kept it on the reasoning
+    /// that it "refetches per range", which is a refetch on a CHIP TAP, not on
+    /// a clock.
+    ///
+    /// §83 forbids a stale number wearing a fresh face, and the app already
+    /// speaks this grammar elsewhere — the wallet stamps "as of Xh ago" on
+    /// last-known holdings rather than letting them read as current. This is
+    /// the same sentence, on the surface that needed it most.
+    var fetchedAt: Date = .now
+
     /// Pulls the token address (and chain) out of a dexscreener link like
     /// `https://dexscreener.com/base/0x…`.
     static func route(from content: String) -> (chain: String, address: String)? {

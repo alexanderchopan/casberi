@@ -110,6 +110,13 @@ struct StockChart {
         // market is open; the candle stands in when meta doesn't carry it.
         let meta = result["meta"] as? [String: Any]
         let price = (meta?["regularMarketPrice"] as? Double) ?? last
-        return TokenChart(closes: closes, price: price, change: (last - first) / first)
+        // The delta is measured against the SAME number the figure shows
+        // (2026-08-16). It used to be `(last - first) / first` — the last
+        // CANDLE against the first — while `price` is the live tick, so while
+        // the market is open the 40pt figure and the pill beneath it described
+        // two different moves, and the pill still said "· 1D". Whichever number
+        // leads is the one the percentage has to be about.
+        return TokenChart(closes: closes, price: price,
+                          change: (price - first) / first)
     }
 }

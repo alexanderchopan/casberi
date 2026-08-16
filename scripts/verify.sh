@@ -267,6 +267,20 @@ step "Address-safety self-test"
   || fail "the address-safety self-test failed — run scripts/address-safety-selftest.sh"
 print -P "%F{green}✓ address-safety self-test%f"
 
+# The price surface's honesty rails (2026-08-16). Every failure it catches
+# renders as a perfectly good-looking chart made of real numbers that are about
+# something other than what the label beside them says: a breathing "live"
+# endpoint over an hour-old price, a 40pt figure and its delta pill describing
+# different moves, a change that rounds to zero given a colour, a range tap that
+# deletes the chips you tapped. Nothing else in the tree can see any of it —
+# `design-motion-audit.py` structurally cannot reach the Reduce Motion guard
+# here (it carves out `withAnimation` inside an `async` func, and the reveal is
+# called from `load()`).
+step "Price-chart self-test"
+"$ROOT/scripts/price-chart-selftest.sh" >/dev/null \
+  || fail "the price-chart self-test failed — run scripts/price-chart-selftest.sh"
+print -P "%F{green}✓ price-chart self-test%f"
+
 # Wallet visualizations — the flow band's grouping, the distance-to-liquidation
 # axis, the stable share. Arithmetic behind three cards that render perfectly
 # whatever number is in them (it already caught an unparseable allowance

@@ -1,5 +1,6 @@
 import SwiftUI
 import Charts
+import Accessibility
 
 /// The token chart family (prd 51, from the approved mock): one anatomy at
 /// two doses. `TokenChartView` is the sheet's full read — price, a delta
@@ -22,6 +23,31 @@ enum TokenChartStyle {
     /// to report: "-0.0%" in red claims a loss the number itself denies. Flat
     /// is its own state — no sign, quiet ink (2026-07-16).
     static func isFlat(_ c: Double) -> Bool { abs(c * 100) < 0.05 }
+
+    /// How recently a curve must have been read for the breathing endpoint to
+    /// be an honest mark (2026-08-16). Two minutes: long enough that the halo
+    /// survives a scrub and a scroll after the fetch that earned it, short
+    /// enough that it can never sit over a price from earlier in the day.
+    ///
+    /// Its ceiling, stated rather than hidden: this is decided when the view
+    /// renders, and a sheet nobody touches does not re-render, so a halo can
+    /// outlive its window on a screen left open. The line beside it always
+    /// carries the real read time, and a foreground return refetches — so the
+    /// worst case is a stale halo next to a sentence that contradicts it,
+    /// where before there was a stale halo and no sentence at all.
+    static let freshWindow: TimeInterval = 120
+
+    static func isFresh(_ fetchedAt: Date, now: Date = .now) -> Bool {
+        now.timeIntervalSince(fetchedAt) < freshWindow
+    }
+
+    /// "read just now" / "read 12 min ago" — the price surface's own version of
+    /// the wallet's "as of Xh ago".
+    static func readLine(_ fetchedAt: Date, now: Date = .now) -> String {
+        let age = now.timeIntervalSince(fetchedAt)
+        if age < 60 { return String(localized: "read just now") }
+        return String(localized: "read \(fetchedAt.formatted(.relative(presentation: .named)))")
+    }
 
     /// The delta's ink, flat included — the up/down reading of a change is
     /// only honest once the change survives rounding.
@@ -403,14 +429,39 @@ struct TokenChartPlot: View {
 /// layout never jumps when data lands and nothing spins at the person.
 struct TokenChartSkeleton: View {
     var plotHeight: CGFloat = 140
+    /// Which anatomy is coming (2026-08-16).
+    ///
+    /// The type's whole promise is "ghosts of the exact anatomy that's coming…
+    /// so the layout never jumps", and under `hero: true` it was false: it drew
+    /// a left-aligned 24pt ghost for a CENTRED 40pt price, no ghost at all for
+    /// the chips row, the since-line or the plot's 18pt vertical padding. Every
+    /// hero token sheet in the app jumped when the data arrived.
+    var hero: Bool = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Space.s3) {
-            HStack(spacing: DS.Space.s2) {
-                ghost(width: 110, height: 24, radius: 6)
-                ghost(width: 72, height: 20, radius: 10)
+            if hero {
+                VStack(spacing: DS.Space.s2) {
+                    ghost(width: 168, height: 44, radius: 8)   // price40's line box
+                    ghost(width: 96, height: 24, radius: 12)   // the delta pill
+                }
+                .frame(maxWidth: .infinity)
+                // The plot carries `.padding(.vertical, 18)` in the sheet, for
+                // the high/low labels — so the ghost has to reserve it too.
+                ghost(width: nil, height: plotHeight, radius: 8)
+                    .padding(.vertical, 18)
+                ghost(width: 132, height: 24, radius: 12)      // the range chips
+                    .frame(maxWidth: .infinity)
+                ghost(width: 104, height: 16, radius: 6)       // the read line
+                    .frame(maxWidth: .infinity)
+            } else {
+                HStack(spacing: DS.Space.s2) {
+                    ghost(width: 110, height: 24, radius: 6)
+                    ghost(width: 72, height: 20, radius: 10)
+                }
+                ghost(width: nil, height: plotHeight, radius: 8)
+                ghost(width: 104, height: 16, radius: 6)
             }
-            ghost(width: nil, height: plotHeight, radius: 8)
         }
     }
 
@@ -485,7 +536,12 @@ struct TokenChartView<R: PriceRange, Fallback: View>: View {
     @State private var note: String?
     @State private var revealed = false
     @State private var scrubIndex: Int?
+    /// The last curve actually drawn. Held so that switching range keeps the
+    /// PLOT on screen while the new one loads (2026-08-16) — see `loaded`.
+    @State private var lastDrawn: TokenChart?
     @Environment(\.colorScheme) private var scheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.scenePhase) private var scenePhase
 
     init(memoryKey: String, fetch: @escaping (R) async -> TokenChart?,
          since: (price: Double, date: Date)? = nil, hero: Bool = false,
@@ -521,7 +577,7 @@ struct TokenChartView<R: PriceRange, Fallback: View>: View {
         Group {
             switch phase {
             case .loading where chart == nil:
-                TokenChartSkeleton()
+                TokenChartSkeleton(hero: hero)
             case .dead:
                 fallback()
             default:
@@ -529,23 +585,68 @@ struct TokenChartView<R: PriceRange, Fallback: View>: View {
             }
         }
         .task(id: range) { await load() }
+        // A price read an hour ago is not the price (2026-08-16). The view
+        // has no timer by design — a chart that polls is a chart that spends
+        // somebody's battery to look busy — so the refresh rides the one
+        // moment the number is about to be looked at again.
+        .onChange(of: scenePhase) { _, phase in
+            guard phase == .active, charts[range] != nil else { return }
+            charts[range] = nil
+            Task { await load() }
+        }
     }
 
+    /// The curve on screen. Falls back to the last one drawn so that tapping a
+    /// range does not delete the control you just tapped (2026-08-16).
+    ///
+    /// **The bug this fixes.** `load()` only sets `phase = .loading` when the
+    /// cache is completely empty, so a range switch left `phase == .ready` with
+    /// `charts[range] == nil` — which fell to the `else` below and rendered the
+    /// SKELETON. The hero price, the delta pill and the range chips all
+    /// vanished for the length of the fetch, so the person who tapped 7D lost
+    /// the chips and could not tap back until the network answered.
+    private var shown: TokenChart? { charts[range] ?? lastDrawn }
+
+    /// True while the selected range has not answered yet and we are standing
+    /// in with the previous curve.
+    private var awaitingRange: Bool { charts[range] == nil && lastDrawn != nil }
+
     @ViewBuilder private var loaded: some View {
-        if let chart {
+        if let chart = shown {
             VStack(alignment: .leading, spacing: DS.Space.s3) {
                 if hero { heroHeader } else { header(chart) }
                 plot(chart)
+                    // The stand-in curve belongs to the PREVIOUS range, so it
+                    // is dimmed and cannot be scrubbed: its shape is no longer
+                    // a claim about the selected window, and reading a value
+                    // off it would be reading the wrong window's price.
+                    .opacity(awaitingRange ? 0.35 : 1)
+                    .allowsHitTesting(!awaitingRange)
+                    .animation(reduceMotion ? nil : DS.Motion.standard,
+                               value: awaitingRange)
                 if hero { heroFooter(chart) }
                 sinceWatchedLine(chart)
+                readLine(chart)
                 if let note {
                     Text(note)
                         .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                 }
             }
         } else {
-            TokenChartSkeleton()
+            TokenChartSkeleton(hero: hero)
         }
+    }
+
+    /// When this price was read (2026-08-16, §83). Always drawn, never
+    /// conditional on the answer being old: a freshness line that appears only
+    /// when something is stale teaches people to read its ABSENCE as
+    /// "current", which is the same overclaim one level up.
+    @ViewBuilder private func readLine(_ chart: TokenChart) -> some View {
+        Text(TokenChartStyle.readLine(chart.fetchedAt))
+            .dsText(.label12)
+            .foregroundStyle(DS.textTertiary)
+            .frame(maxWidth: .infinity, alignment: hero ? .center : .leading)
+            .accessibilityLabel(Text("Price \(TokenChartStyle.readLine(chart.fetchedAt))"))
     }
 
     /// "+41.2% · since Jul 2 — you watched at $0.0031". The change is the
@@ -571,6 +672,21 @@ struct TokenChartView<R: PriceRange, Fallback: View>: View {
     /// centered on the ramp's hero rung, the window-naming delta pill
     /// beneath. Scrubbing still rolls this number; the pill still re-labels
     /// to the scrubbed window's change.
+    /// The price and its delta as ONE stop (2026-08-16).
+    ///
+    /// The figure carried no label at all, so VoiceOver read the raw glyphs and
+    /// then the pill's raw text ("+4.2% · 1D") as a second, unrelated stop —
+    /// two fragments of one sentence. The window is what makes the delta mean
+    /// anything, so it is spoken WITH it rather than beside it.
+    private var spokenPrice: String {
+        let price = TokenChartStyle.priceText(displayPrice)
+        guard !awaitingRange else { return price }
+        let move = TokenChartStyle.isFlat(displayChange)
+            ? String(localized: "unchanged")
+            : String(localized: "\(TokenChartStyle.changeText(displayChange)) over \(range.rawValue)")
+        return "\(price), \(move)"
+    }
+
     private var heroHeader: some View {
         VStack(spacing: DS.Space.s2) {
             Text(TokenChartStyle.priceText(displayPrice))
@@ -583,9 +699,18 @@ struct TokenChartView<R: PriceRange, Fallback: View>: View {
                 .animation(DS.Motion.standard, value: displayPrice)
             // Solid: the hero speaks at full Cash-App weight — the quiet
             // fill under a 40pt price read as an afterthought.
-            TokenDeltaPill(change: displayChange, label: range.rawValue, solid: true)
+            //
+            // Hidden while the selected range is still loading: the PRICE is
+            // range-independent and stays, but a delta is a claim about a
+            // window, and labelling the old window's change with the new
+            // window's name is a wrong reading rather than a missing one.
+            if !awaitingRange {
+                TokenDeltaPill(change: displayChange, label: range.rawValue, solid: true)
+            }
         }
         .frame(maxWidth: .infinity)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(spokenPrice))
     }
 
     /// Hero's under-plot seat for what the classic header carried on its
@@ -618,7 +743,9 @@ struct TokenChartView<R: PriceRange, Fallback: View>: View {
                 .monospacedDigit()
                 .contentTransition(.numericText())
                 .animation(DS.Motion.standard, value: displayPrice)
-            TokenDeltaPill(change: displayChange, label: range.rawValue)
+            if !awaitingRange {
+                TokenDeltaPill(change: displayChange, label: range.rawValue)
+            }
             Spacer(minLength: DS.Space.s2)
             chipsOrCoarseLabel(chart)
         }
@@ -652,7 +779,16 @@ struct TokenChartView<R: PriceRange, Fallback: View>: View {
     }
 
     private func plot(_ chart: TokenChart) -> some View {
-        TokenChartPlot(chart: chart, accent: accent)
+        // The breathing halo means LIVE and is now earned rather than assumed
+        // (2026-08-16). `TokenChartPlot`'s own doc denied the Home row this
+        // mark for overclaiming and let the sheet keep it because the sheet
+        // "refetches per range" — which is a refetch on a chip tap, not on a
+        // clock, so it sat over prices of any age. The quiet endpoint dot (the
+        // pulse's twin, already in that file) carries the legibility job when
+        // the read is no longer recent, so nothing is lost but the claim.
+        let fresh = TokenChartStyle.isFresh(chart.fetchedAt)
+        return TokenChartPlot(chart: chart, accent: accent,
+                              pulses: fresh, endpointDot: !fresh)
             // Draw-on reveal, replayed per range — a range switch is a
             // data arrival (the GenTokenRow entrance, shared).
             .mask(alignment: .leading) {
@@ -667,6 +803,17 @@ struct TokenChartView<R: PriceRange, Fallback: View>: View {
                     overlayContent(chart, proxy: proxy, geo: geo)
                 }
             }
+            // ONE element that plays as an Audio Graph (2026-08-16), replacing
+            // Swift Charts' default fallback of one element PER MARK — a 7d
+            // curve read out as up to 168 stops of "t, 42, price, 0.0031",
+            // with no summary and no trend. Nothing is lost by collapsing the
+            // marks: the only way to interrogate a value here is the scrub,
+            // which is a long-press-then-drag and was never reachable by
+            // VoiceOver in the first place.
+            .accessibilityElement()
+            .accessibilityLabel(Text("Price over \(range.rawValue)"))
+            .accessibilityChartDescriptor(PriceChartDescriptor(
+                closes: chart.closes, window: range.rawValue))
     }
 
     /// The sheet-only plot chrome: anchored high/low (the only numbers on
@@ -742,7 +889,8 @@ struct TokenChartView<R: PriceRange, Fallback: View>: View {
     @State private var noteRange: R?
 
     private func load() async {
-        if charts[range] != nil {
+        if let cached = charts[range] {
+            lastDrawn = cached
             phase = .ready
             replayReveal()
             return
@@ -751,6 +899,7 @@ struct TokenChartView<R: PriceRange, Fallback: View>: View {
         let fetched = await fetch(range)
         if let fetched {
             charts[range] = fetched
+            lastDrawn = fetched
             phase = .ready
             // A note set by the range we just stepped BACK from survives one
             // success — clearing it here wiped the "No 7d prices yet"
@@ -779,7 +928,16 @@ struct TokenChartView<R: PriceRange, Fallback: View>: View {
         range = back   // task(id: range) refires and shows (or fetches) it
     }
 
+    /// The draw-on wipe. Reduce Motion lands it drawn (2026-08-16).
+    ///
+    /// `GenValueSpark` has guarded this exact 0.7s easeOut mask since it was
+    /// written and this copy never did — same duration, same curve, same
+    /// effect, one guarded and one not. It slipped `design-motion-audit.py`
+    /// because that check reads `onAppear`-triggered animations and carves out
+    /// `withAnimation` inside an `async` func, and this is called from `load()`
+    /// via `.task(id:)`. A real gap the lint is shaped not to see.
     private func replayReveal() {
+        guard !reduceMotion else { revealed = true; return }
         revealed = false
         withAnimation(.easeOut(duration: 0.7)) { revealed = true }
     }
@@ -883,5 +1041,47 @@ struct ChartHoverScrub: ViewModifier {
         #else
         content
         #endif
+    }
+}
+
+
+/// The price curve as an Audio Graph (2026-08-16).
+///
+/// A separate `AXChartDescriptorRepresentable` value rather than a conformance
+/// on `TokenChartView`: that view is generic over `R: PriceRange` AND carries a
+/// `Fallback` view, so conforming it would drag both parameters into the
+/// descriptor for no gain. This needs the closes and the window's name.
+struct PriceChartDescriptor: AXChartDescriptorRepresentable {
+    let closes: [Double]
+    let window: String
+
+    func makeChartDescriptor() -> AXChartDescriptor {
+        let x = AXNumericDataAxisDescriptor(
+            title: String(localized: "Time"),
+            range: 0...Double(max(closes.count - 1, 1)),
+            gridlinePositions: []) { position in
+                String(localized: "point \(Int(position) + 1)")
+            }
+        let low = closes.min() ?? 0
+        let high = closes.max() ?? 0
+        let y = AXNumericDataAxisDescriptor(
+            title: String(localized: "Price"),
+            // Never zero-width: a perfectly flat curve would give the graph
+            // nothing to sweep, which plays as silence and reads as broken.
+            range: low...max(high, low + .leastNonzeroMagnitude),
+            gridlinePositions: []) { TokenChartStyle.priceText($0) }
+        let points = closes.enumerated().map { index, close in
+            AXDataPoint(x: Double(index), y: close)
+        }
+        return AXChartDescriptor(
+            title: String(localized: "Price over \(window)"),
+            summary: nil,
+            xAxis: x,
+            yAxis: y,
+            additionalAxes: [],
+            // Continuous: this is a line, and telling the graph otherwise
+            // plays it as unrelated readings rather than one movement.
+            series: [AXDataSeriesDescriptor(name: "", isContinuous: true,
+                                            dataPoints: points)])
     }
 }

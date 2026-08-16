@@ -1292,8 +1292,15 @@ struct ThingSheetView: View {
         // every grant in the corpus (prd §367), so "Site: 1claw.xyz" is a row
         // that is true of the seat and says nothing about the thing. The dial's
         // Open disc already goes there.
+        // Gated on whether a CHART drew, not on one source's name (2026-08-16).
+        // `thing.source != "Tokens"` was written when Tokens was the only
+        // charted source, so a GeckoTerminal trending row — same dexscreener
+        // link, same chart — printed "Site  dexscreener.com" under a
+        // GeckoTerminal eyebrow: a third party's name attached to a row that
+        // is not from them, which is the exact plumbing leak the comment
+        // above says this row exists to prevent.
         let hasSite = !isWork && purchaseReading == nil && agentShape == nil
-            && thing.kind == .link && thing.source != "Tokens"
+            && thing.kind == .link && ThingChart.kind(for: thing) == nil
             && !(contentShown && ThingContentView.showsLinkPreview(thing))
             && Capture.detectURL(in: thing.content.isEmpty ? thing.title : thing.content)?.host() != nil
         // What a Work row's slab says instead: when it landed, which is the
