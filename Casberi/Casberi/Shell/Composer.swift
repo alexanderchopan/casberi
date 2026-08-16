@@ -3084,7 +3084,11 @@ struct Composer: View {
                 .contentShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
                 .dsHover()
             }
-            .buttonStyle(.plain)
+            // The day card presses too (2026-08-15). It is the
+            // largest tap target on the rest surface and had no
+            // press-down either — the same `.plain` default the
+            // chip below it carried.
+            .buttonStyle(PressSpring())
             .padding(.horizontal, DS.Space.s4)
             .padding(.top, DS.Space.s3)
             .accessibilityElement(children: .combine)
@@ -3425,7 +3429,7 @@ struct Composer: View {
                 // §213 restatement in miniature.
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: DS.Space.s2) {
-                        ForEach(shownCategoryChips) { chip in
+                        ForEach(Array(shownCategoryChips.enumerated()), id: \.element.id) { i, chip in
                             Button {
                                 DSHaptic.selection()
                                 draft = chip.query
@@ -3442,7 +3446,21 @@ struct Composer: View {
                                                                      style: .continuous))
                                     .dsHover()
                             }
-                            .buttonStyle(.plain)
+                            // Presses like every other capsule in the app
+                            // (2026-08-15) — it was `.plain`, so the one chip
+                            // that opens the whole brief was the only control
+                            // at rest with no press-down at all. `PressSpring`
+                            // is the shared style; nothing bespoke.
+                            .buttonStyle(PressSpring())
+                            // …and arrives with the other chips rather than
+                            // being simply present. `askChips` has staggered in
+                            // on `chipsAppeared` since §386; this row sat
+                            // outside that and popped, which read as a
+                            // different surface drawn by a different rule.
+                            // Same modifier, same clock, so the bands settle as
+                            // one. Reduce Motion is handled inside it.
+                            .modifier(ChipEntrance(index: i, shown: chipsAppeared,
+                                                   reduceMotion: reduceMotion))
                         }
                     }
                     .padding(.horizontal, DS.Space.s4)
