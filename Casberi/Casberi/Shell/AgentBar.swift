@@ -139,9 +139,24 @@ struct AgentBar: View {
                         }
                     }
                 }
-                .padding(.trailing, DS.Space.s4)
-                .padding(.leading, DS.Space.s1)
-                .padding(.vertical, DS.Space.s3)
+                // COLLAPSED, THE BUTTON IS A SQUARE and the mark is centred by
+                // its FRAME (2026-08-15). The padding below is the EXPANDED
+                // layout — words on the left, berry on the right — and the
+                // trailing `s4` was never the berry's right margin: it was the
+                // GAP between the berry and the magnifier that used to sit
+                // beside it. §386o deleted the magnifier, and the gap stayed,
+                // so the collapsed button became 46pt wide with the mark 5pt
+                // LEFT of centre. The comment on the glass below still says it
+                // "hugs its two controls", which is the tell — there is one.
+                //
+                // Fixed with a frame rather than by re-tuning two paddings to
+                // agree, because two paddings that must sum to the same value
+                // on both sides is exactly the arrangement that just drifted;
+                // 44 is also the tap target the deleted magnifier carried.
+                .padding(.trailing, expanded ? DS.Space.s4 : 0)
+                .padding(.leading, expanded ? DS.Space.s1 : 0)
+                .padding(.vertical, expanded ? DS.Space.s3 : 0)
+                .frame(width: expanded ? nil : 44, height: expanded ? nil : 44)
                 .contentShape(Capsule())
                 .dsHover()
             }
@@ -179,10 +194,14 @@ struct AgentBar: View {
                     }
             )
         }
-        .padding(.leading, DS.Space.s1)
-        // The glass hugs its two controls in BOTH states now (2026-08-07) —
-        // the shape itself says the bar has yielded to the content, and in the
-        // corner there is no full-width state left for it to yield FROM.
+        // Collapsed there is nothing to its left to make room for, and this 4pt
+        // would push the square off-centre inside the glass again — the same
+        // bug one level up (2026-08-15).
+        .padding(.leading, expanded ? DS.Space.s1 : 0)
+        // The glass hugs its one control now — it hugged TWO until §386o took
+        // the magnifier (2026-08-07 comment, corrected 2026-08-15). The shape
+        // itself says the bar has yielded to the content, and in the corner
+        // there is no full-width state left for it to yield FROM.
         .dsGlass(cornerRadius: DS.Radius.pill, tint: roomTint)
         // A scope change re-tints the bar on the same beat the crown re-tints
         // (`MainSurface.crownPour` animates the same value) — the two ends of
