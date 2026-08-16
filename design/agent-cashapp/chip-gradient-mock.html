@@ -1,0 +1,152 @@
+<title>Gradient chips, one blob</title>
+<style>
+  :root {
+    --page: #0a0b0f; --ink: #f2f4f8; --muted: #99a1b4; --faint: #626b80;
+    --tint: #1673e6; --confirm: #30d158; --attn: #ff9f0a;
+    --grad: linear-gradient(100deg, #7fa6d9 0%, #a08cc8 38%, #c48ba0 70%, #c9a77e 100%);
+    --gradLoud: linear-gradient(100deg, #0894fb 0%, #c959dd 40%, #ff2e54 70%, #ff9004 100%);
+    --money: ui-rounded, -apple-system, system-ui, sans-serif;
+    --text: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { background: var(--page); }
+  body { font-family: var(--text); color: var(--ink);
+         background: radial-gradient(900px 420px at 18% -8%, rgba(22,115,230,.10), transparent 62%), var(--page);
+         padding: 48px 28px 72px; }
+  .wrap { max-width: 1040px; margin: 0 auto; }
+  header { max-width: 800px; margin-bottom: 34px; }
+  .eyebrow { font-size: 12px; font-weight: 600; color: #4d8dff; margin-bottom: 10px; }
+  h1 { font-size: clamp(26px,3.4vw,36px); font-weight: 800; letter-spacing: -.02em; line-height: 1.1; margin-bottom: 12px; }
+  header p { font-size: 15px; line-height: 1.55; color: var(--muted); max-width: 72ch; margin-bottom: 8px; }
+  header p b { color: var(--ink); font-weight: 600; }
+
+  .row { display: flex; flex-wrap: wrap; gap: 40px; align-items: flex-start; justify-content: center; }
+  .option { width: 336px; }
+  .optName { font-size: 13px; font-weight: 800; margin: 0 4px 4px; }
+  .optName span { color: var(--faint); font-weight: 600; }
+  .optWhy { font-size: 12.5px; line-height: 1.5; color: var(--muted); margin: 12px 4px 0; }
+  .optWhy b { color: var(--ink); font-weight: 600; }
+  .phone { width: 336px; border-radius: 46px; padding: 10px; background: #15171c; box-shadow: 0 30px 70px rgba(0,0,0,.55); margin-top: 10px; }
+  .screen { border-radius: 38px; overflow: hidden; min-height: 700px; background: #000; position: relative;
+            display: flex; flex-direction: column; }
+  .scroll { flex: 1; padding: 14px 14px 8px; }
+
+  .berry { width: 20px; height: 20px; border-radius: 50%; flex: none;
+           background: radial-gradient(circle at 32% 28%, #6ea8ff, #1673e6 58%, #0c3f85); }
+  .x { margin-left: auto; width: 28px; height: 28px; border-radius: 50%; background: rgba(255,255,255,.08);
+       display: flex; align-items: center; justify-content: center; font-size: 12px; color: var(--muted); flex: none; }
+
+  /* ============ the chip grammar ============ */
+  .chips { display: flex; gap: 14px; align-items: center; margin-bottom: 14px; overflow: hidden; }
+  .chip { font-size: 12.5px; font-weight: 700; white-space: nowrap; padding: 7px 0; }
+  .chip.grad { background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .chip.blob { color: #fff; padding: 7px 14px;
+               background: rgba(255,255,255,.14); border-radius: 999px;
+               backdrop-filter: blur(6px);
+               box-shadow: inset 0 1px 0 rgba(255,255,255,.18), 0 2px 10px rgba(0,0,0,.35); }
+
+  .dayh { display: flex; align-items: baseline; gap: 8px; margin: 6px 4px 10px; }
+  .dayh b { font-family: var(--money); font-size: 22px; font-weight: 800; letter-spacing: -.02em; }
+  .dayh s { text-decoration: none; font-size: 12px; font-weight: 600; color: var(--faint); }
+  .li { display: flex; align-items: center; gap: 10px; padding: 9px 4px; }
+  .av { width: 26px; height: 26px; border-radius: 50%; flex: none; }
+  .li .t { min-width: 0; flex: 1; }
+  .li b { display: block; font-size: 13.5px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .li s { display: block; text-decoration: none; font-size: 11.5px; color: var(--faint); }
+  .src { font-size: 11px; font-weight: 700; }
+
+  /* brief bits */
+  .mast { display: flex; align-items: baseline; gap: 8px; padding: 4px 4px 8px; }
+  .mastTitle { font-family: var(--money); font-size: 24px; font-weight: 800; letter-spacing: -.02em; }
+  .mastDate { font-size: 12.5px; font-weight: 600; color: var(--faint); }
+  .lede { border-radius: 22px; padding: 14px 16px; color: #fff; background: var(--tint); margin: 0 2px 12px; }
+  .lede .cap { font-size: 12px; font-weight: 700; color: rgba(255,255,255,.85); }
+  .lede .big { font-family: var(--money); font-size: 24px; font-weight: 800; letter-spacing: -.02em; line-height: 1.2; margin-top: 3px; }
+  .card { border-radius: 22px; padding: 14px 16px; margin: 0 2px 10px; background: #111113; }
+  .card .cap { font-size: 13px; font-weight: 700; color: var(--muted); }
+  .card .stat { font-family: var(--money); font-size: 26px; font-weight: 800; letter-spacing: -.02em; margin-top: 3px; }
+  .card .stat.late { color: var(--attn); }
+  .card .sub { font-size: 12px; color: var(--faint); margin-top: 3px; }
+  .dock { padding: 6px 14px 16px; }
+  .askbar { display: flex; align-items: center; gap: 10px;
+            background: rgba(28,30,37,.9); border-radius: 999px; padding: 13px 16px; margin-top: 8px; }
+  .askbar s { text-decoration: none; font-size: 14px; color: var(--faint); flex: 1; }
+  .askbar .mic { color: var(--muted); font-size: 14px; }
+</style>
+
+<div class="wrap">
+<header>
+  <div class="eyebrow">Casberi · gradient chips, one glass blob</div>
+  <h1>Gradient chips, subdued</h1>
+  <p>Both strips, one grammar: an unselected chip is <b>bare gradient type</b> — the Apple Intelligence ramp pulled down toward the ink ramp: same hue walk (blue → violet → rose → sand), saturation roughly halved, sitting near secondary-ink brightness — and the selected one is the <b>glass blob</b>, which still travels between chips on a switch (the existing matched-geometry fill; only its passengers changed). Colour now belongs to the words instead of the boxes, which is the same "not gray, not boxed" instinct as the black cards.</p>
+  <div style="display:flex;gap:26px;align-items:center;margin-top:6px">
+    <span style="font-size:11px;color:#626b80;font-weight:700">was</span>
+    <span style="font-size:13px;font-weight:700;background:var(--gradLoud);-webkit-background-clip:text;background-clip:text;color:transparent">Pinned&nbsp;&nbsp;Wallet&nbsp;&nbsp;Markets&nbsp;&nbsp;Social</span>
+    <span style="font-size:11px;color:#626b80;font-weight:700">now</span>
+    <span style="font-size:13px;font-weight:700;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent">Pinned&nbsp;&nbsp;Wallet&nbsp;&nbsp;Markets&nbsp;&nbsp;Social</span>
+  </div>
+</header>
+
+<div class="row">
+
+<div class="option">
+  <div class="optName">All feed <span>— source strip</span></div>
+  <div class="phone"><div class="screen">
+    <div class="scroll">
+      <div class="chips">
+        <span class="chip blob">All</span>
+        <span class="chip grad">Pinned</span>
+        <span class="chip grad">Wallet</span>
+        <span class="chip grad">Markets</span>
+        <span class="chip grad">Social</span>
+        <span class="chip grad">Work</span>
+      </div>
+      <div class="dayh"><b>Today</b><s>14 new</s></div>
+      <div class="li"><span class="av" style="background:radial-gradient(circle at 32% 30%, #e86a6a, #7d6adf 60%, #3a3160)"></span><div class="t"><b>Shipped the new onboarding today. The fork card idea made it in.</b><s><span class="src" style="color:#b79aee">mara · Farcaster</span> · 2h</s></div></div>
+      <div class="li"><span class="av" style="background:linear-gradient(135deg,#3b4c68,#22293a);border-radius:8px"></span><div class="t"><b>Solid-state batteries finally hit a shipping laptop</b><s><span class="src" style="color:#ff9c6b">The Verge · RSS</span> · 4h</s></div></div>
+      <div class="li"><span class="av" style="background:radial-gradient(circle at 32% 30%, #5ad1c4, #2f7de0 60%, #1c3b6e)"></span><div class="t"><b>The trick with local-first sync is admitting the server was never the source of truth.</b><s><span class="src" style="color:#64b2ff">jb · Bluesky</span> · 9h</s></div></div>
+      <div class="li"><span class="av" style="background:rgba(22,115,230,.25);border-radius:8px"></span><div class="t"><b>Received 120 USDC <span style="color:var(--confirm)">+$120</span></b><s><span class="src" style="color:#77b0ff">Wallet</span> · 11am</s></div></div>
+    </div>
+  </div></div>
+  <p class="optWhy"><b>The strip breathes.</b> No row of capsules — just words in the gradient, and one glass blob saying where you are. The blob keeps the travel animation; the gradient only ever paints unselected chips, so it can't collide with selection.</p>
+</div>
+
+<div class="option">
+  <div class="optName">Agent brief <span>— black ground, black cards, docked chips</span></div>
+  <div class="phone"><div class="screen">
+    <div class="scroll">
+      <div class="mast"><span class="mastTitle">Good evening</span><span class="mastDate">Fri, Aug 15</span><span class="x">✕</span></div>
+      <div class="lede">
+        <div class="cap">What's going on</div>
+        <div class="big">14 new things. Two need you, wallet +1.8%.</div>
+      </div>
+      <div class="card">
+        <div class="cap">Needs you</div>
+        <div class="stat late">3 late</div>
+        <div class="sub">$240 dispute leads · evidence due Tuesday</div>
+      </div>
+      <div class="card">
+        <div class="cap">Money</div>
+        <div class="stat">$12,482</div>
+        <div class="sub">Mostly ETH · Gnosis Pay spent $128</div>
+      </div>
+      <div class="card" style="opacity:.68">
+        <div class="cap">Work</div>
+        <div class="sub" style="margin-top:6px">signed_up +18% · nothing new since yesterday</div>
+      </div>
+    </div>
+    <div class="dock">
+      <div class="chips" style="margin-bottom:0">
+        <span class="chip blob">Needs you</span>
+        <span class="chip grad">Money</span>
+        <span class="chip grad">Your day</span>
+        <span class="chip grad">Work</span>
+      </div>
+      <div class="askbar"><s>Ask or search</s><span class="mic">🎙︎</span><span class="berry"></span></div>
+    </div>
+  </div></div>
+  <p class="optWhy"><b>Same grammar, docked.</b> Black ground, black cards with their separation (#111113 on #000 — an edge, not a gray box), the blue lede as the one bright object, and the nav chips matching the feed strip exactly: gradient words, one blob. The section hues retire from the chips entirely — the gradient is one shared voice, not five identities.</p>
+</div>
+
+</div>
+</div>
