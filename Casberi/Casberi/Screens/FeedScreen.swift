@@ -1562,31 +1562,55 @@ struct FeedScreen: View {
     ///
     /// Four ways it declines, each because the card would say something untrue:
     ///
-    /// - The newest row is a FOLD. A bundle summarizes things rather than
-    ///   being one, so there is no thing to enlarge — and promoting a member
-    ///   out of its own fold would leave the fold counting a row that is
-    ///   sitting above it.
-    /// - The newest thing already `standsAlone`. A consent card, a token pulse
-    ///   and a post card are full anatomies that were given their size for
-    ///   their own reasons; wrapping one in a cover is two rhythm-breakers
-    ///   stacked, and for `ApprovalCard` it would bury the verbs.
+    /// - Every row in the first group is a FOLD. A bundle summarizes things
+    ///   rather than being one, so there is nothing in it to enlarge.
     /// - It is older than `ledeMaxAge`.
     /// - The feed is shorter than `ledeMinRows`.
+    /// - Every candidate `standsAlone`. A consent card, a token pulse and a
+    ///   post card are full anatomies that were given their size for their own
+    ///   reasons; wrapping one in a cover is two rhythm-breakers stacked, and
+    ///   for `ApprovalCard` it would bury the verbs.
+    ///
+    /// **A fold is SKIPPED, not fatal (prd §389b, 2026-08-16).** The first cut
+    /// read row zero and declined if it was a fold — principled, and wrong in
+    /// practice: `FeedFold.bundleThreshold` is 3 and Bluesky/Farcaster fold too
+    /// (reversed 2026-08-09 precisely because a wide follow list floods All), so
+    /// on any active feed the newest row is usually "RSS · 6 articles" and the
+    /// cover silently never appeared. Reported as exactly that. So the rule is
+    /// **the newest thing that arrived on its OWN** — which is also the better
+    /// cover: one of six syndicated articles says less than the transfer that
+    /// landed by itself.
+    ///
+    /// The consequence, stated because it is visible: the cover may not be the
+    /// newest thing on screen, since a fold above it can be newer. Every row
+    /// carries its own time, so nothing is misrepresented — a cover is an
+    /// object that leads, not a claim to be first.
+    ///
+    /// Scoped to the FIRST group: a cover is the top of the feed, and reaching
+    /// into yesterday for one would be ranking, not position.
     ///
     /// Counted rather than flattened, deliberately: this runs on every body
     /// evaluation of the screen with this app's worst measured perf history
-    /// (`derivationKey`'s own 6.3-seconds-across-44-renders note), and it needs
-    /// exactly two facts — the first row and how many there are. `flatMap`
-    /// would allocate the whole row list per render to read `.first`.
+    /// (`derivationKey`'s own 6.3-seconds-across-44-renders note), and `flatMap`
+    /// would allocate the whole row list per render to read one group.
     private func ledeID(in groups: [(String, [FeedRow])]) -> String? {
         let count = groups.reduce(0) { $0 + $1.1.count }
-        guard count >= Self.ledeMinRows, let first = groups.first?.1.first else { return nil }
-        // `.live` before any stored read — a derived array read during the same
-        // graph update a heal's delete can land in (the dead-Thing rule).
-        guard case .single(let item) = first.kind, let thing = item.live else { return nil }
-        guard Date.now.timeIntervalSince(thing.capturedAt) <= Self.ledeMaxAge else { return nil }
-        guard !standsAlone(thing) else { return nil }
-        return first.id
+        guard count >= Self.ledeMinRows, let head = groups.first?.1 else { return nil }
+        for row in head {
+            // A fold has no single thing behind it — step over it.
+            guard case .single(let item) = row.kind else { continue }
+            // `.live` before any stored read — a derived array read during the
+            // same graph update a heal's delete can land in (the dead-Thing
+            // rule). A dead row is skipped, not fatal: the next one may be fine.
+            guard let thing = item.live else { continue }
+            // Rows are newest-first, so the first candidate past the age bound
+            // means every later one is too.
+            guard Date.now.timeIntervalSince(thing.capturedAt) <= Self.ledeMaxAge
+            else { return nil }
+            if standsAlone(thing) { continue }
+            return row.id
+        }
+        return nil
     }
 
     /// The away window lifted into its own section (prd §389) — "Since you
@@ -2851,8 +2875,16 @@ struct FeedScreen: View {
             // positions are computed, or the card's absent row would still own
             // the card's top shoulder and the real first row would render
             // square-topped against the header.
-            let ledeRow = allRows.first.flatMap { $0.id == lede ? $0 : nil }
-            let rows = ledeRow == nil ? allRows : Array(allRows.dropFirst())
+            //
+            // Searched rather than assumed to be row zero (prd §389b): the
+            // cover is the newest row that is a single, which a fold above it
+            // can push down the group. Only one group can hold it, and for
+            // every other group `first(where:)` misses and the filter never
+            // runs.
+            let ledeRow = lede.flatMap { id in allRows.first { $0.id == id } }
+            let rows = ledeRow.map { hero in
+                allRows.filter { $0.id != hero.id }
+            } ?? allRows
             // Bundles merge into the day card like any row-shaped thing —
             // only a single that stands alone (consent, token) breaks the run.
             let positions = cardRunPositions(

@@ -24134,3 +24134,50 @@ surface in the app, which is the exact threat §374 names. Two related gaps
 found while checking: `MoneyReceiptCard` (§363) neither references
 `BalancePrivacy` nor appears in `hide-balances-audit.py`'s `WALLET_VIEWS`, so
 the receipt has never been covered either. Not decided here.
+
+### 389b. A fold is skipped, not fatal (user: "on the newest build, i'm not seeing the lede card in the all feed", 2026-08-16)
+
+The report was against build 336, cut at 09:32 — three hours before §389 landed
+at 12:35, so `FeedLedeCard.swift` was not in that binary at all and nothing was
+wrong. **But checking it found a real defect that would have survived into the
+next build**, which is the only reason this entry exists: a "can't see it" report
+against a build that never had it is still worth investigating, because the
+investigation is free and the gate list is where this feature can go quiet.
+
+`ledeID` read ROW ZERO and declined if it was a fold. Principled — a bundle
+summarizes things rather than being one — and wrong in practice:
+`FeedFold.bundleThreshold` is 3, and Bluesky/Farcaster fold as of 2026-08-09
+precisely because a wide follow list floods All. So on any active feed the newest
+row is usually "RSS · 6 articles" or a Farcaster strip, and the cover would have
+declined on exactly the feeds that are busiest — invisible, indistinguishable
+from the feature not shipping, and it would have read as a second bug report.
+
+THE RULE IS NOW **the newest thing that arrived on its OWN**: the newest
+`.single` in the first group, stepping over folds. Still positional, still
+statable in a phrase, and a better cover on its merits — one of six syndicated
+articles says less than the transfer that landed by itself.
+
+Two consequences, both stated rather than left to be discovered:
+
+· **The cover may not be the newest thing on screen.** A fold above it can be
+  newer. Every row carries its own time, so nothing is misrepresented — a cover
+  is an object that LEADS, not a claim to be first. Accepted deliberately over
+  the alternative (lift a member out of its fold and re-decide the fold), which
+  is more literally "the newest thing" and materially more invasive in the file
+  carrying six liveness corollaries.
+
+· A dead row and a `standsAlone` row are now SKIPPED rather than fatal, since
+  the next candidate may be fine. The age bound still returns early — rows are
+  newest-first, so the first candidate past `ledeMaxAge` means every later one
+  is too.
+
+Scoped to the FIRST group on purpose: a cover is the top of the feed, and
+reaching into yesterday for one would be ranking rather than position.
+
+**Standing lesson, and the reason the timeline is recorded above.** Before
+redesigning on a plausible story, check which BINARY the report is against —
+`git merge-base --is-ancestor <version-bump> <feature-commit>` answers it in one
+command, and `git show <bump>:<path>` proves the file's absence rather than
+inferring it from timestamps. The fold defect was then found by reading the gate
+list, not by reproducing the report, because the report could not have been about
+the gate.
