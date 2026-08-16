@@ -393,6 +393,12 @@ struct Composer: View {
 
     @State private var proseStreaming = false
     @State private var answering = false
+    /// A door raised the composer WITH its question already in hand — the FAB
+    /// (which seeds the brief), the whisper capsule, the quick action, the
+    /// `casberi://brief` and `casberi://ask` links. See `handingOff`, which
+    /// this is the second half of; set the moment the request is consumed and
+    /// cleared once the answer owns the screen.
+    @State private var pendingHandoff = false
     @State private var voice = VoiceCapture()
     /// True when the draft arrived by paste — the one typed-ish path that
     /// still captures (pasting is bringing a thing in, not talking).
@@ -624,8 +630,28 @@ struct Composer: View {
     /// `!hasDraft` still guards it, so the moment a character lands the rest
     /// chrome yields to the typed-draft bands (Find / Ask / Send to) — this
     /// state is the empty-handed invitation, never a layer over real typing.
+    /// A question was in hand BEFORE the surface existed, so this open owes an
+    /// answer and nothing else (2026-08-16, reported: "when i click on the fab,
+    /// it momentarily opens a composer screen then jankily goes to the daily
+    /// brief").
+    ///
+    /// The FAB seeds `chrome.askRequest` and only then raises the composer, so
+    /// on the very first frame `answering` is still false and `draft` is still
+    /// empty — which is exactly the rest surface's own condition. The greeting,
+    /// the day card and the chips therefore painted, then `fillDraft` flipped
+    /// it to the typed-draft bands, and only then did the commit land. Three
+    /// surfaces for one tap.
+    ///
+    /// Read straight off `chrome` so it is true on that first frame — a `.task`
+    /// runs after it, which is one frame too late — and held by `pendingHandoff`
+    /// across the window between consuming the request and the commit that
+    /// makes `answering` true.
+    private var handingOff: Bool {
+        chrome.askRequest != nil || pendingHandoff
+    }
+
     private func restChrome(keepBrief: Bool) -> Bool {
-        isOpen && !hasDraft && !isRecording
+        isOpen && !hasDraft && !isRecording && !handingOff
             && (!answering || (keepBrief && briefLanding) || fieldFocused)
     }
 
@@ -2338,6 +2364,22 @@ struct Composer: View {
             await autoSendIfProbed()
             await pushIfProbed()
         }
+        // An ask that arrives while the composer is ALREADY up (2026-08-16).
+        // The task above is keyed on `isOpen`, so it cannot fire for one — and
+        // `RootShell`'s own `onChange` only sets `composerOpen = true`, which
+        // is a no-op when it already is. So a "Ask about this" from a thing
+        // sheet pushed onto the composer's own stack set `askRequest` and
+        // nothing ever read it.
+        //
+        // Now load-bearing for a second reason: `handingOff` is derived from
+        // that pending request, so a request nobody consumes would hold the
+        // rest surface down for the rest of the session. Consuming it is what
+        // guarantees the hold is always released. Double-consumption is safe —
+        // `consumeAskRequest` clears the request before its first await.
+        .onChange(of: chrome.askRequest) { _, request in
+            guard isOpen, request != nil else { return }
+            Task { await consumeAskRequest() }
+        }
         // The placeholder cycler retired with the cycle itself (2026-08-15) —
         // see the field's own note. It was also the composer's one piece of
         // permanently-looping motion, which the motion law only ever
@@ -2368,6 +2410,9 @@ struct Composer: View {
     /// from reading the programmatic set as a capture.
     private func consumeAskRequest() async {
         guard isOpen, let query = chrome.askRequest else { return }
+        // Take the hold BEFORE clearing the request, or `handingOff` reads
+        // false for the window below and the rest surface paints into it.
+        pendingHandoff = true
         chrome.askRequest = nil
         // A surface that asked for a KEYED answer (a thing sheet's "Ask about
         // this") gets the same arc a tap on the verb gives: the free
@@ -2381,13 +2426,23 @@ struct Composer: View {
             chrome.askWithKey = false
         }
         fillDraft(query)
-        try? await Task.sleep(for: .milliseconds(400))   // let the bubble settle
+        // 400ms → 120ms (2026-08-16). The old wait was "let the bubble settle",
+        // but what settled into it was the draft band: long enough to read
+        // "What's going on" appear in the field under a Find chip before the
+        // answer replaced it. `handingOff` hides that now, so this only has to
+        // clear the morph's own first frames — starting the compose inside them
+        // is what made the transition stutter, since `TodayBrief.compose` is
+        // @MainActor and the morph is animating on the same thread.
+        try? await Task.sleep(for: .milliseconds(120))
         // Closing the bubble inside the settle window cancels this task; the
         // try? above swallows that CancellationError, so without this guard
         // commit() would fire an empty ask into a CLOSED composer and strand
         // "Thinking…" for the next open (review 2026-07-11).
-        guard !Task.isCancelled, isOpen else { return }
+        guard !Task.isCancelled, isOpen else { pendingHandoff = false; return }
         commit()
+        // Released only now: `commit()` sets `answering`, so from here the
+        // answer itself keeps the rest surface down and the hold is spent.
+        pendingHandoff = false
     }
 
     /// DEBUG hook: `simctl launch ... -uiAnswerProbe "what's my week"` opens
@@ -2485,6 +2540,7 @@ struct Composer: View {
         withAnimation(DS.Motion.standard) { isOpen = false }
         draft = ""      // close clears the draft (composer spec)
         answering = false
+        pendingHandoff = false
         pasted = false
         chipsAppeared = false
         turns = []
@@ -2556,8 +2612,12 @@ struct Composer: View {
         let query = draft.trimmingCharacters(in: .whitespacesAndNewlines)
         // A paste is a capture on its way to being kept, not a phrase to
         // search for — `takeChips` already withholds Find for one, so a live
-        // read would be work nothing displays.
-        guard !query.isEmpty, !pasted else {
+        // read would be work nothing displays. A HANDOFF is the same trade for
+        // a different reason: the draft is a seeded question already on its way
+        // to commit, and the band that would show these scopes is hidden for
+        // the whole window — so the read is a corpus walk nothing can display,
+        // paid on the main actor while the open is still animating.
+        guard !query.isEmpty, !pasted, !handingOff else {
             liveScopes = []
             liveCount = nil
             droppedScopes = []
@@ -3804,7 +3864,11 @@ struct Composer: View {
         // with Send-to by construction (that band explicitly excludes
         // questions), so the row never crowds.
         let offerKeyed = !pasted && draftIsQuestion && AgentKey.isConfigured
-        if isOpen && hasDraft && !isRecording, offerFind || offerSend || offerKeyed {
+        // `!handingOff` — a seeded question fills the draft on its way to the
+        // commit, and this band flashing Find/Send-to over it was the second
+        // of the three surfaces one FAB tap used to paint.
+        if isOpen && hasDraft && !isRecording && !handingOff,
+           offerFind || offerSend || offerKeyed {
             VStack(alignment: .leading, spacing: DS.Space.s1) {
                 if offerFind && !liveScopes.isEmpty { scopeChips }
                 ScrollView(.horizontal, showsIndicators: false) {
