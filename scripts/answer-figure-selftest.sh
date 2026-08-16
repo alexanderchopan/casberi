@@ -71,8 +71,11 @@ COMPOSERS="Casberi/Casberi/Model/KeptAskComposers.swift"
 THING="Casberi/Shared/Thing.swift"
 ROOTSHELL="Casberi/Casberi/Shell/RootShell.swift"
 SOCIAL="Casberi/Casberi/Model/SocialBridge.swift"
+PANEL="Casberi/Casberi/Model/AgentPanel.swift"
+PANELFIGS="Casberi/Casberi/Model/AgentPanelFigures.swift"
+RENDERER="Casberi/Casberi/GenUI/GenRenderer.swift"
 
-for f in "$FIGURE" "$BRIEF" "$COMPOSERS" "$THING" "$ROOTSHELL" "$SOCIAL"; do
+for f in "$FIGURE" "$BRIEF" "$COMPOSERS" "$THING" "$ROOTSHELL" "$SOCIAL" "$PANEL" "$PANELFIGS" "$RENDERER"; do
   [[ -f "$f" ]] || { print "✗ missing source $f"; exit 1; }
 done
 
@@ -209,6 +212,23 @@ grep -qE '^\s*static func sourceMapLine\(' "$COMPOSERS" \
 grep -qE '^\s*static func faces\(' "$BRIEF" \
   || { print "✗ TodayBrief.faces is no longer reachable — the people rung is dead, and this"; \
        print "  figure has already spent one release orphaned with no caller at all."; exit 1; }
+grep -qE '^\s*static func dialLine\(' "$COMPOSERS" \
+  || { print "✗ KeptAskComposers.dialLine is gone — the clock rung is dead"; exit 1; }
+
+# THE COMPONENT MUST EXIST IN THE RENDERER, and this is the sharpest guard in
+# the file. `GenRender.component` is a switch over NAMES, and a name with no
+# case renders `EmptyView` — so an emitter writing `dial = Dial(…)` into a
+# document that has no `case "Dial"` produces a perfectly valid line, a
+# perfectly valid parse, a root that references it, and NOTHING ON SCREEN. The
+# answer just quietly loses its figure, and every other check here passes.
+grep -q 'case "Dial":' "$RENDERER" \
+  || { print "✗ the renderer has no \`Dial\` component. The emitter still writes the line,"; \
+       print "  the parser still accepts it, the root still references it — and the"; \
+       print "  answer draws nothing where its figure should be."; exit 1; }
+# The dial is a re-home, not a redraw: the drawing stays `FigureView`'s.
+grep -q 'FigureView(figure: figure, slot: .band' "$RENDERER" \
+  || { print "✗ GenDial no longer delegates to FigureView — the dial's floor, hues and"; \
+       print "  entrance are that view's, and a second copy of them will drift."; exit 1; }
 
 # THE DEADLINE FILTER. `runwayAxis` formats a nil `dueAt` as `now`, so handing
 # it undated rows draws a rail claiming every match is due this second. The
@@ -220,9 +240,9 @@ grep -q 'rows.filter { $0.dueAt != nil }' "$TMP/figure.nc.swift" \
        print "  onto the marker and read as all due this instant."; exit 1; }
 
 # ── Extract the shipped logic ───────────────────────────────────────────────
-python3 - "$BRIEF" "$COMPOSERS" "$THING" "$TMP/extracted.swift" "$SOCIAL" <<'PY'
+python3 - "$BRIEF" "$COMPOSERS" "$THING" "$TMP/extracted.swift" "$SOCIAL" "$PANEL" "$PANELFIGS" <<'PY'
 import sys
-brief, composers, thing, out, social = sys.argv[1:6]
+brief, composers, thing, out, social, panel, panelfigs = sys.argv[1:8]
 
 def grab(path, signature):
     """The whole declaration whose line contains `signature`, brace-matched
@@ -321,6 +341,20 @@ extension Array where Element == Thing {
     grabline(social, "static let contextSources: Set<String>"),
     grabline(social, "static func hasContext"),
     "}\n",
+    # The dial, shipped. Its mark arithmetic has been covered by
+    # `agent-panel-selftest` since §339 and is NOT re-tested here — what this
+    # needs is the real FLOOR and the real placement, so the ladder's assertions
+    # are about a clock the renderer would actually draw.
+    "enum AgentPanel {",
+    "  enum Figure {",
+    grabline(panel, "static let dialFloor"),
+    "  }",
+    grab(panel, "struct DialMark"),
+    "}\n",
+    "enum AgentPanelFigures {",
+    grab(panelfigs, "struct Entry"),
+    grab(panelfigs, "static func dial("),
+    "}\n",
     "enum TodayBrief {",
     grab(brief, "static func sourceMixLine"),
     grab(brief, "static func faces"),
@@ -333,6 +367,8 @@ extension Array where Element == Thing {
     grab(composers, "static func contactSheetLine"),
     grab(composers, "static func runwayAxis"),
     grab(composers, "static func sourceMapLine"),
+    grabline(composers, "static let dialMarkCap"),
+    grab(composers, "static func dialLine"),
     grab(composers, "static func mapSafe"),
     grab(composers, "static func genSafe"),
     "}\n",
@@ -463,6 +499,27 @@ let board = AnswerFigure.line(for: wide, now: now) ?? ""
 check("six or more hits → the full board", comp(AnswerFigure.line(for: wide, now: now)) == "TagMap")
 check("the board keeps the room the miniature dropped", board.contains("Notion 1"))
 check("the board's subline is the span of years, ungrouped", !board.contains("2,0"))
+
+print("")
+print("the WHEN rungs — the clock, then the bars")
+// ONE ROOM on purpose. Every WHERE rung declines on a single source, so these
+// fixtures are exactly the sets where the two WHEN rungs are what remains —
+// which is also the only situation either of them ever draws in.
+let week = (0..<12).map { i in thing("Photos", i % 7) }
+check("twelve in a week → the clock", comp(AnswerFigure.line(for: week, now: now)) == "Dial")
+check("eleven → the bars catch it",
+      comp(AnswerFigure.line(for: Array(week.prefix(11)), now: now)) == "Bars")
+check("one mark per row",
+      (AnswerFigure.line(for: week, now: now) ?? "").filter { $0 == ";" }.count == 11)
+// The rhythm is a WEEK's rhythm: twelve rows from nine days ago are not one.
+let stale = (0..<12).map { _ in thing("Photos", 9) } + (0..<4).map { _ in thing("Photos", 1) }
+check("rows outside the week don't fill the clock",
+      comp(AnswerFigure.line(for: stale, now: now)) != "Dial")
+// A source name can't shear the mark grammar — `|` splits a mark's fields and
+// `;` splits the marks, so an unsanitised room name would silently move dots.
+let dirty = (0..<12).map { i in Thing(capturedAt: daysAgo(i % 7), source: "A;B|C") }
+check("a room name can't shear the grammar",
+      (AnswerFigure.line(for: dirty, now: now) ?? "").filter { $0 == ";" }.count == 11)
 
 print("")
 print("the caption — the prose, once a figure leads it")
@@ -716,6 +773,10 @@ mutate "people rung skipped" \
 # the board, silently dropping every room past the third.
 mutate "the miniature ranked above the board" \
   's/^        if let board = KeptAskComposers.sourceMapLine(rows) { return board }$/        if false, let board = KeptAskComposers.sourceMapLine(rows) { return board }/'
+# The clock rung skipped — a week of things answers with seven columns again,
+# and the figure that was just re-homed goes straight back to having no caller.
+mutate "clock rung skipped" \
+  's/^        if let dial = KeptAskComposers.dialLine($/        if false, let dial = KeptAskComposers.dialLine(/'
 # ── The caption. Every one of these renders as a perfectly readable sentence.
 # THE EXPENSIVE ONE: any `.` ends a sentence, so "the wallet moved 1.4% today"
 # becomes "the wallet moved 1" — a wrong NUMBER manufactured by a text rule, on

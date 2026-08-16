@@ -184,6 +184,16 @@ enum AgentPanel {
         /// never a small cell).
         case worth(curve: [Double], cells: [Cell])
 
+        /// The fewest marks that read as a RHYTHM rather than as dots.
+        ///
+        /// Spelled as a constant since 2026-08-16 because it now has a second
+        /// reader: the answer ladder's WHEN rung composes a dial of its own
+        /// (`KeptAskComposers.dialLine`), and it must decline on exactly this
+        /// number or the emitter and the drawing disagree — a line the composer
+        /// thought was worth emitting and the renderer refuses to draw is an
+        /// answer with a hole where its figure was.
+        static let dialFloor = 12
+
         /// A figure with nothing in it draws nothing, and a tile that draws
         /// nothing is a tile that shouldn't exist. Checked at composition, so
         /// an empty room can never mint a blank card.
@@ -210,7 +220,7 @@ enum AgentPanel {
             case .flow(let inL, let outL): return inL.isEmpty || outL.isEmpty
             // A dial of three marks is three dots on a circle, not a rhythm —
             // and rhythm is the only thing it claims.
-            case .dial(let m):    return m.count < 12
+            case .dial(let m):    return m.count < Self.dialFloor
             // A river needs at least two themes to be a river and enough weeks
             // to show drift; one band over ten weeks is an area chart.
             case .river(let b):   return b.count < 2 || (b.first?.weeks.count ?? 0) < 4

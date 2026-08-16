@@ -453,6 +453,7 @@ struct GenRender: View {
         case "TilePair":     GenTilePair(el: el, els: els).mountIn()
         case "MoversTile":   GenMoversTile(el: el).mountIn()
         case "NextTile":     GenNextTile(el: el).mountIn()
+        case "Dial":         GenDial(el: el).mountIn()
         case "WalletFlow":   GenWalletFlow(el: el).mountIn()
         case "SourceMix":    GenSourceMix(el: el).mountIn()
         case "LeadRow":      GenLeadRow(el: el).mountIn()
@@ -5914,6 +5915,61 @@ private struct GenMoversTile: View {
 /// It carries no `Thing` — `WalletFlowSource` reduced them to values at the
 /// composer's boundary — so the liveness rules have nothing to bite on, which
 /// is the same property the room's own card has.
+/// Dial(eyebrow, "hour|recency|source;…") — a week of things on a 24-hour
+/// clock, as the answer ladder's WHEN rung (2026-08-16).
+///
+/// A THIN ADAPTER, the shape `GenWalletFlow` already uses for `WalletFlowBand`:
+/// the drawing, its floor, its entrance choreography and its per-source hues are
+/// `FigureView`'s, and nothing about them is re-decided here. That matters more
+/// than usual for this one — the dial is not a new figure. It was built for the
+/// agent panel, shipped there, and lost its only caller when the panel was
+/// deleted (§386p); this re-homes it rather than drawing it again.
+///
+/// `.band`: full width, and `DialFigure` sizes off `min(width, height)` and
+/// centres, so a wide slot draws the same circle a square one would and simply
+/// gives it room to breathe.
+///
+/// It carries no `Thing` — the marks are three scalars each by the time they
+/// reach the document — so the liveness rules have nothing to bite on.
+private struct GenDial: View {
+    let el: GenEl
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    /// Rebuilt from the doc. A mark needs all three fields to mean anything (a
+    /// half-parsed hour would place a dot at the wrong time of day, which is
+    /// the one thing this figure claims), so an incomplete row is dropped
+    /// rather than guessed at — and while the line is still streaming the whole
+    /// module simply waits below its floor.
+    private var marks: [AgentPanel.DialMark] {
+        el.str(1).split(separator: ";").compactMap { row in
+            let f = row.split(separator: "|", maxSplits: 2, omittingEmptySubsequences: false)
+            guard f.count == 3, let hour = Double(f[0]), let recency = Double(f[1]),
+                  hour >= 0, hour <= 24 else { return nil }
+            return AgentPanel.DialMark(hour: hour, recency: recency, source: String(f[2]))
+        }
+    }
+
+    var body: some View {
+        let figure = AgentPanel.Figure.dial(marks)
+        Group {
+            if !figure.isEmpty {
+                VStack(alignment: .leading, spacing: DS.Space.s2) {
+                    if !el.str(0).isEmpty {
+                        Text(el.str(0)).dsText(.callout15).fontWeight(.semibold)
+                            .foregroundStyle(DS.textPrimary)
+                    }
+                    FigureView(figure: figure, slot: .band, hue: DS.tint,
+                               rising: nil, reduceMotion: reduceMotion)
+                        .frame(height: 150)
+                        .frame(maxWidth: .infinity)
+                }
+                .padding(.horizontal, DS.Space.s4)
+                .padding(.top, DS.Space.s2)
+            }
+        }
+    }
+}
+
 private struct GenWalletFlow: View {
     let el: GenEl
 

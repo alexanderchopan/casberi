@@ -44,9 +44,11 @@ import Foundation
 ///     2-stacked miniature. They answer the same question, so the richer one
 ///     goes first and the compact one catches the sets too small for it — a
 ///     figure sized to its evidence rather than two different claims.
-///   • WHEN (`dailyBars`) last, which §247 already ruled the weakest lead when
-///     it moved the heatmap to the end of `shapedSections` for this exact
-///     reason. It leads only when everything above declined.
+///   • WHEN last, which §247 already ruled the weakest lead when it moved the
+///     heatmap to the end of `shapedSections` for this exact reason — and, like
+///     WHERE, at two scales. `dialLine` puts the week on a 24-hour clock and is
+///     the only thing in this app that answers which HOURS; `dailyBars` catches
+///     the weeks too thin to have a rhythm at all.
 ///
 /// NO FLOOR HERE IS THIS FILE'S. Every emitter declines on its own terms
 /// (`contactSheetLine`: ≥4 distinct pictures; `runwayAxis`: ≥2 dots;
@@ -121,6 +123,19 @@ enum AnswerFigure {
         if let mix = TodayBrief.sourceMixLine(
             rows, eyebrow: String(localized: "Where these came from")) {
             return mix
+        }
+        // 6/7 — WHEN, at two scales, the same way WHERE is. The clock says
+        // which HOURS, which nothing else in this app answers and which the
+        // bars structurally cannot: a week that all happened after ten at night
+        // and a week spread across every waking hour draw the identical strip.
+        // It needs a real rhythm to be one (12 marks), so the bars catch every
+        // week too thin for it.
+        //
+        // The dial windows itself — same `barsWindowDays`, passed in — so it is
+        // handed the unfiltered rows on purpose.
+        if let dial = KeptAskComposers.dialLine(
+            rows, eyebrow: String(localized: "When these landed"), now: now) {
+            return dial
         }
         // Only the rows inside the chart's own window — see the type comment.
         let cutoff = Calendar.current.date(byAdding: .day, value: -(barsWindowDays - 1),

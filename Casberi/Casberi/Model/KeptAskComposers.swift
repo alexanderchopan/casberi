@@ -1070,6 +1070,51 @@ enum KeptAskComposers {
         return "bars = Bars(\"\(genSafe(eyebrow))\", \"\", \"\(counts.map(String.init).joined(separator: ","))\", \"\(labels.joined(separator: ","))\")"
     }
 
+    /// The dial's mark budget for an ANSWER (2026-08-16).
+    ///
+    /// `AgentPanelFigures.dial` caps at 400 of its own, which is right for a
+    /// tile composed in memory and wrong for a line that has to be written into
+    /// a document, streamed a character at a time and re-parsed on every
+    /// snapshot: 400 marks is roughly a 9KB line. At the ~150pt the answer draws
+    /// it, 120 dots already saturate the face, so the extra 280 buy nothing a
+    /// person can see and cost something the renderer feels.
+    static let dialMarkCap = 120
+
+    /// A week of things on a 24-HOUR CLOCK — the WHEN rung above `dailyBars`
+    /// (2026-08-16, user: "dial for when as an answer in composer is good").
+    ///
+    /// Answers the question the bars can only approximate. Seven columns say
+    /// which DAYS; nothing else in this app says which HOURS, and for "when did
+    /// these land" the hour is the more particular fact — a week that all
+    /// happened after ten at night and a week spread across every waking hour
+    /// draw the identical bar strip.
+    ///
+    /// THE ARITHMETIC IS NOT NEW and is deliberately not re-derived here.
+    /// `AgentPanelFigures.dial` has placed marks on this clock since §339 and is
+    /// covered by `agent-panel-selftest`; this hands it the rows and serialises
+    /// what comes back. The figure lost its only home when the agent panel was
+    /// deleted (§386p) — this is where it lives now.
+    ///
+    /// The window is `AnswerFigure.barsWindowDays` rather than the composer's
+    /// own default, so the two WHEN rungs can never disagree about which week
+    /// they are describing.
+    static func dialLine(_ things: [Thing], eyebrow: String, now: Date = .now) -> String? {
+        let marks = AgentPanelFigures.dial(
+            things.map { AgentPanelFigures.Entry(source: $0.source, at: $0.capturedAt) },
+            now: now, days: AnswerFigure.barsWindowDays, cap: dialMarkCap)
+        // The RENDERER'S floor, not one of ours — a line this emitter thought
+        // worth writing and `GenDial` refuses to draw is an answer with a hole
+        // where its figure should be.
+        guard marks.count >= AgentPanel.Figure.dialFloor else { return nil }
+        let rows = marks.map {
+            // Two decimals: the hour is fractional (9:41 is 9.68) and the ring
+            // is a normalised 0…1, so this is the precision the drawing can
+            // actually show — more of it is line length nobody sees.
+            "\(round($0.hour * 100) / 100)|\(round($0.recency * 100) / 100)|\(mapSafe($0.source))"
+        }
+        return "dial = Dial(\"\(genSafe(eyebrow))\", \"\(rows.joined(separator: ";"))\")"
+    }
+
     // MARK: - Kept search
 
     /// How many matches a find DRAWS. The count it REPORTS is the true total —
