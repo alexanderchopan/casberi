@@ -1423,6 +1423,27 @@ struct RootShell: View {
                 // the compose path by construction, which is the only reason
                 // §386a's "the brief awaits no model" survives the feature.
                 await ClusterNames.shared.refresh()
+                // GITHUB'S CONTRIBUTION YEAR (2026-08-16, report: "did we
+                // just get rid of 'your work' as a category or it's not
+                // showing"). Not removed — starved. `TodayBrief.githubCalendar`
+                // reads `GitHubGraphStore.year` and deliberately never
+                // fetches, so the brief costs nothing for a room it merely
+                // mentions; but the ONLY caller that did fetch was the GitHub
+                // room's own `.task`. So Work could compose only for someone
+                // who had opened that room within six hours, which for most
+                // people is never, and the section silently never appeared.
+                //
+                // This is §320's class exactly ("two features existed and
+                // NOTHING CALLED THEM") and §386m's, one section over — a
+                // feature whose absence looks identical to its quiet success,
+                // since a Work section that declines and one that was never
+                // fed render as the same nothing.
+                //
+                // Safe here for the reason the composer's comment already
+                // gives: `refreshIfStale` self-guards on a six-hour cache, an
+                // in-flight flag, and a stored token, so a foreground with no
+                // GitHub connected returns before it touches the network.
+                await GitHubGraphStore.shared.refreshIfStale()
                 await KeptAskStore.shared.refreshDigests(things: surfaced, context: modelContext)
                 // The widget's rung-1 content (its brief headline) is
                 // published as a side effect of composing "today" — but

@@ -3265,7 +3265,21 @@ enum TodayBrief {
         var seen = Set<String>()
         var people: [Thing] = []
         for thing in landed.sorted(by: { $0.capturedAt > $1.capturedAt }) {
-            guard let handle = thing.authorHandle, let avatar = thing.authorAvatarURL,
+            // A SOURCE THAT NAMES A HUMAN, and only that (2026-08-16, report:
+            // "on 'what they're saying' it showed a github link, and that
+            // shouldn't be part of what they're saying"). Exactly right — a
+            // commit title is not somebody speaking. The gate was "has a
+            // handle and an avatar", which GitHub satisfies (the author, their
+            // gravatar) along with anything else that stamps an author.
+            //
+            // `SocialThread.hasContext` is the app's own answer to the
+            // question this module is actually asking, and is already the gate
+            // `dayFold` and `faces` use — so the three cards about people can
+            // never disagree about who counts as one. It excludes GitHub, and
+            // for the same reason excludes RSS and Podcasts, which stamp a
+            // PUBLICATION in this field rather than a person.
+            guard SocialThread.hasContext(thing.source),
+                  let handle = thing.authorHandle, let avatar = thing.authorAvatarURL,
                   !avatar.isEmpty, seen.insert(handle.lowercased()).inserted
             else { continue }
             people.append(thing)
