@@ -57,12 +57,17 @@ struct RootShell: View {
     @AppStorage("firstThingSaved") private var firstThingSaved = false
     /// The bar's teaching grace (2026-07-31). `AgentBar` rests COMPACT now —
     /// but a bar that has never been used should still say what it is once, so
-    /// it wears the full-width "Ask your things…" until the agent has been
-    /// raised on this device by ANY path, then hugs its two controls forever.
-    /// Persisted, unlike the session-scoped `agentEverOpened` above: the words
-    /// are a first-run explanation, and re-explaining on every cold launch is
-    /// what made them permanent furniture in the first place.
-    @AppStorage("agent.everRaised") private var agentEverRaised = false
+    /// it wears its own name until the verb it names has been used on this
+    /// device, then hugs its mark forever. Persisted, unlike the
+    /// session-scoped `agentEverOpened` above: the words are a first-run
+    /// explanation, and re-explaining on every cold launch is what made them
+    /// permanent furniture in the first place.
+    ///
+    /// It tracks the TRAY since §390, not the agent — the words name the tap,
+    /// so the tap is what spends them. Gating on the agent would have left the
+    /// grace standing for everyone who never finds the hold, which is a label
+    /// that outlives its own explanation.
+    @AppStorage("sources.everOpened") private var sourcesEverOpened = false
     /// Every source at once (`SourcesTray`) — raised by holding the agent bar.
     /// Never set directly by a door: they all go through `openSources()`, so
     /// the tray's own feel can't depend on which one you reached it by.
@@ -198,9 +203,6 @@ struct RootShell: View {
             if open {
                 OnDeviceModel.resetConversation()
                 agentEverOpened = true
-                // The teaching grace is spent the first time the agent rises
-                // by any path — the bar's words have done their one job.
-                agentEverRaised = true
                 // The whisper's job is done however the agent rose — it
                 // never returns until a new day has something to say.
                 whisper = nil
@@ -1747,8 +1749,8 @@ struct RootShell: View {
                              // as a first-run grace — and `chrome.minimized`,
                              // which still folds the chip strip, folds them
                              // early if that first-time reader scrolls before
-                             // ever asking.
-                             expanded: !agentEverRaised && !chrome.minimized,
+                             // ever opening the tray.
+                             expanded: !sourcesEverOpened && !chrome.minimized,
                              morphNS: agentMorph,
                              onSources: { openSources() },
                              // NIL since 2026-08-15, the crown-pour ruling's
@@ -1765,7 +1767,12 @@ struct RootShell: View {
                              // parameter — the mechanism is sound, this is a
                              // ruling about what feeds it.
                              roomTint: nil) {
-                        DSHaptic.tap()
+                        // `lift()`, not `tap()`, since §390 — this arrives at
+                        // the END of a 0.45s hold, with the finger still down
+                        // and nothing on screen yet to say the press
+                        // registered. The heavier buzz IS that confirmation;
+                        // the tray's ordinary `tap()` now sits on the tap.
+                        DSHaptic.lift()
                         // Open onto the Today brief, not the empty chips (prd
                         // §181, user: "make daily brief be the default when a
                         // user opens the agent"). Routed through the SAME
@@ -1879,15 +1886,21 @@ struct RootShell: View {
         }
     }
 
-    /// The one door into the sources tray. Every way in fires the SAME
-    /// `DSHaptic.lift()` — the hold, the VoiceOver action on the ask button,
-    /// the Mac menu bar and the bar's own right-click. It used to live inside
-    /// `AgentBar`'s long-press, which meant the gesture with no visible
-    /// affordance was the only route that said it had been received, and the
-    /// three routes built for the people who can't perform that gesture opened
-    /// the tray in silence. Feel belongs to the tray, not to one recognizer.
+    /// The one door into the sources tray. Every way in fires the SAME buzz —
+    /// the bar's tap, the VoiceOver action, the Mac menu bar, the deep link.
+    /// It used to live inside `AgentBar`'s long-press, which meant the gesture
+    /// with no visible affordance was the only route that said it had been
+    /// received, and the routes built for the people who can't perform that
+    /// gesture opened the tray in silence. Feel belongs to the tray, not to
+    /// one recognizer.
+    ///
+    /// `tap()`, not the `lift()` it fired until §390: this is an ordinary tap
+    /// now, and `lift()` is the weight of a gesture that had to be held.
     private func openSources() {
-        DSHaptic.lift()
+        DSHaptic.tap()
+        // The teaching grace is spent the first time the tray opens by any
+        // path — the bar's words have done their one job.
+        sourcesEverOpened = true
         sourcesOpen = true
     }
 

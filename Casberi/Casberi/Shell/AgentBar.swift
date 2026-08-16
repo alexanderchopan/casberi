@@ -42,6 +42,21 @@ import SwiftUI
 /// So `expanded` no longer means "span the screen" — it only adds the words.
 /// The teaching grace survives (a bar nobody has used should still say what it
 /// is once); what died is the full-width slab it used to say it from.
+///
+/// **THE VERBS ARE SWAPPED** (user ruling 2026-08-16, prd §390): the tap opens
+/// the sources tray and the HOLD raises the agent. Chrome is priced by
+/// frequency of use — the same rule that made this bar compact in the first
+/// place — and this is a corpus you open and READ: moving between rooms is
+/// what the thumb does all day, asking is occasional. The cheap gesture now
+/// belongs to the common verb. Nothing about either destination changed; only
+/// which recognizer reaches it.
+///
+/// One consequence worth stating, because it is the cost: the agent is now
+/// behind a gesture with no visible affordance. It is not the only door —
+/// `chrome.composerRequest` (the Mac menu bar's ⌘K, the whisper capsule, the
+/// Daily Brief quick action, `casberi://brief`, a kept pill, any surface that
+/// hands over an ask) all still raise it directly, and this bar's own
+/// VoiceOver action and Mac right-click state it in words.
 struct AgentBar: View {
     var hasUnseenSignal: Bool
     /// The agent noticed something today and it hasn't been seen (prd §384,
@@ -50,11 +65,16 @@ struct AgentBar: View {
     /// means "changed", and two live motions on one 20pt mark is a strobe.
     var noticeGlint: Bool = false
     /// The words. FALSE at rest (see the type's own note) — `RootShell` grants
-    /// it only as a teaching grace, until the agent has been raised once on
-    /// this device, and `ShellChrome.minimized` folds it away early if that
-    /// first-time reader scrolls before ever asking. It no longer carries a
+    /// it only as a teaching grace, until the tray has been opened once on this
+    /// device, and `ShellChrome.minimized` folds it away early if that
+    /// first-time reader scrolls before ever tapping. It no longer carries a
     /// width: since 2026-08-07 the pill hugs its contents in the corner in
     /// BOTH states, so this adds a line of text and nothing else.
+    ///
+    /// It names the TAP (§390) — "Your sources", not "Ask your things…". A
+    /// label on a button is a promise about what pressing it does, and after
+    /// the swap that sentence would have been the honesty rule's dead control
+    /// wearing the wrong verb.
     var expanded: Bool = false
     var morphNS: Namespace.ID?
     /// THE MAGNIFIER IS GONE (2026-08-15, prd §386o, user: "search and the
@@ -73,16 +93,17 @@ struct AgentBar: View {
     /// CHIP still appears the moment there is a draft, and it still runs the
     /// deterministic engine that writes nothing (§215). You reach it by
     /// typing, which is what you were going to do anyway.
-    /// Hold the bar → every source at once (`SourcesTray`, 2026-07-31). It
-    /// lives HERE rather than on the chip strip's catalogue door for three
-    /// reasons: this bar is in the bottom thumb zone and the strip is at the
-    /// top, which is the hardest place to reach on a phone; this bar is hosted
-    /// on `RootShell`'s own ZStack, so the gesture works from Settings, a
-    /// bridge setup form, anywhere, while the strip only exists on
-    /// `MainSurface`; and the catalogue door is this app's most
-    /// gesture-cursed control (three reports, `highPriorityGesture` belt and
-    /// braces, the safeAreaInset-over-pager arbitration), which is not a place
-    /// to stack a second recognizer.
+    /// Every source at once (`SourcesTray`, 2026-07-31) — the bar's TAP since
+    /// §390, a hold before that. It lives HERE rather than on the chip strip's
+    /// catalogue door for three reasons, all of which the promotion only
+    /// strengthens: this bar is in the bottom thumb zone and the strip is at
+    /// the top, which is the hardest place to reach on a phone; this bar is
+    /// hosted on `RootShell`'s own ZStack, so it works from Settings, a bridge
+    /// setup form, anywhere, while the strip only exists on `MainSurface`; and
+    /// the catalogue door is this app's most gesture-cursed control (three
+    /// reports, `highPriorityGesture` belt and braces, the
+    /// safeAreaInset-over-pager arbitration), which is not a place to stack a
+    /// second recognizer.
     var onSources: () -> Void = {}
     /// The room's own hue, when standing in a room that HAS one (2026-08-06) —
     /// `ShellChrome.pourHue`, which is non-nil only inside a scoped wallet.
@@ -95,26 +116,26 @@ struct AgentBar: View {
     /// because a permanent colour that says nothing is decoration, and a
     /// nil here is that same silence.
     var roomTint: Color? = nil
-    var action: () -> Void
+    /// Raise the agent — the bar's HOLD since §390 (its tap before that).
+    var onAsk: () -> Void
 
     /// A hold has fired, so the button's own touch-up must not act on top of
     /// it: a SwiftUI Button fires on RELEASE however long the press lasted,
     /// and the long-press gesture ends at its threshold while the finger is
     /// still down — so this flag is always set before the tap it exists to
-    /// swallow. Self-clearing on a timer because a press that ends by dragging
-    /// off never delivers that tap at all, and a flag left set would eat the
-    /// next legitimate one.
-    @State private var heldForSources = false
+    /// swallow. Cleared when the next press BEGINS, never on a timer (see the
+    /// gesture's own note).
+    @State private var heldForAgent = false
 
     var body: some View {
         HStack(spacing: 0) {
             Button {
                 guard !consumeHold() else { return }
-                action()
+                onSources()
             } label: {
                 HStack(spacing: DS.Space.s3) {
                     if expanded {
-                        Text("Ask your things…")
+                        Text("Your sources")
                             .dsText(.body17)
                             .foregroundStyle(DS.textTertiary)
                             .lineLimit(1)
@@ -162,35 +183,36 @@ struct AgentBar: View {
             }
             .buttonStyle(.plain)
             // The words carried the button's name; compact, it needs its own.
-            .accessibilityLabel(Text("Ask your things"))
+            .accessibilityLabel(Text("Your sources"))
             // The hold, reachable without holding. It rides THIS button rather
             // than the container: a custom action on a plain layout view has no
             // accessibility element of its own to be found on, and VoiceOver
-            // would simply never offer it.
-            .accessibilityAction(named: Text("Your sources"), onSources)
-            // The sources hold, moved from the whole pill onto the berry when
-            // the magnifier's hold became speak (prd §384) — the anchor mark
-            // keeps the taught gesture, and each button now owns exactly one
-            // hold, so a 0.45s press does what the control under the finger
-            // says rather than what the pill decides.
+            // would simply never offer it. It names the AGENT since §390 — the
+            // action always states whichever verb the hold reaches, because
+            // that is the one a person can't discover by pressing.
+            .accessibilityAction(named: Text("Ask your things"), onAsk)
+            // The hold. It rides the berry rather than the pill (prd §384), so
+            // the control under the finger owns exactly one hold and the
+            // gesture does what that control says. §390 changed WHERE it goes
+            // (the agent, not the tray) and nothing else about it.
             .simultaneousGesture(
                 LongPressGesture(minimumDuration: 0.45)
                     // Cleared when the NEXT press BEGINS, never on a timer. A
                     // timer has to guess how long a finger stays down, and it
                     // guesses wrong in the most ordinary case there is: hold
-                    // until the tray appears, look at it, then let go — by
-                    // which time a 900ms clear has already expired and the
-                    // release raises the agent on top of the tray. Press-begin
-                    // is the one moment that is always before the release it
-                    // has to swallow and always after the last one.
-                    .onChanged { _ in heldForSources = false }
+                    // until the agent rises, look at it, then let go — by which
+                    // time a 900ms clear has already expired and the release
+                    // opens the tray under the risen agent. Press-begin is the
+                    // one moment that is always before the release it has to
+                    // swallow and always after the last one.
+                    .onChanged { _ in heldForAgent = false }
                     .onEnded { _ in
-                        heldForSources = true
-                        // The `DSHaptic.lift()` this used to fire here now
-                        // lives on `RootShell.openSources()`, so the
-                        // accessibility action and the Mac menu get the same
-                        // buzz the hold does.
-                        onSources()
+                        heldForAgent = true
+                        // The buzz lives at the destination, not on the
+                        // recognizer (`RootShell`'s two doors), so the
+                        // accessibility action and the Mac menu feel the same
+                        // as the gesture does.
+                        onAsk()
                     }
             )
         }
@@ -208,46 +230,47 @@ struct AgentBar: View {
         // the screen answering one move, rather than a hard swap down here
         // under a gradient that glided.
         .animation(DS.Motion.standard, value: roomTint)
-        // The hold moved OFF the container and onto the buttons (prd §384) —
-        // berry holds for sources, magnifier holds for speaking. Each is a
-        // full 44pt control, so the finger has already chosen; `simultaneous`
-        // on each keeps the buttons' own taps, and both guard on
-        // `consumeHold()` for the release that follows a hold.
-        .modifier(BarSecondaryMenu(onSources: onSources))
+        // The hold moved OFF the container and onto the button (prd §384), and
+        // §390 changed what it reaches. The button is a full 44pt control, so
+        // the finger has already chosen; `simultaneous` keeps its own tap, and
+        // the tap guards on `consumeHold()` for the release that follows a
+        // hold.
+        .modifier(BarSecondaryMenu(onAsk: onAsk))
         .modifier(MorphMatch(ns: morphNS))
     }
 
     /// True if this touch-up is the tail of a hold that already acted.
     private func consumeHold() -> Bool {
-        guard heldForSources else { return false }
-        heldForSources = false
+        guard heldForAgent else { return false }
+        heldForAgent = false
         return true
     }
 }
 
-/// The bar's verbs in words, for a pointer (2026-07-31) — Mac ONLY, and the
-/// `#if` is load-bearing rather than tidiness.
+/// The bar's hidden verb in words, for a pointer (2026-07-31) — Mac ONLY, and
+/// the `#if` is load-bearing rather than tidiness.
 ///
-/// The hold that opens the sources tray (0.45s, above) has no visible
-/// affordance: a phone teaches that through repetition, a mouse never does,
-/// because click-and-wait is not something anyone tries. A right-click states
-/// both doors in words instead.
+/// The 0.45s hold has no visible affordance: a phone teaches that through
+/// repetition, a mouse never does, because click-and-wait is not something
+/// anyone tries. A right-click states the door in words instead. It names the
+/// AGENT since §390, following the hold rather than the destination — the tap
+/// needs no menu entry, it is the click.
 ///
 /// It cannot ship on iOS, though. `.contextMenu` installs its own ~0.5s
 /// long-press recognizer, which on a touch screen would fire alongside the
-/// bar's own hold — one press would open the tray AND raise a menu over it.
+/// bar's own hold — one press would raise the agent AND a menu over it.
 /// Under Catalyst there is no touch input, so the menu answers a secondary
 /// click only and the two never meet.
 private struct BarSecondaryMenu: ViewModifier {
-    let onSources: () -> Void
+    let onAsk: () -> Void
 
     func body(content: Content) -> some View {
         #if targetEnvironment(macCatalyst)
         content.contextMenu {
             Button {
-                onSources()
+                onAsk()
             } label: {
-                Label("Your sources", systemImage: "square.grid.2x2")
+                Label("Ask your things", systemImage: "sparkles")
             }
         }
         #else

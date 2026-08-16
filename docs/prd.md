@@ -24181,3 +24181,59 @@ command, and `git show <bump>:<path>` proves the file's absence rather than
 inferring it from timestamps. The fold defect was then found by reading the gate
 list, not by reproducing the report, because the report could not have been about
 the gate.
+
+## §390 — The bar's verbs swap: tap for sources, hold for the agent (user: "i'd like to switch the behavior of the fab. i'd like it to be tap to open source tray and long press to open agent", 2026-08-16)
+
+`AgentBar` has raised the agent on a tap since it replaced the FAB, and opened
+the sources tray on a 0.45s hold since 2026-07-31. Those are exchanged. Nothing
+about either destination changed — the tray is the same `SourcesTray`, the rise
+is the same morph into the same composer landing on the same brief; only which
+recognizer reaches which.
+
+**The reason is the rule that made this bar compact in the first place** (§ the
+2026-07-31 ruling): chrome is priced by frequency of use. This is a corpus you
+open and READ, and moving between rooms is what the thumb does all day, while
+asking is occasional — capture arrives through the share sheet, the paste chip
+and the bridges. The cheap gesture belongs to the common verb; the bar had it
+the other way round.
+
+**The cost, stated plainly: the agent now sits behind a gesture with no visible
+affordance.** That is survivable only because this bar was never its only door,
+and every other one is untouched — `chrome.composerRequest` (the Mac menu bar,
+⌘K), the whisper capsule, the Daily Brief quick action, `casberi://brief`,
+`casberi://ask?q=`, a kept pill, the day strip, and any surface that hands over
+an ask. The two routes built for people who cannot perform a hold both state it
+in words: the VoiceOver custom action on the pill, and the Mac right-click menu.
+Both follow the HOLD rather than a fixed destination, so they name whichever
+verb is the hidden one — the tap needs no menu entry, it is the click.
+
+**Three things had to move with it, each because leaving it would have made the
+bar lie:**
+
+1. **The teaching-grace words name the tap.** The expanded pill said "Ask your
+   things…", which after the swap is a label promising what pressing does not
+   do — the honesty rule's dead control wearing the wrong verb. It reads "Your
+   sources" now, and its gate moved with it: `sources.everOpened` replaces
+   `agent.everRaised`, so the grace is spent by the tap that the words name.
+   Gating on the agent would have left the sentence standing forever for
+   everyone who never finds the hold — a label outliving its own explanation.
+
+2. **The haptics swapped with the gestures, not with the destinations.**
+   `openSources()` fires `DSHaptic.tap()` (it is an ordinary tap now) and the
+   rise fires `DSHaptic.lift()`. The weight belongs to the hold: that callback
+   arrives at the END of 0.45s with the finger still down and nothing on screen
+   yet, so the heavier buzz IS the confirmation that the press registered.
+   `lift()` on a plain tap would be a flinch.
+
+3. **`AgentBar.action` is renamed `onAsk`.** A parameter called `action` on a
+   control whose primary gesture is now `onSources` is the kind of name that
+   reads correctly today and misleads whoever changes this next.
+
+Unchanged and worth naming, since each looks like it should have needed a
+touch: the `agentMorph` `matchedGeometryEffect` pairing still grows the risen
+surface out of the bar's own frame (the hold ends while the finger is down, the
+rise animates from there); `heldForAgent` still clears on the NEXT press's
+BEGIN rather than on a timer, and the reason only got sharper — hold until the
+agent rises, look at it, then let go, and a timed clear would open the tray
+under the risen agent; and the bar still hosts on `RootShell`'s own ZStack, so
+both verbs work from Settings, a bridge setup form, anywhere.
