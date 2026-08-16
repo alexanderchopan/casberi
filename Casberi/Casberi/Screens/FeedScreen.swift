@@ -3060,7 +3060,9 @@ struct FeedScreen: View {
     private func bundleListRow(source: String, word: String, count: Int,
                                newest: Date, art: [String] = [], index: Int,
                                position: RunPosition = .only) -> some View {
-        BundleRow(source: source, count: count, word: word, newest: newest, art: art)
+        let skin = rowSkin(forSource: source)
+        return BundleRow(source: source, count: count, word: word, newest: newest, art: art)
+            .environment(\.colorScheme, skin?.ink ?? colorScheme)
             .modifier(RowEntrance(index: index, wave: shapeWave, style: entranceStyle))
             .contentShape(Rectangle())
             .onTapGesture {
@@ -3069,8 +3071,11 @@ struct FeedScreen: View {
             }
             .dsTapCard()
             // A bundle is an ordinary row, never a designed card, so it goes
-            // bare on the ink like every list row (lists are air).
-            .listRowBackground(runBackground(position, bare: true))
+            // bare on the ink like every list row (lists are air) — UNLESS the
+            // room mixes sources, where the card IS the source's colour and a
+            // bundle is the row most worth colouring: it stands for the whole
+            // of that source's day.
+            .listRowBackground(runBackground(position, bare: true, skin: skin))
             // Feed rhythm (2026-07-13): back to s2 — the s3 airy read made
             // every gap the same size, so days never clustered. Rows sit
             // tight within their day; the day header carries the big gap.
@@ -3096,7 +3101,9 @@ struct FeedScreen: View {
     private func stripListRow(source: String, word: String, count: Int,
                               newest: Date, tiles: [StripTile], index: Int,
                               position: RunPosition = .only) -> some View {
-        StripRow(source: source, count: count, word: word, newest: newest, tiles: tiles)
+        let skin = rowSkin(forSource: source)
+        return StripRow(source: source, count: count, word: word, newest: newest, tiles: tiles)
+            .environment(\.colorScheme, skin?.ink ?? colorScheme)
             .modifier(RowEntrance(index: index, wave: shapeWave, style: entranceStyle))
             .contentShape(Rectangle())
             .onTapGesture {
@@ -3104,7 +3111,7 @@ struct FeedScreen: View {
                 withAnimation(DS.Motion.standard) { filter.source = source }
             }
             .dsTapCard()
-            .listRowBackground(runBackground(position, bare: true))
+            .listRowBackground(runBackground(position, bare: true, skin: skin))
             .listRowInsets(.init(top: DS.Space.s2,
                                  leading: DS.Space.s4 + DS.Space.s3,
                                  bottom: DS.Space.s2,
@@ -4976,6 +4983,27 @@ struct FeedScreen: View {
     /// the argument list of the row builder, so it runs before `shapedRow`'s
     /// own guard, and `thing.source` is a stored property that fault-resolves
     /// against the store (corollary 3, build 176).
+    /// The skin for a row that already KNOWS its source as a plain string —
+    /// the bundle and strip rows, which is most of what the All room actually
+    /// draws (2026-08-15, reported from the built app: "it doesn't have each
+    /// row in a color, it only has two rows in one").
+    ///
+    /// The first cut skinned only `shapedListRow`, i.e. a row that stands for
+    /// ONE `Thing`. But the All room's whole job is folding a day's volume:
+    /// three or more things from one source collapse into a `BundleRow` or a
+    /// `StripRow`, and those take a different path with a different background
+    /// call. So on a real corpus the feature reached only the handful of rows
+    /// too few to fold — which is exactly what a screenshot of two coloured
+    /// mail rows above six ink ones shows.
+    ///
+    /// A bundle is one source BY CONSTRUCTION (it is what folded them
+    /// together), so it needs no liveness guard and no per-thing test: the
+    /// source is already a `String` here, never a stored property read.
+    private func rowSkin(forSource source: String) -> DS.RowSkin? {
+        guard roomMixesSources else { return nil }
+        return DS.rowSkin(for: source)
+    }
+
     private func rowSkin(_ thing: Thing) -> DS.RowSkin? {
         guard roomMixesSources, thing.modelContext != nil else { return nil }
         // THE CONSENT CARD REFUSES IT. `ApprovalCard` carries no surface of
