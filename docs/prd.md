@@ -23976,3 +23976,82 @@ adding chrome: connected seats lead the grid, or entering the catalogue from a
 source room lands scrolled to that seat. Both were sketched this session and
 neither is built. A per-room door may return only with a placement whose OBJECT
 is unambiguous — nothing sketched so far has one.
+
+## §389 — The feed opens on the newest thing, and on what you missed (user: "how would apple improve our All feed. give me three options", then "for 1, lets do it but if we do the lede, i'd like it to be the most recent item gets the lede. skip 2, and i love 3! do those", 2026-08-16)
+
+Two changes to the All feed, chosen off three mockups. The rejected one — the
+fold wearing its best member instead of "RSS · 6" — is recorded here as
+declined rather than deferred: the user skipped it outright.
+
+**1. The cover.** The newest single draws as a card at the top of the feed —
+its picture if it has one, its words at heading weight either way
+(`FeedLedeCard`, `FeedScreen.ledeID`).
+
+The pick is POSITIONAL: the newest row, full stop. The mockup proposed "the
+day's biggest event" and the user overturned it in the same breath as approving
+the feature ("i'd like it to be the most recent item gets the lede") — which is
+also the version that survives §83, since a hero implies a judgement and the
+only judgement we can defend is one whose rule states in four words. Any
+ranking here ("largest money moved", "nearest clock") would be an editorial
+claim made by a personal corpus about its owner's own things.
+
+It declines four ways, each because the card would otherwise say something
+untrue: the newest row is a FOLD (a bundle summarizes things rather than being
+one, and promoting a member out of its own fold leaves the fold counting a row
+sitting above it); the thing already `standsAlone` (a consent card, token pulse
+or post card is a full anatomy that got its size for its own reason — wrapping
+one is two rhythm-breakers stacked, and for `ApprovalCard` it buries the
+verbs); it is older than 24h (`ledeMaxAge` — open the app after a quiet week
+and the top row is a week old, which is exactly when a cover lies by
+implication); or the feed is under 3 rows (`ledeMinRows` — a cover over a
+two-row feed IS the feed, `wideArtIDs`' own minority discipline).
+
+**A thing with no art gets the words treatment, never a gradient.** Decoration
+in the picture's slot is a claim that there was something to see — `AssetMark`'s
+no-invented-hue rule, one medium over.
+
+It is a CARD, and that is a deliberate second rhythm-breaker. Ruling 2026-07-06
+made the band the one row anatomy and §254 refused a full-width banner under a
+title on those grounds — but §254 was promoting a row IN the run, where a second
+anatomy breaks the run's silhouette. This sits ABOVE the run as the feed's first
+object, the way `ApprovalCard` already stands out of it, so the rhythm it breaks
+is one it precedes.
+
+**2. The away window becomes sectioning** (`FeedScreen.momentSplit`). The top
+section is "Since you left", the day the boundary cut through continues as
+"Earlier today", and the section closes on a quiet "You're caught up" line.
+
+This machinery is not new and that is the point: the All feed has read
+`AppVisit.away` since 2026-07-09 and expressed it as `newSinceDivider`, an
+inline capsule sitting wherever the boundary happened to fall inside a day —
+the same true fact in the weakest available position, a caption between two rows
+competing with the day header above it. Promoting it to sectioning makes the
+first thing the feed says be what you actually opened it to find out. Below-
+boundary dimming (`isQuiet`, §378) is untouched and already keyed on the same
+stamp, so the seen half recedes for free.
+
+The inline divider is SUPPRESSED under a split — the section header is the
+boundary there, and two seams for one fact is worse than either alone. The split
+declines when it would be degenerate (no away window, nothing new, or EVERYTHING
+new), which is `boundaryID`'s own rule: a divider at the very top or the very
+bottom marks nothing.
+
+The header's subline follows the top group rather than the literal label
+"Today", or the §385 whisper would vanish on exactly the opens a split fires on.
+Deliberately not "whichever group is first": open the app after a quiet week and
+that is a Saturday from August, and today's sentence does not belong on it. With
+no whisper, the moment header carries when you were last here — a fact, not a
+tally, since §218 retired counting from this header and "9 new things" (which
+the mockup showed) would put it straight back.
+
+Both run OUTSIDE `DerivationMemo`: `newSince` freezes when the page lands, so it
+changes without `visible` changing, which the memo key — the snapshot's revision
+— structurally cannot see. Both are partitions of arrays already built, so the
+per-render cost is a walk and no derivation.
+
+Known interaction, accepted: `wideArt` is memoized over DAY groups while the
+render walks MOMENT groups, so a split day's remainder may lose its promoted
+picture. Left alone deliberately — the cover is a bigger picture than the anchor
+would have been, so the day still opens on something to look at, and
+recomputing per render costs more than the promotion is worth on the screen with
+this app's worst perf history.

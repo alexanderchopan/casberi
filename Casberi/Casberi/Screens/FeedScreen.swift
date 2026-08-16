@@ -1546,6 +1546,96 @@ struct FeedScreen: View {
         return all.first(where: { $0.date <= newSince })?.id
     }
 
+    /// Past this, the newest thing is not news and gets no cover (prd §389).
+    /// A hero is a claim about recency and nothing else, so it needs a clock
+    /// to be true — open the app after a quiet week and the top row is a week
+    /// old, which is exactly when a cover would be lying by implication.
+    private static let ledeMaxAge: TimeInterval = 24 * 3600
+
+    /// A cover over a two-row feed IS the feed. Same minority discipline
+    /// `wideArtIDs` states as its own floor, for the same reason.
+    private static let ledeMinRows = 3
+
+    /// The row that draws as the feed's cover (prd §389) — the NEWEST one,
+    /// which is the whole rule. `boundaryID`'s shape: takes the already-bundled
+    /// groups so the caller derives them once and shares.
+    ///
+    /// Four ways it declines, each because the card would say something untrue:
+    ///
+    /// - The newest row is a FOLD. A bundle summarizes things rather than
+    ///   being one, so there is no thing to enlarge — and promoting a member
+    ///   out of its own fold would leave the fold counting a row that is
+    ///   sitting above it.
+    /// - The newest thing already `standsAlone`. A consent card, a token pulse
+    ///   and a post card are full anatomies that were given their size for
+    ///   their own reasons; wrapping one in a cover is two rhythm-breakers
+    ///   stacked, and for `ApprovalCard` it would bury the verbs.
+    /// - It is older than `ledeMaxAge`.
+    /// - The feed is shorter than `ledeMinRows`.
+    ///
+    /// Counted rather than flattened, deliberately: this runs on every body
+    /// evaluation of the screen with this app's worst measured perf history
+    /// (`derivationKey`'s own 6.3-seconds-across-44-renders note), and it needs
+    /// exactly two facts — the first row and how many there are. `flatMap`
+    /// would allocate the whole row list per render to read `.first`.
+    private func ledeID(in groups: [(String, [FeedRow])]) -> String? {
+        let count = groups.reduce(0) { $0 + $1.1.count }
+        guard count >= Self.ledeMinRows, let first = groups.first?.1.first else { return nil }
+        // `.live` before any stored read — a derived array read during the same
+        // graph update a heal's delete can land in (the dead-Thing rule).
+        guard case .single(let item) = first.kind, let thing = item.live else { return nil }
+        guard Date.now.timeIntervalSince(thing.capturedAt) <= Self.ledeMaxAge else { return nil }
+        guard !standsAlone(thing) else { return nil }
+        return first.id
+    }
+
+    /// The away window lifted into its own section (prd §389) — "Since you
+    /// left", then the day grain underneath it.
+    ///
+    /// The All feed has carried this boundary since 2026-07-09, as an inline
+    /// capsule (`newSinceDivider`) sitting wherever it happened to fall inside
+    /// a day. That says the same true thing in the weakest available position:
+    /// a caption between two rows, competing with the day header above it.
+    /// Promoting it to sectioning makes the FIRST thing the feed says be what
+    /// you actually came to find out.
+    ///
+    /// Returns the groups unchanged (and `moment: false`) whenever the split
+    /// would be degenerate — no away window, nothing new, or EVERYTHING new —
+    /// which is `boundaryID`'s own rule: a divider at the very top or the very
+    /// bottom marks nothing.
+    ///
+    /// Order carries the partition: groups are newest-first and so are the rows
+    /// inside them, so the fresh side is a prefix and one pass splits it. A
+    /// FOLD spanning the boundary lands whole on the fresh side, since a bundle
+    /// dates itself by its newest member — the same place the inline divider
+    /// has always put it, so nothing moves that wasn't already there.
+    private func momentSplit(_ groups: [(String, [FeedRow])])
+        -> (groups: [(String, [FeedRow])], moment: Bool) {
+        guard let since = newSince,
+              let first = groups.first?.1.first, first.date > since
+        else { return (groups, false) }
+        var fresh: [FeedRow] = []
+        var rest: [(String, [FeedRow])] = []
+        for (label, rows) in groups {
+            let new = rows.prefix { $0.date > since }
+            let old = rows.dropFirst(new.count)
+            fresh.append(contentsOf: new)
+            guard !old.isEmpty else { continue }
+            // A day the boundary cut through keeps its rows under a name that
+            // says so. Only the CUT day is renamed — an untouched Today (the
+            // boundary fell yesterday) is still just Today.
+            let cut = !new.isEmpty && label == String(localized: "Today")
+            rest.append((cut ? String(localized: "Earlier today") : label, Array(old)))
+        }
+        guard !fresh.isEmpty, !rest.isEmpty else { return (groups, false) }
+        return ([(Self.momentLabel, fresh)] + rest, true)
+    }
+
+    /// The away section's name. A constant so the header's whisper gate and
+    /// the seam can both ask for it by identity rather than re-localizing a
+    /// literal and hoping the two strings match.
+    private static var momentLabel: String { String(localized: "Since you left") }
+
     // MARK: - Body
 
     var body: some View {
@@ -2725,13 +2815,22 @@ struct FeedScreen: View {
                 coarseSubjects(memo.days, coarse: memo.coarse)
             }
         }
-        // Windowed (prd §264). `boundary` reads the FULL set so the new-since
-        // divider lands on the same row whether or not the window is open.
+        // The away window becomes sectioning (prd §389) — OUTSIDE the memo
+        // above, deliberately: `newSince` freezes when the page lands and so
+        // changes without `visible` changing, which the memo key (the
+        // snapshot's revision) cannot see. It is a partition of arrays already
+        // built, so recomputing it per render costs a walk and no derivation.
         let allGroups = memo.groups
-        let window = windowed(allGroups)
+        let split = momentSplit(allGroups)
+        // Windowed (prd §264). `boundary` and `lede` read the FULL set so
+        // neither moves depending on whether the window is open.
+        let window = windowed(split.groups)
         let _ = { memo.windowHasMore = window.more }()
         let groups = window.shown
-        let boundary = boundaryID(in: allGroups)
+        // Suppressed under a moment split: the section header IS the boundary
+        // there, and two seams for one fact is worse than either alone.
+        let boundary = split.moment ? nil : boundaryID(in: split.groups)
+        let lede = ledeID(in: split.groups)
         let imageOnly = memo.imageOnly
         let wideArt = memo.wideArt
         let coarse = memo.coarse
@@ -2747,7 +2846,13 @@ struct FeedScreen: View {
         // (honesty law: a day with nothing to say says nothing).
         let dayLine = DayBrief.whisper(things: visible)
         return Group {
-        ForEach(groups, id: \.0) { label, rows in
+        ForEach(groups, id: \.0) { label, allRows in
+            // The cover leaves the run (prd §389). Dropped BEFORE the run
+            // positions are computed, or the card's absent row would still own
+            // the card's top shoulder and the real first row would render
+            // square-topped against the header.
+            let ledeRow = allRows.first.flatMap { $0.id == lede ? $0 : nil }
+            let rows = ledeRow == nil ? allRows : Array(allRows.dropFirst())
             // Bundles merge into the day card like any row-shaped thing —
             // only a single that stands alone (consent, token) breaks the run.
             let positions = cardRunPositions(
@@ -2759,6 +2864,10 @@ struct FeedScreen: View {
                 },
                 isBoundary: { rows[$0].id == boundary })
             Section {
+                if let ledeRow, case .single(let item) = ledeRow.kind,
+                   let thing = item.live {
+                    ledeListRow(thing)
+                }
                 ForEach(Array(rows.enumerated()), id: \.element.id) { i, row in
                     if row.id == boundary { newSinceDivider }
                     switch row.kind {
@@ -2799,6 +2908,12 @@ struct FeedScreen: View {
                             .opacity(isQuiet(row) ? Self.quietRow : 1)
                     }
                 }
+                // The moment closes (prd §389). `newSinceDivider` said the
+                // same thing from ABOVE the boundary, where it had to name the
+                // date to be understood; from below, under a section already
+                // named "Since you left", the only fact left to state is that
+                // this is where you can stop.
+                if split.moment && label == Self.momentLabel { caughtUpSeam }
             } header: {
                 // No count (prd §218, 2026-07-25). §213 retired volume as news
                 // in the brief ("people do not care how many things landed"),
@@ -2835,9 +2950,28 @@ struct FeedScreen: View {
                     // whisper capsule shows this same sentence once a day and
                     // then clears; this is its standing home, on the divider
                     // the day already owns.
-                    if label == String(localized: "Today"), let whisper = dayLine {
+                    //
+                    // Under a moment split (prd §389) the sentence follows the
+                    // TOP group, which is then "Since you left" and the day's
+                    // remainder is "Earlier today" — without this the whisper
+                    // would simply vanish on exactly the opens the split fires
+                    // on. Deliberately not "the first group": open the app
+                    // after a quiet week and that is a Saturday from August,
+                    // and today's sentence does not belong on it.
+                    if label == (split.moment ? Self.momentLabel : String(localized: "Today")),
+                       let whisper = dayLine {
                         whisper.detailText(scheme: colorScheme)
                             .dsText(.subhead13)
+                            .lineLimit(1)
+                    } else if label == Self.momentLabel {
+                        // No count here, by §218's own ruling on this header —
+                        // and the fact worth carrying is not how many landed
+                        // but when you were last here, which is what makes
+                        // "since you left" a measurable claim rather than a
+                        // mood.
+                        Text(String(localized: "Last here \(sinceLabel)"))
+                            .dsText(.subhead13)
+                            .foregroundStyle(DS.textTertiary)
                             .lineLimit(1)
                     }
                 }
@@ -2910,6 +3044,23 @@ struct FeedScreen: View {
         if row.ambient { return true }
         guard let newSince else { return false }
         return row.date <= newSince
+    }
+
+    /// The end of what's new (prd §389) — the moment section's own floor,
+    /// under a split. Words only, no drawn rule (the no-hairlines law), and
+    /// deliberately not a capsule: `newSinceDivider` is a marker BETWEEN two
+    /// rows and needs a fill to read as a seam, while this one closes a
+    /// section and reads as the quiet line it is (`caughtUpFooter`'s
+    /// treatment, which does the same job for the whole feed).
+    private var caughtUpSeam: some View {
+        Text("You're caught up — everything below, you've seen")
+            .dsText(.subhead13)
+            .foregroundStyle(DS.textTertiary)
+            .frame(maxWidth: .infinity)
+            .padding(.top, DS.Space.s4)
+            .padding(.bottom, DS.Space.s2)
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
     }
 
     private var newSinceDivider: some View {
@@ -3052,6 +3203,45 @@ struct FeedScreen: View {
         guard !visitFrozen else { return }
         visitFrozen = true
         newSince = source == "All" ? AppVisit.away?.lowerBound : lastSeen(for: source)
+    }
+
+    /// The cover in the list (prd §389). ONE gesture, opening the same sheet
+    /// the row would have — a cover is a bigger read of one thing, not a
+    /// second kind of destination.
+    ///
+    /// It carries no `runBackground`: the card paints its own surface (it is
+    /// the one object here that is a card rather than a row on a card), so the
+    /// run underneath it starts clean at the row below. That is also why the
+    /// Mac walk's selection is passed INTO the card rather than washed behind
+    /// it — a `selectionWash` under an opaque card is a selection you cannot
+    /// see.
+    ///
+    /// `.id` is load-bearing on Mac: `walkRowIDs` publishes this row's id from
+    /// `memo.groups`, which still holds the promoted row, so without an id here
+    /// ↓ onto the cover would scroll to nothing and highlight nothing — the
+    /// exact dead-walk failure `walkRowIDs`' own doc warns about.
+    private func ledeListRow(_ thing: Thing) -> some View {
+        Button {
+            openThing(thing)
+        } label: {
+            FeedLedeCard(thing: thing,
+                         selected: DS.isMac
+                            && chrome.walkSelected == thing.id.uuidString)
+                .modifier(RowEntrance(index: 0, wave: shapeWave, style: entranceStyle))
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(RowPress())
+        .dsHover()
+        .macHoverLift()
+        .id(thing.id.uuidString)
+        .listRowBackground(Color.clear)
+        // A wider gap below than above: the cover is its own object, and the
+        // day's run begins under it rather than continuing from it.
+        .listRowInsets(.init(top: DS.Space.s2,
+                             leading: DS.Space.s4 + DS.Space.s3,
+                             bottom: DS.Space.s4,
+                             trailing: DS.Space.s4 + DS.Space.s3))
+        .listRowSeparator(.hidden)
     }
 
     /// A bundle in the list: same card treatment as a thing row; the tap
