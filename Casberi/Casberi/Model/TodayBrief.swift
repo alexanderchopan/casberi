@@ -912,7 +912,8 @@ enum TodayBrief {
             onPartial(Self.assemble(ids: ids, lines: lines,
                                     category: category, leadRefs: leadRefs,
                                     hour: Calendar.current.component(.hour, from: now),
-                                    sectionQualifiers: sectionQualifiers))
+                                    sectionQualifiers: sectionQualifiers,
+                                    final: false))
         }
         // The `dayread` paragraph's emission stood here until 2026-08-14
         // (prd §386a) — see the retirement note above the leads.
@@ -958,9 +959,31 @@ enum TodayBrief {
             let since = windowStart.formatted(.dateTime.hour().minute())
             let line = category.map { String(localized: "Nothing new in \($0) since \(since).") }
                 ?? String(localized: "Nothing has landed yet today.")
+            // A QUIET DAY IS STILL A DAY (2026-08-16). One grey sentence on an
+            // otherwise blank screen is the only state in this whole file that
+            // renders as a failure — and it is the most COMMON state for a new
+            // corpus, which makes it the first thing many people ever see the
+            // brief do. Fitness and Photos never draw nothing; they reach back.
+            //
+            // So does this now, and only ever to something REAL: the corpus's
+            // own anniversary if this day carries one, else the newest thing
+            // there is. Both are the module doctrine's second shape — the thing
+            // itself, in full — so neither is a tally and neither invents. When
+            // the corpus is genuinely empty (a fresh install, the one case
+            // where there is nothing to reach for) the sentence stands alone,
+            // exactly as before.
+            let pool = things.live.filter { !Corpus.isImportReceipt($0) }
+            var doc = ["root = Stack([ins])", "ins = Insight(\"\(genSafe(line))\")"]
+            if let echo = OnThisDay.find(in: pool, now: now) {
+                doc[0] = "root = Stack([ins, back])"
+                doc.append(reachBack(echo.thing, meta: echo.label))
+            } else if let newest = pool.max(by: { $0.capturedAt < $1.capturedAt }) {
+                doc[0] = "root = Stack([ins, back])"
+                doc.append(reachBack(newest,
+                                     meta: String(localized: "The last thing you kept")))
+            }
             return KeptAskComposers.Result(
-                delta: "", digest: String(localized: "quiet"),
-                doc: ["root = Stack([ins])", "ins = Insight(\"\(genSafe(line))\")"])
+                delta: "", digest: String(localized: "quiet"), doc: doc)
         }
         // (The Life permutation and the chapter marks moved into `assemble`
         // below, 2026-08-14, so the pre-model partial renders through exactly
@@ -999,7 +1022,15 @@ enum TodayBrief {
         let doc = Self.assemble(ids: ids, lines: lines,
                                 category: category, leadRefs: leadRefs,
                                 hour: Calendar.current.component(.hour, from: now),
-                                sectionQualifiers: sectionQualifiers)
+                                sectionQualifiers: sectionQualifiers,
+                                // A DRAFT MUST NOT CLAIM TO BE THE END. This
+                                // same function composes the corpus-half paint
+                                // (the recursive `skipLiveReads` pass), and a
+                                // terminus on that one says "that's your day"
+                                // and then keeps growing modules above itself —
+                                // which is a worse version of the confusion the
+                                // terminus exists to remove.
+                                final: !skipLiveReads)
         // What each module SAID, for the next brief's quiet set — written
         // last and only when presenting, so a background digest compose can
         // never spend the novelty of a brief nobody saw (`BriefLedger.record`
@@ -1024,10 +1055,24 @@ enum TodayBrief {
     /// could legitimately re-order itself under someone mid-read the instant
     /// the model answered, which is a worse artifact than the latency this
     /// whole pass exists to remove. Pure — no model reads, no `Thing`.
+    /// The quiet day's one real module — a thing, drawn whole, with a meta line
+    /// saying WHY it is the one being shown.
+    ///
+    /// `LeadRow` rather than `Row`: it carries the picture, and on the one
+    /// screen whose problem is emptiness a photograph is the difference between
+    /// a reach-back and a second grey sentence. It is also already the shape the
+    /// leads use, so a quiet day and a busy one draw the same object.
+    private static func reachBack(_ thing: Thing, meta: String) -> String {
+        "back = LeadRow(\"\(genSafe(clamp(thing.title, max: 60)))\", \"\(genSafe(meta))\", "
+            + "\"\(genSafe(thing.previewImageURL ?? ""))\", \"\(thing.id.uuidString)\", "
+            + "\"\(genSafe(thing.source))\")"
+    }
+
     private static func assemble(ids: [String], lines: [String],
                                  category: String?, leadRefs: [String],
                                  hour: Int,
-                                 sectionQualifiers: [String: String] = [:]) -> [String] {
+                                 sectionQualifiers: [String: String] = [:],
+                                 final: Bool) -> [String] {
         var ids = ids
         // The clock's permutation runs FIRST, so the Life ruling below —
         // which is about one scope's subject, not about the hour — gets the
@@ -1109,6 +1154,27 @@ enum TodayBrief {
         // the last brief this device SHOWED. Arg 2, absent everywhere else,
         // and an empty arg is a no-op, so every other `Stack` emitter is
         // untouched.
+        // THE DOCUMENT ENDS (2026-08-16). Every module here composes only when
+        // it has something to say, which is right, and means the brief simply
+        // stops when the last one runs out — so a short day and a document that
+        // failed to finish assembling look identical from the bottom of the
+        // scroll. On a streamed page that is the worse reading of the two: the
+        // brief paints progressively, so "nothing more arrived" is exactly what
+        // a stall looks like.
+        //
+        // "That's your day", NOT "you're all caught up". The brief folds things
+        // away by design — the day card counts what it left out ("69 more · 176
+        // people") — so a claim about the FEED being empty would be false on
+        // the very screen that just admitted otherwise. This says only what it
+        // can: the document is over.
+        //
+        // `Coach` rather than a component of its own: it is already the page's
+        // quiet secondary line, and a terminus is the same drawing with a
+        // different sentence in it.
+        if final {
+            ids.append("end")
+            lines.append("end = Coach(\"\(genSafe(category.map { String(localized: "That's \($0).") } ?? String(localized: "That's your day.")))\")")
+        }
         let quiet = quietIDs(ids: ids, lines: lines)
         return ["root = Stack([\(ids.joined(separator: ", "))], \"\(chapters.joined(separator: ","))\", \"\(quiet.joined(separator: ","))\")"] + lines
     }
@@ -1250,9 +1316,17 @@ enum TodayBrief {
     /// screen reads as a broken render rather than as "you have seen this".
     /// The lede is never dim — a greyed-out headline is the same failure at
     /// the top of the page.
+    ///
+    /// Nor is the TERMINUS (2026-08-16), for a stronger reason than taste: it
+    /// says the same sentence every single day by construction, so it is
+    /// unchanged on every brief there will ever be. Left in, it would be the
+    /// one module guaranteed to dim on a day when everything else was new —
+    /// the end of the document greying out precisely when the document was at
+    /// its most interesting — and it would sit in `shown` permanently skewing
+    /// the all-or-nothing count that decides whether anything dims at all.
     private static func quietIDs(ids: [String], lines: [String]) -> [String] {
         let now = digests(ids: ids, lines: lines)
-        let shown = ids.filter { $0 != "lede" }
+        let shown = ids.filter { $0 != "lede" && $0 != "end" }
         let previous = UserDefaults.standard.dictionary(forKey: quietKey) as? [String: String] ?? [:]
         let unchanged = shown.filter { id in
             guard let a = now[id], let b = previous[id] else { return false }
