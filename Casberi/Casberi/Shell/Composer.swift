@@ -102,24 +102,6 @@ struct Composer: View {
     @Environment(\.openURL) private var openURL
     @Environment(\.colorScheme) private var scheme
 
-    /// The empty field's invitation cycles through what the composer can DO —
-    /// ask, find, recap — so it teaches its range instead of reading as one
-    /// dead line (delight, 2026-07-12). These are honest capability
-    /// invitations, not data claims; the corpus-derived ask CHIPS below carry
-    /// the specifics you can tap.
-    @State private var placeholderIndex = 0
-    private let invitations = [
-        "Ask anything",
-        "What did I save this week?",
-        "Find that thing I pasted",
-        "Recap my month",
-    ]
-    /// The cycling pool actually shown: the real-corpus examples when `open`
-    /// computed some, else the static invitations (before first compute, or
-    /// an empty corpus). Never empty, so the placeholder's modulo is safe.
-    private var activeInvitations: [String] {
-        invitationPool.isEmpty ? invitations : invitationPool
-    }
     /// Flips true just after the bubble opens so the ask chips stagger in
     /// rather than snapping (delight, 2026-07-12).
     @State private var chipsAppeared = false
@@ -550,12 +532,6 @@ struct Composer: View {
     }
     @State private var categoryChips: [CategoryChip] = []
     @State private var suggestions: [AskOption] = []
-    /// Real-corpus example phrasings mixed into the empty field's cycling
-    /// invitation (2026-07-22) — teaches the widened ask vocabulary
-    /// ("synthesize my Verge feed") by naming things that actually exist and
-    /// would answer, never a canned claim. Recomputed per open alongside
-    /// `tagPool`/`corpusSummary`.
-    @State private var invitationPool: [String] = []
     /// The away window's real count — the librarian chip rolls up to it
     /// (delight 2026-07-13); set beside the gate that shows the chip.
     @State private var awayLanded = 0
@@ -659,13 +635,6 @@ struct Composer: View {
     /// condition where an answer exists and is deliberately not drawn.
     private var askSurfaceShowing: Bool {
         answering && fieldFocused && !hasDraft && !isRecording
-    }
-
-    /// The invitation cycles only while the field is genuinely idle and empty —
-    /// typing, answering, or recording all stop it (and the brief landing, whose
-    /// field reads "Ask about this…" statically — `keepBrief: false`).
-    private var cyclingActive: Bool {
-        restChrome(keepBrief: false) && !reduceMotion
     }
 
     /// One ask chip's staggered rise-in on open (delight, 2026-07-12).
@@ -908,11 +877,9 @@ struct Composer: View {
         // here. Never parsed back out of the sentence — the MoneyReceipt rule.
         dayWhisper = DayBrief.whisper(things: all)
         dayLede = WidgetLede.current() ?? dayWhisper?.detail ?? ""
-        // One busy-publisher scan per open, shared by the timely chip below
-        // and the placeholder examples (both want the same dominant handle).
+        // One busy-publisher scan per open, feeding the timely chip below.
         // Counted in the single walk above rather than in a pass of its own.
         let busy = scan.busyPublisher
-        invitationPool = computeInvitationPool(tokenTitle: scan.firstTokenTitle, busy: busy)
         // Context-aware lead (2026-07-12): if you opened the composer while
         // looking at one source's feed, its recap leads the chips — the
         // composer meets you where you are. Only when that source actually has
@@ -1216,8 +1183,7 @@ struct Composer: View {
                              query: TodayBrief.title)]
     }
 
-    // MARK: - The panel (prd §334)
-
+    // MARK: - Kept-ask digests
 
     /// The corpus the kept-ask digests refresh over (prd §386p).
     ///
@@ -1231,114 +1197,6 @@ struct Composer: View {
         fd.fetchLimit = 600
         return ((try? modelContext.fetch(fd)) ?? []).live
     }
-
-    /// Compose the open: the lead, then every connected room's own figure.
-    ///
-    /// Synchronous, off the corpus walk `computeSuggestions()` already paid
-    /// for. Every registry below is pure over `[Thing]` by contract and every
-    /// per-room reading it needs is already in memory or in UserDefaults, so
-    /// there is nothing to await — which matters, because the alternative
-    /// (kick a task, repaint on arrival) shows a visible frame of empty panel
-    /// on every single open.
-
-    /// The per-source ROOM HEADS that draw (user, 2026-08-07: "if we have a
-    /// visualization in the app that is active some form of it should by and
-    /// large be in the agent").
-    ///
-    /// These live outside `FeedInsight` because their subject is bridge state
-    /// in UserDefaults rather than corpus rows, so no registry can reach them —
-    /// which is exactly why they were missing from the panel. Only the ones
-    /// that genuinely DRAW are lifted: Stripe's and Cloudflare's heads are a
-    /// time rail whose own doc calls it a restatement of the rows beneath it,
-    /// and §334 says a card earns its slot by drawing something.
-
-    /// The social rooms' channel treemap (prd §337) — the answer to "the
-    /// farcaster casting summary is a really weak visualization".
-    ///
-    /// Those rooms lead with `SocialRosterHero`, an avatar scroller rather than
-    /// a chart, so with the year-wall demoted they contributed nothing at all.
-    /// `channelName` has been stamped on every cast since §81 and nothing has
-    /// ever drawn it — which makes this the topic map the user prefers, over a
-    /// field that already exists.
-
-    /// The vectors the semantic map projects, read on the main actor because
-    /// `thing.embedding` is a stored property — but found by PREDICATE rather
-    /// than by walking the corpus (PERF 2026-08-12).
-    ///
-    /// `scatterCap`'s note is right that unpacking every vector would blow the
-    /// open's budget, and it capped the unpacking — but the FILTER that fed
-    /// the cap still read `embedding` on every row, and `embedding` is an
-    /// `.externalStorage` attribute: the one column class where touching a row
-    /// is a separate read rather than a field access. So the cap bounded the
-    /// arithmetic and not the I/O, which on a 12,000-row corpus is the larger
-    /// half. Asking SQLite for the newest rows that HAVE one touches exactly
-    /// as many as the map can draw.
-    ///
-    /// Falls back to the old in-memory walk if the predicate is refused, so
-    /// the worst case is the cost we had rather than a missing figure.
-
-    /// The three figures no ROOM can draw (prd §337) — the clock, the weeks,
-    /// and meaning. Composed over the whole corpus rather than one room's
-    /// slice, which is exactly why `FeedInsight`'s registries can't produce
-    /// them and why the All feed has never had a hero.
-    ///
-    /// Built from one flat pass: `AgentPanelFigures` is Foundation-only over
-    /// `Entry`, so nothing here hands a `Thing` across a boundary.
-    ///
-    /// `semanticMap` is handed in already RUNNING (PERF 2026-08-12) — see
-    /// `buildPanel`, which starts it before the room loop so the projection
-    /// overlaps every other figure instead of following them.
-
-    /// How many vectors the semantic map projects.
-    ///
-    /// `AgentPanelFigures.scatter` caps at 300 of its own; this is tighter
-    /// because the projection is the one piece of real arithmetic the panel
-    /// does on open — power iteration over N × 512 — and the open is
-    /// synchronous by design (§334: the alternative shows a frame of empty
-    /// panel every time). 150 points already saturate a tile visually, so the
-    /// extra 150 buy nothing a person can see.
-    private static let scatterCap = 150
-
-    /// What a room would LEAD with, as a figure.
-    ///
-    /// The chain mirrors `FeedScreen.shapedSections` exactly — topic map,
-    /// leaderboard, distribution, mosaic, heatmap — so the tile shows the same
-    /// reading the room itself shows. That is the whole contract of the panel:
-    /// it is a window onto the room, and a tile that previewed a DIFFERENT
-    /// figure than the room draws would be worse than no tile, because you'd
-    /// tap it looking for what you just saw. **Change the order there, change
-    /// it here** (the `-roomInsightProbe` rule).
-    ///
-    /// Rooms whose hero is text (Stripe's rail, PostHog's readings, the
-    /// approvals card) are deliberately absent: §334 says a card earns its slot
-    /// by drawing something.
-
-    /// The rooms whose panel tile may be the activity pulse — the subset of
-    /// `FeedHeatmap.labels` where the counted acts are the person's own habit
-    /// (see the guard above). Spelled here rather than as a flag on the
-    /// heatmap registry because the FEED's fallback rightly keeps drawing the
-    /// year grid for every registered room; only the tile declines.
-
-    /// `FeedInsight.Tone` as the plain index `AgentPanel` carries, so the model
-    /// layer stays free of SwiftUI's Color.
-
-    /// Per-day counts over the last `days`, oldest first.
-
-    /// The wallet's own curve — the one figure with no room registry behind it,
-    /// because the wallet's hero is a balance line rather than a count of rows.
-    /// Reads the samples already recorded on this device; nil until enough
-    /// aligned points exist, which is the honest state for a new wallet.
-
-    /// Deleted in favour of `AgentPanel.compactUSD` (§341) — this one stopped
-    /// at K, so a watched wallet holding $7.26M rendered "$7258k" beside a
-    /// Wallet room saying "$7.0M".
-
-    /// The wallet's flow band — the second Wallet card, under its own key.
-    ///
-    /// The window is the last 30 days rather than the feed's own selectable
-    /// range: the panel has no range control (a tile is a glance, not a
-    /// screen), and a fixed window keeps two opens comparable. Tapping lands
-    /// in the Wallet room, where the real band carries its window chips.
 
     /// Fills the grid so the slots span DOORS, not four flavors of one
     /// (2026-07-22). Timely chips lead (they earned their slot by a real
@@ -1399,32 +1257,6 @@ struct Composer: View {
         return nil
     }
 
-
-    /// The cycling placeholder's pool for THIS open — the static invitations
-    /// plus real-corpus examples that teach the widened vocabulary by naming
-    /// things that exist and would answer (2026-07-22). A busy publisher
-    /// earns "Synthesize my <feed> feed"; a watched token earns a
-    /// per-token ask. Honest by construction: every added line names a real
-    /// entity the answer path resolves.
-    ///
-    /// Takes the newest Tokens row's TITLE rather than the corpus (PERF
-    /// 2026-08-11): the old form did its own `all.first(where:)`, which
-    /// short-circuits for someone who watches tokens and walks every row for
-    /// everyone who doesn't. `CorpusScan` already saw it on the one walk.
-    private func computeInvitationPool(tokenTitle: String?,
-                                       busy: (handle: String, count: Int)?) -> [String] {
-        var pool = invitations
-        if let busy {
-            pool.append(String(localized: "Synthesize my \(shortPublisher(busy.handle)) feed"))
-        }
-        if let tokenTitle {
-            // `TokensAsk.symbol(of:)` — the one parser of the "Name · $TICKER"
-            // watch-title format (a bare space-split grabs the NAME's first
-            // word, so "Wrapped Bitcoin · $WBTC" would read "Wrapped").
-            pool.append(String(localized: "How's \(TokensAsk.symbol(of: tokenTitle)) doing?"))
-        }
-        return pool
-    }
 
     /// A chip's trailing count signal ("· 3"), or nil for zero — the one
     /// place the "· " glyph format lives, so the separator changes in one
@@ -1673,19 +1505,16 @@ struct Composer: View {
                 // The pairing line — teaches the sheet's dual nature (ask a
                 // question, or write a fact and send it out) and keeps the
                 // greeting from reading as an orphan label.
-                // Hidden once the board is up (§332): the pairing line teaches
-                // an empty room what it is for, and a room already full of
-                // answers has taught it. Kept for the empty case, which is
-                // exactly the room that still needs the sentence.
-                if true {
-                    Text("Ask, or write and send it out.")
-                        .dsText(.subhead13)
-                        .foregroundStyle(DS.textTertiary)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .padding(.horizontal, DS.Space.s4)
-                        .padding(.top, DS.Space.s2)
-                        .settleIn(delay: 0.1)
-                }
+                // The pairing line teaches an empty room what it is for. Its
+                // old stand-down condition went with the board (§332) — the
+                // rest surface is the only place this renders now.
+                Text("Ask, or write and send it out.")
+                    .dsText(.subhead13)
+                    .foregroundStyle(DS.textTertiary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.horizontal, DS.Space.s4)
+                    .padding(.top, DS.Space.s2)
+                    .settleIn(delay: 0.1)
             }
             // The content sizes to ITSELF (no filling scroll) so the sheet can
             // hug it — no stranded empty space. The answer conversation carries
@@ -2484,7 +2313,6 @@ struct Composer: View {
                 if chrome.focusDraftOnOpen {
                     chrome.focusDraftOnOpen = false
                     fieldFocused = true
-                    findMode = true
                 }
                 // Raised by HOLDING the magnifier (prd §384): the mic is
                 // already live when the surface lands. Same verb as the mic
@@ -2656,11 +2484,9 @@ struct Composer: View {
         fieldFocused = false
         withAnimation(DS.Motion.standard) { isOpen = false }
         draft = ""      // close clears the draft (composer spec)
-        findMode = false
         answering = false
         pasted = false
         chipsAppeared = false
-        placeholderIndex = 0
         turns = []
         currentQuestion = ""
         keptCurrent = false
@@ -3052,21 +2878,8 @@ struct Composer: View {
     /// also why the `today` pill and the today CHIP drop out of the rows below
     /// while this shows: three controls opening one screen, stacked, is the
     /// duplication the brief itself just stopped doing.
-    /// On screen when the room is at rest and the day has something to say.
-    /// The board is on screen — at rest, with something composed.
-
-    /// The composer was raised by the MAGNIFIER (prd §386n, user: "when i
-    /// press the search bar i get the other composer screen is that
-    /// intentional?").
     ///
-    /// Half of what they saw is intentional and stays: §215 rules that Find
-    /// runs NOTHING until you type, so unlike the berry it does not seed the
-    /// brief. The other half was a leftover — since §386d made a bare tap land
-    /// on the brief, "at rest" only ever happens via Find, so the agent panel
-    /// stopped being the rest surface and became the thing the SEARCH button
-    /// happens to show. Twenty room figures under a search field is noise:
-    /// pressing search should give you a place to search.
-    @State private var findMode = false
+    /// On screen when the room is at rest and the day has something to say.
 
     /// With the panel gone (§386p) this is simply "at rest with a day to
     /// state" — the `composition.isEmpty` term it used to carry was the
@@ -4509,8 +4322,8 @@ private extension View {
     }
 }
 
-/// A minimal wrapping row — kept-ask pills flow onto several lines and
-/// SwiftUI has no built-in for it at this deployment target.
+/// A minimal wrapping row — the settled answer's verb chips flow onto
+/// several lines and SwiftUI has no built-in for it at this deployment target.
 private struct FlowRow: Layout {
     var spacing: CGFloat = 8
 

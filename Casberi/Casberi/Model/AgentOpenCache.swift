@@ -98,8 +98,6 @@ import SwiftData
     var weekCount = 0
     var overdueCount = 0
     var upcomingCount = 0
-    /// The newest Tokens row's title, for the per-token invitation.
-    var firstTokenTitle: String?
     /// Things from the caller's `contextSource` in the last three days.
     var contextSourceRecent = 0
     /// The publisher (RSS feed, Substack, watched social account — all in
@@ -134,10 +132,6 @@ import SwiftData
         if captured >= dayStart { scan.todayCount += 1 }
         if captured >= weekAgo { scan.weekCount += 1 }
         if let src, source == src, captured >= contextRecent { scan.contextSourceRecent += 1 }
-        if scan.firstTokenTitle == nil, source == "Tokens" {
-            let title = thing.title
-            if !title.isEmpty { scan.firstTokenTitle = title }
-        }
         if captured >= busyStart,
            let raw = thing.authorHandle?.trimmingCharacters(in: .whitespaces),
            !raw.isEmpty {
