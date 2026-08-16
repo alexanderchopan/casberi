@@ -501,10 +501,26 @@ check("the board keeps the room the miniature dropped", board.contains("Notion 1
 check("the board's subline is the span of years, ungrouped", !board.contains("2,0"))
 
 print("")
-print("the WHEN rungs — the clock, then the bars")
-// ONE ROOM on purpose. Every WHERE rung declines on a single source, so these
-// fixtures are exactly the sets where the two WHEN rungs are what remains —
-// which is also the only situation either of them ever draws in.
+print("the clock — above WHERE, and the bars below it")
+
+// THE PROMOTION (2026-08-16), and this assertion IS the order guard: twelve
+// rows across four rooms clears the board's floor AND the clock's, so it is
+// exactly the overlap the ranking decides, and it can only come out `Dial` if
+// the clock really does sit above the board. Under the old order this drew a
+// treemap, which is what confined the clock to single-room searches.
+let busyWeek = (0..<12).map { i in
+    thing(["Photos", "Bluesky", "GitHub", "Notion"][i % 4], i % 7)
+}
+check("a busy multi-room week shows hours, not rooms",
+      comp(AnswerFigure.line(for: busyWeek, now: now)) == "Dial")
+// …and BELOW the floor nothing moved: the same four rooms, too few to have a
+// rhythm, still answer with the board.
+let quietWeek = (0..<8).map { i in
+    thing(["Photos", "Bluesky", "GitHub", "Notion"][i % 4], i % 7)
+}
+check("under the floor the board still answers",
+      comp(AnswerFigure.line(for: quietWeek, now: now)) == "TagMap")
+
 let week = (0..<12).map { i in thing("Photos", i % 7) }
 check("twelve in a week → the clock", comp(AnswerFigure.line(for: week, now: now)) == "Dial")
 check("eleven → the bars catch it",
@@ -773,8 +789,10 @@ mutate "people rung skipped" \
 # the board, silently dropping every room past the third.
 mutate "the miniature ranked above the board" \
   's/^        if let board = KeptAskComposers.sourceMapLine(rows) { return board }$/        if false, let board = KeptAskComposers.sourceMapLine(rows) { return board }/'
-# The clock rung skipped — a week of things answers with seven columns again,
-# and the figure that was just re-homed goes straight back to having no caller.
+# The clock rung skipped. This doubles as the ORDER mutation: with the rung
+# gone, the busy multi-room week falls through to the board — which is exactly
+# what a clock demoted back below WHERE would also do, so the fixture catches
+# both the deletion and the reordering.
 mutate "clock rung skipped" \
   's/^        if let dial = KeptAskComposers.dialLine($/        if false, let dial = KeptAskComposers.dialLine(/'
 # ── The caption. Every one of these renders as a perfectly readable sentence.

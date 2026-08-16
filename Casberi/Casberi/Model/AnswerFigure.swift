@@ -39,16 +39,24 @@ import Foundation
 ///   • PEOPLE (`faces`) — a set dominated by humans is about who. Its own gate
 ///     is `SocialThread.hasContext`, so a masthead can never be drawn as a
 ///     person.
+///   • THE WEEK'S RHYTHM (`dialLine`) — the week on a 24-hour clock, and the
+///     only thing in this app that answers which HOURS. It sat below WHERE at
+///     first, which confined it to searches whose matches all came from one
+///     room; a search spanning several is the ordinary case, so it was
+///     reachable in theory and almost never in practice (user ruling,
+///     2026-08-16). Its twelve-mark floor is what makes that safe — what
+///     clears it is a genuinely busy recent stretch, and for one of those the
+///     hours are the more particular fact, since which rooms these came from is
+///     already answerable from the rows.
 ///   • WHERE, twice, at two scales. `sourceMapLine` is the full 4×3 board and
 ///     carries the span of years as its subline; `sourceMixLine` is the 1-big-
 ///     2-stacked miniature. They answer the same question, so the richer one
 ///     goes first and the compact one catches the sets too small for it — a
 ///     figure sized to its evidence rather than two different claims.
-///   • WHEN last, which §247 already ruled the weakest lead when it moved the
-///     heatmap to the end of `shapedSections` for this exact reason — and, like
-///     WHERE, at two scales. `dialLine` puts the week on a 24-hour clock and is
-///     the only thing in this app that answers which HOURS; `dailyBars` catches
-///     the weeks too thin to have a rhythm at all.
+///   • WHICH DAYS (`dailyBars`) last, which §247 already ruled the weakest lead
+///     when it moved the heatmap to the end of `shapedSections`. The clock said
+///     it better for every week that had a rhythm, so what reaches here is the
+///     thin week — and seven columns are the honest drawing for one.
 ///
 /// NO FLOOR HERE IS THIS FILE'S. Every emitter declines on its own terms
 /// (`contactSheetLine`: ≥4 distinct pictures; `runwayAxis`: ≥2 dots;
@@ -116,7 +124,24 @@ enum AnswerFigure {
         if let axis = KeptAskComposers.runwayAxis(dated) { return axis }
         // 3 — who these are from.
         if let roster = TodayBrief.faces(rows) { return roster }
-        // 4/5 — where they live, the full board first and the miniature for the
+        // 4 — the WEEK'S RHYTHM, above where they came from (2026-08-16, user
+        // ruling). It sat under the two WHERE rungs at first, which meant it
+        // could only ever draw for a search whose matches all came from one
+        // room — and a search spanning several rooms is the ordinary case, so
+        // the figure was reachable in theory and almost never in practice.
+        //
+        // Its floor is what makes the promotion safe: twelve marks inside the
+        // week. A set that clears it is a genuinely busy recent stretch, and
+        // for one of those the HOURS are the more particular fact — which rooms
+        // they came from is answerable from the rows themselves, and what time
+        // of day you were doing this is answerable from nothing else in the
+        // app. Below the floor nothing changes at all: the board and the
+        // miniature catch every set exactly as they did.
+        if let dial = KeptAskComposers.dialLine(
+            rows, eyebrow: String(localized: "When these landed"), now: now) {
+            return dial
+        }
+        // 5/6 — where they live, the full board first and the miniature for the
         // sets too small to fill one. See the type comment: one question, two
         // scales, never two claims.
         if let board = KeptAskComposers.sourceMapLine(rows) { return board }
@@ -124,19 +149,11 @@ enum AnswerFigure {
             rows, eyebrow: String(localized: "Where these came from")) {
             return mix
         }
-        // 6/7 — WHEN, at two scales, the same way WHERE is. The clock says
-        // which HOURS, which nothing else in this app answers and which the
-        // bars structurally cannot: a week that all happened after ten at night
-        // and a week spread across every waking hour draw the identical strip.
-        // It needs a real rhythm to be one (12 marks), so the bars catch every
-        // week too thin for it.
+        // 7 — the last thing that is still true of any set: which days. The
+        // clock above already said it better for every week that had a rhythm,
+        // so what reaches here is the thin week — and seven columns are the
+        // honest drawing for one.
         //
-        // The dial windows itself — same `barsWindowDays`, passed in — so it is
-        // handed the unfiltered rows on purpose.
-        if let dial = KeptAskComposers.dialLine(
-            rows, eyebrow: String(localized: "When these landed"), now: now) {
-            return dial
-        }
         // Only the rows inside the chart's own window — see the type comment.
         let cutoff = Calendar.current.date(byAdding: .day, value: -(barsWindowDays - 1),
                                            to: Calendar.current.startOfDay(for: now))
