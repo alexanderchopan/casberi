@@ -104,20 +104,17 @@ enum DS {
     static let fillLine   = Color.adaptive(dark: "#ffffff1a", light: "#00000014")
     static let fillStrong = Color.adaptive(dark: "#ffffff29", light: "#00000024")
 
-    /// The unselected chip's INK — a subdued four-stop gradient across the
-    /// glyphs (2026-08-15, user-approved mock `chip-gradient-mock.html`:
-    /// "that apple style color where it's multi colored font", then "need to
-    /// be a bit more subdued"). The Apple Intelligence hue walk (blue →
-    /// violet → rose → sand) pulled toward the ink ramp: saturation roughly
-    /// halved, brightness near secondary ink, so the strip reads quiet until
-    /// looked at. Shared by the feed's source strip and the brief's docked
-    /// nav so the two rows are one voice.
-    ///
-    /// Selection never wears it — the active chip is the travelling blob with
-    /// plain white ink, so the gradient can only ever mean "not here". Under
-    /// Increase Contrast the gradient stands down to plain secondary ink: a
-    /// multi-hue ramp cannot promise one contrast number, and the person who
-    /// asked for contrast outranks the person who asked for delight.
+    /// RETIRED THE NIGHT IT SHIPPED — no caller (2026-08-16). The subdued
+    /// four-stop gradient for bare-word chips: approved from a mock ("that
+    /// apple style color where it's multi colored font", then "a bit more
+    /// subdued"), wired into both strips, and judged on device within the
+    /// hour — "the blue chips worked better than these words … it's too hard
+    /// to see." A bare 12pt word in a half-saturation ramp over the black
+    /// crown has no edge to find; the capsule was doing more work than it
+    /// looked like. Kept as the experiment's record, the dormant-not-deleted
+    /// shape: if multicolour type comes back, it comes back at DISPLAY size,
+    /// where the ramp has room to read — not on the smallest interactive
+    /// label in the app.
     static var chipGradient: AnyShapeStyle {
         ContrastStore.shared.increased
             ? AnyShapeStyle(textSecondary)

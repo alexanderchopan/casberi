@@ -3538,25 +3538,35 @@ struct Composer: View {
                             // section hues retire from this row entirely —
                             // the gradient is one shared voice, and "which
                             // section am I in" is the blob's position.
+                            // The feed strip's own restored grammar
+                            // (2026-08-16, user: "revert and make them same
+                            // color as the blue we now use in the composer"):
+                            // the active chip is the SAME `DS.tint` blue the
+                            // lede card above wears — one token — with white
+                            // ink, travelling between chips; unselected chips
+                            // are quiet neutral capsules. The gradient-words
+                            // experiment lived one night; its record is on
+                            // `DS.chipGradient`.
                             Text(section.title)
                                 .dsText(.subhead13)
                                 .fontWeight(here ? .semibold : .regular)
-                                .foregroundStyle(here ? AnyShapeStyle(DS.textPrimary)
-                                                      : DS.chipGradient)
+                                .foregroundStyle(here ? .white : DS.textSecondary)
                                 .lineLimit(1)
                                 .padding(.horizontal, DS.Space.s4)
                                 .padding(.vertical, DS.Space.s2)
                                 .background {
                                     if here {
                                         let blob = Capsule(style: .continuous)
-                                            .fill(.ultraThinMaterial)
-                                            .dsGlassBlob()
+                                            .fill(DS.tint)
                                         if reduceMotion {
                                             blob
                                         } else {
                                             blob.matchedGeometryEffect(
                                                 id: "briefNavBlob", in: briefNavNS)
                                         }
+                                    } else {
+                                        Capsule(style: .continuous)
+                                            .fill(DS.fillFaint)
                                     }
                                 }
                                 .dsHover()

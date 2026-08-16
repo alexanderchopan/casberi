@@ -523,11 +523,11 @@ struct SourceChips: View {
         Text(label)
             .dsText(.label12)
             .fontWeight(.semibold)
-            // Active: plain primary ink on the glass blob. Unselected: the
-            // subdued gradient (2026-08-15, approved mock) — the words carry
-            // the colour now that the boxes are gone; `DS.chipGradient`
-            // stands down to secondary ink under Increase Contrast.
-            .foregroundStyle(isOn ? AnyShapeStyle(DS.textPrimary) : DS.chipGradient)
+            // `.white`, not `DS.textPrimary`: this sits on the accent, which is
+            // a dark blue in BOTH themes — the same blue the composer's lede
+            // card wears (one token, `DS.tint`, user 2026-08-16: "make them
+            // same color as the blue we now use in the composer").
+            .foregroundStyle(isOn ? .white : DS.textPrimary)
             .lineLimit(1)
             // Nothing to scale on the phone: the capsule is what gives, so
             // the word keeps its size all the way up the Dynamic Type ramp
@@ -599,8 +599,7 @@ struct SourceChips: View {
                         .fontWeight(.semibold)
                         // The same ink rule as `categoryCapsule` — one
                         // convention across the strip's two word shapes.
-                        .foregroundStyle(isActive ? AnyShapeStyle(DS.textPrimary)
-                                                  : DS.chipGradient)
+                        .foregroundStyle(isActive ? .white : DS.textPrimary)
                         .lineLimit(1)
                         .minimumScaleFactor(0.55)
                         .frame(width: iconSize, height: iconSize)
@@ -946,12 +945,22 @@ private struct WordChipFill: ViewModifier {
     /// records about HOW the blob travels is unchanged — one
     /// matchedGeometryEffect id on a per-chip background, measured against
     /// every fancier cut — only its paint changed.
+    /// RESTORED to the blue-blob-and-glass form after a one-night experiment
+    /// (2026-08-15/16). The bare-gradient-words cut — approved from a mock,
+    /// built, and judged on device within the hour — lost twice: with
+    /// `.ultraThinMaterial` + `dsGlassBlob` the active chip rendered as an
+    /// EMPTY dark capsule (iOS 26 hoists glass above app content, so the
+    /// blob sat OVER its own word), and with the words bare the user's
+    /// verdict was "the blue chips worked better than these words … it's too
+    /// hard to see". The tint fill + glassBlob below is the form that
+    /// shipped for weeks and was never the complaint; `DS.chipGradient`
+    /// stays in the token file as the experiment's record.
     func body(content: Content) -> some View {
         content
             .background {
                 if active {
                     let fill = Capsule(style: .continuous)
-                        .fill(.ultraThinMaterial)
+                        .fill(DS.tint)
                         .dsGlassBlob()
                     if reduceMotion {
                         fill
@@ -960,6 +969,7 @@ private struct WordChipFill: ViewModifier {
                     }
                 }
             }
+            .dsGlass(cornerRadius: cornerRadius, tint: DS.tint)
     }
 }
 

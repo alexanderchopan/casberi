@@ -4167,6 +4167,11 @@ struct GenFrontPage: View {
     var quiet: Set<String> = []
     let inAgentAnswer: Bool
     @State private var width: CGFloat = 0
+    /// Sections whose full modules are open (the digest's tap) — collapsed by
+    /// default, per the mock this implements. Per-view state on purpose: a
+    /// re-compose starts the brief folded again, which is the landing the
+    /// mock shows.
+    @State private var expandedSections: Set<String> = []
 
     /// Two readable columns (≥ ~390pt each) plus the gutter. Below this the
     /// single column is the better page, whatever the idiom says.
@@ -4259,22 +4264,154 @@ struct GenFrontPage: View {
         let isQuiet = seg.count > 1 && seg.dropFirst().allSatisfy { quiet.contains($0) }
         // BLACK CARDS WITH THEIR SEPARATION (2026-08-15, two user rulings
         // minutes apart: "it's fine if it is black cards", then "i like the
-        // card separations, but not gray"). The gray was `surfaceRaised`
-        // (#1a1a1c); the fix is one tonal step DOWN to `surfaceSheet`
-        // (#111113) over the composer's new pure-black `inkGround` — a card
-        // that still has an edge but reads as black, not as a gray box. No
-        // new hex: surfaceSheet is the app's own card token, and the pure
-        // black beneath it is what lets the darkest card tone in the ramp
-        // finally do card work. Never a stroke instead — no hairlines, zero
-        // exceptions.
-        VStack(alignment: .leading, spacing: DS.Space.s2) {
-            ForEach(seg, id: \.self) { module($0, inCard: true) }
+        // card separations, but not gray"): `surfaceSheet` (#111113) over the
+        // composer's pure-black `inkGround` — an edge, not a gray box. Never
+        // a stroke instead; no hairlines, zero exceptions.
+        //
+        // **A SECTION CARD IS A DIGEST NOW** (2026-08-16, user, holding the
+        // approved mock against the built brief: "the day brief DOES NOT
+        // LOOK LIKE THIS"). They were right, and the gap was density: the
+        // deck pass shipped the mock's skeleton — black ground, cards, the
+        // blue lede — while each card still contained its section's FULL
+        // modules, heatmaps and sankeys and face rows, when the mock's whole
+        // point is three lines: the section name small, ONE reading big, one
+        // quiet subline. So a headed card now renders exactly that, and the
+        // modules live behind a tap — expand in place, collapse again — so
+        // nothing composed is lost, it just stops being the landing. The
+        // readings come from the modules' own STRUCTURED args (a MoneyHero's
+        // arg 0 is the compact total, an Alerts row is `title|meta|…`),
+        // never parsed out of localized prose — the MoneyReceipt rule.
+        if let headerRef = seg.first, let header = els[headerRef],
+           header.comp == "Section" {
+            digestCard(headerRef: headerRef, header: header,
+                       members: Array(seg.dropFirst()), quietCard: isQuiet)
+        } else {
+            // The headless trailing run (the leads, anything unfiled) keeps
+            // the plain card — there is no section name to digest under.
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                ForEach(seg, id: \.self) { module($0, inCard: true) }
+            }
+            .opacity(isQuiet ? 0.68 : 1)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(DS.Space.s4)
+            .background(DS.surfaceSheet,
+                        in: RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
         }
-        .opacity(isQuiet ? 0.68 : 1)
+    }
+
+    /// One section as the mock's three lines, modules behind the tap.
+    @ViewBuilder
+    private func digestCard(headerRef: String, header: GenEl,
+                            members: [String], quietCard: Bool) -> some View {
+        let title = header.str(0)
+        let qualifier = header.str(1)
+        let expanded = expandedSections.contains(headerRef)
+        let stat = qualifier.isEmpty ? digestStat(members) : qualifier
+        let sub = digestSub(members)
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            Button {
+                DSHaptic.selection()
+                withAnimation(DS.Motion.standard) {
+                    if expanded { expandedSections.remove(headerRef) }
+                    else { expandedSections.insert(headerRef) }
+                }
+            } label: {
+                VStack(alignment: .leading, spacing: 3) {
+                    HStack(spacing: DS.Space.s2) {
+                        Text(title)
+                            .dsText(.subhead13).fontWeight(.semibold)
+                            .foregroundStyle(DS.textSecondary)
+                        Spacer(minLength: 0)
+                        // The one chevron: says the card OPENS. Rotates
+                        // rather than swaps, so collapse is visibly the
+                        // same door.
+                        Image(systemName: "chevron.down")
+                            .dsGlyph(11)
+                            .foregroundStyle(DS.textTertiary)
+                            .rotationEffect(.degrees(expanded ? 180 : 0))
+                    }
+                    if !stat.isEmpty {
+                        // Attention ink ONLY for the late-reading (the
+                        // qualifier §386l composes for Needs you) — a money
+                        // total in orange would be an alarm about nothing.
+                        Text(stat)
+                            .dsText(.heading28)
+                            .foregroundStyle(!qualifier.isEmpty && header.str(2) == "attention"
+                                             ? DS.attention : DS.textPrimary)
+                            .monospacedDigit()
+                            .lineLimit(1).minimumScaleFactor(0.7)
+                    }
+                    if !sub.isEmpty {
+                        Text(sub)
+                            .dsText(.subhead13)
+                            .foregroundStyle(DS.textTertiary)
+                            .lineLimit(2)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            if expanded {
+                ForEach(members, id: \.self) { module($0, inCard: true) }
+            }
+        }
+        // The §386d step-back, whole-card (see the plain branch above).
+        .opacity(quietCard ? 0.68 : 1)
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(DS.Space.s4)
         .background(DS.surfaceSheet,
                     in: RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
+        // The nav's scroll target AND its where-am-I spy — the header module
+        // is no longer mounted, so the card takes over both of the jobs it
+        // did: `scrollTo(headerRef)` lands here, and the offset preference
+        // (quantized, §386k's re-run lesson) keeps the docked chips' blob
+        // tracking the section under the fold.
+        .id(headerRef)
+        .background {
+            GeometryReader { geo in
+                Color.clear.preference(key: GenSectionOffsetKey.self,
+                                       value: [title: (geo.frame(in: .global).minY / 24).rounded() * 24])
+            }
+        }
+    }
+
+    /// The big line, from a member's own structured args. Only the modules
+    /// whose arg IS a headline figure — never a derived sum, never prose.
+    private func digestStat(_ members: [String]) -> String {
+        for ref in members {
+            guard let el = els[ref] else { continue }
+            if el.comp == "MoneyHero" { return el.str(0) }
+        }
+        return ""
+    }
+
+    /// The quiet line under it — first member that carries one.
+    private func digestSub(_ members: [String]) -> String {
+        for ref in members {
+            guard let el = els[ref] else { continue }
+            switch el.comp {
+            case "MoneyHero":
+                let s = el.str(3); if !s.isEmpty { return s }
+            case "Alerts":
+                // rows are `title|meta|source|id` joined by ";" — structured,
+                // not prose (see `alertsCard`).
+                if let row = el.str(1).split(separator: ";").first {
+                    let parts = row.split(separator: "|", omittingEmptySubsequences: false)
+                    let title = parts.count > 0 ? String(parts[0]) : ""
+                    let meta = parts.count > 1 ? String(parts[1]) : ""
+                    if !title.isEmpty {
+                        return meta.isEmpty ? title : "\(title) · \(meta)"
+                    }
+                }
+            case "DayFold":
+                let s = el.str(3); if !s.isEmpty { return s }
+            case "ValueSpark":
+                let s = el.str(0); if !s.isEmpty { return s }
+            default: break
+            }
+        }
+        return ""
     }
 
     /// One module. Inside a DECK CARD the chapter's top air and the
