@@ -108,6 +108,7 @@ at all.
 | §361 | The top band gets the feed's geometry — it pays for the rail's | amended by §371 |
 | §124a | The Wallet feed carries the treemap AND the NFTs | superseded by §387 |
 | §240 | NFTs in folders, and the eager owned-NFT read behind them | amended by §387 |
+| §389b | A fold is skipped, not fatal — the cover is the newest thing t | reversed by §389c |
 
 ### Known stale, by hand
 
@@ -24181,6 +24182,66 @@ command, and `git show <bump>:<path>` proves the file's absence rather than
 inferring it from timestamps. The fold defect was then found by reading the gate
 list, not by reproducing the report, because the report could not have been about
 the gate.
+
+### 389c. The cover is the newest thing, and it comes OUT of its fold (user: "the most recent single thing should be the days lead, and should not be in the rows below it, then when a new thing happens that is also a single thing it replaces it. we could even have things that are folded replace it eg the single new photo or github link, and then when the next thing occurs they go into their respective row", 2026-08-16)
+
+**This reverses §389b's accepted consequence, and the ruling is the user's:** the
+report was "the all feed is supposed to show most recent single item at the top
+but if you notice here it has an 8 hour old voice note despite me having a recent
+email in the list." §389b wrote that consequence down as accepted ("the cover may
+not be the newest thing on screen, since a fold above it can be newer") and
+declined the alternative — lift a member out of its fold and re-decide the fold —
+as "more invasive in the file carrying six liveness corollaries." It read as a
+sorting bug within the day, which is the outcome that matters.
+
+**Why it bit harder than the entry predicted, and this is the part §389b could
+not see from the code alone.** `FeedFold.bundleable` excludes voice, screenshots
+and anything from You, and `stripCandidate` covers only what can be drawn as
+itself — so the §389b candidate pool was biased toward exactly the rows that can
+NEVER fold. On a feed where mail, RSS and social all fold, the newest
+non-foldable thing is routinely a capture of your own from hours ago, and it then
+holds the top of the feed for a full `ledeMaxAge` (24h) while everything newer
+folds past it. Not an edge case: the bias is structural, and the two exemption
+lists guarantee it recurs.
+
+**THE RULE IS NOW: the newest thing in the newest day, full stop.** Foldable or
+not. It is chosen over THINGS and BEFORE the fold rather than over rows and after
+it (`ledeThingID(in: days)` → `bundle(_:excluding:)`), which is what makes the
+whole class impossible rather than patched — there is no ordering left for a
+cover to violate, and §35's "volume compresses, never reorders" holds again in
+the one place that had exempted itself from it.
+
+Decisions with reasons:
+
+· **It leaves its fold, and the fold recounts.** The cover is dropped before the
+  fold buckets are built, not filtered out of finished rows — so three mails
+  minus the cover is two mails, which is under `bundleThreshold` and correctly
+  stops folding at all. Filtering after the fact would have left "iCloud Mail ·
+  3 emails" sitting beside a cover that is one of those three.
+
+· **A `standsAlone` newest thing DECLINES the cover rather than being stepped
+  past.** §389b skipped it and reached further down; that reintroduces the exact
+  failure — a consent card or token pulse keeps its own position at the top of
+  the rows, so an older cover above it puts a newer row beneath an older card.
+  A stands-alone row is already a full anatomy leading the feed on its own.
+
+· **A dead row is still skipped, not fatal** (the next one may be fine), and the
+  age bound still returns early.
+
+· The cover is resolved at render from the first day group by id, never held as
+  a `Thing` across renders — `DerivationMemo` outlives a heal's delete, so the
+  id is the same shape `FeedRow` already stores for the same reason.
+
+**Standing lesson.** §389b stated its consequence honestly and accepted it, and
+the user reported that exact sentence as a bug the same day. A consequence you
+can state in one line is one you can also test against a real corpus before
+shipping it — and "every row carries its own time, so nothing is misrepresented"
+was true and beside the point: the feed's promise is the ORDER, not the labels.
+
+**BUILT AND COMPILED, NOT SEEN ON SCREEN** — iOS Simulator build green, liveness
+audit green. Unverified visually: a day whose newest thing is the cover renders
+its remaining run one row shorter, and whether the un-folded remainder (a
+two-mail day that no longer folds) reads as intended is a screen question.
 
 ## §390 — The bar's verbs swap: tap for sources, hold for the agent (user: "i'd like to switch the behavior of the fab. i'd like it to be tap to open source tray and long press to open agent", 2026-08-16)
 

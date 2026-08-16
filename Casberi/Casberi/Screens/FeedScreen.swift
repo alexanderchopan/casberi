@@ -424,6 +424,12 @@ struct FeedScreen: View {
         var key: Int?
         var days: [(String, [Thing])] = []
         var groups: [(String, [FeedRow])] = []
+        /// The cover (prd §389c) — picked from `days` and lifted out of
+        /// `groups`, so it is stored as an id and resolved against the first
+        /// day at render (never held as a `Thing` across renders: this class
+        /// outlives a heal's delete, and the id is the same shape `FeedRow`
+        /// stores for the same reason).
+        var lede: UUID?
         var imageOnly: Set<UUID> = []
         var wideArt: Set<UUID> = []
         var coarse: Set<String> = []
@@ -1443,9 +1449,20 @@ struct FeedScreen: View {
     /// Takes the already-computed day groups so the caller derives `dayGroups`
     /// (→`visible`→`feedThings`) ONCE per render and reuses it for the day
     /// totals too, instead of rebuilding the whole chain here a second time.
+    ///
+    /// `excluding` is the cover (prd §389c) — removed BEFORE the fold buckets
+    /// are built, not filtered out of the finished rows, so a source whose run
+    /// the cover was part of counts and draws its remaining members honestly
+    /// (three mails minus the cover is two mails, which is under
+    /// `bundleThreshold` and correctly stops folding at all). Filtering after
+    /// the fact would have left "iCloud Mail · 3 emails" beside a cover that is
+    /// one of those three.
     private func bundle(_ days: [(String, [Thing])],
-                        nextEventID: UUID? = nil) -> [(String, [FeedRow])] {
-        days.map { label, dayThings in
+                        nextEventID: UUID? = nil,
+                        excluding cover: UUID? = nil) -> [(String, [FeedRow])] {
+        days.map { label, allDayThings in
+            let dayThings = cover.map { id in allDayThings.filter { $0.id != id } }
+                ?? allDayThings
             // Grouped ONCE per day (perf, 2026-07-28): the old version
             // re-filtered the whole day for every bundled source it found
             // (O(day size²) — a heavy sync day with several bundled sources
@@ -1556,59 +1573,67 @@ struct FeedScreen: View {
     /// `wideArtIDs` states as its own floor, for the same reason.
     private static let ledeMinRows = 3
 
-    /// The row that draws as the feed's cover (prd §389) — the NEWEST one,
-    /// which is the whole rule. `boundaryID`'s shape: takes the already-bundled
-    /// groups so the caller derives them once and shares.
+    /// The THING that draws as the feed's cover (prd §389c, 2026-08-16) — the
+    /// newest one in the newest day, full stop, whether or not it would
+    /// otherwise have folded. It is lifted OUT of the rows below (see
+    /// `bundle(_:nextEventID:excluding:)`), so it appears exactly once; when
+    /// the next thing lands it takes the cover and this one drops back into its
+    /// own row, or into its source's fold.
     ///
-    /// Four ways it declines, each because the card would say something untrue:
+    /// **Chosen over THINGS, before bundling — not over rows, after it.** The
+    /// §389b version read the bundled rows and stepped over folds to find the
+    /// newest thing that had arrived on its own, and its own doc admitted the
+    /// consequence: "the cover may not be the newest thing on screen, since a
+    /// fold above it can be newer." Reported as exactly that within the day — an
+    /// eight-hour-old voice note leading over a newer email, because mail had
+    /// folded and voice can never fold (`FeedFold.bundleable` excludes voice,
+    /// screenshots and anything from You, so the §389b candidate pool was
+    /// biased toward precisely the rows that never fold, and a stale one could
+    /// hold the top of the feed for a full `ledeMaxAge`). The feed's standing
+    /// law is that volume compresses and NEVER reorders (§35); the cover was
+    /// the one place that reordered, so the fix is to make it unable to.
     ///
-    /// - Every row in the first group is a FOLD. A bundle summarizes things
-    ///   rather than being one, so there is nothing in it to enlarge.
-    /// - It is older than `ledeMaxAge`.
-    /// - The feed is shorter than `ledeMinRows`.
-    /// - Every candidate `standsAlone`. A consent card, a token pulse and a
-    ///   post card are full anatomies that were given their size for their own
-    ///   reasons; wrapping one in a cover is two rhythm-breakers stacked, and
-    ///   for `ApprovalCard` it would bury the verbs.
+    /// Three ways it declines, each because the card would say something
+    /// untrue:
     ///
-    /// **A fold is SKIPPED, not fatal (prd §389b, 2026-08-16).** The first cut
-    /// read row zero and declined if it was a fold — principled, and wrong in
-    /// practice: `FeedFold.bundleThreshold` is 3 and Bluesky/Farcaster fold too
-    /// (reversed 2026-08-09 precisely because a wide follow list floods All), so
-    /// on any active feed the newest row is usually "RSS · 6 articles" and the
-    /// cover silently never appeared. Reported as exactly that. So the rule is
-    /// **the newest thing that arrived on its OWN** — which is also the better
-    /// cover: one of six syndicated articles says less than the transfer that
-    /// landed by itself.
-    ///
-    /// The consequence, stated because it is visible: the cover may not be the
-    /// newest thing on screen, since a fold above it can be newer. Every row
-    /// carries its own time, so nothing is misrepresented — a cover is an
-    /// object that leads, not a claim to be first.
+    /// - The newest thing is older than `ledeMaxAge`. A cover is a claim about
+    ///   recency and nothing else. NOTE this is asked when the derivation memo
+    ///   is rebuilt rather than per render, so a session left open for a day
+    ///   keeps its cover until the next arrival — deliberate: the cover and the
+    ///   fold that excludes it MUST be decided together, and a per-render pick
+    ///   could name a thing that is still inside `memo.groups`' fold, drawing
+    ///   it twice.
+    /// - The feed is shorter than `ledeMinRows` — counted in THINGS here as a
+    ///   cheap upper bound, and re-asked in ROWS by the caller once the fold
+    ///   has run (the real floor; see `bundledSections`).
+    /// - The newest thing `standsAlone` — a consent card, a token pulse, a post
+    ///   card are full anatomies sized for their own reasons, and wrapping one
+    ///   in a cover is two rhythm-breakers stacked (for `ApprovalCard` it would
+    ///   bury the verbs). NOTE it declines rather than reaching PAST it: a
+    ///   stands-alone row keeps its own position at the top of the rows, so
+    ///   covering something older would put a newer row underneath an older
+    ///   card — the very thing this rewrite exists to make impossible.
     ///
     /// Scoped to the FIRST group: a cover is the top of the feed, and reaching
     /// into yesterday for one would be ranking, not position.
     ///
-    /// Counted rather than flattened, deliberately: this runs on every body
-    /// evaluation of the screen with this app's worst measured perf history
-    /// (`derivationKey`'s own 6.3-seconds-across-44-renders note), and `flatMap`
-    /// would allocate the whole row list per render to read one group.
-    private func ledeID(in groups: [(String, [FeedRow])]) -> String? {
-        let count = groups.reduce(0) { $0 + $1.1.count }
-        guard count >= Self.ledeMinRows, let head = groups.first?.1 else { return nil }
-        for row in head {
-            // A fold has no single thing behind it — step over it.
-            guard case .single(let item) = row.kind else { continue }
-            // `.live` before any stored read — a derived array read during the
+    /// Counted rather than flattened, deliberately: `flatMap` would allocate
+    /// the whole thing list to read one group, on the screen with this app's
+    /// worst measured perf history (`derivationKey`'s own
+    /// 6.3-seconds-across-44-renders note).
+    private func ledeThingID(in days: [(String, [Thing])]) -> UUID? {
+        let count = days.reduce(0) { $0 + $1.1.count }
+        guard count >= Self.ledeMinRows, let head = days.first?.1 else { return nil }
+        for thing in head {
+            // `.isLive` before any stored read — a derived array read during the
             // same graph update a heal's delete can land in (the dead-Thing
             // rule). A dead row is skipped, not fatal: the next one may be fine.
-            guard let thing = item.live else { continue }
-            // Rows are newest-first, so the first candidate past the age bound
-            // means every later one is too.
+            guard thing.isLive else { continue }
+            // Newest-first, so the first one past the age bound means every
+            // later one is too.
             guard Date.now.timeIntervalSince(thing.capturedAt) <= Self.ledeMaxAge
             else { return nil }
-            if standsAlone(thing) { continue }
-            return row.id
+            return standsAlone(thing) ? nil : thing.id
         }
         return nil
     }
@@ -2824,6 +2849,11 @@ struct FeedScreen: View {
         if memo.key != key {
             memo.key = key
             memo.days = perfAccum("dayGrouping") { recentDaysThenCoarseTail(visible) }
+            // The cover is chosen over THINGS and before the fold (prd §389c),
+            // which is the whole of the fix: chosen after it, the newest thing
+            // could be inside a fold and the card would lead with something
+            // older than a row beneath it.
+            memo.lede = ledeThingID(in: memo.days)
             // `nextEventID` rides in so the clock carve-out (prd §377) can
             // spare the next-up row. Both it and the live set can change
             // WITHOUT `visible` changing, and this memo keys on the snapshot's
@@ -2831,7 +2861,22 @@ struct FeedScreen: View {
             // folded until the next write. That is a delay, never a
             // regression: before this carve-out existed those rows folded
             // unconditionally, so the stale case is exactly the old behaviour.
-            memo.groups = perfAccum("bundle") { bundle(memo.days, nextEventID: nextEventID) }
+            memo.groups = perfAccum("bundle") {
+                bundle(memo.days, nextEventID: nextEventID, excluding: memo.lede)
+            }
+            // `ledeMinRows` is a floor in ROWS, and rows are only known after
+            // the fold — which needs the cover's identity first, so the two
+            // cannot both be decided in one pass. Asked here, where the answer
+            // exists: four RSS items are four THINGS and one bundled row, and a
+            // cover over a lone "RSS · 3 articles" is the whole feed being a
+            // cover, which is what that floor exists to prevent. Re-bundling
+            // costs nothing precisely because it only ever happens on a feed
+            // this small.
+            if memo.lede != nil,
+               memo.groups.reduce(1, { $0 + $1.1.count }) < Self.ledeMinRows {
+                memo.lede = nil
+                memo.groups = bundle(memo.days, nextEventID: nextEventID)
+            }
             memo.imageOnly = perfAccum("imageOnlyIDs") { imageOnlyIDs(memo.days) }
             memo.wideArt = perfAccum("wideArtIDs") { wideArtIDs(memo.groups) }
             memo.coarse = perfAccum("coarseLabels") { coarseLabels(in: memo.days) }
@@ -2854,7 +2899,16 @@ struct FeedScreen: View {
         // Suppressed under a moment split: the section header IS the boundary
         // there, and two seams for one fact is worse than either alone.
         let boundary = split.moment ? nil : boundaryID(in: split.groups)
-        let lede = ledeID(in: split.groups)
+        // The cover is already OUT of `memo.groups` (prd §389c), so it is
+        // resolved from the day it came from rather than searched for among the
+        // rows. `.isLive` before the id read: `memo.days` is held across
+        // renders, so a heal's delete can land under it — and the first day is
+        // the only one that can hold the cover, so the scan is bounded by a day
+        // rather than by the corpus.
+        let ledeThing = memo.lede.flatMap { id in
+            memo.days.first?.1.first { $0.isLive && $0.id == id }
+        }
+        let firstLabel = groups.first?.0
         let imageOnly = memo.imageOnly
         let wideArt = memo.wideArt
         let coarse = memo.coarse
@@ -2870,21 +2924,17 @@ struct FeedScreen: View {
         // (honesty law: a day with nothing to say says nothing).
         let dayLine = DayBrief.whisper(things: visible)
         return Group {
-        ForEach(groups, id: \.0) { label, allRows in
-            // The cover leaves the run (prd §389). Dropped BEFORE the run
-            // positions are computed, or the card's absent row would still own
-            // the card's top shoulder and the real first row would render
-            // square-topped against the header.
+        ForEach(groups, id: \.0) { label, rows in
+            // The cover draws above the FIRST group's run and is already absent
+            // from every group's rows (prd §389c) — so the run positions below
+            // see the true row list with no filtering, and the card's top
+            // shoulder lands on the real first row.
             //
-            // Searched rather than assumed to be row zero (prd §389b): the
-            // cover is the newest row that is a single, which a fold above it
-            // can push down the group. Only one group can hold it, and for
-            // every other group `first(where:)` misses and the filter never
-            // runs.
-            let ledeRow = lede.flatMap { id in allRows.first { $0.id == id } }
-            let rows = ledeRow.map { hero in
-                allRows.filter { $0.id != hero.id }
-            } ?? allRows
+            // The first group is named rather than indexed: `momentSplit` can
+            // rename or insert a leading group ("Since you left"), and the
+            // labels are the `ForEach` identity, so they are the one thing that
+            // is unique here by construction.
+            let cover = label == firstLabel ? ledeThing : nil
             // Bundles merge into the day card like any row-shaped thing —
             // only a single that stands alone (consent, token) breaks the run.
             let positions = cardRunPositions(
@@ -2896,10 +2946,7 @@ struct FeedScreen: View {
                 },
                 isBoundary: { rows[$0].id == boundary })
             Section {
-                if let ledeRow, case .single(let item) = ledeRow.kind,
-                   let thing = item.live {
-                    ledeListRow(thing)
-                }
+                if let cover, cover.isLive { ledeListRow(cover) }
                 ForEach(Array(rows.enumerated()), id: \.element.id) { i, row in
                     if row.id == boundary { newSinceDivider }
                     switch row.kind {

@@ -45,7 +45,8 @@ enum FeedLedeFace {
     /// keeps the cover's PICK positional (§389).
     ///
     /// There is no `none`: the decision to have a cover at all belongs to
-    /// `FeedScreen.ledeID`, which declines four ways before this is ever asked.
+    /// `FeedScreen.ledeThingID`, which declines three ways before this is ever
+    /// asked.
     /// Once a cover is drawing, it draws something.
     static func kind(isMoney: Bool, hasArt: Bool, hasClock: Bool) -> Kind {
         if isMoney { return .money }
