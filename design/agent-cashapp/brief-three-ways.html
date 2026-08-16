@@ -1,0 +1,246 @@
+<title>The brief, three ways</title>
+<style>
+  :root {
+    --page: #0a0b0f; --ink: #f2f4f8; --muted: #99a1b4; --faint: #626b80;
+    --tint: #1673e6; --confirm: #30d158; --attn: #ff9f0a; --cash: #00d632;
+    --money: ui-rounded, -apple-system, system-ui, sans-serif;
+    --text: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { background: var(--page); }
+  body { font-family: var(--text); color: var(--ink);
+         background: radial-gradient(900px 420px at 18% -8%, rgba(22,115,230,.10), transparent 62%), var(--page);
+         padding: 48px 28px 72px; }
+  .wrap { max-width: 1180px; margin: 0 auto; }
+  header { max-width: 820px; margin-bottom: 34px; }
+  .eyebrow { font-size: 12px; font-weight: 600; color: #4d8dff; margin-bottom: 10px; }
+  h1 { font-size: clamp(26px,3.4vw,36px); font-weight: 800; letter-spacing: -.02em; line-height: 1.1; margin-bottom: 12px; }
+  header p { font-size: 15px; line-height: 1.55; color: var(--muted); max-width: 74ch; }
+  header p b { color: var(--ink); font-weight: 600; }
+
+  .row { display: flex; flex-wrap: wrap; gap: 34px; align-items: flex-start; justify-content: center; }
+  .option { width: 336px; }
+  .optName { font-size: 13px; font-weight: 800; margin: 0 4px 4px; }
+  .optName span { color: var(--faint); font-weight: 600; }
+  .optWhy { font-size: 12.5px; line-height: 1.5; color: var(--muted); margin: 12px 4px 0; }
+  .optWhy b { color: var(--ink); font-weight: 600; }
+  .phone { width: 336px; border-radius: 46px; padding: 10px; background: #15171c; box-shadow: 0 30px 70px rgba(0,0,0,.55); margin-top: 10px; }
+  .screen { border-radius: 38px; overflow: hidden; min-height: 740px; background: #000; position: relative;
+            display: flex; flex-direction: column; }
+  .scroll { flex: 1; padding: 16px 16px 8px; }
+  .x { margin-left: auto; width: 28px; height: 28px; border-radius: 50%; background: rgba(255,255,255,.08);
+       display: flex; align-items: center; justify-content: center; font-size: 12px; color: var(--muted); flex: none; }
+  .berry { width: 20px; height: 20px; border-radius: 50%; flex: none;
+           background: radial-gradient(circle at 32% 28%, #6ea8ff, #1673e6 58%, #0c3f85); }
+  .askbar { margin: 8px 14px 14px; display: flex; align-items: center; gap: 10px;
+            background: rgba(28,30,37,.9); border-radius: 999px; padding: 12px 16px; }
+  .askbar s { text-decoration: none; font-size: 14px; color: var(--faint); flex: 1; }
+  .chipsrow { display: flex; gap: 6px; padding: 0 14px 8px; }
+  .chipsrow span { font-size: 11px; font-weight: 700; padding: 6px 12px; border-radius: 999px; color: var(--muted); background: rgba(255,255,255,.05); }
+  .chipsrow .on { background: var(--tint); color: #fff; }
+
+  .glyph { width: 22px; height: 22px; border-radius: 7px; display: inline-flex; align-items: center;
+           justify-content: center; font-size: 12px; flex: none; }
+  .card { border-radius: 20px; padding: 13px 14px; margin-bottom: 9px; background: #111113; }
+  .caprow { display: flex; align-items: center; gap: 7px; }
+  .caprow b { font-size: 12.5px; font-weight: 700; color: var(--muted); }
+  .caprow .chev { margin-left: auto; color: var(--faint); font-size: 12px; }
+  .numrow { display: flex; align-items: flex-end; gap: 10px; margin-top: 6px; }
+  .num { font-family: var(--money); font-weight: 700; font-size: 27px; letter-spacing: -.02em; line-height: 1;
+         font-variant-numeric: tabular-nums; }
+  .mini { margin-left: auto; flex: none; }
+  .sub { font-size: 11.5px; color: var(--faint); margin-top: 5px; }
+  .pair { display: flex; gap: 9px; }
+  .pair .card { flex: 1; margin-bottom: 9px; }
+  .thumbs { display: flex; gap: 4px; margin-left: auto; }
+  .thumbs i { width: 30px; height: 30px; border-radius: 8px; display: block; }
+</style>
+
+<div class="wrap">
+<header>
+  <div class="eyebrow">Casberi · the brief, three ways</div>
+  <h1>Apple, Cash App, and what Casberi should do</h1>
+  <p>Same day, three grammars. <b>Apple</b> designs measurements: a monument figure, then cards that never ship without a miniature chart. <b>Cash App</b> designs one number with total conviction and treats everything else as an activity feed. <b>Casberi</b> takes Apple's data-density and Cash App's confidence, and keeps its own honesty rules — the monument is chosen by the clock, colour annotates and never decorates, and every card is a door to its room.</p>
+</header>
+
+<div class="row">
+
+<!-- ===================== APPLE ===================== -->
+<div class="option">
+  <div class="optName">A · How Apple would <span>— Weather's monument, Health's cards</span></div>
+  <div class="phone"><div class="screen">
+    <div class="scroll">
+      <div style="display:flex;align-items:flex-start">
+        <div>
+          <div style="font-size:12px;font-weight:600;color:var(--faint)">Saturday, August 16</div>
+          <div style="font-size:28px;font-weight:800;letter-spacing:-.02em;margin-top:1px">Good morning</div>
+        </div>
+        <span class="x">✕</span>
+      </div>
+
+      <!-- the monument -->
+      <div style="text-align:left;padding:22px 2px 6px">
+        <div style="font-family:var(--money);font-size:84px;font-weight:300;line-height:.95;letter-spacing:-.03em">3</div>
+        <div style="font-size:15px;font-weight:600;color:var(--attn);margin-top:4px">need you before Tuesday</div>
+        <div style="font-size:12.5px;color:var(--faint);margin-top:3px">14 new things overnight · wallet +1.8%</div>
+      </div>
+
+      <div class="card" style="margin-top:14px">
+        <div class="caprow"><span class="glyph" style="background:rgba(48,209,88,.16);color:var(--confirm)">$</span><b>Money</b><span class="chev">›</span></div>
+        <div class="numrow">
+          <span class="num">$12,482</span>
+          <span style="font-family:var(--money);font-size:12px;font-weight:700;color:var(--confirm);padding-bottom:2px">+1.8%</span>
+          <span class="mini"><svg width="72" height="30" viewBox="0 0 72 30"><path d="M0,24 C10,21 18,25 27,19 C36,13 45,16 54,10 L72,6" fill="none" stroke="#30d158" stroke-width="2" stroke-linecap="round"/></svg></span>
+        </div>
+        <div class="sub">Mostly ETH · Gnosis Pay spent $128</div>
+      </div>
+
+      <div class="card">
+        <div class="caprow"><span class="glyph" style="background:rgba(255,159,10,.16);color:var(--attn)">!</span><b>Needs you</b><span class="chev">›</span></div>
+        <div class="numrow">
+          <span class="num" style="color:var(--attn)">3 late</span>
+          <span class="mini"><svg width="86" height="20" viewBox="0 0 86 20"><line x1="2" y1="10" x2="84" y2="10" stroke="rgba(255,255,255,.14)" stroke-width="2"/><circle cx="18" cy="10" r="4" fill="#ff9f0a"/><circle cx="44" cy="10" r="4" fill="#ff9f0a"/><circle cx="70" cy="10" r="4" fill="#5e9eff"/></svg></span>
+        </div>
+        <div class="sub">$240 dispute leads · evidence due Tuesday</div>
+      </div>
+
+      <div class="pair">
+        <div class="card">
+          <div class="caprow"><span class="glyph" style="background:rgba(94,158,255,.16);color:#5e9eff">◐</span><b>Your day</b></div>
+          <div class="numrow"><span class="num" style="font-size:22px">14</span></div>
+          <div class="thumbs" style="margin:8px 0 0">
+            <i style="background:linear-gradient(135deg,#3b4c68,#22293a)"></i>
+            <i style="background:linear-gradient(135deg,#5a4a3a,#2e2620)"></i>
+            <i style="background:linear-gradient(135deg,#2f5548,#1a2f28)"></i>
+          </div>
+        </div>
+        <div class="card" style="opacity:.7">
+          <div class="caprow"><span class="glyph" style="background:rgba(94,158,255,.14);color:#9cc0ff">⌗</span><b>Work</b></div>
+          <div class="numrow"><span class="num" style="font-size:22px;color:var(--confirm)">+18%</span>
+          <span class="mini"><svg width="40" height="24" viewBox="0 0 40 24"><rect x="0" y="14" width="6" height="10" rx="2" fill="rgba(94,158,255,.35)"/><rect x="9" y="10" width="6" height="14" rx="2" fill="rgba(94,158,255,.5)"/><rect x="18" y="16" width="6" height="8" rx="2" fill="rgba(94,158,255,.35)"/><rect x="27" y="6" width="6" height="18" rx="2" fill="#5e9eff"/></svg></span></div>
+          <div class="sub">quiet since yesterday</div>
+        </div>
+      </div>
+    </div>
+  </div></div>
+  <p class="optWhy"><b>The grammar:</b> a monument figure chosen for the moment (morning = what needs you), then Health-Summary cards — tinted glyph, big number, and a miniature chart on every trailing edge. No card ships without its picture of the number moving. Identity is the glyph's tint; the cards stay dark. Tap navigates, nothing unfolds.</p>
+</div>
+
+<!-- ===================== CASH APP ===================== -->
+<div class="option">
+  <div class="optName">B · How Cash App would <span>— one number, total conviction</span></div>
+  <div class="phone"><div class="screen">
+    <div class="scroll">
+      <div style="display:flex"><span class="x" style="margin-left:auto">✕</span></div>
+      <div style="padding:16px 2px 4px">
+        <div style="font-family:var(--money);font-size:56px;font-weight:800;letter-spacing:-.03em;line-height:1">$12,482</div>
+        <div style="display:inline-flex;align-items:center;gap:6px;margin-top:10px;background:rgba(0,214,50,.14);border-radius:999px;padding:5px 12px">
+          <span style="font-family:var(--money);font-size:13px;font-weight:800;color:var(--cash)">▲ +1.8% today</span>
+        </div>
+      </div>
+
+      <div style="margin-top:22px">
+        <div style="font-family:var(--money);font-size:17px;font-weight:800;margin:0 2px 6px">Today</div>
+        <div style="display:flex;align-items:center;gap:12px;padding:12px 2px">
+          <span class="glyph" style="width:40px;height:40px;border-radius:50%;background:rgba(255,159,10,.16);color:var(--attn);font-size:17px;font-weight:800">3</span>
+          <div style="flex:1;min-width:0"><div style="font-family:var(--money);font-size:15px;font-weight:700">Three things need you</div>
+          <div style="font-size:12px;color:var(--faint)">$240 dispute · reply by Tuesday</div></div>
+          <span style="color:var(--faint)">›</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;padding:12px 2px">
+          <span class="glyph" style="width:40px;height:40px;border-radius:50%;background:radial-gradient(circle at 32% 30%, #e86a6a, #7d6adf 60%, #3a3160)"></span>
+          <div style="flex:1;min-width:0"><div style="font-family:var(--money);font-size:15px;font-weight:700">14 new things</div>
+          <div style="font-size:12px;color:var(--faint)">mostly Farcaster · mara +12 liked your cast</div></div>
+          <span style="color:var(--faint)">›</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;padding:12px 2px;opacity:.6">
+          <span class="glyph" style="width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,.07);color:var(--muted)">⌗</span>
+          <div style="flex:1;min-width:0"><div style="font-family:var(--money);font-size:15px;font-weight:700">Work is quiet</div>
+          <div style="font-size:12px;color:var(--faint)">signed_up +18% this week</div></div>
+          <span style="color:var(--faint)">›</span>
+        </div>
+      </div>
+    </div>
+    <div style="padding:0 14px 16px">
+      <div style="background:var(--cash);border-radius:999px;padding:15px 0;text-align:center;font-family:var(--money);font-weight:800;font-size:15px;color:#003b0e">What's going on?</div>
+    </div>
+  </div></div>
+  <p class="optWhy"><b>The grammar:</b> money IS the day — one enormous heavy number, a green pill saying which way, and everything else demoted to a chunky activity list with circular badges. One loud action pill at the thumb. Supremely confident, but it answers "how's my money" every morning even on days when the real story is the dispute or the people — Cash App can assume money is the subject; Casberi can't.</p>
+</div>
+
+<!-- ===================== CASBERI ===================== -->
+<div class="option">
+  <div class="optName">C · How Casberi should <span>— Apple's density, Cash App's spine, our clock</span></div>
+  <div class="phone"><div class="screen">
+    <div class="scroll">
+      <div style="display:flex;align-items:flex-start">
+        <div>
+          <div style="font-size:12px;font-weight:600;color:var(--faint)">Saturday, August 16</div>
+          <div style="font-size:26px;font-weight:800;letter-spacing:-.02em;margin-top:1px">Good morning</div>
+        </div>
+        <span class="x">✕</span>
+      </div>
+
+      <!-- monument: chosen by the clock, blue = the one accent -->
+      <div style="padding:20px 2px 4px">
+        <div style="display:flex;align-items:baseline;gap:12px">
+          <span style="font-family:var(--money);font-size:76px;font-weight:250;line-height:.95;letter-spacing:-.03em">3</span>
+          <span style="font-family:var(--money);font-size:19px;font-weight:700;color:var(--attn)">need you</span>
+        </div>
+        <div style="font-size:13px;color:var(--muted);margin-top:6px">14 new overnight · wallet <span style="color:var(--confirm);font-weight:700">+1.8%</span> · evidence due Tuesday</div>
+      </div>
+
+      <div class="card" style="margin-top:14px">
+        <div class="caprow"><span class="glyph" style="background:rgba(255,159,10,.16);color:var(--attn)">!</span><b>Needs you</b><span class="chev">›</span></div>
+        <div class="numrow">
+          <span class="num" style="font-size:20px">Stripe dispute · $240</span>
+          <span class="mini"><svg width="80" height="20" viewBox="0 0 80 20"><line x1="2" y1="10" x2="78" y2="10" stroke="rgba(255,255,255,.14)" stroke-width="2"/><circle cx="16" cy="10" r="4" fill="#ff9f0a"/><circle cx="40" cy="10" r="4" fill="#ff9f0a"/><circle cx="64" cy="10" r="4" fill="#5e9eff"/></svg></span>
+        </div>
+        <div class="sub">then the USDC approval, then build 331 · Tue → in 9 days</div>
+      </div>
+
+      <div class="card">
+        <div class="caprow"><span class="glyph" style="background:rgba(22,115,230,.18);color:#77b0ff">$</span><b>Money</b><span class="chev">›</span></div>
+        <div class="numrow">
+          <span class="num">$12,482</span>
+          <span style="font-family:var(--money);font-size:12px;font-weight:700;color:var(--confirm);padding-bottom:2px">+1.8%</span>
+          <span class="mini"><svg width="72" height="30" viewBox="0 0 72 30"><path d="M0,24 C10,21 18,25 27,19 C36,13 45,16 54,10 L72,6" fill="none" stroke="#30d158" stroke-width="2" stroke-linecap="round"/></svg></span>
+        </div>
+        <div class="sub">Mostly ETH · Gnosis Pay spent $128</div>
+      </div>
+
+      <div class="card">
+        <div class="caprow"><span class="glyph" style="background:rgba(94,158,255,.16);color:#5e9eff">◐</span><b>Your day</b><span class="chev">›</span></div>
+        <div class="numrow" style="align-items:center">
+          <span class="num" style="font-size:20px">mara +12 on your cast</span>
+          <span class="thumbs">
+            <i style="background:linear-gradient(135deg,#3b4c68,#22293a)"></i>
+            <i style="background:linear-gradient(135deg,#5a4a3a,#2e2620)"></i>
+            <i style="background:linear-gradient(135deg,#2f5548,#1a2f28)"></i>
+          </span>
+        </div>
+        <div class="sub">14 things · mostly Farcaster and Photos</div>
+      </div>
+
+      <div class="pair">
+        <div class="card" style="opacity:.68">
+          <div class="caprow"><span class="glyph" style="background:rgba(94,158,255,.14);color:#9cc0ff">⌗</span><b>Work</b></div>
+          <div class="numrow"><span class="num" style="font-size:20px;color:var(--confirm)">+18%</span>
+          <span class="mini"><svg width="36" height="22" viewBox="0 0 36 22"><rect x="0" y="12" width="5" height="10" rx="2" fill="rgba(94,158,255,.35)"/><rect x="8" y="8" width="5" height="14" rx="2" fill="rgba(94,158,255,.5)"/><rect x="16" y="14" width="5" height="8" rx="2" fill="rgba(94,158,255,.35)"/><rect x="24" y="5" width="5" height="17" rx="2" fill="#5e9eff"/></svg></span></div>
+          <div class="sub">quiet</div>
+        </div>
+        <div class="card" style="opacity:.68">
+          <div class="caprow"><span class="glyph" style="background:rgba(48,209,88,.14);color:#63d98a">✓</span><b>Coming up</b></div>
+          <div class="numrow"><span class="num" style="font-size:20px">2</span></div>
+          <div class="sub">rent Thu · cert renews itself</div>
+        </div>
+      </div>
+    </div>
+    <div class="chipsrow"><span class="on">Needs you</span><span>Money</span><span>Your day</span><span>Work</span></div>
+    <div class="askbar"><s>Ask or search</s><span style="color:var(--muted)">🎙︎</span><span class="berry"></span></div>
+  </div></div>
+  <p class="optWhy"><b>The synthesis:</b> Apple's monument — but chosen by our clock (morning = the "3", evening it becomes the wallet move or the people), so the day's subject leads, not always money. Every card keeps Apple's trailing miniature, drawn from args the digest already holds. The big line is sometimes a NAME, not a number — "mara +12", "Stripe dispute · $240" — because this corpus's readings are often people and things, which is Casberi's difference from both of them. Quiet sections pair up half-width and dim. Cards are doors to rooms; the blue lede card retires — blue goes back to being only chrome (chips, berry, send) so the monument owns the screen.</p>
+</div>
+
+</div>
+</div>
