@@ -2836,6 +2836,76 @@ struct FeedScreen: View {
         }
     }
 
+    #if DEBUG
+    /// The All room's census — see the call site in `bundledSections` for why
+    /// it is emitted from the render rather than mirrored in `ProbeHooks`.
+    ///
+    /// Takes no `Thing` by design (`hasCover` is a Bool, not the cover): this
+    /// is called from inside a body evaluation, and the liveness rules above
+    /// mean a census has no business holding a model to count it. Every input
+    /// is already a value type by the time it arrives.
+    ///
+    /// De-duplicated on the composed text because this runs on every body pass:
+    /// a census that repeats forty times a launch buries the one line that
+    /// changed, and `verify.sh` greps for presence, not for the last write.
+    private func logAllFeedCensus(groups: [(String, [FeedRow])],
+                                  hasCover: Bool,
+                                  boundary: String?,
+                                  moment: Bool,
+                                  imageOnly: Set<UUID>,
+                                  wideArt: Set<UUID>,
+                                  coarse: Set<String>,
+                                  subjects: [String: String],
+                                  more: Bool,
+                                  dayLine: DayBrief.Whisper?,
+                                  tailDays: Int,
+                                  tailDrawn: Int) -> Void {
+        var single = 0, strip = 0, bundle = 0
+        var stripTiles = 0, bundleArt = 0, ambient = 0
+        for (_, rows) in groups {
+            for row in rows {
+                if row.ambient { ambient += 1 }
+                switch row.kind {
+                case .single: single += 1
+                case .strip(_, _, _, _, let tiles): strip += 1; stripTiles += tiles.count
+                case .bundle(_, _, _, _, let art): bundle += 1; bundleArt += art.count
+                }
+            }
+        }
+        // Each line is one FEATURE of this room, named the way `verify.sh`'s
+        // required list names it. Counts, never contents: a census that printed
+        // titles would be a corpus dump, and the question here is only ever
+        // "can this room draw this at all on the demo".
+        let lines = [
+            "days=\(groups.count) rows=\(single + strip + bundle)",
+            "cover=\(hasCover ? 1 : 0)",
+            "single=\(single) strip=\(strip) bundle=\(bundle)",
+            "stripTiles=\(stripTiles) bundleArt=\(bundleArt)",
+            "imageOnly=\(imageOnly.count) wideArt=\(wideArt.count)",
+            "coarse=\(coarse.count) subjects=\(subjects.count)",
+            "newSince=\(boundary == nil ? 0 : 1) moment=\(moment ? 1 : 0)",
+            "window=\(more ? "open" : "whole")",
+            "dayLine=\(dayLine == nil ? 0 : 1)",
+            "ambient=\(ambient)",
+            // Both terms of `coarsenIfSparse`'s ratio, plus its verdict. The
+            // gate needs `tailDays >= 6` AND `tailDrawn / tailDays < 1.5`, so
+            // printing the average alone would hide which half is failing.
+            "tailDays=\(tailDays) tailDrawn=\(tailDrawn)",
+            "tailAvg=\(tailDays == 0 ? "n/a" : String(format: "%.2f", Double(tailDrawn) / Double(tailDays)))"
+                + " coarsens=\(tailDays >= 6 && Double(tailDrawn) / Double(max(tailDays, 1)) < 1.5 ? 1 : 0)",
+        ]
+        let composed = lines.joined(separator: ";")
+        guard Self.lastAllFeedCensus != composed else { return }
+        Self.lastAllFeedCensus = composed
+        for line in lines { NSLog("[Casberi] allFeed| %@", line) }
+        // The terminator `verify.sh` waits on — without it the reader cannot
+        // tell "the census finished" from "the census never ran", which for a
+        // room that legitimately draws zero bundles is the whole question.
+        NSLog("[Casberi] allFeed| census complete")
+    }
+    @MainActor private static var lastAllFeedCensus = ""
+    #endif
+
     private func bundledSections(_ visible: [Thing], nextEventID: UUID?) -> some View {
         // Derive ONCE per render, then share — the day bundles, each day's true
         // total, and the new-since boundary. Read inside the row/header loops
@@ -2923,6 +2993,68 @@ struct FeedScreen: View {
         // array — cheap enough to stay time-fresh. Nil composes to no line
         // (honesty law: a day with nothing to say says nothing).
         let dayLine = DayBrief.whisper(things: visible)
+        #if DEBUG
+        // `-allFeedProbe YES` — the All room's own census (2026-08-17), and the
+        // only demo-parity check that can see this room AT ALL.
+        //
+        // Every other demo coverage step reaches a SOURCE room: `verify.sh`'s
+        // room-head step probes ten of them by name, its sheet-anatomy step
+        // opens one record at a time, and `demo-selftest.py`'s check F
+        // explicitly exempts this one (`SHAPE_NO_SOURCE = {"all"}`). But All is
+        // the ONLY room that runs `bundledSections`, so the cover (§389c),
+        // folding into strips and bundles (§377), the image-only and wide-art
+        // treatments, the coarse tail and its subjects (§379) and the away
+        // split (§389) exist NOWHERE ELSE — none of them has ever been checked
+        // against the demo corpus, and All is the room the demo opens on. It is
+        // the first screen a first-time opener sees, and it was the last one
+        // with no parity check.
+        //
+        // Emitted from HERE rather than mirrored in `ProbeHooks`, for
+        // `MainSurface`'s `categoryFold|` reason (2026-08-11): a probe that
+        // recomputes an answer can only ever prove its own copy of the rule.
+        // That is the documented weakness of `-roomInsightProbe`, whose own
+        // header says the order "lives in `FeedScreen.shapedSections` — this
+        // mirrors it, so a change there means a change here." This derives
+        // nothing: every value below is one this render is about to draw with,
+        // read at the one moment they all exist together.
+        //
+        // One NSLog per line (the `-todayProbe` truncation lesson).
+        if UserDefaults.standard.bool(forKey: "allFeedProbe") {
+            // THE TAIL'S OWN ARITHMETIC (2026-08-17). `coarse` measured 0 and
+            // — unlike every other feature here — no amount of seeding can
+            // change that on its own: `coarsenIfSparse` fires only when the
+            // older-than-7-days section averages under 1.5 DRAWN rows per day,
+            // and drawn is post-fold, not row count. So the question "how far
+            // off is the demo" has a number, and guessing at it would mean
+            // restructuring 56 days of dates on a theory. Reported as the two
+            // terms of the ratio plus the gate's own verdict, because an
+            // average alone cannot say whether the fix is fewer rows or more
+            // folding — which are different changes to the demo.
+            let tailCutoff = Self.groupingCalendar.date(
+                byAdding: .day, value: -7,
+                to: Self.groupingCalendar.startOfDay(for: .now))
+            let tail = tailCutoff.map { cut in
+                visible.filter { $0.isLive && $0.capturedAt < cut }
+            } ?? []
+            let tailDayGroups = dayGroups(tail)
+            let tailDrawn = tailDayGroups.reduce(0) { $0 + bundledRowCount($1.1) }
+            // `memo.groups`, NOT `groups` — measured 2026-08-17 on the demo and
+            // the difference is the whole check: `groups` is `windowed(...)`'s
+            // SHOWN slice (prd §264), so the first census over a 467-row demo
+            // read `days=1 rows=3` while `wideArt` — taken from `memo`, i.e.
+            // the full set — read 12 in the same breath. Two units in one
+            // census, and the smaller one is the one `verify.sh` tests for
+            // zero, so a healthy room would have reported missing features
+            // forever. The question here is what the room CAN draw, which is a
+            // property of the whole composed feed; whether the window is open
+            // is reported separately, as its own fact.
+            logAllFeedCensus(groups: memo.groups, hasCover: ledeThing != nil, boundary: boundary,
+                             moment: split.moment, imageOnly: imageOnly, wideArt: wideArt,
+                             coarse: coarse, subjects: subjects, more: window.more,
+                             dayLine: dayLine,
+                             tailDays: tailDayGroups.count, tailDrawn: tailDrawn)
+        }
+        #endif
         return Group {
         ForEach(groups, id: \.0) { label, rows in
             // The cover draws above the FIRST group's run and is already absent

@@ -94,8 +94,6 @@ def demo_rows(text):
         end = nxt if 0 < nxt < m.end() + 1500 else m.end() + 1500
         seg = text[m.start():end]
         src = re.search(r'source:\s*"([^"]+)"', seg)
-        if not src:
-            continue
         fields = set(re.findall(r"\bt\.(\w+)\s*=", seg))
         fields |= set(re.findall(r"\bthing\.(\w+)\s*=", seg))
         # A LITERAL ref only. `ref: StockWatch.symbolRef("AAPL")` is built by a
@@ -105,10 +103,21 @@ def demo_rows(text):
         # judge", which check L skips; `""` would mean "judged, and it matches
         # nothing", which is an accusation.
         ref = re.search(r'ref:\s*"([^"\\]*)', seg)
+        # A VARIABLE source is "cannot judge", not "skip" — the same ruling
+        # this function already makes one line down for a computed ref, and it
+        # was missing here (2026-08-17). A row written `source: f.source` (the
+        # follower rows, the Gemini chats — check E's documented blind spot,
+        # never carried across to M) was DROPPED entirely, so every field it
+        # stamps read as absent: `socialContext` was reported missing for both
+        # Farcaster and Bluesky while the follower rows set it on both. That is
+        # the accusation the ref rule exists to avoid, and acting on it would
+        # have meant padding the demo to satisfy a broken check — the exact
+        # thing this file's own header warns against.
+        source = src.group(1) if src else None
         if not ref and re.search(r"ref:\s*\w", seg):
-            out.append((src.group(1), kind, None, fields))
+            out.append((source, kind, None, fields))
             continue
-        out.append((src.group(1), kind, ref.group(1) if ref else "", fields))
+        out.append((source, kind, ref.group(1) if ref else "", fields))
     return out
 
 
@@ -185,7 +194,9 @@ KNOWN_NO_BRIDGE_KIND = {"You", "Voice", "Contacts", "HomeKit"}
 
 def check_k_kinds(demo, bridges):
     for source, kind, _ref, _f in demo:
-        if source in KNOWN_NO_BRIDGE_KIND:
+        # A row whose source is a variable cannot be attributed, so it cannot
+        # be accused of inventing a kind either (see `demo_rows`).
+        if source is None or source in KNOWN_NO_BRIDGE_KIND:
             continue
         real = bridges.get(source, {}).get("kinds", set())
         if not real:
@@ -227,6 +238,8 @@ def check_l_ref_gates(demo, gate_prefixes, bridges):
     one demo row must wear a ref that could satisfy one."""
     by_source = {}
     for source, _k, ref, _f in demo:
+        if source is None:
+            continue          # a variable source — cannot judge (see `demo_rows`)
         by_source.setdefault(source, set()).add(ref)
     for source, refs in sorted(by_source.items()):
         if source in KNOWN_DEMO_REF_OK:
@@ -286,17 +299,27 @@ KNOWN_HONEST_ABSENCE = {
 
 def check_m_fields(demo, bridges, report_only=True):
     by_source = {}
+    # Fields stamped by a row whose source could not be read (see `demo_rows`).
+    # They belong to SOME source and this pass cannot say which, so they are
+    # reported apart rather than counted as present (which would hide a real
+    # gap) or as missing (which would invent one).
+    unjudged = set()
     for source, _k, _r, fields in demo:
+        if source is None:
+            unjudged |= fields
+            continue
         by_source.setdefault(source, set()).update(fields)
-    gaps = {}
+    gaps, unclear = {}, {}
     for source, seeded in sorted(by_source.items()):
         real = bridges.get(source, {}).get("fields", set()) & DISPLAY_FIELDS
         missing = real - seeded - KNOWN_HONEST_ABSENCE.get(source, set())
-        if missing:
-            gaps[source] = missing
+        if missing & unjudged:
+            unclear[source] = missing & unjudged
+        if missing - unjudged:
+            gaps[source] = missing - unjudged
     if not report_only:
         check("M · no unexplained field gaps", gaps, {})
-    return gaps
+    return gaps, unclear
 
 
 def gate_prefixes(files):
@@ -320,15 +343,15 @@ def run(files, report_fields=True):
     bridges = bridge_rows(files)
     check_k_kinds(demo, bridges)
     check_l_ref_gates(demo, gate_prefixes(files), bridges)
-    gaps = check_m_fields(demo, bridges, report_only=report_fields)
-    return demo, bridges, gaps
+    gaps, unclear = check_m_fields(demo, bridges, report_only=report_fields)
+    return demo, bridges, gaps, unclear
 
 
 def main():
     files = load()
     if "--self-test" in sys.argv:
         sys.exit(self_test(files))
-    demo, bridges, gaps = run(files)
+    demo, bridges, gaps, unclear = run(files)
     if REF_GAPS:
         print("\n  ref-shape gaps (report — judge one, then exempt or fix it):")
         print(f"    {', '.join(sorted(set(REF_GAPS)))}")
@@ -336,6 +359,10 @@ def main():
         print("\n  field gaps (report — see KNOWN_HONEST_ABSENCE to rule on one):")
         for source, missing in sorted(gaps.items()):
             print(f"    {source:<20} {', '.join(sorted(missing))}")
+    if unclear:
+        print("\n  cannot judge (stamped by a row whose source is a variable):")
+        for source, fields in sorted(unclear.items()):
+            print(f"    {source:<20} {', '.join(sorted(fields))}")
     if failures:
         print(f"✗ demo parity: {len(failures)} check(s) failed")
         sys.exit(1)

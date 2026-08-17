@@ -1511,4 +1511,102 @@ else
   fi
 fi
 
+# ── 8. Demo All-room coverage (headless, WARN until calibrated) ──────
+# The FOURTH surface of the 2026-08-08 parity ruling, and the one that covers
+# the room the demo actually OPENS ON.
+#
+# Every demo step above reaches a SOURCE room — the room-head step names ten
+# of them, the sheet step opens records, and `demo-selftest.py`'s check F
+# exempts `Shape.all` outright (`SHAPE_NO_SOURCE = {"all"}`). So the first
+# screen a first-time opener sees was the one surface with no parity check at
+# all, and it is not a thin one: All is the ONLY room that runs
+# `bundledSections`, which means the cover card (§389c), folding into strips
+# and bundles (§377), the image-only and wide-art treatments, the coarse tail
+# and its subjects (§379) and the away split (§389) live nowhere else in the
+# app. A demo that cannot produce a strip, or a bundle, or a cover, opens on a
+# flat list of singles and looks a generation behind the app — with every
+# other check in this file green, because every other check is looking at a
+# different room.
+#
+# The census is emitted BY THE RENDER (`FeedScreen.logAllFeedCensus`), not
+# re-derived in `ProbeHooks` — `MainSurface.categoryFold|`'s 2026-08-11
+# reasoning, and the answer to `-roomInsightProbe`'s own admitted weakness
+# ("the ORDER lives in `FeedScreen.shapedSections` — this mirrors it"). A
+# mirror can only ever prove its own copy of the rule; this reports the values
+# the room is about to draw with.
+#
+# CALIBRATED 2026-08-17, and a HARD FAIL from that point. The first run over
+# the poured demo read `single=378 strip=0 bundle=2 imageOnly=0` — the opening
+# screen was 99.5% plain rows, and two of its own treatments could not draw at
+# all. Both causes were wiring, not content: no demo screenshot ever set
+# `ocrAt`, so none could satisfy `isWordless`; and every cast, post and article
+# sat on its own day, while `FeedFold` needs three of one source on one day, so
+# the corpus was too EVENLY SPREAD to fold. Now `strip=3 bundle=3 imageOnly=2`.
+#
+# `coarse` is deliberately NOT required — the one honest absence here.
+# `coarsenIfSparse` fires only when the older-than-7-days tail averages under
+# 1.5 DRAWN rows per day, and the demo measures `tailDays=55 tailDrawn=218`,
+# i.e. 3.96. Reaching the gate means cutting the tail's drawn rows by 62% or
+# roughly tripling the corpus's date span — and that is padding a demo to
+# satisfy a check, which `demo-parity-audit.py`'s own header forbids. The
+# feature is a REMEDY for a sparse tail (it exists to prevent a ladder of
+# one-row day cards); the demo's tail is dense, so it correctly does not fire.
+# If the demo's history is ever thinned for its own reasons, move `coarse` into
+# REQUIRED in the same change.
+step "Demo All-room coverage"
+ALLFEED_LOG="$OUT/demo-allfeed-coverage.log"
+if [[ -z "$POURED" ]]; then
+  print -P "%F{yellow}⚠ demo never finished pouring (see the Demo pour step above) — skipping All-room coverage%f"
+else
+  # Each entry is one feature of the All room that exists in NO other room.
+  # `cover`/`strip`/`bundle` are the load-bearing three: without them the
+  # opening screen is a flat chronological list.
+  ALLFEED_REQUIRED=(cover strip bundle imageOnly)
+  xcrun simctl terminate "$DEVICE" "$BUNDLE" 2>/dev/null || true
+  xcrun simctl spawn "$DEVICE" log stream --predicate 'process == "Casberi" AND eventMessage CONTAINS "allFeed|"' \
+    --style compact > "$ALLFEED_LOG" 2>/dev/null &
+  AFPID=$!
+  sleep 1
+  xcrun simctl launch "$DEVICE" "$BUNDLE" -onboarded YES -allFeedProbe YES >/dev/null 2>&1 || true
+  for i in {1..15}; do
+    sleep 1
+    grep -q "allFeed| census complete" "$ALLFEED_LOG" 2>/dev/null && break
+  done
+  sleep 2
+  kill $AFPID 2>/dev/null || true
+  xcrun simctl terminate "$DEVICE" "$BUNDLE" 2>/dev/null || true
+  if ! grep -q "allFeed| census complete" "$ALLFEED_LOG" 2>/dev/null; then
+    # A census that never ran and a room that drew nothing look identical from
+    # outside — the terminator is the only thing separating them, which is why
+    # the probe emits one.
+    print -P "%F{yellow}⚠ the All-room census never ran (see $ALLFEED_LOG) — the demo may not have landed on All%f"
+  else
+    print -P "%F{cyan}All-room census:%f"
+    grep -o "allFeed| .*" "$ALLFEED_LOG" | sort -u || true
+    ALLFEED_MISSING=()
+    for feature in "${ALLFEED_REQUIRED[@]}"; do
+      # A feature is MISSING only if it was zero in EVERY census this launch
+      # emitted — not if it was zero in one of them. Measured 2026-08-17: the
+      # All room composes more than once per launch (the debounced snapshot
+      # lands after the first body pass), so an early partial census reports
+      # zeros for a room that fills in a moment later. Testing for `=0`
+      # anywhere would make that partial pass a permanent false gap, which is
+      # the lint-that-cries-wolf failure arriving through the back door of a
+      # check written to prevent it. So the test is POSITIVE: did this feature
+      # ever draw?
+      #
+      # Anchored on the LEADING SPACE, not a `\b` word boundary: BSD grep's
+      # ERE does not carry `\b`, so the portable spelling is the one that
+      # cannot silently match nothing here and everything on a Linux runner.
+      # The space also keeps `strip=` from matching inside `stripTiles=`.
+      grep -qE " ${feature}=[1-9]" "$ALLFEED_LOG" 2>/dev/null || ALLFEED_MISSING+=("$feature")
+    done
+    if (( ${#ALLFEED_MISSING[@]} == 0 )); then
+      print -P "%F{green}✓ demo All-room coverage (${#ALLFEED_REQUIRED[@]}/${#ALLFEED_REQUIRED[@]})%f"
+    else
+      fail "All-room features the demo cannot draw: ${ALLFEED_MISSING[*]} — see $ALLFEED_LOG"
+    fi
+  fi
+fi
+
 print -P "%F{green}✓ verify complete → $OUT%f"

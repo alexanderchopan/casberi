@@ -493,7 +493,7 @@ enum DemoSeedAll {
             ("Lisbon — tram 28 timetable", ["Lisbon", "Maps"], 26, 10),
             ("Espresso — grind chart", ["Espresso", "Design system"], 40, 16),
         ]
-        return shots.enumerated().map { i, s in
+        var out = shots.enumerated().map { i, s in
             row(.screenshot, s.0, source: "Photos", ref: "sample:demo-shot-\(i + 5)",
                 days: s.2, hour: s.3,
                 content: "\(s.0)\n\(s.1.joined(separator: " · "))") { t in
@@ -502,6 +502,33 @@ enum DemoSeedAll {
                 t.previewImageData = pixels(i)
             }
         }
+        // TWO WORDLESS SHOTS (2026-08-17) — §218's picture rows, which the demo
+        // could not draw at all. `FeedScreen.isWordless` asks a screenshot for
+        // `ocrAt != nil && content.isEmpty`: OCR RAN and found no words, so the
+        // picture is the row. Every shot above sets `topicsAt` and never
+        // `ocrAt`, and every one carries `content`, so not one could qualify —
+        // `imageOnly` measured 0 over the whole poured demo while the app
+        // produces these constantly (a photographed scene, a chart, a shot with
+        // no text in it).
+        //
+        // `ocrAt` set with `content` EMPTY is the honest pairing, and the order
+        // matters: `ocrAt` alone would claim we looked and found nothing while
+        // words sat in `content`, and empty `content` alone reads as a shot
+        // still waiting to be read (which draws its byte size, not a picture).
+        //
+        // On two SEPARATE days, each already carrying several worded rows,
+        // because the gate is a minority test per day (`wordless * 2 <
+        // dayThings.count`). Two on one day would be likelier to tip that day
+        // into a gallery, which is exactly what the gate exists to prevent.
+        let wordless: [(days: Double, hour: Int, n: Int)] = [(1, 17, 0), (4, 12, 2)]
+        out += wordless.enumerated().map { i, w in
+            row(.screenshot, "", source: "Photos", ref: "sample:demo-shot-\(11 + i)",
+                days: w.days, hour: w.hour, content: "") { t in
+                t.ocrAt = .now
+                t.previewImageData = pixels(w.n)
+            }
+        }
+        return out
     }
 
     private static func obsidian() -> [Thing] {
@@ -751,6 +778,15 @@ enum DemoSeedAll {
                 // ranked as this year's loudest post.
                 t.likeCount = max(1, 44 - i * 2)
                 t.replyCount = max(0, 6 - i / 2)
+                // Reposts (2026-08-17). §308's superlatives ride
+                // `likeCount`/`repostCount` straight off the archive's own
+                // `favorite_count`/`retweet_count`, and the demo set the first
+                // and never the second — so "most reposted" could never answer
+                // over the busiest room in the corpus. Floored for the reason
+                // the line above documents: a straight-line formula runs
+                // negative down a long table, and `XRoom` reads a negative as
+                // a real count.
+                t.repostCount = max(0, 12 - i)
             }
         }
         // The replies, so the room's second board ("Who you reply to") and the
@@ -1008,6 +1044,12 @@ enum DemoSeedAll {
                 // book `cover` field (2026-08-12) — keyed off the title so
                 // the two highlights from one book share one spine.
                 t.previewImageURL = bookCover(h.0)
+                // The note you wrote under the highlight (2026-08-17).
+                // `TokenBridges` stamps Readwise's `note` onto `summary` as
+                // display copy; without it the demo's highlights were quotes
+                // with nothing of yours attached, which is half of what a
+                // read-later room is for.
+                t.summary = "Why it stuck: \(h.0) says this better than I would."
             }
         }
         let kindle: [(String, String, Double)] = [
@@ -1027,6 +1069,10 @@ enum DemoSeedAll {
                 // means the demo shows the era the app WRITES rather than the
                 // older one it tolerates.
                 t.authorHandle = k.0
+                // §366's importer stamps a passage's note onto `summary`, and
+                // the demo set none — so the room showed passages with no
+                // reader in them (2026-08-17).
+                t.summary = "Marked while reading \(k.0)."
             }
         }
         // Substack and RSS lead with the BYLINE (`postAuthor`) when enough
@@ -1048,22 +1094,38 @@ enum DemoSeedAll {
                 t.enrichedText = "\(s.0) — by \(s.1) in \(s.2)."
             }
         }
+        // A FEED SYNC LANDS SEVERAL AT ONCE — three on day 4 (2026-08-17). RSS
+        // is the most bundleable source in the corpus and the demo laid every
+        // article on its own day, so the one source most likely to fold in real
+        // use never did. Day 4, not day 1 or 2: the social rooms fold on those,
+        // and three sources folding on one day reads as a staged burst rather
+        // than a week of ordinary use.
         let rss: [(String, String, String, Double)] = [
             ("A quieter approach to notifications", "Dana Cole", "The Verge", 1),
             ("Inside a very small compiler", "Eli Rosen", "Hacker News", 4),
-            ("The return of local-first", "Dana Cole", "The Verge", 7),
-            ("Type systems, plainly", "Eli Rosen", "Hacker News", 15),
+            ("The return of local-first", "Dana Cole", "The Verge", 4),
+            ("Type systems, plainly", "Eli Rosen", "Hacker News", 4),
             ("Why your app feels slow", "Dana Cole", "TechCrunch", 24),
             ("The cost of a background sync", "Fay Ng", "TechCrunch", 32),
             ("Local-first, one year on", "Fay Ng", "The Verge", 41),
         ]
         out += rss.enumerated().map { i, r in
-            row(.link, r.0, source: "RSS", ref: "demo:rss:\(i)", days: r.3, hour: 6) { t in
+            row(.link, r.0, source: "RSS", ref: "demo:rss:\(i)", days: r.3,
+                hour: 6 + (i % 3)) { t in
                 t.postAuthor = r.1
                 t.authorHandle = r.2
                 t.authorAvatarURL = publisherArt(r.2)
                 t.previewImageURL = art(i)
                 t.enrichedText = "\(r.0) — \(r.2)."
+                // The item's own paragraph, as DISPLAY copy (2026-08-17).
+                // `RSSIngest` stamps the feed's `<summary>` onto `Thing.summary`
+                // — text the publisher wrote and handed us, which is exactly
+                // that field's contract, and distinct from the `enrichedText`
+                // above, which is retrieval-only and reaches no screen. Without
+                // it the demo's reading room showed headlines where the app
+                // shows a headline and a sentence.
+                t.summary = "\(r.1) on \(r.0.lowercased()) — what changed, "
+                    + "what it costs, and who it is actually for."
             }
         }
         return out
@@ -1081,6 +1143,11 @@ enum DemoSeedAll {
         out += spotify.enumerated().map { i, s in
             row(.link, s.0, source: "Spotify", ref: "demo:spotify:\(i)", days: s.1, hour: 18) { t in
                 t.previewImageURL = art(i)
+                // `SpotifyBridge` stamps the show's own description onto
+                // `summary` (2026-08-17) — the sentence that says what an
+                // episode IS, which a track title never does.
+                t.summary = "\(s.0) — the episode's own description, as the "
+                    + "publisher wrote it."
             }
         }
         let music: [(String, Double)] = [
@@ -1210,6 +1277,12 @@ enum DemoSeedAll {
                 source: "Raindrop", ref: "demo:raindrop:\(i)", days: u.1, hour: 15,
                 content: u.0, tags: raindropTags[i % raindropTags.count]) { t in
                 t.summary = raindropNotes[i % raindropNotes.count]
+                // The saved page's cover (2026-08-17). `RaindropBridge` stamps
+                // the bookmark's own `cover` and its media list, and the demo
+                // set neither — so a room of saved ARTICLES drew as a column
+                // of bare titles, which is the §313 X finding one room over.
+                t.previewImageURL = art(i)
+                if i % 3 == 0 { t.imageURLs = [art(i), art(i + 1)] }
             }
         }
         let bookmarks: [(String, String, Double)] = [
@@ -1326,16 +1399,32 @@ enum DemoSeedAll {
             }
         }
         let casts: [(String, String, String, Int, Double)] = [
+            // THREE ON ONE DAY, AND THAT IS THE POINT (2026-08-17). Measured
+            // over the poured demo: 380 rows in the All feed, of which 378 were
+            // plain singles — `strip=0`, so §377's fold-into-members had never
+            // once drawn on the room the demo OPENS ON. The cause was not the
+            // fold, which works; it was these dates. `FeedFold.decide` needs
+            // `bundleThreshold` (3) rows of ONE source on ONE day, and the
+            // demo laid every cast on a separate day, so no run could ever
+            // exist. Real use arrives in bursts — an afternoon of posting, a
+            // sync landing twenty articles at once — and a corpus spread
+            // perfectly evenly is the one shape that can never fold.
+            //
+            // Distinct hours within the day, not one repeated: identical
+            // timestamps tie the sort, and a run whose order changes between
+            // renders is the reshuffling this codebase already refuses
+            // elsewhere.
             ("Shipped the panel today. Every room's figure in one place.", "/design", "you", 32, 1),
-            ("A chart of everything at once is a chart of nothing.", "/design", "mia", 21, 3),
-            ("Reading about legibility again.", "/books", "you", 9, 6),
+            ("A chart of everything at once is a chart of nothing.", "/design", "mia", 21, 1),
+            ("Reading about legibility again.", "/books", "you", 9, 1),
             ("The best demo is a real one.", "/design", "sam", 44, 10),
             ("Onchain receipts are underrated.", "/base", "mia", 12, 14),
             ("Books that changed how I plan.", "/books", "you", 7, 22),
             ("Base fees are basically nothing now.", "/base", "sam", 15, 30),
         ]
         out += casts.enumerated().map { i, c in
-            row(.chat, c.0, source: "Farcaster", ref: "demo:fc:\(i)", days: c.4, hour: 13) { t in
+            row(.chat, c.0, source: "Farcaster", ref: "demo:fc:\(i)", days: c.4,
+                hour: 13 - (i % 4)) { t in
                 t.postText = c.0
                 t.channelName = c.1
                 t.authorHandle = c.2
@@ -1371,15 +1460,20 @@ enum DemoSeedAll {
             }
         }
         let posts: [(String, String, Int, Double)] = [
+            // Clustered onto one day for the cast block's reason above — this
+            // room needs a run of its own or it can never fold either, and the
+            // two social rooms folding on DIFFERENT days is what keeps the feed
+            // from reading as one synthetic burst.
             ("Small software, made carefully.", "you", 18, 2),
-            ("The panel draws only figures. No sentences.", "uma", 26, 4),
-            ("Espresso and compilers, the eternal pairing.", "nils", 11, 8),
+            ("The panel draws only figures. No sentences.", "uma", 26, 2),
+            ("Espresso and compilers, the eternal pairing.", "nils", 11, 2),
             ("Local-first is just software that respects you.", "you", 33, 12),
             ("Notes from a quiet week.", "uma", 6, 19),
             ("Reading, mostly.", "nils", 4, 27),
         ]
         out += posts.enumerated().map { i, p in
-            row(.chat, p.0, source: "Bluesky", ref: "demo:bsky:\(i)", days: p.3, hour: 16,
+            row(.chat, p.0, source: "Bluesky", ref: "demo:bsky:\(i)", days: p.3,
+                hour: 16 - (i % 3),
                 content: "at://did:plc:demo/app.bsky.feed.post/\(i)") { t in
                 t.postText = p.0
                 t.authorHandle = p.1
@@ -1387,8 +1481,66 @@ enum DemoSeedAll {
                 t.likeCount = p.2
                 t.channelName = i % 2 == 0 ? "Design" : "Reading"
                 t.replyCount = i % 3
+                // EVERYTHING FARCASTER GOT ON 2026-08-12, WHICH BLUESKY DID
+                // NOT (2026-08-17). The two rooms share one renderer
+                // (`SocialBridge`, `PostCard`) and `BlueskyIngest` stamps every
+                // field below — `imageURLs`/`previewImageURL` at its post
+                // hydration, `quote` and `parent` beside them — so the demo's
+                // Bluesky room drew flat text rows next to a Farcaster room
+                // full of replies, quotes and pictures. Same shape, visibly
+                // poorer, and nothing could see it: both rooms render
+                // perfectly, and every other demo check looks at a different
+                // question.
+                //
+                // Sparse rather than on every row, for the reason the cast
+                // block already gives: a column where every entry quotes
+                // something reads as noise, and the point is that the shapes
+                // EXIST.
+                t.repostCount = i % 4
+                if i == 1 {
+                    t.parent = SocialCard(handle: "you",
+                                          text: "Small software, made carefully.",
+                                          avatarURL: avatarArt("you"))
+                }
+                if i == 3 {
+                    t.quote = SocialCard(handle: "nils",
+                                         text: "Espresso and compilers, the eternal pairing.",
+                                         avatarURL: avatarArt("nils"))
+                }
+                // BOTH picture paths, the cast block's own lesson: `PostCard`
+                // draws a SINGLE image from `previewImageURL` and only switches
+                // to `PostImageGrid` at two or more, so one array of one would
+                // have drawn nothing at all.
+                if i == 2 { t.previewImageURL = art(2) }
+                if i == 4 {
+                    t.previewImageURL = art(3)
+                    t.imageURLs = [art(3), art(0)]
+                }
             }
         }
+        // An article somebody SHARED, which is a different row from a post
+        // about one (2026-08-17). `BlueskyIngest.landLinkedArticle` lands a
+        // post's external card as its own `.link` thing carrying the card's
+        // thumbnail and — uniquely on this bridge — the publisher's own
+        // paragraph on `summary`, which is display copy rather than the
+        // retrieval-only `enrichedText`. In `.social` a `.link` is an article a
+        // post shared and draws as a `ReadingRow`, so without one the demo's
+        // Bluesky room had no reading shape at all.
+        //
+        // A `demo:` ref rather than the bridge's own `link:<url>`: nothing
+        // anywhere PARSES that ref (it exists purely for `landLinkedArticle`'s
+        // dedupe set), so joining its namespace would buy nothing and cost
+        // teardown — only `refPrefixes` entries are removed on demo exit. The
+        // follower rows above make the same call for the same reason.
+        out.append(row(.link, "The quiet case for local-first software",
+                       source: "Bluesky", ref: "demo:bskylink:0", days: 7, hour: 9,
+                       content: "https://example.com/local-first") { t in
+            t.authorHandle = "uma"
+            t.authorAvatarURL = avatarArt("uma")
+            t.previewImageURL = art(1)
+            t.summary = "Why software that keeps your data on your own machine "
+                + "ends up feeling faster, calmer and more yours."
+        })
         // Three voices, not one (2026-08-12). Every Nostr row was authored by
         // "you", so the room read as a private notebook where the other two
         // social rooms read as networks — and `NostrStore.accounts`, which the
@@ -1406,6 +1558,30 @@ enum DemoSeedAll {
                 t.postText = n.text
                 t.authorHandle = n.handle
                 t.authorAvatarURL = avatarArt(n.handle)
+                // The same five fields Bluesky was missing (2026-08-17), for
+                // the same reason: `NostrIngest` stamps `channelName` (the
+                // note's hashtag), both picture fields, `quote` and `parent`,
+                // and this room had none of them — so the third social room
+                // read plainer than the two beside it while sharing their
+                // renderer. Sparse, per the cast block's ruling.
+                t.channelName = ["design", "bitcoin", "reading"][i % 3]
+                t.likeCount = 14 - i * 3
+                if i == 1 {
+                    t.parent = SocialCard(handle: "you",
+                                          text: "Relays are just people who agreed to keep talking.",
+                                          avatarURL: avatarArt("you"))
+                }
+                if i == 2 {
+                    t.quote = SocialCard(handle: "uma",
+                                         text: "Signed, not hosted. That is the whole idea.",
+                                         avatarURL: avatarArt("uma"))
+                    // Both picture paths, the cast block's lesson again:
+                    // `PostCard` draws one from `previewImageURL` and only
+                    // reaches `PostImageGrid` at two or more.
+                    t.previewImageURL = art(0)
+                    t.imageURLs = [art(0), art(2)]
+                }
+                if i == 0 { t.previewImageURL = art(3) }
             }
         }
         return out
@@ -1447,6 +1623,10 @@ enum DemoSeedAll {
                 ref: StockWatch.symbolRef(t.symbol), days: t.days, hour: 10,
                 tags: [t.symbol]) { thing in
                 thing.watchPriceUsd = t.watchedAt
+                // The company's own mark, which the bridge stamps
+                // (2026-08-17) — without it every watched stock wore the
+                // source glyph and the watchlist read as one repeated icon.
+                thing.previewImageURL = "sample:coin-\(t.symbol.lowercased())"
             }
         }
         out += mood.enumerated().map { i, m in
@@ -1509,6 +1689,15 @@ enum DemoSeedAll {
                 ref: "demo:gecko:\(t.symbol.lowercased())", days: t.days, hour: 14,
                 tags: ["Trending"]) { thing in
                 thing.previewImageURL = "sample:coin-\(t.symbol.lowercased())"
+                // THE PRICE AS DATA, not as words (2026-08-17) — the same
+                // ruling the Shopify drops already carry. `GeckoTrending`
+                // stamps `priceValue`/`priceCurrency`, which is what
+                // `ThingContent.productPrice` reads to draw the figure as the
+                // sheet's own heading; carried only in the title, that branch
+                // takes its nil path and the sheet falls through to the small
+                // grey fallback line.
+                thing.priceValue = 0.42 + Double(t.symbol.count) / 10
+                thing.priceCurrency = "USD"
             }
         }
         let drops: [(String, Double)] = [
@@ -1518,6 +1707,11 @@ enum DemoSeedAll {
         out += drops.enumerated().map { i, d in
             row(.link, d.0, source: "OpenSea", ref: "demo:opensea:\(i)", days: d.1, hour: 19) { t in
                 t.previewImageURL = art(i)
+                // The collection's own blurb, which `OpenSeaBridge` stamps
+                // onto `summary` (2026-08-17). It is the only thing that
+                // distinguishes one drop's name from another's.
+                t.summary = "\(d.0) — a new collection, described by its own "
+                    + "creator on the marketplace."
             }
         }
         // The price is STRUCTURED here, not just words in `content`
@@ -1689,6 +1883,49 @@ enum DemoSeedAll {
             t.walletAddress = demoWallet
             t.counterpartyAddress = counterpartyAddress(for: "Uniswap")
             t.grantedAt = at(6, 14)
+        })
+        // THE WALLET'S RECONCILING DEADLINES (2026-08-17). Four bridges land a
+        // `dueAt` row under `source: "Wallet"` — ENS name expiry, the Bitcoin
+        // halving, a staked-HYPE unlock and Aerodrome's weekly vote — and the
+        // demo had NONE of them, so the wallet's entire forward-looking half
+        // was missing: nothing in the runway, nothing in the "Needs you" tile,
+        // nothing for `NotifySweep.deadlineNear` to find. The room read as a
+        // pure ledger of things that already happened, which is half of what
+        // the app's wallet actually is.
+        //
+        // REAL REF SHAPES, not `demo:` — each of these bridges reconciles its
+        // own row by ref on every pass, and the eighth instance of a gate keyed
+        // on a ref shape a `demo:` row cannot satisfy is not one worth adding.
+        // Dates sit at the spacing each deadline really has: a vote closes
+        // this week, an unlock in a month, a name in a season, a halving years
+        // out — which is also what gives the runway a real span to draw.
+        let deadlines: [(title: String, ref: String, due: Double, tag: String)] = [
+            ("Aerodrome vote closes", "aerodrome:vote:\(demoWallet):4821", -3, "Onchain"),
+            ("Staked HYPE unlocks", "hyperliquid:unlock:\(demoWallet):0xvalidator", -29, "Onchain"),
+            ("casberi.eth expires", "wallet:ensexpiry:casberi.eth", -96, "Onchain"),
+        ]
+        out += deadlines.map { d in
+            row(.transaction, d.title, source: "Wallet", ref: d.ref,
+                days: 4, hour: 11, tags: [d.tag]) { t in
+                t.walletAddress = demoWallet
+                t.dueAt = at(d.due, 11)
+            }
+        }
+        // Bitcoin is the ONLY wallet path that stamps a fiat figure on a
+        // transfer (`priceValue`/`priceCurrency`, from the sats and the spot
+        // price), so without a BTC row the demo could not draw a money receipt
+        // carrying a second reading in dollars — §363's anatomy at its fullest.
+        // `transferVenue` carries the BLOCK, which is Bitcoin's own named
+        // moment and renders through `ThingStage` with no new UI.
+        out.append(row(.transaction, "Received 0.0250 BTC", source: "Wallet",
+                       ref: "bitcoin:settled:\(demoWallet):demo0", days: 11, hour: 15,
+                       content: "https://mempool.space/tx/demo0", tags: ["Onchain"]) { t in
+            t.walletAddress = demoWallet
+            t.transferDirection = "received"
+            t.transferAmount = "0.0250 BTC"
+            t.transferVenue = "Block 959,701"
+            t.priceValue = 2_640.0
+            t.priceCurrency = "USD"
         })
         // Privacy Pools rides the watched wallet; its rail reads the state TAG
         // `PrivacyPoolsBridge.retag` maintains, never the title's words.
@@ -1966,6 +2203,11 @@ enum DemoSeedAll {
             row(.reminder, title, source: "Cloudflare", ref: "cloudflare:cert:\(id)",
                 days: days, hour: 8, content: "Auto-renews") { t in
                 t.dueAt = at(dueDays, 8)
+                // `CloudflareBridge` stamps the certificate's own detail onto
+                // `summary` (2026-08-17) — the issuer and what it covers, which
+                // is the difference between "a cert expires" and knowing which.
+                t.summary = "Universal SSL, issued by Let's Encrypt, covering "
+                    + "the apex and one wildcard."
             }
         }
     }
@@ -2007,6 +2249,19 @@ enum DemoSeedAll {
             row(.link, s.0, source: "Linear", ref: "demo:linear:\(i)", days: s.2, hour: 10,
                 content: "Assigned to you") { t in
                 t.mark = s.1
+                // THE ISSUE'S OWN DESCRIPTION AND ITS DUE DATE (2026-08-17).
+                // `TokenBridges` stamps both for Linear — the description on
+                // `summary` as display copy (the Trello card-back contract),
+                // the target date on `dueAt` — and the demo set neither, so
+                // this room showed bare titles where the app shows a task you
+                // can actually judge, and none of its work ever reached the
+                // runway or the "Needs you" tile.
+                //
+                // A date on SOME, not all: plenty of real issues carry none,
+                // and a room where every row has a deadline reads as a
+                // deadline list rather than a backlog.
+                t.summary = "\(s.0). Scoped this week; blocked on nothing."
+                if i % 2 == 0 { t.dueAt = at(-Double(3 + i * 4), 17) }
             }
         }
         // WHO DID IT, with their face (2026-08-12). `GitHubFeeds` stamps the
@@ -2027,6 +2282,10 @@ enum DemoSeedAll {
                 t.repoLanguage = "Swift"
                 t.authorHandle = g.1
                 t.authorAvatarURL = avatarArt(g.1)
+                // The repository's social preview image, which `GitHubFeeds`
+                // stamps (2026-08-17). The avatar above says WHO; this says
+                // what the project looks like, and the room drew neither.
+                t.previewImageURL = art(i)
             }
         }
         let slack: [(String, String, Double)] = [
@@ -2039,6 +2298,11 @@ enum DemoSeedAll {
                 content: s.1) { t in
                 t.channelName = s.1
                 t.authorHandle = String(s.0.prefix(while: { $0 != ":" }))
+                // The message itself on `postText` (2026-08-17), where the
+                // bridge puts it and where the card renders it — `title` is
+                // the 80-character clamp, so without this a long Slack message
+                // was readable only as its own truncation.
+                t.postText = s.0
             }
         }
         let trello: [(String, Double)] = [
@@ -2050,6 +2314,11 @@ enum DemoSeedAll {
                 content: "Assigned to you") { t in
                 t.dueAt = at(-Double(2 + i * 3), 12)
                 t.summary = "Card back: check the measurements first."
+                // A card's cover image, which Trello serves and the bridge
+                // stamps (2026-08-17). Sparse, because a real board mixes
+                // covered cards with plain ones and a board where every card
+                // has art reads as a gallery rather than a list of work.
+                if i % 2 == 0 { t.previewImageURL = art(i) }
             }
         }
         // GitLab's own title shape: `references.full` (group/project#N or
@@ -2065,6 +2334,10 @@ enum DemoSeedAll {
         out += gitlab.enumerated().map { i, g in
             row(.link, g.0, source: "GitLab", ref: "demo:gitlab:\(i)", days: g.2, hour: 13) { t in
                 t.mark = g.1
+                // Same pair as Linear above, same bridge file, same two fields
+                // the demo never set — an issue's description and its due date.
+                t.summary = "\(g.0). Opened against the current milestone."
+                if i == 0 { t.dueAt = at(-8, 17) }
             }
         }
         // Jira's title shape: the key leads on its own (`"PROJ-123 · summary"`,
@@ -2389,7 +2662,18 @@ enum DemoSeedAll {
                         "Reading list", "Panel spec", "Hiring loop", "Q4 goals",
                         "Home projects", "Recipes"][i],
                 source: "Notion", ref: "demo:notion:\(i)", days: Double(2 + i * 7), hour: 12,
-                content: "Page in your workspace")
+                content: "Page in your workspace") { t in
+                // A page's cover and its date property (2026-08-17). The
+                // Notion bridge stamps both and the demo had neither, so ten
+                // pages drew as ten identical grey rows and none of the ones
+                // with a real date ever reached the runway.
+                //
+                // Sparse on purpose, both of them: most Notion pages carry no
+                // cover and no date, and a workspace where every page has both
+                // is not a workspace anyone recognises.
+                if i % 3 == 0 { t.previewImageURL = art(i) }
+                if i == 1 || i == 4 { t.dueAt = at(-Double(5 + i * 6), 12) }
+            }
         }
         out += (0..<3).map { i in
             row(.voice, ["Idea for the panel", "Shopping list", "Note to self — call Nils"][i],
@@ -2524,6 +2808,10 @@ enum DemoSeedAll {
             row(.reminder, t.0, source: "Todoist", ref: "demo:todoist:\(i)",
                 days: max(0, t.1), hour: 9, content: "Inbox") { thing in
                 thing.dueAt = at(t.1, 12)
+                // A task's own note (2026-08-17) — `TokenBridges` stamps
+                // Todoist's description onto `summary`, and without it the
+                // demo's tasks were titles with nothing behind them.
+                thing.summary = "\(t.0). Added from the inbox; no sub-tasks."
             }
         }
         out += (0..<2).map { i in
@@ -2609,6 +2897,19 @@ enum DemoSeedAll {
                 days: Double(1 + i * 3), hour: 16) { t in
                 t.watchPriceUsd = k.watchedAt
                 if k.settled { t.marketResolvedYes = true }
+                // WHEN THE MARKET CLOSES (2026-08-17). Both prediction bridges
+                // stamp `dueAt = market.closeTime` — "a market's close IS a
+                // real deadline", in `KalshiWatch`'s own words — and the demo
+                // set it on neither, so its markets reached no runway, no
+                // countdown and no "Needs you" tile. A watched market with no
+                // close is the one fact about it that decides whether you still
+                // have time to act.
+                //
+                // A SETTLED market's close is in the PAST, and getting that
+                // backwards is worse than leaving it empty: a resolved market
+                // wearing a future deadline reads as still open, on the row
+                // whose whole point is that it isn't.
+                t.dueAt = k.settled ? at(1, 16) : at(-21, 16)
             }
         }
         let poly: [(title: String, watchedAt: Double)] = [
@@ -2619,6 +2920,11 @@ enum DemoSeedAll {
             row(.link, p.title, source: "Polymarket", ref: "demo:polymarket:\(i)",
                 days: Double(2 + i * 4), hour: 20) { t in
                 t.watchPriceUsd = p.watchedAt
+                // `PolymarketBridge` stamps the same field for the same reason
+                // (see the Kalshi rows above). Both open, so both future — and
+                // far enough out that they sort behind the week's real work
+                // rather than crowding the top of a runway built for it.
+                t.dueAt = at(Double(-45 - i * 15), 20)
             }
         }
         return out
@@ -2687,10 +2993,26 @@ enum DemoSeedAll {
         // Three rather than the cap of five: enough that the shelf is a real
         // choice and the "All" pill means something, few enough that each one
         // has a believable share of the transfers below.
-        if WalletStore.shared.addresses.isEmpty {
-            for wallet in demoWallets {
-                _ = WalletStore.shared.add(wallet.address, label: wallet.label)
-            }
+        // PER WALLET, not all-or-nothing (2026-08-17). This used to be gated
+        // on `addresses.isEmpty`, which meant the three landed only on a store
+        // that had never watched anything — so ONE leftover watch (a dev
+        // simulator, a previous run, a `-walletAddress` probe) seeded ZERO of
+        // them and the demo watched a single wallet again. That is exactly the
+        // state `verify.sh`'s floor step has been reporting since it landed
+        // ("1 watched, 3 seeded"), and why that step is warn-only: the seeding
+        // was conditional on a precondition nothing guarantees, so the shelf
+        // it exists to fill drew nothing on any sim that had been used.
+        //
+        // Safe to ask per wallet because `add` is already dedupe-aware (it
+        // compares in resolved form, so a demo address present under either
+        // spelling is `.alreadyWatching`, not a second row), and `exit` removes
+        // these BY ADDRESS, so a real watch sitting beside them is neither
+        // clobbered on the way in nor forgotten on the way out. The one case
+        // this still cannot satisfy is a store already at the five-wallet cap,
+        // where `add` answers `.limitReached` — correct behaviour, and a state
+        // no first-time opener is ever in.
+        for wallet in demoWallets {
+            _ = WalletStore.shared.add(wallet.address, label: wallet.label)
         }
         let curve: [Double] = [11_240, 11_180, 11_610, 11_540, 11_890, 12_050,
                                11_960, 12_310, 12_180, 12_460, 12_400, 12_480]
