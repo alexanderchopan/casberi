@@ -402,16 +402,7 @@ struct SourcesTray: View {
         GeometryReader { geo in
             let column = Self.columnWidth(geo.size.width)
             HStack(alignment: .top, spacing: DS.Space.s2) {
-                ForEach(Array(row.blocks.enumerated()), id: \.offset) { index, block in
-                    // ONE SKIPPED COLUMN between groups — the boundary, now
-                    // that there is no container to draw one. It is a real
-                    // column of the same grid, so every chip stays on its
-                    // vertical: the gap is ~68pt against the 8pt inside a
-                    // group, without a single chip moving. `SourceRowPacking`
-                    // reserves it, so a row can never overflow because of it.
-                    if index > 0 {
-                        Color.clear.frame(width: column)
-                    }
+                ForEach(Array(row.blocks.enumerated()), id: \.offset) { _, block in
                     blockView(block, column: column, chipRows: row.chipRows)
                 }
                 // A row that doesn't fill the grid leaves its remainder on the

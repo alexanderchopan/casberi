@@ -122,13 +122,8 @@ enum SourceRowPacking {
             // oversized row's member sum is already greater than `columns`, so
             // the budget below rejects it for every block. Re-adding that guard
             // would be a branch no test can ever reach.
-            // A row's budget counts the SEPARATOR COLUMNS too (2026-08-16,
-            // user: cards behind the icons "makes it amateur"). With no
-            // container, the only boundary that survives without knocking
-            // chips off the shared grid is a whole skipped column — so each
-            // block after the first costs its members PLUS one.
             let fit = rows.firstIndex { row in
-                row.reduce(0) { $0 + $1.members.count } + row.count + block.members.count <= columns
+                row.reduce(0) { $0 + $1.members.count } + block.members.count <= columns
             }
             if let fit {
                 rows[fit].append(block)
