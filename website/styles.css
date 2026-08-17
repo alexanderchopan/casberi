@@ -992,7 +992,16 @@ footer .tagline { font-size: 16px; font-weight: 600; color: var(--ink); margin-b
 
 /* Hero act 3: the berry grows smoothly as it drinks; the headline catches
    the glow when the story lands (2026-07-13) */
-.rain-target .ai-casberi { transition: transform .3s cubic-bezier(.34,1.56,.64,1); transform-origin: 50% 60%; }
+.rain-target .ai-casberi {
+  /* grows UP into the space the rain vacated. At 5x a centre origin would
+     put half the creature through the headline; 88% keeps its feet planted
+     and sends the mass where there is room. */
+  transform-origin: 50% 88%; transform-box: fill-box;
+  /* NO transition on `scale`. The swell is stepped once per arriving app —
+     57 steps about 26ms apart, which is already frame rate — so a transition
+     buys nothing and adds a way for the growth to lag behind the arrivals. */
+  transition: transform .3s cubic-bezier(.34,1.56,.64,1);
+  z-index: 3; position: relative; }
 .hero h1 em { transition: filter 1.2s ease; }
 .hero h1 em.lit { filter: brightness(1.3) drop-shadow(0 0 26px rgba(59,140,240,.35)); }
 

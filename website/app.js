@@ -30,10 +30,12 @@
   var icons = Array.prototype.slice.call(rain.children);
   var state = 'raining';          // raining → absorbing → rested
   // How much the mark swells at the peak of the gather, as a fraction of its
-  // 52px resting size. 0.10 was the original and read as a beat rather than a
-  // swell; 0.80 is the most it can take before the crown of the head starts
-  // crowding the headline beneath it on a short viewport.
-  var SWELL = 0.80;
+  // 52px resting size. The original 0.10 read as a beat; 0.80 read as a swell;
+  // 4.0 reads as the thing actually eating the page — 52px becomes ~260px,
+  // which fills the space the rain just vacated instead of merely nodding at
+  // it. That only works because the growth is a TRANSFORM: it takes no layout
+  // room, so nothing below it reflows no matter how large it gets.
+  var SWELL = 4.0;
 
   // Act 2 — gather. Icons leave far-first in a rolling wave, curve along an
   // arc, accelerate into the tile, and recede (scale + fade) as they arrive.
@@ -68,7 +70,13 @@
         // eating. 52px -> ~93px at the top of the swell.
         var fill = done / n;
         var eased = 1 - Math.pow(1 - fill, 2.2);
-        target.style.transform = 'scale(' + (1 + SWELL * eased).toFixed(3) + ')';
+        // The standalone `scale` property, NOT transform. `fall` is a CSS
+        // animation on this element with fill:both, so it owns `transform`
+        // forever — and a CSS animation outranks an inline style, which is
+        // why every earlier attempt to set style.transform here was silently
+        // discarded. `scale` composes independently, the same way berryBob
+        // already uses `translate`.
+        target.style.scale = (1 + SWELL * eased).toFixed(3);
         // Every arrival gulps, and the gulp SHRINKS as the creature fills:
         // a small animal takes a big swallow, a full one barely flinches.
         target.animate(
@@ -88,7 +96,7 @@
   function finale() {
     setTimeout(function () {
       // the energy flows out: the berry springs back to size…
-      target.style.transform = 'scale(1)';
+      target.style.scale = '1';
       // The release. It gives back everything it took, so this overshoots the
       // other way — the squash is what sells the size it just lost, and the
       // duration is longer than the gulps so the eye reads it as one motion
@@ -184,6 +192,7 @@
     var panel = rain.querySelector('.streamfeed');
     if (panel) panel.remove();
     target.style.transform = '';
+    target.style.scale = '';        // the swell rides `scale` — clear it too
     icons.forEach(function (el, i) {
       el.getAnimations().forEach(function (a) { a.cancel(); });
       el.style.animation = 'none';

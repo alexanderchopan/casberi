@@ -14,13 +14,22 @@ import SwiftUI
 struct CasberiMark: View {
     var size: CGFloat = 20
 
-    /// Below this, the suckers and the two inner arms are dropped and the
-    /// remaining strokes thicken. The rings are 1.4 units wide — at 20pt that
-    /// is a quarter of a point, which renders as grey haze rather than a ring,
-    /// and eight arms at 20pt close into a single skirt. The handoff sets the
-    /// boundary at 60; the FAB (20), the shell (18) and the surface (44) all
-    /// take the small cut, which is the point of having one.
-    static let smallCutBelow: CGFloat = 60
+    /// Below this, the suckers and the outer arms are dropped and the remaining
+    /// strokes thicken.
+    ///
+    /// The handoff puts this boundary at 60, and that was followed literally at
+    /// first — which took the small cut all the way down to the FAB. Wrong, and
+    /// settled by evidence rather than argument: the full mark was set as an
+    /// avatar on a real device at roughly FAB size and reads fine. Retina is the
+    /// reason the arithmetic misled. A 1.4-unit ring at 20pt is a quarter of a
+    /// POINT but three-quarters of a physical pixel at @3x, and the suckers are
+    /// punched in the ground colour against a solid head, which is the highest
+    /// contrast a small detail can have. The handoff's rule was written for CSS
+    /// pixels on the web, where none of that holds.
+    ///
+    /// 16 keeps a cut for the genuinely tiny cases (a glyph seat, a legend) and
+    /// gives the full drawing to everything a person actually looks at.
+    static let smallCutBelow: CGFloat = 16
 
     private var full: Bool { size >= Self.smallCutBelow }
 
