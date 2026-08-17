@@ -135,8 +135,13 @@ struct SourcesTray: View {
     let active: String
     let onPick: (String) -> Void
 
+    /// Closes the overlay. A closure rather than `@Environment(\.dismiss)`
+    /// because this is no longer presented — `dismiss` in an overlay resolves
+    /// to whatever sheet or stack happens to enclose the shell, which is
+    /// either nothing or the wrong thing.
+    let onDismiss: () -> Void
+
     @Environment(BridgeStore.self) private var bridges
-    @Environment(\.dismiss) private var dismiss
 
     /// Mirrors `SourceRowPacking.columns` — the view needs it to wrap an
     /// oversized group's chips, and a drift guard in
@@ -301,7 +306,13 @@ struct SourcesTray: View {
     /// five (772) scroll.
     private static let rowGap: CGFloat = DS.Space.s3
 
-    /// DSTray's own chrome: top clearance, the title, its gap, bottom pad.
+    /// Chrome: top clearance, the title, its gap, bottom pad.
+    ///
+    /// No lane is reserved for the agent bar, because the bar is HIDDEN while
+    /// this panel is up — see `RootShell`'s floating cluster. A reserve was
+    /// written and deleted within the hour: it cost 76pt of resting height
+    /// (about a whole row) to protect chips from a control that no longer
+    /// overlaps them.
     private static let chromeHeight: CGFloat = DS.Space.s6 + 30 + DS.Space.s4 + DS.Space.s6
     /// 620 → 660 on 2026-08-16, alongside the eyebrow's step to `subhead13`:
     /// four rows went 610 → 634pt, and a cap of 620 would have answered the
@@ -344,11 +355,24 @@ struct SourcesTray: View {
         return Self.height(of: restingRows(rows), rows: rows)
     }
 
+    /// The panel's natural height, read by `SourcesOverlay` — which owns the
+    /// presentation now, so the height has to leave the view rather than be
+    /// consumed by a `DSTray` inside it.
+    var panelHeight: CGFloat { trayHeight }
+
+    /// CONTENT ONLY since 2026-08-16 — no `DSTray`, no `.sheet`.
+    ///
+    /// The tray stopped being a sheet because a sheet is the one thing that
+    /// cannot look like glass: it presents in its own context, and every
+    /// measurement this session says `glassEffect` does not sample across
+    /// that boundary (§393a). `SourcesOverlay` hosts this in the shell's own
+    /// ZStack instead, beside the agent bar, where the material has the live
+    /// feed behind it. See that file for what the move cost.
     var body: some View {
-        DSTray(title: String(localized: "Your feeds"),
-               height: trayHeight,
-               glass: true,
-               detents: [.height(trayHeight), .large]) {
+        VStack(alignment: .leading, spacing: DS.Space.s4) {
+            Text("Your feeds")
+                .dsText(.heading22)
+                .foregroundStyle(DS.textPrimary)
             ScrollViewReader { proxy in
                 ScrollView {
                     let rows = packed
@@ -373,6 +397,12 @@ struct SourcesTray: View {
                 .onAppear { revealActive(proxy) }
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .padding(.horizontal, DS.Space.s4)
+        .padding(.top, DS.Space.s6)
+        .padding(.bottom, DS.Space.s6)
+        // A tray was its own hosting environment and re-declared this; an
+        // overlay is inside the shell's tree, so the shell's own copy fires.
     }
 
     /// The tray is the strip's map, and on a big corpus the snap-down cap can
@@ -524,7 +554,7 @@ struct SourcesTray: View {
         Button {
             DSHaptic.selection()
             onPick(label)
-            dismiss()
+            onDismiss()
         } label: {
             VStack(spacing: DS.Space.s1) {
                 ZStack {

@@ -68,8 +68,32 @@ grep -q 'columns = SourceRowPacking.columns' "$TRAY" \
 # material over ~85% of the tray, and the sheet's local value varies with the
 # feed behind it, so the same card reads raised over a dark row and recessed
 # over a bright one. See SourcesTray's own "Where the card used to be" note.
-grep -q 'glass: true' "$TRAY" \
-  || { echo "✗ SourcesTray no longer presents on glass — with no cards its marks are a bare grid on an opaque sheet"; exit 1; }
+# The tray is an OVERLAY, not a sheet, since 2026-08-16 (§394) — and that is
+# the whole reason its glass finally samples the feed. A sheet presents in its
+# own context and `glassEffect` does not reach across it (§393a), so reverting
+# to `.sheet` silently returns the grey panel four builds were spent chasing.
+OVERLAY="Casberi/Casberi/Shell/SourcesOverlay.swift"
+[[ -f "$OVERLAY" ]] \
+  || { echo "✗ SourcesOverlay is gone — the tray is a sheet again and its glass cannot sample the feed"; exit 1; }
+grep -q 'glassEffect(.regular' "$OVERLAY" \
+  || { echo "✗ the panel no longer wears the system's own glass — see §394"; exit 1; }
+# `.clear` was tried in the first overlay build and overshot: the feed's words
+# competed with the tray's own. DSGlassVariant's rule — regular over CONTENT,
+# clear only over PIXELS — is the ruling, not a preference.
+# Read a COMMENT-STRIPPED copy: the file DOCUMENTS why `.clear` was rejected by
+# naming it, so a guard grepping raw source fires on the prose explaining it.
+# Fourth time this repo has paid for that (Obsidian, Cursor, ondevice, here).
+sed 's|//.*||' "$OVERLAY" | grep -q 'glassEffect(.clear' \
+  && { echo "✗ the panel is on .clear glass — it withholds the contrast the chip names need over a feed"; exit 1; }
+grep -q '.sheet(isPresented: \$sourcesOpen)' Casberi/Casberi/Shell/RootShell.swift \
+  && { echo "✗ the sources tray is presented as a sheet again — its glass will stop sampling (§394)"; exit 1; }
+# The environment crash this refactor shipped and caught in the simulator: an
+# overlay sits ABOVE the shell's `.environment(...)` injections in the modifier
+# chain, so it is as starved as a sheet. Without this the tray dies on open
+# with "No Observable object of type BridgeStore found" — a clean compile and
+# every static audit green.
+grep -q 'rootPresented(SourcesOverlay' Casberi/Casberi/Shell/RootShell.swift \
+  || { echo "✗ SourcesOverlay is no longer rootPresented — it will crash on open with no BridgeStore"; exit 1; }
 # Scoped to nameBand, NOT a bare file grep: the chip's own name is textPrimary
 # when it is the active source (line ~441), so an unscoped grep matches whatever
 # the eyebrow does and is a guard that cannot fail.

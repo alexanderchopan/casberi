@@ -24673,3 +24673,84 @@ automated pass could render this screen at all.
 one device. The material's improvement is visible in the sim comparison; the
 `glassEffect` conclusion is inference from a report, and the honest test is the
 next TestFlight build.
+
+## §394 — The tray stops being a sheet, and four boundary treatments are rejected (user: "yes lets move away from the sheet", "i don't like those cards behind the icons it makes it amateur", "this is weird with the empty column in the middle", "if you can drag the panel to close it then the fab doesn't need to be showing", 2026-08-16)
+
+Two threads, settled the same night. Read §392a and §393a first — this is where both land.
+
+### 1. A sheet cannot look like glass
+
+Four builds were spent on the material (0.82 → 0.55 → 0.45 → 0.35,
+`glassEffect(.clear)` tried and reverted, the sheet's dimming layer found and
+removed) and the report stayed "still grayish and not some clear thing". What
+was left was the PRESENTATION. `.sheet` renders in its own context; Apple's
+Liquid Glass surfaces — bars, controls, the App Store tab bar this was compared
+against — are views inside the app's own hierarchy compositing over the scroll
+behind them.
+
+`SourcesOverlay` hosts the panel as a LAYER of `RootShell`'s ZStack.
+**It worked on the first render**: the feed reads straight through the panel,
+which four builds of tuning never achieved. The variant was never the point —
+being in the hierarchy was.
+
+**`.regular`, not `.clear`.** The first overlay build used `.clear` and
+overshot: a feed row's title ran through a category eyebrow. `DSGlassVariant`
+has said since §322's era that `.regular` is for chrome over CONTENT and
+`.clear` only over PIXELS, "deliberately NOT a taste option". The tray sits
+over rows and words.
+
+**What the sheet was carrying for free, now hand-written:** detents (GONE —
+one height, the grid scrolls inside it), drag-to-dismiss (rebuilt), the
+grabber (drawn), modal VoiceOver semantics (declared). The backdrop is a
+CATCHER, not a scrim — it paints nothing, so the feed stays visible, but a tap
+closes the panel.
+
+**THE CRASH, and the lesson that generalises.** The first cut dropped
+`rootPresented` on the reasoning that an overlay inherits the shell's
+environment. It does not: `.overlay` — and a ZStack layer inside `shell` —
+sits ABOVE the `.environment(...)` injections applied to `shell` itself, so the
+panel died on its first read with "No Observable object of type BridgeStore
+found", **on every open, with a clean compile and every static audit green.**
+`rootPresented` is about POSITION IN THE MODIFIER CHAIN, not about sheets.
+Caught only by running the app — which is the argument for a simulator render
+on any presentation change, however green the gates are.
+
+### 2. Four boundary treatments, four rejections
+
+The tray has now tried, in order: an **opaque card** (§391 — masked the glass),
+a **translucent carve** ("makes it amateur"), **fixed-pitch whitespace
+clusters** (§392/§392a — knocked chips off the shared grid, "janky"), and a
+**skipped separator column** ("weird … it's odd"). All four are out.
+
+The grouping rests on the bold `textPrimary` eyebrow and the row rhythm, with
+column alignment — §392a's ruling — doing the structural work. The harness
+guard is INVERTED rather than deleted: it now fails the build if any container
+or separator returns, and names all four, so a fifth needs a ruling.
+
+Worth recording from the separator's brief life: reserving a column per
+boundary made packing order nearly irrelevant (catalog order lost to
+biggest-first on 7.76% of corpora before, ~1 in 3,900 with it). That is gone
+with the separator, but it is the measurement to reach for if row budgets are
+ever coarsened again.
+
+### 3. The bar stands down for the panel
+
+Briefly the agent bar was drawn OVER the panel, so a visible opener was a
+visible closer, and `toggleSources` was added for it. The user's own follow-up
+killed it on three counts, all correct: the bar sits bottom-trailing, so on a
+fuller corpus **a chip lands under it and becomes a source you can see and
+cannot tap**; keeping that lane clear cost 76pt of resting height, about a
+whole row; and the panel already has two ways out the sheet never gave us free.
+The cluster now stands down for `sourcesOpen` exactly as it already did for
+`composerOpen`. `toggleSources` survives, correct and currently unexercised.
+
+**A clarification worth keeping, because it was conflated mid-thread:** what
+the move cost was DETENTS — dragging UP to full height — not drag-to-dismiss,
+which is rebuilt and works.
+
+**Verified:** iOS and Mac Catalyst compile; packing self-test 3,967 checks /
+11 mutations; motion, liveness, ramp and catalog audits green; the panel
+rendered, the crash reproduced and fixed, and the bar toggle driven in the
+simulator before it was removed. **Not verified:** drag-to-dismiss, the
+tap-catcher and the VoiceOver modality have been written and compiled, not
+exercised.

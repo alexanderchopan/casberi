@@ -1173,31 +1173,6 @@ struct RootShell: View {
         // list would have dropped them all AND grown a "Markets" cell whose tap
         // writes a non-source into `filter.source` — a room whose predicate
         // matches nothing, forever, under a chip that lights up as if it worked.
-        .sheet(isPresented: $sourcesOpen) {
-            rootPresented(SourcesTray(labels: chrome.sourceOrder, active: filter.source) { label in
-                // Land ON the feed that was named. A pick made from a pushed
-                // room would otherwise switch the source BEHIND a Settings
-                // screen still standing on the stack — the tray would close
-                // onto the same room it was opened from, having visibly done
-                // nothing.
-                sceneState.route.path = []
-                // A pick means the whole source — the kind filter clears for
-                // every label, and BEFORE the same-source guard, so a re-tap
-                // drops it. The chip strip's own rule (`MainSurface.go(to:)`),
-                // restated rather than shared because the two call sites still
-                // differ on what the re-tap branch does with the source itself.
-                if filter.tag != "All" {
-                    withAnimation(DS.Motion.standard) { filter.tag = "All" }
-                }
-                guard label != filter.source else { return }
-                withAnimation(DS.Motion.standard) {
-                    filter.source = label
-                }
-                // A pick here teaches the strip exactly as a chip tap does —
-                // this is the same act, reached by a different gesture.
-                ChipMemory.visited(label)
-            })
-        }
         .fullScreenCover(isPresented: Binding(
             get: { !onboarded }, set: { if !$0 { onboarded = true } }
         ), onDismiss: {
@@ -1675,7 +1650,77 @@ struct RootShell: View {
             // Hidden entirely once risen (2026-07-20) — `agentMorph` needs
             // exactly one side of the matched pair present at a time, and a
             // bar sitting inert under the risen sheet was dead weight anyway.
-            if !composerOpen {
+            // The sources panel — a LAYER of this ZStack, not a `.sheet` and not
+            // an `.overlay` on the chain (2026-08-16, §394).
+            //
+            // Not a sheet, because a sheet presents in its own context and the
+            // glass cannot sample the feed across it — the whole reason this
+            // tray spent four builds looking grey.
+            //
+            // And placed HERE, before the floating cluster below, so the agent
+            // bar keeps drawing on TOP of the panel (user: "make it so when it
+            // is selected the fab is still showing and user could tap the fab
+            // to dismiss it"). As an `.overlay` the panel covered the bar
+            // outright, which left a raised tray with its own opener hidden
+            // underneath it. Z-order is the whole fix: the bar is later in this
+            // stack, so it stays visible AND hittable, and its own action
+            // toggles.
+            //
+            // `rootPresented` STAYS, and assuming it could go cost a crash: a
+            // ZStack layer inside `shell` is still ABOVE the `.environment(...)`
+            // injections applied to `shell` itself, so the panel launched with
+            // no `BridgeStore` and died on its first read — "No Observable
+            // object of type BridgeStore found", on every open, with a clean
+            // compile and every static audit green. The helper is about
+            // position in the chain, not about sheets.
+            if sourcesOpen {
+                rootPresented(SourcesOverlay(
+                    labels: chrome.sourceOrder,
+                    active: filter.source,
+                    onDismiss: { closeSources() }) { label in
+                    closeSources()
+                // Land ON the feed that was named. A pick made from a pushed
+                // room would otherwise switch the source BEHIND a Settings
+                // screen still standing on the stack — the tray would close
+                // onto the same room it was opened from, having visibly done
+                // nothing.
+                sceneState.route.path = []
+                // A pick means the whole source — the kind filter clears for
+                // every label, and BEFORE the same-source guard, so a re-tap
+                // drops it. The chip strip's own rule (`MainSurface.go(to:)`),
+                // restated rather than shared because the two call sites still
+                // differ on what the re-tap branch does with the source itself.
+                if filter.tag != "All" {
+                    withAnimation(DS.Motion.standard) { filter.tag = "All" }
+                }
+                guard label != filter.source else { return }
+                withAnimation(DS.Motion.standard) {
+                    filter.source = label
+                }
+                // A pick here teaches the strip exactly as a chip tap does —
+                // this is the same act, reached by a different gesture.
+                ChipMemory.visited(label)
+                })
+            }
+
+            // The cluster stands down for the sources panel too (2026-08-16,
+            // user: "if you can drag the panel to close it then the fab
+            // doesn't need to be showing").
+            //
+            // It was briefly shown OVER the panel, on the reasoning that a
+            // visible opener is a visible closer. The user's own follow-up
+            // killed it and was right on three counts: the bar sits
+            // bottom-trailing, so on a fuller corpus a chip lands under it and
+            // becomes a source you can see and cannot tap; keeping it clear
+            // cost 76pt of panel height, about a whole row at rest; and the
+            // panel already has TWO ways out that the sheet never gave us for
+            // free — the hand-built drag-to-dismiss and the tap-catcher. A
+            // third door, floating on top of the surface it closes, is noise.
+            //
+            // What was actually lost with the sheet was DETENTS — dragging UP
+            // to full height — not drag-to-dismiss, which is rebuilt in
+            // `SourcesOverlay`. Those two got conflated for a moment here.
+            if !composerOpen && !sourcesOpen {
                 // The floating cluster (whisper + bar) renders as one
                 // coordinated glass system (2026-07-23) — the container gives
                 // both elements a SHARED backdrop sample, so as feed content
@@ -1762,7 +1807,7 @@ struct RootShell: View {
                              // ever opening the tray.
                              expanded: !sourcesEverOpened && !chrome.minimized,
                              morphNS: agentMorph,
-                             onSources: { openSources() },
+                             onSources: { toggleSources() },
                              // NIL since 2026-08-15, the crown-pour ruling's
                              // other half. The user killed the per-wallet
                              // crown pour because it argued with the wallet
@@ -1911,7 +1956,32 @@ struct RootShell: View {
         // The teaching grace is spent the first time the tray opens by any
         // path — the bar's words have done their one job.
         sourcesEverOpened = true
-        sourcesOpen = true
+        withAnimation(DS.Motion.standard) { sourcesOpen = true }
+    }
+
+    /// One way out, used by every closer — the panel's drag, its tap-catcher,
+    /// a pick, and the bar itself — so the exit animates identically however
+    /// it is reached.
+    private func closeSources() {
+        withAnimation(DS.Motion.standard) { sourcesOpen = false }
+    }
+
+    /// The bar's own verb TOGGLES since 2026-08-16 (user: "user could tap the
+    /// fab to dismiss it").
+    ///
+    /// It could only open before, which was invisible while the tray was a
+    /// sheet — the sheet covered the bar, so the closed state was the only one
+    /// you could ever tap it in. The panel is a ZStack layer under the cluster
+    /// now, so the bar stays visible above a raised tray, and a control you
+    /// can see while its surface is open must be able to close it. Otherwise
+    /// it reads as dead.
+    private func toggleSources() {
+        if sourcesOpen {
+            DSHaptic.tap()
+            closeSources()
+        } else {
+            openSources()
+        }
     }
 
     /// Everything the shell hands its own tree, re-applied to a ROOT-PRESENTED
