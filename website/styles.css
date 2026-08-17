@@ -736,12 +736,17 @@ footer .tagline { font-size: 16px; font-weight: 600; color: var(--ink); margin-b
   animation-delay: 1.5s;       /* after every app has landed */
   box-shadow: 0 16px 40px rgba(0,0,0,.45);
 }
-.rain-target .ai-casberi img {
+.rain-target .ai-casberi img,
+.rain-target .ai-casberi .casberi-glyph {
   width: 100%; height: 100%;
   border-radius: inherit;
   object-fit: cover;
   display: block;
 }
+/* The mark is INLINE svg, not an <img>, on purpose. An img rasterizes at its
+   52px layout size and the swell then scales that bitmap eight times, which
+   is visibly soft. Inline svg is re-rendered by the compositor at whatever
+   scale it is drawn at, so the creature stays sharp at full size. */
 /* the berry breathes gently once it has landed, and leans in on hover */
 .rain-target .ai-casberi {
   animation: fall 1s 1.5s both, berryBob 4.5s ease-in-out 2.8s infinite;
@@ -996,7 +1001,9 @@ footer .tagline { font-size: 16px; font-weight: 600; color: var(--ink); margin-b
   /* grows UP into the space the rain vacated. At 5x a centre origin would
      put half the creature through the headline; 88% keeps its feet planted
      and sends the mass where there is room. */
-  transform-origin: 50% 88%; transform-box: fill-box;
+  /* 84%: grows almost entirely UP into the space the rain just vacated,
+     so the headline underneath stays readable. A centre origin buries it. */
+  transform-origin: 50% 84%; transform-box: fill-box;
   /* NO transition on `scale`. The swell is stepped once per arriving app —
      57 steps about 26ms apart, which is already frame rate — so a transition
      buys nothing and adds a way for the growth to lag behind the arrivals. */

@@ -69,7 +69,10 @@
         // last of it. Linear growth reads as a progress bar; this reads as
         // eating. 52px -> ~93px at the top of the swell.
         var fill = done / n;
-        var eased = 1 - Math.pow(1 - fill, 2.2);
+        // Front-loaded hard: the creature is already most of its final size
+        // by the time half the apps are in, so the swell is a state you SEE
+        // rather than a peak you catch on the last frame.
+        var eased = 1 - Math.pow(1 - fill, 3.4);
         // The standalone `scale` property, NOT transform. `fall` is a CSS
         // animation on this element with fill:both, so it owns `transform`
         // forever — and a CSS animation outranks an inline style, which is
@@ -181,7 +184,7 @@
       });
       if (em) setTimeout(function () { em.classList.add('lit'); }, 45 * cards.length + 500);
       setTimeout(function () { state = 'rested'; }, 45 * cards.length + 900);
-    }, 380);   // a beat at full size before the release
+    }, 950);   // hold at full size — the payoff is the size, so it has to last
   }
 
   // Replay — tap the berry: everything scatters back out, then gathers again.
