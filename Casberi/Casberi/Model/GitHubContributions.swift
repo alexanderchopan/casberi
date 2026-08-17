@@ -166,6 +166,26 @@ final class GitHubGraphStore {
     private var fetching = false
 
     func refreshIfStale() async {
+        // THE DEMO REACHES NOTHING (2026-08-16, caught by `verify.sh`'s own
+        // "Demo reaches nothing" step: `api.github.com · 4 requests`, one per
+        // launch, with `demoProbe| active=YES` in the same log).
+        //
+        // `BridgeRefresh.refreshAllConnected` returns instantly in demo mode
+        // and that gate covers every SWEEP read — but this is a VIEW read, on
+        // its own staleness clock, reached when the contribution tile mounts.
+        // The sweep's gate can't see it, which is the whole bypass class this
+        // check exists to catch, and the reason the gate belongs here rather
+        // than one level up.
+        //
+        // It seeds the synthetic year rather than just returning: a demo whose
+        // GitHub room draws an EMPTY grid is a worse demo than one that draws
+        // a plausible one, and the same synthetic year already backs
+        // `-ghGraphDemo`. Nothing is persisted and `fetchedAt` stays nil, so
+        // leaving the demo re-arms a real fetch on the next mount.
+        if DemoMode.isActive {
+            if year == nil { year = ContributionYear.demo() }
+            return
+        }
         #if DEBUG
         // `-ghGraphDemo YES` seeds a synthetic year so the tile can be seen on
         // the simulator, where there's no real account to read.

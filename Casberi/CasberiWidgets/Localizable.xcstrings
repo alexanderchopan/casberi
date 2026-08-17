@@ -371,6 +371,34 @@
         }
       }
     },
+    "Checked %@": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Comprobado %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@ に確認"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@ 확인함"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@ 检查过"
+          }
+        }
+      }
+    },
     "Deadlines": {
       "localizations": {
         "es": {
@@ -1039,6 +1067,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "正在保存你的 %@ 存档"
+          }
+        }
+      }
+    },
+    "Settled just now": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Liquidado ahora mismo"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "たった今確定しました"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "방금 정산됨"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "刚刚结算"
           }
         }
       }
