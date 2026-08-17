@@ -71,8 +71,15 @@ struct SourcesOverlay: View {
     /// varies with the corpus — a third of a short panel and a third of a tall
     /// one feel the same, where 120pt would feel decisive on one and
     /// unreachable on the other.
+    /// A fraction of the panel, CAPPED — and the cap is the half that was
+    /// missing. At 33% of height alone, a short panel (three rows, ~450pt)
+    /// demanded ~150pt of travel before it let go, so a normal pull did
+    /// nothing at all and read as a dead handle. The cap makes a big panel
+    /// cheap to dismiss without making a small one impossible.
     private static let dismissFraction: CGFloat = 0.33
-    private static let flickVelocity: CGFloat = 600
+    private static let dismissCeiling: CGFloat = 90
+    /// Also lowered, for the same report: 600 asked for a hard flick.
+    private static let flickVelocity: CGFloat = 350
     /// The grabber's own height — its capsule plus the padding above it.
     ///
     /// It is counted in the panel's frame, and NOT counting it was a real bug
@@ -84,6 +91,16 @@ struct SourcesOverlay: View {
     /// The strip, not just the capsule: the drag lives HERE and nowhere else,
     /// so it needs a real target. 24pt of chrome reading as a handle.
     private static let grabberHeight: CGFloat = 24
+    /// The whole header — grabber, its clearance, the title and the gap below
+    /// it. THIS is the drag region (2026-08-16, user: "the grabber doesn't
+    /// work to pull it down, you have to tap outside the panel to close it").
+    ///
+    /// The gesture was on the 24pt grabber strip alone, which is a target you
+    /// have to aim at with a thumb you cannot see past. A sheet lets you drag
+    /// its whole header, and so does this now — ~93pt, full width, everything
+    /// above the scrolling grid. It sums with `SourcesTray.chromeHeight` to
+    /// exactly what that constant used to be, so no resting height moved.
+    private static let headerHeight: CGFloat = grabberHeight + DS.Space.s6 + 30 + DS.Space.s4
     /// How much of the screen the panel may ever take. Not the whole thing:
     /// a panel with no page left above it is a screen, and this one's whole
     /// claim is that it floats over the feed.
@@ -106,8 +123,8 @@ struct SourcesOverlay: View {
             // the tray inside this frame, so a frame sized to the tray alone
             // squeezes the content by exactly its height. That shipped in the
             // first overlay build and made a three-row tray scroll.
-            let resting = min(panel.panelHeight + Self.grabberHeight, ceiling)
-            let full = min(panel.naturalPanelHeight + Self.grabberHeight, ceiling)
+            let resting = min(panel.panelHeight + Self.headerHeight, ceiling)
+            let full = min(panel.naturalPanelHeight + Self.headerHeight, ceiling)
             let canGrow = full > resting + 1
             let height = expanded && canGrow ? full : resting
 
@@ -119,17 +136,17 @@ struct SourcesOverlay: View {
                     .accessibilityHidden(true)
 
                 VStack(spacing: 0) {
-                    // THE DRAG LIVES ON THE GRABBER, not on the panel.
+                    // THE DRAG LIVES ON THE HEADER, not on the panel and not
+                    // on the grabber alone.
                     //
-                    // It was on the whole panel for one build and did nothing:
-                    // the tray's own `ScrollView` wins that arbitration, so an
-                    // upward drag scrolled the grid and never reached this
-                    // gesture. Measured in the simulator — the panel did not
-                    // move a pixel. Scoping the gesture to chrome that does
-                    // not scroll removes the conflict rather than fighting it
-                    // with `simultaneousGesture`, which would have let both
-                    // fire and made a drag scroll AND resize.
-                    grabber
+                    // Not the panel: the tray's own `ScrollView` wins that
+                    // arbitration, so the gesture never fired at all (measured
+                    // — the panel did not move a pixel). Not the grabber
+                    // alone: 24pt is a target you must aim at, and it was
+                    // reported dead on a real device. The header is chrome, it
+                    // does not scroll, and it is the region a sheet lets you
+                    // drag.
+                    header
                         .gesture(dragGesture(height: height, canGrow: canGrow))
                     panel
                 }
@@ -161,6 +178,23 @@ struct SourcesOverlay: View {
                                bottomTrailingRadius: 0,
                                topTrailingRadius: DS.Radius.sheet,
                                style: .continuous)
+    }
+
+    /// Grabber + title: the panel's chrome, and its drag region.
+    private var header: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            grabber
+            Text("Your feeds")
+                .dsText(.heading22)
+                .foregroundStyle(DS.textPrimary)
+                .padding(.top, DS.Space.s6)
+                .padding(.bottom, DS.Space.s4)
+                .padding(.horizontal, DS.Space.s4)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(height: Self.headerHeight)
+        // The whole band is the target, title included.
+        .contentShape(Rectangle())
     }
 
     private var grabber: some View {
@@ -242,7 +276,7 @@ struct SourcesOverlay: View {
                     withAnimation(DS.Motion.standard) { expanded = true; drag = 0 }
                     return
                 }
-                let far = travel > height * Self.dismissFraction
+                let far = travel > min(height * Self.dismissFraction, Self.dismissCeiling)
                 let fast = flick > Self.flickVelocity
                 guard far || fast else {
                     withAnimation(DS.Motion.standard) { drag = 0 }

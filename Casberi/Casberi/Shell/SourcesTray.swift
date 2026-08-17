@@ -306,14 +306,19 @@ struct SourcesTray: View {
     /// five (772) scroll.
     private static let rowGap: CGFloat = DS.Space.s3
 
-    /// Chrome: top clearance, the title, its gap, bottom pad.
+    /// Chrome this view still owns: the bottom pad, and nothing else.
+    ///
+    /// The grabber, the top clearance and the title all moved to
+    /// `SourcesOverlay.headerHeight` when the header became the drag region.
+    /// The two sum to exactly what this constant used to be plus the grabber,
+    /// so no resting height moved.
     ///
     /// No lane is reserved for the agent bar, because the bar is HIDDEN while
     /// this panel is up — see `RootShell`'s floating cluster. A reserve was
     /// written and deleted within the hour: it cost 76pt of resting height
     /// (about a whole row) to protect chips from a control that no longer
     /// overlaps them.
-    private static let chromeHeight: CGFloat = DS.Space.s6 + 30 + DS.Space.s4 + DS.Space.s6
+    private static let chromeHeight: CGFloat = DS.Space.s6
     /// 620 → 660 on 2026-08-16, alongside the eyebrow's step to `subhead13`:
     /// four rows went 610 → 634pt, and a cap of 620 would have answered the
     /// user's "make the eyebrows larger" by snapping a whole category off the
@@ -380,10 +385,11 @@ struct SourcesTray: View {
     /// ZStack instead, beside the agent bar, where the material has the live
     /// feed behind it. See that file for what the move cost.
     var body: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s4) {
-            Text("Your feeds")
-                .dsText(.heading22)
-                .foregroundStyle(DS.textPrimary)
+        VStack(alignment: .leading, spacing: 0) {
+            // The title lives in `SourcesOverlay`'s HEADER now, not here — it
+            // is part of the drag region (2026-08-16, user: "the grabber
+            // doesn't work to pull it down"). A 24pt strip is not a handle you
+            // can find with a thumb.
             ScrollViewReader { proxy in
                 ScrollView {
                     let rows = packed
@@ -410,7 +416,6 @@ struct SourcesTray: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .padding(.horizontal, DS.Space.s4)
-        .padding(.top, DS.Space.s6)
         .padding(.bottom, DS.Space.s6)
         // A tray was its own hosting environment and re-declared this; an
         // overlay is inside the shell's tree, so the shell's own copy fires.

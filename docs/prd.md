@@ -24809,3 +24809,37 @@ should give back what the drag up asked for, not throw the panel away.
 **Verified by driving the simulator**, not by reading: expand, collapse,
 dismiss, and the bar toggle were each performed and screenshotted. Tap-outside
 and the VoiceOver modality remain unexercised.
+
+## §394b — The drag region is the HEADER, and the dismiss threshold is capped (user: "the only problem for ios 348 is the grabber doesn't work to pull it down, you have to tap outside the panel to close it", 2026-08-16)
+
+Amends §394a. Drag-to-dismiss was fixed there and verified in the simulator,
+and it was still unusable on a real device for two reasons that a precise
+synthetic swipe cannot expose.
+
+**1. The target was 24pt.** §394a scoped the gesture to the grabber to escape
+the `ScrollView` conflict, which was right, and then left it at the strip
+alone — a band you have to aim at with a thumb you cannot see past. A
+simulator swipe hits 24pt every time; a finger reaching for a panel does not.
+The drag region is the whole HEADER now — grabber, its clearance, the title
+and the gap below it, ~93pt full width — which is the region a real sheet
+lets you drag. The title moved out of `SourcesTray` into `SourcesOverlay` to
+make that one view; the two height constants sum to exactly what they did
+before, so no resting height moved.
+
+**2. The threshold scaled the wrong way.** `dismissFraction` alone (0.33 of
+the panel) was written so "a third of a short panel and a third of a tall one
+feel the same" — which is true and was the wrong goal. On the reporter's
+three-row panel (~450pt) it demanded ~150pt of travel, so an ordinary pull
+did nothing at all and the handle read as dead. It is capped now
+(`dismissCeiling` 90), and the flick bar dropped 600 → 350.
+
+**The lesson, and it is the sharpest instrumentation lesson of the night:
+a simulator swipe is not a thumb.** It starts exactly where told, travels
+exactly as far as told, and never approximates. Every gesture bug in §394a
+was found by driving the simulator; this one was invisible to it *because*
+the simulator is precise, and only a hand on a device could report it.
+Hit targets and thresholds are the class of defect that needs a human.
+
+**Verified:** dragged from the TITLE — a region with no gesture at all before
+this — and the panel dismissed. Both platforms compile; the packing self-test,
+motion and liveness audits are green.
