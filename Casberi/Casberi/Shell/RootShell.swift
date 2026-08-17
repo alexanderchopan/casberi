@@ -2458,6 +2458,23 @@ struct RootShell: View {
     private func answerDocument(_ query: String,
                                 onProseDoc: @escaping ([String]) -> Void,
                                 onPartialDoc: @escaping ([String]) -> Void = { _ in }) async -> [String] {
+        // TAP → FIRST PAINT, measured here because this is the ONE funnel every
+        // ask goes through — a typed question, a kept chip, the whisper's tap,
+        // the brief. See `AskClock` for why the existing answer metric cannot
+        // see this span. DEBUG-only and free in release, the bargain
+        // `LaunchPerf`'s span markers already make.
+        //
+        // The two channels are wrapped rather than instrumented at their call
+        // sites: there are five of those and they are exactly the kind of list
+        // that goes stale, where a wrapper here covers a branch added later for
+        // free.
+        #if DEBUG
+        let askClock = AskClock(query)
+        defer { askClock.settled() }
+        let rawProse = onProseDoc, rawPartial = onPartialDoc
+        let onProseDoc: ([String]) -> Void = { doc in askClock.paint("prose"); rawProse(doc) }
+        let onPartialDoc: ([String]) -> Void = { doc in askClock.paint("partial"); rawPartial(doc) }
+        #endif
         // The named-ask ellipsis reads the PREVIOUS answer's shape, then this
         // call resets it — set back to non-nil only when a named ask answers
         // below (`answerNamedAsk`), so any other kind of answer turns the
@@ -3909,3 +3926,48 @@ enum ShellMetrics {
     }
     static let topInset: CGFloat = DS.Space.s2
 }
+
+#if DEBUG
+/// `askPerf| firstPaint=` — the span a tap actually owns, which until now
+/// nothing measured (2026-08-16).
+///
+/// `scripts/perf.sh` tracks "answer latency" via `-answerProbe`, and that
+/// number starts inside the answer path and ends when the document is
+/// returned — so BOTH halves of the wait belong to neither end of it: the
+/// corpus fetch upstream of the composer, and everything between a document
+/// being computed and a pixel of it appearing. That is not a hypothetical
+/// gap; it is exactly why the two ask-path regressions found on 2026-08-13
+/// (`RootShell.answerDocument` opening every kept branch with an unbounded
+/// `fullCorpus()`, and `Composer`'s settle block fetching the whole store
+/// again ABOVE the paint line) read clean on every nightly while the chip
+/// taps they governed were the slowest thing in the app. **A metric measuring
+/// the wrong span reads clean**, and this is the missing span.
+///
+/// Reports two moments, because they answer different questions: FIRST PAINT
+/// is what the person experiences (whichever channel fires first — the brief's
+/// early partial, a `lastKnownDoc` interim, or streaming prose), and SETTLED is
+/// when the real document lands. A branch with no early channel at all shows
+/// `firstPaint=never`, which is itself the finding: it means that ask has
+/// nothing to show until it is completely finished.
+@MainActor final class AskClock {
+    private let t0 = Date.now
+    private let query: String
+    private var paintedMs: Double?
+    init(_ query: String) { self.query = query }
+
+    /// First writer wins — later paints are the document being refined, not the
+    /// wait ending.
+    func paint(_ channel: String) {
+        guard paintedMs == nil else { return }
+        let ms = Date.now.timeIntervalSince(t0) * 1000
+        paintedMs = ms
+        NSLog("[Casberi] askPerf| firstPaint=%dms via=%@ q=\"%@\"", Int(ms), channel, query)
+    }
+
+    func settled() {
+        NSLog("[Casberi] askPerf| settled=%dms firstPaint=%@ q=\"%@\"",
+              Int(Date.now.timeIntervalSince(t0) * 1000),
+              paintedMs.map { "\(Int($0))ms" } ?? "never", query)
+    }
+}
+#endif

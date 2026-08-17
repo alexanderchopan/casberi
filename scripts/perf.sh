@@ -52,7 +52,7 @@ xcrun simctl terminate "$DEVICE" "$BUNDLE" 2>/dev/null || true
 # re-measured by hand to act on it. A stream is the cheap half of a perf
 # pass; discarding it to keep the log tidy costs the whole diagnosis.
 xcrun simctl spawn "$DEVICE" log stream \
-  --predicate 'process == "Casberi" AND (eventMessage CONTAINS "launchTimer" OR eventMessage CONTAINS "answerProbe(" OR eventMessage CONTAINS "launchPerf")' \
+  --predicate 'process == "Casberi" AND (eventMessage CONTAINS "launchTimer" OR eventMessage CONTAINS "answerProbe(" OR eventMessage CONTAINS "launchPerf" OR eventMessage CONTAINS "askPerf|")' \
   --style compact > "$LOG" 2>/dev/null &
 LOGPID=$!
 sleep 1
@@ -127,6 +127,24 @@ TS=$(date +%Y-%m-%dT%H:%M:%S)
   line "launch (init→ready)" "ms" "$LAUNCH_MS" "$PREV_LAUNCH" "$LAUNCH_CEIL" "$LAUNCH_RATIO"
   line "memory (RSS)"        "MB" "$MEM_MB"    "$PREV_MEM"    "$MEM_CEIL"    "$MEM_RATIO"
   line "answer (compose)"    "ms" "$ANSWER_MS" "$PREV_ANSWER" "$ANSWER_CEIL" "$ANSWER_RATIO"
+  # ── The ask span the three metrics above cannot see ───────────────────
+  # REPORTED, never gated, and deliberately NOT a fourth CSV column: the
+  # history's schema is parsed by field position (cut -d, -f2..4), so adding
+  # one silently mis-reads every previous row's build_sha as a latency.
+  #
+  # "answer (compose)" starts inside the answer path and stops when the
+  # document is returned. `askPerf|` brackets it — entry to first paint, and
+  # entry to settled — which is where both 2026-08-13 ask regressions lived
+  # (a corpus fetch upstream of the composer, and another one sitting above
+  # the paint). `firstPaint=never` is a finding, not a gap: it means that ask
+  # shows nothing at all until it is completely finished.
+  if grep -q 'askPerf|' "$LOG" 2>/dev/null; then
+    print -r -- ""
+    print -r -- "ask spans (DEBUG markers, not gated):"
+    grep -o 'askPerf| [^"]*' "$LOG" | sed 's/^askPerf| //' | sort -u | while read -r span; do
+      print -r -- "  $span"
+    done
+  fi
   print -r -- ""
   # ── Span breakdown (the WHY behind the launch number) ─────────────────
   # Reported, never flagged: these are DEBUG-only markers and the three

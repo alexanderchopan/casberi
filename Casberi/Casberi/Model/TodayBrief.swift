@@ -332,7 +332,23 @@ enum TodayBrief {
         // see. The lede doesn't touch holdings either, so the widget line it
         // publishes is unaffected.
         async let holdingsRead = (!skipLiveReads && presenting && scopedToMoney) ? liveHoldings() : []
-        async let movesRead = (!skipLiveReads && scopedToMoney) ? liveMoves(context: context) : []
+        // Gated like `holdingsRead` above (2026-08-16), with one difference
+        // that is the whole subtlety and the reason this read outlived the
+        // 2026-08-04 pass that gated its two siblings: `moves` reaches
+        // `moversTile`, which appends "pair" to `ids` — and a SCOPED brief's
+        // digest IS `ids` (`"\(landed.count)|\(ids…)"`). Dropping the read on a
+        // scoped background compose would make that digest disagree with the
+        // one the same brief computes when presented, so the changed-dot would
+        // light on every foreground, forever, for anyone holding a kept Money
+        // pill. The UNSCOPED digest is `DayBrief.detail` and the two widget
+        // publishes are the lede and the themes — none of the three reads
+        // `moves` — so there the background compose was paying a bounded
+        // watchlist price fetch to build a tile in a document its caller
+        // discards, and `RootShell` composes exactly that on EVERY foreground
+        // (`_ = await TodayBrief.compose(…)`). That one is free to skip; the
+        // scoped one is not.
+        async let movesRead = (!skipLiveReads && scopedToMoney && (presenting || category != nil))
+            ? liveMoves(context: context) : []
         // Gated on `presenting` (2026-07-25): the risk rung only ever reaches
         // the LEDE, and the digest — the one thing the background path uses —
         // is `DayBrief.detail`, which never carries it. So on the digest
@@ -345,6 +361,26 @@ enum TodayBrief {
         // work with no reader. The cost of the gate: `-todayProbe` composes
         // with `presenting: false`, so it can't show the risk rung.
         async let riskRead = (!skipLiveReads && presenting && scopedToMoney) ? worstDebt() : nil
+        // THE CLUSTER MAP, STARTED HERE rather than awaited in place (PERF
+        // 2026-08-16). Its PCA costs ~1,800ms (measured, §386k) and it used to
+        // be awaited down among the modules — i.e. strictly AFTER the three
+        // reads above had already settled — so paint two landed at their SUM.
+        // Starting it alongside them costs nothing (the arithmetic is already
+        // detached and the 600-row fetch is its own) and hides it behind
+        // network the brief is waiting on anyway: paint two now lands at the
+        // MAX of the four instead.
+        //
+        // `presenting` for exactly the reason `holdingsRead` and `riskRead`
+        // carry it: the map reaches one place, `lines`, and the background
+        // compose discards the whole document — the unscoped digest is
+        // `DayBrief.detail` and the two widget publishes are the lede and the
+        // themes, none of which it touches. So every foreground was fetching
+        // 600 rows on the main actor and running a PCA over 300 embeddings to
+        // draw a figure with no reader. The cost of the gate, stated as
+        // `riskRead` states its own: `-todayProbe` composes with `presenting:
+        // false`, so it can no longer show the map.
+        async let mapRead = (category == nil && !skipLiveReads && presenting)
+            ? clusterMap(context: context) : nil
         // The corpus half, painted NOW — see `onPartial`. Placed after the
         // three `async let`s on purpose: those tasks are already in flight, so
         // this pass overlaps them rather than delaying them.
@@ -807,11 +843,26 @@ enum TodayBrief {
         // the "instant" corpus half slower than the §288 live-read budget it
         // was built to hide). The final compose draws it; the partial simply
         // paints without the map for the second it takes to arrive.
-        if category == nil, !skipLiveReads, let map = await clusterMap(context: context) {
+        //
+        // Its gates now live on the `async let mapRead` beside the three live
+        // reads (PERF 2026-08-16) — this is only where it is COLLECTED, so the
+        // PCA overlaps the network instead of following it.
+        if let map = await mapRead {
             ids.append("map")
             mark("map")
             lines.append(map)
         }
+        // …and therefore a re-filter, because that `await` is a suspension like
+        // any other and this file's standing rule is per-suspension, not
+        // per-function. It was owed BEFORE this change too: the map has been
+        // awaited here since §386j, and `dayFold`, `yourPostsCard`, the lead
+        // pool and both lead cards below all read stored properties off
+        // `things`/`landed` before the next re-filter (which sits down at
+        // paint two). A ~1,800ms PCA is a far wider race than the one that
+        // produced build 250.
+        things = things.live
+        landed = landed.live
+        mark("postMap.live")
 
         if category != "Money", let fold = dayFold(things: things, landed: landed) {
             ids.append("fold")

@@ -251,18 +251,34 @@ enum KeptAskComposers {
     /// watchlist branch below, which already did this for TokenChip rows).
     private static func wallet(_ things: [Thing]) async -> Result? {
         guard !WalletStore.shared.addresses.isEmpty else { return nil }
+        // `.live` AT EACH USE, after the awaits (crash class fix, 2026-08-16).
+        // The `.live` at this enum's one door (above) validates the array on
+        // ENTRY, and that is all it can do: both branches below reach
+        // `walletDoc` across a network read — one await for the unreachable
+        // path, two for the settled one — and `walletDoc` reads `$0.source`
+        // and `$0.capturedAt` off every row. That is liveness corollary 6
+        // exactly (build 250), and the app's own foreground heals delete in
+        // precisely this window, since `KeptAskStore.refreshDigests` runs this
+        // composer from the same pass those heals run in.
+        //
+        // It is invisible to the liveness audit's check 6, which reads
+        // line-wise inside the `async func`: the stored-property reads are one
+        // call deeper, in a plain `static func`, so this function's own body
+        // shows only `things` being passed onward. Same blind spot the
+        // 2026-08-13 ask-scope pass hit from the other side — the audit passed
+        // before and after that change too.
         guard let line = await WalletAsk.answer() else {
             // The corpus sections are local reads, so an unreachable LIVE
             // read still shows what the wallet bridges already landed.
             return Result(delta: "", digest: "unreachable",
                           doc: walletDoc(line: "Couldn't reach your wallet right now.",
-                                         groups: [], things: things))
+                                         groups: [], things: things.live))
         }
         // The line itself is the honest digest — it only changes when the
         // real figure does, same idiom as the Noticed line below.
         let groups = await WalletIngest.topHoldingsByWallet()
         return Result(delta: line, digest: line,
-                      doc: walletDoc(line: line, groups: groups, things: things))
+                      doc: walletDoc(line: line, groups: groups, things: things.live))
     }
 
     /// Shared by the kept-ask composer and `RootShell.answerDocument`'s

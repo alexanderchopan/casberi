@@ -23,12 +23,19 @@ final class GenStream {
 
     private var doc = ""
     private var boundaries: Set<Int> = []
+    /// Each line's character range in `doc`, text only (the joining newline is
+    /// excluded) — the reveal budget below needs to know where a line starts.
+    private var lineSpans: [(start: Int, end: Int)] = []
     private var cursor = 0
     private var task: Task<Void, Never>?
     /// `GenParser.parseIncremental`'s carry-forward cache — valid only for
     /// the CURRENT `doc`; reset alongside it in `stream(_:)`/`paint(_:)`.
     private var parseCache: GenEls = [:]
     private var parseCacheCompleteLines = 0
+
+    /// How many characters of ONE line are revealed a tick at a time before the
+    /// cursor snaps to the end of it — see the long note in `stream(_:)`.
+    private static let lineRevealBudget = 200
 
     /// Starts (or restarts) streaming a document.
     func stream(_ lines: [String]) {
@@ -44,8 +51,10 @@ final class GenStream {
 
         // Section boundaries: offset after each `root`/Widget/Shelf line.
         boundaries = []
+        lineSpans = []
         var offset = 0
         for line in lines {
+            lineSpans.append((offset, offset + line.count))
             offset += line.count + 1
             if line.hasPrefix("root") || line.contains("Widget") || line.contains("Shelf") {
                 boundaries.insert(offset)
@@ -70,14 +79,57 @@ final class GenStream {
             // (report 2026-07-09). 150ms still separates the entrance from
             // the tab switch/launch that triggered it, just tighter.
             try? await Task.sleep(for: .milliseconds(150))
+            var lineIdx = 0
             while let self, !Task.isCancelled, self.cursor < total {
+                let previous = self.cursor
                 self.cursor = min(self.cursor + Int.random(in: step...(step + 4)), total)
+                // A LINE REVEALS AT MOST `lineRevealBudget` CHARACTERS one tick
+                // at a time; past that the cursor snaps to the end of it (PERF
+                // 2026-08-16).
+                //
+                // The length scaling above bounds the STEP at 18, so a long
+                // document is still paced at total/18 ticks × 30ms — and the
+                // documents got long: one `ClusterMap` line carries a
+                // coordinate triple per dot for up to 300 dots, i.e. thousands
+                // of characters, and a `MoneyHero` is ~400. At 18/tick that one
+                // map line alone is several hundred ticks and the better part
+                // of ten seconds, every one of them re-running
+                // `parseIncremental` and republishing on the main actor.
+                //
+                // And it buys nothing, for the reason the step-scaling note
+                // above already gives: a component mounts on its line's first
+                // token, and its value CSV / treemap cells / dot list render
+                // NOTHING incrementally. Those characters are pure cost.
+                //
+                // Budgeting per line rather than naming the atomic components
+                // is deliberate: a registry of component names would need an
+                // entry per new component and would silently pace the next one
+                // wrongly, where a budget derives the answer from the shape of
+                // the line itself. 200 sits well above any prose line the
+                // brief composes (`ins = Insight("…")` with the longest lede is
+                // ~130) and well below every data line, so what a person
+                // watches type out is untouched.
+                while lineIdx + 1 < self.lineSpans.count,
+                      self.cursor > self.lineSpans[lineIdx].end {
+                    lineIdx += 1
+                }
+                if lineIdx < self.lineSpans.count {
+                    let span = self.lineSpans[lineIdx]
+                    if self.cursor > span.start + Self.lineRevealBudget {
+                        self.cursor = min(max(self.cursor, span.end), total)
+                    }
+                }
                 self.publish()
                 if self.cursor >= total { break }
-                let nearBoundary = self.boundaries.contains {
-                    self.cursor >= $0 && self.cursor - $0 < 8
-                }
-                let delay = nearBoundary ? Double.random(in: 150...400) : 30
+                // The section pause fires on CROSSING a boundary rather than on
+                // sitting within 8 characters of one. Two reasons, both from
+                // the snap above: a tick that jumps a whole data line can clear
+                // that 8-character window entirely and lose the pause, and the
+                // old proximity test could fire on several consecutive ticks
+                // for ONE boundary (at 2 chars/tick, up to four 150–400ms
+                // pauses where the design wants one).
+                let delay = self.boundaries.contains { $0 > previous && $0 <= self.cursor }
+                    ? Double.random(in: 150...400) : 30
                 try? await Task.sleep(for: .milliseconds(Int(delay)))
             }
             if let self {
