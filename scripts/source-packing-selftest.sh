@@ -4,7 +4,9 @@
 #
 #   Casberi/Casberi/Model/SourceRowPacking.swift
 #     — Block.span / Block.chipRows  (how wide and how tall a category's card is)
-#     — pack(_:)                     (whole cards, packed rows, biggest first)
+#     — pack(_:)                     (whole cards, packed rows; catalog order
+#                                     when it ties, biggest first when it pays —
+#                                     2026-08-16)
 #     — chipRows(_:)                 (the number the tray's height is paid in)
 #
 # WHY A HARNESS. Every failure here is a SILENT WRONG ANSWER — the class that
@@ -77,10 +79,23 @@ awk '/private func nameBand/,/^    }/' "$TRAY" | grep -q 'foregroundStyle(DS.tex
 # The tint was refused twice (2026-08-11, re-asked and re-ruled 2026-08-16):
 # DS.tint means SELECTION here (the active chip's ring), so tinted category
 # names put selection's colour on eight unselected things.
-grep -q 'starts\[column\] ?? ""' "$TRAY" \
-  || { echo "✗ the eyebrow band changed shape — check the tint ruling still holds"; exit 1; }
+grep -q 'func nameBand(_ block' "$TRAY" \
+  || { echo "✗ the eyebrow moved off its cluster — check the tint ruling still holds"; exit 1; }
 awk '/private func nameBand/,/^    }/' "$TRAY" | grep -q 'DS.tint' \
   && { echo "✗ the category eyebrow is tinted — ruled against twice; tint means selection in this tray"; exit 1; }
+
+# The grouping is drawn by PROXIMITY since 2026-08-16 (user: "it kinda still
+# looks funky"): chips at a fixed pitch, and the gap BETWEEN groups in a row
+# flexes wider than the gap INSIDE one. Lose the fixed pitch or the flexible
+# gap and the tray silently reverts to five equal slots — where the boundary
+# between two groups is byte-identical to the gap between two chips, and the
+# grouping exists only if you read the eyebrows.
+grep -q 'SourceRowPacking.rowMetrics(slots:' "$TRAY" \
+  || { echo "✗ the tray no longer computes its row metrics — a constant slot/gap pair overflows narrow phones"; exit 1; }
+grep -q 'frame(width: slot)' "$TRAY" \
+  || { echo "✗ cells are no longer at the computed cluster pitch — equal slots erase the group boundary"; exit 1; }
+grep -q 'spacing: CGFloat(metrics.gap)' "$TRAY" \
+  || { echo "✗ the row no longer spaces its groups by the computed gap — the boundary is just another chip gap"; exit 1; }
 
 # --- harness ----------------------------------------------------------------
 # `SourceRowPacking.swift` compiles as-is. The DP and the fixtures are appended.
@@ -191,8 +206,22 @@ expectEq(SourceRowPacking.chipRows(todayRows), 4, "and four chip rows")
 for row in todayRows {
     expectEq(row.reduce(0) { $0 + $1.members.count }, COLS, "every row is completely full")
 }
-// Biggest first is the rule, so the largest category must lead.
-expectEq(todayRows.first?.first?.name, "Markets", "the biggest category leads")
+// Catalog order ties biggest-first on this corpus (both pack four full rows),
+// and CATALOG WINS EVERY TIE (2026-08-16) — so the first catalog category
+// leads, NOT the biggest. This is the stability half of the rule: on a tying
+// corpus, connecting one more source can no longer reshuffle the whole tray.
+expectEq(todayRows.first?.first?.name, "Wallet", "catalog order survives when it ties the optimum")
+
+print("— and the sort still kicks in when catalog order would cost a row")
+// Catalog order first-fits [1,3,4,2] into THREE rows ([1,3],[4],[2]) while
+// biggest-first finds the two-row packing ([4,1],[3,2]). The sort must win
+// here — this is the only case it was ever buying anything, and it is also
+// the deterministic pin for the sort-reversed/sort-removed mutations, which
+// the random sweep alone catches only probabilistically.
+let sortPays = [block("A", 1), block("B", 3), block("C", 4), block("D", 2)]
+let sortRows = SourceRowPacking.pack(sortPays)
+expectEq(sortRows.count, 2, "the sort saves a row where catalog order loses one")
+expectEq(sortRows.first?.first?.name, "C", "and biggest-first order is what's drawn then")
 
 print("— nothing is ever lost, split, or duplicated")
 func members(_ rows: [[Block]]) -> [String] { rows.flatMap { $0.flatMap(\.members) }.sorted() }
@@ -241,6 +270,65 @@ expectEq(SourceRowPacking.pack([block("Huge", 23)]).count, 1,
          "one enormous category is still one card")
 expectEq(SourceRowPacking.chipRows(SourceRowPacking.pack([block("Huge", 23)])), 5,
          "…five chip rows tall")
+
+print("— row metrics: the group boundary is drawn, and the row always fits")
+// THE INVARIANT PAIR, and both halves are load-bearing. A row that overflows
+// clips chips off the screen edge; a gap that collapses to the intra-group
+// spacing silently reverts the tray to the equal-slot grid whose boundaries
+// were invisible (the 2026-08-16 "looks funky" report). Neither is visible in
+// a build, and only the overflow is visible in a screenshot — on the one
+// device size someone happens to look at.
+//
+// 339 is the narrowest content width this app can be handed (a 375pt phone
+// less the tray's own horizontal padding); 1024 is an iPad in full width.
+let INTRA = 8.0            // DS.Space.s2 on iOS — the gap the boundary must beat
+var metricTrials = 0
+for width in stride(from: 339.0, through: 1024.0, by: 5.0) {
+    // Every row shape the packer can actually emit: blocks summing to at most
+    // the grid width, plus the oversized single-block row.
+    for blocks in 1...COLS {
+        for slots in blocks...COLS {
+            metricTrials += 1
+            let m = SourceRowPacking.rowMetrics(slots: slots, blocks: blocks,
+                                                intraGap: INTRA, width: width)
+            let intra = INTRA * Double(slots - blocks)
+            let used = m.slot * Double(slots) + intra + m.gap * Double(blocks - 1)
+            expect(used <= width + 0.001,
+                   "row of \(blocks) group(s)/\(slots) slots fits \(width) (used \(used))")
+            expect(m.slot >= SourceRowPacking.slotMin - 0.001,
+                   "the chip ring is never squeezed below its floor")
+            expect(m.slot <= SourceRowPacking.slotMax + 0.001,
+                   "and never grows past its resting pitch")
+            if blocks > 1 {
+                expect(m.gap >= 2 * INTRA,
+                       "the boundary between groups beats the gap inside one "
+                     + "(\(blocks) groups, \(slots) slots, width \(width): \(m.gap))")
+                // The other side of the same cue. Without a ceiling a sparse
+                // row on a wide screen throws its second group at the far
+                // edge — which stops reading as two clusters and starts
+                // reading as a toolbar with something pinned to each end.
+                expect(m.gap <= SourceRowPacking.groupGapMax + 0.001,
+                       "the boundary never opens past its ceiling "
+                     + "(\(blocks) groups, \(slots) slots, width \(width): \(m.gap))")
+            }
+        }
+    }
+}
+expect(metricTrials > 1000, "the metrics sweep actually ran (got \(metricTrials))")
+
+// The case that broke the first cut: five singleton categories — a new user
+// with five apps in five categories — is the likeliest first shape this tray
+// ever draws, and a hard 20pt gap floor overflowed a 375pt phone by 24pt.
+let newUser = SourceRowPacking.rowMetrics(slots: 5, blocks: 5, intraGap: INTRA, width: 339)
+expect(newUser.slot * 5 + newUser.gap * 4 <= 339.001,
+       "five singleton groups fit the narrowest phone")
+expect(newUser.gap > 0, "…and still keep a real gap between them")
+
+// A single group alone in its row has no boundary to draw, and its chips must
+// stay at the resting pitch rather than stretching across the tray.
+let alone = SourceRowPacking.rowMetrics(slots: 5, blocks: 1, intraGap: INTRA, width: 1024)
+expectEq(alone.slot, SourceRowPacking.slotMax, "a lone group keeps its resting pitch on a wide screen")
+expectEq(alone.gap, 0, "…and reports no group gap at all")
 
 print("— THE CLAIM: the shipped rule ties the exact optimum")
 // This is what the whole harness is for. If a "smarter" packer is ever written,
@@ -401,6 +489,38 @@ mutate "chipRows measures span, not height" \
 # column, past the resting cap and into a scroll.
 mutate "row reuse disabled (a row per category)" \
   's|row.reduce(0) { \$0 + \$1.members.count } + block.members.count <= columns|false|'
+
+# --- the cluster metrics ----------------------------------------------------
+
+# The first cut's actual bug: a hard gap floor with no slot give, which
+# overflows a narrow phone by 24pt on a row of five singleton categories.
+mutate "group gap reserved but slots not squeezed (the shipped overflow bug)" \
+  's|let forSlots = width - intra - groupGapMin \* gapCount|let forSlots = width - intra|'
+
+# The slot floor removed: chips would be squeezed under the 52pt ring, which
+# cannot shrink — so the ring would overlap its neighbour instead.
+mutate "slot floor removed" \
+  's|min(slotMax, max(slotMin, forSlots / Double(slots)))|min(slotMax, forSlots / Double(slots))|'
+
+# The slot cap removed: a lone group on an iPad would stretch its five chips
+# across the whole tray, which is the equal-slot grid this layout replaced.
+mutate "slot cap removed" \
+  's|min(slotMax, max(slotMin, forSlots / Double(slots)))|max(slotMin, forSlots / Double(slots))|'
+
+# The gap collapsed to whatever is left with no floor reserved — the boundary
+# stops beating the intra-group spacing and the grouping goes invisible again.
+mutate "group gap floor not reserved" \
+  's|groupGapMin \* gapCount|0 \* gapCount|'
+
+# The gap ceiling removed: a two-group row on an iPad flings its second group
+# to the far edge, reading as a toolbar rather than as a pair of clusters.
+mutate "group gap ceiling removed" \
+  's|min(groupGapMax, max(0, leftover / gapCount))|max(0, leftover / gapCount)|'
+
+# Intra-group gaps not counted, so a row of wide groups overflows by exactly
+# the spacing between their own chips.
+mutate "intra-group gaps uncounted" \
+  's|let intra = intraGap \* Double(max(0, slots - blocks))|let intra = 0.0|'
 
 cp "$PACK" "$WORK/SourceRowPacking.swift"
 echo ""

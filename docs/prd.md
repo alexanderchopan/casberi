@@ -24371,3 +24371,135 @@ measurement, whole-group placement (a group straddling a row end still arrives
 as chips with no name above them, which was never about the fill), every height
 constant (`cardPadTop`/`Bottom`/`rowGap` all kept, so no arithmetic moved), and
 "All" still has no cell.
+
+## §392 — The grouping is drawn by proximity, the packer stops churning, and the glass steps clearer (user: "how else would you improve the glass tray arrangement or partitioning of icon groups or is it good as it is?", then "it kinda still looks funky and like rows aren't even or something i'm not sure why and i guess its just optical illusion for a human w/o the cards we had backing them", then "and what about the gap between rows", then "can you also make the glass tray even more clear? … I want it to really look like the transparent glass apple does", 2026-08-16)
+
+Four changes to the sources tray, all on the same day §391 deleted its category
+cards. §391 is not reversed — the cards stay gone; this supplies what the eye
+was still missing without them.
+
+### 1. The funk had a cause, and it was the gap
+
+The report was hedged ("i'm not sure why … i guess its just optical illusion")
+and the cause is nameable: the grid was **five equal slots**, so the gap between
+two groups sharing a row was byte-identical to the gap between two chips inside
+a group (`s2` both). **Proximity is the strongest grouping cue the eye has**,
+and it said "one row of five icons" while the eyebrows said "two groups". A gap
+is SEEN where a word is READ, so the gap won. Three symptoms, all one cause: an
+eyebrow floating over an arbitrary column in a mixed row; a four-chip row's
+phantom fifth slot reading as a hole rather than as a group that ended; and
+boundaries landing at different columns row to row, so the strict chip grid and
+the ragged eyebrow pattern fought — a table wearing section headings that don't
+tile. The deleted card carried all three and nothing had replaced it.
+
+Four treatments were compared as rendered pixels over a real feed in
+`prototype/sources-tray-partition-v1.html`. **Whitespace won** — it is the only
+cue that adds zero chrome to a tray the same-day ruling had just de-chromed. The
+carve (a translucent recess IN the glass, §391's documented runner-up) is the
+runner-up again and stays in reserve if proximity stops holding at a larger
+corpus; both cues together were refused as redundant.
+
+So the grid is **clusters**: chips at a computed pitch, the gap inside a group
+stays `s2`, and the gap between two groups is `groupGapMin…groupGapMax` (20–36).
+The test is that covering the eyebrows leaves the grouping intact.
+
+**The first mock was misleading and the correction matters for future ones:**
+three of its four rows held a single group, and on a single-group row the two
+treatments are pixel-identical — so it demonstrated the change in exactly one
+place and the user reasonably could not see it. Redrawn with a fragmented corpus
+(which is what the packer actually produces — small categories are precisely
+what it pairs into shared rows) plus a zoom strip drawing every gap as a labeled
+bar. **A comparison mock must put the changed variable in most of the frame.**
+
+### 2. The gap is COMPUTED, and the constant version was a shipped-shaped bug
+
+The first cut spelled the gap as a `Spacer` with a hard 20pt `minLength`. That
+**overflows the phone**: five singleton categories are 5×62 of chips plus 4×20
+of gaps against ~345pt of content on a 375pt phone — 24pt over. Not an exotic
+corpus: it is a new user who has connected five apps in five different
+categories, i.e. close to the most likely first shape this tray ever draws. It
+was caught by arithmetic before it ever ran, which is the point of writing the
+numbers down rather than eyeballing a mock at one width.
+
+`SourceRowPacking.rowMetrics(slots:blocks:intraGap:width:)` reserves the gap
+floor FIRST and lets slots take what remains, capped at their resting pitch and
+floored at the 52pt ring plus a point either side. So the row can always be
+drawn; the boundary is never squeezed below its floor while any slot slack
+remains; and only once slots are at `slotMin` does the gap give way — at which
+point the row is all singletons and has no intra-group gap to be confused with.
+`Double` not `CGFloat`, so the file stays Foundation-only and the harness
+compiles it whole. `intraGap` is a parameter because `DS.Space.s2` is 8 on iOS
+and 10 on Mac, and a floor ignoring that would read differently on the two
+platforms for no reason anybody chose.
+
+**The `GeometryReader` this needs is a real layout measurement**, unlike the one
+`overlineInset` refuses as "a nudge, not a layout" — and it is safe because the
+row's height is already a computed constant, so the reader's fill-all-space
+behaviour is bounded on both axes.
+
+Guarded by a sweep over every row shape the packer can emit × every width from
+339 (a 375pt phone less the tray's padding) to 1024 (iPad): the row always fits,
+the ring is never squeezed below its floor, chips never grow past their resting
+pitch, and **the boundary always beats the gap inside a group and never opens
+past its ceiling**. 12,942 checks, 16 mutations. The ceiling mutation SURVIVED
+the first run — the sweep asserted a floor and no ceiling, so a two-group row on
+an iPad could fling its second group at the far edge and read as a toolbar. The
+check was wrong, not the mutation.
+
+### 3. The row gap did NOT move, and that is a measured answer
+
+Asked directly. The grid was never uniformly tight — it was tight in ONE axis:
+~31pt of clear air across against 26pt down, on a layout whose whole job is to
+read as groups. **The cluster pitch fixes that for free**, landing the
+within-group gap at ~26 and giving the hierarchy grouping actually wants: ~26
+inside a group < ~40+ between groups < ~80 between rows (the eyebrow band inside
+it). So nothing vertical changed. The budget is stated for the next session:
+four rows rest at 634 against the 660 cap, so 26pt is free — `rowGap` s3→s4
+costs 9 and buys air between rows where the eyebrow band is already separating
+(the weakest spend), pads 8/6→10/8 costs 16 and is the variant §391 refused
+against the OLD 620 cap, so it is affordable now and is the better one if any.
+Both together rest at 659, one point under the cap — refused as a trap, since
+the next 1pt tweak anywhere silently snaps a whole category off the resting
+height.
+
+### 4. Catalog order when it's free, biggest first when it pays
+
+§391's packing measurement stands (biggest-first ties the exact optimum on all
+39,237 corpora; catalog order loses on 7.76%). But the sort's cost is **order
+churn in the one tray whose job is teaching positions** — connecting a single
+source could reorder every group between opens. The same measurement bounds that
+cost: catalog order TIES on ~92%. So both orders are packed and **catalog wins
+every tie**. Most corpora keep the stable order the tray taught before the sort
+existed; the sort runs only when it genuinely saves a row, which is the only
+time it was buying anything. The comparison is in `chipRows` — the unit height
+is paid in — not `rows.count`, which an oversized card makes disagree. Pinned
+both ways: a fixture where catalog order ties (the real corpus — Wallet leads
+now, not Markets) and one where it costs a row and the sort must win.
+
+### 5. The tray scrolls to where you are
+
+The tray is the strip's MAP, and on a big corpus the snap-down cap could rest
+the one cell wearing the selection ring below the fold — you open "where am I?"
+and the answer is hidden with nothing saying so. If the active source's row
+isn't among the resting rows, the scroll jumps to it on mount. A JUMP, not an
+animation: the content simply appears positioned, so there is no
+appear-triggered motion for Reduce Motion to honour.
+
+### 6. The glass steps 0.55 → 0.45
+
+Reported on device ("still a bit gray … way better than before"), so the walk
+continues. **There are exactly two rungs left below this and they should be
+taken in order**: ~0.35, where the blur starts losing to legibility over a
+bright feed, and then replacing the material with the system's real Liquid Glass
+(`glassEffect(.clear)` as the presentation background — the literal "glass Apple
+does", refraction included). The latter is the honest end state and is held only
+because `.clear` withholds exactly the frosting that keeps chip names legible
+over a bright feed (`DSGlassVariant`'s own rule), so it wants a device look
+before it ships rather than after.
+
+**Verified:** iOS Simulator and Mac Catalyst both compile; packing self-test
+12,942 checks / 16 mutations; catalog-sync, design-ramp, design-motion,
+SwiftData-liveness, prd-index and localization audits all green. **Not
+verified:** nothing here has been seen on a device — the glass step in
+particular is a number chosen against the previous step's device report, not a
+measurement.

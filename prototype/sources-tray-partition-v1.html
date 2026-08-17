@@ -1,0 +1,383 @@
+<meta charset="utf-8">
+<title>Sources tray — why the groups look funky, and three ways to partition</title>
+<style>
+  /* Real tokens, DesignTokens.swift (iOS values, as SHIPPED 2026-08-16)
+     page          #000000 / #ffffff
+     textPrimary   #ffffff / #000000
+     textSecondary #ebebf599 / #3c3c43d6
+     tint          #0a84ff
+     Space (iOS)  s1 4  s2 8  s3 12  s4 15  s6 24
+     SourcesTray: columns 5, icon 44, chip 52, nameHeight 28,
+                  eyebrow subhead13 BOLD (13/18) h21 + gap 5,
+                  cardPadTop 8, cardPadBottom 6, rowGap s3 (12)
+     DSTray glass: .ultraThinMaterial.opacity(0.55) + trimmed sheen + depth.
+
+     THE DIAGNOSIS, drawn rather than argued:
+
+     The gap between two GROUPS in a row is the same s2=8 the gap between two
+     chips INSIDE a group is — the grid is five equal slots and the boundary
+     falls wherever it falls. Proximity is the strongest grouping signal the
+     eye has, and here it says "one row of five icons" while the eyebrows say
+     "two groups". The eyebrow loses at a glance because a word is READ and a
+     gap is SEEN. The card used to carry the boundary; nothing replaced it.
+
+     A and B are IDENTICAL on a row holding one group. The difference exists
+     only where two or more groups share a row — which, on a fragmented real
+     corpus, biggest-first packing produces constantly (small categories are
+     exactly what it pairs up to fill rows). The zoom strip up top labels
+     every gap so the one number that changes is visible as a number. */
+
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font: 14px/1.5 -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+    background: #0b0b0d; color: #ebebf5cc;
+    padding: 28px 24px 56px; -webkit-font-smoothing: antialiased;
+  }
+  body.light { background: #f2f2f7; color: #3c3c43d6; }
+
+  h1 { font: 700 22px/28px ui-rounded, -apple-system, system-ui; color: #fff; }
+  body.light h1 { color: #000; }
+  h3 { font: 700 15px/20px ui-rounded, system-ui; color: #fff; margin: 26px 0 4px; }
+  body.light h3 { color: #000; }
+  .sub { margin-top: 6px; max-width: 96ch; font-size: 13px; opacity: .74; }
+  .sub code { font: 400 12px/1 ui-monospace, SFMono-Regular, monospace; opacity: .85; }
+
+  .bar { display: flex; gap: 10px; align-items: center; margin: 16px 0 22px; flex-wrap: wrap; }
+  button {
+    font: 500 13px/1 inherit; color: inherit; cursor: pointer;
+    background: #ffffff14; border: 0; border-radius: 9999px; padding: 9px 15px;
+  }
+  body.light button { background: #00000010; }
+  button.on { background: #0a84ff; color: #fff; }
+
+  .rail { display: flex; gap: 18px; align-items: flex-start; overflow-x: auto; padding-bottom: 14px; }
+  .panel { flex: 0 0 auto; width: 402px; }
+  .panel > h2 { font: 600 13px/18px inherit; color: #fff; margin-bottom: 2px; }
+  body.light .panel > h2 { color: #000; }
+  .panel > .note { font-size: 11.5px; line-height: 16px; opacity: .64; margin-bottom: 7px; min-height: 96px; }
+  .verdict { font-size: 11.5px; line-height: 16px; margin-bottom: 9px; font-weight: 600; }
+  .verdict.bad  { color: #ff6b6b; }
+  .verdict.ok   { color: #30d158; }
+  .verdict.meh  { color: #ffd60a; }
+
+  /* ---- ZOOM STRIP: one mixed row, every gap drawn as a labeled bar ------ */
+
+  .zoom { background: #1c1c1f; border-radius: 16px; padding: 18px 20px 14px;
+          margin-bottom: 8px; width: fit-content; }
+  body.light .zoom { background: #e4e4ea; }
+  .zoom .zlabel { font: 600 12px/16px inherit; margin-bottom: 10px; }
+  .zoom .zlabel b { color: #fff; }
+  body.light .zoom .zlabel b { color: #000; }
+  .zrow { display: flex; align-items: flex-start; margin-bottom: 16px; }
+  .zrow:last-child { margin-bottom: 2px; }
+
+  /* chips at 1.35x so the gaps read */
+  .z .ring { width: 70px; height: 70px; }
+  .z .ring.active { box-shadow: inset 0 0 0 3.5px #0a84ff; }
+  .z .icon { width: 59px; height: 59px; font-size: 23px; }
+  .z .chip { gap: 5px; }
+  .z .chip-name { font-size: 15px; line-height: 20px; height: 24px; }
+
+  .gbar { align-self: stretch; height: 70px; border-radius: 5px;
+          display: grid; place-items: center;
+          font: 700 12px/1 ui-monospace, SFMono-Regular, monospace; }
+  .gbar.in  { background: #ffffff1c; color: #ebebf5aa; }
+  body.light .gbar.in { background: #00000014; color: #3c3c43aa; }
+  .gbar.same { background: #ff6b6b4d; color: #ff9f9f; }
+  .gbar.wide { background: #30d1584d; color: #7fe8a4; }
+  body.light .gbar.same { color: #c04040; }
+  body.light .gbar.wide { color: #1f8a44; }
+
+  /* ---- the phone: a real feed behind, tray in front --------------------- */
+
+  .phone {
+    position: relative; width: 402px; height: 700px;
+    border-radius: 30px; overflow: hidden; background: #000;
+    isolation: isolate;
+  }
+  body.light .phone { background: #fff; }
+
+  .behind { position: absolute; inset: 0; padding: 44px 18px 0; }
+
+  .frow {
+    display: flex; gap: 12px; align-items: center;
+    background: #111113; border-radius: 10px; padding: 10px; margin-bottom: 10px;
+  }
+  body.light .frow { background: #fff; box-shadow: 0 1px 3px #0000001f; }
+  .thumb { width: 56px; height: 56px; border-radius: 8px; flex: 0 0 auto; }
+  .fmark { width: 22px; height: 22px; border-radius: 9999px; flex: 0 0 auto;
+           display: grid; place-items: center; font: 700 10px/1 ui-rounded, system-ui; color: #fff; }
+  .flines { flex: 1; min-width: 0; }
+  .fl { height: 9px; border-radius: 4px; background: #ffffff2e; margin-bottom: 7px; }
+  .fl.b { background: #ffffff59; height: 11px; }
+  body.light .fl { background: #00000021; }
+  body.light .fl.b { background: #00000047; }
+
+  .scrim { position: absolute; inset: 0; background: #00000059; }
+  body.light .scrim { background: #00000029; }
+
+  .tray {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    border-radius: 16px 16px 0 0;
+    padding: 24px 18px 24px;
+    background: rgba(42,42,44,.52);
+    backdrop-filter: blur(30px) saturate(2);
+    -webkit-backdrop-filter: blur(30px) saturate(2);
+  }
+  body.light .tray { background: rgba(246,246,248,.55); }
+  .tray::before {
+    content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+    background: linear-gradient(160deg, #ffffff17 0%, #ffffff05 12%, #ffffff00 30%);
+  }
+  body.light .tray::before {
+    background: linear-gradient(160deg, #ffffff75 0%, #ffffff1d 12%, #ffffff00 30%);
+  }
+  .tray::after {
+    content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+    background: linear-gradient(to top, #00000024 0%, #00000000 55%);
+  }
+  body.light .tray::after {
+    background: linear-gradient(to top, #0000000f 0%, #00000000 55%);
+  }
+  .tray > * { position: relative; z-index: 1; }
+
+  .grabber {
+    position: absolute; top: 8px; left: 50%; transform: translateX(-50%);
+    width: 36px; height: 5px; border-radius: 3px; background: #ffffff40; z-index: 2;
+  }
+  body.light .grabber { background: #00000040; }
+
+  .title { font: 700 22px/28px ui-rounded, -apple-system, system-ui; color: #fff; margin-bottom: 18px; }
+  body.light .title { color: #000; }
+
+  /* ---- the grid --------------------------------------------------------- */
+
+  .rows { display: flex; flex-direction: column; gap: var(--rowgap, 12px); }
+  .cardrow { display: flex; gap: var(--groupgap, 8px); }
+  .card { padding: var(--padtop, 8px) var(--wellx, 0) var(--padbot, 6px); }
+
+  .cat-name {
+    font: 700 13px/18px -apple-system, system-ui;
+    color: #ffffff;
+    padding-left: 7px; margin-bottom: 5px; height: 21px;
+    display: flex; align-items: flex-end; white-space: nowrap;
+  }
+  body.light .cat-name { color: #000; }
+
+  .chips { display: flex; gap: var(--chipgap, 8px); }
+  .chip { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .ring { width: 52px; height: 52px; border-radius: 9999px; display: grid; place-items: center;
+          flex: 0 0 auto; }
+  .ring.active { box-shadow: inset 0 0 0 2.5px #0a84ff; }
+  .icon {
+    width: 44px; height: 44px; border-radius: 9999px; display: grid; place-items: center;
+    font: 700 17px/1 ui-rounded, -apple-system, system-ui; color: #fff;
+  }
+  .chip-name {
+    height: 28px; font: 500 12px/16px -apple-system, system-ui;
+    color: #ebebf599; text-align: center; padding: 0 1px;
+  }
+  .chip-name.long { font-size: 10.5px; letter-spacing: -.2px; }
+  body.light .chip-name { color: #3c3c43d6; }
+  .chip.sel .chip-name { color: #fff; font-weight: 600; }
+  body.light .chip.sel .chip-name { color: #000; }
+
+  /* A — SHIPPING TODAY: five equal slots, every gap s2=8, groups sized by
+     flex so boundaries are invisible. */
+  .p-now .card { flex: var(--n) 0 0; }
+  .p-now .chips .chip { flex: 1 1 0; }
+
+  /* B — CLUSTERS: chips at a fixed 62pt pitch, gap INSIDE a group stays 8,
+     gap BETWEEN groups 32. Nothing stretches. */
+  .p-cluster { --groupgap: 32px; }
+  .p-cluster .chip { width: 62px; }
+
+  /* C — THE CARVE: each group a recess IN the glass (translucent, blur
+     survives). Slot layout identical to A. */
+  .p-carve .card { flex: var(--n) 0 0; --wellx: 6px;
+                   background: #00000021; border-radius: 14px; }
+  body.light .p-carve .card { background: #00000010; }
+  .p-carve .chips .chip { flex: 1 1 0; }
+
+  /* D — BOTH. */
+  .p-both { --groupgap: 14px; }
+  .p-both .card { --wellx: 8px; background: #00000021; border-radius: 14px; }
+  body.light .p-both .card { background: #00000010; }
+  .p-both .chip { width: 62px; }
+
+  /* ---- rail 2: the VERTICAL axis, on B's clusters ----------------------- */
+  /* Budget arithmetic (SourcesTray.swift, restingCap 660): four rows rest at
+     634 today, so there is 26pt of free height before anything snaps.
+       rowGap s3→s4 (12→15)  costs 3×3  = +9   → 643
+       pads 8/6 → 10/8       costs 4×4  = +16  → 650
+       both                              +25  → 659 — one point under the cap */
+  .v-gap  { --rowgap: 15px; }
+  .v-pad  { --padtop: 10px; --padbot: 8px; }
+  .v-both { --rowgap: 15px; --padtop: 10px; --padbot: 8px; }
+</style>
+
+<h1>Sources tray — where A and B actually differ</h1>
+<p class="sub">
+  <b>A and B are identical on any row holding ONE group.</b> The entire change is one number: the gap
+  between two groups <i>sharing a row</i>. In A it is 8pt — the same 8pt that separates chips inside a
+  group, so nothing marks where Media ends and Social begins. In B it becomes 32pt while the inside gaps
+  stay 8. The strip below draws every gap as a labeled bar; the phones use a fragmented corpus (lots of
+  small categories) because that is what biggest-first packing actually produces — mixed rows everywhere,
+  so the one number shows on nearly every row.
+</p>
+
+<div class="bar">
+  <button id="dark" class="on">Dark</button>
+  <button id="light">Light</button>
+</div>
+
+<h3>The one number that changes, at 1.35× with every gap labeled</h3>
+<div class="zoom z" id="zoom"></div>
+
+<h3>The same change on a full tray (fragmented corpus — the realistic case)</h3>
+<div class="rail" id="rail1"></div>
+
+<h3>Rail 2 — the gap between rows (on B's clusters)</h3>
+<p class="sub">
+  With clusters, the spacing hierarchy becomes: <b>~26pt</b> icon-to-icon inside a group, <b>~50pt</b>
+  between groups in a row, <b>~80pt</b> between rows (the eyebrow band sits in it) — tightest inside,
+  loosest between rows, which is the order grouping wants. Note B quietly fixes the axis imbalance the
+  file's own doc complains about: today the grid is airier ACROSS (~31pt) than DOWN (26pt); B's tighter
+  within-group pitch lands both at ~26. So the row gap may not need to move at all — but the cap move to
+  660 freed 26pt of height, which makes the 10/8 pads refused on 2026-08-16 free now. These spend it.
+</p>
+<div class="rail" id="rail2"></div>
+
+<script>
+const MEDIA  = [["Spotify","♫","#1db954"], ["Twitch","T","#9146ff"], ["YouTube","▶","#ff0000"]];
+const SOCIAL = [["Bluesky","B","#0085ff"], ["Farcaster","F","#8a63d2"]];
+
+/* A fragmented corpus: many small categories, which is exactly what
+   biggest-first pairs up into shared rows. Three of four rows are mixed. */
+const CORPUS = [
+  [{ cat: "Wallet", apps: [
+      ["Wallet","W","#627eea",1], ["Peer","P","#00c48c"], ["Gnosis Pay","G","#3e6957"] ] },
+   { cat: "Social", apps: SOCIAL }],
+  [{ cat: "Work", apps: [
+      ["GitHub","","#2b3137"], ["Linear","L","#5e6ad2"], ["Stripe","S","#635bff"] ] },
+   { cat: "Notes", apps: [["Obsidian","◆","#7c3aed"], ["Day One","D","#44c0ff"]] }],
+  [{ cat: "Life", apps: [
+      ["Photos","◈","#f5a623"], ["Calendar","31","#ff3b30"], ["Reminders","☰","#ff9500"],
+      ["Files","▤","#1f8fff"], ["Mail","✉","#0a84ff"] ] }],
+  [{ cat: "Media", apps: MEDIA },
+   { cat: "Markets", apps: [["Tokens","◎","#f7931a"], ["Kalshi","K","#00d16c"]] }],
+];
+
+const FEED = [
+  ["linear-gradient(135deg,#f5a623,#ff3b30)", "#f5a623", "◈"],
+  ["linear-gradient(135deg,#0085ff,#7c5cff)", "#0085ff", "B"],
+  ["linear-gradient(135deg,#1db954,#12ff80)", "#1db954", "♫"],
+  ["linear-gradient(135deg,#627eea,#00c48c)", "#627eea", "W"],
+  ["linear-gradient(135deg,#ff0000,#ff9500)", "#ff0000", "▶"],
+  ["linear-gradient(135deg,#5e6ad2,#635bff)", "#5e6ad2", "L"],
+  ["linear-gradient(135deg,#9146ff,#8a63d2)", "#9146ff", "T"],
+  ["linear-gradient(135deg,#3e6957,#1f8fff)", "#3e6957", "G"],
+  ["linear-gradient(135deg,#ff3b30,#f5a623)", "#ff3b30", "31"],
+  ["linear-gradient(135deg,#0a84ff,#7c5cff)", "#0a84ff", "✉"],
+];
+
+const TREATMENTS = [
+  { cls: "p-now", name: "A · Shipping today",
+    note: "Every gap is s2=8. Cover the eyebrows with your thumb and each mixed row is just five icons — where Wallet ends and Social begins is not drawn anywhere. The eyebrows are the only cue, and they land at whatever column the packing chose, which is the 'words floating at random spots' read.",
+    verdict: ["meh", "Boundary exists only as a word"] },
+  { cls: "p-cluster", name: "B · Clusters",
+    note: "Same rows, same chips, same eyebrows. One change: the between-group gap is 32 while inside gaps stay 8. Cover the eyebrows again — the groups are still there, because a 4× gap ratio is visible without reading. That's the entire difference from A.",
+    verdict: ["ok", "Boundary is drawn, by nothing"] },
+  { cls: "p-carve", name: "C · The carve",
+    note: "The documented runner-up: each group as a translucent recess in the glass. Same information as B, said with material instead of whitespace. Strongest boundary; re-spends the panel area the card's deletion bought back.",
+    verdict: ["ok", "Strongest; costs glass"] },
+  { cls: "p-both", name: "D · Both",
+    note: "Clusters and wells at once — past the point of need; the second cue is decoration.",
+    verdict: ["bad", "Pick one cue"] },
+];
+
+function chip([name, glyph, hue, active]) {
+  return `<div class="chip${active ? " sel" : ""}">
+    <div class="ring${active ? " active" : ""}">
+      <div class="icon" style="background:${hue}">${glyph}</div>
+    </div>
+    <div class="chip-name${!name.includes(" ") && name.length > 7 ? " long" : ""}">${name}</div>
+  </div>`;
+}
+function card(block) {
+  return `<div class="card" style="--n:${block.apps.length}">
+    <div class="cat-name">${block.cat}</div>
+    <div class="chips">${block.apps.map(chip).join("")}</div>
+  </div>`;
+}
+function feedRow([grad, hue, glyph]) {
+  return `<div class="frow">
+    <div class="thumb" style="background:${grad}"></div>
+    <div class="fmark" style="background:${hue}">${glyph}</div>
+    <div class="flines"><div class="fl b" style="width:78%"></div>
+      <div class="fl" style="width:54%"></div></div>
+  </div>`;
+}
+function panel(t, extra) {
+  const rows = CORPUS.map(r => `<div class="cardrow">${r.map(card).join("")}</div>`).join("");
+  return `<section class="panel">
+    <h2>${t.name}</h2>
+    <div class="note">${t.note}</div>
+    <div class="verdict ${t.verdict[0]}">${t.verdict[1]}</div>
+    <div class="phone">
+      <div class="behind">${FEED.map(feedRow).join("")}</div>
+      <div class="scrim"></div>
+      <div class="tray ${t.cls} ${extra || ""}">
+        <div class="grabber"></div>
+        <div class="title">Your feeds</div>
+        <div class="rows">${rows}</div>
+      </div>
+    </div>
+  </section>`;
+}
+
+const VERTICAL = [
+  { cls: "p-cluster", name: "V1 · Shipping vertical (rowGap 12, pads 8/6)",
+    note: "26pt of clear air from a name row to the next eyebrow. Four rows rest at 634 against the 660 cap — 26pt of headroom in the bank. With B's within-group pitch also at ~26, the two axes finally match; this may simply be done.",
+    verdict: ["ok", "Balanced already — spend nothing"] },
+  { cls: "p-cluster v-gap", name: "V2 · rowGap s3 → s4 (+9pt total)",
+    note: "Row separation 26 → 29pt. Spends 9 of the 26pt headroom; four rows rest at 643. The gain is between ROWS, where the eyebrow band is already doing separation work — the axis that was short is the one B just fixed.",
+    verdict: ["meh", "Air where it was least needed"] },
+  { cls: "p-cluster v-pad", name: "V3 · pads 8/6 → 10/8 (+16pt total)",
+    note: "The variant refused on 2026-08-16 — but it was refused against cap 620, and the eyebrow's own step moved the cap to 660, so it fits now (four rows rest at 650). The air lands inside the group, around the eyebrow, which loosens the band without touching the grid.",
+    verdict: ["ok", "The refused variant is free now"] },
+  { cls: "p-cluster v-both", name: "V4 · both (+25pt total)",
+    note: "Four rows rest at 659 — ONE point under the cap. Zero margin: the next 1pt tweak anywhere in the row silently snaps a whole category off the resting height. A budget spent to its last point is a trap for the next session.",
+    verdict: ["bad", "Fits by 1pt — a trap, not a layout"] },
+];
+
+/* Zoom strip: the Media(3) + Social(2) row, chips interleaved with the gaps
+   drawn AS ELEMENTS, each wearing its own width in points. The between-group
+   bar is red in A (8 — indistinguishable from the inside gaps) and green in
+   B (32 — the only number that changed). Bar widths are 1.35× their pt value. */
+function zrow(label, betweenPt, betweenCls) {
+  const gap = (pt, cls) => `<div class="gbar ${cls}" style="width:${pt * 1.35}px">${pt}</div>`;
+  const strip = [
+    chip(MEDIA[0]), gap(8, "in"), chip(MEDIA[1]), gap(8, "in"), chip(MEDIA[2]),
+    gap(betweenPt, betweenCls),
+    chip(SOCIAL[0]), gap(8, "in"), chip(SOCIAL[1]),
+  ].join("");
+  return `<div class="zlabel">${label}</div><div class="zrow">${strip}</div>`;
+}
+zoom.innerHTML =
+  zrow("<b>A · today</b> — the Media→Social boundary is 8, the same as every other gap. Nothing draws it.",
+       8, "same")
+  + zrow("<b>B · clusters</b> — inside gaps stay 8; the boundary alone becomes 32. That is the whole change.",
+         32, "wide");
+
+rail1.innerHTML = TREATMENTS.map(t => panel(t)).join("");
+rail2.innerHTML = VERTICAL.map(t => panel(t)).join("");
+
+const set = (b, o) => { b.classList.add("on"); o.forEach(x => x.classList.remove("on")); };
+dark.onclick  = () => { document.body.classList.remove("light");
+                        document.documentElement.style.colorScheme = "dark"; set(dark, [light]); };
+light.onclick = () => { document.body.classList.add("light");
+                        document.documentElement.style.colorScheme = "light"; set(light, [dark]); };
+</script>

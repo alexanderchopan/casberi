@@ -158,6 +158,18 @@ struct DSTray<Content: View>: View {
 /// fill: the panel's own shading must not fade with the plate it compensates
 /// for.
 ///
+/// **0.55 → 0.45, same day, judged ON DEVICE this time** (user: "still a bit
+/// gray … I want it to really look like the transparent glass apple does").
+/// The walk's remaining grey at 0.45 is the material's own plate, and there
+/// are exactly two rungs left below this: ~0.35, where the blur starts losing
+/// the fight with legibility over a bright feed, and replacing the material
+/// with the system's real Liquid Glass (`glassEffect(.clear)` as the
+/// presentation background — the true "glass Apple does", refraction and all).
+/// The latter is the next move if 0.45 still reads grey; it is held back only
+/// because `.clear` withholds exactly the frosting that keeps chip names
+/// legible over a bright feed (Glass.swift's own `DSGlassVariant` doc), so it
+/// wants a device look before it ships, not after.
+///
 /// No shape of its own: `presentationBackground` is already clipped to the
 /// sheet, and an inner `RoundedRectangle` would draw its own corners inside the
 /// system's — two radii, one of which is a guess at what iOS is doing this year.
@@ -168,7 +180,7 @@ private struct DSGlassSheet: View {
             // The plate fade — see the doc. Before the overlays on purpose:
             // the sheen and depth are the panel's own light and shading and
             // must render at full strength over the faded material.
-            .opacity(0.55)
+            .opacity(0.45)
             .overlay {
                 // The light the panel is under. Short on purpose — see the doc.
                 LinearGradient(
