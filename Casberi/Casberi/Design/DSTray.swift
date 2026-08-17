@@ -160,21 +160,70 @@ struct DSTray<Content: View>: View {
 ///
 /// **0.55 → 0.45, same day, judged ON DEVICE this time** (user: "still a bit
 /// gray … I want it to really look like the transparent glass apple does").
-/// The walk's remaining grey at 0.45 is the material's own plate, and there
-/// are exactly two rungs left below this: ~0.35, where the blur starts losing
-/// the fight with legibility over a bright feed, and replacing the material
-/// with the system's real Liquid Glass (`glassEffect(.clear)` as the
-/// presentation background — the true "glass Apple does", refraction and all).
-/// The latter is the next move if 0.45 still reads grey; it is held back only
-/// because `.clear` withholds exactly the frosting that keeps chip names
-/// legible over a bright feed (Glass.swift's own `DSGlassVariant` doc), so it
-/// wants a device look before it ships, not after.
+///
+/// # …so use what Apple uses (user, 2026-08-16) — and the recipe stays anyway
+///
+/// Asked directly: "why not just use what apple does?" The right answer, and
+/// the walk above was the wrong instrument. **Fading a material does not make
+/// it transparent, it makes it WEAK** — `.opacity()` takes the frosting down
+/// alongside the grey, so every step buys clarity by spending the exact
+/// contrast the chip names stand on. There is a real transparent material and
+/// we were approximating it by thinning an opaque one.
+///
+/// So on iOS 26 this is `glassEffect(.clear)` — the system's own Liquid Glass,
+/// with its refraction, its specular edge and its adaptation to what's behind
+/// it, none of which a gradient can imitate.
+///
+/// **The recipe below is NOT deleted, and that is the honest answer to "just
+/// use Apple's":** this app deploys to **iOS 18**, and `glassEffect` is 26+.
+/// Liquid Glass cannot be the only implementation while a supported device
+/// can't draw it — so the two are a pair, not a replacement, exactly as
+/// `dsGlass` has always been shaped.
+///
+/// Two things the system path does NOT inherit from the recipe:
+///   • **the sheen is dropped.** It exists to fake the light a pane sits
+///     under; real glass draws its own specular highlight, and laying ours
+///     over it is the doubling that read as a wash in the first place.
+///   • **the depth scrim is kept.** It is not decoration and not an imitation
+///     of anything the system does — it is the legibility floor under 12pt
+///     `textSecondary` chip names when the feed behind is edge-to-edge
+///     pictures, which is precisely the contrast `.clear` withholds by design
+///     (`DSGlassVariant`'s own rule). Lighter than the recipe's, since the
+///     system material is already doing more of the work.
+///
+/// **UNVERIFIED on a device, and structurally so** — no simulator renders
+/// Liquid Glass the way hardware does, so the one question that matters here
+/// (do the chip names survive over a bright feed?) cannot be answered from
+/// this host. `-trayGlass material` forces the recipe on an iOS 26 build so
+/// both can be compared in ONE build on the real device, rather than shipping
+/// a guess and waiting for a report.
 ///
 /// No shape of its own: `presentationBackground` is already clipped to the
 /// sheet, and an inner `RoundedRectangle` would draw its own corners inside the
 /// system's — two radii, one of which is a guess at what iOS is doing this year.
 private struct DSGlassSheet: View {
     var body: some View {
+        if #available(iOS 26.0, *), DSTrayGlass.useSystem {
+            systemGlass
+        } else {
+            recipe
+        }
+    }
+
+    /// The real thing (iOS 26+). See the type doc for why the sheen is dropped
+    /// and the depth kept.
+    @available(iOS 26.0, *)
+    private var systemGlass: some View {
+        Color.clear
+            .glassEffect(.clear, in: Rectangle())
+            .overlay { depth(DS.glassDepth.opacity(0.6)) }
+            .ignoresSafeArea()
+    }
+
+    /// The pre-26 recipe — a material, plus the light and shading a pane needs
+    /// to read as a pane. Not a fallback in the apologetic sense: it is what
+    /// every device below iOS 26 draws, which today is most of them.
+    private var recipe: some View {
         Rectangle()
             .fill(.ultraThinMaterial)
             // The plate fade — see the doc. Before the overlays on purpose:
@@ -193,20 +242,37 @@ private struct DSGlassSheet: View {
                     endPoint: .bottom
                 )
             }
-            .overlay {
-                // The depth it sits in. Straight down rather than from the
-                // corner: the sheen is a light SOURCE and has a direction, this
-                // is the panel's own body and has none — leaning it would read
-                // as a second light coming up from the floor.
-                LinearGradient(
-                    stops: [
-                        .init(color: .clear, location: 0.32),
-                        .init(color: DS.glassDepth, location: 1)
-                    ],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-            }
+            .overlay { depth(DS.glassDepth) }
             .ignoresSafeArea()
+    }
+
+    /// The depth the panel sits in. Straight down rather than from the corner:
+    /// the sheen is a light SOURCE and has a direction, this is the panel's own
+    /// body and has none — leaning it would read as a second light coming up
+    /// from the floor.
+    private func depth(_ color: Color) -> some View {
+        LinearGradient(
+            stops: [.init(color: .clear, location: 0.32), .init(color: color, location: 1)],
+            startPoint: .top,
+            endPoint: .bottom
+        )
+    }
+}
+
+/// Which glass the tray draws, and the DEBUG door to the other one.
+///
+/// The comparison this exists for cannot be made on this host: no simulator
+/// renders Liquid Glass the way hardware does, and the question that decides
+/// between them — whether 12pt `textSecondary` chip names survive over an
+/// edge-to-edge picture feed — is exactly the one only a device can answer.
+/// `-trayGlass material` forces the pre-26 recipe on an iOS 26 build, so both
+/// treatments are reachable from ONE build on the real device.
+enum DSTrayGlass {
+    static var useSystem: Bool {
+        #if DEBUG
+        UserDefaults.standard.string(forKey: "trayGlass") != "material"
+        #else
+        true
+        #endif
     }
 }

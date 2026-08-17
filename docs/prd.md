@@ -24503,3 +24503,52 @@ SwiftData-liveness, prd-index and localization audits all green. **Not
 verified:** nothing here has been seen on a device — the glass step in
 particular is a number chosen against the previous step's device report, not a
 measurement.
+
+## §393 — Use what Apple uses, and keep the recipe because iOS 18 exists (user: "why not just use what apple does?", 2026-08-16)
+
+Asked of §392's glass step, and it is the right question — **the walk it ended
+was the wrong instrument.** Fading a material does not make it transparent, it
+makes it WEAK: `.opacity()` on `.ultraThinMaterial` (0.82 → 0.72 → 0.62 → 0.55
+→ 0.45 across two sessions) takes the frosting down alongside the grey, so every
+step bought clarity by spending the exact contrast the chip names stand on. The
+system has had a genuinely transparent material the whole time and we were
+approximating it by thinning an opaque one.
+
+So on iOS 26 the sources tray's sheet is `glassEffect(.clear)` — the system's
+own Liquid Glass, with the refraction, specular edge and adaptation to what's
+behind it that no gradient can imitate.
+
+**The recipe is NOT deleted, and that is the real answer to "just use Apple's":
+this app deploys to iOS 18 and `glassEffect` is 26+.** Liquid Glass cannot be
+the only implementation while a supported device cannot draw it, so the two are
+a pair — the shape `dsGlass` has always had. Most devices draw the recipe today.
+
+Two things the system path does not inherit:
+
+- **The sheen is dropped.** It exists to fake the light a pane sits under; real
+  glass draws its own specular highlight, and laying ours over it is precisely
+  the doubling that read as a wash when §391 first shipped.
+- **The depth scrim is kept**, lighter. It is not decoration and not an
+  imitation of anything the system does — it is the legibility floor under 12pt
+  `textSecondary` chip names when the feed behind is edge-to-edge pictures,
+  which is exactly the contrast `.clear` withholds *by design*
+  (`DSGlassVariant`'s own rule: `.clear` is for chrome over PIXELS, and it
+  withholds frosting on purpose).
+
+**Undecidable from this host, so it ships as a choice rather than a guess.** No
+simulator renders Liquid Glass the way hardware does, and the one question that
+separates the two treatments — do the chip names survive over a bright feed? —
+is one only a device can answer. `-trayGlass material` (DEBUG,
+`DSTrayGlass.useSystem`) forces the recipe on an iOS 26 build, so both are
+reachable in ONE build on the real device instead of shipping one and waiting
+for a report. If the names do fail over pictures, the fix is the depth scrim's
+dose, not a retreat to the material.
+
+**What this does NOT change:** design law still says glass is the floating layer
+only, never content — the tray qualifies as chrome under §391's ruling and
+nothing here widens that. Every other `DSTray` in the app stays on the opaque
+`surfaceSheet`; a tray carrying text you READ has nothing to gain from a live
+backdrop and a contrast floor to lose.
+
+**Verified:** iOS Simulator and Mac Catalyst both compile. **Not verified:** the
+system-glass path has never been rendered — that is the point of the hook.
