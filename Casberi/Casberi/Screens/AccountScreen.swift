@@ -49,6 +49,7 @@ struct SettingsScreen: View {
                     // 2026-07-10 and was rejected: personalization paints your
                     // SPACE — it never builds a profile of you.)
                     rowList(allRows)
+                    colophon
                 }
                 .padding(.top, ShellMetrics.topInset)
                 .padding(.bottom, ShellMetrics.bottomInset)
@@ -337,6 +338,50 @@ struct SettingsScreen: View {
     /// Every row in one A–Z field — the You/App groups are retired.
     private var allRows: [RowSpec] {
         (primaryRows + secondaryRows + demoRow).sorted { $0.title < $1.title }
+    }
+
+    /// The colophon — mark, name, build — at the very foot of Settings, below
+    /// the last row rather than inside a group, because it is a signature and
+    /// not a setting.
+    ///
+    /// It is deliberately NOT a control. §83 bans dead controls, and this is
+    /// the distinction that keeps it honest: a control carries an affordance
+    /// (a tile surface, a chevron, a tap target) and must then do something.
+    /// This carries none, so nothing about it offers to be pressed. The one
+    /// place a logo may sit doing nothing is the bottom of Settings, where the
+    /// question it answers — what is this, and which build am I on — is real.
+    ///
+    /// The name is set in the app's own ramp rather than the brand face. The
+    /// wordmark is Figtree SemiBold on the website (`docs/brand.md`), and
+    /// bundling a display face to render seven letters once would cost Dynamic
+    /// Type's optical sizing, break for the four localizations Figtree has no
+    /// glyphs for, and need the heavier app-embedding licence — for a string
+    /// nobody reads twice. Semibold lowercase in the brand hue lands within a
+    /// hair of it and stays inside §8.
+    private var colophon: some View {
+        VStack(spacing: DS.Space.s2) {
+            CasberiMark(size: 36)
+            Text(verbatim: "casberi")
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(CasberiMark.pink)
+            Text(buildLine)
+                .font(.footnote)
+                .foregroundStyle(DS.textTertiary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.top, DS.Space.s6)
+        // One label, so VoiceOver reads a signature instead of three orphans.
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text("Casberi, \(buildLine)"))
+    }
+
+    /// Marketing version and build, the pair a bug report needs. Both are read
+    /// from the bundle rather than typed, so a shipped build can never claim a
+    /// number it isn't.
+    private var buildLine: String {
+        let v = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "—"
+        let b = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "—"
+        return String(localized: "Version \(v) (\(b))")
     }
 
     private func rowList(_ rows: [RowSpec]) -> some View {
