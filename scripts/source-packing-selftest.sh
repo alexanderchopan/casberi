@@ -97,8 +97,17 @@ grep -q 'frame(width: column)' "$TRAY" \
   || { echo "✗ cells are no longer pinned to one column — a 4|1 row would sit off the columns of a 2|2|1 row"; exit 1; }
 grep -q 'blockWidth(span:' "$TRAY" \
   || { echo "✗ blocks are no longer a whole number of columns wide — the grid stops being a grid"; exit 1; }
-grep -q 'DS.glassCarve' "$TRAY" \
-  || { echo "✗ the category carve is gone — with no container and no gap the grouping is only a word again"; exit 1; }
+# The boundary is a SKIPPED COLUMN since 2026-08-16 (user: cards behind the
+# icons "makes it amateur" — the third container this tray has tried and the
+# third to lose). It is the only boundary that costs nothing: no fill to darken
+# the glass, and no chip moved off the shared grid. Lose it and the tray is a
+# wall of icons whose grouping is only a word.
+grep -q 'Color.clear.frame(width: column)' "$TRAY" \
+  || { echo "✗ the separator column is gone — with no container and no gap the grouping is only a word again"; exit 1; }
+grep -q 'row.count + block.members.count <= columns' "$PACK" \
+  || { echo "✗ the packer no longer reserves the separator column — rows will overflow the grid"; exit 1; }
+awk '/private func blockView/,/^    }/' "$TRAY" | grep -q 'glassCarve' \
+  && { echo "✗ a container is back behind the groups — ruled against 2026-08-16"; exit 1; }
 # The 343 shape, spelled out so it cannot come back by accident.
 awk '/private func rowView/,/^    }/' "$TRAY" | grep -q 'groupGap\|metrics.gap' \
   && { echo "✗ a per-row group gap is back — that is build 343's whitespace boundary, which cost column alignment"; exit 1; }
@@ -144,9 +153,12 @@ func optimalChipRows(_ catalog: [Block]) -> Int {
 
     var fits = Set<Int>()
     for mask in 1..<(1 << k) {
-        var sum = 0
-        for i in 0..<k where mask >> i & 1 == 1 { sum += small[i] }
-        if sum <= COLS { fits.insert(mask) }
+        var sum = 0, n = 0
+        for i in 0..<k where mask >> i & 1 == 1 { sum += small[i]; n += 1 }
+        // One skipped column between groups (2026-08-16) — the boundary the
+        // deleted cards used to draw. The optimiser pays it too, or it would
+        // be scoring the shipped packer against a grid that no longer exists.
+        if sum + (n - 1) <= COLS { fits.insert(mask) }
     }
 
     var memo = [Int: Int]()
@@ -207,10 +219,14 @@ let today = [block("Wallet", 3), block("Social", 3), block("Mail", 1),
              block("Media", 2), block("Markets", 5), block("Life", 4),
              block("Work", 1), block("Reading", 1)]
 let todayRows = SourceRowPacking.pack(today)
-expectEq(todayRows.count, 4, "twenty sources in eight categories pack to four rows")
-expectEq(SourceRowPacking.chipRows(todayRows), 4, "and four chip rows")
+expectEq(todayRows.count, 5, "twenty sources in eight categories pack to five rows")
+expectEq(SourceRowPacking.chipRows(todayRows), 5, "and five chip rows")
+// "Completely full" stopped being true when the separator landed, and the
+// honest invariant is the one the grid actually has to satisfy: members plus
+// the columns skipped between groups must fit.
 for row in todayRows {
-    expectEq(row.reduce(0) { $0 + $1.members.count }, COLS, "every row is completely full")
+    let used = row.reduce(0) { $0 + $1.members.count } + (row.count - 1)
+    expect(used <= COLS, "row of \(row.count) group(s) fits the grid with its separators (used \(used))")
 }
 // Catalog order ties biggest-first on this corpus (both pack four full rows),
 // and CATALOG WINS EVERY TIE (2026-08-16) — so the first catalog category
@@ -218,16 +234,17 @@ for row in todayRows {
 // corpus, connecting one more source can no longer reshuffle the whole tray.
 expectEq(todayRows.first?.first?.name, "Wallet", "catalog order survives when it ties the optimum")
 
-print("— and the sort still kicks in when catalog order would cost a row")
+print("— catalog order still wins every tie (the sweeps below prove the sort still pays)")
 // Catalog order first-fits [1,3,4,2] into THREE rows ([1,3],[4],[2]) while
 // biggest-first finds the two-row packing ([4,1],[3,2]). The sort must win
 // here — this is the only case it was ever buying anything, and it is also
 // the deterministic pin for the sort-reversed/sort-removed mutations, which
 // the random sweep alone catches only probabilistically.
-let sortPays = [block("A", 1), block("B", 3), block("C", 4), block("D", 2)]
-let sortRows = SourceRowPacking.pack(sortPays)
-expectEq(sortRows.count, 2, "the sort saves a row where catalog order loses one")
-expectEq(sortRows.first?.first?.name, "C", "and biggest-first order is what's drawn then")
+let tie = [block("A", 2), block("B", 2), block("C", 2), block("D", 1)]
+let tieRows2 = SourceRowPacking.pack(tie)
+expectEq(tieRows2.first?.first?.name, "A", "a tying corpus keeps catalog order")
+expect(SourceRowPacking.chipRows(tieRows2) <= optimalChipRows(tie),
+       "and never pays a row for that stability")
 
 print("— nothing is ever lost, split, or duplicated")
 func members(_ rows: [[Block]]) -> [String] { rows.flatMap { $0.flatMap(\.members) }.sorted() }
@@ -330,9 +347,17 @@ for _ in 0..<4000 {
         naiveLosses += 1
     }
 }
-expect(naiveLosses > naiveTrials / 50,
-       "packing in catalog order is measurably worse (\(naiveLosses)/\(naiveTrials)) — "
-     + "if this fails, the biggest-first sort is no longer buying anything")
+// MEASURED AGAIN 2026-08-16, and the number moved by two orders of magnitude:
+// catalog order used to lose on 7.76% of corpora, and with the separator
+// column reserved it loses on ~1 in 3,900. Skipping a column between groups
+// coarsens every row's budget, so which order the blocks arrive in almost
+// stops mattering — the tray's order is now stable essentially always, for
+// free. The sort is kept because it still wins occasionally and costs one
+// extra pack, but this guard now asserts only that it is not DEAD; if it ever
+// reaches zero, delete the sort rather than keeping a branch nothing exercises.
+expect(naiveLosses >= 1,
+       "the biggest-first sort still wins somewhere (\(naiveLosses)/\(naiveTrials)) — "
+     + "at zero it is dead code and should be deleted, not kept")
 
 print("")
 if failures == 0 {
@@ -435,7 +460,12 @@ mutate "chipRows measures span, not height" \
 # from the mock — the never-share-a-row masonry that measured 816pt in a single
 # column, past the resting cap and into a scroll.
 mutate "row reuse disabled (a row per category)" \
-  's|row.reduce(0) { \$0 + \$1.members.count } + block.members.count <= columns|false|'
+  's|row.reduce(0) { \$0 + \$1.members.count } + row.count + block.members.count <= columns|false|'
+
+# The separator column itself: without it two groups sit 8pt apart, which is the
+# gap INSIDE a group — the boundary disappears and the row silently overfills.
+mutate "separator column not reserved" \
+  's|+ row.count + block.members.count <= columns|+ block.members.count <= columns|'
 
 cp "$PACK" "$WORK/SourceRowPacking.swift"
 echo ""

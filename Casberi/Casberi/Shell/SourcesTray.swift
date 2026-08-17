@@ -402,7 +402,16 @@ struct SourcesTray: View {
         GeometryReader { geo in
             let column = Self.columnWidth(geo.size.width)
             HStack(alignment: .top, spacing: DS.Space.s2) {
-                ForEach(Array(row.blocks.enumerated()), id: \.offset) { _, block in
+                ForEach(Array(row.blocks.enumerated()), id: \.offset) { index, block in
+                    // ONE SKIPPED COLUMN between groups — the boundary, now
+                    // that there is no container to draw one. It is a real
+                    // column of the same grid, so every chip stays on its
+                    // vertical: the gap is ~68pt against the 8pt inside a
+                    // group, without a single chip moving. `SourceRowPacking`
+                    // reserves it, so a row can never overflow because of it.
+                    if index > 0 {
+                        Color.clear.frame(width: column)
+                    }
                     blockView(block, column: column, chipRows: row.chipRows)
                 }
                 // A row that doesn't fill the grid leaves its remainder on the
@@ -443,10 +452,12 @@ struct SourcesTray: View {
         .frame(width: Self.blockWidth(span: block.span, column: column),
                height: Self.rowHeight(chipRows: chipRows),
                alignment: .topLeading)
-        .background {
-            RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous)
-                .fill(DS.glassCarve)
-        }
+        // NO CONTAINER. The carve that briefly lived here was deleted the
+        // evening it shipped (2026-08-16, user: "i don't like those cards
+        // behind the icons it makes it amateur") — the third container this
+        // tray has tried and the third to lose. The boundary is the skipped
+        // column in `rowView`, which is the only form that costs the panel
+        // nothing: no fill to darken the glass, and no chip moved off the grid.
     }
 
     // MARK: - Where the card used to be
