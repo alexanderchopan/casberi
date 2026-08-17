@@ -29,6 +29,11 @@
 
   var icons = Array.prototype.slice.call(rain.children);
   var state = 'raining';          // raining → absorbing → rested
+  // How much the mark swells at the peak of the gather, as a fraction of its
+  // 52px resting size. 0.10 was the original and read as a beat rather than a
+  // swell; 0.80 is the most it can take before the crown of the head starts
+  // crowding the headline beneath it on a short viewport.
+  var SWELL = 0.80;
 
   // Act 2 — gather. Icons leave far-first in a rolling wave, curve along an
   // arc, accelerate into the tile, and recede (scale + fade) as they arrive.
@@ -56,13 +61,21 @@
       ], { duration: 680, delay: rank * 26, fill: 'forwards' });
       anim.onfinish = function () {
         done++;
-        // conservation of mass: the berry grows with every app it drinks
-        target.style.transform = 'scale(' + (1 + 0.10 * done / n).toFixed(3) + ')';
-        if (done % 4 === 0 && done < n) {
-          target.animate(
-            [{ transform: 'scale(1)' }, { transform: 'scale(1.045)' }, { transform: 'scale(1)' }],
-            { duration: 200, easing: 'ease-out', composite: 'add' });
-        }
+        // Conservation of mass: the octopus grows with every app it drinks,
+        // and the growth EASES OUT rather than running linearly — a creature
+        // filling up gains most of its size early and then strains for the
+        // last of it. Linear growth reads as a progress bar; this reads as
+        // eating. 52px -> ~93px at the top of the swell.
+        var fill = done / n;
+        var eased = 1 - Math.pow(1 - fill, 2.2);
+        target.style.transform = 'scale(' + (1 + SWELL * eased).toFixed(3) + ')';
+        // Every arrival gulps, and the gulp SHRINKS as the creature fills:
+        // a small animal takes a big swallow, a full one barely flinches.
+        target.animate(
+          [{ transform: 'scale(1)' },
+           { transform: 'scale(' + (1 + 0.055 * (1 - eased * 0.75)).toFixed(3) + ')' },
+           { transform: 'scale(1)' }],
+          { duration: 190, easing: 'cubic-bezier(.3,1.4,.6,1)', composite: 'add' });
         if (done === n) finale();
       };
     });
@@ -76,9 +89,14 @@
     setTimeout(function () {
       // the energy flows out: the berry springs back to size…
       target.style.transform = 'scale(1)';
+      // The release. It gives back everything it took, so this overshoots the
+      // other way — the squash is what sells the size it just lost, and the
+      // duration is longer than the gulps so the eye reads it as one motion
+      // settling rather than another bite.
       target.animate(
-        [{ transform: 'scale(1.05)' }, { transform: 'scale(.96)' }, { transform: 'scale(1)' }],
-        { duration: 480, easing: 'cubic-bezier(.34,1.56,.64,1)', composite: 'add' });
+        [{ transform: 'scale(1.10)' }, { transform: 'scale(.90)' },
+         { transform: 'scale(1.03)' }, { transform: 'scale(1)' }],
+        { duration: 620, easing: 'cubic-bezier(.34,1.56,.64,1)', composite: 'add' });
       // …and becomes a feed, streaming into the space the rain left behind
       rain.style.position = 'relative';
       var panel = document.createElement('div');
