@@ -127,9 +127,18 @@ struct ContributionYear {
         return ContributionYear(total: cal["totalContributions"] as? Int ?? 0, weeks: weeks)
     }
 
-    #if DEBUG
-    /// A deterministic synthetic year — screenshot/verification only, so the
-    /// Home tile can be seen rendering without a real account's data.
+    /// A deterministic synthetic year — what the tile draws with no real
+    /// account's data behind it.
+    ///
+    /// **Reachable in RELEASE since 2026-08-16, and that is the point.** It was
+    /// `#if DEBUG` while its only caller was the `-ghGraphDemo` screenshot
+    /// hook. The furnished demo is a mode a shipped build runs (prd §217), so
+    /// the moment `GitHubGraphStore.refreshIfStale` began seeding this instead
+    /// of reaching GitHub, a DEBUG-only body made the Release archive fail to
+    /// compile — which is the good outcome of exactly the class
+    /// `demo-selftest.py` check A was written for (`ChipMemory.seedDemo`
+    /// shipping DEBUG-only while its caller was not). Every check in this repo
+    /// compiles Debug, so nothing but a Release build could see it.
     static func demo() -> ContributionYear {
         var seed: UInt64 = 0x9E3779B97F4A7C15
         func next() -> Int {
@@ -151,7 +160,6 @@ struct ContributionYear {
         }
         return ContributionYear(total: total, weeks: weeks)
     }
-    #endif
 }
 
 /// The in-memory cache for the contribution calendar — one fetch per few hours,
