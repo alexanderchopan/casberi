@@ -165,6 +165,24 @@ struct SourcesTray: View {
     /// `AppsScreen.appTile` uses, so a one-word and a two-word name sit on the
     /// same baseline instead of the row jittering per cell.
     private static let nameHeight: CGFloat = 28
+    /// The label's own margin inside its column (2026-08-16, user: "we need to
+    /// put privacy pools on two rows so it doesn't touch the edge of the
+    /// container").
+    ///
+    /// It does two jobs with one number, and the second is the reason it is
+    /// not simply padding on the carve. A chip's ICON is 52pt centred in a
+    /// ~68pt column, so it can never reach the edge; its NAME is given the
+    /// whole column, so a wide one runs flush into the carve at a group's
+    /// first or last chip. Padding the carve instead would move the chips off
+    /// the shared column grid — the §392a defect, reintroduced.
+    ///
+    /// Narrowing the text box also decides WRAP vs SHRINK: with the full
+    /// column available, `minimumScaleFactor` could squeeze "Privacy Pools"
+    /// onto one line rather than breaking it, which is what put it against
+    /// the edge in the first place. Below the column width it no longer fits
+    /// at any allowed scale, so it takes its second line — which is what the
+    /// two-line box was reserved for all along.
+    private static let nameGutter: CGFloat = 4
     /// One line of `subhead13` (its own `lineHeight`), and the gap under it.
     ///
     /// 15 → 21 on 2026-08-16 (user: "make the eyebrows bold and larger") —
@@ -533,6 +551,9 @@ struct SourcesTray: View {
                     .lineLimit(2)
                     .minimumScaleFactor(0.7)
                     .frame(height: Self.nameHeight, alignment: .top)
+                    // Keeps the widest names off the carve's edge, and is what
+                    // makes them wrap rather than shrink — see `nameGutter`.
+                    .padding(.horizontal, Self.nameGutter)
             }
             // One column of the tray's shared grid — the same width in every
             // row, which is what puts every chip in the tray on a common
