@@ -1,0 +1,197 @@
+<meta charset="utf-8">
+<title>Sources tray — put the columns back, keep the boundary</title>
+<style>
+  /* YOUR REAL TRAY, traced from the 343 screenshot (2026-08-16):
+       row 1  Wallet(2) | Work(2) | Reading(1)
+       row 2  Life(4)   | Markets(1)
+       row 3  Media(2)  | Social(2) | Notes(1)
+
+     THE DEFECT IN 343, measured off that screenshot in image px:
+       chip centres row 1: 115  260 | 458  603 | 801
+       chip centres row 2: 115  260  405  551 | 749
+       chip centres row 3: 115  260 | 458  603 | 801
+     Rows 1 and 3 are both 2|2|1 so they agree. Row 2 is 4|1, so its 3rd and
+     4th chips sit 53px LEFT of the chips above and below them. Three rows of
+     five circles, one row off-grid. That is the jank — and it is caused by
+     the fix, not by the thing the fix was for: clusters pack from the left at
+     a fixed pitch, so the column a chip lands in depends on how many chips
+     preceded it IN ITS OWN ROW.
+
+     The gap ratio 343 bought is real (~34pt between groups vs 8pt inside, in
+     pt terms) and it is NOT worth this. Alignment is the stronger order cue:
+     a grid whose columns agree reads as deliberate even when its boundaries
+     are subtle, while a grid whose columns disagree reads as broken however
+     well its groups are separated.
+
+     SO: put the five equal columns back, and draw the boundary with something
+     that does not move the chips — a carve (a translucent recess IN the
+     glass, §391's own documented runner-up, which the 08-16 cluster pass
+     passed over in favour of whitespace). It cannot mask the blur the way the
+     deleted opaque card did, because it is not opaque. */
+
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font: 14px/1.5 -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+    background: #0b0b0d; color: #ebebf5cc; padding: 26px 22px 50px;
+    -webkit-font-smoothing: antialiased;
+  }
+  h1 { font: 700 22px/28px ui-rounded, -apple-system, system-ui; color: #fff; }
+  .sub { margin-top: 6px; max-width: 98ch; font-size: 13px; opacity: .76; }
+  .sub b { color: #fff; }
+  .rail { display: flex; gap: 18px; align-items: flex-start; overflow-x: auto;
+          padding-bottom: 14px; margin-top: 20px; }
+  .panel { flex: 0 0 auto; width: 402px; }
+  .panel > h2 { font: 600 13px/18px inherit; color: #fff; margin-bottom: 3px; }
+  .panel > .note { font-size: 11.5px; line-height: 16px; opacity: .66;
+                   margin-bottom: 7px; min-height: 88px; }
+  .verdict { font-size: 11.5px; line-height: 16px; margin-bottom: 9px; font-weight: 600; }
+  .verdict.bad { color: #ff6b6b; } .verdict.ok { color: #30d158; }
+
+  /* the phone */
+  .phone { position: relative; width: 402px; height: 620px; border-radius: 30px;
+           overflow: hidden; background: #000; isolation: isolate; }
+  .behind { position: absolute; inset: 0; padding: 40px 18px 0; }
+  .fcard { background: #16283c; border-radius: 12px; padding: 14px; margin-bottom: 12px; }
+  .fcard .t { font: 600 12px/16px inherit; color: #9fb6cc; }
+  .fcard .h { font: 700 21px/26px ui-rounded, system-ui; color: #c8d6e2; margin-top: 6px; }
+  .frow { display: flex; gap: 12px; align-items: center; margin-bottom: 14px; }
+  .fmark { width: 34px; height: 34px; border-radius: 8px; background: #1c3a5e; flex: 0 0 auto; }
+  .fl { height: 10px; border-radius: 5px; background: #ffffff26; }
+
+  /* the tray */
+  .tray { position: absolute; left: 0; right: 0; bottom: 0; height: 470px;
+          border-radius: 16px 16px 0 0; padding: 22px 18px 20px;
+          background: rgba(38,38,41,.55);
+          backdrop-filter: blur(28px) saturate(1.7);
+          -webkit-backdrop-filter: blur(28px) saturate(1.7); }
+  .tray::after { content:""; position:absolute; inset:0; border-radius:inherit;
+                 pointer-events:none;
+                 background: linear-gradient(to top, #00000022 0%, #00000000 50%); }
+  .tray > * { position: relative; z-index: 1; }
+  .grab { position: absolute; top: 8px; left: 50%; transform: translateX(-50%);
+          width: 36px; height: 5px; border-radius: 3px; background: #ffffff40; z-index: 2; }
+  .title { font: 700 22px/28px ui-rounded, -apple-system, system-ui; color: #fff;
+           margin-bottom: 16px; }
+
+  .rows { display: flex; flex-direction: column; gap: 12px; }
+
+  /* ---- A: 343 as shipped — clusters, fixed pitch, left-packed ---------- */
+  .a .row { display: flex; align-items: flex-start; }
+  .a .grp + .grp { margin-left: 34px; }
+  .a .chips { display: flex; gap: 8px; }
+  .a .chip { width: 62px; }
+
+  /* ---- B/C: five equal columns, every row on the same verticals -------- */
+  .g .row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+  .g .cell { grid-column: span 1; }
+
+  /* the carve — translucent, so the blur underneath survives */
+  .carve .grp-bg { background: #ffffff0f; border-radius: 15px; }
+
+  .eyebrow { font: 700 13px/18px -apple-system, system-ui; color: #fff;
+             height: 21px; margin-bottom: 4px; padding-left: 6px; white-space: nowrap; }
+  .chip { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .icon { width: 52px; height: 52px; border-radius: 9999px; display: grid;
+          place-items: center; font: 700 20px/1 ui-rounded, system-ui; color: #fff;
+          margin: 0 auto; }
+  .nm { height: 30px; font: 500 11.5px/15px -apple-system, system-ui;
+        color: #ebebf599; text-align: center; }
+
+  /* column guides — the whole point of the comparison */
+  .guides { position: absolute; inset: 0; pointer-events: none; z-index: 3; display: none; }
+  .guides i { position: absolute; top: 0; bottom: 0; width: 1px; background: #ff3b3055; }
+  body.showguides .guides { display: block; }
+  button { font: 500 13px/1 inherit; color: inherit; cursor: pointer; background: #ffffff14;
+           border: 0; border-radius: 9999px; padding: 9px 15px; margin-top: 14px; }
+  button.on { background: #0a84ff; color: #fff; }
+</style>
+
+<h1>Put the columns back, keep the boundary</h1>
+<p class="sub">
+  Your real tray, traced from the 343 screenshot. <b>Turn the column guides on</b> — in A the middle
+  row (Life is 4 chips, not 2) sits off every vertical the rows above and below use, because clusters
+  pack from the left at a fixed pitch. That is the jank, and it is my change, not the old grid.
+  B and C put the five equal columns back so every chip in every row shares a vertical; the group
+  boundary moves from whitespace to a <b>carve</b> — a translucent recess, which cannot mask the blur
+  the way §391's deleted opaque card did.
+</p>
+<button id="tg">Show column guides</button>
+
+<div class="rail" id="rail"></div>
+
+<script>
+const ROWS = [
+  [["Wallet",[["Wallet","▤","#2f6fed"],["Safe","⬢","#12cf7f"]]],
+   ["Work",[["GitHub","","#16181c"],["App Store Connect","A","#0a84ff"]]],
+   ["Reading",[["RSS","◉","#f26522"]]]],
+  [["Life",[["iCloud Mail","✉","#1f8fff"],["Photos","❋","#4ea3f5"],["Files","☁","#38b3f0"],["Calendar","▦","#f4402f"]]],
+   ["Markets",[["Tokens","↗","#0f2a1c"]]]],
+  [["Media",[["Apple Music","♪","#fa3c5a"],["YouTube","▶","#ff0000"]]],
+   ["Social",[["Farcaster","⬔","#8a63d2"],["Bluesky","🦋","#1185fe"]]],
+   ["Notes",[["Voice","‖","#f43f7d"]]]],
+];
+
+function chip([n,g,c]) {
+  return `<div class="chip"><div class="icon" style="background:${c}">${g}</div>
+    <div class="nm">${n}</div></div>`;
+}
+
+// A — clusters, left-packed at a fixed pitch (what 343 does)
+function rowA(row) {
+  return `<div class="row">` + row.map(([cat,apps]) =>
+    `<div class="grp"><div class="eyebrow">${cat}</div>
+       <div class="chips">${apps.map(chip).join("")}</div></div>`).join("") + `</div>`;
+}
+
+// B/C — five equal columns; a group spans as many columns as it has chips
+function rowG(row, carve) {
+  let cells = "";
+  for (const [cat, apps] of row) {
+    cells += `<div class="cell" style="grid-column: span ${apps.length}">
+      <div class="grp-bg" style="padding:6px 2px 4px">
+        <div class="eyebrow">${cat}</div>
+        <div style="display:grid;grid-template-columns:repeat(${apps.length},1fr);gap:8px">
+          ${apps.map(chip).join("")}
+        </div>
+      </div></div>`;
+  }
+  return `<div class="row">${cells}</div>`;
+}
+
+const T = [
+  {cls:"a", name:"A · 343, shipped now", build:rowA,
+   note:"Clusters at a fixed 62pt pitch, packed from the left. The gap between groups really is ~4x the gap inside one — the cue works. But the middle row has four chips in its first group instead of two, so its 3rd and 4th chips land 53px left of the ones above and below. Five circles per row, one row off-grid.",
+   verdict:["bad","Boundary drawn, alignment lost — a bad trade"]},
+  {cls:"g", name:"B · Equal columns, no carve", build:r=>rowG(r,false),
+   note:"The pre-343 grid: five equal columns, every chip on a shared vertical in every row. This is orderly again — and it is also the state you called 'funky' before, because the only thing marking a group boundary is the eyebrow above it.",
+   verdict:["bad","Aligned, but the boundary is only a word again"]},
+  {cls:"g carve", name:"C · Equal columns + carve", build:r=>rowG(r,true),
+   note:"Same five equal columns — alignment identical to B, so the guides line up everywhere. The boundary is a translucent recess behind each group: it bounds the group without moving a single chip, and being translucent it cannot mask the blur, which is why §391 deleted the opaque card and kept this as the runner-up.",
+   verdict:["ok","Aligned AND bounded — nothing traded"]},
+];
+
+document.getElementById("rail").innerHTML = T.map(t => `
+  <section class="panel">
+    <h2>${t.name}</h2><div class="note">${t.note}</div>
+    <div class="verdict ${t.verdict[0]}">${t.verdict[1]}</div>
+    <div class="phone">
+      <div class="behind">
+        <div class="fcard"><div class="t">Photos · 3m</div><div class="h">Screenshot</div></div>
+        <div class="frow"><div class="fmark"></div><div class="fl" style="flex:1"></div></div>
+      </div>
+      <div class="tray ${t.cls}">
+        <div class="grab"></div><div class="title">Your feeds</div>
+        <div class="rows">${ROWS.map(t.build).join("")}</div>
+      </div>
+      <div class="guides">${[0,1,2,3,4].map(i =>
+        `<i style="left:${18 + 18 + (366-4*8)/5*(i+0.5) + 8*i}px"></i>`).join("")}</div>
+    </div>
+  </section>`).join("");
+
+const tg = document.getElementById("tg");
+tg.onclick = () => { document.body.classList.toggle("showguides");
+                     tg.classList.toggle("on");
+                     tg.textContent = document.body.classList.contains("showguides")
+                       ? "Hide column guides" : "Show column guides"; };
+</script>

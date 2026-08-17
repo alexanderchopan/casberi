@@ -63,37 +63,48 @@ import SwiftUI
 /// they are. There is no continuation, therefore no nameless run, therefore
 /// nothing to explain.
 ///
-/// # The grouping is drawn by PROXIMITY now, not only named (2026-08-16, user)
+/// # The grouping is CARVED, and the columns never move (2026-08-16, user)
 ///
-/// "It kinda still looks funky and like rows aren't even" — and it did, for a
-/// nameable reason: the grid was five EQUAL slots, so the gap between two
-/// groups sharing a row was byte-identical to the gap between two chips inside
-/// a group. Proximity is the strongest grouping signal the eye has, and it
-/// said "one row of five icons" while the eyebrows said "two groups" — a gap
-/// is SEEN where a word is READ, so the gap won, the eyebrows looked like they
-/// floated at random columns, and a four-chip row's phantom fifth slot read as
-/// a hole. The deleted card used to carry the boundary; nothing had replaced
-/// it. Four treatments were compared as rendered pixels in
-/// `prototype/sources-tray-partition-v1.html`; whitespace won — it is the only
-/// cue that adds zero chrome to a tray a same-day ruling just de-chromed.
+/// Two reports, one evening, and the second overturned the first cut of the
+/// fix for the first. Read them together, because the second is the ruling.
 ///
-/// So the grid is CLUSTERS now: chips at a fixed `slotWidth` pitch, the gap
-/// inside a group stays `s2`, and the gap between two groups in a row is a
-/// flexible `groupGapMin…groupGapMax` — wide enough that each group reads as a
-/// discrete object before any word is read (cover the eyebrows and the
-/// grouping survives). The bounds are why no `GeometryReader` is needed: a
-/// full five-slot row with three blocks has exactly 2×20pt to give, a
-/// two-block one 32pt, and the flexible spacer lands both without measuring
-/// anything; a trailing `Spacer` absorbs what's left, so a short row's ragged
-/// right edge reads as clusters ending rather than slots failing. The spacing
-/// hierarchy this buys is the one grouping wants: ~26pt icon-to-icon inside a
-/// group, ~40+pt between groups, ~80pt between rows (the eyebrow band inside
-/// it) — and it fixes the axis imbalance the rowGap note below measured, since
-/// the old grid was airier ACROSS (~31pt) than DOWN (26pt) while the cluster
-/// pitch lands both at ~26. The cost, stated: chips in different rows no
-/// longer share exact column verticals. That alignment was part of the
-/// problem — it is what made the tray read as one table wearing misplaced
-/// headings — so it is given up on purpose.
+/// **The complaint:** "it kinda still looks funky and like rows aren't even".
+/// The diagnosis taken first was that the grid was five EQUAL slots, so the
+/// gap between two groups sharing a row was byte-identical to the gap between
+/// two chips inside one — proximity saying "one row of five icons" while the
+/// eyebrows said "two groups", and a gap is SEEN where a word is READ. That
+/// half is true and still stands.
+///
+/// **The fix that shipped in build 343 was wrong anyway.** It bought the
+/// boundary with WHITESPACE: chips at a fixed pitch, packed from the left, so
+/// a wide gap could open between groups. The only way whitespace can widen
+/// that gap is by MOVING the chips — and the column a chip lands in then
+/// depends on how many chips preceded it IN ITS OWN ROW. On the reporter's
+/// own tray, rows 1 and 3 were `2|2|1` and agreed, while row 2 was `4|1` and
+/// put its third and fourth chips **53px left of the ones directly above and
+/// below them**. Five circles per row, one row off-grid: "basically the same
+/// as it has been, except more janky for the groups".
+///
+/// **So the ruling: ALIGNMENT OUTRANKS THE BOUNDARY, and "rows aren't even"
+/// meant it literally.** A grid whose columns agree reads as deliberate even
+/// when its boundaries are subtle; a grid whose columns disagree reads as
+/// broken however well its groups are separated. The gap ratio 343 bought was
+/// real (~34pt between groups against 8pt inside) and it was not worth this.
+///
+/// The five equal columns are back — `columnWidth` is computed once per row
+/// from the SAME width every row is handed, so a chip sits on the same
+/// vertical in every row of the tray — and the boundary is drawn by something
+/// that moves nothing: a **carve**, a translucent recess behind each group
+/// (`DS.glassCarve`). This was §391's own documented runner-up, passed over
+/// that morning in favour of whitespace. It is NOT the opaque card §391
+/// deleted — translucent, so the blur underneath survives and the panel still
+/// reads as one sheet — and it is BLACK rather than a white lift, for
+/// `glassDepth`'s reason: white would bound the groups by spending the very
+/// backdrop colour the same session was trying to buy back.
+///
+/// Compared as rendered pixels against the reporter's real tray in
+/// `prototype/sources-tray-align-v1.html`, which draws column guides so the
+/// misalignment is a measurement rather than an impression.
 ///
 /// # The packing order: CATALOG WHEN IT'S FREE, biggest first when it pays
 ///
@@ -135,11 +146,21 @@ struct SourcesTray: View {
     /// as `SourceChips` does at its own scale.
     private static let iconSize: CGFloat = 44
     private static let chipSize: CGFloat = 52
-    /// The cluster pitch and the group gap are COMPUTED per row from the
-    /// row's own shape and the width it is given — `SourceRowPacking
-    /// .rowMetrics`, which is where the reasoning and the harness live. A
-    /// fixed pair of constants overflows the phone on a row of small
-    /// categories; see that function's doc.
+    /// One column of the tray's grid, from the width the row is handed.
+    ///
+    /// The SAME arithmetic on every row is what keeps every chip in the tray
+    /// on a shared vertical — the property build 343 gave up and was reported
+    /// for the same evening. A block spans `span` of these plus the gaps
+    /// between them, so a group's width is always a whole number of columns
+    /// and never a pitch of its own.
+    fileprivate static func columnWidth(_ width: CGFloat) -> CGFloat {
+        (width - CGFloat(columns - 1) * DS.Space.s2) / CGFloat(columns)
+    }
+
+    /// How wide a block is: its own columns, plus the gaps it swallows.
+    fileprivate static func blockWidth(span: Int, column: CGFloat) -> CGFloat {
+        CGFloat(span) * column + CGFloat(max(0, span - 1)) * DS.Space.s2
+    }
     /// Two lines of `label12` plus its own leading — the same fixed name box
     /// `AppsScreen.appTile` uses, so a one-word and a two-word name sit on the
     /// same baseline instead of the row jittering per cell.
@@ -351,50 +372,62 @@ struct SourcesTray: View {
         proxy.scrollTo(rows[index].id, anchor: .center)
     }
 
-    /// One packed row of clusters. Blocks keep their packed order, separated by
-    /// the computed group gap; a trailing spacer absorbs whatever the row
-    /// doesn't use, so everything left-packs.
+    /// One packed row. Blocks sit side by side on the tray's shared column
+    /// grid, each exactly as wide as the columns it owns.
     ///
     /// The `GeometryReader` is a real layout measurement, unlike the one
-    /// `overlineInset` refuses — the gap cannot be a constant without
-    /// overflowing narrow phones (see `SourceRowPacking.rowMetrics`). It is
-    /// safe here because the row's height is already a computed constant, so
-    /// the reader's fill-all-space behaviour is bounded on both axes.
+    /// `overlineInset` refuses — a column width cannot be a constant when the
+    /// tray is drawn on both a 375pt phone and an iPad. It is safe here
+    /// because the row's height is already a computed constant, so the
+    /// reader's fill-all-space behaviour is bounded on both axes.
     private func rowView(_ row: PackedRow) -> some View {
-        let slots = row.blocks.reduce(0) { $0 + $1.span }
-        return GeometryReader { geo in
-            let metrics = SourceRowPacking.rowMetrics(slots: slots,
-                                                      blocks: row.blocks.count,
-                                                      intraGap: Double(DS.Space.s2),
-                                                      width: Double(geo.size.width))
-            HStack(alignment: .top, spacing: CGFloat(metrics.gap)) {
+        GeometryReader { geo in
+            let column = Self.columnWidth(geo.size.width)
+            HStack(alignment: .top, spacing: DS.Space.s2) {
                 ForEach(Array(row.blocks.enumerated()), id: \.offset) { _, block in
-                    blockView(block, slot: CGFloat(metrics.slot))
+                    blockView(block, column: column, chipRows: row.chipRows)
                 }
+                // A row that doesn't fill the grid leaves its remainder on the
+                // right rather than stretching the blocks — stretching is what
+                // would take a chip off its column.
                 Spacer(minLength: 0)
             }
         }
-        .padding(.top, Self.cardPadTop)
         .frame(height: Self.rowHeight(chipRows: row.chipRows), alignment: .top)
     }
 
-    /// One category: its name, then its chips at the row's cluster pitch. An
-    /// oversized category wraps inside its own cluster — packed alone in its
-    /// row, so the wrap never collides with a neighbour.
-    private func blockView(_ block: SourceRowPacking.Block, slot: CGFloat) -> some View {
+    /// One category: the carve, holding its name and its chips.
+    ///
+    /// Every block in a row is drawn the full row height so the recesses share
+    /// a top and a bottom edge — a carve sized to its own content would step
+    /// up and down across a row and reintroduce the raggedness this pass
+    /// exists to remove. An oversized category wraps inside its own carve;
+    /// it is packed alone in its row, so the wrap never collides with anyone.
+    private func blockView(_ block: SourceRowPacking.Block,
+                           column: CGFloat, chipRows: Int) -> some View {
         VStack(alignment: .leading, spacing: 0) {
-            nameBand(block, slot: slot)
+            nameBand(block, column: column)
             VStack(alignment: .leading, spacing: DS.Space.s2) {
                 ForEach(Array(stride(from: 0, to: block.members.count, by: Self.columns)),
                         id: \.self) { start in
                     HStack(spacing: DS.Space.s2) {
                         ForEach(block.members[start..<min(start + Self.columns, block.members.count)],
                                 id: \.self) { label in
-                            cell(label: label, category: block.name, slot: slot)
+                            cell(label: label, category: block.name, column: column)
                         }
                     }
                 }
             }
+            Spacer(minLength: 0)
+        }
+        .padding(.top, Self.cardPadTop)
+        .padding(.bottom, Self.cardPadBottom)
+        .frame(width: Self.blockWidth(span: block.span, column: column),
+               height: Self.rowHeight(chipRows: chipRows),
+               alignment: .topLeading)
+        .background {
+            RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous)
+                .fill(DS.glassCarve)
         }
     }
 
@@ -430,7 +463,7 @@ struct SourcesTray: View {
     /// names never truncate (prd §201, the app-tile rule), and the longest
     /// catalog name over a single chip ("Shopping") lands around 0.93, which
     /// the eye doesn't register as a different size.
-    private func nameBand(_ block: SourceRowPacking.Block, slot: CGFloat) -> some View {
+    private func nameBand(_ block: SourceRowPacking.Block, column: CGFloat) -> some View {
         Text(block.name)
             .dsText(.subhead13)
             .fontWeight(.bold)
@@ -440,8 +473,7 @@ struct SourcesTray: View {
             .lineLimit(1)
             .minimumScaleFactor(0.7)
             .padding(.leading, Self.overlineInset)
-            .frame(width: CGFloat(block.span) * slot
-                       + CGFloat(max(0, block.span - 1)) * DS.Space.s2,
+            .frame(width: Self.blockWidth(span: block.span, column: column),
                    height: Self.overlineHeight,
                    alignment: .bottomLeading)
             .padding(.bottom, Self.overlineGap)
@@ -452,7 +484,7 @@ struct SourcesTray: View {
     }
 
     @ViewBuilder
-    private func cell(label: String, category: String, slot: CGFloat) -> some View {
+    private func cell(label: String, category: String, column: CGFloat) -> some View {
         let isActive = label == active
         // Same read as the strip's: one ring, two exclusive states. Solid tint
         // is selection; DASHED orange is "this connection needs you" (the
@@ -502,11 +534,12 @@ struct SourcesTray: View {
                     .minimumScaleFactor(0.7)
                     .frame(height: Self.nameHeight, alignment: .top)
             }
-            // The row's cluster pitch — see `SourceRowPacking.rowMetrics`. An
-            // explicit width rather than a flexible one because the whole
-            // layout rests on the gap INSIDE a group being constant while the
-            // gap BETWEEN groups carries the boundary.
-            .frame(width: slot)
+            // One column of the tray's shared grid — the same width in every
+            // row, which is what puts every chip in the tray on a common
+            // vertical. Never a flexible width: a block that stretched to fill
+            // would take its chips off those columns, which is exactly what
+            // build 343 was reported for.
+            .frame(width: column)
             .contentShape(Rectangle())
             .dsHover()
         }

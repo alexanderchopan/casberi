@@ -323,6 +323,31 @@ enum DS {
     /// claim.
     static let glassDepth  = Color.adaptive(dark: "#00000038", light: "#00000014")
 
+    /// A group CARVED into a glass panel — the sources tray's category recess
+    /// (2026-08-16, `SourcesTray`).
+    ///
+    /// It replaces the whitespace boundary that shipped in build 343 and was
+    /// reported as janky the same evening. Whitespace could only widen the gap
+    /// between two groups by MOVING their chips, which cost the one thing the
+    /// original complaint was actually about: with five equal columns a chip
+    /// sits on the same vertical in every row, and left-packed clusters put a
+    /// four-chip row's third and fourth chips 53px off the columns above and
+    /// below them. A recess bounds a group without moving anything.
+    ///
+    /// **BLACK, not white, and that is `glassDepth`'s reasoning applied one
+    /// level down** — a white lift would bound the group by spending exactly
+    /// the backdrop colour the same session was trying to buy back, and would
+    /// have added eight grey slabs to a panel already reported as too grey. A
+    /// darker recess deepens instead, keeps the hue behind it, and buys the
+    /// chip names a little contrast where they need it most. It is deliberately
+    /// weaker than `glassDepth`: that is the panel's whole body, this is one
+    /// group inside it, and a recess as strong as the panel's own shading
+    /// would read as a returning card.
+    ///
+    /// NOT the opaque card §391 deleted: translucent, so the blur underneath
+    /// survives and the material still reads as one continuous sheet.
+    static let glassCarve  = Color.adaptive(dark: "#00000026", light: "#0000000f")
+
     /// The cast under a floating glass control (composer, FAB, toasts).
     /// Deliberately lighter than `cardShadow` — glass already separates itself
     /// by blur and stroke, so it needs a hint of air, not a card's lift.

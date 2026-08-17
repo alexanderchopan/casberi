@@ -141,51 +141,23 @@ enum SourceRowPacking {
         rows.reduce(0) { $0 + ($1.map(\.chipRows).max() ?? 1) }
     }
 
-    // MARK: - How wide a chip is, and how far apart two groups sit
+    // MARK: - Where the cluster metrics used to be
 
-    /// The chip's resting pitch, and the floor it may be squeezed to. The floor
-    /// is the 52pt ring plus a point either side — below that the ring itself
-    /// would have to shrink, which would break the strip's own scale.
-    static let slotMax: Double = 62
-    static let slotMin: Double = 54
-    /// What a group gap is worth. The floor is 2.5× the intra-group `s2` on
-    /// iOS — enough that proximity carries the boundary without reading it —
-    /// and the ceiling stops a sparse row flinging its second group to the far
-    /// edge like a toolbar.
-    static let groupGapMin: Double = 20
-    static let groupGapMax: Double = 36
-
-    /// One row's horizontal metrics: how wide each chip's slot is, and how far
-    /// apart two groups sharing the row sit (2026-08-16).
+    /// Nothing. `rowMetrics` was added and DELETED on 2026-08-16, and this note
+    /// is here so the deletion is a decision rather than a gap.
     ///
-    /// **This is computed, not asserted, and that is the whole point.** The
-    /// first cut of the cluster layout spelled the gap as a `Spacer` with a
-    /// hard 20pt `minLength`, which OVERFLOWS the phone: five singleton
-    /// categories are 5 × 62 of chips plus 4 × 20 of gaps against ~345pt of
-    /// content on a 375pt phone. That is not an exotic corpus — it is a new
-    /// user who has connected five apps in five different categories, i.e.
-    /// close to the most likely first shape this tray ever draws.
+    /// It computed a per-row chip pitch and a flexible group gap for build
+    /// 343's cluster layout — the fix for "the boundary between two groups is
+    /// the same gap as the one inside a group". The arithmetic was correct and
+    /// the layout it served was wrong: whitespace can only widen the gap
+    /// between groups by MOVING the chips, so the column a chip landed in came
+    /// to depend on how many chips preceded it in its own row, and a `4|1` row
+    /// sat 53px off the `2|2|1` rows above and below it. Reported the same
+    /// evening as "more janky for the groups".
     ///
-    /// So the gap is reserved FIRST and the slots take what is left, capped at
-    /// their resting pitch: the row can always be drawn, the boundary is never
-    /// squeezed below its floor while any slot slack remains, and only once
-    /// slots are at `slotMin` does the gap start giving way (at which point a
-    /// row of singletons has no intra-group gap to be confused with anyway).
-    ///
-    /// `Double` rather than `CGFloat` so this file stays Foundation-only and
-    /// the harness can compile it whole; the view converts. `intraGap` is a
-    /// parameter rather than a constant because `DS.Space.s2` is 8 on iOS and
-    /// 10 on Mac, and a gap floor that ignored that would read differently on
-    /// the two platforms for no reason anybody chose.
-    static func rowMetrics(slots: Int, blocks: Int,
-                           intraGap: Double, width: Double) -> (slot: Double, gap: Double) {
-        guard slots > 0 else { return (slotMax, groupGapMin) }
-        let intra = intraGap * Double(max(0, slots - blocks))
-        let gapCount = Double(max(0, blocks - 1))
-        let forSlots = width - intra - groupGapMin * gapCount
-        let slot = min(slotMax, max(slotMin, forSlots / Double(slots)))
-        guard gapCount > 0 else { return (slot, 0) }
-        let leftover = width - intra - slot * Double(slots)
-        return (slot, min(groupGapMax, max(0, leftover / gapCount)))
-    }
+    /// The boundary is a CARVE now — a translucent recess behind each group,
+    /// which bounds it without moving anything — so the tray is back on five
+    /// equal columns and needs only `SourcesTray.columnWidth`. Do not restore
+    /// a per-row pitch here without reading §392a: alignment outranks the
+    /// boundary, and a pitch is how alignment gets lost.
 }

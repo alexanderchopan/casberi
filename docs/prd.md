@@ -110,6 +110,7 @@ at all.
 | §124a | The Wallet feed carries the treemap AND the NFTs | superseded by §387 |
 | §240 | NFTs in folders, and the eager owned-NFT read behind them | amended by §387 |
 | §389b | A fold is skipped, not fatal — the cover is the newest thing t | reversed by §389c |
+| §392 | The grouping is drawn by proximity, the packer stops churning, | item 1 (the whitespace cluster layout) overturned by §392a; its diagnosis, the packing-order change, the scroll-to-active and the glass step all still stand |
 
 ### Known stale, by hand
 
@@ -24552,3 +24553,66 @@ backdrop and a contrast floor to lose.
 
 **Verified:** iOS Simulator and Mac Catalyst both compile. **Not verified:** the
 system-glass path has never been rendered — that is the point of the hook.
+
+## §392a — Alignment outranks the boundary: build 343's whitespace grouping is replaced by a carve (user: "the grouping looks worse to me now and it still looks gray", then "basically the same as it has been, except more janky for the groups", 2026-08-16)
+
+Overturns §392's item 1 the same evening it shipped. §392's DIAGNOSIS stands —
+with five equal slots the gap between two groups was byte-identical to the gap
+between two chips inside one, so proximity said "one row of icons" while the
+eyebrows said "two groups". Its FIX was wrong.
+
+**Why whitespace could never have worked here.** The only way whitespace widens
+the gap between two groups is by MOVING their chips. Once chips are packed from
+the left at a fixed pitch, the column a chip lands in depends on how many chips
+preceded it *in its own row*. Measured off the reporter's own screenshot: rows 1
+and 3 were `2|2|1` and agreed; row 2 was `4|1`, putting its third and fourth
+chips **53px left of the chips directly above and below them**. Five circles per
+row, one row off-grid.
+
+**The ruling: alignment outranks the boundary, and "rows aren't even" meant it
+literally.** §392 read that complaint as "the boundary is invisible" and traded
+column alignment to fix it — amplifying the very thing being reported. A grid
+whose columns agree reads as deliberate even when its boundaries are subtle; a
+grid whose columns disagree reads as broken however well its groups are
+separated. The gap ratio 343 bought was real (~34pt between groups against 8pt
+inside) and was not worth the trade.
+
+**The fix is §391's own runner-up, passed over that morning.** Five equal
+columns are back — one `columnWidth` derived from the width every row is handed,
+blocks sized to a whole number of columns (`blockWidth`), no flexible width
+anywhere between, so a `2|2|1` row and a `4|1` row both total `5c + 32` and
+every chip shares a vertical. The boundary is a **carve**: a translucent recess
+behind each group (`DS.glassCarve`), which bounds a group without moving
+anything. Not the opaque card §391 deleted — translucent, so the blur survives
+and the panel still reads as one sheet.
+
+**The carve is BLACK, not the white lift the mockup showed** — `glassDepth`'s
+reasoning one level down. White would bound the groups by spending exactly the
+backdrop colour this session was trying to buy back, and would add eight grey
+slabs to a panel reported in the same breath as still too grey. Black deepens,
+keeps the hue, and buys the chip names contrast where they have least margin.
+Every block is drawn the full row height so the recesses share a top and bottom
+edge; a carve sized to its own content would step up and down across a row and
+reintroduce the raggedness this pass removes.
+
+`SourceRowPacking.rowMetrics` is DELETED with the layout it served (its note
+survives in the file so the deletion reads as a decision). Guarded in
+`source-packing-selftest.sh`: one shared column width, cells pinned to a column,
+blocks a whole number of columns, the carve present, and a NEGATIVE guard on a
+per-row group gap ever returning to `rowView`.
+
+**The method lesson, which cost a queue position.** §392 was reasoned from a
+mock whose corpus hid the defect — every row in it had the same block shape, and
+a `4|1` row beside a `2|2|1` row is the only shape that exposes misalignment.
+The second mock (`prototype/sources-tray-align-v1.html`) uses the reporter's
+REAL tray and draws column guides, so the flaw is a measurement rather than an
+impression. **Trace the mock from the user's own screen before trusting it.**
+
+**Still open: the grey.** Reported again on 343, which carries
+`glassEffect(.clear)`. Two candidate causes, not yet separated: the tray covers
+the bottom of a screen whose content there is empty black (no material can show
+through content that is not there), and `glassEffect` inside
+`presentationBackground` may not sample the sheet's backdrop at all, unlike
+`.ultraThinMaterial`, which is documented to. The test is to open the tray over a
+scrolled, full feed; a flat grey panel over colourful rows means the API is not
+sampling and the answer is a different mechanism, not a lower number.
