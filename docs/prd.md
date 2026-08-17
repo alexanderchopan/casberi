@@ -111,6 +111,7 @@ at all.
 | §240 | NFTs in folders, and the eager owned-NFT read behind them | amended by §387 |
 | §389b | A fold is skipped, not fatal — the cover is the newest thing t | reversed by §389c |
 | §392 | The grouping is drawn by proximity, the packer stops churning, | item 1 (the whitespace cluster layout) overturned by §392a; its diagnosis, the packing-order change, the scroll-to-active and the glass step all still stand |
+| §393 | Use what Apple uses, and keep the recipe because iOS 18 exists | default reversed by §393a — `glassEffect` does not sample a sheet's backdrop on hardware, so the material is the default again and the system path stays behind `-trayGlass system`; §393's reasoning about a BAR is untouched |
 
 ### Known stale, by hand
 
@@ -24616,3 +24617,59 @@ through content that is not there), and `glassEffect` inside
 `.ultraThinMaterial`, which is documented to. The test is to open the tray over a
 scrolled, full feed; a flat grey panel over colourful rows means the API is not
 sampling and the answer is a different mechanism, not a lower number.
+
+## §393a — The sheet's own dim was eating the glass, and `glassEffect` does not sample a sheet on hardware (user: "it still looks gray on device, it isn't clear like it is on the sim", "and it's not see through either", "i'm looking at the testflight", 2026-08-16)
+
+Reverses §393's default. Three findings, and the first two are only visible by
+comparing a device report against a simulator render of the SAME build.
+
+**1. `glassEffect` does not sample a presented sheet's backdrop on hardware.**
+The evidence is a split, not a theory: the material walk 0.55 → 0.45 was
+reported "way better than before" ON DEVICE — i.e. it was visibly sampling the
+feed — and the very next build, which replaced it with `glassEffect(.clear)`,
+was reported "not see through", while the simulator renders that same build with
+the feed's red card showing clearly through the panel. A sim/device gap that
+large is not tuning. It is also consistent with what Apple ships: Liquid Glass
+is the FUNCTIONAL layer floating inside a view hierarchy — bars, controls, the
+App Store tab bar this was compared against — and Apple's own sheets are
+materials. `.ultraThinMaterial` is documented to work in
+`presentationBackground`; `glassEffect` never claimed to.
+
+So the material is the default again and the system path stays behind
+`-trayGlass system`, NOT deleted: it becomes right the day this tray stops
+being a sheet, and the flag is how that gets re-measured without a ship.
+
+**2. The sheet's dim was never touched, and it is between the feed and the
+panel.** iOS draws a scrim between presenting content and a sheet. For an
+opaque tray that is invisible and correct; for a glass one it is the whole
+problem — the panel was never sampling the feed, it was sampling the feed
+ALREADY DARKENED, so every point of transparency bought by fading the material
+was spent again by a layer nobody asked for and nobody had looked for.
+`.presentationBackgroundInteraction(.enabled(upThrough:))` is the only public
+way to drop it (UIKit's `largestUndimmedDetentIdentifier` under a SwiftUI name).
+Scoped to the RESTING detent — dragged to `.large` this really is a modal
+surface and dimming is then honest — and to GLASS trays alone, so the ~30 opaque
+trays keep the behaviour they were designed with.
+
+**KNOWN COST, stated rather than discovered later: undimmed means INTERACTIVE.**
+A tap lands on the feed behind instead of being swallowed. That is Maps' sheet
+behaviour and it suits a picker that is a lens over a room, but it is a real
+behaviour change, not a side effect of a colour tweak.
+
+**3. The material walk resumes where the evidence was: 0.45 → 0.35.** Two builds
+spent their transparency budget on `glassEffect` instead of on this number.
+The floor is legibility over a BRIGHT feed, which `glassDepth` carries and which
+no render on the build host can test.
+
+**Method note, the third this session: a simulator render and a device report
+are different instruments, and the DISAGREEMENT is the signal.** Neither alone
+found this. The sim said the glass worked; the device said it did not; holding
+both at once is what identified the sheet as the variable. `-openSources YES`
+was added the same day for exactly this reason — the tray is reachable only by a
+long press on the agent bar, a gesture no headless run can make, so until now no
+automated pass could render this screen at all.
+
+**Still unproven:** every claim here about hardware rests on one person's eyes on
+one device. The material's improvement is visible in the sim comparison; the
+`glassEffect` conclusion is inference from a report, and the honest test is the
+next TestFlight build.

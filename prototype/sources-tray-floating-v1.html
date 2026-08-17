@@ -1,0 +1,203 @@
+<meta charset="utf-8">
+<title>Sources tray — sheet vs floating panel</title>
+<style>
+  /* THE QUESTION (user, 2026-08-16): "why is it so hard to recreate the clear
+     glass apple uses, they use it and it shows up fine even on dark pages" —
+     asked over a screenshot of the App Store's iOS 26 tab bar, where the app
+     name behind it is legible THROUGH the glass.
+
+     THE ANSWER, drawn: that is a floating BAR, and this app already renders
+     the same material on the same class of object (the agent bar, the
+     composer pill, the avatar/catalogue doors all call `dsGlass` →
+     `glassEffect`). The tray is different in three ways, and all three are
+     structural rather than parameters:
+
+       1. NOTHING IS BEHIND IT. The tray covers the bottom ~55% of the screen,
+          and on the reporter's own screenshot that region is empty black page.
+          Glass shows what is behind it; behind this is nothing.
+       2. IT IS NOT INSET. Apple's bar has margin on all four sides, so the eye
+          sees content AROUND it and THROUGH it at once — that contrast is most
+          of what reads as glass. An edge-to-edge slab has no "around".
+       3. IT IS A SHEET. `.sheet` presents in its own context with a system dim
+          behind it; the bar is a view in the app's own hierarchy compositing
+          straight over the scroll.
+
+     A and B differ ONLY in geometry — identical glass recipe, identical
+     content, identical feed behind. If B reads as glass and A does not, the
+     material was never the problem.
+
+     THE MOCK'S OWN CEILING, stated: CSS `backdrop-filter` is not Liquid Glass.
+     It cannot refract, and its specular rim here is drawn by hand where the
+     real material generates one. So judge the GEOMETRY in this file, not the
+     pigment — the pigment question is answered on a device. */
+
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font: 14px/1.5 -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+         background: #0b0b0d; color: #ebebf5cc; padding: 26px 22px 50px;
+         -webkit-font-smoothing: antialiased; }
+  h1 { font: 700 22px/28px ui-rounded, -apple-system, system-ui; color: #fff; }
+  .sub { margin-top: 6px; max-width: 100ch; font-size: 13px; opacity: .78; }
+  .sub b { color: #fff; }
+  .bar { display: flex; gap: 10px; margin: 16px 0 4px; }
+  button { font: 500 13px/1 inherit; color: inherit; cursor: pointer; background: #ffffff14;
+           border: 0; border-radius: 9999px; padding: 9px 15px; }
+  button.on { background: #0a84ff; color: #fff; }
+  .rail { display: flex; gap: 18px; align-items: flex-start; overflow-x: auto;
+          padding-bottom: 14px; margin-top: 18px; }
+  .panel { flex: 0 0 auto; width: 402px; }
+  .panel > h2 { font: 600 13px/18px inherit; color: #fff; margin-bottom: 3px; }
+  .panel > .note { font-size: 11.5px; line-height: 16px; opacity: .66; margin-bottom: 7px;
+                   min-height: 104px; }
+  .verdict { font-size: 11.5px; line-height: 16px; margin-bottom: 9px; font-weight: 600; }
+  .verdict.bad { color: #ff6b6b; } .verdict.ok { color: #30d158; } .verdict.meh { color: #ffd60a; }
+
+  .phone { position: relative; width: 402px; height: 720px; border-radius: 30px;
+           overflow: hidden; background: #000; isolation: isolate; }
+
+  /* ---- the feed behind: real rows, all the way down --------------------- */
+  .behind { position: absolute; inset: 0; padding: 38px 16px 0; }
+  .hd { font: 700 26px/32px ui-rounded, system-ui; color: #fff; margin-bottom: 2px; }
+  .hd + .s { font: 400 13px/18px inherit; color: #8e8e93; margin-bottom: 12px; }
+  .row { display: flex; gap: 11px; align-items: center; margin-bottom: 11px; }
+  .th { width: 54px; height: 54px; border-radius: 11px; flex: 0 0 auto; }
+  .tx { flex: 1; min-width: 0; }
+  .l1 { height: 12px; border-radius: 6px; background: #ffffff5c; margin-bottom: 7px; }
+  .l2 { height: 10px; border-radius: 5px; background: #ffffff2b; }
+  .wide { border-radius: 13px; height: 116px; margin-bottom: 11px; }
+
+  /* body.empty reproduces the reporter's actual screen: content stops early
+     and the bottom half is bare page. This is the case both treatments are
+     judged in, because it is the case that was reported. */
+  body.empty .row:nth-child(n+5), body.empty .wide:nth-child(n+5) { display: none; }
+
+  /* ---- the glass, IDENTICAL in every treatment -------------------------- */
+  .glass {
+    background: rgba(40,40,44,.42);
+    backdrop-filter: blur(26px) saturate(1.9);
+    -webkit-backdrop-filter: blur(26px) saturate(1.9);
+    position: relative;
+  }
+  /* the specular rim the real material generates for itself */
+  .glass::before { content:""; position:absolute; inset:0; border-radius:inherit;
+                   pointer-events:none;
+                   background: linear-gradient(150deg,#ffffff26 0%,#ffffff08 16%,#ffffff00 38%);
+                   -webkit-mask: linear-gradient(#000,#000) content-box, linear-gradient(#000,#000);
+                   -webkit-mask-composite: xor; mask-composite: exclude; padding: 1px; }
+  .glass::after { content:""; position:absolute; inset:0; border-radius:inherit;
+                  pointer-events:none;
+                  background: linear-gradient(to top,#0000001f 0%,#00000000 46%); }
+  .glass > * { position: relative; z-index: 1; }
+
+  /* A — edge to edge, bottom anchored, top corners only (SHIPPING) */
+  .t-sheet { position:absolute; left:0; right:0; bottom:0; height:470px;
+             border-radius: 18px 18px 0 0; padding: 20px 16px 18px; }
+  /* B — inset on all four sides, fully rounded, sized to its content */
+  .t-float { position:absolute; left:13px; right:13px; bottom:15px;
+             border-radius: 30px; padding: 18px 14px 16px; }
+  /* C — inset, and the 22pt title dropped the way a bar has no title */
+  .t-tight { position:absolute; left:13px; right:13px; bottom:15px;
+             border-radius: 30px; padding: 15px 14px 14px; }
+
+  .grab { position:absolute; top:8px; left:50%; transform:translateX(-50%);
+          width:36px; height:5px; border-radius:3px; background:#ffffff40; z-index:2; }
+  .title { font: 700 22px/28px ui-rounded, -apple-system, system-ui; color:#fff;
+           margin-bottom: 14px; }
+
+  .rows { display:flex; flex-direction:column; gap:11px; }
+  .grow { display:flex; gap:8px; }
+  .grp { background:#00000026; border-radius:15px; padding:7px 2px 5px; }
+  .eyebrow { font:700 13px/18px -apple-system,system-ui; color:#fff; height:20px;
+             padding-left:7px; margin-bottom:3px; white-space:nowrap; }
+  .chips { display:grid; gap:8px; }
+  .chip { display:flex; flex-direction:column; align-items:center; gap:4px; }
+  .icon { width:50px; height:50px; border-radius:9999px; display:grid; place-items:center;
+          font:700 19px/1 ui-rounded,system-ui; color:#fff; margin:0 auto; }
+  .nm { height:29px; font:500 11px/14px -apple-system,system-ui; color:#ebebf5a6;
+        text-align:center; }
+</style>
+
+<h1>Sheet vs floating panel — same glass, different object</h1>
+<p class="sub">
+  <b>A and B use a byte-identical glass recipe.</b> The only difference is geometry: A is the
+  edge-to-edge sheet shipping today, B is inset on all four sides and sized to its content — the same
+  class of object as the App Store tab bar you sent. Toggle <b>Empty page</b> to reproduce your actual
+  screen, where the bottom half has no content at all; that is the case where no glass of any kind can
+  look like glass, because there is nothing behind it to show.
+</p>
+
+<div class="bar">
+  <button id="full" class="on">Full feed behind</button>
+  <button id="empty">Empty page (your screenshot)</button>
+</div>
+
+<div class="rail" id="rail"></div>
+
+<script>
+const ROWS = [
+  [["Wallet",[["Wallet","▤","#2f6fed"],["Safe","⬢","#12cf7f"]]],
+   ["Work",[["GitHub","","#16181c"],["App Store Connect","A","#0a84ff"]]],
+   ["Reading",[["RSS","◉","#f26522"]]]],
+  [["Life",[["iCloud Mail","✉","#1f8fff"],["Photos","❋","#4ea3f5"],["Files","☁","#38b3f0"],["Calendar","▦","#f4402f"]]],
+   ["Markets",[["Tokens","↗","#0f7a3f"]]]],
+  [["Media",[["Apple Music","♪","#fa3c5a"],["YouTube","▶","#ff0000"]]],
+   ["Social",[["Farcaster","⬔","#8a63d2"],["Bluesky","≋","#1185fe"]]],
+   ["Notes",[["Voice","‖","#f43f7d"]]]],
+];
+const GRADS = ["linear-gradient(135deg,#f5a623,#ff3b30)","linear-gradient(135deg,#0085ff,#7c5cff)",
+  "linear-gradient(135deg,#1db954,#12ff80)","linear-gradient(135deg,#627eea,#00c48c)",
+  "linear-gradient(135deg,#ff0000,#ff9500)","linear-gradient(135deg,#5e6ad2,#635bff)",
+  "linear-gradient(135deg,#9146ff,#8a63d2)","linear-gradient(135deg,#f43f7d,#fa3c5a)"];
+
+function feed() {
+  let h = `<div class="hd">Today</div><div class="s">65 transactions</div>`;
+  h += `<div class="wide" style="background:${GRADS[0]}"></div>`;
+  for (let i = 0; i < 8; i++) {
+    h += `<div class="row"><div class="th" style="background:${GRADS[i % GRADS.length]}"></div>
+      <div class="tx"><div class="l1" style="width:${58 + (i*7)%34}%"></div>
+      <div class="l2" style="width:${38 + (i*11)%30}%"></div></div></div>`;
+    if (i === 3) h += `<div class="wide" style="background:${GRADS[(i+2) % GRADS.length]}"></div>`;
+  }
+  return h;
+}
+
+function grid() {
+  return ROWS.map(row => `<div class="grow">` + row.map(([cat, apps]) =>
+    `<div class="grp" style="flex:${apps.length} 0 0">
+       <div class="eyebrow">${cat}</div>
+       <div class="chips" style="grid-template-columns:repeat(${apps.length},1fr)">
+         ${apps.map(([n,g,c]) => `<div class="chip">
+            <div class="icon" style="background:${c}">${g}</div><div class="nm">${n}</div></div>`).join("")}
+       </div></div>`).join("") + `</div>`).join("");
+}
+
+const T = [
+  {cls:"t-sheet", title:true, grab:true, name:"A · Shipping today — edge-to-edge sheet",
+   note:"Corner to corner, anchored to the bottom, 470pt tall. There is no page visible beside it, so the eye has nothing to compare the glass against — and on an empty page there is nothing behind it either. Both halves of what makes glass legible as glass are missing, and no opacity value returns them.",
+   verdict:["bad","A wall, whatever material it is made of"]},
+  {cls:"t-float", title:true, grab:false, name:"B · Inset floating panel",
+   note:"Identical glass. Inset 13pt on both sides and 15pt off the bottom, fully rounded, sized to its content instead of to a detent. Now the feed runs down BOTH sides and underneath — you see content around it and through it at once, which is the whole read. This is the same class of object as the tab bar in your screenshot.",
+   verdict:["ok","The material finally has something to be a lens over"]},
+  {cls:"t-tight", title:false, grab:false, name:"C · Inset, no title",
+   note:"B with the 22pt “Your feeds” heading dropped — a floating control names itself by what it holds, the way that tab bar carries no title. Shorter again, so more feed shows. Costs the §391 title ruling, which is your call, not a side effect.",
+   verdict:["meh","Tightest and most bar-like; needs a ruling to drop the title"]},
+];
+
+document.getElementById("rail").innerHTML = T.map(t => `
+  <section class="panel">
+    <h2>${t.name}</h2><div class="note">${t.note}</div>
+    <div class="verdict ${t.verdict[0]}">${t.verdict[1]}</div>
+    <div class="phone">
+      <div class="behind">${feed()}</div>
+      <div class="glass ${t.cls}">
+        ${t.grab ? '<div class="grab"></div>' : ''}
+        ${t.title ? '<div class="title">Your feeds</div>' : ''}
+        <div class="rows">${grid()}</div>
+      </div>
+    </div>
+  </section>`).join("");
+
+const f = document.getElementById("full"), e = document.getElementById("empty");
+f.onclick = () => { document.body.classList.remove("empty"); f.classList.add("on"); e.classList.remove("on"); };
+e.onclick = () => { document.body.classList.add("empty"); e.classList.add("on"); f.classList.remove("on"); };
+</script>

@@ -568,6 +568,16 @@ struct RootShell: View {
             if UserDefaults.standard.bool(forKey: "openSettings") {
                 sceneState.route.present(.settings)
             }
+            // `-openSources YES` raises the sources tray, which is otherwise
+            // reachable ONLY by a long press on the agent bar — a gesture no
+            // headless run can make and no screenshot pass can stage. Added
+            // 2026-08-16 while trying to answer whether `glassEffect` samples
+            // a sheet's backdrop at all: that question can only be settled by
+            // looking at the rendered panel, and there was no way to render it
+            // without a human holding a finger down.
+            if UserDefaults.standard.bool(forKey: "openSources") {
+                openSources()
+            }
             // `-openAppsDelay <s>` pushes the store after a delay — records
             // "tapping the grid door" (the zoom plays on the real push path).
             let appsDelay = UserDefaults.standard.double(forKey: "openAppsDelay")

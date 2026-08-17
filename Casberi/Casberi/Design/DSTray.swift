@@ -79,6 +79,28 @@ struct DSTray<Content: View>: View {
         .padding(.bottom, DS.Space.s6)
         .presentationDetents(detents ?? [.height(height)])
         .presentationDragIndicator(.visible)
+        // THE SHEET'S OWN DIM, which nothing here had ever touched (2026-08-16).
+        //
+        // iOS draws a scrim BETWEEN the presenting content and a sheet. For an
+        // opaque tray that is invisible and correct. For a glass one it is the
+        // whole problem: the panel is not sampling the feed, it is sampling the
+        // feed already darkened, so every point of transparency bought by
+        // fading the material is spent again by a layer we never asked for and
+        // never saw. `.enabled(upThrough:)` is the only public way to drop it —
+        // UIKit's `largestUndimmedDetentIdentifier` under a SwiftUI name.
+        //
+        // Scoped to the resting detent, not `.large`: dragged to full height
+        // this really is a modal surface covering its page, and dimming is then
+        // the honest reading. Scoped to GLASS trays alone, so the 30-odd opaque
+        // trays keep the behaviour they were designed with.
+        //
+        // KNOWN COST, stated rather than discovered later: undimmed means
+        // INTERACTIVE — a tap lands on the feed behind instead of being
+        // swallowed. That is what Maps' sheet does and it suits a picker that
+        // is a lens over the room, but it is a real behaviour change and not a
+        // side effect of a colour tweak.
+        .presentationBackgroundInteraction(glass ? .enabled(upThrough: .height(height))
+                                                 : .automatic)
         // Feel, re-declared for this presentation (2026-08-01, user: the
         // sources tray's cells were silent). `DSHaptic` is a counter bump on a
         // shared bus, and the mapping from counter to feedback is a VIEW
@@ -210,6 +232,32 @@ private struct DSGlassSheet: View {
         }
     }
 
+    // MARK: - Why the material is the DEFAULT again (2026-08-16, device report)
+    //
+    // `glassEffect(.clear)` shipped as the default in build 343 on the
+    // reasoning that fading a material is not the same as transparency. That
+    // reasoning still holds for a BAR. It appears to be false for a SHEET.
+    //
+    // Measured by report, not by theory: the material walk 0.55 → 0.45 was
+    // "way better than before" ON DEVICE, i.e. it was visibly sampling the
+    // feed. The very next build swapped in Liquid Glass and the same person
+    // reported "it still looks gray … and it's not see through either", while
+    // the SIMULATOR renders that same build with the feed's red card clearly
+    // showing through the panel. A sim/device split that large is not a tuning
+    // problem — it says `glassEffect` is not sampling a presented sheet's
+    // backdrop on hardware, and is falling back to a flat tinted fill.
+    //
+    // That is consistent with what Apple actually does: Liquid Glass is for
+    // the functional layer that floats INSIDE a view hierarchy — bars,
+    // controls, the App Store tab bar the report compared us against — and
+    // Apple's own sheets are materials. `.ultraThinMaterial` is documented to
+    // work in `presentationBackground`; `glassEffect` never claimed to.
+    //
+    // So the default is the material again, and the system path stays behind
+    // `-trayGlass system` rather than being deleted: it is right the moment
+    // this tray stops being a sheet, and the flag is how that gets re-measured
+    // without another ship.
+
     /// The real thing (iOS 26+). See the type doc for why the sheen is dropped
     /// and the depth kept.
     @available(iOS 26.0, *)
@@ -229,7 +277,15 @@ private struct DSGlassSheet: View {
             // The plate fade — see the doc. Before the overlays on purpose:
             // the sheen and depth are the panel's own light and shading and
             // must render at full strength over the faded material.
-            .opacity(0.45)
+            //
+            // 0.45 → 0.35 (2026-08-16). 0.45 was reported "way better than
+            // before" and still grey, and the two builds that followed spent
+            // their transparency budget on `glassEffect` instead of on this
+            // number — which turned out to sample nothing on a sheet. This is
+            // the walk resumed where the evidence actually was. The floor is
+            // legibility over a BRIGHT feed, which `glassDepth` carries and
+            // no screenshot on this host can test.
+            .opacity(0.35)
             .overlay {
                 // The light the panel is under. Short on purpose — see the doc.
                 LinearGradient(
@@ -268,11 +324,16 @@ private struct DSGlassSheet: View {
 /// `-trayGlass material` forces the pre-26 recipe on an iOS 26 build, so both
 /// treatments are reachable from ONE build on the real device.
 enum DSTrayGlass {
+    /// FALSE by default since 2026-08-16 — see `DSGlassSheet`'s note. The
+    /// material is what provably samples a sheet's backdrop on hardware; the
+    /// system path is kept behind `-trayGlass system` because it becomes right
+    /// the day this tray stops being a sheet, and a flag is how that gets
+    /// re-measured without another ship.
     static var useSystem: Bool {
         #if DEBUG
-        UserDefaults.standard.string(forKey: "trayGlass") != "material"
+        UserDefaults.standard.string(forKey: "trayGlass") == "system"
         #else
-        true
+        false
         #endif
     }
 }
