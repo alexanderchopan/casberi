@@ -355,10 +355,21 @@ struct SourcesTray: View {
         return Self.height(of: restingRows(rows), rows: rows)
     }
 
-    /// The panel's natural height, read by `SourcesOverlay` — which owns the
+    /// The panel's RESTING height, read by `SourcesOverlay` — which owns the
     /// presentation now, so the height has to leave the view rather than be
-    /// consumed by a `DSTray` inside it.
+    /// consumed by a `DSTray` inside it. Snapped down to a whole number of
+    /// rows under `restingCap`.
     var panelHeight: CGFloat { trayHeight }
+
+    /// Every row, uncapped — what the panel grows to when dragged up
+    /// (2026-08-16, user: "will the tray drag up when there are more apps in
+    /// it? … it scrolls within the panel instead of the panel moving"). The
+    /// overlay clamps this to the screen, so a 40-source corpus still scrolls
+    /// at full height rather than running off the top.
+    var naturalPanelHeight: CGFloat {
+        let rows = packed
+        return Self.height(of: rows.count, rows: rows)
+    }
 
     /// CONTENT ONLY since 2026-08-16 — no `DSTray`, no `.sheet`.
     ///

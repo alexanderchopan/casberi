@@ -60,6 +60,11 @@ struct SourcesOverlay: View {
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var drag: CGFloat = 0
+    /// Grown to `naturalPanelHeight` by an upward drag. The detent `.sheet`
+    /// gave us free, rebuilt — but only ONE step, resting or full, because a
+    /// ladder of stops on a hand-rolled gesture is where this starts costing
+    /// more than the sheet ever did.
+    @State private var expanded = false
 
     /// Past this fraction of its own height, or on a flick, the release lets
     /// go. A fraction rather than a fixed distance because the panel's height
@@ -68,30 +73,80 @@ struct SourcesOverlay: View {
     /// unreachable on the other.
     private static let dismissFraction: CGFloat = 0.33
     private static let flickVelocity: CGFloat = 600
+    /// The grabber's own height — its capsule plus the padding above it.
+    ///
+    /// It is counted in the panel's frame, and NOT counting it was a real bug
+    /// on the first overlay build: the grabber was stacked above the tray
+    /// inside a frame sized to the tray alone, so the content was squeezed by
+    /// 13pt and scrolled — with the first group's eyebrow cut off the top —
+    /// on a corpus small enough to fit twice over. Reported as "it scrolls
+    /// within the panel instead of the panel moving".
+    /// The strip, not just the capsule: the drag lives HERE and nowhere else,
+    /// so it needs a real target. 24pt of chrome reading as a handle.
+    private static let grabberHeight: CGFloat = 24
+    /// How much of the screen the panel may ever take. Not the whole thing:
+    /// a panel with no page left above it is a screen, and this one's whole
+    /// claim is that it floats over the feed.
+    private static let maxScreenFraction: CGFloat = 0.88
+    /// Drag up past this and it grows. Shorter than the dismiss threshold on
+    /// purpose — expanding is cheap and reversible, dismissing throws the
+    /// panel away.
+    private static let expandDistance: CGFloat = 60
 
     var body: some View {
         let panel = SourcesTray(labels: labels, active: active,
                                 onPick: onPick, onDismiss: onDismiss)
-        let height = panel.panelHeight
 
-        ZStack(alignment: .bottom) {
-            // The catcher — paints nothing, closes on a tap. See the type doc.
-            Color.clear
-                .contentShape(Rectangle())
-                .onTapGesture { onDismiss() }
-                .accessibilityHidden(true)
+        GeometryReader { geo in
+            // The ceiling is the screen, not the corpus — a 40-source tray
+            // still scrolls, it just does so at full height instead of at
+            // resting height.
+            let ceiling = geo.size.height * Self.maxScreenFraction
+            // `grabberHeight` is ADDED, not absorbed: the grabber sits above
+            // the tray inside this frame, so a frame sized to the tray alone
+            // squeezes the content by exactly its height. That shipped in the
+            // first overlay build and made a three-row tray scroll.
+            let resting = min(panel.panelHeight + Self.grabberHeight, ceiling)
+            let full = min(panel.naturalPanelHeight + Self.grabberHeight, ceiling)
+            let canGrow = full > resting + 1
+            let height = expanded && canGrow ? full : resting
 
-            VStack(spacing: 0) {
-                grabber
-                panel
+            ZStack(alignment: .bottom) {
+                // The catcher — paints nothing, closes on a tap. See the doc.
+                Color.clear
+                    .contentShape(Rectangle())
+                    .onTapGesture { onDismiss() }
+                    .accessibilityHidden(true)
+
+                VStack(spacing: 0) {
+                    // THE DRAG LIVES ON THE GRABBER, not on the panel.
+                    //
+                    // It was on the whole panel for one build and did nothing:
+                    // the tray's own `ScrollView` wins that arbitration, so an
+                    // upward drag scrolled the grid and never reached this
+                    // gesture. Measured in the simulator — the panel did not
+                    // move a pixel. Scoping the gesture to chrome that does
+                    // not scroll removes the conflict rather than fighting it
+                    // with `simultaneousGesture`, which would have let both
+                    // fire and made a drag scroll AND resize.
+                    grabber
+                        .gesture(dragGesture(height: height, canGrow: canGrow))
+                    panel
+                }
+                .frame(height: height)
+                .background { glass }
+                .clipShape(shape)
+                // Downward only. An upward drag changes the HEIGHT on release
+                // rather than offsetting the panel — lifting it would open a
+                // gap under a surface that is anchored to the bottom edge.
+                .offset(y: max(0, drag))
+                .accessibilityAddTraits(.isModal)
+                .accessibilityAction(.escape) { onDismiss() }
+                .accessibilityAction(named: Text(expanded ? "Collapse" : "Expand")) {
+                    if canGrow { withAnimation(DS.Motion.standard) { expanded.toggle() } }
+                }
             }
-            .frame(height: height)
-            .background { glass }
-            .clipShape(shape)
-            .offset(y: max(0, drag))
-            .gesture(dragToDismiss(height: height))
-            .accessibilityAddTraits(.isModal)
-            .accessibilityAction(.escape) { onDismiss() }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
         }
         .ignoresSafeArea()
         .transition(reduceMotion ? .opacity : .move(edge: .bottom))
@@ -112,7 +167,11 @@ struct SourcesOverlay: View {
         Capsule()
             .fill(DS.fillStrong)
             .frame(width: 36, height: 5)
-            .padding(.top, DS.Space.s2)
+            .frame(maxWidth: .infinity)
+            .frame(height: Self.grabberHeight)
+            // The whole strip is the target, not the 36×5 capsule — a 5pt
+            // drag handle is a 5pt drag handle however well it is drawn.
+            .contentShape(Rectangle())
             .accessibilityHidden(true)
     }
 
@@ -157,26 +216,45 @@ struct SourcesOverlay: View {
         }
     }
 
-    private func dragToDismiss(height: CGFloat) -> some Gesture {
-        DragGesture(minimumDistance: 8)
-            .onChanged { value in
-                // Downward only. An upward drag does nothing rather than
-                // stretching the panel — there is no taller detent to reach,
-                // so rubber-banding toward one would promise a state that
-                // does not exist.
-                drag = max(0, value.translation.height)
-            }
+    /// One gesture, three outcomes: grow, collapse, or let go.
+    ///
+    /// Up expands (when there is anything left to show), down collapses a
+    /// grown panel and dismisses a resting one. Collapsing before dismissing
+    /// matters — a drag down from full height should give back what the drag
+    /// up asked for, not throw the whole panel away.
+    private func dragGesture(height: CGFloat, canGrow: Bool) -> some Gesture {
+        // `.global`, NOT the default `.local` — and this is the difference
+        // between a gesture that works and one that silently does nothing.
+        //
+        // The panel offsets ITSELF as the drag proceeds (`offset(y:)` below),
+        // so in local space the gesture's own frame slides out from under the
+        // finger and the translation it reports collapses. Measured in the
+        // simulator: dragging UP worked (`max(0, drag)` means no offset, so
+        // nothing moved) while dragging DOWN did nothing at all — neither
+        // collapse nor dismiss ever fired. A global coordinate space is
+        // immune to the view's own movement.
+        DragGesture(minimumDistance: 8, coordinateSpace: .global)
+            .onChanged { value in drag = max(0, value.translation.height) }
             .onEnded { value in
-                let far = value.translation.height > height * Self.dismissFraction
-                let fast = value.predictedEndTranslation.height - value.translation.height
-                    > Self.flickVelocity
-                if far || fast {
+                let travel = value.translation.height
+                let flick = value.predictedEndTranslation.height - travel
+                if travel < -Self.expandDistance, canGrow {
+                    withAnimation(DS.Motion.standard) { expanded = true; drag = 0 }
+                    return
+                }
+                let far = travel > height * Self.dismissFraction
+                let fast = flick > Self.flickVelocity
+                guard far || fast else {
+                    withAnimation(DS.Motion.standard) { drag = 0 }
+                    return
+                }
+                if expanded {
+                    withAnimation(DS.Motion.standard) { expanded = false; drag = 0 }
+                } else {
                     onDismiss()
                     // Reset AFTER the close so the panel does not snap back up
                     // through its own exit transition.
                     drag = 0
-                } else {
-                    withAnimation(DS.Motion.standard) { drag = 0 }
                 }
             }
     }

@@ -112,6 +112,7 @@ at all.
 | §389b | A fold is skipped, not fatal — the cover is the newest thing t | reversed by §389c |
 | §392 | The grouping is drawn by proximity, the packer stops churning, | item 1 (the whitespace cluster layout) overturned by §392a; its diagnosis, the packing-order change, the scroll-to-active and the glass step all still stand |
 | §393 | Use what Apple uses, and keep the recipe because iOS 18 exists | default reversed by §393a — `glassEffect` does not sample a sheet's backdrop on hardware, so the material is the default again and the system path stays behind `-trayGlass system`; §393's reasoning about a BAR is untouched |
+| §394 | The tray stops being a sheet, and four boundary treatments are rejected | amended by §394a — the overlay shipped with three runtime-only failures (missing environment, ScrollView eating the drag, `.local` coordinate space) and the drag-to-expand detent §394 declared gone is rebuilt |
 
 ### Known stale, by hand
 
@@ -24754,3 +24755,57 @@ rendered, the crash reproduced and fixed, and the bar toggle driven in the
 simulator before it was removed. **Not verified:** drag-to-dismiss, the
 tap-catcher and the VoiceOver modality have been written and compiled, not
 exercised.
+
+## §394a — The hand-rolled sheet's three invisible failures, and why only running it found them (2026-08-16)
+
+Amends §394. The overlay was written, compiled clean, passed every static
+audit, and was **broken in three separate ways that no gate in this repo can
+see.** Recorded together because they share one shape: SwiftUI presentation
+and gesture code fails at RUNTIME, silently, in a build that looks perfect.
+
+**1. The environment crash.** `rootPresented` was dropped on the reasoning that
+an overlay inherits the shell's environment. It does not — `.overlay`, and a
+ZStack layer inside `shell`, both sit ABOVE the `.environment(...)` injections
+applied to `shell` itself. The panel died on its first read: *"No Observable
+object of type BridgeStore found"*, on every open. **`rootPresented` is about
+POSITION IN THE MODIFIER CHAIN, not about sheets.**
+
+**2. The `ScrollView` ate the drag.** The dismiss gesture was attached to the
+whole panel, which contains the tray's `ScrollView`. That scroll wins the
+arbitration, so an upward drag scrolled the grid and never reached the gesture
+— measured, the panel did not move a pixel. Fixed by scoping the drag to the
+GRABBER, chrome that does not scroll, rather than `simultaneousGesture`, which
+would let both fire and make one drag scroll AND resize. The grabber became a
+24pt strip with its own `contentShape`: a 5pt handle is a 5pt handle however
+well it is drawn.
+
+**3. `DragGesture` defaults to `.local`, and the panel offsets ITSELF.** So the
+gesture's own frame slid out from under the finger and its translation
+collapsed. The tell was asymmetric and would have been easy to misread:
+dragging UP worked (`max(0, drag)` means no offset, nothing moved) while every
+downward drag did NOTHING — neither collapse nor dismiss ever fired.
+`coordinateSpace: .global` is immune to the view's own movement.
+
+**Bug 3 is the one that nearly shipped**, described in a hand-off as "rebuilt
+and working" on the strength of a clean compile and correct-looking logic. The
+logic was correct; the coordinate space made it unreachable.
+
+**The standing lesson: for presentation or gesture work, a green build proves
+nothing.** Run it. Each of these took one simulator launch to find and would
+have reached testers otherwise — and the first would have killed the app on
+every single tray open.
+
+**Also fixed here: the grabber's height was never counted** in the panel's
+frame, so the tray was squeezed by 13pt and scrolled on a corpus that fit twice
+over — reported as "it scrolls within the panel instead of the panel moving".
+
+**And the detent came back.** §394 said drag-to-expand was gone; it is
+rebuilt, one step (resting → natural height, ceilinged at 88% of the screen so
+the feed is never fully covered), with the drag now carrying three outcomes:
+up grows, down from a grown panel COLLAPSES, down from a resting panel
+dismisses. Collapse-before-dismiss matters — a drag down from full height
+should give back what the drag up asked for, not throw the panel away.
+
+**Verified by driving the simulator**, not by reading: expand, collapse,
+dismiss, and the bar toggle were each performed and screenshotted. Tap-outside
+and the VoiceOver modality remain unexercised.
