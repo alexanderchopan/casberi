@@ -169,6 +169,11 @@ extension DS {
         // saturated pixel in the bundled icon (86k of them) — sampled and
         // documented agreeing exactly, which is rare enough to note.
         case "hugging face":        return Color.fixed("#ffd21e")
+        // Radicle's own blue, taken from its mark (prd §400). The bundled
+        // artwork sits on a near-black field, so the HUE is the blue rather
+        // than the background — a gray "app" default here would read as a
+        // seat whose art failed to load (report 2026-08-03).
+        case "radicle":             return Color.fixed("#5555ff")
         case "cal.com":             return Color.fixed("#292929")
         case "calendly":            return Color.fixed("#006bff")
         case "steam":               return Color.fixed("#1b2838")   // their dark navy

@@ -146,6 +146,11 @@ enum BridgeGlyph {
         // fallback should say what's distinct about it rather than repeat
         // GitHub's mark if the bundled asset ever fails to load.
         case "gitlab":    return "arrow.triangle.merge"
+        // Peer-to-peer, not braces: GitHub already owns "curlybraces", and the
+        // single fact that distinguishes this seat is that there is no central
+        // host — repos replicate between nodes, and the seed you name is only
+        // one of them. The GitLab reasoning one line up, for the same reason.
+        case "radicle":   return "point.3.filled.connected.trianglepath.dotted"
         case "linear":    return "list.bullet.rectangle"
         // The lists ARE the mark — a board read as columns. Both this and the
         // hue exist so a seat whose bundled art ever fails to load still reads
