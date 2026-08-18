@@ -67,7 +67,8 @@ BOOK="Casberi/Casberi/Screens/PredictionRoomBook.swift"
 CATALOG="Casberi/Casberi/Model/BridgeCatalog.swift"
 RAIL="Casberi/Casberi/Shell/FaceScopeRail.swift"
 CHROME="Casberi/Casberi/Shell/ShellChrome.swift"
-for f in "$FOLD" "$ROOM" "$MAIN" "$CHIPS" "$FEED" "$SWITCHER" "$BROWSE" "$BOOK" "$CATALOG" "$ROOT" "$APP" "$RAIL" "$CHROME"; do
+OVERLAY="Casberi/Casberi/Shell/SourcesOverlay.swift"
+for f in "$FOLD" "$ROOM" "$MAIN" "$CHIPS" "$FEED" "$SWITCHER" "$BROWSE" "$BOOK" "$CATALOG" "$ROOT" "$APP" "$RAIL" "$CHROME" "$OVERLAY"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 
@@ -99,6 +100,7 @@ strip_comments "$SWITCHER" > "$TMP/switcher.nc"
 strip_comments "$FEED"     > "$TMP/feed.nc"
 strip_comments "$RAIL"     > "$TMP/rail.nc"
 strip_comments "$CHROME"   > "$TMP/chrome.nc"
+strip_comments "$OVERLAY"  > "$TMP/overlay.nc"
 
 # --- drift guards -----------------------------------------------------------
 # Wiring the compiled functions cannot prove on their own. A perfect `fold` is
@@ -140,9 +142,36 @@ grep -q 'CategoryFold.isCategory(label)' "$TMP/main.nc" \
 #
 # Both are invisible to a build and to every static audit, and the second is
 # invisible on iOS entirely.
-grep -q 'SourcesTray(labels: chrome.sourceOrder' "$TMP/root.nc" \
-  || { echo "✗ the sources tray is back on chipOrder — it would drop every folded category's members"; \
+# THE TRAY'S FEED IS CHECKED IN TWO PLACES BECAUSE IT IS PRESENTED THROUGH A
+# WRAPPER (2026-08-17). This guard used to grep RootShell for the literal
+# `SourcesTray(labels: chrome.sourceOrder`, and then the tray moved behind
+# `SourcesOverlay` — so for every commit since, the guard matched nothing and
+# the whole self-test went red while the app was perfectly correct. A guard
+# that cannot pass is exactly as useless as one that cannot fail, and the
+# lesson is the one this tree already wrote down for `roomFigure`: a guarded
+# call that moves files takes its guard with it.
+#
+# Spelled as a POSITIVE on the list that must be used plus a NEGATIVE on the
+# list that must not, so it survives the next wrapper: RootShell may never so
+# much as name the folded order, whatever it hands it to.
+grep -qE 'labels: chrome\.sourceOrder' "$TMP/root.nc" \
+  || { echo "✗ the sources tray is no longer fed chrome.sourceOrder — it would drop every folded category's members"; \
        echo "  and offer a category cell that writes a non-source into FeedFilter.source."; exit 1; }
+# The negative is on the FEED, not on the name. A first cut banned
+# `chrome.chipOrder` from RootShell outright and immediately cried wolf: the
+# `-openSources` probe NSLogs that list as its readiness signal, which is a
+# diagnostic print and not a leak, and a lint that fires on correct code gets
+# turned off within a week. What must never happen is the folded list being
+# handed over AS the tray's labels.
+if grep -qE 'labels: chrome\.chipOrder' "$TMP/root.nc"; then
+  echo "✗ the sources tray is back on chrome.chipOrder — the FOLDED list. That tray claims to show"
+  echo "  every source: it would drop every folded category's members AND offer a category cell"
+  echo "  that writes a non-source into FeedFilter.source, opening a room matching nothing."
+  exit 1
+fi
+grep -q 'SourcesTray(labels: labels' "$TMP/overlay.nc" \
+  || { echo "✗ SourcesOverlay no longer passes its labels straight through to SourcesTray —"; \
+       echo "  the order RootShell chose can no longer be trusted to be the order the tray shows."; exit 1; }
 grep -q 'CategoryFold.isCategory(label)' "$TMP/app.nc" \
   || { echo "✗ ⌘1–⌘9 no longer resolves a folded label — it would write the category name"; \
        echo "  into FeedFilter.source and open a permanently empty room."; exit 1; }
