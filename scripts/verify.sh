@@ -714,6 +714,18 @@ print -P "%F{green}✓ obsidian self-test%f"
 # credential at all — and the guard that keeps `/activity` unread, since that
 # endpoint is a trailing 365-day window and a span strip fed from it would
 # re-commit the bug §398 had just fixed for the journals.
+# The GitHub room head (prd §401). Its whole subject is a RANKING — which of
+# three asks outranks which — and a ranking is invisible to every other check
+# here: a card that leads with a mention instead of a requested review renders
+# exactly as well as a correct one, and the person simply attends to the wrong
+# thing. It also guards the two-file MIRROR between `GitHubRoom.Ask`'s raw
+# values and the strings `GitHubFeeds.notificationAsk` stamps, which cannot
+# import each other and would otherwise drift into the head silently vanishing.
+step "GitHub room pure-logic self-test"
+"$ROOT/scripts/github-room-selftest.sh" >/dev/null \
+  || fail "the GitHub room self-test failed — run scripts/github-room-selftest.sh"
+print -P "%F{green}✓ github-room self-test%f"
+
 step "Radicle pure-logic self-test"
 "$ROOT/scripts/radicle-selftest.sh" >/dev/null \
   || fail "the Radicle logic self-test failed — run scripts/radicle-selftest.sh"
@@ -1334,6 +1346,8 @@ else
     instagramHead     "Instagram"
     dayOneHead        "Day One"
     appleJournalHead  "Apple Journal"
+    githubHead        "GitHub"
+    radicleHead       "Radicle"
   )
   MISSING_HEADS=()
   for name in "${(k)ROOM_HEADS[@]}"; do

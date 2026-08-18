@@ -115,6 +115,15 @@ enum DemoSeedAll {
                               // "Reclaimed" on evidence that isn't real.
                               "peer:demo", "privacypools:dep:demo",
                               "privacypools:ragequit:demo",
+                              // Radicle (prd §401), same reasoning again: the
+                              // rows carry the real `radicle:<kind>:<rid>:…`
+                              // shape so the head's tap can find them, and the
+                              // demo RID is what scopes teardown to this
+                              // file's rows. Two entries because the KIND sits
+                              // before the rid, so no single prefix covers a
+                              // patch and an issue.
+                              "radicle:patch:rad:zDEMO",
+                              "radicle:issue:rad:zDEMO",
                               // The two PostHog WATCH rows (2026-08-10) carry
                               // the real `PostHogWatch.metricRef` shape for
                               // the same reason — no "demo" segment is
@@ -389,6 +398,9 @@ enum DemoSeedAll {
         ASCState.apps = [:]
         ASCState.standing = [:]
         ASCState.lastRead = nil
+        // BY NAME (prd §401) — a dev install watches real repos through this
+        // same store, so a blanket wipe would take them with it.
+        RadicleStore.shared.forgetDemo(rid: "rad:zDEMOheartwood0000000000001")
         SafeBridge.clearDemoSnapshot()
         forgetAddressBook()
         // The watched social accounts, by HANDLE — never a blanket wipe, since
@@ -2562,14 +2574,21 @@ enum DemoSeedAll {
         // row is somebody's action showed no one performing it. The review
         // request is a COLLABORATOR's — that is what makes it a request rather
         // than a note to self.
-        let github: [(String, String, Double)] = [
-            ("Merged: panel draws only figures (#412)", "you", 1),
-            ("Opened: seed every source on the sim (#414)", "you", 1.5),
-            ("Merged: serialize NLEmbedding inference (#409)", "you", 6),
-            ("Review requested: receipts reach map (#402)", "mia", 14),
+        // The fourth entry has always READ as a review request and carried no
+        // ask TAG, so the §401 head — which ranks on the tag and never on the
+        // title — saw nothing and correctly declined. `verify.sh`'s room-head
+        // coverage would then have reported a real gap that was only ever a
+        // demo one (§375's X lesson, two rooms over). Three asks are seeded so
+        // the card can demonstrate its whole ranking, not just its lead.
+        let github: [(String, String, Double, String?)] = [
+            ("Merged: panel draws only figures (#412)", "you", 1, nil),
+            ("Mentioned you · casberi/app · seed every source on the sim (#414)", "you", 1.5, "Mentioned"),
+            ("Assigned to you · casberi/app · serialize NLEmbedding inference (#409)", "you", 6, "Assigned"),
+            ("Review requested · casberi/app · receipts reach map (#402)", "mia", 14, "Review"),
         ]
         out += github.enumerated().map { i, g in
             row(.link, g.0, source: "GitHub", ref: "demo:github:\(i)", days: g.2, hour: 15) { t in
+                if let ask = g.3 { t.tags = t.tags + ["Notifications", ask] }
                 t.starCount = 128 + i
                 t.repoLanguage = "Swift"
                 t.authorHandle = g.1
@@ -2790,7 +2809,13 @@ enum DemoSeedAll {
         // silently dropped by room heads matching on the bridge's real one.
         // No mark: Radicle publishes no avatar for a DID, so there is nothing
         // to show and inventing one would be a claim.
-        let radicleRID = "rad:z3gqcJUoA1n9HaHKufZs5FCSGazv5"
+        // A DEMO rid, not heartwood's real one. Two reasons, both the
+        // `cloudflare:cert:demo` reasoning: it is what lets `refPrefixes`
+        // scope teardown to rows this file wrote, and it means a dev install
+        // that genuinely watches heartwood can never have its real rows swept
+        // up by `clear`/`teardown`. Shaped so `RadicleWire.normalizeRID`
+        // accepts it.
+        let radicleRID = "rad:zDEMOheartwood0000000000001"
         let radicle: [(String, String, [String], Double)] = [
             ("heartwood · merged · Fix seed discovery on cold start", "lorenz", ["Patch", "Merged"], 1),
             ("heartwood · patch · Cache the inventory read", "fintohaps", ["Patch", "Proposed"], 3),
@@ -3509,6 +3534,25 @@ enum DemoSeedAll {
                 build: "285", buildState: ASCBuildState.valid.rawValue, expires: nil),
         ]
         ASCState.lastRead = .now
+
+        // Radicle's open work (prd §401). The head reads bridge STATE, not
+        // rows, so seeding the three patch/issue rows above is not enough to
+        // make it compose — this is what it actually reads. Dates match the
+        // seeded rows, so the card and the room beneath it agree.
+        RadicleStore.shared.seedDemo(
+            rid: "rad:zDEMOheartwood0000000000001",
+            name: "heartwood",
+            open: [
+                RadicleWire.OpenItem(kind: .issue, id: "demo2",
+                                     title: "NO_COLOR disables all styling",
+                                     opened: at(41, 11), isDraft: false),
+                RadicleWire.OpenItem(kind: .patch, id: "demo1",
+                                     title: "Cache the inventory read",
+                                     opened: at(12, 11), isDraft: false),
+                RadicleWire.OpenItem(kind: .patch, id: "demo3",
+                                     title: "Try a smaller gossip window",
+                                     opened: at(4, 11), isDraft: true),
+            ])
 
         // 3 · A visit history, so the panel ranks on something.
         ChipMemory.seedDemo(demoVisits)

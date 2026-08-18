@@ -50,6 +50,7 @@ final class RadicleStore {
     private static let namesKey = "radicle.names.v1"
     private static let snapshotsKey = "radicle.snapshots.v1"
     private static let seededKey = "radicle.seeded.v1"
+    private static let openKey = "radicle.open.v1"
 
     /// The seeds Radicle's own explorer ships as its preferred pair, both
     /// measured live 2026-08-18. The default matters: a bridge that opened on
@@ -85,6 +86,18 @@ final class RadicleStore {
         }
     }
 
+    /// RID → what is still open there, written by the sweep from the page it
+    /// already fetched (prd §401). The `ASCStanding` shape: bridge state, kept
+    /// beside the rows rather than derived from them, because a landed row
+    /// says a patch was PROPOSED and can never say it is still unresolved.
+    private var openItems: [String: [RadicleWire.OpenItem]] {
+        didSet {
+            if let data = try? JSONEncoder().encode(openItems) {
+                UserDefaults.standard.set(data, forKey: Self.openKey)
+            }
+        }
+    }
+
     /// Which repos have had their first-sight pass. Distinct from "has any
     /// thing landed": a repo with no patches and no issues must still count as
     /// seeded, or every pass would re-run the backfill branch against an empty
@@ -112,6 +125,11 @@ final class RadicleStore {
                                                  from: data) {
             snapshots = saved
         } else { snapshots = [:] }
+        if let data = UserDefaults.standard.data(forKey: Self.openKey),
+           let saved = try? JSONDecoder().decode([String: [RadicleWire.OpenItem]].self,
+                                                 from: data) {
+            openItems = saved
+        } else { openItems = [:] }
     }
 
     var connected: Bool { !repos.isEmpty }
@@ -135,6 +153,7 @@ final class RadicleStore {
         repos.removeAll { $0 == id }
         names.removeValue(forKey: id)
         snapshots.removeValue(forKey: id)
+        openItems.removeValue(forKey: id)
         seeded.remove(id)
     }
 
@@ -146,6 +165,17 @@ final class RadicleStore {
         snapshots[rid] = snapshot
     }
 
+    func open(for rid: String) -> [RadicleWire.OpenItem] { openItems[rid] ?? [] }
+    func rememberOpen(_ items: [RadicleWire.OpenItem], for rid: String) {
+        openItems[rid] = items
+    }
+
+    /// Every watched repo's open work, newest-repo-order irrelevant — the head
+    /// ranks them itself.
+    var allOpen: [(rid: String, name: String?, items: [RadicleWire.OpenItem])] {
+        repos.map { (rid: $0, name: names[$0], items: openItems[$0] ?? []) }
+    }
+
     func hasSeeded(_ rid: String) -> Bool { seeded.contains(rid) }
     func markSeeded(_ rid: String) { seeded.insert(rid) }
 
@@ -153,8 +183,35 @@ final class RadicleStore {
         repos = []
         names = [:]
         snapshots = [:]
+        openItems = [:]
         seeded = []
         seed = Self.defaultSeeds[0]
+        UserDefaults.standard.removeObject(forKey: Self.openKey)
+    }
+
+    /// The demo's watched repo and its open work (prd §401).
+    ///
+    /// **The head reads STATE, so the demo must seed state** — seeding rows
+    /// alone leaves the card correctly declining, and `verify.sh`'s room-head
+    /// coverage is a HARD FAIL that would report that as a real gap (§375's X
+    /// lesson). Reachable outside every `#if DEBUG` on purpose: `ChipMemory`
+    /// shipped its own seed DEBUG-only once, invisible to every check here
+    /// because they all compile DEBUG.
+    func seedDemo(rid: String, name: String, open: [RadicleWire.OpenItem]) {
+        if !repos.contains(rid) { repos.append(rid) }
+        names[rid] = name
+        openItems[rid] = open
+        seeded.insert(rid)
+    }
+
+    /// Unwinds `seedDemo` BY NAME, never a blanket wipe — a dev install watches
+    /// real repos through this same store.
+    func forgetDemo(rid: String) {
+        repos.removeAll { $0 == rid }
+        names.removeValue(forKey: rid)
+        openItems.removeValue(forKey: rid)
+        snapshots.removeValue(forKey: rid)
+        seeded.remove(rid)
     }
 
     private func persist(_ list: [String], _ key: String) {
@@ -298,15 +355,44 @@ enum RadicleIngest {
             // close that happened before you started watching is not invented.
             let sawClose = !firstSight && (old.map { repo.snapshot.sawIssueClose(from: $0) } ?? false)
 
+            var walkedPatches: [RadicleWire.Patch]?
+            var walkedIssues: [RadicleWire.Issue]?
             if walkPatches, let patches = await fetchPatches(seed: seed, rid: rid) {
+                walkedPatches = patches
                 added += landPatches(patches, repo: repo, rid: rid, seed: seed,
                                      firstSight: firstSight,
                                      existing: &existing, context: context)
             }
             if walkIssues, let issues = await fetchIssues(seed: seed, rid: rid) {
+                walkedIssues = issues
                 added += landIssues(issues, repo: repo, rid: rid, seed: seed,
                                     firstSight: firstSight, sawClose: sawClose,
                                     existing: &existing, context: context)
+            }
+            // What is still unresolved, kept for the room head (prd §401).
+            // FREE: these are the pages just fetched, which until now were read
+            // for what to land and then discarded.
+            //
+            // Merged PER KIND, not written wholesale. A repo whose patch
+            // counts moved re-fetches patches ALONE, so writing the combined
+            // result of that pass would blank the issues and the head would
+            // read it as "every issue closed". Each half is replaced only when
+            // that half was actually walked; the quiet one keeps its previous
+            // answer, which is still true precisely because nothing moved.
+            if walkedPatches != nil || walkedIssues != nil {
+                let fresh = RadicleWire.openItems(patches: walkedPatches ?? [],
+                                                  issues: walkedIssues ?? [])
+                // Keep exactly the halves this pass did NOT walk. Spelled as
+                // the direct statement of that, because the ternary form of it
+                // silently keeps stale issues alongside fresh ones whenever
+                // both sides walk — which is every first sight.
+                let kept = store.open(for: rid).filter { item in
+                    switch item.kind {
+                    case .patch: return walkedPatches == nil
+                    case .issue: return walkedIssues == nil
+                    }
+                }
+                store.rememberOpen(fresh + kept, for: rid)
             }
 
             // The snapshot advances only AFTER the rows are in the context —

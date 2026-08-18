@@ -92,6 +92,13 @@ enum HomeComposition {
             // language, so promoting them would hide every link and note
             // about the subject (§397's `Account` reasoning).
             "Patch", "Proposed", "Merged", "Opened", "Closed",
+            // GitHub's three notification ASKS (prd §401) — what a thread wants
+            // from you, stamped as data so `GitHubRoom` never has to read it
+            // back out of a clamped title. State, not subject: they say what is
+            // being asked, never what it is about. Not facets, for the reason
+            // "Opened"/"Closed" above are not — "review", "assigned" and
+            // "mentioned" are ordinary words this corpus is full of.
+            "Review", "Assigned", "Mentioned",
             // X's account record (prd §396) — the day you joined, and every
             // handle you have worn. Deliberately NOT a facet in
             // `Retriever.facetTags`: "account" is among the most ordinary

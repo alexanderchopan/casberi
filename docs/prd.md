@@ -25905,3 +25905,108 @@ of reading them as undeclared reaches. This is the first Work seat where the
 person chooses the host, and the choice is the whole trust boundary: **whichever
 seed you name sees which repos you ask about.** That is in the setup copy, not a
 footnote.
+
+## §401 — The two code rooms get a head: what is waiting on you, and what is stuck (user: "how can we improve the radicle and github source room experiences", 2026-08-18)
+
+Two rooms, one complaint, opposite causes.
+
+**GitHub had led with the wrong card since it shipped.** `githubGraphHero` — the
+contributions heatmap, whose own comment in `FeedScreen` calls it decorative —
+owned the slot, answering **how much did I write this year**. That is a fine
+thing to look at and is never why the room was opened. Meanwhile the rows that
+genuinely need you (a requested review, an issue assigned to you) sat in a plain
+list beside your stars, your gists and every release from every repo you ever
+starred, differentiated by nothing but the words at the front of a title. §247's
+failure shape exactly: a card owning the slot another was built for.
+
+**Radicle had no head at all**, deliberately — §400 refused the `/activity` span
+strip after measuring that endpoint as a trailing ~365-day window, and said the
+honest head was "a separate pass over the dates the bridge DOES recover
+exactly". This is that pass.
+
+### GitHub: the ask becomes DATA
+
+A notification's reason was written into its title as words ("Review requested ·
+org/repo · …") and nowhere else. `GitHubFeedFetch.notificationAsk` now stamps it
+as an unlocalized TAG, and `GitHubRoom` ranks on the tag and **never on the
+title** — the `CursorRoom` lesson written down before it cost anything: a title
+is display copy, `IngestSupport.titleLine` clamps it at 80 characters, and
+reading a reason back out of one is a parse that fails on exactly the longest
+rows and silently mis-ranks them.
+
+**Only three of GitHub's nine reasons are an ask.** `author`, `comment`,
+`subscribed`, `manual`, `state_change` and `ci_activity` all mean "this moved" —
+real news, already a row, nothing for you to do. Tagging them too would make the
+head a second copy of the feed with a ranking on top. `team_mention` folds into
+`mention`, because from the reader's side the act is the same.
+
+Ranked by **whose work is blocked**: a requested review stops another person
+merging, so it outranks work assigned to you, which is yours to schedule; a
+mention is the weakest, asking only for attention. The heatmap **stands down**
+whenever the head has content and remains the lead on the quiet days, which is
+most of them — which is why it was not deleted.
+
+**The card says "last moved", never "waiting N days".** `capturedAt` is GitHub's
+`updated_at` for the THREAD, so a review requested Monday whose author pushed a
+fixup Friday would read as one day old when it has waited five. That gap is
+invisible and would be believed, so the card refuses the stronger sentence
+rather than qualifying it in fine print.
+
+### Radicle: what is stuck, and why its ages may be stated
+
+`RadicleWire.OpenItem` keeps the unresolved patches and issues from the pages the
+sweep **already fetches** when the snapshot diff says a count moved — pages that
+until now were read for what to land and then discarded. No request, no new
+`Thing` property, no CloudKit deploy.
+
+It reads STATE and **no rows at all** (the `ASCRoomSource` shape), and that is
+forced rather than chosen: a landed row says a patch was PROPOSED, and nothing
+in the corpus can say it is still unresolved. "Has no merge row yet" is a
+different and wrong claim — an ARCHIVED patch never gets one either and would
+sit on the card forever.
+
+The card is **oldest-open-first**, because a room of rows newest-first tells you
+what happened last and cannot tell you a patch has been unreviewed since March.
+Its ages are exact — `revisions[0].timestamp` for a patch,
+`discussion[0].timestamp` for an issue — so "open 41 days" is a fact about the
+patch, and the card may draw a bar from them. **One room, two date grades**: the
+same room's issue CLOSES carry no timestamp anywhere on the wire and are stamped
+with when we watched the count move, which is why this card draws only the exact
+kind.
+
+**A DRAFT is never called stuck.** It is your own unfinished work, waiting on
+nobody; counted apart, never ranked, or the room would open by saying your
+scratch branch needs attention.
+
+### What neither may draw
+
+No count as a HEADLINE (§223 — a tally is not a thing; it is the subline). No
+green or red, since age is not fault. No velocity, success rate or trend: both
+rooms are capped windows, and any curve drawn over them would describe the cap.
+No repo named by a stand-in — an unnamed one is drawn by its own id.
+
+### The merge that is per-kind, and the reason
+
+A repo whose patch counts moved re-fetches patches ALONE, so writing that pass's
+combined result would blank the issues and the head would read it as "every
+issue closed". Each half is replaced only when that half was walked; the quiet
+one keeps its previous answer, which is still true precisely because nothing
+moved.
+
+### Guards
+
+`scripts/github-room-selftest.sh` (new) compiles `GitHubRoom.swift` whole — 40
+assertions, 8 mutations — and guards the two-file MIRROR between `Ask`'s raw
+values and the strings `notificationAsk` stamps, which cannot import each other
+and would otherwise drift into the head silently vanishing. `radicle-selftest.sh`
+grew `RadicleRoom` coverage: +30 assertions, +8 mutations, including the archived
+patch that would sit on the card forever. Both heads are in `verify.sh`'s
+room-head coverage map (HARD FAIL) and both are seeded in the demo — GitHub's
+fourth row had always READ as a review request and carried no tag, so the head
+would have correctly declined and the coverage check would have reported a real
+gap that was only ever a demo one (§375's X lesson, two rooms over).
+
+**A harness bug worth recording**: `mktemp file.XXXXXX.swift` does not randomise
+on macOS — only TRAILING X's are replaced — so two concurrent runs collide with
+"File exists". It failed a `verify.sh` pass on the Radicle harness's first night,
+when the pass and a hand-run overlapped. Use `mktemp -d` with fixed names inside.

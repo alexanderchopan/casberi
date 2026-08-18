@@ -126,6 +126,60 @@ enum RadicleWire {
         }
     }
 
+    // MARK: - What is still open
+
+    /// One unresolved patch or issue, kept so the room can say what is STUCK
+    /// (prd §401).
+    ///
+    /// **The date here is exact, and that is the whole reason this type
+    /// exists.** §400 refused a room head because `/activity` is a trailing
+    /// 365-day window and a span strip fed from it would claim a span it
+    /// cannot see. This is the head it pointed at instead: `opened` is
+    /// `revisions[0].timestamp` for a patch and `discussion[0].timestamp` for
+    /// an issue — recovered from the record, not observed by us — so "open
+    /// since March" is a fact rather than a note about when we first looked.
+    /// Contrast `ASCStanding.observed`, which has to say "we watched this
+    /// change" precisely because Apple publishes no such date.
+    struct OpenItem: Codable, Equatable {
+        enum Kind: String, Codable, Equatable { case patch, issue }
+        let kind: Kind
+        let id: String
+        let title: String
+        let opened: Date
+        /// A patch still being drafted. Drawn apart from a proposed one,
+        /// because a draft is not waiting on anybody — it is not stuck, it is
+        /// unfinished, and ranking the two together would put your own
+        /// scratch work at the top of a card about what needs attention.
+        let isDraft: Bool
+    }
+
+    /// The unresolved patches and issues in one fetched page.
+    ///
+    /// Costs NOTHING extra: the sweep already fetches these lists whenever the
+    /// snapshot diff says a count moved, and until now it read them only to
+    /// decide what to land and then threw the rest away. An archived or merged
+    /// patch is not here by construction — it is resolved, and the card is
+    /// about what is not.
+    static func openItems(patches: [Patch], issues: [Issue]) -> [OpenItem] {
+        var out: [OpenItem] = []
+        for p in patches {
+            // `open` and `draft` only. A patch that is merged or archived is
+            // finished; reading "not merged" as "open" would keep every
+            // archived patch on this card forever, which is the silent-wrong
+            // answer a status field exists to prevent.
+            guard p.status == "open" || p.status == "draft", let opened = p.opened
+            else { continue }
+            out.append(OpenItem(kind: .patch, id: p.id, title: p.title,
+                                opened: opened, isDraft: p.status == "draft"))
+        }
+        for i in issues {
+            guard i.status == "open", let opened = i.opened else { continue }
+            out.append(OpenItem(kind: .issue, id: i.id, title: i.title,
+                                opened: opened, isDraft: false))
+        }
+        return out
+    }
+
     /// Reads one entry of `/repos` or the whole of `/repos/:rid`.
     static func repo(_ root: [String: Any], rid fallbackRID: String? = nil) -> Repo? {
         guard let payloads = root["payloads"] as? [String: Any],

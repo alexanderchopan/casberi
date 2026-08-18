@@ -39,13 +39,14 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 WIRE="Casberi/Casberi/Model/RadicleWire.swift"
+ROOM="Casberi/Casberi/Model/RadicleRoom.swift"
 BRIDGE="Casberi/Casberi/Model/RadicleBridge.swift"
 SCREEN="Casberi/Casberi/Screens/RadicleScreen.swift"
 REACH="Casberi/Casberi/Model/NetworkReach.swift"
 REFRESH="Casberi/Casberi/Model/BridgeRefresh.swift"
 ROUTING="Casberi/Casberi/Model/BridgeRouting.swift"
 CATALOG="Casberi/Casberi/Model/BridgeCatalog.swift"
-for f in "$WIRE" "$BRIDGE" "$SCREEN" "$REACH" "$REFRESH" "$ROUTING" "$CATALOG"; do
+for f in "$WIRE" "$ROOM" "$BRIDGE" "$SCREEN" "$REACH" "$REFRESH" "$ROUTING" "$CATALOG"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 
@@ -53,9 +54,15 @@ done
 # things it must never do — it names `Authorization`, milliseconds and the flat
 # shape in prose explaining why each is wrong — so a guard grepping raw source
 # fires against the explanation. (The Obsidian/Cursor lesson, fifth time.)
-STRIPPED=$(mktemp /tmp/radicle-stripped.XXXXXX.swift)
-BRIDGE_STRIPPED=$(mktemp /tmp/radicle-bstripped.XXXXXX.swift)
-trap 'rm -f "$STRIPPED" "$BRIDGE_STRIPPED"' EXIT
+# A temp DIRECTORY with fixed names inside, NOT `mktemp file.XXXXXX.swift`:
+# macOS `mktemp` only randomises TRAILING X's, so a template with a suffix
+# after them does not randomise at all and two concurrent runs collide with
+# "File exists". Not hypothetical — it failed a verify.sh pass on this
+# harness's first night, because the pass and a hand-run overlapped.
+STRIPDIR=$(mktemp -d /tmp/radicle-strip.XXXXXX)
+STRIPPED="$STRIPDIR/wire.swift"
+BRIDGE_STRIPPED="$STRIPDIR/bridge.swift"
+trap 'rm -rf "$STRIPDIR"' EXIT
 strip_comments() {
   python3 - "$1" "$2" <<'PY'
 import sys, re
@@ -153,7 +160,7 @@ grep -q 'seeds' "$SCREEN" \
 # --- the driver -------------------------------------------------------------
 TMP=$(mktemp -d /tmp/radicle-selftest.XXXXXX)
 WORK="$TMP/work"
-trap 'rm -rf "$TMP"; rm -f "$STRIPPED" "$BRIDGE_STRIPPED"' EXIT
+trap 'rm -rf "$TMP" "$STRIPDIR"' EXIT
 
 cat > "$TMP/main.swift" <<'SWIFT'
 import Foundation
@@ -475,13 +482,125 @@ do {
             .contains("merged"))
 }
 
+// ── open items ─────────────────────────────────────────────────────────────
+print("openItems — resolved work is not open work")
+func openPatch(_ id: String, _ status: String, _ ts: Int) -> [String: Any] {
+    ["id": id, "title": "patch \(id)", "author": ["id": "did:key:z", "alias": "a"],
+     "state": ["status": status], "merges": [], "revisions": [["id": "r", "timestamp": ts]]]
+}
+func openIssue(_ id: String, _ status: String, _ ts: Int) -> [String: Any] {
+    ["id": id, "title": "issue \(id)", "author": ["id": "did:key:z", "alias": "a"],
+     "state": ["status": status], "discussion": [["id": "c", "timestamp": ts]]]
+}
+do {
+    let patches = [openPatch("p1", "open", 1_770_000_000),
+                   openPatch("p2", "draft", 1_775_000_000),
+                   openPatch("p3", "merged", 1_776_000_000),
+                   openPatch("p4", "archived", 1_777_000_000)].compactMap(RadicleWire.patch)
+    let issues = [openIssue("i1", "open", 1_771_000_000),
+                  openIssue("i2", "closed", 1_772_000_000)].compactMap(RadicleWire.issue)
+    let open = RadicleWire.openItems(patches: patches, issues: issues)
+    check("a merged patch is not open", !open.contains { $0.id == "p3" })
+    // THE ONE THAT WOULD SIT THERE FOREVER. "no merge row yet" is not the same
+    // claim as "open" — an archived patch never gets one either.
+    check("an ARCHIVED patch is not open", !open.contains { $0.id == "p4" })
+    check("a closed issue is not open", !open.contains { $0.id == "i2" })
+    check("an open patch is open", open.contains { $0.id == "p1" })
+    check("an open issue is open", open.contains { $0.id == "i1" })
+    check("a draft is open but marked a draft",
+          open.first { $0.id == "p2" }?.isDraft == true)
+    check("a proposed patch is NOT marked a draft",
+          open.first { $0.id == "p1" }?.isDraft == false)
+    check("kinds are kept apart",
+          open.first { $0.id == "i1" }?.kind == .issue && open.first { $0.id == "p1" }?.kind == .patch)
+    check("a patch with no revision date is dropped, never dated now",
+          RadicleWire.openItems(patches: [openPatch("p9", "open", 1)].compactMap(RadicleWire.patch),
+                                issues: []).isEmpty)
+}
+
+// ── the room head ──────────────────────────────────────────────────────────
+print("RadicleRoom — oldest-open-first, and drafts are not stuck")
+let day = 86_400.0
+func item(_ id: String, _ kind: RadicleWire.OpenItem.Kind, daysAgo: Double,
+          draft: Bool = false, title: String = "t") -> RadicleWire.OpenItem {
+    RadicleWire.OpenItem(kind: kind, id: id, title: title,
+                         opened: Date().addingTimeInterval(-daysAgo * day), isDraft: draft)
+}
+do {
+    let room = RadicleRoom.compose(repos: [
+        (rid: "rad:zA", name: "heartwood", items: [item("a", .patch, daysAgo: 3),
+                                                   item("b", .issue, daysAgo: 40)]),
+        (rid: "rad:zB", name: nil, items: [item("c", .patch, daysAgo: 12)]),
+    ])
+    check("the card composes", room != nil)
+    check("the OLDEST leads", room?.oldest?.id == "b")
+    check("…and it is the issue, not the newest patch", room?.oldest?.kind == .issue)
+    check("every item is drawn in age order",
+          room?.items.map(\.id) == ["b", "c", "a"])
+    check("a repo with no learned name is drawn by its id, never a stand-in",
+          room?.items.first { $0.id == "c" }?.repo == "rad:zB")
+    check("a named repo uses its name", room?.items.first { $0.id == "b" }?.repo == "heartwood")
+    check("the repo count is the ones that contributed", room?.repos == 2)
+    check("days open is floored, not rounded",
+          room?.items.first { $0.id == "a" }?.daysOpen(asOf: Date()) == 3)
+}
+do {
+    // Drafts are YOUR unfinished work. Ranking them as stuck would open the
+    // room by saying your own scratch branch needs attention.
+    let room = RadicleRoom.compose(repos: [
+        (rid: "rad:zA", name: "r", items: [item("d1", .patch, daysAgo: 90, draft: true),
+                                           item("d2", .patch, daysAgo: 80, draft: true),
+                                           item("x", .patch, daysAgo: 2),
+                                           item("y", .issue, daysAgo: 1)]),
+    ])
+    check("a draft never leads, however old", room?.oldest?.id == "x")
+    check("drafts are not in the ranked items",
+          room?.items.contains { $0.id.hasPrefix("d") } == false)
+    check("…they are counted apart", room?.drafts == 2)
+    check("and said in their own line", room?.draftLine?.contains("2") == true)
+}
+do {
+    check("one open item is below the floor — the row beneath already says it",
+          RadicleRoom.compose(repos: [(rid: "rad:zA", name: "r",
+                                       items: [item("a", .patch, daysAgo: 1)])]) == nil)
+    check("nothing open composes nothing",
+          RadicleRoom.compose(repos: [(rid: "rad:zA", name: "r", items: [])]) == nil)
+    check("drafts ALONE are not a card — nothing is stuck",
+          RadicleRoom.compose(repos: [(rid: "rad:zA", name: "r",
+                                       items: [item("d1", .patch, daysAgo: 9, draft: true),
+                                               item("d2", .patch, daysAgo: 8, draft: true)])]) == nil)
+    check("a titleless item is dropped",
+          RadicleRoom.compose(repos: [(rid: "rad:zA", name: "r",
+                                       items: [item("a", .patch, daysAgo: 5, title: "  "),
+                                               item("b", .patch, daysAgo: 4, title: " ")])]) == nil)
+}
+do {
+    // A card that reshuffles between two opens over identical data reads as
+    // broken — the ASCRoom rule. Same instant, so only the tiebreak can order.
+    let same = Date().addingTimeInterval(-5 * day)
+    let tied = [RadicleWire.OpenItem(kind: .patch, id: "zz", title: "t", opened: same, isDraft: false),
+                RadicleWire.OpenItem(kind: .patch, id: "aa", title: "t", opened: same, isDraft: false)]
+    let a = RadicleRoom.compose(repos: [(rid: "rad:zA", name: "r", items: tied)])
+    let b = RadicleRoom.compose(repos: [(rid: "rad:zA", name: "r", items: tied.reversed())])
+    check("the sort is TOTAL — identical data orders identically", a?.items.map(\.id) == b?.items.map(\.id))
+    check("…and the tiebreak is the id", a?.items.map(\.id) == ["aa", "zz"])
+}
+do {
+    let many = (0..<12).map { item("n\($0)", .patch, daysAgo: Double(100 - $0)) }
+    let room = RadicleRoom.compose(repos: [(rid: "rad:zA", name: "r", items: many)])
+    check("the card is capped", room?.items.count == RadicleRoom.cap)
+    check("…keeping the OLDEST, not the first seen", room?.items.first?.id == "n0")
+    check("the subline counts what was DRAWN, not the whole backlog",
+          room?.subline(asOf: Date())?.contains("5") == true)
+}
+
 print("")
 if failures > 0 { print("✗ \(failures) assertion(s) failed"); exit(1) }
 print("✓ all assertions passed")
 SWIFT
 
-if ! swiftc -O -o "$TMP/run" "$WIRE" "$TMP/main.swift" 2>"$TMP/build.log"; then
-  echo "✗ the harness did not compile against the shipped RadicleWire.swift:"
+if ! swiftc -O -o "$TMP/run" "$WIRE" "$ROOM" "$TMP/main.swift" 2>"$TMP/build.log"; then
+  echo "✗ the harness did not compile against the shipped RadicleWire/RadicleRoom:"
   sed -n '1,40p' "$TMP/build.log"
   exit 1
 fi
@@ -496,7 +615,7 @@ echo "mutations — each must be caught"
 mutate() {
   local name="$1" from="$2" to="$3"
   rm -rf "$WORK"; mkdir -p "$WORK"
-  cp "$WIRE" "$WORK/RadicleWire.swift"
+  cp "$WIRE" "$WORK/RadicleWire.swift"; cp "$ROOM" "$WORK/RadicleRoom.swift"
   MUT_FROM="$from" MUT_TO="$to" python3 - "$WORK/RadicleWire.swift" <<'PY'
 import os, sys
 path = sys.argv[1]
@@ -509,7 +628,36 @@ PY
   if [[ $? -ne 0 ]] || ! grep -qF -- "$to" "$WORK/RadicleWire.swift"; then
     echo "  ✗ $name — the mutation did not apply (the shipped source moved)"; exit 1
   fi
-  if ! swiftc -O -o "$TMP/mut" "$WORK/RadicleWire.swift" "$TMP/main.swift" 2>/dev/null; then
+  if ! swiftc -O -o "$TMP/mut" "$WORK/RadicleWire.swift" "$WORK/RadicleRoom.swift" "$TMP/main.swift" 2>/dev/null; then
+    echo "  ✓ $name (rejected at compile)"; return
+  fi
+  if "$TMP/mut" > /dev/null 2>&1; then
+    echo "  ✗ $name — the harness still passed, so nothing was testing this"; exit 1
+  fi
+  echo "  ✓ $name"
+}
+
+# The same, targeting `RadicleRoom.swift` — the head's judgements live in a
+# second file, and a mutate() that only ever rewrites the wire would report
+# ANCHOR-MISSING for every one of them (which is what it did on this block's
+# first run).
+mutate_room() {
+  local name="$1" from="$2" to="$3"
+  rm -rf "$WORK"; mkdir -p "$WORK"
+  cp "$WIRE" "$WORK/RadicleWire.swift"; cp "$ROOM" "$WORK/RadicleRoom.swift"
+  MUT_FROM="$from" MUT_TO="$to" python3 - "$WORK/RadicleRoom.swift" <<'PY2'
+import os, sys
+path = sys.argv[1]
+src = open(path).read()
+frm, to = os.environ["MUT_FROM"], os.environ["MUT_TO"]
+if frm not in src:
+    sys.stderr.write("ANCHOR-MISSING\n"); sys.exit(2)
+open(path, "w").write(src.replace(frm, to, 1))
+PY2
+  if [[ $? -ne 0 ]] || ! grep -qF -- "$to" "$WORK/RadicleRoom.swift"; then
+    echo "  ✗ $name — the mutation did not apply (the shipped source moved)"; exit 1
+  fi
+  if ! swiftc -O -o "$TMP/mut" "$WORK/RadicleWire.swift" "$WORK/RadicleRoom.swift" "$TMP/main.swift" 2>/dev/null; then
     echo "  ✓ $name (rejected at compile)"; return
   fi
   if "$TMP/mut" > /dev/null 2>&1; then
@@ -596,6 +744,51 @@ mutate "an alias invented for an anonymous DID" \
 mutate "the seed host guard relaxed" \
   's.allSatisfy({ $0.isLetter || $0.isNumber || $0 == "." || $0 == "-" || $0 == ":" })' \
   'true'
+
+# 16. An ARCHIVED patch read as open — it would sit on the card forever, and
+#     "has no merge row" is exactly the wrong test this guards against.
+mutate "an archived patch treated as open" \
+  'guard p.status == "open" || p.status == "draft", let opened = p.opened' \
+  'guard p.status != "merged", let opened = p.opened'
+
+# 17. A closed issue read as open.
+mutate "a closed issue treated as open" \
+  'guard i.status == "open", let opened = i.opened' \
+  'guard i.status != "nonexistent", let opened = i.opened'
+
+# 18. Drafts ranked with the rest — the room opens by calling your own
+#     unfinished branch the thing that has waited longest.
+mutate_room "drafts ranked as stuck" \
+  'if item.isDraft { drafts += 1; continue }' \
+  'if item.isDraft { drafts += 1 }'
+
+# 19. NEWEST-first — the card stops answering the only question it exists for.
+mutate_room "the card ranked newest-first" \
+  'if $0.opened != $1.opened { return $0.opened < $1.opened }' \
+  'if $0.opened != $1.opened { return $0.opened > $1.opened }'
+
+# 20. The tiebreak dropped, so a card can reshuffle between two opens over
+#     identical data (the ASCRoom rule).
+mutate_room "the sort made non-total" \
+  'return $0.id < $1.id' \
+  'return false'
+
+# 21. An unnamed repo given a stand-in instead of its own id.
+mutate_room "a stand-in name for an unnamed repo" \
+  'repo: (label?.isEmpty == false) ? label! : repo.rid,' \
+  'repo: (label?.isEmpty == false) ? label! : "a repo",'
+
+# 22. The floor removed — a single open patch draws a card that repeats the
+#     row directly beneath it.
+mutate_room "the card floor removed" \
+  'guard items.count >= floor else { return nil }' \
+  'guard items.count >= 1 else { return nil }'
+
+# 23. Days-open ROUNDED rather than floored — everything opened this morning
+#     reads as a day old.
+mutate_room "days open rounded up" \
+  'max(0, Int(now.timeIntervalSince(opened) / 86_400))' \
+  'max(0, Int((now.timeIntervalSince(opened) / 86_400).rounded(.up)))'
 
 echo
 echo "✓ radicle self-test: assertions and mutations all passed"

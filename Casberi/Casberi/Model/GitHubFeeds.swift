@@ -389,10 +389,16 @@ enum GitHubFeedFetch {
                   let link = notificationHTMLURL(fromAPI: apiURL),
                   let repo = (item["repository"] as? [String: Any])?["full_name"] as? String
             else { return nil }
-            let reason = notificationReason(item["reason"] as? String)
+            let raw = item["reason"] as? String
+            let reason = notificationReason(raw)
             let t = thing(.link, title: "\(reason) · \(repo) · \(title)", content: link,
                           ref: "gh:notif:\(id)", feed: .notifications,
                           at: IngestSupport.isoDate(item["updated_at"]))
+            // The ask, as data rather than as words inside the title — what
+            // `GitHubRoom` ranks on (prd §401). Nil for the six reasons that
+            // are news rather than a request, so those rows stay exactly as
+            // they were and never reach the head.
+            if let ask = notificationAsk(raw) { t.tags = t.tags + [ask] }
             // The REPO's owner, and the one place in this file where the face
             // is not the person who acted: GitHub's notifications payload
             // names no actor anywhere — not on the notification, not on the
@@ -430,6 +436,35 @@ enum GitHubFeedFetch {
         case "subscribed":       "New activity"
         case "manual":           "You subscribed"
         default:                 "Notification"
+        }
+    }
+
+    /// The ASK a notification carries, as a stable unlocalized tag — or nil
+    /// when it carries none (prd §401).
+    ///
+    /// **The room head ranks on this and never on the title**, which is the
+    /// `CursorRoom` lesson written down before it costs anything: a title is
+    /// display copy, it is clamped at 80 characters by `IngestSupport.titleLine`,
+    /// and reading a reason back out of one is a parse that fails silently on
+    /// exactly the longest rows. A tag is data.
+    ///
+    /// **Only three of GitHub's nine reasons are an ask.** `author`, `comment`,
+    /// `subscribed`, `manual`, `state_change` and `ci_activity` are all "this
+    /// moved" — real news, already a row, and nothing for you to do. Tagging
+    /// them too would make the head a second copy of the feed, ranked. The
+    /// head exists precisely to separate the handful that are waiting on YOU
+    /// from the stream that isn't.
+    ///
+    /// `team_mention` folds into `mention` deliberately: from the reader's side
+    /// the act is the same, and splitting them would put two words on the card
+    /// for one thing.
+    static func notificationAsk(_ raw: String?) -> String? {
+        switch raw ?? "" {
+        case "review_requested": "Review"
+        case "assign":           "Assigned"
+        case "mention",
+             "team_mention":     "Mentioned"
+        default:                 nil
         }
     }
 

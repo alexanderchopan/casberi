@@ -1984,7 +1984,14 @@ struct FeedScreen: View {
                 // (`GitHubGraphStore` self-fetches with it), so it rides the
                 // GitHub feed whenever it's the filter; the hero self-checks for
                 // a landed year and takes no room otherwise.
-                if source == "GitHub" { githubGraphHero }
+                // …and stands DOWN whenever the "needs you" head has something
+                // to say (prd §401). Two leads is not a richer room, it is a
+                // room with no lead: the heatmap answers "how much did I write
+                // this year" and the head answers "what is waiting on you",
+                // and only one of those is why you opened it. The heatmap
+                // remains the lead on the quiet days, which is most of them,
+                // and is why it was not simply deleted.
+                if source == "GitHub", sourceHeadIsAbsent { githubGraphHero }
                 predictionBook
             }
             .listRowBackground(Color.clear)
@@ -2511,6 +2518,27 @@ struct FeedScreen: View {
                         // field over).
                         openNewest(source: CursorRoomSource.source, in: visible) { thing in
                             thing.authorHandle == repo.name
+                        }
+                    }
+                case .github(let room):
+                    GitHubRoomCard(room: room) { ref in
+                        // The card names a real row, so this lands exactly —
+                        // no "newest matching" hop is needed or wanted.
+                        openNewest(source: GitHubRoomSource.source, in: visible) { thing in
+                            thing.sourceRef == ref
+                        }
+                    }
+                case .radicle(let room):
+                    RadicleRoomCard(room: room) { rid, id, kind in
+                        // This head reads STATE, so the item it names may have
+                        // no landed row at all — an issue opened before you
+                        // started watching is in the store's open list and was
+                        // never landed as news. So the landing is the row when
+                        // one exists, and nothing when it doesn't, rather than
+                        // a guess at a neighbouring row.
+                        let ref = "radicle:\(kind.rawValue):\(rid):\(id):opened"
+                        openNewest(source: RadicleRoomSource.source, in: visible) { thing in
+                            thing.sourceRef == ref
                         }
                     }
                 case .peer(let room):
@@ -3915,6 +3943,13 @@ struct FeedScreen: View {
         case x402(X402Room)
         case appStoreConnect(ASCRoom)
         case cursor(CursorRoom)
+        // The two CODE rooms (prd §401). GitHub had led with the contributions
+        // heatmap since it shipped — a decorative card answering "how much did
+        // I write", in the slot the rows that actually need you were competing
+        // for. Radicle shipped headless on purpose (§400 refused the
+        // `/activity` span strip), and this is the head that entry pointed at.
+        case github(GitHubRoom)
+        case radicle(RadicleRoom)
         // The WALLET-RIDING seats that own a source room (2026-08-10, prd
         // §349). Aave/Morpho/Hyperliquid/Aerodrome/Uniswap still land under
         // `source: "Wallet"` and have no room of their own to head; their
@@ -3970,6 +4005,17 @@ struct FeedScreen: View {
         })
     }
 
+    /// True when this room draws no `SourceHead`, so a card that would
+    /// otherwise be a SECOND lead can stand down (prd §401).
+    ///
+    /// Deliberately re-composes rather than caching: `sourceHead` is already
+    /// evaluated once per body pass for the head itself, both sides are pure
+    /// over the same array, and a cached flag is one more thing that can
+    /// disagree with what actually drew.
+    private var sourceHeadIsAbsent: Bool {
+        sourceHead(liveVisible()) == nil
+    }
+
     /// Resolve this room's own head, or nil. One `switch` so adding a fourth
     /// per-source head is one case here rather than an edit to five gates.
     private func sourceHead(_ visible: [Thing]) -> SourceHead? {
@@ -3991,6 +4037,12 @@ struct FeedScreen: View {
             return ASCRoomSource.compose(things: visible).map { .appStoreConnect($0) }
         case CursorRoomSource.source:
             return CursorRoomSource.compose(things: visible).map { .cursor($0) }
+        case GitHubRoomSource.source:
+            return GitHubRoomSource.compose(things: visible).map { .github($0) }
+        // Reads no rows at all — its subject is bridge STATE, since no landed
+        // row can say a patch is still unresolved. See `RadicleRoomSource`.
+        case RadicleRoomSource.source:
+            return RadicleRoomSource.compose(things: visible).map { .radicle($0) }
         case PeerRoomSource.source:
             return PeerRoomSource.compose(things: visible).map { .peer($0) }
         case PrivacyPoolsRoomSource.source:
