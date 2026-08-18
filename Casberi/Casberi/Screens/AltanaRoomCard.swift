@@ -103,6 +103,13 @@ struct AltanaRoomCard: View {
             }
             .padding(.top, DS.Space.s3)
         }
+        // The section paints the card's BACKGROUND (every sibling head relies
+        // on that), but it does NOT inset the contents — `PeerRoomCard` and
+        // `AppStoreConnectRoomCard` both keep this padding and drop only the
+        // background. Removing both together drew the card edge-to-edge and
+        // clipped every trailing label ("today", "25d left", "expired") off
+        // the right of the screen.
+        .padding(DS.Space.s4)
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
