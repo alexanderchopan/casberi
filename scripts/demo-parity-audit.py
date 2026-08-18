@@ -484,10 +484,30 @@ def self_test(_files):
         True)
     ok &= verify_fixture(
         "a demo ref that cannot satisfy its bridge's gate is caught",
-        # The Obsidian vault's own bug: a real `obsidian:` ref back to `demo:`.
+        # **Dropbox's own bug, restored (2026-08-17).** Its demo rows wore
+        # `demo:dropbox:` while `FilesBridge.isStoredPicture` gates on
+        # `dropbox:` to decide picture-grid membership, so the seeded
+        # "Floor plan.png" could never join the grid.
+        #
+        # It replaced an Obsidian mutation that **could never have been
+        # caught**, and the way that went unnoticed is worth keeping. This
+        # fixture asserts on REF_GAPS being non-empty, and until every real
+        # source in that list was judged, REF_GAPS was non-empty on ANY run —
+        # so the fixture passed whether or not its mutation did anything. When
+        # the list finally reached zero, it went red and exposed itself.
+        #
+        # The Obsidian mutation applied cleanly; check L simply skips that
+        # source, because `ObsidianIngest` builds its refs from a variable so
+        # the parser sees no literal `obsidian:` ref to gate on (`if not
+        # gated: continue`). A fixture pointed at a source the check cannot
+        # reach is a fixture that proves nothing.
+        #
+        # **So the standing rule for a `watch_refs` fixture: it is only
+        # meaningful while the shipped tree reports ZERO ref gaps.** If that
+        # list is ever allowed to grow again, these stop testing anything.
         lambda f: f.__setitem__(DEMO, f[DEMO].replace(
-            'ref: "obsidian:demo-vault/\\(n.0).md"',
-            'ref: "demo:obsidian:\\(i)"', 1)),
+            'ref: "dropbox:demo/\\(f.name.lowercased())"',
+            'ref: "demo:dropbox:\\(i)"', 1)),
         True, watch_refs=True)
     ok &= verify_fixture(
         "the shipped tree passes",
