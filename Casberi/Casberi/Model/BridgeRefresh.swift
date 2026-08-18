@@ -668,6 +668,26 @@ enum BridgeRefresh {
                 }
             }
         }
+        // The two journal importers, 2026-08-17 (prd §398) — the chat block's
+        // shape one room over, and reachable for the same reason: neither has a
+        // live read, so the only work a foreground can do for them is on words
+        // already in the store. Free (no network, no request), self-terminating
+        // once `topicsAt` is stamped on every entry.
+        //
+        // It runs HERE and not only at import because a re-import cannot do it:
+        // both importers dedupe on `sourceRef`, so every entry already in the
+        // corpus is skipped before its text is ever looked at — the §320
+        // Obsidian lesson, and the reason years of already-imported entries
+        // would otherwise never appear in the map this pass gave these rooms.
+        for (seatID, source) in [("dayone", "Day One"), ("journal", "Apple Journal")]
+        where connected(seatID) {
+            let s = slot(); Task { @MainActor in
+                await BridgeRefresh.stagger(s)
+                _ = await sweepTimed("\(seatID).topics") {
+                    await ScreenshotTopics.healTopics(source: source, context: context)
+                }
+            }
+        }
         if connected("instagram") {
             let s = slot(); Task { @MainActor in
                 await BridgeRefresh.stagger(s)

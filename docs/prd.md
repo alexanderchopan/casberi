@@ -25504,3 +25504,251 @@ RESOLVES, and every one of these resolved perfectly, to somebody else's ruling.
 That is §363's own finding restated, and it is why the audit's guarantee has a
 ceiling worth remembering — a number that resolves is not a number that means
 what you meant.
+
+## §398 — The notes rooms stop being a list of days (user: "how can we improve the notes experiences across the board, the rooms i mean", then "do all", 2026-08-17)
+
+Four rooms sit in the Notes group — Apple Notes, Day One, Apple Journal,
+Obsidian — and only one of them had ever had a pass. §320 gave the vault a topic
+map, a backlink shelf, an "Open in Obsidian" door and a reader that read past the
+frontmatter. The two journals got none of it. Their only head was
+`FeedHeatmap`'s "Your journaling year": a trailing-twelve-month grid, over a
+corpus whose entire point is that it goes back further than twelve months.
+
+Six changes — three defects that shipped and were invisible, three readings the
+rooms never had.
+
+### 1. Both importers were silently truncating, and had been since prd 55
+
+`DayOneImport` and `JournalImport` capped at **500 entries** and reported nothing
+about what they refused — the class §307 found in the X archive and §309 carried
+to Instagram, TikTok and Snapchat, which never reached these two because nobody
+went back for the rooms that already worked. A journal is at most an entry a day,
+so 500 is thirteen months: **a truncated import and a complete one produced
+byte-identical receipts.**
+
+The cap is `DayOneImport.entryCap` (5,000) and the refusal is COUNTED —
+`Summary.dropped`, on the receipt, both screens and both probes, worded exactly as
+X's is. `dropped` is named apart from `skipped` because they are opposite facts:
+"already here" is a re-import working, "not imported" is a run that left the
+oldest years on disk.
+
+Raising the cap tenfold created §310's risk, so both landings moved onto
+`ImportCommit` — insert, save, index, yield, 200 at a time. A chunk is a commit,
+so a run that dies partway keeps what it landed.
+
+### 2. Every note row read its first line twice
+
+`ExcerptRow` drew the title at `body17` and the whole of `content` beneath it at
+`subhead13` — and every importer that names an entry after its opening line (Day
+One, Apple Journal, Obsidian, a shared Apple Note) stores that line as the first
+line of `content`.
+
+**The guard for this existed and could never fire.** `excerpt` refused text when
+`text != thing.title` was false, but `title` is `IngestSupport.titleLine`'s
+output: flattened, clamped to 80 characters with an ellipsis, and stripped of
+leading heading marks. A raw body almost never equals that, and an entry whose
+first line ran past 80 characters could never match at all.
+`IngestSupport.bodyBelowTitle` is `titleLine`'s inverse and compares the
+NORMALISED first line.
+
+### 3. Two registries the journals were never in
+
+`ScreenshotTopics.topicSource` and `FeedInsight.topicMap` had every other writing
+room and not the two most literally "what you write about". Both registered
+(`.note`, no domains — a hostname is not a subject, §313), swept from
+`BridgeRefresh` as well as at import. **The foreground sweep is the half that
+matters** (§320's lesson): both importers dedupe on `sourceRef`, so healing only
+at import reaches nothing already imported.
+
+### 4. The head: your years, not your year
+
+`JournalRoom` / `JournalRoomSource` / `JournalRoomCard`, `-journalRoomProbe`. A
+span strip with silent years drawn, the longest run of consecutive days as the
+headline, and the fullest years as rows carrying each year's own subject.
+
+**Why the run leads.** Every other room records things that ARRIVED; a journal
+records showing up. Below `streakFloor` (3) there is nothing worth naming and the
+fullest year leads instead — two consecutive days is a weekend, and a card
+announcing it as a streak is the app straining to congratulate somebody.
+
+**It costs nothing** — `capturedAt`, `ocrTopics`, `sourceRef`, all on a landed
+row. **§349's rule is why the year rows carry subjects**: this displaces
+`topicMap`, so it says which year was which rather than what eight years were
+about at once.
+
+**Two floors, and the second is in DAYS.** Two calendar years is a lower bar than
+`XRoom`'s three — but it is also what six weeks straddling New Year's Eve has, so
+`minimumSpanDays` (180) sits beside it. A calendar-year count can be doubled by an
+accident of the calendar; a day count cannot.
+
+**Obsidian is deliberately not one of these rooms.** A vault note's `capturedAt`
+is the file's mtime, so editing a 2019 note today moves it to today. Years over
+that would chart when files were touched while claiming to chart when somebody
+wrote — §83 where it would look most convincing.
+
+**One `SourceHead` case, two probe labels** (`dayOneHead`, `appleJournalHead`):
+`verify.sh`'s coverage is keyed by that name, so one label could only assert that
+ONE journal composes. The demo's journals were twelve and eight entries in one
+season, which would have made this head correctly decline and the check read the
+decline as a gap (§375's lesson, two rooms over) — they span three calendar years
+each now, opening on a real run.
+
+### 5. The anniversary is PROMOTED above the head, and gets words
+
+`OnThisDay` has ridden inside the heatmap card since 2026-07-21 so it would never
+compete for a room's hero slot. Giving the journals a head would have ended it
+entirely — the years card composes on every open, and the heatmap it displaces is
+where the echo lived. So it moved above `sourceHead`: a card about how many years
+you kept a journal must not cover what you wrote on this date in one of them.
+
+**The scope is the whole safety of the promotion.** It is non-nil only for the
+memories room and the two journals, neither of which has an ALARM head.
+
+**The hero gained a text treatment, which also closes a hole.** It was pixels or
+nothing — and because the anniversary SUPPRESSES every card below it, a text echo
+drew an empty head slot on exactly the days the room had something to say.
+
+### 6. The photographs
+
+Day One's `photos/<md5>.<type>`, Apple Journal's `Resources/`, both as the same
+480pt `ImportMedia` thumbnail. **Day One's picker now accepts the FOLDER as well
+as the `.json`, and it has to:** a scoped grant on a file cannot read the
+directory beside it. `ImportMedia.mediaIndex(in:under:)` is `xMediaIndex`
+generalised — ONE listing per import, keyed by basename WITHOUT the extension,
+because Day One's `type` need not match the extension on disk and Apple Journal's
+`src` depth is Apple's business.
+
+### UNMEASURED, and the harness
+
+No Day One or Apple Journal export has ever been held by this project. Every path
+fails safe. `scripts/journal-room-selftest.sh` compiles `JournalRoom` WHOLE — 70
+assertions, 12 mutations, 15 drift guards — and is not the best proof these
+numbers are right but the ONLY one.
+
+**Two of its own fixtures were wrong on the first run, both the "right result for
+the wrong reason" class**: the minimum-entries case sat one entry ABOVE the floor
+it tested, and the no-silent-years case used 2024 and 2026, which leaves 2025
+silent. Both now assert the fixture's own premise first. A third case was DELETED
+rather than fixed — `longestRun` takes a `Set<Int>`, so a duplicate day cannot
+reach it. The type is the guard, and a stronger one than an assertion.
+
+### The section number, twice
+
+Written as §389, renumbered to §395 before commit (§389 was already the All-feed
+cover), then renumbered again to §398 when an Instagram pass took §395 upstream
+while this work sat uncommitted. **The index audit passes through all of it,
+because it checks that a citation RESOLVES and every one of those numbers
+resolved — to somebody else's ruling.** Standing habit, now paid for twice:
+`git show origin/main:docs/prd.md | grep '^## §' | tail -3` before the first
+citation, not the local file, which can be hours behind.
+
+## §399 — A note sheet reads like a note (user: "how can we improve the thing sheets in the notes apps?", then "do all and you decide on 5", 2026-08-17)
+
+§366 gave this category its three anatomies — a dated entry, a named vault note,
+a marked passage — and fixed the worst of it: prose at the reading tier instead
+of as a caption, tags drawn, the spec table's one `From` row replaced by a
+sentence. What was left is the residue, and one item of it was created by §398
+that same afternoon.
+
+### 1. The photograph §398 landed, that nothing drew
+
+§398 landed both journal exports' pictures as `previewImageData`. Nothing
+rendered them. An entry's own photograph appeared in exactly ONE place in the
+app: as a 92pt tile on a **different** entry's "That day" shelf. The sheet for
+the entry that owns it drew a date and some words.
+
+`NoteEntryPhoto` sits BELOW the dateline and above the prose, which is the order
+the entry has — the date identifies it, the photograph is part of what it says
+rather than a heading over it. `PhotoWell` and not a hand-rolled `Image`, because
+that is the one image view here that honours `redactionReasons`: a private
+photograph at 220pt surviving into the app-switcher snapshot is precisely the leak
+that guard exists for. The row got a 40pt trailing thumb, deliberately NOT a grid
+tile — every mixed room in this app promotes a WORDLESS picture into a grid and
+keeps a captioned one as a row, and a journal entry always has words.
+
+### 2. The same date, in other years
+
+The room's anniversary answers TODAY's date. This answers the ENTRY's, which is
+what a journal is opened for: you are reading 14 May 2021, and 14 May exists in
+six other years, all of them already here.
+
+**Bounded by construction.** A predicate cannot call a calendar, so the
+alternative is fetching the room and filtering — the corpus walk this project
+forbids. Each candidate year is a narrow range read with `fetchLimit = 1`, capped
+at `yearSpan` (12). Scoped to ONE source: merging two exports of the same years
+would produce two rows for one day with no way to tell which journal was which.
+
+### 3. The entry before, and the entry after
+
+A journal is a SEQUENCE and the sheet dead-ended — reading three consecutive days
+meant sheet, close, scroll, sheet, three times. Two `fetchLimit = 2` reads (two,
+not one, so an import receipt cannot be offered as the next entry — a door onto
+our own note about a sync, from inside somebody's diary).
+
+Older left, newer right — the direction the writing went, not the direction the
+feed scrolls. Each door names its entry's DATE rather than "Previous": a door
+that says where it goes beats one that says which way. A missing neighbour draws
+NOTHING rather than a disabled control; the first entry really has nothing before
+it.
+
+### 4. Markdown is drawn as markdown, and only where it IS markdown
+
+`NoteProse` set the whole body as one `Text`, so a Day One or Obsidian note drew
+its own punctuation: `# Monday` as a hash and a word, `**finally**` with the
+asterisks in, `- milk` as a hyphen. `NoteSheet.blocks` splits four shapes —
+heading, bullet, numbered, quote — and nothing more; tables and HTML blocks are
+each a way for a body to render as something other than what it says.
+
+**`markdown` is a per-source FACT, not a preference.** Day One stores markdown
+(`unescapeMarkdown` exists because it escapes markdown punctuation on the way
+out) and a vault is markdown by definition. Apple Journal's body is HTML through
+`plainText(fromHTML:)`, and a `You` note is whatever somebody typed — parsing
+those would eat a literal asterisk somebody meant.
+
+**Blank lines separate blocks; single newlines inside a paragraph are KEPT.**
+This is where it knowingly departs from CommonMark, which would run them
+together: a journal entry's line breaks are the writer's.
+
+**Every marker requires a space after it**, which is the whole of its
+correctness: `#hashtag` is an Obsidian inline tag, `-5 degrees` is not a bullet.
+The fold cuts at a BLOCK boundary and always keeps one, so it can never leave a
+heading standing over nothing — the old fold was `lineLimit(12)` on one `Text`,
+cutting mid-sentence at whatever width the device happened to be.
+
+**Wikilinks became walkable.** `[[Other note]]` has been extracted at ingest since
+2026-07-28 and resolved into a list UNDER the note, while in the body it read as
+literal double brackets — the one place a vault user expects a link to work,
+because it works everywhere else they see that note. `markdownWithWikilinks`
+rewrites them to ordinary markdown links under a `casberi-note://` scheme, which
+is deliberately NOT `casberi://`: that is the app's real deep-link scheme and
+`RootShell.route` acts on it, so a note containing a crafted link could otherwise
+reach a router. The alias split mirrors `NoteLinks.extract` exactly, or the body
+would draw a link the shelf below doesn't list. A tap walks through the sheet's
+existing walker; an unresolved target does nothing, honestly.
+
+### 5. A shared Apple Note gets the anatomy — the ruling §366 deferred
+
+§366 left `You` out and said why: the sheet would first need "an answer to what
+`You` means (wrote it, or merely brought it)", since a note shared out of Apple
+Notes lands there indistinguishably from one typed here. So those things had NO
+anatomy at all — a title cut from the note's own first line, and then the same
+line again beneath it at footnote size, which is the exact defect this whole
+category was fixed for.
+
+**The answer is that we cannot know, and it turns out not to matter.** The
+anatomy claims nothing about authorship once the verb is `Act.kept`: **you kept
+it**, at that time, on this device — true of both, and claiming neither. The
+`.device` provenance sentence follows the act for the same reason ("Kept here",
+not "Recorded here", which is a claim only a voice note earns).
+
+Scoped by KIND, not by source: `You` holds every hand capture, so a `.note` gets
+the anatomy and a saved `.link` keeps the generic sheet it has always had. It is
+NOT added to `NoteSheetSource.sources` — that set is checked against the
+catalog's Notes group by the harness, and `You` is not a catalog seat.
+
+**One consequence worth stating**: the "That day" shelf excluded rows of the same
+SOURCE, which for a journal is identical to same-kind and for `You` hid that
+day's screenshots, links and voice notes — exactly the rows worth showing beside
+something you wrote. The rule is same source AND same kind now, filtered in Swift
+because a `#Predicate` on `kind` is the transformable-attribute crash class this
+project has a report for.

@@ -1231,39 +1231,100 @@ struct OnThisDayHero: View {
 
     /// Liveness guard (COROLLARY 5) — this view stores the echo's model and
     /// SwiftUI re-runs a leaf's body on that model's own observation.
+    ///
+    /// TWO TREATMENTS since 2026-08-17 (prd §398), and the split is what the
+    /// thing IS: a photograph is drawn, an entry is read.
+    ///
+    /// Until then this card was pixels or nothing — which was right while
+    /// Snapchat's memories were the only room that reached it, and became a
+    /// silent hole the moment the journal rooms did. A non-nil echo with no
+    /// pixels drew an EmptyView, and because the anniversary SUPPRESSES every
+    /// card below it in `shapedSections`, the room's whole head slot went blank
+    /// on exactly the days it had something to say.
     var body: some View {
-        // `previewImageData` gates the card (no pixels, no card) but the
-        // drawing is `PhotoWell`'s: it decodes ONCE into its own state instead
-        // of re-decoding a full-size photograph on every body evaluation, and
-        // it is the one image view in this app that honours
-        // `redactionReasons` — a hand-rolled `Image` survives into the
-        // app-switcher snapshot with hidePreviews ON, which for a private
-        // photograph at 190pt is exactly the leak that guard exists to stop.
-        if echo.thing.isLive, echo.thing.previewImageData != nil {
-            Button {
-                DSHaptic.selection()
-                onTap()
-            } label: {
-                PhotoWell(thing: echo.thing, size: nil)
-                    .frame(height: 190)
-                    .frame(maxWidth: .infinity)
-                    .clipped()
-                    .clipShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
-                    .overlay(alignment: .bottomLeading) {
-                        LinearGradient(colors: [.clear, .black.opacity(0.7)],
-                                       startPoint: .center, endPoint: .bottom)
-                            .clipShape(RoundedRectangle(cornerRadius: DS.Radius.widget,
-                                                        style: .continuous))
-                            .allowsHitTesting(false)
-                        Text(echo.label)
-                            .dsText(.body17).foregroundStyle(.white)
-                            .padding(DS.Space.s3)
-                    }
-                    .contentShape(RoundedRectangle(cornerRadius: DS.Radius.widget,
-                                                   style: .continuous))
-            }
-            .buttonStyle(DSTileButtonStyle())
+        if echo.thing.isLive {
+            if echo.thing.previewImageData != nil { picture } else { words }
         }
+    }
+
+    /// The photograph, at a size worth looking at.
+    ///
+    /// The drawing is `PhotoWell`'s: it decodes ONCE into its own state instead
+    /// of re-decoding a full-size photograph on every body evaluation, and it is
+    /// the one image view in this app that honours `redactionReasons` — a
+    /// hand-rolled `Image` survives into the app-switcher snapshot with
+    /// hidePreviews ON, which for a private photograph at 190pt is exactly the
+    /// leak that guard exists to stop.
+    private var picture: some View {
+        Button {
+            DSHaptic.selection()
+            onTap()
+        } label: {
+            PhotoWell(thing: echo.thing, size: nil)
+                .frame(height: 190)
+                .frame(maxWidth: .infinity)
+                .clipped()
+                .clipShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
+                .overlay(alignment: .bottomLeading) {
+                    LinearGradient(colors: [.clear, .black.opacity(0.7)],
+                                   startPoint: .center, endPoint: .bottom)
+                        .clipShape(RoundedRectangle(cornerRadius: DS.Radius.widget,
+                                                    style: .continuous))
+                        .allowsHitTesting(false)
+                    Text(echo.label)
+                        .dsText(.body17).foregroundStyle(.white)
+                        .padding(DS.Space.s3)
+                }
+                .contentShape(RoundedRectangle(cornerRadius: DS.Radius.widget,
+                                               style: .continuous))
+        }
+        .buttonStyle(DSTileButtonStyle())
+    }
+
+    /// The entry itself — what you wrote on this day, in the room where that is
+    /// the whole object.
+    ///
+    /// It leads with the DATE rather than the title, which inverts every other
+    /// card in this app and is the point: the finding here is not what the entry
+    /// says, it is that it was written on today's date some years ago. The words
+    /// underneath are the payoff, and there are more of them than a feed row
+    /// affords (five lines against three) because a journal entry read back is
+    /// the one thing in this room worth stopping on.
+    ///
+    /// `bodyBelowTitle` for the excerpt, so the opening line isn't printed twice
+    /// — the same defect §398 fixed in `ExcerptRow`, and it would have been
+    /// louder here, at heading size directly above its own repeat.
+    private var words: some View {
+        Button {
+            DSHaptic.selection()
+            onTap()
+        } label: {
+            VStack(alignment: .leading, spacing: DS.Space.s1) {
+                Text(echo.label)
+                    .dsText(.label12).fontWeight(.semibold)
+                    .foregroundStyle(DS.legibleCardFill(for: echo.thing.source))
+                Text(echo.thing.title)
+                    .dsText(.heading22)
+                    .foregroundStyle(DS.textPrimary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .multilineTextAlignment(.leading)
+                if let body = IngestSupport.bodyBelowTitle(echo.thing.content,
+                                                           title: echo.thing.title) {
+                    Text(body)
+                        .dsText(.subhead13)
+                        .foregroundStyle(DS.textSecondary)
+                        .lineLimit(5)
+                        .multilineTextAlignment(.leading)
+                        .padding(.top, DS.Space.s1)
+                }
+            }
+            .padding(DS.Space.s4)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .dsWidgetSurface()
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text("\(echo.label). \(echo.thing.title)"))
     }
 }
 

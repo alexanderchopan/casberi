@@ -2402,18 +2402,27 @@ struct ExcerptRow: View {
     /// a chat's first line is a snippet (2).
     var lines: Int = 3
 
-    /// The body text worth excerpting — nil when the content is empty, repeats
-    /// the title, or is a bare URL (a link permalink is plumbing, not prose).
-    /// "Bare URL" = one whitespace-free token the detector recognizes —
-    /// comparing absoluteString to the raw text misses every scheme-less or
-    /// normalized link (NSDataDetector rewrites what it matches).
+    /// The body text worth excerpting — nil when the content is empty, says
+    /// only what the title already says, or is a bare URL (a link permalink is
+    /// plumbing, not prose). "Bare URL" = one whitespace-free token the
+    /// detector recognizes — comparing absoluteString to the raw text misses
+    /// every scheme-less or normalized link (NSDataDetector rewrites what it
+    /// matches).
+    ///
+    /// The excerpt starts BELOW the title's own line (prd §398, 2026-08-17).
+    /// Every importer that names an entry after its opening line — Day One,
+    /// Apple Journal, Obsidian, a shared Apple Note — stores the whole body,
+    /// so this row drew that line at body size and then immediately again at
+    /// subhead size. The old `text != thing.title` guard was written for
+    /// exactly this and could not fire: `title` is `titleLine`'s flattened,
+    /// 80-clamped output, so it almost never equals the raw body it came from.
     private var excerpt: String? {
         let text = thing.content.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !text.isEmpty, text != thing.title else { return nil }
+        guard !text.isEmpty else { return nil }
         if !text.contains(where: \.isWhitespace), Capture.detectURL(in: text) != nil {
             return nil
         }
-        return text
+        return IngestSupport.bodyBelowTitle(text, title: thing.title)
     }
 
     /// Liveness guard (build 188 — see `ThingRowKeying.swift`). SwiftUI
@@ -2440,6 +2449,19 @@ struct ExcerptRow: View {
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
+            // THE ENTRY'S PICTURE (prd §399, 2026-08-17). §398 landed both
+            // journal exports' photographs and no row drew them, so a journal
+            // room full of pictures read as a wall of text.
+            //
+            // A TRAILING THUMB, not a grid tile: every mixed room in this app
+            // (Snapchat, Files, X) promotes a WORDLESS picture into a grid and
+            // keeps a captioned one as a row, and a journal entry always has
+            // words — the photograph accompanies what you wrote rather than
+            // being it, so splitting them would separate an entry from its own
+            // picture.
+            if thing.previewImageData != nil {
+                PhotoWell(thing: thing, size: 40)
+            }
             LiveTimeText(date: thing.capturedAt)
         }
         .padding(.vertical, DS.Space.s2)

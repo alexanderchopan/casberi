@@ -172,6 +172,56 @@ print("  \u2713 every catalog Notes seat is in NoteSheetSource.sources (%d + Kin
       % len(offers))
 PY
 
+# --- §399: the sheet reads like a note ---------------------------------------
+# The photograph §398 landed and nothing drew. Its whole failure mode was
+# silence: the pixels were in the store, the row and the sheet both ignored
+# them, and only a DIFFERENT entry's day shelf ever showed one.
+guard "the entry sheet draws its own photograph" \
+  'NoteEntryPhoto\(thing: thing\)' "$VIEW"
+guard "and the row does too" 'thing\.previewImageData != nil' \
+  "Casberi/Casberi/Screens/ShapedRows.swift"
+# `PhotoWell`, never a hand-rolled `Image`: it is the one image view here that
+# honours `redactionReasons`, and a private photograph at 220pt surviving into
+# the app-switcher snapshot is exactly the leak that guard exists to stop.
+guard "the photograph is drawn by the redaction-aware well" \
+  'PhotoWell\(thing: thing, size: nil\)' "$VIEWS"
+
+# The two bounded reads, and that the sheet actually asks for them.
+guard "the sheet reads the same date in other years" \
+  'NoteSheetSource\s*$|otherYears\(of: thing' "$VIEW"
+guard "the sheet reads the entries either side" \
+  'NoteSheetSource\.neighbours\(of: thing' "$VIEW"
+guard "both shelves are drawn" 'NoteOtherYearsList\(rows: otherYears' "$VIEW"
+guard "the neighbour doors are drawn" 'NoteNeighbourDoors\(previous:' "$VIEW"
+# Bounded, never a walk: one `fetchLimit = 1` read per candidate year, capped.
+guard "the other-years read is capped" 'static let yearSpan = 12' "$SOURCE"
+guard "each year is a single-row read" 'd\.fetchLimit = 1' "$SOURCE"
+
+# Markdown is a per-source FACT. Rendering Apple Journal's HTML-derived text or
+# a hand-typed note as markdown would eat a literal asterisk somebody meant.
+guard "markdown is decided per source" \
+  'static let markdownSources: Set<String> = \["Day One", "Obsidian"\]' "$SOURCE"
+guard "the sheet passes both per-source facts to the renderer" \
+  'markdown: prose\.markdown' "$VIEW"
+# A tapped wikilink walks THROUGH the sheet's own walker rather than opening a
+# second presentation (the one-screen-one-sheet rule, paid for three times).
+guard "an inline wikilink resolves before it walks" \
+  'NoteLinks\.resolve\(\[target\]' "$VIEW"
+
+# §399's ruling: a note under `You` gets the anatomy, and claims nothing about
+# who wrote it.
+guard "a kept note reaches the anatomy" 'isKeptNote\(thing\)' "$SOURCE"
+guard "…and only when it is a note" \
+  'thing\.source == keptSource && thing\.kind == \.note' "$SOURCE"
+# NOT by joining `sources`, which the catalog guard below checks against the
+# Notes group — `You` is not a catalog seat.
+absent "You is not smuggled into the catalog-checked source set" \
+  '"Obsidian", "Day One", "Apple Journal", "Apple Notes", "Kindle", "Voice", "You"' "$SOURCE"
+# The day shelf excludes SIBLINGS, not the whole source — the old rule hid every
+# screenshot, link and voice note from the same day in the room this widened to.
+guard "the day shelf excludes same source AND same kind" \
+  '\$0\.source == source && \$0\.kind == kind' "$SOURCE"
+
 [[ $fail -eq 0 ]] || { echo "note-sheet-selftest: ✗ drift guard(s) failed"; exit 1; }
 
 # --- the harness ------------------------------------------------------------
@@ -279,12 +329,14 @@ print("")
 print("How it landed — the block that replaced one spec row")
 
 func input(shape: NoteSheet.Shape = .entry, source: String = "Day One",
-           origin: NoteReception.Origin = .export, originFile: String? = nil,
+           origin: NoteReception.Origin = .export, act: NoteSheet.Act = .wrote,
+           originFile: String? = nil,
            path: String? = nil, words: Int? = nil, clamped: Bool = false,
            editedAt: Date? = nil, markedAt: Date? = nil, siblings: Int? = nil,
            writtenAt: Date? = nil, landedAt: Date? = nil,
            truncatedPassage: Bool = false) -> NoteReception.Input {
-    .init(shape: shape, source: source, origin: origin, originFile: originFile,
+    .init(shape: shape, source: source, origin: origin, act: act,
+          originFile: originFile,
           path: path, words: words, clamped: clamped, editedAt: editedAt,
           markedAt: markedAt, siblings: siblings, writtenAt: writtenAt,
           landedAt: landedAt, truncatedPassage: truncatedPassage, now: today)
@@ -352,7 +404,8 @@ check("a vault with no path still says where it read from",
                                   words: 300))?
         .provenance == "Read from your Obsidian vault.")
 check("a device recording says so",
-      NoteReception.compose(input(source: "Voice", origin: .device, words: 31))?
+      NoteReception.compose(input(source: "Voice", origin: .device,
+                                  act: .recorded, words: 31))?
         .provenance == "Recorded here, on this device.")
 check("an export names the source",
       NoteReception.compose(input(words: 318))?
@@ -418,6 +471,145 @@ check("a future date reads as just now",
       NoteSheet.relative(today.addingTimeInterval(600), now: today) == "just now")
 
 print("")
+print("")
+print("The body's own structure (prd §399)")
+// A source whose body is NOT markdown is one paragraph, whatever it contains —
+// the whole point of the per-source fact. A dash somebody typed is a dash.
+check("a non-markdown body is one paragraph",
+      NoteSheet.blocks("- milk\n- bread", markdown: false) == [.paragraph("- milk\n- bread")])
+check("an empty body has no blocks", NoteSheet.blocks("   \n\n ", markdown: true).isEmpty)
+check("a heading is a heading",
+      NoteSheet.blocks("# Monday", markdown: true) == [.heading(level: 1, text: "Monday")])
+check("its level is kept", NoteSheet.blocks("### Deep", markdown: true)
+      == [.heading(level: 3, text: "Deep")])
+// EVERY marker needs a space after it, and this is the whole of its
+// correctness: `#hashtag` is Obsidian's own inline tag syntax, landed by that
+// ingest, and drawing it as a heading would promote a tag to a title.
+check("a hashtag is not a heading",
+      NoteSheet.blocks("#legibility matters", markdown: true)
+        == [.paragraph("#legibility matters")])
+check("seven hashes is not a heading",
+      NoteSheet.blocks("####### too deep", markdown: true)
+        == [.paragraph("####### too deep")])
+check("a bullet is a bullet", NoteSheet.blocks("- milk", markdown: true) == [.bullet("milk")])
+check("so are the other two marks",
+      NoteSheet.blocks("* milk", markdown: true) == [.bullet("milk")]
+        && NoteSheet.blocks("+ milk", markdown: true) == [.bullet("milk")])
+check("a negative number is not a bullet",
+      NoteSheet.blocks("-5 degrees and falling", markdown: true)
+        == [.paragraph("-5 degrees and falling")])
+// The index is the one WRITTEN, never a re-count: a list starting at 3 was
+// started at 3 on purpose, and renumbering somebody's note is editing it.
+check("a numbered item keeps the number it was given",
+      NoteSheet.blocks("3. third", markdown: true) == [.numbered(index: 3, text: "third")])
+check("a date is not a numbered item",
+      NoteSheet.blocks("2019. What a year", markdown: true)
+        == [.paragraph("2019. What a year")])
+check("a quote is a quote", NoteSheet.blocks("> said Sam", markdown: true) == [.quote("said Sam")])
+// THE DEPARTURE FROM COMMONMARK, stated as a test: a journal's line breaks are
+// the writer's, and joining them would run an entry into one wall.
+check("single newlines stay inside one paragraph",
+      NoteSheet.blocks("one\ntwo", markdown: true) == [.paragraph("one\ntwo")])
+check("a blank line starts a new block",
+      NoteSheet.blocks("one\n\ntwo", markdown: true) == [.paragraph("one"), .paragraph("two")])
+// A thematic break draws nothing (no hairlines), so it acts as the break it
+// already is rather than printing "---" as a line of prose.
+check("a thematic break is not printed",
+      NoteSheet.blocks("one\n---\ntwo", markdown: true)
+        == [.paragraph("one"), .paragraph("two")])
+check("a mixed body splits into its real shapes",
+      NoteSheet.blocks("# Monday\n\nWoke late.\n\n- coffee\n- walk", markdown: true)
+        == [.heading(level: 1, text: "Monday"), .paragraph("Woke late."),
+            .bullet("coffee"), .bullet("walk")])
+
+print("")
+print("The fold cuts at a block, never mid-sentence")
+let long = (0..<40).map { "Paragraph number \($0), with enough words in it to matter." }
+    .joined(separator: "\n\n")
+let longBlocks = NoteSheet.blocks(long, markdown: true)
+check("a long body really has many blocks", longBlocks.count == 40)
+let shown = NoteSheet.folded(longBlocks)
+check("the fold keeps fewer blocks than there are", shown.count < longBlocks.count)
+check("every kept block is whole", shown.allSatisfy { longBlocks.contains($0) })
+check("a short body is not folded at all",
+      NoteSheet.folded(NoteSheet.blocks("Short.", markdown: true)).count == 1)
+// Always at least one, so a fold can never show an empty opening — and a
+// single block longer than the limit is shown rather than hidden behind a
+// disclosure that reveals the only thing there is.
+check("one enormous block is still shown",
+      NoteSheet.folded([.paragraph(String(repeating: "x", count: 5_000))]).count == 1)
+// The boundary that makes "always keep one" load-bearing rather than
+// incidental. At the shipped limit the first block is appended before `used`
+// can exceed anything, so the guard reads as redundant — at limit 0 it is the
+// only thing standing between the reader and a "Read the rest" button with
+// nothing above it.
+check("even a zero limit shows one block",
+      NoteSheet.folded(longBlocks, limit: 0).count == 1)
+
+print("")
+print("Wikilinks become links, and only ours are ours")
+check("a body with no wikilink is untouched",
+      NoteSheet.markdownWithWikilinks("plain words") == "plain words")
+check("a bare wikilink becomes a markdown link",
+      NoteSheet.markdownWithWikilinks("see [[Other note]]")
+        == "see [Other note](casberi-note://Other%20note)")
+// The alias split MIRRORS `NoteLinks.extract`, and must: the shelf under the
+// note is built from that function, so a different split here draws a link the
+// shelf doesn't list.
+check("an alias is what the reader sees, the target is where it goes",
+      NoteSheet.markdownWithWikilinks("[[Target|Alias]]")
+        == "[Alias](casberi-note://Target)")
+check("a heading anchor is not part of the target",
+      NoteSheet.markdownWithWikilinks("[[Target#Section]]")
+        == "[Target](casberi-note://Target)")
+check("an empty link is left exactly as written",
+      NoteSheet.markdownWithWikilinks("[[]]") == "[[]]")
+check("text either side survives",
+      NoteSheet.markdownWithWikilinks("a [[One]] b [[Two]] c")
+        == "a [One](casberi-note://One) b [Two](casberi-note://Two) c")
+// An alias is somebody's own text and may hold a bracket, which ends a markdown
+// link early and spills the rest of the URL into the note as visible prose.
+//
+// `[` and not `]`: the capture is `[^\]]+`, so an alias holding a CLOSING
+// bracket is never matched at all and the escaper's `]` case cannot be reached
+// from here. It stays in the source as insurance against that pattern changing,
+// and is deliberately not asserted — a test that passes because its input never
+// reaches the code is the "right result for the wrong reason" class.
+check("an opening bracket in an alias is escaped",
+      NoteSheet.markdownWithWikilinks("[[T|a[b]]").contains("\\["))
+check("…and a wikilink whose alias holds a CLOSING bracket is left alone entirely",
+      NoteSheet.markdownWithWikilinks("[[T|a]b]]") == "[[T|a]b]]")
+check("our scheme resolves to the note it names",
+      NoteSheet.wikiTarget(URL(string: "casberi-note://Other%20note")!) == "Other note")
+// NOT `casberi://` — that is the app's real deep-link scheme and `RootShell`
+// acts on it, so a note holding a crafted link could otherwise reach a router.
+check("the app's own scheme is NOT a wikilink",
+      NoteSheet.wikiTarget(URL(string: "casberi://settings")!) == nil)
+check("a real URL somebody wrote is not a wikilink",
+      NoteSheet.wikiTarget(URL(string: "https://example.com")!) == nil)
+check("a hostless one names nothing",
+      NoteSheet.wikiTarget(URL(string: "casberi-note://")!) == nil)
+
+print("")
+print("What you KEPT, which is neither writing nor recording (prd §399)")
+// The ruling §366 deferred: a note shared out of Apple Notes is
+// indistinguishable from one typed here, so the verb claims neither.
+check("kept is its own verb", NoteSheet.Act.kept.verb == "kept")
+check("and it is not written", NoteSheet.Act.kept.verb != NoteSheet.Act.wrote.verb)
+let keptLine = NoteSheet.dateline(date(2026, 5, 14), act: .kept, now: date(2026, 6, 1))
+check("the dateline says you kept it", keptLine.detail.contains("kept at"))
+let keptDevice = NoteReception.compose(.init(
+    shape: .entry, source: "You", origin: .device, act: .kept,
+    words: 40, writtenAt: date(2026, 5, 14), landedAt: date(2026, 5, 14),
+    now: date(2026, 6, 1)))!
+check("a kept note is not said to have been recorded",
+      keptDevice.provenance == "Kept here, on this device.")
+let recorded = NoteReception.compose(.init(
+    shape: .entry, source: "Voice", origin: .device, act: .recorded,
+    words: 40, writtenAt: date(2026, 5, 14), landedAt: date(2026, 5, 14),
+    now: date(2026, 6, 1)))!
+check("a voice note still is", recorded.provenance == "Recorded here, on this device.")
+
 if failures > 0 { print("note-sheet-selftest: ✗ \(failures) assertion(s) failed"); exit(1) }
 SWIFT
 
@@ -565,4 +757,56 @@ mutate "the ceiling never fires" \
 # the intent and nothing here pretends to prove it.
 
 echo ""
+# §399's block grammar. Each of these renders perfectly and says something the
+# note does not.
+mutate "a marker needs no space, so a hashtag becomes a heading" \
+  'if hashes <= 6, rest.hasPrefix(" ") {' \
+  'if hashes <= 6 {'
+mutate "any depth of hash is a heading" \
+  'if hashes <= 6, rest.hasPrefix(" ") {' \
+  'if hashes <= 99, rest.hasPrefix(" ") {'
+mutate "a numbered item is renumbered from one" \
+  'return .numbered(index: index, text: text)' \
+  'return .numbered(index: 1, text: text)'
+mutate "an unbounded run of digits starts a list" \
+  'if !digits.isEmpty, digits.count <= 3, let index = Int(digits) {' \
+  'if !digits.isEmpty, let index = Int(digits) {'
+# CommonMark's own behaviour, which is wrong for a journal: a body's line breaks
+# are the writer's, and joining them runs an entry into one wall.
+mutate "single newlines are joined the way CommonMark would" \
+  'para.joined(separator: "\n")' \
+  'para.joined(separator: " ")'
+mutate "a non-markdown body is parsed as markdown anyway" \
+  'guard markdown else { return [.paragraph(body)] }' \
+  'guard true else { return [.paragraph(body)] }'
+# A fold that keeps nothing shows an empty opening above a "read the rest".
+mutate "the fold can keep no blocks at all" \
+  'if !out.isEmpty && used >= limit { break }' \
+  'if used >= limit { break }'
+mutate "the fold never fires" \
+  'if !out.isEmpty && used >= limit { break }' \
+  'if false { break }'
+# The alias split must mirror `NoteLinks.extract`, or the body draws a link the
+# shelf beneath the note does not list.
+mutate "a heading anchor is left in the target" \
+  '.split(whereSeparator: { $0 == "|" || $0 == "#" })' \
+  '.split(separator: "|")'
+mutate "an alias bracket is left unescaped" \
+  '.replacingOccurrences(of: "[", with: "\\[")' \
+  '.replacingOccurrences(of: "[", with: "[")'
+# The scheme is the whole containment: `casberi://` is the app's real router.
+mutate "wikilinks ride the app's own deep-link scheme" \
+  'static let wikiScheme = "casberi-note"' \
+  'static let wikiScheme = "casberi"'
+mutate "any URL in a note is treated as a wikilink" \
+  'guard url.scheme == wikiScheme else { return nil }' \
+  'guard url.scheme != nil else { return nil }'
+# The §399 ruling itself: a kept note must not claim you wrote it.
+mutate "a kept note claims you wrote it" \
+  'case .kept:     return String(localized: "kept")' \
+  'case .kept:     return String(localized: "written")'
+mutate "everything on this device is said to have been recorded" \
+  'return i.act == .recorded' \
+  'return true'
+
 echo "note-sheet-selftest: OK — assertions and mutations both pass."

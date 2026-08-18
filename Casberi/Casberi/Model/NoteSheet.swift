@@ -163,6 +163,18 @@ enum NoteSheet {
     /// sentence both turn on.
     enum Act: String, Equatable {
         case wrote, recorded, marked
+        /// A note that arrived under `You` — the share sheet, a drop, a
+        /// capture (prd §399, 2026-08-17).
+        ///
+        /// It exists because the anatomy could not honestly be widened to
+        /// `You` without it. §366 left that source out and said why: the sheet
+        /// would first need "an answer to what `You` means (wrote it, or merely
+        /// brought it)", and a note shared out of Apple Notes lands there
+        /// indistinguishably from one typed here. The answer is that we cannot
+        /// know, and the fix is a verb that does not need to: **you kept it**,
+        /// at that time, on this device, which is true of both and claims
+        /// authorship of neither.
+        case kept
 
         /// Past tense, second person, as it appears mid-sentence.
         var verb: String {
@@ -170,6 +182,7 @@ enum NoteSheet {
             case .wrote:    return String(localized: "written")
             case .recorded: return String(localized: "recorded")
             case .marked:   return String(localized: "marked")
+            case .kept:     return String(localized: "kept")
             }
         }
     }
@@ -191,6 +204,217 @@ enum NoteSheet {
         guard !sameYear else { return Dateline(headline: headline, detail: clause) }
         let year = when.formatted(.dateTime.year())
         return Dateline(headline: headline, detail: "\(year) · \(clause)")
+    }
+
+    // MARK: - The body's own structure
+
+    /// One block of a note's body (prd §399, 2026-08-17).
+    ///
+    /// `NoteProse` set the whole body as ONE `Text`, so a Day One or Obsidian
+    /// note — both of which really are markdown — drew its own punctuation:
+    /// `# Monday` as a hash and a word, `**finally**` with the asterisks in,
+    /// `- milk` as a hyphen. The importer already proves the format is
+    /// markdown; `DayOneImport.unescapeMarkdown` exists precisely because Day
+    /// One backslash-escapes markdown punctuation on the way out.
+    ///
+    /// Deliberately SMALL. Headings, lists, quotes and paragraphs are the four
+    /// shapes a person writing prose actually uses; tables, footnotes, HTML
+    /// blocks and embeds are not, and each one added is a way for a body to
+    /// render as something other than what it says.
+    enum Block: Equatable {
+        /// `# …` through `###### …`, level clamped to 1...6.
+        case heading(level: Int, text: String)
+        case bullet(String)
+        /// The index is the one WRITTEN in the source, never a re-count: a list
+        /// starting at 3 was started at 3 on purpose, and renumbering somebody's
+        /// note is editing it.
+        case numbered(index: Int, text: String)
+        case quote(String)
+        case paragraph(String)
+
+        /// The characters this block will draw, for the fold's arithmetic.
+        var length: Int {
+            switch self {
+            case .heading(_, let t), .bullet(let t), .quote(let t), .paragraph(let t):
+                return t.count
+            case .numbered(_, let t):
+                return t.count
+            }
+        }
+    }
+
+    /// A body, split into blocks — or one paragraph when the source is not
+    /// markdown.
+    ///
+    /// **`markdown` is a per-source FACT, not a preference.** Day One and
+    /// Obsidian store markdown. Apple Journal's body is HTML run through
+    /// `plainText(fromHTML:)`, and a `You` note is whatever somebody typed or
+    /// shared — neither is markdown, and parsing them as if they were would
+    /// eat a literal asterisk somebody meant, or promote a line starting "- "
+    /// into a bullet that was a dash.
+    ///
+    /// Blank lines separate blocks; single newlines INSIDE a paragraph are
+    /// kept rather than joined, which is where this departs from strict
+    /// markdown and does so knowingly: a journal entry's line breaks are the
+    /// writer's, and CommonMark would run them together into one wall.
+    static func blocks(_ text: String, markdown: Bool) -> [Block] {
+        let body = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !body.isEmpty else { return [] }
+        guard markdown else { return [.paragraph(body)] }
+
+        var out: [Block] = []
+        var para: [String] = []
+        func flush() {
+            let joined = para.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
+            if !joined.isEmpty { out.append(.paragraph(joined)) }
+            para = []
+        }
+        for raw in body.components(separatedBy: .newlines) {
+            let line = raw.trimmingCharacters(in: .whitespaces)
+            if line.isEmpty { flush(); continue }
+            // A thematic break draws nothing — the design system has no
+            // hairlines — so it acts as the paragraph break it already is
+            // rather than printing "---" as a line of prose.
+            if line.allSatisfy({ $0 == "-" }) && line.count >= 3 { flush(); continue }
+            if line.allSatisfy({ $0 == "*" }) && line.count >= 3 { flush(); continue }
+            if let block = leader(line) { flush(); out.append(block); continue }
+            para.append(line)
+        }
+        flush()
+        return out
+    }
+
+    /// One line's own block, or nil when it is ordinary prose.
+    ///
+    /// Every marker requires a SPACE after it, which is the whole of its
+    /// correctness: `#hashtag` is a tag somebody wrote (Obsidian's inline tag
+    /// syntax, landed by its own ingest), `#Monday` is not a heading, and
+    /// `-5 degrees` is not a bullet.
+    static func leader(_ line: String) -> Block? {
+        if line.hasPrefix("#") {
+            let hashes = line.prefix(while: { $0 == "#" }).count
+            let rest = line.dropFirst(hashes)
+            if hashes <= 6, rest.hasPrefix(" ") {
+                let text = rest.trimmingCharacters(in: .whitespaces)
+                if !text.isEmpty { return .heading(level: hashes, text: text) }
+            }
+            return nil
+        }
+        for mark in ["- ", "* ", "+ "] where line.hasPrefix(mark) {
+            let text = String(line.dropFirst(2)).trimmingCharacters(in: .whitespaces)
+            return text.isEmpty ? nil : .bullet(text)
+        }
+        if line.hasPrefix(">") {
+            let text = String(line.dropFirst()).trimmingCharacters(in: .whitespaces)
+            return text.isEmpty ? nil : .quote(text)
+        }
+        let digits = line.prefix(while: { $0.isNumber })
+        if !digits.isEmpty, digits.count <= 3, let index = Int(digits) {
+            let rest = line.dropFirst(digits.count)
+            if rest.hasPrefix(". ") || rest.hasPrefix(") ") {
+                let text = String(rest.dropFirst(2)).trimmingCharacters(in: .whitespaces)
+                if !text.isEmpty { return .numbered(index: index, text: text) }
+            }
+        }
+        return nil
+    }
+
+    /// Past this many characters the body folds. Roughly a screenful at
+    /// `reading20` on a phone: short enough that a fold is rare on an ordinary
+    /// entry, long enough that the fold means something when it happens.
+    static let foldLength = 900
+
+    /// The blocks shown before the fold — whole blocks only.
+    ///
+    /// It cuts at a BLOCK boundary and always keeps at least one, so a fold can
+    /// never leave a heading standing alone over nothing, and never shows an
+    /// empty opening. The old fold was `lineLimit(12)` on one `Text`, which cut
+    /// mid-sentence at whatever width the device happened to be.
+    static func folded(_ blocks: [Block], limit: Int = foldLength) -> [Block] {
+        var out: [Block] = []
+        var used = 0
+        for block in blocks {
+            if !out.isEmpty && used >= limit { break }
+            out.append(block)
+            used += block.length
+        }
+        return out
+    }
+
+    // MARK: - Wikilinks
+
+    /// The URL scheme an inline `[[wikilink]]` becomes, so the renderer can
+    /// tell OUR links from a real one somebody wrote in their note.
+    ///
+    /// Deliberately not `casberi://` — that is the app's real deep-link scheme
+    /// and `RootShell.route` acts on it, so a note containing a crafted link
+    /// could otherwise reach a router. This scheme is claimed by nothing,
+    /// registered nowhere, and is intercepted by the one view that renders it.
+    static let wikiScheme = "casberi-note"
+
+    /// Rewrites `[[Target]]`, `[[Target|Alias]]` and `[[Target#Heading]]` into
+    /// ordinary markdown links, so the inline renderer draws them and the
+    /// sheet can walk them (prd §399).
+    ///
+    /// The vault's own syntax has been extracted at ingest since 2026-07-28
+    /// and resolved into a list UNDER the note — but in the body itself it
+    /// still read as literal double brackets, which is the one place a vault
+    /// user expects a link to work because it works everywhere else they see
+    /// that note.
+    ///
+    /// Alias rules mirror `NoteLinks.extract` exactly, and must: the list below
+    /// the note is built from that function, so a different split here would
+    /// draw a link the shelf doesn't list, or list one the body doesn't draw.
+    static func markdownWithWikilinks(_ text: String) -> String {
+        guard text.contains("[["),
+              let regex = try? NSRegularExpression(pattern: #"\[\[([^\]]+)\]\]"#)
+        else { return text }
+        let ns = text as NSString
+        var out = ""
+        var cursor = 0
+        for match in regex.matches(in: text, range: NSRange(location: 0, length: ns.length)) {
+            guard match.numberOfRanges > 1 else { continue }
+            out += ns.substring(with: NSRange(location: cursor,
+                                              length: match.range.location - cursor))
+            cursor = match.range.location + match.range.length
+            let inner = ns.substring(with: match.range(at: 1))
+            // `Target|Alias` and `Target#Heading` — the target is everything
+            // before the first of either, exactly as `NoteLinks.extract` cuts it.
+            let target = inner
+                .split(whereSeparator: { $0 == "|" || $0 == "#" })
+                .first.map(String.init)?
+                .trimmingCharacters(in: .whitespaces) ?? ""
+            let alias = inner.contains("|")
+                ? inner.split(separator: "|", maxSplits: 1)[1].trimmingCharacters(in: .whitespaces)
+                : target
+            guard !target.isEmpty, !alias.isEmpty,
+                  let encoded = target.addingPercentEncoding(
+                    withAllowedCharacters: .alphanumerics) else {
+                out += ns.substring(with: match.range)
+                continue
+            }
+            // The alias is somebody's own text and may hold `]` or `)`, either
+            // of which ends a markdown link early and spills the rest of the
+            // URL into the note as visible prose.
+            let safe = alias
+                .replacingOccurrences(of: "\\", with: "\\\\")
+                .replacingOccurrences(of: "[", with: "\\[")
+                .replacingOccurrences(of: "]", with: "\\]")
+            out += "[\(safe)](\(wikiScheme)://\(encoded))"
+        }
+        out += ns.substring(from: cursor)
+        return out
+    }
+
+    /// The note title an intercepted wikilink URL names, or nil.
+    ///
+    /// The inverse of the encoding above, and the ONLY way a tapped link
+    /// becomes a destination — so a URL that is not ours, or carries no host,
+    /// resolves to nothing rather than to a guess.
+    static func wikiTarget(_ url: URL) -> String? {
+        guard url.scheme == wikiScheme else { return nil }
+        let host = url.host(percentEncoded: false) ?? ""
+        return host.isEmpty ? nil : host
     }
 
     /// "4m", "3h", "6d", "5w" — how long since a vault note was edited.
@@ -271,6 +495,10 @@ struct NoteReception: Equatable {
         var shape: NoteSheet.Shape
         var source: String
         var origin: Origin
+        /// What the person did. It reaches the sentence only for a `.device`
+        /// origin, where "Recorded here" and "Kept here" are the difference
+        /// between a claim we can make and one we can't (prd §399).
+        var act: NoteSheet.Act = .wrote
         /// The one file this source's export IS, where naming it tells the
         /// person something they can act on ("My Clippings.txt"). nil where
         /// the export is a folder of many.
@@ -376,7 +604,13 @@ struct NoteReception: Equatable {
             }
             return String(localized: "Read from your vault at \(path).")
         case .device:
-            return String(localized: "Recorded here, on this device.")
+            // A voice note really was recorded here. A `You` note may have been
+            // typed here or shared in from somewhere else, and nothing in the
+            // record can tell the two apart — so it says the one thing that is
+            // true either way (§399).
+            return i.act == .recorded
+                ? String(localized: "Recorded here, on this device.")
+                : String(localized: "Kept here, on this device.")
         case .export:
             let head: String
             if let file = i.originFile, !file.isEmpty {

@@ -65,27 +65,35 @@ struct NoteProse: View {
     /// same tier but is never long enough to fold, and a "Read more" under a
     /// quotation would be a control that does nothing.
     var foldable: Bool = true
+    /// Is this body really markdown? A per-source FACT — see
+    /// `NoteSheetSource.markdownSources`. False draws one paragraph exactly as
+    /// this view always has.
+    var markdown: Bool = false
+    /// Does `[[this]]` mean something here? Obsidian only.
+    var wikilinks: Bool = false
+    /// Walks an inline wikilink. nil leaves them drawn but inert, which is why
+    /// the sheet always passes one — a tinted word that does nothing is the
+    /// dead control the honesty law bans.
+    var onWikilink: ((String) -> Void)?
 
     @State private var expanded = false
 
-    /// Past this many characters the body folds. Roughly a screenful at
-    /// `reading20` on a phone: short enough that a fold is rare on an ordinary
-    /// entry, long enough that the fold means something when it happens.
-    private static let foldLength = 900
+    private var blocks: [NoteSheet.Block] {
+        NoteSheet.blocks(text, markdown: markdown)
+    }
 
-    private var folds: Bool { foldable && !expanded && text.count > Self.foldLength }
+    private var shown: [NoteSheet.Block] {
+        guard foldable, !expanded else { return blocks }
+        return NoteSheet.folded(blocks)
+    }
+
+    private var folds: Bool { foldable && !expanded && shown.count < blocks.count }
 
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Space.s3) {
-            Text(ProseLinks.rendered(text))
-                .dsText(.reading20)
-                .foregroundStyle(DS.textPrimary)
-                .fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                // Words are what people copy a phrase out of, and until now
-                // no note body in this app allowed it.
-                .textSelection(.enabled)
-                .lineLimit(folds ? 12 : nil)
+            ForEach(Array(shown.enumerated()), id: \.offset) { _, block in
+                view(for: block)
+            }
             if folds {
                 Button {
                     withAnimation(DS.Motion.standard) { expanded = true }
@@ -101,6 +109,97 @@ struct NoteProse: View {
                 .dsHover()
             }
         }
+        // ONE handler for the whole body rather than one per block: an
+        // `OpenURLAction` is an environment value, so installing it here covers
+        // every link in every block and cannot be forgotten on a new case.
+        // Anything that is not ours falls through to the system untouched —
+        // a real URL somebody wrote in their note still opens their browser.
+        .environment(\.openURL, OpenURLAction { url in
+            guard let target = NoteSheet.wikiTarget(url) else { return .systemAction }
+            onWikilink?(target)
+            return .handled
+        })
+    }
+
+    /// The four shapes, each at the tier it is read in.
+    ///
+    /// A heading is `heading17` at every level rather than a ramp per level:
+    /// this is a note inside a sheet, not a document, and six type sizes inside
+    /// a body would out-shout the sheet's own hero. The LEVEL still shows, as
+    /// the indent — which is what a level means.
+    @ViewBuilder
+    private func view(for block: NoteSheet.Block) -> some View {
+        switch block {
+        case .heading(let level, let text):
+            prose(text)
+                .dsText(.heading17)
+                .foregroundStyle(DS.textPrimary)
+                .padding(.leading, CGFloat(min(level, 3) - 1) * DS.Space.s3)
+        case .bullet(let text):
+            marked("•", prose(text))
+        case .numbered(let index, let text):
+            marked("\(index).", prose(text))
+        case .quote(let text):
+            // The rail is a 2pt shape marking a quoted block, not a divider:
+            // the no-hairlines law is about DIVIDERS, and this divides nothing
+            // (`NotePassageContent`'s rail, one shape over).
+            HStack(alignment: .top, spacing: DS.Space.s3) {
+                RoundedRectangle(cornerRadius: 1, style: .continuous)
+                    .fill(DS.fillFaint)
+                    .frame(width: 2)
+                prose(text)
+                    .dsText(.reading20)
+                    .foregroundStyle(DS.textSecondary)
+            }
+        case .paragraph(let text):
+            prose(text)
+                .dsText(.reading20)
+                .foregroundStyle(DS.textPrimary)
+                // Words are what people copy a phrase out of, and until §366 no
+                // note body in this app allowed it.
+                .textSelection(.enabled)
+        }
+    }
+
+    /// A list item: its mark and its words, the words wrapping under
+    /// themselves rather than under the mark.
+    private func marked(_ mark: String, _ content: Text) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+            Text(verbatim: mark)
+                .dsText(.reading20)
+                .foregroundStyle(DS.textTertiary)
+                .monospacedDigit()
+            content
+                .dsText(.reading20)
+                .foregroundStyle(DS.textPrimary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// One block's words: wikilinks rewritten, then inline markdown, then the
+    /// plain-URL linkifier the sheet has always run.
+    ///
+    /// The ORDER is load-bearing. Wikilinks become markdown links, so they must
+    /// be rewritten BEFORE the markdown parse; and the parse is
+    /// `inlineOnlyPreservingWhitespace`, because this view has already split the
+    /// blocks and letting the parser do it again would collapse the line breaks
+    /// `NoteSheet.blocks` deliberately kept.
+    private func prose(_ text: String) -> Text {
+        var body = text
+        if wikilinks { body = NoteSheet.markdownWithWikilinks(body) }
+        guard markdown else {
+            return Text(ProseLinks.rendered(body))
+        }
+        // A body is somebody's own writing and may hold anything; a parse that
+        // throws leaves the words exactly as they were rather than losing them.
+        guard var attributed = try? AttributedString(
+            markdown: body,
+            options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace))
+        else { return Text(ProseLinks.rendered(text)) }
+        for run in attributed.runs where run.link != nil {
+            attributed[run.range].foregroundColor = DS.tint
+        }
+        return Text(attributed)
     }
 }
 
@@ -410,5 +509,183 @@ struct NoteReceptionCard: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(DS.fillFaint,
                     in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+    }
+}
+
+// MARK: - The entry's own photograph
+
+/// A journal entry's picture (prd §399, 2026-08-17).
+///
+/// §398 landed the two journal exports' photographs — Day One's `photos/`,
+/// Apple Journal's `Resources/` — as the same `previewImageData` thumbnail
+/// every other picture in this app is. And nothing drew them. An entry's own
+/// photograph appeared in exactly one place in the whole app: as a 92pt tile on
+/// a DIFFERENT entry's "That day" shelf. The sheet for the entry that owns it
+/// showed a date and some words.
+///
+/// It sits BELOW the dateline and above the prose, which is the order the entry
+/// itself has: the date identifies it, and the photograph is part of what it
+/// says rather than a heading over it.
+///
+/// Liveness: stores a `Thing`, so it guards its own body (corollary 5) — and
+/// `PhotoWell` inside it guards again, which is not redundant, since SwiftUI
+/// re-runs a leaf on the model's own observation independently of this one.
+struct NoteEntryPhoto: View {
+    let thing: Thing
+    var onZoom: () -> Void
+
+    var body: some View {
+        if thing.isLive, thing.previewImageData != nil {
+            Button {
+                DSHaptic.selection()
+                onZoom()
+            } label: {
+                // `PhotoWell` and not a hand-rolled `Image`: it decodes ONCE
+                // into its own state instead of re-decoding on every body
+                // evaluation, and it is the one image view in this app that
+                // honours `redactionReasons` — a private photograph at this size
+                // surviving into the app-switcher snapshot is exactly the leak
+                // that guard exists to stop.
+                PhotoWell(thing: thing, size: nil)
+                    .frame(height: 220)
+                    .frame(maxWidth: .infinity)
+                    .clipped()
+                    .clipShape(RoundedRectangle(cornerRadius: DS.Radius.card,
+                                                style: .continuous))
+                    .contentShape(RoundedRectangle(cornerRadius: DS.Radius.card,
+                                                   style: .continuous))
+            }
+            .buttonStyle(DSTileButtonStyle())
+            .accessibilityLabel(Text("Photograph from this entry. Opens it full screen."))
+        }
+    }
+}
+
+// MARK: - The same date, in other years
+
+/// What you wrote on this date in the other years you kept this journal
+/// (prd §399).
+///
+/// The room's anniversary answers TODAY's date; this answers the ENTRY's, which
+/// is the reading a journal is opened for. A year leads each row because the
+/// year is the whole finding — the day and month are the same on every one of
+/// them, and repeating them would be the label-for-a-label failure.
+///
+/// The line beneath is the entry's own opening, never its title: for these
+/// sources the title IS the opening line, so drawing both would print it twice
+/// (the §398 `ExcerptRow` defect, one screen over).
+struct NoteOtherYearsList: View {
+    let rows: [KeyedThing]
+    var onOpen: (Thing) -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            // `.live` INSIDE the closure (corollary 3): the array this `ForEach`
+            // holds was filtered when the view value was made, which is before
+            // any delete that lands while the sheet is open.
+            ForEach(rows) { row in
+                if let thing = row.live {
+                    Button { onOpen(thing) } label: {
+                        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s3) {
+                            Text(verbatim: String(
+                                Calendar.current.component(.year, from: thing.capturedAt)))
+                                .dsText(.heading17)
+                                .foregroundStyle(DS.textPrimary)
+                                .monospacedDigit()
+                            Text(thing.title)
+                                .dsText(.callout15)
+                                .foregroundStyle(DS.textSecondary)
+                                .lineLimit(2)
+                                .multilineTextAlignment(.leading)
+                                .fixedSize(horizontal: false, vertical: true)
+                            Spacer(minLength: 0)
+                        }
+                        .padding(.vertical, DS.Space.s2)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .dsHover()
+                    .accessibilityElement(children: .combine)
+                }
+            }
+        }
+    }
+}
+
+// MARK: - The entry before, and the entry after
+
+/// The two doors that make a journal readable AS a journal (prd §399).
+///
+/// A journal is a sequence and the sheet dead-ended, so reading three
+/// consecutive days meant sheet, close, scroll, sheet, three times over. These
+/// are the same walk the sibling passages and the day shelf already use.
+///
+/// **Older on the left, newer on the right** — the direction the writing went,
+/// not the direction the feed scrolls. And each door names its entry's DATE
+/// rather than saying "Previous": a door that says where it goes is worth more
+/// than one that says which way, and the date is what identifies an entry here.
+///
+/// A missing neighbour draws NOTHING rather than a disabled control: the first
+/// entry in a journal really has nothing before it, and greying out a door onto
+/// a thing that does not exist is furniture.
+struct NoteNeighbourDoors: View {
+    let previous: KeyedThing?
+    let next: KeyedThing?
+    var onOpen: (Thing) -> Void
+
+    var body: some View {
+        HStack(alignment: .top, spacing: DS.Space.s2) {
+            door(previous, systemImage: "chevron.left", trailing: false)
+            door(next, systemImage: "chevron.right", trailing: true)
+        }
+    }
+
+    @ViewBuilder
+    private func door(_ row: KeyedThing?, systemImage: String, trailing: Bool) -> some View {
+        // Liveness re-checked HERE and not only where the value was made: a heal
+        // can delete the neighbour while this sheet is open (corollary 3).
+        if let thing = row?.live {
+            Button {
+                DSHaptic.selection()
+                onOpen(thing)
+            } label: {
+                HStack(spacing: DS.Space.s2) {
+                    if !trailing { chevron(systemImage) }
+                    VStack(alignment: trailing ? .trailing : .leading, spacing: 1) {
+                        Text(thing.capturedAt.formatted(.dateTime.day().month(.abbreviated)))
+                            .dsText(.callout15)
+                            .foregroundStyle(DS.textPrimary)
+                        Text(thing.title)
+                            .dsText(.label12)
+                            .foregroundStyle(DS.textTertiary)
+                            .lineLimit(1)
+                    }
+                    .frame(maxWidth: .infinity, alignment: trailing ? .trailing : .leading)
+                    if trailing { chevron(systemImage) }
+                }
+                .padding(DS.Space.s3)
+                .frame(maxWidth: .infinity)
+                .background(DS.fillFaint,
+                            in: RoundedRectangle(cornerRadius: DS.Radius.card,
+                                                 style: .continuous))
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .dsHover()
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel(Text(trailing
+                ? "The entry after this one, \(thing.title)"
+                : "The entry before this one, \(thing.title)"))
+        } else {
+            // Holds the other door's width so a lone neighbour doesn't stretch
+            // across the sheet and read as the only thing there is.
+            Color.clear.frame(maxWidth: .infinity).frame(height: 0)
+        }
+    }
+
+    private func chevron(_ systemImage: String) -> some View {
+        Image(systemName: systemImage)
+            .dsGlyph(13, weight: .semibold)
+            .foregroundStyle(DS.textTertiary)
     }
 }

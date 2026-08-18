@@ -265,6 +265,44 @@ enum IngestSupport {
         return flat.count > 80 ? String(flat.prefix(80)) + "…" : flat
     }
 
+    /// `titleLine`'s inverse, for a row that draws BOTH (prd §398, 2026-08-17):
+    /// the body with the line the title was made from taken off the front, or
+    /// nil when nothing else is left.
+    ///
+    /// It exists because of a defect visible in every notes room and invisible
+    /// in the code: an importer that takes its title from the body's first line
+    /// — Day One, Apple Journal, Obsidian, a shared Apple Note — stores the
+    /// WHOLE body on `content`, and `ExcerptRow` drew the title at body size and
+    /// then the content underneath it at subhead size. So the first line of
+    /// every multi-line entry was printed twice, one above the other, and the
+    /// three lines of excerpt a journal row affords spent one of them saying
+    /// what the row had just said.
+    ///
+    /// The comparison is on the NORMALISED line rather than a string equality
+    /// with `content`, which is what the old guard did and why it never fired:
+    /// `title` is this function's namesake output — flattened, clamped to 80
+    /// with an ellipsis, and (for the journal importers) stripped of leading
+    /// markdown heading marks — so a raw body almost never equals it, and an
+    /// entry whose first line ran past 80 characters could never match at all.
+    static func bodyBelowTitle(_ text: String, title: String) -> String? {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        guard trimmed != title else { return nil }
+        var lines = trimmed.components(separatedBy: .newlines)
+        // The first line that says anything — the same line every one of these
+        // importers built its title out of, heading marks and all.
+        guard let head = lines.firstIndex(where: {
+            !$0.trimmingCharacters(in: .whitespaces).isEmpty
+        }) else { return nil }
+        let headline = lines[head]
+            .trimmingCharacters(in: CharacterSet(charactersIn: "# "))
+        guard titleLine(headline) == title else { return trimmed }
+        lines.removeSubrange(...head)
+        let rest = lines.joined(separator: "\n")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return rest.isEmpty ? nil : rest
+    }
+
     /// One session for every bridge call, instead of `URLSession.shared`'s
     /// 60s default timeout (2026-07-21). A single stalled endpoint used to
     /// hold a connection up to a full minute during the foreground sweep;

@@ -68,6 +68,12 @@ struct ThingSheetView: View {
     @State private var siblingTotal = 0
     /// What else the corpus holds from the day this entry describes.
     @State private var sameDayThings: [KeyedThing] = []
+    /// The same date in the other years of this journal, and the entries either
+    /// side of this one (prd §399). Read once on open, never persisted — the
+    /// `replies`/`approvalCheck` shape this sheet already uses.
+    @State private var otherYears: [KeyedThing] = []
+    @State private var previousEntry: KeyedThing?
+    @State private var nextEntry: KeyedThing?
 
     /// The second-encounter naming nudge, when this sheet earns one.
     private var namePrompt: (address: String, count: Int, kind: AddressBook.Kind)? {
@@ -665,6 +671,31 @@ struct ThingSheetView: View {
                     }
                     .padding(.top, DS.Space.s4)
                 }
+                // THE SAME DATE, IN OTHER YEARS (prd §399). Under "That day",
+                // which answers about the day ACROSS the corpus, because this
+                // one answers about the date ACROSS the years — the wider
+                // reading, and the one that only exists once a journal is deep.
+                if !otherYears.isEmpty {
+                    VStack(alignment: .leading, spacing: DS.Space.s2) {
+                        Text("On this date")
+                            .dsText(.label12).foregroundStyle(DS.textTertiary)
+                        NoteOtherYearsList(rows: otherYears) {
+                            walkingToNote = KeyedThing($0)
+                        }
+                    }
+                    .padding(.horizontal, DS.Space.s4)
+                    .padding(.top, DS.Space.s4)
+                }
+                // THE ENTRY BEFORE AND AFTER (prd §399) — last of the note
+                // shelves, because it is the way OUT of this entry and
+                // everything above is about the entry itself.
+                if previousEntry != nil || nextEntry != nil {
+                    NoteNeighbourDoors(previous: previousEntry, next: nextEntry) {
+                        walkingToNote = KeyedThing($0)
+                    }
+                    .padding(.horizontal, DS.Space.s4)
+                    .padding(.top, DS.Space.s4)
+                }
                 // IN THE VAULT (prd §366) — both halves of the graph existed
                 // and both were a plain list at the very bottom of the sheet.
                 // Counted and led with, they are a reading: this note is a hub,
@@ -762,6 +793,21 @@ struct ThingSheetView: View {
                 if shape == .entry {
                     sameDayThings = NoteSheetSource
                         .sameDay(as: thing, context: modelContext).keyed
+                    // THE SAME DATE, IN OTHER YEARS (prd §399) — the room's
+                    // anniversary answers today's date; this answers the
+                    // entry's, which is what a journal is opened for. Bounded:
+                    // one `fetchLimit = 1` read per candidate year, capped at
+                    // `NoteSheetSource.yearSpan`.
+                    otherYears = NoteSheetSource
+                        .otherYears(of: thing, context: modelContext).keyed
+                    // THE ENTRIES EITHER SIDE (prd §399) — two more bounded
+                    // reads, so a journal can be read AS a journal instead of
+                    // one sheet at a time. `.entry` only: a vault note's
+                    // `capturedAt` is a file's modification time, so its "next"
+                    // would be whatever you last edited.
+                    let sides = NoteSheetSource.neighbours(of: thing, context: modelContext)
+                    previousEntry = sides.previous.map(KeyedThing.init)
+                    nextEntry = sides.next.map(KeyedThing.init)
                 }
             }
             // HOW IT LANDED (prd §363), in two passes and deliberately so: the
@@ -1219,13 +1265,18 @@ struct ThingSheetView: View {
             case .entry:
                 NoteDateline(dateline: NoteSheet.dateline(
                     thing.capturedAt, act: NoteSheetSource.act(for: thing), now: .now))
+                // THE ENTRY'S OWN PHOTOGRAPH (prd §399). §398 landed both
+                // journal exports' pictures and nothing drew them — an entry's
+                // photograph appeared only as a 92pt tile on a DIFFERENT
+                // entry's day shelf, never on the sheet that owns it.
+                NoteEntryPhoto(thing: thing) { zoomingPhoto = true }
                 // A voice note's words belong to its recording, and
                 // `VoiceContent` below draws the two together — player, real
                 // amplitude envelope, transcript. Setting the transcript here
                 // as well would print it twice and separate it from the audio
                 // it transcribes.
                 if thing.kind != .voice {
-                    NoteProse(text: NoteSheetSource.body(for: thing).text)
+                    noteProse
                 }
             case .note:
                 // A vault note's title IS a name the person chose, so unlike
@@ -1235,7 +1286,7 @@ struct ThingSheetView: View {
                     .foregroundStyle(DS.textPrimary)
                     .fixedSize(horizontal: false, vertical: true)
                     .textSelection(.enabled)
-                NoteProse(text: NoteSheetSource.body(for: thing).text)
+                noteProse
             case .passage:
                 NotePassageContent(
                     passage: NoteSheetSource.passage(for: thing),
@@ -1247,6 +1298,27 @@ struct ThingSheetView: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// The body, with the two per-source facts the renderer needs (prd §399):
+    /// is this really markdown, and does `[[this]]` mean anything here.
+    ///
+    /// A tapped wikilink walks THROUGH the sheet's existing walker rather than
+    /// opening a second presentation — the standing one-screen-one-`.sheet`
+    /// rule, and the same door `NoteSiblingList` and the day shelf already use.
+    /// A target that no landed note resolves does nothing at all, which is
+    /// honest: `NoteLinks.resolve` never invents a destination for a link whose
+    /// note has not synced (or never existed).
+    @ViewBuilder
+    private var noteProse: some View {
+        let prose = NoteSheetSource.prose(for: thing)
+        NoteProse(text: prose.text,
+                  markdown: prose.markdown,
+                  wikilinks: prose.wikilinks) { target in
+            guard let match = NoteLinks.resolve([target], context: modelContext).first
+            else { return }
+            walkingToNote = KeyedThing(match)
+        }
     }
 
     /// Whether the face in the eyebrow is a DOOR. Only the three networks with

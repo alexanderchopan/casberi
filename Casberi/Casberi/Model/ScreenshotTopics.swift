@@ -477,6 +477,21 @@ enum ScreenshotTopics {
         // is the opening ask alone, which is what these rooms had before, so a
         // partially-repaired room degrades to its old reading rather than to
         // nothing.
+        // The two journal importers, 2026-08-17 (prd §398) — and the rooms
+        // this switch should have had first. A journal is the same corpus
+        // Obsidian is (one kind, the person's own sentences, nobody else's
+        // half to leave out) and the only one of the two that is dated by the
+        // day it was WRITTEN rather than by a file's mtime.
+        //
+        // `includeDomains` is FALSE, the writing-room setting: an entry that
+        // pastes a link is not an entry about that hostname.
+        //
+        // The text is `content` and stays the default — both importers store
+        // the whole entry there (clamped at 4,000 characters), unlike a vault
+        // note, which keeps only a 300-character excerpt there and its words
+        // on `enrichedText`.
+        case "Day One", "Apple Journal":
+                          return TopicSource(kinds: [.note], needsOCR: false, includeDomains: false)
         case "ChatGPT", "Claude", "Gemini":
             return TopicSource(kinds: [.chat], needsOCR: false, includeDomains: false,
                                text: { $0.enrichedText ?? $0.content })

@@ -876,7 +876,7 @@ enum DemoSeedAll {
              "rauno", "Latency is a design problem, not an infrastructure one.", 34),
             ("Still true.", "lindsey", "", 210),
             // A THIRD reply to the same person, on purpose (2026-08-18, prd
-            // §396). `XPerson.minimumSightings` is 3, so with two the person
+            // §397). `XPerson.minimumSightings` is 3, so with two the person
             // card — the whole "your years with @lindsey" reading, reached by
             // tapping the room's own board — correctly declines and the demo
             // becomes the one place it can never be seen. Dated years back so
@@ -904,7 +904,7 @@ enum DemoSeedAll {
         // A wordless picture post — the room's grid half (prd §375). Seeded the
         // way the importer lands one — pixels, the medium tag, and NO
         // `postText` — since it is the absent `postText` that `isXPhotoTile`
-        // reads (prd §396); a demo that faked it with a title would prove
+        // reads (prd §397); a demo that faked it with a title would prove
         // nothing about the room's real membership test.
         out += (0..<3).map { i in
             row(.note, "Photo", source: "X", ref: "demo:x:photo:\(i)",
@@ -915,7 +915,7 @@ enum DemoSeedAll {
                 t.likeCount = 30 - i
             }
         }
-        // A VIDEO POST (2026-08-18, prd §396). The same shape as a picture
+        // A VIDEO POST (2026-08-18, prd §397). The same shape as a picture
         // post and a different tag, because until this pass a video landed
         // with no pixels at all and read as a row saying "Photo" — so the
         // demo is where the poster frame, the corner mark and the fact that
@@ -928,7 +928,7 @@ enum DemoSeedAll {
                 t.authorAvatarURL = avatarArt("you")
                 t.likeCount = 38
             })
-        // The account's own record (2026-08-18, prd §396) — the three
+        // The account's own record (2026-08-18, prd §397) — the three
         // categories nothing had ever read. They are `.link` rows, so they
         // stay out of `XRoom`'s year counts (which are your writing alone) and
         // draw as plain bands rather than as posts nobody wrote.
@@ -2831,7 +2831,7 @@ enum DemoSeedAll {
     /// across eight weeks — and a grid with one bright smudge reads as a bug.
     private static func writing() -> [Thing] {
         var out: [Thing] = []
-        // THE TWO JOURNALS SPAN YEARS (2026-08-17, prd §395). They were twelve
+        // THE TWO JOURNALS SPAN YEARS (2026-08-17, prd §398). They were twelve
         // and eight entries inside one season, which is what a journal looks
         // like six weeks after you start one and nothing like the object
         // `JournalRoom` was built to read — so that head would have correctly
@@ -2852,7 +2852,7 @@ enum DemoSeedAll {
         // both importers really store it (`title` is the first line, `content`
         // is the whole thing). A seed whose content equalled its title made
         // every row draw a title and no excerpt, and would have hidden the
-        // §395 `bodyBelowTitle` fix entirely.
+        // §398 `bodyBelowTitle` fix entirely.
         let dayOne: [(Double, String, String)] = [
             (2,   "Slow morning, long walk", "Out along the canal before anything else was awake. Berlin does this about four days a year and I keep forgetting to be outside for them."),
             (3,   "Wrote for an hour before anything else", "Kept the phone in the other room. Two pages, both keepable."),
@@ -2889,9 +2889,18 @@ enum DemoSeedAll {
             (735, "Told them I was leaving", "Kinder about it than I deserved."),
             (790, "Something has to change", "Wrote three pages about it and did not solve anything."),
         ]
+        // A HANDFUL CARRY A PHOTOGRAPH (prd §399, 2026-08-17). §398 landed both
+        // journal exports' pictures and §399 is what finally draws them, so the
+        // demo has to hold some or the one branch this pass exists for never
+        // renders in the room anybody actually looks at. Four of thirty-four,
+        // which is roughly how often a journal entry really has one — seeding
+        // every entry would make the sheet read as a photo app.
+        let dayOnePhotos: Set<Int> = [0, 11, 14, 18]
         out += dayOne.enumerated().map { i, e in
             row(.note, e.1, source: "Day One", ref: "demo:dayone:\(i)",
-                days: e.0, hour: 21, content: "\(e.1)\n\(e.2)")
+                days: e.0, hour: 21, content: "\(e.1)\n\(e.2)") { t in
+                if dayOnePhotos.contains(i) { t.previewImageData = pixels(i) }
+            }
         }
         let appleJournal: [(Double, String, String)] = [
             (7,   "A good week", "Three things went right and I noticed all three, which is the rarer part."),
@@ -2915,9 +2924,12 @@ enum DemoSeedAll {
             (525, "Something worth keeping", "A conversation with Sam I have thought about every week since."),
             (600, "First entry", "Trying this properly. Every Sunday, whatever happened."),
         ]
+        let journalPhotos: Set<Int> = [1, 11]
         out += appleJournal.enumerated().map { i, e in
             row(.note, e.1, source: "Apple Journal", ref: "demo:journal:\(i)",
-                days: e.0, hour: 22, content: "\(e.1)\n\(e.2)")
+                days: e.0, hour: 22, content: "\(e.1)\n\(e.2)") { t in
+                if journalPhotos.contains(i) { t.previewImageData = pixels(i) }
+            }
         }
         let chats: [(String, String, Double)] = [
             ("Designing a bento panel", "ChatGPT", 1), ("SwiftData migration plan", "ChatGPT", 5),

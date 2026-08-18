@@ -657,6 +657,15 @@ enum FeedInsight {
         // One kind, no `belongs`: every row a followed channel lands is a
         // `.link`, and a Short is a video like any other — nothing in this
         // room belongs to anybody but the channels.
+        // The two journal rooms, 2026-08-17 (prd §398). Obsidian's case exactly
+        // — one kind, the person's own writing — and the pair that waited
+        // longest for it: until this pass the only thing either room could say
+        // about years of somebody's diary was WHICH DAYS they wrote on.
+        //
+        // "write", not "post" or "capture": these are the only two rooms in the
+        // app where that verb is unambiguously true of every row.
+        case "Day One", "Apple Journal":
+            title = "What you write about"; unit = ("entry", "entries"); kinds = [.note]
         case "YouTube":
             title = "What your channels cover"; unit = ("video", "videos"); kinds = [.link]
         // The three chat imports, 2026-08-08. The rooms that had the least to

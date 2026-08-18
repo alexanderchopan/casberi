@@ -7,6 +7,51 @@ import UniformTypeIdentifiers
 // is the share-path explainer — Apple Notes has no export and no API, so
 // the honest screen teaches the one sanctioned route and opens Notes.
 
+/// What one journal import really did, in one line (prd §398, 2026-08-17).
+///
+/// Three numbers, and the third is why this exists: `dropped` is history the
+/// cap REFUSED, and until this date both importers applied a 500-entry cap and
+/// said nothing about it — so a fifteen-year journal read "412 entries in" and
+/// looked complete. It is named apart from `skipped` because they are opposite
+/// facts: "already here" is a re-import working, "not imported" is a run that
+/// left the oldest years on disk.
+///
+/// Shared by both screens rather than written twice: the two importers have the
+/// same `Summary` and the same cap, so a divergence here could only ever be a
+/// mistake. Mirrors `XArchiveImportScreen`'s wording exactly — the person
+/// reading it may have imported both.
+func journalImportReceipt(_ summary: DayOneImport.Summary) -> String {
+    guard summary.imported > 0 else {
+        return summary.dropped > 0
+            ? String(localized: "Nothing new — all \(summary.skipped) entries were already here · \(summary.dropped) older not imported")
+            : String(localized: "Nothing new — all \(summary.skipped) entries were already here.")
+    }
+    var line = String(localized: "\(summary.imported) entries in")
+    if summary.skipped > 0 {
+        line += String(localized: " · \(summary.skipped) already here")
+    }
+    if summary.dropped > 0 {
+        line += String(localized: " · \(summary.dropped) older not imported")
+    }
+    return line
+}
+
+/// Lift the topic terms off what just landed, so the room's "What you write
+/// about" map is there when they walk into it rather than a few foregrounds
+/// later (`XArchiveImportScreen`'s pass, prd §398).
+///
+/// Bounded, and `BridgeRefresh` carries the rest on later opens — which is the
+/// half that matters for these two rooms, since a re-import skips every entry
+/// already deduped and so can never reach the years imported before this
+/// existed.
+@MainActor
+func journalHealTopics(source: String, landed: Int, context: ModelContext) {
+    guard landed > 0 else { return }
+    Task { @MainActor in
+        _ = await ScreenshotTopics.healTopics(source: source, context: context, limit: 400)
+    }
+}
+
 /// Day One, connected — by import. Steps happen in Day One's own settings;
 /// one button picks the export's .json and entries land as notes.
 struct DayOneImportScreen: View {
@@ -32,9 +77,12 @@ struct DayOneImportScreen: View {
             ])
             Section {
                 VStack(alignment: .leading, spacing: DS.Space.s2) {
-                    ImportPickRow(label: "Choose your Day One .json") { importing = true }
+                    ImportPickRow(label: "Choose your Day One export") { importing = true }
                     BridgeSyncStatusRows(result: result, resultIsError: resultIsError)
-                    DSSlabNote(text: "Photos stay in the export for now.")
+                    // The one fine print that changes what somebody DOES
+                    // (§315): the folder and the .json both import, and only the
+                    // folder can reach `photos/`.
+                    DSSlabNote(text: "Pick the folder, not the .json, to bring your photos too.")
                 }
             }
             .dsSlabSection()
@@ -50,8 +98,13 @@ struct DayOneImportScreen: View {
         .dsPageBackground()
         .dsSoftScrollEdges()
         .dsScreenTitle("Day One")
+        // FOLDER OR FILE since 2026-08-17 (prd §398). The `.json` alone still
+        // works and still imports every entry — but a scoped grant on a file
+        // cannot read the `photos/` directory beside it, so the folder is the
+        // only pick that can bring the pictures. Accepting both means nobody's
+        // existing habit breaks and the better pick is the one the row names.
         .fileImporter(isPresented: $importing,
-                      allowedContentTypes: [.json]) { outcome in
+                      allowedContentTypes: [.json, .folder]) { outcome in
             guard case .success(let url) = outcome else { return }
             Task { await runImport(url) }
         }
@@ -60,12 +113,19 @@ struct DayOneImportScreen: View {
     private func runImport(_ url: URL) async {
         let scoped = url.startAccessingSecurityScopedResource()
         defer { if scoped { url.stopAccessingSecurityScopedResource() } }
-        guard let data = await SecurityScopedFileReader.readData(at: url) else {
-            result = String(localized: "Couldn't read that file. Pick the .json from the unzipped export.")
+        let isFolder = (try? url.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory == true
+        // The folder is the media root when they picked one. For a `.json` pick
+        // the parent is passed anyway and simply fails to read — every path in
+        // `ImportMedia` yields nil rather than throwing, so the entries land
+        // exactly as they did before and no branch is needed for the difference.
+        let root = isFolder ? url : url.deletingLastPathComponent()
+        guard let json = isFolder ? DayOneImport.findJSON(inFolder: url) : url,
+              let data = await SecurityScopedFileReader.readData(at: json) else {
+            result = String(localized: "Couldn't read that. Pick the unzipped export folder, or the .json inside it.")
             resultIsError = true
             return
         }
-        let summary = DayOneImport.run(data: data, context: modelContext)
+        let summary = await DayOneImport.run(data: data, context: modelContext, exportRoot: root)
         if summary.failed {
             result = String(localized: "That file isn't a Day One export. Pick the .json inside the unzipped folder.")
             resultIsError = true
@@ -73,17 +133,14 @@ struct DayOneImportScreen: View {
         }
         resultIsError = false
         DSHaptic.success()
-        result = summary.imported > 0
-            ? (summary.skipped > 0
-               ? String(localized: "\(summary.imported) entries in · \(summary.skipped) already here")
-               : String(localized: "\(summary.imported) entries in"))
-            : String(localized: "Nothing new — all \(summary.skipped) entries were already here.")
+        result = journalImportReceipt(summary)
         let proof = summary.imported > 0
             ? String(localized: "\(summary.imported) entries in")
             : String(localized: "Synced just now")
         store.registerConnected(id: "dayone", name: "Day One", proof: proof,
                                 can: ["Imports the journal you export.",
                                       "Read-only — nothing leaves \(DS.device)."])
+        journalHealTopics(source: "Day One", landed: summary.imported, context: modelContext)
     }
 }
 
@@ -123,7 +180,12 @@ struct JournalImportScreen: View {
                 VStack(alignment: .leading, spacing: DS.Space.s2) {
                     ImportPickRow(label: "Choose the export folder") { importing = true }
                     BridgeSyncStatusRows(result: result, resultIsError: resultIsError)
-                    DSSlabNote(text: "Photos stay in the export for now.")
+                    // The note that sat here ("Photos stay in the export for
+                    // now") is DELETED rather than reworded: it stopped being
+                    // true when §398 landed the pictures, and unlike Day One's
+                    // there is no choice left for fine print to govern — this
+                    // screen only ever picks the folder.
+                    
                 }
             }
             .dsSlabSection()
@@ -157,17 +219,14 @@ struct JournalImportScreen: View {
         }
         resultIsError = false
         DSHaptic.success()
-        result = summary.imported > 0
-            ? (summary.skipped > 0
-               ? String(localized: "\(summary.imported) entries in · \(summary.skipped) already here")
-               : String(localized: "\(summary.imported) entries in"))
-            : String(localized: "Nothing new — all \(summary.skipped) entries were already here.")
+        result = journalImportReceipt(summary)
         let proof = summary.imported > 0
             ? String(localized: "\(summary.imported) entries in")
             : String(localized: "Synced just now")
         store.registerConnected(id: "journal", name: "Apple Journal", proof: proof,
                                 can: ["Imports the journal you export.",
                                       "Read-only — nothing leaves \(DS.device)."])
+        journalHealTopics(source: "Apple Journal", landed: summary.imported, context: modelContext)
     }
 }
 

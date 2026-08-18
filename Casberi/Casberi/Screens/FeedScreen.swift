@@ -2389,7 +2389,34 @@ struct FeedScreen: View {
         // chain would fall through to a blank head. Cloudflare's is also the
         // one card here that renders on an EMPTY room, which is the whole
         // reason it exists — see `CloudflareRunway`.
-        let sourceHead = liveStream == nil ? sourceHead(visible) : nil
+        // Derived ONCE and shared with the grid below — the memories room asks
+        // this set twice (which picture leads, and which rows are tiles) and
+        // walking `visible` per question is the shape the 2026-07-13 feed
+        // freeze was made of. Empty for every other room, so it costs nothing
+        // there.
+        let memoryTiles = shape == .snapchat ? visible.live.filter(Self.isMemoryTile) : []
+        // THE ANNIVERSARY — a real thing from this exact day in an earlier year.
+        //
+        // It sits ABOVE `sourceHead` since 2026-08-17 (prd §398), which is a
+        // promotion, and the reason is the one `OnThisDayHero`'s own doc has
+        // always given: it is worth more than any STANDING fact the room can
+        // state, and it is nil on nearly every day, so it takes the head rarely
+        // rather than owning it. Until that pass nothing above it could claim
+        // these rooms, so the rank was untested; the journal head landing the
+        // same day is what made the order a real question, and a card about how
+        // many years you have kept a journal must not cover what you wrote on
+        // this date in one of them.
+        //
+        // SCOPED, and the scope is the whole safety of the promotion: this is
+        // non-nil only for the memories room and the two journals, and neither
+        // has an ALARM head. Widen it to a room whose head is a dispute
+        // deadline or a Safe awaiting your signature and a nostalgia card would
+        // cover something time-critical — so a new source belongs here only
+        // after that question is asked about its head.
+        let anniversary: OnThisDay.Echo? = liveStream == nil
+            ? journalAnniversary(shape: shape, memoryTiles: memoryTiles, visible: visible)
+            : nil
+        let sourceHead = liveStream == nil && anniversary == nil ? sourceHead(visible) : nil
         // (The All feed's cross-source "thread" head lived here for one day and
         // was DELETED, prd §333. It ranked a shared WORD as a subject, so its
         // headline read "Wallet" over a Files row, an x402 blurb containing
@@ -2399,22 +2426,6 @@ struct FeedScreen: View {
         // connections — see `HomeInsightStore`, whose doc says a real version
         // "would be a fresh build, not a revival of this." The All feed leads
         // with the themes treemap again, which claims only what it measures.)
-        // The anniversary, when it's a PICTURE (2026-07-31). Scoped to the
-        // memories room on purpose: everywhere else `OnThisDay` rides inside
-        // the heatmap card, where a title represents the thing perfectly, and
-        // widening this to every source would silently re-rank rooms nobody
-        // has looked at yet. Here the thing is a photograph from this exact
-        // day years ago, which is worth more than any standing fact the room
-        // can state — and it's nil on nearly every day, so it takes the head
-        // rarely rather than owning it.
-        // Derived ONCE and shared with the grid below — the memories room asks
-        // this set twice (which picture leads, and which rows are tiles) and
-        // walking `visible` per question is the shape the 2026-07-13 feed
-        // freeze was made of. Empty for every other room, so it costs nothing
-        // there.
-        let memoryTiles = shape == .snapchat ? visible.live.filter(Self.isMemoryTile) : []
-        let anniversary: OnThisDay.Echo? = liveStream == nil && shape == .snapchat
-            ? OnThisDay.find(in: memoryTiles) : nil
         // The OCR/text treemap (2026-07-30) — what the screenshots are ABOUT,
         // and since 2026-07-31 what an Instagram export's own captions and
         // comments are about. When there's too little text to say anything it
@@ -2554,6 +2565,10 @@ struct FeedScreen: View {
                 case .x(let room):
                     XRoomCard(room: room) { year in
                         openYear(year, in: visible)
+                    }
+                case .journal(let room, let name):
+                    JournalRoomCard(room: room, source: name) { year in
+                        openJournalYear(year, source: name, in: visible)
                     }
                 case .instagram(let room):
                     InstagramRoomCard(room: room) { account in
@@ -3927,6 +3942,32 @@ struct FeedScreen: View {
         // carries `FeedInsight.leaderboard`'s board forward whole, which is
         // §349's rule rather than a courtesy; see `InstagramRoom`'s type note.
         case instagram(InstagramRoom)
+        // The two journal rooms (2026-08-17, prd §398) — the first head serving
+        // MORE THAN ONE source, and the only place in this enum where that is
+        // right: Day One and Apple Journal hold the same object under two app
+        // names, compose through one `JournalRoomSource`, and draw one card
+        // that differs by a kicker and a hue. It carries its source so the card
+        // can say which journal it is without storing a `Thing`.
+        case journal(JournalRoom, source: String)
+    }
+
+    /// Which rooms may lead with an anniversary, and what it reaches into.
+    ///
+    /// Two shapes, because the ROOMS are two shapes. The memories room asks only
+    /// its picture tiles — a photograph is what it has, and an echo naming a
+    /// saved chat there would open a wall of text where a tile was promised.
+    /// The journal rooms ask their entries, which is every row they have.
+    ///
+    /// The import receipt is excluded for the reason every aggregate over these
+    /// rooms excludes it (`Corpus.isImportReceipt`): "3 years ago today" over
+    /// our own note about a sync is the app reminiscing about itself.
+    private func journalAnniversary(shape: Shape, memoryTiles: [Thing],
+                                    visible: [Thing]) -> OnThisDay.Echo? {
+        if shape == .snapchat { return OnThisDay.find(in: memoryTiles) }
+        guard JournalRoomSource.sources.contains(source) else { return nil }
+        return OnThisDay.find(in: visible.live.filter {
+            $0.kind == .note && !Corpus.isImportReceipt($0)
+        })
     }
 
     /// Resolve this room's own head, or nil. One `switch` so adding a fourth
@@ -3964,6 +4005,8 @@ struct FeedScreen: View {
             return XRoomSource.compose(things: visible).map { .x($0) }
         case InstagramRoomSource.source:
             return InstagramRoomSource.compose(things: visible).map { .instagram($0) }
+        case let name where JournalRoomSource.sources.contains(name):
+            return JournalRoomSource.compose(things: visible).map { .journal($0, source: name) }
         default:
             return nil
         }
@@ -4006,6 +4049,28 @@ struct FeedScreen: View {
         }
         let calendar = Calendar.current
         openNewest(source: XRoomSource.source, in: visible) { thing in
+            thing.kind == .note
+                && calendar.component(.year, from: thing.capturedAt) == year.year
+        }
+    }
+
+    /// Open a journal year's last entry (2026-08-17, prd §398). A year owns
+    /// hundreds of entries, so like every other head that ranks a group this
+    /// hands back a value and the lookup lands here.
+    ///
+    /// The fallback is `openYear`'s and exists for the same reason — a card
+    /// whose tap did nothing would be a dead control (P4) — but the PRIMARY
+    /// landing differs, and deliberately: an X year opens its most-liked post
+    /// because an archive records popularity, and a journal records none at
+    /// all, so the honest answer is simply the last thing written that year.
+    private func openJournalYear(_ year: JournalRoom.Year, source name: String,
+                                 in visible: [Thing]) {
+        if let ref = year.newestRef {
+            openBySourceRef(ref, in: visible)
+            return
+        }
+        let calendar = Calendar.current
+        openNewest(source: name, in: visible) { thing in
             thing.kind == .note
                 && calendar.component(.year, from: thing.capturedAt) == year.year
         }
@@ -5750,11 +5815,6 @@ struct FeedScreen: View {
             // call site, so every row anatomy inherits it; compiles away off
             // Catalyst.
             .macHoverLift()
-            // …and the row leaves the app under the cursor (2026-08-17). Same
-            // single call site as the hover pair above, so every one of
-            // `shapedRow`'s anatomies can be dragged into Finder, Mail or a
-            // note; compiles away off Catalyst. See `MacRowDrag`.
-            .macRowDrag(thing)
             // V3b (2026-07-07, supersedes the kind-color wash): rows are
             // NEUTRAL cards — the translucent kind wash read as murk. Color
             // moved into the tag text: the project's own stable hue.

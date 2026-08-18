@@ -343,6 +343,18 @@ print -P "%F{green}✓ front-page self-test%f"
 # parses to zero rows and reads as an empty account. Runs here with the rest
 # of the static head so it's part of `verify.sh` rather than something to
 # remember (the reach-audit lesson, 2026-07-31).
+# The journal rooms' head (prd §398). Same reason as X's below it and one
+# degree stronger: Day One and Apple Journal have no live read, no key anyone
+# could mint, and no export this project has ever held — so a harness is not
+# the best proof these numbers are right, it is the ONLY proof. Every failure
+# it catches renders as a convincing card: a streak counted across a gap, a
+# six-week journal drawn as a two-year span, silent years skipped so the axis
+# rescales itself, or a year printed as the quantity "2,019".
+step "Journal-room self-test"
+"$ROOT/scripts/journal-room-selftest.sh" >/dev/null \
+  || fail "the journal-room self-test failed — run scripts/journal-room-selftest.sh"
+print -P "%F{green}✓ journal-room self-test%f"
+
 step "X pure-logic self-test"
 "$ROOT/scripts/x-selftest.sh" >/dev/null \
   || fail "the X logic self-test failed — run scripts/x-selftest.sh"
@@ -1177,6 +1189,18 @@ xcrun simctl terminate "$DEVICE" "$BUNDLE" 2>/dev/null || true
 #     which is the exact registry-drift class this probe's own header
 #     warns about and would have reported three false "gaps" forever.
 #
+# `dayOneHead`/`appleJournalHead` (2026-08-17, prd §398) are ONE `SourceHead`
+# case under two names. These keys are an associative array, so a shared label
+# could only assert that one of the two journals composes — and they have
+# separate corpora and separate demo seeds, which is precisely the gap this
+# check exists to catch.
+#
+# Both are also the first rooms whose head can be legitimately OUTRANKED by the
+# anniversary, which would read here as a missing head. It cannot fire on the
+# demo by construction rather than by luck: an entry falls on today's month and
+# day only when its seeded offset is 365/366 or 730/731 days, the offsets in
+# `DemoSeedAll.writing()` are constants, and none of them is.
+#
 # `instagramHead` (2026-08-18, prd §395) is the FOURTEENTH, and the second
 # over an IMPORT rather than a live bridge. Its demo gap would have been the
 # subtlest yet and is worth recording: the seat's rows were already there and
@@ -1273,6 +1297,8 @@ else
     safeHead          "Safe"
     xHead             "X"
     instagramHead     "Instagram"
+    dayOneHead        "Day One"
+    appleJournalHead  "Apple Journal"
   )
   MISSING_HEADS=()
   for name in "${(k)ROOM_HEADS[@]}"; do

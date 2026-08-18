@@ -40,6 +40,33 @@ enum NoteSheetSource {
 
     static func isNotes(_ source: String) -> Bool { sources.contains(source) }
 
+    /// A note you kept here (prd §399, 2026-08-17) — the case §366 left out and
+    /// said why.
+    ///
+    /// A note shared out of Apple Notes lands under source `You` with no record
+    /// of where it came from, so that seat's things had NO anatomy at all: the
+    /// sheet drew a title cut out of the note's own first line and then the same
+    /// line again beneath it at footnote size, which is the exact defect this
+    /// whole category was fixed for.
+    ///
+    /// §366 declined to widen because it "first needs an answer to what `You`
+    /// means (wrote it, or merely brought it)". The answer is that we cannot
+    /// know, and it turns out not to matter: the anatomy claims nothing about
+    /// authorship once the verb is `Act.kept`. What DOES matter is that `You`
+    /// holds every hand capture — links, screenshots, files, pastes — so this
+    /// is scoped by KIND. A `.note` under `You` is writing somebody kept; a
+    /// `.link` is a saved page and keeps the generic sheet it has always had.
+    ///
+    /// It is NOT in `sources`, and that is deliberate rather than tidy: that set
+    /// is checked against `BridgeCatalog`'s Notes group by the harness, and
+    /// `You` is not a catalog seat — adding it would either break that guard or
+    /// force it to carry an exception forever.
+    static let keptSource = "You"
+
+    static func isKeptNote(_ thing: Thing) -> Bool {
+        thing.source == keptSource && thing.kind == .note
+    }
+
     /// The one source whose export is a single named file worth naming.
     static let clippingsFile = "My Clippings.txt"
 
@@ -56,7 +83,8 @@ enum NoteSheetSource {
 
     static func facts(for thing: Thing) -> NoteSheet.Facts {
         NoteSheet.Facts(
-            notes: isNotes(thing.source) && !Corpus.isImportReceipt(thing),
+            notes: (isNotes(thing.source) || isKeptNote(thing))
+                && !Corpus.isImportReceipt(thing),
             kind: thing.kind.rawValue,
             cited: citation(for: thing) != nil,
             named: isNamed(thing))
@@ -161,6 +189,31 @@ enum NoteSheetSource {
         return (body, clamped)
     }
 
+    /// Sources whose body really IS markdown (prd §399).
+    ///
+    /// A FACT about each export, not a preference — Day One writes markdown
+    /// (`DayOneImport.unescapeMarkdown` exists because it backslash-escapes
+    /// markdown punctuation on the way out) and an Obsidian vault is markdown by
+    /// definition. Apple Journal's body is HTML run through
+    /// `plainText(fromHTML:)`, a Kindle passage is a sentence from a book, and a
+    /// `You` note is whatever somebody typed or shared. Rendering those as
+    /// markdown would eat a literal asterisk somebody meant and promote a dash
+    /// into a bullet.
+    static let markdownSources: Set<String> = ["Day One", "Obsidian"]
+
+    /// The body to draw and everything the renderer needs to draw it right.
+    static func prose(for thing: Thing) -> (text: String, clamped: Bool,
+                                            markdown: Bool, wikilinks: Bool) {
+        let body = self.body(for: thing)
+        return (body.text, body.clamped,
+                markdownSources.contains(thing.source),
+                // Only a vault-shaped bridge populates `Thing.wikilinks`, and
+                // only Obsidian's own syntax means anything to a reader —
+                // rendering `[[x]]` as a link anywhere else would invent a
+                // destination the corpus has no way to resolve.
+                thing.source == "Obsidian")
+    }
+
     /// The tags a note sheet shows: the person's own, never the kind tag the
     /// app writes onto every row (`ThingKind.typeTag`), which would put "Note"
     /// beside "#legibility" as though a person had chosen both.
@@ -181,6 +234,7 @@ enum NoteSheetSource {
             shape: shape,
             source: thing.source,
             origin: origin,
+            act: act(for: thing),
             originFile: thing.source == "Kindle" ? clippingsFile : nil,
             path: ObsidianLink.relativePath(from: thing.sourceRef),
             words: measured.map { NoteSheet.words(in: $0.text) },
@@ -202,9 +256,13 @@ enum NoteSheetSource {
     /// wording lives in `NoteReception`.
     static func origin(for source: String) -> NoteReception.Origin {
         switch source {
-        case "Obsidian": return .vault
-        case "Voice":    return .device
-        default:         return .export
+        case "Obsidian":  return .vault
+        // Nothing was brought and nothing is read for either of these. The
+        // sentence they earn differs by ACT, not by origin — see
+        // `NoteReception.sentence`.
+        case "Voice":     return .device
+        case keptSource:  return .device
+        default:          return .export
         }
     }
 
@@ -212,7 +270,14 @@ enum NoteSheetSource {
     static func act(for thing: Thing) -> NoteSheet.Act {
         switch thing.kind {
         case .voice: return .recorded
-        default:     return thing.source == "Kindle" ? .marked : .wrote
+        default:
+            if thing.source == "Kindle" { return .marked }
+            // "kept", never "written" (prd §399): a `You` note may have been
+            // typed here or shared in from another app, the record cannot tell
+            // them apart, and a dateline claiming you wrote somebody else's
+            // paragraph is §83 in the loudest slot on the sheet.
+            if thing.source == keptSource { return .kept }
+            return .wrote
         }
     }
 
@@ -261,24 +326,129 @@ enum NoteSheetSource {
     /// journal app can show you those. It is one predicate over a bounded
     /// range, not a walk.
     ///
-    /// Excludes the entry itself, its own source (a shelf of the same journal
-    /// is just the room), and every import receipt.
+    /// Excludes the entry itself, its SIBLINGS, and every import receipt.
+    ///
+    /// "Sibling" is same source AND same kind since 2026-08-17 (prd §399), not
+    /// same source. The old rule was written for a journal, where every row is a
+    /// `.note` and so the two are identical — and it is wrong for the `You` room
+    /// this pass widened the anatomy to, where the same source also holds that
+    /// day's screenshots, saved links and voice notes. Those are exactly the
+    /// rows worth showing beside something you wrote, and the source rule hid
+    /// every one of them.
+    ///
+    /// The scan window is `limit * 6` rather than `limit + 2`: the exclusion now
+    /// happens in Swift (a `#Predicate` on `kind` is the transformable-attribute
+    /// class this project has a crash report for), so the fetch has to see past
+    /// the siblings it is about to drop. A day holding more than that many rows
+    /// of one kind shows fewer tiles — a stated ceiling, never a walk.
     @MainActor
     static func sameDay(as thing: Thing, context: ModelContext,
                         calendar: Calendar = .current, limit: Int = 6) -> [Thing] {
         let start = calendar.startOfDay(for: thing.capturedAt)
         guard let end = calendar.date(byAdding: .day, value: 1, to: start) else { return [] }
-        let source = thing.source
         let id = thing.id
+        let source = thing.source
+        let kind = thing.kind
         var d = FetchDescriptor<Thing>(
-            predicate: #Predicate {
-                $0.capturedAt >= start && $0.capturedAt < end && $0.source != source
-            },
+            predicate: #Predicate { $0.capturedAt >= start && $0.capturedAt < end },
             sortBy: [SortDescriptor(\.capturedAt, order: .forward)])
-        d.fetchLimit = limit + 2
+        d.fetchLimit = limit * 6
         let found = ((try? context.fetch(d)) ?? []).live
         return Array(found.lazy
-            .filter { $0.id != id && !Corpus.isImportReceipt($0) }
+            .filter { $0.id != id && !Corpus.isImportReceipt($0)
+                      && !($0.source == source && $0.kind == kind) }
             .prefix(limit))
+    }
+
+    // MARK: - The same date, in other years
+
+    /// What you wrote on this date in the other years you kept this journal
+    /// (prd §399, 2026-08-17).
+    ///
+    /// The ROOM's anniversary answers today's date. This answers the ENTRY's,
+    /// which is the reading a journal is actually opened for and the one thing
+    /// a corpus can do that a chronological list cannot: you are reading 14 May
+    /// 2021, and 14 May exists in six other years, all of them already here.
+    ///
+    /// **Bounded by construction, one small fetch per year.** There is no way to
+    /// ask SwiftData for "same month and day" — a predicate cannot call a
+    /// calendar — so the alternative is fetching the room and filtering, which
+    /// for a decade-deep journal is the corpus walk this project forbids. Each
+    /// year is a narrow date-range read with `fetchLimit = 1`, the same shape
+    /// `sameDay` above already uses, and the year list is capped at `yearSpan`.
+    ///
+    /// Scoped to ONE source: "what I wrote in this journal on this date" is a
+    /// question with an answer, and merging two exports of the same years would
+    /// produce two rows for one day with no way to tell which journal was which.
+    static let yearSpan = 12
+
+    @MainActor
+    static func otherYears(of thing: Thing, context: ModelContext,
+                           calendar: Calendar = .current, now: Date = .now,
+                           limit: Int = 6) -> [Thing] {
+        let source = thing.source
+        let parts = calendar.dateComponents([.year, .month, .day], from: thing.capturedAt)
+        guard let year = parts.year, let month = parts.month, let day = parts.day
+        else { return [] }
+        // Years around this one, never past today: a journal has no future, and
+        // asking for one is `yearSpan` fetches guaranteed to answer nothing.
+        let newest = calendar.component(.year, from: now)
+        let lower = max(year - yearSpan, newest - yearSpan)
+        var out: [Thing] = []
+        for candidate in stride(from: newest, through: lower, by: -1) where candidate != year {
+            var components = DateComponents()
+            components.year = candidate; components.month = month; components.day = day
+            guard let start = calendar.date(from: components),
+                  let end = calendar.date(byAdding: .day, value: 1, to: start) else { continue }
+            var d = FetchDescriptor<Thing>(
+                predicate: #Predicate {
+                    $0.source == source && $0.capturedAt >= start && $0.capturedAt < end
+                },
+                sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
+            d.fetchLimit = 1
+            // `.live` at the boundary (corollary 4) — this array is handed to a
+            // view, so the guarantee is made here rather than promised downstream.
+            if let match = ((try? context.fetch(d)) ?? []).live.first {
+                out.append(match)
+                if out.count >= limit { break }
+            }
+        }
+        return out
+    }
+
+    // MARK: - The entry before and the entry after
+
+    /// The neighbouring entries in the same journal, in the order they were
+    /// written (prd §399, 2026-08-17).
+    ///
+    /// A journal is a SEQUENCE and the sheet dead-ended: reading three
+    /// consecutive days meant sheet, close, scroll, sheet, three times. Two
+    /// bounded reads — the newest row before this one and the oldest after it,
+    /// each `fetchLimit = 1`.
+    ///
+    /// Same source only, and `.entry` shapes only at the call site: a vault
+    /// note's `capturedAt` is a file's modification time, so its "next" would be
+    /// whatever you happened to edit afterwards, which is a fact about your
+    /// editor rather than about the writing.
+    @MainActor
+    static func neighbours(of thing: Thing, context: ModelContext)
+        -> (previous: Thing?, next: Thing?) {
+        let source = thing.source
+        let when = thing.capturedAt
+        let id = thing.id
+        func one(_ before: Bool) -> Thing? {
+            var d = FetchDescriptor<Thing>(
+                predicate: before
+                    ? #Predicate { $0.source == source && $0.capturedAt < when }
+                    : #Predicate { $0.source == source && $0.capturedAt > when },
+                sortBy: [SortDescriptor(\.capturedAt, order: before ? .reverse : .forward)])
+            // Two, not one: an import receipt shares the room and would
+            // otherwise be offered as the next entry — a door onto our own note
+            // about a sync, from inside somebody's diary.
+            d.fetchLimit = 2
+            return ((try? context.fetch(d)) ?? []).live
+                .first { $0.id != id && !Corpus.isImportReceipt($0) }
+        }
+        return (one(true), one(false))
     }
 }

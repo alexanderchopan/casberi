@@ -230,6 +230,56 @@ enum ImportMedia {
         return nil
     }
 
+    /// Every file in a named subdirectory of an export, keyed by its basename
+    /// WITHOUT the extension (2026-08-17, prd §398).
+    ///
+    /// `xMediaIndex`'s shape, generalised for the two journal exports, which
+    /// both name their media by an opaque id and neither of which states a
+    /// usable path:
+    ///
+    ///   * Day One's entry JSON carries `photos: [{ md5, type }]` and the file
+    ///     lands at `photos/<md5>.<type>` — but `type` is the export's word for
+    ///     the format ("jpeg", "heic") and does not always match the extension
+    ///     on disk, so keying on the STEM sidesteps the mismatch entirely.
+    ///   * Apple Journal's per-entry HTML carries `<img src="Resources/…">`
+    ///     with a path relative to a directory whose depth is Apple's business,
+    ///     not ours.
+    ///
+    /// ONE listing for the whole import, which is the point: `resolve` lists the
+    /// root's children on every call, and a fifteen-year journal would pay that
+    /// thousands of times (`xMediaIndex`'s own reason for existing).
+    ///
+    /// No fence is needed here and its absence is not an oversight: every URL
+    /// handed back was enumerated from INSIDE `root`, so unlike `resolve` — which
+    /// appends a path that came out of a data file — there is no attacker-supplied
+    /// component to escape with.
+    static func mediaIndex(in subdirectory: String, under root: URL) -> [String: URL] {
+        let manager = FileManager.default
+        var roots = [root]
+        if let children = try? manager.contentsOfDirectory(
+            at: root, includingPropertiesForKeys: [.isDirectoryKey]) {
+            roots += children.filter {
+                (try? $0.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory == true
+            }
+        }
+        var index: [String: URL] = [:]
+        for base in roots {
+            let dir = base.appending(path: subdirectory)
+            guard let files = try? manager.contentsOfDirectory(
+                at: dir, includingPropertiesForKeys: nil) else { continue }
+            for file in files {
+                let stem = file.deletingPathExtension().lastPathComponent
+                // FIRST WINS, so an export holding both a full-size picture and
+                // a thumbnail of it under one stem can't have the answer depend
+                // on the order the filesystem happened to enumerate them in.
+                guard !stem.isEmpty, index[stem] == nil else { continue }
+                index[stem] = file
+            }
+            if !index.isEmpty { break }
+        }
+        return index
+    }
+
     /// The picture for an X post, which the archive files by TWEET ID rather
     /// than by a path the JSON states: `data/tweets_media/<id>-<something>.jpg`.
     ///

@@ -451,19 +451,40 @@ enum ProbeHooks {
             NSLog("xPerson| headline=%@", XPerson.headline(person, handle: handle))
             NSLog("xPerson| note=%@", XPerson.note(person))
         },
-        // `-dayoneImport <path>` imports a Day One export .json from disk.
+        // `-dayoneImport <path>` imports a Day One export — the unzipped FOLDER
+        // (which brings the photographs) or the `.json` on its own.
+        //
+        // `dropped` and `with photos` are reported beside the landed count and
+        // are the two facts a bare total cannot carry (prd §398): a truncated
+        // import and a complete one read identically, and so do a run that
+        // found the pictures and one whose `photos/` was never reachable.
         Hook(key: "dayoneImport") { path, context in
-            guard let data = FileManager.default.contents(atPath: path) else { return }
-            let summary = DayOneImport.run(data: data, context: context)
-            NSLog("Day One probe: %d imported, %d skipped, failed=%d",
-                  summary.imported, summary.skipped, summary.failed ? 1 : 0)
+            Task { @MainActor in
+                let url = URL(fileURLWithPath: path)
+                let isFolder = (try? url.resourceValues(forKeys: [.isDirectoryKey]))?
+                    .isDirectory == true
+                guard let json = isFolder ? DayOneImport.findJSON(inFolder: url) : url,
+                      let data = FileManager.default.contents(atPath: json.path) else {
+                    NSLog("Day One probe: no .json at %@", path)
+                    return
+                }
+                let summary = await DayOneImport.run(
+                    data: data, context: context,
+                    exportRoot: isFolder ? url : url.deletingLastPathComponent())
+                NSLog("Day One probe: %d imported, %d skipped, %d dropped, %d with photos, failed=%d",
+                      summary.imported, summary.skipped, summary.dropped,
+                      DayOneImport.thumbnailed(source: "Day One", context: context),
+                      summary.failed ? 1 : 0)
+            }
         },
         // `-journalImport <path>` imports an unzipped Apple Journal export folder.
         Hook(key: "journalImport") { path, context in
             Task { @MainActor in
                 let summary = await JournalImport.run(folder: URL(fileURLWithPath: path), context: context)
-                NSLog("Journal probe: %d imported, %d skipped, failed=%d",
-                      summary.imported, summary.skipped, summary.failed ? 1 : 0)
+                NSLog("Journal probe: %d imported, %d skipped, %d dropped, %d with photos, failed=%d",
+                      summary.imported, summary.skipped, summary.dropped,
+                      DayOneImport.thumbnailed(source: "Apple Journal", context: context),
+                      summary.failed ? 1 : 0)
             }
         },
         // `-snapchatImport <path>` imports an unzipped Snapchat data export
@@ -773,6 +794,28 @@ enum ProbeHooks {
             let rows = (try? context.fetch(descriptor)) ?? []
             for line in InstagramRoomSource.probeLines(things: rows) {
                 NSLog("[Casberi] %@", line)
+            }
+        },
+        // `-journalRoomProbe YES` — the journal rooms' head, year by year
+        // (2026-08-17, prd §398). No key, no network, no bridge state: it
+        // composes off the rows an import already landed, which is why the
+        // fetch takes the WHOLE room rather than a page of it — a span is not a
+        // span if it is computed over the newest five hundred entries of a
+        // decade.
+        //
+        // BOTH journals in one launch, named apart. They share a composer and a
+        // card and have entirely separate corpora, so the failure this catches
+        // is one of them composing while the other silently doesn't — and a
+        // probe that reported a single merged answer could not see it.
+        Hook(key: "journalRoomProbe") { _, context in
+            for name in JournalRoomSource.sources.sorted() {
+                let descriptor = FetchDescriptor<Thing>(
+                    predicate: #Predicate { $0.source == name })
+                let rows = (try? context.fetch(descriptor)) ?? []
+                NSLog("[Casberi] journalRoom| — %@ —", name)
+                for line in JournalRoomSource.probeLines(things: rows) {
+                    NSLog("[Casberi] %@", line)
+                }
             }
         },
         Hook(key: "peerRoomProbe") { _, context in
@@ -4062,11 +4105,36 @@ enum ProbeHooks {
                      ? InstagramRoomSource.compose(things: things).map {
                         "\(InstagramRoom.headline($0)) · \($0.accounts.count) rows · \($0.gone) gone"
                      } : nil)
-                // 2. the anniversary — memories room only, and only with pixels
+                // The journal rooms (2026-08-17, prd §398) — one composer
+                // serving TWO rooms, and the only line in this list with two
+                // names.
+                //
+                // That is deliberate, not drift: `verify.sh`'s room-head
+                // coverage is a zsh associative array keyed by the name printed
+                // here, so a single shared label could only ever assert that ONE
+                // of the two journals composes. They have separate corpora and
+                // separate demo seeds, which is exactly the gap that check
+                // exists to catch — the §349 finding, where three rooms' heads
+                // were each broken in a different way and every one of them
+                // rendered as the same silent nothing.
+                let journalLabel = source == "Apple Journal" ? "appleJournalHead" : "dayOneHead"
+                note(journalLabel, JournalRoomSource.sources.contains(source)
+                     ? JournalRoomSource.compose(things: things).map {
+                        "\(JournalRoom.headline($0)) · \($0.span) years · \($0.silent) silent"
+                        + " · \($0.days) days · streak \($0.streak)"
+                     } : nil)
+                // 2. the anniversary — the memories room's pictures, and (since
+                // §398) the two journals' entries. It OUTRANKS every head above
+                // in `shapedSections`, so it is printed after them and the
+                // `leader` below still names the right winner only because
+                // every head above answers nil for these three rooms.
                 let echo = source == "Snapchat"
                     ? OnThisDay.find(in: things.filter {
                         $0.kind == .file && $0.previewImageData != nil })
-                    : nil
+                    : JournalRoomSource.sources.contains(source)
+                        ? OnThisDay.find(in: things.filter {
+                            $0.kind == .note && !Corpus.isImportReceipt($0) })
+                        : nil
                 note("anniversary", echo.map { "\($0.label) → \($0.thing.title)" })
                 // 3. the treemap
                 let map = FeedInsight.topicMap(source: source, things: things)
