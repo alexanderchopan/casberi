@@ -1,5 +1,6 @@
 import Foundation
 import SwiftData
+import Security
 
 /// The one store, shared between the app and the share extension through the
 /// app group — capture routes here from every surface (S3), and the corpus
@@ -8,6 +9,43 @@ import SwiftData
 /// fails to launch over an entitlement.
 enum SharedStore {
     static let appGroup = "group.com.casberi.app"
+
+    /// The app group id the CONTAINER is actually reached by, which is not the
+    /// same string on both platforms (measured 2026-08-18, a Release Catalyst
+    /// launch against a fresh container).
+    ///
+    /// iOS grants `group.com.casberi.app` unprefixed; macOS grants it
+    /// TEAM-PREFIXED (`$(TeamIdentifierPrefix)group.…`, see
+    /// Casberi-Catalyst.entitlements). And
+    /// `containerURL(forSecurityApplicationGroupIdentifier:)` does NOT resolve
+    /// one spelling to the other — handed the unprefixed id on macOS it returns
+    /// a perfectly real-looking URL to a directory the sandbox never granted,
+    /// so the caller cannot tell the difference until CoreData tries to write
+    /// and gets `file-write-create denied`. Both rungs of
+    /// `containerWithFallback`'s ladder then threw and the Mac app ran on the
+    /// EPHEMERAL in-memory store — nothing a Mac user saved survived a
+    /// relaunch, with no symptom at launch. No gate could see it:
+    /// `verify-mac.sh` launches every run with `-storeScratch YES`, which
+    /// bypasses the group container entirely.
+    ///
+    /// Read out of our OWN entitlement rather than hardcoded, so it stays
+    /// correct if the team prefix ever changes; the literal is only a fallback
+    /// for the case where the entitlement can't be read at all. `appGroup`
+    /// itself is deliberately untouched — it is also TokenVault's default
+    /// keychain access group, and moving that would orphan every stored key.
+    static let containerGroupID: String = {
+        #if targetEnvironment(macCatalyst)
+        if let task = SecTaskCreateFromSelf(nil),
+           let granted = SecTaskCopyValueForEntitlement(
+               task, "com.apple.security.application-groups" as CFString, nil) as? [String],
+           let match = granted.first(where: { $0.hasSuffix(appGroup) }) {
+            return match
+        }
+        return "35428TQK3S." + appGroup
+        #else
+        return appGroup
+        #endif
+    }()
     /// The CloudKit container the synced store mirrors into (M1). Matches the
     /// iCloud capability added in Xcode; until that capability exists, opening a
     /// CloudKit-backed container throws and we fall back to a local store.
@@ -96,7 +134,7 @@ enum SharedStore {
         // so declining is honest — and the store exists on every install the
         // moment the app has launched once.
         guard let groupURL = FileManager.default
-                .containerURL(forSecurityApplicationGroupIdentifier: appGroup),
+                .containerURL(forSecurityApplicationGroupIdentifier: containerGroupID),
               FileManager.default.fileExists(atPath: groupStoreURL(in: groupURL).path)
         else { throw StoreUnready() }
         return try make(cloudKit: .none)
@@ -227,11 +265,15 @@ enum SharedStore {
 
     private static func make(cloudKit: ModelConfiguration.CloudKitDatabase) throws -> ModelContainer {
         let groupURL = FileManager.default
-            .containerURL(forSecurityApplicationGroupIdentifier: appGroup)
+            .containerURL(forSecurityApplicationGroupIdentifier: containerGroupID)
         if let groupURL { adoptLegacyStoreIfNeeded(into: groupURL) }
+        // `containerGroupID`, never `appGroup` — see that property for why the
+        // two differ on Mac and what it cost. iOS is unaffected: there the two
+        // strings are equal, so this is the same call it has always made.
         let config = groupURL != nil
-            ? ModelConfiguration(groupContainer: .identifier(appGroup), cloudKitDatabase: cloudKit)
+            ? ModelConfiguration(groupContainer: .identifier(containerGroupID), cloudKitDatabase: cloudKit)
             : ModelConfiguration(cloudKitDatabase: cloudKit)
+        NSLog("[Casberi] store group=%@ url=%@", containerGroupID, groupURL?.path ?? "nil")
         return try ModelContainer(for: Thing.self, migrationPlan: ThingMigrationPlan.self, configurations: config)
     }
 

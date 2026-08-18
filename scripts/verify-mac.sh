@@ -236,6 +236,41 @@ if (( CYCLES > 0 )); then
   ok "cold-launch survival ($CYCLES/$CYCLES)"
 fi
 
+# ── 2b. The app group is real (2026-08-18) ─────────────────────────────────
+# THE GAP THAT SHIPPED 22 BROKEN MAC BUILDS. Every one of them fell all the way
+# down `SharedStore.containerWithFallback`'s ladder to the EPHEMERAL in-memory
+# store, because macOS grants the app group TEAM-PREFIXED and the container was
+# asked for by the unprefixed id (see `SharedStore.containerGroupID`). Nothing a
+# Mac user saved survived a relaunch.
+#
+# Nothing above could see it. The build is clean, the app launches, paints, and
+# behaves correctly for one session — persistence is the only casualty, and no
+# step here relaunches and looks for what the last one wrote. Worse, step 2's
+# `-storeScratch YES` (which every `launch` passes, and must keep passing —
+# without it a DEBUG run forward-migrates the REAL corpus of whoever is running
+# the harness) opens a store at a temp path and never touches the group
+# container at all. The one broken path was the one path never exercised.
+#
+# So this probes the group container DIRECTLY rather than dropping the scratch
+# flag: the group id and its URL don't depend on which store file is opened, so
+# the check is faithful without ever putting a real corpus at risk. The app
+# writes and deletes one empty file there — proving the grant instead of
+# inferring it from a path that merely looks right, which is the entire trap
+# (the ungranted path is a perfectly well-formed URL until something writes).
+step "App group container is granted and writable"
+GROUP_LOG="$OUT/groupprobe.log"
+launch "$GROUP_LOG" -groupProbe YES
+if ! wait_for "$GROUP_LOG" 'groupProbe\| id=' 20; then
+  quit_app
+  fail "group probe never reported (see $GROUP_LOG)"
+fi
+quit_app
+GROUP_LINE=$(grep -o 'groupProbe| .*' "$GROUP_LOG" | head -1)
+if [[ "$GROUP_LINE" != *"writable=YES"* ]]; then
+  fail "app group container NOT writable — the store will fall back to an in-memory container and nothing will persist: $GROUP_LINE"
+fi
+ok "app group container ($GROUP_LINE)"
+
 # ── 3. Screen sweep ────────────────────────────────────────────────────────
 # The app renders its own key window (see the `-macSnapshot` rationale above)
 # into its container tmp; we copy each PNG out and prove it's a real frame.

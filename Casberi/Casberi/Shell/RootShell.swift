@@ -598,6 +598,47 @@ struct RootShell: View {
                     NSLog("[Casberi] berryPulse: dealt")
                 }
             }
+            // `-groupProbe YES` — is the REAL app-group container reachable and
+            // writable (scripts/verify-mac.sh). The check 22 Mac builds needed
+            // and no gate had.
+            //
+            // Every Mac build ever shipped fell all the way down
+            // `containerWithFallback`'s ladder to the EPHEMERAL in-memory store,
+            // because the container was asked for by the unprefixed group id
+            // that macOS does not grant (see `SharedStore.containerGroupID`).
+            // Nothing a Mac user saved survived a relaunch. It was invisible
+            // from outside — the app launches, paints, and behaves normally for
+            // one session — and no gate could see it either, because
+            // `verify-mac.sh` launches EVERY run with `-storeScratch YES`,
+            // which opens a store at a temp path and never touches the group
+            // container at all.
+            //
+            // So this probe deliberately runs ALONGSIDE `-storeScratch`, rather
+            // than the gate dropping that flag: an un-scratched DEBUG launch
+            // would open the REAL corpus of whoever is running the harness and
+            // forward-migrate it (the whole reason `-storeScratch` exists), and
+            // a check that endangers the daily driver's data is not one anybody
+            // will keep running. The group id and its URL are independent of
+            // which store file is opened, so probing them under scratch is both
+            // safe and faithful: hand `containerURL` an id the sandbox never
+            // granted and the write below fails, which is exactly the bug.
+            //
+            // Writes and deletes one empty file, so it proves the grant rather
+            // than inferring it from a path that merely looks right — the whole
+            // trap here is that the wrong path looks perfectly real until
+            // something tries to write to it.
+            if UserDefaults.standard.bool(forKey: "groupProbe") {
+                let id = SharedStore.containerGroupID
+                let url = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: id)
+                var writable = false
+                if let url {
+                    let probe = url.appendingPathComponent(".casberi-groupProbe")
+                    writable = ((try? Data().write(to: probe)) != nil)
+                    try? FileManager.default.removeItem(at: probe)
+                }
+                NSLog("[Casberi] groupProbe| id=%@ writable=%@ url=%@",
+                      id, writable ? "YES" : "NO", url?.path ?? "nil")
+            }
             // Debug hook (the Mac harness's screenshot, scripts/verify-mac.sh):
             // `-macSnapshot <name>` renders the key window as <name>.png after
             // `-snapshotDelay <s>` (default 4s) and NSLogs the full path for
