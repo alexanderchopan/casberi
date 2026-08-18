@@ -2092,7 +2092,11 @@ struct RootShell: View {
         // headlessly like every other surface.
         case "person":
             let parts = url.pathComponents.filter { $0 != "/" }
-            if parts.count == 2, SocialThread.isSocial(parts[0]) {
+            // `hasPersonRoom`, not `isSocial` (2026-08-18, prd §395): this
+            // route opens a room composed entirely out of the corpus, so it
+            // works for an X handle even though nothing about X can be
+            // fetched.
+            if parts.count == 2, SocialThread.hasPersonRoom(parts[0]) {
                 deepLinkPerson = SocialProfile(source: parts[0], handle: parts[1],
                                                displayName: nil, bio: nil, avatarURL: nil)
             }

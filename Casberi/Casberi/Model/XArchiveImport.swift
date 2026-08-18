@@ -99,6 +99,18 @@ enum XArchiveImport {
         /// Private messages, landed only when `ImportOptions.includeMessages`
         /// says so. See that file — the default is off and stays off.
         var messages = 0
+        /// Apps that can act as your account (2026-08-18, prd §395). Its own
+        /// number on the receipt because it is the one category here nobody
+        /// expects to be in an archive at all, and a person who sees "11 apps"
+        /// has learnt something before opening the room.
+        var apps = 0
+        /// The account's own beginning and every handle it has worn. One
+        /// counter for both — they are the same kind of fact and neither runs
+        /// to more than a handful.
+        var account = 0
+        /// Posts made inside a Community, read from `community-tweet.js` —
+        /// your own writing, and until this pass not imported at all.
+        var community = 0
         /// Posts that came down whole because `note-tweet.js` held their real
         /// body (2026-08-13). Counted rather than folded into `posts` because
         /// it is the one number that says a truncation was REPAIRED — an
@@ -109,9 +121,17 @@ enum XArchiveImport {
         /// shortlink. Counted for the same reason: before 2026-08-13 these
         /// landed titled `https://t.co/…`, which looked like data.
         var photos = 0
+        /// Video and GIF posts, which until 2026-08-18 landed as a row whose
+        /// entire content was the word "Photo" and no pixels at all — the
+        /// picture reader cannot open an mp4, so nothing was ever written to
+        /// `previewImageData` and the room's grid correctly refused them.
+        /// Counted apart from `photos` because they are a different medium and
+        /// because a zero here on an archive full of video is the tell that
+        /// the poster read failed rather than that the posts were missing.
+        var videos = 0
         var failed = false
 
-        var imported: Int { posts + replies + liked + messages }
+        var imported: Int { posts + replies + liked + messages + apps + account }
         var dropped: Int { droppedPosts + droppedLikes }
     }
 
@@ -171,6 +191,11 @@ enum XArchiveImport {
         // and the rows land exactly as they did before, so this can only ever
         // add a handle, never lose a post.
         let mine = accountHandle(under: folder)
+        // The account's own beginning, read from the same file as the handle
+        // (2026-08-18, prd §395). Read BEFORE the apps below, which use its
+        // date as the only honest fallback for a grant the export left
+        // undated.
+        let origin = accountOrigin(under: folder)
         // And your FACE, from the same archive (2026-08-06). `PostCard` has
         // always drawn `authorAvatarURL` when a row carries one and the source
         // icon when it doesn't — so before this every post in the room wore the
@@ -188,17 +213,53 @@ enum XArchiveImport {
         // — that is a full directory enumeration, and doing it twice for one
         // import would be the same cost paid for no reason.
         let pictures = ImportMedia.xMediaIndex(under: folder)
+        // id → is it a video. `landTweets` needs exactly this much: whether a
+        // wordless post has a file at all (so it is a photograph rather than
+        // an empty row) and which word it should wear. The URLs stay here, for
+        // `mediaJobs` below.
+        let media = pictures.mapValues(\.isVideo)
         var tweetFiles = readSeries("tweets", under: folder)
         if tweetFiles.isEmpty { tweetFiles = readSeries("tweet", under: folder) }
         for data in tweetFiles {
             foundAnyCategory = true
             landTweets(data, mine: mine, avatar: face, notes: notes,
-                       pictures: Set(pictures.keys), existing: existing,
+                       media: media, existing: existing,
+                       summary: &summary, landed: &landed, seen: &seen)
+        }
+        // POSTS MADE INSIDE A COMMUNITY (2026-08-18, prd §395) — your own
+        // writing, in the same shape as `tweets.js`, in a file nothing here
+        // had ever opened. Everything the main file gets, these get: the long
+        // bodies, the pictures, the thread join, the reply lead. They wear one
+        // extra tag so the room can tell the two apart, since a Community post
+        // was written to a room rather than to a timeline.
+        //
+        // Its OWN cap rather than a share of the posts budget — the same rule
+        // `readSeries`'s parts already follow, and the alternative would let a
+        // busy Community silently displace the timeline it sits beside.
+        for data in readSeries("community-tweet", under: folder) {
+            foundAnyCategory = true
+            landTweets(data, mine: mine, avatar: face, notes: notes,
+                       media: media, existing: existing, extraTag: "Community",
                        summary: &summary, landed: &landed, seen: &seen)
         }
         for data in readSeries("like", under: folder) {
             foundAnyCategory = true
             landLikes(data, summary: &summary, landed: &landed, seen: &seen)
+        }
+        // WHICH APPS CAN ACT AS YOU (2026-08-18, prd §395).
+        for data in readSeries("connected-application", under: folder) {
+            foundAnyCategory = true
+            landApps(data, fallback: origin?.createdAt, existing: existing,
+                     summary: &summary, landed: &landed, seen: &seen)
+        }
+        // The account's own beginning and every handle it has worn. Neither
+        // sets `foundAnyCategory`, deliberately: `account.js` is in every
+        // archive and in nothing else, so counting it as a category would make
+        // "this isn't an X archive" unreachable — any folder holding one file
+        // would import as a success with nothing in it.
+        if let origin { landOrigin(origin, summary: &summary, landed: &landed, seen: &seen) }
+        for data in readSeries("screen-name-change", under: folder) {
+            landRenames(data, summary: &summary, landed: &landed, seen: &seen)
         }
         // Only when explicitly asked. `readSeries` is reused so a long DM
         // history split across `-part1`, `-part2` … is read whole, exactly
@@ -215,7 +276,7 @@ enum XArchiveImport {
         // rides the same insert (prd §310). Inside the scoped grant, which is
         // why this can't be a later heal — there is no second chance at a
         // folder the person has stopped granting.
-        let pixels = await ImportMedia.decode(mediaJobs(landed, index: pictures))
+        let pixels = await ImportMedia.decode(mediaJobs(landed, index: pictures), folder: folder)
         ImportMedia.apply(pixels, to: landed)
         await finish(&summary, landed: landed, context: context, progress: progress)
         return summary
@@ -260,6 +321,7 @@ enum XArchiveImport {
             s.replies > 0 ? String(localized: "\(s.replies) replies") : nil,
             s.liked > 0   ? String(localized: "\(s.liked) liked") : nil,
             s.messages > 0 ? String(localized: "\(s.messages) conversations") : nil,
+            s.apps > 0 ? String(localized: "\(s.apps) connected apps") : nil,
         ].compactMap { $0 }
         if s.dropped > 0 {
             parts.append(String(localized: "\(s.dropped) older not imported"))
@@ -356,6 +418,59 @@ enum XArchiveImport {
         return changed
     }
 
+    /// The door back to X, for rows landed before there was one (2026-08-18,
+    /// prd §395).
+    ///
+    /// It can be healed — unlike the avatar, the long bodies and the room
+    /// fields, which all live inside the archive folder and can only be
+    /// reached by a re-import — because every fact it needs is already on the
+    /// row: `sourceRef` carries the post id and `authorHandle` carries the
+    /// account the importer read out of `account.js`. So this is a pure
+    /// rewrite of stored data, no request and no folder.
+    ///
+    /// Its own key, not `healRoom`'s. That pass has already drained on every
+    /// install that imported before today (it stamps its flag even when it
+    /// changes nothing), and its `pending` filter is `postText == nil`, which
+    /// excludes exactly the rows that landed correctly and still want a link.
+    ///
+    /// Scoped to `.note`: a LIKED post is `.link` and has carried its own
+    /// permalink in `content` since the seat shipped.
+    @MainActor
+    static func healLinks(context: ModelContext, chunk: Int = 200) async -> Int {
+        let key = "x.postLinks.backfill"
+        guard !UserDefaults.standard.bool(forKey: key) else { return 0 }
+        let descriptor = FetchDescriptor<Thing>(
+            predicate: #Predicate<Thing> { $0.source == "X" && $0.externalLink == nil })
+        let pending = ((try? context.fetch(descriptor)) ?? []).filter {
+            guard !Corpus.isImportReceipt($0), $0.kind == .note,
+                  let handle = $0.authorHandle, !handle.isEmpty,
+                  let ref = $0.sourceRef, ref.hasPrefix("x:tweet:") else { return false }
+            return ref.count > "x:tweet:".count
+        }
+        guard !pending.isEmpty else {
+            UserDefaults.standard.set(true, forKey: key)
+            return 0
+        }
+        var changed = 0
+        for (offset, thing) in pending.enumerated() {
+            // Per-ROW liveness, not a re-filter of the array (COROLLARY 6):
+            // this list is held across every yield below, and a bridge heal
+            // can tombstone a row inside one.
+            if thing.isLive, let handle = thing.authorHandle, let ref = thing.sourceRef {
+                thing.externalLink = permalink(handle: handle,
+                                               id: String(ref.dropFirst("x:tweet:".count)))
+                changed += 1
+            }
+            if offset % chunk == chunk - 1 {
+                _ = context.saveHonestly()
+                await Task.yield()
+            }
+        }
+        if changed > 0 { _ = context.saveHonestly() }
+        UserDefaults.standard.set(true, forKey: key)
+        return changed
+    }
+
     /// The account's own `@handle`, from the archive's `account.js`.
     ///
     /// Pure and failure-tolerant by construction: every step is an optional
@@ -416,8 +531,9 @@ enum XArchiveImport {
 
     @MainActor
     private static func landTweets(_ data: Data, mine: String?, avatar: String?,
-                                   notes: [String: String], pictures: Set<String>,
-                                   existing: [String: Thing], summary: inout Summary,
+                                   notes: [String: String], media: [String: Bool],
+                                   existing: [String: Thing], extraTag: String? = nil,
+                                   summary: inout Summary,
                                    landed: inout [Thing], seen: inout Set<String>) {
         guard let entries = parseArray(data) else { return }
 
@@ -431,6 +547,11 @@ enum XArchiveImport {
             let reposts: Int?
             /// Nothing but a picture — no words of its own. See the type doc.
             let wordless: Bool
+            /// The file the export holds for this post is a video (or a GIF,
+            /// which X exports as one). Read alongside `wordless` rather than
+            /// folded into it: a CAPTIONED video is still a post card, and it
+            /// still wants a poster frame.
+            let video: Bool
             /// This post's body came from `note-tweet.js` rather than from the
             /// clipped copy in `tweets.js`. Carried on the row rather than
             /// counted where it is discovered, so the count is incremented
@@ -467,8 +588,9 @@ enum XArchiveImport {
             // post's only text was the shortlink standing in for its own
             // image; paired with a file in the export, that is a photograph
             // and not an empty row.
+            let isVideo = media[id]
             let wordless = wordsWithoutMedia(raw, entities: entities).isEmpty
-                && pictures.contains(id)
+                && isVideo != nil
             guard !text.isEmpty || wordless, let date = created(tweet, id: id) else { continue }
             let replyTo = (tweet["in_reply_to_screen_name"] as? String)
                 .flatMap { $0.isEmpty ? nil : $0 }
@@ -476,7 +598,8 @@ enum XArchiveImport {
                             parentID: parentIdentifier(tweet),
                             likes: metric(tweet, "favorite_count"),
                             reposts: metric(tweet, "retweet_count"),
-                            wordless: wordless, longform: longform))
+                            wordless: wordless, video: isVideo == true,
+                            longform: longform))
         }
         // Every post's own words, keyed by id — what fills in a SELF-reply's
         // parent for free (2026-08-13). Built over the whole file before the
@@ -522,7 +645,8 @@ enum XArchiveImport {
                         existingRow.content = row.text
                         existingRow.postText = row.text
                         existingRow.title = IngestSupport.titleLine(
-                            face(reply: row.replyTo, text: row.text, wordless: row.wordless))
+                            face(reply: row.replyTo, text: row.text,
+                                 wordless: row.wordless, video: row.video))
                         existingRow.embedding = nil
                         summary.longform += 1
                     }
@@ -552,12 +676,34 @@ enum XArchiveImport {
             // replacing either: a wordless picture is still a post or still a
             // reply, and the room's own grid membership reads the pixels, not
             // this tag.
-            if row.wordless { tags.append("Photo"); summary.photos += 1 }
+            // A VIDEO IS NOT A PHOTO, and one facet meaning two media is
+            // worse than no facet (2026-08-18, prd §395 — the `Gone` ruling,
+            // reused). "photos I posted" must not answer with a GIF, and the
+            // room's grid membership reads either tag, so the split costs the
+            // tiles nothing.
+            //
+            // The two are NOT symmetric, and the asymmetry is deliberate.
+            // `Photo` stays exactly what §375 made it — a post that IS a
+            // photograph — because "posts with a picture attached" is not a
+            // question anybody asks of an archive where most posts have one.
+            // `Video` rides EVERY video post, captioned or not, because the
+            // card has to know: a poster frame drawn with no mark is a still
+            // standing in for a video, which is the one thing `VideoMark`'s
+            // own doc says a picture must never do.
+            if row.wordless { tags.append(row.video ? "Video" : "Photo") }
+            else if row.video { tags.append("Video") }
+            // A Community post says so (2026-08-18). Beside Post/Reply rather
+            // than instead of either: a post in a Community is still a post or
+            // still a reply, and "my replies" must keep finding it.
+            if let extraTag { tags.append(extraTag); summary.community += 1 }
+            if row.video { summary.videos += 1 }
+            else if row.wordless { summary.photos += 1 }
             if row.longform { summary.longform += 1 }
             let thing = Thing(
                 kind: .note,
                 title: IngestSupport.titleLine(
-                    face(reply: row.replyTo, text: row.text, wordless: row.wordless)),
+                    face(reply: row.replyTo, text: row.text,
+                         wordless: row.wordless, video: row.video)),
                 content: row.text,
                 source: "X",
                 capturedAt: row.date,
@@ -607,6 +753,18 @@ enum XArchiveImport {
             // this one — a stranger's post wearing your avatar is the plainest
             // fake status there is.
             thing.authorAvatarURL = avatar
+            // A DOOR BACK TO THE POST (2026-08-18, prd §395). Until this date
+            // a row in this room had none at all: a post's `content` is its
+            // own words, so unlike a liked post — whose `content` IS a
+            // permalink — there was no way to open your own post on X, in the
+            // one room where every row is something you can still go and look
+            // at. `permalink` builds it from the two facts the archive states,
+            // and X resolves a status by its id and ignores the handle in the
+            // path, so this survives an account that has since been renamed.
+            //
+            // Only when the archive named you. A permalink built on a guessed
+            // handle would be a door onto somebody else's post.
+            if let mine { thing.externalLink = permalink(handle: mine, id: row.id) }
             // WHO A REPLY ANSWERS, in the slot the card already draws
             // (2026-08-06). `PostCard` renders `parent` as "Replying to
             // @someone" and reads NOTHING else off the card — not its text,
@@ -617,9 +775,22 @@ enum XArchiveImport {
             // draw, and a room of replies would have read as a room of
             // non sequiturs.
             //
-            // `ref` deliberately stays nil: it is what `foldThreadReplies`
-            // walks, and X's chains are already handled at import (a head
-            // carries its own `enrichedText`).
+            // `ref` IS SET, for a self-reply and only for one (2026-08-18,
+            // prd §395). It stayed nil until then on the reasoning that X's
+            // chains are "already handled at import", because the head carries
+            // the whole chain on `enrichedText` — and that is retrieval text,
+            // which nothing draws. So a twelve-post thread was findable as one
+            // argument and READ as twelve consecutive rows, in the room whose
+            // standing complaint (§313) is that it is a long list of things.
+            //
+            // `foldThreadReplies` walks exactly this field, and the condition
+            // is exact rather than inferred: `textByID` holds the ids in this
+            // very file, so a parent found there is by construction a post the
+            // same person wrote. A reply to somebody else keeps a nil ref and
+            // cannot fold, which is right — it is not a thread.
+            //
+            // The continuations still land as their own rows. Folding is a
+            // rendering decision; what the archive was does not change.
             //
             // TWO FIELDS ADDED 2026-08-13, and they are the difference between
             // a label and context. `url` is the parent's own permalink, built
@@ -638,7 +809,7 @@ enum XArchiveImport {
                     text: parentPreview(row.parentID.flatMap { textByID[$0] }),
                     avatarURL: nil,
                     url: row.parentID.map { permalink(handle: replyTo, id: $0) },
-                    ref: nil)
+                    ref: row.parentID.flatMap { textByID[$0] == nil ? nil : "x:tweet:\($0)" })
             }
             // What the post actually did. No new field — `likeCount` and
             // `repostCount` have been on `Thing` since prd 81's social pass,
@@ -830,16 +1001,142 @@ enum XArchiveImport {
     /// about. This shape avoids relying on that being true forever.)
     @MainActor
     private static func mediaJobs(_ landed: [Thing],
-                                  index: [String: URL]) -> [ImportMedia.Job] {
+                                  index: [String: ImportMedia.Media]) -> [ImportMedia.Job] {
         guard !index.isEmpty else { return [] }
         var jobs: [ImportMedia.Job] = []
         for thing in landed where thing.kind == .note {
             guard jobs.count < ImportMedia.perImport,
                   let ref = thing.sourceRef, ref.hasPrefix("x:tweet:") else { continue }
             let id = String(ref.dropFirst("x:tweet:".count))
-            if let file = index[id] { jobs.append(ImportMedia.Job(ref: ref, file: file)) }
+            if let media = index[id] {
+                jobs.append(ImportMedia.Job(ref: ref, file: media.file,
+                                            isVideo: media.isVideo))
+            }
         }
         return jobs
+    }
+
+    // MARK: - The account itself (2026-08-18, prd §395)
+
+    /// The account's own beginning, from the file this importer already opens
+    /// for the handle. Nil when the field is absent or in a shape neither date
+    /// parser knows — never today's date, which would put "you joined X" at the
+    /// top of a room holding fifteen years of history.
+    static func accountOrigin(under root: URL) -> XArchiveAccount.Origin? {
+        for data in readSeries("account", under: root) {
+            guard let entries = parseArray(data) else { continue }
+            if let origin = XArchiveAccount.origin(entries) { return origin }
+        }
+        return nil
+    }
+
+    /// The apps that can act as your account.
+    ///
+    /// A `.link` rather than a `.note` on purpose: the row's whole point is
+    /// the door beside it, and unlike a post there is nothing here that is
+    /// text. `content` is X's own connected-apps page, so the sheet's derived
+    /// "Open link" already goes to the one place a grant can be taken back —
+    /// this app has no way to revoke anything and never claims one (prd §112:
+    /// read and preview here, act there).
+    ///
+    /// It HEALS on the dedupe hit, which none of the other categories here do
+    /// and this one must: a grant is a live fact about your account, so an app
+    /// that gained write access between two exports has to say so. Posts and
+    /// likes are finished when they land; permissions are not.
+    ///
+    /// An undated grant is stamped with the account's own creation date, and
+    /// when even that is unknown the row is DROPPED rather than stamped with
+    /// now. `.now` on this row would read as "you approved this today", which
+    /// is the loudest possible wrong answer on a security inventory — the
+    /// `PeerRoom` rule (our clock records when we LOOKED, never when it
+    /// happened), applied where it costs the most.
+    @MainActor
+    private static func landApps(_ data: Data, fallback: Date?,
+                                 existing: [String: Thing], summary: inout Summary,
+                                 landed: inout [Thing], seen: inout Set<String>) {
+        guard let entries = parseArray(data) else { return }
+        for app in XArchiveAccount.apps(entries) {
+            guard let when = app.approvedAt ?? fallback else { continue }
+            let ref = "x:app:\(app.id)"
+            let title = IngestSupport.titleLine(XArchiveAccount.appTitle(app))
+            guard !seen.contains(ref) else {
+                if let row = existing[ref], row.isLive, row.title != title {
+                    row.title = title
+                    row.summary = XArchiveAccount.appDetail(app)
+                }
+                summary.skipped += 1
+                continue
+            }
+            seen.insert(ref)
+            let thing = Thing(
+                kind: .link,
+                title: title,
+                content: XArchiveAccount.settingsURL,
+                source: "X",
+                capturedAt: when,
+                tags: ["Access"],
+                sourceRef: ref
+            )
+            // Display copy, not retrieval text: what an app says about itself
+            // is the sentence you read to decide whether you still want it
+            // connected (the Cursor `summary` ruling).
+            thing.summary = XArchiveAccount.appDetail(app)
+            landed.append(thing)
+            summary.apps += 1
+        }
+    }
+
+    /// The day the account was made — one row, at the very bottom of the room.
+    @MainActor
+    private static func landOrigin(_ origin: XArchiveAccount.Origin,
+                                   summary: inout Summary,
+                                   landed: inout [Thing], seen: inout Set<String>) {
+        // Keyed on the account id when the export names one, and on the date
+        // otherwise: an account has exactly one beginning, so the ref only has
+        // to be stable across re-imports of the same archive.
+        let ref = "x:joined:\(origin.accountID ?? String(Int(origin.createdAt.timeIntervalSince1970)))"
+        guard !seen.contains(ref) else { summary.skipped += 1; return }
+        seen.insert(ref)
+        let thing = Thing(
+            kind: .link,
+            title: String(localized: "You joined X"),
+            content: origin.handle.map { "https://x.com/\($0)" } ?? "https://x.com",
+            source: "X",
+            capturedAt: origin.createdAt,
+            tags: ["Account"],
+            sourceRef: ref
+        )
+        landed.append(thing)
+        summary.account += 1
+    }
+
+    /// Every handle the account has worn, each as its own dated row.
+    ///
+    /// A rename is an EVENT — it happened on a day — which is exactly what a
+    /// thing is, and why this is rows rather than a line on the room's head.
+    /// It also earns its keep past nostalgia: a reply from 2016 was written by
+    /// whoever this account was called in 2016, and nothing else in the corpus
+    /// records that.
+    @MainActor
+    private static func landRenames(_ data: Data, summary: inout Summary,
+                                    landed: inout [Thing], seen: inout Set<String>) {
+        guard let entries = parseArray(data) else { return }
+        for rename in XArchiveAccount.renames(entries) {
+            let ref = "x:handle:\(Int(rename.at.timeIntervalSince1970))"
+            guard !seen.contains(ref) else { summary.skipped += 1; continue }
+            seen.insert(ref)
+            let thing = Thing(
+                kind: .link,
+                title: IngestSupport.titleLine(XArchiveAccount.renameTitle(rename)),
+                content: "https://x.com/\(rename.to)",
+                source: "X",
+                capturedAt: rename.at,
+                tags: ["Account"],
+                sourceRef: ref
+            )
+            landed.append(thing)
+            summary.account += 1
+        }
     }
 
     // MARK: - The second act: who wrote the things you liked
@@ -1158,7 +1455,8 @@ enum XArchiveImport {
                 let raw = (create["text"] as? String) ?? ""
                 let text = clean(raw, entities: create["urls"].map { ["urls": $0] })
                 guard !text.isEmpty else { continue }
-                let stamp = (create["createdAt"] as? String).flatMap(isoStamp) ?? Date(timeIntervalSince1970: 0)
+                let stamp = (create["createdAt"] as? String)
+                    .flatMap(XArchiveAccount.isoStamp) ?? Date(timeIntervalSince1970: 0)
                 lines.append((stamp, text))
             }
             guard !lines.isEmpty else { continue }
@@ -1195,39 +1493,25 @@ enum XArchiveImport {
     private static let transcriptLines = 60
     private static let transcriptBytes = 4_000
 
-    /// X stamps a DM in ISO 8601 (`2019-04-16T12:34:56.000Z`), not the
-    /// `created_at` shape its tweets use.
-    private static func isoStamp(_ raw: String) -> Date? {
-        let f = ISO8601DateFormatter()
-        f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        if let d = f.date(from: raw) { return d }
-        f.formatOptions = [.withInternetDateTime]
-        return f.date(from: raw)
-    }
 
     // MARK: - Dates
 
     /// A tweet's own `created_at`, or — when that field is missing or in a
     /// shape we don't know — the date encoded in its id.
     private static func created(_ tweet: [String: Any], id: String) -> Date? {
+        // BOTH date parsers live in `XArchiveAccount` since 2026-08-18
+        // (prd §395): that file is compiled WHOLE by the harness and this one
+        // cannot be, so a date shape proven there is proven for every reader
+        // of this export. Two copies of a date parser drift, and a drifted one
+        // dates a decade of somebody's posts to 1970 while every row still
+        // renders perfectly.
         if let raw = tweet["created_at"] as? String,
-           let parsed = twitterDateFormatter.date(from: raw) {
+           let parsed = XArchiveAccount.tweetDateFormatter.date(from: raw) {
             return parsed
         }
         return snowflakeDate(id)
     }
 
-    /// "Wed Mar 21 20:50:14 +0000 2006". Pinned to POSIX and UTC: the month and
-    /// weekday names in this field are always English regardless of the
-    /// person's locale, and a device formatter would fail to parse them for
-    /// anyone whose phone isn't in English.
-    private static let twitterDateFormatter: DateFormatter = {
-        let f = DateFormatter()
-        f.locale = Locale(identifier: "en_US_POSIX")
-        f.timeZone = TimeZone(secondsFromGMT: 0)
-        f.dateFormat = "EEE MMM dd HH:mm:ss Z yyyy"
-        return f
-    }()
 
     /// The date inside a post id.
     ///
@@ -1393,8 +1677,13 @@ enum XArchiveImport {
     /// A row's clamped face. The recipient LEADS a reply (the §303 clamp
     /// ruling, see the call site) and a wordless picture post says so plainly
     /// rather than wearing the shortlink that used to stand in for its image.
-    static func face(reply: String?, text: String, wordless: Bool) -> String {
-        if wordless { return String(localized: "Photo") }
+    static func face(reply: String?, text: String, wordless: Bool,
+                     video: Bool = false) -> String {
+        // A GIF is an mp4 in this export and says "Video" too. There is no
+        // third word: the archive states the file and nothing about its
+        // length, so calling a two-second loop a GIF would be a guess, and a
+        // guess in the one line the row shows (2026-08-18, prd §395).
+        if wordless { return video ? String(localized: "Video") : String(localized: "Photo") }
         return reply.map { "To @\($0) · \(text)" } ?? text
     }
 

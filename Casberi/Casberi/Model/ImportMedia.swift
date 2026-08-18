@@ -1,4 +1,5 @@
 import Foundation
+import AVFoundation
 import UIKit
 import ImageIO
 import SwiftData
@@ -45,20 +46,105 @@ enum ImportMedia {
 
     /// One picture to read: a row's `sourceRef` and the file it names. Plain
     /// values on purpose — this is what crosses the await instead of a model.
+    ///
+    /// `isVideo` picks the READER, not the destination: a video's poster is
+    /// written to exactly the same `previewImageData` a photograph's thumbnail
+    /// is, so nothing downstream needs to know which one it got (2026-08-18,
+    /// prd §395 — the `FilesBridge` ruling, one export over).
     struct Job: Sendable {
         let ref: String
         let file: URL
+        var isVideo: Bool = false
+    }
+
+    /// A file inside an export, and which MEDIUM it is.
+    ///
+    /// The distinction did not exist here until 2026-08-18 and its absence was
+    /// the whole of the bug: `xMediaIndex` has always indexed whatever files
+    /// sat in `data/tweets_media`, `.mp4` included, and `thumbnail(at:)` is a
+    /// `CGImageSource` read that cannot open one. So a video post — and X
+    /// stores every animated GIF as an mp4 too — landed with no pixels at all,
+    /// which excluded it from its room's grid and left it as a row whose whole
+    /// content was the placeholder word "Photo".
+    struct Media: Sendable, Equatable {
+        let file: URL
+        let isVideo: Bool
+    }
+
+    /// The file extensions a poster frame is read from rather than a thumbnail.
+    ///
+    /// Deliberately a small closed set rather than "not an image": an unknown
+    /// extension falls to the image reader, which answers nil for anything it
+    /// can't decode — the behaviour every export has had all along. A wrong
+    /// guess the other way would hand `AVURLAsset` a JPEG and spend a video
+    /// decode to learn nothing.
+    static let videoExtensions: Set<String> = ["mp4", "mov", "m4v"]
+
+    static func isVideoFile(_ url: URL) -> Bool {
+        videoExtensions.contains(url.pathExtension.lowercased())
     }
 
     /// Thumbnails every job. Takes NO `Thing`, so nothing can be tombstoned
     /// underneath it and the liveness rules have nothing to say about it.
-    static func decode(_ jobs: [Job]) async -> [String: Data] {
+    /// `folder` is the export's own root, and it is passed for ONE reason: a
+    /// video's frame is read through `AVURLAsset`, which opens a file by a
+    /// stricter route than `CGImageSource` and fails without the security
+    /// scope — by returning a nil frame, which is indistinguishable from a
+    /// video we simply can't read. The importer holds that scope for the whole
+    /// run, so this is belt and braces; nested starts are refcounted, so it is
+    /// safe alongside the window the caller already opened.
+    static func decode(_ jobs: [Job], folder: URL? = nil) async -> [String: Data] {
         guard !jobs.isEmpty else { return [:] }
         var out: [String: Data] = [:]
         for job in jobs {
-            if let data = await thumbnail(at: job.file) { out[job.ref] = data }
+            let data = job.isVideo
+                ? await posterFrame(url: job.file, folder: folder)
+                : await thumbnail(at: job.file)
+            if let data { out[job.ref] = data }
         }
         return out
+    }
+
+    /// One frame from a video, written as the SAME 480pt JPEG the image path
+    /// writes — so a video tiles in a room's grid through exactly the
+    /// `previewImageData` route a photograph already uses, with no second
+    /// field, no second code path in the grid, and no CloudKit deploy.
+    ///
+    /// Moved here from `FilesBridge` on 2026-08-18 (prd §395) rather than
+    /// copied: two implementations of one frame grab drift, and then a
+    /// connected folder and an imported archive disagree about which second of
+    /// a video is its cover. `FilesBridge` calls this now.
+    ///
+    /// Three decisions, each a wrong-looking poster if got wrong:
+    ///
+    /// `appliesPreferredTrackTransform` — without it every video shot in
+    /// portrait posters on its side. The rotation lives in the track's
+    /// transform, not the pixels, so the frame comes back landscape and
+    /// perfectly plausible.
+    ///
+    /// The frame is taken a second IN, never at zero. A great many videos open
+    /// on black (a fade, a shutter, a leading blank frame), and a black tile in
+    /// a grid reads as a picture that failed to load rather than as the video
+    /// it is. Short clips take their own midpoint instead, since one second
+    /// into a 400ms clip is past the end.
+    ///
+    /// It opens the security scope ITSELF when handed a root — see `decode`.
+    static func posterFrame(url: URL, folder: URL?) async -> Data? {
+        await Task.detached(priority: .utility) { () -> Data? in
+            let scoped = folder?.startAccessingSecurityScopedResource() ?? false
+            defer { if scoped { folder?.stopAccessingSecurityScopedResource() } }
+
+            let asset = AVURLAsset(url: url)
+            guard let seconds = try? await CMTimeGetSeconds(asset.load(.duration)),
+                  seconds.isFinite, seconds > 0 else { return nil }
+
+            let generator = AVAssetImageGenerator(asset: asset)
+            generator.appliesPreferredTrackTransform = true
+            generator.maximumSize = CGSize(width: 480, height: 480)
+            let at = CMTime(seconds: min(1, seconds / 2), preferredTimescale: 600)
+            guard let cg = try? await generator.image(at: at).image else { return nil }
+            return UIImage(cgImage: cg).jpegData(compressionQuality: 0.7)
+        }.value
     }
 
     /// Writes the decoded pixels back, synchronously — no suspension between
@@ -151,7 +237,7 @@ enum ImportMedia {
     /// one place these two exports genuinely differ. The directory is listed
     /// ONCE per import and handed back as an index, because doing it per post
     /// would be a full directory enumeration per row.
-    static func xMediaIndex(under root: URL) -> [String: URL] {
+    static func xMediaIndex(under root: URL) -> [String: Media] {
         let manager = FileManager.default
         var roots = [root]
         if let children = try? manager.contentsOfDirectory(
@@ -160,11 +246,19 @@ enum ImportMedia {
                 (try? $0.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory == true
             }
         }
-        var index: [String: URL] = [:]
+        var index: [String: Media] = [:]
         for base in roots {
-            let dir = base.appending(path: "data/tweets_media")
-            guard let files = try? manager.contentsOfDirectory(
-                at: dir, includingPropertiesForKeys: nil) else { continue }
+            // BOTH media directories (2026-08-18, prd §395). A post made inside
+            // a Community files its pictures under `community_tweet_media`, and
+            // until `community-tweet.js` was read at all that directory had
+            // nothing to match — now a wordless Community photo post would
+            // otherwise land titled with the t.co shortlink standing in for its
+            // own image, which is the §375 defect arriving in a second file.
+            let files = ["data/tweets_media", "data/community_tweet_media"]
+                .compactMap { try? manager.contentsOfDirectory(
+                    at: base.appending(path: $0), includingPropertiesForKeys: nil) }
+                .flatMap { $0 }
+            guard !files.isEmpty else { continue }
             for file in files {
                 // `<id>-<hash>.<ext>` — the id is everything before the first
                 // dash. A post with several pictures yields several files; the
@@ -172,8 +266,18 @@ enum ImportMedia {
                 let name = file.lastPathComponent
                 guard let dash = name.firstIndex(of: "-") else { continue }
                 let id = String(name[name.startIndex..<dash])
-                guard !id.isEmpty, index[id] == nil else { continue }
-                index[id] = file
+                guard !id.isEmpty else { continue }
+                let video = isVideoFile(file)
+                // AN IMAGE BEATS A VIDEO for the same post, and the ordering is
+                // not a preference (2026-08-18, prd §395). `contentsOfDirectory`
+                // returns files in no order this code may rely on, so a video
+                // post that also exported a cover jpg would otherwise tile from
+                // whichever the filesystem happened to hand back first — the
+                // same post posters differently on two machines. Taking the
+                // image when there is one is also the cheaper read and the more
+                // faithful frame: it is the cover X itself chose.
+                if let held = index[id], held.isVideo == false || video { continue }
+                index[id] = Media(file: file, isVideo: video)
             }
             if !index.isEmpty { break }
         }

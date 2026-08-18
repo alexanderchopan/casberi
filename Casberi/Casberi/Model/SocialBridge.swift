@@ -82,6 +82,23 @@ enum SocialThread {
     static let contextSources: Set<String> = sources.union(["Slack", "X", "Instagram"])
     static func hasContext(_ source: String) -> Bool { contextSources.contains(source) }
 
+    /// Sources whose PERSON ROOM can be opened (2026-08-18, prd §395).
+    ///
+    /// A THIRD set, and it is genuinely a third question. `isSocial` asks
+    /// whether a network can be reached — a thread read, a profile lookup, a
+    /// Watch verb — and X can never answer yes to any of it. `hasContext` asks
+    /// whether a row carries a provenance word. This asks whether the CORPUS
+    /// can describe a person, which needs nothing from the network at all: an
+    /// X archive holds your replies to somebody, your posts naming them and
+    /// their posts you liked, spanning years X's own search cannot reach.
+    ///
+    /// So `SocialProfileCard` stays gated on `isSocial` — its one verb is
+    /// Watch and on X that is impossible, which would be the dead control the
+    /// honesty law bans — while `PersonRoomScreen`, which only ever reads what
+    /// is already here, opens for either.
+    static let personSources: Set<String> = sources.union(["X"])
+    static func hasPersonRoom(_ source: String) -> Bool { personSources.contains(source) }
+
     /// How many replies a thread fetch returns — the sheet shows this many at
     /// most, so a thread AT this count may have more (the header says "N+").
     static let replyCap = 8

@@ -108,6 +108,7 @@ at all.
 | §306 | Notifications — time-sensitive DECLARED but not honoured, copy | amended by §383 |
 | §361 | The top band gets the feed's geometry — it pays for the rail's | amended by §371 |
 | §124a | The Wallet feed carries the treemap AND the NFTs | superseded by §387 |
+| §375 | The archive reads like an archive | amended by §395 |
 | §240 | NFTs in folders, and the eager owned-NFT read behind them | amended by §387 |
 | §389b | A fold is skipped, not fatal — the cover is the newest thing t | reversed by §389c |
 | §392 | The grouping is drawn by proximity, the packer stops churning, | item 1 (the whitespace cluster layout) overturned by §392a; its diagnosis, the packing-order change, the scroll-to-active and the glass step all still stand |
@@ -25058,3 +25059,224 @@ been imported on this host, and the four new media paths come from the same
 parsers §245 was built against. Every read fails safe: a missing file is a skip,
 an unresolvable path yields no thumbnail, a refused host yields no cover, and
 the row lands exactly as it did before.
+## §395 — The archive's other half: what it can act as you with, who you talked to, and the posts that were never pictures (user: "i'd like to make the Twitter experience fantastic. What else can we do to enrich it?", then a pick of three of four proposals, 2026-08-18)
+
+Three pieces. One is a repair of something that shipped wrong and could not be
+seen from outside, one reads three files nothing had ever opened, and one is a
+reading the corpus has supported since the seat landed and never drew.
+
+**This amends §375** in two places: a self-reply's `parent.ref` is set now
+rather than deliberately nil, and the `Photo` facet that entry announced is
+actually in the ask vocabulary.
+
+### 1. A video post landed as a blank row that said "Photo"
+
+`ImportMedia.xMediaIndex` has indexed whatever files sat in
+`data/tweets_media` since media landed on 2026-08-05 — `.mp4` included — and
+`thumbnail(at:)` is a `CGImageSource` read, which cannot open one. So a
+wordless video post satisfied every test §375 built for a photograph, took the
+`Photo` facet, and then got no pixels: excluded from the room's grid (which
+requires them, correctly), it fell through to a post card with no words and the
+placeholder title "Photo". **X exports every animated GIF as an mp4 too**, so
+this was both media at once.
+
+Nothing could have caught it. The import reports one number for pictures, the
+build is green, the room renders, and the row looks like a post that happens to
+be empty — which in an archive of fifteen years is not a surprising thing to
+scroll past.
+
+The reader that fixes it landed the day before, one export over
+(`FilesBridge.posterFrame`, 2026-08-17), and it MOVED to `ImportMedia` rather
+than being copied: two implementations of one frame grab drift, and then a
+connected folder and an imported archive disagree about which second of a video
+is its cover. Every decision written up there travels with it — the preferred
+track transform (or every portrait video posters on its side, landscape and
+perfectly plausible), the second-in seek (a great many videos open on black,
+and a black tile reads as a picture that failed to load), and opening the
+security scope for `AVURLAsset`, which fails by returning a nil frame rather
+than an error.
+
+**Three rulings inside it.**
+
+**An image beats a video for the same post, and that is not a preference.**
+`contentsOfDirectory` returns files in no order this code may rely on, so a
+video that also exported a cover jpg would otherwise poster differently on two
+machines. Taking the image is also the cheaper read and the more faithful
+frame: it is the cover X itself chose.
+
+**`Video` is not folded into `Photo`.** One facet meaning two media is worse
+than no facet — the `Gone` ruling, reused — and "photos I posted" must not
+answer with a GIF. The two are deliberately NOT symmetric, though: `Photo`
+stays exactly what §375 made it, a post that IS a photograph, because "posts
+with a picture attached" is not a question anybody asks of an archive where
+most posts have one; `Video` rides EVERY video post, captioned or not, because
+the card has to know. A poster frame drawn with no mark is a still standing in
+for a video, which is the one thing `VideoMark`'s own doc says a picture must
+never do.
+
+**Which means grid membership could no longer be the tag**, and is
+`postText == nil` instead — a fact about the row rather than a word about the
+medium. A captioned video is still a post card, because the caption is the
+post.
+
+**The ceiling is stated rather than worked around: there is no player.** The
+archive folder is a temporary scoped pick and the mp4 was deliberately never
+copied (§310's ruling, unchanged), so what this app holds is one frame. The
+honest door is the post itself — which the room did not have either, and now
+does: `landTweets` stores a permalink on `externalLink` for your own posts, the
+sheet offers it as "On X" (§302's Explorer ruling — the glyph already says it
+opens something, the word's job is the destination), and `healLinks` fills it
+in for rows landed before today. That one is healable, unlike the avatar and
+the long bodies, because both facts it needs are already on the row.
+
+### 2. Three files nothing had ever opened
+
+`connected-application.js` is the strongest thing in the export that isn't your
+writing, and the one an account of any age is most likely to be wrong about. An
+OAuth grant made in 2013 to an app that shut down in 2015 is still a live
+grant, sitting in a settings page nobody opens. This is `FarcasterSigners`
+(§239) with a different wire: an INVENTORY, read and shown, with a door to the
+page that revokes. Nothing here revokes anything and nothing here can — the
+archive is a file on a disk and the grant lives on X's servers, which is
+§112's preparing-surface ruling arriving in a third place.
+
+**The reach ladder leads the row and is never guessed.** `unknown` is a real
+answer with its own sentence, because "can post as you" printed over a
+read-only app is the §83 fake status in the one place somebody would act on it.
+The field is read as SUBSTRINGS of a lowercased join rather than matched
+against a fixed vocabulary: some exports carry `permissions: ["read","write"]`,
+some a single `accessType: "Read and Write"`, and some spell the message scope
+"dm" where others spell it "direct messages". An enum match reads one of those
+and answers `unknown` for the rest, which UNDER-states a write grant — the one
+direction that must never happen.
+
+**A grant is the only category here that heals on the dedupe hit.** Posts and
+likes are finished when they land; permissions are a live fact about your
+account, so an app that gained write access between two exports has to say so.
+And **an undated grant with no account date is dropped rather than stamped with
+now**: `.now` on a security inventory reads as "you approved this today", which
+is `PeerRoom`'s rule (our clock records when we LOOKED) applied where it costs
+the most.
+
+`account.js` has been read for its `username` since the seat shipped and its
+`createdAt` was sitting beside it — the day you joined, landing as one dated
+row so the room's oldest entry is the account's own beginning. `screen-name-change.js`
+is who you used to be, each change its own dated event, which is exactly what a
+thing is. Neither sets `foundAnyCategory`, and that is load-bearing:
+`account.js` is in every archive and in nothing else, so counting it as a
+category makes "this isn't an X archive at all" unreachable — any folder
+holding one file would import as a success with nothing in it. A small script
+guards the shape (`scripts/support/x-run-shape.py`) because a grep cannot state
+it.
+
+`community-tweet.js` is your own writing in the same shape as `tweets.js`, and
+it was simply never read. It gets everything the main file gets — the long
+bodies, the pictures, the thread join, the reply lead — plus one tag, since a
+Community post was written to a room rather than to a timeline, and its OWN cap
+rather than a share of the posts budget. Its pictures live in a second
+directory (`community_tweet_media`), which the media index now scans: without
+it a wordless Community photo post would land titled with the t.co shortlink
+standing in for its own image, which is §375's defect arriving in a second
+file.
+
+**The facet vocabulary, and a defect §375 wrote down and did not notice.** That
+entry says in as many words that stamping `Photo` made "photos I posted" a
+filter rather than a hope. The tag never reached `Retriever.facetTable`, so for
+five days it existed and no sentence could name it — and
+`HomeComposition.mechanicalTags` had a hand-written comment recording exactly
+that gap ("`Photo` is NOT in `Retriever.facetTags`") which nobody read as a bug.
+`Photo`, `Video`, `Access` and `Community` are all in the table now, under the
+gating rule that has carried "review", "build" and "short": behind a named
+source they narrow, unscoped they can never quietly empty a result. `Account`
+is deliberately NOT a facet — it is among the most ordinary words in the
+language and this corpus is full of accounts — so it is hand-listed as a
+mechanical tag instead.
+
+### 3. Your years with one person
+
+The reading an X archive can make that X itself cannot. Search on X is scoped
+to what its index still holds and its product surfaces a relationship nowhere
+at all, so "how long have I been talking to this person, and when" has no
+answer there — while every fact it needs has been in this corpus since the
+archive landed.
+
+**Three ways a person appears, counted apart and never summed.** A REPLY is a
+post of yours answering theirs (`Thing.parent`, stamped at import). A MENTION is
+a post of yours naming them without answering them. A LIKED post is one of
+theirs you kept, which exists only after `fetchFaces` has named its author.
+"You replied to @foo 214 times" is a statement about a decade of conversation;
+folding forty likes into it would make reading look like talking.
+
+**It joins differently from every other person room, and it has to.** The
+existing fetch asks "what did they write" — for Bluesky, Farcaster and Nostr
+that is the whole of what the corpus holds about somebody. An X archive is YOUR
+side: their handle sits on `parent` for a reply you sent, inside the words of a
+post that names them, and on `authorHandle` only for posts of theirs you liked.
+An `authorHandle` fetch answers with the likes alone and misses the decade.
+
+**`personSources` is a THIRD source set, and it asks a third question.**
+`isSocial` asks whether a network can be reached — a thread read, a profile
+lookup, a Watch verb — and X can never answer yes to any of it. `hasContext`
+asks whether a row carries a provenance word. This asks whether the CORPUS can
+describe a person, which needs nothing from the network. So `SocialProfileCard`
+stays gated on `isSocial` (its one verb is Watch, and on X that is the dead
+control the honesty law bans) while the person room, which only reads what is
+already here, opens for either.
+
+**What the card may not do.** No claim about them — an archive holds your side
+and no other, so a "conversation" count would be half a fact wearing a whole
+one's name. No colour for more or less. And no rate, no average, no streak:
+those are inferences about a relationship, and the ruling that shaped
+`AddressConnections` ("limit the analysis, it should be factual") covers this
+exactly. Silent years are drawn at zero, `XRoom`'s rule, and it says more here
+than there — the two years you stopped talking are most of what the shape is.
+
+**The door is the room's own board.** "Who you reply to" has named people you
+have talked to for a decade and, until now, tapping one did nothing.
+`LeaderboardHero` takes an optional `onPick` and is only ever wrapped in a
+button when a destination was handed in, so every other board — subreddits,
+artists, publications, books — keeps exactly the plain row it has always drawn
+rather than growing a control that goes nowhere.
+
+**And threads fold.** §375 set a self-reply's `parent.ref` to nil on the
+reasoning that X's chains are "already handled at import", because the head
+carries the whole chain on `enrichedText` — which is retrieval text, drawn by
+nothing. So a twelve-post thread was findable as one argument and READ as
+twelve consecutive rows, in the room whose standing complaint (§313) is that it
+is a long list of things. The ref is set now, for a self-reply and only for
+one: the parent's id is in the same file, so a parent found there is by
+construction a post the same person wrote. The continuations still land as
+their own rows — folding is a rendering decision, and what the archive was does
+not change.
+
+### What it is checked by, and what it is not
+
+`XArchiveAccount` and `XPerson` are Foundation-only by design and
+`scripts/x-selftest.sh` compiles both WHOLE and unmodified, the way it already
+does `XRoom`. That is the only proof these readings are right: no real X
+archive has ever been opened on any machine this seat has been written on, and
+every failure in this work renders as something that looks completely normal.
+Both date parsers moved into `XArchiveAccount` for the same reason — that file
+is compiled as shipped and `XArchiveImport` cannot be, so a date shape proven
+there is proven for every reader of this export.
+
+Twenty-one new drift guards carry the wiring the compiled functions cannot
+prove, each naming the invisible failure it prevents. The importer half stays
+**UNMEASURED against a real archive**, like every other line that reads one:
+`connected-application.js`, `screen-name-change.js` and `community-tweet.js`
+are all doc-derived, both known wrapper shapes are tried, both date shapes are
+tried for every timestamp, and a file or key this build doesn't recognise
+contributes nothing rather than something wrong.
+
+**And it is UNBUILT.** This pass was written on a Linux host with no Xcode, so
+`scripts/verify.sh` and the Swift half of `x-selftest.sh` have not run — the
+§330 footing. Every static audit passed; the compile and the sweep are owed.
+
+**Not built, deliberately.** Bookmarks are still not in the export and the copy
+still says so. `personalization.js` remains where §375 left it — a genuinely
+unique read and a tally, waiting on a pass that measures a real file. DMs stay
+behind `ImportOptions.includeMessages`, off by default. Retweets are still
+skipped and counted (§280's ruling: somebody else's words truncated at 140).
+The client each post was written from (`source`, an HTML anchor on every tweet
+and an era reading nothing else can give) was offered and NOT picked this pass;
+it is free, already in the file, and still there.

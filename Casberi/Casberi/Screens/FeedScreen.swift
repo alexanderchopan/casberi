@@ -321,6 +321,14 @@ struct FeedScreen: View {
         /// would rise part way and close again (ruling 2026-07-28). Carries only
         /// value types, so no `Thing` and no liveness question.
         case nftPicks(address: String, label: String)
+        /// Your years with one person, opened from the room's own board
+        /// (2026-08-18, prd §395). Routed here for the standing reason every
+        /// case above it is: the board lives inside this List's rows, and a
+        /// `.sheet` on a row resolves to the same presenting controller as
+        /// this one — the half-open-then-close bug (ruling 2026-07-28).
+        /// Carries a handle and a source, so no `Thing` and no liveness
+        /// question.
+        case person(source: String, handle: String)
 
         var id: String {
             switch self {
@@ -332,6 +340,7 @@ struct FeedScreen: View {
             case .locks: "locks"
             case .market(let p): "market:\(p.id)"
             case .nftPicks(let address, _): "nftPicks:\(address)"
+            case .person(let source, let handle): "person:\(source):\(handle)"
             }
         }
     }
@@ -2257,6 +2266,12 @@ struct FeedScreen: View {
                 PredictionPreviewSheet(preview: preview)
             case .nftPicks(let address, let label):
                 WalletNFTPickerSheet(wallet: address, label: label)
+            case .person(let source, let handle):
+                NavigationStack {
+                    PersonRoomScreen(profile: SocialProfile(
+                        source: source, handle: handle,
+                        displayName: nil, bio: nil, avatarURL: nil))
+                }
             }
         }
         #if !targetEnvironment(macCatalyst)
@@ -2527,7 +2542,21 @@ struct FeedScreen: View {
         } else if let topicMap {
             insightSection { TopicMapHero(map: topicMap) }
         } else if let leaderboard {
-            insightSection { LeaderboardHero(board: leaderboard) }
+            insightSection {
+                // THE BOARD IS A DOOR, in the one room that can open one
+                // (2026-08-18, prd §395). "Who you reply to" names people you
+                // have talked to for a decade and, until this pass, tapping
+                // one did nothing — while the corpus behind it could answer
+                // "when, and how often" better than X can. Passed only for X:
+                // every other board here ranks subreddits, artists,
+                // publications and books, and a person room over an artist
+                // name would open an empty screen.
+                LeaderboardHero(board: leaderboard,
+                                onPick: source == XPersonSource.source
+                                    ? { row in feedSheet = .person(source: XPersonSource.source,
+                                                                  handle: row.label) }
+                                    : nil)
+            }
         } else if let distribution {
             insightSection { DistributionHero(dist: distribution) }
         } else if let mosaic {
@@ -2581,10 +2610,23 @@ struct FeedScreen: View {
             let photoTiles = visible.live.filter(Self.isXPhotoTile)
             let rest = visible.live.filter { !Self.isXPhotoTile($0) }
             if !photoTiles.isEmpty { photoGridSection(photoTiles) }
-            let days = chronoGroups(rest)
-            groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
+            // A THREAD READS AS A THREAD (2026-08-18, prd §395). The archive
+            // has named a self-reply's parent since §308, and until this pass
+            // the only place that fact reached was `enrichedText` — retrieval
+            // text, drawn by nothing — so a twelve-post thread was one
+            // findable argument and twelve unreadable rows. Same fold the
+            // social rooms have used since 2026-07-27, on the same field.
+            //
+            // Instagram deliberately does NOT fold below: only X's archive
+            // names a parent post, which is §309's standing split between what
+            // generalises across the import rooms and what is one export's own
+            // fact.
+            let (roomThings, threadReplies) = foldThreadReplies(rest)
+            let days = chronoGroups(roomThings)
+            groupedSections(days, nextEventID: nextEventID,
+                            boundary: boundaryThingID(in: days), replies: threadReplies)
         case .instagram:
-            // The mixed room's fourth instance (2026-08-18, prd §395), on
+            // The mixed room's fourth instance (2026-08-18, prd §396), on
             // Snapchat's, Files' and X's terms: what has pixels AND nothing to
             // say leads as a grid, everything else reads as rows.
             let photoTiles = visible.live.filter(Self.isInstagramPhotoTile)
@@ -4960,12 +5002,6 @@ struct FeedScreen: View {
             && FilesIngest.drawsAsPicture(thing.sourceRef)
     }
 
-    /// A wordless picture post in an X archive (2026-08-13, prd §375) — the
-    /// mixed X room's grid membership, `isMemoryTile`'s shape one source over.
-    /// The test is the pixels plus the tag the importer stamps, never the
-    /// title: that title is the localized word "Photo", and matching on it
-    /// would empty this grid on every device that isn't in English. Guarded
-    /// internally for the same corollary-4 reason as its two siblings.
     /// A wordless picture in an Instagram export (2026-08-18, prd §389) — the
     /// mixed room's grid membership, `isXPhotoTile`'s shape one product over
     /// and for its exact reasons.
@@ -4988,10 +5024,54 @@ struct FeedScreen: View {
             && thing.tags.contains("Photo")
     }
 
+    /// A wordless picture OR video post in an X archive (2026-08-13, prd §375;
+    /// widened 2026-08-18, prd §395) — the mixed X room's grid membership,
+    /// `isMemoryTile`'s shape one source over.
+    ///
+    /// THE TEST IS `postText == nil`, not the tag, and that changed with the
+    /// videos. A wordless post is exactly one the importer gave no `postText`
+    /// (`landTweets` writes it only from a non-empty body), which is a fact
+    /// about the row rather than a word about the medium — so one test covers
+    /// both tags and neither tag has to mean two things. It is never the
+    /// title: that title is the localized word "Photo" or "Video", and
+    /// matching on it would empty this grid on every device not in English.
+    ///
+    /// `Video` rides captioned posts too (see `landTweets`), which is exactly
+    /// why the tag can no longer be the membership test: a video with a
+    /// caption is a post card, and its caption is the post.
+    ///
+    /// Guarded internally for the same corollary-4 reason as its three
+    /// siblings.
     private static func isXPhotoTile(_ thing: Thing) -> Bool {
         thing.isLive && thing.source == XRoomSource.source && thing.kind == .note
             && thing.previewImageData != nil
-            && thing.tags.contains("Photo")
+            && thing.postText == nil
+            && (thing.tags.contains("Photo") || thing.tags.contains("Video"))
+    }
+
+    /// A row about the ACCOUNT rather than about anything it posted
+    /// (2026-08-18, prd §395) — the two tags `XArchiveImport` stamps on the
+    /// three categories that have no author: `Access` (an app that can act as
+    /// you) and `Account` (the day you joined, and every rename since).
+    ///
+    /// Tag-tested rather than kind-tested, because a LIKED post is `.link`
+    /// too and is very much a post.
+    private static func isXAccountRow(_ thing: Thing) -> Bool {
+        thing.isLive
+            && (thing.tags.contains("Access") || thing.tags.contains("Account"))
+    }
+
+    /// A tile whose picture is one FRAME of a video, so the grid can mark it.
+    ///
+    /// The mark is not decoration and its absence was a small lie: a poster
+    /// frame is a still, and a still drawn with nothing to say otherwise reads
+    /// as a photograph. `VideoMark`'s own doc settled the shape (cornered, no
+    /// centred play button, no hits taken) — this is the test that decides
+    /// which tiles wear it, in the two rooms that can hold one.
+    private static func isVideoTile(_ thing: Thing) -> Bool {
+        guard thing.isLive else { return false }
+        if thing.source == XRoomSource.source { return thing.tags.contains("Video") }
+        return FilesIngest.isVideoRef(thing.sourceRef)
     }
 
     /// What a grid tile says across its foot. A screenshot's title is the text
@@ -5056,7 +5136,8 @@ struct FeedScreen: View {
                                     openThing(thing)
                                 } label: {
                                     PhotoCell(thing: thing, dayPill: firstOfDay ? dayLabels[i] : nil,
-                                              caption: Self.tileCaption(thing))
+                                              caption: Self.tileCaption(thing),
+                                              video: Self.isVideoTile(thing))
                                 }
                                 // A photograph LIFTS under the finger (prd
                                 // §384) where every control tile dips — a
@@ -5790,6 +5871,22 @@ struct FeedScreen: View {
                             wideArt: wideArt)
                 } else if thing.kind == .chat {
                     ExcerptRow(thing: thing, lines: 2)
+                } else if let kids = replies[thing.id.uuidString], !kids.isEmpty {
+                    // A self-thread's head, drawn with its continuations
+                    // (2026-08-18, prd §395) — the social rooms' card, on the
+                    // room that has the deepest threads in the corpus.
+                    SocialThreadCard(head: thing, replies: kids)
+                } else if Self.isXAccountRow(thing) {
+                    // The account's own record (2026-08-18, prd §395): a
+                    // connected app, the day you joined, a handle you used to
+                    // wear. None of them is a post and none has an author, so
+                    // a post card would draw a face and a handle over a fact
+                    // about the account — a plain band is what these are.
+                    BandRow(thing: thing,
+                            emphasized: thing.id == nextEventID,
+                            live: false,
+                            imageOnly: imageOnly,
+                            wideArt: wideArt)
                 } else {
                     PostCard(thing: thing)
                 }

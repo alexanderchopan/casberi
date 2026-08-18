@@ -54,6 +54,92 @@ grep -q 'raw.hasPrefix("RT @")' "$XARCH" \
 grep -q '"X"' Casberi/Shared/Thing.swift \
   || { echo "✗ X is not a bulk-import source — its rows would flood All"; exit 1; }
 
+# --- 2026-08-18, prd §395: the enrichment pass ------------------------------
+# Every one of these is a wiring fact the compiled functions above cannot
+# prove, and every one of them fails INVISIBLY — a room that renders perfectly
+# while a category never landed, a video that tiles as a photograph, a thread
+# that reads as twelve unrelated rows.
+MEDIA="Casberi/Casberi/Model/ImportMedia.swift"
+FEEDSCREEN_395="Casberi/Casberi/Screens/FeedScreen.swift"
+RETRIEVER_395="Casberi/Casberi/Model/Retriever.swift"
+
+# (1) VIDEO. The whole defect was that `xMediaIndex` indexed mp4s and the
+# thumbnail reader could not open one, so a video post landed with no pixels at
+# all and fell out of the room's grid wearing the placeholder word "Photo".
+grep -q 'static func posterFrame' "$MEDIA" \
+  || { echo "✗ ImportMedia can no longer read a frame from a video — every video post lands with no pixels"; exit 1; }
+grep -qF 'await posterFrame(url: job.file, folder: folder)' "$MEDIA" \
+  || { echo "✗ decode no longer routes a video job to the poster reader — CGImageSource cannot open an mp4"; exit 1; }
+grep -qF 'isVideo: media.isVideo' "$XARCH" \
+  || { echo "✗ the media job no longer carries which MEDIUM it is"; exit 1; }
+grep -qF 'ImportMedia.posterFrame(url: fileURL, folder: folder)' Casberi/Casberi/Model/FilesBridge.swift \
+  || { echo "✗ a connected folder no longer shares the one poster reader — two frame grabs drift"; exit 1; }
+grep -qF 'tags.append(row.video ? "Video" : "Photo")' "$XARCH" \
+  || { echo "✗ a video post is filed as a photo — one facet meaning two media"; exit 1; }
+grep -qF 'community_tweet_media' "$MEDIA" \
+  || { echo "✗ a Community post's pictures are no longer found — those rows land titled with a t.co shortlink (§375's defect, second file)"; exit 1; }
+# Grid membership is `postText == nil`, NOT the tag: `Video` rides captioned
+# posts too, and a captioned post is a card whose caption is the post.
+grep -qF '&& thing.postText == nil' "$FEEDSCREEN_395" \
+  || { echo "✗ the X grid no longer tests for a WORDLESS post — a captioned video would be torn out of its card and tiled"; exit 1; }
+grep -q 'VideoMark(size: 22)' Casberi/Casberi/Screens/ShapedRows.swift \
+  || { echo "✗ a poster frame in the grid no longer says it is one — a still passing for a photograph"; exit 1; }
+
+# (2) THE ACCOUNT'S OWN RECORD. Three categories, each read from a file nothing
+# opened before this pass.
+grep -qF 'readSeries("connected-application"' "$XARCH" \
+  || { echo "✗ connected-application.js is no longer read — the apps that can post as you are invisible again"; exit 1; }
+grep -qF 'readSeries("community-tweet"' "$XARCH" \
+  || { echo "✗ community-tweet.js is no longer read — your own writing, not imported"; exit 1; }
+grep -qF 'readSeries("screen-name-change"' "$XARCH" \
+  || { echo "✗ screen-name-change.js is no longer read"; exit 1; }
+grep -qF 'XArchiveAccount.settingsURL' "$XARCH" \
+  || { echo "✗ a connected app no longer opens the page that revokes it — a row with nothing to do"; exit 1; }
+# `foundAnyCategory` must NOT be set by account.js: it is in every archive and
+# in nothing else, so counting it makes "this isn't an X archive" unreachable.
+python3 scripts/support/x-run-shape.py "$XARCH" || exit 1
+
+# (3) THREADS FOLD. The parent ref is set for a SELF-reply only, and the room
+# is what folds on it — either half alone changes nothing on screen.
+grep -qF 'ref: row.parentID.flatMap { textByID[$0] == nil ? nil : "x:tweet:\($0)" }' "$XARCH" \
+  || { echo "✗ a self-reply no longer names its parent — the room cannot fold a thread"; exit 1; }
+grep -qF 'let (roomThings, threadReplies) = foldThreadReplies(rest)' "$FEEDSCREEN_395" \
+  || { echo "✗ the X room no longer folds its threads — a twelve-post thread reads as twelve rows"; exit 1; }
+
+# (4) THE DOOR BACK TO X, and the one that heals rows landed before it existed.
+grep -qF 'if let mine { thing.externalLink = permalink(handle: mine, id: row.id) }' "$XARCH" \
+  || { echo "✗ your own posts no longer carry a permalink — the room has no door onto the post"; exit 1; }
+grep -qF 'XArchiveImport.healLinks(context: context)' Casberi/Casberi/Model/BridgeRefresh.swift \
+  || { echo "✗ healLinks never runs — rows imported before today keep no door forever"; exit 1; }
+grep -q 'xPostVerb' Casberi/Casberi/Screens/ThingSheetView.swift \
+  || { echo "✗ the sheet no longer offers the post's own link"; exit 1; }
+
+# (5) THE FACETS. `Photo` was stamped from 2026-08-13 and prd §375 claimed in
+# as many words that it made "photos I posted" a filter — and it never reached
+# the vocabulary, so for five days the tag existed and no sentence could name
+# it. That is what this guard exists for.
+for tag in Photo Video Access Community; do
+  grep -q "\"$tag\")," "$RETRIEVER_395" \
+    || { echo "✗ the $tag facet is not in the ask vocabulary — the tag is stamped and unreachable (§375's own defect)"; exit 1; }
+done
+
+# (6) THE PERSON ROOM. A third source set, because it asks a third question:
+# not "can this network be reached" but "can the corpus describe a person".
+grep -q 'static let personSources' Casberi/Casberi/Model/SocialBridge.swift \
+  || { echo "✗ the person-room source set is gone"; exit 1; }
+grep -qF 'SocialThread.hasPersonRoom(parts[0])' Casberi/Casberi/Shell/RootShell.swift \
+  || { echo "✗ casberi://person/X/<handle> no longer resolves"; exit 1; }
+grep -qF 'XPersonSource.compose(room, handle: handle)' Casberi/Casberi/Screens/PersonRoomScreen.swift \
+  || { echo "✗ the person room no longer composes X's own head"; exit 1; }
+grep -qF 'src == XPersonSource.source' Casberi/Casberi/Screens/PersonRoomScreen.swift \
+  || { echo "✗ the person room fetches X by authorHandle again — that answers with the LIKES alone and misses every reply"; exit 1; }
+grep -qF 'feedSheet = .person(source: XPersonSource.source' "$FEEDSCREEN_395" \
+  || { echo "✗ 'Who you reply to' is no longer a door"; exit 1; }
+# `SocialProfileCard` must stay gated on `isSocial`: its one verb is Watch and
+# on X that can never succeed — the dead control the honesty law bans.
+grep -qF 'private var facesAreDoors: Bool { SocialThread.isSocial(thing.source) }' Casberi/Casberi/Screens/ThingSheetView.swift \
+  || { echo "✗ the profile card's gate moved — an X face opening a card whose only verb is impossible is a dead control"; exit 1; }
+
 # --- 2026-08-05: the searchability pass -------------------------------------
 # Each of these is a wiring fact behind "the room has 3,500 posts in it and an
 # ask that names X comes back with five unrelated things". The extracted
@@ -117,8 +203,10 @@ grep -q 'connected("x")' Casberi/Casberi/Model/BridgeRefresh.swift \
 # because the Swift checks can only prove the function is right.)
 grep -qF 'return reply.map { "To @\($0) · \(text)" } ?? text' "$XARCH" \
   || { echo "✗ a reply's recipient no longer LEADS its title — titleLine's 80-char clamp eats a trailing one (§303)"; exit 1; }
-grep -qF 'face(reply: row.replyTo, text: row.text, wordless: row.wordless)' "$XARCH" \
-  || { echo "✗ the landing no longer builds its title through face(reply:text:wordless:)"; exit 1; }
+grep -qF 'face(reply: row.replyTo, text: row.text,' "$XARCH" \
+  || { echo "✗ the landing no longer builds its title through face(reply:text:wordless:video:)"; exit 1; }
+grep -qF 'wordless: row.wordless, video: row.video)' "$XARCH" \
+  || { echo "✗ the landing no longer tells face() which MEDIUM it has — every video post is titled Photo"; exit 1; }
 # The avatar, same reasoning: `accountAvatarURL` is compiled and tested below,
 # but `landTweets` builds `Thing`s and can't be, so only a text guard can say
 # the face reaches a row at all. Three separate facts, each able to fail alone.
@@ -314,10 +402,17 @@ grep -q 'notes: notes' "$XARCH" \
 # (2) PICTURE POSTS. `wordsWithoutMedia` answering empty is the whole signal.
 grep -q 'let wordless = wordsWithoutMedia(raw, entities: entities).isEmpty' "$XARCH" \
   || { echo "✗ a wordless post is no longer detected — a photo post lands titled with its own t.co shortlink"; exit 1; }
-grep -q 'pictures.contains(id)' "$XARCH" \
+# 2026-08-18: the index answers with the MEDIUM now, not just membership, so
+# the test reads `isVideo != nil` — still "is there a file for this post", and
+# still the thing that separates a photograph from an empty row.
+grep -q 'let isVideo = media\[id\]' "$XARCH" \
+  || { echo "✗ the landing no longer looks the post's own file up — it cannot tell a photo post from an empty row, nor a video from a photo"; exit 1; }
+grep -q 'isVideo != nil' "$XARCH" \
   || { echo "✗ the wordless test no longer requires a real picture in the export — an empty row would land as a photograph"; exit 1; }
-grep -qF 'if row.wordless { tags.append("Photo")' "$XARCH" \
-  || { echo "✗ a picture post is no longer tagged — the room's grid membership reads that tag"; exit 1; }
+# 2026-08-18: the tag is the MEDIUM now (`Photo` or `Video`), and grid
+# membership moved off it onto `postText == nil` — see the §395 block above.
+grep -qF 'if row.wordless { tags.append(row.video ? "Video" : "Photo") }' "$XARCH" \
+  || { echo "✗ a wordless media post is no longer tagged with its medium"; exit 1; }
 grep -q 'thing.tags.contains("Photo")' "$FEEDSCREEN" \
   || { echo "✗ the X grid no longer reads the tag (matching the localized title 'Photo' would empty the grid outside English)"; exit 1; }
 grep -q 'photoGridSection(photoTiles)' "$FEEDSCREEN" \
@@ -493,6 +588,15 @@ pieces = [
     # numbers are right, since no real archive has ever been imported here and
     # every failure in it renders as a perfectly good-looking card.
     wholefile("Casberi/Casberi/Model/XRoom.swift"),
+    # The half of the archive that isn't posts (2026-08-18, prd §395) — the
+    # connected-app inventory, the account's own beginning, every rename, and
+    # BOTH date parsers, which moved here from `XArchiveImport` precisely so
+    # they could be compiled as shipped rather than extracted by name.
+    wholefile("Casberi/Casberi/Model/XArchiveAccount.swift"),
+    # Your years with one person (2026-08-18, prd §395). Same reason as
+    # `XRoom`: every failure in this card renders as a perfectly good-looking
+    # one, and no real archive has ever been read on this host.
+    wholefile("Casberi/Casberi/Model/XPerson.swift"),
     "\nenum XThreads {",
     grab(xarch, "static func threadTexts"),
     grabline(xarch, "static let threadCap"),
@@ -525,7 +629,6 @@ pieces = [
     grab(xarch, "static func noteEntities"),
     grab(xarch, "static func identifier"),
     grab(xarch, "static func created"),
-    grabvar(xarch, "static let twitterDateFormatter"),
     "}\n",
     # The treemap's reading surface for a room of WRITING (2026-08-06). Both
     # are Foundation-only — `terms(in:)` itself needs NLTagger and a model
@@ -1095,6 +1198,186 @@ check("a card with no subjects at all says the room hasn't been read",
 check("a card with every subject named has no footnote",
       XRoom.footnote(XRoom.compose(sightings([(2019, 30), (2020, 30), (2021, 30)],
                                               terms: [2019: ["A"], 2020: ["B"], 2021: ["C"]]))!) == nil)
+
+// ---------------------------------------------------------------------------
+// 2026-08-18, prd §395 — the account's own record, and your years with one
+// person. Both files are compiled WHOLE and unmodified above.
+// ---------------------------------------------------------------------------
+
+print("")
+print("XArchiveAccount — the reach ladder, and the two date shapes")
+
+func app(_ fields: [String: Any]) -> XArchiveAccount.App? {
+    XArchiveAccount.apps([["connectedApplication": fields]]).first
+}
+check("an app with no name is dropped rather than landed unnamed",
+      XArchiveAccount.apps([["connectedApplication": ["id": "1"]]]).isEmpty)
+check("a write grant says it can post as you",
+      app(["id": "1", "name": "Tweetbot", "permissions": ["read", "write"]])?.reach == .write)
+check("a read-only grant is never upgraded",
+      app(["id": "1", "name": "Reader", "permissions": ["read"]])?.reach == .read)
+// The single-string era. An enum match against a fixed vocabulary reads
+// `permissions: ["read","write"]` and answers `unknown` for this one, which
+// UNDER-states a write grant — the one direction that must never happen.
+check("the one-string form reads the same as the array form",
+      app(["id": "1", "name": "Old", "accessType": "Read and Write"])?.reach == .write)
+check("a message scope outranks write, however it is spelled",
+      app(["id": "1", "name": "DMs", "permissions": ["read", "write", "dm"]])?.reach == .messages
+      && app(["id": "2", "name": "DMs", "accessType": "Read, Write and Direct Messages"])?.reach == .messages)
+check("a permission field naming nothing we know stays unknown, never a guess",
+      app(["id": "1", "name": "Mystery", "permissions": ["frobnicate"]])?.reach == .unknown)
+check("an absent permission field is unknown too",
+      app(["id": "1", "name": "Mystery"])?.reach == .unknown)
+// Every grade gets its own sentence, and the REACH LEADS — §303's clamp
+// ruling: `titleLine` cuts at 80 characters, so a trailing "can post as you"
+// on a long app name is exactly what the cut eats.
+for probe in [(XArchiveAccount.Reach.messages, "messages"), (.write, "write"),
+              (.read, "read"), (.unknown, "unknown")] {
+    let a = XArchiveAccount.App(id: "1", name: "Zed", organization: nil, detail: nil,
+                                reach: probe.0, approvedAt: nil)
+    check("the \(probe.1) grade leads with its reach and names the app",
+          XArchiveAccount.appTitle(a).hasSuffix("Zed")
+          && XArchiveAccount.appTitle(a).count > 4)
+}
+check("an unknown grant does not claim it can post as you",
+      !XArchiveAccount.appTitle(
+        XArchiveAccount.App(id: "1", name: "Zed", organization: nil, detail: nil,
+                            reach: .unknown, approvedAt: nil)).contains("post"))
+check("an organisation that repeats the app's own name is dropped",
+      app(["id": "1", "name": "Tweetbot",
+           "organization": ["name": "Tweetbot"]])?.organization == nil)
+check("…and one that differs is kept, ahead of the app's own blurb",
+      XArchiveAccount.appDetail(
+        XArchiveAccount.App(id: "1", name: "Tweetbot", organization: "Tapbots",
+                            detail: "A Twitter client.", reach: .write, approvedAt: nil))
+        == "Tapbots · A Twitter client.")
+check("no organisation and no blurb draws no second line at all",
+      XArchiveAccount.appDetail(
+        XArchiveAccount.App(id: "1", name: "Zed", organization: nil, detail: nil,
+                            reach: .read, approvedAt: nil)) == nil)
+check("the same app twice in one file lands once",
+      XArchiveAccount.apps([["connectedApplication": ["id": "7", "name": "A"]],
+                            ["connectedApplication": ["id": "7", "name": "A"]]]).count == 1)
+// TOTAL ordering. Without the name and id terms two grants approved the same
+// second race, and the inventory reshuffles between two identical opens.
+let ordered = XArchiveAccount.apps([
+    ["connectedApplication": ["id": "1", "name": "B", "approvedAt": "2013-05-01T12:00:00.000Z"]],
+    ["connectedApplication": ["id": "2", "name": "A", "approvedAt": "2019-05-01T12:00:00.000Z"]],
+    ["connectedApplication": ["id": "3", "name": "A", "approvedAt": "2013-05-01T12:00:00.000Z"]],
+])
+check("apps rank newest grant first, then by name — a total order",
+      ordered.map(\.name) == ["A", "A", "B"] && ordered.map(\.id) == ["2", "3", "1"])
+check("an id arriving as a JSON number is still read",
+      XArchiveAccount.apps([["connectedApplication": ["id": 42, "name": "N"]]]).first?.id == "42")
+
+// The two date shapes, both accepted everywhere outside the tweet files. This
+// is the one measured fact about this export's dates: they are not consistent.
+check("an ISO stamp parses",
+      XArchiveAccount.stamp("2013-05-01T12:00:00.000Z") != nil)
+check("an ISO stamp with no fractional seconds parses too",
+      XArchiveAccount.stamp("2013-05-01T12:00:00Z") != nil)
+check("X's own post stamp parses through the same door",
+      XArchiveAccount.stamp("Wed Mar 21 20:50:14 +0000 2006") != nil)
+check("both shapes agree to the second on the same instant",
+      XArchiveAccount.stamp("2006-03-21T20:50:14Z")
+        == XArchiveAccount.stamp("Wed Mar 21 20:50:14 +0000 2006"))
+check("nonsense is refused rather than dated", XArchiveAccount.stamp("last tuesday") == nil)
+check("an empty or missing stamp is nil, never now",
+      XArchiveAccount.stamp("") == nil && XArchiveAccount.stamp(nil) == nil)
+
+check("the account's beginning is read, handle and all",
+      XArchiveAccount.origin([["account": ["username": "@me", "accountId": "9",
+                                           "createdAt": "2009-03-01T00:00:00.000Z"]]])?.handle == "me")
+check("an account with no createdAt yields nothing rather than today",
+      XArchiveAccount.origin([["account": ["username": "me"]]]) == nil)
+
+// The doubled nesting is genuinely in X's own file: the wrapper key and the
+// inner key are both `screenNameChange`.
+let renames = XArchiveAccount.renames([
+    ["screenNameChange": ["screenNameChange": ["changedFrom": "old", "changedTo": "new",
+                                               "changedAt": "2016-01-01T00:00:00.000Z"]]],
+    ["screenNameChange": ["screenNameChange": ["changedTo": "@newer",
+                                               "changedAt": "2011-01-01T00:00:00.000Z"]]],
+])
+check("renames come back oldest first", renames.map(\.to) == ["newer", "new"])
+check("an @ is stripped from either handle", renames.first?.to == "newer")
+check("a rename with no date is dropped rather than undated",
+      XArchiveAccount.renames([["screenNameChange": ["changedTo": "x"]]]).isEmpty)
+check("a rename naming both handles says both — the old one is the half you'd search for",
+      XArchiveAccount.renameTitle(renames[1]).contains("old")
+      && XArchiveAccount.renameTitle(renames[1]).contains("new"))
+check("…and one naming only the new handle does not invent an old one",
+      !XArchiveAccount.renameTitle(renames[0]).contains("old"))
+
+print("")
+print("XPerson — your years with one person")
+
+func met(_ years: [(Int, XPerson.Sighting.Kind, Int)]) -> [XPerson.Sighting] {
+    years.flatMap { year, kind, n in
+        (0..<n).map { _ in XPerson.Sighting(year: year, kind: kind) }
+    }
+}
+check("one or two sightings are not a relationship",
+      XPerson.compose(met([(2019, .reply, 2)])) == nil)
+let friend = XPerson.compose(met([(2013, .reply, 12), (2016, .reply, 40),
+                                  (2016, .liked, 5), (2019, .mention, 3)]))!
+check("the three memberships are counted apart, never summed into one",
+      friend.replies == 52 && friend.liked == 5 && friend.mentions == 3)
+check("the span runs first year to last, silent years included",
+      friend.years.map(\.year) == Array(2013...2019))
+check("…and the silent ones are counted so the card can say so", friend.silent == 4)
+check("the busiest year is the one with the most of anything", friend.busiest.year == 2016)
+// TOTAL ordering, the `XRoom` lesson: two equally busy years must not race, or
+// the headline renames itself between two identical opens.
+check("a tie goes to the earlier year, deterministically",
+      XPerson.compose(met([(2019, .reply, 9), (2021, .reply, 9)]))!.busiest.year == 2019
+      && XPerson.compose(met([(2021, .reply, 9), (2019, .reply, 9)]))!.busiest.year == 2019)
+// The headline names WHICH count it reports — folding likes into replies would
+// make reading look like talking.
+check("the biggest membership leads, and says which it is",
+      XPerson.headline(friend, handle: "foo").contains("replied"))
+check("a person you only ever liked says exactly that",
+      XPerson.headline(XPerson.compose(met([(2019, .liked, 8)]))!, handle: "foo")
+        .contains("liked"))
+check("a person you only ever named says that instead",
+      XPerson.headline(XPerson.compose(met([(2019, .mention, 8)]))!, handle: "foo")
+        .contains("mentioned"))
+// A YEAR IS NOT A QUANTITY. `String(localized: "\(year)")` groups an Int with
+// the locale's separator — the defect `XRoom`'s harness caught rendering
+// "2,019 was your loudest year", in the largest type on the card.
+check("years print as four digits, never grouped",
+      XPerson.plainYear(2019) == "2019" && !XPerson.note(friend).contains(","))
+check("the note names both ends of the span", XPerson.note(friend).contains("2013")
+      && XPerson.note(friend).contains("2019"))
+check("a single-year relationship states one year, not a range",
+      XPerson.note(XPerson.compose(met([(2019, .reply, 5)]))!) == "2019")
+check("a bar is a share of the busiest year, and never divides by nothing",
+      XPerson.share(10, of: 20) == 0.5 && XPerson.share(5, of: 0) == 0)
+check("a share can't exceed the axis", XPerson.share(40, of: 30) == 1)
+check("the axis is never zero, so no bar is ever a NaN width",
+      XPerson.peak(XPerson.compose(met([(2019, .reply, 3)]))!) >= 1)
+
+// The mention scan. Both bounds are load-bearing and each has its own way of
+// being wrong: no leading @ merges a word into a handle, no trailing boundary
+// merges two people into one relationship — and the card renders perfectly
+// either way.
+check("a plain mention is found", XPerson.mentions("thanks @foo!", handle: "foo"))
+check("…case-insensitively, and with the @ optional in the query",
+      XPerson.mentions("THANKS @FOO", handle: "@Foo"))
+check("a longer handle does not match the shorter one",
+      !XPerson.mentions("hey @foobar", handle: "foo"))
+check("…and the shorter one does not match inside the longer",
+      !XPerson.mentions("hey @foo_bar", handle: "foo"))
+check("a bare word is not a mention", !XPerson.mentions("the foo of it", handle: "foo"))
+check("an email address is not a mention", !XPerson.mentions("me@foo", handle: "foo"))
+check("a handle at the very end of a post still counts",
+      XPerson.mentions("cc @foo", handle: "foo"))
+check("a handle followed by punctuation still counts",
+      XPerson.mentions("@foo, hi", handle: "foo") && XPerson.mentions("(@foo)", handle: "foo"))
+check("a dot ends a handle, the way X reads one",
+      XPerson.mentions("see @foo.com", handle: "foo"))
+check("an empty handle matches nothing at all",
+      !XPerson.mentions("@ hello", handle: "") && !XPerson.mentions("anything", handle: "@"))
 
 print("")
 if failures > 0 { print("x-selftest: ✗ \(failures) assertion(s) failed"); exit(1) }

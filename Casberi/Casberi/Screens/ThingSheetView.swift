@@ -1732,6 +1732,35 @@ struct ThingSheetView: View {
         return Verb(label: "Episode", icon: "arrow.up.forward.app", action: .openURL(url))
     }
 
+    /// THE DOOR BACK TO X (2026-08-18, prd §395).
+    ///
+    /// An imported post is the one record in this app that is also still
+    /// sitting on somebody else's site, and until this pass there was no way to
+    /// go and look at it: a post's `content` is its own words, so unlike a
+    /// LIKED post — whose `content` is a permalink and which has always derived
+    /// "Open link" — your own writing had no link at all. `landTweets` stores
+    /// one now, and `healLinks` fills it in for rows that predate it.
+    ///
+    /// Scoped by SOURCE and by kind, never by "there is an `externalLink`" —
+    /// that field means something different in every room that fills it (a
+    /// Reddit body link, a podcast enclosure, a meeting URL), and the episode
+    /// verb above documents why at length.
+    ///
+    /// "On X", not "Open": §302's Explorer ruling — the glyph already says it
+    /// opens something, so the word's job is the destination. It is also the
+    /// honest answer for a VIDEO post, which this app holds one frame of and
+    /// cannot play: the mp4 lives in an archive folder we deliberately never
+    /// copied, so the place to watch it is the place it came from.
+    private var xPostVerb: Verb? {
+        guard thing.isLive, thing.kind == .note,
+              thing.source == XRoomSource.source,
+              let raw = thing.externalLink?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !raw.isEmpty,
+              let url = URL(string: raw), url.scheme == "https"
+        else { return nil }
+        return Verb(label: "On X", icon: "arrow.up.forward.app", action: .openURL(url))
+    }
+
     /// The dial's verbs: derivation, plus the episode hand-off derivation can't
     /// gate (above). FIRST, on the Obsidian ruling — for an episode the file is
     /// the strongest thing you can do with the row, and the page below it is the
@@ -1750,7 +1779,7 @@ struct ThingSheetView: View {
            case .openURL = first.action {
             derived[0] = Verb(label: word, icon: first.icon, action: first.action)
         }
-        let extras = [joinVerb, episodeVerb].compactMap { $0 }
+        let extras = [joinVerb, episodeVerb, xPostVerb].compactMap { $0 }
         guard !extras.isEmpty else { return derived }
         return Array((extras + derived).prefix(4))
     }

@@ -84,10 +84,19 @@ enum HomeComposition {
             "Card", "Payment", "Pending", "Settled",      // Apple Wallet, cards
             "Price drop", "Price rise", "Refund",
             "Paper",                                      // Hugging Face
-            // X's wordless picture post (prd §375). Note it is NOT in
-            // `Retriever.facetTags` — so it is listed by hand here, and
-            // "photos from X" is a read that room still cannot answer.
-            "Photo",
+            // X's account record (prd §395) — the day you joined, and every
+            // handle you have worn. Deliberately NOT a facet in
+            // `Retriever.facetTags`: "account" is among the most ordinary
+            // words in the language and this corpus is full of accounts, so
+            // it would be the first genuinely misleading entry in that table.
+            // Hand-listed here, which is what this half of the set is for.
+            //
+            // ("Photo" left this list on 2026-08-18 — it is a facet now, so
+            // the derived half excludes it. §375 said in as many words that
+            // the tag made "photos I posted" a filter and it had never reached
+            // the vocabulary; this list's own comment recorded that gap for
+            // five days.)
+            "Account",
             "Runway",                                     // Stripe, Cloudflare
             "Shielded",                                   // Privacy Pools
             "Trending", "Watching", "Watchlist",          // discovery, watches

@@ -237,6 +237,12 @@ struct XArchiveImportScreen: View {
         if summary.posts > 0   { parts.append("\(summary.posts) posts") }
         if summary.replies > 0 { parts.append("\(summary.replies) replies") }
         if summary.liked > 0   { parts.append("\(summary.liked) liked") }
+        // The categories nothing had ever read (2026-08-18, prd §395). Apps
+        // get their own clause rather than folding into the total, because
+        // nobody expects an archive to hold them at all — a person who reads
+        // "11 connected apps" has learnt something before opening the room.
+        if summary.apps > 0      { parts.append("\(summary.apps) connected apps") }
+        if summary.community > 0 { parts.append("\(summary.community) from Communities") }
         var line = parts.joined(separator: " · ")
         if summary.skipped > 0  { line += " · \(summary.skipped) already here" }
         if summary.retweets > 0 { line += " · \(summary.retweets) reposts skipped" }
@@ -254,6 +260,13 @@ struct XArchiveImportScreen: View {
         // this, no way to see that anything happened at all.
         if summary.longform > 0 {
             line += " · \(summary.longform) long posts in full"
+        }
+        // Videos say so for the same reason the long posts do: before
+        // 2026-08-18 every one of them landed as a row saying "Photo" with
+        // nothing in it, so on a RE-import over an older room this number is
+        // the only sign the frames came down at all.
+        if summary.videos > 0 {
+            line += " · \(summary.videos) videos with a frame"
         }
         return line
     }

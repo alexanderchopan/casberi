@@ -1,4 +1,3 @@
-import AVFoundation
 import Foundation
 import ImageIO
 import Observation
@@ -562,7 +561,7 @@ enum FilesIngest {
             // container), so it gets its own tighter bound, the same split
             // OCR already has below.
             if thing.previewImageData == nil, isVideo, postered < 8,
-               let data = await posterFrame(url: fileURL, folder: folder) {
+               let data = await ImportMedia.posterFrame(url: fileURL, folder: folder) {
                 thing.previewImageData = data
                 postered += 1
                 thumbed += 1
@@ -630,49 +629,13 @@ enum FilesIngest {
     /// UI thread. Guessing at readiness from iCloud metadata cost two
     /// separate live bugs (2026-07-29); just attempting the read is simpler
     /// and can't disagree with reality the way a heuristic can.
-    /// One frame from a video, written as the SAME 480pt JPEG the image heal
-    /// writes — so a video tiles in the room's grid through exactly the
-    /// `previewImageData` path a photo already uses, with no second field, no
-    /// second code path in the grid, and no CloudKit deploy (2026-08-17).
-    ///
-    /// Three decisions, each a wrong-looking poster if got wrong:
-    ///
-    /// `appliesPreferredTrackTransform` — without it every video shot in
-    /// portrait posters on its side. The rotation lives in the track's
-    /// transform, not the pixels, so the frame comes back landscape and
-    /// perfectly plausible.
-    ///
-    /// The frame is taken a second IN, never at zero. A great many videos open
-    /// on black (a fade, a shutter, a leading blank frame), and a black tile
-    /// in a grid reads as a picture that failed to load rather than as the
-    /// video it is. Short clips take their own midpoint instead, since one
-    /// second into a 400ms clip is past the end.
-    ///
-    /// It opens the folder's security scope ITSELF, unlike `thumbnail`, which
-    /// reads outside the walk's window. Not a stylistic difference: an image
-    /// read goes through `CGImageSource` on a path the resolved bookmark
-    /// already reaches, while `AVURLAsset` opens the file through a stricter
-    /// route that fails without the scope — and it fails by returning a nil
-    /// frame, which is indistinguishable from a video we simply can't read.
-    /// Nested starts are refcounted, so this is safe alongside any window a
-    /// caller has already opened.
-    private static func posterFrame(url: URL, folder: URL) async -> Data? {
-        await Task.detached(priority: .utility) { () -> Data? in
-            let scoped = folder.startAccessingSecurityScopedResource()
-            defer { if scoped { folder.stopAccessingSecurityScopedResource() } }
-
-            let asset = AVURLAsset(url: url)
-            guard let seconds = try? await CMTimeGetSeconds(asset.load(.duration)),
-                  seconds.isFinite, seconds > 0 else { return nil }
-
-            let generator = AVAssetImageGenerator(asset: asset)
-            generator.appliesPreferredTrackTransform = true
-            generator.maximumSize = CGSize(width: 480, height: 480)
-            let at = CMTime(seconds: min(1, seconds / 2), preferredTimescale: 600)
-            guard let cg = try? await generator.image(at: at).image else { return nil }
-            return UIImage(cgImage: cg).jpegData(compressionQuality: 0.7)
-        }.value
-    }
+    /// The poster frame moved to `ImportMedia.posterFrame` on 2026-08-18
+    /// (prd §395), where the X archive's own videos needed exactly the same
+    /// read. Not copied — two implementations of one frame grab drift, and
+    /// then a connected folder and an imported archive disagree about which
+    /// second of a video is its cover. Every decision that was written up here
+    /// (the preferred track transform, the second-in seek, opening the scope
+    /// for `AVURLAsset`) travelled with it.
 
     private static func thumbnail(url: URL) async -> Data? {
         await Task.detached(priority: .utility) { () -> Data? in

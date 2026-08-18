@@ -23,6 +23,10 @@ struct PersonRoomScreen: View {
     @State private var posts: [Thing] = []
     @State private var transactions: [Thing] = []
     @State private var verifiedAddresses: [String] = []
+    /// Your years with this person, when the corpus can describe them
+    /// (2026-08-18, prd §395). X only: it is the one source here whose rows
+    /// name somebody you never watched and never will be able to.
+    @State private var xPerson: XPerson?
     @State private var loading = true
     @State private var sheetThing: Thing?
     @State private var filter: Filter = .all
@@ -59,7 +63,18 @@ struct PersonRoomScreen: View {
                         .dsText(.callout15).foregroundStyle(DS.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
-                cadenceSection
+                if let xPerson {
+                    // X's own head, in place of the rhythm grid below
+                    // (2026-08-18, prd §395). `FeedHeatmap.label(for: "X")`
+                    // is "Your X year", which titles a ROOM and would be a
+                    // wrong sentence over one person — and a trailing-twelve-
+                    // months grid over a relationship that ended in 2019 is
+                    // an empty square. The card says the span instead.
+                    XPersonCard(person: xPerson, handle: profile.handle)
+                        .padding(.top, DS.Space.s1)
+                } else {
+                    cadenceSection
+                }
                 if !transactions.isEmpty {
                     filterPicker
                 }
@@ -166,10 +181,31 @@ struct PersonRoomScreen: View {
     private func load() async {
         let handle = profile.handle
         let src = profile.source
-        let postDescriptor = FetchDescriptor<Thing>(
-            predicate: #Predicate<Thing> { $0.authorHandle == handle && $0.source == src })
-        posts = ((try? modelContext.fetch(postDescriptor)) ?? [])
-            .sorted { $0.capturedAt > $1.capturedAt }
+        // X JOINS DIFFERENTLY, and it has to (2026-08-18, prd §395). The
+        // equality fetch below asks "what did they write", which for every
+        // network here is the whole of what the corpus holds about somebody.
+        // An X archive is YOUR side: their handle sits on `parent` for a reply
+        // you sent, inside the words of a post that names them, and on
+        // `authorHandle` only for the posts of theirs you liked — so an
+        // `authorHandle` fetch would answer with the likes alone and miss the
+        // decade of conversation, which is the reading this room exists for.
+        //
+        // One unscoped fetch of the room, narrowed in Swift: `parent` is a
+        // transformable attribute and a `#Predicate` cannot reach inside one,
+        // and a `.contains` on an array attribute CRASHES at runtime inside
+        // CoreData (CLAUDE.md's own note). It runs once per screen open.
+        if src == XPersonSource.source {
+            let descriptor = FetchDescriptor<Thing>(
+                predicate: #Predicate<Thing> { $0.source == "X" })
+            let room = (try? modelContext.fetch(descriptor)) ?? []
+            posts = XPersonSource.rows(room, handle: handle)
+            xPerson = XPersonSource.compose(room, handle: handle)
+        } else {
+            let postDescriptor = FetchDescriptor<Thing>(
+                predicate: #Predicate<Thing> { $0.authorHandle == handle && $0.source == src })
+            posts = ((try? modelContext.fetch(postDescriptor)) ?? [])
+                .sorted { $0.capturedAt > $1.capturedAt }
+        }
 
         async let profileFetch = SocialPeople.profile(handle: handle, source: src)
 

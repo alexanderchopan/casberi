@@ -1397,6 +1397,12 @@ struct CalendarHeatmapHero: View {
 /// group, the count sits at the trailing edge.
 struct LeaderboardHero: View {
     let board: FeedInsight.Leaderboard
+    /// What a tapped row opens, when the room it is in has somewhere to go
+    /// (2026-08-18, prd §395). Nil for every board whose rows are subreddits,
+    /// artists, publications or books — a row that looks tappable and isn't is
+    /// the dead control the honesty law bans, so the row is only ever wrapped
+    /// in a button when a destination was handed in.
+    var onPick: ((FeedInsight.LeaderRow) -> Void)?
     /// The bars' grow-on (delight, 2026-08-03): each bar grows from its
     /// seed width to its real share, staggered top to bottom — the chart
     /// drawing the ranking rather than presenting it pre-drawn. The same
@@ -1417,35 +1423,66 @@ struct LeaderboardHero: View {
                 let barW = max(w - labelW - valueW - DS.Space.s2 * 2, 24)
                 VStack(spacing: 8) {
                     ForEach(Array(rows.enumerated()), id: \.element.id) { i, row in
-                        HStack(spacing: DS.Space.s2) {
-                            Text(row.label)
-                                .dsText(.callout15).foregroundStyle(DS.textPrimary)
-                                .lineLimit(1).truncationMode(.tail)
-                                .frame(width: labelW, alignment: .leading)
-                            ZStack(alignment: .leading) {
-                                Capsule().fill(DS.surfaceWell).frame(height: 8)
-                                Capsule().fill(DS.tint.opacity(0.85))
-                                    .frame(width: grown
-                                           ? max(barW * CGFloat(row.value) / CGFloat(maxV), 4)
-                                           : 4,
-                                           height: 8)
-                                    .animation(reduceMotion ? nil
-                                               : DS.Motion.standard.delay(Double(i) * 0.05),
-                                               value: grown)
-                            }
-                            .frame(width: barW)
-                            Text(row.detail)
-                                .dsText(.subhead13).foregroundStyle(DS.textSecondary)
-                                .monospacedDigit().lineLimit(1)
-                                .frame(width: valueW, alignment: .trailing)
-                        }
-                        .frame(height: 20)
+                        bar(row, index: i, labelW: labelW, barW: barW,
+                            valueW: valueW, maxV: maxV)
                     }
                 }
             }
             .frame(height: CGFloat(rows.count) * 28)
             .onAppear { grown = true }
         }
+    }
+
+    /// One ranked row. Wrapped in a button only when `onPick` was given, so a
+    /// board with nowhere to go keeps exactly the plain row it has always
+    /// drawn — no hit target, no press state, no promise.
+    @ViewBuilder
+    private func bar(_ row: FeedInsight.LeaderRow, index i: Int,
+                     labelW: CGFloat, barW: CGFloat, valueW: CGFloat,
+                     maxV: Int) -> some View {
+        if let onPick {
+            Button {
+                DSHaptic.selection()
+                onPick(row)
+            } label: {
+                barBody(row, index: i, labelW: labelW, barW: barW,
+                        valueW: valueW, maxV: maxV)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .dsHover()
+        } else {
+            barBody(row, index: i, labelW: labelW, barW: barW,
+                    valueW: valueW, maxV: maxV)
+        }
+    }
+
+    private func barBody(_ row: FeedInsight.LeaderRow, index i: Int,
+                         labelW: CGFloat, barW: CGFloat, valueW: CGFloat,
+                         maxV: Int) -> some View {
+        HStack(spacing: DS.Space.s2) {
+            Text(row.label)
+                .dsText(.callout15).foregroundStyle(DS.textPrimary)
+                .lineLimit(1).truncationMode(.tail)
+                .frame(width: labelW, alignment: .leading)
+            ZStack(alignment: .leading) {
+                Capsule().fill(DS.surfaceWell).frame(height: 8)
+                Capsule().fill(DS.tint.opacity(0.85))
+                    .frame(width: grown
+                           ? max(barW * CGFloat(row.value) / CGFloat(maxV), 4)
+                           : 4,
+                           height: 8)
+                    .animation(reduceMotion ? nil
+                               : DS.Motion.standard.delay(Double(i) * 0.05),
+                               value: grown)
+            }
+            .frame(width: barW)
+            Text(row.detail)
+                .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                .monospacedDigit().lineLimit(1)
+                .frame(width: valueW, alignment: .trailing)
+        }
+        .frame(height: 20)
     }
 }
 

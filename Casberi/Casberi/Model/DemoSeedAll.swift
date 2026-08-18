@@ -799,6 +799,14 @@ enum DemoSeedAll {
             ("This, but for rooms as well as rows.",
              "rauno", "Latency is a design problem, not an infrastructure one.", 34),
             ("Still true.", "lindsey", "", 210),
+            // A THIRD reply to the same person, on purpose (2026-08-18, prd
+            // §395). `XPerson.minimumSightings` is 3, so with two the person
+            // card — the whole "your years with @lindsey" reading, reached by
+            // tapping the room's own board — correctly declines and the demo
+            // becomes the one place it can never be seen. Dated years back so
+            // the card's span has a shape rather than one column.
+            ("The archive answered it. Took nine years.",
+             "lindsey", "Does anyone remember what we decided about this?", 1240),
         ]
         out += replies.enumerated().map { i, r in
             row(.note, "To @\(r.1) · \(r.0)", source: "X", ref: "demo:x:reply:\(i)",
@@ -817,10 +825,11 @@ enum DemoSeedAll {
                                       url: "https://x.com/\(r.1)/status/17\(i)0000000000000000")
             }
         }
-        // A wordless picture post — the room's grid half (prd §375). Tagged the
-        // way the importer tags one, since that tag is what `isXPhotoTile`
-        // reads; a demo that faked it with a title would prove nothing about
-        // the room's real membership test.
+        // A wordless picture post — the room's grid half (prd §375). Seeded the
+        // way the importer lands one — pixels, the medium tag, and NO
+        // `postText` — since it is the absent `postText` that `isXPhotoTile`
+        // reads (prd §395); a demo that faked it with a title would prove
+        // nothing about the room's real membership test.
         out += (0..<3).map { i in
             row(.note, "Photo", source: "X", ref: "demo:x:photo:\(i)",
                 days: 20 + Double(i) * 27, hour: 18, tags: ["Post", "Photo"]) { t in
@@ -830,6 +839,47 @@ enum DemoSeedAll {
                 t.likeCount = 30 - i
             }
         }
+        // A VIDEO POST (2026-08-18, prd §395). The same shape as a picture
+        // post and a different tag, because until this pass a video landed
+        // with no pixels at all and read as a row saying "Photo" — so the
+        // demo is where the poster frame, the corner mark and the fact that
+        // `Video` is its own facet are all visible at once.
+        out.append(
+            row(.note, "Video", source: "X", ref: "demo:x:video:0",
+                days: 61, hour: 18, tags: ["Post", "Video"]) { t in
+                t.previewImageData = pixels(3)
+                t.authorHandle = "you"
+                t.authorAvatarURL = avatarArt("you")
+                t.likeCount = 38
+            })
+        // The account's own record (2026-08-18, prd §395) — the three
+        // categories nothing had ever read. They are `.link` rows, so they
+        // stay out of `XRoom`'s year counts (which are your writing alone) and
+        // draw as plain bands rather than as posts nobody wrote.
+        //
+        // Plain `demo:` refs, NOT the real `x:app:`/`x:joined:` shapes the
+        // importer writes. Peer and Privacy Pools carry their bridges' real
+        // prefixes because their room heads MATCH on the ref shape; nothing
+        // here does — `FeedScreen` tells these rows apart by their tag — so a
+        // real prefix would buy nothing and cost the one thing that matters:
+        // `refPrefixes` is what `teardown` sweeps, and a row outside it
+        // outlives the demo, indistinguishable from a real grant.
+        out.append(
+            row(.link, "Can post as you · Tweetbot", source: "X", ref: "demo:x:app:0",
+                days: 3100, hour: 9, content: "https://x.com/settings/connected_apps",
+                tags: ["Access"]) { t in
+                t.summary = "Tapbots · A Twitter client."
+            })
+        out.append(
+            row(.link, "Can read your account · Timeline Cleaner", source: "X",
+                ref: "demo:x:app:1", days: 1400, hour: 11,
+                content: "https://x.com/settings/connected_apps", tags: ["Access"]))
+        out.append(
+            row(.link, "@firstname became @you", source: "X", ref: "demo:x:handle:0",
+                days: 2200, hour: 10, content: "https://x.com/you", tags: ["Account"]))
+        out.append(
+            row(.link, "You joined X", source: "X", ref: "demo:x:joined:0",
+                days: 3650, hour: 8, content: "https://x.com/you", tags: ["Account"]))
         let likes: [(String, String, Double)] = [
             ("A good demo is a real one", "@lindsey", 5),
             ("On drawing data honestly", "@tufte_bot", 10),

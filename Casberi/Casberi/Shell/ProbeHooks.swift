@@ -415,6 +415,42 @@ enum ProbeHooks {
                       XArchiveImport.pendingContextCount(context: context))
             }
         },
+        // `-xPersonProbe <handle>` — your years with one person (2026-08-18,
+        // prd §395), line by line: one `xPerson|` per year, then the card's
+        // own sentence.
+        //
+        // It exists because an EMPTY card has five causes that render as one
+        // silence, and only one of them is a bug: the handle is spelled
+        // differently in the archive than you typed it, `fetchFaces` has never
+        // run so no liked post names an author, this person really does appear
+        // fewer than `XPerson.minimumSightings` times (the common case — most
+        // handles in a long archive appear once), the room was never imported,
+        // or the join stopped reaching `parent`. The per-kind counts are what
+        // separate them: replies at 0 with mentions non-zero is the join, and
+        // liked at 0 across every handle is the face pass.
+        //
+        // One NSLog per line — a joined multi-line message gets truncated by
+        // the log reader (the `-todayProbe` lesson).
+        Hook(key: "xPersonProbe") { handle, context in
+            let all = (try? context.fetch(FetchDescriptor<Thing>(
+                predicate: #Predicate<Thing> { $0.source == "X" }))) ?? []
+            let rows = XPersonSource.rows(all, handle: handle)
+            NSLog("xPerson| handle=%@ room=%d matched=%d", handle, all.count, rows.count)
+            guard let person = XPersonSource.compose(all, handle: handle) else {
+                NSLog("xPerson| no card — under %d sightings, or nothing matched",
+                      XPerson.minimumSightings)
+                return
+            }
+            NSLog("xPerson| replies=%d mentions=%d liked=%d span=%d silent=%d",
+                  person.replies, person.mentions, person.liked,
+                  person.span, person.silent)
+            for year in person.years {
+                NSLog("xPersonYear| %@ replies=%d mentions=%d liked=%d",
+                      XPerson.plainYear(year.year), year.replies, year.mentions, year.liked)
+            }
+            NSLog("xPerson| headline=%@", XPerson.headline(person, handle: handle))
+            NSLog("xPerson| note=%@", XPerson.note(person))
+        },
         // `-dayoneImport <path>` imports a Day One export .json from disk.
         Hook(key: "dayoneImport") { path, context in
             guard let data = FileManager.default.contents(atPath: path) else { return }

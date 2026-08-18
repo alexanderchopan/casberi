@@ -761,6 +761,26 @@ enum Retriever {
             // `XArchiveImport.fetchFaces`.
             (["gone", "deleted", "no longer there", "disappeared"], "Gone"),
             (["threads", "thread"], "Thread"),
+            // The media halves of an import room. `Photo` has been stamped by
+            // `XArchiveImport` since 2026-08-13 and prd §375 said in as many
+            // words that it made "photos I posted" a filter rather than a
+            // hope — and it never reached this table, so for five days the tag
+            // existed and no sentence could name it. `Video` lands with it
+            // (2026-08-18, prd §395) rather than after it.
+            //
+            // The gating rule matters here as much as it does for "review" and
+            // "short": these are among the most ordinary words in the language
+            // and this corpus is full of both media. Behind a named source
+            // they narrow; unscoped they can never quietly empty a result.
+            (["my photos", "photos", "photo", "pictures", "picture"], "Photo"),
+            (["my videos", "videos", "video", "gifs", "gif"], "Video"),
+            // The account's own record (2026-08-18, prd §395). "Connected
+            // apps" only, never the bare "apps": this app calls its own
+            // catalog the apps, so that one word means something else on every
+            // other screen and would be the first genuinely misleading facet
+            // in the table.
+            (["connected apps", "connected accounts", "app access"], "Access"),
+            (["communities", "community"], "Community"),
             // The remaining halves of the four import rooms (2026-08-05,
             // prd §309): Instagram's and TikTok's comments, and Snapchat's two.
             (["my comments", "comments", "comment"], "Comment"),

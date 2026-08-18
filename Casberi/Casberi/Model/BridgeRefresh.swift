@@ -721,6 +721,10 @@ enum BridgeRefresh {
                 // here rather than at import because a re-import can't do it:
                 // `landTweets` skips a ref it has already seen.
                 _ = await sweepTimed("x.healRoom") { await XArchiveImport.healRoom(context: context) }
+                // The door back to X, for rows landed before they had one
+                // (2026-08-18, prd §395). Free, one-shot and its own key —
+                // `healRoom` has already drained wherever this is needed.
+                _ = await sweepTimed("x.healLinks") { await XArchiveImport.healLinks(context: context) }
                 if BridgeRefresh.dueForHeal("x.faces") {
                     _ = await sweepTimed("x.faces") { await XArchiveImport.fetchFaces(limit: 60, context: context) }
                 }
