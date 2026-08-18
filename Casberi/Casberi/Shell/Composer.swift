@@ -1498,7 +1498,15 @@ struct Composer: View {
             // one question the tools and the field both answer, and gives the
             // sheet its warmth (design pass 2026-07-12, "B: greeting-led").
             // Hidden once a conversation is underway: the answer is the header.
-            if embedded, turns.isEmpty, !answering {
+            // …and hidden for a HANDOFF (2026-08-17, reported again: "it
+            // briefly opens the composer then switches to the brief"). This
+            // was the one band on the rest surface never gated on
+            // `handingOff` — every other one goes through `restChrome`, which
+            // has held that condition since 2026-08-16 — so a FAB tap still
+            // painted "Sunday afternoon." and its pairing line, with their own
+            // `settleIn` entrances, into the window before the answer commits.
+            // An open that owes an answer shows the answer and nothing else.
+            if embedded, turns.isEmpty, !answering, !handingOff {
                 // The greeting (docs/agent-brief.md ruling 4, built
                 // 2026-07-20): the day and its moment, "Saturday morning."
                 // ONE line since 2026-07-31 — the corpus stat that used to
@@ -2277,6 +2285,32 @@ struct Composer: View {
                 //
                 // Now: first open skeletons, every later open shows the board
                 await Task.yield()
+                // THE HANDOFF GOES FIRST (2026-08-17, reported again: "it
+                // briefly opens the composer then switches to the brief").
+                // §386's fix hid the rest surface for the handoff window; it
+                // did not shorten it, and this is what made that window long.
+                // Everything below — `computeSuggestions()` (measured ~700ms
+                // on a 12,000-row corpus, main-actor with no yield of its
+                // own), the chip stagger's own 90ms, a full corpus fetch for
+                // the digests — ran BEFORE the ask was even read, so a FAB tap
+                // sat on an empty composer for the better part of a second and
+                // only then started composing the brief.
+                //
+                // None of that work is visible during a handoff: the chips,
+                // the day card and the scope row are all behind `restChrome`,
+                // which is false for the whole window. So it is not skipped
+                // (the docked suggestions need it when the brief lands, ~20s
+                // later) — it simply runs after the answer is on its way.
+                // `commit()` sets `answering` synchronously and streams from
+                // its own Task, so by the time the line below is reached the
+                // skeleton is already on screen.
+                //
+                // A no-op when nothing was handed off: `consumeAskRequest`
+                // returns immediately on a nil request, which is every ordinary
+                // open. The call further down stays for the same reason it was
+                // written — it releases the hold for a request that arrives
+                // during this prep — and double-consumption is safe.
+                await consumeAskRequest()
                 await computeSuggestions()
                 // Kept asks share AskMemory's own decay counters with the
                 // suggestion tiles (ruling 5: "ignored asks decay dim") —
