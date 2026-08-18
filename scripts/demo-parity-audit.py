@@ -254,6 +254,39 @@ def check_l_ref_gates(demo, gate_prefixes, bridges):
             continue
         reachable = any(ref.startswith(g.split(":")[0] + ":")
                         for ref in refs for g in gated)
+        # DIAGNOSED 2026-08-17, which is the part the bare list was missing.
+        # All eight unjudged sources share ONE shape: the demo seeds
+        # `demo:<x>:` while the bridge gates on the real `<x>:` prefix —
+        #
+        #     Bluesky  demo:bsky:…      vs  bsky:
+        #     Farcaster demo:fc:…       vs  fc:
+        #     Nostr    demo:nostr:…     vs  nostr:
+        #     Cursor   demo:cursor:…    vs  cursor:agent:
+        #     Dropbox  demo:dropbox:…   vs  dropbox:
+        #     HF       demo:hf:…        vs  hf:paper:
+        #     Instagram demo:ig:…       vs  instagram:comment:
+        #     X        demo:x:handle:…  vs  x:handle:
+        #
+        # That is the §349 class exactly — the shape that made Peer's and
+        # Privacy Pools' room heads drop every seeded row before counting it,
+        # while the rooms rendered perfectly. So the list is not noise.
+        #
+        # It is still not a build failure, and the remaining question is per
+        # source and cannot be answered here: does the gate change what is
+        # DRAWN, or only what could be FETCHED? A reply walk keyed on `bsky:`
+        # is unreachable in the demo either way (`DemoMode` reaches nothing by
+        # design), so seeding a real ref there buys an ability the demo must
+        # never exercise; a room head keyed on `cursor:agent:` is the Peer bug
+        # and must be fixed. Judge one, then either fix the ref or add it to
+        # KNOWN_DEMO_REF_OK with the reason.
+        #
+        # **Fixing a ref is two changes, not one.** `DemoSeedAll.refPrefixes`
+        # is what `clear` and `restampIfStale` walk, so a row moved off the
+        # `demo:` family outlives every exit unless its new prefix is added
+        # there too — the seven-orphan bug of 2026-08-17. `demo-selftest`'s
+        # check K now fails the build on exactly that, so the pair cannot be
+        # half-done silently.
+        #
         # REPORT, not fail, until each source here is judged one at a time.
         # Three were checked by hand the day this landed — Wallet's approval
         # (real: the prepare card could never draw), Linear's kind, and
