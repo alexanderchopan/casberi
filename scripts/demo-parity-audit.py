@@ -230,6 +230,50 @@ KNOWN_DEMO_REF_OK = {
     # `wallet:approval:`, so the prepare card could never draw. A name goes in
     # here only after checking that its bridge's gates key on something other
     # than the ref — a source name, a tag, a kind.
+    #
+    # ── The seven ruled 2026-08-17, one bridge read each ──────────────────
+    #
+    # The eighth, Dropbox, was a REAL gap and was fixed rather than exempted:
+    # `FilesBridge.isStoredPicture` gates on `dropbox:` to decide PICTURE-GRID
+    # membership, and the demo's one image ("Floor plan.png") wore
+    # `demo:dropbox:2`, so it could never join the grid it belongs in. That is
+    # the §349 class exactly, and it is the reason this list is written one
+    # name at a time instead of pasted.
+    #
+    # The three social rooms gate on their prefixes ONLY to fetch a thread
+    # (`SocialBridge.replies(for:)`) or to heal/prune against a live read
+    # (`BlueskyIngest`, `FarcasterIngest`). `DemoMode` reaches nothing by
+    # design — `BridgeRefresh` returns instantly while it is active — so a
+    # real ref here would buy an ability the demo must never exercise, and
+    # would make the seeded rows indistinguishable from synced ones for the
+    # prune paths. Nothing these gates control is DRAWN from stored state.
+    "Bluesky": "replies/heal are network reads; the demo reaches nothing",
+    "Farcaster": "replies/heal are network reads; the demo reaches nothing",
+    "Nostr": "replies are a network read; the demo reaches nothing",
+    # `hf:paper:` appears in exactly one place: `HuggingFaceScreen`'s
+    # `togglePapers(false)`, which PRUNES followed papers. A prune, not a
+    # render — and demo teardown already removes these rows by their own
+    # prefix, which is the path that actually runs.
+    "Hugging Face": "the only gate is a prune on toggling papers off, not a render",
+    # `cursor:agent:` is read by one rule in `NotifySweep` (a failed agent is
+    # an alarm). The demo seeds a failed run, but it must never notify —
+    # `Notifications.submit` returns [] while demo mode is active, by ruling —
+    # so a reachable ref would buy a plan that is discarded. The rule itself
+    # is covered by `notify-selftest.sh`, which does not use the demo corpus.
+    "Cursor": "its only gate is a notify rule the demo must never fire",
+    # Neither prefix has a consumer: `instagram:comment:` and `x:handle:` are
+    # written by their importers and read by nothing that gates on the shape.
+    # They enter `gate_prefixes` because they LOOK like gates, which is the
+    # check being appropriately coarse rather than a finding.
+    "Instagram": "instagram:comment: is written by the importer and gated on by nothing",
+    "X": "x:handle: is written by the importer and gated on by nothing",
+    # Surfaced 2026-08-17 when clearing the eight above stopped drowning it —
+    # which is the argument for judging a report list rather than living with
+    # it. `dayone:` is written once, by `JournalImports`, and read by nothing:
+    # no gate keys on the prefix, so the demo's `demo:dayone:` rows reach every
+    # surface the real ones do. Its room head groups on dates and its sheet on
+    # kind, neither of which is ref-shaped.
+    "Day One": "dayone: is written by the importer and gated on by nothing",
 }
 
 

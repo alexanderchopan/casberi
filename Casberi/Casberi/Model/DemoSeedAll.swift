@@ -213,7 +213,13 @@ enum DemoSeedAll {
                               // alone would take a real settled transfer with
                               // it, the bare-prefix trap the PostHog and
                               // Stocktwits entries above are scoped against.
-                              "bitcoin:settled:\(demoWallet):demo"]
+                              "bitcoin:settled:\(demoWallet):demo",
+                              // Dropbox joins the real namespace so its images
+                              // can satisfy `FilesBridge.isStoredPicture`
+                              // (2026-08-17) — scoped to the demo FOLDER, never
+                              // the bare `dropbox:` prefix, which would take a
+                              // real connected folder's rows with it.
+                              "dropbox:demo/"]
 
     // MARK: - Entry point
 
@@ -2821,10 +2827,26 @@ enum DemoSeedAll {
                 t.authorAvatarURL = avatarArt(["nova", "kestrel"][i])
             }
         }
-        out += (0..<3).map { i in
-            row(.file, ["Contract — joinery.pdf", "Invoice 2026-081.pdf", "Floor plan.png"][i],
-                source: "Dropbox", ref: "demo:dropbox:\(i)", days: Double(3 + i * 8), hour: 15,
-                content: "PDF · 840 KB")
+        // **The refs join the REAL `dropbox:` namespace (2026-08-17).**
+        // `FilesBridge.isStoredPicture` decides picture-grid membership for
+        // this room by reading the EXTENSION off a `dropbox:<path>` ref, so
+        // under `demo:dropbox:2` the floor plan could never join the grid it
+        // belongs in — the §349 shape, in the mixed room §283 built the grid
+        // half for. They keep a "demo/" FOLDER segment so nothing real can
+        // collide, the `files:demo/` and `obsidian:demo-vault/` shape, and
+        // `refPrefixes` carries it so exit and re-stamp still reach them.
+        //
+        // The size line is per file too: every row said "PDF · 840 KB",
+        // including the PNG.
+        let dropbox: [(name: String, note: String)] = [
+            ("Contract — joinery.pdf", "PDF · 840 KB"),
+            ("Invoice 2026-081.pdf", "PDF · 210 KB"),
+            ("Floor plan.png", "PNG · 1.4 MB"),
+        ]
+        out += dropbox.enumerated().map { i, f in
+            row(.file, f.name, source: "Dropbox",
+                ref: "dropbox:demo/\(f.name.lowercased())",
+                days: Double(3 + i * 8), hour: 15, content: f.note)
         }
         // 1Claw grants, wearing what `OneClawFetch.policyThing` really stamps
         // (2026-08-12, prd §367): the joined title, the parts as fields, and the
