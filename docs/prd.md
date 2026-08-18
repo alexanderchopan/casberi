@@ -25752,3 +25752,219 @@ day's screenshots, links and voice notes — exactly the rows worth showing besi
 something you wrote. The rule is same source AND same kind now, filtered in Swift
 because a `#Predicate` on `kind` is the transformable-attribute crash class this
 project has a report for.
+
+## §400 — Radicle: possible, keyless, and read-only with no credential to be read-only about (user: "can we create a bridge for radicle? is it possible", https://radicle.network/, 2026-08-18)
+
+**POSSIBLE, and it is the cleanest fit of any Work seat since Hugging Face.**
+Recorded as a feasibility ruling rather than a built bridge — nothing here is
+compiled, and the *how* below is a proposal awaiting the user's ruling, not a
+description of shipped code.
+
+**How this was established, and its ceiling.** This session's egress policy
+refuses every Radicle host — `radicle.xyz`, `radicle.network`, both preferred
+seeds, `app.radicle.xyz` all answer **403 to CONNECT** at the gateway, and
+`WebFetch` is blocked on the same domains — so **not one request in this entry
+was made against a live seed.** The API is instead read out of Radicle's own
+shipped source: `radicle-dev/radicle-explorer` (`http-client/`, a typed Zod
+client for the whole surface) and its `config/*.json`, both cloned from the
+GitHub mirror, which *is* reachable. That is a strong authority for the wire
+SHAPE — it is the client the official explorer ships and its schemas fail loudly
+on drift — and **no authority at all for liveness**: it cannot say a seed is up,
+what it seeds today, or how it paces. Every number below is a shape, not a
+measurement. **Measure before building** (`-radicleProbe`'s job, if it is built).
+
+### What Radicle is, in the terms this app already has
+
+Peer-to-peer Git: repos, issues and patches (its pull requests) replicate between
+nodes, with no central host. The bridgeable surface is **`radicle-httpd`**, a
+gateway a node runs that exposes its storage as an HTTP JSON API, documented by
+its own operators as **read-only over the node's state**. Public *seed* nodes run
+it, and that is what the web explorer reads.
+
+**Read-only is STRUCTURAL here, and it outranks every grade in the catalog.**
+Trello's promise is a minted `scope=read` token, PostHog's and Stripe's are boxes
+someone ticked, Privacy.com's and Cursor's are conduct. Radicle's is that **there
+is no credential at all** and no write verb in the surface: every one of the 29
+endpoints in the official client is a `GET`, and the client contains no
+`Authorization` header, no bearer token and no session code of any kind. Writing
+to Radicle happens through the `rad` CLI against a local node with a signing key
+— it is not a thing this API can do. So the seat joins the keyless
+GeckoTerminal/Farcaster tier, where a leak has nothing to spend.
+
+### The surface (all `GET`, all under `https://<seed>/api/v1`)
+
+| Endpoint | Answers |
+| --- | --- |
+| `/` (bare) | `{message, service, version, apiVersion, nid, path, links[]}` — free validation, and the drift signal |
+| `/info` | `{node, httpd: {searchAvailable}}` — **search is per-seed** |
+| `/repos?page&perPage&show=pinned\|all&sort=rid\|activity\|seeding` | what this seed holds |
+| `/repos/search?q=` | name → RID, **only where `searchAvailable`** |
+| `/repos/:rid` | name, description, defaultBranch, `meta.head`, `meta.patches{open,draft,archived,merged}`, `meta.issues{open,closed}`, delegates, threshold, visibility, `seeding`, optional `alias` |
+| `/delegates/:did/repos` | **the repos a person delegates** — the "watch a person" read |
+| `/repos/:rid/patches?page&perPage&status` | id, author, title, state, target, labels, merges, assignees, revisions |
+| `/repos/:rid/issues?page&perPage&status` | id, author, title, state, discussion, labels, assignees |
+| `/repos/:rid/activity` | `{activity: number[]}` — **bare commit timestamps, whole history** |
+| `/repos/:rid/commits`, `/commits/:sha`, `/diff/…`, `/tree`, `/blob`, `/readme/:sha`, `/remotes`, `/jobs/:commit` | the source, on demand |
+| `/nodes/:nid`, `/nodes/:nid/inventory`, `/stats`, `/node` | who the seed is and what it actually holds |
+
+### Six quirks, each a silent wrong answer if smoothed over
+
+1. **Timestamps are epoch SECONDS.** The explorer's own line: *"Multiplying
+   timestamp with 1000 to convert from seconds to milliseconds"*. Read as
+   milliseconds, every row lands in January 1970 — and a bridge that then
+   fell back to `.now` would date a decade of patches "today".
+2. **A patch and an issue carry NO timestamp of their own.** Neither schema has
+   one. The date is **derivable and exact, not estimated**: an issue opened at
+   `discussion[0].timestamp` (in Radicle's COB model the root comment *is* the
+   issue body), a patch at `revisions[0].timestamp`, a merge at
+   `merges[].timestamp`. Same class as X's snowflake decode (§280) — a real date
+   recovered from the record, which is why these rows may sort back into history
+   instead of seeding silently.
+3. **`activity` is misnamed** — it is not counts, it is every commit's timestamp
+   on the default branch, for the whole history, in one request. That is a room
+   head for free (see below), and a trap for anyone who assumes buckets.
+4. **`searchAvailable` is a per-seed capability.** A seed that does not index
+   cannot turn a name into an RID, so an RID must be accepted directly and
+   search treated as a convenience — never the only door.
+5. **A seed serves only what it SEEDS.** There is no global index; this is the
+   deepest difference from GitHub and the one the copy must carry out loud: a
+   repo appears only if the seed you are asking happens to hold it.
+   `/nodes/:nid/inventory` is what a node really has.
+6. **`/v1` in the path is not the compatibility contract.** The official
+   explorer pins `~0.18.0` against the root read's `apiVersion` and refuses a
+   node outside it with its own error. So the version to watch is the one the
+   seed reports, not the path — exactly the dependency-drift class
+   `live-integrations.sh` exists for, and its row here is the root read.
+
+Two more from the shipped config, not quirks but facts: public seeds are
+**443/https** (a local node's httpd is 8080), the current preferred seeds are
+**`rosa.radicle.network`** and **`iris.radicle.network`**, and the public
+explorer is **`https://radicle.network/nodes/$host/$rid$path`** — so a permalink
+for any row is derivable with no extra read. (The user's link is the current
+domain; `radicle.xyz` is the older one.)
+
+### What would land, under the module doctrine
+
+A patch OPENED and a patch MERGED; an issue OPENED and CLOSED; a new repo from a
+delegate you watch (the Hugging Face `createdAt` shape). Each is an event with a
+real author and a recoverable date, which is the GitHub-releases shape pointed at
+a network with no GitHub in it.
+
+What must NOT land, by the rule this app already keeps: the `seeding` count, the
+patch and issue TOTALS, and "the repo was updated". Those are states and tallies,
+and a tally is not a thing (§223).
+
+**The sweep is cheap, and that is the design.** One `GET /repos/:rid` per watched
+repo returns `meta.head` plus all six counts, so a diff against a stored snapshot
+decides whether to walk patches or issues **at all** — the Hyperliquid
+snapshot-diff shape (`HyperliquidDeFi.sync`, which diffs the open-position set
+against a stored snapshot instead of landing a firehose of fills), bounding a
+quiet pass at one request per repo. The
+counts are what makes change detection possible without a timestamp to sort by,
+which is quirk 2 turned into an advantage.
+
+**The room head is already paid for.** `activity`'s whole-history commit
+timestamps are precisely the input the span strip established for the journals
+and the X archive (§398, §375): the full span with silent weeks drawn at zero
+rather than skipped, the busiest stretch as a sentence. One request, no commit
+walk, no new `Thing` field.
+
+### What it cannot do, stated so nobody thinks it was forgotten
+
+- **Any write** — opening an issue, commenting, submitting or merging a patch.
+  Not in this API at all; it needs a local node and a signing key. This app does
+  not write, so the decline costs nothing.
+- **A network-wide view of a person** without naming a seed. No global index
+  exists; `delegates/:did/repos` answers for the seed you asked and no further.
+- **Private repos.** `visibility: private` is in the schema; a public seed will
+  not serve them, and nothing should imply otherwise.
+- **A local node** (`127.0.0.1:8080`), which is the richest read available and
+  belongs to the MCP-listener precedent: Catalyst-only, off by default, and
+  unmeasurable from any simulator. Not part of a first pass.
+
+### Where it would sit, and the one registry subtlety
+
+**Work**, beside GitHub and Hugging Face. Keyless, no account, `needsSetup: true`
+— a seed-host field (PostHog's shape) plus a watch list of RIDs, aliases or DIDs.
+
+**The seed host is typed by the person, so `NetworkReach` cannot declare it.**
+The default seeds can be declared; a seed someone else names cannot, which is the
+§289 case exactly — those call sites must name the service to
+`NetworkLedger.record(host:as:)` or the receipts screen reads them as undeclared
+reaches. This is the first Work seat where the person chooses the host, and it is
+also the whole trust boundary: whichever seed you name sees which repos you asked
+about. That belongs in the setup copy, not a footnote.
+
+### Before building: what to measure
+
+The root read against both preferred seeds (`apiVersion`, and whether `~0.18.0`
+still holds), `/info` for `searchAvailable`, one `/repos/:rid` for the counts
+block, one `/repos/:rid/patches` and `/issues` to confirm the timestamps really
+sit where the schemas put them, and `/repos/:rid/activity` for units and length.
+Six keyless requests, one launch — none of which could be made from here.
+
+### §400 follow-up — the six reads, as commands (user: "i'll have another session build it", 2026-08-18)
+
+Handed off deliberately, so the measurement below is the first thing the building
+session does rather than something it re-derives. Six keyless reads, no account,
+no key, nothing minted; `jq` optional. Run against **both** preferred seeds,
+because "a seed serves only what it seeds" means the two can legitimately
+disagree about every repo:
+
+```sh
+SEED=rosa.radicle.network      # then repeat with iris.radicle.network
+
+# 1. The root read: is it up, what is it, and does the explorer's ~0.18.0 pin
+#    still hold? `apiVersion` is the drift signal — NOT the /v1 in the path.
+curl -sS "https://$SEED/api/v1" | jq '{service, version, apiVersion, nid}'
+
+# 2. Is search available on THIS seed? (per-seed capability, quirk 4)
+curl -sS "https://$SEED/api/v1/info" | jq '.httpd'
+
+# 3. What does it seed? Take an RID from here for the reads below — do not
+#    guess one, and do not assume a repo on one seed is on the other.
+curl -sS "https://$SEED/api/v1/repos?perPage=5&sort=activity" \
+  | jq '.[] | {rid, alias, name: .payloads["xyz.radicle.project"].data.name}'
+RID=<paste one rid from above>
+
+# 4. The counts block — the whole change-detection design rests on this one
+#    read carrying head + all six counts.
+curl -sS "https://$SEED/api/v1/repos/$RID" \
+  | jq '.payloads["xyz.radicle.project"].meta, {seeding, threshold}'
+
+# 5. Do the timestamps really sit where the schemas put them? This is quirk 2,
+#    and it is the read most worth doing by hand: a patch's date must come out
+#    of revisions[0].timestamp and an issue's out of discussion[0].timestamp.
+curl -sS "https://$SEED/api/v1/repos/$RID/patches?perPage=3" \
+  | jq '.[] | {id, title, state: .state.status, first: .revisions[0].timestamp, merges: [.merges[].timestamp]}'
+curl -sS "https://$SEED/api/v1/repos/$RID/issues?perPage=3&status=all" \
+  | jq '.[] | {id, title, state: .state.status, opened: .discussion[0].timestamp}'
+
+# 6. Units and length of the misnamed `activity` (quirk 3): expect an array of
+#    epoch SECONDS spanning the whole history, not buckets.
+curl -sS "https://$SEED/api/v1/repos/$RID/activity" \
+  | jq '{n: (.activity|length), newest: (.activity|max), oldest: (.activity|min)}'
+```
+
+**What each result decides.** A 200 on (1) with an `apiVersion` outside `~0.18.0`
+means the schemas in this entry are already stale and the building session should
+re-read the client before trusting any field name here. A `false` on (2) means
+name→RID resolution is unavailable on that seed and the setup screen must accept
+an RID as the primary input rather than a convenience. If (4) is missing the
+counts block, the cheap sweep is gone and every pass has to walk patches and
+issues, which changes the cost model. If (5)'s timestamps are absent or sit
+elsewhere, **stop** — a bridge that cannot date a row honestly is the one thing
+this seat must not ship, and `.now` is not the fallback (`PeerRoom`'s refusal).
+A ten-digit `newest` on (6) confirms seconds; thirteen digits means milliseconds
+and the explorer's own comment has gone stale.
+
+**On the brand mark.** Radicle's current mark is the pixel-art creature (their
+avatar); their repo also ships `public/radicle.svg` — an abstract
+two-circles-in-a-square — and a `radicle` wordmark in `src/components/Logo.svelte`.
+Pixel art authors cleanly as a grid of `rect`s, which reproduces it exactly
+rather than approximately, and that one source serves both the app asset (on the
+`DS.Mark` ramp) and the website's **inlined base64** — never a hotlink, by the
+2026-07-08 rule. Note `cdn.simpleicons.org` could not be reached from the session
+that wrote this, so whether it carries a `radicle` entry is **unknown, not
+absent** — a 000 is a blocked request, not a 404, and the two must not be
+confused.
