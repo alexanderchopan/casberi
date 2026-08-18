@@ -84,6 +84,15 @@ enum HomeComposition {
             "Card", "Payment", "Pending", "Settled",      // Apple Wallet, cards
             "Price drop", "Price rise", "Refund",
             "Paper",                                      // Hugging Face
+            // Altana (prd §402) and the chain a wallet row sits on. Both are
+            // STATE by this set's own rule: a key type says what a key IS and
+            // a chain name says where a row happened, and neither says what
+            // anything is ABOUT. A chain in particular is the `Onchain` test
+            // run backwards — that one is in KNOWN_SUBJECT because it is a
+            // theme somebody keeps things about, while "BNB Smart Chain" is a
+            // venue stamped on every row that touched it.
+            "Root key", "Session key",                    // Altana keystore
+            "BNB Smart Chain",                            // wallet chain label
             // Radicle (prd §400). All five are STATE, not subject: they say
             // what happened to a patch or an issue, never what it is about.
             // Deliberately not facets either — `Issue` above is already
