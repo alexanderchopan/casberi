@@ -61,13 +61,50 @@ enum AltanaKeystore {
 
     // MARK: - Deployment
 
-    /// The L1 keystore, lowercased. One entry, because there is one source of
-    /// truth by the design's own claim — the L2 caches are mirrors and this
-    /// reads the original (see the type doc).
+    /// One EXECUTION chain the keystore is deployed on, with its own hosts.
     ///
-    /// Measured live 2026-08-18: deployed, answering, `owner()` set.
-    static let network = "eth-mainnet"
-    static let contract = "0xb70fda90c1d576ba8399946a0c10ecd9d9ea923b"
+    /// **This table is why the first cut of this seat read empty for everyone**
+    /// (2026-08-18, corrected the same day). It shipped reading Ethereum
+    /// alone, on the strength of a measurement that was Ethereum-only — and
+    /// the explorer then said 39 keys, **38 of them on BNB Smart Chain**.
+    /// Verified by calling `getKeys` on real accounts across both: 18 keys on
+    /// BNB across 7 accounts, 0 on Ethereum for every one of them. So the
+    /// reader was pointed at the chain holding 1/39th of the data and would
+    /// have answered "no keys" for every real user of the registry, forever,
+    /// with no error anywhere. The standing lesson is the one this codebase
+    /// keeps re-earning: **a measurement of one chain is not a measurement of
+    /// the network** — ask where the data IS before deciding where to read.
+    ///
+    /// It carries its OWN hosts rather than joining `WalletApprovals.allChains`
+    /// deliberately. That pool serves balances, approvals and transfers for
+    /// every watched wallet, and BNB is not in it; adding a fifth chain there
+    /// to serve one contract would put every other wallet read on a chain
+    /// nobody asked for. This seat reads one fixed address per chain, so it
+    /// needs a host list, not a chain abstraction.
+    struct Registry: Equatable {
+        /// For copy and for the explorer link.
+        let label: String
+        /// The keystore contract on this chain, lowercased.
+        let contract: String
+        /// Tried in order; the first that answers wins.
+        let hosts: [String]
+    }
+
+    /// Measured live 2026-08-18: both deployed, both answering `getKeys`.
+    ///
+    /// BNB leads because that is where the keys are — the read walks in this
+    /// order and an account with nothing anywhere costs one call per chain,
+    /// so the cheap common case should fail fast on the busy chain first.
+    static let registries: [Registry] = [
+        Registry(label: "BNB Smart Chain",
+                 contract: "0x6572427ed530badcf7375cf9a4709d8d2b0e7e0a",
+                 hosts: ["https://bsc-rpc.publicnode.com",
+                         "https://bsc-dataseed.binance.org"]),
+        Registry(label: "Ethereum",
+                 contract: "0xb70fda90c1d576ba8399946a0c10ecd9d9ea923b",
+                 hosts: ["https://ethereum-rpc.publicnode.com",
+                         "https://rpc.mevblocker.io"]),
+    ]
 
     // MARK: - Selectors (read from deployed bytecode, 2026-08-18)
 
@@ -82,6 +119,9 @@ enum AltanaKeystore {
     static let getExpirySelector = "0x3b49ad47"
     /// `getNonce(address,bytes32)` → whether this key has ever signed.
     static let getNonceSelector = "0x9e2de5a6"
+    /// `getKey(address,bytes32)` → the whole record. Read for ONE field the
+    /// individual getters don't publish: when the key was registered.
+    static let getKeySelector = "0x314f5c11"
 
     /// Named to be refused, never called. See the type doc.
     static let writeSelectors: Set<String> = [
@@ -220,6 +260,49 @@ enum AltanaKeystore {
         return v
     }
 
+    /// Word index of `registeredAt` in a `getKey` reply, and of the expiry
+    /// that proves the layout. Both counted from the START of the returned
+    /// buffer, i.e. including the leading struct offset word.
+    ///
+    /// Measured against four real keys on BNB (2026-08-18): word 5 held a
+    /// plausible recent timestamp on every one, and word 7 equalled
+    /// `getExpiry`'s answer BYTE FOR BYTE — 0 for each root key, the exact
+    /// expiry for each session key.
+    static let registeredAtWord = 5
+    static let expiryWitnessWord = 7
+
+    /// `registeredAt` out of a `getKey` reply — **only when the reply proves
+    /// its own layout.**
+    ///
+    /// This is an INFERRED struct layout, and the failure mode of guessing one
+    /// is a confident wrong date on a security screen: read a neighbouring
+    /// word and a key registered last week renders as 1970, or as a date years
+    /// out, and nothing about it looks broken. So the layout is not trusted,
+    /// it is WITNESSED — word 7 must equal the expiry that `getExpiry`
+    /// authoritatively returned for this same key. If the struct ever gains,
+    /// loses or reorders a field, that witness stops matching and this returns
+    /// nil, which costs a runway bar and a date. The room degrades; it never
+    /// lies.
+    ///
+    /// `expectedExpiry` is seconds, 0 meaning "never" — the raw `getExpiry`
+    /// value, not a `Date`, so the comparison is exact integer equality and
+    /// cannot be blurred by any conversion on the way.
+    static func registeredAt(fromGetKey hex: String, expectedExpiry: Int) -> Date? {
+        var s = hex.lowercased()
+        if s.hasPrefix("0x") { s.removeFirst(2) }
+        guard s.count >= (expiryWitnessWord + 1) * 64, s.allSatisfy(\.isHexDigit) else { return nil }
+        guard let witness = word(s, expiryWitnessWord), witness == expectedExpiry else { return nil }
+        guard let seconds = word(s, registeredAtWord), seconds > 0 else { return nil }
+        // A registration older than the contract itself, or in the future, is
+        // the right word read from a wrong buffer. Both refused.
+        guard seconds >= earliestPlausibleRegistration else { return nil }
+        return Date(timeIntervalSince1970: TimeInterval(seconds))
+    }
+
+    /// 2026-01-01. The keystore was deployed in 2026, so anything before this
+    /// is not a registration date — it is a misread word wearing one.
+    static let earliestPlausibleRegistration = 1_767_225_600
+
     // MARK: - The model
 
     /// One registered credential.
@@ -239,6 +322,47 @@ enum AltanaKeystore {
         /// can act and never has is exactly what somebody auditing their own
         /// account wants separated from one in daily use.
         let hasEverSigned: Bool
+        /// When the key was registered, read out of `getKey` and CROSS-CHECKED
+        /// (see `registeredAt(fromGetKey:expectedExpiry:)`). nil whenever that
+        /// check fails — the room then shows a key with no start, which costs
+        /// a runway bar and never shows a wrong date.
+        ///
+        /// `var` with a default so the memberwise init keeps its old shape.
+        var registeredAt: Date? = nil
+        /// Which registry answered — "BNB Smart Chain" or "Ethereum". An
+        /// account can hold keys on both, and a row that didn't say which
+        /// would send someone to the wrong explorer.
+        var chainLabel: String? = nil
+
+        /// How long this grant was written for — the honest phrase "a 24-hour
+        /// key", available only because both ends are readable. nil unless
+        /// both are.
+        var grantDuration: TimeInterval? {
+            guard let registeredAt, let expiry, expiry > registeredAt else { return nil }
+            return expiry.timeIntervalSince(registeredAt)
+        }
+
+        /// How far through its own grant this key is, 0…1 — the runway bar.
+        ///
+        /// It is a TRUE fraction, unlike `ASCRoom`'s runway, which had to gate
+        /// on "a transition this device watched" because Apple publishes no
+        /// start date. Here the chain publishes both ends, so every key gets a
+        /// real bar on first sight, on every device, with nothing observed
+        /// locally.
+        func progress(now: Date) -> Double? {
+            guard let registeredAt, let grantDuration, grantDuration > 0 else { return nil }
+            let elapsed = now.timeIntervalSince(registeredAt)
+            return min(1, max(0, elapsed / grantDuration))
+        }
+
+        /// The registry still lists this key as active, but its own expiry has
+        /// passed — so it cannot act, whatever the list says. Measured real on
+        /// BNB: two of six sampled session keys were in exactly this state.
+        /// The hygiene reading nothing else surfaces.
+        func isExpiredButListed(now: Date) -> Bool {
+            guard let expiry else { return false }
+            return expiry <= now
+        }
 
         /// A session key past its expiry cannot act, whatever the registry
         /// still lists. Kept as a function of an injected `now` so the harness

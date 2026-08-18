@@ -114,7 +114,7 @@ enum BridgeCatalog {
                 "RSS", "Substack", "Podcasts", "Pinterest", "Farcaster",
                 "Bluesky", "Nostr", "OpenSea", "Kalshi", "Shopify", "GeckoTerminal", "Deals",
                 "Circle x402",
-                "Open Food Facts", "Stocktwits", "Hugging Face", "Radicle", "npm", "PyPI"]
+                "Open Food Facts", "Stocktwits", "Hugging Face", "Radicle", "npm", "PyPI", "Altana"]
             if keyless.contains(name) { return "No account" }
             // Instagram and Snapchat were missed here when they landed
             // (2026-07-31) and TikTok would have been missed the same way:
@@ -175,6 +175,22 @@ enum BridgeCatalog {
                          "Read from Ethereum's public chain and 0xBow's public API",
                          "For the wallets you already watch"],
               needsSetup: true, added: day(2026, 7, 21)),
+        // Wallet group, beside Privacy Pools and Railgun (prd §403). Altana is
+        // an onchain KEYSTORE — a public registry of the credentials allowed
+        // to sign for an account — so it rides the watched wallets the Peer
+        // way: no account, no key, nothing to connect but a wallet you already
+        // watch.
+        //
+        // The summary names the two ceilings, because both would otherwise be
+        // assumed the other way. A session key's SCOPE is not published, so
+        // this says what a key may sign UNTIL and never what it may sign FOR;
+        // and revoking happens on Altana's own surface, never here (§112).
+        Offer(name: "Altana", tagline: "Which keys can sign as you", group: "Wallet", connectable: true,
+              summary: "Altana keeps a public onchain registry of the keys allowed to sign for an account. Watch a wallet and its keys land here, each with when it was granted and when it stops.\n\nNo account, no key, read-only: nothing here registers, revokes, or signs.",
+              features: ["Root keys and session keys, with the real deadline on each",
+                         "Says when the registry still lists a key that can no longer act",
+                         "Read from BNB Smart Chain and Ethereum, for the wallets you already watch"],
+              needsSetup: true, added: day(2026, 8, 18)),
         // Wallet group, beside Privacy Pools — the same category for the same
         // reason (prd §268): Railgun trades nothing, it's your own funds
         // wearing a privacy status, and it rides the watched wallets with no

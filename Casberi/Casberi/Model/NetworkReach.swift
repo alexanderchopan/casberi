@@ -219,6 +219,17 @@ enum NetworkReach {
                  reach: .whenConnected(bridge: "Radicle"),
                  purpose: "Reads the patches and issues of the repos you watch, from the seed node you name. Carries only the repo ids you asked for; there is no account and no key, so nothing identifies you — but the seed you pick does see which repos you ask about.",
                  hosts: ["rosa.radicle.network", "iris.radicle.network", "the seed you name"]),
+        // Altana (prd §403). Reach is WALLET, not "Altana": the seat rides the
+        // watched wallets and its sweep runs whenever a wallet is watched, so
+        // gating the disclosure on the seat being "connected" would understate
+        // when the request really happens — the same reasoning Railgun and
+        // Gnosis Pay use below. BNB Smart Chain leads because that is where
+        // the keys are (38 of 39, measured 2026-08-18).
+        Endpoint(service: "Altana",
+                 reach: .whenConnected(bridge: "Wallet"),
+                 purpose: "Reads which keys are allowed to sign for the wallets you watch, from Altana's public keystore contracts. Carries only the wallet address you asked about; there is no account and no key, and nothing is ever registered, revoked or signed.",
+                 hosts: ["bsc-rpc.publicnode.com", "bsc-dataseed.binance.org",
+                         "ethereum-rpc.publicnode.com", "rpc.mevblocker.io"]),
         Endpoint(service: "0xBow Privacy Pools",
                  reach: .whenConnected(bridge: "0xBow Privacy Pools"),
                  purpose: "Reads your Privacy Pools deposits from the public chain and their review status from 0xBow's public API, for the wallets you watch.",

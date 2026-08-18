@@ -151,6 +151,12 @@ enum BridgeGlyph {
         // host — repos replicate between nodes, and the seed you name is only
         // one of them. The GitLab reasoning one line up, for the same reason.
         case "radicle":   return "point.3.filled.connected.trianglepath.dotted"
+        // A KEY, plainly — this is the one seat in the catalog whose whole
+        // subject is signing credentials, so the literal symbol is the right
+        // one and any cleverer choice would say less. "key.horizontal" rather
+        // than "lock": nothing here is locked or unlocked, and a padlock would
+        // imply a control this seat deliberately doesn't have (§112).
+        case "altana":    return "key.horizontal"
         case "linear":    return "list.bullet.rectangle"
         // The lists ARE the mark — a board read as columns. Both this and the
         // hue exist so a seat whose bundled art ever fails to load still reads

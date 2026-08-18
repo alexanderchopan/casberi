@@ -468,6 +468,14 @@ enum WalletIngest {
                                                               addresses: evmAddresses,
                                                               existing: existing)
         added += privacyPoolsAdded ?? 0
+        // Altana's keystore rides the same pass (prd §403) — ONE `eth_call`
+        // per wallet per registry, and for a wallet with nothing registered
+        // that is the whole cost: `getKeys` answers an empty array and the
+        // per-key reads never run. Both registries are asked because the keys
+        // are on BNB, not Ethereum — the correction that this seat's first cut
+        // got wrong. Inside the running guard like everything above; not
+        // seat-gated (see the Peer note).
+        added += await AltanaKeystore.sync(context: context)
         // Railgun rides the same pass (prd §268) — two filtered ERC-20
         // Transfer reads per wallet on mainnet (into the pool, and back out),
         // landing "Shielded 1.2 WETH into Railgun" and "Received 500 USDC

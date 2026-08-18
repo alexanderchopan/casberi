@@ -2550,6 +2550,17 @@ struct FeedScreen: View {
                             thing.authorHandle == rail.name
                         }
                     }
+                case .altana(let card):
+                    AltanaRoomCard(card: card) {
+                        // The door is Altana's own explorer — the only place a
+                        // key can actually be revoked (§112: we read and
+                        // state, they act). Opened directly rather than
+                        // landing on a row, because the account page is the
+                        // whole subject and no single row is.
+                        if let url = URL(string: AltanaKeystore.explorerURL(address: card.address)) {
+                            openExternal(url)
+                        }
+                    }
                 case .privacyPools(let room):
                     PrivacyPoolsRoomCard(room: room) { state in
                         // Matched on the DEPOSIT ref as well as the tag: an
@@ -3956,6 +3967,10 @@ struct FeedScreen: View {
         // readings are the Wallet room's balance card, DeFi tiles and
         // composition strip, which is where they belong.
         case peer(PeerRoom)
+        // Altana's keystore (2026-08-18, prd §403) — the only wallet-riding
+        // room whose subject is not money at all: which credentials can sign
+        // in this account's name, and when each of them stops.
+        case altana(AltanaRoom.Card)
         case privacyPools(PrivacyPoolsRoom)
         case gnosisPay(GnosisPayRoom)
         // A fourth wallet-riding seat (2026-08-11) — grouped by TOKEN rather
@@ -4043,6 +4058,11 @@ struct FeedScreen: View {
         // row can say a patch is still unresolved. See `RadicleRoomSource`.
         case RadicleRoomSource.source:
             return RadicleRoomSource.compose(things: visible).map { .radicle($0) }
+        // Composed from the SNAPSHOT the sweep wrote, not from `visible` — the
+        // keys are chain state, not rows, and re-reading them on every draw
+        // would spend an `eth_call` per scroll (`AltanaState`).
+        case AltanaKeystore.source:
+            return AltanaRoom.card().map { .altana($0) }
         case PeerRoomSource.source:
             return PeerRoomSource.compose(things: visible).map { .peer($0) }
         case PrivacyPoolsRoomSource.source:

@@ -100,10 +100,14 @@ done
 # read — and the reader would fail silently, since a wrong address answers
 # `0x` and the decoder correctly returns nil, which renders as "no keys" for
 # every wallet forever.
-grep -q 'static let contract = "0xb70fda90c1d576ba8399946a0c10ecd9d9ea923b"' "$ALTANA" \
-  || { echo "✗ AltanaKeystore.contract moved — re-measure before trusting $0"; exit 1; }
-grep -q 'static let network = "eth-mainnet"' "$ALTANA" \
-  || { echo "✗ AltanaKeystore.network moved — the L2 caches cannot answer isValidKey (measured)"; exit 1; }
+# BOTH registries, and BNB is the load-bearing one: 38 of the 39 keys that
+# exist are there, and this seat's first cut read Ethereum alone and therefore
+# read empty for every real user (prd §403). If the BNB entry ever goes, the
+# reader silently returns to that state — no error, just an empty room forever.
+grep -q '0x6572427ed530badcf7375cf9a4709d8d2b0e7e0a' "$ALTANA" \
+  || { echo "✗ the BNB registry is gone from $ALTANA — 38 of 39 keys live there; the reader would read empty"; exit 1; }
+grep -q '0xb70fda90c1d576ba8399946a0c10ecd9d9ea923b' "$ALTANA" \
+  || { echo "✗ the Ethereum registry is gone from $ALTANA — re-measure before trusting $0"; exit 1; }
 # `getKeys` is the one call made for a wallet with nothing registered, i.e. for
 # every wallet today. Its selector is read from deployed bytecode, not recalled.
 grep -q 'static let getKeysSelector = "0x34e80c34"' "$ALTANA" \

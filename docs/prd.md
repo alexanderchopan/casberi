@@ -80,6 +80,7 @@ at all.
 | Ruling | What it said | Changed by |
 |---|---|---|
 | §18 | Feed spec | amended by §64 |
+| §402 | Altana keystore: read Ethereum only, and stay silent on first sight | amended by §403 |
 | §36a | Home cover: an explicit banner outranks the automatic screensh | amended by §36j, superseded by §36o |
 | §36h | Wallet holdings: one treemap per wallet, leads Feed too, tap-t | amended by §36n |
 | §36j | Home cover is 2-tier now: a set banner, or black | superseded by §36o |
@@ -26115,3 +26116,112 @@ rather than "key". `getKey`'s struct layout is inferred from a single sample.
 How the Base cache knows the id list without `populateKey` is unexplained. And
 no event ABI is published, which is why news is a snapshot diff rather than a
 log read.
+
+## §403 — Altana gets a seat and a room, and the reader gets pointed at the right chain (user: "i'd like to give the team a source room", 2026-08-18)
+
+§402 shipped the keystore reader in the morning. By the afternoon the explorer
+(`explorer.altana.network`) said the network held **39 keys, 38 of them on BNB
+Smart Chain**, and §402 had measured Ethereum alone — where there is exactly
+one, the deployer's own. Verified before acting on it: real account addresses
+pulled out of the explorer's server-rendered payload (public BSC RPCs gate
+ranged `eth_getLogs`, so logs were a dead end), then `getKeys` called against
+both chains — **18 keys across 7 accounts on BNB, 0 on Ethereum for every one
+of them**.
+
+**So the reader shipped pointed at the chain holding 1/39th of the data**, and
+would have answered "no keys" for every real user of the registry, forever,
+with no error anywhere. The standing lesson, which this codebase keeps
+re-earning in new clothes: **a measurement of one chain is not a measurement of
+the network** — ask where the data IS before deciding where to read.
+
+**The fix is a registry TABLE with its own hosts, not a fifth chain in the
+shared wallet pool.** `WalletApprovals.allChains` serves balances, approvals and
+transfers for every watched wallet and has no BNB entry; adding one there to
+serve a single contract would put every other wallet read on a chain nobody
+asked for. This seat reads one fixed address per chain, so it needs a host
+list, not a chain abstraction. BNB LEADS the table, because a wallet with
+nothing anywhere should fail fast on the busy chain first.
+
+**The find that made a room worth building: `getKey` carries a registration
+date.** Word 5 of the returned struct held a plausible recent timestamp on
+every one of four real keys, and word 7 equalled `getExpiry`'s answer BYTE FOR
+BYTE — 0 for each root, the exact expiry for each session. So both ends of
+every grant are readable without any log access.
+
+**And the layout is not trusted, it is WITNESSED.** This is an inferred struct
+layout, and the failure mode of guessing one is a confident wrong date on a
+security screen: read a neighbouring word and a key registered last week
+renders as 1970, with nothing about it looking broken. `registeredAt(fromGetKey:
+expectedExpiry:)` returns the date ONLY when word 7 still equals the
+authoritative expiry. If the struct ever gains, loses or reorders a field, the
+witness stops matching and the reader loses a date rather than inventing one —
+**the room degrades; it never lies.** Two further refusals: a zero registration
+is "not recorded", never 1970, and anything before 2026 is the right word read
+from a wrong buffer.
+
+**The runway means more here than next door.** `ASCRoom` (§324) had to gate its
+duration on "a transition this device watched", because Apple publishes no
+start date. Here the chain publishes both ends, so a session key's bar shows
+real elapsed progress through a real grant, **on first sight, on every device,
+with nothing observed locally.** The grant DURATION is a fact too — the measured
+BNB corpus is full of exactly-24-hour grants — so the card says "24-hour key",
+which is more useful than any percentage, and refuses to print "1.02-day key"
+for a grant plainly written as a day.
+
+**The hygiene reading, which nothing else surfaces:** `isKeyActive` keeps
+returning true for a session key whose own expiry has passed — measured, two of
+six sampled on BNB are in that state today. So the registry lists credentials
+that cannot act. Stated quietly, never alarmed about (an expired key is safe,
+it is just noise), and the reader deliberately KEEPS expired keys rather than
+filtering them at the read, which §402's first cut did — dropping them deletes
+the finding.
+
+**Backfill on first sight AMENDS §402's silent-first-sight rule**, and the
+amendment is earned rather than convenient. That rule existed because a key
+could not be dated: a backfilled row would have worn today's date and read as
+"this just happened", the Hyperliquid bug. With a witnessed registration date a
+backfilled row sorts to when it actually happened and cannot fake urgency —
+exactly the `PrivacyPoolsBridge` divergence (§162), taken for the same reason.
+The MOMENT rule still holds: only a key appearing while we watch is news, and
+only that one wears the alarming sentence.
+
+**The seat is gated on EVIDENCE, not on watching** (the Gnosis Pay rule §222,
+not Peer's): most wallets hold no keystore entry, and a seat lighting up for
+every watched wallet claims a registry entry that isn't there (§83). It uses a
+`WalletSeatEvidence` mark, which stamps and never unstamps, so a public RPC
+having a bad minute cannot blink a seat someone really uses out of the catalog.
+
+**Costs one `eth_call` per wallet per registry.** `getKeys` answers an
+unregistered address with an empty array rather than reverting, so the common
+case ends there and the per-key reads never run. The HEAD costs nothing at all
+per open: it composes from `AltanaState`, a UserDefaults snapshot the sweep
+writes — never a live read, or every room draw would spend a request. No new
+`Thing` field, so **no CloudKit Production deploy**.
+
+**Refused, with reasons.** No security score and no judgement on key count
+(three keys is neither good nor bad, and a number on a security screen is
+believed). No naming the app that registered a key — the registry does not
+record it, and a wrong name on a permissions notice sends somebody to revoke
+the wrong thing (§239). No claim about what a session key may DO: the scope is
+not published, so the copy states what a key may sign UNTIL and never what it
+may sign FOR. No in-app revoke — §112 stands, and the door goes to Altana's own
+explorer. And none of the explorer's aggregates (leaderboards, network totals):
+those are other people's accounts, and this app holds yours.
+
+Guarded by `scripts/altana-selftest.sh` (in `verify.sh`) — both pure files
+compiled WHOLE, 50 assertions, mutation-proven twelve ways, plus the conduct
+guard keeping "never registers, revokes, or signs" true and a drift guard on
+the witness word indices. **It is the only proof these readings are right**, and
+in a stronger sense than any harness here: nothing on this host can register a
+key, revoke one, or make a grant expire — there are 39 keys on Earth and this
+project owns none of them. One of its own fixtures was wrong on the first run,
+the familiar class: a one-day grant is spelled "24-hour key", so a
+`contains("day")` assertion failed for the right reason and was replaced with
+the exact phrase.
+
+**NOT built, deliberately.** A `NotifyKind` for a newly registered key — the
+row lands and says so, and adding a kind means re-proving `notify-selftest.sh`'s
+79 assertions, which is its own pass; session expiries already reach the lock
+screen through the generic `deadlineNear` path with no notification code of this
+seat's own. No setup screen: there is nothing to configure, so the catalog tile
+routes to the wallet manager like every other wallet-riding seat.

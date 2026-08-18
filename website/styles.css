@@ -568,18 +568,33 @@ p.lede strong { color: var(--ink); font-weight: 600; }
 
 /* ---------- Catalog — the app's ten shelves as packed cards, every
    app visible, no inner scroll (2026-07-14) ---------- */
-.store-flow { columns: 4 220px; column-gap: 14px; }
-.shelf { break-inside: avoid; margin-bottom: 14px;
-  background: var(--surface); border-radius: 18px; padding: 15px 12px 11px; }
-.shelf > h3 { font-size: 15px; font-weight: 750; letter-spacing: -0.01em;
-  margin: 0 10px 7px; }
-.mini-cell { display: flex; align-items: center; gap: 11px;
-  padding: 6px 10px; border-radius: 12px; }
-.mini-cell:hover { background: rgba(255,255,255,.05); }
-.mini-cell .ai { width: 30px; height: 30px; border-radius: 8.5px;
-  font-size: 13px; flex: none; }
-.mini-cell span { font-size: 14px; font-weight: 600; white-space: nowrap;
-  overflow: hidden; text-overflow: ellipsis; }
+/* ROWS, not columns (user, 2026-08-18). This was `columns: 4 220px` — a CSS
+   multi-column newspaper flow, which stacks each category into a narrow
+   vertical strip and orders the shelves top-to-bottom-then-across, so reading
+   the catalog meant scanning down four times and the eye never got a whole
+   category at once. Now every category is a full-width ROW and its apps flow
+   left-to-right as chips that wrap.
+
+   Two things this buys beyond the reading order: a long category (Wallet,
+   Work) is no longer forced to be four screens tall to stay in its column,
+   and the chips reflow at any width, so the same rule serves phone and
+   desktop with no breakpoint of its own. */
+.store-flow { display: flex; flex-direction: column; gap: 12px; }
+.shelf { display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+  background: var(--surface); border-radius: 18px; padding: 14px 14px 15px; }
+/* The heading owns its own line — `flex-basis: 100%` rather than a separate
+   wrapper element, so the markup is untouched and `catalog-sync.sh` still
+   reads the shelf exactly as it did. */
+.shelf > h3 { flex: 0 0 100%; font-size: 15px; font-weight: 750;
+  letter-spacing: -0.01em; margin: 0 0 4px 2px; }
+/* A chip now sizes to its own name instead of filling a column. */
+.mini-cell { display: inline-flex; align-items: center; gap: 9px;
+  flex: 0 0 auto; padding: 5px 13px 5px 6px; border-radius: 999px;
+  background: rgba(255,255,255,.045); }
+.mini-cell:hover { background: rgba(255,255,255,.09); }
+.mini-cell .ai { width: 26px; height: 26px; border-radius: 7.5px;
+  font-size: 12px; flex: none; }
+.mini-cell span { font-size: 13.5px; font-weight: 600; white-space: nowrap; }
 .mini-cell .soon { font-style: normal; font-size: 11px; font-weight: 700;
   color: var(--muted); background: rgba(255,255,255,.07);
   padding: 2px 8px; border-radius: 999px; margin-left: auto; flex: none; }
@@ -1395,6 +1410,16 @@ footer .tagline { font-size: 16px; font-weight: 600; color: var(--ink); margin-b
   .mini-cell:hover .ai, .mini-cell .ai.flip { animation: coinflip .55s ease; }
 }
 @keyframes coinflip { from { transform: rotateY(0) } to { transform: rotateY(360deg) } }
+/* The tagline tooltip is a HOVER affordance, so it is rendered only where
+   hover exists. It was always emitted, opacity 0, on every device — which
+   costs nothing visually but does widen each shelf's scrollWidth by ~32px,
+   because an absolutely-positioned pseudo-element still counts. That was
+   harmless while a shelf was a narrow column with its chips far from the
+   edge; now that chips fill the row (2026-08-18) a right-edge chip's tooltip
+   would also be clipped. Gating on the same `(hover: hover)` query the flip
+   and the reveal already use fixes both, and costs touch devices nothing they
+   could have used. */
+@media (hover: hover) and (pointer: fine) {
 .mini-cell[data-tag]::after {
   content: attr(data-tag);
   position: absolute; left: 50%; bottom: calc(100% + 8px); transform: translateX(-50%) translateY(4px);
@@ -1403,7 +1428,6 @@ footer .tagline { font-size: 16px; font-weight: 600; color: var(--ink); margin-b
   text-align: center; opacity: 0; pointer-events: none; z-index: 40;
   box-shadow: 0 8px 24px rgba(0,0,0,.5), inset 0 0 0 1px rgba(255,255,255,.07);
   transition: opacity .18s ease, transform .18s ease; }
-@media (hover: hover) and (pointer: fine) {
   .mini-cell:hover::after { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
 
@@ -1500,3 +1524,8 @@ footer .tagline { font-size: 16px; font-weight: 600; color: var(--ink); margin-b
 @media (max-width: 900px) {
   .why-card { padding: 32px 26px 34px; border-radius: 24px; }
 }
+
+/* Altana ships its mark on white — full-bleed square artwork, the same
+   treatment as Radicle and Hugging Face above. */
+.ai-altana { background: #fff; }
+.ai-altana img { width: 100%; height: 100%; border-radius: inherit; }

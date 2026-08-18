@@ -33,6 +33,12 @@ KNOWN_NON_REACH=(
   dexscreener.com twitch.tv reddit.com stocktwits.com farcaster.xyz
   privacy.com polymarket.com app.safe.global app.uniswap.org
   aerodrome.finance app.hyperliquid.xyz
+  explorer.altana.network
+  # Altana's public explorer (prd §403) — where an account's keys open on tap,
+  # and the ONLY place a key can actually be revoked (§112: we read and state,
+  # they act). NEVER fetched: the seat reads the keystore CONTRACTS over
+  # JSON-RPC, and those hosts ARE disclosed in NetworkReach (the "Altana"
+  # entry names all four). The explorer is only ever a link written into a row.
   # Radicle's public explorer (prd §400) — where a patch or issue row opens on
   # tap. NEVER fetched: the bridge reads a SEED NODE's `radicle-httpd` API, and
   # those hosts ARE disclosed in NetworkReach (the "Radicle" entry names both

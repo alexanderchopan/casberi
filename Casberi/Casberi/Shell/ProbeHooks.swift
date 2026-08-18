@@ -2874,6 +2874,31 @@ enum ProbeHooks {
                 }
             }
         },
+        // `-altanaSync YES` — run the keystore sweep and land rows, without
+        // waiting for a foreground wallet pass. Declared BEFORE the room
+        // probe (hooks run in list order) so a single launch can sync and
+        // then read the card it just made possible.
+        Hook(key: "altanaSync") { _, context in
+            Task { @MainActor in
+                let n = await AltanaKeystore.sync(context: context)
+                NSLog("altanaSync| landed=%d", n)
+            }
+        },
+        // `-altanaRoomProbe YES` — the room head (prd §403): the stored
+        // readings, then the composed card line by line. One NSLog each (the
+        // `-todayProbe` truncation lesson).
+        //
+        // It reads the SNAPSHOT, never the chain, which is the whole contract
+        // of this head — so an empty card here means the sweep hasn't run or
+        // found nothing, never that the RPC was slow. Pair with `-altanaSync`
+        // on the same launch to prove the round trip.
+        Hook(key: "altanaRoomProbe") { _, _ in
+            Task { @MainActor in
+                for line in AltanaRoom.probeLines() {
+                    NSLog("altanaRoom| %@", line)
+                }
+            }
+        },
         // `-safeProbe YES` NSLogs which watched wallets are detected Safes
         // per chain and their pending queue counts (or the honest
         // unreachable/none). Pairs with `-walletAddress` (a Safe address, to

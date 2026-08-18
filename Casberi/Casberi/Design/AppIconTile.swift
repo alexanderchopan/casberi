@@ -174,6 +174,12 @@ extension DS {
         // than the background — a gray "app" default here would read as a
         // seat whose art failed to load (report 2026-08-03).
         case "radicle":             return Color.fixed("#5555ff")
+        // Altana's own blue, sampled from its mark (prd §403). The mark is
+        // three fields — blue, yellow, orange — and the BLUE is the largest
+        // and the one that reads as the brand at chip size; picking the
+        // orange would make the seat read as an alert, which is precisely
+        // the wrong thing for a room about keys.
+        case "altana":              return Color.fixed("#3565e3")
         case "cal.com":             return Color.fixed("#292929")
         case "calendly":            return Color.fixed("#006bff")
         case "steam":               return Color.fixed("#1b2838")   // their dark navy

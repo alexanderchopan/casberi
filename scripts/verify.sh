@@ -729,6 +729,20 @@ print -P "%F{green}✓ github-room self-test%f"
 step "Radicle pure-logic self-test"
 "$ROOT/scripts/radicle-selftest.sh" >/dev/null \
   || fail "the Radicle logic self-test failed — run scripts/radicle-selftest.sh"
+
+# Altana's keystore room (`Model/AltanaKeystore.swift`, `Model/AltanaRoom.swift`).
+# Nothing on this host can register a key, revoke one, or make a grant expire —
+# there are 39 keys on Earth and this project owns none of them — so no device
+# check can ever exercise this room and the harness is the ONLY proof its
+# readings are right. Its sharpest case is the witnessed registration date: the
+# `getKey` struct layout is inferred, so a shifted field would render a
+# confident wrong date on a security screen, and the harness proves the witness
+# refuses rather than guesses. It also carries the conduct guard that keeps the
+# catalog's "never registers, revokes, or signs" true.
+step "Altana keystore self-test"
+"$ROOT/scripts/altana-selftest.sh" >/dev/null \
+  || fail "the Altana keystore self-test failed — run scripts/altana-selftest.sh"
+print -P "%F{green}✓ altana self-test%f"
 print -P "%F{green}✓ radicle self-test%f"
 
 # The four bridges added 2026-08-04. Three of them (Sentry, Vercel, PagerDuty)

@@ -371,6 +371,9 @@ enum DemoSeedAll {
         for event in demoMetrics { PostHogState.forget(event) }
         ChipMemory.forgetDemo(Array(demoVisits.keys))
         X402State.forget()
+        // The keystore snapshot and its seat evidence (prd §403).
+        AltanaState.clear()
+        AltanaKeystore.evidence.forget(demoWallet)
         // The seeded anonymity sets (prd §397). Scoped BY LABEL, unlike the
         // PostHog/Cloudflare stores above, and that is not fussiness: the
         // live sizes are global and re-bought within a day, but a landing
@@ -2271,6 +2274,33 @@ enum DemoSeedAll {
                 t.walletAddress = demoWallet
             }
         }
+        // Altana's keystore rides the watched wallet (prd §403). The refs must
+        // carry the REAL `altana:key:<chain>:<address>:<keyid>` shape
+        // `AltanaKeystore.ref` builds — a `"demo:"`-prefixed ref is the miss
+        // that silently zeroed the Peer and Privacy Pools cards on their own
+        // first coverage run, twice.
+        //
+        // These MIRROR `seedAltanaKeystore()`'s snapshot on purpose: the room
+        // HEAD composes from that snapshot and the rows are what sits beneath
+        // it, so a demo where the two disagree shows a card describing keys
+        // the room does not list.
+        let keys: [(String, String, Bool, Double)] = [
+            ("A root key can sign as \(WalletStore.shortAddress(demoWallet))", "dem0", true, 62),
+            ("A session key was granted for \(WalletStore.shortAddress(demoWallet)), until tomorrow", "dem1", false, 0.6),
+            ("A session key was granted for \(WalletStore.shortAddress(demoWallet)), until next month", "dem2", false, 4),
+            ("A session key was granted for \(WalletStore.shortAddress(demoWallet)), until last week", "dem3", false, 6),
+        ]
+        out += keys.map { k in
+            row(.link, k.0, source: "Altana",
+                ref: AltanaKeystore.ref(chain: "BNB Smart Chain", address: demoWallet,
+                                        keyID: "0x" + k.1 + String(repeating: "0", count: 59)),
+                days: k.3, hour: 10,
+                content: AltanaKeystore.explorerURL(address: demoWallet),
+                tags: [k.2 ? "Root key" : "Session key", "BNB Smart Chain"]) { t in
+                t.walletAddress = demoWallet
+                t.externalLink = AltanaKeystore.explorerURL(address: demoWallet)
+            }
+        }
         // Railgun ranks by token, read as DATA off `priceValue`/`priceCurrency`
         // — never parsed back out of the title. Ref must carry the real
         // `"railgun:shield:"`/`"railgun:unshield:"` prefix (`RailgunRoom
@@ -2527,6 +2557,48 @@ enum DemoSeedAll {
     /// ids exactly, so `item()`'s `estate.zoneNames[id]` lookup resolves a
     /// real name instead of falling back to the row's own title.
     @MainActor
+    /// Altana's keystore snapshot (prd §403).
+    ///
+    /// The room head composes from `AltanaState`, NOT from rows — it is chain
+    /// state, and re-reading it on every draw would spend an `eth_call` per
+    /// scroll. So a demo that seeded only rows would furnish the room and
+    /// leave its head permanently empty, which is the Cloudflare `runway` gap
+    /// (2026-08-08) in a new seat: a card that cannot draw, looking exactly
+    /// like a card with nothing to say.
+    ///
+    /// The shape mirrors what was MEASURED on BNB: one root key with no
+    /// expiry, 24-hour session grants, and — deliberately — one session key
+    /// already past its expiry while the registry still lists it, so the
+    /// demo exercises the hygiene line rather than pre-baking it away.
+    private static func seedAltanaKeystore() {
+        let now = Date.now
+        func key(_ id: String, root: Bool, registeredDaysAgo: Double,
+                 grantHours: Double?) -> AltanaKeystore.Key {
+            let registered = now.addingTimeInterval(-registeredDaysAgo * 86_400)
+            return AltanaKeystore.Key(
+                id: id, isRoot: root,
+                expiry: grantHours.map { registered.addingTimeInterval($0 * 3600) },
+                hasEverSigned: false, registeredAt: registered,
+                chainLabel: "BNB Smart Chain")
+        }
+        AltanaState.save([
+            AltanaKeystore.Reading(address: demoWallet, keys: [
+                key("0xdem0" + String(repeating: "0", count: 59), root: true,
+                    registeredDaysAgo: 62, grantHours: nil),
+                // Live, a little over halfway through a 24-hour grant.
+                key("0xdem1" + String(repeating: "0", count: 59), root: false,
+                    registeredDaysAgo: 0.6, grantHours: 24),
+                // Live, a 30-day grant with most of its runway left.
+                key("0xdem2" + String(repeating: "0", count: 59), root: false,
+                    registeredDaysAgo: 4, grantHours: 24 * 30),
+                // EXPIRED but still listed — the reading nothing else has.
+                key("0xdem3" + String(repeating: "0", count: 59), root: false,
+                    registeredDaysAgo: 6, grantHours: 24),
+            ], truncated: false),
+        ])
+        AltanaKeystore.evidence.remember(demoWallet)
+    }
+
     private static func seedCloudflareEstate() {
         CloudflareEstateStore.save(CloudflareEstate(
             zoneNames: ["demo0": "casberi.app", "demo1": "api.casberi.app"],
@@ -3577,6 +3649,8 @@ enum DemoSeedAll {
         // 5 · Cloudflare's estate snapshot — see `seedCloudflareEstate`'s own
         // doc for why the two cert rows alone don't reach the runway figure.
         seedCloudflareEstate()
+        // 5b · Altana's keystore snapshot — see `seedAltanaKeystore`.
+        seedAltanaKeystore()
         // 5b · The anonymity sets behind the Privacy Pools deposits seeded in
         // `wallet()` (prd §397). Two numbers, and the pair is the point: the
         // CURRENT set, plus the set at the moment the oldest deposit in each
@@ -3730,6 +3804,7 @@ enum DemoSeedAll {
         ("Polymarket", "Browsing", "Reads the public order book."),
         ("Peer", "Rides your wallet", "Lands settled fills, never trades."),
         ("Privacy Pools", "Rides your wallet", "Reads your deposits' review status."),
+        ("Altana", "Rides your wallet", "Reads which keys can sign for you."),
         ("Gnosis Pay", "Rides your wallet", "Reads what the card settled onchain."),
         ("ether.fi", "Rides your wallet", "Reads what the card settled onchain."),
         ("Apple Wallet", "Synced 6m ago", "Reads Apple Card, Cash and Savings."),
