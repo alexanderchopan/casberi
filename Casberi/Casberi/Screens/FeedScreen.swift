@@ -5712,6 +5712,11 @@ struct FeedScreen: View {
             // call site, so every row anatomy inherits it; compiles away off
             // Catalyst.
             .macHoverLift()
+            // …and the row leaves the app under the cursor (2026-08-17). Same
+            // single call site as the hover pair above, so every one of
+            // `shapedRow`'s anatomies can be dragged into Finder, Mail or a
+            // note; compiles away off Catalyst. See `MacRowDrag`.
+            .macRowDrag(thing)
             // V3b (2026-07-07, supersedes the kind-color wash): rows are
             // NEUTRAL cards — the translucent kind wash read as murk. Color
             // moved into the tag text: the project's own stable hue.
