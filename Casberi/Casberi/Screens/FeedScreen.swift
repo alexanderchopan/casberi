@@ -625,7 +625,7 @@ struct FeedScreen: View {
 
     /// The shape a source takes when its chip is in force.
     private enum Shape {
-        case all, photos, wallet, calendar, gmail, chat, social, reminders, bookmarks, notes, you, music, media, tokens, bitrefill, oneclaw, snapchat, files, x, x402, appStoreConnect, cursor, plain
+        case all, photos, wallet, calendar, gmail, chat, social, reminders, bookmarks, notes, you, music, media, tokens, bitrefill, oneclaw, snapchat, files, instagram, x, x402, appStoreConnect, cursor, plain
         init(source: String) {
             switch source {
             case "All":                 self = .all
@@ -677,6 +677,27 @@ struct FeedScreen: View {
             // case would also hand X's room the Farcaster/Bluesky roster head,
             // which reads its accounts out of `BlueskyStore` for anything that
             // isn't Farcaster.
+            // Instagram, 2026-08-18 (prd §395) — the LAST photo app in this
+            // app still drawing as text, and the one where it cost most. It
+            // had no case here at all, so it fell to `.plain`: a `BandRow` per
+            // row, a 26pt leader square and `titleLine`'s 80-character clamp,
+            // in a room whose own importer has written 480pt thumbnails since
+            // §310 explicitly because "Instagram is a photo app, and its room
+            // was a wall of text". The pixels were stored and never drawn at
+            // any size worth looking at — the §283 Files failure and the §313 X
+            // failure, both again, in the room they were both compared to.
+            //
+            // Its OWN case rather than joining `.x`: that room's grid holds
+            // your own wordless posts alone, and this one has to hold saves
+            // that arrived with no picture at all until `InstagramCaptions`
+            // fetched one. Sharing the case would also hand this room X's head.
+            // The LITERAL, like `case "X"` and `case "Snapchat"` beside it —
+            // `demo-selftest.py`'s check F reads this switch to prove every
+            // shape has a seeded source, and it resolves exactly three
+            // indirections by name (x402, App Store Connect, the media
+            // predicate). A fourth would make this room's shape unverifiable
+            // rather than verified, which is the worse half of both options.
+            case "Instagram":           self = .instagram
             case "X":                   self = .x
             // Circle x402, 2026-08-06 — the same defect as the line above, one
             // day later. It had no case here, so `.plain` drew twenty-two
@@ -766,7 +787,7 @@ struct FeedScreen: View {
         // Frames settle in like the music room's covers — a touch of scale so
         // the art reads as arriving, not sliding.
         case .media:    .init(dx: 0, dy: 10, scale: 0.97, step: 0.035)
-        case .social, .x: .init(dx: 0, dy: 12, scale: 0.98, step: 0.035)
+        case .social, .x, .instagram: .init(dx: 0, dy: 12, scale: 0.98, step: 0.035)
         default:        .init(dx: 0, dy: 8, scale: 1, step: 0.028)
         }
     }
@@ -2486,6 +2507,17 @@ struct FeedScreen: View {
                     XRoomCard(room: room) { year in
                         openYear(year, in: visible)
                     }
+                case .instagram(let room):
+                    InstagramRoomCard(room: room) { account in
+                        // An account owns many kept posts, so the card names
+                        // its newest as the landing (the Cursor repo rule).
+                        // Matched on `authorHandle` and on the ACT, or a tap on
+                        // a saves board could open a like from the same person.
+                        let tag = room.act == .saved ? "Saved" : "Liked"
+                        openNewest(source: InstagramRoomSource.source, in: visible) { thing in
+                            thing.authorHandle == account.handle && thing.tags.contains(tag)
+                        }
+                    }
                 }
             }
         } else if let anniversary {
@@ -2548,6 +2580,15 @@ struct FeedScreen: View {
             // separate the two halves of one thing.
             let photoTiles = visible.live.filter(Self.isXPhotoTile)
             let rest = visible.live.filter { !Self.isXPhotoTile($0) }
+            if !photoTiles.isEmpty { photoGridSection(photoTiles) }
+            let days = chronoGroups(rest)
+            groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
+        case .instagram:
+            // The mixed room's fourth instance (2026-08-18, prd §395), on
+            // Snapchat's, Files' and X's terms: what has pixels AND nothing to
+            // say leads as a grid, everything else reads as rows.
+            let photoTiles = visible.live.filter(Self.isInstagramPhotoTile)
+            let rest = visible.live.filter { !Self.isInstagramPhotoTile($0) }
             if !photoTiles.isEmpty { photoGridSection(photoTiles) }
             let days = chronoGroups(rest)
             groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
@@ -3806,6 +3847,11 @@ struct FeedScreen: View {
         // a shallow archive keeps the treemap; see that type's own note for
         // why the year rows carry each year's subject.
         case x(XRoom)
+        // Instagram (2026-08-18, prd §389) — the second head over an import,
+        // and the second that displaces a card the room already drew. It
+        // carries `FeedInsight.leaderboard`'s board forward whole, which is
+        // §349's rule rather than a courtesy; see `InstagramRoom`'s type note.
+        case instagram(InstagramRoom)
     }
 
     /// Resolve this room's own head, or nil. One `switch` so adding a fourth
@@ -3841,6 +3887,8 @@ struct FeedScreen: View {
             return SafeRoomSource.compose(things: visible).map { .safe($0) }
         case XRoomSource.source:
             return XRoomSource.compose(things: visible).map { .x($0) }
+        case InstagramRoomSource.source:
+            return InstagramRoomSource.compose(things: visible).map { .instagram($0) }
         default:
             return nil
         }
@@ -4918,6 +4966,28 @@ struct FeedScreen: View {
     /// title: that title is the localized word "Photo", and matching on it
     /// would empty this grid on every device that isn't in English. Guarded
     /// internally for the same corollary-4 reason as its two siblings.
+    /// A wordless picture in an Instagram export (2026-08-18, prd §389) — the
+    /// mixed room's grid membership, `isXPhotoTile`'s shape one product over
+    /// and for its exact reasons.
+    ///
+    /// Your own posts, reels and stories ONLY. A saved post's cover is a
+    /// picture too, and it is deliberately not a tile: a save is somebody
+    /// else's post that you kept for what it SAID as much as what it showed,
+    /// and the caption `InstagramCaptions` fetches is the words the room exists
+    /// to make searchable — extracting the picture into a grid would file the
+    /// two halves of one thing in two places. It rides its own post card
+    /// instead, cover and all.
+    ///
+    /// The test is the pixels plus the tag the importer stamps, never the
+    /// title: that title is the localized word "Photo", and matching on it
+    /// would empty this grid on every device that isn't in English. Guarded
+    /// internally for the same corollary-4 reason as its three siblings.
+    private static func isInstagramPhotoTile(_ thing: Thing) -> Bool {
+        thing.isLive && thing.source == InstagramImport.source && thing.kind == .note
+            && thing.previewImageData != nil
+            && thing.tags.contains("Photo")
+    }
+
     private static func isXPhotoTile(_ thing: Thing) -> Bool {
         thing.isLive && thing.source == XRoomSource.source && thing.kind == .note
             && thing.previewImageData != nil
@@ -4938,6 +5008,10 @@ struct FeedScreen: View {
         // importer gave it. Printing that under every cell would be a grid of
         // identical labels saying nothing.
         if thing.source == XRoomSource.source { return nil }
+        // An Instagram picture post is a tile precisely BECAUSE it has no
+        // caption; its title is the placeholder word the importer gave it, and
+        // printing that under every cell is a grid of identical labels.
+        if thing.source == InstagramImport.source { return nil }
         return thing.title
     }
 
@@ -5716,6 +5790,54 @@ struct FeedScreen: View {
                             wideArt: wideArt)
                 } else if thing.kind == .chat {
                     ExcerptRow(thing: thing, lines: 2)
+                } else {
+                    PostCard(thing: thing)
+                }
+            case .instagram:
+                // Our own note about the import keeps its plain band, and a
+                // saved conversation stays an excerpt — the X room's split
+                // exactly. Everything else in here IS a post: your captions,
+                // and the posts you saved or liked, which `InstagramCaptions`
+                // gives real words and a real cover.
+                if Corpus.isImportReceipt(thing) {
+                    BandRow(thing: thing,
+                            emphasized: thing.id == nextEventID,
+                            live: false,
+                            imageOnly: imageOnly,
+                            wideArt: wideArt)
+                } else if thing.kind == .chat {
+                    ExcerptRow(thing: thing, lines: 2)
+                } else if thing.tags.contains("Comment") {
+                    // A comment is not a post. It is a sentence you left on
+                    // somebody else's, and the export does not carry the post
+                    // it was left on — so it reads as an excerpt rather than as
+                    // a card claiming to be something it can't show.
+                    ExcerptRow(thing: thing, lines: 3)
+                } else if thing.kind == .link, thing.postText == nil {
+                    // A save whose words `InstagramCaptions` has not read back
+                    // yet, which right after an import is most of the room. It
+                    // is a handle and a date and nothing else (§245), and a
+                    // post card over it would print that handle TWICE — once as
+                    // the byline and once as the body, since `PostCard.words`
+                    // falls back to the title. So it stays the excerpt row it
+                    // has always been, and becomes a card the moment there is
+                    // something to put in one.
+                    //
+                    // Covers arrive on the SAME visit as the words, so a row
+                    // reaching here has no picture to lose.
+                    ExcerptRow(thing: thing, lines: 2)
+                } else if thing.tags.contains("Photo"), thing.previewImageData == nil {
+                    // A picture post whose thumbnail never landed — past
+                    // `ImportMedia.perImport`, or a file that would not decode.
+                    // The grid correctly refuses it (a tile promises a
+                    // picture), and a post card would show the placeholder word
+                    // "Photo" as its entire body. The plain band is what this
+                    // row honestly is: a date, and that something was posted.
+                    BandRow(thing: thing,
+                            emphasized: thing.id == nextEventID,
+                            live: false,
+                            imageOnly: imageOnly,
+                            wideArt: wideArt)
                 } else {
                     PostCard(thing: thing)
                 }

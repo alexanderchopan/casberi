@@ -36,6 +36,13 @@ private let instagramRecentDescriptor: FetchDescriptor<Thing> = {
 /// it says a deleted or private post stays a link, because the failure has to
 /// be named where the promise is made.
 ///
+/// AMENDED AGAIN 2026-08-18 (prd §389). Two of the export's own categories the
+/// steps never told anybody to tick — Stories and Reels — are read now, so the
+/// tick list names them; and the saved rows get their COVER PICTURE back beside
+/// their words, which is why the intro says a picture is fetched as well as a
+/// caption. The reach is the same one `NetworkReach` already discloses, one
+/// entry widened rather than a new act to explain.
+///
 /// SHAPE: `ImportSetupComponents`' (prd §314) — the staged block X earned. The
 /// wait here is about an hour rather than a day, but the structure is the same
 /// and so was the clutter.
@@ -57,7 +64,7 @@ struct InstagramImportScreen: View {
             BridgeSetupHeader(
                 name: "Instagram",
                 mode: .oneTimeImport,
-                intro: "Instagram has no live connection — download your export, bring it here, and search your captions, comments, saves and likes. Re-import any time for what's new.")
+                intro: "Instagram has no live connection — download your export, bring it here, and search your captions, comments, saves and likes. Saved posts get their words and cover picture back from Instagram's own public pages; re-import any time for what's new.")
             setupSection
             if !recent.isEmpty {
                 RecentThingsSection(header: "Imported", things: recent.live)
@@ -99,7 +106,7 @@ struct InstagramImportScreen: View {
                     // says why it didn't work.
                     steps: [
                         "Choose Download or transfer information, then Some of your information.",
-                        "Tick Saved, Likes, Posts and Comments.",
+                        "Tick Saved, Likes, Posts, Stories, Reels and Comments.",
                         "Set Format to JSON, not HTML, then Download to device.",
                         // "then pick the unzipped folder below" was the button
                         // beneath it read out loud (2026-07-31).
@@ -181,6 +188,10 @@ struct InstagramImportScreen: View {
     private func landedLine(_ summary: InstagramImport.Summary) -> String {
         var parts: [String] = []
         if summary.posts > 0    { parts.append("\(summary.posts) posts") }
+        // The wordless half, named apart (2026-08-18, prd §389). A subset of
+        // `posts`, never added to it — an export that is mostly photographs
+        // otherwise reports one number that reads as captions.
+        if summary.photos > 0   { parts.append("\(summary.photos) photos") }
         if summary.comments > 0 { parts.append("\(summary.comments) comments") }
         if summary.saved > 0    { parts.append("\(summary.saved) saved") }
         if summary.liked > 0    { parts.append("\(summary.liked) liked") }
@@ -195,6 +206,6 @@ struct InstagramImportScreen: View {
     private func nothingNewLine(_ summary: InstagramImport.Summary) -> String {
         summary.skipped > 0
             ? "Nothing new — all \(summary.skipped) were already here."
-            : "That export had nothing in it. Check you ticked Saved, Likes, Posts or Comments — and chose JSON, not HTML, which can't be read."
+            : "That export had nothing in it. Check you ticked Saved, Likes, Posts, Stories, Reels or Comments — and chose JSON, not HTML, which can't be read."
     }
 }

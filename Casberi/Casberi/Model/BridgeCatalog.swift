@@ -678,9 +678,9 @@ enum BridgeCatalog {
         // honesty rule — the alternative is a seat that reads as full search
         // over your saves and isn't.
         Offer(name: "Instagram",   tagline: "Your posts and saves, findable",        group: "Network",   connectable: true,
-              summary: "Instagram only lets you export your account — a folder you'd never open again. This makes it usable.\n\nMeta leaves other people's captions out, so a saved post lands named for who made it.",
-              features: ["Your captions and comments, as searchable text",
-                         "Saves and likes, named and openable",
+              summary: "Instagram only lets you export your account — a folder you'd never open again. This makes it usable.\n\nMeta leaves other people's captions and pictures out, so \(DS.device) reads each saved post's own public page to put them back.",
+              features: ["Your posts, reels, stories and comments, as searchable text",
+                         "Saves and likes, named, worded and with their cover",
                          "One-time import — re-importing adds only what's new",
                          "Read on \(DS.device); nothing is sent to Meta"],
               needsSetup: true, added: day(2026, 7, 31)),

@@ -851,6 +851,19 @@ enum DemoSeedAll {
         return out
     }
 
+    /// Instagram — the room a person recognises, which means the room has to
+    /// be MOSTLY OTHER PEOPLE (prd §395). The old seed was six captions and
+    /// five saves across three accounts, which drew nothing this room actually
+    /// looks like and, once `InstagramRoom` shipped, could not compose its head
+    /// at all: that card needs `minimumKept` kept posts across
+    /// `minimumAccounts` accounts before it will claim a library exists.
+    ///
+    /// Four things it now carries deliberately, each exercising a branch that
+    /// otherwise renders as the same silent nothing: kept posts with WORDS and
+    /// a COVER (what `InstagramCaptions` produces, so the room draws post cards
+    /// rather than handles), a wordless PHOTO post (the grid), a save tagged
+    /// `Gone` (the head's footnote — the reading no service can make about your
+    /// own library), and a `Reel` (the facet read off Meta's own permalink).
     private static func instagram() -> [Thing] {
         var out: [Thing] = [receipt("Instagram", "96 saved · 240 comments", days: 6)]
         let written: [(String, [String], Double)] = [
@@ -863,24 +876,91 @@ enum DemoSeedAll {
         ]
         out += written.enumerated().map { i, w in
             row(.note, w.0, source: "Instagram", ref: "demo:ig:note:\(i)", days: w.2, hour: 19,
-                content: w.0) { t in
+                content: w.0, tags: ["Post"]) { t in
                 t.ocrTopics = w.1
                 t.topicsAt = .now
+                // The words the room's post card draws — `title` is only ever
+                // the 80-character clamp.
+                t.postText = w.0
+                t.authorHandle = "you"
             }
         }
-        let saved: [(String, String, Double)] = [
-            ("Cafe with the marble counter", "@lisboneats", 8),
-            ("Studio shelf, all wood", "@workspaces", 15),
-            ("Ceramics, matte glaze", "@studiokoto", 22),
-            ("Bakery window at six", "@lisboneats", 34),
-            ("Desk setup, one lamp", "@workspaces", 48),
-        ]
-        out += saved.enumerated().map { i, s in
-            row(.link, s.0, source: "Instagram", ref: "demo:ig:save:\(i)", days: s.2, hour: 23,
-                tags: ["Saved"]) { t in
-                t.authorHandle = s.1
-                t.previewImageURL = art(i)
+        // The wordless half: a photograph is a post with nothing to say, and
+        // its pixels are what make it a grid tile rather than a row titled
+        // "Photo" (`FeedScreen.isInstagramPhotoTile`).
+        let photos: [(Double, Int)] = [(9, 0), (17, 1), (26, 2), (41, 3)]
+        out += photos.enumerated().map { i, p in
+            row(.note, "Photo", source: "Instagram", ref: "demo:ig:photo:\(i)",
+                days: p.0, hour: 20, tags: ["Post", "Photo"]) { t in
+                t.previewImageData = pixels(p.1)
+                t.authorHandle = "you"
             }
+        }
+        // Fourteen kept posts across five accounts — over `minimumKept` and
+        // `minimumAccounts`, so the head composes, and unevenly spread so the
+        // board has a real shape rather than five equal bars.
+        let saved: [(caption: String, handle: String, days: Double, reel: Bool)] = [
+            ("Cafe with the marble counter", "lisboneats", 8, false),
+            ("Studio shelf, all wood", "workspaces", 15, false),
+            ("Ceramics, matte glaze", "studiokoto", 22, false),
+            ("Bakery window at six", "lisboneats", 34, false),
+            ("Desk setup, one lamp", "workspaces", 48, false),
+            ("Thirty seconds on lamination", "lisboneats", 55, true),
+            ("The tile shop nobody posts about", "lisboneats", 61, false),
+            ("Two chairs, one window", "workspaces", 74, false),
+            ("Wheel-thrown, trimmed wet", "studiokoto", 88, true),
+            ("Blue hour over the bridge", "lightsonlisboa", 103, false),
+            ("Pastry lamination, slowly", "lisboneats", 119, false),
+            ("Kiln opening, third firing", "studiokoto", 140, false),
+            ("Rooftop, no filter", "lightsonlisboa", 166, false),
+            ("A shelf of nothing but bowls", "quietrooms", 190, false),
+        ]
+        out += saved.enumerated().map { (i, s) -> Thing in
+            var tags = ["Saved"]
+            if s.reel { tags.append("Reel") }
+            // The two oldest are gone from Instagram — what the caption pass
+            // records when a saved post answers 404 (prd §309), and the only
+            // input to the head's footnote.
+            if i >= saved.count - 2 { tags.append("Gone") }
+            return row(.link, s.caption, source: "Instagram", ref: "demo:ig:save:\(i)",
+                       days: s.days, hour: 23, content: "https://www.instagram.com/p/demo\(i)/",
+                       tags: tags) { t in
+                t.authorHandle = s.handle
+                t.socialContext = "saved"
+                // What `InstagramCaptions` leaves behind on a row it reached:
+                // the post's own words on `postText`, its cover as bytes, and
+                // the retrieval line. A `Gone` row keeps its handle and nothing
+                // else, which is exactly what a 404 leaves you with.
+                if !t.tags.contains("Gone") {
+                    t.postText = s.caption
+                    t.enrichedText = s.caption
+                    t.previewImageData = pixels(i)
+                }
+            }
+        }
+        let liked: [(String, String, Double)] = [
+            ("Every bench in the park, ranked", "quietrooms", 11),
+            ("One pot, forty minutes", "lisboneats", 24),
+            ("Shelf brackets that aren't ugly", "workspaces", 58),
+        ]
+        out += liked.enumerated().map { i, l in
+            row(.link, l.0, source: "Instagram", ref: "demo:ig:like:\(i)",
+                days: l.2, hour: 21, content: "https://www.instagram.com/p/demolike\(i)/",
+                tags: ["Liked"]) { t in
+                t.authorHandle = l.1
+                t.socialContext = "liked"
+                t.postText = l.0
+                t.previewImageData = pixels(i)
+            }
+        }
+        let comments: [(String, String, Double)] = [
+            ("The crumb on this is unreal", "lisboneats", 12),
+            ("Which glaze is that?", "studiokoto", 31),
+        ]
+        out += comments.enumerated().map { i, c in
+            row(.note, "\(c.0) — on @\(c.1)", source: "Instagram",
+                ref: "demo:ig:comment:\(i)", days: c.2, hour: 18,
+                content: c.0, tags: ["Comment"])
         }
         return out
     }

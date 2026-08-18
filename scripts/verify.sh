@@ -346,7 +346,21 @@ print -P "%F{green}✓ front-page self-test%f"
 step "X pure-logic self-test"
 "$ROOT/scripts/x-selftest.sh" >/dev/null \
   || fail "the X logic self-test failed — run scripts/x-selftest.sh"
-print -P "%F{green}✓ x self-test%f"
+print -P "%F{green}✓ X pure-logic self-test%f"
+
+# The Instagram room's head and the §395 wiring under it. Same reason as the X
+# row above and one grade stronger: that seat could at least be measured by
+# anyone who requests an archive, and this one cannot be measured on this host
+# at all — every failure is a silent wrong answer over a corpus nobody here has.
+# Saves and likes summed into one board (§247's ruling, broken), a board that
+# reshuffles between two opens, "from 6 accounts" over a library of four
+# hundred, a year printed as a quantity. It also carries the negative guard that
+# keeps `og:image`'s SIGNED url out of `previewImageURL` — art that 404s within
+# the week, which is precisely what §245 measured and refused.
+step "Instagram pure-logic self-test"
+"$ROOT/scripts/instagram-selftest.sh" >/dev/null \
+  || fail "the Instagram logic self-test failed — run scripts/instagram-selftest.sh"
+print -P "%F{green}✓ Instagram pure-logic self-test%f"
 
 # The All feed's fold decisions (prd §377/§378/§379). Every failure it catches
 # is a silent wrong answer on the LANDING SCREEN that renders perfectly: a
@@ -1163,6 +1177,15 @@ xcrun simctl terminate "$DEVICE" "$BUNDLE" 2>/dev/null || true
 #     which is the exact registry-drift class this probe's own header
 #     warns about and would have reported three false "gaps" forever.
 #
+# `instagramHead` (2026-08-18, prd §395) is the FOURTEENTH, and the second
+# over an IMPORT rather than a live bridge. Its demo gap would have been the
+# subtlest yet and is worth recording: the seat's rows were already there and
+# already correct, but the head needs `InstagramRoom.minimumKept` kept posts
+# across `minimumAccounts` accounts before it will claim a library exists, and
+# the old seed had five saves across three — a corpus that composes every OTHER
+# Instagram card and not this one. `DemoSeedAll.instagram` grew a real library
+# in the same commit.
+#
 # `railgunHead` (2026-08-11) is the ELEVENTH source head, added by a
 # concurrent session mid-way through this list's own life — added here the
 # same day, the exact discipline the registry-drift finding above argues
@@ -1249,6 +1272,7 @@ else
     railgunHead       "Railgun"
     safeHead          "Safe"
     xHead             "X"
+    instagramHead     "Instagram"
   )
   MISSING_HEADS=()
   for name in "${(k)ROOM_HEADS[@]}"; do

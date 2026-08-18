@@ -74,7 +74,12 @@ enum SocialThread {
     /// of that room apart once every row renders as a post card: your own
     /// writing and posts you liked, which otherwise differ only by a handle
     /// that `fetchFaces` may not have named yet.
-    static let contextSources: Set<String> = sources.union(["Slack", "X"])
+    /// Instagram joined 2026-08-18 (prd §395) on X's own terms and for its own
+    /// reason: once the room draws every row as a post card, a saved post and a
+    /// liked one differ only by a marker, and both differ from something you
+    /// wrote only by a handle the caption pass may not have reached yet. The
+    /// export states the act, so the card can say it.
+    static let contextSources: Set<String> = sources.union(["Slack", "X", "Instagram"])
     static func hasContext(_ source: String) -> Bool { contextSources.contains(source) }
 
     /// How many replies a thread fetch returns — the sheet shows this many at
@@ -181,6 +186,10 @@ enum SocialThread {
         }
         switch thing.socialContext {
         case "liked":   return String(localized: "Liked")
+        // Instagram's other half. A save is a deliberate keep and a like is a
+        // reaction in passing — §247 refuses to sum them into one ranking, and
+        // the card refuses to spell them with one word for the same reason.
+        case "saved":   return String(localized: "Saved")
         case "recast":  return recastWord(thing.source)
         case "mention": return String(localized: "Mentions you")
         case "reply":   return String(localized: "Replied to you")

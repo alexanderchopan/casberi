@@ -24843,3 +24843,218 @@ Hit targets and thresholds are the class of defect that needs a human.
 **Verified:** dragged from the TITLE — a region with no gesture at all before
 this — and the panel dismissed. Both platforms compile; the packing self-test,
 motion and liveness audits are green.
+
+## §395 — Instagram becomes a photo app: the room gets a shape, the saves get their pictures, and the export's other four files finally get opened (user: "i'd like to make the Instagram experience fantastic. What else can we do to enrich it?", then picked all four options, 2026-08-18)
+
+Four changes, and the thread running through all of them is that this seat's
+data was already better than its surfaces. §245 landed the import, §247 gave the
+room a face, §309 raised the caps and §310 taught the importer to thumbnail the
+export's own pictures — and then nothing drew them, because nobody had ever
+given Instagram a `FeedScreen.Shape`.
+
+### 1. The room had no shape at all, in the app's only photo app
+
+`Shape.init(source:)` had no `case` for Instagram, so it fell to `.plain`: a
+`BandRow` per row — a 26pt leader square, `titleLine`'s 80-character clamp, a
+timestamp. §310's own entry says why that is the worst room in the app for it:
+*"Instagram is a photo app and its room was a wall of text."* That pass fixed
+the DATA (a 480pt thumbnail on `previewImageData`, read inside the folder grant)
+and left the RENDERING exactly where it was, so the pixels have been in the
+store and on no screen since.
+
+This is the third time the same failure has been found — Files (§283: a
+connected folder of screenshots drawn as filename rows over stored thumbnails),
+X (§313: a room of sentences drawn as 80-character titles over stored prose) —
+and Instagram is the room both of those were compared *to*. It now has its own
+case, on the same mixed-room terms as Snapchat (§247), Files (§283) and X
+(§375): what has pixels AND nothing to say leads as a grid, everything else
+reads as rows.
+
+**Its own case, not `.x`.** That room's grid holds your own wordless posts
+alone; this one also holds saves whose cover arrives later, from the network,
+and sharing the case would hand this room X's head as well.
+
+**Rows.** Our own import receipt keeps the plain band and a saved conversation
+keeps its excerpt — X's split exactly. A COMMENT is an excerpt too, deliberately:
+it is a sentence you left on somebody else's post, and the export does not carry
+the post, so a card would be claiming to show something it cannot. Everything
+else is a post card: your captions, and the posts you saved or liked.
+
+**A save's cover is deliberately NOT a tile.** A save is somebody else's post
+that you kept for what it said as much as for what it showed, and the caption
+`InstagramCaptions` fetches is the words this room exists to make searchable —
+extracting the picture into a grid would file the two halves of one thing in two
+places. It rides its own post card, cover and all. This is §375's own rule ("a
+photograph with a caption stays a post card, because the caption is the post")
+applied to somebody else's caption.
+
+### 2. The saves get their pictures — and §245's refusal was right about the wrong thing
+
+§245's amendment measured `og:image` and declined it, in terms worth quoting
+because they are still true: the URL is real and it works, and it is **signed**,
+with the sampled post's `oe=6A74B2B9` decoding to four days out. Storing it as
+`previewImageURL` gives every row art that silently 404s within the week, and
+re-fetching hundreds of rows to keep signatures warm is not a trade worth making
+for decoration.
+
+**That is an argument about the URL, and it was applied to the pixels.** Every
+other picture in this app is a 480pt JPEG on `previewImageData` — bytes, which
+cannot expire — and `ImportMedia` has produced exactly that object, from an
+import, since §310. So the cover is fetched once, downscaled, and kept; the
+signed URL is read, used and thrown away, never stored. The negative guard in
+`scripts/instagram-selftest.sh` fails the build if `previewImageURL` ever
+appears in that file, because the refusal is the part that is easy to lose.
+
+Four rails, none of them optional:
+
+1. **Bounded harder than the captions.** `coverCap` = 1,000 covers, ever, for
+   the whole library. Text is a rounding error beside pixels; at ~40KB each this
+   is ~40MB in a store that mirrors to CloudKit. Newest first, so what it keeps
+   is what a person is likeliest to be looking for. The count is a
+   `UserDefaults` counter rather than a measurement, because measuring it means
+   reading `previewImageData` on every row of a room that holds thousands — a
+   column deliberately absent from `FeedScreen.lightColumns`, so the
+   measurement would fault the entire library to answer a question about a cap.
+2. **The host is checked**, on the label boundary, against Meta's own two CDNs
+   (`cdninstagram.com`, `fbcdn.net`) and nothing else. `og:image` is a string
+   out of a page — following it because it appeared in a page we asked for is
+   the same leak `postURL` already refuses one function down.
+3. **Disclosed.** `NetworkReach`'s Instagram entry names both CDNs and says a
+   cover is downloaded once; the connect screen's intro says it before you tap
+   Import; `NetworkLedger.record` puts it on the receipts screen.
+4. **The backfill is separate, and sequenced.** The cover rides the same visit
+   as the caption for rows the pass has yet to reach. For rows an earlier build
+   already captioned there is no visit left to make — `enrichedText != nil` is
+   precisely what drops a row out of `candidates` — so `healCovers` runs only
+   when there is nothing left to caption, with its own ledger. Without it the
+   feature would have reached imports made after it shipped and nothing else:
+   §313's `termsEpoch` problem, in a room where everything landed on one
+   afternoon.
+
+The same pass now writes the caption to **`postText`** as well as
+`enrichedText`. `enrichedText` is retrieval-only by the 2026-07-15 ruling, so
+until today a caption this pass fetched was searchable and on no screen — §313's
+X finding, in the room beside it. `postText` is what the post card draws — and like
+`content` it sits deliberately OUTSIDE `FeedScreen.lightColumns`, so it faults on
+a visible row's appearance and never once per corpus row, which is the trade that
+pre-fetch list exists to make. An un-captioned save keeps the excerpt row it has
+always been rather than becoming a post card whose body is its own handle printed
+twice.
+
+### 3. Four files the importer had never opened, and the wordless half
+
+Only `media/posts_N.json` was read, and only when the post carried a caption.
+Both halves of that were losses nobody could see.
+
+**`reels.json`, `stories.json`, `archived_posts.json` and `igtv_videos.json`**
+sit beside it in the same shape and were never opened. A person whose Instagram
+is mostly reels imported their comments and nothing they had made in years, and
+the receipt reported it in a number that looked perfectly healthy. `posts_N` is
+the only numbered one and the only bare array; the rest are single-key envelopes
+whose key differs per category, so `entries(in:)` takes the first array it finds
+rather than matching a key we would have to keep in step with Meta's naming —
+`permalink`'s own rule, one function up.
+
+**A captionless post now lands as a picture.** The old rule — "the media stays
+in the export, so a caption is the only substance such a row would have" — was
+written in §245, before §310. It has pixels now. This is `XArchiveImport`'s §375
+ruling one product over, and it carries the same `Photo` facet. But only when
+the picture is one we can DECODE: `isPicture` gates on the file's own extension,
+so a wordless video is still skipped rather than landing as a row titled "Photo"
+with nothing behind it — the §83 fake status, spelled as a placeholder.
+
+Three more facts the export already stated and nobody was reading: your own
+**username** (`personal_information.json`) so a post you wrote is introduced by
+you rather than by the word "Instagram"; the **kind of post a save was**, read
+off Meta's own permalink (`/reel/` → a `Reel` facet — free, no request, the §312
+YouTube-Shorts precedent, and the only thing separating a saved reel from a
+saved photograph in a room made mostly of saves); and the **act**
+(`socialContext`), so the post card says "Saved" or "Liked" in the slot every
+other social room has drawn it in since §239.
+
+**Three new §308 facets** — `Reel`, `Story`, `Photo` — each read off a fact
+rather than guessed, each riding BESIDE `Post` rather than replacing it (a
+wordless reel is still a reel), and each behind the standing gating rule, which
+`Photo` needs as much as `Shorts` did: it is an ordinary English word and this
+corpus is full of it.
+
+**One correction that came with them.** "Everything I wrote" (§310) matches on a
+tag set, and a wordless post wears a writing tag beside `Photo`. That is right
+for a facet and wrong for that scope — so `Retriever.wroteIt` excludes `Photo`,
+and `FeedInsight.topicMap` excludes it from the Instagram map's own denominator.
+Before today a captionless post did not land at all, so neither could be wrong;
+landing them is what made both necessary.
+
+### 4. The room head: the library, not the day
+
+Every other import room in this app is mostly the person's own writing. This one
+is not, and nothing the room drew said so. `FeedInsight.leaderboard` ranked the
+accounts and could not say how big the pile was or how far back it went; the
+topic treemap describes the seam of your own captions running through it;
+`FeedHeatmap`'s "Your Instagram year" charts twelve months over a decade of
+saving.
+
+`InstagramRoom` states the library: **how much you kept, from how many accounts,
+over how long, and how much of it Instagram has since deleted.**
+
+**§349's rule is why the board is still there.** This card displaces "Who you
+save most", and a head must never draw less than what it displaces — so the
+board is carried forward whole, ranked the same way, capped at the same six rows
+`FeedInsight.ranked` uses. The two caps live in different files and cannot see
+each other; `instagram-selftest.sh` is the only thing keeping them equal.
+
+**§247's ruling is kept exactly.** Saves and likes are never summed — a save is
+a deliberate keep and a like is a reaction in passing, and one ranking over both
+is a number with no meaning. The card is about ONE act, saves when there are
+enough of them and likes otherwise, and its headline says which rather than
+quietly re-labelling the same bars. What you MADE is a separate clause with its
+own verb, never added to the total.
+
+**The `Gone` count is the reading no service can make about you.** §309 has
+stamped that tag since it shipped and nothing has ever surfaced it. It is stated
+as a floor, not a total, and the wording carries that — only rows the caption
+pass has actually asked about can be known gone, and that pass walks the library
+slowly in the background.
+
+**One reading was deliberately left out**, and it is the one somebody will try to
+add back: how many kept posts have their words and covers yet. That test is
+`enrichedText != nil` / `previewImageData != nil`, and neither is a pre-fetched
+column — asking them would fault every row of a room holding thousands, on every
+re-draw, to answer a question about a background pass. Both live in
+`-instagramRoomProbe` instead, where they are asked once.
+
+It costs nothing: `sourceRef`, `authorHandle`, `capturedAt`, `tags`, `kind`, all
+light columns already pre-fetched. No request, no new `Thing` property, **no
+CloudKit Production deploy**.
+
+### What guards it
+
+`scripts/instagram-selftest.sh` (wired into `verify.sh`; `verify-mac.sh` picks
+it up by discovery) compiles `InstagramRoom.swift` WHOLE and unmodified —
+Foundation-only by design — with ~30 assertions and 10 mutations, plus the drift
+guards for the wiring a compiled head cannot prove about itself: the `Shape`
+case, the grid's membership test, the head being reached and drawn, both caps
+being equal, the four media paths, the three facets, the cover's two halves
+(bytes kept, signed URL refused), and the CDN's presence in `NetworkReach`.
+`DemoSeedAll.instagram` grew a real library in the same commit, because the head
+declines under its floors and the old seed — five saves across three accounts —
+could compose every other Instagram card and not this one; `verify.sh`'s
+room-head coverage step would have caught that, which is what it is for.
+
+Three negative guards read a COMMENT-STRIPPED copy of the source, because all
+three files document these rules by naming the thing they must not do. That is
+the Obsidian/Cursor lesson (§319/§303), earned for the fourth time here: the
+`previewImageURL` guard fires against the paragraph explaining why
+`previewImageURL` is forbidden, unless the comments are gone first.
+
+**UNBUILT AND UNMEASURED, and structurally so.** Authored on Linux with no Xcode
+and no Swift toolchain, so nothing here has been compiled and the harness has
+never run — the §245/§246/§280 grade, and stated plainly rather than implied.
+Every static audit that can run without a toolchain is green (reach, catalog,
+demo parity, demo guard, liveness, motion, ramps, localization, setup copy, prd
+index), and the drift guards in the new harness were run standalone and pass.
+The cover fetch has never touched a real Instagram CDN, no real export has ever
+been imported on this host, and the four new media paths come from the same
+parsers §245 was built against. Every read fails safe: a missing file is a skip,
+an unresolvable path yields no thumbnail, a refused host yields no cover, and
+the row lands exactly as it did before.

@@ -93,6 +93,27 @@ enum ImportMedia {
         }.value
     }
 
+    /// A 480pt / q0.7 JPEG for bytes already in hand, rather than a file on
+    /// disk (2026-08-18, prd §395).
+    ///
+    /// Same size, same quality, same off-main decode as the file version above
+    /// — one object, two doors — because a cover fetched from Instagram's CDN
+    /// has to be indistinguishable from a picture read out of the export folder
+    /// once it lands. `CGImageSourceCreateWithData` is the only difference.
+    static func thumbnail(data: Data) async -> Data? {
+        await Task.detached(priority: .utility) { () -> Data? in
+            guard let src = CGImageSourceCreateWithData(data as CFData, nil) else { return nil }
+            let opts: [CFString: Any] = [
+                kCGImageSourceCreateThumbnailFromImageAlways: true,
+                kCGImageSourceThumbnailMaxPixelSize: 480,
+                kCGImageSourceCreateThumbnailWithTransform: true,
+            ]
+            guard let cg = CGImageSourceCreateThumbnailAtIndex(src, 0, opts as CFDictionary)
+            else { return nil }
+            return UIImage(cgImage: cg).jpegData(compressionQuality: 0.7)
+        }.value
+    }
+
     /// Resolves a path the export states RELATIVE to its own root, trying the
     /// picked folder and then one level down — the same two-level search every
     /// importer's own `read` does, and for the same reason: whether a person

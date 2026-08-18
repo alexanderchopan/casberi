@@ -44,6 +44,30 @@ import SwiftData
 /// files stay exactly where they are. This mattered more here than anywhere
 /// else: Instagram is a photo app, and its room was a wall of text.
 ///
+/// FOUR MORE FILES, AND THE WORDLESS HALF (2026-08-18, prd §395). Until this
+/// date the only thing you MADE that this importer read was `posts_N.json`, and
+/// only when the post carried a caption. Both halves of that were losses nobody
+/// could see:
+///
+///   - `reels.json`, `stories.json`, `archived_posts.json` and
+///     `igtv_videos.json` sit beside it, in the same shape, and were never
+///     opened. A person whose Instagram is mostly reels imported their comments
+///     and nothing they had made in years, and the receipt said so in a number
+///     that looked perfectly healthy.
+///   - A captionless post was SKIPPED, on §245's reasoning that "the media
+///     stays in the export, so a caption is the only substance such a row would
+///     have". That stopped being true in §310, when this importer learned to
+///     thumbnail the export's own files. It has pixels now, so a wordless
+///     photograph is a thing — `XArchiveImport`'s §375 ruling, one product
+///     over, and it carries the same `Photo` facet and feeds the same kind of
+///     grid.
+///
+/// The same pass reads your own USERNAME out of `personal_information.json`, so
+/// a post you wrote is introduced by you rather than by the word "Instagram";
+/// stamps the kind of post a save was (`Reel`) off Meta's own permalink; and
+/// stamps the ACT (`socialContext`) so the room's post card can say "Saved" or
+/// "Liked" in the slot every other social room already draws it in.
+///
 /// NOT BUILT, with reasons. (1) DMs: full message text is in there and would be
 /// the largest prose corpus in the export, but whether years of private
 /// conversation belong in a searchable index is the person's call to make
@@ -56,6 +80,12 @@ enum InstagramImport {
         var saved = 0
         var liked = 0
         var posts = 0
+        /// How many of `posts` landed as PICTURES rather than captions — a
+        /// SUBSET, never added to `imported`. Your Instagram is full of posts
+        /// whose caption is the empty string, and until 2026-08-18 every one of
+        /// them was skipped: `landOwnMedia` required a caption, so a wordless
+        /// photograph had, in its own words, no substance. It has a photograph.
+        var photos = 0
         var comments = 0
         /// Private messages, landed only when `ImportOptions.includeMessages`
         /// says so. Off by default and stays off.
@@ -95,6 +125,71 @@ enum InstagramImport {
     private static let likedPath    = "your_instagram_activity/likes/liked_posts.json"
     private static let postsStem    = "your_instagram_activity/media/posts_"
     private static let commentsStem = "your_instagram_activity/comments/post_comments_"
+    /// Where the export states your own username — the one place it appears as
+    /// data rather than inside a path. Without it every row you WROTE
+    /// introduced itself as "Instagram" in the room's own post cards, beside
+    /// saves that correctly name the account they came from.
+    private static let selfPath     = "personal_information/personal_information.json"
+
+    /// The name every row of this room carries.
+    static let source = "Instagram"
+
+    /// The OTHER four files under `media/` holding things you made, none of
+    /// which were read until 2026-08-18 (prd §395). `posts_N.json` is the only
+    /// numbered one and the only bare array; the rest are single-key envelopes
+    /// whose key differs per category — which is exactly why `entries(in:)`
+    /// below takes the first array it finds instead of matching a key we would
+    /// have to keep in step with Meta's naming.
+    ///
+    /// Each carries its own `ref` prefix and its own §308 facet, so "my reels"
+    /// and "my stories" are filters rather than hopes, and so a story and a
+    /// post posted in the same second can never collide on one `sourceRef`.
+    /// Archived posts and IGTV keep the plain `Post` facet — an archived post
+    /// is a post you hid, not a different kind of object, and IGTV is a product
+    /// Instagram itself retired.
+    private static let ownMedia: [(path: String, ref: String, facet: String)] = [
+        ("your_instagram_activity/media/reels.json",          "reel",     "Reel"),
+        ("your_instagram_activity/media/stories.json",        "story",    "Story"),
+        ("your_instagram_activity/media/archived_posts.json", "archived", "Post"),
+        ("your_instagram_activity/media/igtv_videos.json",    "igtv",     "Post"),
+    ]
+
+    /// Picture extensions `ImportMedia.thumbnail` can actually decode.
+    ///
+    /// Load-bearing, and the reason a wordless VIDEO is still skipped: a
+    /// captionless row's whole substance is its picture, and `CGImageSource`
+    /// cannot open an `.mp4`. Landing one anyway would put a row titled "Photo"
+    /// with no photo in it into a room whose grid promises pixels — the §83
+    /// fake status, spelled as a placeholder.
+    private static let pictureExtensions: Set<String> = [
+        "jpg", "jpeg", "png", "heic", "heif", "webp", "gif",
+    ]
+
+    /// Whether the export's own path for an entry names a picture we can read.
+    static func isPicture(uri: String?) -> Bool {
+        guard let uri, let dot = uri.lastIndex(of: ".") else { return false }
+        let ext = uri[uri.index(after: dot)...].lowercased()
+        return pictureExtensions.contains(ext)
+    }
+
+    /// A saved or liked post's §308 facet, read off the permalink Meta wrote.
+    ///
+    /// Free — no request, no new field, no guess: Instagram encodes the KIND of
+    /// post in its own URL path, and until now a saved reel and a saved
+    /// photograph were indistinguishable in a room made mostly of saves. The
+    /// YouTube-Shorts precedent (prd §312), one product over.
+    ///
+    /// `/tv/` is IGTV, which Instagram folded into reels; it answers the same
+    /// facet because that is what the person would search for. Everything else
+    /// — `/p/`, and anything Meta ships next — earns no extra facet rather than
+    /// a guessed one: `Saved` and `Liked` already say what the row is.
+    static func linkFacet(_ link: String) -> String? {
+        let lower = link.lowercased()
+        for marker in ["/reel/", "/reels/", "/tv/"] where lower.contains(marker) {
+            return "Reel"
+        }
+        return nil
+    }
 
     // MARK: - Run
 
@@ -132,10 +227,26 @@ enum InstagramImport {
                       summary: &summary, landed: &landed, seen: &seen,
                       stored: stored, backfilled: &backfilled)
         }
+        // Read BEFORE the rows that wear it. Nil is normal (an export requested
+        // without the profile box ticked has no such file) and costs only the
+        // byline, never a row.
+        let me = ownUsername(under: folder)
         for data in readNumbered(postsStem, under: folder) {
             foundAnyCategory = true
-            landPosts(data, summary: &summary, landed: &landed, seen: &seen,
-                      mediaURIs: &mediaURIs)
+            landOwnMedia(data, refPrefix: "post", facet: "Post", me: me,
+                         summary: &summary, landed: &landed, seen: &seen,
+                         mediaURIs: &mediaURIs)
+        }
+        // Reels, stories, archived posts and IGTV (2026-08-18, prd §395). Same
+        // reader, same shape, four files this importer had simply never opened
+        // — so a person whose Instagram is mostly reels imported their comments
+        // and nothing they had made in years.
+        for category in ownMedia {
+            guard let data = read(category.path, under: folder) else { continue }
+            foundAnyCategory = true
+            landOwnMedia(data, refPrefix: category.ref, facet: category.facet, me: me,
+                         summary: &summary, landed: &landed, seen: &seen,
+                         mediaURIs: &mediaURIs)
         }
         for data in readNumbered(commentsStem, under: folder) {
             foundAnyCategory = true
@@ -325,6 +436,7 @@ enum InstagramImport {
             s.saved > 0 ? String(localized: "\(s.saved) saved") : nil,
             s.liked > 0 ? String(localized: "\(s.liked) liked") : nil,
             s.posts > 0 ? String(localized: "\(s.posts) posts") : nil,
+            s.photos > 0 ? String(localized: "\(s.photos) photos") : nil,
             s.comments > 0 ? String(localized: "\(s.comments) comments") : nil,
             s.messages > 0 ? String(localized: "\(s.messages) conversations") : nil,
         ].compactMap { $0 }
@@ -380,15 +492,26 @@ enum InstagramImport {
             // entry with none falls back to the permalink so it is still
             // openable rather than being dropped.
             let name = row.handle.isEmpty ? row.link : "@" + row.handle
+            // Saved/Liked says WHICH act; `Reel` says what kind of post it was,
+            // read off Meta's own permalink (2026-08-18, prd §395) — free, and
+            // the only thing separating a saved reel from a saved photograph in
+            // a room made mostly of saves.
+            var tags = [marker == "saved" ? "Saved" : "Liked"]
+            if let facet = linkFacet(row.link) { tags.append(facet) }
             let thing = Thing(
                 kind: .link,
                 title: IngestSupport.titleLine(name),
                 content: row.link,
-                source: "Instagram",
+                source: "Instagram",   // the literal — see `landOwnMedia`
                 capturedAt: row.date,
-                tags: [marker == "saved" ? "Saved" : "Liked"],
+                tags: tags,
                 sourceRef: ref
             )
+            // The WHY, in the slot the room's post card already draws it in
+            // (`SocialThread.contextLabel`) — the same marker Farcaster, Bluesky
+            // and X have carried since §239. A tag is a filter; this is the word
+            // on the card, and the two are read by different things.
+            thing.socialContext = marker
             // The handle is stored as a FIELD as well as spoken in the title
             // (2026-07-31). The title is display text — "@handle" or, for the
             // rare entry with no title, a bare URL — so grouping on it would
@@ -425,21 +548,31 @@ enum InstagramImport {
         return nil
     }
 
-    // MARK: - Your own posts (captions — real text)
+    // MARK: - Your own posts, reels, stories and archive
 
-    /// Your own posts. The caption may sit at the top level or on the first
-    /// media item depending on whether the post was a single image or a
-    /// carousel, so both are read. A captionless post is SKIPPED rather than
-    /// landed as an empty note: the media stays in the export (see the type
-    /// doc), so a caption is the only substance such a row would have.
+    /// Everything you MADE, from whichever of the five `media/` files it came
+    /// out of. The caption may sit at the top level or on the first media item
+    /// depending on whether the post was a single image or a carousel, so both
+    /// are read.
+    ///
+    /// A CAPTIONLESS ENTRY NOW LANDS AS A PICTURE (2026-08-18, prd §395), where
+    /// it used to be skipped outright. The old rule — "the media stays in the
+    /// export, so a caption is the only substance such a row would have" — was
+    /// written in §245, before §310 taught this importer to thumbnail the
+    /// export's own files. It has pixels now, so a wordless photograph is a
+    /// thing; skipping it silently dropped whole years for anyone whose posting
+    /// is pictures rather than paragraphs. This is `XArchiveImport`'s own §375
+    /// ruling, one product over, and it carries the same `Photo` facet.
+    ///
+    /// Only when the picture is one we can actually DECODE, though: `isPicture`
+    /// gates on the file's own extension, so a wordless video is still skipped
+    /// rather than landing as a row titled "Photo" with nothing behind it.
     @MainActor
-    private static func landPosts(_ data: Data, summary: inout Summary,
-                                  landed: inout [Thing], seen: inout Set<String>,
-                                  mediaURIs: inout [String: String]) {
-        guard let entries = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]]
-        else { return }
-
-        let dated: [(date: Date, caption: String, uri: String?)] = entries.compactMap { entry in
+    private static func landOwnMedia(_ data: Data, refPrefix: String, facet: String,
+                                     me: String?, summary: inout Summary,
+                                     landed: inout [Thing], seen: inout Set<String>,
+                                     mediaURIs: inout [String: String]) {
+        let dated: [(date: Date, caption: String, uri: String?)] = entries(in: data).compactMap { entry in
             let media = entry["media"] as? [[String: Any]] ?? []
             let rawCaption = (entry["title"] as? String).flatMap { $0.isEmpty ? nil : $0 }
                 ?? (media.first?["title"] as? String)
@@ -448,32 +581,99 @@ enum InstagramImport {
                 ?? (media.first?["creation_timestamp"] as? Double)
                 ?? 0
             let caption = repairMojibake(rawCaption).trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !caption.isEmpty, stamp > 0 else { return nil }
             // The export states its own picture's path relative to the export
             // root. Carried through so `run` can thumbnail it while the scoped
             // grant is still held (prd §310).
             let uri = (entry["uri"] as? String) ?? (media.first?["uri"] as? String)
+            guard stamp > 0, !caption.isEmpty || isPicture(uri: uri) else { return nil }
             return (Date(timeIntervalSince1970: stamp), caption, uri)
         }.sorted { $0.date > $1.date }
         summary.dropped += max(0, dated.count - writingCap)
 
         for row in dated.prefix(writingCap) {
-            let ref = "instagram:post:\(Int(row.date.timeIntervalSince1970))"
+            // The prefix is what keeps a story and a post published in the same
+            // second from claiming one `sourceRef` — and `post` is spelled
+            // exactly as it always was, so nothing already in a corpus moves.
+            let ref = "instagram:\(refPrefix):\(Int(row.date.timeIntervalSince1970))"
             guard !seen.contains(ref) else { summary.skipped += 1; continue }
             seen.insert(ref)
+            let wordless = row.caption.isEmpty
+            var tags = [facet]
+            // Beside the facet, never instead of it: a wordless reel is still a
+            // reel, and the room's grid membership reads this tag together with
+            // the pixels (`FeedScreen.isInstagramPhotoTile`).
+            if wordless { tags.append("Photo") }
             let thing = Thing(
                 kind: .note,
-                title: IngestSupport.titleLine(row.caption),
+                title: IngestSupport.titleLine(wordless ? String(localized: "Photo") : row.caption),
                 content: row.caption,
+                // The LITERAL, not `source`, in every `Thing(` in this file.
+                // `source:` is the only thing a bridge and the demo seed are
+                // guaranteed to agree on, so it is what `demo-parity-audit.py`
+                // keys every one of its checks on — and a variable there makes
+                // this room's rows unattributable to that audit, which then
+                // silently stops checking them.
                 source: "Instagram",
                 capturedAt: row.date,
-                tags: ["Post"],
+                tags: tags,
                 sourceRef: ref
             )
+            // The caption is a POST — the room draws every one of these as a
+            // post card, and that card reads `postText` for the words it shows
+            // (`title` is only ever `titleLine`'s 80-character clamp). Left nil
+            // for a wordless picture, so the card shows the photograph rather
+            // than the placeholder word under it.
+            if !wordless { thing.postText = row.caption }
+            // Whose post this is. Without it the card falls back to the SOURCE
+            // name, so every row you wrote introduced itself as "Instagram"
+            // beside saves correctly naming the account they came from.
+            if let me, !me.isEmpty { thing.authorHandle = me }
             landed.append(thing)
             if let uri = row.uri, !uri.isEmpty { mediaURIs[ref] = uri }
             summary.posts += 1
+            if wordless { summary.photos += 1 }
         }
+    }
+
+    /// The entries inside one `media/` file, whichever envelope it uses.
+    ///
+    /// `posts_N.json` is a bare array; `reels.json`, `stories.json`,
+    /// `archived_posts.json` and `igtv_videos.json` each wrap theirs in a
+    /// single-key object (`ig_reels_media`, `ig_stories`, …). The FIRST array of
+    /// objects is taken rather than the key matched, for `permalink`'s reason
+    /// one function up: the labels are Meta's copy, and a format that changes
+    /// under us should degrade to "nothing new" rather than to a silent zero.
+    private static func entries(in data: Data) -> [[String: Any]] {
+        guard let root = try? JSONSerialization.jsonObject(with: data) else { return [] }
+        if let array = root as? [[String: Any]] { return array }
+        guard let object = root as? [String: Any] else { return [] }
+        for value in object.values {
+            if let array = value as? [[String: Any]], !array.isEmpty { return array }
+        }
+        return []
+    }
+
+    /// Your own username, from the export's own profile file.
+    ///
+    /// Read as DATA rather than parsed out of a folder name: the zip unpacks to
+    /// `instagram-<name>-<date>-<hash>/`, and taking the handle from there means
+    /// splitting a string Meta is free to re-shape, on a screen where getting it
+    /// wrong labels every post you ever wrote with somebody else's name.
+    private static func ownUsername(under root: URL) -> String? {
+        guard let data = read(selfPath, under: root),
+              let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let profiles = object["profile_user"] as? [[String: Any]]
+        else { return nil }
+        for profile in profiles {
+            guard let map = profile["string_map_data"] as? [String: Any] else { continue }
+            for key in ["Username", "username"] {
+                if let name = field(map, key)?.trimmingCharacters(in: .whitespacesAndNewlines),
+                   !name.isEmpty {
+                    return repairMojibake(name)
+                }
+            }
+        }
+        return nil
     }
 
     // MARK: - Your own comments (text, decontextualised on purpose)

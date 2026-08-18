@@ -1100,6 +1100,14 @@ struct RootShell: View {
                     NSLog("[Casberi] instagramCaptions: considered=%d enriched=%d failed=%d backedOff=%@",
                           report.considered, report.enriched, report.failed,
                           report.backedOff ? "YES" : "NO")
+                    // The covers, counted apart (2026-08-18, prd §395): a page
+                    // can answer with its words and no picture, and a picture
+                    // can fail to download from a page that read perfectly, so
+                    // one number could not tell those two apart. `held` against
+                    // the cap is what separates "no new covers" from "the cap
+                    // is full", which look identical from outside.
+                    NSLog("[Casberi] instagramCovers: stored=%d held=%d/%d",
+                          report.covered, report.coversHeld, InstagramCaptions.coverCap)
                 }
             }
             // Debug hook: `-toolAnswer "<query>"` runs the tool-calling agent

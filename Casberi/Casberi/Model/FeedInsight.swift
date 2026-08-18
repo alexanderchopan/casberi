@@ -612,6 +612,13 @@ enum FeedInsight {
             title = "What you screenshot"; unit = ("screenshot", "screenshots"); kinds = [.screenshot]
         case "Instagram":
             title = "What you write about"; unit = ("post", "posts"); kinds = [.note]
+            // A WORDLESS picture post is a `.note` too since 2026-08-18 (prd
+            // §395) and has, by definition, nothing to say — so it is excluded
+            // rather than counted into the "N of M" denominator this subtitle
+            // prints. Left in, a room of photographs would read as a map
+            // covering a third of what you wrote, which is a statement about
+            // our own parser rather than about the person.
+            belongs = { !$0.tags.contains("Photo") }
         // X, 2026-08-05. Instagram's split exactly, and the strongest corpus in
         // the app for this card: an X archive's `.note` half is years of the
         // person's own sentences, written to be read, with none of a caption's

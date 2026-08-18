@@ -101,8 +101,13 @@ enum NetworkReach {
         // the post's own page, or its provider's own preview endpoint.
         Endpoint(service: "Instagram captions",
                  reach: .whenConnected(bridge: "instagram"),
-                 purpose: "Your Instagram export lists the posts you saved by handle and link, without their words. \(DS.device) opens each saved post's own public page once to read its caption, so you can search for what was in it. The request carries only that post's link.",
-                 hosts: ["instagram.com"]),
+                 purpose: "Your Instagram export lists the posts you saved by handle and link, without their words or their picture. \(DS.device) opens each saved post's own public page once to read its caption, and downloads its cover picture once to keep a small copy. The requests carry only that post's link.",
+                 // BOTH spellings of the post host. Meta's own export writes
+                 // its hrefs as `www.instagram.com/p/…`, so the bare form alone
+                 // named a host this app does not in fact open — and the two
+                 // CDNs are where `og:image` points (2026-08-18, prd §395).
+                 hosts: ["instagram.com", "www.instagram.com",
+                         "cdninstagram.com", "fbcdn.net"]),
         // The third, same family. A TikTok export names the videos you saved
         // by link and NOTHING else — no caption, no creator, no cover, because
         // the video belongs to whoever made it. Those facts are public on

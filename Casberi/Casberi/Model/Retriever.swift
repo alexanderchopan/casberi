@@ -198,8 +198,7 @@ enum Retriever {
         // every other filter here.
         let writingScope = dropping.contains(.writing) ? nil
             : Self.writingScope(in: query).flatMap { match in
-                corpus.contains { !$0.tags.isEmpty && !Self.mine.isDisjoint(with: $0.tags) }
-                    ? match : nil
+                corpus.contains { Self.wroteIt($0.tags) } ? match : nil
             }
         if let writingScope {
             terms.removeAll { writingScope.contains($0) }
@@ -291,7 +290,7 @@ enum Retriever {
         let prepared: [Prepared] = all.compactMap { thing -> Prepared? in
             if let sourceMatch, thing.source != sourceMatch.source { return nil }
             if let facetMatch, !thing.tags.contains(facetMatch.tag) { return nil }
-            if writingScope != nil, Self.mine.isDisjoint(with: thing.tags) { return nil }
+            if writingScope != nil, !Self.wroteIt(thing.tags) { return nil }
             if let kindFilter, thing.kind != kindFilter { return nil }
             if let dateMatch, !dateMatch.range.contains(thing.capturedAt) { return nil }
             let titleTokens = tokens(thing.title)
@@ -671,7 +670,21 @@ enum Retriever {
     /// `Liked` and `Memory` are deliberately absent — they are things you
     /// TAPPED or were handed, and counting them as your writing is the whole
     /// distinction this scope exists to draw.
-    static let mine: Set<String> = ["Post", "Reply", "Comment", "Thread"]
+    static let mine: Set<String> = ["Post", "Reply", "Comment", "Thread", "Reel", "Story"]
+
+    /// Whether a row is the person's OWN WRITING — the tag test above, minus
+    /// the one thing that wears a writing tag and contains no writing.
+    ///
+    /// A wordless picture post carries `Post` (or `Reel`, or `Story`) BESIDE
+    /// `Photo`, because a photograph you posted is still a post — see
+    /// `XArchiveImport` and `InstagramImport.landOwnMedia`. That is right for a
+    /// facet and wrong for this scope: "everything I wrote" must not answer
+    /// with a photograph, and before 2026-08-18 it could not, because a
+    /// captionless post did not land at all. Spelled as a function so the two
+    /// call sites can never drift into disagreeing about it.
+    static func wroteIt(_ tags: [String]) -> Bool {
+        !tags.isEmpty && !mine.isDisjoint(with: tags) && !tags.contains("Photo")
+    }
 
     /// Whether a query explicitly asks for the person's OWN writing, and the
     /// words that said so.
@@ -760,6 +773,21 @@ enum Retriever {
             // YouTube" narrows, "something short" can't quietly empty a
             // result.
             (["shorts", "short"], "Shorts"),
+            // Instagram's own halves (2026-08-18, prd §395), all three read off
+            // facts the export already states: the permalink says `/reel/`, the
+            // file says `stories.json`, and a post with no caption is a
+            // photograph. Before this a saved reel and a saved photograph were
+            // indistinguishable in a room that is mostly saves.
+            //
+            // `Photo` sits with `Shorts` above under the same gating rule and
+            // needs it just as much: "photo" is an ordinary English word and
+            // this corpus is full of it. Behind a named room it narrows; on its
+            // own it can never quietly empty a result. Note the tag rides
+            // BESIDE `Post`/`Reel`/`Story` rather than replacing one — a
+            // wordless reel is still a reel.
+            (["my reels", "reels", "reel"], "Reel"),
+            (["my stories", "stories", "story"], "Story"),
+            (["photos", "photo", "pictures", "picture"], "Photo"),
             // App Store Connect's three halves (2026-08-06, prd §324). The
             // room mixes what Apple decided, what customers wrote, and what
             // your builds did — three genuinely different questions, and until

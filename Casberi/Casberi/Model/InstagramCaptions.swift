@@ -22,13 +22,32 @@ import SwiftData
 /// So one keyless request per row turns "@everydayastronaut" into the post's
 /// actual words, and the corpus can hold them. That is the entire feature.
 ///
-/// NO IMAGE, and the reason is measured rather than assumed. `og:image` is a
-/// real CDN URL and it works — but it is SIGNED and carries its own expiry:
-/// the sampled post's `oe=6A74B2B9` decoded to 2026-08-06, four days out.
-/// Storing it as `previewImageURL` would give every row art that silently 404s
-/// within the week, and re-fetching 500 rows every few days to keep signatures
-/// warm is not a trade worth making for decoration. Text is what retrieval
-/// needs and text is what this pass takes.
+/// THE COVER, AND WHY THE OLD REFUSAL WAS RIGHT ABOUT THE WRONG THING
+/// (2026-08-18, prd §395). This doc used to say "NO IMAGE", on a measured
+/// fact: `og:image` is a real CDN URL that works, and it is SIGNED with its own
+/// expiry — the sampled post's `oe=6A74B2B9` decoded to four days out. Storing
+/// it as `previewImageURL` would give every row art that silently 404s within
+/// the week, and re-fetching hundreds of rows to keep signatures warm is not a
+/// trade worth making for decoration. All of that is still true.
+///
+/// It was an argument about the URL, and it was applied to the PIXELS. Every
+/// other picture in this app is a 480pt JPEG on `previewImageData` — bytes,
+/// which cannot expire — and `ImportMedia` has produced exactly that object,
+/// from an import, since prd §310. So the cover is fetched ONCE, downscaled,
+/// and kept; the signed URL is read, used and thrown away, never stored. In the
+/// one room in this app that is a photo app, that is the difference between a
+/// list of handles and Instagram.
+///
+/// BOUNDED HARDER THAN THE CAPTIONS, because pixels cost more than words:
+/// `coverCap` covers in total, ever, across the whole library. At ~40KB each
+/// that is a store this size (see the constant), and it is a CloudKit-mirrored
+/// store — text is cheap to sync and pictures are not. Newest first, so the cap
+/// keeps the saves a person is likeliest to be looking for.
+///
+/// THE HOST IS CHECKED, exactly as the post URL is. `og:image` is a string out
+/// of a page, so it names whatever that page says — and following it blindly is
+/// the same privacy leak `postURL` refuses one function down. Matched on the
+/// label boundary against Meta's own two CDNs, never `contains`.
 ///
 /// BOUNDED, PACED AND RESUMABLE, because one measured request proves nothing
 /// about five hundred. This is the Farcaster follow-graph lesson (CLAUDE.md):
@@ -53,6 +72,15 @@ enum InstagramCaptions {
         var enriched = 0
         var failed = 0
         var considered = 0
+        /// Covers stored this pass (2026-08-18, prd §395). Counted apart from
+        /// `enriched` because they succeed and fail independently: a post can
+        /// answer with its words and no picture, and a picture can fail to
+        /// download from a page that read perfectly.
+        var covered = 0
+        /// How many covers this library has stored in total, against the cap.
+        /// Reported so "no new covers" can be told apart from "the cap is full",
+        /// which look identical from outside.
+        var coversHeld = 0
         /// The host pushed back (429) or five rows failed in a row. Reported
         /// rather than swallowed: "0 enriched because we stopped" and
         /// "0 enriched because there was nothing to do" are different facts,
@@ -77,6 +105,31 @@ enum InstagramCaptions {
     private static let ledgerKey = "instagram.captions.attempts"
     private static let ledgerCap = 2000
 
+    /// Covers kept, ever, for this whole library.
+    ///
+    /// A thousand 480pt JPEGs at roughly 40KB each is about 40MB — the size of
+    /// a short video, in a store that mirrors to CloudKit. The captions have no
+    /// such cap because text is a rounding error beside this; pixels are not,
+    /// and a cap chosen now beats one discovered by somebody's iCloud filling
+    /// up. Newest first, so what it keeps is what a person is likeliest to be
+    /// looking for.
+    static let coverCap = 1_000
+    private static let coverLedgerKey = "instagram.covers.attempts"
+    /// How many covers are stored, kept as a counter rather than measured off
+    /// the corpus. Counting for real means reading `previewImageData` on every
+    /// row of a room that can hold thousands — and that column is deliberately
+    /// absent from `FeedScreen.lightColumns`, so the measurement would fault
+    /// the entire library to answer a question about a cap.
+    private static let coverCountKey = "instagram.covers.stored"
+
+    /// Meta's own two picture CDNs — where `og:image` points, and the only
+    /// hosts a cover is ever fetched from.
+    ///
+    /// Matched on the LABEL BOUNDARY, never `contains`: the URL is a string out
+    /// of a page, so `cdninstagram.com.attacker.example` must not match. Same
+    /// rule, same reason, as `OEmbed.endpoints` and `postURL` below.
+    private static let coverHosts = ["cdninstagram.com", "fbcdn.net"]
+
     // MARK: - The pass
 
     /// Enriches up to `perPass` unenriched saves/likes, newest first.
@@ -93,10 +146,20 @@ enum InstagramCaptions {
                      trace: ((String) -> Void)? = nil) async -> Report {
         var report = Report()
         var ledger = attempts()
+        var covers = coverAttempts()
+        report.coversHeld = coversStored()
 
         let due = candidates(context: context, ledger: ledger)
         report.considered = due.count
-        guard !due.isEmpty else { return report }
+        // Nothing left to caption is where the COVER backfill runs (2026-08-18,
+        // prd §395). Sequenced rather than interleaved so a fresh import spends
+        // its first passes on words — text is what retrieval needs, and a row
+        // with a picture and no words is findable by nothing. It also means a
+        // steady-state library never does both in one foreground.
+        guard !due.isEmpty else {
+            return await healCovers(context: context, report: report,
+                                    covers: covers, trace: trace)
+        }
 
         var consecutiveFailures = 0
         for thing in due.prefix(perPass) {
@@ -117,6 +180,7 @@ enum InstagramCaptions {
                 trace?("RATE LIMITED at \(url.path()) — stopping this pass")
                 report.backedOff = true
                 save(ledger)
+                save(covers, key: coverLedgerKey)
                 return report
             case .permanentlyGone:
                 trace?("gone \(url.path()) — deleted or private, not asking again")
@@ -140,8 +204,24 @@ enum InstagramCaptions {
                 report.failed += 1
                 consecutiveFailures += 1
                 bump(&ledger, ref)
-            case .found(let caption, let retrieval):
+            case .found(let caption, let retrieval, let image):
                 consecutiveFailures = 0
+                // The cover rides the SAME visit rather than a second fetch of
+                // the same page — the page has already been read and the URL is
+                // in hand. `healCovers` below exists only for rows a build
+                // before this one already captioned.
+                if coversStored() < coverCap, (covers[ref] ?? 0) < maxAttempts {
+                    switch await store(cover: image, on: thing, context: context) {
+                    case .stored:
+                        trace?("cover \(url.path())")
+                        report.covered += 1
+                        bump(&covers, ref, to: maxAttempts)
+                    case .missing:
+                        bump(&covers, ref, to: maxAttempts)
+                    case .retry:
+                        bump(&covers, ref)
+                    }
+                }
                 if apply(caption: caption, retrieval: retrieval, to: thing, context: context) {
                     trace?("ok \(url.path()) → \(caption.prefix(90))")
                     report.enriched += 1
@@ -164,7 +244,151 @@ enum InstagramCaptions {
         }
 
         save(ledger)
+        save(covers, key: coverLedgerKey)
+        report.coversHeld = coversStored()
         return report
+    }
+
+    // MARK: - Covers for rows an earlier build already captioned
+
+    /// The backfill half of the cover pass.
+    ///
+    /// It exists because the cover is otherwise taken during the caption visit,
+    /// and a library captioned by a build before 2026-08-18 has no visits left
+    /// to make: `enrichedText != nil` is precisely what drops a row out of
+    /// `candidates`. Without this the feature would have reached only imports
+    /// made after it shipped — the §313 `termsEpoch` problem, in a room where
+    /// everything landed on one afternoon.
+    ///
+    /// It costs a second read of a page already read once, which is why it runs
+    /// only when there is nothing left to caption and why every row it touches
+    /// is marked in the ledger whether it succeeded or not. Bounded by the same
+    /// `perPass`, `pace` and `coverCap` as everything else here.
+    ///
+    /// Takes and returns its state by VALUE rather than `inout`. Forwarding an
+    /// `inout` parameter into another `async` call is a shape worth not having
+    /// in a file this size — the ledger is a small dictionary and the report is
+    /// six integers, so copying them costs nothing and removes the question.
+    @MainActor
+    private static func healCovers(context: ModelContext, report: Report,
+                                   covers: [String: Int],
+                                   trace: ((String) -> Void)?) async -> Report {
+        var report = report
+        var covers = covers
+        guard coversStored() < coverCap else {
+            trace?("covers: \(coverCap) held — the cap, not a failure")
+            return report
+        }
+        let due = coverCandidates(context: context, ledger: covers)
+        guard !due.isEmpty else { return report }
+        var consecutiveFailures = 0
+        for thing in due.prefix(perPass) {
+            guard thing.isLive, coversStored() < coverCap else { break }
+            let ref = thing.sourceRef ?? ""
+            guard let url = postURL(thing) else {
+                bump(&covers, ref, to: maxAttempts)
+                continue
+            }
+            switch await fetch(url) {
+            case .rateLimited:
+                trace?("covers: RATE LIMITED at \(url.path()) — stopping this pass")
+                report.backedOff = true
+                break
+            case .found(_, _, let image):
+                consecutiveFailures = 0
+                switch await store(cover: image, on: thing, context: context) {
+                case .stored:
+                    trace?("cover \(url.path())")
+                    report.covered += 1
+                    bump(&covers, ref, to: maxAttempts)
+                case .missing:
+                    // A page that answered with no usable picture will not grow
+                    // one. Marked so the walk moves on rather than re-reading
+                    // the same page every foreground for the rest of time.
+                    trace?("covers: no picture on \(url.path())")
+                    bump(&covers, ref, to: maxAttempts)
+                case .retry:
+                    trace?("covers: picture unreachable on \(url.path())")
+                    bump(&covers, ref)
+                }
+            case .permanentlyGone:
+                trace?("covers: gone \(url.path())")
+                bump(&covers, ref, to: maxAttempts)
+                consecutiveFailures += 1
+            case .unreachable:
+                trace?("covers: unreachable \(url.path())")
+                bump(&covers, ref)
+                consecutiveFailures += 1
+            }
+            if report.backedOff { break }
+            if consecutiveFailures >= backOffAfter {
+                trace?("covers: backing off — \(backOffAfter) rows failed in a row")
+                report.backedOff = true
+                break
+            }
+            try? await Task.sleep(for: pace)
+        }
+        save(covers, key: coverLedgerKey)
+        report.coversHeld = coversStored()
+        return report
+    }
+
+    /// Saves and likes this build has never asked a cover for.
+    ///
+    /// The LEDGER is the cursor here, where the caption pass uses
+    /// `enrichedText == nil` — and it has to be: the honest test would be
+    /// "carries no `previewImageData`", and that column faults per row on a
+    /// library of thousands (see `coverCountKey`). A ledger entry answers the
+    /// same question out of `UserDefaults`, and its worst failure is asking
+    /// once more for a picture we already hold.
+    @MainActor
+    private static func coverCandidates(context: ModelContext,
+                                        ledger: [String: Int]) -> [Thing] {
+        IngestSupport.thingsByRef(context, source: InstagramImport.source)
+            .filter { ref, thing in
+                thing.isLive
+                    && thing.kind == .link
+                    && !thing.tags.contains("Gone")
+                    && (ref.hasPrefix("instagram:saved:") || ref.hasPrefix("instagram:liked:"))
+                    && (ledger[ref] ?? 0) < maxAttempts
+            }
+            .values
+            .sorted { $0.capturedAt > $1.capturedAt }
+    }
+
+    /// What one cover attempt did — three outcomes rather than a Bool, because
+    /// the ledger treats them differently and a caller handed `false` cannot
+    /// tell "this page has no picture, stop asking" from "the network blinked,
+    /// ask again". Bookkeeping stays with the caller so nothing is passed
+    /// `inout` into an `async` call.
+    private enum CoverResult {
+        case stored     // pixels landed
+        case missing    // no picture, or one that will never decode — stop asking
+        case retry      // a blip; worth asking again later
+    }
+
+    /// Downloads one cover, downscales it, and keeps the bytes.
+    ///
+    /// The signed URL is used and dropped — never written to
+    /// `previewImageURL`, which is the whole of the §245 refusal this pass
+    /// keeps.
+    @MainActor
+    private static func store(cover image: URL?, on thing: Thing,
+                              context: ModelContext) async -> CoverResult {
+        guard let image, thing.isLive else { return .missing }
+        guard let data = await fetchCover(image) else { return .retry }
+        guard let thumb = await ImportMedia.thumbnail(data: data) else {
+            // The bytes arrived and would not decode. Not worth another try.
+            return .missing
+        }
+        // Re-checked AFTER the two suspensions above: a heal or a CloudKit
+        // delete can tombstone this row while we are on the network, and
+        // writing to a tombstoned model traps inside SwiftData.
+        guard thing.isLive else { return .missing }
+        thing.previewImageData = thumb
+        setCoversStored(coversStored() + 1)
+        context.saveHonestly()
+        return .stored
     }
 
     /// Saves and likes still wearing only their handle, newest first.
@@ -207,7 +431,7 @@ enum InstagramCaptions {
     // MARK: - The read
 
     private enum Outcome {
-        case found(caption: String, retrieval: String)
+        case found(caption: String, retrieval: String, image: URL?)
         case permanentlyGone      // deleted, or private: never coming back
         case unreachable          // a blip; worth asking again later
         case rateLimited          // the host asked us to stop
@@ -250,7 +474,44 @@ enum InstagramCaptions {
         // words. Either alone is worth having; neither means this page told
         // us nothing and the row keeps the handle it has.
         guard let caption = title ?? description else { return .unreachable }
-        return .found(caption: caption, retrieval: description ?? caption)
+        return .found(caption: caption, retrieval: description ?? caption,
+                      image: coverURL(meta(html, "og:image")))
+    }
+
+    /// The picture on that page, when the page names one AND it is on a host we
+    /// are willing to open.
+    ///
+    /// `og:image` is a string somebody else's server wrote. Following it because
+    /// it appeared in a page we asked for is exactly the leak `postURL` refuses
+    /// one function down — so the host is checked on the label boundary against
+    /// Meta's own CDNs and nothing else is fetched.
+    static func coverURL(_ raw: String?) -> URL? {
+        guard let raw, let url = URL(string: raw.trimmingCharacters(in: .whitespacesAndNewlines)),
+              url.scheme?.lowercased() == "https",
+              let host = url.host()?.lowercased(),
+              coverHosts.contains(where: { host == $0 || host.hasSuffix("." + $0) })
+        else { return nil }
+        return url
+    }
+
+    /// The cover's bytes, capped. `maxCover` is a refusal, not a budget: a
+    /// `Content-Length` is a claim, so the read is truncated on what actually
+    /// arrives rather than on what the header promised.
+    private static let maxCover = 4_194_304
+
+    private static func fetchCover(_ url: URL) async -> Data? {
+        var request = URLRequest(url: url)
+        request.timeoutInterval = 15
+        request.setValue(IngestSupport.safariUserAgent, forHTTPHeaderField: "User-Agent")
+        request.setValue("image/*", forHTTPHeaderField: "Accept")
+        // The receipts ledger — a reach nobody declared is the build-214 failure
+        // this app's own privacy screen exists to make impossible.
+        NetworkLedger.shared.record(request)
+        guard let (data, response) = try? await URLSession.shared.data(for: request),
+              (response as? HTTPURLResponse)?.statusCode == 200,
+              !data.isEmpty
+        else { return nil }
+        return data.count > maxCover ? nil : data
     }
 
     /// An Open Graph value, in both attribute orders (providers write them
@@ -294,6 +555,26 @@ enum InstagramCaptions {
             thing.enrichedText = text
             changed = true
         }
+        // The words the ROOM draws (2026-08-18, prd §395). `enrichedText` is
+        // retrieval-only by the 2026-07-15 ruling, so until now a caption this
+        // pass fetched was searchable and on no screen — the §313 X finding, in
+        // the room beside it. `postText` is the field the post card reads; like
+        // `content` it is deliberately outside `FeedScreen.lightColumns`, so it
+        // faults on a VISIBLE row's appearance and never once per corpus row —
+        // which is exactly the trade that pre-fetch list documents, and why the
+        // room head next door reads none of it.
+        //
+        // The FACE, not the description: `og:title` reads "Author on Instagram:
+        // "caption"" and is what the title already carries, while
+        // `og:description` prefixes the counts ("6,800 likes, 29 comments - …").
+        // A card is the post, so it shows the post.
+        // The UNCLAMPED caption, deliberately — `face` above is
+        // `titleLine`'s 80 characters, which is the row's fallback and exactly
+        // what this field exists to beat.
+        if caption != thing.postText, !caption.isEmpty {
+            thing.postText = caption
+            changed = true
+        }
         guard changed else { return false }
         thing.embedding = nil
         context.saveHonestly()
@@ -307,6 +588,18 @@ enum InstagramCaptions {
         UserDefaults.standard.dictionary(forKey: ledgerKey) as? [String: Int] ?? [:]
     }
 
+    private static func coverAttempts() -> [String: Int] {
+        UserDefaults.standard.dictionary(forKey: coverLedgerKey) as? [String: Int] ?? [:]
+    }
+
+    static func coversStored() -> Int {
+        UserDefaults.standard.integer(forKey: coverCountKey)
+    }
+
+    private static func setCoversStored(_ value: Int) {
+        UserDefaults.standard.set(value, forKey: coverCountKey)
+    }
+
     private static func bump(_ ledger: inout [String: Int], _ ref: String, to value: Int? = nil) {
         guard !ref.isEmpty else { return }
         ledger[ref] = value ?? ((ledger[ref] ?? 0) + 1)
@@ -316,18 +609,19 @@ enum InstagramCaptions {
     /// by dropping the rows we've tried LEAST — a ref at `maxAttempts` is the
     /// one worth remembering, since forgetting it is what would put a dead
     /// post back in the queue forever.
-    private static func save(_ ledger: [String: Int]) {
+    private static func save(_ ledger: [String: Int], key: String = ledgerKey) {
         var out = ledger
         if out.count > ledgerCap {
             out = Dictionary(uniqueKeysWithValues:
                 out.sorted { $0.value > $1.value }.prefix(ledgerCap).map { ($0.key, $0.value) })
         }
-        UserDefaults.standard.set(out, forKey: ledgerKey)
+        UserDefaults.standard.set(out, forKey: key)
     }
 
     /// DEBUG only — lets `-instagramCaptions` re-walk rows a previous run
     /// gave up on, so the pass can be exercised twice in a session.
     static func forgetFailures() {
         UserDefaults.standard.removeObject(forKey: ledgerKey)
+        UserDefaults.standard.removeObject(forKey: coverLedgerKey)
     }
 }
