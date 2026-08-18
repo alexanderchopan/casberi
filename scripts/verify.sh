@@ -845,6 +845,22 @@ python3 "$ROOT/scripts/design-motion-audit.py" >/dev/null \
   || fail "the design-motion audit failed — run python3 scripts/design-motion-audit.py"
 print -P "%F{green}✓ design-motion audit%f"
 
+# The pointer vocabulary (2026-08-17). Three failures, each invisible from a
+# build AND from a screenshot — the second half matters here, because a
+# tooltip only exists under a cursor and no sweep in this repo has one: an
+# element wearing BOTH hover treatments (it scales and rises against a doubled
+# shadow, which reads as a rendering bug), a tooltip that shouts or trails a
+# full stop (build-brief §8 holds in system chrome too), and the vocabulary
+# bypassed — a raw `.help()` outside `Design/` doubles the VoiceOver hint on
+# iOS, so a Mac tooltip silently degrades the phone's accessibility.
+#
+# `verify-mac.sh` discovers this one by its `*-audit.py` name; this list is
+# hand-kept by design, so it needs its own line here.
+"$ROOT/scripts/mac-pointer-audit.py" --self-test >/dev/null \
+  || fail "the Mac pointer audit's own self-test failed — run scripts/mac-pointer-audit.py --self-test"
+"$ROOT/scripts/mac-pointer-audit.py" \
+  || fail "the Mac pointer vocabulary drifted — see the output above"
+
 # The design system's SECOND mechanical check, and it exists for the same
 # reason the first one does: the rule lived in memory and memory lost. Face
 # sizes had drifted to sixteen literals across forty-seven call sites — two
@@ -1426,7 +1442,7 @@ else
   fi
 fi
 
-# ── 6c. Demo floor coverage (headless, WARN — see the note) ──────────
+# ── 6c. Demo floor coverage (headless, HARD FAIL) ────────────────────
 # The quietest demo failure: state that sits UNDER a control's minimum. A
 # control gated on a count does not fail when the demo is short — it simply
 # does not draw, and every other check passes. Four were found by eye this
@@ -1437,11 +1453,18 @@ fi
 # registry lives in `-floorProbe` and marks each entry required or optional,
 # so "the demo need not satisfy this one" is written down rather than implied.
 #
-# WARN, NOT FAIL, AND ONLY FOR NOW: `wallet.addresses` is genuinely under its
-# floor on the shipped demo (1 watched, 3 seeded — the face rail cannot draw),
-# and that is an open bug, not a tuning problem. Flipping this to a hard fail
-# is the right end state and should happen in the same change that fixes it;
-# making main red first would only block whoever is mid-edit.
+# HARD FAIL since 2026-08-17, on the trigger the warn note named. It was
+# warn-only because `wallet.addresses` was genuinely under its floor (1
+# watched, 3 seeded — the face rail could not draw), which is a bug rather
+# than a tuning problem, and the note said the flip belonged with the fix.
+# `seedBridgeState` now adds every entry in `demoWallets` rather than gating
+# on an empty store, so the count is 3 against a floor of 2 and the last
+# reason to warn is gone.
+#
+# It is a fail rather than a warn for the room-head step's reason exactly:
+# there is no ranking here to lose. A floor is a fixed number compared to a
+# count, so a demo that clears it clears it every run — an UNDER is a real
+# gap, not noise.
 step "Demo floor coverage"
 FLOOR_LOG="$OUT/demo-floor-coverage.log"
 if [[ -z "$POURED" ]]; then
@@ -1472,10 +1495,11 @@ else
   if [[ "$UNDER" == "0" ]]; then
     print -P "%F{green}✓ demo floor coverage (every required control clears its floor)%f"
   else
-    print -P "%F{yellow}⚠ $UNDER required control(s) under their floor:%f"
-    # `|| true`: this is a WARN-only step, so the listing must never be the
-    # thing that fails the run.
+    # `|| true` on the LISTING only: the run is about to fail on the count, and
+    # a grep that finds nothing must not pre-empt that with its own exit code
+    # and a less useful message.
     grep -o "floor| .*UNDER.*" "$FLOOR_LOG" | sort -u || true
+    fail "$UNDER required control(s) under their demo floor (listed above) — a control gated on a count does not fail when the demo is short, it silently does not draw"
   fi
 fi
 

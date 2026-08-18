@@ -782,14 +782,48 @@ enum DemoSeedAll {
     /// exist and right to stay; the demo was claiming a connected state the
     /// screen behind it explicitly refuses to claim (§83's fake status).
     private static func ownCaptures() -> [Thing] {
-        let notes: [(String, Double)] = [
-            ("Packing list", 3), ("Wifi passwords", 8), ("Gift ideas", 14),
-            ("Book recs from Sam", 21), ("Standup talking points", 26),
-            ("Recipe — weeknight pasta", 34), ("Car maintenance log", 48),
+        // **A note's body is not its title (2026-08-17).** These rows shipped
+        // with `content` set to the title, so every one of them rendered an
+        // excerpt that restated the line above it — the thinnest possible row,
+        // in the one room that models what YOUR OWN saves look like.
+        //
+        // The fix is parity, not enrichment: `RootShell.keepAnswer` lands a
+        // real capture as `Thing(kind: .note, title:, content: text, source:
+        // "You")` and stamps nothing else — no tags, no image, no handle — so
+        // these carry a real body and nothing more. Checked against that path
+        // before writing, which is the rule this pass had to learn: whether a
+        // demo room is thin is answered by the bridge, never by comparing it
+        // to a richer room next door.
+        //
+        // They are also what `ScreenshotTopics.prose` reads for the All room's
+        // map, so a body that is a duplicated title contributed a term that
+        // was already the row's own name.
+        let notes: [(String, String, Double)] = [
+            ("Packing list",
+             "Passport, chargers, the grey jacket. Swim stuff if the pool is open — check.",
+             3),
+            ("Wifi passwords",
+             "Flat: the usual one. Studio: ask Uma, hers rotates monthly.",
+             8),
+            ("Gift ideas",
+             "Sam — the Lisbon cookbook. Mia — proper secateurs, hers are shot.",
+             14),
+            ("Book recs from Sam",
+             "The one about the lighthouse keeper, and anything by the Norwegian essayist.",
+             21),
+            ("Standup talking points",
+             "Ship the import receipt. Flag the Thursday review moving. Ask about the joinery quote.",
+             26),
+            ("Recipe — weeknight pasta",
+             "Anchovy, garlic, chilli, breadcrumbs. Twenty minutes, one pan, no cream.",
+             34),
+            ("Car maintenance log",
+             "Tyres rotated at 41,200. Next service due around 46,000 or spring.",
+             48),
         ]
         return notes.enumerated().map { i, n in
             row(.note, n.0, source: "You", ref: "demo:own:\(i)",
-                days: n.1, hour: 21, content: n.0)
+                days: n.2, hour: 21, content: n.1)
         }
     }
 
