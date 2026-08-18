@@ -124,6 +124,11 @@ TAP_DECLARED = re.compile(
     r"|accessibilityAction|accessibilityRepresentation"
 )
 
+# Check 2's one allowance, and it is a PAIR — never `accessibilityHidden` on
+# its own. The ruling is at its use site below.
+HIDDEN_SURFACE = re.compile(r"accessibilityHidden\(\s*true\s*\)")
+ESCAPE_ACTION = re.compile(r"accessibilityAction\(\s*\.escape\s*\)")
+
 WORDS = re.compile(r"\bText\(|\bLabel\(|dsText|LocalizedStringKey|String\(localized:")
 
 
@@ -297,6 +302,22 @@ def audit_text(path: str, raw: str, floor: int):
             continue
         if enclosing and "dsCardLead(" in src[enclosing[0]:enclosing[1]]:
             continue
+        # A surface DECLARED not to be an element is a decision, not the
+        # omission this check exists for — but only when the action it carries
+        # is reachable another way, and a static check can see that in exactly
+        # one shape: a modal's tap-to-dismiss SCRIM, hidden on purpose because
+        # VoiceOver's own dismiss is the `.escape` action on the panel it sits
+        # behind (`SourcesOverlay`, 2026-08-16). Announcing the backdrop would
+        # put a second, worse dismiss control in front of a modal that already
+        # has the one the platform gesture calls.
+        #
+        # The PAIRING is what keeps this from being a hole big enough to hide
+        # the shapes this check was written for: a room head whose only tap was
+        # taken away from VoiceOver has no escape anywhere near it — nothing to
+        # escape from — so it is still flagged, which its own fixture pins.
+        if (HIDDEN_SURFACE.search(chain) and enclosing
+                and ESCAPE_ACTION.search(src[enclosing[0]:enclosing[1]])):
+            continue
         line = src[:m.start()].count("\n") + 1
         key = f"{os.path.basename(path)}:{line}"
         if key in KNOWN_EXEMPT:
@@ -468,6 +489,38 @@ struct E: View {
 """
 
 
+# The scrim: a modal's tap-to-dismiss backdrop, hidden on purpose because the
+# panel it sits behind carries the escape action VoiceOver actually uses.
+CLEAN_HIDDEN_SCRIM = """
+struct I: View {
+    var body: some View {
+        ZStack {
+            Color.clear
+                .contentShape(Rectangle())
+                .onTapGesture { onDismiss() }
+                .accessibilityHidden(true)
+            panel
+                .accessibilityAddTraits(.isModal)
+                .accessibilityAction(.escape) { onDismiss() }
+        }
+    }
+}
+"""
+
+# The same modifier with nothing to answer for it: a card whose only tap was
+# taken away from VoiceOver, which is the dead end check 2 exists for.
+DIRTY_HIDDEN_NO_ESCAPE = """
+struct J: View {
+    var body: some View {
+        card
+            .contentShape(Rectangle())
+            .onTapGesture { open() }
+            .accessibilityHidden(true)
+    }
+}
+"""
+
+
 def self_test() -> bool:
     floor = 44
     cases = [
@@ -478,6 +531,9 @@ def self_test() -> bool:
         ("clean: all three shapes done right", CLEAN, set()),
         ("clean: headline carries the card's verb", CLEAN_CARD_LEAD, set()),
         ("clean: prose naming the forbidden shapes", CLEAN_PROSE, set()),
+        ("clean: hidden scrim beside a modal's escape", CLEAN_HIDDEN_SCRIM, set()),
+        ("dirty: hidden tap with no escape to answer for it",
+         DIRTY_HIDDEN_NO_ESCAPE, {"untraited-tap-target"}),
     ]
     ok = True
     for name, text, expected in cases:
