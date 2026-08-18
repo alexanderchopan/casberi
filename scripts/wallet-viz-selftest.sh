@@ -30,7 +30,9 @@ EXPOSURE="Casberi/Casberi/Model/WalletApprovalExposure.swift"
 USEROPS="Casberi/Casberi/Model/WalletUserOps.swift"
 PARTIES="Casberi/Casberi/Model/WalletActingParties.swift"
 CONNECTIONS="Casberi/Casberi/Model/AddressConnections.swift"
-for f in "$FLOW" "$RISK" "$STABLE" "$EXPOSURE" "$USEROPS" "$CONNECTIONS"; do
+ALTANA="Casberi/Casberi/Model/AltanaKeystore.swift"
+ALTANA_SRC="Casberi/Casberi/Model/AltanaKeystoreSource.swift"
+for f in "$FLOW" "$RISK" "$STABLE" "$EXPOSURE" "$USEROPS" "$CONNECTIONS" "$ALTANA"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 
@@ -65,6 +67,47 @@ grep -q 'static let unlimitedThreshold: Double = 1e40' Casberi/Casberi/Model/Wal
 # quietly becomes unlimited-only.
 grep -q 'var amount: Double? = nil' Casberi/Casberi/Model/WalletIngest.swift \
   || { echo "✗ HeldToken.amount is gone — the capped arm of $EXPOSURE cannot work"; exit 1; }
+
+# --- Altana keystore: the read-only promise, mechanically (prd §402) --------
+# The seat's whole claim is that it reads and never signs. That claim is worth
+# exactly as much as this check: `AltanaKeystore` NAMES the six write selectors
+# so they can be refused, and the file that makes the calls must never build
+# one.
+#
+# The pure file legitimately contains every write selector (in `writeSelectors`
+# and in its own type doc explaining the refusal), so the guard is pointed at
+# the SOURCE file — and reads it COMMENT-STRIPPED, because that file documents
+# the rule by naming what it must not do. Grepping raw source fires against the
+# prose explaining the guard, which is the Obsidian/Cursor lesson this codebase
+# has now paid for five times.
+ALTANA_CODE=$(sed 's://.*::' "$ALTANA_SRC" | sed '/^[[:space:]]*\/\/\//d')
+for sel in 0xa5c2bd05 0x96295a64 0x3cf26a01 0xd7e54cad 0xf2fa7392 0x5ed1e59a; do
+  if print -r -- "$ALTANA_CODE" | grep -q "$sel"; then
+    echo "✗ $ALTANA_SRC builds a WRITE selector ($sel) — the read-only promise in"
+    echo "  AltanaKeystore's type doc and the connect copy is now false. Change both,"
+    echo "  or don't make the call."
+    exit 1
+  fi
+done
+# The same promise from the other direction: no signing or sending verb.
+for verb in eth_sendTransaction eth_sendRawTransaction eth_signTypedData personal_sign; do
+  if print -r -- "$ALTANA_CODE" | grep -q "$verb"; then
+    echo "✗ $ALTANA_SRC issues $verb — prd §112 says nothing here signs"; exit 1
+  fi
+done
+# The contract address and network are MEASURED (2026-08-18, live mainnet). If
+# either moves, every assertion below is describing a contract we no longer
+# read — and the reader would fail silently, since a wrong address answers
+# `0x` and the decoder correctly returns nil, which renders as "no keys" for
+# every wallet forever.
+grep -q 'static let contract = "0xb70fda90c1d576ba8399946a0c10ecd9d9ea923b"' "$ALTANA" \
+  || { echo "✗ AltanaKeystore.contract moved — re-measure before trusting $0"; exit 1; }
+grep -q 'static let network = "eth-mainnet"' "$ALTANA" \
+  || { echo "✗ AltanaKeystore.network moved — the L2 caches cannot answer isValidKey (measured)"; exit 1; }
+# `getKeys` is the one call made for a wallet with nothing registered, i.e. for
+# every wallet today. Its selector is read from deployed bytecode, not recalled.
+grep -q 'static let getKeysSelector = "0x34e80c34"' "$ALTANA" \
+  || { echo "✗ getKeys selector changed — re-derive it from the deployed bytecode"; exit 1; }
 
 TMP=$(mktemp -d /tmp/wallet-viz-selftest.XXXXXX)
 trap 'rm -rf "$TMP"' EXIT
@@ -877,6 +920,179 @@ check(Conn.untouchedNote([], connectedCount: 2) == nil, "nothing unreached, noth
 check(Conn.untouchedNote(["COLD"], connectedCount: 2)?.contains("COLD") == true,
       "…and an unreached wallet is NAMED, never drawn as an empty node")
 
+// ===========================================================================
+// AltanaKeystore — what keys can sign as you (prd §402)
+//
+// Every failure in this file is a WRONG READING that renders perfectly: a
+// session key shown as a root credential, a capped list that looks complete,
+// a first sight that fires alarms about registrations from before anyone was
+// watching. None of it can be caught by a build, and none of it can be caught
+// on device either — exactly one address on Earth has a key registered, so
+// there is nothing to look at. This harness is the only proof these readings
+// are right.
+// ===========================================================================
+print("AltanaKeystore")
+
+typealias AK = AltanaKeystore
+
+func word32(_ v: Int) -> String {
+    let s = String(v, radix: 16)
+    return String(repeating: "0", count: 64 - s.count) + s
+}
+func keyIDHex(_ n: Int) -> String { word32(n) }
+/// A `bytes32[]` return: offset, length, then elements.
+func arrayHex(count: Int, ids: [Int]) -> String {
+    "0x" + word32(32) + word32(count) + ids.map { keyIDHex($0) }.joined()
+}
+
+// ── encoding: a malformed argument is REFUSED, never padded ───────────────
+let akAddr = "0x2b589af23311e44398e626895af0e3d43e0c97a8"
+check(AK.encode(AK.getKeysSelector, address: akAddr)
+        == AK.getKeysSelector + String(repeating: "0", count: 24) + akAddr.dropFirst(2),
+      "getKeys encodes as selector + left-padded address")
+check(AK.encode(AK.getKeysSelector, address: akAddr.uppercased())
+        == AK.encode(AK.getKeysSelector, address: akAddr),
+      "case in, lowercase out — a checksummed address encodes identically")
+check(AK.encode(AK.getKeysSelector, address: String(akAddr.dropFirst(2)))
+        == AK.encode(AK.getKeysSelector, address: akAddr),
+      "the 0x prefix is optional")
+check(AK.encode(AK.getKeysSelector, address: "0x2b589af2") == nil,
+      "a SHORT address is refused — padding it would read a different, valid-looking account")
+check(AK.encode(AK.getKeysSelector, address: akAddr + "ff") == nil, "…and a long one")
+check(AK.encode(AK.getKeysSelector, address: "0x" + String(repeating: "z", count: 40)) == nil,
+      "…and a non-hex one")
+check(AK.encode(AK.isRootKeySelector, address: akAddr, keyID: keyIDHex(1)) != nil,
+      "a 32-byte key id encodes")
+check(AK.encode(AK.isRootKeySelector, address: akAddr, keyID: "0xdead") == nil,
+      "a short key id is refused")
+
+// ── decoding getKeys ──────────────────────────────────────────────────────
+// The distinction the whole gate rests on: an EMPTY array is a real answer
+// ("this wallet has nothing"), a nil is "we could not ask". Folding them
+// together would hide an RPC outage behind the reassuring common case, which
+// today is every case.
+let akEmpty = AK.decodeKeyIDs(arrayHex(count: 0, ids: []))
+check(akEmpty?.ids.isEmpty == true && akEmpty?.truncated == false,
+      "an unregistered wallet decodes to an EMPTY list, not nil")
+check(AK.decodeKeyIDs("0x") == nil, "a revert decodes to nil — which is NOT an empty list")
+check(AK.decodeKeyIDs("0xzzzz") == nil, "non-hex is refused")
+
+let akOne = AK.decodeKeyIDs(arrayHex(count: 1, ids: [0x2db5]))
+check(akOne?.ids.count == 1, "one key decodes")
+check(akOne?.ids.first == "0x" + keyIDHex(0x2db5), "…0x-prefixed and byte-exact")
+check(akOne?.truncated == false, "…and not truncated")
+
+let akThree = AK.decodeKeyIDs(arrayHex(count: 3, ids: [1, 2, 3]))
+check(akThree?.ids == ["0x" + keyIDHex(1), "0x" + keyIDHex(2), "0x" + keyIDHex(3)],
+      "several keys decode IN ORDER")
+
+// A wrong offset is refused rather than guessed at: mis-parsing it yields key
+// ids read from the wrong place in the buffer, which look exactly like real
+// ones.
+check(AK.decodeKeyIDs("0x" + word32(64) + word32(1) + keyIDHex(1)) == nil,
+      "an offset that isn't 0x20 is refused, never re-based")
+
+// A length word bigger than Int cannot size an allocation.
+check(AK.decodeKeyIDs("0x" + word32(32) + String(repeating: "f", count: 64)) == nil,
+      "an enormous length word is refused rather than wrapped")
+
+// Truncation is REPORTED, which is §307's rule: a capped read that looks
+// complete is worse than a akShort akOne that says so.
+let akShort = AK.decodeKeyIDs("0x" + word32(32) + word32(5) + keyIDHex(1) + keyIDHex(2))
+check(akShort?.ids.count == 2, "a length claiming more than the buffer holds reads what is there")
+check(akShort?.truncated == true, "…and SAYS it was short")
+
+let akOverCap = AK.decodeKeyIDs(arrayHex(count: AK.maxKeys + 3,
+                                       ids: Array(1...(AK.maxKeys + 3))))
+check(akOverCap?.ids.count == AK.maxKeys, "the decode cap holds")
+check(akOverCap?.truncated == true, "…and reports itself")
+check(AK.maxDetailedKeys < AK.maxKeys,
+      "the request budget is tighter than the decode guard — they are different jobs")
+
+// ── decoding single words ─────────────────────────────────────────────────
+check(AK.decodeBool(word32(1)) == true, "1 is true")
+check(AK.decodeBool(word32(0)) == false, "0 is false")
+check(AK.decodeBool(word32(2)) == nil,
+      "2 is NOT true — a contract answering 2 to isKeyActive is not answering yes")
+check(AK.decodeBool("0xff") == nil, "a short word is refused")
+check(AK.decodeUInt(word32(1_700_000_000)) == 1_700_000_000, "a uint40 expiry decodes")
+check(AK.decodeUInt(String(repeating: "f", count: 64)) == nil, "an over-Int word is refused")
+// The fixture above proves the right thing for the WRONG reason on its own:
+// 16 `f`s overflow Int64, so `Int(_, radix:)` returns nil whether or not the
+// high-bits guard is there, and deleting that guard ran green. This is the
+// case that actually pins it — high bits set, low 64 bits a perfectly
+// innocent small number. Without the guard it decodes as 5, so a garbage
+// length word would size a real array and a garbage expiry would render as a
+// date in 1970.
+let highBitsSet = "1" + String(repeating: "0", count: 47)
+                      + String(repeating: "0", count: 15) + "5"
+check(highBitsSet.count == 64, "…(fixture is a well-formed word)")
+check(AK.decodeUInt(highBitsSet) == nil,
+      "a word whose HIGH bits are set is refused, never read as just its low 64 bits")
+
+// ── a key's usability ─────────────────────────────────────────────────────
+let akNow = Date(timeIntervalSince1970: 1_800_000_000)
+func mkKey(_ id: Int, root: Bool, expiry: Date?, signed: Bool = false) -> AK.Key {
+    AK.Key(id: "0x" + keyIDHex(id), isRoot: root, expiry: expiry, hasEverSigned: signed)
+}
+check(mkKey(1, root: true, expiry: nil).isUsable(now: akNow),
+      "a key with no expiry is usable")
+check(mkKey(2, root: false, expiry: akNow.addingTimeInterval(60)).isUsable(now: akNow),
+      "a session key before its expiry is usable")
+check(!mkKey(3, root: false, expiry: akNow.addingTimeInterval(-60)).isUsable(now: akNow),
+      "an EXPIRED session key cannot act, whatever the registry still lists")
+check(!mkKey(4, root: false, expiry: akNow).isUsable(now: akNow),
+      "expiry is exclusive — at the instant it expires it is already gone")
+
+// ── the order is TOTAL ────────────────────────────────────────────────────
+// A list that reshuffles between two reads of identical data reads as broken.
+let akSoon = akNow.addingTimeInterval(3600)
+let akLater = akNow.addingTimeInterval(86_400)
+let akUnordered = [
+    mkKey(9, root: false, expiry: nil),
+    mkKey(3, root: false, expiry: akLater),
+    mkKey(7, root: true, expiry: nil),
+    mkKey(1, root: false, expiry: akSoon),
+    mkKey(2, root: true, expiry: nil),
+]
+let akOrdered = AK.sorted(akUnordered)
+check(akOrdered.first?.isRoot == true, "roots lead")
+check(akOrdered.prefix(2).allSatisfy(\.isRoot), "…all of them")
+check(akOrdered[0].id < akOrdered[1].id, "…tied roots fall back to the key id, so the order is total")
+check(akOrdered[2].expiry == akSoon, "among sessions the SOONEST expiry leads")
+check(akOrdered[3].expiry == akLater, "…then the later one")
+check(akOrdered[4].expiry == nil, "…and a key with no deadline sorts last of its group")
+check(AK.sorted(akUnordered.reversed()).map(\.id) == akOrdered.map(\.id),
+      "the same set in any input order sorts identically — no reshuffle between opens")
+
+// ── news: first sight is SILENT ───────────────────────────────────────────
+// The single most important assertion in this file. Watching a wallet that
+// already holds akThree credentials must not fire akThree "a new key can sign as
+// you" alarms about registrations that happened long before anyone watched.
+check(AK.newlyAppeared(previous: nil, current: ["0xa", "0xb", "0xc"]).isEmpty,
+      "FIRST SIGHT REPORTS NOTHING — a pre-existing key is not news")
+check(AK.newlyAppeared(previous: [], current: ["0xa"]) == ["0xa"],
+      "…but an empty snapshot is a real baseline, so the next key IS news")
+check(AK.newlyAppeared(previous: ["0xa"], current: ["0xa"]).isEmpty,
+      "an unchanged registry is quiet")
+check(AK.newlyAppeared(previous: ["0xa"], current: ["0xa", "0xb"]) == ["0xb"],
+      "…and only the new one is reported")
+check(AK.newlyAppeared(previous: ["0xA"], current: ["0xa"]).isEmpty,
+      "the comparison is case-insensitive — a re-cased id is not a new key")
+check(AK.newlyAppeared(previous: ["0xb"], current: ["0xa", "0xb", "0xc"]) == ["0xa", "0xc"],
+      "…and several new keys arrive in the registry's own order")
+check(AK.newlyAppeared(previous: ["0xa", "0xb"], current: ["0xa"]).isEmpty,
+      "a REVOKED key is not reported here — this reports arrivals, and a removal is a different sentence")
+
+// ── the read-only promise, as data ────────────────────────────────────────
+check(AK.writeSelectors.count == 6, "all six write verbs are named so they can be refused")
+let akReads = [AK.getKeysSelector, AK.isRootKeySelector, AK.isKeyActiveSelector,
+                     AK.getExpirySelector, AK.getNonceSelector]
+check(akReads.allSatisfy { !AK.writeSelectors.contains($0) },
+      "no read selector collides with a write one")
+check(Set(akReads).count == akReads.count,
+      "…and no two reads share a selector, which would silently call the wrong method")
+
 print("")
 if failures == 0 {
     print("✓ wallet-viz self-test: \(checks) checks passed")
@@ -892,5 +1108,5 @@ SWIFT
 # `swiftc` to a binary, NOT `swift file1 file2 …` — that form runs the FIRST
 # file as a script and passes the rest as command-line ARGUMENTS to it, so the
 # sources were never compiled and the run exited 0 having tested nothing.
-swiftc -O -o "$TMP/selftest" "$FLOW" "$RISK" "$STABLE" "$EXPOSURE" "$USEROPS" "$CONNECTIONS" "$DRIVER"
+swiftc -O -o "$TMP/selftest" "$FLOW" "$RISK" "$STABLE" "$EXPOSURE" "$USEROPS" "$CONNECTIONS" "$ALTANA" "$DRIVER"
 "$TMP/selftest"

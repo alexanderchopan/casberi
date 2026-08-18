@@ -26010,3 +26010,108 @@ gap that was only ever a demo one (§375's X lesson, two rooms over).
 on macOS — only TRAILING X's are replaced — so two concurrent runs collide with
 "File exists". It failed a `verify.sh` pass on the Radicle harness's first night,
 when the pass and a hand-run overlapped. Use `mktemp -d` with fixed names inside.
+## §402 — Reading Altana’s onchain keystore: an inventory, not a seat (user: "could we build soething with this?", https://www.altana.network/architecture, 2026-08-18)
+
+Altana's keystore is an onchain registry of an account's signing credentials —
+passkeys, hardware keys, session keys, backups — kept on L1 so every chain can
+reference one source of truth. It is §293's question ("what else can act as
+you") asked about SIGNATURES rather than about Safe modules and 7702 delegates.
+
+**The measurement came first, and it decided the shape.** Read live against
+mainnet on this date: both contracts are deployed and answering
+(`0xb70fDa90C1d576Ba8399946a0c10ECD9d9Ea923b` on Ethereum,
+`0x6572427ED530BadcF7375Cf9A4709D8d2b0E7E0a` as a cache on Base). A sweep of
+1.2M blocks reached PAST the deployment — the `OwnershipTransferred` from the
+zero address sits at block 25474389 — so what follows is the contract's ENTIRE
+history and not a sample: **five logs**. Two ownership transfers, a controller
+authorization, an ownership handover, and exactly one key registration,
+belonging to the deployer. `getKeys` on that address returns one key id;
+decoded, it is a root key, active, with no expiry and a nonce of zero — a test
+credential that has never signed.
+
+**Ruling 1: it is NOT a catalog seat.** A tile promising to read something
+nobody has is §83's fake status, and it would stay that way for however long
+adoption takes. It lands instead as a fourth species in §293's inventory, which
+already draws nothing when there is nothing to say — so a wallet with no
+keystore entry sees no change anywhere in the app. That reframes the adoption
+problem out of existence: this is not a bridge with no users, it is one more
+line in an inventory that stays silent until it has something.
+
+**Ruling 2: read L1, ignore the L2 cache.** The Base cache returns the correct
+key id list, and an empty list for an unregistered address — but `isValidKey`
+there reverts with `Cache: call populateKey before isValidKey` (measured), so
+the per-key proof has never been hydrated for the one key that exists. Its L1
+block reference IS live, so the `L1Block` plumbing works; it is the population
+that has not happened. Reading L1 alone is simpler and the only half we can
+stand behind.
+
+**The documentation undersells the read surface, and the enumeration is the
+whole feature.** `docs.altana.network` advertises `isValidKey` — a POINT query
+answering "is this key allowed?", which requires already knowing the key and
+therefore can never produce an inventory. Pulling the dispatch table out of the
+deployed bytecode found 24 selectors on L1 including `getKeys(address)`, a real
+enumeration returning `bytes32[]`. Every selector in `AltanaKeystore` was read
+from that bytecode and confirmed against a public signature database; none was
+recalled. Per key: `isRootKey` (the distinction worth reading), `isKeyActive`,
+`getExpiry` (a `uint40`, 0 meaning never), `getNonce` (whether it has ever
+signed).
+
+**It costs one `eth_call` per watched wallet per pass.** `getKeys` answers an
+unregistered address with an empty array rather than reverting, so the common
+case — which today is every case — ends after one call. Detail calls fire only
+on a hit, bounded by `maxDetailedKeys` (12), because each key costs four
+further reads and an unbounded account would spend the burst that made
+`AerodromeDeFi` need a pacer.
+
+**nil and empty are different answers, deliberately.** nil is "we could not
+ask"; empty is "we asked and this wallet has nothing". Folding them together
+would hide an RPC outage behind the reassuring common case forever.
+
+**First sight is SILENT** (the Hyperliquid rule, 2026-07-30): watching a wallet
+that already holds three credentials must not land three "a new key can sign as
+you" alarms about registrations that happened before anyone was watching. Only
+a key appearing WHILE we watch is news, and then it is alarm-class. News needs
+no log reads and no event ABI — it is a snapshot diff on `getKeys`. The
+snapshot leaves with the watch, beside `WalletApprovals.clearCursors`, or a
+re-watch reports the whole gap as news.
+
+**Read-only by CONDUCT, and mechanically enforced.** The six write selectors
+(`registerKey`, `initialRegisterKey`, `revokeKey`, `updateNonce`,
+`setAuthorizedContract`, `populateKey`) are NAMED in `AltanaKeystore` so they
+can be refused, and `wallet-viz-selftest.sh` fails the build if one appears at
+a call site in `AltanaKeystoreSource.swift`, or if that file names a signing or
+sending verb. The negative guard reads a COMMENT-STRIPPED copy, because both
+files document the rule by naming what they must not do — the Obsidian/Cursor
+lesson, fifth time. §112 holds: nothing here signs.
+
+**Copy ceiling: a session key's SCOPE cannot be read.** The registry publishes
+no way to ask what a scoped key may do, so the row states the expiry it can
+read and declines to describe powers it cannot. A root credential gets the
+plain sentence; a session key is named as one and dated.
+
+Guarded by `scripts/wallet-viz-selftest.sh` — `AltanaKeystore.swift` is
+Foundation-only and compiled WHOLE, 40 assertions, mutation-proven ten ways,
+plus drift guards on the contract address, the network, the `getKeys` selector
+and the conduct promise. **It is the only proof these readings are right**, and
+in a stronger sense than the Stripe/PostHog harnesses: those bridges could be
+measured by anyone willing to mint a key, and here there is nothing on Earth to
+read but one test credential. One of its own fixtures was wrong on the first
+run in the "right result for the wrong reason" class — a 64-`f` word is refused
+by `Int(_:radix:)` for overflow whether or not the high-bits guard exists, so
+deleting that guard ran green; the pinning case has high bits set and low bits
+holding an innocent small number.
+
+**NOT built, deliberately.** No feed row and no `Thing` lands — the inventory
+is a standing statement, and a registration alarm is a separate pass with its
+own copy. No catalog seat, no website tile, no demo seeding, no room head, no
+new `Thing` field and therefore **no CloudKit Production deploy**. Nothing that
+registers, revokes, or populates a key. The keystore's own SDK and MCP server
+are write surfaces and are not touched.
+
+**Open questions, each currently resolved by saying less.** `getValidator`
+answered the zero address for the one real key — "default scheme" or "unset" is
+undecidable from outside, and it is what would let a row honestly say "passkey"
+rather than "key". `getKey`'s struct layout is inferred from a single sample.
+How the Base cache knows the id list without `populateKey` is unexplained. And
+no event ABI is published, which is why news is a snapshot diff rather than a
+log read.

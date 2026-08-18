@@ -2849,6 +2849,31 @@ enum ProbeHooks {
                 }
             }
         },
+        // `-altanaProbe YES` — the Altana keystore read on its own
+        // (2026-08-18, prd §402): which credentials can sign as each watched
+        // wallet, their role, expiry, and whether they have ever signed. One
+        // NSLog per line (the `-todayProbe` truncation lesson).
+        //
+        // Separate from `-actingPartiesProbe` even though the inventory folds
+        // it in, because an empty keystore reading has FOUR causes that render
+        // as the same silence — no EVM wallet watched, the RPC did not answer,
+        // the wallet genuinely has nothing registered (which today is the
+        // correct answer for every wallet but Altana's own deployer), or the
+        // decoder refused a reply whose shape it did not recognise. Only the
+        // last two are worth acting on, and `unreadable` vs `keys=0` is the
+        // line that separates them.
+        //
+        // Pair with `-walletAddress` to point it at a specific account. Reads
+        // only: no write selector is ever constructed (`AltanaKeystore.writeSelectors`
+        // exists to be checked against, and the self-test fails the build on
+        // one appearing at a call site).
+        Hook(key: "altanaProbe") { _, _ in
+            Task { @MainActor in
+                for line in await AltanaKeystore.probeLines() {
+                    NSLog("altana| %@", line)
+                }
+            }
+        },
         // `-safeProbe YES` NSLogs which watched wallets are detected Safes
         // per chain and their pending queue counts (or the honest
         // unreachable/none). Pairs with `-walletAddress` (a Safe address, to
