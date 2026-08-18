@@ -1037,7 +1037,8 @@ check(AK.decodeUInt(highBitsSet) == nil,
 // ── a key's usability ─────────────────────────────────────────────────────
 let akNow = Date(timeIntervalSince1970: 1_800_000_000)
 func mkKey(_ id: Int, root: Bool, expiry: Date?, signed: Bool = false) -> AK.Key {
-    AK.Key(id: "0x" + keyIDHex(id), isRoot: root, expiry: expiry, hasEverSigned: signed)
+    AK.Key(id: "0x" + keyIDHex(id), isRoot: root, expiry: expiry,
+           signatureCount: signed ? 1 : 0)
 }
 check(mkKey(1, root: true, expiry: nil).isUsable(now: akNow),
       "a key with no expiry is usable")

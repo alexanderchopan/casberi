@@ -2284,16 +2284,16 @@ enum DemoSeedAll {
         // HEAD composes from that snapshot and the rows are what sits beneath
         // it, so a demo where the two disagree shows a card describing keys
         // the room does not list.
-        let keys: [(String, String, Bool, Double)] = [
-            ("A root key can sign as \(WalletStore.shortAddress(demoWallet))", "dem0", true, 62),
-            ("A session key was granted for \(WalletStore.shortAddress(demoWallet)), until tomorrow", "dem1", false, 0.6),
-            ("A session key was granted for \(WalletStore.shortAddress(demoWallet)), until next month", "dem2", false, 4),
-            ("A session key was granted for \(WalletStore.shortAddress(demoWallet)), until last week", "dem3", false, 6),
+        let keys: [(String, Int, Bool, Double)] = [
+            ("A root key can sign as \(WalletStore.shortAddress(demoWallet))", 0, true, 62),
+            ("A session key was granted for \(WalletStore.shortAddress(demoWallet)), until tomorrow", 1, false, 0.6),
+            ("A session key was granted for \(WalletStore.shortAddress(demoWallet)), until next month", 2, false, 4),
+            ("A session key was granted for \(WalletStore.shortAddress(demoWallet)), until last week", 3, false, 6),
         ]
         out += keys.map { k in
             row(.link, k.0, source: "Altana",
                 ref: AltanaKeystore.ref(chain: "BNB Smart Chain", address: demoWallet,
-                                        keyID: "0x" + k.1 + String(repeating: "0", count: 59)),
+                                        keyID: demoAltanaKeyIDValue(k.1)),
                 days: k.3, hour: 10,
                 content: AltanaKeystore.explorerURL(address: demoWallet),
                 tags: [k.2 ? "Root key" : "Session key", "BNB Smart Chain"]) { t in
@@ -2570,29 +2570,52 @@ enum DemoSeedAll {
     /// expiry, 24-hour session grants, and — deliberately — one session key
     /// already past its expiry while the registry still lists it, so the
     /// demo exercises the hygiene line rather than pre-baking it away.
+    /// A demo key id that is REAL HEX.
+    ///
+    /// The first cut spelled these `0xdem0…`, which reads nicely and is not a
+    /// hex string — `m` is not a hex digit, and it was 63 characters rather
+    /// than 64. `AltanaKeySheet.parse` refuses both, correctly, so every demo
+    /// key row fell back to the generic link sheet while the room head (which
+    /// never validates an id) rendered perfectly. A demo that furnishes one
+    /// surface and silently starves another is exactly the §349 class, one
+    /// layer down — and no static check covers a sheet anatomy.
+    ///
+    /// Shared by the snapshot and the rows deliberately: they must agree, or
+    /// the sheet composes for an id the room does not list.
+
     private static func seedAltanaKeystore() {
         let now = Date.now
+        // A REAL secp256k1 point, measured off BNB 2026-08-18 — so the demo's
+        // curve label ("Wallet key") is computed by the shipped detector from
+        // key material that genuinely lies on the curve, not asserted. A made-up
+        // point would satisfy neither equation and render as `.unknown`, which
+        // is exactly the demo silently under-showing a feature.
+        let realPoint = "04a376e7011da0888af6a46b1803c93760db185736229fbcf96d2c9750f9e3eacb"
+                      + "021abf6eeffcd4f7645c343e2d43c3dc5e2a352ee7ab15c7b8f16649531ba940"
         func key(_ id: String, root: Bool, registeredDaysAgo: Double,
-                 grantHours: Double?) -> AltanaKeystore.Key {
+                 grantHours: Double?, signatures: Int = 0,
+                 publicKey: String? = nil) -> AltanaKeystore.Key {
             let registered = now.addingTimeInterval(-registeredDaysAgo * 86_400)
             return AltanaKeystore.Key(
                 id: id, isRoot: root,
                 expiry: grantHours.map { registered.addingTimeInterval($0 * 3600) },
-                hasEverSigned: false, registeredAt: registered,
-                chainLabel: "BNB Smart Chain")
+                signatureCount: signatures, publicKey: publicKey,
+                registeredAt: registered, chainLabel: "BNB Smart Chain")
         }
         AltanaState.save([
             AltanaKeystore.Reading(address: demoWallet, keys: [
-                key("0xdem0" + String(repeating: "0", count: 59), root: true,
-                    registeredDaysAgo: 62, grantHours: nil),
+                key(demoAltanaKeyIDValue(0), root: true,
+                    registeredDaysAgo: 62, grantHours: nil,
+                    signatures: 0, publicKey: realPoint),
                 // Live, a little over halfway through a 24-hour grant.
-                key("0xdem1" + String(repeating: "0", count: 59), root: false,
-                    registeredDaysAgo: 0.6, grantHours: 24),
+                key(demoAltanaKeyIDValue(1), root: false,
+                    registeredDaysAgo: 0.6, grantHours: 24,
+                    signatures: 47, publicKey: realPoint),
                 // Live, a 30-day grant with most of its runway left.
-                key("0xdem2" + String(repeating: "0", count: 59), root: false,
+                key(demoAltanaKeyIDValue(2), root: false,
                     registeredDaysAgo: 4, grantHours: 24 * 30),
                 // EXPIRED but still listed — the reading nothing else has.
-                key("0xdem3" + String(repeating: "0", count: 59), root: false,
+                key(demoAltanaKeyIDValue(3), root: false,
                     registeredDaysAgo: 6, grantHours: 24),
             ], truncated: false),
         ])
@@ -3854,4 +3877,18 @@ enum DemoSeedAll {
         ("HomeKit", "Live", "Reads your accessories, never controls them."),
         ("Voice", "3 notes", "Transcribes on device."),
     ]
+}
+
+/// A demo Altana key id that is REAL HEX — file-scope so both the (MainActor)
+/// seeder and the nonisolated row builder can reach it.
+///
+/// The first cut spelled these `0xdem0…`, which reads nicely and is not hex:
+/// `m` is not a hex digit, and the string was 63 characters rather than 64.
+/// `AltanaKeySheet.parse` refuses both, correctly — so every demo key row fell
+/// back to the generic link sheet while the room head, which never validates
+/// an id, rendered perfectly. A demo that furnishes one surface and silently
+/// starves another is the §349 class one layer down, and no static check
+/// covers a sheet anatomy.
+func demoAltanaKeyIDValue(_ n: Int) -> String {
+    "0xde" + String(n) + String(repeating: "0", count: 61)
 }

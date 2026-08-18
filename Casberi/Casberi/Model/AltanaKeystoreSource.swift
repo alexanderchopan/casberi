@@ -112,15 +112,27 @@ extension AltanaKeystore {
             registered = registeredAt(fromGetKey: hex, expectedExpiry: expirySeconds)
         }
 
-        var hasEverSigned = false
+        // The COUNT, not a boolean — see `Key.signatureCount`. The call is
+        // the same one this file already made; only the discarding changed.
+        var signatures = 0
         if let data = encode(getNonceSelector, address: address, keyID: id),
            let hex = await call(data, on: registry), let nonce = decodeUInt(hex) {
-            hasEverSigned = nonce > 0
+            signatures = nonce
+        }
+
+        // The key material, read for ONE purpose: which curve it lies on, and
+        // therefore whether it is a wallet key or a passkey (§404). Never
+        // displayed whole.
+        var pub: String?
+        if let data = encode(getPublicKeySelector, address: address, keyID: id),
+           let hex = await call(data, on: registry),
+           let decoded = decodeBytes(hex), decoded.count == 130 {
+            pub = decoded
         }
 
         return Key(id: id.lowercased(), isRoot: isRoot, expiry: expiry,
-                   hasEverSigned: hasEverSigned, registeredAt: registered,
-                   chainLabel: registry.label)
+                   signatureCount: signatures, publicKey: pub,
+                   registeredAt: registered, chainLabel: registry.label)
     }
 
     /// Reads several addresses, skipping anything that is not plain hex.
@@ -143,11 +155,28 @@ extension AltanaKeystore {
     }
 
     static func storedKeyIDs(for address: String) -> [String]? {
-        UserDefaults.standard.stringArray(forKey: snapshotKey(address))
+        storedNonces(for: address).map { Array($0.keys) }
     }
 
-    static func storeKeyIDs(_ ids: [String], for address: String) {
-        UserDefaults.standard.set(ids.map { $0.lowercased() }, forKey: snapshotKey(address))
+    /// key id → signature count, as of the last pass. nil means we have never
+    /// looked, which is what makes first sight silent.
+    ///
+    /// Stored as a dictionary rather than the old id ARRAY (prd §404): the
+    /// nonce is what makes a first-use detectable, and keeping it here costs
+    /// one small UserDefaults value per wallet. A device holding the old array
+    /// shape decodes as nil and simply re-seeds — one silent pass, no wrong
+    /// rows, which is the right way for this to fail.
+    static func storedNonces(for address: String) -> [String: Int]? {
+        guard let raw = UserDefaults.standard.dictionary(forKey: snapshotKey(address)) else { return nil }
+        var out: [String: Int] = [:]
+        for (k, v) in raw { if let n = v as? Int { out[k.lowercased()] = n } }
+        return out.isEmpty && !raw.isEmpty ? nil : out
+    }
+
+    static func storeNonces(_ keys: [(id: String, nonce: Int)], for address: String) {
+        var out: [String: Int] = [:]
+        for k in keys { out[k.id.lowercased()] = k.nonce }
+        UserDefaults.standard.set(out, forKey: snapshotKey(address))
     }
 
     /// Unwatching takes the snapshot with it, beside `WalletApprovals.clearCursors`.
@@ -208,11 +237,31 @@ extension AltanaKeystore {
             if !reading.keys.isEmpty { evidence.remember(address) }
             snapshot.append(reading)
 
-            let current = reading.keys.map { $0.id.lowercased() }
-            let previous = storedKeyIDs(for: address)
+            let current = reading.keys.map { (id: $0.id.lowercased(), nonce: $0.signatureCount) }
+            let previous = storedNonces(for: address)
             let firstSight = previous == nil
-            let fresh = Set(newlyAppeared(previous: previous, current: current))
-            storeKeyIDs(current, for: address)
+            let changed = changes(previous: previous, current: current)
+            let fresh = Set(changed.compactMap { if case .added(let k) = $0 { k } else { nil } })
+            storeNonces(current, for: address)
+
+            // The two events the arrivals-only diff could not see (§404). Both
+            // are landed BEFORE the key rows below, so a revoked key's own row
+            // is already in the corpus when its revocation arrives.
+            for change in changed {
+                guard let sentence = eventTitle(change, reading: reading, address: address) else { continue }
+                let r = eventRef(change, address: address)
+                guard !IngestSupport.existingSourceRefs(context, source: source).contains(r) else { continue }
+                let thing = Thing(kind: .link, title: sentence,
+                                  content: explorerURL(address: address),
+                                  source: source, sourceRef: r)
+                thing.capturedAt = Date.now
+                thing.walletAddress = address
+                thing.externalLink = explorerURL(address: address)
+                thing.tags = [changeTag(change), "BNB Smart Chain"]
+                context.insert(thing)
+                SpotlightIndex.index([thing])
+                landed += 1
+            }
 
             let existing = IngestSupport.existingSourceRefs(context, source: source)
             for key in reading.keys {
@@ -274,11 +323,85 @@ extension AltanaKeystore {
         return String(localized: "A session key was granted for \(short), until \(when)")
     }
 
+    /// A revocation or a first use, as a sentence — nil when there is nothing
+    /// honest to say.
+    ///
+    /// FIRST USE leads with the finding, because "had never signed just
+    /// signed" IS the whole story and a badge would bury it. On a ROOT key it
+    /// wears the alarming form, since a permanent credential waking up after
+    /// months is the shape of a compromise; on a session key it is ordinary —
+    /// session keys are granted in order to be used.
+    ///
+    /// REVOCATION is deliberately quiet. It is the system working, and the
+    /// only reason to say it at all is that a key leaving your account without
+    /// you doing it is worth seeing.
+    static func eventTitle(_ change: Change, reading: Reading, address: String) -> String? {
+        let short = WalletStore.shortAddress(address)
+        switch change {
+        case .added:
+            return nil    // the key's own row already says this
+        case .revoked:
+            return String(localized: "A key was revoked for \(short)")
+        case .firstUse(let id):
+            guard let key = reading.keys.first(where: { $0.id.lowercased() == id }) else { return nil }
+            return key.isRoot
+                ? String(localized: "A key that had never signed just signed for \(short) — if that wasn’t you, revoke it on Altana")
+                : String(localized: "A session key signed for \(short) for the first time")
+        }
+    }
+
+    static func eventRef(_ change: Change, address: String) -> String {
+        let verb: String
+        switch change {
+        case .added: verb = "added"
+        case .revoked: verb = "revoked"
+        case .firstUse: verb = "firstuse"
+        }
+        return "altana:event:\(verb):\(address.lowercased()):\(change.keyID)"
+    }
+
+    static func changeTag(_ change: Change) -> String {
+        switch change {
+        case .added: String(localized: "Key granted")
+        case .revoked: String(localized: "Key revoked")
+        case .firstUse: String(localized: "First use")
+        }
+    }
+
     /// The door. Altana's own explorer is where a key can actually be acted on
     /// — §112's preparing-surface rule, the Revoke.cash shape: we read and
     /// state, they act.
     static func explorerURL(address: String) -> String {
         "https://explorer.altana.network/account/\(address.lowercased())"
+    }
+
+    /// Is this key still valid, asked NOW (prd §404).
+    ///
+    /// The sheet's live re-check. `isValidKey` is the registry's own point
+    /// query — the one the documentation leads with, and the one that is
+    /// useless for building an inventory but exactly right for confirming a
+    /// single credential.
+    ///
+    /// Walks the registries so a key on either chain answers, and returns
+    /// `.unreadable` rather than `.revoked` when nothing answered: a public
+    /// RPC having a bad minute must never render as "your key was revoked",
+    /// which is the alarming direction and would be a lie.
+    @MainActor
+    static func liveState(address: String, keyID: String) async -> AltanaKeySheet.LiveState {
+        // THE DEMO REACHES NOTHING. Without this the sheet asks the real
+        // registry about a seeded wallet that holds no keys, gets `false`, and
+        // renders "Revoked — this key can no longer sign" over a demo
+        // credential that is fine — the most alarming sentence on the card,
+        // shown to someone who has not decided whether to keep the app. The
+        // seeded keys are active by construction, so that is what it says.
+        if DemoMode.isActive { return .active }
+        for registry in registries {
+            guard let data = encode(isKeyActiveSelector, address: address, keyID: keyID),
+                  let hex = await call(data, on: registry),
+                  let active = decodeBool(hex) else { continue }
+            return active ? .active : .revoked
+        }
+        return .unreadable
     }
 
     // MARK: - Probes

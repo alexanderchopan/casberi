@@ -21,7 +21,13 @@ enum AltanaState {
         var id: String
         var isRoot: Bool
         var expiry: Date?
-        var hasEverSigned: Bool
+        /// The COUNT (§404). Optional so a snapshot written by an older build
+        /// still decodes — Swift's synthesized decoder does not apply defaults
+        /// for a missing key, and a non-optional addition here would throw and
+        /// silently blank the head for everyone who upgraded (the trap
+        /// `WalletStore.WatchedAddress.updatedAt` documents).
+        var signatureCount: Int?
+        var publicKey: String?
         var registeredAt: Date?
         var chainLabel: String?
     }
@@ -37,7 +43,8 @@ enum AltanaState {
             StoredReading(address: r.address,
                           keys: r.keys.map {
                               StoredKey(id: $0.id, isRoot: $0.isRoot, expiry: $0.expiry,
-                                        hasEverSigned: $0.hasEverSigned,
+                                        signatureCount: $0.signatureCount,
+                                        publicKey: $0.publicKey,
                                         registeredAt: $0.registeredAt,
                                         chainLabel: $0.chainLabel)
                           },
@@ -56,7 +63,8 @@ enum AltanaState {
                 address: r.address,
                 keys: r.keys.map {
                     AltanaKeystore.Key(id: $0.id, isRoot: $0.isRoot, expiry: $0.expiry,
-                                       hasEverSigned: $0.hasEverSigned,
+                                       signatureCount: $0.signatureCount ?? 0,
+                                       publicKey: $0.publicKey,
                                        registeredAt: $0.registeredAt,
                                        chainLabel: $0.chainLabel)
                 },

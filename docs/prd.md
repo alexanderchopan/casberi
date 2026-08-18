@@ -26225,3 +26225,80 @@ row lands and says so, and adding a kind means re-proving `notify-selftest.sh`'s
 screen through the generic `deadlineNear` path with no notification code of this
 seat's own. No setup screen: there is nothing to configure, so the catalog tile
 routes to the wallet manager like every other wallet-riding seat.
+
+## §404 — A key gets a credential sheet, a curve, and the two events we could see and weren't saying (user: "how else can we dramatically improve the altana experience", 2026-08-18)
+
+§403 gave the keystore a room. This is the pass over what the reader was
+already fetching and throwing away — every item here is a field that was
+crossing the wire on the previous build and being discarded, plus two chain
+facts the arrivals-only diff could not see.
+
+**The sheet.** An Altana row was a `.link`, so opening one gave the generic
+sheet: a title, a timestamp and a door. That is §363's situation for money,
+one category over — real structure falling through `ThingContent`'s
+`default:`. `AltanaKeySheet` + `AltanaKeyCard` replace it with a credential
+anatomy, assembled from stamped fields and never parsed back out of a title.
+
+**The window leads, and it is the one thing nothing else in this app can
+draw.** Every other deadline here knows one end: ENS knows when a name expires
+and not when it was registered, and `ASCRoom` had to gate its runway on "a
+transition this device watched" because Apple publishes no start. The keystore
+publishes both, so the sheet draws a real window, dated at each end, with a
+marker where now sits — on first sight and on every device. Elapsed AND
+remaining in words ("14 hours in · 10 hours left"), never a percentage: a
+percentage of a grant whose length nobody chose means nothing.
+
+**The sheet ASKS what the row cannot.** A row records that a key EXISTED; only
+a fresh read says whether it still does. One `isValidKey` on open (the point
+query the docs lead with — useless for an inventory, exactly right for
+confirming one credential), settling in after mount. **An unreachable RPC
+returns `.unreadable`, never `.revoked`** — the alarming direction is the
+wrong one, and mutation-tested as such.
+
+**The curve, which is the flagship.** A key is `04 || X || Y`, and both
+candidate curves are defined by `y² = x³ + ax + b (mod p)` — so testing which
+equation the point satisfies IS the identification. No heuristics, no
+metadata. **secp256k1 is what wallets sign with; P-256 is what WebAuthn
+passkeys and the Secure Enclave use**, so this yields the only word on the
+whole surface a person already has: "Wallet key" or "Passkey". `.unknown` is a
+real answer and says nothing. Measured: the one key on Ethereum is secp256k1,
+a wallet key. The arithmetic is a hand-rolled 256-bit `BigU` (32-bit limbs,
+binary-long-division modulo) for `Keccak256`'s reason — this file must stay
+Foundation-only so the harness compiles it as shipped, and a dependency for
+six multiplications trades that away.
+
+**Three readings that were already on the wire.** The nonce was read every
+pass and collapsed to a Bool — it is the COUNT now, because "signed 47 times"
+and "registered 62 days ago, never used" are different credentials and only a
+number tells them apart. `getPublicKey` feeds the curve. And **"Also signs
+for"**: a key id derives from its public key, so the same credential
+registered on several watched wallets is detectable by plain id equality — one
+passkey controlling three accounts is a single point of failure, and no
+surface anywhere shows it, Altana's own explorer being account-scoped. Factual
+only, never a similarity inference (`AddressConnections`' rule).
+
+**Two events the arrivals-only diff could not see.** A key vanishing from
+`getKeys` is a REVOCATION — the one lifecycle event the registry publishes for
+free, and it was disappearing in silence. A nonce leaving zero is a FIRST USE,
+and on a root key that sat unused for months that is the most specific thing
+this seat can ever say. Both fall out of one comparison; the snapshot stores
+nonces beside ids to make it possible. A nonce that FELL is a misread, not a
+signature, and says nothing. First sight still answers empty, same rule and
+same reason.
+
+Copy rulings: first use LEADS with the finding ("a key that had never signed
+just signed"), alarming on a root key and ordinary on a session key, which are
+granted in order to be used. Revocation is quiet — it is the system working.
+An expired key is grey and never red: it is safe, just untidy.
+
+Guarded in `scripts/altana-selftest.sh` — 88 assertions, **mutation-proven 17
+ways**, the curve tested against three real points (the network's own key, and
+both curve generators, whose coordinates are public and fixed). Two of its own
+fixtures were the familiar "right result for the wrong reason": a junk point
+with a compressed prefix is refused by the equation whether or not the prefix
+is checked, and X = p exactly reduces to x = 0, which the paired Y fails
+anyway — so both guards' mutations survived until the fixtures became a VALID
+point wearing an 03 prefix, and X = p+1 with a Y that genuinely satisfies the
+equation after reduction. A third bug was caught by the tests rather than
+written into them: `compose` compared raw key ids, which matches only while
+both sides agree about the `0x` prefix and fails silently otherwise.

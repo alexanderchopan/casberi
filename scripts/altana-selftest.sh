@@ -25,8 +25,9 @@ cd "$(dirname "$0")/.."
 
 MODEL="Casberi/Casberi/Model/AltanaKeystore.swift"
 ROOM="Casberi/Casberi/Model/AltanaRoom.swift"
+SHEET="Casberi/Casberi/Model/AltanaKeySheet.swift"
 SOURCE="Casberi/Casberi/Model/AltanaKeystoreSource.swift"
-for f in "$MODEL" "$ROOM" "$SOURCE"; do
+for f in "$MODEL" "$ROOM" "$SHEET" "$SOURCE"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 
@@ -163,7 +164,7 @@ let now = Date(timeIntervalSince1970: 1_787_083_931)   // measured "now", 2026-0
 func key(_ n: Int, root: Bool, reg: Int?, exp: Int?) -> AK.Key {
     AK.Key(id: "0x" + kid(n), isRoot: root,
            expiry: exp.map { Date(timeIntervalSince1970: TimeInterval($0)) },
-           hasEverSigned: false,
+           signatureCount: 0, publicKey: nil,
            registeredAt: reg.map { Date(timeIntervalSince1970: TimeInterval($0)) },
            chainLabel: "BNB Smart Chain")
 }
@@ -276,6 +277,159 @@ let many = reading("0xccc", [root, over, key(11, root: true, reg: rootReg, exp: 
 check(AltanaRoom.compose(readings: [many, a], now: now)?.address == "0xaaa",
       "a live deadline outranks a bigger pile with no clock in it")
 
+// ===========================================================================
+// The curve — what KIND of credential this is (prd §404)
+//
+// The point below is REAL: measured off BNB 2026-08-18 and reassembled from
+// the getKey words. It lies on secp256k1, verified independently in Python
+// before this test existed. So this asserts the shipped detector against
+// ground truth, not against itself.
+// ===========================================================================
+print("AltanaKeystore.curve")
+
+let realKey = "04a376e7011da0888af6a46b1803c93760db185736229fbcf96d2c9750f9e3eacb"
+            + "021abf6eeffcd4f7645c343e2d43c3dc5e2a352ee7ab15c7b8f16649531ba940"
+check(AK.curve(fromPublicKey: realKey) == .secp256k1,
+      "the one real key on the network is secp256k1 — a WALLET key, not a passkey")
+check(AK.Curve.secp256k1.label == "Wallet key", "…and it is named in a word people know")
+check(AK.Curve.p256.label == "Passkey", "P-256 is the passkey curve")
+check(AK.Curve.unknown.label == nil,
+      "an unrecognised curve says NOTHING — naming it anyway is the §83 line here")
+
+// A real P-256 point: the NIST P-256 generator, whose coordinates are public
+// and fixed. If the detector mixed the two equations up, this would come back
+// secp256k1 and every passkey would be labelled a wallet key.
+let p256Generator = "04"
+  + "6b17d1f2e12c4247f8bce6e563a440f277037d812deb33a0f4a13945d898c296"
+  + "4fe342e2fe1a7f9b8ee7eb4a7c0f9e162bce33576b315ececbb6406837bf51f5"
+check(AK.curve(fromPublicKey: p256Generator) == .p256,
+      "the P-256 generator is identified as P-256, not as secp256k1")
+
+// The secp256k1 generator, likewise.
+let k1Generator = "04"
+  + "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798"
+  + "483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8"
+check(AK.curve(fromPublicKey: k1Generator) == .secp256k1,
+      "the secp256k1 generator is identified as secp256k1")
+
+// Junk, and near-misses, all refuse.
+check(AK.curve(fromPublicKey: "04" + String(repeating: "11", count: 64)) == .unknown,
+      "a point on neither curve is unknown")
+// A VALID secp256k1 point wearing the wrong prefix. The earlier fixture used
+// 64 bytes of junk, which is refused by the curve equation whether or not the
+// prefix is checked — so it proved nothing about the prefix guard and the
+// mutation survived. This one is on the curve, so only the prefix can reject it.
+check(AK.curve(fromPublicKey: "03"
+      + "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798"
+      + "483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8") == .unknown,
+      "a COMPRESSED prefix is refused even on a point that IS on the curve")
+check(AK.curve(fromPublicKey: "03" + String(repeating: "aa", count: 64)) == .unknown,
+      "…and junk with a compressed prefix likewise")
+check(AK.curve(fromPublicKey: "04ff") == .unknown, "a short key is refused")
+check(AK.curve(fromPublicKey: "") == .unknown, "an empty key is refused")
+// A coordinate at or above the field prime is not on the curve, whatever it
+// reduces to.
+// X = p + 1, which is >= the field prime but REDUCES to x = 1 — a real point
+// on the curve, with a Y that genuinely satisfies the equation after
+// reduction. So this is accepted the moment the range check goes, and is the
+// only shape that pins it: the earlier fixture (X = p exactly) reduces to
+// x = 0, whose y² = 7 the paired Y does not satisfy, so it was refused by the
+// equation rather than by the range check and the mutation survived.
+check(AK.curve(fromPublicKey: "04"
+      + "fffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc30"
+      + "4218f20ae6c646b363db68605822fb14264ca8d2587fdd6fbc750d587e76a7ee") == .unknown,
+      "a coordinate ABOVE the field prime is refused, never silently reduced")
+
+// ===========================================================================
+// The change diff — revocations and first use
+// ===========================================================================
+print("AltanaKeystore.changes")
+
+check(AK.changes(previous: nil, current: [("0xa", 0), ("0xb", 3)]).isEmpty,
+      "FIRST SIGHT REPORTS NOTHING — not the arrivals, and not a key that had already signed")
+check(AK.changes(previous: [:], current: [("0xa", 0)]) == [.added("0xa")],
+      "an empty baseline is real, so the next key is an arrival")
+check(AK.changes(previous: ["0xa": 0], current: [("0xa", 0)]).isEmpty,
+      "nothing changed, nothing said")
+check(AK.changes(previous: ["0xa": 0], current: [("0xa", 0), ("0xb", 0)]) == [.added("0xb")],
+      "a new key is an arrival")
+check(AK.changes(previous: ["0xa": 0, "0xb": 0], current: [("0xa", 0)]) == [.revoked("0xb")],
+      "A KEY THAT VANISHED IS A REVOCATION — the event the arrivals-only diff could not see")
+check(AK.changes(previous: ["0xa": 0], current: [("0xa", 1)]) == [.firstUse("0xa")],
+      "a nonce leaving zero is a FIRST USE")
+check(AK.changes(previous: ["0xa": 3], current: [("0xa", 9)]).isEmpty,
+      "…but an already-used key signing again is not news — only the first time is")
+check(AK.changes(previous: ["0xa": 5], current: [("0xa", 2)]).isEmpty,
+      "a nonce that FELL is a misread, not a signature — say nothing")
+check(AK.changes(previous: ["0xA": 0], current: [("0xa", 1)]) == [.firstUse("0xa")],
+      "the comparison is case-insensitive")
+// Determinism: several revocations must come back in a stable order, or the
+// rows reshuffle between passes.
+let manyRevoked = AK.changes(previous: ["0xc": 0, "0xa": 0, "0xb": 0], current: [])
+check(manyRevoked == [.revoked("0xa"), .revoked("0xb"), .revoked("0xc")],
+      "several revocations arrive sorted, never in a Set's order")
+
+// ===========================================================================
+// The credential sheet
+// ===========================================================================
+print("AltanaKeySheet")
+
+let addr = "2b589af23311e44398e626895af0e3d43e0c97a8"
+let goodRef = "altana:key:bnb-smart-chain:\(addr):\(kid(1))"
+check(AltanaKeySheet.parse(ref: goodRef)?.address == addr, "a key ref parses to its wallet")
+check(AltanaKeySheet.parse(ref: "altana:event:revoked:\(addr):\(kid(1))") == nil,
+      "an EVENT ref is refused — it is not a credential and must not open this sheet")
+check(AltanaKeySheet.parse(ref: "altana:key:bnb:short:\(kid(1))") == nil, "a bad address is refused")
+check(AltanaKeySheet.parse(ref: "peer:demo0") == nil, "another bridge's ref is refused")
+
+func sheetKey(_ n: Int, root: Bool, reg: Int?, exp: Int?, sigs: Int, pub: String? = nil) -> AK.Key {
+    AK.Key(id: "0x" + kid(n), isRoot: root,
+           expiry: exp.map { Date(timeIntervalSince1970: TimeInterval($0)) },
+           signatureCount: sigs, publicKey: pub,
+           registeredAt: reg.map { Date(timeIntervalSince1970: TimeInterval($0)) },
+           chainLabel: "BNB Smart Chain")
+}
+let sheetReading = AK.Reading(address: addr, keys: [
+    sheetKey(1, root: false, reg: sessReg, exp: sessExp, sigs: 47, pub: realKey),
+    sheetKey(2, root: true, reg: rootReg, exp: nil, sigs: 0),
+], truncated: false)
+let otherWallet = AK.Reading(address: "aaaa", keys: [
+    sheetKey(1, root: false, reg: sessReg, exp: sessExp, sigs: 2)
+], truncated: false)
+
+guard let sheet = AltanaKeySheet.compose(ref: goodRef, readings: [sheetReading, otherWallet]) else {
+    print("  ✗ the sheet composes"); exit(1)
+}
+check(AltanaKeySheet.title(sheet) == "24-hour key",
+      "the heading is the grant duration when both ends are known")
+check(AltanaKeySheet.subtitle(sheet).contains("Wallet key"),
+      "the subtitle carries the CURVE, computed from real key material")
+check(AltanaKeySheet.usageLine(sheet) == "Signed 47 times", "the usage line states the count")
+check(sheet.alsoSignsFor == ["aaaa"],
+      "THE SAME KEY ID ON ANOTHER WATCHED WALLET IS SURFACED — one credential, several accounts")
+check(sheet.live == .checking,
+      "the mounted state is 'checking' — the sheet never claims a status it hasn't asked for")
+check(AltanaKeySheet.liveLine(sheet).contains("Checking"), "…and says so")
+check(AltanaKeySheet.scopeCeiling(sheet) != nil, "a session key states the scope ceiling")
+
+// A never-used key says so WITH its age, which is the part worth noticing.
+guard let rootSheet = AltanaKeySheet.compose(
+        ref: "altana:key:bnb-smart-chain:\(addr):\(kid(2))", readings: [sheetReading]) else {
+    print("  ✗ the root sheet composes"); exit(1)
+}
+check(AltanaKeySheet.usageLine(rootSheet, now: Date(timeIntervalSince1970: TimeInterval(rootReg + 62 * 86_400)))
+        == "Registered 62 days ago, never used",
+      "a never-used key is stated with its age, never as 'signed 0 times'")
+check(AltanaKeySheet.title(rootSheet) == "Root key", "a root key has no grant phrase")
+check(AltanaKeySheet.scopeCeiling(rootSheet) == nil,
+      "a root key does NOT claim a scope ceiling — its authority isn't scoped")
+check(rootSheet.alsoSignsFor.isEmpty, "a key registered nowhere else surfaces nothing")
+
+// An unreadable live check must never render as revoked.
+var unreadable = sheet; unreadable.live = .unreadable
+check(!AltanaKeySheet.liveLine(unreadable).lowercased().contains("revoked"),
+      "AN UNREACHABLE RPC IS NOT A REVOCATION — the alarming direction is the wrong one")
+
 print("")
 if failures == 0 {
     print("✓ altana self-test: \(checks) checks passed")
@@ -285,5 +439,5 @@ if failures == 0 {
 }
 SWIFT
 
-swiftc -O -o "$TMP/selftest" "$MODEL" "$ROOM" "$DRIVER"
+swiftc -O -o "$TMP/selftest" "$MODEL" "$ROOM" "$SHEET" "$DRIVER"
 "$TMP/selftest"

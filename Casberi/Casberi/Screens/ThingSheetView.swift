@@ -125,6 +125,9 @@ struct ThingSheetView: View {
     /// re-evaluated many times per open. Recomputed when `safeCheck` answers,
     /// since a Safe receipt's stamp and its signer sentence both read it.
     @State private var moneyReceipt: MoneyReceipt?
+    /// The Altana credential head (prd §404). Populated from the snapshot on
+    /// mount, then re-stamped once the live `isValidKey` answers.
+    @State private var altanaKey: AltanaKeySheet.Model?
     @State private var moneySays: MoneyCommentary?
     /// Mirrors `MoneyActivityDriver.isTracking` for this record, so the control
     /// re-labels itself the moment it is used.
@@ -315,6 +318,20 @@ struct ThingSheetView: View {
                 let framedShot = moneyReceipt == nil
                     && (thing.kind == .screenshot
                         || FilesIngest.isStoredPicture(thing.sourceRef))
+                if let altanaKey {
+                    AltanaKeyCard(model: altanaKey) {
+                        if let url = URL(string: AltanaKeystore.explorerURL(address: altanaKey.address)) {
+                            openURL(url)
+                        }
+                    } onWallet: { address in
+                        if let url = URL(string: AltanaKeystore.explorerURL(address: address)) {
+                            openURL(url)
+                        }
+                    }
+                    .padding(.horizontal, DS.Space.s4)
+                    .padding(.top, DS.Space.s4)
+                    .settleIn(delay: 0.06)
+                }
                 if let moneyReceipt {
                     // The subject face is a door (prd §369 amendment): the
                     // history this sheet already draws belongs to that address,
@@ -868,6 +885,7 @@ struct ThingSheetView: View {
                 Task { safeCheck = await SafeBridge.check(for: thing) }
             }
             loadReceipt()
+            Task { await loadAltanaKey() }
         }
         // A Safe receipt can't be complete until its queue read answers — the
         // stamp ("Your turn" vs "Pending") and the signer sentence both come
@@ -1587,6 +1605,30 @@ struct ThingSheetView: View {
                 .dsText(.callout15).foregroundStyle(DS.destructive)
                 .fixedSize(horizontal: false, vertical: true)
         }
+    }
+
+    /// Compose the Altana credential head, then ask the chain whether the key
+    /// is still valid (prd §404).
+    ///
+    /// TWO steps on purpose. The snapshot gives the whole card instantly, so
+    /// the sheet never opens empty; the live check is the one thing the stored
+    /// row cannot know — a row records that a key EXISTED, and only a fresh
+    /// read says whether it still does (`WalletPrepare`'s ruling, §112). It
+    /// settles in after mount rather than blocking the sheet.
+    ///
+    /// No `Thing` crosses the suspension: the ref is copied out first, so the
+    /// await holds a `String` and nothing else (corollary 6).
+    private func loadAltanaKey() async {
+        guard thing.isLive, thing.source == AltanaKeystore.source,
+              let ref = thing.sourceRef,
+              var model = AltanaKeySheet.compose(ref: ref, readings: AltanaState.readings)
+        else { return }
+        altanaKey = model
+
+        let address = model.address, keyID = model.keyID
+        let state = await AltanaKeystore.liveState(address: address, keyID: keyID)
+        model.live = state
+        altanaKey = model
     }
 
     /// Compose the money receipt and its commentary, once per open (prd §369).

@@ -122,6 +122,9 @@ enum AltanaKeystore {
     /// `getKey(address,bytes32)` → the whole record. Read for ONE field the
     /// individual getters don't publish: when the key was registered.
     static let getKeySelector = "0x314f5c11"
+    /// `getPublicKey(address,bytes32)` → the raw key material, read only to
+    /// decide which curve it lies on (§404).
+    static let getPublicKeySelector = "0x7cefdd5d"
 
     /// Named to be refused, never called. See the type doc.
     static let writeSelectors: Set<String> = [
@@ -303,6 +306,25 @@ enum AltanaKeystore {
     /// is not a registration date — it is a misread word wearing one.
     static let earliestPlausibleRegistration = 1_767_225_600
 
+    /// A dynamic `bytes` return, as lowercase hex with no `0x`.
+    ///
+    /// Same single-return layout assumption as `decodeKeyIDs` — offset word
+    /// must be 0x20 — and the same refusal rather than a re-base, for the same
+    /// reason: key material read from the wrong offset is still 65 plausible
+    /// bytes, and it would be tested against a curve and confidently named.
+    static func decodeBytes(_ hex: String) -> String? {
+        var s = hex.lowercased()
+        if s.hasPrefix("0x") { s.removeFirst(2) }
+        guard s.count >= 128, s.allSatisfy(\.isHexDigit) else { return nil }
+        guard let offset = word(s, 0), offset == 32, let length = word(s, 1),
+              length > 0, length <= 256 else { return nil }
+        let start = 128, need = length * 2
+        guard s.count >= start + need else { return nil }
+        let lo = s.index(s.startIndex, offsetBy: start)
+        let hi = s.index(lo, offsetBy: need)
+        return String(s[lo..<hi])
+    }
+
     // MARK: - The model
 
     /// One registered credential.
@@ -318,10 +340,32 @@ enum AltanaKeystore {
         /// and notable for a session key.
         let expiry: Date?
         /// False when the key's nonce is still zero, i.e. it has been
-        /// registered and never used. Worth stating plainly: a credential that
-        /// can act and never has is exactly what somebody auditing their own
-        /// account wants separated from one in daily use.
-        let hasEverSigned: Bool
+        /// How many times this key has signed — the key's own nonce.
+        ///
+        /// Stored as the NUMBER rather than the old `hasEverSigned` boolean
+        /// (prd §404). The call already returned it and this file was throwing
+        /// the magnitude away: "signed 47 times" and "registered 62 days ago,
+        /// never used" are very different credentials to be looking at, and
+        /// only one of them can be said with a Bool. One source of truth —
+        /// `hasEverSigned` is derived below rather than stored beside it.
+        let signatureCount: Int
+
+        /// The uncompressed public key (`04 || X || Y`), when it was read.
+        /// Feeds `curve`, and nothing else — it is never displayed whole.
+        var publicKey: String? = nil
+
+        /// A credential that can act and never has, which is exactly what
+        /// somebody auditing their own account wants separated from one in
+        /// daily use.
+        var hasEverSigned: Bool { signatureCount > 0 }
+
+        /// What KIND of credential this is, computed from the key material
+        /// itself. `.unknown` whenever the point satisfies neither curve, and
+        /// the copy then says nothing.
+        var curve: Curve {
+            guard let publicKey else { return .unknown }
+            return AltanaKeystore.curve(fromPublicKey: publicKey)
+        }
         /// When the key was registered, read out of `getKey` and CROSS-CHECKED
         /// (see `registeredAt(fromGetKey:expectedExpiry:)`). nil whenever that
         /// check fails — the room then shows a key with no start, which costs
@@ -408,6 +452,194 @@ enum AltanaKeystore {
         }
     }
 
+    // MARK: - What KIND of credential this is (prd §404)
+
+    /// The curve a public key lies on — which is the most human-meaningful
+    /// fact available about a credential, and the only one the registry
+    /// publishes that a person already has a word for.
+    ///
+    /// A key is 65 bytes: `04 || X || Y`. Both curves below are defined by
+    /// `y² = x³ + ax + b (mod p)`, so testing which equation the point
+    /// satisfies IS the identification — no guessing, no metadata, no
+    /// heuristics on length or prefix.
+    ///
+    /// **secp256k1 is what wallets sign with. P-256 is what WebAuthn
+    /// passkeys and the Secure Enclave use.** Measured 2026-08-18 against the
+    /// one real key on Ethereum: secp256k1, so the network's first credential
+    /// is a wallet key rather than a passkey.
+    ///
+    /// `unknown` is a real answer and the copy says nothing rather than
+    /// guessing — a point that satisfies neither equation is not a key we
+    /// understand, and naming it anyway on a security screen is §83 at its
+    /// most expensive.
+    enum Curve: String, Equatable {
+        case secp256k1, p256, unknown
+
+        /// The word a person already knows. nil for `unknown`, which is what
+        /// keeps the label honest — a row simply omits it.
+        var label: String? {
+            switch self {
+            case .secp256k1: String(localized: "Wallet key")
+            case .p256:      String(localized: "Passkey")
+            case .unknown:   nil
+            }
+        }
+    }
+
+    private static let secp256k1P = "fffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f"
+    private static let p256P      = "ffffffff00000001000000000000000000000000ffffffffffffffffffffffff"
+    private static let p256B      = "5ac635d8aa3a93e7b3ebbd55769886bc651d06b0cc53b0f63bce3c3e27d2604b"
+
+    /// Which curve this uncompressed public key lies on.
+    ///
+    /// Refuses anything that is not exactly `04` + 64 bytes of hex, and any
+    /// coordinate at or above the field prime (a valid-looking point whose
+    /// coordinates are out of range is not on the curve, whatever the equation
+    /// says once reduced).
+    static func curve(fromPublicKey hex: String) -> Curve {
+        var s = hex.lowercased()
+        if s.hasPrefix("0x") { s.removeFirst(2) }
+        guard s.count == 130, s.hasPrefix("04"), s.allSatisfy(\.isHexDigit) else { return .unknown }
+        let x = BigU(hex: String(s.dropFirst(2).prefix(64)))
+        let y = BigU(hex: String(s.suffix(64)))
+
+        // secp256k1: y² = x³ + 7
+        let p1 = BigU(hex: secp256k1P)
+        if x < p1, y < p1 {
+            let lhs = (y * y).mod(p1)
+            let rhs = ((x * x).mod(p1) * x + BigU(7)).mod(p1)
+            if lhs == rhs { return .secp256k1 }
+        }
+        // P-256: y² = x³ - 3x + b, written as x³ + (p-3)x + b so every term
+        // stays unsigned.
+        let p2 = BigU(hex: p256P)
+        if x < p2, y < p2 {
+            let a = p2 - BigU(3)
+            let lhs = (y * y).mod(p2)
+            let rhs = ((x * x).mod(p2) * x + (a * x).mod(p2) + BigU(hex: p256B)).mod(p2)
+            if lhs == rhs { return .p256 }
+        }
+        return .unknown
+    }
+
+    /// A minimal unsigned big integer — just enough to test a point against a
+    /// curve equation, and no more.
+    ///
+    /// Hand-rolled for the same reason `Keccak256` is: this file has to stay
+    /// Foundation-only so the harness compiles it as shipped, and pulling in a
+    /// dependency for six multiplications would trade that away. 32-bit limbs
+    /// so every partial product fits a `UInt64` with no overflow handling, and
+    /// modulo by binary long division because a few hundred shift-compare
+    /// steps per key is free at this scale — this runs a handful of times per
+    /// wallet, not in a loop.
+    struct BigU: Equatable {
+        /// Little-endian 32-bit limbs, no trailing zeros.
+        private(set) var limbs: [UInt32]
+
+        init(_ limbs: [UInt32]) { self.limbs = limbs; trim() }
+        init(_ v: UInt32) { limbs = [v]; trim() }
+
+        /// Big-endian hex, any length.
+        init(hex: String) {
+            var out: [UInt32] = []
+            var chars = Array(hex)
+            while !chars.isEmpty {
+                let take = min(8, chars.count)
+                let chunk = String(chars.suffix(take))
+                chars.removeLast(take)
+                out.append(UInt32(chunk, radix: 16) ?? 0)
+            }
+            limbs = out.isEmpty ? [0] : out
+            trim()
+        }
+
+        private mutating func trim() {
+            while limbs.count > 1, limbs.last == 0 { limbs.removeLast() }
+            if limbs.isEmpty { limbs = [0] }
+        }
+
+        var isZero: Bool { limbs.count == 1 && limbs[0] == 0 }
+
+        var bitWidth: Int {
+            guard let top = limbs.last else { return 0 }
+            return (limbs.count - 1) * 32 + (32 - top.leadingZeroBitCount)
+        }
+
+        func bit(_ i: Int) -> Bool {
+            let limb = i / 32, off = i % 32
+            guard limb < limbs.count else { return false }
+            return (limbs[limb] >> UInt32(off)) & 1 == 1
+        }
+
+        static func < (a: BigU, b: BigU) -> Bool {
+            if a.limbs.count != b.limbs.count { return a.limbs.count < b.limbs.count }
+            for i in stride(from: a.limbs.count - 1, through: 0, by: -1) where a.limbs[i] != b.limbs[i] {
+                return a.limbs[i] < b.limbs[i]
+            }
+            return false
+        }
+
+        static func + (a: BigU, b: BigU) -> BigU {
+            var out: [UInt32] = []
+            var carry: UInt64 = 0
+            for i in 0..<max(a.limbs.count, b.limbs.count) {
+                let sum = UInt64(i < a.limbs.count ? a.limbs[i] : 0)
+                        + UInt64(i < b.limbs.count ? b.limbs[i] : 0) + carry
+                out.append(UInt32(truncatingIfNeeded: sum))
+                carry = sum >> 32
+            }
+            if carry > 0 { out.append(UInt32(carry)) }
+            return BigU(out)
+        }
+
+        /// `a - b`, and the caller must know `a >= b` — this is only ever
+        /// reached from the division loop and from `p - 3`, both of which do.
+        static func - (a: BigU, b: BigU) -> BigU {
+            var out: [UInt32] = []
+            var borrow: Int64 = 0
+            for i in 0..<a.limbs.count {
+                var diff = Int64(a.limbs[i]) - Int64(i < b.limbs.count ? b.limbs[i] : 0) - borrow
+                if diff < 0 { diff += 1 << 32; borrow = 1 } else { borrow = 0 }
+                out.append(UInt32(diff))
+            }
+            return BigU(out)
+        }
+
+        static func * (a: BigU, b: BigU) -> BigU {
+            var out = [UInt32](repeating: 0, count: a.limbs.count + b.limbs.count)
+            for i in 0..<a.limbs.count {
+                var carry: UInt64 = 0
+                for j in 0..<b.limbs.count {
+                    let cur = UInt64(out[i + j]) + UInt64(a.limbs[i]) * UInt64(b.limbs[j]) + carry
+                    out[i + j] = UInt32(truncatingIfNeeded: cur)
+                    carry = cur >> 32
+                }
+                var k = i + b.limbs.count
+                while carry > 0 {
+                    let cur = UInt64(out[k]) + carry
+                    out[k] = UInt32(truncatingIfNeeded: cur)
+                    carry = cur >> 32
+                    k += 1
+                }
+            }
+            return BigU(out)
+        }
+
+        /// Binary long division remainder.
+        func mod(_ m: BigU) -> BigU {
+            guard !m.isZero else { return self }
+            if self < m { return self }
+            var rem = BigU(0)
+            for i in stride(from: bitWidth - 1, through: 0, by: -1) {
+                // rem = rem * 2 + bit(i)
+                rem = rem + rem
+                if bit(i) { rem = rem + BigU(1) }
+                if !(rem < m) { rem = rem - m }
+            }
+            return rem
+        }
+    }
+
     // MARK: - News
 
     /// Which key ids are NEW since the last pass.
@@ -426,5 +658,60 @@ enum AltanaKeystore {
         guard let previous else { return [] }
         let seen = Set(previous.map { $0.lowercased() })
         return current.filter { !seen.contains($0.lowercased()) }
+    }
+
+    /// Everything that CHANGED between two passes (prd §404).
+    ///
+    /// `newlyAppeared` above reports arrivals and nothing else, which left two
+    /// events we can see and were not saying:
+    ///
+    /// - **A revocation.** A key vanishing from `getKeys` is the one lifecycle
+    ///   event the registry publishes for free, and it was disappearing in
+    ///   silence — the room could say a key arrived and never that one left.
+    /// - **First use.** A nonce moving off zero means a credential that had
+    ///   never signed just signed. On a root key that sat unused for months
+    ///   that is the most specific thing this seat can ever say, and it costs
+    ///   nothing: the nonce is already read for every key on every pass.
+    ///
+    /// First sight answers EMPTY, same rule and same reason as
+    /// `newlyAppeared` — a wallet already holding keys must not report them
+    /// all as arrivals, and a key that had already signed before we ever
+    /// looked has no first use for us to witness.
+    ///
+    /// Order is deterministic: arrivals and first-uses follow the registry's
+    /// own order, then revocations sorted by id. A `Set` would reorder these
+    /// between runs and re-shuffle the rows a person just read.
+    enum Change: Equatable {
+        case added(String)
+        case revoked(String)
+        case firstUse(String)
+
+        var keyID: String {
+            switch self {
+            case .added(let k), .revoked(let k), .firstUse(let k): k
+            }
+        }
+    }
+
+    static func changes(previous: [String: Int]?, current: [(id: String, nonce: Int)]) -> [Change] {
+        guard let previous else { return [] }
+        var before: [String: Int] = [:]
+        for (k, v) in previous { before[k.lowercased()] = v }
+
+        var out: [Change] = []
+        var seen = Set<String>()
+        for entry in current {
+            let id = entry.id.lowercased()
+            seen.insert(id)
+            guard let was = before[id] else { out.append(.added(id)); continue }
+            // A nonce can only climb, so a fall means we misread one of the
+            // two — say nothing rather than announce a signature that didn't
+            // happen.
+            if was == 0, entry.nonce > 0 { out.append(.firstUse(id)) }
+        }
+        for id in before.keys.sorted() where !seen.contains(id) {
+            out.append(.revoked(id))
+        }
+        return out
     }
 }
