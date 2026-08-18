@@ -1140,6 +1140,18 @@ struct ContributionGraph: View {
                         .gesture(SpatialTapGesture().onEnded { value in
                             pick(at: value.location, size: geo.size)
                         })
+                        // …and on a Mac the cursor alone names the day
+                        // (2026-08-17), with no click. A press is the honest
+                        // gesture on a 7–11pt square under a finger; a pointer
+                        // has no such constraint, and requiring a click to
+                        // read a cell is asking for a commitment to get an
+                        // answer. Routed through `pick` — the SAME inversion
+                        // the tap uses — so hover can never name a different
+                        // day than a click on the same cell.
+                        .macHoverScrub { point in
+                            guard let point else { return }
+                            pick(at: point, size: geo.size, silent: true)
+                        }
                 }
             }
         }
@@ -1148,7 +1160,10 @@ struct ContributionGraph: View {
     /// The Canvas math, inverted. Any drift between this and the draw loop
     /// mis-names a day, which is why both read the same `gap`/`reference`
     /// constants and the same trailing-aligned origin.
-    private func pick(at point: CGPoint, size: CGSize) {
+    /// `silent` suppresses the selection haptic. A tap is a deliberate act and
+    /// deserves the tick; a cursor crossing the grid would fire one per cell,
+    /// which on a trackpad is a stutter rather than feedback.
+    private func pick(at point: CGPoint, size: CGSize, silent: Bool = false) {
         guard let onPick else { return }
         let weeks = year?.weeks ?? []
         guard !weeks.isEmpty else { return }
@@ -1164,7 +1179,7 @@ struct ContributionGraph: View {
         let row = Int((point.y / (cell + gap)).rounded(.down))
         guard col >= 0, col < weeks.count, row >= 0, row < 7,
               weeks[col].days.count > row else { return }
-        DSHaptic.selection()
+        if !silent { DSHaptic.selection() }
         onPick(weeks[col].days[row])
     }
 
@@ -4065,6 +4080,19 @@ private struct GenRunway: View {
                                     .frame(width: 10, height: 10)
                                     .offset(x: min(max(dx - 5, 0), max(w - 10, 0)), y: 10)
                                     .chartArrival(index: i, reduceMotion: reduceMotion)
+                                    // A runway says the SHAPE of what's coming
+                                    // and deliberately names only its two ends
+                                    // (see `spread` — the labels are the ends,
+                                    // and a label per dot would be a list, not
+                                    // a rail). On a Mac the cursor can ask any
+                                    // dot which one it is without spending a
+                                    // label on it. Overdue is said out loud
+                                    // rather than left to the hue, since the
+                                    // colour is the only thing carrying it and
+                                    // colour alone is not a reading.
+                                    .dsTooltip(dot.at < now
+                                               ? String(localized: "\(dot.source) — was due \(dot.at.formatted(.dateTime.month(.abbreviated).day()))")
+                                               : String(localized: "\(dot.source) — \(dot.at.formatted(.dateTime.month(.abbreviated).day()))"))
                             }
                         }
                     }

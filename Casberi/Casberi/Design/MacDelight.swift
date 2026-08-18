@@ -79,6 +79,38 @@ extension View {
         #endif
     }
 
+    /// A figure that answers the cursor's POSITION rather than its arrival
+    /// (2026-08-17) — the scrub, and the fifth entry in the vocabulary.
+    ///
+    /// It exists because a `Canvas` has no per-cell views to hover: the
+    /// contribution grid and the token chart both draw hundreds of cells in
+    /// one pass, so `dsTooltip` (which needs a view per cell) cannot reach
+    /// them and a readout has to come from the cursor's coordinate instead.
+    /// The closure is handed the location inside the figure, and `nil` when
+    /// the cursor leaves — callers use that to clear whatever they named.
+    ///
+    /// The point is deliberately in the figure's own coordinate space, so a
+    /// caller can feed it straight into the same hit-test its TAP already
+    /// uses. Reusing that one function is the whole design: a second
+    /// coordinate→cell inversion written for hover would drift from the tap's
+    /// and name a different day than the one under the cursor, which is worse
+    /// than no readout at all.
+    ///
+    /// Not Reduce-Motion gated, unlike the two above, because it moves
+    /// nothing — it reports. Compiles to `self` off Catalyst.
+    func macHoverScrub(_ onMove: @escaping (CGPoint?) -> Void) -> some View {
+        #if targetEnvironment(macCatalyst)
+        onContinuousHover { phase in
+            switch phase {
+            case .active(let point): onMove(point)
+            case .ended: onMove(nil)
+            }
+        }
+        #else
+        self
+        #endif
+    }
+
     /// A thumbnail blooming gently under the cursor — the whisper of a peek,
     /// not the peek itself (the tap still opens the thing; this only says
     /// the picture noticed you).
