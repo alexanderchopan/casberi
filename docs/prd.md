@@ -25902,3 +25902,69 @@ still holds), `/info` for `searchAvailable`, one `/repos/:rid` for the counts
 block, one `/repos/:rid/patches` and `/issues` to confirm the timestamps really
 sit where the schemas put them, and `/repos/:rid/activity` for units and length.
 Six keyless requests, one launch — none of which could be made from here.
+
+### §400 follow-up — the six reads, as commands (user: "i'll have another session build it", 2026-08-18)
+
+Handed off deliberately, so the measurement below is the first thing the building
+session does rather than something it re-derives. Six keyless reads, no account,
+no key, nothing minted; `jq` optional. Run against **both** preferred seeds,
+because "a seed serves only what it seeds" means the two can legitimately
+disagree about every repo:
+
+```sh
+SEED=rosa.radicle.network      # then repeat with iris.radicle.network
+
+# 1. The root read: is it up, what is it, and does the explorer's ~0.18.0 pin
+#    still hold? `apiVersion` is the drift signal — NOT the /v1 in the path.
+curl -sS "https://$SEED/api/v1" | jq '{service, version, apiVersion, nid}'
+
+# 2. Is search available on THIS seed? (per-seed capability, quirk 4)
+curl -sS "https://$SEED/api/v1/info" | jq '.httpd'
+
+# 3. What does it seed? Take an RID from here for the reads below — do not
+#    guess one, and do not assume a repo on one seed is on the other.
+curl -sS "https://$SEED/api/v1/repos?perPage=5&sort=activity" \
+  | jq '.[] | {rid, alias, name: .payloads["xyz.radicle.project"].data.name}'
+RID=<paste one rid from above>
+
+# 4. The counts block — the whole change-detection design rests on this one
+#    read carrying head + all six counts.
+curl -sS "https://$SEED/api/v1/repos/$RID" \
+  | jq '.payloads["xyz.radicle.project"].meta, {seeding, threshold}'
+
+# 5. Do the timestamps really sit where the schemas put them? This is quirk 2,
+#    and it is the read most worth doing by hand: a patch's date must come out
+#    of revisions[0].timestamp and an issue's out of discussion[0].timestamp.
+curl -sS "https://$SEED/api/v1/repos/$RID/patches?perPage=3" \
+  | jq '.[] | {id, title, state: .state.status, first: .revisions[0].timestamp, merges: [.merges[].timestamp]}'
+curl -sS "https://$SEED/api/v1/repos/$RID/issues?perPage=3&status=all" \
+  | jq '.[] | {id, title, state: .state.status, opened: .discussion[0].timestamp}'
+
+# 6. Units and length of the misnamed `activity` (quirk 3): expect an array of
+#    epoch SECONDS spanning the whole history, not buckets.
+curl -sS "https://$SEED/api/v1/repos/$RID/activity" \
+  | jq '{n: (.activity|length), newest: (.activity|max), oldest: (.activity|min)}'
+```
+
+**What each result decides.** A 200 on (1) with an `apiVersion` outside `~0.18.0`
+means the schemas in this entry are already stale and the building session should
+re-read the client before trusting any field name here. A `false` on (2) means
+name→RID resolution is unavailable on that seed and the setup screen must accept
+an RID as the primary input rather than a convenience. If (4) is missing the
+counts block, the cheap sweep is gone and every pass has to walk patches and
+issues, which changes the cost model. If (5)'s timestamps are absent or sit
+elsewhere, **stop** — a bridge that cannot date a row honestly is the one thing
+this seat must not ship, and `.now` is not the fallback (`PeerRoom`'s refusal).
+A ten-digit `newest` on (6) confirms seconds; thirteen digits means milliseconds
+and the explorer's own comment has gone stale.
+
+**On the brand mark.** Radicle's current mark is the pixel-art creature (their
+avatar); their repo also ships `public/radicle.svg` — an abstract
+two-circles-in-a-square — and a `radicle` wordmark in `src/components/Logo.svelte`.
+Pixel art authors cleanly as a grid of `rect`s, which reproduces it exactly
+rather than approximately, and that one source serves both the app asset (on the
+`DS.Mark` ramp) and the website's **inlined base64** — never a hotlink, by the
+2026-07-08 rule. Note `cdn.simpleicons.org` could not be reached from the session
+that wrote this, so whether it carries a `radicle` entry is **unknown, not
+absent** — a 000 is a blocked request, not a 404, and the two must not be
+confused.
