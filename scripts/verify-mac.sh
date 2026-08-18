@@ -276,17 +276,82 @@ sweep feed     -seedThing "Bluesky:0" -deeplink "casberi://feed"
 sweep composer -openComposer YES
 sweep apps     -deeplink "casberi://account"
 sweep settings -deeplink "casberi://settings"
-# The demo banner (`Screens/DemoBanner.swift`) has NEVER been rendered on
-# Mac — its Catalyst padding branch (`topInset`'s `isMacCatalystApp` check)
-# was written and verified only against the iOS Simulator. `-demoEnter YES`
-# (2026-08-07) is release-gated correctly but the ~330-row pour is untested
-# on this platform's timing; `-onboarded YES` is already global (see
-# `launch()` above) so no cover blocks it. 4s of settle (the same
-# `-snapshotDelay` every other sweep row gets) may be tight for a pour that
-# measured ~1.6s on the simulator plus Catalyst's own slower first frame —
-# widen it here first if this row starts failing before assuming the banner
-# itself regressed.
+# The demo banner (`Screens/DemoBanner.swift`) had never been rendered on Mac
+# before this row existed — its Catalyst padding branch (`topInset`'s
+# `isMacCatalystApp` check) was written and verified only against the iOS
+# Simulator. `-demoEnter YES` (2026-08-07) is release-gated correctly;
+# `-onboarded YES` is already global (see `launch()` above) so no cover blocks
+# it. 4s of settle (the same `-snapshotDelay` every other sweep row gets) may
+# be tight for a pour that measures ~1.8s on the simulator plus Catalyst's own
+# slower first frame — widen it here first if this row starts failing before
+# assuming the banner itself regressed.
+#
+# The snapshot proves a window painted. The step below proves WHAT it painted,
+# which is a different claim and the one that matters for a first run.
 sweep demo     -demoEnter YES -deeplink "casberi://feed"
+
+# ── 3b. The demo actually pours, on THIS platform (2026-08-17) ─────────────
+# Until this step the Mac's entire demo assurance was the >20KB PNG above, and
+# a skeleton feed clears 20KB easily — so a pour that landed nothing, or died
+# after two chunks, read as a pass. That is the surface a first-time Mac user
+# meets before anything else in the product.
+#
+# **Why this is a pour gate rather than verify.sh's six demo gates ported.**
+# `-storeScratch YES` (mandatory here — a Mac DEBUG build otherwise shares the
+# REAL app-group container with the installed app) gives each RUN its own
+# store, keyed per PID. On the simulator the guest sandbox isolates the whole
+# pass for free, so verify.sh can pour once and then spend fourteen separate
+# launches probing room heads against that same corpus. Here launch two opens
+# an empty store. Room-head coverage would need the pour repeated inside every
+# one of those launches, racing each probe's own delay against a chunked pour
+# — a flaky gate, which is the one thing the audits in this repo refuse to be.
+# It stays iOS-only on purpose, and this is the note saying so rather than a
+# silent gap.
+#
+# What CAN be proven in one launch is proven: the pour finishes, it lands a
+# real corpus rather than a handful of rows, the mode is genuinely active, and
+# the seats registered. `-demoProbe` reports 3s after launch, which is what
+# lets one launch carry both halves.
+# **It gates on the CORPUS, not on `poured` — measured 2026-08-17, and the
+# obvious gate was wrong.** A first cut waited for `demoMode: poured N` and
+# required N >= 250. Run against a real Mac build it read `poured 0 rows`
+# beside `things=548`, and both numbers were correct: this is a DEBUG build,
+# so `DemoSeedAll.seedIfNeeded` had already laid the whole table down at
+# launch, leaving `-demoEnter`'s chunked pour correctly with nothing to do
+# (it dedupes on `sourceRef`). `poured 0` is the HEALTHY answer on this
+# platform, so a gate demanding otherwise fails every night on a working app —
+# the flaky-gate class, arrived at from the opposite direction.
+#
+# What is asserted instead is the state a person would actually meet: rows are
+# there, the mode is on, the seats registered. That holds whichever path put
+# the rows down, which is the property a gate wants.
+#
+# Note `hasSeen`/`pending` live in UserDefaults, which is NOT per-PID and so
+# persists across runs on this platform even though the STORE does not. That
+# asymmetry is why this step never asserts on them.
+step "Demo furnishes the Mac"
+DEMO_LOG="$OUT/demo-pour.log"
+launch "$DEMO_LOG" -demoEnter YES -demoProbe YES
+if ! wait_for "$DEMO_LOG" "demoProbe\| seats=" 45; then
+  quit_app
+  fail "demo probe never reported on Mac in 45s (see $DEMO_LOG) — the first thing a new Mac user sees"
+fi
+quit_app
+DEMO_ROWS=$(grep -Eo "demoProbe\| active=[A-Z]+ hasSeen=[A-Z]+ pending=[A-Z]+ things=[0-9]+" "$DEMO_LOG" \
+            | grep -Eo "things=[0-9]+" | grep -Eo "[0-9]+" | tail -1)
+DEMO_SEATS=$(grep -Eo "demoProbe\| seats=[0-9]+" "$DEMO_LOG" | grep -Eo "[0-9]+" | tail -1)
+: ${DEMO_ROWS:=0}; : ${DEMO_SEATS:=0}
+# FLOORS, not exact counts — the seed grows constantly, and a gate pinned to a
+# number is one somebody edits every week until they stop reading it. Both sit
+# well under what a furnished demo measures (~400+ rows, ~82 seats), so only a
+# real collapse trips them.
+(( DEMO_ROWS >= 250 )) \
+  || fail "demo corpus is only $DEMO_ROWS things on Mac (want >=250) — see $DEMO_LOG"
+(( DEMO_SEATS >= 50 )) \
+  || fail "demo registered only $DEMO_SEATS seats on Mac (want >=50) — see $DEMO_LOG"
+grep -q "demoProbe| active=YES" "$DEMO_LOG" \
+  || fail "demo rows landed but the mode is not active on Mac — see $DEMO_LOG"
+ok "demo furnished ($DEMO_ROWS things, $DEMO_SEATS seats, mode active)"
 
 # ── 4. On-device end-to-end (deterministic — these gate the run) ───────────
 # Everything here is local: no network, no keys, no credits. A failure is a
