@@ -1082,6 +1082,11 @@ struct AppsScreen: View {
             .frame(maxWidth: .infinity)
             .contentShape(Rectangle())
             .dsHover()
+            // A catalog tile is a CARD — you click it to go somewhere — so it
+            // takes the lift (2026-08-17). The wall is six columns wide on a
+            // Mac window, which is the densest grid of clickable objects in
+            // the app and the place a uniform hover said least.
+            .macHoverLift()
         }
         .buttonStyle(PressSpring())
         .modifier(PeekPreview(

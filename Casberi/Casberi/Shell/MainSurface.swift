@@ -486,6 +486,22 @@ struct MainSurface: View {
     private var railInset: some View {
         if showsRail {
             sourceStrip(axis: .vertical)
+                // Clearance for the traffic lights (2026-08-17). With the
+                // title bar collapsed (`RootShell.applyMacWindowChrome`) the
+                // content runs to the top edge, and the window buttons float
+                // over the top-LEFT — which on this layout is exactly where
+                // the rail's first source chip sits. Without this the close
+                // button lands on a chip: the chip is unclickable and the
+                // button looks like part of the app.
+                //
+                // A fixed inset rather than a safe-area read, because Catalyst
+                // reports no safe area for the window buttons — they are drawn
+                // by the window, not the scene, so nothing publishes their
+                // frame. 32pt is measured against the standard macOS button
+                // row (~28pt tall from the top edge) plus a hair, and it is
+                // spent only on the Mac.
+                .padding(.top, ProcessInfo.processInfo.isMacCatalystApp
+                         ? DS.Space.s8 : 0)
         }
     }
 

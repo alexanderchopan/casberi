@@ -635,6 +635,23 @@ struct FeedScreen: View {
     /// The shape a source takes when its chip is in force.
     private enum Shape {
         case all, photos, wallet, calendar, gmail, chat, social, reminders, bookmarks, notes, you, music, media, tokens, bitrefill, oneclaw, snapchat, files, instagram, x, x402, appStoreConnect, cursor, plain
+
+        /// Rooms whose lead is a GRID of pictures, and which therefore earn the
+        /// wide content cap on a regular-width window (2026-08-17).
+        ///
+        /// Membership is "does this room draw a picture wall", not "does this
+        /// room contain images" — `social` and `x` hold plenty of photos but
+        /// lead with post cards whose words are the content, and widening those
+        /// would stretch a paragraph past the reading measure to no benefit.
+        /// The mixed rooms (Files, Snapchat, Instagram) are in because the grid
+        /// is what sets their width; `x` stays out because its picture half is
+        /// a minority of a room that is overwhelmingly writing.
+        var widensForPictures: Bool {
+            switch self {
+            case .photos, .media, .files, .snapchat, .instagram: return true
+            default: return false
+            }
+        }
         init(source: String) {
             switch source {
             case "All":                 self = .all
@@ -2085,7 +2102,19 @@ struct FeedScreen: View {
         }
         .animation(DS.Motion.standard, value: listRevision)   // new things rise in (debounced for All)
         .scrollContentBackground(.hidden)
-        .dsAdaptiveContentWidth()
+        // Width buys COLUMNS in a picture room and LINE LENGTH everywhere else
+        // (2026-08-17). The 700pt reading cap is right for prose and wrong for
+        // a grid: a Mac window at 1120 drew the same three-across grid it draws
+        // at 700 and spent the rest on margin, so the one room type that can
+        // actually use a big window was the one room type that didn't.
+        //
+        // Only the rooms whose lead is a GRID widen. A mixed room (Files,
+        // Snapchat, Instagram, X) qualifies because its grid half is what sets
+        // its width; its prose rows still wrap inside the same column, which is
+        // the trade — a slightly long band row against a picture wall that
+        // actually fills the window. Everything else keeps `.reading`, and no
+        // paragraph in this app gets wider.
+        .dsAdaptiveContentWidth(shape.widensForPictures ? .wide : .reading)
         // Seed/refresh the contribution year from a RELIABLE always-present spot
         // (the conditionally-empty hero's own `.task` doesn't fire until a year
         // lands — chicken-and-egg). `source` is fixed per feed instance, so this
@@ -5168,6 +5197,15 @@ struct FeedScreen: View {
                                 // `DSTileButtonStyle` (2026-07-10).
                                 .buttonStyle(PressLift())
                                 .dsHover()
+                                // …and BLOOMS under a cursor (2026-08-17). The
+                                // vocabulary's media treatment, on the app's
+                                // largest field of pictures: a photograph is
+                                // the one row whose content you read by
+                                // looking, so the cursor answers it by making
+                                // it bigger rather than by lifting a card.
+                                // Never paired with `macHoverLift` — one
+                                // motion treatment per element.
+                                .macHoverBloom()
                                 // Zoom source removed with the thing-open zoom (prd 232, 2026-07-30).
                             }
                         }

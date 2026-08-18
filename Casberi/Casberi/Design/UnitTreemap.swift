@@ -37,6 +37,22 @@ struct UnitTreemap<Cell: View>: View {
     /// The cell face for slot `i`. Sizing, placement and the entrance are this
     /// view's; the fill, the words and the magnitude wash are the caller's.
     @ViewBuilder var cell: (Int) -> Cell
+    /// What slot `i` says under a cursor (2026-08-17) — Mac only, via the
+    /// tooltip vocabulary, so it costs the phone nothing and adds no new hover
+    /// mechanism to keep in step with `Design/MacDelight.swift`.
+    ///
+    /// **A treemap is the figure that most needs this and can least show it.**
+    /// The tiling is rank-ordered rather than area-proportional (see `frames`),
+    /// and the smallest cells are the ones whose label is clipped or dropped —
+    /// so precisely the cells a person hovers to identify are the ones the map
+    /// cannot name. The readout is the answer, and it is the caller's to write
+    /// because only the caller knows whether its magnitude is requests, spend,
+    /// posts or services.
+    ///
+    /// Optional, and absent by default: a map whose cells are already fully
+    /// labelled gains nothing from restating them, and `dsTooltip` on every
+    /// figure in the app would be the noise the vocabulary exists to prevent.
+    var readout: ((Int) -> String?)? = nil
 
     /// (x, y, w, h) in grid units, per cell count. Sized so a 1- to 6-cell map
     /// always fills the board with no holes.
@@ -86,6 +102,7 @@ struct UnitTreemap<Cell: View>: View {
                         // rows already speak. Lives here rather than at each call
                         // site so the two maps can't drift on the beat.
                         .settleIn(delay: Double(i) * 0.06)
+                        .dsTooltipIfPresent(readout?(i))
                 }
             }
         }

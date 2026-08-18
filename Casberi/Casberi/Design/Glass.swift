@@ -357,6 +357,19 @@ extension View {
         #endif
     }
 
+    /// `dsTooltip` for a name that may not exist. An empty or nil readout must
+    /// draw NO tooltip rather than an empty one — an empty `.help()` renders as
+    /// a blank yellow rectangle under the cursor, which reads as a rendering
+    /// bug rather than as an absence.
+    @ViewBuilder
+    func dsTooltipIfPresent(_ text: String?) -> some View {
+        if let text, !text.trimmingCharacters(in: .whitespaces).isEmpty {
+            dsTooltip(text)
+        } else {
+            self
+        }
+    }
+
     /// A modal sheet / tray surface with the overlay shadow.
     func dsSheetSurface() -> some View {
         let shape = RoundedRectangle(cornerRadius: DS.Radius.sheet, style: .continuous)

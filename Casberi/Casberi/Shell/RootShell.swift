@@ -3817,6 +3817,23 @@ struct RootShell: View {
     /// restricted at all.
     private func applyMacWindowChrome(to scene: UIWindowScene) {
         scene.sizeRestrictions?.minimumSize = PadLayout.macMinWindowSize
+        // **The window is one surface, top to bottom (2026-08-17).** Every
+        // other pixel of this app is painted by the design system — the page
+        // background, the crown pour, the six bleed hues — and the title bar
+        // was the one strip of the window that was not. Hiding the title (and
+        // owning no toolbar, which this app deliberately does not — prd §273,
+        // the chip rail IS the navigation) collapses that strip and lets the
+        // page, and its pour, run to the top edge behind floating window
+        // buttons.
+        //
+        // `windowScene.title` is STILL SET, on every source change, and that
+        // is the half worth keeping: the name is what Mission Control, the
+        // Window menu and ⌘` cycling read. What goes is the drawn bar, not the
+        // window's identity — so nothing that identifies a window is lost, and
+        // a person with three windows open can still tell them apart
+        // everywhere the system names them.
+        scene.titlebar?.titleVisibility = .hidden
+        scene.titlebar?.toolbar = nil
         #if DEBUG
         applyMacWindowSizeOverride(to: scene)
         #endif

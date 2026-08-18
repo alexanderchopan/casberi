@@ -51,9 +51,16 @@ struct X402RoomCard: View {
                     .padding(.top, DS.Space.s1)
             }
 
-            UnitTreemap(count: room.cells.count, height: 180) { i in
+            UnitTreemap(count: room.cells.count, height: 180, cell: { i in
                 face(room.cells[i])
-            }
+            }, readout: { i in
+                let cell = room.cells[i]
+                let unit = cell.services == 1 ? "service" : "services"
+                // The fold names how many sellers it holds, never a seller —
+                // it is not one company and must not read as one (`tailID`'s
+                // own rule, restated where a cursor can reach it).
+                return "\(cell.label) — \(cell.services) \(unit)"
+            })
             .padding(.top, DS.Space.s4)
         }
         .padding(DS.Space.s4)

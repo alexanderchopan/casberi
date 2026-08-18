@@ -207,9 +207,22 @@ private struct ReachCard: View {
             Text(subline)
                 .dsText(.label12).foregroundStyle(DS.textTertiary)
                 .fixedSize(horizontal: false, vertical: true)
-            UnitTreemap(count: reach.cells.count, height: 180) { i in
+            UnitTreemap(count: reach.cells.count, height: 180, cell: { i in
                 face(reach.cells[i])
-            }
+            }, readout: { i in
+                // The exact count under the cursor. The card's whole job is
+                // "who did this app reach, and how much", and a rank-ordered
+                // tile can only ever show the ORDER — a small cell's own
+                // number is the fact it cannot fit and the one a person hovers
+                // to get. Declared state is named too, because an undeclared
+                // host is the finding this screen exists to surface and it must
+                // read as such even when its cell is one of the small ones.
+                let cell = reach.cells[i]
+                let unit = cell.count == 1 ? "request" : "requests"
+                return cell.declared
+                    ? "\(cell.label) — \(cell.count) \(unit)"
+                    : "\(cell.label) — \(cell.count) \(unit), not on the list"
+            })
         }
         .padding(.vertical, DS.Space.s1)
     }
