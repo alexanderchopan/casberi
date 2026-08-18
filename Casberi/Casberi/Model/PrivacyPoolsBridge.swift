@@ -242,14 +242,43 @@ enum PrivacyPoolsBridge {
         return String(localized: "Privacy Pools' \(symbol) pool holds about \(approx) accepted deposits — the anonymity set your deposit hides in.")
     }
 
-    /// "3,900" from 3,947, "12" from 12 — two significant figures, grouped.
+    /// "3,900" from 3,947, "12" from 12 — two significant figures, taken from
+    /// `PrivacyPoolsRoom` rather than spelled again (2026-08-17, prd §397).
+    /// The room's cover line and this sentence state the same pool's set size
+    /// on two surfaces, and rounding them separately is how the sheet and the
+    /// card end up disagreeing by a hundred deposits about the same number —
+    /// the `depositRefPrefix` lesson, applied before it could be earned twice.
     private static func roundedSet(_ n: Int) -> String {
-        guard n >= 100 else { return "\(n)" }
-        let digits = String(n).count
-        let unit = Int(pow(10.0, Double(digits - 2)))
-        let rounded = (n / unit) * unit
-        let f = NumberFormatter(); f.numberStyle = .decimal
-        return f.string(from: NSNumber(value: rounded)) ?? "\(rounded)"
+        PrivacyPoolsRoom.roundedSet(n)
+    }
+
+    // MARK: - Cover refresh (prd §397)
+
+    /// Re-reads every pool's accepted-deposit count at most once a day and
+    /// keeps it as a NUMBER, so the room can state the anonymity set as it is
+    /// NOW rather than as it was when each deposit landed (`PrivacyPoolsCover`
+    /// has the whole argument).
+    ///
+    /// Gated on `evidence`, not on a watch: most watched wallets have never
+    /// touched Privacy Pools, and buying a request a day for all of them would
+    /// spend it on people who will never see a cover line. Costs one keyless
+    /// GET, reuses this pass's memo when a deposit already bought it, and
+    /// writes nothing when the host is unreachable.
+    @MainActor
+    private static func refreshCoverIfDue() async {
+        guard !evidence.isEmpty, PrivacyPoolsCover.needsRefresh() else { return }
+        let readings = await cover()
+        guard !readings.isEmpty else { return }
+        // Keyed by OUR table's symbol, never the API's `tokenSymbol` — the
+        // room joins cover to holdings through `Thing.priceCurrency`, which is
+        // stamped from `Pool.symbol`. See `PrivacyPoolsCover`.
+        var bySymbol: [String: Int] = [:]
+        for pool in pools.values {
+            if let reading = readings[pool.scope], reading.count > 0 {
+                bySymbol[pool.symbol] = reading.count
+            }
+        }
+        PrivacyPoolsCover.save(current: bySymbol)
     }
 
     // MARK: - Sync
@@ -338,7 +367,8 @@ enum PrivacyPoolsBridge {
             // landed things while still proving the deposit is theirs.
             if !depositLogs.isEmpty { evidence.remember(address) }
             var landed = await things(from: depositLogs, wallet: address, existing: existing)
-            landed += await ragequitThings(from: ragequitLogs, wallet: address, existing: existing)
+            landed += await ragequitThings(from: ragequitLogs, wallet: address,
+                                           existing: existing, context: context)
             if !landed.isEmpty {
                 for thing in landed {
                     context.insert(thing)
@@ -355,7 +385,47 @@ enum PrivacyPoolsBridge {
         // is its own host, and a pending flip is the seat's whole point.
         let alerts = await pollStatuses(context: context, existing: existing)
         added += alerts
+        // Ragequits that landed BEFORE the loop-closing pass shipped — runs
+        // once, ever. See `healReclaimed`.
+        healReclaimed(context: context)
+        // At most one keyless GET a day, and only for a wallet that has
+        // actually deposited (prd §397).
+        await refreshCoverIfDue()
         return added
+    }
+
+    /// The one-time repair for reclaims that landed before 2026-08-17
+    /// (prd §397).
+    ///
+    /// `PrivacyPoolsRoom` does this join itself and treats the ragequit ROW as
+    /// the authority, so the CARD is right on every device the moment this
+    /// ships, with or without this function. What this fixes is the stored
+    /// TAG, which is what search, the §308 facets and the row's own chrome
+    /// read — without it a deposit reclaimed last month keeps saying
+    /// "Declined" everywhere except the card, and a card disagreeing with the
+    /// row beneath it is worse than either being wrong alone.
+    ///
+    /// Forward-only sweeps cannot reach these rows: the cursor has long since
+    /// passed the block the ragequit was in, so nothing re-reads it. Keyed by
+    /// a done-flag like `ObsidianIngest.readerEpoch`, and cheap — one fetch
+    /// over one source, once.
+    @MainActor
+    private static func healReclaimed(context: ModelContext) {
+        let key = "privacypools.healedReclaims"
+        guard !UserDefaults.standard.bool(forKey: key) else { return }
+        let source = sourceName
+        let descriptor = FetchDescriptor<Thing>(
+            predicate: #Predicate { $0.source == source })
+        guard let rows = try? context.fetch(descriptor) else { return }
+        for row in rows where row.isLive {
+            guard let ref = row.sourceRef,
+                  ref.hasPrefix(PrivacyPoolsRoom.reclaimedPrefix),
+                  let label = PrivacyPoolsRoom.label(ref: ref) else { continue }
+            retag(label: label, to: PrivacyPoolsRoom.State.reclaimed.rawValue,
+                  context: context)
+        }
+        _ = context.saveHonestly()
+        UserDefaults.standard.set(true, forKey: key)
     }
 
     /// `-privacyPoolsProbe <blocksBack|YES>` — switches the seat on upstream
@@ -479,9 +549,13 @@ enum PrivacyPoolsBridge {
             let ref = depositRefPrefix + (label ?? deposit.commitment)
             guard !existing.contains(ref), seen.insert(ref).inserted else { continue }
 
-            let amount = pool.map {
-                WalletIngest.format(deposit.rawAmount / pow(10, Double($0.decimals)))
-            }
+            // The size in the token's own units, kept as a NUMBER beside the
+            // display string. `WalletIngest.format` rounds and groups by
+            // locale, so parsing it back is both lossy and locale-dependent —
+            // which is exactly why the room reads `priceValue` and never
+            // `transferAmount` (`GnosisPayRoomSource`'s rule).
+            let value = pool.map { deposit.rawAmount / pow(10, Double($0.decimals)) }
+            let amount = value.map { WalletIngest.format($0) }
             let what = pool.map { "\(amount ?? "") \($0.symbol)" } ?? "crypto"
             let capturedAt = times[deposit.block] ?? .now
             let thing = Thing(
@@ -502,12 +576,30 @@ enum PrivacyPoolsBridge {
             // An existing field — no CloudKit deploy — and rows landed before
             // today simply keep leading with their title.
             if pool != nil { thing.transferAmount = what }
+            // The size as STRUCTURED data (prd §397, 2026-08-17) — the same
+            // `priceValue`/`priceCurrency` pair Railgun and Gnosis Pay already
+            // stamp, and the only reason the room can state what is in the
+            // pools per asset. §349 refused that figure because the amount
+            // lived solely inside a localized title; this is what retires the
+            // refusal. Both existing fields — no CloudKit deploy — and
+            // deposits landed before today stay `unpriced`, counted and named
+            // on the card rather than silently missing from the total.
+            if let pool, let value {
+                thing.priceValue = value
+                thing.priceCurrency = pool.symbol
+            }
             // Anonymity-set context (prd §228): how much cover this deposit
             // has, on `enrichedText` (the thing sheet's body + search), never
             // the title — it's context, not a tally-thing. Snapshot at landing;
             // reads bare when pools-stats is unreachable.
             if let pool, let c = (await cover())[pool.scope], c.count > 0 {
                 thing.enrichedText = coverLine(symbol: pool.symbol, count: c.count)
+                // …and the same count as a NUMBER, so the room can later say
+                // the set GREW (prd §397). Written once per label and never
+                // overwritten — see `PrivacyPoolsCover.snapshot`.
+                if let label {
+                    PrivacyPoolsCover.snapshot(label: label, count: c.count)
+                }
             }
             out.append(thing)
 
@@ -561,7 +653,8 @@ enum PrivacyPoolsBridge {
     /// wallet landing path.
     @MainActor
     private static func ragequitThings(from logs: [[String: Any]], wallet: String,
-                                       existing: Set<String>) async -> [Thing] {
+                                       existing: Set<String>,
+                                       context: ModelContext) async -> [Thing] {
         struct Exit { let label: String; let pool: String; let raw: Double
                       let block: Int; let txHash: String }
         var exits: [Exit] = []
@@ -588,12 +681,20 @@ enum PrivacyPoolsBridge {
         var seen = Set<String>()
         var watchlist = pending()
         for exit in exits {
-            let ref = "privacypools:ragequit:\(exit.label)"
+            let ref = PrivacyPoolsRoom.reclaimedPrefix + exit.label
+            // THE LOOP CLOSES HERE (prd §397, 2026-08-17). Deliberately ABOVE
+            // the dedupe guard: a ragequit that already landed still needs its
+            // deposit's tag moved, or a window re-scanned after this shipped
+            // would land nothing and repair nothing. The deposit is the SAME
+            // deposit — it is not declined any more, it is out — so the state
+            // moves in place exactly as the ASP verdicts do, and the ragequit
+            // row remains the news that it happened.
+            retag(label: exit.label, to: PrivacyPoolsRoom.State.reclaimed.rawValue,
+                  context: context)
             guard !existing.contains(ref), seen.insert(ref).inserted else { continue }
             let pool = pools[exit.pool]
-            let what = pool.map {
-                "\(WalletIngest.format(exit.raw / pow(10, Double($0.decimals)))) \($0.symbol)"
-            } ?? "crypto"
+            let value = pool.map { exit.raw / pow(10, Double($0.decimals)) }
+            let what = pool.map { "\(WalletIngest.format(value ?? 0)) \($0.symbol)" } ?? "crypto"
             let thing = Thing(
                 kind: .transaction,
                 title: String(localized: "Reclaimed \(what) from Privacy Pools"),
@@ -602,6 +703,16 @@ enum PrivacyPoolsBridge {
                 capturedAt: times[exit.block] ?? .now,
                 sourceRef: ref)
             thing.walletAddress = wallet
+            // The same structured pair the deposit carries (prd §397), so the
+            // exit draws a real money receipt (§363) instead of leading with
+            // its title. The ROOM never counts a reclaim toward holdings —
+            // this money is out of the pools — so these fields feed the sheet,
+            // not the card.
+            if let pool, let value {
+                thing.transferAmount = what
+                thing.priceValue = value
+                thing.priceCurrency = pool.symbol
+            }
             out.append(thing)
             // Out of the pool — stop watching its screening status.
             watchlist.removeAll { $0["label"] == exit.label }

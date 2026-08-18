@@ -1,7 +1,8 @@
 import Foundation
 
 /// THE PRIVACY POOLS ROOM'S HEAD (2026-08-10, prd §349) — where your deposits
-/// stand with the screener, and whether one of them needs you.
+/// stand with the screener, whether one of them needs you, how much is actually
+/// in there, and how much cover it has.
 ///
 /// §162 built this seat around one moment (a deposit clearing) and §228 added
 /// the two that also matter (declined, proof required). All three land as their
@@ -10,12 +11,30 @@ import Foundation
 /// a list newest-first, so **"what is still waiting, and is anything stuck?"**
 /// had no answer anywhere in the app. That is what this card is.
 ///
-/// ## It spends nothing
+/// 2026-08-17 (prd §397) widened it three ways, each closing a gap the first
+/// cut named in its own doc as out of reach:
 ///
-/// Every fact is a tag already on a landed row — `Pending` → `Cleared` /
-/// `Declined` / `Needs proof`, moved in place by `PrivacyPoolsBridge.retag` as
-/// the ASP answers (§311). No request, no ASP poll of its own, no new `Thing`
-/// property, no CloudKit deploy: the `StripeRoom`/`CursorRoom` contract.
+///  1. **The reclaim loop closes.** A ragequit landed as its own row and the
+///     deposit it undid kept whatever state it had — so a card whose whole job
+///     is "trouble leads" went on leading with "A deposit was declined —
+///     reclaim to your wallet" FOREVER, on a deposit already back in the
+///     wallet. See `reclaimedLabels`.
+///  2. **What is in the pools, per asset.** §349 refused a figure because the
+///     amount lived only inside each row's title. It does not any more:
+///     `PrivacyPoolsBridge` stamps `priceValue`/`priceCurrency` at landing
+///     (2026-08-17), the same structured pair `RailgunRoom` and
+///     `GnosisPayRoom` already read. Never summed across assets.
+///  3. **Cover became a number.** See `Cover`.
+///
+/// ## It spends nothing per open
+///
+/// Every fact is a tag or a stamped field already on a landed row — `Pending`
+/// → `Cleared` / `Declined` / `Needs proof` / `Reclaimed`, moved in place by
+/// `PrivacyPoolsBridge.retag` as the ASP answers (§311). No request per open,
+/// no new `Thing` property, no CloudKit deploy: the `StripeRoom`/`CursorRoom`
+/// contract. The one read this room's data costs is the once-a-day pools-stats
+/// refresh behind `Cover`, which is bought by the BRIDGE on its own sweep and
+/// never by drawing.
 ///
 /// It deliberately does NOT read the pending WATCHLIST that drives the poll,
 /// even though that watchlist is structured and right there in `UserDefaults`.
@@ -24,23 +43,19 @@ import Foundation
 /// after it resolved, since the watchlist prunes terminal labels. One source of
 /// truth, and it is the corpus.
 ///
-/// ## What it may NOT draw: the anonymity set
+/// ## What it may NOT draw: the anonymity set, as prose
 ///
 /// §228 stores each deposit's cover — "Privacy Pools' ETH pool holds about
-/// 3,900 accepted deposits" — and stores it as a SENTENCE, on `enrichedText`.
-/// There is no number in the store to add up, only prose to re-parse, and
-/// re-parsing display prose back into arithmetic is the thing `Thing`'s own doc
-/// argues against. It would also be wrong per-deposit even if it worked: the
-/// line is a snapshot taken at landing, so a card summing them would present
-/// several different moments' pool sizes as one current figure, on the screen
-/// where a number's meaning is the whole point. The cover reading stays where
-/// it is honest — on the deposit it describes, in its own sheet.
+/// 3,900 accepted deposits" — as a SENTENCE, on `enrichedText`, and §349
+/// refused to draw anything from it: there is no number in that sentence to add
+/// up, only prose to re-parse, and a card summing several deposits' lines would
+/// present several different moments' pool sizes as one current figure.
 ///
-/// ## What it may NOT draw: money
-///
-/// The amount lives only inside each row's title. Same limit, same reason, as
-/// `PeerRoom` — and worse here, because deposits span pools in different assets
-/// and a parsed sum would add ETH to USDC.
+/// That refusal stands, and `Cover` does not reverse it — it goes around it.
+/// The count is read as a NUMBER, from the same `pools-stats` endpoint §228
+/// already calls, kept per pool as an integer, and stated as ONE current
+/// reading for ONE asset rather than a sum of snapshots. The per-deposit
+/// sentence stays exactly where it is honest: on the deposit it describes.
 ///
 /// Foundation-only by design so `scripts/wallet-rooms-selftest.sh` can compile
 /// it WHOLE and unmodified.
@@ -68,6 +83,11 @@ struct PrivacyPoolsRoom: Equatable {
         case declined     = "Declined"
         /// 0xBow wants proof of innocence before it can rule.
         case needsProof   = "Needs proof"
+        /// Taken back out to the original depositor (2026-08-17) — the only
+        /// state that means the money is no longer in a pool at all. See
+        /// `reclaimedLabels` for why this is decided by EVIDENCE and not only
+        /// by the tag.
+        case reclaimed    = "Reclaimed"
 
         /// Whether this state is waiting on the PERSON rather than on the
         /// screener. Only one is: proof is something only they can supply.
@@ -76,7 +96,13 @@ struct PrivacyPoolsRoom: Equatable {
         var needsYou: Bool { self == .needsProof }
 
         /// Whether the deposit's review is over, either way.
-        var resolved: Bool { self == .cleared || self == .declined }
+        var resolved: Bool { self != .pending && self != .needsProof }
+
+        /// Whether the money is still inside a pool. A decline does NOT take
+        /// it out — a declined deposit sits there until it is reclaimed, which
+        /// is exactly why the two are different states and why the reclaim is
+        /// worth landing at all.
+        var inPool: Bool { self != .reclaimed }
     }
 
     /// The tag vocabulary, as strings — the set `retag` strips before writing a
@@ -86,11 +112,14 @@ struct PrivacyPoolsRoom: Equatable {
 
     /// The `sourceRef` prefixes `PrivacyPoolsBridge` lands.
     ///
-    /// Only the first two are DEPOSITS in any sense the card counts. The other
-    /// two are ALERTS about a deposit that is already counted — landing one is
-    /// how the person hears the news, and counting it here would report a
-    /// cleared deposit twice, once as itself and once as its own announcement.
-    /// Excluded by construction rather than by remembering.
+    /// Only the first is a DEPOSIT in the sense the card counts. `reclaimed`
+    /// is the EXIT — a real row, and since 2026-08-17 also the evidence that
+    /// resolves its own deposit (see `reclaimedLabels`) rather than a second
+    /// thing to add up. The other two are ALERTS about a deposit that is
+    /// already counted — landing one is how the person hears the news, and
+    /// counting it would report a cleared deposit twice, once as itself and
+    /// once as its own announcement. Excluded by construction rather than by
+    /// remembering.
     static let depositPrefix   = "privacypools:dep:"
     static let reclaimedPrefix = "privacypools:ragequit:"
     static let statusPrefix    = "privacypools:status:"
@@ -116,15 +145,19 @@ struct PrivacyPoolsRoom: Equatable {
         return nil
     }
 
-    /// The deposit's ASP label, off either a deposit ref or its status alert
-    /// — `PrivacyPoolsBridge` lands both under the SAME label suffix
-    /// (`depositPrefix + label`, `statusPrefix + label`), which is what lets
-    /// this card join "when it landed" to "when we saw it resolve" without a
-    /// new field or a second read. Nil for a ref shape neither prefix names.
+    /// The deposit's ASP label, off a deposit ref, its status alert, or its
+    /// ragequit — `PrivacyPoolsBridge` lands all three under the SAME label
+    /// suffix (`depositPrefix + label`, `statusPrefix + label`,
+    /// `reclaimedPrefix + label`), which is what lets this card join "when it
+    /// landed" to "when we saw it resolve" and to "when it came back out"
+    /// without a new field or a second read. Nil for a ref shape no prefix
+    /// names.
     static func label(ref: String?) -> String? {
         guard let ref else { return nil }
-        if ref.hasPrefix(depositPrefix) { return String(ref.dropFirst(depositPrefix.count)) }
-        if ref.hasPrefix(statusPrefix) { return String(ref.dropFirst(statusPrefix.count)) }
+        for prefix in [depositPrefix, statusPrefix, reclaimedPrefix]
+        where ref.hasPrefix(prefix) {
+            return String(ref.dropFirst(prefix.count))
+        }
         return nil
     }
 
@@ -146,7 +179,26 @@ struct PrivacyPoolsRoom: Equatable {
     struct Sighting: Equatable {
         let ref: String?
         let tags: [String]
+        /// `Thing.priceCurrency` — the pool's token symbol, stamped at landing
+        /// (2026-08-17). Nil for every deposit that landed before that, and
+        /// for a pool this build's table doesn't name (those land titled
+        /// "crypto" and must never be bucketed under an invented symbol).
+        let asset: String?
+        /// `Thing.priceValue` — the deposit's size in that token's own units.
+        /// Read as DATA and never parsed back out of `transferAmount`, which
+        /// is a rounded display string whose thousands separator is
+        /// locale-dependent (`GnosisPayRoomSource`'s rule).
+        let amount: Double?
         let at: Date
+
+        init(ref: String?, tags: [String], asset: String? = nil,
+             amount: Double? = nil, at: Date) {
+            self.ref = ref
+            self.tags = tags
+            self.asset = asset
+            self.amount = amount
+            self.at = at
+        }
     }
 
     // MARK: - Values
@@ -165,15 +217,52 @@ struct PrivacyPoolsRoom: Equatable {
         let oldestAt: Date?
     }
 
+    /// What one asset still has sitting in the pools (2026-08-17).
+    ///
+    /// Deposits only, and only ones still IN — a reclaimed deposit is money
+    /// back in the wallet and counting it here would state a shielded balance
+    /// that isn't shielded.
+    struct Holding: Identifiable, Equatable {
+        var id: String { symbol }
+        let symbol: String
+        /// How many of this asset's deposits are in the pools.
+        let deposits: Int
+        /// How many of those are still open with the screener.
+        let waiting: Int
+        /// Sum of `amount` across them — nil unless EVERY deposit counted
+        /// here carried a readable one. `RailgunRoom.Token`'s all-or-nothing
+        /// rule: a partial sum presented as a total is the failure this stays
+        /// silent to avoid, and the card falls back to stating the count.
+        let amount: Double?
+    }
+
+    /// How much cover one asset's deposits have (2026-08-17) — the anonymity
+    /// set they hide in, as a NUMBER rather than §228's frozen sentence.
+    ///
+    /// `current` is the pool's live `acceptedDepositsCount`, read at most once
+    /// a day by the bridge. `atLanding` is the same count snapshotted when the
+    /// person's OLDEST deposit in that pool landed, so the pair can state
+    /// growth — the one genuinely good piece of news this seat can deliver
+    /// that nothing else reports, since a set that grows makes a deposit
+    /// already made MORE private without anybody doing anything.
+    ///
+    /// `atLanding` is nil for anyone whose deposits predate the snapshot
+    /// store, and then the line simply states the current set and no growth.
+    struct Cover: Equatable {
+        let symbol: String
+        let current: Int
+        let atLanding: Int?
+    }
+
     /// Ranked — see `ordered`. Only states with at least one deposit appear, so
     /// a card never draws an empty segment.
     let segments: [Segment]
     /// Deposits carrying no state tag at all. Counted, never assumed pending.
     let untagged: Int
-    /// Deposits taken back out to the depositor. Not a state — a ragequit is
-    /// its own row and the deposit it undoes keeps whatever state it had, so
-    /// this is reported beside the segments and never inside them.
-    let reclaimed: Int
+    /// Ragequit rows whose deposit is NOT in this room — see
+    /// `reclaimedLabels`. A matched one is not counted here at all; it turns
+    /// its own deposit `.reclaimed` and is reported there, once.
+    let unattachedReclaims: Int
     /// The newest deposit, for the idle clause. Over deposits only: an alert
     /// row is stamped when we polled, not when anything was deposited.
     let newest: Date?
@@ -183,11 +272,22 @@ struct PrivacyPoolsRoom: Equatable {
     /// claim about the screener in general. Nil when no deposit has both
     /// ends observed yet.
     let reviewDays: Int?
+    /// What is still in the pools, by asset, ranked — see `orderedHoldings`.
+    let holdings: [Holding]
+    /// Deposits still in the pools whose asset or size could not be read.
+    /// Counted and named, never folded into a holding under a guessed symbol.
+    let unpriced: Int
+    /// Cover for the leading holding's asset, when the bridge has a reading.
+    let cover: Cover?
 
     /// Below this there is nothing a card can say that the row does not.
     static let minimumDeposits = 1
 
-    /// Every deposit the card knows about, tagged or not.
+    /// The card names at most this many assets; the rest are counted in the
+    /// footnote rather than silently dropped (`RailgunRoomSource.rowCap`).
+    static let holdingCap = 3
+
+    /// Every deposit the card knows about, tagged or not, in or out.
     var deposits: Int { segments.reduce(0) { $0 + $1.count } + untagged }
 
     /// Deposits still in review — the number this card exists to state.
@@ -195,23 +295,41 @@ struct PrivacyPoolsRoom: Equatable {
         segments.filter { !$0.state.resolved }.reduce(0) { $0 + $1.count }
     }
 
+    /// Deposits whose money is still inside a pool. Untagged ones count: we
+    /// have no evidence they came out, and a ragequit would have said so.
+    var inPools: Int {
+        segments.filter { $0.state.inPool }.reduce(0) { $0 + $1.count } + untagged
+    }
+
     /// The one deposit state that needs the person, if any.
     var needsYou: Segment? { segments.first { $0.state.needsYou } }
 
     var lead: Segment? { segments.first }
 
-    /// A room with no deposits at all. A reclaimed-only room still draws — the
+    var leadHolding: Holding? { holdings.first }
+
+    /// A room with no deposits at all. A reclaim-only room still draws — the
     /// card can honestly say everything came back out, which is a real standing
     /// and the row list alone does not add it up.
-    var isEmpty: Bool { deposits < PrivacyPoolsRoom.minimumDeposits && reclaimed == 0 }
+    var isEmpty: Bool {
+        deposits < PrivacyPoolsRoom.minimumDeposits && unattachedReclaims == 0
+    }
 
     // MARK: - Composing
 
-    static func compose(rows sightings: [Sighting]) -> PrivacyPoolsRoom {
+    static func compose(rows sightings: [Sighting],
+                        covers: [Cover] = []) -> PrivacyPoolsRoom {
+        // Every label this room has seen come back OUT. Built in full before
+        // any deposit is placed, because a ragequit row can sort either side
+        // of the deposit it undoes and a single pass would place a deposit
+        // before learning its fate.
+        let reclaimed = reclaimedLabels(sightings)
+
         var counts: [State: Int] = [:]
         var oldestByState: [State: Date] = [:]
-        var untagged = 0, reclaimed = 0
+        var untagged = 0, attachedReclaims = 0, reclaimRows = 0, unpriced = 0
         var newest: Date?
+        var byAsset: [String: (deposits: Int, waiting: Int, sum: Double, complete: Bool)] = [:]
         // Label → when the deposit landed, and label → when this device saw
         // its STATUS alert (approved/declined only — never the poi alert,
         // which isn't a resolution). Both keyed the same way `retag` and
@@ -222,8 +340,19 @@ struct PrivacyPoolsRoom: Equatable {
 
         for sighting in sightings {
             switch row(ref: sighting.ref, tags: sighting.tags) {
-            case .deposit(let state):
+            case .deposit(let tagged):
                 if newest == nil || sighting.at > newest! { newest = sighting.at }
+                let label = label(ref: sighting.ref)
+                if let label { depositAt[label] = sighting.at }
+                // EVIDENCE BEATS THE RECORD. A ragequit row for this label is
+                // proof the money came back out; the tag is only a note the
+                // bridge left. They agree for anything landed after
+                // 2026-08-17, and where they disagree — a deposit tagged
+                // `Declined` months ago and reclaimed the same week — the
+                // proof is right and the note is stale.
+                let out = label.map { reclaimed.contains($0) } ?? false
+                if out { attachedReclaims += 1 }
+                let state: State? = out ? .reclaimed : tagged
                 if let state {
                     counts[state, default: 0] += 1
                     if oldestByState[state] == nil || sighting.at < oldestByState[state]! {
@@ -232,9 +361,21 @@ struct PrivacyPoolsRoom: Equatable {
                 } else {
                     untagged += 1
                 }
-                if let label = label(ref: sighting.ref) { depositAt[label] = sighting.at }
+                // Holdings count what is still IN. An untagged deposit counts
+                // (nothing says it left), a reclaimed one never does.
+                guard state?.inPool ?? true else { continue }
+                guard let asset = sighting.asset, !asset.isEmpty else {
+                    unpriced += 1
+                    continue
+                }
+                var bucket = byAsset[asset] ?? (0, 0, 0, true)
+                bucket.deposits += 1
+                if !(state?.resolved ?? false) { bucket.waiting += 1 }
+                if let amount = sighting.amount { bucket.sum += amount }
+                else { bucket.complete = false }
+                byAsset[asset] = bucket
             case .reclaimed:
-                reclaimed += 1
+                reclaimRows += 1
             // An alert about a deposit already counted; a ref this build does
             // not know is not evidence of anything. A STATUS alert (not a poi
             // one) also marks the moment this device saw that deposit resolve.
@@ -251,6 +392,11 @@ struct PrivacyPoolsRoom: Equatable {
         let segments = counts.map {
             Segment(state: $0.key, count: $0.value, oldestAt: oldestByState[$0.key])
         }
+        let holdings = byAsset.map {
+            Holding(symbol: $0.key, deposits: $0.value.deposits,
+                    waiting: $0.value.waiting,
+                    amount: $0.value.complete ? $0.value.sum : nil)
+        }
 
         // Observed review time: only labels whose landing AND resolution
         // this device both saw — never estimated, never a claim about the
@@ -262,9 +408,48 @@ struct PrivacyPoolsRoom: Equatable {
             return days(from: landed, to: resolved)
         }
 
-        return PrivacyPoolsRoom(segments: ordered(segments), untagged: untagged,
-                                reclaimed: reclaimed, newest: newest,
-                                reviewDays: medianDays(durations))
+        let ranked = orderedHoldings(holdings)
+        return PrivacyPoolsRoom(
+            segments: ordered(segments),
+            untagged: untagged,
+            // Only the ORPHANS. A ragequit that found its deposit is already
+            // reported as that deposit's state, and counting it here too is
+            // the double-count this room refuses everywhere else.
+            unattachedReclaims: max(reclaimRows - attachedReclaims, 0),
+            newest: newest,
+            reviewDays: medianDays(durations),
+            holdings: ranked,
+            unpriced: unpriced,
+            cover: cover(for: ranked.first, in: covers))
+    }
+
+    /// Every label with a ragequit row — the deposits this room can PROVE came
+    /// back out.
+    ///
+    /// This is what closes §228's loop. Before it, a declined deposit that was
+    /// then reclaimed kept its `Declined` tag for life, so `rank` went on
+    /// putting it at the top of the card with "reclaim it to your wallet" —
+    /// telling the person to do a thing they had already done, permanently, on
+    /// the one card whose job is to say what still needs them.
+    static func reclaimedLabels(_ sightings: [Sighting]) -> Set<String> {
+        var out: Set<String> = []
+        for sighting in sightings {
+            guard case .reclaimed? = row(ref: sighting.ref, tags: sighting.tags),
+                  let label = label(ref: sighting.ref) else { continue }
+            out.insert(label)
+        }
+        return out
+    }
+
+    /// The cover reading for the asset the card is about to lead with, or nil.
+    ///
+    /// ONE asset, deliberately. Several cover lines would be several different
+    /// pools' set sizes stacked up, which reads as one aggregate privacy
+    /// figure and is not one — the pools are separate sets and a deposit hides
+    /// only in its own.
+    static func cover(for holding: Holding?, in covers: [Cover]) -> Cover? {
+        guard let holding else { return nil }
+        return covers.first { $0.symbol == holding.symbol }
     }
 
     /// The middle value, sorted — MEDIAN rather than mean, the
@@ -283,11 +468,12 @@ struct PrivacyPoolsRoom: Equatable {
 
     /// Which state leads the card.
     ///
-    ///   3 — proof required: only you can move this, and nothing moves until
+    ///   4 — proof required: only you can move this, and nothing moves until
     ///       you do.
-    ///   2 — declined: the money needs reclaiming, but the decision is made.
-    ///   1 — pending: waiting on somebody else.
-    ///   0 — cleared: the good outcome, and the one that needs nothing.
+    ///   3 — declined: the money needs reclaiming, but the decision is made.
+    ///   2 — pending: waiting on somebody else.
+    ///   1 — cleared: the good outcome, and the one that needs nothing.
+    ///   0 — reclaimed: over, and the money is already back in the wallet.
     ///
     /// Deliberately NOT by count. A single deposit stuck on proof outranks
     /// forty that cleared, because the forty need nothing from anybody and the
@@ -295,10 +481,11 @@ struct PrivacyPoolsRoom: Equatable {
     /// on the accounts that use this seat most.
     static func rank(_ state: State) -> Int {
         switch state {
-        case .needsProof: return 3
-        case .declined:   return 2
-        case .pending:    return 1
-        case .cleared:    return 0
+        case .needsProof: return 4
+        case .declined:   return 3
+        case .pending:    return 2
+        case .cleared:    return 1
+        case .reclaimed:  return 0
         }
     }
 
@@ -310,6 +497,17 @@ struct PrivacyPoolsRoom: Equatable {
             if ra != rb { return ra > rb }
             if a.count != b.count { return a.count > b.count }
             return a.state.rawValue < b.state.rawValue
+        }
+    }
+
+    /// Most deposits first, then symbol — TOTAL, for the reason `ordered` is.
+    /// Deliberately NOT by amount: amounts in different tokens do not compare,
+    /// so sorting by them would rank 0.4 ETH below 500 USDC and imply a
+    /// conversion this room refuses to make.
+    static func orderedHoldings(_ holdings: [Holding]) -> [Holding] {
+        holdings.sorted { a, b in
+            if a.deposits != b.deposits { return a.deposits > b.deposits }
+            return a.symbol < b.symbol
         }
     }
 
@@ -358,6 +556,7 @@ struct PrivacyPoolsRoom: Equatable {
         case .declined:   return String(localized: "reclaim to your wallet")
         case .pending:    return String(localized: "in review")
         case .cleared:    return String(localized: "ready to withdraw privately")
+        case .reclaimed:  return String(localized: "back in your wallet")
         }
     }
 
@@ -365,16 +564,38 @@ struct PrivacyPoolsRoom: Equatable {
         String(localized: "\(segment.count) \(meaning(segment.state))")
     }
 
+    /// The legend's trailing text (2026-08-17): what this state means, plus
+    /// how long its oldest deposit has been waiting when that is worth saying.
+    ///
+    /// The headline already carries the wait for the state it leads with;
+    /// this puts it on the OTHER open states too, which is where the useful
+    /// comparison lives — "3 in review · oldest 4 days" beside "1 waiting on
+    /// your proof · oldest 22 days" says which one has actually gone quiet,
+    /// and no arrangement of counts alone can.
+    static func legendLine(_ segment: Segment, now: Date = .now) -> String {
+        guard let wait = waitLabel(segment, now: now) else { return segmentLine(segment) }
+        return String(localized: "\(segmentLine(segment)) · \(wait)")
+    }
+
     /// Below this the wait isn't worth naming — a deposit a few hours into
     /// review reading "waited 0 days" is noise, not news.
     static let noteworthyWaitDays = 3
 
+    /// "9 days" for the legend's trailing slot (2026-08-17), empty under
+    /// `noteworthyWaitDays` and for any state nobody is waiting on. A cleared
+    /// or reclaimed deposit finished waiting, and how long a decline took to
+    /// arrive is not the fact that matters once it has.
+    static func waitLabel(_ segment: Segment, now: Date = .now) -> String? {
+        guard !segment.state.resolved, let oldestAt = segment.oldestAt else { return nil }
+        let waited = days(from: oldestAt, to: now)
+        guard waited >= noteworthyWaitDays else { return nil }
+        return String(localized: "oldest \(waited) days")
+    }
+
     /// "— the oldest has waited 9 days" (2026-08-11), appended to a headline
     /// that is already naming a state someone is WAITING on. Silent under
-    /// `noteworthyWaitDays`, and silent for a `nil` segment (the `.declined`
-    /// and `.cleared` headline branches never call this — a cleared deposit
-    /// finished waiting, and how long a decline took to arrive isn't the
-    /// fact that matters once it has).
+    /// `noteworthyWaitDays`, and silent for a `nil` segment (the `.declined`,
+    /// `.cleared` and `.reclaimed` headline branches never call this).
     static func ageClause(_ segment: Segment?, now: Date = .now) -> String {
         guard let oldestAt = segment?.oldestAt else { return "" }
         let waited = days(from: oldestAt, to: now)
@@ -392,14 +613,14 @@ struct PrivacyPoolsRoom: Equatable {
         }
         guard let lead = room.lead else {
             // Nothing tagged at all. Two shapes reach here and both are real:
-            // a room of pre-§311 deposits, and a room where everything has
-            // been reclaimed.
+            // a room of pre-§311 deposits, and a room whose only rows are
+            // ragequits whose deposits we never held.
             if room.deposits > 0 {
                 return String(localized: "\(depositsLabel(room.deposits)) in Privacy Pools")
             }
-            return room.reclaimed == 1
+            return room.unattachedReclaims == 1
                 ? String(localized: "1 deposit reclaimed — nothing shielded")
-                : String(localized: "\(room.reclaimed) deposits reclaimed — nothing shielded")
+                : String(localized: "\(room.unattachedReclaims) deposits reclaimed — nothing shielded")
         }
         switch lead.state {
         case .declined:
@@ -415,6 +636,12 @@ struct PrivacyPoolsRoom: Equatable {
             return lead.count == 1
                 ? String(localized: "Your deposit is ready to withdraw")
                 : String(localized: "All \(lead.count) deposits are ready to withdraw")
+        case .reclaimed:
+            // Every deposit is out. Nothing here needs anybody, so the
+            // headline states the standing rather than an action.
+            return lead.count == 1
+                ? String(localized: "Your deposit is back in your wallet")
+                : String(localized: "All \(lead.count) deposits are back in your wallet")
         case .needsProof:
             // Unreachable — `needsYou` above claims this state first. Stated
             // rather than crashed, because a `fatalError` in a card composer
@@ -430,6 +657,11 @@ struct PrivacyPoolsRoom: Equatable {
         guard room.deposits > 0 else {
             return String(localized: "Nothing in the pools right now")
         }
+        // Said before the review clauses on purpose: once everything is out,
+        // whether its review finished is no longer the interesting fact.
+        if room.inPools == 0 {
+            return String(localized: "All of it has been taken back out")
+        }
         let waiting = room.waiting
         if waiting == 0 {
             return String(localized: "Every review is finished")
@@ -440,13 +672,101 @@ struct PrivacyPoolsRoom: Equatable {
         return String(localized: "\(waiting) of \(room.deposits) still waiting on the screener")
     }
 
-    /// The quiet line at the foot: deposits with no state we can read, ones
-    /// already taken back out, and how long the room has been still.
+    // MARK: - What's in the pools
+
+    /// "0.44 ETH" — plain units, not `.formatted(.currency())`: a token symbol
+    /// is not an ISO 4217 code. Self-contained (not `WalletIngest.format`) so
+    /// this file stays Foundation-only.
+    ///
+    /// `mask` is the §374 hide-balances string, PASSED IN rather than read,
+    /// for the reason `RailgunRoom.amountText` states: this file cannot reach
+    /// `BalancePrivacy`. The SYMBOL survives the mask — a hidden line still
+    /// says which asset is in there, which is the shape §374 rule 3 keeps.
+    static func amountText(_ amount: Double, symbol: String, mask: String? = nil) -> String {
+        guard let mask else {
+            let formatted = amount.formatted(.number.precision(.fractionLength(0...4)))
+            return "\(formatted) \(symbol)"
+        }
+        return "\(mask) \(symbol)"
+    }
+
+    /// One asset's line: its size when every deposit behind it is readable,
+    /// otherwise a bare count. A count of deposits is not a balance, so the
+    /// fallback is unaffected by `mask`.
+    static func holdingText(_ holding: Holding, mask: String? = nil) -> String {
+        if let amount = holding.amount {
+            return amountText(amount, symbol: holding.symbol, mask: mask)
+        }
+        return holding.deposits == 1
+            ? String(localized: "1 \(holding.symbol) deposit")
+            : String(localized: "\(holding.deposits) \(holding.symbol) deposits")
+    }
+
+    /// "0.44 ETH · 500 USDC in the pools" — nil when nothing is in there or no
+    /// asset could be read at all.
+    ///
+    /// Assets are listed side by side and NEVER summed: 0.44 ETH and 500 USDC
+    /// have no common unit, and the one figure that would combine them is a
+    /// dollar total this room has no price to compute and no business
+    /// inventing. Capped at `holdingCap`; the remainder is named in the
+    /// footnote rather than dropped.
+    static func holdingsLine(_ room: PrivacyPoolsRoom, mask: String? = nil) -> String? {
+        let shown = room.holdings.prefix(holdingCap)
+        guard !shown.isEmpty else { return nil }
+        let parts = shown.map { holdingText($0, mask: mask) }
+        return String(localized: "\(parts.joined(separator: " · ")) in the pools")
+    }
+
+    // MARK: - Cover
+
+    /// "3,900" from 3,947, "12" from 12 — two significant figures, grouped.
+    ///
+    /// The exact count is noise and the ORDER OF MAGNITUDE is the privacy
+    /// fact, which is also why `coverLine` compares ROUNDED values before it
+    /// will claim growth. `PrivacyPoolsBridge` calls this for the per-deposit
+    /// sentence it stores, so the number on the card and the number in the
+    /// sheet are rounded by one function and cannot disagree.
+    static func roundedSet(_ n: Int) -> String {
+        guard n >= 100 else { return "\(n)" }
+        let digits = String(n).count
+        let unit = Int(pow(10.0, Double(digits - 2)))
+        let rounded = (n / unit) * unit
+        let f = NumberFormatter()
+        f.numberStyle = .decimal
+        return f.string(from: NSNumber(value: rounded)) ?? "\(rounded)"
+    }
+
+    /// "Your ETH hides among about 3,900 accepted deposits — up from 2,400
+    /// when you first deposited." Nil when there is no reading.
+    ///
+    /// Growth is stated ONLY when the two ROUNDED figures differ. At two
+    /// significant figures a set that moved from 3,947 to 3,961 renders as
+    /// "up from 3,900 to 3,900", which reads as a broken sentence rather than
+    /// as the honest "no material change" it actually is.
+    ///
+    /// A set that SHRANK is never narrated. `acceptedDepositsCount` going down
+    /// means deposits left the tree, which is real, but "your cover shrank" on
+    /// a privacy screen is alarming enough that it should be said only by
+    /// something that knows why — and this reading does not.
+    static func coverLine(_ cover: Cover?) -> String? {
+        guard let cover, cover.current > 0 else { return nil }
+        let now = roundedSet(cover.current)
+        guard let landed = cover.atLanding, landed > 0, cover.current > landed,
+              roundedSet(landed) != now else {
+            return String(localized: "Your \(cover.symbol) hides among about \(now) accepted deposits.")
+        }
+        return String(localized: "Your \(cover.symbol) hides among about \(now) accepted deposits — up from \(roundedSet(landed)) when you first deposited.")
+    }
+
+    /// The quiet line at the foot: deposits with no state we can read, ones we
+    /// cannot price, ragequits with no deposit here, how long review has taken,
+    /// and how long the room has been still.
     ///
     /// The untagged clause is not politeness. A deposit this card cannot place
     /// is a deposit missing from every segment above it AND a gap in the bar,
     /// and a standing that silently omits rows is the failure the import drop
-    /// counters exist to prevent, one room over.
+    /// counters exist to prevent, one room over. `unpriced` and the holdings
+    /// overflow are the same rule applied to the money line.
     static func footnote(_ room: PrivacyPoolsRoom, now: Date = .now) -> String? {
         var parts: [String] = []
         if room.untagged > 0 {
@@ -454,10 +774,19 @@ struct PrivacyPoolsRoom: Equatable {
                          ? String(localized: "1 deposit's status is unknown")
                          : String(localized: "\(room.untagged) deposits' status is unknown"))
         }
-        if room.reclaimed > 0 {
-            parts.append(room.reclaimed == 1
-                         ? String(localized: "1 reclaimed")
-                         : String(localized: "\(room.reclaimed) reclaimed"))
+        if room.unpriced > 0 {
+            parts.append(room.unpriced == 1
+                         ? String(localized: "1 deposit's size is unknown")
+                         : String(localized: "\(room.unpriced) deposits' sizes are unknown"))
+        }
+        let overflow = room.holdings.count - holdingCap
+        if overflow > 0 {
+            parts.append(String(localized: "\(overflow) more assets"))
+        }
+        if room.unattachedReclaims > 0 {
+            parts.append(room.unattachedReclaims == 1
+                         ? String(localized: "1 reclaimed before you watched")
+                         : String(localized: "\(room.unattachedReclaims) reclaimed before you watched"))
         }
         // Only what THIS device has actually watched resolve — never a claim
         // about 0xBow's screener in general. See `compose`'s `reviewDays`.

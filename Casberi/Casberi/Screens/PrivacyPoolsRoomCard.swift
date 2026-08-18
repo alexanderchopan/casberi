@@ -27,6 +27,21 @@ import SwiftUI
 /// gap is deliberate and the footnote names it — filling the bar by dividing
 /// through the tagged count alone would present partial knowledge as complete.
 ///
+/// ## Three readings, in the order they change what you do
+///
+/// Added 2026-08-17 (prd §397), each stated once and never repeated lower down:
+///
+///  - **What is in there**, per asset, under the note. Never summed across
+///    assets — 0.44 ETH and 500 USDC share no unit, and the figure that would
+///    combine them is a dollar total this room has no price for. Masked by
+///    §374 hide-balances, symbol surviving the mask (rule 3: figures go,
+///    shapes stay).
+///  - **How much cover it has**, under the legend — the live anonymity set,
+///    and how much it has grown since the first deposit. This is the one
+///    reading on the card that is unambiguously good news.
+///  - **The door**, and only for the one state that needs a person. See
+///    `respondRow`.
+///
 /// ## Liveness
 ///
 /// Stores no `Thing` — only value types out of `PrivacyPoolsRoom`, filtered at
@@ -41,8 +56,23 @@ struct PrivacyPoolsRoomCard: View {
     var onOpen: (PrivacyPoolsRoom.State) -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.openURL) private var openURL
 
     private static let mark = DS.legibleCardFill(for: "Privacy Pools")
+
+    /// Where a proof is actually supplied. 0xBow's own app, the same
+    /// destination the `poi_required` alert row already links to — one place
+    /// this URL means one thing, and a door that opens anywhere else on the
+    /// screen telling you to respond would be the sharpest dead door in the
+    /// app.
+    private static let respondURL = URL(string: "https://app.0xbow.io")
+
+    /// §374, passed down rather than read inside `PrivacyPoolsRoom` — that
+    /// file is Foundation-only and compiled whole by the harness, so it cannot
+    /// reach `BalancePrivacy`.
+    private var mask: String? {
+        BalancePrivacy.shared.hidden ? BalancePrivacy.mask : nil
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -69,10 +99,37 @@ struct PrivacyPoolsRoomCard: View {
                 .foregroundStyle(DS.textSecondary)
                 .padding(.top, DS.Space.s1)
 
+            // What is actually in there. Primary weight, because it is a
+            // reading and not a gloss on the headline — the note above it
+            // explains the headline, this one states a different fact.
+            if let holdings = PrivacyPoolsRoom.holdingsLine(room, mask: mask) {
+                Text(holdings)
+                    .dsText(.body17)
+                    .foregroundStyle(DS.textPrimary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, DS.Space.s2)
+            }
+
             if !room.segments.isEmpty {
                 splitBar
                     .padding(.top, DS.Space.s3)
                 legend
+                    .padding(.top, DS.Space.s3)
+            }
+
+            // Only for the state that needs a person, and only under a card
+            // already saying so — a standing "Open 0xBow" link would be chrome
+            // on every other room state, where there is nothing to respond to.
+            if room.needsYou != nil {
+                respondRow
+                    .padding(.top, DS.Space.s2)
+            }
+
+            if let cover = PrivacyPoolsRoom.coverLine(room.cover) {
+                Text(cover)
+                    .dsText(.subhead13)
+                    .foregroundStyle(DS.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
                     .padding(.top, DS.Space.s3)
             }
 
@@ -154,16 +211,49 @@ struct PrivacyPoolsRoomCard: View {
                             .foregroundStyle(DS.textPrimary)
                             .lineLimit(1)
                         Spacer(minLength: DS.Space.s2)
-                        Text(PrivacyPoolsRoom.segmentLine(segment))
+                        Text(PrivacyPoolsRoom.legendLine(segment))
                             .dsText(.subhead13)
                             .foregroundStyle(DS.textSecondary)
                             .lineLimit(1)
+                            .minimumScaleFactor(0.8)
                     }
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel(Text("\(segment.state.rawValue), \(PrivacyPoolsRoom.segmentLine(segment))"))
+                .accessibilityLabel(Text("\(segment.state.rawValue), \(PrivacyPoolsRoom.legendLine(segment))"))
             }
+        }
+    }
+
+    // MARK: - The door
+
+    /// The one action this card can offer, on the one state that needs it.
+    ///
+    /// Proof is supplied in 0xBow's own app and nowhere else — this app is
+    /// capture-only by ruling (§162), so there is no version of this that
+    /// responds on the person's behalf, and the honest affordance is a door
+    /// rather than a form. It is the same hand-off shape `ApprovalPrepareCard`
+    /// uses for Revoke.cash, down to the arrow.
+    @ViewBuilder private var respondRow: some View {
+        if let url = Self.respondURL {
+            Button {
+                DSHaptic.selection()
+                openURL(url)
+            } label: {
+                HStack(spacing: DS.Space.s2) {
+                    Image(systemName: "arrow.up.right")
+                        .dsGlyph(13, weight: .regular)
+                        .foregroundStyle(DS.textSecondary)
+                        .frame(width: 18, alignment: .center)
+                    Text("Respond on 0xBow")
+                        .dsText(.callout15)
+                        .foregroundStyle(DS.textPrimary)
+                    Spacer(minLength: 0)
+                }
+                .padding(.vertical, DS.Space.s1)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
         }
     }
 }

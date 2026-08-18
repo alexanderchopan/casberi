@@ -107,7 +107,14 @@ enum DemoSeedAll {
                               // exit() needs its own entries or these rows
                               // outlive the demo, indistinguishable from a
                               // real synced deposit/fill.
+                              // …including the RAGEQUIT that closes the loop
+                              // (2026-08-17, prd §397). Without its own entry
+                              // the exit row outlives the demo AND goes on
+                              // joining to nothing, which is the one shape
+                              // that could make a real deposit read
+                              // "Reclaimed" on evidence that isn't real.
                               "peer:demo", "privacypools:dep:demo",
+                              "privacypools:ragequit:demo",
                               // The two PostHog WATCH rows (2026-08-10) carry
                               // the real `PostHogWatch.metricRef` shape for
                               // the same reason — no "demo" segment is
@@ -349,6 +356,15 @@ enum DemoSeedAll {
         for event in demoMetrics { PostHogState.forget(event) }
         ChipMemory.forgetDemo(Array(demoVisits.keys))
         X402State.forget()
+        // The seeded anonymity sets (prd §397). Scoped BY LABEL, unlike the
+        // PostHog/Cloudflare stores above, and that is not fussiness: the
+        // live sizes are global and re-bought within a day, but a landing
+        // snapshot is the size of a set at a moment that has passed and can
+        // never be re-read — so a real depositor who walked the demo would
+        // permanently lose the growth half of their cover line to a blanket
+        // wipe. Demo labels are `demo…`, a real one is a decimal uint256.
+        PrivacyPoolsCover.forgetCurrent()
+        PrivacyPoolsCover.forget(labels: ["demo2", "demo7"])
         // Same shape as PostHog above, and the same accepted risk: one
         // global cache, no per-account key, so this can't tell a demo
         // estate from a real one it might have overwritten — exactly what
@@ -2119,35 +2135,65 @@ enum DemoSeedAll {
         })
         // Privacy Pools rides the watched wallet; its rail reads the state TAG
         // `PrivacyPoolsBridge.retag` maintains, never the title's words.
-        let pools: [(String, String, Double)] = [
-            ("Put 0.0700 ETH into Privacy Pools", "Pending", 2),
-            ("Put 0.1200 ETH into Privacy Pools", "Pending", 9),
-            ("Put 0.2500 ETH into Privacy Pools", "Cleared", 17),
-            ("Put 0.0400 ETH into Privacy Pools", "Cleared", 24),
-            ("Put 0.3000 ETH into Privacy Pools", "Needs proof", 31),
-            ("Put 0.0900 ETH into Privacy Pools", "Cleared", 45),
+        // TWO assets on purpose (prd §397): the room states what is in the
+        // pools per asset and must NEVER sum across them, and a single-asset
+        // demo cannot show the difference between a card that respects that
+        // and one that adds 0.86 to 400. The reclaimed pair below is the
+        // other deliberate shape — see `poolExits`.
+        let pools: [(label: String, title: String, state: String,
+                     days: Double, symbol: String, value: Double)] = [
+            ("demo0", "Put 0.0700 ETH into Privacy Pools", "Pending",     2,  "ETH",  0.07),
+            ("demo1", "Put 0.1200 ETH into Privacy Pools", "Pending",     9,  "ETH",  0.12),
+            ("demo2", "Put 250 USDC into Privacy Pools",   "Cleared",     13, "USDC", 250),
+            ("demo3", "Put 0.2500 ETH into Privacy Pools", "Cleared",     17, "ETH",  0.25),
+            ("demo4", "Put 0.0400 ETH into Privacy Pools", "Cleared",     24, "ETH",  0.04),
+            ("demo5", "Put 0.3000 ETH into Privacy Pools", "Needs proof", 31, "ETH",  0.30),
+            // Reclaimed: still TAGGED `Declined`, deliberately. Its ragequit
+            // row below is what turns it `Reclaimed` on the card, so the demo
+            // exercises the §397 join — evidence beating a stale tag — rather
+            // than pre-baking the answer into the tag and proving nothing.
+            ("demo6", "Put 0.1500 ETH into Privacy Pools", "Declined",    38, "ETH",  0.15),
+            ("demo7", "Put 0.0900 ETH into Privacy Pools", "Cleared",     45, "ETH",  0.09),
         ]
-        out += pools.enumerated().map { i, p in
+        out += pools.map { p in
             // The ref must carry `PrivacyPoolsRoom.depositPrefix` — the room
             // head's `row(ref:tags:)` matches on that exact prefix, and a
             // `"demo:"`-prefixed ref (the family every other seed uses) falls
             // through as unrecognised, silently zeroing this card. Found
             // building the room-head coverage check (2026-08-10): all six
             // seeded deposits were landing and going straight to `nil`.
-            row(.transaction, p.0, source: "Privacy Pools", ref: "privacypools:dep:demo\(i)",
-                days: p.2, hour: 20, content: "Ethereum · 0xBow",
-                tags: ["Shielded", p.1]) { t in
+            row(.transaction, p.title, source: "Privacy Pools",
+                ref: PrivacyPoolsRoom.depositPrefix + p.label,
+                days: p.days, hour: 20, content: "Ethereum · 0xBow",
+                tags: ["Shielded", p.state]) { t in
                 t.walletAddress = demoWallet
                 // The amount as DATA (prd §369) — the receipt states a figure
                 // only from a stamped field, never by parsing the title, so
                 // without this the demo's deposits lead with their title and
                 // the sheet's headline number never draws.
-                t.transferAmount = p.0.hasPrefix("Put ")
-                    ? String(p.0.dropFirst(4)).components(separatedBy: " into ").first
-                    : nil
-                t.enrichedText = "The ETH pool holds about 3,900 accepted deposits."
+                t.transferAmount = "\(p.value.formatted(.number.precision(.fractionLength(0...4)))) \(p.symbol)"
+                // …and the structured pair the ROOM reads (prd §397). Without
+                // it every demo deposit is `unpriced`, the holdings line never
+                // draws, and the cover line has no asset to join against —
+                // three readings silently absent from the demo while the card
+                // still looks complete.
+                t.priceValue = p.value
+                t.priceCurrency = p.symbol
+                t.enrichedText = "The \(p.symbol) pool holds about "
+                    + "\(p.symbol == "USDC" ? "700" : "3,900") accepted deposits."
             }
         }
+        // The exit that closes the loop. Same label as `demo6`, which is what
+        // joins them — `PrivacyPoolsRoom.reclaimedLabels` keys on exactly this.
+        out.append(row(.transaction, "Reclaimed 0.1500 ETH from Privacy Pools",
+                       source: "Privacy Pools",
+                       ref: PrivacyPoolsRoom.reclaimedPrefix + "demo6",
+                       days: 35, hour: 20, content: "Ethereum · 0xBow") { t in
+            t.walletAddress = demoWallet
+            t.transferAmount = "0.1500 ETH"
+            t.priceValue = 0.15
+            t.priceCurrency = "ETH"
+        })
         // Peer ranks on the funding RAIL, stamped on `authorHandle`.
         let fills: [(String, String, Double)] = [
             ("Bought 250 USDC with Venmo on Peer", "Venmo", 3),
@@ -2785,21 +2831,93 @@ enum DemoSeedAll {
     /// across eight weeks — and a grid with one bright smudge reads as a bug.
     private static func writing() -> [Thing] {
         var out: [Thing] = []
-        let journal = ["Slow morning, long walk", "Wrote for an hour before anything else",
-                       "The panel finally looks like one thing", "Rain all day, read instead",
-                       "Cooked properly for the first time in weeks", "Long call with Sam",
-                       "Cleared the desk, cleared the head", "Ran the loop twice",
-                       "Bought the tiles", "Quiet Sunday", "Fixed the shelf", "Started the new book"]
-        out += journal.enumerated().map { i, j in
-            row(.note, j, source: "Day One", ref: "demo:dayone:\(i)",
-                days: Double(1 + i * 6), hour: 21, content: j)
+        // THE TWO JOURNALS SPAN YEARS (2026-08-17, prd §395). They were twelve
+        // and eight entries inside one season, which is what a journal looks
+        // like six weeks after you start one and nothing like the object
+        // `JournalRoom` was built to read — so that head would have correctly
+        // declined and `verify.sh`'s room-head coverage would have read the
+        // decline as a gap. §375 seeded X's years for exactly this reason;
+        // this is the same fix, two rooms over.
+        //
+        // Three things each list is shaped to carry, because each is a branch
+        // of the card that would otherwise never draw in a demo: a STREAK (the
+        // opening run of consecutive days — without one the headline takes its
+        // fallback and the branch that reads a journal's own signature fact is
+        // never seen), a SPAN past `minimumSpanDays`, and RECURRING SUBJECTS —
+        // the same handful of places and people across a year, so
+        // `ScreenshotTopics` has something that survives its recurrence floor
+        // and the year rows carry a "mostly …" clause.
+        //
+        // Content is the entry's opening line and then its BODY, which is how
+        // both importers really store it (`title` is the first line, `content`
+        // is the whole thing). A seed whose content equalled its title made
+        // every row draw a title and no excerpt, and would have hidden the
+        // §395 `bodyBelowTitle` fix entirely.
+        let dayOne: [(Double, String, String)] = [
+            (2,   "Slow morning, long walk", "Out along the canal before anything else was awake. Berlin does this about four days a year and I keep forgetting to be outside for them."),
+            (3,   "Wrote for an hour before anything else", "Kept the phone in the other room. Two pages, both keepable."),
+            (4,   "Cooked properly for the first time in weeks", "Sam came over. We ate late and nobody looked at a screen."),
+            (5,   "The panel finally looks like one thing", "Six weeks of it being four things stacked up. Today it stopped arguing with itself."),
+            (11,  "Rain all day, read instead", "Finished the book I have been carrying around since Lisbon."),
+            (18,  "Cleared the desk, cleared the head", "The studio is workable again."),
+            (26,  "Ran the loop twice", "Slower than the spring but the whole way without stopping."),
+            (33,  "Long call with Sam", "About the move, mostly. Neither of us said the obvious thing."),
+            (41,  "Bought the tiles", "Green, in the end. The studio will look like somewhere."),
+            (55,  "Quiet Sunday", "Nothing worth writing down, which is worth writing down."),
+            (68,  "Started the new book", "Slow first fifty pages and I do not mind."),
+            (82,  "Back from Lisbon", "Ten days and I did not open the laptop once."),
+            (97,  "The last week before Lisbon", "Everything at once, the way it always is before going anywhere."),
+            (113, "A better week than the one before", "Berlin finally warm. Ate outside three nights."),
+            (130, "Sam's birthday", "Twelve of us round a table too small for twelve."),
+            (152, "Moved the desk to the window", "Should have done it in January."),
+            (174, "Cold snap", "Did not leave the studio for two days."),
+            (196, "A year since the move", "Berlin still does not feel like a decision I made."),
+            (221, "Long walk, no route", "Ended up somewhere I have never been, forty minutes from the flat."),
+            (248, "Finished the thing", "Eight months. It is out and I feel nothing yet."),
+            (275, "Sam is leaving", "Told me over coffee like it was ordinary news."),
+            (305, "Studio day", "Nothing but the work from nine until it got dark."),
+            (340, "Christmas, quietly", "Just the two of us and too much food."),
+            (372, "New year, no list", "Trying it without one this time."),
+            (405, "The Lisbon flat fell through", "Probably for the best. Berlin then."),
+            (440, "Two weeks in", "The routine is holding, which is new."),
+            (478, "Swimming again", "First time since school. Terrible and completely worth it."),
+            (515, "A hard week", "Nothing specific. Wrote anyway, which was the point."),
+            (552, "Sam moved back", "Round for dinner within a week, as if nothing had happened."),
+            (596, "Spring, apparently", "The whole city outside at once."),
+            (640, "Started keeping this", "Not sure what it is for yet. Every morning, ten minutes."),
+            (688, "The flat is finally empty", "Boxes gone. Berlin from Monday."),
+            (735, "Told them I was leaving", "Kinder about it than I deserved."),
+            (790, "Something has to change", "Wrote three pages about it and did not solve anything."),
+        ]
+        out += dayOne.enumerated().map { i, e in
+            row(.note, e.1, source: "Day One", ref: "demo:dayone:\(i)",
+                days: e.0, hour: 21, content: "\(e.1)\n\(e.2)")
         }
-        out += (0..<8).map { i in
-            row(.note, ["A good week", "Notes on the trip", "What I want from autumn",
-                        "Three things that worked", "On finishing things", "A quieter month",
-                        "Reading again", "Small wins"][i],
-                source: "Apple Journal", ref: "demo:journal:\(i)",
-                days: Double(3 + i * 9), hour: 22, content: "Journal entry")
+        let appleJournal: [(Double, String, String)] = [
+            (7,   "A good week", "Three things went right and I noticed all three, which is the rarer part."),
+            (8,   "Notes on the trip", "Lisbon again in the autumn if the work allows it."),
+            (9,   "What I want from autumn", "Less of the calendar, more of the studio."),
+            (16,  "Three things that worked", "Mornings without the phone. Walking to the studio. Saying no once."),
+            (29,  "On finishing things", "The last ten per cent is the whole job and I keep pretending it isn't."),
+            (44,  "A quieter month", "Deliberately. It worked."),
+            (60,  "Reading again", "Two books in three weeks after a year of none."),
+            (78,  "Small wins", "The shelf, the tiles, the invoice I had been avoiding since June."),
+            (100, "Sam, after a long gap", "Picked up exactly where we left it."),
+            (125, "The studio in summer", "Unbearable by two in the afternoon. Working mornings now."),
+            (150, "Halfway", "Six months of this and it has not slipped once."),
+            (180, "Berlin in the rain", "Better than Berlin in August, honestly."),
+            (215, "A week off", "No plans made and none needed."),
+            (255, "Back to it", "Slower start than I wanted. Fine."),
+            (300, "The end of a long project", "Relief first, then the odd flatness that always follows."),
+            (350, "Winter routine", "Dark by four. Studio lamps on from three."),
+            (400, "Starting over on the same idea", "Third attempt. This one might hold."),
+            (460, "Lisbon, briefly", "Four days. Came back with a plan I did not have going out."),
+            (525, "Something worth keeping", "A conversation with Sam I have thought about every week since."),
+            (600, "First entry", "Trying this properly. Every Sunday, whatever happened."),
+        ]
+        out += appleJournal.enumerated().map { i, e in
+            row(.note, e.1, source: "Apple Journal", ref: "demo:journal:\(i)",
+                days: e.0, hour: 22, content: "\(e.1)\n\(e.2)")
         }
         let chats: [(String, String, Double)] = [
             ("Designing a bento panel", "ChatGPT", 1), ("SwiftData migration plan", "ChatGPT", 5),
@@ -3323,6 +3441,27 @@ enum DemoSeedAll {
         // 5 · Cloudflare's estate snapshot — see `seedCloudflareEstate`'s own
         // doc for why the two cert rows alone don't reach the runway figure.
         seedCloudflareEstate()
+        // 5b · The anonymity sets behind the Privacy Pools deposits seeded in
+        // `wallet()` (prd §397). Two numbers, and the pair is the point: the
+        // CURRENT set, plus the set at the moment the oldest deposit in each
+        // pool landed, which is the only way the card can say cover has GROWN.
+        // Without this the room head still draws and the cover line is simply
+        // absent — the silent-gap shape `verify.sh`'s room-head coverage step
+        // exists to catch, one reading down.
+        //
+        // Symbols must match the `priceCurrency` those rows are stamped with
+        // (`PrivacyPoolsCover`'s own rule); a mismatch unjoins the line with
+        // nothing on screen to say so. Labels are the deposit refs minus their
+        // prefix: `demo7` is the oldest ETH deposit, `demo2` the only USDC one.
+        //
+        // Deliberately NOT preceded by a wipe: `save(current:)` replaces the
+        // live sizes wholesale anyway, and `snapshot` never overwrites, so a
+        // real depositor's own landing snapshots — which cannot be re-bought,
+        // being the size of a set at a moment that has passed — survive
+        // entering the demo untouched.
+        PrivacyPoolsCover.save(current: ["ETH": 4_180, "USDC": 742])
+        PrivacyPoolsCover.snapshot(label: "demo7", count: 3_240)
+        PrivacyPoolsCover.snapshot(label: "demo2", count: 690)
         // 6 · Safe's room head (2026-08-11) reads `SafeBridge`'s own bridge
         // state, not the seeded `.transaction` things above (`SafeRoomSource`'s
         // own doc) — refs match the `wallet:safe:eth:demo0/1` rows in `wallet()`
@@ -3489,8 +3628,8 @@ enum DemoSeedAll {
         ("Hugging Face", "3 watched", "Reads new models and papers."),
         ("Twitch", "1 channel", "Reads who's live."),
         ("1Claw", "1 vault", "Reads which agents were granted what."),
-        ("Day One", "Imported 12 entries", "Holds the journal you exported."),
-        ("Apple Journal", "Imported 8 entries", "Holds the journal you exported."),
+        ("Day One", "Imported 34 entries", "Holds the journal you exported."),
+        ("Apple Journal", "Imported 20 entries", "Holds the journal you exported."),
         ("Apple Health", "Synced 1h ago", "Reads your workouts."),
         ("Strava", "Rides Apple Health", "Reads activities Strava wrote."),
         ("Todoist", "Synced 18m ago", "Reads your tasks."),

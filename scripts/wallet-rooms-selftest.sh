@@ -70,6 +70,7 @@ CARD_RAILGUN="Casberi/Casberi/Screens/RailgunRoomCard.swift"
 CARD_SAFE="Casberi/Casberi/Screens/SafeRoomCard.swift"
 FEED="Casberi/Casberi/Screens/FeedScreen.swift"
 PROBES="Casberi/Casberi/Shell/ProbeHooks.swift"
+DEMO="Casberi/Casberi/Model/DemoSeedAll.swift"
 
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
@@ -125,6 +126,65 @@ grep -q 'thing.priceCurrency = spend.token.currency' "$BR_GNOSIS" \
   || { echo "✗ GnosisPayBridge no longer stamps priceCurrency — spends would drop out of every total with nothing on screen to say so"; exit 1; }
 grep -q 'tags: \["Shielded", "Pending"\]' "$BR_POOLS" \
   || { echo "✗ a Privacy Pools deposit no longer lands wearing a state tag — every deposit would compose as untagged"; exit 1; }
+
+# --- prd §397 (2026-08-17) --------------------------------------------------
+# The money the room states. Without BOTH halves every deposit is `unpriced`,
+# the holdings line never draws, and the cover line has no asset to join
+# against — three readings gone while the card still renders a full standing.
+grep -q 'thing.priceValue = value' "$BR_POOLS" \
+  || { echo "✗ PrivacyPoolsBridge no longer stamps priceValue — the room could state no money at all, and §349's refusal would be back"; exit 1; }
+grep -q 'thing.priceCurrency = pool.symbol' "$BR_POOLS" \
+  || { echo "✗ PrivacyPoolsBridge no longer stamps priceCurrency — deposits would drop out of every holding with nothing on screen to say so"; exit 1; }
+# THE LOOP. Without this the deposit a ragequit undoes keeps its `Declined`
+# tag, so the row and the card disagree about the same deposit forever. (The
+# CARD is still right — `PrivacyPoolsRoom` does the join itself — so this
+# failing is invisible everywhere except search and the row's own chrome,
+# which is exactly why it is mechanical.)
+grep -q 'retag(label: exit.label, to: PrivacyPoolsRoom.State.reclaimed.rawValue' "$BR_POOLS" \
+  || { echo "✗ a ragequit no longer moves its own deposit's state tag — the row would keep saying Declined after the money came back"; exit 1; }
+# Both halves of the join must build the ref from ONE constant, the
+# `depositRefPrefix` lesson applied to the exit.
+grep -q 'let ref = PrivacyPoolsRoom.reclaimedPrefix + exit.label' "$BR_POOLS" \
+  || { echo "✗ the ragequit ref is spelled by hand again — the room's reclaim join keys on PrivacyPoolsRoom.reclaimedPrefix and would silently match nothing"; exit 1; }
+# One rounding for one number. The card's cover line and the sheet's §228
+# sentence state the same pool's set size on two surfaces; rounding them
+# separately is how they end up a hundred deposits apart.
+grep -q 'PrivacyPoolsRoom.roundedSet(n)' "$BR_POOLS" \
+  || { echo "✗ PrivacyPoolsBridge rounds the anonymity set itself again — the card and the thing sheet can now disagree about the same pool"; exit 1; }
+# The cover store is written by the SWEEP, not by drawing. A card that fetched
+# its own reading would spend a request per open on the one head whose contract
+# says it spends nothing per open.
+grep -q 'PrivacyPoolsCover.save(current: bySymbol)' "$BR_POOLS" \
+  || { echo "✗ nothing writes the live anonymity sets any more — the cover line would be permanently absent"; exit 1; }
+grep -q 'PrivacyPoolsCover.snapshot(label: label, count: c.count)' "$BR_POOLS" \
+  || { echo "✗ the set size at landing is no longer snapshotted — cover could never be shown to have GROWN, the one good reading this seat has"; exit 1; }
+if grep -q 'URLSession\|IngestSupport\|getJSON' "$SRC_POOLS" "$CARD_POOLS"; then
+  echo "✗ the Privacy Pools room head reaches the network — it composes from landed rows and stored numbers only"; exit 1
+fi
+# §374: a room that states figures must be able to hide them.
+grep -q 'BalancePrivacy.shared.hidden ? BalancePrivacy.mask : nil' "$CARD_POOLS" \
+  || { echo "✗ the Privacy Pools card no longer honours hide-balances — §374 figures would stay on screen on the most stood-next-to surface this app has"; exit 1; }
+grep -q 'PrivacyPoolsRoom.holdingsLine(room, mask: mask)' "$CARD_POOLS" \
+  || { echo "✗ the card no longer draws what's in the pools, or draws it unmasked"; exit 1; }
+grep -q 'PrivacyPoolsRoom.coverLine(room.cover)' "$CARD_POOLS" \
+  || { echo "✗ the card no longer draws the anonymity set"; exit 1; }
+# The door exists only for the state that needs a person, and opens 0xBow and
+# nowhere else — capture-only means the honest affordance is a hand-off.
+grep -q 'if room.needsYou != nil {' "$CARD_POOLS" \
+  || { echo "✗ the 0xBow door is no longer gated on the one state that needs you — it would be chrome on every other room state"; exit 1; }
+grep -q 'respondURL = URL(string: "https://app.0xbow.io")' "$CARD_POOLS" \
+  || { echo "✗ the respond door no longer opens 0xBow — a door telling you to respond must land where responding happens"; exit 1; }
+
+# Demo parity (the standing ship step): every reading above must COMPOSE over
+# the seeded corpus, or the demo shows a card the real room would not.
+grep -q 'PrivacyPoolsCover.save(current:' "$DEMO" \
+  || { echo "✗ the demo no longer seeds the anonymity sets — the cover line would be silently absent from every demo"; exit 1; }
+grep -q 'PrivacyPoolsRoom.reclaimedPrefix + "demo6"' "$DEMO" \
+  || { echo "✗ the demo no longer seeds a ragequit joined to a deposit — the §397 loop would ship unexercised"; exit 1; }
+grep -q '"privacypools:ragequit:demo"' "$DEMO" \
+  || { echo "✗ the demo's ragequit ref prefix is missing from refPrefixes — the exit row would outlive the demo and go on joining to a deposit that is real"; exit 1; }
+grep -q 'PrivacyPoolsCover.forget(labels:' "$DEMO" \
+  || { echo "✗ demo teardown no longer removes the seeded cover snapshots by label — a blanket wipe would destroy a real depositor's own, which cannot be re-read"; exit 1; }
 
 # The source name each room filters on, still the one the bridge lands under.
 # The constants exist so the two agree; these check they still describe reality.
@@ -468,7 +528,7 @@ func pp(_ ref: String, _ tags: [String] = [], at: Date = t0) -> PrivacyPoolsRoom
 // The mirror the whole card rests on: these raw values ARE the tag strings
 // `PrivacyPoolsBridge.retag` writes.
 check("the tag vocabulary is the bridge's",
-      PrivacyPoolsRoom.states == ["Pending", "Cleared", "Declined", "Needs proof"])
+      PrivacyPoolsRoom.states == ["Pending", "Cleared", "Declined", "Needs proof", "Reclaimed"])
 check("a state is read off the tag", PrivacyPoolsRoom.state(tags: ["Shielded", "Cleared"]) == .cleared)
 check("the shielded marker is not a state", PrivacyPoolsRoom.state(tags: ["Shielded"]) == nil)
 // Defaulting to pending is a claim about the screener made with no evidence —
@@ -497,7 +557,9 @@ let pools = PrivacyPoolsRoom.compose(rows: [
 check("deposits are counted", pools.deposits == 5)
 check("an untagged deposit is counted apart", pools.untagged == 1)
 check("an alert is NOT a deposit", pools.deposits == 5 && pools.segments.reduce(0) { $0 + $1.count } == 4)
-check("a reclaim is counted apart from the states", pools.reclaimed == 1)
+// Ragequit 6 has no deposit 6 in this room, so it stays an orphan rather than
+// resolving anything — see the loop-closing block below for the joined case.
+check("a reclaim with no deposit here is counted apart", pools.unattachedReclaims == 1)
 check("what is still open is counted", pools.waiting == 3)
 check("a reclaim never dates the room", pools.newest == day(-2))
 
@@ -579,7 +641,7 @@ check("a wholly unruled room says so",
 let ppFoot = PrivacyPoolsRoom.footnote(pools, now: t0) ?? ""
 check("untagged deposits are named in the footnote",
       ppFoot.contains("1 deposit's status is unknown"))
-check("reclaims are named", ppFoot.contains("1 reclaimed"))
+check("orphan reclaims are named", ppFoot.contains("1 reclaimed before you watched"))
 check("a room of pre-tag deposits gets an honest headline",
       PrivacyPoolsRoom.headline(PrivacyPoolsRoom.compose(rows: [
           pp("privacypools:dep:1"), pp("privacypools:dep:2")]))
@@ -588,6 +650,170 @@ check("a fully reclaimed room still draws",
       !PrivacyPoolsRoom.compose(rows: [pp("privacypools:ragequit:1")]).isEmpty)
 check("an alert on its own is no card",
       PrivacyPoolsRoom.compose(rows: [pp("privacypools:status:1")]).isEmpty)
+
+print("")
+print("Privacy Pools — the loop closes (prd §397)")
+// THE BUG THIS EXISTS FOR: before the join, a deposit that was declined and
+// then reclaimed kept its `Declined` tag for life, so `rank` went on putting
+// it at the top of the card telling the person to reclaim it — permanently,
+// on the one card whose whole job is to say what still needs them.
+let closed = PrivacyPoolsRoom.compose(rows: [
+    pp("privacypools:dep:x", ["Shielded", "Declined"], at: day(-30)),
+    pp("privacypools:ragequit:x", at: day(-25)),
+])
+check("a reclaimed deposit stops being declined", closed.lead?.state == .reclaimed)
+check("and the headline stops asking for a reclaim already done",
+      PrivacyPoolsRoom.headline(closed, now: t0) == "Your deposit is back in your wallet")
+// The double-count the whole room is careful about everywhere else: the
+// ragequit resolved a deposit, so it is reported once, as that deposit.
+check("a joined ragequit is not ALSO counted as its own thing",
+      closed.deposits == 1 && closed.unattachedReclaims == 0)
+check("nothing is left in the pools", closed.inPools == 0)
+check("and the note says that, not that reviews finished",
+      PrivacyPoolsRoom.note(closed) == "All of it has been taken back out")
+// Evidence beats the record: the stored tag is untouched and still reads
+// `Declined`. The card is right because it joined, not because anything
+// rewrote history.
+check("the stale tag itself still says declined",
+      PrivacyPoolsRoom.state(tags: ["Shielded", "Declined"]) == .declined)
+// A reclaim is over, so it must never outrank something still open.
+check("a reclaim ranks below everything still open",
+      PrivacyPoolsRoom.rank(.reclaimed) < PrivacyPoolsRoom.rank(.cleared))
+check("a reclaim is resolved and out of the pool",
+      PrivacyPoolsRoom.State.reclaimed.resolved
+        && PrivacyPoolsRoom.State.reclaimed.inPool == false)
+// A DECLINE is not an exit — the money sits there until it is reclaimed,
+// which is the entire reason these are two states.
+check("a decline is still in the pool", PrivacyPoolsRoom.State.declined.inPool)
+// Only the deposit the evidence names moves. Getting this wrong the other way
+// — every declined deposit going quiet because one was reclaimed — is the
+// same bug with the sign flipped.
+let mixedReclaims = PrivacyPoolsRoom.compose(rows: [
+    pp("privacypools:dep:a", ["Declined"], at: day(-30)),
+    pp("privacypools:dep:b", ["Declined"], at: day(-20)),
+    pp("privacypools:ragequit:a", at: day(-25)),
+])
+check("only the deposit the ragequit names moves",
+      mixedReclaims.lead?.state == .declined && mixedReclaims.lead?.count == 1)
+check("and the reclaimed one is reported exactly once",
+      mixedReclaims.segments.first { $0.state == .reclaimed }?.count == 1)
+check("a ragequit sorted BEFORE its own deposit still joins",
+      PrivacyPoolsRoom.compose(rows: [
+          pp("privacypools:ragequit:z", at: day(-25)),
+          pp("privacypools:dep:z", ["Declined"], at: day(-30)),
+      ]).lead?.state == .reclaimed)
+
+print("")
+print("Privacy Pools — what's in the pools (prd §397)")
+func ppa(_ ref: String, _ tags: [String], _ asset: String?, _ amount: Double?,
+         at: Date = t0) -> PrivacyPoolsRoom.Sighting {
+    PrivacyPoolsRoom.Sighting(ref: ref, tags: tags, asset: asset, amount: amount, at: at)
+}
+let held = PrivacyPoolsRoom.compose(rows: [
+    ppa("privacypools:dep:h1", ["Pending"], "ETH", 0.07, at: day(-2)),
+    ppa("privacypools:dep:h2", ["Cleared"], "ETH", 0.25, at: day(-5)),
+    ppa("privacypools:dep:h3", ["Cleared"], "USDC", 250, at: day(-6)),
+    // Declined AND reclaimed — its 0.15 must not be counted as shielded.
+    ppa("privacypools:dep:h4", ["Declined"], "ETH", 0.15, at: day(-9)),
+    pp("privacypools:ragequit:h4", at: day(-8)),
+    // Landed before the bridge stamped the pair: counted, never bucketed.
+    ppa("privacypools:dep:h5", ["Pending"], nil, nil, at: day(-3)),
+])
+check("assets are separate holdings", held.holdings.count == 2)
+check("the leading asset is the one with the most deposits",
+      held.leadHolding?.symbol == "ETH")
+check("money already taken back out is not counted as still in there",
+      abs((held.leadHolding?.amount ?? 0) - 0.32) < 0.0001)
+check("an unpriced deposit is counted, never dropped", held.unpriced == 1)
+check("an unpriced deposit is not bucketed under a guessed symbol",
+      held.holdings.map(\.symbol).sorted() == ["ETH", "USDC"])
+check("open deposits are counted per asset", held.leadHolding?.waiting == 1)
+// The one arithmetic this room must never do.
+check("assets are never summed",
+      PrivacyPoolsRoom.holdingsLine(held) == "0.32 ETH · 250 USDC in the pools")
+// A partial sum presented as a total is the failure this stays silent for.
+let partial = PrivacyPoolsRoom.compose(rows: [
+    ppa("privacypools:dep:p1", ["Pending"], "ETH", 0.07),
+    ppa("privacypools:dep:p2", ["Pending"], "ETH", nil),
+])
+check("a sum missing one of its parts is never stated",
+      partial.leadHolding?.amount == nil)
+check("and it falls back to a count, which is not a balance",
+      PrivacyPoolsRoom.holdingText(partial.leadHolding!) == "2 ETH deposits")
+// §374 rule 3: figures go, shapes stay.
+check("hide-balances masks the figure and keeps the asset",
+      PrivacyPoolsRoom.holdingText(held.leadHolding!, mask: "••••") == "•••• ETH")
+check("a room with nothing in it has no holdings line",
+      PrivacyPoolsRoom.holdingsLine(closed) == nil)
+// Amounts in different tokens do not compare, so ranking by them would imply
+// a conversion this room refuses to make.
+check("holdings rank by deposit count, never by amount",
+      PrivacyPoolsRoom.orderedHoldings([
+          .init(symbol: "USDC", deposits: 1, waiting: 0, amount: 250),
+          .init(symbol: "ETH", deposits: 2, waiting: 0, amount: 0.32),
+      ]).first?.symbol == "ETH")
+// Without the last tiebreak the order comes off a dictionary and the card
+// reshuffles between opens over identical data.
+check("equal counts fall back to a stable name order",
+      PrivacyPoolsRoom.orderedHoldings([
+          .init(symbol: "USDC", deposits: 1, waiting: 0, amount: 250),
+          .init(symbol: "DAI", deposits: 1, waiting: 0, amount: 10),
+      ]).first?.symbol == "DAI")
+
+print("")
+print("Privacy Pools — cover (prd §397)")
+check("no reading, no line", PrivacyPoolsRoom.coverLine(nil) == nil)
+check("an empty set is not a reading",
+      PrivacyPoolsRoom.coverLine(.init(symbol: "ETH", current: 0, atLanding: nil)) == nil)
+check("the current set is stated on its own",
+      PrivacyPoolsRoom.coverLine(.init(symbol: "ETH", current: 3947, atLanding: nil))
+        == "Your ETH hides among about 3,900 accepted deposits.")
+check("growth is stated when the rounded figures differ",
+      (PrivacyPoolsRoom.coverLine(.init(symbol: "ETH", current: 3947, atLanding: 2410)) ?? "")
+        .contains("up from 2,400"))
+// At two significant figures 3,947 → 3,961 renders as "up from 3,900 to
+// 3,900", which reads as a broken sentence rather than the honest "no
+// material change" it is.
+check("growth inside the rounding is not narrated",
+      (PrivacyPoolsRoom.coverLine(.init(symbol: "ETH", current: 3961, atLanding: 3947)) ?? "")
+        .contains("up from") == false)
+// A shrinking set is real but alarming, and this reading does not know why.
+check("a set that shrank is never narrated",
+      (PrivacyPoolsRoom.coverLine(.init(symbol: "ETH", current: 3000, atLanding: 4000)) ?? "")
+        .contains("up from") == false)
+// Locale-independent: the grouping separator differs by region, the digits do
+// not.
+check("two significant figures, rounded down",
+      PrivacyPoolsRoom.roundedSet(3947).filter(\.isNumber) == "3900")
+check("a small set is stated exactly", PrivacyPoolsRoom.roundedSet(12) == "12")
+// One asset, deliberately: several cover lines would stack separate pools'
+// set sizes into something that reads as one aggregate privacy figure.
+let covered = PrivacyPoolsRoom.compose(rows: [
+    ppa("privacypools:dep:c1", ["Pending"], "ETH", 0.07),
+    ppa("privacypools:dep:c2", ["Cleared"], "ETH", 0.25),
+    ppa("privacypools:dep:c3", ["Cleared"], "USDC", 250),
+], covers: [.init(symbol: "USDC", current: 700, atLanding: nil),
+            .init(symbol: "ETH", current: 4000, atLanding: 3000)])
+check("cover follows the leading asset and no other", covered.cover?.symbol == "ETH")
+check("a pool we have no reading for gets no line",
+      PrivacyPoolsRoom.cover(for: covered.leadHolding,
+                             in: [.init(symbol: "DAI", current: 9, atLanding: nil)]) == nil)
+
+print("")
+print("Privacy Pools — the legend's wait (prd §397)")
+let waitingSeg = staleRoom.lead!
+check("the legend names how long the oldest has waited",
+      PrivacyPoolsRoom.legendLine(waitingSeg, now: t0).contains("oldest 10 days"))
+// A cleared or reclaimed deposit finished waiting; saying how long it took is
+// not the fact that matters once it has.
+check("a resolved state says nothing about waiting",
+      PrivacyPoolsRoom.legendLine(
+          .init(state: .cleared, count: 2, oldestAt: day(-40)), now: t0)
+        == PrivacyPoolsRoom.segmentLine(.init(state: .cleared, count: 2, oldestAt: day(-40))))
+check("a wait under the floor is not worth naming",
+      PrivacyPoolsRoom.legendLine(
+          .init(state: .pending, count: 1, oldestAt: day(-1)), now: t0)
+        == "1 in review")
 
 // ===========================================================================
 print("")
@@ -1007,6 +1233,14 @@ check("nothing awaiting you means nothing stuck, however old the queue is",
       SafeRoom.stuckDays(SafeRoom.compose(
         entries: [safeEntry("a", have: 1, required: 3, yourTurn: false, submittedAt: day(-40))],
         safeCount: 1), now: t0) == nil)
+check("a fully-signed transaction is never reported as a stuck signature",
+      SafeRoom.stuckDays(SafeRoom.compose(
+        entries: [safeEntry("a", have: 3, required: 3, yourTurn: true, submittedAt: day(-40))],
+        safeCount: 1), now: t0) == nil)
+check("an unknown submission date yields no duration rather than a fabricated one",
+      SafeRoom.stuckDays(SafeRoom.compose(
+        entries: [safeEntry("a", have: 1, required: 3, yourTurn: true, submittedAt: nil)],
+        safeCount: 1), now: t0) == nil)
 
 print("")
 if failures > 0 { print("\(failures) failed"); exit(1) }
@@ -1126,7 +1360,7 @@ mutate "an alert is counted as a second deposit" pools \
 # One deposit stuck on proof, buried under forty that cleared — exactly on the
 # accounts that use this seat most.
 mutate "proof-required stops outranking everything" pools \
-  'case .needsProof: return 3' \
+  'case .needsProof: return 4' \
   'case .needsProof: return 0'
 # Partial knowledge drawn as complete: the bar fills, and the deposits nobody
 # could place vanish out of the denominator.
@@ -1144,6 +1378,80 @@ mutate "a state's raw value stops mirroring the bridge's tag" pools \
 mutate "a review-time pair no longer checks the resolution came after the deposit" pools \
   'guard let resolved = resolvedAt[label], resolved >= landed else { return nil }' \
   'guard let resolved = resolvedAt[label] else { return nil }'
+
+# --- prd §397: the loop, the money, the cover ------------------------------
+# THE BUG THIS PASS EXISTS FOR. Without the join a deposit that was declined
+# and then reclaimed keeps its `Declined` tag for life, so the card goes on
+# telling the person to reclaim money already in their wallet — forever, in the
+# largest type on the room whose whole job is to say what still needs them.
+mutate "a reclaimed deposit is no longer joined to its own ragequit" pools \
+  'let out = label.map { reclaimed.contains($0) } ?? false' \
+  'let out = false'
+# The other direction: a ragequit that resolved a deposit is reported once, as
+# that deposit. Counting it again is the same double-count the alert exclusion
+# already refuses one line up.
+mutate "a joined ragequit is counted a second time as an orphan" pools \
+  'unattachedReclaims: max(reclaimRows - attachedReclaims, 0),' \
+  'unattachedReclaims: reclaimRows,'
+# A decline is NOT an exit — the money sits in the pool until it is reclaimed,
+# which is the entire reason the two are separate states.
+mutate "a reclaimed deposit is treated as still inside the pool" pools \
+  'var inPool: Bool { self != .reclaimed }' \
+  'var inPool: Bool { true }'
+# Money already back in the wallet, counted as still shielded: a balance
+# overstated by exactly the amount that left.
+mutate "money taken back out is still counted as in the pools" pools \
+  '                guard state?.inPool ?? true else { continue }' \
+  '                guard true else { continue }'
+# The note has to say "taken back out" BEFORE it says "every review is
+# finished" — once it is all out, whether the reviews finished is not the fact.
+mutate "an emptied room reports finished reviews instead of an empty pool" pools \
+  'if room.inPools == 0 {' \
+  'if room.inPools < 0 {'
+# A partial sum presented as a total, which renders as a confident balance.
+mutate "a sum missing one of its parts is presented as a total" pools \
+  'amount: $0.value.complete ? $0.value.sum : nil' \
+  'amount: $0.value.sum'
+# An asset nobody named, invented and then ranked beside the real ones — the
+# `PeerRoom` "Unknown rail" mutation, one room over.
+mutate "an unpriced deposit is bucketed under an invented symbol" pools \
+  '                guard let asset = sighting.asset, !asset.isEmpty else {
+                    unpriced += 1
+                    continue
+                }' \
+  '                let asset = sighting.asset ?? "Unknown"'
+# Ranking assets by amount implies a conversion between them that this room
+# refuses to make: it would put 500 USDC above 0.4 ETH on no basis at all.
+mutate "holdings are ranked by amount across different tokens" pools \
+  'if a.deposits != b.deposits { return a.deposits > b.deposits }' \
+  'if (a.amount ?? 0) != (b.amount ?? 0) { return (a.amount ?? 0) > (b.amount ?? 0) }'
+# Without the last tiebreak the order comes off a dictionary and the card
+# reshuffles between opens over identical data.
+mutate "the holdings order stops being total" pools \
+  'return a.symbol < b.symbol' \
+  'return a.symbol > b.symbol'
+# At two significant figures a set that moved 3,947 → 3,961 renders as "up from
+# 3,900 to 3,900" — a sentence that reads as broken rather than as the honest
+# "no material change" it is.
+mutate "growth is claimed when both figures round to the same number" pools \
+  'guard let landed = cover.atLanding, landed > 0, cover.current > landed,
+              roundedSet(landed) != now else {' \
+  'guard let landed = cover.atLanding, landed > 0, cover.current > landed else {'
+# A set that SHRANK narrated as growth — the one cover claim that would be
+# flatly false rather than merely unhelpful.
+mutate "a shrinking anonymity set is narrated as growth" pools \
+  'guard let landed = cover.atLanding, landed > 0, cover.current > landed,' \
+  'guard let landed = cover.atLanding, landed > 0, cover.current != landed,'
+# Cover belongs to ONE pool. Joined to whatever reading came first, the card
+# states some other pool'"'"'s set size as the cover for your asset.
+mutate "cover is joined to whatever pool answered first" pools \
+  'return covers.first { $0.symbol == holding.symbol }' \
+  'return covers.first'
+# A cleared deposit finished waiting; how long it took is not the fact that
+# matters once it has, and stating it makes every legend row look urgent.
+mutate "a resolved state reports how long it waited" pools \
+  'guard !segment.state.resolved, let oldestAt = segment.oldestAt else { return nil }' \
+  'guard let oldestAt = segment.oldestAt else { return nil }'
 
 # The cross-currency sum this file exists to refuse.
 mutate "every currency lands in one bucket" gnosis \

@@ -25374,3 +25374,133 @@ Same footing as §396: authored on a host with no Xcode, so nothing here has bee
 compiled or looked at. Every static audit passes and the harness's shell guards
 pass; a change whose entire subject is how a row LOOKS is owed a screenshot
 before it is believed.
+## §397 — Privacy Pools states what is in the pools, closes the reclaim loop, and turns cover into a number (user: "How else would you enrich the Privacy Pools source room", then "ok do all", 2026-08-17)
+
+§349 gave this room a head — where every deposit stands with the screener,
+what needs you, how long it has waited. Its own doc named three things it could
+not do, and this pass does all three. Nothing here adds a `Thing` property, so
+**no CloudKit Production deploy**; every figure rides fields that already exist.
+
+**1. The reclaim loop closes — and this is a BUG FIX, not an addition.** §228
+landed the ragequit (the exit that returns to the original depositor, and the
+only withdrawal leg that is linkable at all) as its own row, and left the
+deposit it undid wearing whatever state it had. So a deposit that was declined
+and then reclaimed kept its `Declined` tag **for life**, and `rank` — which
+exists to put trouble first — went on leading the card with "A deposit was
+declined · reclaim to your wallet" forever, on money already back in the
+wallet. The one card whose job is to say what still needs you, permanently
+asking for a thing already done.
+
+The join is by LABEL, which every row here is already keyed by
+(`privacypools:dep:<label>`, `:status:<label>`, `:ragequit:<label>`), so it
+costs no field and no read. **Evidence beats the record**: a ragequit row is
+proof the money left, the tag is a note the bridge left, and where they
+disagree the proof wins. That ordering is why the fix reaches devices whose
+reclaims landed months ago — the card is correct the moment this ships, with or
+without any repair. The stored tag is repaired too (`healReclaimed`, a one-time
+sweep, since a forward-only cursor can never revisit those blocks), because
+search, the §308 facets and the row's own chrome read the tag, and a card
+disagreeing with the row beneath it is worse than either being wrong alone.
+
+`Reclaimed` is a fifth state, resolved and NOT `inPool`. A decline explicitly
+remains `inPool` — the money sits there until it is reclaimed, which is the
+entire reason the two are separate states.
+
+**2. What is in the pools, per asset.** §349 refused a figure because "the
+amount lives only inside each row's title", and re-parsing prose into
+arithmetic is what this codebase refuses everywhere. That constraint expired
+without anyone noticing: §369 stamped `transferAmount`, and the room still had
+nothing structured to read. The bridge now stamps `priceValue`/`priceCurrency`
+at landing — the same pair `RailgunRoom` and `GnosisPayRoom` already read —
+computed from the raw log amount and the pool's decimals, never parsed back out
+of `transferAmount` (which `WalletIngest.format` rounds AND groups by locale,
+so parsing it is both lossy and region-dependent; `GnosisPayRoomSource`'s
+standing rule).
+
+**Never summed across assets.** 0.44 ETH and 500 USDC share no unit, and the
+one figure that would combine them is a dollar total this room has no price for
+and no business inventing. They sit side by side. A sum missing any of its
+parts is not stated at all (Railgun's all-or-nothing rule) and falls back to a
+count, because a count of deposits is not a balance. Deposits landed before
+today are `unpriced` — counted and named in the footnote, never dropped and
+never bucketed under a guessed symbol. Holdings rank by deposit COUNT, never by
+amount, since ranking by amount would imply exactly the conversion above.
+§374 hide-balances is honoured, symbol surviving the mask (rule 3: figures go,
+shapes stay).
+
+**3. Cover became a number, and it is the one piece of good news this seat
+has.** §228 reads `acceptedDepositsCount` — the real anonymity set, since only
+approved deposits sit in the merkle tree a withdrawal proof draws from — and
+throws the integer away, keeping a sentence on each deposit's `enrichedText`.
+§349 read that sentence and correctly refused to draw from it: several
+deposits' lines are several different moments' pool sizes, and summing them
+would present them as one current figure.
+
+**That refusal stands; `PrivacyPoolsCover` goes around it rather than
+reversing it.** The count is kept as an integer per pool, refreshed at most
+once a day by the SWEEP (never by drawing — the head's "spends nothing per
+open" contract holds), plus a snapshot of the set size at the moment each
+deposit landed. The pair is what lets the card say the set GREW, which nothing
+in the app reported: a deposit already made becomes more private as strangers
+deposit, without the depositor doing anything, and the frozen per-deposit
+sentence structurally cannot say so. ONE asset per card — several cover lines
+would stack separate pools' sets into something that reads as one aggregate
+privacy figure and is not one.
+
+Two refusals inside the reading, both mechanical: growth is claimed only when
+the two ROUNDED figures differ (at two significant figures 3,947 → 3,961 renders
+as "up from 3,900 to 3,900", which reads as a broken sentence rather than the
+honest "no material change" it is), and a set that SHRANK is never narrated —
+real, but alarming enough on a privacy screen that it should be said only by
+something that knows why, and this reading does not. Rounding is now ONE
+function shared with the bridge's §228 sentence, so the card and the thing
+sheet cannot drift a hundred deposits apart about the same pool.
+
+**Two smaller things.** The legend carries each open state's oldest wait, which
+is where the useful comparison lives — "3 in review · oldest 4 days" beside
+"1 waiting on your proof · oldest 22 days" says which one has actually gone
+quiet, and no arrangement of counts alone can. And the needs-proof state gets a
+door to 0xBow — gated on that state alone, so it is never chrome on a room with
+nothing to respond to. Capture-only (§162) means the honest affordance is a
+hand-off, not a form; it is `ApprovalPrepareCard`'s Revoke.cash shape.
+
+**Guarded, because none of it can be measured here.** Nothing on this host can
+make a screener rule or a pool grow, so `scripts/wallet-rooms-selftest.sh` is
+the only proof these numbers are right: 37 new assertions and 13 new mutations,
+each mutation a silent wrong answer that renders perfectly — the join deleted,
+a joined ragequit double-counted, reclaimed money counted as still shielded, a
+partial sum presented as a total, an unpriced deposit bucketed under "Unknown",
+holdings ranked by amount across tokens, growth claimed inside the rounding, a
+shrinking set narrated as growth, cover joined to whatever pool answered first.
+Plus static drift guards for the two stamps, the retag, the shared rounding,
+the §374 mask, and demo parity.
+
+**The harness caught this pass's own mistake, twice.** Renumbering `rank` to
+make room for `Reclaimed` broke an existing mutation that pinned
+`case .needsProof: return 3`, which is exactly what a mutation is for. And the
+§387 collision below was caught before commit, not after.
+
+**Numbering — this ruling collided TWICE, and the second time is the
+instructive one.** It was written and cited as **§387** throughout (thirty-nine
+citations across five files) before anyone read the ledger; §387 was already the
+NFT-shelf picker (2026-08-15), cited from `DemoNFTArt.swift`. Renumbered to
+**§396** — which was free in the local ledger, and by the time the commit was
+rebased onto `origin/main` twenty minutes later was "The archive's other half",
+cited from eleven files. Renumbered again, to **§397**. Per §363 the bare number
+stays with whichever meaning the SOURCE already cites, so both losses were the
+correct outcome; the cost was only the renumbering.
+
+**The lesson is not "read the ledger" — §389 already wrote that down, and it was
+followed the second time and still failed.** The local `docs/prd.md` is not the
+ledger; `origin/main`'s is. Three sessions ran against this tree that afternoon
+and the local file was behind origin by eight commits for most of it, so
+"read the last `## §N`" answered honestly and answered wrong. The check that
+works is `git show origin/main:docs/prd.md | grep '^## §' | tail -3`, and the
+one that works better is telling the other sessions which number you are taking
+before you write it — which is what finally settled §397.
+
+`prd-index-audit.py` cannot catch this class: it checks that a citation
+RESOLVES, and every one of these resolved perfectly, to somebody else's ruling.
+That is §363's own finding restated, and it is why the audit's guarantee has a
+ceiling worth remembering — a number that resolves is not a number that means
+what you meant.
