@@ -84,6 +84,14 @@ enum HomeComposition {
             "Card", "Payment", "Pending", "Settled",      // Apple Wallet, cards
             "Price drop", "Price rise", "Refund",
             "Paper",                                      // Hugging Face
+            // Radicle (prd §400). All five are STATE, not subject: they say
+            // what happened to a patch or an issue, never what it is about.
+            // Deliberately not facets either — `Issue` above is already
+            // mechanical-only for the same reason, and "opened"/"closed"/
+            // "merged"/"proposed" are among the most ordinary words in the
+            // language, so promoting them would hide every link and note
+            // about the subject (§397's `Account` reasoning).
+            "Patch", "Proposed", "Merged", "Opened", "Closed",
             // X's account record (prd §396) — the day you joined, and every
             // handle you have worn. Deliberately NOT a facet in
             // `Retriever.facetTags`: "account" is among the most ordinary

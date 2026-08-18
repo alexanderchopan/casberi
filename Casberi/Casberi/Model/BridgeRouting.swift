@@ -35,6 +35,7 @@ enum BridgeRouter {
         /// lane usually wants a second.
         case circleX402
         case huggingFace
+        case radicle
         case shopify
         case deals
         case openFoodFacts
@@ -232,6 +233,7 @@ enum BridgeRouter {
             case .geckoTerminal:  "geckoterminal"
             case .circleX402:     "x402"
             case .huggingFace:    "huggingface"
+            case .radicle:        "radicle"
             case .shopify:        "shopify"
             case .deals:          "deals"
             case .openFoodFacts:  "off"
@@ -343,6 +345,7 @@ enum BridgeRouter {
         Row(offer: "GeckoTerminal", id: "geckoterminal", destination: .geckoTerminal),
         Row(offer: "Circle x402", id: "x402", destination: .circleX402),
         Row(offer: "Hugging Face", id: "huggingface", destination: .huggingFace),
+        Row(offer: "Radicle",    id: "radicle",    destination: .radicle),
         Row(offer: "Shopify",    id: "shopify",    destination: .shopify),
         Row(offer: "Deals",      id: "deals",      destination: .deals),
         Row(offer: "Open Food Facts", id: "off",   destination: .openFoodFacts),
@@ -440,6 +443,7 @@ struct BridgeDestinationView: View {
         case .geckoTerminal:  GeckoTerminalScreen()
         case .circleX402:     CircleX402Screen()
         case .huggingFace:    HuggingFaceScreen()
+        case .radicle:        RadicleScreen()
         case .shopify:        ShopifyScreen()
         case .deals:          DealsScreen()
         case .openFoodFacts:  OpenFoodFactsScreen()

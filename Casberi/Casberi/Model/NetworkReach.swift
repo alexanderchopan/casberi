@@ -208,6 +208,17 @@ enum NetworkReach {
                  reach: .whenConnected(bridge: "Hugging Face"),
                  purpose: "Reads the new models, datasets and Spaces published by the orgs and people you watch, and — when Daily Papers is on — Hugging Face's own curated daily list with its cover images. Carries only what you watch; there's no account and no key, so nothing identifies you.",
                  hosts: ["huggingface.co", "cdn-thumbnails.huggingface.co"]),
+        // Radicle (prd §400) — the ONLY entry here whose host the person can
+        // change. Radicle has no central host: a seed node is chosen, and a
+        // seed someone else names cannot be declared in advance, which is the
+        // §289 case. The two Radicle ships as its preferred pair are listed;
+        // every request also names this service to `NetworkLedger`, so a
+        // self-chosen seed is ATTRIBUTED on the receipts screen rather than
+        // reading as an undeclared reach.
+        Endpoint(service: "Radicle",
+                 reach: .whenConnected(bridge: "Radicle"),
+                 purpose: "Reads the patches and issues of the repos you watch, from the seed node you name. Carries only the repo ids you asked for; there is no account and no key, so nothing identifies you — but the seed you pick does see which repos you ask about.",
+                 hosts: ["rosa.radicle.network", "iris.radicle.network", "the seed you name"]),
         Endpoint(service: "0xBow Privacy Pools",
                  reach: .whenConnected(bridge: "0xBow Privacy Pools"),
                  purpose: "Reads your Privacy Pools deposits from the public chain and their review status from 0xBow's public API, for the wallets you watch.",

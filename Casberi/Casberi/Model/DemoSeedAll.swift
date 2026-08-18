@@ -2782,6 +2782,30 @@ enum DemoSeedAll {
                 }
             }
         }
+        // Radicle (prd §400) — the row shape the real bridge lands: the REPO
+        // leads, then the verb, then the patch or issue title, with the
+        // author's alias on `authorHandle`. Refs carry the real
+        // `radicle:<kind>:<rid>:<id>:<event>` shape rather than a `demo:`
+        // prefix — §349's lesson, where demo rows wearing a demo ref were
+        // silently dropped by room heads matching on the bridge's real one.
+        // No mark: Radicle publishes no avatar for a DID, so there is nothing
+        // to show and inventing one would be a claim.
+        let radicleRID = "rad:z3gqcJUoA1n9HaHKufZs5FCSGazv5"
+        let radicle: [(String, String, [String], Double)] = [
+            ("heartwood · merged · Fix seed discovery on cold start", "lorenz", ["Patch", "Merged"], 1),
+            ("heartwood · patch · Cache the inventory read", "fintohaps", ["Patch", "Proposed"], 3),
+            ("heartwood · issue · NO_COLOR disables all styling", "ade", ["Issue", "Opened"], 7),
+        ]
+        out += radicle.enumerated().map { i, r in
+            let kind = r.2.first == "Issue" ? "issue" : "patch"
+            let event = r.2.last?.lowercased() ?? "opened"
+            return row(.link, r.0, source: "Radicle",
+                ref: "radicle:\(kind):\(radicleRID):demo\(i):\(event == "proposed" ? "opened" : event)",
+                days: r.3, hour: 11) { t in
+                t.authorHandle = r.1
+                t.tags = r.2
+            }
+        }
         let posthog: [(String, Double)] = [
             ("signed_up crossed 1,000", 3), ("Annotation · shipped the panel", 5),
             ("answer_asked has gone quiet", 8),
@@ -3686,6 +3710,7 @@ enum DemoSeedAll {
         ("Slack", "3 channels", "Reads the channels you name."),
         ("Trello", "Synced 40m ago", "Reads cards assigned to you."),
         ("Cursor", "Synced 1h ago", "Reads cloud agents that finished."),
+        ("Radicle", "1 repo", "Reads patches and issues, keyless."),
         ("Sentry", "Synced 20m ago", "Reads what broke."),
         ("Vercel", "Synced 12m ago", "Reads what deployed."),
         ("PagerDuty", "Synced 1h ago", "Reads what paged you."),

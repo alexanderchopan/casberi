@@ -606,6 +606,16 @@ enum BridgeRefresh {
                 _ = await HuggingFaceIngest.refresh(context: context)
             }
         }
+        // Radicle (prd §400). A quiet pass is one `GET /repos/:rid` per
+        // watched repo — the snapshot diff decides whether walking patches or
+        // issues is worth a request at all — so this is cheap to run every
+        // foreground even against a volunteer-run seed.
+        if RadicleStore.shared.connected {
+            let s = slot(); Task { @MainActor in
+                await BridgeRefresh.stagger(s)
+                _ = await RadicleIngest.refresh(context: context)
+            }
+        }
         // What became of the pull request a Cursor agent opened (2026-08-08,
         // prd §340). Its own line rather than a rider on the Cursor bridge,
         // because it spends the GITHUB token: it is gated on both seats being

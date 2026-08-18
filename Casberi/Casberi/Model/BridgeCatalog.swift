@@ -114,7 +114,7 @@ enum BridgeCatalog {
                 "RSS", "Substack", "Podcasts", "Pinterest", "Farcaster",
                 "Bluesky", "Nostr", "OpenSea", "Kalshi", "Shopify", "GeckoTerminal", "Deals",
                 "Circle x402",
-                "Open Food Facts", "Stocktwits", "Hugging Face", "npm", "PyPI"]
+                "Open Food Facts", "Stocktwits", "Hugging Face", "Radicle", "npm", "PyPI"]
             if keyless.contains(name) { return "No account" }
             // Instagram and Snapchat were missed here when they landed
             // (2026-07-31) and TikTok would have been missed the same way:
@@ -504,6 +504,17 @@ enum BridgeCatalog {
                          "Daily Papers land with their abstracts, searchable months later",
                          "Only what's NEW — downloads and likes are counts, not news"],
               needsSetup: true, added: day(2026, 8, 3)),
+        // Peer-to-peer Git (prd §400). Work, beside GitHub and Hugging Face —
+        // it is the same "what happened to the code" read pointed at a network
+        // with no central host in it. Keyless in the strongest grade here:
+        // `radicle-httpd` has no credential at all, so unlike GitHub's
+        // read-only token there is nothing to mint and nothing to leak.
+        Offer(name: "Radicle", tagline: "Peer-to-peer Git, as it happens", group: "Work", connectable: true,
+              summary: "Watch a Radicle repo and its patches and issues land as they happen, each dated to when it really occurred.\n\nNo account and no key — the gateway is read-only, with no credential to store.",
+              features: ["Patches proposed and merged, issues opened and closed",
+                         "You pick the seed node that answers you",
+                         "Read-only — writing needs the rad CLI, which this never touches"],
+              needsSetup: true, added: day(2026, 8, 18)),
         Offer(name: "Linear",      tagline: "Your issues stay in reach",             group: "Work",      connectable: true,
               summary: "The issues assigned to you join your things and surface when they matter. Connects with a personal API key from Linear settings — it stays in \(DS.device)'s Keychain.",
               needsSetup: true),

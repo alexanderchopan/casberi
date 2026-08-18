@@ -33,6 +33,11 @@ KNOWN_NON_REACH=(
   dexscreener.com twitch.tv reddit.com stocktwits.com farcaster.xyz
   privacy.com polymarket.com app.safe.global app.uniswap.org
   aerodrome.finance app.hyperliquid.xyz
+  # Radicle's public explorer (prd §400) — where a patch or issue row opens on
+  # tap. NEVER fetched: the bridge reads a SEED NODE's `radicle-httpd` API, and
+  # those hosts ARE disclosed in NetworkReach (the "Radicle" entry names both
+  # default seeds). The explorer is only ever a link written into a row.
+  radicle.network
   # ether.fi's own app — where an unstake row's "claim" and a Cash row open on
   # tap. Never fetched: the reads are public RPC hosts, and those ARE disclosed
   # in NetworkReach (the "ether.fi" and "ether.fi Cash" entries).

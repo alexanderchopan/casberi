@@ -700,6 +700,25 @@ step "Obsidian pure-logic self-test"
   || fail "the Obsidian logic self-test failed — run scripts/obsidian-selftest.sh"
 print -P "%F{green}✓ obsidian self-test%f"
 
+# Radicle (prd §400, 2026-08-18). The ONLY proof this bridge has: nothing on
+# this host can open a patch, merge one or close an issue, so no probe and no
+# sweep can ever exercise its landing paths — one degree weaker than Stripe's
+# and PostHog's situation, since those could at least be measured by anyone
+# willing to mint a key and Radicle has no key to mint. Every failure it
+# catches renders as a perfectly good-looking room: a timestamp read as
+# milliseconds files every patch in 1970; the `payloads` nesting flattened
+# (which is the shape §400's own first draft documented, before it was
+# measured) yields nil for every field and an EMPTY ROOM WITH NO ERROR; a
+# guessed close date drops years-old issues into today's feed. It also carries
+# the conduct guard for the strongest read-only promise in the catalog — no
+# credential at all — and the guard that keeps `/activity` unread, since that
+# endpoint is a trailing 365-day window and a span strip fed from it would
+# re-commit the bug §398 had just fixed for the journals.
+step "Radicle pure-logic self-test"
+"$ROOT/scripts/radicle-selftest.sh" >/dev/null \
+  || fail "the Radicle logic self-test failed — run scripts/radicle-selftest.sh"
+print -P "%F{green}✓ radicle self-test%f"
+
 # The four bridges added 2026-08-04. Three of them (Sentry, Vercel, PagerDuty)
 # have never run against a live account from this host, so these harnesses are
 # the only proof their shaping is right — and every failure in them is a silent

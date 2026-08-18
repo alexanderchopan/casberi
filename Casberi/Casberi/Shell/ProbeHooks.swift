@@ -1963,6 +1963,84 @@ enum ProbeHooks {
                 }
             }
         },
+        // `-radicleSeed <host>` — point at a seed node (prd §400). Declared
+        // BEFORE the watch/probe hooks: hooks run in list order, and both must
+        // read a seed that is already set.
+        Hook(key: "radicleSeed") { spec, _ in
+            guard let host = RadicleWire.normalizeSeed(spec) else {
+                NSLog("radicleSeed: REFUSED %@", spec); return
+            }
+            RadicleStore.shared.seed = host
+            Task { @MainActor in
+                let (ok, version) = await RadicleIngest.probeSeed(host)
+                NSLog("radicleSeed: %@ | httpd=%@ | apiVersion=%@",
+                      host, ok ? "YES" : "NO", version ?? "-")
+            }
+        },
+        // `-radicleWatch "<rid[,rid]>"` — watch repos and sync.
+        Hook(key: "radicleWatch") { spec, context in
+            Task { @MainActor in
+                var added: [String] = []
+                for raw in spec.split(separator: ",") {
+                    let one = String(raw).trimmingCharacters(in: .whitespaces)
+                    guard let id = RadicleWire.normalizeRID(one) else {
+                        NSLog("radicleWatch: REFUSED %@", one); continue
+                    }
+                    if RadicleStore.shared.add(id) { added.append(id) }
+                }
+                let n = await RadicleIngest.refresh(context: context)
+                NSLog("radicleWatch: +%d watched | seed=%@ | %@ new",
+                      added.count, RadicleStore.shared.seed,
+                      n.map(String.init) ?? "FAILED")
+            }
+        },
+        // `-radicleProbe YES` — the sweep, then what the seat HOLDS, one NSLog
+        // per row (the `-todayProbe` truncation lesson).
+        //
+        // It exists because an empty Radicle room has SIX causes that render as
+        // one silence and only the last is a bug: nothing watched, the seed
+        // unreachable, the seed simply not seeding that repo (no global index —
+        // the most likely and most confusing one), a repo with no patches or
+        // issues, everything already landed, or the payload shape drifting. The
+        // per-repo line separates them — it prints the counts the sweep read, so
+        // a repo answering `patches=0 issues=0` is a quiet repo while a repo
+        // that failed to parse prints `UNREADABLE`, which is the shape-drift
+        // signal (§400 quirk 6: `meta` lives under `payloads`, and reading it
+        // flat yields an empty room with no error).
+        Hook(key: "radicleProbe") { _, context in
+            Task { @MainActor in
+                let store = RadicleStore.shared
+                let seed = store.seed
+                let (ok, version) = await RadicleIngest.probeSeed(seed)
+                NSLog("radicleProbe: seed=%@ | httpd=%@ | apiVersion=%@ | watching %d",
+                      seed, ok ? "YES" : "NO", version ?? "-", store.repos.count)
+                // `refreshWaiting`, not `refresh` — a `-radicleWatch` in the
+                // SAME launch is still in flight, and the plain guard would
+                // hand this 0 and let it dump an empty corpus.
+                let n = await RadicleIngest.refreshWaiting(context: context)
+                NSLog("radicleProbe: %@ new", n.map(String.init) ?? "FAILED")
+                for rid in store.repos {
+                    if let snap = store.snapshot(for: rid) {
+                        NSLog("radicleRepo| %@ | name=%@ | head=%@ | patches o%d/d%d/a%d/m%d | issues o%d/c%d",
+                              rid, store.name(for: rid) ?? "-", snap.head ?? "-",
+                              snap.patchesOpen, snap.patchesDraft,
+                              snap.patchesArchived, snap.patchesMerged,
+                              snap.issuesOpen, snap.issuesClosed)
+                    } else {
+                        NSLog("radicleRepo| %@ | UNREADABLE", rid)
+                    }
+                }
+                let rows = (try? context.fetch(
+                    FetchDescriptor<Thing>(predicate: #Predicate { $0.source == "Radicle" })
+                )) ?? []
+                for thing in rows.filter(\.isLive)
+                    .sorted(by: { $0.capturedAt > $1.capturedAt }).prefix(30) {
+                    NSLog("radicleRow| %@ | ref=%@ | who=%@ | tags=%@",
+                          thing.title, thing.sourceRef ?? "-",
+                          thing.authorHandle ?? "-", thing.tags.joined(separator: ","))
+                }
+            }
+        },
         // `-stockWatch "<query[,query]>"` — resolve each on Stocktwits, watch
         // it, then sync the streams; NSLogs tickers + new posts (headless
         // bridge test).
