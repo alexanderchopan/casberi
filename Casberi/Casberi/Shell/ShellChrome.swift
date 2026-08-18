@@ -258,7 +258,7 @@ final class ShellChrome {
     ///
     /// It is a single opacity on one container, deliberately — the obvious
     /// version of this effect animates the rows out individually, and that
-    /// means deleting ~330 `Thing`s while a live `@Query` feed re-renders
+    /// means deleting ~400 `Thing`s while a live `@Query` feed re-renders
     /// between each batch, which is precisely the crash class CLAUDE.md's six
     /// liveness corollaries document. The fade is indistinguishable to the
     /// eye and touches no model at all: the delete still happens once, in one

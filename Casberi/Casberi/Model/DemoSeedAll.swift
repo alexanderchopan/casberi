@@ -39,7 +39,25 @@ import UIKit
 enum DemoSeedAll {
 
     /// Bump to re-seed on the next dev launch.
-    static let version = 1
+    ///
+    /// **Sat at 1 from the day it was written until 2026-08-17**, through
+    /// dozens of table changes — so `seedIfNeeded` short-circuited on every
+    /// launch of every dev install that had ever seeded, and the DEBUG
+    /// auto-seed path silently served a corpus years of edits out of date.
+    /// It never bit hard because the doors people actually use (`-demoSeed
+    /// force`, `-demoEnter`) both bypass this guard, which is exactly why
+    /// nothing ever pointed at it.
+    ///
+    /// Deliberately still a HAND-BUMPED integer. A fingerprint derived from
+    /// the table would never go stale, and was declined twice over: Swift's
+    /// `hashValue` is randomly seeded per process, so the obvious spelling is
+    /// not even stable across two launches of the same binary; and a
+    /// fingerprint that DOES change re-runs `seed`, which is an insert path,
+    /// on a corpus that may already hold those rows. Getting that wrong
+    /// double-seeds a dev install rather than failing loudly. The honest
+    /// version of "make it mechanical" here is a check that the stamp moved
+    /// when the table did, not a stamp that moves itself.
+    static let version = 2
     private static let versionKey = "demo.fullSeed.version"
 
     /// The three demo-watched tokens — (symbol, name, price, ref index),
@@ -162,7 +180,33 @@ enum DemoSeedAll {
                               // namespace because `WalletPrepare.applies`
                               // parses it. The "demo" segment keeps it clear
                               // of a real grant (the `peer:demo` shape).
-                              "wallet:approval:demo"]
+                              "wallet:approval:demo",
+                              // **The three families that were MISSING until
+                              // 2026-08-17.** Each joins a real namespace for
+                              // the `peer:demo` reason above and each kept a
+                              // "demo" segment, so the seeder was right — it
+                              // was this list that was short, and the failure
+                              // is silent in the worst direction: `clear`
+                              // walks these prefixes, so the rows outlived
+                              // every exit, and `restampIfStale` walks the
+                              // same list, so they also froze in place while
+                              // the other ~390 rows moved forward.
+                              //
+                              // Safe is the one that mattered most, because
+                              // `teardown` DOES call `SafeBridge
+                              // .clearDemoSnapshot()`: the head went and the
+                              // rows stayed, leaving orphans still tagged
+                              // "Your turn" and "Ready to execute" with
+                              // nothing behind them to be your turn AT. A
+                              // demo that cannot be left is the one promise
+                              // `DemoBanner` makes out loud.
+                              "wallet:safe:eth:demo", "1claw:policy:demo",
+                              // Bitcoin keys on the demo wallet address, so
+                              // the prefix stops before it — `bitcoin:settled:`
+                              // alone would take a real settled transfer with
+                              // it, the bare-prefix trap the PostHog and
+                              // Stocktwits entries above are scoped against.
+                              "bitcoin:settled:\(demoWallet):demo"]
 
     // MARK: - Entry point
 
@@ -331,6 +375,22 @@ enum DemoSeedAll {
         FarcasterStore.shared.accounts.removeAll { fcDemo.contains($0.username) }
         let bskyDemo = Set(demoBluesky.map(\.handle))
         BlueskyStore.shared.accounts.removeAll { bskyDemo.contains($0.handle) }
+        // Nostr, the third social roster — seeded since 2026-08-12 and never
+        // unwound until 2026-08-17, so three watched accounts survived every
+        // demo exit. Worse than a stray row: `nostr.accounts` is a REQUIRED
+        // floor in the `-floorProbe` registry, so the leak sat inside a
+        // control something already checks the presence of, and presence was
+        // all it checked.
+        //
+        // Keyed on the PUBKEY, not the handle. Farcaster and Bluesky match on
+        // what the person typed because that is what their stores hold, but a
+        // Nostr `Account.input` is normalized on the way in (an npub, a hex
+        // key or a NIP-05 identifier all land differently), so a handle match
+        // is a guess about that normalization. `pubkeyHex` is set from
+        // `demoNostr` verbatim two functions up, which makes it the one field
+        // both halves are certain to agree on.
+        let nostrDemo = Set(demoNostr.map(\.pubkey))
+        NostrStore.shared.accounts.removeAll { nostrDemo.contains($0.pubkeyHex) }
 
         // `clear` REMOVES the version stamp, which is right for the dev verb
         // it was written for (`-demoSeed clear`, where the next launch should

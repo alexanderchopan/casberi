@@ -27,7 +27,7 @@ import SwiftData
 /// silently disagree — and swapping containers mid-session would put that
 /// invariant on the demo path, where a bug reads as data loss. The demo rows
 /// use only existing `Thing` fields, so nothing here touches CloudKit's
-/// Production schema; what it costs is ~330 rows mirroring to the person's
+/// Production schema; what it costs is ~400 rows mirroring to the person's
 /// zone and then a matching set of deletes on exit. That is a real cost, and
 /// the honest mitigation is that leaving is always one tap away and always
 /// complete (`DemoSeedAll.teardown`).
@@ -117,9 +117,16 @@ enum DemoMode {
     /// Set while the rows have been promised but not yet poured.
     private static let pendingKey = "demo.mode.pourPending"
 
-    /// Rows per beat, and the beat. Together these spend ~1.6s on a ~330-row
+    /// Rows per beat, and the beat. Together these spend ~1.8s on a ~400-row
     /// seed. Small enough that each step is well inside a frame's budget;
     /// slow enough to read as arriving rather than as a stutter.
+    ///
+    /// The count is MEASURED, not estimated (2026-08-17): the All room alone
+    /// censuses 378 rows, and this file's own race note below quotes a real
+    /// launch pouring 370 and then 406. It read "~330" everywhere until then,
+    /// a figure from the seed's first week that four separate comments had
+    /// copied from each other — harmless on its own, and worth correcting
+    /// because it is the number anyone sizing this pour would reason from.
     private static let pourChunk = 12
     private static let pourBeat = Duration.milliseconds(55)
 
@@ -176,7 +183,7 @@ enum DemoMode {
     ///
     /// The chunking is `ImportCommit`'s shape and exists for its reason as
     /// well as for the animation: these are main-actor inserts into the
-    /// context a live `@Query` is watching, so doing all ~330 at once holds
+    /// context a live `@Query` is watching, so doing all ~400 at once holds
     /// the main thread through the exact frames this is trying to make
     /// beautiful. A chunk is a commit here too, which is what makes the pour
     /// safe to interrupt — a kill mid-pour leaves the pending flag set and

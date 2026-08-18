@@ -765,8 +765,73 @@ def check_i_wallet_counterparties_are_named(files_text):
               True, True)
 
 
+# A Swift string literal's leading run of REAL characters — everything before
+# its first `\(interpolation)` or escape. `[^"\\]*` stops at both, which is the
+# whole trick: `\(` is NOT an escape in Swift, so the obvious literal regex
+# (`(?:[^"\\]|\\.)*`) swallows it as one and reports a head of `off:\(` for a
+# ref whose real head is `off:`. Caught on this check's first run.
+LITERAL_HEAD = r'"([^"\\]*)'
+
+
+def check_k_seeded_refs_are_cleared(files_text):
+    """Every ref the seeder writes must be covered by a `refPrefixes` entry.
+
+    `refPrefixes` is the ONE list both `clear` and `restampIfStale` walk, so a
+    ref missing from it fails twice and silently: the row outlives every demo
+    exit, and it freezes in place while the rest of the corpus is shifted
+    forward by the freshness re-stamp. Nothing renders wrong — an orphan looks
+    exactly like a real synced row, which is the whole problem.
+
+    Absent until 2026-08-17, and its absence had already shipped SEVEN
+    orphans: four `wallet:safe:eth:demo…` rows (the worst of them, since
+    `teardown` clears the Safe snapshot, so they survived as "Your turn" tags
+    with no head behind them), two `1claw:policy:demo…` grants, and the one
+    `bitcoin:settled:…` money receipt.
+
+    Compared on literal heads only — a ref like `"bitcoin:settled:\\(demoWallet)
+    :demo0"` is half runtime — so this proves a prefix EXISTS to cover the ref,
+    never that the interpolations agree. That ceiling is deliberate: the
+    alternative is evaluating Swift, and a coarse check that catches an absent
+    family is worth more than a precise one nobody writes.
+
+    Compatibility is checked in BOTH directions, and that is not a loosening
+    for its own sake. `"railgun:\\(kind):demo\\(i)"` has a literal head of just
+    `railgun:` because the part that distinguishes it — shield vs unshield —
+    is computed, while its prefixes are the full `railgun:shield:demo`. A
+    one-directional test calls that uncovered when at runtime it plainly is,
+    and three such rows fired on this check's first run. So a ref is a finding
+    only when NO prefix could possibly apply: neither is a prefix of the
+    other."""
+    text = strip_comments(files_text["DemoSeedAll"])
+
+    block = re.search(r"static let refPrefixes = \[(.*?)\]\n", text, re.DOTALL)
+    if not block:
+        check("K refPrefixes list is findable", False, True)
+        return
+    # Literal entries only. An entry like `PostHogWatch.metricRef("signed_up")`
+    # is a computed ref, and the seeder writes it the same computed way, so
+    # neither side is a literal and both are skipped together.
+    prefixes = [p for p in re.findall(LITERAL_HEAD, block.group(1)) if p]
+
+    # Refs the seeder actually writes. Everything after the list itself, so the
+    # prefix declarations are not mistaken for seeded refs.
+    body = text[block.end():]
+    uncovered = []
+    for m in re.finditer(r'\bref:\s*' + LITERAL_HEAD, body):
+        head = m.group(1)
+        if not head:
+            continue
+        if not any(head.startswith(p) or p.startswith(head) for p in prefixes):
+            line = body[:m.start()].count("\n") + text[:block.end()].count("\n") + 1
+            uncovered.append(f"{head}… (line {line})")
+
+    check("K every seeded ref is covered by refPrefixes",
+          uncovered or "none", "none")
+
+
 def run_checks(files_text):
     before = len(failures)
+    check_k_seeded_refs_are_cleared(files_text)
     check_a_release_reachable(files_text)
     check_b_reaches_nothing(files_text)
     check_j_per_view_reads_gated(files_text)
@@ -924,6 +989,26 @@ def self_test():
     # proven against a REAL failure, not a checker that always fails.
     global SILENT
     clean = {k: read(v) for k, v in DEMO_FILES.items()}
+    # Check K, proven against the exact bug it was written for: drop two of the
+    # families from `refPrefixes` and the rows they name must be reported as
+    # uncleared. This is the shipped state of 2026-08-16 restored on purpose —
+    # a fixture that recreates a real incident rather than an invented one.
+    ok &= verify_fixture(
+        "a seeded ref family missing from refPrefixes is caught",
+        lambda f: f.__setitem__("DemoSeedAll", f["DemoSeedAll"].replace(
+            '"wallet:safe:eth:demo", "1claw:policy:demo",', "", 1)),
+        check_k_seeded_refs_are_cleared, True)
+
+    # …and the interpolation case, which this check got wrong on its own first
+    # run: a ref whose distinguishing segment is COMPUTED (`railgun:\(kind):…`)
+    # is covered by a longer literal prefix, and must not be reported. Without
+    # the bidirectional test this fixture fails, which is what makes it a
+    # guard on the rule rather than on the code that happens to implement it.
+    ok &= verify_fixture(
+        "a computed-segment ref is not reported as uncleared",
+        lambda f: f.__setitem__("DemoSeedAll", f["DemoSeedAll"]),
+        check_k_seeded_refs_are_cleared, False)
+
     saved = list(failures)
     failures.clear()
     SILENT = True
