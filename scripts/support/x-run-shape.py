@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""`XArchiveImport.run`'s category shape (2026-08-18, prd §395).
+"""`XArchiveImport.run`'s category shape (2026-08-18, prd §396).
 
 Two facts a grep can't state on its own, both of which fail invisibly:
 

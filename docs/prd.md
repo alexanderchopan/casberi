@@ -108,7 +108,7 @@ at all.
 | §306 | Notifications — time-sensitive DECLARED but not honoured, copy | amended by §383 |
 | §361 | The top band gets the feed's geometry — it pays for the rail's | amended by §371 |
 | §124a | The Wallet feed carries the treemap AND the NFTs | superseded by §387 |
-| §375 | The archive reads like an archive | amended by §395 |
+| §375 | The archive reads like an archive | amended by §396 |
 | §240 | NFTs in folders, and the eager owned-NFT read behind them | amended by §387 |
 | §389b | A fold is skipped, not fatal — the cover is the newest thing t | reversed by §389c |
 | §392 | The grouping is drawn by proximity, the packer stops churning, | item 1 (the whitespace cluster layout) overturned by §392a; its diagnosis, the packing-order change, the scroll-to-active and the glass step all still stand |
@@ -25059,7 +25059,7 @@ been imported on this host, and the four new media paths come from the same
 parsers §245 was built against. Every read fails safe: a missing file is a skip,
 an unresolvable path yields no thumbnail, a refused host yields no cover, and
 the row lands exactly as it did before.
-## §395 — The archive's other half: what it can act as you with, who you talked to, and the posts that were never pictures (user: "i'd like to make the Twitter experience fantastic. What else can we do to enrich it?", then a pick of three of four proposals, 2026-08-18)
+## §396 — The archive's other half: what it can act as you with, who you talked to, and the posts that were never pictures (user: "i'd like to make the Twitter experience fantastic. What else can we do to enrich it?", then a pick of three of four proposals, 2026-08-18)
 
 Three pieces. One is a repair of something that shipped wrong and could not be
 seen from outside, one reads three files nothing had ever opened, and one is a
@@ -25068,6 +25068,18 @@ reading the corpus has supported since the seat landed and never drew.
 **This amends §375** in two places: a self-reply's `parent.ref` is set now
 rather than deliberately nil, and the `Photo` facet that entry announced is
 actually in the ask vocabulary.
+
+**Numbered §396 after a collision, and the collision is the point.** This work
+and §395 were written the same afternoon by two sessions neither of which could
+see the other's uncommitted tree, and both took "the next free §" — the exact
+shape the twenty-two collisions §391's index audit found were all made of, and
+the one thing a written reminder cannot fix. It resolved by the standing rule
+(the bare number stays with whichever meaning the source already cites; ties go
+to document order, and Instagram's entry landed on `main` first), and it cost
+nothing only because every citation of the loser was still unpushed. Both
+sessions also independently added a `Photo` facet, an import room's grid, and a
+`thumbnail` door on `ImportMedia` — three merges that resolved cleanly and one,
+the facet table, that would have shipped the same tag twice.
 
 ### 1. A video post landed as a blank row that said "Photo"
 
@@ -25281,7 +25293,7 @@ The client each post was written from (`source`, an HTML anchor on every tweet
 and an era reading nothing else can give) was offered and NOT picked this pass;
 it is free, already in the file, and still there.
 
-## §395a — A post reads as a post: the X room's rows get their card back, and the whole tweet (user: "for example, I would think it should show the whole tweet for every tweet, not just in a row, but more like a card", 2026-08-18)
+## §396a — A post reads as a post: the X room's rows get their card back, and the whole tweet (user: "for example, I would think it should show the whole tweet for every tweet, not just in a row, but more like a card", 2026-08-18)
 
 Two separate causes, both of them a new shape failing to join a registry the
 old one was already in — §313 gave X its OWN `FeedScreen.Shape` rather than
@@ -25301,7 +25313,7 @@ by anatomy with no card under it, which is exactly what "it reads like a row,
 not a card" describes.
 
 **Scoped to the posts**, and that is what forced the second half of this
-change. The room also holds the import receipt, DM transcripts and (as of §395)
+change. The room also holds the import receipt, DM transcripts and (as of §396)
 the account's own record — a connected app, the day you joined, a handle you
 used to wear. None of those is a post; all of them are bands and should merge
 the way every other band does.
@@ -25358,7 +25370,7 @@ record — a separate decision, on separate evidence, and not one to make unseen
 
 ### Unbuilt, again
 
-Same footing as §395: authored on a host with no Xcode, so nothing here has been
+Same footing as §396: authored on a host with no Xcode, so nothing here has been
 compiled or looked at. Every static audit passes and the harness's shell guards
 pass; a change whose entire subject is how a row LOOKS is owed a screenshot
 before it is believed.

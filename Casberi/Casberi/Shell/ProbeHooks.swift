@@ -416,7 +416,7 @@ enum ProbeHooks {
             }
         },
         // `-xPersonProbe <handle>` — your years with one person (2026-08-18,
-        // prd §395), line by line: one `xPerson|` per year, then the card's
+        // prd §396), line by line: one `xPerson|` per year, then the card's
         // own sentence.
         //
         // It exists because an EMPTY card has five causes that render as one

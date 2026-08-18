@@ -82,7 +82,7 @@ enum SocialThread {
     static let contextSources: Set<String> = sources.union(["Slack", "X", "Instagram"])
     static func hasContext(_ source: String) -> Bool { contextSources.contains(source) }
 
-    /// Sources whose PERSON ROOM can be opened (2026-08-18, prd §395).
+    /// Sources whose PERSON ROOM can be opened (2026-08-18, prd §396).
     ///
     /// A THIRD set, and it is genuinely a third question. `isSocial` asks
     /// whether a network can be reached — a thread read, a profile lookup, a

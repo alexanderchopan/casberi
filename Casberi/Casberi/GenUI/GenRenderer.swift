@@ -1398,7 +1398,7 @@ struct CalendarHeatmapHero: View {
 struct LeaderboardHero: View {
     let board: FeedInsight.Leaderboard
     /// What a tapped row opens, when the room it is in has somewhere to go
-    /// (2026-08-18, prd §395). Nil for every board whose rows are subreddits,
+    /// (2026-08-18, prd §396). Nil for every board whose rows are subreddits,
     /// artists, publications or books — a row that looks tappable and isn't is
     /// the dead control the honesty law bans, so the row is only ever wrapped
     /// in a button when a destination was handed in.

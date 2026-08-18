@@ -1,6 +1,6 @@
 import Foundation
 
-/// YOUR YEARS WITH ONE PERSON (2026-08-18, prd §395).
+/// YOUR YEARS WITH ONE PERSON (2026-08-18, prd §396).
 ///
 /// The reading an X archive can make that X itself cannot. Search on X is
 /// scoped to what its index still holds and its own product surfaces a

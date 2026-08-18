@@ -24,7 +24,7 @@ struct PersonRoomScreen: View {
     @State private var transactions: [Thing] = []
     @State private var verifiedAddresses: [String] = []
     /// Your years with this person, when the corpus can describe them
-    /// (2026-08-18, prd §395). X only: it is the one source here whose rows
+    /// (2026-08-18, prd §396). X only: it is the one source here whose rows
     /// name somebody you never watched and never will be able to.
     @State private var xPerson: XPerson?
     @State private var loading = true
@@ -65,7 +65,7 @@ struct PersonRoomScreen: View {
                 }
                 if let xPerson {
                     // X's own head, in place of the rhythm grid below
-                    // (2026-08-18, prd §395). `FeedHeatmap.label(for: "X")`
+                    // (2026-08-18, prd §396). `FeedHeatmap.label(for: "X")`
                     // is "Your X year", which titles a ROOM and would be a
                     // wrong sentence over one person — and a trailing-twelve-
                     // months grid over a relationship that ended in 2019 is
@@ -181,7 +181,7 @@ struct PersonRoomScreen: View {
     private func load() async {
         let handle = profile.handle
         let src = profile.source
-        // X JOINS DIFFERENTLY, and it has to (2026-08-18, prd §395). The
+        // X JOINS DIFFERENTLY, and it has to (2026-08-18, prd §396). The
         // equality fetch below asks "what did they write", which for every
         // network here is the whole of what the corpus holds about somebody.
         // An X archive is YOUR side: their handle sits on `parent` for a reply

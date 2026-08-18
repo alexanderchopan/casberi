@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// YOUR YEARS WITH ONE PERSON (2026-08-18, prd §395) — the person room's head
+/// YOUR YEARS WITH ONE PERSON (2026-08-18, prd §396) — the person room's head
 /// for an X handle.
 ///
 /// `XRoomCard`'s anatomy at one person's scale: kicker, the finding as a

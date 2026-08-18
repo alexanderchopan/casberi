@@ -84,7 +84,7 @@ enum HomeComposition {
             "Card", "Payment", "Pending", "Settled",      // Apple Wallet, cards
             "Price drop", "Price rise", "Refund",
             "Paper",                                      // Hugging Face
-            // X's account record (prd §395) — the day you joined, and every
+            // X's account record (prd §396) — the day you joined, and every
             // handle you have worn. Deliberately NOT a facet in
             // `Retriever.facetTags`: "account" is among the most ordinary
             // words in the language and this corpus is full of accounts, so

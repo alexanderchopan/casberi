@@ -630,7 +630,7 @@ enum FilesIngest {
     /// separate live bugs (2026-07-29); just attempting the read is simpler
     /// and can't disagree with reality the way a heuristic can.
     /// The poster frame moved to `ImportMedia.posterFrame` on 2026-08-18
-    /// (prd §395), where the X archive's own videos needed exactly the same
+    /// (prd §396), where the X archive's own videos needed exactly the same
     /// read. Not copied — two implementations of one frame grab drift, and
     /// then a connected folder and an imported archive disagree about which
     /// second of a video is its cover. Every decision that was written up here

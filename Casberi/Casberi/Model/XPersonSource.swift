@@ -1,6 +1,6 @@
 import Foundation
 
-/// `XPerson`'s corpus half (2026-08-18, prd §395) — the only file that reads a
+/// `XPerson`'s corpus half (2026-08-18, prd §396) — the only file that reads a
 /// `Thing` for it, exactly the way `XRoomSource` stands beside `XRoom`.
 ///
 /// The split is not tidiness: it is what lets the judgement above be compiled

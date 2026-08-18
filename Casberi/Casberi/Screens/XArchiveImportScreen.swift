@@ -237,7 +237,7 @@ struct XArchiveImportScreen: View {
         if summary.posts > 0   { parts.append("\(summary.posts) posts") }
         if summary.replies > 0 { parts.append("\(summary.replies) replies") }
         if summary.liked > 0   { parts.append("\(summary.liked) liked") }
-        // The categories nothing had ever read (2026-08-18, prd §395). Apps
+        // The categories nothing had ever read (2026-08-18, prd §396). Apps
         // get their own clause rather than folding into the total, because
         // nobody expects an archive to hold them at all — a person who reads
         // "11 connected apps" has learnt something before opening the room.

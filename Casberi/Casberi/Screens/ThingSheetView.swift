@@ -1732,7 +1732,7 @@ struct ThingSheetView: View {
         return Verb(label: "Episode", icon: "arrow.up.forward.app", action: .openURL(url))
     }
 
-    /// THE DOOR BACK TO X (2026-08-18, prd §395).
+    /// THE DOOR BACK TO X (2026-08-18, prd §396).
     ///
     /// An imported post is the one record in this app that is also still
     /// sitting on somebody else's site, and until this pass there was no way to

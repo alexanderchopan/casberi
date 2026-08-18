@@ -2092,7 +2092,7 @@ struct RootShell: View {
         // headlessly like every other surface.
         case "person":
             let parts = url.pathComponents.filter { $0 != "/" }
-            // `hasPersonRoom`, not `isSocial` (2026-08-18, prd §395): this
+            // `hasPersonRoom`, not `isSocial` (2026-08-18, prd §396): this
             // route opens a room composed entirely out of the corpus, so it
             // works for an X handle even though nothing about X can be
             // fetched.

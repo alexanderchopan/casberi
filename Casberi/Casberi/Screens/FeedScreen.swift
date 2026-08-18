@@ -322,7 +322,7 @@ struct FeedScreen: View {
         /// value types, so no `Thing` and no liveness question.
         case nftPicks(address: String, label: String)
         /// Your years with one person, opened from the room's own board
-        /// (2026-08-18, prd §395). Routed here for the standing reason every
+        /// (2026-08-18, prd §396). Routed here for the standing reason every
         /// case above it is: the board lives inside this List's rows, and a
         /// `.sheet` on a row resolves to the same presenting controller as
         /// this one — the half-open-then-close bug (ruling 2026-07-28).
@@ -2544,7 +2544,7 @@ struct FeedScreen: View {
         } else if let leaderboard {
             insightSection {
                 // THE BOARD IS A DOOR, in the one room that can open one
-                // (2026-08-18, prd §395). "Who you reply to" names people you
+                // (2026-08-18, prd §396). "Who you reply to" names people you
                 // have talked to for a decade and, until this pass, tapping
                 // one did nothing — while the corpus behind it could answer
                 // "when, and how often" better than X can. Passed only for X:
@@ -2610,7 +2610,7 @@ struct FeedScreen: View {
             let photoTiles = visible.live.filter(Self.isXPhotoTile)
             let rest = visible.live.filter { !Self.isXPhotoTile($0) }
             if !photoTiles.isEmpty { photoGridSection(photoTiles) }
-            // A THREAD READS AS A THREAD (2026-08-18, prd §395). The archive
+            // A THREAD READS AS A THREAD (2026-08-18, prd §396). The archive
             // has named a self-reply's parent since §308, and until this pass
             // the only place that fact reached was `enrichedText` — retrieval
             // text, drawn by nothing — so a twelve-post thread was one
@@ -2626,7 +2626,7 @@ struct FeedScreen: View {
             groupedSections(days, nextEventID: nextEventID,
                             boundary: boundaryThingID(in: days), replies: threadReplies)
         case .instagram:
-            // The mixed room's fourth instance (2026-08-18, prd §396), on
+            // The mixed room's fourth instance (2026-08-18, prd §395), on
             // Snapchat's, Files' and X's terms: what has pixels AND nothing to
             // say leads as a grid, everything else reads as rows.
             let photoTiles = visible.live.filter(Self.isInstagramPhotoTile)
@@ -5025,7 +5025,7 @@ struct FeedScreen: View {
     }
 
     /// A wordless picture OR video post in an X archive (2026-08-13, prd §375;
-    /// widened 2026-08-18, prd §395) — the mixed X room's grid membership,
+    /// widened 2026-08-18, prd §396) — the mixed X room's grid membership,
     /// `isMemoryTile`'s shape one source over.
     ///
     /// THE TEST IS `postText == nil`, not the tag, and that changed with the
@@ -5050,7 +5050,7 @@ struct FeedScreen: View {
     }
 
     /// A row about the ACCOUNT rather than about anything it posted
-    /// (2026-08-18, prd §395) — the two tags `XArchiveImport` stamps on the
+    /// (2026-08-18, prd §396) — the two tags `XArchiveImport` stamps on the
     /// three categories that have no author: `Access` (an app that can act as
     /// you) and `Account` (the day you joined, and every rename since).
     ///
@@ -5062,7 +5062,7 @@ struct FeedScreen: View {
     }
 
     /// A row in the X room that is a POST — the rows this room draws as a
-    /// card rather than as a band (2026-08-18, prd §395a).
+    /// card rather than as a band (2026-08-18, prd §396a).
     ///
     /// ONE definition with TWO readers, and that is the point: `shapedRow`
     /// picks the anatomy and `standsAlone` decides whether it gets a surface
@@ -5498,7 +5498,7 @@ struct FeedScreen: View {
         if thing.kind == .approval && thing.mark != .done { return true }  // consent card
         if shape == .social { return true }                                // PostCard, media at width
         // The X room's posts are the same anatomy and were missing this
-        // (2026-08-18, prd §395a): §313 gave that room its OWN shape rather
+        // (2026-08-18, prd §396a): §313 gave that room its OWN shape rather
         // than reusing `.social`, and this registry was one of the things the
         // new case never joined — so a room of post cards drew them merged
         // into a run of bare rows, which is exactly what "it reads like a row,
@@ -5909,11 +5909,11 @@ struct FeedScreen: View {
                     }
                 } else if let kids = replies[thing.id.uuidString], !kids.isEmpty {
                     // A self-thread's head, drawn with its continuations
-                    // (2026-08-18, prd §395) — the social rooms' card, on the
+                    // (2026-08-18, prd §396) — the social rooms' card, on the
                     // room that has the deepest threads in the corpus.
                     SocialThreadCard(head: thing, replies: kids, whole: true)
                 } else {
-                    // WHOLE, not clamped (2026-08-18, prd §395a). This room is
+                    // WHOLE, not clamped (2026-08-18, prd §396a). This room is
                     // an archive of somebody's own writing and the words are
                     // the entire content of every row — see `PostCard.whole`.
                     PostCard(thing: thing, whole: true)
@@ -6501,7 +6501,7 @@ struct FeedScreen: View {
             return rows.count == 1 ? "1 post" : "\(rows.count) posts"
         }
         // The X room says posts too, and only when every row in the group IS
-        // one (2026-08-18, prd §395a). Its rows are `.note` and `.link` by
+        // one (2026-08-18, prd §396a). Its rows are `.note` and `.link` by
         // kind, so the general path below called a day of your own writing "12
         // notes"; but the room also holds connected apps and the day you
         // joined, and calling those posts would be worse than saying things.

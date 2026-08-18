@@ -99,7 +99,7 @@ enum XArchiveImport {
         /// Private messages, landed only when `ImportOptions.includeMessages`
         /// says so. See that file — the default is off and stays off.
         var messages = 0
-        /// Apps that can act as your account (2026-08-18, prd §395). Its own
+        /// Apps that can act as your account (2026-08-18, prd §396). Its own
         /// number on the receipt because it is the one category here nobody
         /// expects to be in an archive at all, and a person who sees "11 apps"
         /// has learnt something before opening the room.
@@ -192,7 +192,7 @@ enum XArchiveImport {
         // add a handle, never lose a post.
         let mine = accountHandle(under: folder)
         // The account's own beginning, read from the same file as the handle
-        // (2026-08-18, prd §395). Read BEFORE the apps below, which use its
+        // (2026-08-18, prd §396). Read BEFORE the apps below, which use its
         // date as the only honest fallback for a grant the export left
         // undated.
         let origin = accountOrigin(under: folder)
@@ -226,7 +226,7 @@ enum XArchiveImport {
                        media: media, existing: existing,
                        summary: &summary, landed: &landed, seen: &seen)
         }
-        // POSTS MADE INSIDE A COMMUNITY (2026-08-18, prd §395) — your own
+        // POSTS MADE INSIDE A COMMUNITY (2026-08-18, prd §396) — your own
         // writing, in the same shape as `tweets.js`, in a file nothing here
         // had ever opened. Everything the main file gets, these get: the long
         // bodies, the pictures, the thread join, the reply lead. They wear one
@@ -246,7 +246,7 @@ enum XArchiveImport {
             foundAnyCategory = true
             landLikes(data, summary: &summary, landed: &landed, seen: &seen)
         }
-        // WHICH APPS CAN ACT AS YOU (2026-08-18, prd §395).
+        // WHICH APPS CAN ACT AS YOU (2026-08-18, prd §396).
         for data in readSeries("connected-application", under: folder) {
             foundAnyCategory = true
             landApps(data, fallback: origin?.createdAt, existing: existing,
@@ -419,7 +419,7 @@ enum XArchiveImport {
     }
 
     /// The door back to X, for rows landed before there was one (2026-08-18,
-    /// prd §395).
+    /// prd §396).
     ///
     /// It can be healed — unlike the avatar, the long bodies and the room
     /// fields, which all live inside the archive folder and can only be
@@ -677,7 +677,7 @@ enum XArchiveImport {
             // reply, and the room's own grid membership reads the pixels, not
             // this tag.
             // A VIDEO IS NOT A PHOTO, and one facet meaning two media is
-            // worse than no facet (2026-08-18, prd §395 — the `Gone` ruling,
+            // worse than no facet (2026-08-18, prd §396 — the `Gone` ruling,
             // reused). "photos I posted" must not answer with a GIF, and the
             // room's grid membership reads either tag, so the split costs the
             // tiles nothing.
@@ -753,7 +753,7 @@ enum XArchiveImport {
             // this one — a stranger's post wearing your avatar is the plainest
             // fake status there is.
             thing.authorAvatarURL = avatar
-            // A DOOR BACK TO THE POST (2026-08-18, prd §395). Until this date
+            // A DOOR BACK TO THE POST (2026-08-18, prd §396). Until this date
             // a row in this room had none at all: a post's `content` is its
             // own words, so unlike a liked post — whose `content` IS a
             // permalink — there was no way to open your own post on X, in the
@@ -776,7 +776,7 @@ enum XArchiveImport {
             // non sequiturs.
             //
             // `ref` IS SET, for a self-reply and only for one (2026-08-18,
-            // prd §395). It stayed nil until then on the reasoning that X's
+            // prd §396). It stayed nil until then on the reasoning that X's
             // chains are "already handled at import", because the head carries
             // the whole chain on `enrichedText` — and that is retrieval text,
             // which nothing draws. So a twelve-post thread was findable as one
@@ -1016,7 +1016,7 @@ enum XArchiveImport {
         return jobs
     }
 
-    // MARK: - The account itself (2026-08-18, prd §395)
+    // MARK: - The account itself (2026-08-18, prd §396)
 
     /// The account's own beginning, from the file this importer already opens
     /// for the handle. Nil when the field is absent or in a shape neither date
@@ -1500,7 +1500,7 @@ enum XArchiveImport {
     /// shape we don't know — the date encoded in its id.
     private static func created(_ tweet: [String: Any], id: String) -> Date? {
         // BOTH date parsers live in `XArchiveAccount` since 2026-08-18
-        // (prd §395): that file is compiled WHOLE by the harness and this one
+        // (prd §396): that file is compiled WHOLE by the harness and this one
         // cannot be, so a date shape proven there is proven for every reader
         // of this export. Two copies of a date parser drift, and a drifted one
         // dates a decade of somebody's posts to 1970 while every row still
@@ -1682,7 +1682,7 @@ enum XArchiveImport {
         // A GIF is an mp4 in this export and says "Video" too. There is no
         // third word: the archive states the file and nothing about its
         // length, so calling a two-second loop a GIF would be a guess, and a
-        // guess in the one line the row shows (2026-08-18, prd §395).
+        // guess in the one line the row shows (2026-08-18, prd §396).
         if wordless { return video ? String(localized: "Video") : String(localized: "Photo") }
         return reply.map { "To @\($0) · \(text)" } ?? text
     }

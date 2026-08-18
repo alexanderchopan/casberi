@@ -2170,7 +2170,7 @@ struct PhotoCell: View {
     /// carries, so the tile would state it twice. That room passes the capture
     /// PLACE when the export named one, and nothing when it didn't.
     var caption: String?
-    /// This tile's picture is one frame of a video (2026-08-18, prd §395).
+    /// This tile's picture is one frame of a video (2026-08-18, prd §396).
     /// Passed in rather than derived here, because the two rooms that can hold
     /// one answer the question differently — a connected folder by the file's
     /// own extension, an imported X archive by the tag the importer stamped —
@@ -2455,7 +2455,7 @@ struct ExcerptRow: View {
 /// rhythm, not the post's. Same card surface; no new colors.
 struct PostCard: View {
     let thing: Thing
-    /// Show the post WHOLE rather than clamped (2026-08-18, prd §395a).
+    /// Show the post WHOLE rather than clamped (2026-08-18, prd §396a).
     ///
     /// Off by default, and on in the X room. The clamp below is right for a
     /// LIVE social room, where a row is a glance at something still happening
@@ -2638,7 +2638,7 @@ struct PostCard: View {
                 }
                 .frame(height: 160)
                 .clipShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
-                // A CAPTIONED video's poster says so (2026-08-18, prd §395).
+                // A CAPTIONED video's poster says so (2026-08-18, prd §396).
                 // The wordless ones are tiles in the room's grid and wear the
                 // mark there; this is the other half — a video with a caption
                 // stays a post card, so without this its frame is a still with
@@ -2771,7 +2771,7 @@ struct SocialThreadCard: View {
     /// between the fold and this body evaluating (`ThingRowKeying`'s rule).
     let replies: [Thing]
     /// Show every post in the chain WHOLE — `PostCard.whole`'s flag, on the
-    /// card a thread folds into (2026-08-18, prd §395a).
+    /// card a thread folds into (2026-08-18, prd §396a).
     ///
     /// It matters MORE here than on a single post, not less: a thread is one
     /// argument split across posts, and clamping each of them turns it into a

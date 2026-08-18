@@ -54,7 +54,7 @@ grep -q 'raw.hasPrefix("RT @")' "$XARCH" \
 grep -q '"X"' Casberi/Shared/Thing.swift \
   || { echo "✗ X is not a bulk-import source — its rows would flood All"; exit 1; }
 
-# --- 2026-08-18, prd §395: the enrichment pass ------------------------------
+# --- 2026-08-18, prd §396: the enrichment pass ------------------------------
 # Every one of these is a wiring fact the compiled functions above cannot
 # prove, and every one of them fails INVISIBLY — a room that renders perfectly
 # while a category never landed, a video that tiles as a photograph, a thread
@@ -140,7 +140,7 @@ grep -qF 'feedSheet = .person(source: XPersonSource.source' "$FEEDSCREEN_395" \
 grep -qF 'private var facesAreDoors: Bool { SocialThread.isSocial(thing.source) }' Casberi/Casberi/Screens/ThingSheetView.swift \
   || { echo "✗ the profile card's gate moved — an X face opening a card whose only verb is impossible is a dead control"; exit 1; }
 
-# (7) 2026-08-18, prd §395a — a post reads as a post.
+# (7) 2026-08-18, prd §396a — a post reads as a post.
 # `standsAlone` is what decides whether a row keeps a SURFACE
 # (`shapedListRow` passes `bare: !standsAlone(thing)`), and `.x` was never in
 # it: the room drew post cards merged into a run of bare rows. Both halves are
@@ -322,7 +322,12 @@ grep -qF 'thing.parent = SocialCard(' "$XARCH" \
   || { echo "✗ a reply no longer says who it answers — the card doesn't draw the title's 'To @' lead"; exit 1; }
 grep -q 'thing.socialContext = "liked"' "$XARCH" \
   || { echo "✗ a liked post is no longer marked — half the room stops being distinguishable from your own writing"; exit 1; }
-grep -q 'sources.union(\["Slack", "X"\])' Casberi/Casberi/Model/SocialBridge.swift \
+# Matched on X's MEMBERSHIP rather than on the whole literal (2026-08-18):
+# `contextSources` gains members — Instagram joined it the same afternoon this
+# guard was written — and a guard pinned to the exact set fires every time
+# somebody else's room joins, which is a guard that cries wolf about a change
+# it has no opinion on. What it must prove is that X is still in there.
+grep -qE 'static let contextSources.*union\(\[.*"X".*\]\)' Casberi/Casberi/Model/SocialBridge.swift \
   || { echo "✗ X lost its context label — the 'Liked' marker it stamps would render nowhere"; exit 1; }
 # S4's premise — every `.note` is a capture waiting to become an outcome —
 # expired the day the import rooms landed published writing under that kind,
@@ -444,7 +449,7 @@ grep -q 'let isVideo = media\[id\]' "$XARCH" \
 grep -q 'isVideo != nil' "$XARCH" \
   || { echo "✗ the wordless test no longer requires a real picture in the export — an empty row would land as a photograph"; exit 1; }
 # 2026-08-18: the tag is the MEDIUM now (`Photo` or `Video`), and grid
-# membership moved off it onto `postText == nil` — see the §395 block above.
+# membership moved off it onto `postText == nil` — see the §396 block above.
 grep -qF 'if row.wordless { tags.append(row.video ? "Video" : "Photo") }' "$XARCH" \
   || { echo "✗ a wordless media post is no longer tagged with its medium"; exit 1; }
 grep -q 'thing.tags.contains("Photo")' "$FEEDSCREEN" \
@@ -622,12 +627,12 @@ pieces = [
     # numbers are right, since no real archive has ever been imported here and
     # every failure in it renders as a perfectly good-looking card.
     wholefile("Casberi/Casberi/Model/XRoom.swift"),
-    # The half of the archive that isn't posts (2026-08-18, prd §395) — the
+    # The half of the archive that isn't posts (2026-08-18, prd §396) — the
     # connected-app inventory, the account's own beginning, every rename, and
     # BOTH date parsers, which moved here from `XArchiveImport` precisely so
     # they could be compiled as shipped rather than extracted by name.
     wholefile("Casberi/Casberi/Model/XArchiveAccount.swift"),
-    # Your years with one person (2026-08-18, prd §395). Same reason as
+    # Your years with one person (2026-08-18, prd §396). Same reason as
     # `XRoom`: every failure in this card renders as a perfectly good-looking
     # one, and no real archive has ever been read on this host.
     wholefile("Casberi/Casberi/Model/XPerson.swift"),
@@ -1234,7 +1239,7 @@ check("a card with every subject named has no footnote",
                                               terms: [2019: ["A"], 2020: ["B"], 2021: ["C"]]))!) == nil)
 
 // ---------------------------------------------------------------------------
-// 2026-08-18, prd §395 — the account's own record, and your years with one
+// 2026-08-18, prd §396 — the account's own record, and your years with one
 // person. Both files are compiled WHOLE and unmodified above.
 // ---------------------------------------------------------------------------
 

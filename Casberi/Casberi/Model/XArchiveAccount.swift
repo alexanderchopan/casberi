@@ -1,6 +1,6 @@
 import Foundation
 
-/// THE HALF OF AN X ARCHIVE THAT ISN'T POSTS (2026-08-18, prd §395).
+/// THE HALF OF AN X ARCHIVE THAT ISN'T POSTS (2026-08-18, prd §396).
 ///
 /// `XArchiveImport` reads what you wrote and what you liked. This reads the
 /// three files beside them that nothing had ever opened, and it is deliberately

@@ -800,7 +800,7 @@ enum DemoSeedAll {
              "rauno", "Latency is a design problem, not an infrastructure one.", 34),
             ("Still true.", "lindsey", "", 210),
             // A THIRD reply to the same person, on purpose (2026-08-18, prd
-            // §395). `XPerson.minimumSightings` is 3, so with two the person
+            // §396). `XPerson.minimumSightings` is 3, so with two the person
             // card — the whole "your years with @lindsey" reading, reached by
             // tapping the room's own board — correctly declines and the demo
             // becomes the one place it can never be seen. Dated years back so
@@ -828,7 +828,7 @@ enum DemoSeedAll {
         // A wordless picture post — the room's grid half (prd §375). Seeded the
         // way the importer lands one — pixels, the medium tag, and NO
         // `postText` — since it is the absent `postText` that `isXPhotoTile`
-        // reads (prd §395); a demo that faked it with a title would prove
+        // reads (prd §396); a demo that faked it with a title would prove
         // nothing about the room's real membership test.
         out += (0..<3).map { i in
             row(.note, "Photo", source: "X", ref: "demo:x:photo:\(i)",
@@ -839,7 +839,7 @@ enum DemoSeedAll {
                 t.likeCount = 30 - i
             }
         }
-        // A VIDEO POST (2026-08-18, prd §395). The same shape as a picture
+        // A VIDEO POST (2026-08-18, prd §396). The same shape as a picture
         // post and a different tag, because until this pass a video landed
         // with no pixels at all and read as a row saying "Photo" — so the
         // demo is where the poster frame, the corner mark and the fact that
@@ -852,7 +852,7 @@ enum DemoSeedAll {
                 t.authorAvatarURL = avatarArt("you")
                 t.likeCount = 38
             })
-        // The account's own record (2026-08-18, prd §395) — the three
+        // The account's own record (2026-08-18, prd §396) — the three
         // categories nothing had ever read. They are `.link` rows, so they
         // stay out of `XRoom`'s year counts (which are your writing alone) and
         // draw as plain bands rather than as posts nobody wrote.

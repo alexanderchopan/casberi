@@ -148,8 +148,18 @@ done
 # "Everything I wrote" must not answer with a photograph. A wordless post wears
 # a writing tag beside `Photo` (a photograph you posted is still a post), which
 # is right for a facet and wrong for this scope.
-grep -qF 'tags.contains("Photo")' "$RETRIEVER" \
+#
+# The exclusion became a SET on 2026-08-18 (prd §396): the X pass added `Video`
+# the same afternoon this guard landed, and a wordless clip wears `Post` beside
+# it for the identical reason — so a check pinned to `Photo` alone passed while
+# captionless video walked straight back into the one scope that must hold
+# none. Both members are asserted, and the guard is stronger than it was.
+grep -qF 'wordless.isDisjoint(with: tags)' "$RETRIEVER" \
   || { echo "✗ the writing scope no longer excludes wordless picture posts"; exit 1; }
+for wordless in Photo Video; do
+  grep -qE "static let wordless.*\"$wordless\"" "$RETRIEVER" \
+    || { echo "✗ $wordless is not excluded from the writing scope — captionless media reads as something you wrote"; exit 1; }
+done
 # …and the topic map must not count them into its own denominator.
 grep -qF 'belongs = { !$0.tags.contains("Photo") }' "$INSIGHT" \
   || { echo "✗ the Instagram topic map counts wordless pictures as writing"; exit 1; }

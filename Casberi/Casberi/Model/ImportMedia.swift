@@ -50,7 +50,7 @@ enum ImportMedia {
     /// `isVideo` picks the READER, not the destination: a video's poster is
     /// written to exactly the same `previewImageData` a photograph's thumbnail
     /// is, so nothing downstream needs to know which one it got (2026-08-18,
-    /// prd §395 — the `FilesBridge` ruling, one export over).
+    /// prd §396 — the `FilesBridge` ruling, one export over).
     struct Job: Sendable {
         let ref: String
         let file: URL
@@ -110,7 +110,7 @@ enum ImportMedia {
     /// `previewImageData` route a photograph already uses, with no second
     /// field, no second code path in the grid, and no CloudKit deploy.
     ///
-    /// Moved here from `FilesBridge` on 2026-08-18 (prd §395) rather than
+    /// Moved here from `FilesBridge` on 2026-08-18 (prd §396) rather than
     /// copied: two implementations of one frame grab drift, and then a
     /// connected folder and an imported archive disagree about which second of
     /// a video is its cover. `FilesBridge` calls this now.
@@ -248,7 +248,7 @@ enum ImportMedia {
         }
         var index: [String: Media] = [:]
         for base in roots {
-            // BOTH media directories (2026-08-18, prd §395). A post made inside
+            // BOTH media directories (2026-08-18, prd §396). A post made inside
             // a Community files its pictures under `community_tweet_media`, and
             // until `community-tweet.js` was read at all that directory had
             // nothing to match — now a wordless Community photo post would
@@ -269,7 +269,7 @@ enum ImportMedia {
                 guard !id.isEmpty else { continue }
                 let video = isVideoFile(file)
                 // AN IMAGE BEATS A VIDEO for the same post, and the ordering is
-                // not a preference (2026-08-18, prd §395). `contentsOfDirectory`
+                // not a preference (2026-08-18, prd §396). `contentsOfDirectory`
                 // returns files in no order this code may rely on, so a video
                 // post that also exported a cover jpg would otherwise tile from
                 // whichever the filesystem happened to hand back first — the

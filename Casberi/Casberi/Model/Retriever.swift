@@ -683,8 +683,21 @@ enum Retriever {
     /// captionless post did not land at all. Spelled as a function so the two
     /// call sites can never drift into disagreeing about it.
     static func wroteIt(_ tags: [String]) -> Bool {
-        !tags.isEmpty && !mine.isDisjoint(with: tags) && !tags.contains("Photo")
+        !tags.isEmpty && !mine.isDisjoint(with: tags)
+            && wordless.isDisjoint(with: tags)
     }
+
+    /// The tags that mean "this post's own content is a picture, not words".
+    ///
+    /// `Video` joined `Photo` here on the merge of §395 and §396 (2026-08-18):
+    /// that guard was written against the only wordless tag that existed when
+    /// it landed, and the X pass added a second one the same afternoon. A
+    /// wordless VIDEO post carries `Post` beside `Video` for exactly the reason
+    /// a wordless photograph carries `Post` beside `Photo` — a clip you posted
+    /// is still a post — so without this it slipped straight back into
+    /// "everything I wrote", which is the one scope that must contain no
+    /// captionless media at all.
+    static let wordless: Set<String> = ["Photo", "Video"]
 
     /// Whether a query explicitly asks for the person's OWN writing, and the
     /// words that said so.
@@ -766,7 +779,18 @@ enum Retriever {
             // words that it made "photos I posted" a filter rather than a
             // hope — and it never reached this table, so for five days the tag
             // existed and no sentence could name it. `Video` lands with it
-            // (2026-08-18, prd §395) rather than after it.
+            // (2026-08-18, prd §396) rather than after it.
+            //
+            // ONE `Photo` row, serving BOTH import rooms, and it is here rather
+            // than beside `Reel`/`Story` below because it predates them: §395
+            // and §396 were written the same afternoon by two sessions that
+            // could not see each other, and each added its own `Photo` entry.
+            // Git merged both, which is a textual success and a semantic
+            // duplicate — the second would have been dead code (the first
+            // phrase match wins) in a table whose whole value is that it is
+            // curated. `XArchiveImport` stamps the tag for a wordless tweet and
+            // `InstagramImport.landOwnMedia` for a captionless post; the facet
+            // does not care which room it came from.
             //
             // The gating rule matters here as much as it does for "review" and
             // "short": these are among the most ordinary words in the language
@@ -774,7 +798,7 @@ enum Retriever {
             // they narrow; unscoped they can never quietly empty a result.
             (["my photos", "photos", "photo", "pictures", "picture"], "Photo"),
             (["my videos", "videos", "video", "gifs", "gif"], "Video"),
-            // The account's own record (2026-08-18, prd §395). "Connected
+            // The account's own record (2026-08-18, prd §396). "Connected
             // apps" only, never the bare "apps": this app calls its own
             // catalog the apps, so that one word means something else on every
             // other screen and would be the first genuinely misleading facet
@@ -793,21 +817,19 @@ enum Retriever {
             // YouTube" narrows, "something short" can't quietly empty a
             // result.
             (["shorts", "short"], "Shorts"),
-            // Instagram's own halves (2026-08-18, prd §395), all three read off
-            // facts the export already states: the permalink says `/reel/`, the
-            // file says `stories.json`, and a post with no caption is a
-            // photograph. Before this a saved reel and a saved photograph were
-            // indistinguishable in a room that is mostly saves.
+            // Instagram's own halves (2026-08-18, prd §395), both read off
+            // facts the export already states: the permalink says `/reel/` and
+            // the file says `stories.json`. Before this a saved reel and a
+            // saved photograph were indistinguishable in a room that is mostly
+            // saves.
             //
-            // `Photo` sits with `Shorts` above under the same gating rule and
-            // needs it just as much: "photo" is an ordinary English word and
-            // this corpus is full of it. Behind a named room it narrows; on its
-            // own it can never quietly empty a result. Note the tag rides
-            // BESIDE `Post`/`Reel`/`Story` rather than replacing one — a
-            // wordless reel is still a reel.
+            // Its third — `Photo`, for a post with no caption — is the shared
+            // row further up rather than a second entry here; see that comment
+            // for why there is only one. The tag rides BESIDE
+            // `Post`/`Reel`/`Story` rather than replacing one: a wordless reel
+            // is still a reel.
             (["my reels", "reels", "reel"], "Reel"),
             (["my stories", "stories", "story"], "Story"),
-            (["photos", "photo", "pictures", "picture"], "Photo"),
             // App Store Connect's three halves (2026-08-06, prd §324). The
             // room mixes what Apple decided, what customers wrote, and what
             // your builds did — three genuinely different questions, and until

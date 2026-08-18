@@ -82,7 +82,7 @@ struct SocialPostContent: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .clipShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
                 // A poster frame is a still, and this is the largest a stored
-                // one is ever drawn (2026-08-18, prd §395) — so it is the one
+                // one is ever drawn (2026-08-18, prd §396) — so it is the one
                 // place a video passing for a photograph misleads most. There
                 // is no player: the archive folder is a temporary scoped pick
                 // and the mp4 is not ours to keep, which is why the mark is
