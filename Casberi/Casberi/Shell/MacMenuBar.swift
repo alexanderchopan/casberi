@@ -57,9 +57,68 @@ extension AppDelegate {
         builder.remove(menu: .find)
         builder.remove(menu: Self.documentMenu)
 
+        // **The View menu's three dead controls — MEASURED 2026-08-17, and the
+        // measurement overturned the obvious fix.** Show Toolbar, Customize
+        // Toolbar… and Show Sidebar are synthesized for every Catalyst app;
+        // this one has no `NSToolbar` and no sidebar, and deliberately never
+        // will (prd §273 — the chip rail IS the navigation, the nav bar is
+        // hidden), so all three are dead controls in our own menu bar, exactly
+        // like the four File verbs above.
+        //
+        // `builder.remove(menu:)` is the WRONG tool for them, which only a
+        // `-macMenuProbe` dump could show. The two system groups are not ours
+        // to delete, because SwiftUI puts OUR commands inside them:
+        //
+        //     com.apple.menu.toolbar → Show Toolbar · Customize Toolbar…
+        //                              · Refresh · Back · Switch to All
+        //                              · Switch to Chip 2…9 · Previous/Next
+        //                                Venue · Scope to Wallet 1…6
+        //     com.apple.menu.sidebar → Show Sidebar
+        //                              · Next/Previous/Open/Close Item
+        //
+        // So `remove(menu: .toolbar)` would take ⌘R, ⌘[, ⌘1–⌘9 and ⌥1–⌥6 with
+        // it, and `remove(menu: .sidebar)` the entire keyboard walk — a silent
+        // regression of every shortcut this app has, to delete three items.
+        // `CommandGroup(after:)` lands siblings INSIDE the group it names, not
+        // after it; that is the fact this whole comment exists to record.
+        //
+        // The surgical form is below: keep the groups, drop the three system
+        // leaves. They are matched by SELECTOR, never by title — the titles are
+        // localized, so a title match would silently stop working in every
+        // language but English, which is the failure mode that looks like the
+        // feature was never built.
+        strip(deadViewItems: builder)
+
         #if DEBUG
         if UserDefaults.standard.bool(forKey: "macMenuProbe") { dumpMenus(builder) }
         #endif
+    }
+
+    /// The three system leaves the View menu synthesizes for furniture this app
+    /// does not have. Matched by SELECTOR because a menu item's title is
+    /// localized and its identifier, for these three, is empty — the probe dump
+    /// shows them as bare `·  — Show Toolbar` rows, so there is nothing else to
+    /// key on.
+    ///
+    /// Anything that is not one of these three survives untouched, which is
+    /// what keeps our own commands — placed INSIDE these same two groups by
+    /// `CommandGroup(after:)` — where they are.
+    private static let deadViewSelectors: Set<Selector> = [
+        NSSelectorFromString("toggleToolbarShown:"),
+        NSSelectorFromString("runToolbarCustomizationPalette:"),
+        NSSelectorFromString("toggleSidebar:"),
+    ]
+
+    private func strip(deadViewItems builder: UIMenuBuilder) {
+        for id in [UIMenu.Identifier.toolbar, UIMenu.Identifier.sidebar] {
+            guard builder.menu(for: id) != nil else { continue }
+            builder.replaceChildren(ofMenu: id) { children in
+                children.filter { element in
+                    guard let command = element as? UICommand else { return true }
+                    return !Self.deadViewSelectors.contains(command.action)
+                }
+            }
+        }
     }
 
     #if DEBUG
@@ -119,9 +178,20 @@ extension AppDelegate {
     /// A menu element's own identifier, whichever kind it is. Catalyst nests
     /// most File children as inline `UIMenu` groups rather than bare actions,
     /// so both cases have to be read. DEBUG-only, like its one caller.
+    /// A menu element's own identifier, whichever kind it is — and its ACTION
+    /// when it has no identifier at all. That last case is the one that
+    /// mattered: the three dead View items print a blank identifier, so the
+    /// first version of this dump could show that they existed and never say
+    /// what to key on to remove them. The selector is what `strip(deadViewItems:)`
+    /// matches, so printing it is how the removal stays verifiable.
     private static func identifier(of element: UIMenuElement) -> String {
         if let menu = element as? UIMenu { return menu.identifier.rawValue }
-        if let action = element as? UIAction { return action.identifier.rawValue }
+        if let action = element as? UIAction, !action.identifier.rawValue.isEmpty {
+            return action.identifier.rawValue
+        }
+        if let command = element as? UICommand {
+            return "sel:" + NSStringFromSelector(command.action)
+        }
         return ""
     }
     #endif
