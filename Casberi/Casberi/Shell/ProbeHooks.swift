@@ -822,12 +822,19 @@ enum ProbeHooks {
                 NSLog("[Casberi] %@", line)
             }
         },
-        // The fifth wallet-riding room head (2026-08-11), and the one that
-        // reads no `Thing` at all — its subject is `SafeBridge`'s own
-        // tracking state, the `ASCRoomSource` shape. Pair with
-        // `-approvalProbe`/`-safeProbe` to land a pending queue first.
-        Hook(key: "safeRoomProbe") { _, _ in
-            for line in SafeRoomSource.probeLines() {
+        // The fifth wallet-riding room head (2026-08-11) — its subject is
+        // mostly `SafeBridge`'s own tracking state, the `ASCRoomSource` shape.
+        // It reads rows for ONE thing (2026-08-17): the ref a module-only card
+        // opens, which is the whole reason that card stopped being a dead
+        // control. Pair with `-approvalProbe`/`-safeProbe` to land a pending
+        // queue first.
+        Hook(key: "safeRoomProbe") { _, context in
+            let source = SafeRoomSource.source
+            var descriptor = FetchDescriptor<Thing>(
+                predicate: #Predicate { $0.source == source })
+            descriptor.fetchLimit = 500
+            let rows = (try? context.fetch(descriptor)) ?? []
+            for line in SafeRoomSource.probeLines(things: rows) {
                 NSLog("[Casberi] %@", line)
             }
         },
@@ -4007,13 +4014,16 @@ enum ProbeHooks {
                      ? RailgunRoomSource.compose(things: things).map {
                         "\(RailgunRoom.headline($0)) · \($0.tokens.count) tokens"
                      } : nil)
-                // The fifth (2026-08-11) — reads no `things` at all (see
-                // `SafeRoomSource`'s own doc), so `compose` is called
-                // unconditionally; the `source ==` gate still decides whether
-                // this LINE prints, matching every sibling in this block.
+                // The fifth (2026-08-11). The three counts are printed apart
+                // because they are three different states that render as one
+                // number in `pendingCount` alone: a fully-signed transaction
+                // needs an execution, not a signature, and a contested pair
+                // needs neither from whoever loses.
                 note("safeHead", source == SafeRoomSource.source
-                     ? SafeRoomSource.compose().map {
+                     ? SafeRoomSource.compose(things: things).map {
                         "\(SafeRoom.headline($0)) · \($0.pendingCount) pending"
+                        + " · \($0.awaitsYouCount) awaiting you · \($0.readyCount) ready"
+                        + " · \($0.contestedCount) contested"
                      } : nil)
                 // Three more per-source heads that shipped without a line
                 // here — exactly the drift this probe's own header warns

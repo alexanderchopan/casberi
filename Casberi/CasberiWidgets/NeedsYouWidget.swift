@@ -34,15 +34,30 @@ struct NeedsYouWidget: Widget {
 struct NeedsYouEntry: TimelineEntry {
     let date: Date
     let rows: [WidgetDeadline]
+    /// A signature somebody is blocked on (2026-08-17). Not a row: it has no
+    /// due date and must never be drawn on the dated rail — see `WidgetSafeCall`.
+    var safe: WidgetSafeCall?
 
     var overdue: [WidgetDeadline] { rows.filter { $0.isOverdue(now: date) } }
+
+    /// Everything on this tile, deadline or not. The tile's subject is things
+    /// that want something from you, and a queue item awaiting your signature
+    /// is one of them — so a corpus with nothing dated and one signature
+    /// pending must not read "Nothing due", which is what it did before this
+    /// payload existed.
+    var isEmpty: Bool { rows.isEmpty && (safe?.awaitsYou ?? 0) == 0 }
 
     /// Something already late outranks something merely coming; an empty tile
     /// asks for no slot at all. The Smart Stack rule the hero established
     /// (§282), applied to the one payload where lateness is objective.
+    ///
+    /// A pending signature scores as PRESSING rather than merely open, and
+    /// that is a definition and not an inference about a date: the state means
+    /// a co-signer's transaction cannot proceed until you act.
     var relevance: TimelineEntryRelevance? {
-        if rows.isEmpty { return TimelineEntryRelevance(score: 0) }
-        return TimelineEntryRelevance(score: overdue.isEmpty ? 45 : 95)
+        if isEmpty { return TimelineEntryRelevance(score: 0) }
+        let pressing = !overdue.isEmpty || (safe?.awaitsYou ?? 0) > 0
+        return TimelineEntryRelevance(score: pressing ? 95 : 45)
     }
 }
 
@@ -52,7 +67,8 @@ struct NeedsYouProvider: TimelineProvider {
     }
 
     func getSnapshot(in context: Context, completion: @escaping (NeedsYouEntry) -> Void) {
-        completion(NeedsYouEntry(date: .now, rows: WidgetDeadlines.published()))
+        completion(NeedsYouEntry(date: .now, rows: WidgetDeadlines.published(),
+                                 safe: WidgetSafe.published()))
     }
 
     /// The refresh clock is the DEADLINES THEMSELVES, not a fixed hour.
@@ -66,13 +82,18 @@ struct NeedsYouProvider: TimelineProvider {
     func getTimeline(in context: Context, completion: @escaping (Timeline<NeedsYouEntry>) -> Void) {
         let now = Date.now
         let rows = WidgetDeadlines.published(now: now)
+        let safe = WidgetSafe.published(now: now)
         let hourly = Calendar.current.date(byAdding: .hour, value: 1, to: now) ?? now
         // `> now` and not `>= now`: a deadline exactly at this instant has
         // already flipped, and asking to be woken for it again would schedule a
         // reload in the past.
         let nextFlip = rows.map(\.due).filter { $0 > now }.min()
         let next = min(nextFlip ?? hourly, hourly)
-        completion(Timeline(entries: [NeedsYouEntry(date: now, rows: rows)], policy: .after(next)))
+        // The Safe call needs no flip time of its own: it carries no date, and
+        // its own six-hour shelf life is enforced on READ, so the hourly
+        // ceiling already re-asks well inside it.
+        completion(Timeline(entries: [NeedsYouEntry(date: now, rows: rows, safe: safe)],
+                            policy: .after(next)))
     }
 }
 
@@ -83,23 +104,41 @@ struct NeedsYouWidgetView: View {
     private var accent: Color { WidgetChrome.accent }
     private var rows: [WidgetDeadline] { entry.rows }
     private var overdueCount: Int { entry.overdue.count }
+    /// The call, only when it actually asks for something. A payload whose
+    /// `awaitsYou` has fallen to zero is a stale reading, not a quiet one.
+    private var call: WidgetSafeCall? {
+        guard let safe = entry.safe, safe.awaitsYou > 0 else { return nil }
+        return safe
+    }
 
     var body: some View {
         Group {
             switch family {
             case .accessoryCircular:
-                // A gauge whose fill is the OVERDUE share of what's open. It
+                // A gauge whose fill is the PRESSING share of what's open. It
                 // draws nothing at all when nothing is due, rather than an empty
-                // ring that reads as a broken tile.
-                Gauge(value: rows.isEmpty ? 0 : Double(overdueCount) / Double(rows.count)) {
+                // ring that reads as a broken tile. A pending signature counts
+                // in both numerator and denominator: it is open, and it is
+                // pressing by definition (see `NeedsYouEntry.relevance`).
+                Gauge(value: openCount == 0 ? 0 : Double(pressingCount) / Double(openCount)) {
                     Image(systemName: "clock").dsGlyph(11)
                 } currentValueLabel: {
-                    Text("\(rows.count)").monospacedDigit()
+                    Text("\(openCount)").monospacedDigit()
                 }
                 .gaugeStyle(.accessoryCircular)
-                .accessibilityLabel(Text("Deadlines"))
+                .accessibilityLabel(Text("Needs you"))
             case .accessoryRectangular:
-                if let first = rows.first {
+                // The signature leads this family outright rather than sharing
+                // it: there is room for one thing, and the one thing a person
+                // is blocked on beats the one with a date on it.
+                if let call {
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(headline).dsText(.widgetEyebrow11).widgetAccentable()
+                        Text(call.subject).dsText(.widgetTitle14).lineLimit(1)
+                        Text(waitLine(call)).dsText(.widgetSubline11).opacity(0.75).lineLimit(1)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                } else if let first = rows.first {
                     VStack(alignment: .leading, spacing: 1) {
                         Text(headline).dsText(.widgetEyebrow11).widgetAccentable()
                         Text(first.title).dsText(.widgetTitle14).lineLimit(1)
@@ -113,7 +152,23 @@ struct NeedsYouWidgetView: View {
             case .systemSmall:
                 VStack(alignment: .leading, spacing: 6) {
                     WidgetLabel(text: String(localized: "Needs you"))
-                    if let first = rows.first {
+                    if let call {
+                        Text(headline)
+                            .dsText(.widgetTitle17)
+                            .foregroundStyle(.white)
+                            .lineLimit(2)
+                        Spacer(minLength: 0)
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(call.subject)
+                                .dsText(.widgetRecentTitle12)
+                                .foregroundStyle(.white)
+                                .lineLimit(2)
+                            Text(waitLine(call))
+                                .dsText(.widgetSubline11)
+                                .foregroundStyle(accent)
+                                .lineLimit(1)
+                        }
+                    } else if let first = rows.first {
                         Text(headline)
                             .dsText(.widgetTitle17)
                             .foregroundStyle(.white)
@@ -145,15 +200,20 @@ struct NeedsYouWidgetView: View {
                     HStack(alignment: .firstTextBaseline) {
                         WidgetLabel(text: String(localized: "Needs you"))
                         Spacer(minLength: 4)
-                        if !rows.isEmpty {
+                        if !entry.isEmpty {
                             Text(headline)
                                 .dsText(.widgetSubline11)
                                 .foregroundStyle(.white.opacity(0.6))
                                 .lineLimit(1)
                         }
                     }
+                    // ABOVE the rail, and never on it. The rail is a time axis
+                    // and this has no time on it; placing it there would need
+                    // an invented date, which would then draw as late or early
+                    // — a claim nobody made.
+                    if let call { signatureCall(call) }
                     if rows.isEmpty {
-                        emptyLine
+                        if call == nil { emptyLine }
                         Spacer(minLength: 0)
                     } else {
                         // The rail, above the rows it summarises (2026-08-14,
@@ -185,13 +245,62 @@ struct NeedsYouWidgetView: View {
         .widgetURL(WidgetAskLink.url(asking: askQuery))
     }
 
-    /// "2 late" / "3 coming up" — the overdue count leads whenever there is
-    /// one, because late and soon are different states and only one of them is
-    /// already a problem.
+    /// The signature request, drawn as a banner rather than a row.
+    ///
+    /// It links to the pending transaction when the corpus has it, and to the
+    /// tile's own ask when it doesn't — never to `casberi://thing/` with an id
+    /// we don't have, which is a door onto nothing.
+    @ViewBuilder
+    private func signatureCall(_ call: WidgetSafeCall) -> some View {
+        let content = HStack(alignment: .top, spacing: 6) {
+            Image(systemName: "signature")
+                .dsGlyph(11, weight: .semibold)
+                .foregroundStyle(accent)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(call.awaitsYou == 1
+                     ? String(localized: "Your signature is needed")
+                     : String(localized: "Your signature is needed on \(call.awaitsYou)"))
+                    .dsText(.widgetRecentTitle12)
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
+                Text(call.subject)
+                    .dsText(.widgetSubline11)
+                    .foregroundStyle(.white.opacity(0.6))
+                    .lineLimit(1)
+            }
+            Spacer(minLength: 0)
+        }
+        if let id = call.id, let url = URL(string: "casberi://thing/\(id)") {
+            Link(destination: url) { content }
+        } else {
+            content
+        }
+    }
+
+    /// "waiting 5 days" / "waiting" — never "waiting 0 days". A submission
+    /// date the wire didn't carry is unknown, not today.
+    private func waitLine(_ call: WidgetSafeCall) -> String {
+        guard let days = call.waitingDays, days > 0 else { return String(localized: "waiting") }
+        return days == 1 ? String(localized: "waiting 1 day")
+                         : String(localized: "waiting \(days) days")
+    }
+
+    /// Everything open on this tile, dated or not.
+    private var openCount: Int { rows.count + (call?.awaitsYou ?? 0) }
+    /// The subset that is already someone else's problem waiting on you.
+    private var pressingCount: Int { overdueCount + (call?.awaitsYou ?? 0) }
+
+    /// "2 late" / "1 to sign" / "3 coming up" — ranked by how much each state
+    /// is already a problem. A signature outranks a future deadline (somebody
+    /// is blocked right now) and sits below something already late.
     private var headline: String {
         if overdueCount > 0 {
             return overdueCount == 1 ? String(localized: "1 late")
                                      : String(localized: "\(overdueCount) late")
+        }
+        if let call {
+            return call.awaitsYou == 1 ? String(localized: "1 to sign")
+                                       : String(localized: "\(call.awaitsYou) to sign")
         }
         return rows.count == 1 ? String(localized: "1 coming up")
                                : String(localized: "\(rows.count) coming up")

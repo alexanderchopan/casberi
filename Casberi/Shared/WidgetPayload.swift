@@ -462,6 +462,60 @@ enum WidgetDeadlines {
     }
 }
 
+// MARK: - A signature somebody is waiting on
+
+/// What a Safe is waiting on YOU for (2026-08-17).
+///
+/// This tile's subject is things that want something from you, and until now
+/// it could only see `dueAt` — so the clearest "needs you" fact the whole app
+/// carries never reached it. A your-turn signature has NO DATE (Safe publishes
+/// a `submissionDate`, which is when it was asked, not when it is due), so it
+/// can never be a `WidgetDeadline` and must not be faked into one: putting a
+/// made-up due date on the rail would place it among real deadlines and let it
+/// draw as "late", which is a claim nobody made.
+///
+/// It is a READING, so it takes the short shelf life — a signature collected
+/// in the Safe app five minutes after you looked makes every count here wrong,
+/// and no amount of the app being closed makes that number true again.
+struct WidgetSafeCall: Codable, Equatable {
+    /// The row to open, when the pending transaction is in the corpus.
+    /// Optional because the tracking store and the corpus are two different
+    /// records: a queue item can be tracked before its row has landed. The
+    /// tile falls back to the ask rather than minting a link to nothing.
+    let id: String?
+    /// "a transfer of 1,500 USDC to payroll.eth" — the bridge's own rendering,
+    /// never re-derived here.
+    let subject: String
+    /// Transactions whose missing signature is genuinely yours — `awaitsYou`,
+    /// not `yourTurn`: a threshold already met without you needs nothing from
+    /// you, and this tile exists to say what does.
+    let awaitsYou: Int
+    /// Fully signed, waiting only on an execution. Counted apart because it is
+    /// a different act by a different person.
+    let ready: Int
+    /// Whole days the oldest request has waited, or nil when the wire carried
+    /// no submission date. Nil is not zero — "waiting" and "waiting 0 days"
+    /// are different claims.
+    let waitingDays: Int?
+}
+
+enum WidgetSafe {
+    static let key = "widget.safe"
+    static let stampKey = "widget.safeAt"
+
+    /// Six hours, the reading window — deliberately far shorter than the
+    /// 36-hour deadline set beside it in the same tile. See the type's doc:
+    /// dates don't rot and counts do.
+    static let freshness: TimeInterval = 6 * 3600
+
+    static func published(now: Date = .now,
+                          defaults: UserDefaults? = UserDefaults(suiteName: SharedStore.appGroup))
+    -> WidgetSafeCall? {
+        WidgetPayload.read(WidgetSafeCall.self, key: key, stampKey: stampKey,
+                           freshness: freshness, now: now, defaults: defaults)
+    }
+}
+
 // MARK: - Wallet
 
 /// The combined wallet line, as a widget draws it.

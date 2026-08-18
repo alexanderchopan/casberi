@@ -235,6 +235,84 @@ done
 grep -q 'static let sourceName = "Safe"' "Casberi/Casberi/Model/SafeBridge.swift" \
   || { echo "✗ SafeBridge.sourceName changed"; exit 1; }
 
+# --- 2026-08-17 drift guards ------------------------------------------------
+# Wiring the compiled functions above cannot prove about themselves, each one a
+# failure that renders as a perfectly good-looking card.
+
+# THE LANDED ROW AND THE HEAD MUST AGREE. `syncPending` skipped an
+# already-landed row entirely while `trackPending` kept refreshing the same
+# counts for the head, so the feed said "2 of 3 — your signature is needed"
+# after two more people had signed, one line under a head that said otherwise.
+grep -q 'heals.append(Heal(' "Casberi/Casberi/Model/SafeBridge.swift" \
+  || { echo "✗ SafeBridge no longer heals an already-landed pending row — its title and tag would freeze at landing while the room head stays live"; exit 1; }
+# ONE definition of the three states. Two copies of "what does ready mean"
+# drift, and then a row and the head above it describe the same transaction
+# differently.
+grep -q 'SafeRoom.Entry(ref: "", safeAddress: ""' "Casberi/Casberi/Model/SafeBridge.swift" \
+  || { echo "✗ SafeBridge.rowFace no longer derives ready/awaitsYou from SafeRoom — the feed row and the room head would each carry their own copy of the rule"; exit 1; }
+# The notification tag rides `awaitsYou`, never the raw `yourTurn` — otherwise
+# a threshold already met without you fires a lock-screen alarm asking for a
+# signature nobody needs.
+grep -q 'if entry.awaitsYou {' "Casberi/Casberi/Model/SafeBridge.swift" \
+  || { echo "✗ the 'Your turn' tag no longer rides awaitsYou — a fully-signed transaction would alarm for a signature it does not need"; exit 1; }
+# The nonce is what makes a rival a rival. Stop stamping it and the collision
+# warning silently never fires again, with the card still rendering perfectly.
+grep -q 'nonce: tx\["nonce"\] as? Int' "Casberi/Casberi/Model/SafeBridge.swift" \
+  || { echo "✗ SafeBridge no longer stamps the queue nonce — same-nonce rivals become undetectable"; exit 1; }
+
+# THE DEAD CONTROL. `compose` returns a card on module risk ALONE, and both of
+# the card's tap paths used to resolve through `room.lead` — so that exact card
+# announced "Opens this Safe" and did nothing.
+grep -q 'room.lead?.ref ?? fallbackRef' "$CARD_SAFE" \
+  || { echo "✗ the Safe card no longer falls back to a real destination — a module-only card would announce a door it does not have"; exit 1; }
+grep -q 'SafeRoomSource.fallbackRef(things:' "$FEED" \
+  || { echo "✗ FeedScreen no longer hands the Safe card its fallback ref"; exit 1; }
+# ...and when there is no destination at all, BOTH the gesture and the
+# accessibility action must be withheld rather than left announcing one.
+grep -q 'if let destination {' "$CARD_SAFE" \
+  || { echo "✗ the Safe card's tap is no longer gated on having somewhere to go"; exit 1; }
+# The card must draw the state line, or a nonce collision is computed and never
+# said — the one fact nothing else in this app surfaces.
+grep -q 'SafeRoom.stateNote(room)' "$CARD_SAFE" \
+  || { echo "✗ the Safe card no longer draws the state note — rival transactions would be detected and never mentioned"; exit 1; }
+grep -q 'room.isContested(entry)' "$CARD_SAFE" \
+  || { echo "✗ the Safe card no longer marks WHICH rings collide — the sentence says two of these contest and nothing says which"; exit 1; }
+
+# The chip's long-press peek must preview the room it opens. Safe's head is a
+# FIGURE (rings), not a text hero, so it belongs in this chain for X's exact
+# reason — without it the peek drew a blank.
+grep -q 'source == SafeRoomSource.source, let room = SafeRoomSource.compose' \
+  "Casberi/Casberi/Model/RoomFigure.swift" \
+  || { echo "✗ the Safe chip peek no longer previews the Safe head — long-pressing the chip would draw nothing"; exit 1; }
+
+# The widget half. A your-turn signature has NO due date, so it can never be a
+# WidgetDeadline without inventing one — and an invented date would sort among
+# real deadlines and draw itself late.
+grep -q 'static func safeCall(things:' "Casberi/Casberi/Model/WidgetPublish.swift" \
+  || { echo "✗ the Needs-you tile no longer receives the Safe signature call"; exit 1; }
+grep -q 'enum WidgetSafe {' "Casberi/Shared/WidgetPayload.swift" \
+  || { echo "✗ the WidgetSafe payload is gone"; exit 1; }
+# It is a READING, so it takes the short window. Sharing the deadlines' 36
+# hours would leave a count on the Home Screen a day and a half after it
+# stopped being true.
+grep -q 'static let freshness: TimeInterval = 6 \* 3600' "Casberi/Shared/WidgetPayload.swift" \
+  || { echo "✗ the Safe call no longer carries the READING freshness window — a stale count would sit on the Home Screen for 36 hours"; exit 1; }
+# "Nothing due" while a signature waits is the bug this payload exists to fix.
+grep -q 'var isEmpty: Bool { rows.isEmpty && (safe?.awaitsYou ?? 0) == 0 }' \
+  "Casberi/CasberiWidgets/NeedsYouWidget.swift" \
+  || { echo "✗ the Needs-you tile can say 'Nothing due' while a signature is waiting on you"; exit 1; }
+
+# The brief's rung — the ONLY surface that can re-raise a your-turn signature,
+# since §306's news window forbids a second notification forever after.
+grep -q 'safeStuckLine(now: now)' "Casberi/Casberi/Model/TodayBrief.swift" \
+  || { echo "✗ the Today brief no longer carries the stuck-signature rung — a request nobody answered would have no surface at all after its landing day"; exit 1; }
+
+# The demo has to be able to SHOW all three states, or they ship unseen — the
+# standing demo-parity rule, and what verify.sh's room-head check reads.
+grep -q 'wallet:safe:eth:demo3' "Casberi/Casberi/Model/DemoSeedAll.swift" \
+  || { echo "✗ the demo no longer seeds a rival pair / fully-signed Safe queue — the three states would ship unseen"; exit 1; }
+
+
 cat > "$TMP/main.swift" <<'SWIFT'
 import Foundation
 
@@ -752,11 +830,13 @@ check("share is a fraction of the busiest token's moves", RailgunRoom.share(move
 check("a zero denominator can't divide by zero", RailgunRoom.share(moves: 3, of: 0) == 0)
 
 print("")
-print("Safe — ranking is your-turn first, then oldest first")
+print("Safe — ranking is your-turn first, then ready, then oldest first")
 func safeEntry(_ ref: String, have: Int = 1, required: Int = 3, yourTurn: Bool = false,
-               submittedAt: Date? = nil) -> SafeRoom.Entry {
-    SafeRoom.Entry(ref: ref, safeAddress: "0xSafe", have: have, required: required,
-                   yourTurn: yourTurn, submittedAt: submittedAt, descriptionText: "a transfer")
+               submittedAt: Date? = nil, nonce: Int? = nil,
+               safe: String = "0xSafe", description: String = "a transfer") -> SafeRoom.Entry {
+    SafeRoom.Entry(ref: ref, safeAddress: safe, have: have, required: required,
+                   yourTurn: yourTurn, submittedAt: submittedAt, descriptionText: description,
+                   nonce: nonce)
 }
 check("your turn always outranks waiting on others, even when it arrived later",
       SafeRoom.ordered([safeEntry("a", yourTurn: false, submittedAt: day(-9)),
@@ -771,34 +851,162 @@ check("a full tie breaks on ref, for a total order that never reshuffles on iden
       SafeRoom.ordered([safeEntry("b"), safeEntry("a")]).first?.ref == "a")
 
 print("")
+print("Safe — fully signed is not pending (2026-08-17)")
+// THE FALSE ALARM THIS FIXES. `yourTurn` is `!hasSigned(you)` alone, so a
+// 2-of-3 whose other two owners both signed said "your signature is needed",
+// ranked it first, and fired a lock-screen alarm — for a transaction that
+// needs nothing from you.
+check("a met threshold is ready, not pending",
+      safeEntry("a", have: 3, required: 3).isReady)
+check("an unread threshold is never 'ready' — 0/0 is no evidence at all",
+      !safeEntry("a", have: 0, required: 0).isReady)
+check("more signatures than required is still ready, never a fourth state",
+      safeEntry("a", have: 4, required: 3).isReady)
+check("your signature can't be needed on something already fully signed without you",
+      !safeEntry("a", have: 2, required: 2, yourTurn: true).awaitsYou)
+check("your signature IS needed when the threshold is genuinely short",
+      safeEntry("a", have: 1, required: 2, yourTurn: true).awaitsYou)
+// The ready candidate is given the STRONGER raw position on purpose — it is
+// really yourTurn and really newer — so this can only pass because `isReady`
+// is being honoured, not because raw wait already ordered them.
+let safeReadyRank = SafeRoom.ordered([
+    safeEntry("ready", have: 3, required: 3, yourTurn: true, submittedAt: day(-1)),
+    safeEntry("short", have: 1, required: 3, yourTurn: true, submittedAt: day(-9)),
+])
+check("a genuinely-short signature outranks a fully-signed one — only you can add yours",
+      safeReadyRank.first?.ref == "short")
+let safeReadyOverWaiting = SafeRoom.ordered([
+    safeEntry("waiting", have: 1, required: 3, yourTurn: false, submittedAt: day(-9)),
+    safeEntry("ready", have: 3, required: 3, yourTurn: false, submittedAt: day(-1)),
+])
+check("fully-signed outranks still-collecting even when it arrived later",
+      safeReadyOverWaiting.first?.ref == "ready")
+let safeRoomReady = SafeRoom.compose(
+    entries: [safeEntry("a", have: 3, required: 3, submittedAt: day(-2))], safeCount: 1)
+check("a fully-signed queue says 'ready to execute', never 'waiting on others'",
+      SafeRoom.headline(safeRoomReady).contains("ready to execute")
+      && !SafeRoom.headline(safeRoomReady).contains("waiting on others"))
+check("a fully-signed transaction is not counted as a pending signature",
+      safeRoomReady.readyCount == 1 && safeRoomReady.awaitsYouCount == 0)
+let safeRoomBoth = SafeRoom.compose(
+    entries: [safeEntry("a", have: 1, required: 3, yourTurn: true, submittedAt: day(-2)),
+              safeEntry("b", have: 3, required: 3, submittedAt: day(-2))], safeCount: 1)
+check("the ready count the headline couldn't carry lands in the state note",
+      SafeRoom.stateNote(safeRoomBoth)?.contains("ready to execute") == true)
+check("the state note never restates a headline that already led with ready",
+      SafeRoom.stateNote(safeRoomReady) == nil)
+
+print("")
+print("Safe — rival transactions at one nonce (2026-08-17)")
+// A Safe executes exactly ONE transaction per nonce, so a signature spent on
+// the loser is spent for nothing (§238). Rivals share a Safe AND a nonce.
+// The unrelated entry sits BETWEEN the pair by age on purpose. The first
+// version of this fixture dated them -2/-1/-3, which plain age-sorting
+// already returns as c,a,b — so the pair was adjacent by accident and the
+// regroup mutation survived while the check read green (the harness trap this
+// file's siblings have paid for twice).
+let safeRivals = [safeEntry("a", submittedAt: day(-9), nonce: 7),
+                  safeEntry("b", submittedAt: day(-1), nonce: 7),
+                  safeEntry("c", submittedAt: day(-5), nonce: 8)]
+let safeRivalRoom = SafeRoom.compose(entries: safeRivals, safeCount: 1)
+check("two transactions at one nonce are contested", safeRivalRoom.contestedCount == 2)
+check("a lone transaction at its own nonce is not contested",
+      !safeRivalRoom.isContested(safeEntry("c", submittedAt: day(-5), nonce: 8)))
+check("an unknown nonce is never called a rival — we can't prove a collision we can't see",
+      SafeRoom.contestedKeys(in: [safeEntry("a", nonce: nil), safeEntry("b", nonce: nil)]).isEmpty)
+check("the same nonce on two DIFFERENT Safes is not a collision",
+      SafeRoom.contestedKeys(in: [safeEntry("a", nonce: 7, safe: "0xOne"),
+                                  safeEntry("b", nonce: 7, safe: "0xTwo")]).isEmpty)
+// The regroup is the point: ranked strictly by wait this is a, c, b — the
+// unrelated entry wedged between the rivals — and a pair that reads as two
+// unrelated rings invites exactly the wasted signature this warning exists to
+// prevent.
+check("rivals are drawn adjacent, even when an unrelated entry sorts between them",
+      Array(safeRivalRoom.entries.map { $0.ref }.prefix(3)) == ["a", "b", "c"])
+check("the regroup keeps every entry exactly once",
+      Set(safeRivalRoom.entries.map { $0.ref }).count == 3)
+check("a rival pair is said out loud, and says only one of them can execute",
+      SafeRoom.stateNote(safeRivalRoom)?.contains("only one of them can execute") == true)
+let safeTwoGroups = SafeRoom.compose(
+    entries: [safeEntry("a", nonce: 7), safeEntry("b", nonce: 7),
+              safeEntry("c", nonce: 9), safeEntry("d", nonce: 9)], safeCount: 1)
+check("two contested positions are counted as positions, not folded into one",
+      SafeRoom.stateNote(safeTwoGroups)?.contains("2 queue positions") == true)
+check("a rival warning outranks the ready count in the one note slot",
+      SafeRoom.stateNote(SafeRoom.compose(
+        entries: [safeEntry("a", have: 1, required: 3, yourTurn: true, nonce: 7),
+                  safeEntry("b", have: 1, required: 3, nonce: 7),
+                  safeEntry("c", have: 3, required: 3)],
+        safeCount: 1))?.contains("only one of them can execute") == true)
+
+print("")
 print("Safe — words")
 let safeRoomYourTurn = SafeRoom.compose(
     entries: [safeEntry("a", have: 2, required: 3, yourTurn: true, submittedAt: day(-2))],
-    safeCount: 1, moduleCount: 0)
+    safeCount: 1)
 check("your-turn count leads the headline over a bare pending count",
       SafeRoom.headline(safeRoomYourTurn).contains("Your signature is needed"))
 let safeRoomWaiting = SafeRoom.compose(
     entries: [safeEntry("a", have: 1, required: 3, yourTurn: false, submittedAt: day(-2))],
-    safeCount: 1, moduleCount: 0)
+    safeCount: 1)
 check("nobody's turn but something is pending — 'waiting on others', not the your-turn wording",
       SafeRoom.headline(safeRoomWaiting).contains("waiting on others"))
-let safeRoomQuiet = SafeRoom.compose(entries: [], safeCount: 2, moduleCount: 0)
+let safeRoomQuiet = SafeRoom.compose(entries: [], safeCount: 2)
 check("a quiet room with more than one Safe pluralises 'Safes'",
       SafeRoom.headline(safeRoomQuiet).contains("Safes"))
-let safeRoomModule = SafeRoom.compose(entries: [], safeCount: 1, moduleCount: 1)
+let safeRoomModule = SafeRoom.compose(entries: [], safeCount: 1,
+                                      moduleSafes: [.init(label: "treasury.eth", count: 1)])
 check("a module warning is stated even with nothing pending — the highest-stakes fact this bridge can carry",
       SafeRoom.note(safeRoomModule)?.contains("without a signature") == true)
+check("with only one Safe watched there is nothing to disambiguate, so the name would be noise",
+      SafeRoom.note(safeRoomModule)?.contains("treasury.eth") == false)
+// Naming it is the whole point once there is more than one: "1 module can move
+// funds without a signature" says a drain is possible and not WHERE.
+let safeRoomModuleNamed = SafeRoom.compose(entries: [], safeCount: 3,
+                                           moduleSafes: [.init(label: "treasury.eth", count: 1)])
+check("with several Safes watched the module warning names the one it means",
+      SafeRoom.note(safeRoomModuleNamed)?.contains("treasury.eth") == true)
+let safeRoomModulesSpread = SafeRoom.compose(
+    entries: [], safeCount: 3,
+    moduleSafes: [.init(label: "treasury.eth", count: 2), .init(label: "ops.eth", count: 1)])
+check("modules across several Safes count both the modules and the Safes",
+      SafeRoom.note(safeRoomModulesSpread)?.contains("3 modules across 2 Safes") == true)
+check("a Safe carrying no modules is not counted as a carrier",
+      SafeRoom.note(SafeRoom.compose(entries: [], safeCount: 2,
+                                     moduleSafes: [.init(label: "a.eth", count: 0)])) == nil)
 check("no module means no note at all — a second sentence that says nothing doesn't get to exist",
       SafeRoom.note(safeRoomWaiting) == nil)
-check("a Safe never detected at all is no card", SafeRoom.compose(entries: [], safeCount: 0, moduleCount: 0).isEmpty)
+check("a Safe never detected at all is no card", SafeRoom.compose(entries: [], safeCount: 0).isEmpty)
 check("today reads as 'today', not '0 days'",
       SafeRoom.waitLabel(safeEntry("a", submittedAt: t0), now: t0) == "today")
 check("a nil submittedAt reads as 'waiting', never a fabricated duration",
       SafeRoom.waitLabel(safeEntry("a", submittedAt: nil), now: t0) == "waiting")
 let safeFoot = SafeRoom.footnote(SafeRoom.compose(entries: [safeEntry("a"), safeEntry("b"), safeEntry("c"), safeEntry("d")],
-                                                  safeCount: 1, moduleCount: 0), drawn: 3)
+                                                  safeCount: 1), drawn: 3)
 check("entries beyond the row cap are counted in the footnote, never silently dropped",
       safeFoot == "1 more pending")
+
+print("")
+print("Safe — the stuck-signature line the brief and the widget read")
+// A your-turn signature notifies ONCE at landing and §306's 36-hour news
+// window forbids a second buzz forever after, so this is the only surface that
+// can ever re-raise a request nobody answered.
+let safeStuck = SafeRoom.compose(
+    entries: [safeEntry("a", have: 1, required: 3, yourTurn: true, submittedAt: day(-6),
+                        description: "a transfer of 1,500 USDC to payroll.eth")],
+    safeCount: 1)
+check("a signature waiting past the floor is measured in whole days",
+      SafeRoom.stuckDays(safeStuck, now: t0) == 6)
+check("the line names what is actually being asked of you",
+      SafeRoom.stuckLine(safeStuck, now: t0)?.contains("payroll.eth") == true)
+check("a request from this morning is not 'stuck' — that would just repeat yesterday's notification",
+      SafeRoom.stuckLine(SafeRoom.compose(
+        entries: [safeEntry("a", have: 1, required: 3, yourTurn: true, submittedAt: day(-1))],
+        safeCount: 1), now: t0) == nil)
+check("nothing awaiting you means nothing stuck, however old the queue is",
+      SafeRoom.stuckDays(SafeRoom.compose(
+        entries: [safeEntry("a", have: 1, required: 3, yourTurn: false, submittedAt: day(-40))],
+        safeCount: 1), now: t0) == nil)
 
 print("")
 if failures > 0 { print("\(failures) failed"); exit(1) }
@@ -1007,8 +1215,8 @@ mutate "tokens are ranked by recency before move count" railgun \
 # waiting on you) silently stop working while every other reading stays
 # correct.
 mutate "your turn no longer outranks waiting on others" safe \
-  'if a.yourTurn != b.yourTurn { return a.yourTurn && !b.yourTurn }' \
-  'if false { return a.yourTurn && !b.yourTurn }'
+  'if a.awaitsYou != b.awaitsYou { return a.awaitsYou && !b.awaitsYou }' \
+  'if false { return a.awaitsYou && !b.awaitsYou }'
 # The longest-waiting entry within a group loses its lead — a transaction
 # that has sat for nine days ranks behind one from yesterday, which is
 # exactly backwards for a card whose whole point is surfacing what has been
@@ -1017,5 +1225,75 @@ mutate "the oldest pending entry no longer leads within its group" safe \
   'if da != db { return da < db }' \
   'if da != db { return da > db }'
 
+# --- 2026-08-17: the three states, and the rivals ---------------------------
+
+# THE FALSE ALARM. `yourTurn` is `!hasSigned(you)` with no check that the
+# threshold isn't already met WITHOUT you, so a 2-of-3 whose other two owners
+# both signed claimed your signature was needed, ranked it first, and — since
+# §349's (7) — fired a lock-screen alarm for a transaction that needs nothing
+# from you. Dropping the `isReady` term restores exactly that bug.
+mutate "your signature is 'needed' on a transaction already fully signed without you" safe \
+  'var awaitsYou: Bool { yourTurn && !isReady }' \
+  'var awaitsYou: Bool { yourTurn }'
+# A transaction whose `confirmationsRequired` didn't parse arrives as 0/0.
+# Reading that as a met threshold reports something ready to execute on no
+# evidence at all — and it renders as a full green ring.
+mutate "an unread threshold counts as fully signed" safe \
+  'var isReady: Bool { required > 0 && have >= required }' \
+  'var isReady: Bool { have >= required }'
+# Fully-signed folded back into the pending count: "3 of 3 signatures pending —
+# waiting on others", which is false twice in one line (nobody's signature is
+# pending, and it isn't the others holding it up).
+mutate "fully-signed transactions are counted as pending signatures again" safe \
+  'if room.readyCount > 0 {' \
+  'if false {'
+# Ready loses its rank and sorts purely by age, so the one transaction anybody
+# can finish right now falls below one still collecting.
+mutate "a fully-signed transaction no longer outranks one still collecting" safe \
+  'if a.isReady != b.isReady { return a.isReady && !b.isReady }' \
+  'if false { return a.isReady && !b.isReady }'
+# A nonce we could not read becomes a rival of every other unreadable one —
+# a collision warning asserted on the absence of evidence, on the card whose
+# whole job is telling you which signature not to waste.
+mutate "an unknown nonce is treated as a queue position" safe \
+  'nonce.map { "\(safeAddress.lowercased())#\($0)" }' \
+  '"\(safeAddress.lowercased())#\(nonce ?? -1)"'
+# The same nonce on two DIFFERENT Safes reads as a collision. They are separate
+# queues; only the pair (Safe, nonce) is a position.
+mutate "a queue position stops being scoped to its own Safe" safe \
+  '"\(safeAddress.lowercased())#\($0)"' \
+  '"#\($0)"'
+# Rivals stop being pulled adjacent. The sentence still says two of these
+# collide and nothing on screen says WHICH two — worse than silence, since it
+# invites the wasted signature.
+mutate "rivals are no longer drawn beside each other" safe \
+  'guard !contested.isEmpty else { return sorted }' \
+  'return sorted; guard !contested.isEmpty else { return sorted }'
+# The rival warning yields the note slot to the ready count — losing the one
+# fact nothing else in this app surfaces, in favour of one the rings already
+# show.
+mutate "the ready count outranks a nonce collision in the one note slot" safe \
+  'if room.contestedCount > 1 {' \
+  'if false {'
+# The module warning stops naming its Safe once several are watched, so a
+# person told their funds can move without a signature is not told where.
+mutate "the module warning stops naming which Safe it means" safe \
+  'guard room.safeCount > 1, let only = carriers.first else {' \
+  'guard false, let only = carriers.first else {'
+# A Safe with zero modules counts as a carrier, so a room with no module risk
+# at all grows an alarm sentence about nothing.
+mutate "a Safe carrying no modules is counted as a carrier" safe \
+  'let carriers = room.moduleSafes.filter { $0.count > 0 }' \
+  'let carriers = room.moduleSafes'
+# The stuck floor disappears, so the brief repeats yesterday's notification as
+# today's headline, every day, forever.
+mutate "a signature asked for this morning is already 'stuck'" safe \
+  'guard let days = stuckDays(room, now: now), days >= stuckFloor,' \
+  'guard let days = stuckDays(room, now: now), days >= 0,'
+# The brief's lede reports a fully-signed transaction as a signature waiting on
+# you — the false alarm again, one surface over.
+mutate "a fully-signed transaction is reported as a stuck signature" safe \
+  'let dates = room.entries.filter(\.awaitsYou).compactMap(\.submittedAt)' \
+  'let dates = room.entries.filter(\.yourTurn).compactMap(\.submittedAt)'
 echo ""
 echo "wallet-rooms-selftest: OK — assertions pass and every mutation is caught."

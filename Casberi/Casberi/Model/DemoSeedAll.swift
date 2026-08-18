@@ -2141,15 +2141,31 @@ enum DemoSeedAll {
         // Morpho still are. Title shape and ref match `SafeBridge.swift`'s
         // real "N of M signatures collected on … — waiting on others / —
         // your signature is needed", `"wallet:safe:<chainSeg>:<txHash>"`.
-        let safeTxs: [(String, Bool, Double)] = [
-            ("2 of 3 signatures collected on sending 1,500 USDC to payroll.eth — your signature is needed", true, 2),
-            ("1 of 3 signatures collected on approving Uniswap to spend 2,000 USDC — waiting on others", false, 9),
+        //
+        // Four rows, not two, since 2026-08-17 — the demo has to be able to
+        // SHOW the three states the head distinguishes, or the states ship
+        // unseen (the standing demo-parity rule, and `verify.sh`'s room-head
+        // check reads this corpus). Titles and tags match `SafeBridge.rowFace`
+        // exactly, including the fully-signed face, which is a different
+        // sentence and a different tag rather than "3 of 3".
+        let safeTxs: [(title: String, tags: [String], days: Double)] = [
+            ("2 of 3 signatures collected on sending 1,500 USDC to payroll.eth — your signature is needed",
+             ["Your turn"], 5),
+            ("Fully signed — sending 900 USDC to vendor.eth is ready to execute",
+             ["Ready to execute"], 4),
+            ("1 of 3 signatures collected on approving Uniswap to spend 2,000 USDC — waiting on others",
+             [], 9),
+            // The rival: same Safe, same nonce as the row above it. Only one of
+            // the two can ever execute, which is the fact §238 could state in
+            // the sheet and the head could not until the nonce was tracked.
+            ("1 of 3 signatures collected on revoking Uniswap's spending approval — waiting on others",
+             [], 6),
         ]
         out += safeTxs.enumerated().map { i, s in
-            row(.transaction, s.0, source: "Safe", ref: "wallet:safe:eth:demo\(i)",
-                days: s.2, hour: 15) { t in
+            row(.transaction, s.title, source: "Safe", ref: "wallet:safe:eth:demo\(i)",
+                days: s.days, hour: 15) { t in
                 t.walletAddress = demoWallet
-                if s.1 { t.tags = ["Your turn"] }
+                t.tags = s.tags
             }
         }
         return out
@@ -3251,11 +3267,20 @@ enum DemoSeedAll {
         // state, not the seeded `.transaction` things above (`SafeRoomSource`'s
         // own doc) — refs match the `wallet:safe:eth:demo0/1` rows in `wallet()`
         // exactly, so a tap on either ring opens the real seeded thing.
+        // Nonces are the point of the last two: 44 twice is a real rival pair,
+        // so the head draws them adjacent, marks both rings and says only one
+        // of them can execute. `demo0` sits 5 days back so the brief's stuck-
+        // signature lede (`SafeRoom.stuckFloor`, 3 days) has something true to
+        // say in the demo rather than shipping unseen.
         SafeBridge.seedDemoSnapshot(safeAddress: demoWallet, pending: [
-            (ref: "wallet:safe:eth:demo0", have: 2, required: 3, yourTurn: true, daysAgo: 2,
-             descriptionText: "a transfer of 1,500 USDC to payroll.eth"),
-            (ref: "wallet:safe:eth:demo1", have: 1, required: 3, yourTurn: false, daysAgo: 9,
-             descriptionText: "an approval for Uniswap to spend 2,000 USDC"),
+            (ref: "wallet:safe:eth:demo0", have: 2, required: 3, yourTurn: true, daysAgo: 5,
+             descriptionText: "a transfer of 1,500 USDC to payroll.eth", nonce: 42),
+            (ref: "wallet:safe:eth:demo1", have: 3, required: 3, yourTurn: false, daysAgo: 4,
+             descriptionText: "a transfer of 900 USDC to vendor.eth", nonce: 43),
+            (ref: "wallet:safe:eth:demo2", have: 1, required: 3, yourTurn: false, daysAgo: 9,
+             descriptionText: "an approval for Uniswap to spend 2,000 USDC", nonce: 44),
+            (ref: "wallet:safe:eth:demo3", have: 1, required: 3, yourTurn: false, daysAgo: 6,
+             descriptionText: "a revoke of Uniswap's spending approval", nonce: 44),
         ])
 
         // 8 · The watched social accounts (2026-08-11). The social rooms grew

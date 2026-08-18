@@ -49,6 +49,11 @@ enum WidgetPublish {
                                stampKey: WidgetDeadlines.stampKey, defaults: group) {
             stale.append(WidgetDeadlines.kind)
         }
+        // Rides the same tile, so it reloads the same kind — see `safeCall`.
+        if WidgetPayload.write(safeCall(things: things), key: WidgetSafe.key,
+                               stampKey: WidgetSafe.stampKey, defaults: group) {
+            stale.append(WidgetDeadlines.kind)
+        }
         if WidgetPayload.write(wallet(), key: WidgetWallet.key,
                                stampKey: WidgetWallet.stampKey, defaults: group) {
             stale.append(WidgetWallet.kind)
@@ -259,6 +264,33 @@ enum WidgetPublish {
             .map { WidgetDeadline(id: $0.id.uuidString, title: $0.title,
                                   source: $0.source, due: $0.dueAt ?? now) }
         return rows.isEmpty ? nil : Array(rows)
+    }
+
+    /// The signature a co-signer is waiting on, for the same tile (2026-08-17).
+    ///
+    /// Published SEPARATELY from `deadlines` rather than folded into it, and the
+    /// separation is the whole design: a your-turn signature carries no due
+    /// date, so it cannot be a `WidgetDeadline` without inventing one — and an
+    /// invented date would sort among real deadlines and draw itself late. It is
+    /// a reading and takes the reading's short shelf life (`WidgetSafe`).
+    ///
+    /// Reads the room head rather than the corpus, so the tile and the room can
+    /// never disagree about how many transactions need you; `things` is used
+    /// only to resolve the lead's `sourceRef` into an id the tile can open. That
+    /// lookup deliberately does NOT fetch: the id is a convenience (the tile
+    /// falls back to the ask when it is nil), and a second fetch on every
+    /// foreground for a convenience is not a trade this pass makes.
+    @MainActor
+    static func safeCall(things: [Thing], now: Date = .now) -> WidgetSafeCall? {
+        guard let room = SafeRoomSource.compose(things: things, now: now),
+              let lead = room.entries.first(where: \.awaitsYou)
+        else { return nil }
+        let id = things.live.first { $0.sourceRef == lead.ref }?.id.uuidString
+        return WidgetSafeCall(id: id,
+                              subject: lead.descriptionText,
+                              awaitsYou: room.awaitsYouCount,
+                              ready: room.readyCount,
+                              waitingDays: SafeRoom.stuckDays(room, now: now))
     }
 
     /// How far back an overdue thing still counts as wanting something from you.

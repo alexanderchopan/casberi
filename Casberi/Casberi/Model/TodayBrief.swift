@@ -485,10 +485,21 @@ enum TodayBrief {
 
         // 1. The lede — the day in ONE sentence, in display type, above
         // everything (user, 2026-07-25: "that line should be above wallet").
-        // A ranked ladder since §214: risk, then money, then a person, then a
-        // deadline. Nothing is padded to fill the slot — an empty ladder emits
-        // no lede and the brief opens on the hero instead.
-        let lede = ledeLine(move: move, risk: risk, landed: landed, things: things,
+        // A ranked ladder since §214: risk, then a stuck signature, then
+        // money, then a person, then a deadline. Nothing is padded to fill the
+        // slot — an empty ladder emits no lede and the brief opens on the hero
+        // instead.
+        //
+        // The Safe rung is computed HERE rather than inside `ledeLine` for the
+        // same reason `risk` and `move` are: the ladder stays a pure ranking
+        // over facts it is handed, and the SCOPE decision lives with its
+        // siblings. It needs no `presenting`/`skipLiveReads` gate, unlike them
+        // — it is a UserDefaults read and some arithmetic, reaching no network
+        // at all, so even the draft pass gets a true sentence rather than one
+        // that arrives seconds later.
+        let stuckSignature = scopedToMoney ? safeStuckLine(now: now) : nil
+        let lede = ledeLine(move: move, risk: risk, stuckSignature: stuckSignature,
+                            landed: landed, things: things,
                             now: now, alerted: alerts?.ids ?? [])
         // THE MONUMENT (2026-08-16, mockup C, user: "ok do c") — the day's one
         // figure at display scale, with the sentence demoted to its support
@@ -1918,6 +1929,13 @@ enum TodayBrief {
     /// money isn't lost when that happens — its attribution falls back to a
     /// synthesis note, which is where it lived before the crown pass.
     ///
+    /// A stuck Safe signature sits between them for the same reason and one
+    /// more: it is the only rung with a PERSON waiting at the other end, and
+    /// the only obligation in this app that nothing else re-raises — a
+    /// your-turn signature notifies once at landing and §306's news window
+    /// forbids a second buzz forever after. It sets `tookRisk` exactly as rung
+    /// 1 does, so the money keeps its synthesis seat.
+    ///
     /// Every rung yields rather than padding: no debt, no risk line; no
     /// snapshot pair spanning the window, no money line; and an empty ladder
     /// returns "" so the brief simply opens on the hero.
@@ -1931,6 +1949,7 @@ enum TodayBrief {
     /// anyway, so a lede that named a mention instead would leave the crown
     /// uncaptioned. Don't "fix" one to match the other.
     private static func ledeLine(move: DayBrief.WalletMove?, risk: DeFiRisk.Debt?,
+                                 stuckSignature: String? = nil,
                                  landed: [Thing], things: [Thing],
                                  now: Date, alerted: Set<UUID> = []) -> Lede {
         // 1. Something is close to liquidation.
@@ -1940,16 +1959,37 @@ enum TodayBrief {
                 "Your \(risk.protocolName) position on \(chain) is close to liquidation — health factor \(WalletIngest.format(risk.hf))."),
                         tookRisk: true)
         }
-        // 2. The money moved.
+        // 2. A person is blocked on your signature, and has been for days.
+        //
+        // It outranks the money for the reason this ladder is ordered by —
+        // what can still cost you — and because it is the one obligation here
+        // with a HUMAN on the other end of it: a payroll transfer that hasn't
+        // gone out because nobody asked you again. Only you can clear it.
+        //
+        // It exists because nothing else re-raises this. A your-turn signature
+        // notifies exactly once, at landing, and §306's 36-hour news window
+        // means it structurally cannot notify again — so a request that has sat
+        // for a week has had no surface at all since the day it arrived. The
+        // brief is the honest place for that: it is a thing you open, not a
+        // buzz, so restating a standing obligation here is a recap and not a
+        // second alarm. `SafeRoom.stuckFloor` (3 days) is what keeps it from
+        // being a daily repeat of yesterday's notification.
+        //
+        // `tookRisk` for the same reason rung 1 sets it: the money's
+        // attribution isn't lost, it falls back to a synthesis note.
+        if let stuckSignature {
+            return Lede(text: stuckSignature + ".", tookRisk: true)
+        }
+        // 3. The money moved.
         let money = walletAttribution(move)
         if !money.text.isEmpty { return money }
-        // 3. Someone addressed you by name. The mention card below shows the
+        // 4. Someone addressed you by name. The mention card below shows the
         // POST; this says who, which is the half a headline is for.
         if let mention = landed.first(where: { $0.socialContext == "mention" }),
            let who = mention.authorHandle, !who.isEmpty {
             return Lede(text: String(localized: "\(who) mentioned you."))
         }
-        // 4. The deadlines — as a SHAPE when the runway will draw one, as the
+        // 5. The deadlines — as a SHAPE when the runway will draw one, as the
         // item itself when it won't (2026-08-13).
         //
         // It used to always name the nearest item, which on any scope with a
@@ -2002,6 +2042,25 @@ enum TodayBrief {
                 : String(localized: "\(name) is due today\(stop)"))
         }
         return Lede()
+    }
+
+    /// The lede's second rung: a Safe signature that has been waiting on you
+    /// for `SafeRoom.stuckFloor` days or more (2026-08-17).
+    ///
+    /// Costs nothing — `SafeRoomSource.compose` reads `SafeBridge`'s own
+    /// persisted tracking snapshot, which the sync pass keeps current
+    /// regardless of whether anything landed. No request, no fetch, no new
+    /// `Thing` property, so it is safe to run on the draft pass and on every
+    /// background digest.
+    ///
+    /// Nil is the overwhelmingly common answer: most people have no Safe, and
+    /// of those who do, most have nothing waiting on them. The whole judgement
+    /// (which entry, the floor, whether the wire even carried a submission
+    /// date to measure from) lives in `SafeRoom`, where the harness compiles
+    /// it — this is only the door.
+    private static func safeStuckLine(now: Date) -> String? {
+        guard let room = SafeRoomSource.compose(now: now) else { return nil }
+        return SafeRoom.stuckLine(room, now: now)
     }
 
     /// One errand, one row — the same task tracked in two apps counted once
@@ -2093,7 +2152,7 @@ enum TodayBrief {
     }
 
     /// The nearest open deadline falling inside today, overdue included — the
-    /// lede's fourth rung. Nil when the next deadline is tomorrow or later:
+    /// lede's last rung. Nil when the next deadline is tomorrow or later:
     /// "due Thursday" is not a headline, it's the `NextTile`'s job.
     private static func dueToday(_ things: [Thing], now: Date = .now) -> Thing? {
         let calendar = Calendar.current

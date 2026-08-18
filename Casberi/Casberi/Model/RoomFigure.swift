@@ -38,6 +38,31 @@ enum RoomFigure {
                                            detail: $0.posts.formatted())
                         }))
         }
+        // Safe is the second exception, and for X's exact reason (2026-08-17):
+        // its head is a FIGURE, not a text hero — rings, one per pending
+        // transaction, ranked. Leaving it out made the peek preview NOTHING at
+        // all (no topic map, no leaderboard, no heatmap registry entry), so
+        // long-pressing the one chip whose room might be asking for your
+        // signature previewed a blank.
+        //
+        // Bars rather than a rail: the room's subject is a COUNT toward a
+        // threshold, which is what the rings draw, and a rail would restate it
+        // as a proportion — the exact shape `SafeRoomCard` rejected.
+        if source == SafeRoomSource.source, let room = SafeRoomSource.compose(things: things) {
+            let rows = room.entries.prefix(4)
+            guard !rows.isEmpty else {
+                // Module risk with an empty queue: the head still draws (it is
+                // the highest-stakes thing this bridge says) but there are no
+                // rings to preview, and a tile with no bars is a broken tile.
+                return nil
+            }
+            return card(SafeRoom.headline(room),
+                        SafeRoom.stateNote(room) ?? SafeRoom.note(room) ?? "",
+                        .bars(rows.map {
+                            AgentPanel.Bar(label: SafeRoom.waitLabel($0), value: $0.have,
+                                           detail: "\($0.have)/\($0.required)")
+                        }))
+        }
         if let map = FeedInsight.topicMap(source: source, things: things) {
             // Four rows, not six: the inventory of small forms is explicit that
             // a six-cell map's last slot is one grid unit wide and its label

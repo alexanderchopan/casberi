@@ -2511,12 +2511,16 @@ struct FeedScreen: View {
                         }
                     }
                 case .safe(let room):
-                    SafeRoomCard(room: room) { entry in
+                    // `fallbackRef` is what the card opens when nothing is
+                    // pending and only a module warning stands — without it
+                    // that card announced a door and had none (2026-08-17).
+                    SafeRoomCard(room: room,
+                                 fallbackRef: SafeRoomSource.fallbackRef(things: visible)) { ref in
                         // Unlike its siblings, a Safe entry OWNS a single row
                         // — the tracking snapshot is keyed by the pending
                         // thing's own `sourceRef` — so this is a direct
                         // lookup, not a newest-of-many match.
-                        openBySourceRef(entry.ref, in: visible)
+                        openBySourceRef(ref, in: visible)
                     }
                 case .x(let room):
                     XRoomCard(room: room) { year in

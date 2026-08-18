@@ -357,13 +357,14 @@ enum SafeBridge {
     /// build on a demo-facing seed function that isn't.
     static func seedDemoSnapshot(safeAddress: String,
                                  pending: [(ref: String, have: Int, required: Int,
-                                           yourTurn: Bool, daysAgo: Double, descriptionText: String)]) {
+                                           yourTurn: Bool, daysAgo: Double, descriptionText: String,
+                                           nonce: Int?)]) {
         rememberDetected(chains[0], safeAddress)
         for p in pending {
             trackPending(ref: p.ref, seg: chains[0].seg, safeAddress: safeAddress, ownerAddress: safeAddress,
                         have: p.have, required: p.required, yourTurn: p.yourTurn,
                         submittedAt: Date.now.addingTimeInterval(-p.daysAgo * 86_400),
-                        descriptionText: p.descriptionText)
+                        descriptionText: p.descriptionText, nonce: p.nonce)
         }
     }
 
@@ -720,6 +721,7 @@ enum SafeBridge {
     static func sync(context: ModelContext, addresses: [String], existing: Set<String>) async -> Int {
         guard !addresses.isEmpty else { return 0 }
         var added = 0
+        var heals: [Heal] = []
         var configChecked = Set<String>()   // one config check per (chain,safe) per pass
         for candidate in await candidates(addresses: addresses) {
             let chain = candidate.chain
@@ -760,26 +762,32 @@ enum SafeBridge {
                 // honestly say whose turn it is. Watching the Safe's own
                 // address doesn't tell us which of its N owners you are.
                 let yourTurn = candidate.viaOwner.map { !hasSigned(tx, owner: $0) } ?? false
+                let face = rowFace(have: have, required: required, yourTurn: yourTurn,
+                                   knowsYou: candidate.viaOwner != nil, description: description)
                 if !existing.contains(ref) {
-                    var title = String(localized:
-                        "\(have) of \(required) signatures collected on \(description)")
-                    if let owner = candidate.viaOwner {
-                        title += hasSigned(tx, owner: owner)
-                            ? String(localized: " — waiting on others")
-                            : String(localized: " — your signature is needed")
-                    }
-                    let thing = Thing(kind: .transaction, title: title, source: sourceName, sourceRef: ref)
+                    let thing = Thing(kind: .transaction, title: face.title,
+                                      source: sourceName, sourceRef: ref)
                     thing.walletAddress = candidate.viaOwner ?? safeAddress
                     // Tagged structurally (not parsed from the title above) so
                     // `NotifySweep.classify` can tell "your turn" apart from
                     // "waiting on others" without the localized-string trap —
                     // the Stripe/Cursor/Apple-Wallet tag shape.
-                    if yourTurn { thing.tags = ["Your turn"] }
+                    thing.tags = face.tags
                     context.insert(thing)
                     SpotlightIndex.index([thing])
                     added += 1
                     noteThresholdIfMet(chain: chain, safeTxHash: safeTxHash, have: have, required: required,
                                        tx: tx, safeAddress: safeAddress, facts: facts)
+                } else {
+                    // ALREADY LANDED — and until 2026-08-17 that meant the row
+                    // was never touched again, while `trackPending` below kept
+                    // refreshing the very same counts for the room head. So the
+                    // feed went on saying "2 of 3 — your signature is needed"
+                    // after two more owners signed, or after YOU signed in the
+                    // Safe app, until execution finally landed a closing row;
+                    // the head one line above it said something else. Collected
+                    // as a value and applied after the loop — see `heals`.
+                    heals.append(Heal(ref: ref, title: face.title, tags: face.tags))
                 }
                 // Seed/refresh tracking so this pending transaction's eventual
                 // resolution (executed, or replaced by a rival at the same
@@ -789,13 +797,93 @@ enum SafeBridge {
                 trackPending(ref: ref, seg: chain.seg, safeAddress: safeAddress, ownerAddress: candidate.viaOwner,
                             have: have, required: required, yourTurn: yourTurn,
                             submittedAt: ClaudeImport.parseDate(tx["submissionDate"] as? String),
-                            descriptionText: description)
+                            descriptionText: description, nonce: tx["nonce"] as? Int)
             }
             added += await resolveTracking(context: context, chain: chain, safeAddress: safeAddress,
                                            pending: pending, currentNonce: currentNonce, existing: existing)
         }
-        if added > 0 { context.saveHonestly() }
+        let healed = apply(heals, context: context)
+        if added > 0 || healed { context.saveHonestly() }
         return added
+    }
+
+    // MARK: - Keeping a landed row true
+
+    /// One already-landed pending row's face as this pass reads it. A VALUE,
+    /// collected inside the async walk and applied afterwards — never a
+    /// `Thing` held across an `await`, which is the liveness class corollary 6
+    /// exists for (`SafeBridge.sync` suspends on every chain, every queue read
+    /// and every token-facts prefetch, and the app deletes `Thing`s on the
+    /// main context throughout).
+    private struct Heal {
+        let ref: String
+        let title: String
+        let tags: [String]
+    }
+
+    /// Rewrites the landed rows whose face actually moved, and says whether
+    /// anything changed.
+    ///
+    /// One fetch for the whole pass, taken HERE rather than before the walk so
+    /// no model crosses a suspension, and the write is unconditional on
+    /// nothing: a row whose title and tags already match is left alone, or
+    /// every sync would dirty the context (and re-emit the feed's `@Query`)
+    /// for a queue that hasn't moved in a week.
+    @MainActor
+    private static func apply(_ heals: [Heal], context: ModelContext) -> Bool {
+        guard !heals.isEmpty else { return false }
+        let landed = IngestSupport.thingsByRef(context, source: sourceName)
+        var changed = false
+        for heal in heals {
+            guard let thing = landed[heal.ref], thing.isLive else { continue }
+            guard thing.title != heal.title || thing.tags != heal.tags else { continue }
+            thing.title = heal.title
+            thing.tags = heal.tags
+            SpotlightIndex.index([thing])
+            changed = true
+        }
+        return changed
+    }
+
+    /// The title and tags one pending transaction wears — the SINGLE
+    /// definition, read by both the landing path and the heal above so a row
+    /// cannot say one thing when it arrives and another when it updates.
+    ///
+    /// "Ready to execute" is its own face rather than a fraction (2026-08-17).
+    /// `have >= required` means the threshold is MET: nobody's signature is
+    /// pending and what it waits on is an execution, so "3 of 3 signatures
+    /// collected — waiting on others" was wrong twice in one line. §238 named
+    /// this state for its delight toast and no row ever wore it.
+    ///
+    /// It also fixes a false alarm: `yourTurn` is `!hasSigned(you)` alone, so
+    /// a 2-of-3 whose other two owners had both signed said "your signature is
+    /// needed" and — since (7) — fired a lock-screen alarm for a transaction
+    /// that needed nothing from you. The ready branch is tested FIRST, and the
+    /// "Your turn" tag `NotifySweep` keys on now rides `awaitsYou`.
+    ///
+    /// The rule itself lives in `SafeRoom.Entry`, which is Foundation-only and
+    /// harness-compiled — two copies of "what does ready mean" would drift,
+    /// and then the feed row and the room head above it would disagree about
+    /// the same transaction.
+    static func rowFace(have: Int, required: Int, yourTurn: Bool, knowsYou: Bool,
+                        description: String) -> (title: String, tags: [String]) {
+        let entry = SafeRoom.Entry(ref: "", safeAddress: "", have: have, required: required,
+                                   yourTurn: yourTurn, submittedAt: nil,
+                                   descriptionText: description, nonce: nil)
+        if entry.isReady {
+            return (String(localized: "Fully signed — \(description) is ready to execute"),
+                    ["Ready to execute"])
+        }
+        var title = String(localized: "\(have) of \(required) signatures collected on \(description)")
+        // No suffix at all when the Safe is watched directly — see `yourTurn`'s
+        // own note at the call site: we don't know which owner you are.
+        guard knowsYou else { return (title, []) }
+        if entry.awaitsYou {
+            title += String(localized: " — your signature is needed")
+            return (title, ["Your turn"])
+        }
+        title += String(localized: " — waiting on others")
+        return (title, [])
     }
 
     // MARK: - Moments (2026-07-30)
@@ -850,6 +938,14 @@ enum SafeBridge {
         var yourTurn: Bool?
         var submittedAt: Date?
         var descriptionText: String?
+        /// The Safe's own nonce — the queue POSITION (2026-08-17). Two
+        /// tracked transactions sharing one are rivals: a Safe executes
+        /// exactly one per nonce, so a signature spent on the loser is spent
+        /// for nothing (§238, which could state this in the sheet and not at
+        /// the room head, because this field wasn't kept). Optional like its
+        /// neighbours, so an entry written before this shipped decodes fine
+        /// and picks the nonce up on the next sync pass.
+        var nonce: Int?
     }
     private static let trackingKey = "wallet.safe.tracking.v1"
 
@@ -871,7 +967,7 @@ enum SafeBridge {
     /// (`seg`/`safeAddress`/`ownerAddress`) are set once and never rewritten.
     private static func trackPending(ref: String, seg: String, safeAddress: String, ownerAddress: String?,
                                      have: Int, required: Int, yourTurn: Bool,
-                                     submittedAt: Date?, descriptionText: String) {
+                                     submittedAt: Date?, descriptionText: String, nonce: Int? = nil) {
         var tracking = loadTracking()
         var entry = tracking[ref] ?? TrackEntry(seg: seg, safeAddress: safeAddress, ownerAddress: ownerAddress)
         entry.have = have
@@ -879,6 +975,7 @@ enum SafeBridge {
         entry.yourTurn = yourTurn
         entry.submittedAt = submittedAt
         entry.descriptionText = descriptionText
+        entry.nonce = nonce
         tracking[ref] = entry
         saveTracking(tracking)
     }
@@ -896,6 +993,11 @@ enum SafeBridge {
         let yourTurn: Bool
         let submittedAt: Date?
         let descriptionText: String
+        /// The queue position — see `TrackEntry.nonce`. Nil for an entry
+        /// tracked before 2026-08-17 and not yet re-seen by a sync pass;
+        /// `SafeRoom` never treats an unknown position as a rival, so the
+        /// gap costs a missing warning and never a false one.
+        let nonce: Int?
     }
 
     /// Every pending transaction this app is currently watching for a
@@ -905,7 +1007,8 @@ enum SafeBridge {
         loadTracking().map { ref, e in
             PendingSnapshot(ref: ref, safeAddress: e.safeAddress, ownerAddress: e.ownerAddress,
                             have: e.have ?? 0, required: e.required ?? 0, yourTurn: e.yourTurn ?? false,
-                            submittedAt: e.submittedAt, descriptionText: e.descriptionText ?? "")
+                            submittedAt: e.submittedAt, descriptionText: e.descriptionText ?? "",
+                            nonce: e.nonce)
         }
     }
 
