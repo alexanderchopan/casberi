@@ -5061,6 +5061,25 @@ struct FeedScreen: View {
             && (thing.tags.contains("Access") || thing.tags.contains("Account"))
     }
 
+    /// A row in the X room that is a POST — the rows this room draws as a
+    /// card rather than as a band (2026-08-18, prd §395a).
+    ///
+    /// ONE definition with TWO readers, and that is the point: `shapedRow`
+    /// picks the anatomy and `standsAlone` decides whether it gets a surface
+    /// of its own, and when those two disagreed the room drew post cards
+    /// squeezed into a merged run of bare rows — a card by anatomy with no
+    /// card under it. Spelling the test twice is how they would drift again.
+    ///
+    /// Everything that is NOT a post says so by being something else: the
+    /// app's own import receipt, a DM transcript, and the account's own record
+    /// (a connected app, the day you joined, a handle you used to wear).
+    private static func isXPostRow(_ thing: Thing) -> Bool {
+        thing.isLive
+            && !Corpus.isImportReceipt(thing)
+            && thing.kind != .chat
+            && !isXAccountRow(thing)
+    }
+
     /// A tile whose picture is one FRAME of a video, so the grid can mark it.
     ///
     /// The mark is not decoration and its absence was a small lie: a poster
@@ -5478,6 +5497,15 @@ struct FeedScreen: View {
         guard thing.modelContext != nil else { return false }
         if thing.kind == .approval && thing.mark != .done { return true }  // consent card
         if shape == .social { return true }                                // PostCard, media at width
+        // The X room's posts are the same anatomy and were missing this
+        // (2026-08-18, prd §395a): §313 gave that room its OWN shape rather
+        // than reusing `.social`, and this registry was one of the things the
+        // new case never joined — so a room of post cards drew them merged
+        // into a run of bare rows, which is exactly what "it reads like a row,
+        // not a card" describes. Scoped to the POSTS: the receipt, a DM
+        // transcript and the account's own record are bands and merge the way
+        // every other band does.
+        if shape == .x { return Self.isXPostRow(thing) }
         if shape == .chat && thing.mark == .doing { return true }          // TakeawayCard
         if TokenPulse.shared.pulse(for: thing) != nil { return true }      // TokenRow fat anatomy
         if PredictionPulse.shared.pulse(for: thing) != nil { return true } // PredictionRow, same
@@ -5863,32 +5891,32 @@ struct FeedScreen: View {
             // All) and a DM conversation, which is a transcript and reads as
             // the excerpt every other chat room draws.
             case .x:
-                if Corpus.isImportReceipt(thing) {
-                    BandRow(thing: thing,
-                            emphasized: thing.id == nextEventID,
-                            live: false,
-                            imageOnly: imageOnly,
-                            wideArt: wideArt)
-                } else if thing.kind == .chat {
-                    ExcerptRow(thing: thing, lines: 2)
+                if !Self.isXPostRow(thing) {
+                    // A DM is a transcript and reads as the excerpt every
+                    // other chat room draws; everything else that isn't a post
+                    // — the import receipt, a connected app, the day you
+                    // joined, a handle you used to wear — has no author at
+                    // all, so a post card would draw a face and a handle over
+                    // a fact about the account.
+                    if thing.kind == .chat {
+                        ExcerptRow(thing: thing, lines: 2)
+                    } else {
+                        BandRow(thing: thing,
+                                emphasized: thing.id == nextEventID,
+                                live: false,
+                                imageOnly: imageOnly,
+                                wideArt: wideArt)
+                    }
                 } else if let kids = replies[thing.id.uuidString], !kids.isEmpty {
                     // A self-thread's head, drawn with its continuations
                     // (2026-08-18, prd §395) — the social rooms' card, on the
                     // room that has the deepest threads in the corpus.
-                    SocialThreadCard(head: thing, replies: kids)
-                } else if Self.isXAccountRow(thing) {
-                    // The account's own record (2026-08-18, prd §395): a
-                    // connected app, the day you joined, a handle you used to
-                    // wear. None of them is a post and none has an author, so
-                    // a post card would draw a face and a handle over a fact
-                    // about the account — a plain band is what these are.
-                    BandRow(thing: thing,
-                            emphasized: thing.id == nextEventID,
-                            live: false,
-                            imageOnly: imageOnly,
-                            wideArt: wideArt)
+                    SocialThreadCard(head: thing, replies: kids, whole: true)
                 } else {
-                    PostCard(thing: thing)
+                    // WHOLE, not clamped (2026-08-18, prd §395a). This room is
+                    // an archive of somebody's own writing and the words are
+                    // the entire content of every row — see `PostCard.whole`.
+                    PostCard(thing: thing, whole: true)
                 }
             case .instagram:
                 // Our own note about the import keeps its plain band, and a
@@ -6470,6 +6498,14 @@ struct FeedScreen: View {
         let rows = rows.filter(\.isLive)
         guard source != "All" else { return "\(rows.count)" }
         if shape == .social {
+            return rows.count == 1 ? "1 post" : "\(rows.count) posts"
+        }
+        // The X room says posts too, and only when every row in the group IS
+        // one (2026-08-18, prd §395a). Its rows are `.note` and `.link` by
+        // kind, so the general path below called a day of your own writing "12
+        // notes"; but the room also holds connected apps and the day you
+        // joined, and calling those posts would be worse than saying things.
+        if shape == .x, rows.allSatisfy(Self.isXPostRow) {
             return rows.count == 1 ? "1 post" : "\(rows.count) posts"
         }
         let kinds = Set(rows.map(\.kind))

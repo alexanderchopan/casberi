@@ -25280,3 +25280,85 @@ skipped and counted (§280's ruling: somebody else's words truncated at 140).
 The client each post was written from (`source`, an HTML anchor on every tweet
 and an era reading nothing else can give) was offered and NOT picked this pass;
 it is free, already in the file, and still there.
+
+## §395a — A post reads as a post: the X room's rows get their card back, and the whole tweet (user: "for example, I would think it should show the whole tweet for every tweet, not just in a row, but more like a card", 2026-08-18)
+
+Two separate causes, both of them a new shape failing to join a registry the
+old one was already in — §313 gave X its OWN `FeedScreen.Shape` rather than
+reusing `.social`, for good reasons, and then inherited none of what that case
+had accumulated.
+
+### 1. The card was never there
+
+`standsAlone` is what decides whether a row keeps a SURFACE — `shapedListRow`
+passes `bare: !standsAlone(thing)`, and a bare row renders `Color.clear` while a
+standing one gets `dayCardBackground` with its shoulders and its shadow. That
+registry has read `if shape == .social { return true }` since the post card was
+built, with the comment "PostCard, media at width", and `.x` was never added to
+it. So the X room drew post cards — the designed anatomy, author line, avatar,
+words, media at card width — merged into a run of bare rows on the ink. A card
+by anatomy with no card under it, which is exactly what "it reads like a row,
+not a card" describes.
+
+**Scoped to the posts**, and that is what forced the second half of this
+change. The room also holds the import receipt, DM transcripts and (as of §395)
+the account's own record — a connected app, the day you joined, a handle you
+used to wear. None of those is a post; all of them are bands and should merge
+the way every other band does.
+
+**Which means `shapedRow` and `standsAlone` had to agree, so they now read ONE
+predicate.** `isXPostRow` is the whole test, and both call it. The alternative
+was spelling the same four clauses in two files' worth of branches, which is
+how they would drift again — and the failure would be silent in the ugly
+direction: a connected app wearing a post's card, or a post losing one.
+`countLabel` reads it too, so a day of your own writing says "12 posts" instead
+of "12 notes" — but only when every row in the group really is a post, since
+calling the day you joined X a post is worse than calling it a thing.
+
+### 2. The tweet was cut at six lines
+
+`PostCard` clamps its words at six lines, with a comment that is right for what
+it was written for: "a row still has a floor: six lines reads as prose, not a
+wall — the tap already opens the sheet for the rest". That is a LIVE social
+room's contract, where a row is a glance at something still happening.
+
+An imported archive is not a feed. Its rows are the person's own sentences,
+written years ago, and the words are the entire content of the room — so a post
+cut short with nothing to say it was cut is the room failing at the one thing
+it exists for. Measured against the type ramp, `body17` at phone width runs
+roughly forty characters a line, so six lines is about 240 characters and **the
+longest tweets — the 280-character ones, the ones somebody worked to fit — were
+exactly the ones being truncated.**
+
+**`whole` is a ladder, not a switch, because "the whole post" means two
+different sizes of object in the same room.** A tweet is bounded, so showing one
+whole costs a tall row and finishes a thought. A long-form post is not bounded
+in any useful way — `note-tweet.js` holds essays, and §375 is the pass that
+started importing them intact — and drawing four thousand characters inline
+would hand one row the entire scroll. So: whole up to a tweet, a generous
+24-line excerpt past it, and the sheet for the rest.
+
+**The threshold is measured in CHARACTERS and it is not 280.**
+`XArchiveImport.clean` expands every t.co shortening back to its real URL, so
+the stored text of a 280-character tweet carrying three links can run past 500
+while saying exactly as much as it always did. `wholeChars` is 600, set well
+clear of that: the failure to avoid is a real tweet landing on the wrong rung,
+and the cost of being generous is one tall row.
+
+**A folded thread gets it too, and it matters more there.** A thread is one
+argument split across posts; clamping each part turns it into a column of
+opening sentences that never reaches its own conclusion. `SocialThreadCard`
+reads `PostCard`'s own constants rather than keeping a second copy, so the two
+cards can never disagree about how long a tweet is.
+
+**Not flipped on for the live social rooms in the same pass.** Their rows carry
+fetched media, quote cards and engagement lines an archive row does not, so
+unclamping there changes the rhythm of a scrolling feed rather than finishing a
+record — a separate decision, on separate evidence, and not one to make unseen.
+
+### Unbuilt, again
+
+Same footing as §395: authored on a host with no Xcode, so nothing here has been
+compiled or looked at. Every static audit passes and the harness's shell guards
+pass; a change whose entire subject is how a row LOOKS is owed a screenshot
+before it is believed.

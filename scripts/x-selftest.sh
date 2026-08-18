@@ -140,6 +140,40 @@ grep -qF 'feedSheet = .person(source: XPersonSource.source' "$FEEDSCREEN_395" \
 grep -qF 'private var facesAreDoors: Bool { SocialThread.isSocial(thing.source) }' Casberi/Casberi/Screens/ThingSheetView.swift \
   || { echo "✗ the profile card's gate moved — an X face opening a card whose only verb is impossible is a dead control"; exit 1; }
 
+# (7) 2026-08-18, prd §395a — a post reads as a post.
+# `standsAlone` is what decides whether a row keeps a SURFACE
+# (`shapedListRow` passes `bare: !standsAlone(thing)`), and `.x` was never in
+# it: the room drew post cards merged into a run of bare rows. Both halves are
+# guarded, because either alone leaves the room looking wrong in a way no
+# other check can see.
+grep -qF 'if shape == .x { return Self.isXPostRow(thing) }' "$FEEDSCREEN_395" \
+  || { echo "✗ the X room's posts no longer stand alone — a card by anatomy with no card under it"; exit 1; }
+grep -q 'private static func isXPostRow' "$FEEDSCREEN_395" \
+  || { echo "✗ the post test is gone — the renderer and the surface must read ONE predicate or they drift"; exit 1; }
+grep -qF 'PostCard(thing: thing, whole: true)' "$FEEDSCREEN_395" \
+  || { echo "✗ the X room clamps its posts again — the longest tweets are exactly the ones cut"; exit 1; }
+grep -qF 'SocialThreadCard(head: thing, replies: kids, whole: true)' "$FEEDSCREEN_395" \
+  || { echo "✗ a folded thread clamps each part — an argument that never reaches its conclusion"; exit 1; }
+# The ladder itself: whole up to a tweet, an excerpt past it. A bare `nil`
+# would hand one long-form post the entire scroll.
+grep -qF 'return words.count <= Self.wholeChars ? nil : Self.longformLines' Casberi/Casberi/Screens/ShapedRows.swift \
+  || { echo "✗ PostCard's clamp is no longer a ladder — either a tweet is cut or an essay owns the scroll"; exit 1; }
+grep -qF 'text.count <= PostCard.wholeChars ? nil : PostCard.longformLines' Casberi/Casberi/Screens/ShapedRows.swift \
+  || { echo "✗ the thread card keeps its own copy of how long a tweet is — two cards that can disagree"; exit 1; }
+# 600, not 280: `clean` expands t.co back to real URLs, so a 280-char tweet
+# carrying links is stored well past 280.
+python3 - <<'PYCHK' || exit 1
+import re, sys
+src = open("Casberi/Casberi/Screens/ShapedRows.swift", encoding="utf-8").read()
+m = re.search(r'static let wholeChars = (\d+)', src)
+if not m:
+    print("✗ PostCard.wholeChars is gone"); sys.exit(1)
+if int(m.group(1)) < 400:
+    print("✗ PostCard.wholeChars is at or under a bare tweet limit — `clean` expands t.co "
+          "back to real URLs, so a real 280-char tweet is stored well past 280 and would "
+          "land on the excerpt rung"); sys.exit(1)
+PYCHK
+
 # --- 2026-08-05: the searchability pass -------------------------------------
 # Each of these is a wiring fact behind "the room has 3,500 posts in it and an
 # ask that names X comes back with five unrelated things". The extracted

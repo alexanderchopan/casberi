@@ -2455,6 +2455,22 @@ struct ExcerptRow: View {
 /// rhythm, not the post's. Same card surface; no new colors.
 struct PostCard: View {
     let thing: Thing
+    /// Show the post WHOLE rather than clamped (2026-08-18, prd §395a).
+    ///
+    /// Off by default, and on in the X room. The clamp below is right for a
+    /// LIVE social room, where a row is a glance at something still happening
+    /// and the sheet is one tap away — but an imported archive is not a feed.
+    /// Its rows are the person's own sentences, written years ago, and the
+    /// words are the entire content of the room: a post cut at six lines with
+    /// no way to see that it was cut is the room failing at the one thing it
+    /// exists for.
+    ///
+    /// Deliberately NOT flipped on for the live social rooms in the same
+    /// pass. Their rows carry fetched media, quote cards and engagement lines
+    /// that an archive row does not, so unclamping there changes the rhythm of
+    /// a scrolling feed rather than finishing a record — a separate decision,
+    /// on separate evidence.
+    var whole: Bool = false
 
     /// Empty-string handles exist (an unmigrated Farcaster row) — fall back
     /// to the source name, same guard the avatar line already carries. A
@@ -2477,6 +2493,35 @@ struct PostCard: View {
         let full = (thing.postText ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
         return full.isEmpty ? thing.title : full
     }
+
+    /// How many lines the words get — nil for all of them.
+    ///
+    /// A LADDER, not a switch, because "the whole post" means two different
+    /// sizes of object in the same room. A TWEET is bounded — 280 characters —
+    /// so showing one whole costs a tall row and finishes a thought. A
+    /// LONG-FORM post is not bounded in any useful way (`note-tweet.js` holds
+    /// essays, and prd §375 is the pass that started importing them intact),
+    /// and drawing four thousand characters inline would hand one row the
+    /// entire scroll. So: whole up to a tweet, a generous excerpt past it, and
+    /// the sheet for the rest.
+    ///
+    /// **Measured in CHARACTERS, not lines**, and the threshold is not 280.
+    /// `XArchiveImport.clean` expands every t.co shortening back to its real
+    /// URL, so the STORED text of a 280-character tweet with three links can
+    /// run past 500 while saying exactly as much as it always did. `wholeChars`
+    /// is set well clear of that: the failure to avoid is a real tweet landing
+    /// on the wrong rung, and the cost of being generous is one tall row.
+    private var clamp: Int? {
+        guard whole else { return 6 }
+        return words.count <= Self.wholeChars ? nil : Self.longformLines
+    }
+
+    /// The ceiling for "this is a tweet, show it all". See `clamp`.
+    static let wholeChars = 600
+    /// What a post PAST that ceiling gets — an excerpt with real substance,
+    /// still a row rather than a wall, with the sheet holding the rest.
+    static let longformLines = 24
+
 
     /// Liveness guard (build 188 — see `ThingRowKeying.swift`). SwiftUI
     /// re-evaluates a LEAF view's body on the model's own observation,
@@ -2548,8 +2593,9 @@ struct PostCard: View {
                 .dsText(.body17).foregroundStyle(DS.textPrimary)
                 // A row still has a floor: six lines reads as prose, not a
                 // wall — the tap already opens the sheet for the rest, the
-                // same convention `ExcerptRow`'s clamp keeps.
-                .lineLimit(6)
+                // same convention `ExcerptRow`'s clamp keeps. `whole` lifts it
+                // for a room whose rows ARE the words; see the ladder below.
+                .lineLimit(clamp)
                 .fixedSize(horizontal: false, vertical: true)
             // The post this one QUOTES (2026-07-27) — `SocialQuoteCard`
             // already rendered in the sheet since 2026-07-16; a quote-post in
@@ -2724,6 +2770,15 @@ struct SocialThreadCard: View {
     /// re-reads a stored property off a model a heal might have deleted
     /// between the fold and this body evaluating (`ThingRowKeying`'s rule).
     let replies: [Thing]
+    /// Show every post in the chain WHOLE — `PostCard.whole`'s flag, on the
+    /// card a thread folds into (2026-08-18, prd §395a).
+    ///
+    /// It matters MORE here than on a single post, not less: a thread is one
+    /// argument split across posts, and clamping each of them turns it into a
+    /// column of opening sentences that never reaches its own conclusion. Each
+    /// part is a bounded tweet, so whole means whole — the same ladder, since
+    /// the head of a chain can be a long-form post.
+    var whole: Bool = false
 
     /// Same Nostr-hex-vs-real-handle split as `PostCard.author` above.
     private var author: String {
@@ -2736,6 +2791,13 @@ struct SocialThreadCard: View {
     private func words(_ thing: Thing) -> String {
         let full = (thing.postText ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
         return full.isEmpty ? thing.title : full
+    }
+
+    /// `PostCard.clamp`'s ladder, read through that type's own constants so
+    /// the two cards can never disagree about how long a tweet is.
+    private func clamp(_ text: String) -> Int? {
+        guard whole else { return 6 }
+        return text.count <= PostCard.wholeChars ? nil : PostCard.longformLines
     }
 
     var body: some View {
@@ -2774,15 +2836,17 @@ struct SocialThreadCard: View {
                     .fill(DS.fillFaint)
                     .frame(width: 2)
                 VStack(alignment: .leading, spacing: DS.Space.s2) {
-                    Text(words(head))
+                    let headWords = words(head)
+                    Text(headWords)
                         .dsText(.body17).foregroundStyle(DS.textPrimary)
-                        .lineLimit(6)
+                        .lineLimit(clamp(headWords))
                         .fixedSize(horizontal: false, vertical: true)
                     ForEach(replies.keyed) { item in
                         if item.thing.isLive {
-                            Text(words(item.thing))
+                            let part = words(item.thing)
+                            Text(part)
                                 .dsText(.body17).foregroundStyle(DS.textPrimary)
-                                .lineLimit(6)
+                                .lineLimit(clamp(part))
                                 .fixedSize(horizontal: false, vertical: true)
                         }
                     }
