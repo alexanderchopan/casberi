@@ -386,6 +386,11 @@ struct ThingContentView: View {
                 // file drew this chip alone, repeating the title verbatim
                 // under the title.
                 FileChip(name: thing.title, note: thing.content, compact: true)
+            } else if let ref = thing.sourceRef, FilesIngest.isAudioRef(ref) {
+                // Audio leads with its transport, on the same anatomy as the
+                // picture above it: the thing itself first, the name and size
+                // beneath as the quiet line.
+                FileAudioContent(ref: ref, name: thing.title, note: thing.content)
             } else {
                 FileChip(name: thing.title, note: thing.content)
             }
@@ -925,10 +930,23 @@ private struct ChatBubbles: View {
 /// Voice leads with its waveform — and plays, when the thing keeps its audio
 /// file (things captured by the mic do; demo rows don't). The transcript
 /// follows when one exists.
+///
+/// Two callers now (2026-08-17). A `.voice` thing hands its own `sourceRef`
+/// and lets this find the recording in `VoiceCapture`'s directory; an audio
+/// file in a connected FOLDER hands a `fileURL` it resolved itself, because
+/// that file is somewhere only a fresh walk of the folder can say (see
+/// `FilesIngest.audio(for:)`). Everything below the transport — the decoded
+/// envelope, the transport itself, the session category — is the same for
+/// both, which is why this took a parameter rather than a second copy.
 private struct VoiceContent: View {
     let transcript: String
     var sourceRef: String? = nil
     var audio: Data? = nil
+    /// A file the caller already resolved and holds access to. Wins over
+    /// `sourceRef`, and is NOT existence-checked the way the voice directory
+    /// is — it came from a walk of the folder moments ago, and re-statting it
+    /// here would only add a disk read that can block on iCloud.
+    var fileURL: URL? = nil
 
     @State private var player: AVAudioPlayer?
     @State private var playing = false
@@ -941,7 +959,8 @@ private struct VoiceContent: View {
     @State private var envelope: [CGFloat]?
 
     private var audioURL: URL? {
-        sourceRef.flatMap(VoiceCapture.audioURL(for:))
+        if let fileURL { return fileURL }
+        return sourceRef.flatMap(VoiceCapture.audioURL(for:))
             .flatMap { FileManager.default.fileExists(atPath: $0.path) ? $0 : nil }
     }
 
@@ -1059,6 +1078,91 @@ private struct VoiceContent: View {
         }
         player?.play()
         playing = player?.isPlaying ?? false
+    }
+}
+
+/// An audio file sitting in the connected folder, with a transport
+/// (2026-08-17).
+///
+/// A folder's m4a landed as `kind: .file` like everything else and drew a chip
+/// naming a file nothing could open — while the app has had a working player
+/// the whole time, gated to `kind == .voice` and to `VoiceCapture`'s own
+/// directory. This is that same transport pointed at a file the person
+/// already has, and it adds no new stored field, no request and no copy.
+///
+/// The player lives HERE and not on the feed row on purpose: a row is a read
+/// with ONE gesture (ruling 2026-07-16), and a second control inside a row is
+/// the half-opening-sheet class this codebase has already paid for.
+///
+/// VALUES, never the `Thing` — so there is no held model to guard (the
+/// build-188 leaf rule) and nothing here can trap on a row the folder's own
+/// prune deletes while this sheet is open.
+private struct FileAudioContent: View {
+    let ref: String
+    let name: String
+    let note: String
+
+    /// Kept apart from `status` because the handle outlives the frame that
+    /// made it: it holds the folder's security scope open for as long as the
+    /// transport can be used, and `onDisappear` is what balances that.
+    @State private var handle: FilesAudioHandle?
+    @State private var status: Status = .resolving
+
+    private enum Status { case resolving, ready, notDownloaded, missing, unreachable }
+
+    /// What a non-playable file says. Four outcomes reach here and three of
+    /// them are not errors, so each gets its own sentence rather than one
+    /// silence over all of them — the honesty rule's no-fake-status half, on
+    /// the screen where the only alternative is a play button that does
+    /// nothing.
+    private var line: String? {
+        switch status {
+        case .resolving, .ready: return nil
+        case .notDownloaded: return String(localized: "Still downloading from iCloud — it'll play once the file is here.")
+        case .missing: return String(localized: "This file isn't in the folder anymore.")
+        case .unreachable: return String(localized: "Can't reach the folder right now.")
+        }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            if case .ready = status, let handle {
+                // No transcript: a file from a folder carries no words of its
+                // own, and this app does not transcribe what it did not
+                // record. The waveform and the transport are the content.
+                VoiceContent(transcript: "", fileURL: handle.url)
+            }
+            if let line {
+                Text(line)
+                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                    .padding(.horizontal, DS.Space.s4)
+                    .padding(.bottom, DS.Space.s3)
+            }
+            // Compact in every state, not just the playable one — the chip
+            // must not restyle itself when the resolve lands, or opening the
+            // sheet reads as the layout jumping.
+            FileChip(name: name, note: note, compact: true)
+        }
+        .task(id: ref) { await resolve() }
+        .onDisappear {
+            handle?.release()
+            handle = nil
+        }
+    }
+
+    private func resolve() async {
+        switch await FilesIngest.audio(for: ref) {
+        case .ready(let resolved):
+            // A `.task(id:)` re-run releases the previous window rather than
+            // leaking it — nested scopes are refcounted, so an unbalanced
+            // start is a real leak and not a no-op.
+            handle?.release()
+            handle = resolved
+            status = .ready
+        case .notDownloaded: status = .notDownloaded
+        case .missing: status = .missing
+        case .unreachable: status = .unreachable
+        }
     }
 }
 

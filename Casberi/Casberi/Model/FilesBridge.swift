@@ -59,6 +59,44 @@ final class FilesStore {
     }
 }
 
+/// The security scope behind a playing audio file (2026-08-17).
+///
+/// A file in the connected folder is readable only while its FOLDER's
+/// security-scoped access is open, and `AVAudioPlayer` keeps reading the file
+/// as it plays — so unlike the walk in `refresh`/`heal`, which opens and
+/// closes the scope around one synchronous pass, this has to stay open for as
+/// long as the transport can be used. The view that resolved it owns it and
+/// calls `release()` when it goes away; `deinit` is the backstop for a handle
+/// dropped without one.
+///
+/// Nothing is copied into app storage. The folder is read-only to us (stated
+/// in `FilesStore`'s own doc) and an hour of audio is not worth mirroring to
+/// play it once.
+final class FilesAudioHandle {
+    let url: URL
+    private let folder: URL
+    private var scoped: Bool
+
+    fileprivate init(url: URL, folder: URL) {
+        self.url = url
+        self.folder = folder
+        // False just means the URL wasn't security-scoped (an in-sandbox
+        // folder) — reading still works; only balance the stop when it began.
+        // Nested starts are refcounted, so this is safe alongside the walk's
+        // own window having opened and closed already.
+        self.scoped = folder.startAccessingSecurityScopedResource()
+    }
+
+    /// Idempotent, so the view's `onDisappear` and `deinit` can both call it.
+    func release() {
+        guard scoped else { return }
+        scoped = false
+        folder.stopAccessingSecurityScopedResource()
+    }
+
+    deinit { release() }
+}
+
 enum FilesIngest {
 
     /// Single-flight, but TIME-BOXED rather than a bare flag (2026-08-02).
@@ -319,6 +357,79 @@ enum FilesIngest {
         guard ref.hasPrefix("dropbox:") else { return false }
         let path = String(ref.dropFirst("dropbox:".count))
         return imageExtensions.contains((path as NSString).pathExtension.lowercased())
+    }
+
+    /// Extensions `AVAudioPlayer` can open — the membership test behind the
+    /// player a folder's audio file gets in its thing sheet (2026-08-17).
+    ///
+    /// Kept beside `imageExtensions` and read the same way, for the same
+    /// reason stated there: "what counts as audio" must never fork between
+    /// the gate that offers the transport and the resolve that feeds it.
+    /// Deliberately a CLOSED list rather than a UTType query — an extension
+    /// in here is one this app has a reason to believe plays, and a format
+    /// that turns out not to open just leaves the row as it was before.
+    private static let audioExtensions: Set<String> = [
+        "m4a", "m4b", "mp3", "wav", "aac", "aif", "aiff", "caf", "flac",
+    ]
+
+    /// Whether a Files/`files:`-ref'd thing is an AUDIO file.
+    ///
+    /// STRING TEST ONLY, the `isStoredPicture` constraint for the same
+    /// reason: this is read from view bodies per row, and a `sourceRef` is a
+    /// plain string column while anything on the file itself is a disk read.
+    ///
+    /// Scoped to `files:` on purpose — Dropbox shares the extension tables
+    /// but not the bytes (its rows carry a 2KB text preview and nothing
+    /// else), so a Dropbox m4a has nothing local to play and must not be
+    /// offered a transport.
+    static func isAudioRef(_ sourceRef: String?) -> Bool {
+        guard let ref = sourceRef, ref.hasPrefix("files:") else { return false }
+        let rel = String(ref.dropFirst("files:".count))
+        return audioExtensions.contains((rel as NSString).pathExtension.lowercased())
+    }
+
+    /// What a resolve found. Four outcomes rather than an optional, because
+    /// three of them are NOT errors and the sheet says something different
+    /// for each: a file still coming down from iCloud will play in a minute,
+    /// a file gone from the folder is `refresh`'s next prune, and a folder
+    /// we can no longer reach is a reconnect. Collapsing them to nil would
+    /// draw the same silence over all four.
+    enum AudioResolution {
+        case ready(FilesAudioHandle)
+        /// In the folder, but its bytes aren't on this device yet.
+        case notDownloaded
+        /// The walk ran and this ref wasn't in it — moved or deleted.
+        case missing
+        /// The folder itself couldn't be walked (moved, permission lost).
+        case unreachable
+    }
+
+    /// Resolves a `files:` ref to something playable.
+    ///
+    /// The URL comes from a FRESH walk and is never rebuilt from the ref's
+    /// own path string — `WalkedFile`'s doc records why (a second resolution
+    /// of the same bookmark can standardize differently and silently point at
+    /// the wrong file, which reads as "never plays" with no error anywhere).
+    ///
+    /// The walk runs off the main actor inside its own scoped-access window,
+    /// exactly as `refresh` and `heal` do, since enumerating an iCloud folder
+    /// can block on the calling thread.
+    @MainActor
+    static func audio(for ref: String) async -> AudioResolution {
+        guard let folder = FilesStore.shared.folderURL() else { return .unreachable }
+        let found: (url: URL, downloaded: Bool)?? = await Task.detached(priority: .userInitiated) {
+            () -> (url: URL, downloaded: Bool)?? in
+            let scoped = folder.startAccessingSecurityScopedResource()
+            defer { if scoped { folder.stopAccessingSecurityScopedResource() } }
+            guard let files = walk(folder) else { return .some(nil) }
+            guard let match = files.first(where: { $0.ref == ref }) else { return .some(nil) }
+            return .some((match.url, match.isDownloaded))
+        }.value
+
+        guard let outer = found else { return .unreachable }
+        guard let match = outer else { return .missing }
+        guard match.downloaded else { return .notDownloaded }
+        return .ready(FilesAudioHandle(url: match.url, folder: folder))
     }
 
     /// A filename the person never typed — a camera/screenshot naming
