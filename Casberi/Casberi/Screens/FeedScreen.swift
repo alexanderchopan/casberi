@@ -4894,16 +4894,22 @@ struct FeedScreen: View {
             && thing.previewImageData != nil
     }
 
-    /// A connected-folder image whose heal has landed a thumbnail — the mixed
+    /// A connected-folder file whose heal has landed pixels — the mixed
     /// Files room's grid membership (2026-08-02), `isMemoryTile`'s shape with
-    /// one addition: the extension check makes the image claim explicit
-    /// (today only images ever carry `previewImageData` under Files, but that
-    /// is the heal's implementation detail, not this test's contract). Guarded
-    /// internally for the same corollary-4 reason as above.
+    /// one addition: the extension check makes the picture claim explicit
+    /// rather than inferring it from `previewImageData`, which is the heal's
+    /// implementation detail and not this test's contract. Guarded internally
+    /// for the same corollary-4 reason as above.
+    ///
+    /// `drawsAsPicture`, not `isImageRef`, since 2026-08-17 — a VIDEO's poster
+    /// frame is pixels and tiles here too. The comment above used to say only
+    /// images ever carry `previewImageData` under Files; that stopped being
+    /// true the day the poster heal landed, which is exactly why the claim was
+    /// written as an explicit test instead of a `previewImageData != nil`.
     private static func isFileImageTile(_ thing: Thing) -> Bool {
         thing.isLive && thing.source == "Files" && thing.kind == .file
             && thing.previewImageData != nil
-            && FilesIngest.isImageRef(thing.sourceRef)
+            && FilesIngest.drawsAsPicture(thing.sourceRef)
     }
 
     /// A wordless picture post in an X archive (2026-08-13, prd §375) — the

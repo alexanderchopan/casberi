@@ -211,6 +211,12 @@ struct ThingSheetView: View {
             // A folder-picked image opens at the same height as a screenshot
             // now that it draws in the same frame (prd §365).
             || FilesIngest.isStoredPicture(thing.sourceRef)
+            // A folder-picked VIDEO for the height, and only the height
+            // (2026-08-17). It is deliberately absent from the `framedShot`
+            // test below — a video draws its own player, and the floating
+            // frame's tap opens the PHOTO viewer, which would freeze it into
+            // the one still we happened to poster it with.
+            || FilesIngest.isVideoRef(thing.sourceRef)
             || !(thing.previewImageURL ?? "").isEmpty
             // Any charted link — token, Kalshi, stock, PostHog metric. This
             // read Token and Stock only, so a KALSHI market has been opening

@@ -3,6 +3,7 @@ import SwiftData
 import Photos
 import LinkPresentation
 import AVFoundation
+import AVKit
 
 /// Prose with the URLs inside it live (2026-08-12, user ruling).
 ///
@@ -377,7 +378,14 @@ struct ThingContentView: View {
             // Files heal pass) — lead with the picture, the same way a
             // screenshot leads with ScreenshotContent, instead of a chip
             // naming a file whose whole point IS what's in it.
-            if let data = thing.previewImageData, let image = UIImage(data: data) {
+            // VIDEO IS TESTED FIRST, and the order is load-bearing since the
+            // poster heal landed (2026-08-17): a video now carries
+            // `previewImageData` like any picture, so the branch below would
+            // claim it and draw the file as a still nothing could play.
+            if let ref = thing.sourceRef, FilesIngest.isVideoRef(ref) {
+                FileVideoContent(ref: ref, name: thing.title, note: thing.content,
+                                 poster: thing.previewImageData.flatMap(UIImage.init(data:)))
+            } else if let data = thing.previewImageData, let image = UIImage(data: data) {
                 FilePictureContent(image: image)
                 // The name, size and folder BENEATH the picture (prd §365) —
                 // the delivery anatomy. Before this an image file drew its
@@ -1081,6 +1089,101 @@ private struct VoiceContent: View {
     }
 }
 
+/// A video file sitting in the connected folder, with a player (2026-08-17).
+///
+/// The audio sibling below, one medium over, and it reuses that whole resolve:
+/// the fresh-walk lookup, the four-case answer and the handle that holds the
+/// folder's security scope open for the player's lifetime. Only the surface
+/// differs, because a waveform is the wrong picture of a video — this draws
+/// the frames.
+///
+/// It leads with the POSTER while the resolve is in flight rather than an
+/// empty box, so the sheet opens on the same pixels the row was showing a
+/// moment ago and the player takes their place. `VideoPlayer` renders its own
+/// transport, so there is no play button of ours to keep honest here — until
+/// it exists there is simply a still, which claims nothing.
+///
+/// VALUES, never the `Thing`, for the same two reasons `FileAudioContent`
+/// gives: no held model to guard, and nothing to trap on when the folder's
+/// prune deletes this row with the sheet open.
+private struct FileVideoContent: View {
+    let ref: String
+    let name: String
+    let note: String
+    let poster: UIImage?
+
+    @State private var handle: FilesMediaHandle?
+    @State private var player: AVPlayer?
+    @State private var status: Status = .resolving
+
+    private enum Status { case resolving, ready, notDownloaded, missing, unreachable }
+
+    private var line: String? {
+        switch status {
+        case .resolving, .ready: return nil
+        case .notDownloaded: return String(localized: "Still downloading from iCloud — it'll play once the file is here.")
+        case .missing: return String(localized: "This file isn't in the folder anymore.")
+        case .unreachable: return String(localized: "Can't reach the folder right now.")
+        }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Group {
+                if let player {
+                    VideoPlayer(player: player)
+                        .aspectRatio(16 / 9, contentMode: .fit)
+                } else if let poster {
+                    // The frame the grid already drew — the sheet opens on it
+                    // rather than on a hole, and the player replaces it in
+                    // place.
+                    Image(uiImage: poster)
+                        .resizable().scaledToFit()
+                } else {
+                    // No poster and no player: a video whose heal hasn't run
+                    // yet, or one AVFoundation couldn't read a frame from.
+                    // Nothing is drawn — an empty frame with a glyph in it
+                    // would be a picture of a video we do not have.
+                    Color.clear.frame(height: 0)
+                }
+            }
+            .clipShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+            .padding(.horizontal, DS.Space.s4)
+            .padding(.bottom, DS.Space.s3)
+
+            if let line {
+                Text(line)
+                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                    .padding(.horizontal, DS.Space.s4)
+                    .padding(.bottom, DS.Space.s3)
+            }
+            FileChip(name: name, note: note, compact: true)
+        }
+        .task(id: ref) { await resolve() }
+        .onDisappear {
+            // Order matters: the player stops reading the file BEFORE the
+            // scope that made it readable is given back.
+            player?.pause()
+            player = nil
+            handle?.release()
+            handle = nil
+        }
+    }
+
+    private func resolve() async {
+        switch await FilesIngest.media(for: ref) {
+        case .ready(let resolved):
+            handle?.release()
+            handle = resolved
+            player = AVPlayer(url: resolved.url)
+            status = .ready
+        case .notDownloaded: status = .notDownloaded
+        case .missing: status = .missing
+        case .unreachable: status = .unreachable
+        }
+    }
+}
+
 /// An audio file sitting in the connected folder, with a transport
 /// (2026-08-17).
 ///
@@ -1105,7 +1208,7 @@ private struct FileAudioContent: View {
     /// Kept apart from `status` because the handle outlives the frame that
     /// made it: it holds the folder's security scope open for as long as the
     /// transport can be used, and `onDisappear` is what balances that.
-    @State private var handle: FilesAudioHandle?
+    @State private var handle: FilesMediaHandle?
     @State private var status: Status = .resolving
 
     private enum Status { case resolving, ready, notDownloaded, missing, unreachable }
@@ -1151,7 +1254,7 @@ private struct FileAudioContent: View {
     }
 
     private func resolve() async {
-        switch await FilesIngest.audio(for: ref) {
+        switch await FilesIngest.media(for: ref) {
         case .ready(let resolved):
             // A `.task(id:)` re-run releases the previous window rather than
             // leaking it — nested scopes are refcounted, so an unbalanced

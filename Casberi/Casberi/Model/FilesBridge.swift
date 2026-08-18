@@ -1,3 +1,4 @@
+import AVFoundation
 import Foundation
 import ImageIO
 import Observation
@@ -72,7 +73,7 @@ final class FilesStore {
 /// Nothing is copied into app storage. The folder is read-only to us (stated
 /// in `FilesStore`'s own doc) and an hour of audio is not worth mirroring to
 /// play it once.
-final class FilesAudioHandle {
+final class FilesMediaHandle {
     let url: URL
     private let folder: URL
     private var scoped: Bool
@@ -372,6 +373,40 @@ enum FilesIngest {
         "m4a", "m4b", "mp3", "wav", "aac", "aif", "aiff", "caf", "flac",
     ]
 
+    /// Extensions `AVPlayer` can open — video's half of the same closed list,
+    /// and closed for the same reason: an extension in here is one this app
+    /// has a reason to believe plays. Deliberately short. AVFoundation reads
+    /// the QuickTime/MPEG-4 family natively and nothing else reliably — mkv,
+    /// avi and wmv are container formats it will happily FAIL to open, and a
+    /// poster frame that never generates plus a player that shows black is a
+    /// worse answer than the file chip those files keep instead.
+    private static let videoExtensions: Set<String> = ["mp4", "m4v", "mov"]
+
+    /// Whether a Files/`files:`-ref'd thing is a VIDEO file. Same string-only
+    /// constraint and same `files:` scoping as `isAudioRef` below, for the
+    /// same two reasons.
+    static func isVideoRef(_ sourceRef: String?) -> Bool {
+        guard let ref = sourceRef, ref.hasPrefix("files:") else { return false }
+        let rel = String(ref.dropFirst("files:".count))
+        return videoExtensions.contains((rel as NSString).pathExtension.lowercased())
+    }
+
+    /// What DRAWS as a picture in the mixed Files room's grid — an image, or a
+    /// video whose poster frame has landed.
+    ///
+    /// Deliberately NOT folded into `isImageRef`, and the split is the whole
+    /// point (2026-08-17). Three questions were one test while pixels could
+    /// only ever come from an image, and they diverge the moment a video
+    /// carries a poster: what has pixels to TILE (this), what has pixels worth
+    /// READING (`isImageRef` — the OCR heal and the "What your images say"
+    /// treemap, which a video frame has no business joining, since one frame
+    /// is not what a video says), and what opens in the PHOTO VIEWER
+    /// (`isStoredPicture` — a video opens in a player instead, so it must
+    /// stay out of that one or its Zoom verb would freeze it into a still).
+    static func drawsAsPicture(_ sourceRef: String?) -> Bool {
+        isImageRef(sourceRef) || isVideoRef(sourceRef)
+    }
+
     /// Whether a Files/`files:`-ref'd thing is an AUDIO file.
     ///
     /// STRING TEST ONLY, the `isStoredPicture` constraint for the same
@@ -394,8 +429,8 @@ enum FilesIngest {
     /// a file gone from the folder is `refresh`'s next prune, and a folder
     /// we can no longer reach is a reconnect. Collapsing them to nil would
     /// draw the same silence over all four.
-    enum AudioResolution {
-        case ready(FilesAudioHandle)
+    enum MediaResolution {
+        case ready(FilesMediaHandle)
         /// In the folder, but its bytes aren't on this device yet.
         case notDownloaded
         /// The walk ran and this ref wasn't in it — moved or deleted.
@@ -415,7 +450,7 @@ enum FilesIngest {
     /// exactly as `refresh` and `heal` do, since enumerating an iCloud folder
     /// can block on the calling thread.
     @MainActor
-    static func audio(for ref: String) async -> AudioResolution {
+    static func media(for ref: String) async -> MediaResolution {
         guard let folder = FilesStore.shared.folderURL() else { return .unreachable }
         let found: (url: URL, downloaded: Bool)?? = await Task.detached(priority: .userInitiated) {
             () -> (url: URL, downloaded: Bool)?? in
@@ -429,7 +464,7 @@ enum FilesIngest {
         guard let outer = found else { return .unreachable }
         guard let match = outer else { return .missing }
         guard match.downloaded else { return .notDownloaded }
-        return .ready(FilesAudioHandle(url: match.url, folder: folder))
+        return .ready(FilesMediaHandle(url: match.url, folder: folder))
     }
 
     /// A filename the person never typed — a camera/screenshot naming
@@ -485,8 +520,16 @@ enum FilesIngest {
                 guard thing.kind == .file, let ref = thing.sourceRef,
                       ref.hasPrefix("files:") else { return false }
                 let rel = String(ref.dropFirst("files:".count))
-                guard imageExtensions.contains((rel as NSString).pathExtension.lowercased())
-                else { return false }
+                let ext = (rel as NSString).pathExtension.lowercased()
+                // A VIDEO is selected on its poster frame ALONE (2026-08-17).
+                // `ocrAt` must not enter its condition: nothing ever OCRs a
+                // video, so that stamp stays nil forever and an `|| ocrAt ==
+                // nil` would re-select every video on every foreground pass
+                // for the life of the install — a heal that never finishes,
+                // costing an `AVAssetImageGenerator` per video per pass and
+                // looking from outside exactly like one that works.
+                if videoExtensions.contains(ext) { return thing.previewImageData == nil }
+                guard imageExtensions.contains(ext) else { return false }
                 return thing.previewImageData == nil || thing.ocrAt == nil
             }
         guard !things.isEmpty else { return (0, 0) }
@@ -501,7 +544,7 @@ enum FilesIngest {
             return map
         }.value
 
-        var thumbed = 0, ocred = 0
+        var thumbed = 0, ocred = 0, postered = 0
         var reindex: [Thing] = []
         for thing in things {
             // Not in the current walk — moved or deleted since this Thing
@@ -510,13 +553,29 @@ enum FilesIngest {
             guard let ref = thing.sourceRef, let fileURL = byRef[ref] else { continue }
             let originalName = fileURL.lastPathComponent
 
+            let isVideo = videoExtensions
+                .contains(fileURL.pathExtension.lowercased())
+
             // Bound the per-pass work — the rest heal on later passes, same
-            // as Photos.
-            if thing.previewImageData == nil, thumbed < 40,
-               let data = await thumbnail(url: fileURL) {
+            // as Photos. A video's pixels cost far more than an image's (a
+            // decode of one frame rather than a thumbnail read off the
+            // container), so it gets its own tighter bound, the same split
+            // OCR already has below.
+            if thing.previewImageData == nil, isVideo, postered < 8,
+               let data = await posterFrame(url: fileURL, folder: folder) {
+                thing.previewImageData = data
+                postered += 1
+                thumbed += 1
+            } else if thing.previewImageData == nil, !isVideo, thumbed < 40,
+                      let data = await thumbnail(url: fileURL) {
                 thing.previewImageData = data
                 thumbed += 1
             }
+            // Nothing below reads a video: OCR over one arbitrary frame would
+            // put whatever happened to be on screen at that instant into the
+            // corpus as what the file SAYS, and into the room's treemap as a
+            // term somebody wrote.
+            if isVideo { continue }
             // OCR is heavier than a thumbnail — a tighter bound; `ocrAt`
             // marks the attempt so a text-less image is never re-read.
             if thing.ocrAt == nil, ocred < 12 {
@@ -571,6 +630,50 @@ enum FilesIngest {
     /// UI thread. Guessing at readiness from iCloud metadata cost two
     /// separate live bugs (2026-07-29); just attempting the read is simpler
     /// and can't disagree with reality the way a heuristic can.
+    /// One frame from a video, written as the SAME 480pt JPEG the image heal
+    /// writes — so a video tiles in the room's grid through exactly the
+    /// `previewImageData` path a photo already uses, with no second field, no
+    /// second code path in the grid, and no CloudKit deploy (2026-08-17).
+    ///
+    /// Three decisions, each a wrong-looking poster if got wrong:
+    ///
+    /// `appliesPreferredTrackTransform` — without it every video shot in
+    /// portrait posters on its side. The rotation lives in the track's
+    /// transform, not the pixels, so the frame comes back landscape and
+    /// perfectly plausible.
+    ///
+    /// The frame is taken a second IN, never at zero. A great many videos open
+    /// on black (a fade, a shutter, a leading blank frame), and a black tile
+    /// in a grid reads as a picture that failed to load rather than as the
+    /// video it is. Short clips take their own midpoint instead, since one
+    /// second into a 400ms clip is past the end.
+    ///
+    /// It opens the folder's security scope ITSELF, unlike `thumbnail`, which
+    /// reads outside the walk's window. Not a stylistic difference: an image
+    /// read goes through `CGImageSource` on a path the resolved bookmark
+    /// already reaches, while `AVURLAsset` opens the file through a stricter
+    /// route that fails without the scope — and it fails by returning a nil
+    /// frame, which is indistinguishable from a video we simply can't read.
+    /// Nested starts are refcounted, so this is safe alongside any window a
+    /// caller has already opened.
+    private static func posterFrame(url: URL, folder: URL) async -> Data? {
+        await Task.detached(priority: .utility) { () -> Data? in
+            let scoped = folder.startAccessingSecurityScopedResource()
+            defer { if scoped { folder.stopAccessingSecurityScopedResource() } }
+
+            let asset = AVURLAsset(url: url)
+            guard let seconds = try? await CMTimeGetSeconds(asset.load(.duration)),
+                  seconds.isFinite, seconds > 0 else { return nil }
+
+            let generator = AVAssetImageGenerator(asset: asset)
+            generator.appliesPreferredTrackTransform = true
+            generator.maximumSize = CGSize(width: 480, height: 480)
+            let at = CMTime(seconds: min(1, seconds / 2), preferredTimescale: 600)
+            guard let cg = try? await generator.image(at: at).image else { return nil }
+            return UIImage(cgImage: cg).jpegData(compressionQuality: 0.7)
+        }.value
+    }
+
     private static func thumbnail(url: URL) async -> Data? {
         await Task.detached(priority: .utility) { () -> Data? in
             guard let src = CGImageSourceCreateWithURL(url as CFURL, nil) else { return nil }
