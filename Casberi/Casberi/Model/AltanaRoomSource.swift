@@ -105,14 +105,19 @@ extension AltanaRoom {
             return lines + ["altanaRoom| no card — nothing watched, no keys, or under the floor"]
         }
         lines.append("altanaRoom| \(card.headline)")
-        if let root = card.rootLine { lines.append("altanaRoom| root: \(root)") }
         if let stale = card.staleNote { lines.append("altanaRoom| stale: \(stale)") }
         if let other = card.otherWalletsNote { lines.append("altanaRoom| other: \(other)") }
         lines.append("altanaRoom| chains: \(card.chains.joined(separator: ", "))")
-        for s in card.sessions {
+        if let hours = card.urgentHours { lines.append("altanaRoom| urgent: \(hours)h to the soonest expiry") }
+        // Every row IN DRAWN ORDER, roots included — the order is the thing
+        // most worth seeing here, since it is what §405 found wrong.
+        for s in card.rows {
             let pct = s.progress.map { "\(Int($0 * 100))%" } ?? "—"
-            lines.append("  altanaSession| \(s.id.prefix(18))…"
+            lines.append("  altanaRow| \(s.id.prefix(18))…"
+                + " role=\(s.isRoot ? "root" : "session")"
+                + " kind=\(s.kindLabel ?? "—")"
                 + " grant=\(s.grantPhrase ?? "—")"
+                + " signed=\(s.signatureCount)"
                 + " progress=\(pct)"
                 + " daysLeft=\(s.daysLeft.map(String.init) ?? "—")"
                 + " expired=\(s.expired ? "YES" : "NO")"

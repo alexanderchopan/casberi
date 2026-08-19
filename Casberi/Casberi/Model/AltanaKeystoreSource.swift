@@ -393,8 +393,10 @@ extension AltanaKeystore {
         // renders "Revoked — this key can no longer sign" over a demo
         // credential that is fine — the most alarming sentence on the card,
         // shown to someone who has not decided whether to keep the app. The
-        // seeded keys are active by construction, so that is what it says.
-        if DemoMode.isActive { return .active }
+        // seeded keys are active by construction, so that is what it says —
+        // as `.seeded`, whose copy states the fact WITHOUT claiming a check
+        // that never happened.
+        if DemoMode.isActive { return .seeded }
         for registry in registries {
             guard let data = encode(isKeyActiveSelector, address: address, keyID: keyID),
                   let hex = await call(data, on: registry),

@@ -2560,6 +2560,15 @@ struct FeedScreen: View {
                         if let url = URL(string: AltanaKeystore.explorerURL(address: card.address)) {
                             openExternal(url)
                         }
+                    } onPickKey: { row in
+                        // Matched on the KEY ID, which is the last segment of
+                        // every ref `AltanaKeystore.ref` builds. Deliberately
+                        // not a rebuilt ref: that would need the row's chain
+                        // label to still agree with the one the landing used,
+                        // and a drifted label would silently open nothing.
+                        openNewest(source: AltanaKeystore.source, in: visible) { thing in
+                            thing.sourceRef?.hasSuffix(":" + row.id.lowercased()) ?? false
+                        }
                     }
                 case .privacyPools(let room):
                     PrivacyPoolsRoomCard(room: room) { state in

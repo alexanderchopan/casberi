@@ -26302,3 +26302,134 @@ point wearing an 03 prefix, and X = p+1 with a Y that genuinely satisfies the
 equation after reduction. A third bug was caught by the tests rather than
 written into them: `compose` compared raw key ids, which matches only while
 both sides agree about the `0x` prefix and fails silently otherwise.
+
+## §405 — The Altana room draws every credential, in the right order, with the word people already know (user: "how else can we enrich the altana room", 2026-08-18)
+
+Six changes, and two of them are DEFECTS found by reading the room rather than
+remembering it.
+
+**The card ordered itself wrong on every real account, and the demo hid it.**
+`compose` mapped whatever order it was handed. Real accounts arrive through
+`AltanaKeystore.sorted` — roots first, then ASCENDING EXPIRY — so an expired
+key, holding the earliest date of all, sorted above everything live: the card
+would have led with dead credentials and buried the one expiring in nine
+hours. The demo could not show it, because it seeds `AltanaState` directly and
+never passes through that sort. **Two orderings, and the one nobody had seen
+was the one everybody would get.** `compose` owns the order now — roots, then
+live sessions soonest-first, then expired most-recent-first, total on key id —
+and the demo seeds them DELIBERATELY SCRAMBLED so it proves the fix instead of
+hiding it.
+
+**The card could not reach the sheet it earned.** Its only tap was the headline
+opening the explorer; the three rows were inert while looking exactly like the
+tappable rows beneath them. So §404's credential sheet — grant window, curve,
+live re-check — was reachable only by scrolling PAST the card that summarised
+it: the richest surface in the feature behind the poorest affordance, plus
+controls that look live and are not (§83's dead-control rule). Rows tap to
+their own sheet now, matched on the KEY ID (the last segment of every ref) and
+never a rebuilt ref, which would need the row's chain label to still agree with
+the landing's.
+
+**The room ignored data sitting in its own snapshot.** §404 put the curve and
+the signature count in `AltanaState`, and `Session` picked up neither. So:
+**the kind leads the row now** — "Passkey" / "Wallet key", the only words here
+a person already owns — with the ROLE preserved in the detail line, because a
+title that takes the kind must not lose whether this credential is permanent.
+An unreadable curve falls back to the role and never guesses. **Usage is said
+only when it carries information**: a session key that has been used is doing
+exactly what it was granted for and needs no remark; one that never has is the
+notable case, and a root key's count is the account's own activity.
+
+**The root key got a row.** It had a grey subline while three session keys had
+full rows with bars — importance drawn upside down. It draws NO runway, and
+that is the reading: a credential whose authority does not run out has no
+fraction to show, and its slot says "no expiry" where every other row carries a
+countdown.
+
+**The headline leads with the clock.** "3 keys can sign for this wallet" is
+true every day and is therefore never the reason to look today; "A key expires
+in 9 hours" is. Inside a 24-hour window only — a deadline days away is a row's
+business, and an already-expired key is never urgent because it needs nothing.
+
+**The demo stopped claiming a check it never made.** `liveState` returns early
+under `DemoMode` (the demo reaches nothing), and the copy then read "Still
+active — checked just now" over a key nothing had asked about. A `.seeded`
+state states the fact and drops the clause — §83 in miniature, in the one
+experience someone judges the app by.
+
+Harness at 68 assertions, mutation-proven eleven ways, plus a drift guard that
+the demo path still returns `.seeded`. **Two of its own fixtures were the
+familiar "right result for the wrong reason"**: the root-runway case used a
+root with no expiry, so `progress` was nil whatever the row did and deleting
+the guard ran green (the pinning fixture is a root carrying BOTH dates); and a
+grant assertion expected "24-hour key" from a fixture whose window is really
+25 hours.
+
+## §406 — The Altana card loses its repetition and keeps its census (user: "improve the design to bring it to parity wtih rest of the app and clean it up", 2026-08-18)
+
+Five changes, ruled from a before/after mockup rather than adjectives, and one
+finding about what parity ISN'T.
+
+**Parity does not mean discs.** The survey that opened this pass found exactly
+one sibling room card with a disc column — PostHog's, whose `MetricDisc` is
+DATA-BEARING (the metric's own seven-day curve). Every other head's rows are
+text-led. A key-glyph disc per Altana row would have been decoration, which the
+card doctrine bans; the elegant move was subtraction, not ornament.
+
+**The word "key" appeared three times per row.** "Session key · 24-hour key"
+under a title already saying "Wallet key" — and the role was earning nothing,
+because a credential WITH a grant is a session by definition. The detail says
+"24-hour grant" now, the role is spelled only when nothing else implies it (a
+kind-titled session with no readable grant), and a kind-titled root leads with
+the bare word "Root" since its title already says "key". **The two wordings are
+two renderings of ONE computation** (`grantUnits`): the rounding is measured
+(the BNB corpus is full of grants that are 24 hours to the second) and
+mutation-tested, and a second copy of it would be free to drift from the tested
+one. The sheet's "24-hour key" title is untouched — there the row IS the key.
+
+**The alarm headline deleted the census.** "A key expires in 9 hours" cost the
+card "3 keys can sign for this wallet" entirely. ASC's headline-plus-subline
+anatomy restores it — and the subline is nil when the headline IS the census,
+so the card never says the same sentence twice.
+
+**"today" under a headline saying "9 hours"** was the card disagreeing with
+itself about the same clock. Inside the last day the trailing slot says
+"9h left" (and "under 1h left" at the floor); past a day, hours are noise and
+days remain.
+
+**A full grey bar made the least important row the heaviest.** An expired key
+needs nothing, and its 100% runway drew the eye straight to it. The row drops
+its bar and dims to 0.55 — done things recede — with "expired" in the trailing
+slot already saying everything the bar did. The runway's `expired` parameter
+died with it: a parameter that can only be false is a dead control in code form.
+
+**The scope ceiling in half the words**: "Only a key's deadline is published,
+never its scope."
+
+**The sheet got the same pass.** Its subtitle read "Session key · Passkey ·
+BNB Smart Chain" under a title that already implied the role — the role is
+GONE from the subtitle now, because the title always carries it ("Root key",
+"Session key") or implies it (a grant phrase is a session by definition), and
+an empty subtitle is skipped rather than drawn. "Registered 4 days ago, never
+used" duplicated the Granted date sitting two rows up, so with the window
+drawn the usage line says just "Never used" — while a ROOT, which draws no
+window, keeps its dated form, because the usage line is the one place a root's
+age shows. And both ceilings are now the same sentence word for word, asserted
+verbatim: two spellings of one fact drift.
+
+**"For this account", not "for this wallet"** (user ruling, same day). The
+catalog summary already said "the keys allowed to sign for an account" and
+§293's own framing is "who can act as the ACCOUNT" — the room's headline was
+the one surface saying "wallet", and it was also the less precise word: in
+account-abstraction vocabulary the keys effectively ARE the wallet, and the
+thing they sign for is the account. The other-wallets note keeps "watched
+wallet", because it names entities on the app's own watch list rather than
+the registry's.
+
+Harness at 91 assertions, eight new mutations all caught — including the one
+this split exists for (grantDetail growing its own rounding) and the subline
+showing when the headline is already the census. Two fixture lessons, both the
+"wrong premise" class: the role-survives assertion had to be INVERTED (the §405
+rule it tested was the thing §406 changed), and the root-detail check first ran
+against a root with no key material, whose title is "Root key" and whose detail
+therefore rightly does NOT respell "Root".

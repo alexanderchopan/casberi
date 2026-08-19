@@ -339,7 +339,7 @@ enum AltanaKeystore {
         /// nil means the key never expires — which is normal for a root key
         /// and notable for a session key.
         let expiry: Date?
-        /// False when the key's nonce is still zero, i.e. it has been
+
         /// How many times this key has signed — the key's own nonce.
         ///
         /// Stored as the NUMBER rather than the old `hasEverSigned` boolean

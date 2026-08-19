@@ -41,6 +41,14 @@ struct AltanaRoomCard: View {
     /// Opens Altana's own explorer for this account — the only place a key can
     /// actually be revoked (§112: we read and state, they act).
     var onOpen: () -> Void
+    /// Opens one credential's own sheet (§405).
+    ///
+    /// Until this existed the card's three rows were INERT while looking
+    /// exactly like the tappable rows beneath them, and §404's credential
+    /// sheet — the grant window, the curve, the live re-check — was reachable
+    /// only by scrolling past the card that summarised it. The richest surface
+    /// in the feature behind the poorest affordance.
+    var onPickKey: (AltanaRoom.KeyRow) -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -65,17 +73,20 @@ struct AltanaRoomCard: View {
                     onOpen()
                 }
 
-            if let root = card.rootLine {
-                Text(root)
+            // The census, when the alarm took the headline (§406) — ASC's
+            // headline-plus-subline anatomy, restoring the fact the urgency
+            // used to delete.
+            if let subline = card.subline {
+                Text(subline)
                     .dsText(.subhead13)
                     .foregroundStyle(DS.textSecondary)
                     .padding(.top, DS.Space.s1)
             }
 
-            if !card.sessions.isEmpty {
+            if !card.rows.isEmpty {
                 VStack(alignment: .leading, spacing: DS.Space.s3) {
-                    ForEach(Array(card.sessions.enumerated()), id: \.element.id) { index, session in
-                        sessionRow(session)
+                    ForEach(Array(card.rows.enumerated()), id: \.element.id) { index, row in
+                        keyRow(row)
                             .chartArrival(index: index, reduceMotion: reduceMotion)
                     }
                 }
@@ -97,7 +108,7 @@ struct AltanaRoomCard: View {
                         .dsText(.subhead13)
                         .foregroundStyle(DS.textSecondary)
                 }
-                Text(String(localized: "What a session key may sign for isn’t published — only until when."))
+                Text(String(localized: "Only a key’s deadline is published, never its scope."))
                     .dsText(.subhead13)
                     .foregroundStyle(DS.textTertiary)
             }
@@ -114,43 +125,80 @@ struct AltanaRoomCard: View {
     }
 
     @ViewBuilder
-    private func sessionRow(_ session: AltanaRoom.Session) -> some View {
-        VStack(alignment: .leading, spacing: DS.Space.s2) {
-            HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                Text(session.grantPhrase ?? String(localized: "Session key"))
-                    .dsText(.body17).fontWeight(.medium)
-                    .foregroundStyle(DS.textPrimary)
-                Spacer(minLength: DS.Space.s2)
-                Text(trailing(session))
-                    .dsText(.subhead13)
-                    .foregroundStyle(DS.textSecondary)
-                    .monospacedDigit()
+    private func keyRow(_ row: AltanaRoom.KeyRow) -> some View {
+        Button {
+            DSHaptic.selection()
+            onPickKey(row)
+        } label: {
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                    Text(row.title)
+                        .dsText(.body17).fontWeight(.medium)
+                        .foregroundStyle(DS.textPrimary)
+                    Spacer(minLength: DS.Space.s2)
+                    Text(trailing(row))
+                        .dsText(.subhead13)
+                        .foregroundStyle(DS.textSecondary)
+                        .monospacedDigit()
+                }
+                if let detail = subtitle(row) {
+                    Text(detail)
+                        .dsText(.subhead13)
+                        .foregroundStyle(DS.textSecondary)
+                }
+                // An expired row draws NO bar (§406): a full grey runway made
+                // the least important row the heaviest thing on the card, and
+                // "expired" in the trailing slot already says everything the
+                // bar did. Done things recede.
+                if !row.expired, let progress = row.progress {
+                    runway(progress: progress)
+                }
             }
-            if let progress = session.progress {
-                runway(progress: progress, expired: session.expired)
-            }
+            .contentShape(Rectangle())
+            // …and the whole row dims with them, title included.
+            .opacity(row.expired ? 0.55 : 1)
         }
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text("\(row.title), \(trailing(row))"))
+    }
+
+    /// The row's second line. The chain is appended ONLY when this account
+    /// spans more than one registry — otherwise the card's footer already
+    /// says it once, and repeating "BNB Smart Chain" on every row is chrome.
+    private func subtitle(_ row: AltanaRoom.KeyRow) -> String? {
+        guard card.chains.count > 1, let chain = row.chainLabel else { return row.detail }
+        guard let detail = row.detail else { return chain }
+        return detail + " · " + chain
     }
 
     /// What the right-hand slot says. An expired key states that plainly rather
     /// than showing "0 days", which reads as a countdown still running.
-    private func trailing(_ session: AltanaRoom.Session) -> String {
+    private func trailing(_ session: AltanaRoom.KeyRow) -> String {
         if session.expired { return String(localized: "expired") }
+        // Inside the last day the headline says "9 hours", and a row saying
+        // "today" underneath it is the card disagreeing with itself about the
+        // same clock (§406).
+        if let hours = session.hoursLeft {
+            return hours == 0 ? String(localized: "under 1h left")
+                              : String(localized: "\(hours)h left")
+        }
         guard let days = session.daysLeft else {
-            guard let expiry = session.expiry else { return "" }
+            // A credential that never runs out — which is what a root key IS,
+            // and the fact worth stating in the slot where every other row
+            // carries a countdown.
+            guard let expiry = session.expiry else { return String(localized: "no expiry") }
             return expiry.formatted(date: .abbreviated, time: .omitted)
         }
-        return days == 0 ? String(localized: "today")
-                         : String(localized: "\(days)d left")
+        return String(localized: "\(days)d left")
     }
 
-    private func runway(progress: Double, expired: Bool) -> some View {
+    private func runway(progress: Double) -> some View {
         GeometryReader { geo in
             ZStack(alignment: .leading) {
                 Capsule()
                     .fill(DS.textTertiary.opacity(0.18))
                 Capsule()
-                    .fill(expired ? DS.textTertiary : Self.mark)
+                    .fill(Self.mark)
                     .frame(width: max(2, geo.size.width * progress))
             }
         }

@@ -64,6 +64,13 @@ CARDCODE=$(sed 's://.*::' "Casberi/Casberi/Model/AltanaRoomSource.swift" | sed '
 print -r -- "$CARDCODE" | grep -q 'AltanaKeystore.call\|eth_call' && {
   echo "✗ the room head reaches the chain — it must compose from AltanaState only"; exit 1; }
 
+# The demo reaches nothing, so its live line must not claim a check. If the
+# demo path ever resolves to `.active` again, the card says "checked just now"
+# over a key nothing asked about — §83 inside the experience people judge the
+# app by, which is the worst place to keep it.
+grep -q 'if DemoMode.isActive { return .seeded }' "$SOURCE" \
+  || { echo "✗ the demo live-check no longer returns .seeded — it would claim a check it never made"; exit 1; }
+
 TMP=$(mktemp -d /tmp/altana-selftest.XXXXXX)
 trap 'rm -rf "$TMP"' EXIT
 # MUST be named main.swift — with several files on the command line, only
@@ -81,6 +88,21 @@ func check(_ ok: Bool, _ what: String) {
 }
 
 typealias AK = AltanaKeystore
+
+func farOffRowHasNoHours() -> Bool {
+    let far = key(60, root: false, reg: sessReg, exp: Int(now.timeIntervalSince1970) + 5 * 86_400)
+    guard let c = AltanaRoom.compose(readings: [reading("0xa", [root, far])], now: now) else { return false }
+    return c.rows.last?.hoursLeft == nil && c.rows.last?.daysLeft == 5
+}
+
+func demoModel(_ live: AltanaKeySheet.LiveState) -> AltanaKeySheet.Model {
+    var m = AltanaKeySheet.Model(keyID: "0x" + String(repeating: "0", count: 64),
+                                 address: "0xa", isRoot: false, registeredAt: nil,
+                                 expiry: nil, signatureCount: 0, chainLabel: nil,
+                                 curve: .unknown, alsoSignsFor: [])
+    m.live = live
+    return m
+}
 
 func w(_ v: Int) -> String {
     let s = String(v, radix: 16)
@@ -110,6 +132,10 @@ func getKeyReply(registered: Int, expiry: Int) -> String {
 
 // Measured real values from BNB, 2026-08-18: a root key registered
 // 2026-08-11 05:03 UTC with no expiry, and a 24-hour session key.
+// A real P-256 point, so the kind label is asserted against ground truth
+// rather than against our own detector agreeing with itself.
+let p256Sample = "0x04" + "6b17d1f2e12c4247f8bce6e563a440f277037d812deb33a0f4a13945d898c296"
+                        + "4fe342e2fe1a7f9b8ee7eb4a7c0f9e162bce33576b315ececbb6406837bf51f5"
 let rootReg = 1_786_424_584
 let sessReg = 1_786_507_440, sessExp = 1_786_593_840
 
@@ -233,202 +259,196 @@ guard let card = AltanaRoom.compose(readings: [reading("0xa", [root, live, over]
 check(card.usableCount == 2, "usable counts the root and the live session, not the expired one")
 check(card.rootCount == 1, "one root")
 check(card.staleCount == 1, "one expired-but-listed key")
-check(card.sessions.count == 2, "both sessions are drawn, expired included")
+check(card.rows.count == 3, "EVERY credential gets a row now — the root included")
+check(card.sessions.count == 2, "…and `sessions` still answers the old question")
 check(card.staleNote?.contains("1 key") == true, "the tidy-up line names the count")
-check(card.rootLine?.contains("registered") == true, "the root line dates the account when witnessed")
 check(card.chains == ["BNB Smart Chain"], "chains are listed, in first-appearance order")
 check(card.otherWallets == 0, "one wallet, no others note")
 check(card.otherWalletsNote == nil, "…and the note is silent rather than saying zero")
 
-// A root key with no witnessed date states the count and NOT a date.
+// ── ORDER, which compose owns since §405 ──────────────────────────────────
+// The defect this replaced: `compose` mapped whatever it was handed, and real
+// accounts arrive through `AltanaKeystore.sorted` — roots first then ASCENDING
+// expiry — so an expired key, holding the earliest date of all, led the card.
+check(card.rows.first?.isRoot == true, "the root leads")
+check(card.rows[1].id == live.id, "then the LIVE session")
+check(card.rows[2].id == over.id, "and the expired one is LAST, not first")
+
+// Feeding it in the order a real read produces must not change the result.
+guard let resorted = AltanaRoom.compose(
+        readings: [reading("0xa", AK.sorted([root, live, over]))], now: now) else {
+    print("  ✗ a sorted reading composes"); exit(1)
+}
+check(resorted.rows.map(\.id) == card.rows.map(\.id),
+      "THE SORT AND THE DEMO NOW AGREE — the two orderings that used to differ")
+check(AltanaRoom.compose(readings: [reading("0xa", [over, live, root])], now: now)?
+        .rows.map(\.id) == card.rows.map(\.id),
+      "…in any input order at all")
+
+// Two expired keys: most recently expired first, and totally ordered.
+let old1 = key(20, root: false, reg: sessReg, exp: Int(now.timeIntervalSince1970) - 90_000)
+let old2 = key(21, root: false, reg: sessReg, exp: Int(now.timeIntervalSince1970) - 10_000)
+guard let twoDead = AltanaRoom.compose(readings: [reading("0xa", [root, old1, old2])], now: now) else {
+    print("  ✗ two expired keys compose"); exit(1)
+}
+check(twoDead.rows[1].id == old2.id, "the most recently expired leads its group")
+
+// ── the row's own words ───────────────────────────────────────────────────
+guard let rootRow = card.rows.first else { print("  ✗ root row"); exit(1) }
+check(rootRow.progress == nil, "A ROOT HAS NO RUNWAY — no end, so no fraction to draw")
+// The case above proves the right thing for the WRONG reason on its own: that
+// root has no expiry, so `progress` is nil whatever the row does, and deleting
+// the guard ran green. This is the fixture that actually pins it — a root
+// carrying BOTH dates, where an unguarded row would happily draw a bar.
+let datedRoot = key(50, root: true, reg: Int(now.timeIntervalSince1970) - 3600,
+                    exp: Int(now.timeIntervalSince1970) + 3600)
+check(datedRoot.progress(now: now) != nil, "…(the underlying key CAN compute one)")
+guard let datedCard = AltanaRoom.compose(readings: [reading("0xa", [datedRoot, live])], now: now) else {
+    print("  ✗ a dated root composes"); exit(1)
+}
+check(datedCard.rows.first?.progress == nil,
+      "…and the ROW still refuses it: a root's authority does not run out, so a bar would be a lie")
+check(rootRow.detail?.contains("registered") == true, "the root row carries its registration date")
+// 25, not 24: this fixture was registered an hour before "now" and expires a
+// day after it, so its grant really is 25 hours. Asserted exactly rather than
+// loosely — a `contains("hour")` here would pass against almost any arithmetic.
+check(card.rows[1].detail?.contains("25-hour grant") == true,
+      "a session row carries its grant, worded as a GRANT (§406 — the row's title already says key)")
+check(card.rows[1].detail?.contains("Session key") != true,
+      "…and the role is NOT respelled beside it: a grant implies a session, and 'Session key · 25-hour key' said it twice")
+
+// The honesty rail moved with the date: no witnessed registration, no date.
 guard let undatedCard = AltanaRoom.compose(
         readings: [reading("0xa", [key(7, root: true, reg: nil, exp: nil), live])], now: now) else {
     print("  ✗ an undated root still composes"); exit(1)
 }
-check(undatedCard.rootLine?.contains("registered") == false,
+check(undatedCard.rows.first?.detail?.contains("registered") != true,
       "NO DATE when it wasn't witnessed — 'registered today' must never stand in for 'we don't know'")
 
-// Headline arithmetic.
-check(card.headline.contains("2"), "the headline states how many keys can sign")
-guard let noneCard = AltanaRoom.compose(readings: [reading("0xa", [over, key(8, root: false, reg: sessReg, exp: sessExp)])],
-                                        now: now) else {
-    print("  ✗ an all-expired account still composes"); exit(1)
+// ── the kind label (§404's curve, which the room ignored until §405) ──────
+let passkey = AK.Key(id: "0x" + kid(30), isRoot: false,
+                     expiry: Date(timeIntervalSince1970: TimeInterval(Int(now.timeIntervalSince1970) + 86_400)),
+                     signatureCount: 0, publicKey: p256Sample,
+                     registeredAt: Date(timeIntervalSince1970: TimeInterval(sessReg)),
+                     chainLabel: "BNB Smart Chain")
+guard let kindCard = AltanaRoom.compose(readings: [reading("0xa", [root, passkey])], now: now),
+      let kindRow = kindCard.rows.last else { print("  ✗ a passkey composes"); exit(1) }
+check(kindRow.title == "Passkey", "a P-256 credential is titled by the word a person already owns")
+check(kindRow.detail?.contains("Session key") != true,
+      "…and the role is IMPLIED by the grant, not respelled (§406)")
+// The role IS said when nothing else implies it: a kind-titled session with
+// no readable grant would otherwise be a row whose two lines never say what
+// the credential is.
+let grantless = AK.Key(id: "0x" + kid(32), isRoot: false,
+                       expiry: nil, signatureCount: 0, publicKey: p256Sample,
+                       registeredAt: nil, chainLabel: "BNB Smart Chain")
+guard let grantlessCard = AltanaRoom.compose(readings: [reading("0xa", [root, grantless])], now: now) else {
+    print("  ✗ a grantless session composes"); exit(1)
 }
-check(noneCard.usableCount == 0, "every key expired means none can sign")
-check(noneCard.headline.contains("No key"), "…and the headline says so plainly")
+check(grantlessCard.rows.last?.title == "Passkey", "…(fixture premise: the title took the kind)")
+check(grantlessCard.rows.last?.detail?.contains("Session key") == true,
+      "…so with NO grant to imply it, the role IS said — the exception that keeps the rule honest")
+let unknownKind = AltanaRoom.compose(readings: [reading("0xa", [root, live])], now: now)
+check(unknownKind?.rows.last?.title == "Session key",
+      "an unreadable curve falls back to the role, never a guess")
 
-// RANKING is total — a head that reshuffles between opens over identical data
-// reads as broken (the ASCRoom ruling).
-let soonest = key(9, root: false, reg: sessReg, exp: Int(now.timeIntervalSince1970) + 100)
-let later   = key(10, root: false, reg: sessReg, exp: Int(now.timeIntervalSince1970) + 100_000)
-let a = reading("0xaaa", [root, soonest])
-let b = reading("0xbbb", [root, later])
-check(AltanaRoom.compose(readings: [a, b], now: now)?.address == "0xaaa",
-      "the soonest deadline leads")
-check(AltanaRoom.compose(readings: [b, a], now: now)?.address == "0xaaa",
-      "…in either input order — the ranking is total")
-check(AltanaRoom.compose(readings: [a, b], now: now)?.otherWallets == 1,
-      "the other wallet with keys is counted, never dropped in silence")
-
-// A wallet with NO live deadline never outranks one that has one, however many
-// keys it holds — trouble with a clock first.
-let many = reading("0xccc", [root, over, key(11, root: true, reg: rootReg, exp: nil),
-                             key(12, root: true, reg: rootReg, exp: nil)])
-check(AltanaRoom.compose(readings: [many, a], now: now)?.address == "0xaaa",
-      "a live deadline outranks a bigger pile with no clock in it")
-
-// ===========================================================================
-// The curve — what KIND of credential this is (prd §404)
-//
-// The point below is REAL: measured off BNB 2026-08-18 and reassembled from
-// the getKey words. It lies on secp256k1, verified independently in Python
-// before this test existed. So this asserts the shipped detector against
-// ground truth, not against itself.
-// ===========================================================================
-print("AltanaKeystore.curve")
-
-let realKey = "04a376e7011da0888af6a46b1803c93760db185736229fbcf96d2c9750f9e3eacb"
-            + "021abf6eeffcd4f7645c343e2d43c3dc5e2a352ee7ab15c7b8f16649531ba940"
-check(AK.curve(fromPublicKey: realKey) == .secp256k1,
-      "the one real key on the network is secp256k1 — a WALLET key, not a passkey")
-check(AK.Curve.secp256k1.label == "Wallet key", "…and it is named in a word people know")
-check(AK.Curve.p256.label == "Passkey", "P-256 is the passkey curve")
-check(AK.Curve.unknown.label == nil,
-      "an unrecognised curve says NOTHING — naming it anyway is the §83 line here")
-
-// A real P-256 point: the NIST P-256 generator, whose coordinates are public
-// and fixed. If the detector mixed the two equations up, this would come back
-// secp256k1 and every passkey would be labelled a wallet key.
-let p256Generator = "04"
-  + "6b17d1f2e12c4247f8bce6e563a440f277037d812deb33a0f4a13945d898c296"
-  + "4fe342e2fe1a7f9b8ee7eb4a7c0f9e162bce33576b315ececbb6406837bf51f5"
-check(AK.curve(fromPublicKey: p256Generator) == .p256,
-      "the P-256 generator is identified as P-256, not as secp256k1")
-
-// The secp256k1 generator, likewise.
-let k1Generator = "04"
-  + "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798"
-  + "483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8"
-check(AK.curve(fromPublicKey: k1Generator) == .secp256k1,
-      "the secp256k1 generator is identified as secp256k1")
-
-// Junk, and near-misses, all refuse.
-check(AK.curve(fromPublicKey: "04" + String(repeating: "11", count: 64)) == .unknown,
-      "a point on neither curve is unknown")
-// A VALID secp256k1 point wearing the wrong prefix. The earlier fixture used
-// 64 bytes of junk, which is refused by the curve equation whether or not the
-// prefix is checked — so it proved nothing about the prefix guard and the
-// mutation survived. This one is on the curve, so only the prefix can reject it.
-check(AK.curve(fromPublicKey: "03"
-      + "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798"
-      + "483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8") == .unknown,
-      "a COMPRESSED prefix is refused even on a point that IS on the curve")
-check(AK.curve(fromPublicKey: "03" + String(repeating: "aa", count: 64)) == .unknown,
-      "…and junk with a compressed prefix likewise")
-check(AK.curve(fromPublicKey: "04ff") == .unknown, "a short key is refused")
-check(AK.curve(fromPublicKey: "") == .unknown, "an empty key is refused")
-// A coordinate at or above the field prime is not on the curve, whatever it
-// reduces to.
-// X = p + 1, which is >= the field prime but REDUCES to x = 1 — a real point
-// on the curve, with a Y that genuinely satisfies the equation after
-// reduction. So this is accepted the moment the range check goes, and is the
-// only shape that pins it: the earlier fixture (X = p exactly) reduces to
-// x = 0, whose y² = 7 the paired Y does not satisfy, so it was refused by the
-// equation rather than by the range check and the mutation survived.
-check(AK.curve(fromPublicKey: "04"
-      + "fffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc30"
-      + "4218f20ae6c646b363db68605822fb14264ca8d2587fdd6fbc750d587e76a7ee") == .unknown,
-      "a coordinate ABOVE the field prime is refused, never silently reduced")
-
-// ===========================================================================
-// The change diff — revocations and first use
-// ===========================================================================
-print("AltanaKeystore.changes")
-
-check(AK.changes(previous: nil, current: [("0xa", 0), ("0xb", 3)]).isEmpty,
-      "FIRST SIGHT REPORTS NOTHING — not the arrivals, and not a key that had already signed")
-check(AK.changes(previous: [:], current: [("0xa", 0)]) == [.added("0xa")],
-      "an empty baseline is real, so the next key is an arrival")
-check(AK.changes(previous: ["0xa": 0], current: [("0xa", 0)]).isEmpty,
-      "nothing changed, nothing said")
-check(AK.changes(previous: ["0xa": 0], current: [("0xa", 0), ("0xb", 0)]) == [.added("0xb")],
-      "a new key is an arrival")
-check(AK.changes(previous: ["0xa": 0, "0xb": 0], current: [("0xa", 0)]) == [.revoked("0xb")],
-      "A KEY THAT VANISHED IS A REVOCATION — the event the arrivals-only diff could not see")
-check(AK.changes(previous: ["0xa": 0], current: [("0xa", 1)]) == [.firstUse("0xa")],
-      "a nonce leaving zero is a FIRST USE")
-check(AK.changes(previous: ["0xa": 3], current: [("0xa", 9)]).isEmpty,
-      "…but an already-used key signing again is not news — only the first time is")
-check(AK.changes(previous: ["0xa": 5], current: [("0xa", 2)]).isEmpty,
-      "a nonce that FELL is a misread, not a signature — say nothing")
-check(AK.changes(previous: ["0xA": 0], current: [("0xa", 1)]) == [.firstUse("0xa")],
-      "the comparison is case-insensitive")
-// Determinism: several revocations must come back in a stable order, or the
-// rows reshuffle between passes.
-let manyRevoked = AK.changes(previous: ["0xc": 0, "0xa": 0, "0xb": 0], current: [])
-check(manyRevoked == [.revoked("0xa"), .revoked("0xb"), .revoked("0xc")],
-      "several revocations arrive sorted, never in a Set's order")
-
-// ===========================================================================
-// The credential sheet
-// ===========================================================================
-print("AltanaKeySheet")
-
-let addr = "2b589af23311e44398e626895af0e3d43e0c97a8"
-let goodRef = "altana:key:bnb-smart-chain:\(addr):\(kid(1))"
-check(AltanaKeySheet.parse(ref: goodRef)?.address == addr, "a key ref parses to its wallet")
-check(AltanaKeySheet.parse(ref: "altana:event:revoked:\(addr):\(kid(1))") == nil,
-      "an EVENT ref is refused — it is not a credential and must not open this sheet")
-check(AltanaKeySheet.parse(ref: "altana:key:bnb:short:\(kid(1))") == nil, "a bad address is refused")
-check(AltanaKeySheet.parse(ref: "peer:demo0") == nil, "another bridge's ref is refused")
-
-func sheetKey(_ n: Int, root: Bool, reg: Int?, exp: Int?, sigs: Int, pub: String? = nil) -> AK.Key {
-    AK.Key(id: "0x" + kid(n), isRoot: root,
-           expiry: exp.map { Date(timeIntervalSince1970: TimeInterval($0)) },
-           signatureCount: sigs, publicKey: pub,
-           registeredAt: reg.map { Date(timeIntervalSince1970: TimeInterval($0)) },
-           chainLabel: "BNB Smart Chain")
+// ── usage, said only when it carries information ─────────────────────────
+check(kindRow.usageNote == "never used", "a credential that has never signed says so")
+let used = AK.Key(id: "0x" + kid(31), isRoot: false,
+                  expiry: Date(timeIntervalSince1970: TimeInterval(Int(now.timeIntervalSince1970) + 86_400)),
+                  signatureCount: 12, publicKey: nil,
+                  registeredAt: Date(timeIntervalSince1970: TimeInterval(sessReg)),
+                  chainLabel: "BNB Smart Chain")
+guard let usedCard = AltanaRoom.compose(readings: [reading("0xa", [root, used])], now: now) else {
+    print("  ✗ a used session composes"); exit(1)
 }
-let sheetReading = AK.Reading(address: addr, keys: [
-    sheetKey(1, root: false, reg: sessReg, exp: sessExp, sigs: 47, pub: realKey),
-    sheetKey(2, root: true, reg: rootReg, exp: nil, sigs: 0),
-], truncated: false)
-let otherWallet = AK.Reading(address: "aaaa", keys: [
-    sheetKey(1, root: false, reg: sessReg, exp: sessExp, sigs: 2)
-], truncated: false)
+check(usedCard.rows.last?.usageNote == nil,
+      "a session key doing its job needs no remark — only the never-used one is notable")
+check(usedCard.rows.first?.usageNote != nil,
+      "…but a ROOT key's count is the account's own activity, so it is always stated")
 
-guard let sheet = AltanaKeySheet.compose(ref: goodRef, readings: [sheetReading, otherWallet]) else {
-    print("  ✗ the sheet composes"); exit(1)
+// ── §406: two wordings, one measured computation ─────────────────────────
+check(AltanaRoom.grantPhrase(seconds: 86_400) == "24-hour key", "the sheet's wording is untouched")
+check(AltanaRoom.grantDetail(seconds: 86_400) == "24-hour grant", "the room's wording says grant")
+check(AltanaRoom.grantDetail(seconds: 86_400 * 30) == "30-day grant", "…in days too")
+check(AltanaRoom.grantDetail(seconds: 90 * 60) == "90-minute grant", "…and minutes")
+check(AltanaRoom.grantDetail(seconds: 0) == nil, "a zero grant has no detail either")
+check(AltanaRoom.grantDetail(seconds: 86_400 + 600) == "24-hour grant",
+      "both wordings share the measured rounding — they cannot drift apart")
+
+// ── §406: root detail leads "Root", not "Root key", when the title says key ─
+// The plain fixture root has no key material, so its title IS "Root key" and
+// its detail rightly does not respell "Root" — asserting on it was the wrong
+// premise. The kind-titled case needs a root whose curve resolves.
+check(rootRow.detail?.hasPrefix("Root") != true,
+      "a role-titled root does not repeat itself in its own detail")
+let kindRoot = AK.Key(id: "0x" + kid(33), isRoot: true, expiry: nil,
+                      signatureCount: 128, publicKey: p256Sample,
+                      registeredAt: Date(timeIntervalSince1970: TimeInterval(rootReg)),
+                      chainLabel: "BNB Smart Chain")
+guard let kindRootCard = AltanaRoom.compose(readings: [reading("0xa", [kindRoot, live])], now: now) else {
+    print("  ✗ a kind-titled root composes"); exit(1)
 }
-check(AltanaKeySheet.title(sheet) == "24-hour key",
-      "the heading is the grant duration when both ends are known")
-check(AltanaKeySheet.subtitle(sheet).contains("Wallet key"),
-      "the subtitle carries the CURVE, computed from real key material")
-check(AltanaKeySheet.usageLine(sheet) == "Signed 47 times", "the usage line states the count")
-check(sheet.alsoSignsFor == ["aaaa"],
-      "THE SAME KEY ID ON ANOTHER WATCHED WALLET IS SURFACED — one credential, several accounts")
-check(sheet.live == .checking,
-      "the mounted state is 'checking' — the sheet never claims a status it hasn't asked for")
-check(AltanaKeySheet.liveLine(sheet).contains("Checking"), "…and says so")
-check(AltanaKeySheet.scopeCeiling(sheet) != nil, "a session key states the scope ceiling")
+check(kindRootCard.rows.first?.title == "Passkey", "…(fixture premise: the title took the kind)")
+check(kindRootCard.rows.first?.detail?.hasPrefix("Root ·") == true,
+      "a kind-titled root's detail leads the bare word Root — its title already says key")
 
-// A never-used key says so WITH its age, which is the part worth noticing.
-guard let rootSheet = AltanaKeySheet.compose(
-        ref: "altana:key:bnb-smart-chain:\(addr):\(kid(2))", readings: [sheetReading]) else {
-    print("  ✗ the root sheet composes"); exit(1)
+// ── the headline leads with the clock when there is one ──────────────────
+check(card.headline.contains("2"), "with nothing imminent the headline states the census")
+check(card.urgentHours == nil, "…and no urgency is claimed")
+let imminent = key(40, root: false, reg: sessReg, exp: Int(now.timeIntervalSince1970) + 9 * 3600)
+guard let urgent = AltanaRoom.compose(readings: [reading("0xa", [root, imminent])], now: now) else {
+    print("  ✗ an imminent expiry composes"); exit(1)
 }
-check(AltanaKeySheet.usageLine(rootSheet, now: Date(timeIntervalSince1970: TimeInterval(rootReg + 62 * 86_400)))
-        == "Registered 62 days ago, never used",
-      "a never-used key is stated with its age, never as 'signed 0 times'")
-check(AltanaKeySheet.title(rootSheet) == "Root key", "a root key has no grant phrase")
-check(AltanaKeySheet.scopeCeiling(rootSheet) == nil,
-      "a root key does NOT claim a scope ceiling — its authority isn't scoped")
-check(rootSheet.alsoSignsFor.isEmpty, "a key registered nowhere else surfaces nothing")
+check(urgent.urgentHours == 9, "nine hours out is nine hours")
+check(urgent.headline.contains("9 hours"), "ALARM FIRST — the thing with a clock on it leads")
+check(urgent.subline?.contains("can sign") == true,
+      "…and the census SURVIVES as a subline — the alarm used to delete it (§406)")
+check(card.subline == nil,
+      "with no alarm the headline IS the census, and the card never says it twice")
+// Inside the last day the row agrees with the headline about the same clock.
+check(urgent.rows.last?.hoursLeft == 9, "a sub-day deadline carries its hours")
+check(farOffRowHasNoHours(), "…and a distant one does not — hours past a day are noise")
+let farOff = key(41, root: false, reg: sessReg, exp: Int(now.timeIntervalSince1970) + 5 * 86_400)
+check(AltanaRoom.compose(readings: [reading("0xa", [root, farOff])], now: now)?.urgentHours == nil,
+      "a deadline days away is a row's business, not a headline's")
+check(AltanaRoom.compose(readings: [reading("0xa", [root, over])], now: now)?.urgentHours == nil,
+      "an ALREADY expired key is never urgent — it needs nothing")
 
-// An unreadable live check must never render as revoked.
-var unreadable = sheet; unreadable.live = .unreadable
-check(!AltanaKeySheet.liveLine(unreadable).lowercased().contains("revoked"),
-      "AN UNREACHABLE RPC IS NOT A REVOCATION — the alarming direction is the wrong one")
+// ── §406 on the SHEET: the role is never said twice ──────────────────────
+var sheetM = demoModel(.seeded)
+check(AltanaKeySheet.subtitle(sheetM) == "",
+      "no curve, no chain — the subtitle is empty, and the view skips it")
+sheetM = AltanaKeySheet.Model(keyID: "0x" + String(repeating: "0", count: 64),
+                              address: "0xa", isRoot: false,
+                              registeredAt: Date(timeIntervalSince1970: TimeInterval(sessReg)),
+                              expiry: Date(timeIntervalSince1970: TimeInterval(sessExp)),
+                              signatureCount: 0, chainLabel: "BNB Smart Chain",
+                              curve: .p256, alsoSignsFor: [])
+check(AltanaKeySheet.subtitle(sheetM) == "Passkey · BNB Smart Chain",
+      "THE ROLE IS GONE FROM THE SUBTITLE — the title states or implies it, and two adjacent lines both saying session was §406's complaint")
+check(AltanaKeySheet.title(sheetM) == "24-hour key",
+      "…(fixture premise: the title is the grant phrase, which implies the role)")
+// Usage: the age rides along only when the window above is not drawn.
+check(AltanaKeySheet.usageLine(sheetM) == "Never used",
+      "with the grant window drawn, usage does not repeat the Granted date two rows up")
+var rootM = sheetM; // root: window absent, so the age lives here — its one home
+rootM = AltanaKeySheet.Model(keyID: sheetM.keyID, address: "0xa", isRoot: true,
+                             registeredAt: Date(timeIntervalSince1970: TimeInterval(rootReg)),
+                             expiry: nil, signatureCount: 0, chainLabel: nil,
+                             curve: .unknown, alsoSignsFor: [])
+check(AltanaKeySheet.usageLine(rootM, now: now).contains("never used"),
+      "with NO window drawn the age stays in the usage line — the one place it shows")
+check(AltanaKeySheet.usageLine(rootM, now: now).contains("days ago"),
+      "…dated, because nothing else on the card dates a root")
+check(AltanaKeySheet.scopeCeiling(sheetM) == "Only a key’s deadline is published, never its scope.",
+      "the sheet's ceiling matches the card's, word for word — two spellings of one fact drift")
+
+// The demo's own state says the true thing and no more.
+check(!AltanaKeySheet.liveLine(demoModel(.seeded)).contains("checked"),
+      "THE DEMO NEVER CLAIMS A CHECK — it reaches nothing, so it may not say it looked")
+check(AltanaKeySheet.liveLine(demoModel(.active)).contains("checked"),
+      "…while a real read does say so, which is the whole distinction")
 
 print("")
 if failures == 0 {

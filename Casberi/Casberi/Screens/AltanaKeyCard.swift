@@ -94,9 +94,13 @@ struct AltanaKeyCard: View {
                 Text(AltanaKeySheet.title(model))
                     .dsText(.heading22)
                     .foregroundStyle(DS.textPrimary)
-                Text(AltanaKeySheet.subtitle(model))
-                    .dsText(.subhead13)
-                    .foregroundStyle(DS.textSecondary)
+                // Empty when neither the curve nor the chain could be read —
+                // skipped rather than drawn as a blank line.
+                if !AltanaKeySheet.subtitle(model).isEmpty {
+                    Text(AltanaKeySheet.subtitle(model))
+                        .dsText(.subhead13)
+                        .foregroundStyle(DS.textSecondary)
+                }
             }
             Spacer(minLength: 0)
         }

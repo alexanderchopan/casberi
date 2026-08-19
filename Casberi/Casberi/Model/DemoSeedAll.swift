@@ -2602,21 +2602,34 @@ enum DemoSeedAll {
                 signatureCount: signatures, publicKey: publicKey,
                 registeredAt: registered, chainLabel: "BNB Smart Chain")
         }
+        // A REAL P-256 point (the curve's own base point), so the demo shows
+        // the word the whole label exists for — "Passkey" — computed by the
+        // shipped detector rather than asserted.
+        let realP256 = "046b17d1f2e12c4247f8bce6e563a440f277037d812deb33a0f4a13945d898c296"
+                     + "4fe342e2fe1a7f9b8ee7eb4a7c0f9e162bce33576b315ececbb6406837bf51f5"
+        // SEEDED OUT OF ORDER, deliberately (§405). Expired first, root last —
+        // the exact arrangement that used to reach the card untouched, because
+        // `compose` mapped whatever it was handed. Now the card sorts its own
+        // rows, so the demo proves the fix instead of hiding it: whatever order
+        // this array is in, the head must draw root → live → expired.
         AltanaState.save([
             AltanaKeystore.Reading(address: demoWallet, keys: [
-                key(demoAltanaKeyIDValue(0), root: true,
-                    registeredDaysAgo: 62, grantHours: nil,
-                    signatures: 0, publicKey: realPoint),
-                // Live, a little over halfway through a 24-hour grant.
-                key(demoAltanaKeyIDValue(1), root: false,
-                    registeredDaysAgo: 0.6, grantHours: 24,
-                    signatures: 47, publicKey: realPoint),
-                // Live, a 30-day grant with most of its runway left.
-                key(demoAltanaKeyIDValue(2), root: false,
-                    registeredDaysAgo: 4, grantHours: 24 * 30),
                 // EXPIRED but still listed — the reading nothing else has.
                 key(demoAltanaKeyIDValue(3), root: false,
                     registeredDaysAgo: 6, grantHours: 24),
+                // Live, a 30-day grant with most of its runway left, and never
+                // used — the notable state a count can say and a Bool cannot.
+                key(demoAltanaKeyIDValue(2), root: false,
+                    registeredDaysAgo: 4, grantHours: 24 * 30,
+                    signatures: 0, publicKey: realP256),
+                // Live, a little over halfway through a 24-hour grant — and the
+                // one that puts a clock in the headline.
+                key(demoAltanaKeyIDValue(1), root: false,
+                    registeredDaysAgo: 0.6, grantHours: 24,
+                    signatures: 47, publicKey: realPoint),
+                key(demoAltanaKeyIDValue(0), root: true,
+                    registeredDaysAgo: 62, grantHours: nil,
+                    signatures: 128, publicKey: realPoint),
             ], truncated: false),
         ])
         AltanaKeystore.evidence.remember(demoWallet)

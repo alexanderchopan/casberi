@@ -44,7 +44,15 @@ enum AltanaKeySheet {
 
     /// What a live re-check found. `checking` is the mounted state, so the
     /// sheet never claims a status it has not yet asked for.
-    enum LiveState: Equatable { case checking, active, revoked, unreadable }
+    /// What the registry says about this key RIGHT NOW.
+    ///
+    /// `seeded` is the demo's state and exists for one reason: the demo
+    /// reaches nothing (`AltanaKeystore.liveState` returns early), so saying
+    /// "checked just now" there would claim an action that did not happen —
+    /// §83 in miniature, inside the one experience someone judges the app by.
+    /// The seeded keys really are active, so the state is true; only the
+    /// clause about having just checked is dropped.
+    enum LiveState: Equatable { case checking, active, seeded, revoked, unreadable }
 
     struct Model: Equatable {
         let keyID: String
@@ -128,13 +136,14 @@ enum AltanaKeySheet {
         return m.isRoot ? String(localized: "Root key") : String(localized: "Session key")
     }
 
-    /// Role · curve · chain, skipping whatever we could not read. The CURVE is
-    /// the interesting half — it is the only word here a person already knows.
+    /// Curve · chain — and deliberately NOT the role (§406). The title always
+    /// carries it: "Root key" and "Session key" say it outright, and a grant
+    /// phrase ("30-day key") implies a session by definition, so the old
+    /// "Session key · Passkey · BNB Smart Chain" said the role twice on two
+    /// adjacent lines. Empty when neither half could be read; the view skips
+    /// an empty line rather than reserving one.
     static func subtitle(_ m: Model) -> String {
         var parts: [String] = []
-        if !m.isRoot || m.curve.label == nil {
-            parts.append(m.isRoot ? String(localized: "Root key") : String(localized: "Session key"))
-        }
         if let curve = m.curve.label { parts.append(curve) }
         if let chain = m.chainLabel { parts.append(chain) }
         return parts.joined(separator: " · ")
@@ -145,6 +154,7 @@ enum AltanaKeySheet {
         switch m.live {
         case .checking:   String(localized: "Checking with the registry…")
         case .active:     String(localized: "Still active — checked just now")
+        case .seeded:     String(localized: "Active")
         case .revoked:    String(localized: "Revoked — this key can no longer sign")
         case .unreadable: String(localized: "Couldn’t reach the registry just now")
         }
@@ -155,6 +165,12 @@ enum AltanaKeySheet {
     /// it worth noticing.
     static func usageLine(_ m: Model, now: Date = .now) -> String {
         guard m.signatureCount > 0 else {
+            // The age rides along ONLY when the grant window above is not
+            // drawn (§406): with the window there, "Registered 4 days ago"
+            // duplicated the Granted date sitting two rows up. A root key has
+            // no window, so its age still lives here — the one place it shows.
+            let windowDrawn = m.registeredAt != nil && m.expiry != nil
+            guard !windowDrawn else { return String(localized: "Never used") }
             guard let registered = m.registeredAt else {
                 return String(localized: "Has never signed")
             }
@@ -210,6 +226,6 @@ enum AltanaKeySheet {
     /// could do. A root key's authority is not scoped, so it says nothing.
     static func scopeCeiling(_ m: Model) -> String? {
         m.isRoot ? nil
-                 : String(localized: "What this key may sign for isn’t published — only until when.")
+                 : String(localized: "Only a key’s deadline is published, never its scope.")
     }
 }
