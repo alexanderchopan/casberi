@@ -163,6 +163,38 @@ step "CloudKit schema audit"
 "$ROOT/scripts/cloudkit-schema-audit.py" || fail "a Thing property has no CloudKit field — see the output above"
 print -P "%F{green}✓ cloudkit schema audit%f"
 
+# `SecretScan` is well tested and nothing checked it was still CALLED. The
+# scrubber's own fixtures prove it classifies; this proves the ~20 call sites
+# across the eight egress files still exist, so one deleted `redacted(` can no
+# longer leave every check green while the app hands a recovery phrase to a
+# provider, to Spotlight, or to whatever is on the far end of the MCP
+# listener. It found a real one on its first run: `SearchCasberiIntent` built
+# the dialog Siri SPEAKS out of raw titles while the snippet rows beside it,
+# and both of `AskCasberiIntent`'s paths, all redacted correctly.
+step "Redaction coverage audit"
+python3 "$ROOT/scripts/redaction-coverage-audit.py" --self-test >/dev/null \
+  || fail "the redaction audit's own self-test failed — the check is broken, not the code"
+python3 "$ROOT/scripts/redaction-coverage-audit.py" \
+  || fail "corpus text leaves the process unscrubbed — see the output above"
+print -P "%F{green}✓ redaction coverage audit%f"
+
+# NEVER PRUNE ON AN EMPTY UPSTREAM READ. An un-materialized iCloud folder
+# enumerates EMPTY, as does a revoked bookmark and an unmounted volume — read
+# as "everything upstream was deleted", any of them wipes a source out of the
+# corpus and CloudKit carries that to every other device. Mechanical because
+# it had already drifted: `ObsidianBridge` guarded both sides and said why,
+# and `FilesBridge` — the bridge it was modelled on, pointed at iCloud Drive
+# by its own setup copy — guarded only one. Nine other prunes in the tree get
+# this right by four different idioms; each is named in KNOWN_SAFE with the
+# literal that proves it, so an exemption defends its own mechanism instead of
+# switching the check off.
+step "Delete-guard audit"
+python3 "$ROOT/scripts/delete-guard-audit.py" --self-test >/dev/null \
+  || fail "the delete-guard audit's own self-test failed — the check is broken, not the code"
+python3 "$ROOT/scripts/delete-guard-audit.py" \
+  || fail "a prune can fire on an empty upstream read — see the output above"
+print -P "%F{green}✓ delete-guard audit%f"
+
 # The credential tripwire's fixtures (prd §277) — that the shipped patterns and
 # thresholds still hide a recovery phrase and still leave an ordinary shopping
 # list alone. Reads both out of the Swift source, so re-tuning a number here
@@ -236,12 +268,33 @@ print -P "%F{green}✓ demo parity audit%f"
 # the reason is the part that gets skipped when it isn't enforced.
 step "Self-test completeness"
 typeset -a UNWIRED
-for _st in "$ROOT"/scripts/*-selftest.sh; do
+# `.sh` AND `.py`: the guard covered only `*-selftest.sh`, so a self-test
+# spelled `.py` could be added and never run by either pass with nothing
+# complaining. Both that exist today (`secret-scan`, `demo`) happen to be
+# wired by hand; that is luck, not a guarantee.
+for _st in "$ROOT"/scripts/*-selftest.sh "$ROOT"/scripts/*-selftest.py; do
+  [[ -e "$_st" ]] || continue
   grep -q "${_st:t}" "$0" || UNWIRED+=("${_st:t}")
 done
+# AUDITS TOO (2026-08-19). This guard's own reasoning applied to `*-selftest`
+# and stopped there, so the audits stayed a HAND LIST with nothing checking it
+# — the exact drift `verify-mac.sh` fixed for itself on 2026-08-12, running
+# the other way. That script DISCOVERS `scripts/*-audit.{py,sh}`, so an audit
+# added today runs on the Mac nightly and never here, and the failure is
+# silent: this pass prints its audits green while skipping the new one.
+#
+# Still a hand list here rather than a glob, deliberately, for the reason the
+# self-test block below gives: the comment above each invocation is the only
+# written record of WHY that check exists, and a glob would run all of them
+# while throwing every one of those reasons away. So the list stays curated
+# and this makes it provably complete — `catalog-sync.sh`'s shape.
+for _a in "$ROOT"/scripts/*-audit.py "$ROOT"/scripts/*-audit.sh; do
+  [[ -e "$_a" ]] || continue
+  grep -q "${_a:t}" "$0" || UNWIRED+=("${_a:t}")
+done
 (( ${#UNWIRED} == 0 )) \
-  || fail "self-test never run by verify.sh: ${UNWIRED[*]} — add it below with a comment saying what it catches"
-print -P "%F{green}✓ self-test completeness ($(ls "$ROOT"/scripts/*-selftest.sh | wc -l | tr -d ' ') wired)%f"
+  || fail "check never run by verify.sh: ${UNWIRED[*]} — add it below with a comment saying what it catches"
+print -P "%F{green}✓ check completeness ($(ls "$ROOT"/scripts/*-selftest.sh "$ROOT"/scripts/*-selftest.py "$ROOT"/scripts/*-audit.py "$ROOT"/scripts/*-audit.sh 2>/dev/null | wc -l | tr -d ' ') wired)%f"
 
 # ── The seven the guard above found unwired (2026-08-12) ────────────
 # Each existed in `scripts/` and had never once run in this pass. Grouped
@@ -1028,6 +1081,32 @@ xcodebuild -project "$ROOT/Casberi/Casberi.xcodeproj" -scheme Casberi \
   -destination "platform=iOS Simulator,name=$DEVICE" \
   -derivedDataPath "$DD" build -quiet || fail "build failed"
 print -P "%F{green}✓ build%f"
+
+# ── 1a. The unit-test target ────────────────────────────────────────
+# `CasberiTests` has existed the whole time — a real `bundle.unit-test` target
+# in the pbxproj, wired into the shared scheme's TestAction, holding eleven
+# swift-testing cases over `GenParser` — and NOTHING HAS EVER RUN IT. This
+# pass built the app scheme and stopped, so the tests could have rotted
+# against any `GenParser` change with no signal anywhere. (CLAUDE.md said "no
+# test target" until 2026-08-19, which is how it stayed invisible: the doc
+# described the absence and the target was right there.)
+#
+# It runs AFTER the app build on purpose — the build gate above is the faster,
+# broader failure, and a compile error should read as "the app is broken", not
+# "the tests are broken". `-only-testing` keeps it to this target so an added
+# UI-test bundle can never quietly turn a 40-second step into a 20-minute one.
+#
+# This is also the one door in the pass that can reach `@testable import` —
+# the whole SwiftData half of the tree (`Thing`, every `…Source.swift`) is
+# invisible to the `swiftc` harnesses by construction, because they compile
+# Foundation-only files against stubs. Anything needing a real `ModelContext`
+# belongs here.
+step "Unit tests (CasberiTests)"
+xcodebuild test -project "$ROOT/Casberi/Casberi.xcodeproj" -scheme Casberi \
+  -destination "platform=iOS Simulator,name=$DEVICE" \
+  -derivedDataPath "$DD" -only-testing:CasberiTests -quiet \
+  || fail "unit tests failed — run the same xcodebuild test line for the output"
+print -P "%F{green}✓ unit tests%f"
 
 # ── 1b. Mac parity (Catalyst COMPILE only) ──────────────────────────
 # The one platform gap this pass had: everything above builds and runs for

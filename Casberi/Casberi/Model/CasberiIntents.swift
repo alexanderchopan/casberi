@@ -105,7 +105,14 @@ struct SearchCasberiIntent: AppIntent {
                            view: IntentRowsSnippet(rows: []))
         }
         let entities = hits.map(ThingEntity.init)
-        let lines = hits.map { "\($0.title) — \($0.source)" }
+        // The credential tripwire (prd §277), at the boundary that matters:
+        // this dialog is SPOKEN by Siri and shown outside the app, exactly as
+        // the snippet rows below are. Both of `AskCasberiIntent`'s paths and
+        // `IntentRowsSnippet.Row.init` have always scrubbed here; this one
+        // line did not, so a search that matched a screenshot of a recovery
+        // phrase read it out loud. Found by `redaction-coverage-audit.py` on
+        // its first run (2026-08-19).
+        let lines = hits.map { "\(SecretScan.redacted($0.title)) — \($0.source)" }
         let joined = lines.joined(separator: "\n")
         // The rows are built here, off the live models, and handed to the
         // snippet as plain values — a view that held `Thing`s would be reading

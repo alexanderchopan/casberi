@@ -73,7 +73,14 @@ enum MCPTools {
         guard !week.isEmpty else { return "Nothing landed this week." }
 
         var parts = ["\(week.count) thing\(week.count == 1 ? "" : "s") this week"]
-        if let top = HomeComposition.projectClusters(things: week).first {
+        // A cluster is named after a TAG, and a tag is something the person
+        // typed — so it goes out through the same gate as everything else
+        // here (prd §277). The counts beside it are ours and carry nothing.
+        // `safeTags` DROPS a tag that carries a secret rather than masking
+        // it: a redacted name in "… led with 4" reads as a real project you
+        // do not have, and the honest answer is to lead with the next one.
+        if let top = HomeComposition.projectClusters(things: week)
+            .first(where: { !SecretScan.safeTags([$0.name]).isEmpty }) {
             parts.append("\(top.name) led with \(top.things.count)")
         }
         let sources = Set(week.map(\.source))

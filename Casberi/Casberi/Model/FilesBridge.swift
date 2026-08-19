@@ -282,7 +282,25 @@ enum FilesIngest {
         // was deleted since the last sync.
         var removed = 0
         var removedIDs: [UUID] = []
-        if !existing.isEmpty {
+        // BOTH SIDES, not just `existing` (2026-08-19). This guarded the
+        // LANDED set alone, so a walk that succeeded and returned NOTHING made
+        // `goneRefs == existing` and deleted every Files row — then CloudKit
+        // carried that to the person's other devices before they could quit.
+        //
+        // An empty walk is not hypothetical for this bridge in particular: it
+        // is what an un-materialized iCloud folder enumerates as, what a
+        // revoked security-scoped bookmark gives back, and what an unmounted
+        // network volume looks like — and this bridge's own setup copy tells
+        // people to point it at iCloud Drive. `walk` returning nil is already
+        // handled above; returning `[]` was not.
+        //
+        // `ObsidianBridge` has always guarded both (`!existing.isEmpty &&
+        // !outcome.allRefs.isEmpty`) and says why in a comment; this file is
+        // the bridge it was modelled on and never got the guard back. The same
+        // sibling drift as the cap-ordering bug fixed here on 2026-08-06.
+        // Erring toward KEEP can only leave a stale row somebody can delete;
+        // erring the other way deletes a folder's worth of corpus everywhere.
+        if !existing.isEmpty && !outcome.allRefs.isEmpty {
             let goneRefs = existing.subtracting(outcome.allRefs)
             if !goneRefs.isEmpty {
                 let descriptor = FetchDescriptor<Thing>(predicate: #Predicate { $0.source == "Files" })

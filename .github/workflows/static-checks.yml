@@ -1,0 +1,96 @@
+# The static half of `scripts/verify.sh`, on every push.
+#
+# WHY THIS EXISTS. Every check in `scripts/` was made mechanical because a
+# rule had already been re-broken by memory — and then the whole suite was
+# left to be RUN by memory. Until this workflow there was no CI at all: the
+# iOS pass ran when somebody typed `scripts/verify.sh`, and the only
+# unattended runner was `nightly-mac`, a LaunchAgent driving a real GUI app,
+# so a closed lid means the night is SKIPPED rather than queued.
+#
+# That is exactly how `api.stripe.com` shipped undisclosed in build 214: the
+# session ran `catalog-sync.sh` and the liveness audit BY HAND, both green,
+# and never invoked the reach audit. The lesson written down that day was "run
+# `scripts/verify.sh`, not the audits you happen to remember." This is that
+# lesson as infrastructure — nobody has to remember, and a closed lid cannot
+# skip it.
+#
+# Actions minutes and storage are FREE for public repos (CLAUDE.md), so this
+# costs the account nothing.
+#
+# WHAT IT DOES NOT DO, deliberately. No build, no simulator, no device, no
+# `swiftc` harness — a macOS runner is minutes and this is seconds, and the
+# 51 Swift harnesses plus the build, the screen sweep and the demo coverage
+# steps stay where they already run (`verify.sh` on demand, `verify-mac.sh`
+# nightly, both of which discover their own checks). This is the cheap,
+# always-on floor beneath them, not a replacement.
+name: Static checks
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  audits:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # DISCOVERED, never enumerated — `verify-mac.sh`'s 2026-08-12 ruling,
+      # which it earned by hand-listing seven audits while `verify.sh` ran
+      # fifteen. The naming convention IS the registry: name a new check
+      # `*-audit.py` and it is covered here the day it lands, with no line to
+      # add and no way to forget.
+      #
+      # SKIPPED is printed, never silent. A pass that quietly drops a check it
+      # could not run is worse than one that fails: it prints green over a gap,
+      # which is the failure mode this whole suite exists to end.
+      - name: Static audits and self-tests
+        run: |
+          set -uo pipefail
+          # Needs a macOS toolchain, so it cannot run on this runner. Both
+          # still run in `verify.sh` and `verify-mac.sh`.
+          declare -A SKIP=(
+            [cloudkit-schema-audit.py]="reads the schema via xcrun cktool"
+            [localization-coverage-audit.py]="needs the Xcode string catalogs"
+          )
+          declare -A NO_SELFTEST=(
+            [catalog-sync.sh]="it is its own fixture — three real lists compared"
+          )
+          fails=(); ran=0
+          run() {  # run <cmd...> -- named by its basename
+            local name; name="$(basename "${2}")"
+            if [[ -n "${SKIP[$name]:-}" ]]; then
+              printf '  skip %-34s (%s)\n' "$name" "${SKIP[$name]}"; return
+            fi
+            ran=$((ran+1))
+            # `--self-test` FIRST and required, not optional: a check that
+            # cannot demonstrate it catches anything certifies nothing — the
+            # rule the audits themselves are written to.
+            #
+            # Except where there is nothing to demand it OF, and that has to be
+            # named rather than assumed: `catalog-sync.sh` has no `--self-test`
+            # and IGNORES the flag, exiting 0 — so requiring one of it passed
+            # vacuously, a check satisfied for the wrong reason. It is the one
+            # script here that is its own fixture (it compares three lists that
+            # all exist in the tree), and `verify-mac.sh` calls it separately
+            # for the same reason.
+            if [[ -z "${NO_SELFTEST[$name]:-}" ]] && ! "$@" --self-test >/dev/null 2>&1; then
+              printf '  FAIL %-34s (its OWN self-test — the check is broken, not the code)\n' "$name"
+              fails+=("$name (self-test)"); return
+            fi
+            if "$@" >/dev/null 2>&1; then printf '  ok   %s\n' "$name"
+            else printf '  FAIL %s\n' "$name"; fails+=("$name"); fi
+          }
+          for f in scripts/*-audit.py scripts/*-selftest.py; do
+            [[ -e "$f" ]] && run python3 "$f"
+          done
+          for f in scripts/*-audit.sh; do [[ -e "$f" ]] && run bash "$f"; done
+          run bash scripts/catalog-sync.sh
+          echo "— $ran checks run, ${#fails[@]} failed"
+          if (( ${#fails[@]} )); then
+            printf 'failed: %s\n' "${fails[*]}"
+            echo "run the named script locally for its output"; exit 1
+          fi

@@ -361,7 +361,10 @@ enum AgentCorpusTools {
         let nodes = corpus.map(\.node)
         let ties = ThingLinks.pointingAt(target.node, in: nodes, limit: pageLimit)
         guard !ties.isEmpty else {
-            return "Nothing in the person's things points at \"\(target.title)\"."
+            // Scrubbed like every other line this file hands back: a tool
+            // result is corpus text on its way into a provider's context
+            // window, and an error string is not an exception to that.
+            return "Nothing in the person's things points at \"\(SecretScan.redacted(target.title))\"."
         }
         let bySnapshotID = Dictionary(uniqueKeysWithValues: corpus.map { ($0.id, $0) })
         let safe = ties.filter { tie in
