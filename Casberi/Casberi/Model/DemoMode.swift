@@ -42,14 +42,14 @@ enum DemoMode {
 
     /// Read from `BridgeStore.init` and from view bodies, so it stays cheap
     /// and non-isolated — one `UserDefaults` read.
-    static var isActive: Bool { UserDefaults.standard.bool(forKey: activeKey) }
+    static var isActive: Bool { ScratchDefaults.standard.bool(forKey: activeKey) }
 
     private static let seenKey = "demo.mode.hasSeen"
 
     /// Sticky once the demo has ever been entered, and never cleared by
     /// leaving — that is the point. The fork uses it to stop offering a tour
     /// of a room the person has just walked out of.
-    static var hasSeen: Bool { UserDefaults.standard.bool(forKey: seenKey) }
+    static var hasSeen: Bool { ScratchDefaults.standard.bool(forKey: seenKey) }
 
     /// The standing questions a furnished install would plausibly have kept.
     ///
@@ -141,9 +141,9 @@ enum DemoMode {
     /// describing it.
     @MainActor
     static func begin(store: BridgeStore) {
-        UserDefaults.standard.set(true, forKey: activeKey)
-        UserDefaults.standard.set(true, forKey: pendingKey)
-        UserDefaults.standard.set(true, forKey: seenKey)
+        ScratchDefaults.standard.set(true, forKey: activeKey)
+        ScratchDefaults.standard.set(true, forKey: pendingKey)
+        ScratchDefaults.standard.set(true, forKey: seenKey)
         // The catalog must not contradict the feed: rooms full of rows over a
         // catalog claiming nothing is connected reads as a bug. `bridges`
         // persists on write, so this survives relaunch with no init path of
@@ -212,7 +212,7 @@ enum DemoMode {
     /// Idempotent and self-clearing; cheap to call on every launch.
     @MainActor
     static func pourIfNeeded(context: ModelContext) async {
-        guard UserDefaults.standard.bool(forKey: pendingKey) else { return }
+        guard ScratchDefaults.standard.bool(forKey: pendingKey) else { return }
         guard !pouring else { return }
         pouring = true
         defer { pouring = false }
@@ -232,7 +232,7 @@ enum DemoMode {
             context.saveHonestly()
             try? await Task.sleep(for: pourBeat)
         }
-        UserDefaults.standard.set(false, forKey: pendingKey)
+        ScratchDefaults.standard.set(false, forKey: pendingKey)
         NSLog("[Casberi] demoMode: poured %d rows", rows.count)
     }
 
@@ -354,7 +354,7 @@ enum DemoMode {
         // sites (2026-08-07: was a duplicated string literal in three
         // places before this).
         let key = WalletStore.historyKey(DemoSeedAll.demoWallet)
-        if let data = UserDefaults.standard.data(forKey: key),
+        if let data = ScratchDefaults.standard.data(forKey: key),
            let samples = try? JSONDecoder().decode([WalletStore.ValueSample].self, from: data) {
             let shifted = samples.map { sample in
                 WalletStore.ValueSample(
@@ -362,7 +362,7 @@ enum DemoMode {
                     usd: sample.usd, holdings: sample.holdings)
             }
             if let reencoded = try? JSONEncoder().encode(shifted) {
-                UserDefaults.standard.set(reencoded, forKey: key)
+                ScratchDefaults.standard.set(reencoded, forKey: key)
             }
         }
 
@@ -383,11 +383,11 @@ enum DemoMode {
         let rows = DemoSeedAll.teardown(context)
         store.bridges = []
         for ask in keptAsks { KeptAskStore.shared.remove(ask.kind) }
-        UserDefaults.standard.set(false, forKey: activeKey)
+        ScratchDefaults.standard.set(false, forKey: activeKey)
         // A pour interrupted by Exit must not resume on the next launch —
         // otherwise the rows the person just removed pour straight back in,
         // and the app looks like it refused to let go.
-        UserDefaults.standard.set(false, forKey: pendingKey)
+        ScratchDefaults.standard.set(false, forKey: pendingKey)
 
         // The mirror of `begin`'s memory seed. `restoreDemoCheckpoint`
         // removes both the fake prior windows AND any real window recorded

@@ -329,3 +329,46 @@ enum SharedStore {
         }
     }
 }
+
+/// Where a DEBUG run's own state goes.
+///
+/// **`-storeScratch YES` isolated the STORE and nothing else, and that gap
+/// corrupted a real install (2026-08-19).** The store is only half of what a
+/// run leaves behind: the demo's `active`/`hasSeen`/`pending` flags and the
+/// connected-seat list live in `UserDefaults`, which is NOT per-process. On
+/// the Mac a DEBUG build shares the container with the person's installed
+/// app, so a harness run that entered the demo wrote `demo.mode.active = 1`
+/// into their real defaults, its rows went to the throwaway store, and the
+/// next launch of the INSTALLED app read that flag and poured a demo corpus
+/// in beside their own things. From outside it read as a corrupted install:
+/// real rows and fixture rows together, every app claiming to be connected.
+///
+/// So scratch now covers both halves. A run gets its own defaults suite,
+/// wiped on entry so nothing carries between runs, and the person's real
+/// domain is never written at all.
+///
+/// Only state a RUN owns belongs here — demo flags, the seat list, seed
+/// versions. Preferences the harness deliberately drives from the argument
+/// domain (`-onboarded`, `-theme.light`) must keep reading `.standard`, or
+/// every launch arg would land in a suite nothing reads.
+enum ScratchDefaults {
+    #if DEBUG
+    private static let suiteName = "casberi-scratch-\(ProcessInfo.processInfo.processIdentifier)"
+    #endif
+
+    /// The defaults a DEBUG run should write its own state into.
+    static let standard: UserDefaults = {
+        #if DEBUG
+        if UserDefaults.standard.bool(forKey: "storeScratch"),
+           let suite = UserDefaults(suiteName: suiteName) {
+            // Start clean: a suite is a file on disk like any other, so a
+            // recycled PID would otherwise inherit the last run's demo state
+            // — the exact cross-run bleed this exists to stop.
+            suite.removePersistentDomain(forName: suiteName)
+            NSLog("[Casberi] storeScratch: defaults suite %@", suiteName)
+            return suite
+        }
+        #endif
+        return .standard
+    }()
+}

@@ -21,7 +21,7 @@ final class BridgeStore {
     init(bridges: [BridgeApp]? = nil) {
         if let bridges {
             self.bridges = bridges
-        } else if let data = UserDefaults.standard.data(forKey: Self.saveKey),
+        } else if let data = ScratchDefaults.standard.data(forKey: Self.saveKey),
                   let saved = try? JSONDecoder().decode([BridgeApp].self, from: data),
                   !saved.isEmpty {
             self.bridges = saved
@@ -32,7 +32,7 @@ final class BridgeStore {
 
     private func persist() {
         if let data = try? JSONEncoder().encode(bridges) {
-            UserDefaults.standard.set(data, forKey: Self.saveKey)
+            ScratchDefaults.standard.set(data, forKey: Self.saveKey)
         }
     }
 

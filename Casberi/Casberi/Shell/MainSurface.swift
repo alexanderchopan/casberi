@@ -72,7 +72,12 @@ struct MainSurface: View {
     /// Mirrors `DemoMode.isActive` — the standing demo banner rides this
     /// surface's top inset (see the `.safeAreaInset` below). `@AppStorage`
     /// rather than a plain read so Exit removes it on the spot.
-    @AppStorage("demo.mode.active") private var demoActive = false
+    // Reads the SAME store `DemoMode` writes. Under `-storeScratch` that is a
+    // per-process suite, so a harness run still shows its own banner while
+    // writing nothing into the person's real defaults; outside scratch this is
+    // `.standard` exactly as before.
+    @AppStorage("demo.mode.active", store: ScratchDefaults.standard)
+    private var demoActive = false
     /// Source moments (wallet new highs, token new highs, a Bitrefill refill,
     /// a quiet account posting again) — the data paths can't reach the
     /// corpus-arrival watcher that fires the release rain (some aren't things

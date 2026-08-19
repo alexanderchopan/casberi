@@ -4564,6 +4564,59 @@ enum ProbeHooks {
         // removes the rows it owns and forgets the version, so the next launch
         // seeds again. Neither can fire in a release build or in `-fresh YES`
         // mode — `DemoSeedAll.seed` is gated the same way `DemoCorpus` is.
+        // `-demoCorpusClear YES` — remove the BASE dev corpus (`DemoCorpus`),
+        // the half `-demoSeed clear` cannot reach. Those rows carry no
+        // `sourceRef`, so no prefix sweep can find them, and until `clear()`
+        // existed there was no way to take them back out of an install that
+        // had ever run a DEBUG build. It also switches `demo.corpusAllowed`
+        // off, or the next DEBUG launch re-seeds what this just removed and
+        // the whole exercise reads as having done nothing.
+        // `-devReset YES` — put a dev-polluted install back to what a real
+        // release install looks like: no seeded seats, and none of the rows a
+        // seeded seat caused to be ingested.
+        //
+        // It exists because clearing the CORPUS is not enough on its own.
+        // `BridgeStore.init` falls back to `BridgeApp.demo` whenever
+        // `DemoState.seedsDemoData` is true, and that init runs BEFORE any
+        // hook — so a DEBUG launch that clears rows still comes up with every
+        // seat "connected", and any seat with a real device source behind it
+        // (Contacts, Photos, Calendar, Reminders) then ingests the person's
+        // ACTUAL data on the first foreground sweep. Measured: one such launch
+        // landed 23 real contacts nobody asked for.
+        //
+        // So this switches the seeding flag off FIRST — a later launch cannot
+        // re-seed — then empties the seat list and removes the rows those
+        // phantom seats pulled in. Rows are matched by their own ref prefixes,
+        // never by source name alone, so a row that arrived legitimately from
+        // another device keeps its place.
+        Hook(key: "devReset") { _, context in
+            Task { @MainActor in
+                UserDefaults.standard.set(false, forKey: "demo.corpusAllowed")
+                let removedCorpus = DemoCorpus.clear(context)
+                let prefixes = ["contact:", "homekit:"]
+                var pulled = 0
+                if let all = try? context.fetch(FetchDescriptor<Thing>()) {
+                    for thing in all where thing.isLive {
+                        guard let ref = thing.sourceRef,
+                              prefixes.contains(where: { ref.hasPrefix($0) }) else { continue }
+                        context.delete(thing)
+                        pulled += 1
+                    }
+                    context.saveHonestly()
+                }
+                let left = (try? context.fetchCount(FetchDescriptor<Thing>())) ?? 0
+                NSLog("[Casberi] devReset: corpus=%d ingested=%d left=%d",
+                      removedCorpus, pulled, left)
+            }
+        },
+        Hook(key: "demoCorpusClear") { _, context in
+            Task { @MainActor in
+                let gone = DemoCorpus.clear(context)
+                UserDefaults.standard.set(false, forKey: "demo.corpusAllowed")
+                let left = (try? context.fetchCount(FetchDescriptor<Thing>())) ?? 0
+                NSLog("[Casberi] demoCorpusClear: removed %d, %d things left", gone, left)
+            }
+        },
         Hook(key: "demoSeed") { spec, context in
             Task { @MainActor in
                 if spec == "clear" {

@@ -84,6 +84,43 @@ enum DemoCorpus {
         Date(timeIntervalSinceNow: -hours * 3600)
     }
 
+    /// Remove exactly the rows this file seeds, and nothing else.
+    ///
+    /// **`DemoSeedAll` has had `clear()` since it was written and this base
+    /// corpus never did**, which is a real gap rather than an oversight
+    /// nobody hit: seeding is one-way, so any install that has ever run a
+    /// DEBUG build carries these rows for good, with no verb anywhere — in
+    /// the app, in Settings, or behind a launch arg — that can take them
+    /// back out. It cost a real afternoon: a Mac carrying 27 of these read as
+    /// a corrupted TestFlight install, because a fixture row and a real one
+    /// are indistinguishable once they are in the store.
+    ///
+    /// Matched against `things()` itself — the fixtures name themselves, so
+    /// this cannot drift as the table changes, and a row that merely happens
+    /// to share a title with one is safe because the pair must match AND the
+    /// row must carry no `sourceRef`. Every real row has one, since a bridge
+    /// stamps it; the only rows without are these fixtures and a hand-typed
+    /// note, which is why the source must match too.
+    ///
+    /// Deletes through the context rather than the store, so the removals
+    /// tombstone properly and travel to the person's other devices — a raw
+    /// store delete leaves no tombstone and the rows sync straight back.
+    @MainActor
+    @discardableResult
+    static func clear(_ context: ModelContext) -> Int {
+        let fixtures = Set(things().map { "\($0.source)\u{0}\($0.title)" })
+        guard let all = try? context.fetch(FetchDescriptor<Thing>()) else { return 0 }
+        let mine = all.filter { thing in
+            guard thing.isLive else { return false }
+            let ref = thing.sourceRef ?? ""
+            guard ref.isEmpty else { return false }
+            return fixtures.contains("\(thing.source)\u{0}\(thing.title)")
+        }
+        for thing in mine { context.delete(thing) }
+        context.saveHonestly()
+        return mine.count
+    }
+
     private static func things() -> [Thing] {
         [
             // ── Lisbon trip cluster ─────────────────────────────────────────
