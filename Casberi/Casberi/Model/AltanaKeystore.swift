@@ -37,14 +37,26 @@ import Foundation
 /// enumeration. Every selector below was read from that bytecode and confirmed
 /// against a public signature database; none was recalled.
 ///
-/// ## L1 only, deliberately
+/// ## TWO keystores and one cache — not "an L1 with L2 mirrors"
 ///
-/// Base carries a KeyStoreCache that mirrors L1 by storage proof, and it
-/// returns the right key ids. But `isValidKey` there reverts with
-/// `Cache: call populateKey before isValidKey` (measured) — the per-key
-/// population has never been run for the one key that exists, so the cache
-/// can list and cannot answer. Reading L1 alone is both simpler and the only
-/// thing we can currently stand behind.
+/// Measured 2026-08-19 by pulling all three dispatch tables, and it corrects
+/// both the marketing page and this file's own earlier wording. **Ethereum and
+/// BNB are INDEPENDENT keystores**: 24 selectors each, no cache markers, its
+/// own controller and its own registration fee per chain. **Base is the only
+/// cache** — 14 selectors, carrying `l1KeyStore` / `l1BlockNumber` /
+/// `populateKey`, and its `l1KeyStore()` answers with the ETHEREUM contract.
+///
+/// So a key registered on BNB can never appear on Base. Not "hasn't been
+/// mirrored yet" — structurally cannot, because Base mirrors Ethereum. And
+/// the one real Ethereum key is LISTED on Base while `isValidKey` there still
+/// reverts with `Cache: call populateKey before isValidKey`, so that cache can
+/// list and cannot answer.
+///
+/// `registries` therefore holds the two KEYSTORES and no cache. A cache would
+/// return Ethereum's list and double-count every key on it, and asking one
+/// where a credential can sign was explored and dropped (§409): the reading it
+/// supports — a credential × chain matrix — declines for every single-chain
+/// account, which today is every account there is.
 ///
 /// ## Reads only
 ///

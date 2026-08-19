@@ -26757,3 +26757,56 @@ logic. One survived as the familiar "right result for the wrong reason": the
 rail-span fixture's furthest deadline happened to be exactly 30 days out, so a
 hard-coded 30-day window agreed with it exactly; the pinning fixture puts
 everything inside ten days, where the two answers differ.
+
+## §409 — The chain matrix, explored and declined; two keystores, not one (user: "i don't think that is useful", 2026-08-19)
+
+Asked what else the data could show, the honest answer needed measuring
+first — and the measuring produced one correction worth keeping and one chart
+worth dropping.
+
+**Three fields we discard have nothing behind them.** Probed across all 18 real
+BNB keys: `getValidator` is the zero address on every one, `getMetadata` is
+empty on every one, and every nonce is zero. So the "custom policy contract"
+reading, the human-label reading and the usage reading are unbuildable today,
+not merely unbuilt. Re-probe before proposing any of them again.
+
+**The log window was wrong in §402.** That entry says public BSC RPCs gate
+ranged `eth_getLogs`; measured again, publicnode serves 1,000-block windows
+fine — the earlier conclusion came from testing 5,000 and 10,000. That reopens
+`KeyRevoked` (revocation history, which the snapshot diff can only see
+forward) and `FeeCollected`. **The standing lesson: a limit measured at one
+size is not a limit.**
+
+**The fee is real and measured**: the controller charges a USD-denominated
+registration fee converted per chain through a price feed —
+`registrationFeeUSD` is 5e17 (18 decimals, so **$0.50**), and
+`getRegistrationFeeInWei` returned 0.000238 ETH and 0.000811 BNB, which
+cross-check against that price. Ethereum's `priceFeed()` is Chainlink's
+canonical ETH/USD.
+
+**TWO INDEPENDENT KEYSTORES AND ONE CACHE.** Pulling all three dispatch
+tables: Ethereum and BNB carry 24 selectors each with no cache markers, each
+with its own controller and its own fee; Base carries 14 and has
+`l1KeyStore`/`l1BlockNumber`/`populateKey`, and its `l1KeyStore()` answers with
+the ETHEREUM contract. So a BNB key can never appear on Base — structurally,
+not "not yet". The marketing page's "one keystore every chain references" is
+not what is deployed, and this file's own §403 wording said "L1 only", which
+framed Ethereum as THE keystore. Both corrected in the source doc.
+
+**The chain matrix was mocked and DECLINED by the user, and the mockup is what
+made the decision cheap.** A credentials × chains grid is genuinely novel and
+genuinely snapshot-shaped, and it carried an honest gate: draw only when the
+rows differ, because a grid whose rows are identical is one sentence wearing a
+costume (the grant-histogram rule). Building it would have meant discovering
+that the gate declines for every single-chain account — which today is every
+account there is. **A chart that almost always refuses to draw is not worth
+the code**, and the groundwork (a cache tier on `registries`, a `Reach` model)
+was reverted rather than left half-built, where it would have made `read` walk
+the cache and double-count Ethereum's keys.
+
+**Two readings survive and neither is a chart.** REVOCATIONS: two to four
+events is not a dataset, and they belong in the constellation as ghost nodes
+with a severed tie — history arriving in the picture that already works.
+FEES: at $0.50 a registration somebody with five keys has spent $2.50, and
+charting $2.50 is the data slop the module doctrine bans; it is one line of
+money text. Both are still unbuilt, and both now have a measured path.
