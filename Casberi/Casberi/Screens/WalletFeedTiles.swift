@@ -176,7 +176,18 @@ struct WalletBalanceHeadline: View {
                 // beneath the line for a gradient to fall through, which is
                 // the shape Stocks draws and the reason the taller plot needs
                 // it (a 170pt box with a hairline of fill reads as empty).
-                TokenChartPlot(chart: chart, accent: accent, height: 170, pulses: false,
+                //
+                // 170 → 120 (2026-08-18, user ruling): the height is spent
+                // BUYING the room's newest transactions a place above the
+                // fold (`FeedScreen.walletTodaySection`). The chart is still
+                // the room's biggest element and every reason above survives
+                // at 120 — a nearly-flat line still has real height under it
+                // for the fill to fall through, which was the only thing 52
+                // could not give. What it can no longer be is the whole first
+                // screen: a wallet's transactions sat behind ten standing
+                // cards, and the fix is a shorter hero rather than a folded
+                // room (Options A and B, both declined).
+                TokenChartPlot(chart: chart, accent: accent, height: 120, pulses: false,
                                lineWidth: 2.6, fillOpacity: 0.24, endpointDot: true,
                                marks: marks,
                                onTapMark: marks.isEmpty ? nil : { onOpenMark($0.id) },

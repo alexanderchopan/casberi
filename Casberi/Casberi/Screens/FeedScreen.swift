@@ -2753,7 +2753,20 @@ struct FeedScreen: View {
             // (The wallet switcher isn't here: it PINS over the stream via
             // safeAreaInset — a scoping control has to stay reachable when
             // you're deep in the transactions it scopes.)
-            walletTilesSection(visible)
+            // The stream's rows, gathered ONCE at the top of the case
+            // (2026-08-18): the newest few now LEAD the room from inside the
+            // balance card (`walletTodayCard`) and the rest read below, so
+            // both halves have to be cut from one list — computed twice, a
+            // row would show up in both.
+            let upcoming = walletUpcoming(visible)
+            // Promoted rows leave the stream, or the same deadline would be
+            // read twice on one screen — once as what's coming and once as
+            // whenever it happened to land.
+            let promoted = Set(upcoming.map(\.id))
+            let all = visible.live.filter { !promoted.contains($0.id) }
+            let latest = Array(all.prefix(Self.walletTodayRows))
+            let led = Set(latest.map(\.id))
+            walletTilesSection(visible, latest: latest, streamTotal: all.count)
             // Answers the question the balance card's own delta pill raises,
             // before the map changes the subject to composition (2026-08-01).
             walletFlowSection
@@ -2774,14 +2787,13 @@ struct FeedScreen: View {
             // below reads backwards from today; these rows are dated forwards,
             // and nothing else in the app shows them any more — see
             // `walletUpcoming` for why they were effectively invisible.
-            let upcoming = walletUpcoming(visible)
             walletComingUpSection(upcoming)
-            // Promoted rows leave the stream, or the same deadline would be
-            // read twice on one screen — once as what's coming and once as
-            // whenever it happened to land.
-            let promoted = Set(upcoming.map(\.id))
-            let all = visible.live.filter { !promoted.contains($0.id) }
-            let preview = walletStreamRows(all)
+            // …and the rows the card above already led with leave too, for
+            // that same reason one level down (§208, never say one thing
+            // twice). Purely SUBTRACTIVE: nothing else about the stream
+            // changes, so a day whose rows all led up top simply doesn't open
+            // a section, and a busy day keeps every row it had bar three.
+            let preview = walletStreamRows(all.filter { !led.contains($0.id) })
             walletStreamSections(preview, nextEventID: nextEventID)
             walletSeeAllSection(total: all.count)
         case .calendar:
@@ -4234,6 +4246,24 @@ struct FeedScreen: View {
     /// screen, and an unbounded stream buried all four of them.
     private static let walletPreviewRows = 5
 
+    /// How many transactions lead the room from inside the balance card
+    /// (2026-08-18, user ruling — the answer to "the transactions are at the
+    /// end"). THREE, and the number is the whole design: it is what fits above
+    /// the fold under a shortened chart, and the moment it grows it stops
+    /// being a glance and becomes the stream a second time.
+    ///
+    /// The two rejected fixes are worth recording, because both were drawn
+    /// before this one won. FOLDING the standing cards (Liquidity, Perps, a
+    /// changeless Approvals into one "Positions" card) buys the same height
+    /// and costs a room the user likes: "don't collapse the rest of the
+    /// stuff." MOVING the whole stream up front-loads a room that may hold
+    /// hundreds of rows, and re-litigates the load-bearing hero → ink →
+    /// treemap adjacency below. A three-row card costs ~140pt, hides nothing
+    /// (every row it takes is still one tap away, and the rest of the stream
+    /// still reads below), and leaves every card in the room exactly where it
+    /// was.
+    private static let walletTodayRows = 3
+
     /// The wallet room's two cards are TRANSLUCENT (prd §160): they sit on the
     /// crown pour, and an opaque surface would punch a hole in the one
     /// atmospheric move the shell makes. One constant so the balance card and
@@ -4259,8 +4289,17 @@ struct FeedScreen: View {
     /// two value samples exist, no warnings line when there's nothing wrong —
     /// and with both absent the section renders nothing at all rather than an
     /// empty row (the same honesty floor every section here keeps).
+    /// - Parameters:
+    ///   - latest: the newest stream rows, led from inside this card
+    ///     (`walletTodayCard`). Named apart from the balance's own `total`
+    ///     below, which is money — these two numbers count different things
+    ///     and a shadowed name here would be a silent wrong figure.
+    ///   - streamTotal: how many rows the stream holds in all, for the card's
+    ///     own door.
     @ViewBuilder
-    private func walletTilesSection(_ visible: [Thing]) -> some View {
+    private func walletTilesSection(_ visible: [Thing],
+                                    latest: [Thing] = [],
+                                    streamTotal: Int = 0) -> some View {
         // Scoped to the selected wallet's own value line, else the combined
         // portfolio line (prd §128). Both start honest — nil until two aligned
         // samples exist (TokenChart.from guards ≥2) — but the NUMBER no longer
@@ -4283,7 +4322,12 @@ struct FeedScreen: View {
         // Hyperliquid account with an empty EVM wallet — has no priced
         // holdings and no warnings, so without this the one surface that
         // states its money would never render at all.
-        if chart != nil || total != nil || !warnings.isEmpty || !composition.isEmpty {
+        // `latest` joins the gate for the same reason `composition` did: a
+        // wallet with no priced holdings, no line and no warning still has
+        // transactions, and without this the one card that shows them would
+        // never render at all.
+        if chart != nil || total != nil || !warnings.isEmpty || !composition.isEmpty
+            || !latest.isEmpty {
             Section {
                 // ONE card (prd §212, 2026-07-25) — the balance, the per-wallet
                 // split, and the security read. Three parcels of equal weight
@@ -4394,6 +4438,26 @@ struct FeedScreen: View {
                 // structurally prevented: on a DOWN day this hero is red, top
                 // to bottom, because every colour on it now comes from the
                 // data rather than from the surface.
+                }
+
+                // WHAT JUST HAPPENED, directly under the number it moved
+                // (2026-08-18, user ruling). The room's transactions used to
+                // begin after ten standing cards, so on a busy wallet the one
+                // thing a wallet app gets opened for was two screens down. This
+                // is the whole fix, and deliberately the SMALLEST one that
+                // works: three rows, nothing else folded, every card below
+                // exactly where it was.
+                //
+                // ABOVE the caution block on purpose. That block's own ordering
+                // note (below) is about the hero and the TREEMAP reading as one
+                // blue mass with no ink between them — still true, and now
+                // doubly satisfied, since this card is ink too. What it is not
+                // is a reason to seat a security warning between the balance
+                // and the transactions that moved it: this card and the hero
+                // are one glance ("it moved — here's what moved"), and the
+                // caution answers a different question.
+                if !latest.isEmpty {
+                    walletTodayCard(latest, streamTotal: streamTotal)
                 }
 
                 // …and the caution presses back in ink. ORDERING IS
@@ -4876,6 +4940,76 @@ struct FeedScreen: View {
     /// Only a run of `walletFoldMin`+ folds — collapsing two rows into a row
     /// that says "2 transfers" saves nothing and costs the two titles.
     private static let walletFoldMin = 3
+
+    /// The newest few transactions, drawn INSIDE the balance card
+    /// (2026-08-18, user ruling: "the real answer is the user will want to see
+    /// them above the fold").
+    ///
+    /// **Not a second row anatomy.** These are `BandRow`s with the money
+    /// column, byte-identical to what the stream below draws, because §212's
+    /// law for this room is one row shape and a compact variant here would be
+    /// the second. So a row reads the same whether you meet it up top or two
+    /// screens down, and the fold's rows and this card's can never disagree
+    /// about how a transfer looks.
+    ///
+    /// **The door is the section label's count-link, not a centred see-all
+    /// row.** `WalletRowChevron`'s own note records that this room once
+    /// carried six grammars for "there's more" and that exactly two survived
+    /// the §212 pass — a chevron on a row, and a count-link on a section
+    /// label. This is the second one, at its documented shape.
+    ///
+    /// **Every row it takes, the stream gives up** (see the `.wallet` case's
+    /// `led` set), so nothing is said twice and nothing is hidden: the rest of
+    /// the stream still reads below, and the full history is one tap away.
+    @ViewBuilder
+    private func walletTodayCard(_ rows: [Thing], streamTotal: Int) -> some View {
+        // Only when there IS more behind it — a wallet whose whole history is
+        // these three rows would otherwise get a door onto what it can already
+        // see (the honesty rule's dead-control clause).
+        let hasMore = streamTotal > rows.count
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            WalletSectionLabel(
+                title: walletLatestLabel(rows),
+                trailingTitle: hasMore ? String(localized: "See all \(streamTotal)") : nil,
+                onTapTrailing: hasMore
+                    ? { route.pushBridge(.walletHistory(scope: selectedWallet)) }
+                    : nil)
+            ForEach(Array(rows.keyed.enumerated()), id: \.element.id) { i, item in
+                // `live` INSIDE the closure, before any read (corollary 3):
+                // this re-evaluates against the array it already holds when a
+                // heal's delete lands.
+                if let thing = item.live {
+                    Button {
+                        openThing(thing)
+                    } label: {
+                        BandRow(thing: thing, moneyColumn: true, rippleIndex: i)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(RowPress())
+                    .dsHover()
+                    .macHoverLift()
+                }
+            }
+        }
+        .padding(DS.Space.s4)
+        .dsWidgetSurface(fillOpacity: Self.walletCardFill)
+    }
+
+    /// What to call the card above — and the reason it is a function rather
+    /// than the literal "Today" the mock carried.
+    ///
+    /// A day word is only honest while every row it covers falls on that day.
+    /// A wallet that last moved in March would wear "Today" over three
+    /// five-month-old transfers — §83's fake status, in the largest claim on
+    /// the card. So the day label is used when the rows agree on a day (the
+    /// ordinary case on an active wallet, where it reads exactly as asked),
+    /// and the room's own neutral word otherwise. Each row carries its own
+    /// timestamp either way, so nothing is lost by the fallback.
+    private func walletLatestLabel(_ rows: [Thing]) -> String {
+        let days = Set(rows.live.map { Self.groupingCalendar.startOfDay(for: $0.capturedAt) })
+        if days.count == 1, let day = days.first { return dayLabel(day) }
+        return String(localized: "Activity")
+    }
 
     private func walletStreamRows(_ things: [Thing]) -> [FeedRow] {
         var rows: [FeedRow] = []
