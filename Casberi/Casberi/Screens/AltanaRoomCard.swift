@@ -120,7 +120,7 @@ struct AltanaRoomCard: View {
         HStack(alignment: .top, spacing: DS.Space.s3) {
             if showFace {
                 VStack(spacing: DS.Space.s1) {
-                    WalletFace(address: group.address, size: 30, circular: true)
+                    WalletFace(address: group.address, size: DS.Face.rowCircle, circular: true)
                     Text(WalletStore.shortAddress(group.address))
                         .dsText(.label12)
                         .foregroundStyle(DS.textTertiary)
