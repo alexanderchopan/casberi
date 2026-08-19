@@ -112,13 +112,20 @@ extension AltanaRoom {
         if let hours = card.urgentHours { lines.append("altanaRoom| urgent: \(hours)h to the soonest expiry") }
         // Every row IN DRAWN ORDER, roots included — the order is the thing
         // most worth seeing here, since it is what §405 found wrong.
-        for s in card.rows {
+        // The rail, in drawn order — positions only (§408a).
+        for dot in card.rail {
+            lines.append("  altanaRail| \(dot.label) at \(Int(dot.position * 100))%"
+                + (dot.count > 1 ? " (merged \(dot.count))" : ""))
+        }
+        // Every CREDENTIAL once, deduped — what the constellation draws.
+        for s in card.credentials {
             let pct = s.progress.map { "\(Int($0 * 100))%" } ?? "—"
-            lines.append("  altanaRow| \(s.id.prefix(18))…"
+            lines.append("  altanaKey| \(s.id.prefix(18))…"
                 + " role=\(s.isRoot ? "root" : "session")"
                 + " kind=\(s.kindLabel ?? "—")"
                 + " grant=\(s.grantPhrase ?? "—")"
                 + " signed=\(s.signatureCount)"
+                + " signsFor=\(s.accountAddresses.count)"
                 + " progress=\(pct)"
                 + " daysLeft=\(s.daysLeft.map(String.init) ?? "—")"
                 + " expired=\(s.expired ? "YES" : "NO")"

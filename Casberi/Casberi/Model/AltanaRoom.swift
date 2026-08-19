@@ -88,6 +88,16 @@ enum AltanaRoom {
         /// though it was already in the snapshot it reads.
         let signatureCount: Int
         let registeredAt: Date?
+        /// EVERY watched account this credential can sign for (§408a).
+        ///
+        /// A key id derives from its public key, so the same id under two
+        /// accounts is ONE credential with two registrations — which is why
+        /// the card draws one token with two ties rather than two tokens, and
+        /// why the census counts credentials rather than registrations.
+        var accountAddresses: [String] = []
+
+        /// Signs for more than one watched account.
+        var isShared: Bool { accountAddresses.count > 1 }
 
         /// The row's leading word: the KIND when we can prove it, because
         /// "Passkey" is the only word here a person already owns. Falls back
@@ -138,6 +148,31 @@ enum AltanaRoom {
         }
     }
 
+    /// One deadline on the "next" rail (§408a).
+    ///
+    /// POSITION ONLY — never a length. A span drawn as a bar invites the
+    /// reading that a long grant is somehow more than a short one, which is
+    /// the user's own objection to the timeline draft: seeing a long line for
+    /// a wallet key beside a shorter one for a passkey tells you nothing you
+    /// can act on. A dot says the one thing that IS actionable — when,
+    /// relative to now and to the others.
+    struct RailDot: Equatable, Identifiable {
+        /// The key id of the first credential in the group.
+        let id: String
+        /// True fraction from now to the furthest live deadline, 0…1.
+        let position: Double
+        /// "9h · Passkey", or "2 keys" once a group merged.
+        let label: String
+        /// How many deadlines this dot stands for.
+        let count: Int
+    }
+
+    /// Dots closer together than this merge into one, because two overlapping
+    /// dots are one unreadable dot. The merge keeps the TRUE position of the
+    /// earliest in the group and says how many — it never nudges a dot to a
+    /// time that is not its own.
+    static let railMergeGap = 0.05
+
     /// One account's keys, behind its face (§407a).
     struct AccountGroup: Equatable, Identifiable {
         /// Lowercased hex — feeds `WalletFace` and the row-matching tap.
@@ -157,7 +192,12 @@ enum AltanaRoom {
         /// same urgency ranking that used to pick the lead now merely picks
         /// who is drawn on top.
         let accounts: [AccountGroup]
-        /// Usable keys that can sign right now, across every account.
+        /// EVERY credential exactly once, deduped by key id (§408a) — the
+        /// constellation's tokens, and the honest unit for the census.
+        let credentials: [KeyRow]
+        /// Distinct credentials that can sign right now. NOT a count of
+        /// registrations: a key signing for two accounts is one credential,
+        /// and the picture shows one token, so the sentence says one.
         let usableCount: Int
         let rootCount: Int
         /// Hours until the soonest LIVE expiry anywhere, when that is close
@@ -171,12 +211,14 @@ enum AltanaRoom {
         /// credential by construction (an id derives from its public key), so
         /// this is the single-point-of-failure fact with no inference in it.
         let sharedKeyIDs: Set<String>
+        /// The deadlines ahead, as positions on one shared rail (§408a).
+        let rail: [RailDot]
 
         /// The first account's address — kept for the headline's tap target
         /// (the explorer door opens on the most urgent account).
         var address: String { accounts.first?.address ?? "" }
 
-        /// Every row across every account, in drawn order — the probe's view.
+        /// Every registration in drawn order — the probe's per-account view.
         var rows: [KeyRow] { accounts.flatMap(\.rows) }
         /// Sessions only — the harness still asks the question this way.
         var sessions: [KeyRow] { rows.filter { !$0.isRoot } }
@@ -199,7 +241,7 @@ enum AltanaRoom {
                 return String(localized: "No key can sign for this account right now")
             }
             if accounts.count > 1 {
-                return String(localized: "\(n) keys can sign across \(accounts.count) accounts")
+                return String(localized: "\(n) keys can sign for \(accounts.count) accounts")
             }
             return n == 1
                 ? String(localized: "1 key can sign for this account")
@@ -214,20 +256,28 @@ enum AltanaRoom {
             guard urgentHours != nil else { return nil }
             let n = usableCount
             if accounts.count > 1 {
-                return String(localized: "\(n) keys can sign across \(accounts.count) accounts")
+                return String(localized: "\(n) keys can sign for \(accounts.count) accounts")
             }
             return n == 1
                 ? String(localized: "1 key can sign for this account")
                 : String(localized: "\(n) keys can sign for this account")
         }
 
-        /// The shared-credential fact, drawn as a link mark on the tokens and
-        /// said once here — nil for the overwhelmingly common case.
+        /// The shared-credential fact.
+        ///
+        /// **A key SIGNS FOR an account; it never "holds" one** (user ruling,
+        /// §408a). Holding implies custody of the account itself, which is the
+        /// §83 overclaim this whole seat is careful about — the registry says
+        /// only what may sign. Since §408a the tie is DRAWN, so this sentence
+        /// exists as the accessible reading of the picture rather than as the
+        /// only place the fact appears.
         var sharedNote: String? {
             guard !sharedKeyIDs.isEmpty else { return nil }
+            let accountsSigned = credentials.filter(\.isShared)
+                .map(\.accountAddresses.count).max() ?? 2
             return sharedKeyIDs.count == 1
-                ? String(localized: "One credential signs for more than one of your accounts")
-                : String(localized: "\(sharedKeyIDs.count) credentials sign for more than one of your accounts")
+                ? String(localized: "One key can sign for \(accountsSigned) of your accounts")
+                : String(localized: "\(sharedKeyIDs.count) keys can sign for more than one of your accounts")
         }
 
         /// The hygiene line — nil when there is nothing to tidy.
@@ -332,13 +382,39 @@ enum AltanaRoom {
                          rows: orderedRows(reading.keys, now: now))
         }
 
+        // ONE token per credential (§408a). A key id derives from its public
+        // key, so the same id under two accounts is one credential with two
+        // registrations — drawn once, with a tie to each account it can sign
+        // for, and counted once.
+        var byID: [String: KeyRow] = [:]
+        var order: [String] = []
+        for group in groups {
+            for row in group.rows {
+                let key = row.id.lowercased()
+                if var existing = byID[key] {
+                    existing.accountAddresses.append(group.address)
+                    byID[key] = existing
+                } else {
+                    var fresh = row
+                    fresh.accountAddresses = [group.address]
+                    byID[key] = fresh
+                    order.append(key)
+                }
+            }
+        }
+        let credentials = order.compactMap { byID[$0] }
+
         return Card(accounts: groups,
-                    usableCount: allKeys.filter { $0.isUsable(now: now) }.count,
-                    rootCount: allKeys.filter(\.isRoot).count,
+                    credentials: credentials,
+                    // DEDUPED: the picture shows one token for a shared key,
+                    // so the sentence counts one.
+                    usableCount: credentials.filter { !$0.expired }.count,
+                    rootCount: credentials.filter(\.isRoot).count,
                     urgentHours: urgentHours(allKeys, now: now),
                     staleCount: allKeys.filter { $0.isExpiredButListed(now: now) }.count,
                     chains: orderedChains(allKeys),
-                    sharedKeyIDs: shared)
+                    sharedKeyIDs: shared,
+                    rail: rail(credentials, now: now))
     }
 
     /// How the card orders its credentials — and it is `compose` that owns
@@ -415,6 +491,152 @@ enum AltanaRoom {
         let hours = soonest.timeIntervalSince(now) / 3600
         guard hours < Double(urgentWindowHours) else { return nil }
         return Int(hours)
+    }
+
+    // MARK: - The constellation's geometry (§408a)
+
+    /// Where every node sits, in points, and what ties to what.
+    ///
+    /// PURE, and here rather than in the view for one reason: this is the only
+    /// place that can guarantee ONE TOKEN PER CREDENTIAL. The first cut drew
+    /// each account's credentials in its own row, which put a shared key on
+    /// screen twice — so the picture showed six tokens while the sentence
+    /// counted four, which is the very disagreement §408a exists to end. A
+    /// shared credential has one position and several ties, and that is only
+    /// expressible as a layout.
+    struct Placement: Equatable {
+        struct Node: Equatable, Identifiable {
+            let id: String
+            let x: Double
+            let y: Double
+        }
+        struct Tie: Equatable, Identifiable {
+            let account: String
+            let credential: String
+            /// This credential can sign for more than one account, so the tie
+            /// is drawn in the card's own hue rather than as quiet chrome.
+            let shared: Bool
+            var id: String { account + "→" + credential }
+        }
+        let accounts: [Node]
+        let credentials: [Node]
+        let ties: [Tie]
+        let width: Double
+        let height: Double
+    }
+
+    static let tokenSize: Double = 44
+    static let faceSize: Double = 30
+    static let nodeGap: Double = 18
+    /// Tall enough that a token, its two label lines AND a clear channel
+    /// between rows all fit — the channel is what a shared credential's ties
+    /// route through, instead of cutting diagonally across the labels of the
+    /// row above (measured on the sim: at 96 the tie crossed "Session key /
+    /// expired" and made both unreadable).
+    static let rowGap: Double = 124
+
+    /// Lays the constellation out.
+    ///
+    /// Accounts run down the left. Each account's EXCLUSIVE credentials sit in
+    /// a row beside it. A SHARED credential is placed once, in a column to the
+    /// right of everything, at the mean height of the accounts it serves — so
+    /// its ties fan visibly to both, which is the whole reading.
+    ///
+    /// Deterministic: positions derive from the card's own ordering, so the
+    /// picture cannot reshuffle between two draws of identical data.
+    static func placement(_ card: Card) -> Placement {
+        let faceX = faceSize / 2
+        let firstTokenX = faceX + faceSize / 2 + nodeGap + tokenSize / 2 + nodeGap
+        let step = tokenSize + nodeGap
+
+        var accountNodes: [Placement.Node] = []
+        var credentialNodes: [Placement.Node] = []
+        var ties: [Placement.Tie] = []
+        var maxX = firstTokenX
+
+        for (index, account) in card.accounts.enumerated() {
+            let y = tokenSize / 2 + Double(index) * rowGap
+            accountNodes.append(.init(id: account.address, x: faceX, y: y))
+
+            let exclusive = card.credentials.filter {
+                $0.accountAddresses == [account.address]
+            }
+            for (column, credential) in exclusive.enumerated() {
+                let x = firstTokenX + Double(column) * step
+                credentialNodes.append(.init(id: credential.id, x: x, y: y))
+                ties.append(.init(account: account.address, credential: credential.id, shared: false))
+                maxX = max(maxX, x)
+            }
+        }
+
+        // The shared ones, once each, to the right of every exclusive token.
+        let shared = card.credentials.filter(\.isShared)
+        for (column, credential) in shared.enumerated() {
+            let ys = credential.accountAddresses.compactMap { address in
+                accountNodes.first { $0.id == address }?.y
+            }
+            guard !ys.isEmpty else { continue }
+            let x = maxX + step + Double(column) * step
+            let y = ys.reduce(0, +) / Double(ys.count)
+            credentialNodes.append(.init(id: credential.id, x: x, y: y))
+            for address in credential.accountAddresses {
+                ties.append(.init(account: address, credential: credential.id, shared: true))
+            }
+        }
+
+        let width = (credentialNodes.map(\.x).max() ?? firstTokenX) + tokenSize / 2
+        let height = (accountNodes.map(\.y).max() ?? tokenSize / 2) + tokenSize / 2 + 22
+        return Placement(accounts: accountNodes, credentials: credentialNodes,
+                         ties: ties, width: width, height: height)
+    }
+
+    /// The deadlines ahead as positions on ONE rail (§408a).
+    ///
+    /// The span is now → the furthest LIVE deadline, so the last dot always
+    /// sits at the end and the rail is never mostly empty. Positions are true
+    /// fractions of that span; dots closer than `railMergeGap` merge, keeping
+    /// the earliest one's real position and saying how many. Nothing is ever
+    /// nudged to a time it does not have.
+    ///
+    /// Empty when nothing is expiring — a rail with no dots is a rail with
+    /// nothing to say, and the card omits it rather than drawing an empty axis.
+    static func rail(_ credentials: [KeyRow], now: Date) -> [RailDot] {
+        let live = credentials
+            .filter { !$0.expired }
+            .compactMap { row -> (KeyRow, Date)? in row.expiry.map { (row, $0) } }
+            .filter { $0.1 > now }
+            .sorted { $0.1 < $1.1 }
+        guard let furthest = live.last?.1 else { return [] }
+        let span = furthest.timeIntervalSince(now)
+        guard span > 0 else { return [] }
+
+        var dots: [RailDot] = []
+        for (row, expiry) in live {
+            let position = min(1, max(0, expiry.timeIntervalSince(now) / span))
+            if var last = dots.last, position - last.position < railMergeGap {
+                last = RailDot(id: last.id, position: last.position,
+                               label: String(localized: "\(last.count + 1) keys"),
+                               count: last.count + 1)
+                dots[dots.count - 1] = last
+                continue
+            }
+            dots.append(RailDot(id: row.id, position: position,
+                                label: dotLabel(row, now: now), count: 1))
+        }
+        return dots
+    }
+
+    /// "9h · Passkey" near, "25d · Passkey" further out — the same relative
+    /// clock the tokens use, so the rail and the rest of the card never
+    /// disagree about the same deadline.
+    static func dotLabel(_ row: KeyRow, now: Date) -> String {
+        let title = row.title
+        if let hours = row.hoursLeft {
+            return hours <= 0 ? String(localized: "<1h · \(title)")
+                              : String(localized: "\(hours)h · \(title)")
+        }
+        if let days = row.daysLeft { return String(localized: "\(days)d · \(title)") }
+        return title
     }
 
     /// The soonest expiry still in the future, or nil.

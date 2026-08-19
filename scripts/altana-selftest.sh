@@ -406,7 +406,7 @@ check(multi.accounts.count == 2, "BOTH accounts draw — the footnote is retired
 check(multi.accounts.first?.address == "0xbbb",
       "the account with the soonest live deadline draws on TOP — ranking orders, it no longer selects")
 check(multi.usableCount == 4, "the census spans every account")
-check(multi.headline.contains("across 2 accounts") || multi.subline?.contains("across 2 accounts") == true,
+check(multi.headline.contains("for 2 accounts") || multi.subline?.contains("for 2 accounts") == true,
       "…and says so")
 check(multi.urgentHours == 4, "urgency is the soonest deadline ANYWHERE")
 // (No mutation can separate "urgency over all keys" from "urgency over the
@@ -426,7 +426,13 @@ guard let sharedCard = AltanaRoom.compose(readings: [shA, shB], now: now) else {
 }
 check(sharedCard.sharedKeyIDs == [sharedKey.id.lowercased()],
       "the same key id under two accounts is the shared credential — by construction, no inference")
-check(sharedCard.sharedNote?.contains("more than one") == true, "…and the card says it once")
+// A key SIGNS FOR an account and never HOLDS one (user ruling, §408a) — the
+// overclaim this seat is otherwise careful about, in the sentence most likely
+// to be read.
+check(sharedCard.sharedNote?.contains("can sign for") == true,
+      "…and the card says it once, as SIGNS FOR — never 'holds'")
+check(sharedCard.sharedNote?.lowercased().contains("hold") == false,
+      "…the word 'hold' never appears: a key does not hold an account")
 check(multi.sharedKeyIDs.isEmpty,
       "distinct ids across accounts share NOTHING — the badge must be rare or it is wallpaper")
 // The same id twice under ONE account is a duplicate row, not a shared
@@ -517,6 +523,105 @@ check(!AltanaKeySheet.liveLine(demoModel(.seeded)).contains("checked"),
       "THE DEMO NEVER CLAIMS A CHECK — it reaches nothing, so it may not say it looked")
 check(AltanaKeySheet.liveLine(demoModel(.active)).contains("checked"),
       "…while a real read does say so, which is the whole distinction")
+
+// ── §408a: credentials, not registrations ─────────────────────────────────
+// The picture draws a shared key ONCE, so the census counts it once. Saying
+// "5 keys" over a drawing of 4 tokens is the card disagreeing with itself.
+check(sharedCard.credentials.count == 3,
+      "a key shared across two accounts is ONE credential, not two")
+check(sharedCard.rows.count == 4, "…while the per-account rows still count both registrations")
+check(sharedCard.usableCount == 3, "the census counts credentials")
+guard let sharedCred = sharedCard.credentials.first(where: { $0.isShared }) else {
+    print("  ✗ the shared credential is marked"); exit(1)
+}
+check(sharedCred.accountAddresses.count == 2, "…and carries both accounts it can sign for")
+check(sharedCred.accountAddresses == ["0xaaa", "0xbbb"],
+      "…in the order the accounts are drawn, so the ties are stable between opens")
+check(multi.credentials.allSatisfy { !$0.isShared }, "distinct keys are never marked shared")
+
+// ── §408a: the rail is POSITIONS, never lengths ───────────────────────────
+// The user's objection to the timeline: a long bar beside a short one invites
+// a comparison that carries nothing. A dot says the one actionable thing.
+let railNow = Date(timeIntervalSince1970: 1_787_083_931)
+func at(_ n: Int, hours: Double) -> AK.Key {
+    key(n, root: false, reg: sessReg, exp: Int(railNow.timeIntervalSince1970 + hours * 3600))
+}
+guard let railCard = AltanaRoom.compose(
+        readings: [reading("0xa", [root, at(80, hours: 9), at(81, hours: 720)])], now: railNow) else {
+    print("  ✗ a rail composes"); exit(1)
+}
+check(railCard.rail.count == 2, "one dot per live deadline")
+check(railCard.rail.last?.position == 1.0,
+      "the FURTHEST deadline anchors the end — the rail is never mostly empty")
+check((railCard.rail.first?.position ?? 1) < 0.02,
+      "…and a 9-hour deadline against a 30-day span sits hard against now, which is the reading")
+check(railCard.rail.first?.label.contains("9h") == true, "the near dot says its own clock")
+check(railCard.rail.allSatisfy { $0.count == 1 }, "well-separated deadlines do not merge")
+
+// The span is the FURTHEST deadline, not a fixed window — and the case above
+// cannot tell the two apart, because its furthest deadline happens to be 30
+// days out, so a hard-coded 30-day window agrees with it exactly. This is the
+// fixture that separates them: everything inside ten days, where a fixed
+// window would bunch every dot into the first third and leave two-thirds of
+// the rail empty for no reason.
+guard let shortSpan = AltanaRoom.compose(
+        readings: [reading("0xa", [root, at(85, hours: 24), at(86, hours: 240)])], now: railNow) else {
+    print("  ✗ a short-span rail composes"); exit(1)
+}
+check(shortSpan.rail.last?.position == 1.0,
+      "a ten-day furthest deadline still anchors the END — the rail scales to what is actually ahead")
+check((shortSpan.rail.first?.position ?? 0) > 0.05,
+      "…and the near dot spreads out with it, rather than bunching against now")
+
+// Two deadlines an hour apart against a month-long span are one unreadable
+// dot, so they merge — keeping the EARLIER one's true position.
+guard let merged = AltanaRoom.compose(
+        readings: [reading("0xa", [root, at(82, hours: 9), at(83, hours: 10), at(84, hours: 720)])],
+        now: railNow) else { print("  ✗ a merging rail composes"); exit(1) }
+check(merged.rail.count == 2, "two dots inside the merge gap become one")
+check(merged.rail.first?.count == 2, "…which says how many it stands for")
+check(merged.rail.first?.label.contains("2") == true, "…in its label")
+check(merged.rail.first?.position == railCard.rail.first?.position,
+      "…at the EARLIER deadline's real position — a merge never invents a time")
+
+// An expired key is not ahead of anything, and a root has no deadline at all.
+check(AltanaRoom.compose(readings: [reading("0xa", [root, over])], now: now)?.rail.isEmpty == true,
+      "nothing live to expire means no rail — an empty axis is not a reading")
+
+// ── §408a: the layout draws each credential ONCE ─────────────────────────
+// The bug this replaced: per-account rows put a shared key on screen twice, so
+// the picture showed six tokens while the census said four. A picture that
+// disagrees with its own caption is worse than either alone.
+let plan = AltanaRoom.placement(sharedCard)
+check(plan.credentials.count == sharedCard.credentials.count,
+      "ONE NODE PER CREDENTIAL — a shared key is drawn once, never once per account")
+check(Set(plan.credentials.map(\.id)).count == plan.credentials.count,
+      "…and no id is placed twice")
+check(plan.accounts.count == 2, "both accounts are placed")
+check(plan.ties.count == 4,
+      "four ties: each account to its own root, and both to the shared key")
+let sharedTies = plan.ties.filter(\.shared)
+check(sharedTies.count == 2, "the shared credential ties to BOTH accounts")
+check(Set(sharedTies.map(\.account)).count == 2, "…to two DIFFERENT accounts")
+check(plan.ties.filter { !$0.shared }.allSatisfy { tie in
+        sharedCard.credentials.first { $0.id == tie.credential }?.isShared == false },
+      "…and an exclusive tie never points at a shared credential")
+
+// The shared node sits between the accounts it serves — that is what makes
+// the fan readable as one key reaching two places.
+if let sharedNode = plan.credentials.first(where: { node in
+       sharedCard.credentials.first { $0.id == node.id }?.isShared == true }) {
+    let ys = plan.accounts.map(\.y).sorted()
+    check(sharedNode.y > ys[0] && sharedNode.y < ys[1],
+          "the shared token is placed BETWEEN its accounts, so both ties fan visibly")
+    check(plan.credentials.filter { $0.id != sharedNode.id }.allSatisfy { $0.x < sharedNode.x },
+          "…and to the right of every exclusive token, so its ties cross nothing")
+} else { check(false, "the shared node is placed") }
+
+// Deterministic: the same card lays out identically every time, or the
+// picture reshuffles between two draws of the same data.
+check(AltanaRoom.placement(sharedCard) == plan, "the layout is deterministic")
+check(plan.width > 0 && plan.height > 0, "the frame has real size")
 
 print("")
 if failures == 0 {

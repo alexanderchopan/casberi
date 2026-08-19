@@ -2560,15 +2560,14 @@ struct FeedScreen: View {
                         if let url = URL(string: AltanaKeystore.explorerURL(address: card.address)) {
                             openExternal(url)
                         }
-                    } onPickKey: { address, row in
-                        // Matched on ACCOUNT + KEY ID — the tail every ref
-                        // `AltanaKeystore.ref` builds ends with (§407a: a shared
-                        // credential appears under two accounts, and tapping it
-                        // under account A must open A's row). Deliberately not
-                        // a rebuilt ref: that would need the row's chain label
-                        // to still agree with the landing's, and a drifted
-                        // label would silently open nothing.
-                        let tail = ":" + address.lowercased() + ":" + row.id.lowercased()
+                    } onPickKey: { row in
+                        // Matched on the KEY ID, the last segment of every ref
+                        // `AltanaKeystore.ref` builds. A SHARED credential is
+                        // one token signing for several accounts (§408a), so it
+                        // has several rows — the newest wins, which is
+                        // `openNewest`'s own rule and the honest answer when
+                        // one credential has more than one registration.
+                        let tail = ":" + row.id.lowercased()
                         openNewest(source: AltanaKeystore.source, in: visible) { thing in
                             thing.sourceRef?.hasSuffix(tail) ?? false
                         }

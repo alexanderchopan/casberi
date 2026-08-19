@@ -144,6 +144,7 @@ marks chronological position within the pair.
 | §294a | §294 | collided with the smart-account kind ruling (11 citations) |
 | §340a | §340 | the bare number went to the 2026-08-08 session — see §340 |
 | §407a | §407 | the bare number went to the sources-tray session (document order); the keyring entry took the letter |
+| §408a | §408 | the bare number went to the folder-reveal session (document order); the constellation took the letter |
 | §340b | §340 | see §340a |
 | §355b | §355 | collided with the category-chip tint ruling |
 | §369 | §363 | the money receipt collided with the social sheet, which opened the §364–§368 category series and keeps the bare number by document order (2026-08-12 integration merge) |
@@ -26695,3 +26696,64 @@ folder half.
 §365 added the first of those a Files row has been unable to reach "Copy text"
 or "Translate". Real, pre-existing, and a change to a verb set is a design
 call rather than a rider on this one.
+
+## §408a — The constellation: one token per credential, and duration stops being a length (user: "the circles aren't all the same size… line graphs are kinda just for show… i like chart C", 2026-08-18)
+
+Three criticisms, each correct, and each one killed a thing §407a had shipped.
+
+**"The circles aren't all the same size."** They were — every token was 44pt —
+but each wore an arc sweeping a different fraction and a root wore none at
+all, so a row of equal circles READ as unequal. The arcs are gone. A token
+carries identity only: the glyph is the kind, a solid fill is the root,
+outlined is a session. **Authority is weight, never size**, and size never
+varies for any reason.
+
+**"Line graphs are kinda just for show… seeing a long line for a wallet key
+next to a shorter one for a passkey doesn't help me."** Exactly right, and it
+retires the timeline draft: a span drawn as a bar invites a comparison that
+carries nothing actionable. The rail keeps POSITION and drops length — a dot
+where each deadline falls, relative to now and to the others. Its span is now
+→ the furthest live deadline, so the rail scales to what is actually ahead
+rather than to a fixed window that would bunch everything into one third of
+it. Dots closer than `railMergeGap` merge into one that says how many,
+**keeping the earliest one's true position** — a merge never invents a time.
+Nothing live to expire means no rail at all; an empty axis is not a reading.
+
+**"I like chart C."** The constellation is the card's body now, and that
+promotion exposed the real defect. The first cut drew it as one row per
+account, which put a SHARED credential on screen twice — so the picture showed
+six tokens while the census said four, a card disagreeing with its own
+drawing. `AltanaRoom.placement` is a pure layout that guarantees ONE NODE PER
+CREDENTIAL: accounts down the left, exclusive credentials beside their
+account, and a shared credential placed ONCE at the mean height of the
+accounts it serves, to the right of everything, so its ties fan visibly to
+both. It lives in the model rather than the view because "one token per
+credential" is only expressible as a layout, and because the harness can then
+prove it.
+
+**The census counts CREDENTIALS, not registrations.** Since the picture draws a
+shared key once, the sentence counts it once — "5 keys" over four drawn tokens
+was the same disagreement in words.
+
+**A key SIGNS FOR an account; it never HOLDS one** (user ruling). Holding
+implies custody of the account itself, which is the §83 overclaim this seat is
+otherwise careful about — the registry says only what may sign. Guarded: the
+harness fails if the word "hold" reaches that sentence.
+
+**Ties are ROUTED, not diagonal.** Measured on the simulator: a straight line
+from a face to a shared token cut through the labels of every row it passed
+and took them with it. Shared ties run out from the face, along the channel
+between rows, then in — and `rowGap` is 124 rather than 96 precisely so that
+channel exists. The card falls back to a plain token list above
+`maxDrawnAccounts` (3), where the picture stops being readable — stated rather
+than discovered.
+
+The KEY SHEET is deliberately unchanged (user ruling): it already carries the
+window, both dates, usage, the shared-account chips and the scope ceiling, and
+the card's job is the glance.
+
+Harness at 136 assertions, mutation-proven fourteen ways across §408's own
+logic. One survived as the familiar "right result for the wrong reason": the
+rail-span fixture's furthest deadline happened to be exactly 30 days out, so a
+hard-coded 30-day window agreed with it exactly; the pinning fixture puts
+everything inside ten days, where the two answers differ.
