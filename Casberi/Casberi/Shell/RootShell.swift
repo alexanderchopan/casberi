@@ -1726,7 +1726,18 @@ struct RootShell: View {
                 rootPresented(SourcesOverlay(
                     labels: chrome.sourceOrder,
                     active: filter.source,
-                    onDismiss: { closeSources() }) { label in
+                    onDismiss: { closeSources() },
+                    // The empty tray's door (2026-08-18). The SAME push the
+                    // strip's own catalogue button makes — one catalog, one
+                    // way in — and it closes the panel first, because a door
+                    // that pushes a screen behind a raised panel reads as
+                    // having done nothing.
+                    onOpenCatalog: {
+                        closeSources()
+                        withAnimation(DS.Motion.standard) {
+                            sceneState.route.present(.apps)
+                        }
+                    }) { label in
                     closeSources()
                 // Land ON the feed that was named. A pick made from a pushed
                 // room would otherwise switch the source BEHIND a Settings

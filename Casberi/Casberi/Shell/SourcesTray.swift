@@ -124,11 +124,12 @@ import SwiftUI
 /// is teaching the positions of an icon-only row that has no labels, and an
 /// alphabetical tray teaches positions the strip does not have.
 ///
-/// **"All" has no cell** (user, 2026-08-06). It belongs to no category, so in a
-/// grouped grid it could only ever be an ungrouped orphan taking a row of its
-/// own. It remains the first chip in the strip behind this tray, so the
-/// everything-room is one dismiss and one tap away. Known cost, stated rather
-/// than hidden: from INSIDE the tray there is now no way back to All.
+/// **"All" has no cell** (user, 2026-08-06), and the cost that ruling stated
+/// is PAID since 2026-08-18 — see `SourcesOverlay.allChip`. It still belongs
+/// to no category, so it is still never a cell in this grid: a grouped grid
+/// could only hold it as an ungrouped orphan taking a whole row. It is a word
+/// capsule in the panel's HEADER instead, which costs the grid nothing and
+/// costs the packer nothing.
 struct SourcesTray: View {
     /// The strip's own ordered labels — "All" first, then sources.
     let labels: [String]
@@ -140,6 +141,15 @@ struct SourcesTray: View {
     /// to whatever sheet or stack happens to enclose the shell, which is
     /// either nothing or the wrong thing.
     let onDismiss: () -> Void
+
+    /// The catalog door, for the EMPTY tray only (2026-08-18).
+    ///
+    /// A closure for the same reason `onPick` is one: the route is per-window
+    /// state on `SceneState`, and this view is a ZStack layer that must not
+    /// know which window it is in. `RootShell` closes the panel and pushes
+    /// `.apps` — the same door the strip's own catalogue button opens, so
+    /// there is one catalog and one way to reach it.
+    let onOpenCatalog: () -> Void
 
     @Environment(BridgeStore.self) private var bridges
 
@@ -319,6 +329,25 @@ struct SourcesTray: View {
     /// (about a whole row) to protect chips from a control that no longer
     /// overlaps them.
     private static let chromeHeight: CGFloat = DS.Space.s6
+
+    /// The empty tray's own height (2026-08-18) — a sentence, a gap, and the
+    /// catalog door, plus the bottom pad every other height already carries.
+    ///
+    /// It has to be spelled, because the arithmetic above cannot reach it:
+    /// `height(of:rows:)` sums PACKED ROWS, and an empty corpus has none, so
+    /// the panel resolved to `chromeHeight` alone — 24pt. That was survivable
+    /// while the branch drew one line of text (which simply overflowed a frame
+    /// nobody could see the edge of) and is not survivable now that it draws a
+    /// 48pt control: a door squeezed into 24pt is a door you cannot press,
+    /// which is the dead control §83 bans, in the one state where the tray has
+    /// nothing else to offer.
+    ///
+    /// Summed from the pieces rather than measured, so it cannot drift when
+    /// the type ramp moves: `subhead13`'s own line, `s4`, the button, the pad.
+    private static let emptyLine: CGFloat = 21     // subhead13.lineHeight
+    private static let emptyDoorHeight: CGFloat = 48
+    private static let emptyHeight: CGFloat =
+        emptyLine + DS.Space.s4 + emptyDoorHeight + chromeHeight
     /// 620 → 660 on 2026-08-16, alongside the eyebrow's step to `subhead13`:
     /// four rows went 610 → 634pt, and a cap of 620 would have answered the
     /// user's "make the eyebrows larger" by snapping a whole category off the
@@ -347,7 +376,9 @@ struct SourcesTray: View {
     }
 
     private static func height(of n: Int, rows: [PackedRow]) -> CGFloat {
-        guard n > 0 else { return chromeHeight }
+        // No rows means an EMPTY CORPUS, not a zero-height panel — the branch
+        // below draws a sentence and a door. See `emptyHeight`.
+        guard n > 0 else { return emptyHeight }
         let body = rows.prefix(n).reduce(CGFloat.zero) { $0 + rowHeight(chipRows: $1.chipRows) }
         return body + CGFloat(n - 1) * rowGap + chromeHeight
     }
@@ -395,13 +426,10 @@ struct SourcesTray: View {
                     let rows = packed
                     if rows.isEmpty {
                         // Reachable on a brand-new install: the hold gesture works
-                        // before anything is connected, and with All in the strip
+                        // before anything is connected, and with All in the header
                         // rather than the grid this would otherwise be a blank
                         // sheet with a title.
-                        Text("Connect an app and it lands here.")
-                            .dsText(.subhead13)
-                            .foregroundStyle(DS.textSecondary)
-                            .frame(maxWidth: .infinity, alignment: .leading)
+                        emptyState
                     } else {
                         VStack(alignment: .leading, spacing: Self.rowGap) {
                             ForEach(rows) { row in
@@ -419,6 +447,59 @@ struct SourcesTray: View {
         .padding(.bottom, DS.Space.s6)
         // A tray was its own hosting environment and re-declared this; an
         // overlay is inside the shell's tree, so the shell's own copy fires.
+    }
+
+    /// The empty tray: the sentence, and a door (2026-08-18).
+    ///
+    /// **The sentence alone was a dead end.** Somebody who finds the hold
+    /// gesture on a fresh install got told where things WILL land and given no
+    /// way to make that happen — you dismiss the panel and go hunting for the
+    /// catalogue button in the strip you just covered up. This is the one
+    /// state where the tray has nothing to show and therefore nothing a verb
+    /// could compete with, so the verb is free here in a way it is nowhere
+    /// else in this panel.
+    ///
+    /// **ONE door, not a choice.** The onboarding fork's own §217 ruling — a
+    /// fork you answer in a second beats a wall you have to survey — is why
+    /// this does not offer three ways in. It is also why the door is the
+    /// catalog rather than the fork: somebody holding the agent bar to open
+    /// "your sources" has already decided they want a source, and the fork
+    /// asks a question they have answered.
+    ///
+    /// **The only filled control this tray will ever draw**, and it exists
+    /// only in the state where the grid is empty — the moment anything
+    /// connects, this branch is gone and the tray is chips again. That is what
+    /// keeps it from being the fourth container this tray has tried; a
+    /// container behind groups was refused three times (§391, §392a, the card)
+    /// and none of those arguments reach a control that is alone on the panel.
+    /// `dsGlassProminent` is the app's own primary-action-on-glass treatment
+    /// (the composer's Save), so it is a grammar this surface already speaks,
+    /// not a new one.
+    private var emptyState: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s4) {
+            Text("Connect an app and it lands here.")
+                .dsText(.subhead13)
+                .foregroundStyle(DS.textSecondary)
+            Button {
+                DSHaptic.tap()
+                onOpenCatalog()
+            } label: {
+                Text("Open the catalog")
+                    .dsText(.body17)
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, DS.Space.s6)
+                    .frame(height: Self.emptyDoorHeight)
+                    // Glass INSIDE the label, so the Button owns the whole hit
+                    // region — interactive glass applied OUTSIDE a button eats
+                    // taps for its own press deformation (2026-07-17, "takes
+                    // several taps"). `HowItWorksSheet`'s pattern, verbatim.
+                    .dsGlassProminent(tint: DS.tint, cornerRadius: DS.Radius.pill)
+                    .contentShape(Capsule())
+            }
+            .buttonStyle(.plain)
+            .dsHover()
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     /// The tray is the strip's map, and on a big corpus the snap-down cap can
@@ -613,6 +694,36 @@ struct SourcesTray: View {
             .dsHover()
         }
         .buttonStyle(PressSpring())
+        // THE SAME PEEK THE STRIP'S CHIPS ANSWER WITH (2026-08-18, §384's
+        // modifier, reused rather than rebuilt).
+        //
+        // This tray's own doc calls it "the strip's map", and a map whose
+        // marks answer a gesture differently from the things they map is a
+        // map you have to learn twice: press to wonder, release to stay, tap
+        // through to commit was true of a chip and silently untrue of the
+        // cell standing for that same room. It is also the surface where the
+        // peek is worth MORE than it is on the strip — the strip shows four
+        // marks you have probably learned, while this shows every room you
+        // have, including the ones you opened once and cannot picture.
+        //
+        // `venues: []` is correct rather than lazy: the tray draws
+        // `ShellChrome.sourceOrder`, which is the UNFOLDED list, so every
+        // label here is a real seat and `CategoryFold.isCategory` is false
+        // for all of them — the fold branch that reads `venues` is
+        // unreachable from this call site. If a source ever shares a
+        // category's name it degrades safely, since `landing` returns nil for
+        // an empty member list and the modifier then draws no peek at all.
+        //
+        // `enabled` restates the "All" guard even though `packed` already
+        // filtered it out of the grid: a guard that mirrors the strip's own
+        // is worth more than one that trusts a filter three functions away,
+        // and "All" previewing the entire feed is the thing §384 refused.
+        .modifier(ChipPeekModifier(label: label, venues: [],
+                                   enabled: label != "All",
+                                   onOpen: {
+                                       onPick(label)
+                                       onDismiss()
+                                   }))
         // The grouping is drawn, so it must also be SPOKEN — a name band
         // hidden from VoiceOver would otherwise take the category away from
         // the one reader who can't see the layout that carries it.

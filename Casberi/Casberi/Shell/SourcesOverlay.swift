@@ -54,6 +54,9 @@ struct SourcesOverlay: View {
     let labels: [String]
     let active: String
     let onDismiss: () -> Void
+    /// The catalog door the EMPTY tray offers — threaded straight through to
+    /// `SourcesTray`, which is the only thing that draws it.
+    let onOpenCatalog: () -> Void
     /// Last so the call site reads as a trailing closure, matching the shape
     /// the `.sheet` call it replaced already had.
     let onPick: (String) -> Void
@@ -97,10 +100,21 @@ struct SourcesOverlay: View {
     ///
     /// The gesture was on the 24pt grabber strip alone, which is a target you
     /// have to aim at with a thumb you cannot see past. A sheet lets you drag
-    /// its whole header, and so does this now — ~93pt, full width, everything
-    /// above the scrolling grid. It sums with `SourcesTray.chromeHeight` to
-    /// exactly what that constant used to be, so no resting height moved.
-    private static let headerHeight: CGFloat = grabberHeight + DS.Space.s6 + 30 + DS.Space.s4
+    /// its whole header, and so does this now — full width, everything above
+    /// the scrolling grid.
+    ///
+    /// **93 → 107 on 2026-08-18**, when the title band gained the All capsule
+    /// beside it: the band is the taller of the title's own line and a 44pt
+    /// control, and 44 wins. Stated because this height is spent, not free —
+    /// it is 14pt less feed above the panel. What it does NOT touch is how
+    /// many rows rest: `restingCap` governs the tray's CONTENT and this sits
+    /// outside it, so a four-row corpus still rests at four (634 + 107 = 741,
+    /// under the 769 ceiling a 874pt phone allows). On a phone small enough
+    /// for the ceiling to bite, the panel was already clamped and already
+    /// scrolling, so the 14pt changes nothing there either.
+    private static let titleBandHeight: CGFloat = DS.Hit.min
+    private static let headerHeight: CGFloat =
+        grabberHeight + DS.Space.s6 + titleBandHeight + DS.Space.s4
     /// How much of the screen the panel may ever take. Not the whole thing:
     /// a panel with no page left above it is a screen, and this one's whole
     /// claim is that it floats over the feed.
@@ -112,7 +126,8 @@ struct SourcesOverlay: View {
 
     var body: some View {
         let panel = SourcesTray(labels: labels, active: active,
-                                onPick: onPick, onDismiss: onDismiss)
+                                onPick: onPick, onDismiss: onDismiss,
+                                onOpenCatalog: onOpenCatalog)
 
         GeometryReader { geo in
             // The ceiling is the screen, not the corpus — a 40-source tray
@@ -180,21 +195,112 @@ struct SourcesOverlay: View {
                                style: .continuous)
     }
 
-    /// Grabber + title: the panel's chrome, and its drag region.
+    /// Grabber + title + the All capsule: the panel's chrome, and its drag
+    /// region.
     private var header: some View {
         VStack(alignment: .leading, spacing: 0) {
             grabber
-            Text("Your feeds")
-                .dsText(.heading22)
-                .foregroundStyle(DS.textPrimary)
-                .padding(.top, DS.Space.s6)
-                .padding(.bottom, DS.Space.s4)
-                .padding(.horizontal, DS.Space.s4)
+            HStack(spacing: DS.Space.s2) {
+                Text("Your feeds")
+                    .dsText(.heading22)
+                    .foregroundStyle(DS.textPrimary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                Spacer(minLength: DS.Space.s2)
+                allChip
+            }
+            .frame(height: Self.titleBandHeight)
+            .padding(.top, DS.Space.s6)
+            .padding(.bottom, DS.Space.s4)
+            .padding(.horizontal, DS.Space.s4)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .frame(height: Self.headerHeight)
         // The whole band is the target, title included.
         .contentShape(Rectangle())
+    }
+
+    /// The way back to All, from inside the tray (2026-08-18).
+    ///
+    /// **The known cost §391 restated and §407 pays.** "All has no cell" (user,
+    /// 2026-08-06) is a ruling about the GRID, and it stands: All belongs to
+    /// no category, so as a cell it could only be an ungrouped orphan taking a
+    /// row of its own out of a layout whose whole discipline is whole groups
+    /// on shared columns. `SourcesTray`'s own doc then recorded the
+    /// consequence rather than hiding it — "from INSIDE the tray there is now
+    /// no way back to All" — and the panel is the surface that most invites
+    /// you to try: it is the map of every room, opened by the gesture that
+    /// means "where can I go", and the everything-room was the one
+    /// destination it refused. A word capsule in the header costs the grid
+    /// nothing, costs the packer nothing, and touches no ruling: it is not a
+    /// cell.
+    ///
+    /// **It also fixes a second thing, which is the stronger argument.** Open
+    /// this panel while you are IN All — which is where the app opens, so it
+    /// is the common case — and until today no cell anywhere wore the
+    /// selection ring. A map of your rooms showing no you-are-here reads as
+    /// broken, and `revealActive`'s whole job (jump so the active cell is
+    /// visible) was silently a no-op in exactly that state because there was
+    /// nothing to jump to.
+    ///
+    /// **Why not `wordChipFill`**, the strip's own shared word-chip paint: it
+    /// carries `dsGlass`, i.e. a second material, and this capsule sits ON the
+    /// panel's glass rather than on the crown. Stacking material inside the
+    /// panel is §391's lesson wearing a translucent coat. Its travelling
+    /// `matchedGeometryEffect` has nowhere to travel to besides — there is one
+    /// word chip here, not five — so the only thing sharing that modifier
+    /// would buy is a shape this surface renders differently anyway. What IS
+    /// shared is the reading: tint means selection here exactly as it does on
+    /// the strip and on a cell's ring, and the resting state is `fillStrong`,
+    /// the same wash the grabber above it already wears.
+    ///
+    /// **The one open question, stated rather than discovered later, and
+    /// UNMEASURED on device:** how the header's `.gesture` and this button
+    /// arbitrate a drag that STARTS on the capsule. Either SwiftUI gives the
+    /// drag priority once it passes its 8pt minimum (the capsule taps and the
+    /// panel still drags, nothing to fix) or it gives the nested button
+    /// priority (those ~55×44pt become a dead zone for the pull-to-dismiss
+    /// the rest of the band carries). The TAP works in both, so neither is a
+    /// broken control — this is worth a device check, not a redesign.
+    ///
+    /// What is NOT the fix if it turns out to be the dead zone:
+    /// `.simultaneousGesture`. A short pull that stays inside the capsule's
+    /// own bounds would then move the panel AND fire the button on release,
+    /// so a hesitant drag would land you in All — a wrong destination is a
+    /// worse failure than a corner of a full-width header that does not drag.
+    /// Move the drag onto the grabber-plus-title region instead, which gives
+    /// the capsule its own space without handing one gesture two meanings.
+    private var allChip: some View {
+        let isOn = active == "All"
+        return Button {
+            DSHaptic.selection()
+            onPick("All")
+            onDismiss()
+        } label: {
+            Text("All")
+                .dsText(.label12)
+                .fontWeight(.semibold)
+                // `.white` on the tint for the same reason the strip's active
+                // word chip is white on it: the accent is a dark blue in both
+                // themes, so this pairing does not flip with the theme.
+                .foregroundStyle(isOn ? .white : DS.textPrimary)
+                .lineLimit(1)
+                .padding(.horizontal, DS.Space.s3)
+                .frame(height: DS.Hit.min)
+                .background {
+                    if isOn {
+                        Capsule(style: .continuous).fill(DS.tint)
+                    } else {
+                        Capsule(style: .continuous).fill(DS.fillStrong)
+                    }
+                }
+                .contentShape(Capsule())
+        }
+        .buttonStyle(PressSpring())
+        .dsHover()
+        .accessibilityLabel(Text("All"))
+        .accessibilityHint(Text("Show every source"))
+        .accessibilityAddTraits(isOn ? .isSelected : [])
     }
 
     private var grabber: some View {

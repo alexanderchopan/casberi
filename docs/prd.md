@@ -26433,3 +26433,104 @@ showing when the headline is already the census. Two fixture lessons, both the
 rule it tested was the thing §406 changed), and the root-detail check first ran
 against a root with no key material, whose title is "Root key" and whose detail
 therefore rightly does NOT respell "Root".
+
+## §407 — The tray gets its way back to All, and the empty tray gets a door (session: "how if at all would you improve the your sources tray in terms of UI", then "ok do both", 2026-08-18)
+
+Asked as a design review of the sources panel, and the honest first answer was
+**mostly leave it alone**. This is one of the most tuned surfaces in the app: a
+container behind the groups was proposed and refused three times (§391 deleted
+the card, §394 deleted the carve that replaced it), the eyebrow's ink and size
+were ruled twice in one day (§391, then the same-day overturn to `subhead13`
+bold), the packer's whitespace grouping was reverted within a build because
+alignment outranks the boundary (§392a), and the sheet became an in-hierarchy
+panel only after four builds spent on the material (§393, §393a, §394). Nearly
+every visible property of this tray is a settled ruling with a measurement
+behind it, and re-opening one of them is how it gets worse.
+
+So this pass changes nothing that was ruled. It pays the two costs the rulings
+themselves WROTE DOWN as costs — the class of finding that is only visible by
+reading what the surface admits about itself.
+
+**1. The way back to All.** §391 restated the 2026-08-06 ruling that "All" has
+no cell, and `SourcesTray`'s own doc recorded the consequence rather than
+hiding it: *from INSIDE the tray there is now no way back to All.* The ruling
+is about the GRID and it stands — All belongs to no category, so as a cell it
+could only be an ungrouped orphan taking a whole row out of a layout whose
+entire discipline is whole groups on shared columns. A word capsule in the
+panel's HEADER is not a cell: it costs the grid nothing, costs the packer
+nothing, and reopens nothing.
+
+The stronger argument is the second one, which nobody had named: **open this
+panel while you are in All — which is where the app opens, so it is the common
+case — and no cell anywhere wore the selection ring.** A map of your rooms
+showing no you-are-here reads as broken, and `revealActive` (whose whole job is
+to jump so the active cell is visible) was silently a no-op in exactly that
+state, because there was nothing to jump to.
+
+`wordChipFill`, the strip's own shared word-chip paint, was considered and
+refused: it carries `dsGlass`, and this capsule sits ON the panel's glass — a
+second material inside the panel is §391's lesson wearing a translucent coat.
+Its travelling `matchedGeometryEffect` also has nowhere to travel, there being
+one word chip here rather than five. What IS shared is the READING: tint means
+selection here exactly as it does on the strip and on a cell's ring, and the
+resting state is `fillStrong`, the same wash the grabber above it wears.
+
+Cost, stated: the title band is now the taller of the title's line and a 44pt
+control, so `headerHeight` goes 93 → 107. That is 14pt less feed above the
+panel and **no change to how many rows rest** — `restingCap` governs the tray's
+CONTENT and the header sits outside it, so a four-row corpus still rests at
+four (634 + 107 = 741, under the 769 a 874pt phone allows). On a phone small
+enough for the ceiling to bite, the panel was already clamped and already
+scrolling.
+
+Open and UNMEASURED on device: how the header's drag gesture and a nested
+button arbitrate a drag that STARTS on the capsule. Either the drag wins past
+its 8pt minimum (nothing to fix) or the button does (those ~55×44pt stop
+dragging). The tap works either way, so neither is a broken control. If it is
+the dead zone, the fix is to narrow the drag region to grabber-plus-title —
+**not** `.simultaneousGesture`, which would let a short pull inside the
+capsule's own bounds move the panel AND fire the button on release, landing you
+in All by accident. A wrong destination is worse than a corner that does not
+drag.
+
+**2. The empty tray gets a door.** The hold gesture works before anything is
+connected, so a fresh install could reach this panel and be told where things
+WILL land with no way to make that happen — you dismiss the panel and go
+hunting for the catalogue button in the strip you just covered. One filled
+control, one destination (`.apps`, the same push the strip's own catalogue door
+makes). Not the onboarding fork: §217's own reasoning is that the fork beats
+the catalog for someone who has not decided yet, and somebody holding the agent
+bar to open "your sources" has decided.
+
+It is the only filled control this tray will ever draw, and it exists ONLY in
+the state where the grid is empty — the moment anything connects, the branch is
+gone. That is what keeps it from being the fourth container this tray has
+tried: none of the arguments that killed the card, the carve or the whitespace
+reach a control that is alone on the panel. `dsGlassProminent` is the app's own
+primary-action-on-glass treatment (the composer's Save), so it is a grammar
+this surface already speaks.
+
+**The defect this uncovered, which is the part a mockup could not have found.**
+`SourcesTray.height(of:rows:)` sums PACKED ROWS, and an empty corpus has none,
+so the panel resolved to `chromeHeight` alone — **24pt**. That was survivable
+while the branch drew one sentence (which simply overflowed a frame whose edge
+nobody could see) and is not survivable beside a 48pt control: a door squeezed
+into 24pt is a door you cannot press, the dead control §83 bans, in the one
+state where the tray has nothing else to offer. `emptyHeight` is summed from
+its pieces (`subhead13`'s own line, `s4`, the button, the pad) rather than
+measured, so it cannot drift when the type ramp moves.
+
+**Deliberately NOT done**, because the rulings settled them and this pass had
+no new evidence: any container behind the groups, a tinted or resized eyebrow,
+alphabetising (the tray teaches the STRIP's positions, and an alphabetical tray
+teaches positions the strip does not have), packing that moves chips off the
+shared columns, `.clear` glass (this panel sits over words), and any count or
+tally in the chrome.
+
+**Two zero-pixel improvements identified and left for their own pass:**
+`revealActive` could reveal a needs-attention seat resting below the snap-down
+fold (today a dashed orange ring can sit hidden with nothing anywhere saying
+so, on the one surface where every seat is individually visible), and the
+tray's cells could answer a long-press with the room figure peek its strip
+chips already give — the tray being the strip's map, the same gesture should
+mean the same thing.
