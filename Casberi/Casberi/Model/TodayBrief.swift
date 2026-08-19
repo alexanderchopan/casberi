@@ -2702,16 +2702,42 @@ enum TodayBrief {
     @MainActor static var lastPresentedDoc: [String]?
 
     private static func clusterMap(context: ModelContext) async -> String? {
+        // THE SIGNATURE IS ASKED FIRST, AND CHEAPLY (PERF 2026-08-18).
+        //
+        // The cache above does its job — the ~1,800ms PCA runs only when the
+        // corpus really moved — but the question "did it move?" was being
+        // answered by hydrating 600 rows and their packed embedding blobs on
+        // the main actor, per presented open, INCLUDING every hit. So the
+        // cheap path was only cheap in its expensive half. Two indexed reads
+        // answer the same question: how many rows carry an embedding, and
+        // which is the newest.
+        //
+        // A different signature from the one it replaces, deliberately, and
+        // safe because this cache is in-memory only and reset every launch —
+        // it is a change DETECTOR, never a claim about the map. The `min(…,
+        // 300)` keeps the old form's saturation, which is load-bearing rather
+        // than cosmetic: past the plotted cap the count must stop moving, or
+        // every row the backfill embeds re-runs a PCA whose input barely
+        // changed. It counts import receipts where the old form did not, so a
+        // receipt can now cost one extra recompute — cheaper than the fetch
+        // this removes, and only below the cap.
+        var probe = FetchDescriptor<Thing>(
+            predicate: #Predicate { $0.embedding != nil },
+            sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
+        probe.fetchLimit = 1
+        let newest = (try? context.fetch(probe))?.first?.id.uuidString ?? ""
+        let counter = FetchDescriptor<Thing>(predicate: #Predicate { $0.embedding != nil })
+        let embedded = (try? context.fetchCount(counter)) ?? 0
+        let signature = "\(min(embedded, 300))|\(newest)"
+        if let cached = mapCache, cached.signature == signature {
+            return cached.line
+        }
         var fd = FetchDescriptor<Thing>(
             predicate: #Predicate { $0.embedding != nil },
             sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
         fd.fetchLimit = 600
         guard let rows = try? context.fetch(fd) else { return nil }
         let live = rows.filter { $0.isLive && !Corpus.isImportReceipt($0) }.prefix(300)
-        let signature = "\(live.count)|\(live.first?.id.uuidString ?? "")"
-        if let cached = mapCache, cached.signature == signature {
-            return cached.line
-        }
         let entries: [AgentPanelFigures.Entry] = live
             .compactMap { thing in
                 guard let packed = thing.embedding,

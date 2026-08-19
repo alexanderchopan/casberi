@@ -2619,6 +2619,13 @@ struct RootShell: View {
         let onProseDoc: ([String]) -> Void = { doc in askClock.paint("prose"); rawProse(doc) }
         let onPartialDoc: ([String]) -> Void = { doc in askClock.paint("partial"); rawPartial(doc) }
         #endif
+        // How long the brief's own compose stands off after painting the
+        // cached document, so the rise animation gets the main actor
+        // (PERF 2026-08-18; see the `TodayBrief.matches` branch below).
+        // Roughly the bar→surface morph's own spring response — long enough to
+        // cover the frames that make the open feel smooth, short enough to
+        // disappear into the seconds the live reads take anyway.
+        let briefRiseHoldMS = 250
         // The named-ask ellipsis reads the PREVIOUS answer's shape, then this
         // call resets it — set back to non-nil only when a named ask answers
         // below (`answerNamedAsk`), so any other kind of answer turns the
@@ -2702,7 +2709,45 @@ struct RootShell: View {
             // (`AgentOpenCache`'s own trade): a doc from a previous launch
             // could be a day stale, but within a session it is minutes old
             // and about to be corrected either way.
-            if let cached = TodayBrief.lastPresentedDoc { onPartialDoc(cached) }
+            var paintedCached = false
+            if let cached = TodayBrief.lastPresentedDoc {
+                onPartialDoc(cached)
+                paintedCached = true
+                // …AND THE PAINT NEEDS A FRAME TO HAPPEN IN (PERF 2026-08-18).
+                //
+                // `onPartialDoc` publishes into `GenStream`; the pixels arrive
+                // on the next render pass. `allThings()` below is an unbounded
+                // main-actor hydration with no yield point inside it, and it
+                // sat in the SAME run-loop turn — so the cached doc could not
+                // paint before the fetch blocked, and §386k's "instantly" was
+                // instant only in the sense that the work started immediately.
+                // One yield is what turns a published document into a drawn
+                // one; the composer's own `.task(id: isOpen)` makes exactly
+                // this move for exactly this reason.
+                await Task.yield()
+                // Then hold the actor free while the rise animation runs. The
+                // morph is a spring, and it needs frames more than the fresh
+                // compose needs a 250ms head start — the document on screen is
+                // already a real brief, minutes old, and the live reads it is
+                // waiting on cost seconds. ONLY when something painted: an
+                // empty surface must never be made to wait.
+                try? await Task.sleep(for: .milliseconds(briefRiseHoldMS))
+            }
+            // THE CORPUS-ONLY DRAFT STANDS DOWN WHEN A CACHED DOC PAINTED
+            // (PERF 2026-08-18). `TodayBrief.compose` paints a second document
+            // before its live reads settle — composed with `skipLiveReads`, so
+            // it carries NO money hero, no movers, no cluster map. Over an
+            // empty surface that is a real gain. Over the cached doc it is a
+            // REGRESSION dressed as progress: the reader watches a complete
+            // brief lose three modules and then grow them back, and pays a
+            // full corpus compose plus a full document mount for the
+            // privilege. Nothing is withheld — the fresh document replaces it
+            // either way, bounded by `liveReadBudget`.
+            //
+            // `askPerf| firstPaint` is unaffected: the cached paint goes
+            // through this same wrapped channel, so the span still ends at the
+            // first pixel rather than at the first partial.
+            let partial: (([String]) -> Void)? = paintedCached ? nil : onPartialDoc
             // `presenting: true` — this is the route every way of REACHING the
             // brief funnels through (the typed ask, the whisper's tap, the
             // kept pill), so it's the one place the §214 ledger should record
@@ -2710,7 +2755,7 @@ struct RootShell: View {
             if let result = await KeptAskComposers.compose("today", things: allThings(),
                                                           context: modelContext,
                                                           presenting: true,
-                                                          onPartial: onPartialDoc) {
+                                                          onPartial: partial) {
                 return result.doc
             }
         }

@@ -822,21 +822,26 @@ struct Composer: View {
         // `.externalStorage` and were never in the row; what is left is inline
         // text SQLite reads either way, and the partial-fault bookkeeping
         // costs more than it saves. Don't re-add it without re-running that.
-        let all: [Thing]
-        if cachedChipFacts == nil {
-            all = (try? modelContext.fetch(FetchDescriptor<Thing>())) ?? []
-        } else {
-            // Only the recent window the day-lede and the away pulse read —
-            // both are windowed by construction, so this is small at any
-            // corpus size. The counters come from the cache below.
-            let floor = min(AppVisit.away?.lowerBound ?? .distantFuture,
-                            Date.now.addingTimeInterval(-7 * 86_400))
-            var recent = FetchDescriptor<Thing>(
-                predicate: #Predicate { $0.capturedAt >= floor },
-                sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
-            recent.fetchLimit = 2000
-            all = (try? modelContext.fetch(recent)) ?? []
-        }
+        // Only the recent window the day-lede and the away pulse read — both
+        // are windowed by construction, so this is small at any corpus size.
+        // The counters come from the cache, or from the PAGED walk below.
+        //
+        // Unconditional since 2026-08-18. This used to fork: a cold cache took
+        // an unbounded `fetch(FetchDescriptor<Thing>())` and every later open
+        // took this window — so the first open of a launch materialised the
+        // whole store TWICE (once here, once inside the walk) and did it as one
+        // uninterruptible main-actor call in the middle of the rise. The fork
+        // bought nothing: the two readers below (`DayBrief.whisper`, the away
+        // pulse) are both windowed, which is why every open after the first has
+        // always been allowed to hand them exactly this array. The first open
+        // is simply consistent with them now.
+        let floor = min(AppVisit.away?.lowerBound ?? .distantFuture,
+                        Date.now.addingTimeInterval(-7 * 86_400))
+        var recent = FetchDescriptor<Thing>(
+            predicate: #Predicate { $0.capturedAt >= floor },
+            sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
+        recent.fetchLimit = 2000
+        let all = (try? modelContext.fetch(recent)) ?? []
         #if DEBUG
         NSLog("[Casberi] composerPerfDEBUG| afterFetch=%dms count=%d",
               Int(Date.now.timeIntervalSince(composerT0) * 1000), all.count)
@@ -867,12 +872,20 @@ struct Composer: View {
         // The cache, or the one full walk that seeds it. `contextSourceRecent`
         // is the one counter that depends on WHERE you opened the agent from,
         // so it is recomputed per open off the recent rows rather than cached.
-        var scan = cachedChipFacts ?? AgentChipFacts.scan(all, contextSource: standingIn, now: .now)
-        if cachedChipFacts != nil {
+        var scan: AgentChipFacts
+        if let cached = cachedChipFacts {
+            scan = cached
             scan.contextSourceRecent = all.reduce(into: 0) { n, t in
                 if let standingIn, t.source == standingIn,
                    t.capturedAt >= Date.now.addingTimeInterval(-3 * 86_400) { n += 1 }
             }
+        } else {
+            // The one open that pays the full walk — PAGED, so it yields
+            // between pages instead of holding the main actor for the whole
+            // of it (PERF 2026-08-18, see `AgentChipFacts.scanPaged`). Same
+            // counters, same total cost; the rise animation can draw during it.
+            scan = await AgentChipFacts.scanPaged(context: modelContext,
+                                                  contextSource: standingIn, now: .now)
         }
         cachedChipFacts = scan
         tagPool = scan.tagPool
