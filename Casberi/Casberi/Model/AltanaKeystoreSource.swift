@@ -182,6 +182,10 @@ extension AltanaKeystore {
     /// Unwatching takes the snapshot with it, beside `WalletApprovals.clearCursors`.
     static func clearSnapshot(address: String) {
         UserDefaults.standard.removeObject(forKey: snapshotKey(address))
+        // The ghosts go with the watch (§410) — re-watching starts from a
+        // picture of what is there, not a memorial to a wallet nobody is
+        // watching any more.
+        AltanaState.forgetGhosts(address: address)
     }
 
     // MARK: - The seat's gate
@@ -248,6 +252,21 @@ extension AltanaKeystore {
             // are landed BEFORE the key rows below, so a revoked key's own row
             // is already in the corpus when its revocation arrives.
             for change in changed {
+                // A revoked credential is REMEMBERED as well as announced
+                // (§410). The registry drops it from `getKeys` the moment it
+                // goes, so this pass is the last one that can know anything
+                // about it — everything the ghost carries has to be captured
+                // here or it is gone for good. Recorded from the PREVIOUS
+                // snapshot's own facts where the reading no longer has them.
+                if case .revoked(let id) = change {
+                    let was = reading.keys.first { $0.id.lowercased() == id }
+                    AltanaState.rememberGone(.init(
+                        address: address, keyID: id,
+                        isRoot: was?.isRoot ?? false,
+                        kindLabel: was?.curve.label,
+                        chainLabel: was?.chainLabel ?? registries.first?.label,
+                        noticedAt: Date.now))
+                }
                 guard let sentence = eventTitle(change, reading: reading, address: address) else { continue }
                 let r = eventRef(change, address: address)
                 guard !IngestSupport.existingSourceRefs(context, source: source).contains(r) else { continue }

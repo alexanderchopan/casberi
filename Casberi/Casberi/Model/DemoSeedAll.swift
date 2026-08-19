@@ -372,7 +372,7 @@ enum DemoSeedAll {
         ChipMemory.forgetDemo(Array(demoVisits.keys))
         X402State.forget()
         // The keystore snapshot and its seat evidence (prd §403).
-        AltanaState.clear()
+        AltanaState.clear()   // takes the seeded ghosts with it (§410)
         AltanaKeystore.evidence.forget(demoWallet)
         // The seeded anonymity sets (prd §397). Scoped BY LABEL, unlike the
         // PostHog/Cloudflare stores above, and that is not fussiness: the
@@ -2670,6 +2670,17 @@ enum DemoSeedAll {
                     signatures: 0, publicKey: realP256),
             ], truncated: false),
         ])
+        // A GHOST (§410): a credential revoked while watching, so the demo
+        // shows the severed tie rather than leaving the whole reading
+        // invisible until somebody's real key is revoked — which for this
+        // registry could be months. Noticed 3 days ago, inside `ghostLifetime`.
+        AltanaState.rememberGone(.init(
+            address: demoWallet,
+            keyID: demoAltanaKeyIDValue(5),
+            isRoot: false,
+            kindLabel: String(localized: "Passkey"),
+            chainLabel: "BNB Smart Chain",
+            noticedAt: now.addingTimeInterval(-3 * 86_400)))
         AltanaKeystore.evidence.remember(demoWallet)
     }
 

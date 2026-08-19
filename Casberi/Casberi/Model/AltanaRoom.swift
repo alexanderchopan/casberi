@@ -99,6 +99,16 @@ enum AltanaRoom {
         /// Signs for more than one watched account.
         var isShared: Bool { accountAddresses.count > 1 }
 
+        /// REVOKED, and remembered (§410). The registry drops a revoked key
+        /// from `getKeys` entirely, so the only way it appears at all is that
+        /// we saw it before it went — which is why a ghost is forward-only and
+        /// can never be backfilled on first sight.
+        ///
+        /// It is drawn because a picture with no memory answers "who can sign
+        /// as me" and silently refuses "who used to" — and the second question
+        /// is the one somebody asks after a scare.
+        var isGone: Bool = false
+
         /// The row's leading word: the KIND when we can prove it, because
         /// "Passkey" is the only word here a person already owns. Falls back
         /// to the role, which is never a guess.
@@ -146,6 +156,23 @@ enum AltanaRoom {
             if let usageNote { parts.append(usageNote) }
             return parts.isEmpty ? nil : parts.joined(separator: " · ")
         }
+    }
+
+    /// A credential we watched disappear (§410).
+    ///
+    /// Carries only what survives the key itself: the registry drops a revoked
+    /// key from `getKeys`, so nothing can be re-read about it afterwards and
+    /// every field here is what was noted while it still existed.
+    struct Ghost: Equatable {
+        let address: String
+        let keyID: String
+        let isRoot: Bool
+        let kindLabel: String?
+        let chainLabel: String?
+        /// When we NOTICED it gone — not when it was revoked, which the
+        /// registry does not tell us. The copy says "noticed" for that reason:
+        /// those are two different claims and only one of them is ours.
+        let noticedAt: Date
     }
 
     /// One deadline on the "next" rail (§408a).
@@ -280,6 +307,21 @@ enum AltanaRoom {
                 : String(localized: "\(sharedKeyIDs.count) keys can sign for more than one of your accounts")
         }
 
+        /// What was revoked, remembered (§410) — the sentence beside the
+        /// ghosts, so the picture has an accessible reading.
+        ///
+        /// "NOTICED", never "revoked on": the registry drops a revoked key
+        /// without telling us when it went, so the only honest date is the
+        /// pass that found it missing. Forward-only by construction, and the
+        /// copy carries that rather than implying a complete history.
+        var revokedNote: String? {
+            let gone = credentials.filter(\.isGone).count
+            guard gone > 0 else { return nil }
+            return gone == 1
+                ? String(localized: "1 key was revoked while you were watching")
+                : String(localized: "\(gone) keys were revoked while you were watching")
+        }
+
         /// The hygiene line — nil when there is nothing to tidy.
         var staleNote: String? {
             guard staleCount > 0 else { return nil }
@@ -346,7 +388,8 @@ enum AltanaRoom {
     /// identical data reads as broken — the `ASCRoom` ruling): a wallet with a
     /// live deadline outranks one without, soonest first; then more keys;
     /// then the address itself, so ties can never flip.
-    static func compose(readings: [AltanaKeystore.Reading], now: Date) -> Card? {
+    static func compose(readings: [AltanaKeystore.Reading],
+                        ghosts: [Ghost] = [], now: Date) -> Card? {
         let withKeys = readings.filter { !$0.keys.isEmpty }
         guard !withKeys.isEmpty else { return nil }
 
@@ -402,13 +445,30 @@ enum AltanaRoom {
                 }
             }
         }
-        let credentials = order.compactMap { byID[$0] }
+        var credentials = order.compactMap { byID[$0] }
+
+        // The ghosts (§410), appended once each and therefore always last:
+        // revoked credentials the picture remembers, so it answers "who used
+        // to" as well as "who can". An id that came BACK is skipped — a key
+        // re-registered under the same id is alive again, and drawing both
+        // would be wrong in two directions at once.
+        let alive = Set(credentials.map { $0.id.lowercased() })
+        var ghostSeen = Set<String>()
+        for ghost in ghosts where !alive.contains(ghost.keyID.lowercased())
+                                  && ghostSeen.insert(ghost.keyID.lowercased()).inserted {
+            credentials.append(KeyRow(
+                id: ghost.keyID, isRoot: ghost.isRoot, kindLabel: ghost.kindLabel,
+                grantPhrase: nil, progress: nil, expiry: nil, expired: false,
+                daysLeft: nil, hoursLeft: nil, chainLabel: ghost.chainLabel,
+                signatureCount: 0, registeredAt: nil,
+                accountAddresses: [ghost.address], isGone: true))
+        }
 
         return Card(accounts: groups,
                     credentials: credentials,
                     // DEDUPED: the picture shows one token for a shared key,
                     // so the sentence counts one.
-                    usableCount: credentials.filter { !$0.expired }.count,
+                    usableCount: credentials.filter { !$0.expired && !$0.isGone }.count,
                     rootCount: credentials.filter(\.isRoot).count,
                     urgentHours: urgentHours(allKeys, now: now),
                     staleCount: allKeys.filter { $0.isExpiredButListed(now: now) }.count,
@@ -516,6 +576,10 @@ enum AltanaRoom {
             /// This credential can sign for more than one account, so the tie
             /// is drawn in the card's own hue rather than as quiet chrome.
             let shared: Bool
+            /// The credential was revoked (§410) — the tie is drawn CUT, which
+            /// is the whole reading: it reached this account and no longer
+            /// does. A ghost with an intact tie would say the opposite.
+            var severed: Bool = false
             var id: String { account + "→" + credential }
         }
         let accounts: [Node]
@@ -564,7 +628,8 @@ enum AltanaRoom {
             for (column, credential) in exclusive.enumerated() {
                 let x = firstTokenX + Double(column) * step
                 credentialNodes.append(.init(id: credential.id, x: x, y: y))
-                ties.append(.init(account: account.address, credential: credential.id, shared: false))
+                ties.append(.init(account: account.address, credential: credential.id,
+                                  shared: false, severed: credential.isGone))
                 maxX = max(maxX, x)
             }
         }
@@ -602,7 +667,7 @@ enum AltanaRoom {
     /// nothing to say, and the card omits it rather than drawing an empty axis.
     static func rail(_ credentials: [KeyRow], now: Date) -> [RailDot] {
         let live = credentials
-            .filter { !$0.expired }
+            .filter { !$0.expired && !$0.isGone }
             .compactMap { row -> (KeyRow, Date)? in row.expiry.map { (row, $0) } }
             .filter { $0.1 > now }
             .sorted { $0.1 < $1.1 }

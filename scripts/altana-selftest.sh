@@ -623,6 +623,61 @@ if let sharedNode = plan.credentials.first(where: { node in
 check(AltanaRoom.placement(sharedCard) == plan, "the layout is deterministic")
 check(plan.width > 0 && plan.height > 0, "the frame has real size")
 
+// ── §410: revoked credentials the picture remembers ─────────────────────
+// The registry DROPS a revoked key from getKeys, so a ghost can only ever be
+// something we saw before it went — forward-only by construction, and the copy
+// says "while you were watching" rather than implying a complete history.
+func ghost(_ n: Int, address: String = "0xaaa", root: Bool = false) -> AltanaRoom.Ghost {
+    AltanaRoom.Ghost(address: address, keyID: "0x" + kid(n), isRoot: root,
+                     kindLabel: "Passkey", chainLabel: "BNB Smart Chain",
+                     noticedAt: railNow.addingTimeInterval(-3 * 86_400))
+}
+guard let withGhost = AltanaRoom.compose(
+        readings: [reading("0xaaa", [root, live])], ghosts: [ghost(90)], now: now) else {
+    print("  ✗ a ghost composes"); exit(1)
+}
+check(withGhost.credentials.count == 3, "the ghost joins the picture")
+check(withGhost.credentials.last?.isGone == true, "…and is drawn LAST, after the living")
+check(withGhost.usableCount == 2,
+      "A GHOST IS NOT USABLE — a revoked key must never be counted as one that can sign")
+check(withGhost.revokedNote?.contains("1 key") == true, "the sentence names the count")
+check(withGhost.revokedNote?.contains("while you were watching") == true,
+      "…and says WHILE YOU WERE WATCHING, because the history before that is unknowable")
+check(withGhost.rail.allSatisfy { $0.id != ghost(90).keyID },
+      "a ghost carries no deadline onto the rail")
+
+// The tie is CUT — an intact one would say it still reaches the account.
+let ghostPlan = AltanaRoom.placement(withGhost)
+guard let cut = ghostPlan.ties.first(where: { $0.credential == ghost(90).keyID }) else {
+    print("  ✗ the ghost is tied to its account"); exit(1)
+}
+check(cut.severed, "the ghost's tie is SEVERED")
+check(ghostPlan.ties.filter { !$0.severed }.allSatisfy { tie in
+        withGhost.credentials.first { $0.id == tie.credential }?.isGone == false },
+      "…and no living credential's tie is")
+
+// A key that came BACK is alive, not a ghost — drawing both would be wrong in
+// two directions at once.
+guard let returned = AltanaRoom.compose(
+        readings: [reading("0xaaa", [root, live])],
+        ghosts: [AltanaRoom.Ghost(address: "0xaaa", keyID: live.id, isRoot: false,
+                                  kindLabel: nil, chainLabel: nil, noticedAt: now)],
+        now: now) else { print("  ✗ a returned key composes"); exit(1) }
+check(returned.credentials.count == 2, "a re-registered id is NOT also drawn as a ghost")
+check(returned.credentials.allSatisfy { !$0.isGone }, "…and nothing is marked gone")
+check(AltanaRoom.compose(readings: [reading("0xaaa", [root, live])], now: now)?
+        .revokedNote == nil, "no ghosts, no sentence")
+
+// The same ghost handed in twice is drawn once. The store dedupes too, but a
+// fixture with a single ghost can never exercise this — and the belt-and-
+// braces guard is exactly the kind that rots unnoticed without its own case.
+guard let twice = AltanaRoom.compose(readings: [reading("0xaaa", [root, live])],
+                                     ghosts: [ghost(91), ghost(91)], now: now) else {
+    print("  ✗ duplicate ghosts compose"); exit(1)
+}
+check(twice.credentials.filter(\.isGone).count == 1, "one ghost, however many times handed in")
+check(twice.revokedNote?.contains("1 key") == true, "…and the sentence counts it once")
+
 print("")
 if failures == 0 {
     print("✓ altana self-test: \(checks) checks passed")

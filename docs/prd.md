@@ -26810,3 +26810,50 @@ with a severed tie — history arriving in the picture that already works.
 FEES: at $0.50 a registration somebody with five keys has spent $2.50, and
 charting $2.50 is the data slop the module doctrine bans; it is one line of
 money text. Both are still unbuilt, and both now have a measured path.
+
+## §410 — Revoked keys the picture remembers, and the fee line declined (2026-08-19)
+
+§404 already DETECTED revocation and landed a row for it; what was missing is
+that the picture kept no memory. The constellation answered "who can sign as
+me" and silently refused "who used to" — and the second question is the one
+somebody asks after a scare.
+
+**A ghost is forward-only BY CONSTRUCTION, and the copy carries that.** The
+registry drops a revoked key from `getKeys` the moment it goes, so nothing can
+be re-read about it afterwards: the pass that notices it disappear is the last
+one that can know anything, and everything the ghost carries is captured
+there. The sentence therefore says "revoked **while you were watching**" and
+the stored date is when we NOTICED, never when it was revoked — the registry
+does not tell us that, and those are two different claims of which only one is
+ours.
+
+**Drawn as a cut tie**, because an intact one says the opposite of what
+happened: the credential reached this account and no longer does. Dashed
+token, dashed tie, dimmed, "revoked" in the slot where a live key carries its
+clock. It is never counted as usable and never reaches the rail — a revoked
+key with a deadline on the "what expires next" axis would be nonsense.
+
+**A returned id is alive, not a ghost.** A key re-registered under the same id
+is drawn once, as living — drawing both would be wrong in two directions at
+once. Ghosts age out at 30 days and cap at 4: a revocation from months ago is
+not the picture any more, it is history, and the row that landed at the time
+is where history belongs. They leave with the watch, like every other cursor
+here.
+
+**The demo seeds one**, because otherwise the whole reading is invisible until
+somebody's real key is revoked — which for this registry could be months.
+
+**THE FEE LINE IS DECLINED, having been offered and accepted.** §409 proposed
+it as "one line of money text" and that framing did not survive contact: what
+a person has PAID needs `FeeCollected` logs, and without them any total would
+be today's fee multiplied by past registrations — a fabricated number on a
+money surface, which is §83 at its most expensive. With the logs it is $2.50.
+And the CURRENT fee ($0.50 a registration, measured) is a fact about the
+registry, not about the person: this app never registers a key, so it is
+trivia. **Saying yes to a proposal is not a reason to ship it once the
+proposal turns out to be wrong** — the honest move is to come back with the
+reason, which is what happened here.
+
+Harness at 149 assertions, mutation-proven seven ways. One survived first
+time, the same class as always: the dedupe guard could not fire because the
+fixture passed a single ghost.

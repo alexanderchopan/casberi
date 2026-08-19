@@ -72,10 +72,73 @@ enum AltanaState {
         }
     }
 
+    /// Revoked credentials the picture remembers (§410).
+    ///
+    /// Kept HERE rather than as `Thing` rows because a ghost is a property of
+    /// the current picture, not an event in the feed — the event already
+    /// landed as a row when §404 detected the revocation. This is what lets
+    /// the constellation still draw it.
+    private static let goneKey = "altana.gone"
+
+    struct StoredGhost: Codable, Equatable {
+        var address: String
+        var keyID: String
+        var isRoot: Bool
+        var kindLabel: String?
+        var chainLabel: String?
+        var noticedAt: Date
+    }
+
+    /// How long a ghost is remembered, and how many. A revocation from months
+    /// ago is not the picture any more — it is history, and the row that
+    /// landed at the time is where history belongs.
+    static let ghostLifetime: TimeInterval = 30 * 86_400
+    static let ghostCap = 4
+
+    static var ghosts: [AltanaRoom.Ghost] {
+        guard let data = UserDefaults.standard.data(forKey: goneKey),
+              let stored = try? JSONDecoder().decode([StoredGhost].self, from: data)
+        else { return [] }
+        let cutoff = Date.now.addingTimeInterval(-ghostLifetime)
+        return stored
+            .filter { $0.noticedAt > cutoff }
+            .sorted { $0.noticedAt > $1.noticedAt }
+            .prefix(ghostCap)
+            .map { AltanaRoom.Ghost(address: $0.address, keyID: $0.keyID, isRoot: $0.isRoot,
+                                    kindLabel: $0.kindLabel, chainLabel: $0.chainLabel,
+                                    noticedAt: $0.noticedAt) }
+    }
+
+    /// Records one, newest first, never twice.
+    static func rememberGone(_ ghost: StoredGhost) {
+        var all = (try? JSONDecoder().decode(
+            [StoredGhost].self,
+            from: UserDefaults.standard.data(forKey: goneKey) ?? Data())) ?? []
+        guard !all.contains(where: {
+            $0.keyID.lowercased() == ghost.keyID.lowercased()
+                && $0.address.lowercased() == ghost.address.lowercased()
+        }) else { return }
+        all.insert(ghost, at: 0)
+        all = Array(all.prefix(ghostCap * 4))
+        if let data = try? JSONEncoder().encode(all) {
+            UserDefaults.standard.set(data, forKey: goneKey)
+        }
+    }
+
+    static func forgetGhosts(address: String) {
+        guard let data = UserDefaults.standard.data(forKey: goneKey),
+              var all = try? JSONDecoder().decode([StoredGhost].self, from: data) else { return }
+        all.removeAll { $0.address.lowercased() == address.lowercased() }
+        if let out = try? JSONEncoder().encode(all) {
+            UserDefaults.standard.set(out, forKey: goneKey)
+        }
+    }
+
     /// Disconnecting forgets the cache, so a re-watch composes from a fresh
     /// read rather than a card describing wallets nobody is watching.
     static func clear() {
         UserDefaults.standard.removeObject(forKey: key)
+        UserDefaults.standard.removeObject(forKey: goneKey)
     }
 }
 
@@ -88,7 +151,7 @@ extension AltanaRoom {
     /// watched, no wallet holds keys, the snapshot failed to decode, or the
     /// leading wallet is under `minimumKeys`.
     static func card(now: Date = .now) -> Card? {
-        compose(readings: AltanaState.readings, now: now)
+        compose(readings: AltanaState.readings, ghosts: AltanaState.ghosts, now: now)
     }
 
     /// `-altanaRoomProbe YES` — the stored readings, then the composed card.
@@ -101,7 +164,7 @@ extension AltanaRoom {
             lines.append("altanaStored| \(WalletStore.shortAddress(r.address))"
                 + " keys=\(r.keys.count) truncated=\(r.truncated ? "YES" : "NO")")
         }
-        guard let card = compose(readings: readings, now: now) else {
+        guard let card = compose(readings: readings, ghosts: AltanaState.ghosts, now: now) else {
             return lines + ["altanaRoom| no card — nothing watched, no keys, or under the floor"]
         }
         lines.append("altanaRoom| \(card.headline)")

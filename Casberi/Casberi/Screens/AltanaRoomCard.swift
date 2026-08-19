@@ -103,12 +103,19 @@ struct AltanaRoomCard: View {
             // ONE line (§408a): the tie replaced the shared sentence as the
             // card's primary telling, and the scope ceiling lives on the key's
             // own sheet, which states it beside the dates it governs.
-            if let stale = card.staleNote {
-                Text(stale)
-                    .dsText(.subhead13)
-                    .foregroundStyle(DS.textSecondary)
-                    .padding(.top, DS.Space.s4)
+            VStack(alignment: .leading, spacing: DS.Space.s1) {
+                if let revoked = card.revokedNote {
+                    Text(revoked)
+                        .dsText(.subhead13)
+                        .foregroundStyle(DS.textSecondary)
+                }
+                if let stale = card.staleNote {
+                    Text(stale)
+                        .dsText(.subhead13)
+                        .foregroundStyle(DS.textSecondary)
+                }
             }
+            .padding(.top, DS.Space.s4)
         }
         .padding(DS.Space.s4)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -145,8 +152,14 @@ struct AltanaRoomCard: View {
                         }
                     }
                     .stroke(tie.shared ? Self.mark.opacity(0.9)
-                                       : DS.textTertiary.opacity(0.28),
-                            style: StrokeStyle(lineWidth: tie.shared ? 2.5 : 2, lineCap: .round))
+                                       : DS.textTertiary.opacity(tie.severed ? 0.20 : 0.28),
+                            style: StrokeStyle(lineWidth: tie.shared ? 2.5 : 2,
+                                               lineCap: .round,
+                                               // CUT, for a revoked credential
+                                               // (§410): it reached this account
+                                               // and no longer does, and an
+                                               // intact line says the opposite.
+                                               dash: tie.severed ? [2, 5] : []))
                 }
             }
 
@@ -201,14 +214,18 @@ struct AltanaRoomCard: View {
             VStack(spacing: DS.Space.s2) {
                 ZStack {
                     Circle()
-                        .fill(row.isRoot ? Self.mark : DS.surfaceRaised)
+                        .fill(row.isGone ? DS.surfaceRaised.opacity(0.6)
+                                         : (row.isRoot ? Self.mark : DS.surfaceRaised))
                     Circle()
-                        .strokeBorder(row.isShared ? Self.mark
-                                                   : DS.textTertiary.opacity(row.isRoot ? 0 : 0.28),
-                                      lineWidth: 2)
+                        .strokeBorder(row.isGone ? DS.textTertiary.opacity(0.30)
+                                                 : (row.isShared ? Self.mark
+                                                                 : DS.textTertiary.opacity(row.isRoot ? 0 : 0.28)),
+                                      style: StrokeStyle(lineWidth: 2,
+                                                         dash: row.isGone ? [2, 4] : []))
                     Image(systemName: glyph(row))
                         .dsGlyph(18)
-                        .foregroundStyle(row.isRoot ? .white : DS.textPrimary)
+                        .foregroundStyle(row.isGone ? DS.textTertiary
+                                                    : (row.isRoot ? .white : DS.textPrimary))
                 }
                 // EVERY token, the same size — no exceptions (§408a).
                 .frame(width: Self.token, height: Self.token)
@@ -228,7 +245,7 @@ struct AltanaRoomCard: View {
                 }
             }
             .frame(minWidth: 62)
-            .opacity(row.expired ? 0.45 : 1)
+            .opacity(row.expired || row.isGone ? 0.45 : 1)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -287,6 +304,7 @@ struct AltanaRoomCard: View {
     }
 
     private func tokenLine(_ row: AltanaRoom.KeyRow) -> String? {
+        if row.isGone { return String(localized: "revoked") }
         if row.expired { return String(localized: "expired") }
         if let hours = row.hoursLeft {
             return hours == 0 ? String(localized: "under 1h")
@@ -299,6 +317,7 @@ struct AltanaRoomCard: View {
 
     private func accessibility(_ row: AltanaRoom.KeyRow) -> String {
         var parts = [row.title]
+        if row.isGone { parts.append(String(localized: "revoked")) }
         if row.isRoot { parts.append(String(localized: "root key")) }
         if row.isShared {
             parts.append(String(localized: "signs for \(row.accountAddresses.count) accounts"))
@@ -311,6 +330,7 @@ struct AltanaRoomCard: View {
     private var accessibilitySummary: String {
         var parts = [card.headline]
         if let shared = card.sharedNote { parts.append(shared) }
+        if let revoked = card.revokedNote { parts.append(revoked) }
         if let stale = card.staleNote { parts.append(stale) }
         return parts.joined(separator: ". ")
     }
