@@ -344,6 +344,27 @@ struct AppsScreen: View {
             if let name = UserDefaults.standard.string(forKey: "openApp") { probe = .app(name) }
             // `-openSetup "<Offer name>"` pushes a bridge's setup screen
             // directly — the token/handle field screens have no deep link.
+            // `-connectTap "<Offer name>"` — the door the Connect BUTTON takes.
+            //
+            // It exists because `-openSetup` below does NOT take it, and that
+            // gap shipped a crash. `-openSetup` calls `route.pushBridge`, which
+            // PUSHES the setup screen; every real Connect calls
+            // `route.openSetup`, which for any non-wallet destination RAISES it
+            // as a sheet. Two doors onto the same screen, and only the pushed
+            // one had a probe — so the sheet presentation was never exercised
+            // here, and `ConnectFormSheet`'s required
+            // `@Environment(BridgeStore.self)` went missing on Mac for every
+            // setup bridge in the catalog (App Store review 2.1(a), build 363).
+            // A probe that opens the screen by a route no person can take
+            // proves the screen, never the act.
+            //
+            // Both hooks stay: the push is what the screenshot sweep wants
+            // (a full screen, no presentation to dismiss), the raise is what
+            // the crash gate wants. See scripts/verify-mac.sh step 2c.
+            if let name = UserDefaults.standard.string(forKey: "connectTap") {
+                NSLog("[Casberi] connectTap| raising connect form for %@", name)
+                route.openSetup(forOffer: name)
+            }
             if let name = UserDefaults.standard.string(forKey: "openSetup") {
                 route.pushBridge(BridgeRouter.destination(forOffer: name))
             }

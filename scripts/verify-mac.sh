@@ -271,6 +271,46 @@ if [[ "$GROUP_LINE" != *"writable=YES"* ]]; then
 fi
 ok "app group container ($GROUP_LINE)"
 
+# ── 2c. A Connect actually opens (2026-08-18) ──────────────────────────────
+# App Review 2.1(a), build 363: tapping Connect on a catalog card crashed the
+# app instantly. `ConnectFormSheet` opens with a REQUIRED
+# `@Environment(BridgeStore.self)`, a sheet is built in its own hosting
+# controller, and the shell's environment injections did not reach it — so the
+# read trapped at mount ("No Observable object of type BridgeStore found")
+# before a frame was drawn. `raisedByConnect` is true for every destination but
+# the wallet, so this was EVERY setup bridge in the catalog, on the first
+# Connect anyone tapped.
+#
+# Nothing here could see it, and the reason is worth keeping: `-openSetup`
+# reaches that screen by `route.pushBridge`, while the button reaches it by
+# `route.openSetup`, which RAISES it. The screen sweep opened the pushed copy,
+# screenshotted it, and passed — proving the screen and never the presentation.
+# So this step uses `-connectTap`, the door a person actually takes.
+#
+# RSS deliberately, not an Apple bridge: it is a plain setup form with no
+# system permission behind it, so a failure here is the presentation and only
+# the presentation. The reviewer's card happened to be Apple Notes; the bug
+# never was.
+step "Connect raises its form without crashing"
+CONNECT_LOG="$OUT/connect.log"
+launch "$CONNECT_LOG" -deeplink casberi://account -connectTap "RSS"
+if ! wait_for "$CONNECT_LOG" 'connectTap\| raising' 20; then
+  quit_app
+  fail "connect probe never fired (see $CONNECT_LOG)"
+fi
+# The trap is synchronous with the presentation, so a moment after the raise is
+# enough — and the process being GONE is the finding, not a log line.
+sleep 3
+if [[ -z "$(app_pid)" ]]; then
+  fail "app DIED raising the connect form — every setup bridge's Connect is broken (see $CONNECT_LOG)"
+fi
+if grep -q "Fatal error" "$CONNECT_LOG"; then
+  quit_app
+  fail "connect form raised a Swift fatal error: $(grep -m1 'Fatal error' "$CONNECT_LOG")"
+fi
+quit_app
+ok "connect form raises (RSS)"
+
 # ── 3. Screen sweep ────────────────────────────────────────────────────────
 # The app renders its own key window (see the `-macSnapshot` rationale above)
 # into its container tmp; we copy each PNG out and prove it's a real frame.

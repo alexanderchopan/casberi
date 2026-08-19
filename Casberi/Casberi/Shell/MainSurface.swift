@@ -1892,7 +1892,32 @@ struct MainSurface: View {
         // `HomeRoute.openSetup`, so a tile, a peek preview and a product page
         // can't drift into three different presentations of one act.
         .sheet(item: $route.connectForm) { destination in
+            // RE-INJECTED, and this is `rootPresented`'s rule reaching the one
+            // presentation that never went through it (App Store review
+            // 2.1(a) on the Mac build, crash reproduced 2026-08-18).
+            //
+            // A sheet is built in its OWN hosting controller, and the shell's
+            // `.environment(...)` injections do not reach it here — so
+            // `ConnectFormSheet`'s required `@Environment(BridgeStore.self)`
+            // read a value that was not there and trapped at mount:
+            // "No Observable object of type BridgeStore found", every time,
+            // before a single frame of the form was drawn.
+            //
+            // It is NOT an Apple-bridge bug, which is what the report looked
+            // like: `raisedByConnect` is true for every destination but the
+            // wallet, so this fired for the FIRST Connect anyone tapped on any
+            // setup bridge. The reviewer's happened to be the Apple Notes
+            // story card.
+            //
+            // `RootShell.rootPresented` is the same three lines and cannot be
+            // called from here (it is private to that view), so this mirrors
+            // it deliberately — see its doc: "any new shell-wide environment
+            // object gets added HERE, not to individual sheets", which now
+            // means both places.
             ConnectFormSheet(destination: destination)
+                .environment(store)
+                .environment(chrome)
+                .environment(\.locale, LanguageStore.shared.locale)
         }
         // The rail (2026-08-10) — see `body` and `railInset`. On the STACK,
         // deliberately, not inside its content closure like the `.top` strip
