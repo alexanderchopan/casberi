@@ -4034,6 +4034,70 @@ enum ProbeHooks {
                       assetAlive ? "YES" : "NO")
             }
         },
+        // `-filesRevealProbe YES|"<title prefix>"` — the folder door on a
+        // folder-picked file (2026-08-19, prd §408): what the sheet's "From"
+        // row SAYS, and where pressing it would land.
+        //
+        // Bare `YES` takes the newest Files thing; a prefix picks one by title
+        // (`-openThing`'s rule — a UUID changes every install, a title
+        // doesn't). One NSLog per fact rather than a joined line (the
+        // `-todayProbe` truncation lesson).
+        //
+        // IT EXISTS BECAUSE THE URL IS UNMEASURED. iOS publishes no public API
+        // that reveals a file, so this rides the Files app's own
+        // `shareddocuments://` scheme — and a wrong PATH and an unclaimed
+        // SCHEME both end the same way from outside (the person lands
+        // somewhere that isn't their folder), while only one of them is
+        // fixable here. `claimed` is ground truth, `inSet` is what the verb is
+        // gated on, and `url` is the exact string handed to LaunchServices, so
+        // one launch separates all three. A missing door has four causes and
+        // three are healthy: no folder connected, the bookmark stopped
+        // resolving, the row belongs to another bridge (Dropbox lands `.file`
+        // rows whose bytes are not on this device), or the scheme is
+        // unclaimed — which on Mac Catalyst is the correct answer.
+        //
+        // Delayed for `HandOffState`'s reason: the set it reads is written by
+        // the first foreground pass, which has not run when `runAll` fires.
+        Hook(key: "filesRevealProbe") { spec, context in
+            Task { @MainActor in
+                try? await Task.sleep(for: .seconds(2))
+                let scheme = FilesLocation.revealScheme
+                let claimed = URL(string: "\(scheme)://").map {
+                    UIApplication.shared.canOpenURL($0)
+                } ?? false
+                NSLog("[Casberi] filesReveal| scheme=%@ claimed=%@ inSet=%@",
+                      scheme, claimed ? "YES" : "NO",
+                      HandOffState.installedSchemes.contains(scheme) ? "YES" : "NO")
+                NSLog("[Casberi] filesReveal| connected=%@ folderName=%@ resolves=%@",
+                      FilesStore.shared.connected ? "YES" : "NO",
+                      FilesStore.shared.folderName.isEmpty ? "(none)" : FilesStore.shared.folderName,
+                      FilesStore.shared.folderURL()?.path ?? "(unresolvable)")
+                var descriptor = FetchDescriptor<Thing>(
+                    predicate: #Predicate { $0.source == "Files" },
+                    sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
+                descriptor.fetchLimit = 300
+                let files = ((try? context.fetch(descriptor)) ?? []).filter(\.isLive)
+                let prefix = (spec == "YES" || spec.isEmpty) ? "" : spec.lowercased()
+                let rows = prefix.isEmpty
+                    ? Array(files.prefix(5))
+                    : files.filter { $0.title.lowercased().hasPrefix(prefix) }
+                guard !rows.isEmpty else {
+                    NSLog("[Casberi] filesReveal| no Files thing%@ in the corpus",
+                          prefix.isEmpty ? "" : " whose title starts with \(spec)")
+                    return
+                }
+                for thing in rows {
+                    NSLog("[Casberi] filesRow| %@ · ref=%@", thing.title,
+                          thing.sourceRef ?? "(none)")
+                    NSLog("[Casberi] filesRow|   from=\"%@\" · url=%@",
+                          PlaceWords.line(for: thing),
+                          FilesIngest.revealURL(for: thing.sourceRef)?.absoluteString ?? "(none)")
+                    let discs = VerbDerivation.verbs(for: thing)
+                        .map { VerbDial.dialLabel(for: $0) }.joined(separator: ", ")
+                    NSLog("[Casberi] filesRow|   discs=%@", discs.isEmpty ? "(none)" : discs)
+                }
+            }
+        },
         // `-topicMapProbe YES` — the Photos feed's OCR treemap (2026-07-30),
         // headless. Runs the `ocrTopics` backfill first (reads the OCR text
         // already on each shot — no PHAsset walk), then composes

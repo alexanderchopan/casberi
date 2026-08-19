@@ -17,6 +17,7 @@ struct Verb: Identifiable {
         case deny                     // S10: the person's no
         case translate                // read: system Translation sheet over the thing's own text
         case viewImage                // read: the picture itself, full screen and zoomable
+        case showInFiles              // read hand-off: the Files app, at the folder this file is in
     }
     let label: String
     let icon: String
@@ -39,6 +40,7 @@ struct Verb: Identifiable {
         case .deny:           return "Deny"
         case .translate:      return "Translate"
         case .viewImage:      return "Zoom"
+        case .showInFiles:    return "Files"
         }
     }
     var id: String { label }
@@ -239,6 +241,39 @@ enum VerbDerivation {
             if FilesIngest.isStoredPicture(thing.sourceRef) {
                 out.append(Verb(label: "Zoom", icon: "arrow.up.left.and.arrow.down.right",
                                 action: .viewImage))
+            }
+            // The folder it is saved in, in the Files app (2026-08-19, prd
+            // §408 — user: "would be great to be able to press here and it
+            // takes you to folder where the file is saved").
+            //
+            // A folder-picked file had NO door at all: the corpus held the
+            // row, the sheet drew it, and the file itself — sitting in a
+            // folder the person picked, two taps away in another app — was
+            // reachable from Casberi only by remembering where it was. Every
+            // other bridge in this app whose rows exist somewhere else offers
+            // that door (a cast's thread, a note's vault, a transaction's
+            // explorer); this was the one that didn't.
+            //
+            // Scoped to the Files source, not to the kind: Dropbox lands
+            // `.file` rows too and its bytes are not on this device, so the
+            // Files app has nothing to show for one. Gated on the scheme so it
+            // is never a disc that does nothing — the screenshot verb's rule,
+            // and the reason is the same measured one: an unclaimed scheme is
+            // refused ASYNCHRONOUSLY by LaunchServices and neither
+            // `UIApplication.open`'s completion nor SwiftUI's `openURL`
+            // reports it. On Mac Catalyst nothing claims it, so the verb
+            // simply isn't there.
+            //
+            // The URL is built at TAP time, not here: this function runs off
+            // the main actor inside GenUI composition and is called per row by
+            // the feed's context-menu builder (prd §260), while resolving the
+            // bookmark is a `FilesStore` read. The gate is three string tests
+            // and a set lookup, which is what that context can afford.
+            if thing.source == "Files",
+               FilesLocation.components(ref: thing.sourceRef) != nil,
+               HandOffState.installedSchemes.contains(FilesLocation.revealScheme) {
+                out.append(Verb(label: "Show in Files", icon: "folder",
+                                action: .showInFiles))
             }
         case .note:
             // A note's next action: it becomes a reminder (S4 — captures
@@ -657,10 +692,17 @@ enum HandOffState {
     /// two were missed because Calendar and Reminders ship with iOS, so the
     /// scheme is always answerable THERE. Mac Catalyst is where that stops
     /// being true, and the reviewer's Mac is where it surfaced.
+    /// `shareddocuments` joined 2026-08-19 with the Files hand-off (prd
+    /// §408). Same reason as `obsidian`: connecting a folder says the person
+    /// has a FOLDER, which says nothing about whether the Files app is on this
+    /// device — and on Mac Catalyst nothing claims the scheme at all, which is
+    /// the platform that turned the Calendar miss above into an App Store
+    /// rejection.
     private static let candidates = ["todoist", "googlegmail", "photos-redirect",
                                      "youtube", "obsidian",
                                      "calshow", "x-apple-reminderkit",
-                                     "chatgpt", "music", "spotify", "mobilenotes"]
+                                     "chatgpt", "music", "spotify", "mobilenotes",
+                                     "shareddocuments"]
 
     #if DEBUG
     /// The same list, for `-photoVerbProbe`'s census. Exposed rather than
@@ -722,6 +764,33 @@ enum HandOff {
         try await jump(thing, to: URL(string: "x-apple-reminderkit://"))
     }
 
+    /// Open the Files app at the folder a folder-picked file is saved in
+    /// (2026-08-19, prd §408).
+    ///
+    /// NOT `jump`: that copies the thing's words first, because neither
+    /// Calendar's nor Reminders' scheme can carry text and the clipboard is
+    /// what makes those hops useful. Here the destination IS the whole verb —
+    /// the folder is what was asked for — and quietly replacing the person's
+    /// clipboard on the way is a side effect nothing on screen promised.
+    ///
+    /// The failure is worth a sentence rather than a silence: an unreachable
+    /// folder means the bookmark stopped resolving (the folder was moved,
+    /// renamed or unshared), which is a real thing the person can act on, and
+    /// it is indistinguishable from a tap that did nothing.
+    @MainActor
+    static func showInFiles(_ thing: Thing) async throws {
+        // Build 256: a detached Task runs LATER than it was created, so this
+        // row can already be deleted by the time this line does (prd §297).
+        guard thing.isLive else { return }
+        guard let url = FilesIngest.revealURL(for: thing.sourceRef),
+              UIApplication.shared.canOpenURL(url) else {
+            throw HandOffError.folderUnreachable
+        }
+        guard await UIApplication.shared.open(url) else {
+            throw HandOffError.folderUnreachable
+        }
+    }
+
     /// Open Calendar ON a date read out of a thing's own text — the hand-off
     /// half of `ScreenshotFacts` (prd §282, 2026-08-02). Same contract as
     /// `addToCalendar`: the words go on the clipboard FIRST and
@@ -761,10 +830,18 @@ enum HandOff {
 
     enum HandOffError: LocalizedError {
         case unavailable
+        case folderUnreachable
         var errorDescription: String? {
-            // The copy DID happen — say so, because it's the half the person
-            // can still use.
-            String(localized: "Copied — couldn't open the app")
+            switch self {
+            case .unavailable:
+                // The copy DID happen — say so, because it's the half the
+                // person can still use.
+                return String(localized: "Copied — couldn't open the app")
+            case .folderUnreachable:
+                // Nothing was copied on this path, so the sentence claims
+                // nothing beyond what failed.
+                return String(localized: "Couldn't open the folder in Files")
+            }
         }
     }
 }
@@ -780,7 +857,23 @@ enum PlaceWords {
         }
         // A folder-picked file didn't arrive by mail — "in your inbox" was
         // written for that case; a Files thing names the folder it lives in.
+        //
+        // And it names it BY NAME since 2026-08-19 (prd §408). "in your
+        // folder" was true of every file in the corpus and told you nothing
+        // about this one — the row a person pointed at when they asked for a
+        // way through to where the file actually is. The immediate parent, so
+        // it reads as a place inside a sentence: "in Receipts", not "in
+        // Documents/2026/Q3/Receipts", which is a field value wearing a
+        // preposition.
+        //
+        // Interpolated rather than localized, the `walletPlace` precedent
+        // below: the folder is a name the person gave a folder, and it is the
+        // same name in every language.
         if thing.kind == .file, thing.source == "Files" {
+            if let folder = FilesLocation.folderName(ref: thing.sourceRef,
+                                                     connectedFolder: FilesStore.shared.folderName) {
+                return "in \(folder)"
+            }
             return "in your folder"
         }
         // Privacy.com became a `.transaction` on 2026-08-06, and the kind's

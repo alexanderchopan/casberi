@@ -422,6 +422,22 @@ enum FilesIngest {
         return audioExtensions.contains((rel as NSString).pathExtension.lowercased())
     }
 
+    /// The Files-app door for a landed file — the folder it sits in
+    /// (2026-08-19, prd §408).
+    ///
+    /// Cheap ON PURPOSE: resolving the bookmark is a UserDefaults read and a
+    /// string build, no enumeration, so the sheet can call it while drawing a
+    /// row. `FilesLocation`'s own doc records why rebuilding the path is safe
+    /// here and nowhere else in this file.
+    ///
+    /// Nil has three causes and none of them is an error: the folder was
+    /// never connected, the bookmark no longer resolves, or the ref belongs to
+    /// another bridge. Every caller draws nothing rather than a dead control.
+    static func revealURL(for sourceRef: String?) -> URL? {
+        guard let folder = FilesStore.shared.folderURL() else { return nil }
+        return FilesLocation.revealURL(folder: folder, ref: sourceRef)
+    }
+
     /// What a resolve found. Four outcomes rather than an optional, because
     /// three of them are NOT errors and the sheet says something different
     /// for each: a file still coming down from iCloud will play in a minute,

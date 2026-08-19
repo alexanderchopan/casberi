@@ -700,6 +700,21 @@ step "Obsidian pure-logic self-test"
   || fail "the Obsidian logic self-test failed — run scripts/obsidian-selftest.sh"
 print -P "%F{green}✓ obsidian self-test%f"
 
+# The folder door on a folder-picked file (prd §408, 2026-08-19). Every failure
+# it catches renders as a perfectly ordinary row: a ref that walks upward
+# building a URL onto a folder OUTSIDE the one the person picked, the FILE's
+# path where the folder's was meant (which opens a preview of the thing they
+# are already looking at), an unencoded space or `#` making `URL(string:)`
+# answer nil so the door silently stops existing for whoever has an ordinary
+# folder name, and "in June.pdf" — the file named as the place it is in. Its
+# drift guards cover the half the pure file cannot: the scheme is declared,
+# probed and GATED, both verb dispatchers run it, and the hand-off does not
+# quietly take the pasteboard on the way out.
+step "Files-location pure-logic self-test"
+"$ROOT/scripts/files-location-selftest.sh" >/dev/null \
+  || fail "the Files-location self-test failed — run scripts/files-location-selftest.sh"
+print -P "%F{green}✓ files-location self-test%f"
+
 # Radicle (prd §400, 2026-08-18). The ONLY proof this bridge has: nothing on
 # this host can open a patch, merge one or close an issue, so no probe and no
 # sweep can ever exercise its landing paths — one degree weaker than Stripe's

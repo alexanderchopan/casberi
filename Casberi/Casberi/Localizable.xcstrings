@@ -29572,6 +29572,34 @@
         }
       }
     },
+    "Couldn't open the folder in Files": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "No se pudo abrir la carpeta en Archivos"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "「ファイル」でフォルダを開けませんでした"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "파일 앱에서 폴더를 열 수 없습니다"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "无法在“文件”中打开该文件夹"
+          }
+        }
+      }
+    },
     "Couldn't reach %@ — check your connection.": {
       "localizations": {
         "es": {

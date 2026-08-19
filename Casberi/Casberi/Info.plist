@@ -97,6 +97,13 @@
 		<string>music</string>
 		<string>spotify</string>
 		<string>mobilenotes</string>
+		<!-- The Files app (2026-08-19, prd §408). A folder-picked file's thing
+		     sheet offers the folder it is saved in; iOS publishes no public
+		     API that reveals a file, so the door is the Files app's own
+		     scheme, and a scheme absent from this list always reads as absent
+		     — which is what lets HandOffState drop the verb on Mac Catalyst,
+		     where nothing claims it. -->
+		<string>shareddocuments</string>
 		<string>metamask</string>
 		<string>rainbow</string>
 		<string>rabby</string>

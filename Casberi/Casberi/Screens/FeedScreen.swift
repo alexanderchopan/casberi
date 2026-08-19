@@ -7045,6 +7045,11 @@ struct FeedScreen: View {
         case .translate:
             translateText = thing.postText ?? thing.content
             showTranslate = true
+        case .showInFiles:
+            Task {
+                do { try await HandOff.showInFiles(thing) }
+                catch { chrome.flash(error.localizedDescription, tone: .failure) }
+            }
         case .viewImage:
             // The full-screen viewer lives in the thing sheet, which is where
             // this row's tap already goes — the feed's own menu never offers

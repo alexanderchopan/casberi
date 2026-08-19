@@ -1493,7 +1493,7 @@ struct ThingSheetView: View {
                 // already depicts both parties, so "in your wallet" here was
                 // the redundant row (user: "one-row table saying nothing").
                 if hasFrom {
-                    specRow("From", PlaceWords.line(for: thing))
+                    fromRow(PlaceWords.line(for: thing))
                 }
                 // A wallet transfer's counterparty — the other side of the
                 // trade, nameable ("this is Mom"). Only when the hex was
@@ -1509,6 +1509,63 @@ struct ThingSheetView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(DS.fillFaint,
                         in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+        }
+    }
+
+    /// "From — in Receipts", and a way through to it (2026-08-19, prd §408).
+    ///
+    /// This is the row the feedback pointed at: "would be great to be able to
+    /// press here and it takes you to folder where the file is saved". It is a
+    /// button for exactly the one case where there is somewhere to go — a
+    /// folder-picked file whose folder the Files app will really open — and
+    /// stays the plain row it always was otherwise, rather than becoming a
+    /// control that shrugs (§83's first corollary, on the row somebody
+    /// actually tried to press).
+    ///
+    /// It carries the same verb the dial does, through the same `runVerb`, so
+    /// the two doors can never behave differently or report differently. The
+    /// dial is where the verb is DISCOVERABLE; this is where it was looked
+    /// for.
+    ///
+    /// The gate is deliberately CHEAP — a set lookup, a UserDefaults read and
+    /// a string parse — because this runs on every evaluation of the sheet's
+    /// body. Building the URL here would resolve the security-scoped bookmark
+    /// each pass, i.e. touch the disk to decide whether to draw a chevron. A
+    /// bookmark that has since gone stale (the folder moved, was renamed or
+    /// was unshared) therefore reaches the TAP rather than the gate, and the
+    /// tap has a sentence for exactly that — which is a hand-off reporting a
+    /// real failure, not a control that does nothing.
+    @ViewBuilder
+    private func fromRow(_ value: String) -> some View {
+        if thing.source == "Files", FilesStore.shared.connected,
+           HandOffState.installedSchemes.contains(FilesLocation.revealScheme),
+           FilesLocation.components(ref: thing.sourceRef) != nil {
+            Button {
+                runVerb(Verb(label: "Show in Files", icon: "folder", action: .showInFiles))
+            } label: {
+                HStack(alignment: .firstTextBaseline, spacing: 0) {
+                    Text("From")
+                        .dsText(.label12)
+                        .foregroundStyle(DS.textTertiary)
+                        .frame(width: 80, alignment: .leading)
+                    Text(LocalizedStringKey(value))
+                        .dsText(.callout15).foregroundStyle(DS.textPrimary)
+                        .lineLimit(2)
+                    // The hand-off mark every leaving verb in this app wears —
+                    // the row says where you land, this says that you leave.
+                    Image(systemName: "arrow.up.right")
+                        .accessibilityHidden(true)
+                        .dsGlyph(12, weight: .regular)
+                        .foregroundStyle(DS.textTertiary)
+                        .padding(.leading, DS.Space.s2)
+                    Spacer(minLength: 0)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .dsHover()
+        } else {
+            specRow("From", value)
         }
     }
 
@@ -2470,6 +2527,17 @@ struct ThingSheetView: View {
         case .viewImage:
             verbResult = nil
             zoomingPhoto = true
+        case .showInFiles:
+            do {
+                // No success line: the Files app is now in front of the
+                // person, so a sentence in the sheet behind it is written for
+                // nobody. Only the failure has a reader.
+                try await HandOff.showInFiles(thing)
+                verbResult = nil
+            } catch {
+                verbResult = error.localizedDescription
+                verbResultIsError = true
+            }
         case .approve:
             // Demo bridge: the decision lands locally; the gateway wire is M5.
             thing.mark = .done

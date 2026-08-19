@@ -26598,3 +26598,100 @@ Harness at 106 assertions. One mutation survived as an EQUIVALENT MUTANT and
 is recorded rather than chased: urgency over the top-ranked account's keys
 equals urgency over all keys, because the ranking puts the soonest deadline
 on top by construction.
+
+## §408 — The folder a file is saved in (user feedback, relayed: "would be great to be able to press here and it takes you to folder where the file is saved", 2026-08-19)
+
+A screenshot of a file's thing sheet, with the "From — in your folder" row
+pointed at. Two separate things were wrong with that row and neither could be
+seen from inside the app.
+
+**It said nothing.** "in your folder" is true of every file in the corpus,
+whatever folder it is in and however deep. The row was the sheet's whole
+contribution on where a file lives, and it spent an 80pt label column to say
+"somewhere in the folder you connected". It names the folder now — **the
+IMMEDIATE parent**, because this reads inside a sentence ("in Receipts"), where
+"in Documents/2026/Q3/Receipts" is a field value wearing a preposition. A file
+at the connected folder's own root takes that folder's name, which is the true
+and useful answer there. Nil when there is nothing true to say (an
+unconnected store has no name) and the old wording stands — an absent fact is
+never worth a guessed one.
+
+**It was a label, not a door.** Every other bridge here whose rows exist
+somewhere else offers the way through: a cast has its thread, a vault note has
+Obsidian, a transaction has its explorer. A folder-picked file — sitting in a
+folder the person chose, two taps away in another app — had none. It was
+reachable from Casberi only by remembering where you put it, which is the
+thing a corpus is supposed to end.
+
+**The door is the Files app, and its grade is stated rather than implied.**
+iOS publishes NO public API that reveals a file. So this rides the Files app's
+own undocumented `shareddocuments://` scheme — exactly the grade of read
+`photos-redirect://` is, one app over — and it is gated the way that one is:
+declared in `LSApplicationQueriesSchemes`, probed by `HandOffState`, offered
+only while something claims it. An unclaimed scheme is refused ASYNCHRONOUSLY
+by LaunchServices and neither `UIApplication.open`'s completion nor SwiftUI's
+`openURL` reports it (measured 2026-07-16 for `wc:`), so an ungated version
+would be the dead control §83 bans. On Mac Catalyst nothing claims it and the
+verb simply is not there.
+
+**UNMEASURED**, and the probe is the point: `-filesRevealProbe` prints the
+scheme census (`claimed` is ground truth, `inSet` is what the verb is gated
+on), whether the bookmark still resolves, and the exact string handed to
+LaunchServices. A wrong PATH and an unclaimed SCHEME both end with the person
+somewhere that isn't their folder, and only one of them is fixable here. The
+worst case for a wrong path is the Files app's own root — weaker than the
+label promises, which is why the label promises the folder and the probe
+exists to check that it delivers it.
+
+**Four decisions with reasons.**
+
+1. **The FOLDER, never the file.** A file path opens a preview of the thing
+   the person is already looking at in Casberi. "Takes you to folder where the
+   file is saved" is the request, and it is also the only part of this that
+   the app cannot already do.
+2. **Scoped to the Files SOURCE, not the `.file` kind.** Dropbox lands `.file`
+   rows too and its bytes are not on this device, so the Files app has nothing
+   to show for one. A door onto a folder that does not exist is worse than no
+   door.
+3. **The path is rebuilt from the ref**, which `FilesIngest.WalkedFile`'s doc
+   forbids — for a READ, and for a good reason (two resolutions of one
+   bookmark can standardize differently, and bytes read from the wrong path
+   are silently wrong). Nothing is read here: the string is handed to another
+   app, so a stale path opens Files somewhere unhelpful rather than quietly
+   answering with the wrong file. The alternative is a fresh walk, i.e. an
+   iCloud-blocking enumeration on a tap, which is the one place this app
+   cannot afford one. Fenced against `..` all the same — a ref goes through a
+   `Thing` and a CloudKit round trip before it builds a URL.
+4. **The hand-off does not take the pasteboard.** `HandOff.jump` copies the
+   thing's words first, which is right for Calendar and Reminders (neither
+   scheme can carry text, so the clipboard is what makes the hop useful) and
+   wrong here, where the destination is the whole verb. Replacing somebody's
+   clipboard on the way is a side effect nothing on screen promised. Guarded
+   mechanically, from a comment-stripped copy — the source documents the rule
+   by naming what it must not do.
+
+**Two doors, one verb.** The row carries the same `Verb` the dial does,
+through the same `runVerb`, so they can never behave or report differently.
+The dial is where the verb is discoverable; the row is where it was looked
+for.
+
+Costs nothing: no new `Thing` field, no request, no CloudKit Production
+deploy. `Model/FilesLocation.swift` is Foundation-only by design and
+`scripts/files-location-selftest.sh` compiles it WHOLE — 39 assertions, 7
+mutations, plus drift guards for the three gates, both verb dispatchers and
+the pasteboard negative. Every failure it catches renders as an ordinary row:
+a ref walking out of the picked folder, the file's path where the folder's was
+meant, an unencoded space or `#` making `URL(string:)` answer nil so the door
+silently stops existing for whoever has an ordinary folder name, and "in
+June.pdf" — the file named as the place it is in.
+
+**UNBUILT: authored on Linux with no Xcode and no Swift toolchain**, so
+nothing here has been compiled and the harness has never run. Run
+`scripts/verify.sh`, then `-filesRevealProbe` on a device, before trusting the
+folder half.
+
+**Noted, not fixed (out of scope):** `VerbDerivation.verbs(for:)` matches
+`case .file:` before the later `case .chat, .mail, .file, .voice:`, so since
+§365 added the first of those a Files row has been unable to reach "Copy text"
+or "Translate". Real, pre-existing, and a change to a verb set is a design
+call rather than a rider on this one.
