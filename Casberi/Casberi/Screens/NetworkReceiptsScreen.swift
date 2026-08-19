@@ -30,18 +30,12 @@ struct NetworkReceiptsScreen: View {
     /// report it", which was both wrong and alarming. Those call sites now
     /// name their service when they record (`NetworkLedger.Entry.service`).
     ///
-    /// The name is honoured only when the registry really carries a service
-    /// by that name, so an attribution can move a host from one honest place
-    /// to another and never OUT of the finding — and the host match always
-    /// wins, because it's the one a static audit can prove.
+    /// The RULE itself moved to `NetworkLedger.Entry.resolvedService`
+    /// (2026-08-18) when the Privacy tray's door began stating this screen's
+    /// verdict on its own row: two copies of "is this host declared?" is how
+    /// a door and the screen behind it come to answer differently.
     private var receipts: [Receipt] {
-        entries.map { entry in
-            let byHost = NetworkReach.service(forHost: entry.host)
-            let named = entry.service.flatMap {
-                NetworkReach.declares(service: $0) ? $0 : nil
-            }
-            return Receipt(entry: entry, service: byHost ?? named)
-        }
+        entries.map { Receipt(entry: $0, service: $0.resolvedService) }
     }
 
     /// Rows whose host the registry declares, and rows it doesn't. The second

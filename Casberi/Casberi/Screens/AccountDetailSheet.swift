@@ -72,6 +72,30 @@ struct AccountDetailSheet: View {
     @State private var notifySettings = Notifications.settings
     @State private var notifyAuthorized = false
 
+    // MARK: Privacy home's live facts (2026-08-18)
+    //
+    // All three are snapshotted at `onAppear` rather than read in `body`, and
+    // for the same reason `notifySettings` is: none of them is observable, and
+    // two of them are not free — `AgentKey.active` is a Keychain read and
+    // `NetworkLedger.receiptRows()` flushes and walks the ledger. A body-level
+    // read would pay both on every re-render of a tray whose toggles re-render
+    // it constantly.
+
+    /// The agent a keyed ask would actually reach, if any. Distinct from
+    /// `keyProvider`, which is the "Your key" picker's selection and follows
+    /// the person's browsing, not what is configured.
+    @State private var keyedAgent: AgentProvider?
+    /// Whether the librarian is allowed to spend that key on the app's own
+    /// schedule — which changes the honest sentence from "when you tap" to
+    /// "when you tap, and on its own".
+    @State private var librarianOn = false
+    /// The receipts card's own verdict, composed from the ledger exactly as
+    /// `NetworkReceiptsScreen` composes it. Nil on an empty ledger, which is
+    /// a fresh install and gets the door's standing subtitle instead.
+    @State private var reach: NetworkReceiptsInsight.Reach?
+    /// How many registry services are reachable right now.
+    @State private var reachingNow = 0
+
     var body: some View {
         DSTray(title: title, height: sheetHeight) {
             switch detail {
@@ -86,7 +110,16 @@ struct AccountDetailSheet: View {
                 notifyCard
             }
         }
-        .onAppear { if detail == .data { exportURL = buildExport() } }
+        .onAppear {
+            guard detail == .data else { return }
+            exportURL = buildExport()
+            keyedAgent = AgentKey.active
+            librarianOn = AgentLibrarian.isEnabled
+            reach = NetworkReceiptsInsight.compose(rows: NetworkLedger.shared.receiptRows())
+            reachingNow = NetworkReach.reachingNow(
+                connected: Set(store.bridges.filter { $0.status == .connected }.map(\.name))
+            ).count
+        }
         .sheet(item: $privacyPage) { page in
             NavigationStack {
                 switch page {
@@ -214,13 +247,31 @@ struct AccountDetailSheet: View {
         // + alive row, the action band grew 20pt (two 54pt capsules + the red
         // text line vs three 44pt slabs), and the ADP nudge lost its 50pt
         // badge indent so it wraps one line fewer.
-        case .data: icloudSync ? (syncHasLiveError ? 760 : 720) : 645
+        case .data: privacyHeight
         case .key: 500   // +40 for the per-agent capability line (2026-07-21)
         case .color: 400   // aliveRow + one swatch row + a footnote (prd §204)
         // Status row + three class toggles + the whisper's time + quiet hours
         // + the ceiling footnote (prd §306).
         case .notifications: notifyAuthorized ? 660 : 600
         }
+    }
+
+    /// The privacy home's own height, spelled out rather than nested into one
+    /// more ternary (2026-08-18): it now varies on FOUR independent facts —
+    /// sync, a live sync error, whether a key is configured, and whether the
+    /// librarian is on — and a four-way ternary is where a tray quietly starts
+    /// clipping its last row.
+    ///
+    /// Each addend is one wrapped `subhead13` paragraph at this width plus the
+    /// stack's own gap, measured against the two paragraphs already here (the
+    /// ADP nudge is the same shape and cost 60 when it landed).
+    private var privacyHeight: CGFloat {
+        var height: CGFloat = icloudSync ? (syncHasLiveError ? 760 : 720) : 645
+        // The secret-scan sentence — always present, two lines.
+        height += 60
+        // The keyed line, which the librarian's fork wraps one line further.
+        if keyedAgent != nil { height += librarianOn ? 76 : 54 }
+        return height
     }
 
     // MARK: - iCloud sync status (2026-07-27)
@@ -269,16 +320,41 @@ struct AccountDetailSheet: View {
             }
             // The whole on-device story, worn as one quiet capsule — the
             // guarantee still reads at a glance without a badge painting it.
-            HStack(spacing: DS.Space.s2) {
-                Image(systemName: "sparkles")
-                    .dsGlyph(13)
-                Text("Private — answers run on \(DS.device)")
-                    .dsText(.subhead13).fontWeight(.semibold)
+            //
+            // The capsule states the BASELINE and keeps stating it whatever
+            // else is configured; the line below names the one thing that
+            // departs from it (2026-08-18). Same structure as the ADP nudge
+            // further down, for the same reason: an unconditional guarantee
+            // beside a real exception is how "private" gets read as more than
+            // it promises. Nothing here is conditional on the capsule — a
+            // keyed ask is still a per-answer tap on a device whose default
+            // answer never left.
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                HStack(spacing: DS.Space.s2) {
+                    Image(systemName: "sparkles")
+                        .dsGlyph(13)
+                    Text("Private — answers run on \(DS.device)")
+                        .dsText(.subhead13).fontWeight(.semibold)
+                }
+                .foregroundStyle(DS.confirm)
+                .padding(.horizontal, DS.Space.s4)
+                .frame(height: 34)
+                .background(DS.confirm.opacity(0.13), in: Capsule(style: .continuous))
+                // Only with a key configured — an unkeyed install reads
+                // exactly as it did before. The sentence names the AGENT (who
+                // answers) and the COMPANY (who receives it), because those
+                // differ and the second is the privacy fact. The librarian
+                // fork is not a nicety: with it on, the key is spent on the
+                // app's OWN schedule, so "when you tap" would be false in the
+                // one place a person checks whether that is true.
+                if let keyedAgent {
+                    Text(librarianOn
+                         ? "Your \(keyedAgent.agent) key answers when you tap, and the librarian sends things to \(keyedAgent.company) on its own to name and summarize them."
+                         : "Your \(keyedAgent.agent) key answers when you tap — that question and its matched things go to \(keyedAgent.company), per answer.")
+                        .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
-            .foregroundStyle(DS.confirm)
-            .padding(.horizontal, DS.Space.s4)
-            .frame(height: 34)
-            .background(DS.confirm.opacity(0.13), in: Capsule(style: .continuous))
             // iCloud sync. The container binds at launch, so a fresh flip says
             // WHEN it goes live instead of pretending it is. RULE (2026-07-27):
             // this used to read the toggle's own INTENT ("Synced to your
@@ -342,22 +418,86 @@ struct AccountDetailSheet: View {
             // above are your copy AT REST (on device / iCloud); this opens the
             // full list of every service the app talks to. Same privacy home,
             // one tap deeper.
-            door("What this app reaches",
-                 "Every service, straight from \(DS.device)") { privacyPage = .reach }
+            door("What this app reaches", reachDoorLine) { privacyPage = .reach }
             // The same question asked of BEHAVIOUR rather than of a list
             // (prd §277). The row above is what the app may reach and is
             // hand-maintained; this is what it actually did reach, recorded
             // as it happened — so the claim can be checked rather than
             // trusted, and a host nobody declared shows up as one.
-            door("What it actually reached",
-                 "Receipts from the last seven days") { privacyPage = .receipts }
+            door("What it actually reached", receiptsDoorLine,
+                 subtitleTone: receiptsDoorTone) { privacyPage = .receipts }
+            // The tripwire, said out loud (2026-08-18). `SecretScan` (prd
+            // §277) has redacted spotted credentials from the Spotlight/Siri
+            // donation and from keyed-agent grounding since it shipped, and no
+            // screen in the app has ever mentioned it — the strongest privacy
+            // behaviour here was also the only invisible one, which is the
+            // §83 honesty rule applied to a SILENCE rather than to a claim.
+            //
+            // Worded around two overclaims it would be easy to make. It does
+            // NOT say the secret never leaves \(DS.device): the thing itself
+            // still syncs when sync is on, and redaction is applied at the two
+            // boundaries where text is handed to somebody else, not at rest.
+            // And it names those two boundaries rather than saying "anywhere",
+            // because the on-device model is deliberately NOT redacted — it
+            // never leaves, and "what's my wifi password?" is a fair question
+            // to ask your own corpus.
+            Text("Passwords and recovery phrases spotted in your things are kept out of search, Siri, and any ask sent with your key.")
+                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                .fixedSize(horizontal: false, vertical: true)
         }
+    }
+
+    // MARK: - The two doors' live facts (2026-08-18)
+    //
+    // Every other row in Settings answers without being opened — the source
+    // count on the Privacy row itself, `notifySummary` on Notifications. These
+    // two were the exception, wearing copy that said what the page WAS instead
+    // of what it currently says. The readings behind both already existed and
+    // cost nothing new: the registry is a static list, and the receipts card
+    // composes from a ledger this sheet already had to read nothing extra for.
+
+    /// "N reaching now · M listed" — the honest pair, because the registry's
+    /// full length counts services you would only reach if you connected them,
+    /// and stating that number alone would overstate what this app touches.
+    private var reachDoorLine: String {
+        String(localized: "\(reachingNow) reaching now · \(NetworkReach.endpoints.count) listed")
+    }
+
+    /// The receipts card's own verdict, one row earlier. An empty ledger keeps
+    /// the standing subtitle: a fresh install has reached nothing, and "All
+    /// declared" over zero requests is a claim about an absence.
+    ///
+    /// The FINDING half is worded verbatim as `ReachCard`'s own pill, singular
+    /// split included — a door and the card it opens saying the same fact in
+    /// two different phrasings reads as two different facts.
+    private var receiptsDoorLine: String {
+        guard let reach else { return String(localized: "Receipts from the last seven days") }
+        guard reach.clean else {
+            return reach.undeclaredHosts == 1
+                ? String(localized: "1 not on the list")
+                : String(localized: "\(reach.undeclaredHosts) not on the list")
+        }
+        return String(localized: "All declared · \(reach.services) services this week")
+    }
+
+    /// Green for a clean week, attention for a host nobody declared — the
+    /// reach map's own grammar (§300), one screen earlier. Deliberately NOT
+    /// `destructive`: an undeclared host is a finding to look at, not a
+    /// failure, and the map behind this door already draws it in attention.
+    private var receiptsDoorTone: Color {
+        guard let reach else { return DS.textTertiary }
+        return reach.clean ? DS.confirm : DS.attention
     }
 
     /// A row that opens a privacy sub-page. Two of them, so the shape lives in
     /// one place. Badge-less since the Statement pass — the semibold title is
     /// the wayfinding, the chevron is the affordance.
+    /// `subtitleTone` carries a door's own verdict where it has one — the same
+    /// parameter `toggleRow` takes for a failing sync, and for the same
+    /// reason: the state belongs on the line that states the fact, not on a
+    /// badge beside it.
     private func door(_ title: String, _ subtitle: String,
+                      subtitleTone: Color = DS.textTertiary,
                       action: @escaping () -> Void) -> some View {
         Button {
             DSHaptic.tap()
@@ -368,7 +508,7 @@ struct AccountDetailSheet: View {
                     Text(title).dsText(.body17).fontWeight(.semibold)
                         .foregroundStyle(DS.textPrimary)
                     Text(subtitle)
-                        .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                        .dsText(.subhead13).foregroundStyle(subtitleTone)
                 }
                 Spacer(minLength: 0)
                 Image(systemName: "chevron.right")

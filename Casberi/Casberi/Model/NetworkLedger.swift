@@ -186,3 +186,42 @@ final class NetworkLedger: @unchecked Sendable {
         }
     }
 }
+
+// MARK: - Resolution (2026-08-18)
+//
+// The one place a recorded host becomes a service name. It lived inside
+// `NetworkReceiptsScreen` until the Privacy tray's receipts DOOR started
+// stating the same verdict on its own row — and a second copy of this rule is
+// exactly how the door and the screen behind it come to disagree about whether
+// a host is on the list, which on a privacy screen is the worst possible
+// disagreement to have.
+extension NetworkLedger.Entry {
+
+    /// Registry first, then the recorder's own attribution.
+    ///
+    /// Some hosts can never be in the registry: a feed you follow, a Shopify
+    /// store you named, a link you saved, your own self-hosted PostHog. The
+    /// host comes out of YOUR input, so `service(forHost:)` misses it.
+    ///
+    /// A caller's name is honoured only when the registry really carries a
+    /// service by that name, so an attribution can move a host from one honest
+    /// place to another and never OUT of the finding — and the host match
+    /// always wins, because it's the one a static audit can prove.
+    var resolvedService: String? {
+        let byHost = NetworkReach.service(forHost: host)
+        let named = service.flatMap { NetworkReach.declares(service: $0) ? $0 : nil }
+        return byHost ?? named
+    }
+}
+
+extension NetworkLedger {
+
+    /// The whole ledger as `NetworkReceiptsInsight` wants it — resolved once,
+    /// so the Privacy tray's door and the receipts screen's own card are
+    /// composed from byte-identical rows.
+    func receiptRows() -> [NetworkReceiptsInsight.Row] {
+        snapshot().map {
+            .init(host: $0.host, count: $0.count, service: $0.resolvedService)
+        }
+    }
+}

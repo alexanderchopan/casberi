@@ -20,14 +20,11 @@ struct NetworkReachScreen: View {
         Set(store.bridges.filter { $0.status == .connected }.map(\.name))
     }
 
+    /// The rule lives in `NetworkReach.reachingNow(connected:)` (2026-08-18)
+    /// so the Privacy tray's door, which now states this count, can never
+    /// disagree with the list it opens.
     private var reachingNow: [NetworkReach.Endpoint] {
-        NetworkReach.endpoints.filter { endpoint in
-            switch endpoint.reach {
-            case .always: true
-            case .whenConnected(let bridge): connectedNames.contains(bridge)
-            case .onTapWithKey: false
-            }
-        }
+        NetworkReach.reachingNow(connected: connectedNames)
     }
 
     private var available: [NetworkReach.Endpoint] {

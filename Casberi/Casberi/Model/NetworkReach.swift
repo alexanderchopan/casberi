@@ -641,3 +641,27 @@ enum NetworkReach {
         return best?.service
     }
 }
+
+// MARK: - Reachable now (2026-08-18)
+
+extension NetworkReach {
+
+    /// The services reaching NOW: the always-on set plus the bridges you have
+    /// actually connected. `.onTapWithKey` is excluded on purpose — it is
+    /// inert until you both add a key AND tap a keyed answer, so counting it
+    /// as live would overstate the very number this exists to state honestly.
+    ///
+    /// Lifted out of `NetworkReachScreen` when the Privacy tray's door started
+    /// carrying this count — the `resolvedService` reasoning one screen over:
+    /// a door that disagrees with the list it opens is worse than a door that
+    /// says nothing.
+    static func reachingNow(connected: Set<String>) -> [Endpoint] {
+        endpoints.filter { endpoint in
+            switch endpoint.reach {
+            case .always: true
+            case .whenConnected(let bridge): connected.contains(bridge)
+            case .onTapWithKey: false
+            }
+        }
+    }
+}
