@@ -1,61 +1,62 @@
 import SwiftUI
 
-/// THE ALTANA ROOM'S HEAD (2026-08-18, prd §403) — who can sign as you, and
-/// for how much longer.
+/// THE ALTANA ROOM'S HEAD (prd §403, rebuilt as the KEYRING in §407a) — every
+/// credential on every watched account, as one picture of right now.
 ///
-/// The anatomy is `AppStoreConnectRoomCard`'s, which took it from
-/// `StripeRoomCard` and `CloudflareRunwayCard`: a kicker in the card's one hue,
-/// a heavy headline stating the whole finding as a sentence, ranked rows, and
-/// nothing drawn that isn't a reading. What was ruled out there is out here —
-/// no coloured rail down a row, and **no green/red**. An expired key is not a
-/// failure and a live one is not a success; both are just facts, and painting
-/// them would make a tidy-up look like an incident.
+/// ## Why tokens replaced the rows
 ///
-/// ## The runway means more here than it does next door
+/// §405 gave every key a row and §406 tightened the words, and the result
+/// still had two structural limits: the card ranked accounts and drew ONE,
+/// relegating the rest to a footnote — and the rows said in four lines what a
+/// glance could say at once. The keyring draws the whole registry: one token
+/// per credential, grouped behind each account's own face. The words the rows
+/// carried live on the key's sheet, one tap away, where they always were.
 ///
-/// `AppStoreConnectRoomCard` draws its runway only when this device watched the
-/// transition, because Apple publishes no start date — so on a fresh install it
-/// honestly draws nothing. Here BOTH ends come off the chain (§403), so every
-/// session key gets a true bar on first sight, on every device. Each key keeps
-/// its OWN bar rather than sharing one axis, for the same reason that card gives:
-/// two grants written at different times and lengths on one scale imply a
-/// comparison nobody made.
+/// ## What each mark stores — nothing is decoration
 ///
-/// ## The bar is drawn only when the grant is real
+/// The GLYPH is the kind (`touchid` for a passkey, `key.horizontal` for a
+/// wallet key and for a curve we could not read — "a key" is all we can then
+/// honestly claim). A SOLID mark-blue face is the root: its authority is
+/// carried by weight, never by size, because a bigger token would imply a
+/// magnitude nobody measured. The ARC is the session's remaining grant — the
+/// same `progress(now:)` the row runways drew, rendered round, so the two
+/// encodings can never disagree because there is only one. An EXPIRED key
+/// fades and keeps no arc: done things recede (§406). A LINK badge marks a
+/// credential registered under more than one account — the same key id is the
+/// same credential by construction, and that single-point-of-failure fact is
+/// drawn instead of said.
 ///
-/// `AltanaKeystore.Key.progress` returns nil unless the registration date was
-/// WITNESSED against the expiry (see the pure file). This card omits the bar in
-/// that case rather than drawing an empty or full one — a runway is a claim
-/// about elapsed time, and drawing it from an unverified date is the §83 line
-/// for this card.
+/// ## The §403 rulings all survive
+///
+/// No green/red — the arc is the room's own hue and an expired token is
+/// merely dim. No shared time axis — each arc is its own grant's fraction
+/// (the ASC reasoning: two grants on one scale imply a comparison nobody
+/// made). The arc draws only when the registration was WITNESSED (§403's
+/// honesty rail): an unwitnessed grant shows a plain ring, never a guessed
+/// fraction.
 ///
 /// ## Liveness
 ///
-/// Stores no `Thing` — only value types out of `AltanaRoom`, composed from a
+/// Stores no `Thing` — value types out of `AltanaRoom`, composed from a
 /// UserDefaults snapshot. Corollary 5 has nothing to guard here.
 ///
 /// FLAT BY LAW like its neighbours: a plain VStack, no generic `Widget`/`Row`
 /// mount (the render-depth lesson, paid three times).
 struct AltanaRoomCard: View {
     let card: AltanaRoom.Card
-    /// Opens Altana's own explorer for this account — the only place a key can
-    /// actually be revoked (§112: we read and state, they act).
+    /// Opens Altana's own explorer — the only place a key can actually be
+    /// revoked (§112: we read and state, they act).
     var onOpen: () -> Void
-    /// Opens one credential's own sheet (§405).
-    ///
-    /// Until this existed the card's three rows were INERT while looking
-    /// exactly like the tappable rows beneath them, and §404's credential
-    /// sheet — the grant window, the curve, the live re-check — was reachable
-    /// only by scrolling past the card that summarised it. The richest surface
-    /// in the feature behind the poorest affordance.
-    var onPickKey: (AltanaRoom.KeyRow) -> Void
+    /// Opens one credential's sheet. Carries the ACCOUNT as well as the key
+    /// (§407a): a shared credential appears under two accounts, and tapping it
+    /// under account A must open A's row, not whichever landed newest.
+    var onPickKey: (_ address: String, _ row: AltanaRoom.KeyRow) -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private static let mark = DS.brandHue(for: "Altana") ?? Color.fixed("#3565e3")
-    /// A hairline is banned outright (§8), so the runway is a capsule with real
-    /// height rather than a rule.
-    private static let runwayHeight: CGFloat = 5
+    private static let tokenSize: CGFloat = 52
+    private static let arcWidth: CGFloat = 4
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -73,9 +74,6 @@ struct AltanaRoomCard: View {
                     onOpen()
                 }
 
-            // The census, when the alarm took the headline (§406) — ASC's
-            // headline-plus-subline anatomy, restoring the fact the urgency
-            // used to delete.
             if let subline = card.subline {
                 Text(subline)
                     .dsText(.subhead13)
@@ -83,28 +81,25 @@ struct AltanaRoomCard: View {
                     .padding(.top, DS.Space.s1)
             }
 
-            if !card.rows.isEmpty {
-                VStack(alignment: .leading, spacing: DS.Space.s3) {
-                    ForEach(Array(card.rows.enumerated()), id: \.element.id) { index, row in
-                        keyRow(row)
-                            .chartArrival(index: index, reduceMotion: reduceMotion)
-                    }
+            // The keyring. One horizontal band per account; the face leads
+            // only when there is more than one account to tell apart —
+            // a lone account's face would caption a picture of itself.
+            VStack(alignment: .leading, spacing: DS.Space.s4) {
+                ForEach(Array(card.accounts.enumerated()), id: \.element.id) { index, group in
+                    accountBand(group, showFace: card.accounts.count > 1)
+                        .chartArrival(index: index, reduceMotion: reduceMotion)
                 }
-                .padding(.top, DS.Space.s3)
             }
+            .padding(.top, DS.Space.s4)
 
-            // The tidy-up line and the scope ceiling, both quiet. The second is
-            // not decoration: a session key's powers are NOT readable from the
-            // registry, and a card that showed a deadline without saying so
-            // would imply we knew what the key could do.
             VStack(alignment: .leading, spacing: DS.Space.s1) {
-                if let stale = card.staleNote {
-                    Text(stale)
+                if let shared = card.sharedNote {
+                    Text(shared)
                         .dsText(.subhead13)
                         .foregroundStyle(DS.textSecondary)
                 }
-                if let other = card.otherWalletsNote {
-                    Text(other)
+                if let stale = card.staleNote {
+                    Text(stale)
                         .dsText(.subhead13)
                         .foregroundStyle(DS.textSecondary)
                 }
@@ -112,97 +107,129 @@ struct AltanaRoomCard: View {
                     .dsText(.subhead13)
                     .foregroundStyle(DS.textTertiary)
             }
-            .padding(.top, DS.Space.s3)
+            .padding(.top, DS.Space.s4)
         }
-        // The section paints the card's BACKGROUND (every sibling head relies
-        // on that), but it does NOT inset the contents — `PeerRoomCard` and
-        // `AppStoreConnectRoomCard` both keep this padding and drop only the
-        // background. Removing both together drew the card edge-to-edge and
-        // clipped every trailing label ("today", "25d left", "expired") off
-        // the right of the screen.
         .padding(DS.Space.s4)
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
+    // MARK: - One account's band
+
     @ViewBuilder
-    private func keyRow(_ row: AltanaRoom.KeyRow) -> some View {
+    private func accountBand(_ group: AltanaRoom.AccountGroup, showFace: Bool) -> some View {
+        HStack(alignment: .top, spacing: DS.Space.s3) {
+            if showFace {
+                VStack(spacing: DS.Space.s1) {
+                    WalletFace(address: group.address, size: 30, circular: true)
+                    Text(WalletStore.shortAddress(group.address))
+                        .dsText(.label12)
+                        .foregroundStyle(DS.textTertiary)
+                }
+                .padding(.top, DS.Space.s1)
+            }
+            // Tokens scroll when an account outgrows the width — the band
+            // clips inside its own scroll rather than wrapping, so two
+            // accounts stay two clean shelves (the mini-cell reasoning).
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(alignment: .top, spacing: DS.Space.s3) {
+                    ForEach(group.rows) { row in
+                        keyToken(row, address: group.address,
+                                 shared: card.sharedKeyIDs.contains(row.id.lowercased()))
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: - One credential
+
+    @ViewBuilder
+    private func keyToken(_ row: AltanaRoom.KeyRow, address: String, shared: Bool) -> some View {
         Button {
             DSHaptic.selection()
-            onPickKey(row)
+            onPickKey(address, row)
         } label: {
-            VStack(alignment: .leading, spacing: DS.Space.s2) {
-                HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+            VStack(spacing: DS.Space.s2) {
+                ZStack {
+                    // The track ring, and the arc when the grant is real.
+                    Circle()
+                        .stroke(DS.textTertiary.opacity(0.18), lineWidth: Self.arcWidth)
+                    if !row.expired, let progress = row.progress {
+                        // REMAINING, not elapsed — the arc drains as the grant
+                        // runs out, so a thin arc is a nearly-dead key before
+                        // the label is read.
+                        Circle()
+                            .trim(from: 0, to: max(0.02, 1 - progress))
+                            .stroke(Self.mark, style: StrokeStyle(lineWidth: Self.arcWidth, lineCap: .round))
+                            .rotationEffect(.degrees(-90))
+                    }
+                    // The face: solid for the root's permanent authority,
+                    // quiet for a session.
+                    Circle()
+                        .fill(row.isRoot ? Self.mark : DS.surfaceRaised)
+                        .padding(Self.arcWidth + 3)
+                    Image(systemName: glyph(row))
+                        .dsGlyph(17)
+                        .foregroundStyle(row.isRoot ? .white : DS.textPrimary)
+                }
+                .frame(width: Self.tokenSize, height: Self.tokenSize)
+                .overlay(alignment: .topTrailing) {
+                    if shared {
+                        // The same credential under another account too.
+                        Image(systemName: "link")
+                            .dsGlyph(9)
+                            .foregroundStyle(.white)
+                            .frame(width: 16, height: 16)
+                            .background(DS.textTertiary, in: Circle())
+                    }
+                }
+
+                VStack(spacing: 1) {
                     Text(row.title)
-                        .dsText(.body17).fontWeight(.medium)
+                        .dsText(.label12).fontWeight(.medium)
                         .foregroundStyle(DS.textPrimary)
-                    Spacer(minLength: DS.Space.s2)
-                    Text(trailing(row))
-                        .dsText(.subhead13)
-                        .foregroundStyle(DS.textSecondary)
-                        .monospacedDigit()
-                }
-                if let detail = subtitle(row) {
-                    Text(detail)
-                        .dsText(.subhead13)
-                        .foregroundStyle(DS.textSecondary)
-                }
-                // An expired row draws NO bar (§406): a full grey runway made
-                // the least important row the heaviest thing on the card, and
-                // "expired" in the trailing slot already says everything the
-                // bar did. Done things recede.
-                if !row.expired, let progress = row.progress {
-                    runway(progress: progress)
+                        .lineLimit(1)
+                    if let line = tokenLine(row) {
+                        Text(line)
+                            .dsText(.label12)
+                            .foregroundStyle(DS.textSecondary)
+                            .monospacedDigit()
+                            .lineLimit(1)
+                    }
                 }
             }
+            .frame(minWidth: 58)
+            .opacity(row.expired ? 0.45 : 1)
             .contentShape(Rectangle())
-            // …and the whole row dims with them, title included.
-            .opacity(row.expired ? 0.55 : 1)
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(Text("\(row.title), \(trailing(row))"))
+        .accessibilityLabel(Text(accessibility(row)))
     }
 
-    /// The row's second line. The chain is appended ONLY when this account
-    /// spans more than one registry — otherwise the card's footer already
-    /// says it once, and repeating "BNB Smart Chain" on every row is chrome.
-    private func subtitle(_ row: AltanaRoom.KeyRow) -> String? {
-        guard card.chains.count > 1, let chain = row.chainLabel else { return row.detail }
-        guard let detail = row.detail else { return chain }
-        return detail + " · " + chain
+    private func glyph(_ row: AltanaRoom.KeyRow) -> String {
+        // `touchid` is what a passkey IS to the person holding the phone;
+        // everything else — a wallet key, and a curve we could not read — is
+        // honestly "a key", in the seat's own glyph.
+        row.kindLabel == String(localized: "Passkey") ? "touchid" : "key.horizontal"
     }
 
-    /// What the right-hand slot says. An expired key states that plainly rather
-    /// than showing "0 days", which reads as a countdown still running.
-    private func trailing(_ session: AltanaRoom.KeyRow) -> String {
-        if session.expired { return String(localized: "expired") }
-        // Inside the last day the headline says "9 hours", and a row saying
-        // "today" underneath it is the card disagreeing with itself about the
-        // same clock (§406).
-        if let hours = session.hoursLeft {
-            return hours == 0 ? String(localized: "under 1h left")
+    /// The one line under a token. Deadline first (it is the reading), then
+    /// the states with no clock.
+    private func tokenLine(_ row: AltanaRoom.KeyRow) -> String? {
+        if row.expired { return String(localized: "expired") }
+        if let hours = row.hoursLeft {
+            return hours == 0 ? String(localized: "under 1h")
                               : String(localized: "\(hours)h left")
         }
-        guard let days = session.daysLeft else {
-            // A credential that never runs out — which is what a root key IS,
-            // and the fact worth stating in the slot where every other row
-            // carries a countdown.
-            guard let expiry = session.expiry else { return String(localized: "no expiry") }
-            return expiry.formatted(date: .abbreviated, time: .omitted)
-        }
-        return String(localized: "\(days)d left")
+        if let days = row.daysLeft { return String(localized: "\(days)d left") }
+        if row.isRoot { return String(localized: "no expiry") }
+        return nil
     }
 
-    private func runway(progress: Double) -> some View {
-        GeometryReader { geo in
-            ZStack(alignment: .leading) {
-                Capsule()
-                    .fill(DS.textTertiary.opacity(0.18))
-                Capsule()
-                    .fill(Self.mark)
-                    .frame(width: max(2, geo.size.width * progress))
-            }
-        }
-        .frame(height: Self.runwayHeight)
-        .accessibilityLabel(Text("\(Int(progress * 100)) percent through its grant"))
+    private func accessibility(_ row: AltanaRoom.KeyRow) -> String {
+        var parts = [row.title]
+        if row.isRoot { parts.append(String(localized: "root key")) }
+        if let line = tokenLine(row) { parts.append(line) }
+        return parts.joined(separator: ", ")
     }
 }

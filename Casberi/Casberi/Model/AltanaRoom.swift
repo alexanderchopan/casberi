@@ -138,31 +138,47 @@ enum AltanaRoom {
         }
     }
 
-    /// The head.
-    struct Card: Equatable {
-        /// Lowercased hex of the wallet this card is about.
+    /// One account's keys, behind its face (§407a).
+    struct AccountGroup: Equatable, Identifiable {
+        /// Lowercased hex — feeds `WalletFace` and the row-matching tap.
         let address: String
-        /// Usable keys that can sign right now.
+        let rows: [KeyRow]
+        var id: String { address }
+    }
+
+    /// The head — EVERY watched account with keys, not a ranked lead (§407a).
+    ///
+    /// Until this, `compose` ranked accounts and drew ONE, relegating the rest
+    /// to "1 other watched wallet also has keys" — a footnote about the thing
+    /// the card exists to show. The keyring draws them all, each behind its
+    /// identicon, so the aggregate the footnote gestured at is the picture.
+    struct Card: Equatable {
+        /// Ordered: the account with the soonest live deadline first — the
+        /// same urgency ranking that used to pick the lead now merely picks
+        /// who is drawn on top.
+        let accounts: [AccountGroup]
+        /// Usable keys that can sign right now, across every account.
         let usableCount: Int
         let rootCount: Int
-        /// The root credential's registration, when witnessed.
-        let rootRegistered: Date?
-        /// Every credential, ordered by `orderedRows` — roots, then live
-        /// sessions soonest-first, then expired.
-        let rows: [KeyRow]
-        /// Hours until the soonest LIVE expiry, when that is close enough to
-        /// be the reason to look today (`urgentWindowHours`). nil otherwise,
-        /// and the headline then states the standing fact instead.
+        /// Hours until the soonest LIVE expiry anywhere, when that is close
+        /// enough to be the reason to look today (`urgentWindowHours`).
         let urgentHours: Int?
         /// Listed by the registry as active, but past their own expiry.
         let staleCount: Int
-        /// Other watched wallets that also hold keys.
-        let otherWallets: Int
         /// Distinct registries these keys live on.
         let chains: [String]
+        /// Key ids registered under MORE THAN ONE watched account — the same
+        /// credential by construction (an id derives from its public key), so
+        /// this is the single-point-of-failure fact with no inference in it.
+        let sharedKeyIDs: Set<String>
 
-        /// Sessions only — the card drew these before roots had rows of their
-        /// own, and the probe and harness still ask the question this way.
+        /// The first account's address — kept for the headline's tap target
+        /// (the explorer door opens on the most urgent account).
+        var address: String { accounts.first?.address ?? "" }
+
+        /// Every row across every account, in drawn order — the probe's view.
+        var rows: [KeyRow] { accounts.flatMap(\.rows) }
+        /// Sessions only — the harness still asks the question this way.
         var sessions: [KeyRow] { rows.filter { !$0.isRoot } }
 
         /// ALARM FIRST, then the standing fact.
@@ -182,6 +198,9 @@ enum AltanaRoom {
             if n == 0 {
                 return String(localized: "No key can sign for this account right now")
             }
+            if accounts.count > 1 {
+                return String(localized: "\(n) keys can sign across \(accounts.count) accounts")
+            }
             return n == 1
                 ? String(localized: "1 key can sign for this account")
                 : String(localized: "\(n) keys can sign for this account")
@@ -194,9 +213,21 @@ enum AltanaRoom {
         var subline: String? {
             guard urgentHours != nil else { return nil }
             let n = usableCount
+            if accounts.count > 1 {
+                return String(localized: "\(n) keys can sign across \(accounts.count) accounts")
+            }
             return n == 1
                 ? String(localized: "1 key can sign for this account")
                 : String(localized: "\(n) keys can sign for this account")
+        }
+
+        /// The shared-credential fact, drawn as a link mark on the tokens and
+        /// said once here — nil for the overwhelmingly common case.
+        var sharedNote: String? {
+            guard !sharedKeyIDs.isEmpty else { return nil }
+            return sharedKeyIDs.count == 1
+                ? String(localized: "One credential signs for more than one of your accounts")
+                : String(localized: "\(sharedKeyIDs.count) credentials sign for more than one of your accounts")
         }
 
         /// The hygiene line — nil when there is nothing to tidy.
@@ -207,12 +238,6 @@ enum AltanaRoom {
                 : String(localized: "\(staleCount) keys the registry still lists can no longer act")
         }
 
-        var otherWalletsNote: String? {
-            guard otherWallets > 0 else { return nil }
-            return otherWallets == 1
-                ? String(localized: "1 other watched wallet also has keys")
-                : String(localized: "\(otherWallets) other watched wallets also have keys")
-        }
     }
 
     /// How a grant's length is spelled — the SHAPE, shared by both wordings.
@@ -275,6 +300,9 @@ enum AltanaRoom {
         let withKeys = readings.filter { !$0.keys.isEmpty }
         guard !withKeys.isEmpty else { return nil }
 
+        // The urgency ranking that used to pick a single lead now merely
+        // decides who draws on top (§407a) — soonest live deadline first, then
+        // more keys, then address so a tie can never flip.
         let ranked = withKeys.sorted { a, b in
             switch (soonestDeadline(a, now: now), soonestDeadline(b, now: now)) {
             case let (x?, y?) where x != y: return x < y
@@ -285,27 +313,32 @@ enum AltanaRoom {
             if a.keys.count != b.keys.count { return a.keys.count > b.keys.count }
             return a.address < b.address
         }
-        guard let lead = ranked.first else { return nil }
-        guard lead.keys.count >= minimumKeys else { return nil }
 
-        let usable = lead.keys.filter { $0.isUsable(now: now) }
-        let stale = lead.keys.filter { $0.isExpiredButListed(now: now) }
-        let roots = lead.keys.filter(\.isRoot)
+        let allKeys = ranked.flatMap(\.keys)
+        // The floor is the TOTAL now: a single root key across every account
+        // is the registry merely existing, which the rows already say.
+        guard allKeys.count >= minimumKeys else { return nil }
 
-        let rows = orderedRows(lead.keys, now: now)
+        // The same credential under two accounts — same id by construction.
+        var seenIDs = Set<String>(), shared = Set<String>()
+        for reading in ranked {
+            for id in Set(reading.keys.map { $0.id.lowercased() }) {
+                if !seenIDs.insert(id).inserted { shared.insert(id) }
+            }
+        }
 
-        return Card(address: lead.address,
-                    usableCount: usable.count,
-                    rootCount: roots.count,
-                    // The EARLIEST root registration — for an account with one
-                    // root, which is every account measured, this is simply
-                    // when the account started.
-                    rootRegistered: roots.compactMap(\.registeredAt).min(),
-                    rows: rows,
-                    urgentHours: urgentHours(lead.keys, now: now),
-                    staleCount: stale.count,
-                    otherWallets: withKeys.count - 1,
-                    chains: orderedChains(lead.keys))
+        let groups = ranked.map { reading in
+            AccountGroup(address: reading.address,
+                         rows: orderedRows(reading.keys, now: now))
+        }
+
+        return Card(accounts: groups,
+                    usableCount: allKeys.filter { $0.isUsable(now: now) }.count,
+                    rootCount: allKeys.filter(\.isRoot).count,
+                    urgentHours: urgentHours(allKeys, now: now),
+                    staleCount: allKeys.filter { $0.isExpiredButListed(now: now) }.count,
+                    chains: orderedChains(allKeys),
+                    sharedKeyIDs: shared)
     }
 
     /// How the card orders its credentials — and it is `compose` that owns

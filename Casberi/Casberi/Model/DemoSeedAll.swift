@@ -2301,6 +2301,24 @@ enum DemoSeedAll {
                 t.externalLink = AltanaKeystore.explorerURL(address: demoWallet)
             }
         }
+        // …and the SECOND account's rows (§407a): its tokens are tap targets
+        // like any others, and a token whose sheet never opens is §83's dead
+        // control hiding in the demo. Same ref shape, the second address.
+        let keys2: [(String, Int, Bool, Double)] = [
+            ("A root key can sign as …160f", 4, true, 30),
+            ("A session key was granted for …160f, until next month", 2, false, 4),
+        ]
+        out += keys2.map { k in
+            row(.link, k.0, source: "Altana",
+                ref: AltanaKeystore.ref(chain: "BNB Smart Chain", address: demoAltanaSecondAccount,
+                                        keyID: demoAltanaKeyIDValue(k.1)),
+                days: k.3, hour: 11,
+                content: AltanaKeystore.explorerURL(address: demoAltanaSecondAccount),
+                tags: [k.2 ? "Root key" : "Session key", "BNB Smart Chain"]) { t in
+                t.walletAddress = demoAltanaSecondAccount
+                t.externalLink = AltanaKeystore.explorerURL(address: demoAltanaSecondAccount)
+            }
+        }
         // Railgun ranks by token, read as DATA off `priceValue`/`priceCurrency`
         // — never parsed back out of the title. Ref must carry the real
         // `"railgun:shield:"`/`"railgun:unshield:"` prefix (`RailgunRoom
@@ -2583,6 +2601,9 @@ enum DemoSeedAll {
     /// Shared by the snapshot and the rows deliberately: they must agree, or
     /// the sheet composes for an id the room does not list.
 
+    /// The demo's second Altana account — snapshot-only, never watched.
+    private static let demoAltanaSecondAccount = "0x9e8d7c6b5a49382716059483726150493827160f"
+
     private static func seedAltanaKeystore() {
         let now = Date.now
         // A REAL secp256k1 point, measured off BNB 2026-08-18 — so the demo's
@@ -2630,6 +2651,23 @@ enum DemoSeedAll {
                 key(demoAltanaKeyIDValue(0), root: true,
                     registeredDaysAgo: 62, grantHours: nil,
                     signatures: 128, publicKey: realPoint),
+            ], truncated: false),
+            // A SECOND account (§407a): the keyring's whole point is the
+            // aggregate the old card footnoted, and a one-account demo would
+            // hide the grouping exactly the way the sorted-input demo hid the
+            // ordering defect. Its passkey shares demoAltanaKeyIDValue(2)'s id
+            // with the first account ON PURPOSE — the same credential under
+            // two accounts is the link-badge fact, otherwise unreachable in a
+            // demo. Not a watched wallet, which is fine: the head composes
+            // from the snapshot, and the demo banner already says none of
+            // this is yours.
+            AltanaKeystore.Reading(address: demoAltanaSecondAccount, keys: [
+                key(demoAltanaKeyIDValue(4), root: true,
+                    registeredDaysAgo: 30, grantHours: nil,
+                    signatures: 12, publicKey: realPoint),
+                key(demoAltanaKeyIDValue(2), root: false,
+                    registeredDaysAgo: 4, grantHours: 24 * 30,
+                    signatures: 0, publicKey: realP256),
             ], truncated: false),
         ])
         AltanaKeystore.evidence.remember(demoWallet)

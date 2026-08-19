@@ -263,8 +263,8 @@ check(card.rows.count == 3, "EVERY credential gets a row now — the root includ
 check(card.sessions.count == 2, "…and `sessions` still answers the old question")
 check(card.staleNote?.contains("1 key") == true, "the tidy-up line names the count")
 check(card.chains == ["BNB Smart Chain"], "chains are listed, in first-appearance order")
-check(card.otherWallets == 0, "one wallet, no others note")
-check(card.otherWalletsNote == nil, "…and the note is silent rather than saying zero")
+check(card.accounts.count == 1, "one account, one group")
+check(card.sharedNote == nil, "…and no shared-credential note when nothing is shared")
 
 // ── ORDER, which compose owns since §405 ──────────────────────────────────
 // The defect this replaced: `compose` mapped whatever it was handed, and real
@@ -392,6 +392,74 @@ guard let kindRootCard = AltanaRoom.compose(readings: [reading("0xa", [kindRoot,
 check(kindRootCard.rows.first?.title == "Passkey", "…(fixture premise: the title took the kind)")
 check(kindRootCard.rows.first?.detail?.hasPrefix("Root ·") == true,
       "a kind-titled root's detail leads the bare word Root — its title already says key")
+
+// ── §407a: every account draws, and the aggregate is real ─────────────────
+// The old card ranked accounts and drew ONE; the keyring draws them all.
+let acctA = reading("0xaaa", [root, live])                    // no imminent deadline
+let acctB = reading("0xbbb", [key(70, root: true, reg: rootReg, exp: nil),
+                              key(71, root: false, reg: sessReg,
+                                  exp: Int(now.timeIntervalSince1970) + 4 * 3600)])
+guard let multi = AltanaRoom.compose(readings: [acctA, acctB], now: now) else {
+    print("  ✗ two accounts compose"); exit(1)
+}
+check(multi.accounts.count == 2, "BOTH accounts draw — the footnote is retired")
+check(multi.accounts.first?.address == "0xbbb",
+      "the account with the soonest live deadline draws on TOP — ranking orders, it no longer selects")
+check(multi.usableCount == 4, "the census spans every account")
+check(multi.headline.contains("across 2 accounts") || multi.subline?.contains("across 2 accounts") == true,
+      "…and says so")
+check(multi.urgentHours == 4, "urgency is the soonest deadline ANYWHERE")
+// (No mutation can separate "urgency over all keys" from "urgency over the
+// top-ranked account's keys": the ranking puts the soonest deadline on top by
+// construction, so the two are equivalent. Recorded so nobody chases it.)
+check(AltanaRoom.compose(readings: [acctB, acctA], now: now)?.accounts.map(\.id)
+        == multi.accounts.map(\.id),
+      "group order is total — input order cannot flip the card")
+
+// ── §407a: the shared credential is detected by ID, never inferred ────────
+let sharedKey = key(72, root: false, reg: sessReg,
+                    exp: Int(now.timeIntervalSince1970) + 86_400)
+let shA = reading("0xaaa", [root, sharedKey])
+let shB = reading("0xbbb", [key(73, root: true, reg: rootReg, exp: nil), sharedKey])
+guard let sharedCard = AltanaRoom.compose(readings: [shA, shB], now: now) else {
+    print("  ✗ shared-credential accounts compose"); exit(1)
+}
+check(sharedCard.sharedKeyIDs == [sharedKey.id.lowercased()],
+      "the same key id under two accounts is the shared credential — by construction, no inference")
+check(sharedCard.sharedNote?.contains("more than one") == true, "…and the card says it once")
+check(multi.sharedKeyIDs.isEmpty,
+      "distinct ids across accounts share NOTHING — the badge must be rare or it is wallpaper")
+// The same id twice under ONE account is a duplicate row, not a shared
+// credential — sharing means crossing an account boundary.
+let dupA = reading("0xaaa", [root, sharedKey, sharedKey])
+check(AltanaRoom.compose(readings: [dupA], now: now)?.sharedKeyIDs.isEmpty == true,
+      "a duplicate within one account is not 'shared' — sharing crosses accounts")
+
+// ── §407a: the floor is the TOTAL across accounts ─────────────────────────
+let lonelyA = reading("0xaaa", [key(74, root: true, reg: rootReg, exp: nil)])
+let lonelyB = reading("0xbbb", [key(75, root: true, reg: rootReg, exp: nil)])
+check(AltanaRoom.compose(readings: [lonelyA], now: now) == nil,
+      "one root alone is still under the floor")
+check(AltanaRoom.compose(readings: [lonelyA, lonelyB], now: now) != nil,
+      "…but two accounts of one root each clear it — the registry exists in aggregate")
+
+// ── §407a: the sheet keeps the root's date now the card rows are gone ─────
+var regM = demoModel(.seeded)
+check(AltanaKeySheet.registeredLine(regM) == nil,
+      "no witnessed date, no Registered row — never 'today' standing in for unknown")
+regM = AltanaKeySheet.Model(keyID: regM.keyID, address: "0xa", isRoot: true,
+                            registeredAt: Date(timeIntervalSince1970: TimeInterval(rootReg)),
+                            expiry: nil, signatureCount: 128, chainLabel: nil,
+                            curve: .unknown, alsoSignsFor: [])
+check(AltanaKeySheet.registeredLine(regM) != nil,
+      "a ROOT gets the Registered row — with the card rows retired, this is the date's one home")
+let windowed = AltanaKeySheet.Model(keyID: regM.keyID, address: "0xa", isRoot: false,
+                                    registeredAt: Date(timeIntervalSince1970: TimeInterval(sessReg)),
+                                    expiry: Date(timeIntervalSince1970: TimeInterval(sessExp)),
+                                    signatureCount: 0, chainLabel: nil,
+                                    curve: .unknown, alsoSignsFor: [])
+check(AltanaKeySheet.registeredLine(windowed) == nil,
+      "…while a drawn window already says Granted, so the row stays away (§406's duplicate rule)")
 
 // ── the headline leads with the clock when there is one ──────────────────
 check(card.headline.contains("2"), "with nothing imminent the headline states the census")

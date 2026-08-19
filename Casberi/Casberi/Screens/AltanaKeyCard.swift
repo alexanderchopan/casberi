@@ -171,6 +171,9 @@ struct AltanaKeyCard: View {
 
     private var facts: some View {
         VStack(spacing: 0) {
+            if let registered = AltanaKeySheet.registeredLine(model) {
+                fact(String(localized: "Registered"), registered)
+            }
             fact(String(localized: "Used"), AltanaKeySheet.usageLine(model))
             fact(String(localized: "Key id"), shortKey, quiet: true)
         }

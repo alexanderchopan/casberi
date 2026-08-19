@@ -106,7 +106,8 @@ extension AltanaRoom {
         }
         lines.append("altanaRoom| \(card.headline)")
         if let stale = card.staleNote { lines.append("altanaRoom| stale: \(stale)") }
-        if let other = card.otherWalletsNote { lines.append("altanaRoom| other: \(other)") }
+        if let shared = card.sharedNote { lines.append("altanaRoom| shared: \(shared)") }
+        lines.append("altanaRoom| accounts: \(card.accounts.count)")
         lines.append("altanaRoom| chains: \(card.chains.joined(separator: ", "))")
         if let hours = card.urgentHours { lines.append("altanaRoom| urgent: \(hours)h to the soonest expiry") }
         // Every row IN DRAWN ORDER, roots included — the order is the thing

@@ -2560,14 +2560,17 @@ struct FeedScreen: View {
                         if let url = URL(string: AltanaKeystore.explorerURL(address: card.address)) {
                             openExternal(url)
                         }
-                    } onPickKey: { row in
-                        // Matched on the KEY ID, which is the last segment of
-                        // every ref `AltanaKeystore.ref` builds. Deliberately
-                        // not a rebuilt ref: that would need the row's chain
-                        // label to still agree with the one the landing used,
-                        // and a drifted label would silently open nothing.
+                    } onPickKey: { address, row in
+                        // Matched on ACCOUNT + KEY ID — the tail every ref
+                        // `AltanaKeystore.ref` builds ends with (§407a: a shared
+                        // credential appears under two accounts, and tapping it
+                        // under account A must open A's row). Deliberately not
+                        // a rebuilt ref: that would need the row's chain label
+                        // to still agree with the landing's, and a drifted
+                        // label would silently open nothing.
+                        let tail = ":" + address.lowercased() + ":" + row.id.lowercased()
                         openNewest(source: AltanaKeystore.source, in: visible) { thing in
-                            thing.sourceRef?.hasSuffix(":" + row.id.lowercased()) ?? false
+                            thing.sourceRef?.hasSuffix(tail) ?? false
                         }
                     }
                 case .privacyPools(let room):

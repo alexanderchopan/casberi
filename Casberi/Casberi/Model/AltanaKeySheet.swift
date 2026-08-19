@@ -160,6 +160,18 @@ enum AltanaKeySheet {
         }
     }
 
+    /// The registration, as its own fact row — ONLY when the grant window is
+    /// not drawn (§407a). A session's window already states "Granted Aug 14",
+    /// so repeating it here would be §406's duplicate; a ROOT draws no window,
+    /// and with the card's rows retired this line is the one place its date
+    /// survives. nil too when the date was never witnessed — "registered
+    /// today" must never stand in for "we don't know".
+    static func registeredLine(_ m: Model) -> String? {
+        let windowDrawn = m.registeredAt != nil && m.expiry != nil
+        guard !windowDrawn, let registered = m.registeredAt else { return nil }
+        return registered.formatted(date: .abbreviated, time: .omitted)
+    }
+
     /// The usage reading. Never "0 times" — a credential that has never signed
     /// deserves the sentence that says so, and the age is the part that makes
     /// it worth noticing.

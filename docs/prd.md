@@ -143,6 +143,7 @@ marks chronological position within the pair.
 | §238b | §238 | collided with Safe becomes about people; neither was cited |
 | §294a | §294 | collided with the smart-account kind ruling (11 citations) |
 | §340a | §340 | the bare number went to the 2026-08-08 session — see §340 |
+| §407a | §407 | the bare number went to the sources-tray session (document order); the keyring entry took the letter |
 | §340b | §340 | see §340a |
 | §355b | §355 | collided with the category-chip tint ruling |
 | §369 | §363 | the money receipt collided with the social sheet, which opened the §364–§368 category series and keeps the bare number by document order (2026-08-12 integration merge) |
@@ -26534,3 +26535,66 @@ so, on the one surface where every seat is individually visible), and the
 tray's cells could answer a long-press with the room figure peek its strip
 chips already give — the tray being the strip's map, the same gesture should
 mean the same thing.
+
+## §407a — The keyring: the whole registry as one picture (user: "better ways that aggregates or shows all the keys visually somehow… accurate snapshot", 2026-08-18)
+
+The user's pushback found the flaw in my first proposal, and the fix in the
+same sentence. A "which keys do the signing" usage chart was offered and
+declined for the right reason — on the measured corpus every nonce is zero,
+so the chart draws nothing today, and the interesting version of that fact is
+the ROOM's business only once real history exists. What they asked for
+instead — an accurate SNAPSHOT of the whole key set — is what this is.
+
+**The keyring replaces the rows; it does not join them.** The first cut of the
+mockup put tokens ABOVE the §405 rows, and the user's "what is the difference?"
+was the review working: the two encoded the same four facts twice on one card,
+the exact sin §406 had just removed. So the tokens ARE the card now, and the
+words the rows carried live on the key's sheet, where they always also were.
+
+**Every mark is a stored fact.** The glyph is the kind — `touchid` for a
+passkey (the user's ruling against the mockup's emoji: SF Symbols are the
+app's vocabulary, and `touchid` is what a passkey IS to the person holding
+the phone), `key.horizontal` for a wallet key AND for a curve we could not
+read, since "a key" is all we can then claim. A solid mark-blue face is the
+root: **authority carried by weight, never by size** — a bigger token would
+imply a magnitude nobody measured. The arc is the session's REMAINING grant,
+the same `progress(now:)` the row runways drew, rendered round — one
+computation, so the encodings cannot disagree. It DRAINS as the grant runs
+out: a thin arc is a nearly-dead key before its label is read. An expired
+token fades and keeps no arc (§406: done things recede).
+
+**Every account draws — the aggregate the footnote gestured at.** `compose`
+ranked accounts and drew ONE, relegating the rest to "1 other watched wallet
+also has keys". The ranking now merely decides who draws on TOP (soonest live
+deadline first, total order); every account renders as its own band behind
+its `WalletFace`, faces shown only when there is more than one account to
+tell apart. The floor moved with it: `minimumKeys` gates the TOTAL, so two
+accounts of one root each clear it — the registry exists in aggregate.
+
+**The shared credential is drawn, not said.** A key id derives from its
+public key, so the same id under two accounts is the same credential BY
+CONSTRUCTION — no inference. Those tokens wear a link badge and the card says
+it once below; the badge is rare by nature, which is what keeps it from being
+wallpaper. Sharing means CROSSING an account boundary: the same id twice
+under one account is a duplicate row, not a shared credential (harnessed).
+The tap carries the ACCOUNT as well as the key now, because a shared
+credential appears under two accounts and tapping it under account A must
+open A's row — the ref match is `:address:keyid`, both halves.
+
+**The sheet keeps the root's date.** With the card rows retired, a root's
+registration date had exactly one remaining home and it was conditional:
+`usageLine` carried it only while the key had never signed. `registeredLine`
+is its own fact row now, shown ONLY when the grant window is not drawn (a
+session's window already says "Granted", §406's duplicate rule) and never
+when the date was unwitnessed.
+
+**The demo exercises all of it**: a second snapshot-only account (the head
+composes from `AltanaState`, so it needs no watch), sharing one passkey id
+with the first — and that account's ROWS are seeded too, because a token
+whose sheet never opens is §83's dead control hiding in the demo. Verified by
+tapping it: the shared passkey's sheet opens and says "Also signs for …3c4d".
+
+Harness at 106 assertions. One mutation survived as an EQUIVALENT MUTANT and
+is recorded rather than chased: urgency over the top-ranked account's keys
+equals urgency over all keys, because the ranking puts the soonest deadline
+on top by construction.
