@@ -178,6 +178,23 @@ python3 "$ROOT/scripts/redaction-coverage-audit.py" \
   || fail "corpus text leaves the process unscrubbed — see the output above"
 print -P "%F{green}✓ redaction coverage audit%f"
 
+# A room head matches its rows by ref prefix, the bridge stamps that prefix in
+# a different file, and nothing checked the two agree. When they stop agreeing
+# the room does not break, it goes QUIET — every row still landed, the head
+# matching none of them, which from outside is "you have none yet". §311's
+# retag fetched `privacypools:deposit:` while deposits land `privacypools:dep:`
+# so no state tag ever moved and every deposit read Pending for life, cleared
+# ones included, for as long as the feature existed. Proven against that exact
+# shape in that exact file. Its reverse direction (a row produced under a ref
+# no room matches) is deliberately NOT built — measured at 82 findings on a
+# clean tree, see the script's header.
+step "Ref-shape audit"
+python3 "$ROOT/scripts/ref-shape-audit.py" --self-test >/dev/null \
+  || fail "the ref-shape audit's own self-test failed — the check is broken, not the code"
+python3 "$ROOT/scripts/ref-shape-audit.py" \
+  || fail "a room matches a ref prefix nothing produces — see the output above"
+print -P "%F{green}✓ ref-shape audit%f"
+
 # NEVER PRUNE ON AN EMPTY UPSTREAM READ. An un-materialized iCloud folder
 # enumerates EMPTY, as does a revoked bookmark and an unmounted volume — read
 # as "everything upstream was deleted", any of them wipes a source out of the
