@@ -113,13 +113,13 @@ extension DS {
         // pixels sample #e03000–#f0b000 across the hedgehog.
         case "posthog":             return Color.fixed("#f54e00")
         case "cloudflare":          return Color.fixed("#f6821f")   // the cloud's orange (their documented brand orange; the bundled mark samples it)
-        // Walletbeat ships no bundled mark and takes none by ruling — a rating
-        // registry's own logo beside its verdicts reads as our endorsement of
-        // them rather than their judgment of a wallet (§323's trademark line,
-        // for the opposite reason). The hue alone carries the seat, and it is
-        // deliberately NOT the blue every other Wallet-group seat wears: this
-        // one reads software, not money.
-        case "walletbeat":          return Color.fixed("#6c5ce7")
+        // Walletbeat's own coral, taken from their brand SVGs
+        // (`resources/branding/icon_dark.svg`, `#f96681`; their wordmark lockup
+        // samples `#fa6682`). The bundled mark is their real icon — a wallet
+        // with a heart and a flower — rather than the invented pulse line this
+        // seat shipped with for an afternoon, and the hue is theirs rather than
+        // a purple picked to look distinct from the Wallet group's blue.
+        case "walletbeat":          return Color.fixed("#f96681")
 
         // Circle's mark is a logo-on-white lockup (the PostHog/Hugging Face
         // shape), so the brand is the mark, not the field — and the mark is a
