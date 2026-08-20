@@ -162,12 +162,16 @@ grep -q 'X402Faces.heal' "$REFRESH" \
 # every row, which is a grouping that does no work. This reverts silently —
 # the feed still renders, just back to a single undifferentiated pile — so
 # both halves are guarded: the lane grouping is called, and the chronological
-# one is not.
+# one is not. The window ENDS AT THE NEXT `case`, never at a named one: it
+# used to close on `case .tokens:`, so a room inserted between the two (the
+# Walletbeat room, 2026-08-20) put ITS legitimate `chronoGroups` inside x402's
+# window and failed a check about a room it does not touch. A guard that fires
+# on its neighbour's correct code gets turned off within a week.
 grep -q 'groupedSections(x402Lanes(visible)' "$FEED" \
   || { echo "✗ the x402 room no longer groups by lane — it falls back to one 'Today' pile"; exit 1; }
 feed_code="$TMP/feed.swift"
 sed -E '/^[[:space:]]*\/\//d' "$FEED" > "$feed_code"
-awk '/case \.x402:/{f=1} f&&/chronoDays|chronoGroups/{print; found=1} /case \.tokens:/{f=0} END{exit found?1:0}' "$feed_code" \
+awk '/case \.x402:/{f=1; next} f&&/^[[:space:]]*case \./{f=0} f&&/chronoDays|chronoGroups/{print; found=1} END{exit found?1:0}' "$feed_code" \
   || { echo "✗ the x402 room went back to chronological grouping — every row shares one"; \
        echo "  timestamp, so that is a single section with no information in it."; exit 1; }
 # The lane's biggest seller leads it. Without this each shelf is an

@@ -233,6 +233,17 @@ enum BridgeGlyph {
         case "open food facts": return "barcode.viewfinder"
         case "bitrefill": return "gift"
         case "privacy":   return "creditcard"
+        // Walletbeat GRADES wallets, and plenty of its verdicts are failing
+        // ones — so a seal or a shield is wrong here twice over: both read as
+        // "approved", which would state a verdict this seat does not hold (§83),
+        // and `checkmark.shield`/`lock.shield` are already spoken for. A report
+        // card is the neutral shape: it says an assessment exists, not how it
+        // came out.
+        case "walletbeat": return "list.clipboard"
+        // The offers sitting unused on your cards — a reward, not a card. The
+        // card glyphs are taken by the seats that ARE cards (Privacy, Apple
+        // Wallet), and reusing one would file this beside them as a third card.
+        case "cardpointers": return "rosette"
         case "coinbase", "kraken", "binance", "gemini exchange": return "building.columns"
         case "eth validators": return "checkmark.shield"
         case "1claw":     return "lock.shield"
