@@ -27298,3 +27298,209 @@ advance on a real high→low transition — a door that opens already-healthy ha
 nothing to report and stays still — and it stands down under Reduce Motion. Same
 `symbolEffect` vocabulary the door already speaks, so this is one more beat
 rather than a second language.
+
+## §417 — The wallet's cards finish their own anatomy, and the room's overviews get wired to their detail (user: "anything else you would do to improve the wallet experience and or it's thing sheets", then "do all", 2026-08-20)
+
+Five changes, none of them a new invention: each finishes a grammar the app
+already owned and had applied unevenly. §416 gave the room landmarks between
+its blocks; this is the pass INSIDE them.
+
+### 1. Every card speaks before it shows
+
+Lending and Approvals have led with a spoken reading at `heading22` — "$4,120
+borrowed", "3 apps can move $12,400" — since they shipped, and then shown the
+evidence under it. Three cards never got that anatomy, and each failed
+differently for it:
+
+- **The holdings treemap** kept its one sentence (`concentrationLine`, "ETH is
+  61% of the book") BELOW the map at `subhead13`. The room's largest drawing
+  therefore said nothing until you had read it and then found the footnote. The
+  reading is promoted above the map; `WalletConcentrationLine` is renamed
+  **`WalletAllocationDoor`** and keeps only the chevron, because a view named
+  "line" that draws a door is the drift this codebase renames rather than
+  tolerates.
+- **Liquidity** jumped from an 11pt label to rows, so "is it working" — the
+  question its own doc says it exists to answer — had to be derived by reading
+  every pill. Its reading **counts POSITIONS, never fees**: two positions can
+  earn in different tokens, so a combined "+$59" would sum exactly what the rows
+  keep apart. A count always converts; the money stays on the pills.
+- **Perps** was already sorted "nearest to liquidation first" and never said so,
+  making the sort useful only to a reader who knew it existed. It now names the
+  position it ranks first, **and says nothing about profit** — this card has
+  never shown PnL and the largest type on it is not where to start, because an
+  unrealized number reads as money you have.
+
+### 2. Coming up gets the runway rail
+
+`WidgetRunway` has paired deadline rows with a rail in the "Needs you" tile
+since §382a; the room drew the rows alone. Rows say WHAT is next, a rail says
+how it is SPREAD — three deadlines bunched into next week reads nothing like
+three across a quarter, and no list gives that at any length.
+**`WalletRunwayRail` reuses the widget's arithmetic rather than restating it**,
+so the invariant travels intact: the window always CONTAINS now, folded in
+rather than clamped, and a row that has slipped its date can never draw ahead of
+the marker. Now is a NOTCH, not a dot — it is not one of the things being
+placed, and a fifth circle would read as a fifth deadline.
+
+### 3. The commentary becomes a margin note
+
+Under a receipt, the record and the app's reading of it drew as two slabs of
+equal width, fill and authority — and they are not equal. The receipt is
+EVIDENCE, stamped from what a bridge landed; `MoneyCommentaryCard` is Casberi
+talking about it. Same words, same evidence strip; what changed is who is
+visibly speaking. Three things carry it, each a grammar already in the app: the
+INDENT (a note sits beside what it annotates), the TINT (`DS.tint`, the same
+wash `AddressCard` pours for machinery, on the same reasoning — the app has no
+identity of its own to borrow here), and a SQUARED top-leading corner pointing
+back at the paper. **No arrow, no glyph, no rule** — §8's no-lines law holds
+with no exception and the shape does the pointing.
+
+### 4. The counterparty history leads with its span
+
+An address card's history is newest-first rows answering WHAT, silent on how far
+back you two go — and the card only ever shows six, so a monthly habit and a
+single touch in 2024 read identically until the tail you never reach. The rail
+from (2) runs backwards (`Sense.behind`): first contact to now, one dot per
+transfer. **The gap between the last dot and the marker is the reading** — how
+long since you two last spoke — which no arrangement of rows provides. It draws
+the WHOLE history, not the six rows shown, or it would describe the preview
+instead of the relationship. Every dot the same size, no colour, no rate: the
+`AddressConnections` factual-only ruling, kept on the screen where somebody
+decides whether to trust an address.
+
+### 5. The risk axis walks to its card
+
+`WalletRiskStrip`'s own doc already described itself as the overview and the
+cards below as the detail; reconnecting them was the reader's job, by scrolling
+and matching labels by eye. A dot is now a door. The target is derived from the
+entry's **id namespace, never its label** — a label is localized display text
+("Morpho · wstETH/USDC"), so keying on it sends a Spanish device nowhere — and
+an unknown namespace resolves to nil and scrolls NOWHERE rather than somewhere
+wrong. The hit area grows around the mark without growing the mark, which
+carries magnitude. It lands `.center` so the strip that sent you stays visible:
+the connection is the point. And **nothing is tap-only** — the card is still
+reachable by scrolling, so the honesty rule's dead-control clause is satisfied
+in both directions (`onPick` nil leaves every dot inert).
+
+**Accessibility, and a trap worth recording.** The strip collapses to ONE
+element with a spoken axis (§299 — dots on a track read as nothing), so a label
+on each new button would have been written and never read. The dots are hidden
+and the walk is offered as `accessibilityActions` on the combined element
+instead: a rotor gets a named list, a pointer gets a hit target, the sentence
+stays one sentence. Anywhere a tappable child is added under
+`children: .combine`, this is the shape.
+
+**Costs nothing:** no new `Thing` field, no request, no CloudKit deploy, no new
+type rung. The one renamed symbol has a single call site.
+
+## 418. The agent rooms: how long the conversation was, code drawn as code, and carrying it on (user: "Anything else you would do to improve the Claude and Chatgpt and codex experience? in terms of UI?", then "lets do 1, 2, 4", 2026-08-20)
+
+Four changes to the imported-chat rooms, and **one of the three things asked
+for turned out to already ship** — which is the entry's standing lesson, not an
+aside.
+
+**0. THE FOLD ALREADY EXISTS, and so did most of the sheet.** The ask was to
+fold the five agent chips into one, on the Markets pattern. §351 generalized
+that pattern into `CategoryFold` and applied it to EVERY catalog category
+unconditionally, `switcherFloor: 1` — and `Agents` is a real category holding
+all ten agent seats, so it has folded since that day, with a venue switcher, a
+remembered last venue and its own `categoryFold|` probe line. Nothing to build.
+The sheet's turn rendering was likewise already there (§367, six days old).
+**This is §412's lesson arriving for the third time in one session: assuming
+absence from a grep, in a system more finished than the audit assumed.** The
+correction that generalizes: before proposing a UI change to a mature room,
+read the room's own most recent ledger entry first — not the code, the entry —
+because the code will not tell you which of its gaps were deliberate.
+
+**1. A duplicate parser shipped in §415 and is deleted here.** That entry added
+`ChatTurns`, which read a stored transcript back into turns — work
+`AgentSheet.turns` had already been doing since §367, better: it derives the
+assistant's label from the SOURCE (`assistant(for:)`) where the duplicate
+carried a closed vocabulary of three names, so a fifth agent seat would have
+been readable by one and invisible to the other. It was written after grepping
+for the importers and `ChatTranscript` and not for a sheet-side reader. **Two
+parsers over one format is precisely the drift `AgentCorpusTools.rank` was
+folded into `ToolScore` to prevent**, and the failure would have been the worst
+kind: the same conversation rendering correctly in the sheet and pairing wrongly
+into a keyed continuation. The two functions that were genuinely new —
+`exchanges` (turns as (question, answer) pairs, which is the only shape
+`AgentTurn` has on any wire) and `continuationInstructions` — moved into
+`AgentSheet` beside the parse, with their tests, and `ChatTurns.swift`, its
+harness and its probe hook are gone. §415's paragraph naming `ChatTurns` is
+wrong from today; the ledger is append-only, so it is corrected here rather
+than edited there.
+
+**2. The row says how long the conversation was.** §367 made the sheet draw a
+chat as a chat and left the ROW giving a 61-turn working session and a one-line
+question identical chrome — title, excerpt, time. `messageCount` is stamped by
+all four importers and was drawn on one screen in the app. It rides
+`FeedScreen`'s prefetch list, so this costs no fault. **The row deliberately
+says nothing about the CLAMP**: knowing how much was cut needs the parsed turn
+count, which means reading `enrichedText` — a heavy column left out of that
+prefetch on purpose — for every row on every scroll. The sheet already carries
+that clause, where somebody reading the conversation actually needs it. The
+noun is read off `AgentSheet.assistant(for:)` rather than a source list of its
+own, so "turns" and "messages" can never disagree with the sheet, and a
+Snapchat thread gets the right word for people talking.
+
+**3. Code is drawn as code, in the shared splitter.** `NoteSheet.Block` gained
+a fifth case, `code(language:text:)`, and it is the one shape an LLM answer
+cannot do without. Drawn as prose, a fenced block rendered its own punctuation
+— and far worse, **every marker rule applied INSIDE the code**, so a Python
+`# TODO` became a heading and a shell `- flag` became a bullet: an answer's
+program silently rewritten as prose. The fence SUSPENDS all of them; that
+suspension is the case's whole content. **An unclosed fence still yields its
+code**, which is the common path rather than an edge one — transcripts are
+stored under an 8,000-character clamp, so a long answer's last fence is
+routinely cut mid-program, and dropping it would delete exactly what the sheet
+was opened to read. Extended rather than forked: a vault note gains the same
+fix for free, and two renderers over one splitter is how a fence starts drawing
+correctly in one room and as prose in the other. `NoteProse` took a `tier`
+parameter for the same reason (a turn is set at bubble size, a note body at
+`reading20` by §366) — and §366's guard moved WITH the rule rather than being
+deleted, now asserting the default plus that the note sheet never overrides it.
+**The agent's side is markdown and the person's is not**, which is the §399
+per-source FACT one room over and also how these products render: what somebody
+typed is what they typed, and parsing it would eat a literal asterisk they
+meant.
+
+**4. "Carry on with Claude."** An imported chat is the one row in this corpus
+that was a live conversation somewhere else and became a dead record here;
+§367 made it readable and reading was still all you could do. The turns become
+the keyed agent's history (`ShellChrome.askSeedHistory`, consumed exactly once
+in `keyedAnswerDocument` — the only place a keyed answer is composed — and
+cleared, so the next question somebody types can never inherit somebody else's
+chat). **The model is told it is joining a conversation, and told when the
+transcript is CLAMPED**: handing over what survived an 8,000-character cut
+without saying so invites it to answer as though it had read the rest, and
+`cut` is the only place that fact exists. The prefix LEADS the contract rather
+than trailing it, or it arrives after the grounding rules as an afterthought to
+a task already described.
+
+**It never invents a question.** The verb seeds the ask with the conversation's
+own pending one when the transcript ends on you — the clamp keeps the oldest
+end, so that is a question really left hanging — and otherwise rises FOCUSED
+and empty, which closed a real hole on the way past: `consumeAskRequest` would
+have called `commit()` on an empty draft, the stranded-"Thinking…" failure its
+own neighbouring guard exists to prevent, and the only thing preventing it
+until now was that nothing ever sent an empty `chrome.ask`. Three conditions
+keep it from being a dead control: a key configured (there is no free path —
+the on-device model holds no conversation of its own), a transcript that really
+parsed into exchanges, and Bankr excluded upstream since it answers from a
+wallet rather than from turns.
+
+**Guards.** `note-sheet-selftest` gains eleven fence assertions and three
+mutations; `agent-sheet-selftest` gains the pairing and continuation
+assertions and three mutations. **A mutation caught a non-discriminating
+fixture for the third time this session** — every wrong-scheme fixture in
+`agent-keyed-selftest` was also hostless, both speaker lookalikes there sat
+mid-line, and here "use \`let\` here" does not START with a backtick, so
+loosening the fence test to one backtick left the suite green. The rule worth
+keeping: **a fixture only tests the rule it names if it fails that rule and
+passes every other one.**
+
+**UNMEASURED**: no imported ChatGPT, Claude, Gemini or Claude Code export has
+ever been held by this project, and no provider key is stored on this host, so
+the continuation has never run end to end. Every path fails safe — an
+unparseable transcript offers no verb, a missing key draws none, and an empty
+ask now focuses instead of sending.

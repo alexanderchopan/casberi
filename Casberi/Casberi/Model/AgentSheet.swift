@@ -269,6 +269,68 @@ enum AgentSheet {
             provenance: provenance(source: i.source, growing: i.growing))
     }
 
+    // MARK: - Carrying a conversation on (2026-08-20)
+
+    /// The conversation as question/answer PAIRS, for handing to the keyed
+    /// agent as prior history so somebody can pick an imported chat back up.
+    ///
+    /// Pairing is the point rather than a formality: `AgentTurn` is a
+    /// (question, answer) pair on every wire this app speaks, so a flat list of
+    /// turns cannot be sent at all.
+    ///
+    /// **Three shapes are dropped rather than guessed at, and each one would
+    /// put words in somebody's mouth.** An assistant turn with no question
+    /// before it — the importer's clamp keeps the oldest end, so this is a
+    /// transcript whose opening ask was cut — is not given an invented one.
+    /// Consecutive turns from the same voice (two asks in a row, which all four
+    /// of these products allow) pair the LATEST ask with the answer, since that
+    /// is the one the answer replies to. And a trailing ask with no answer yet
+    /// is not half a pair; it is returned as `pending`, because it is the thing
+    /// somebody continuing this conversation most likely wants asked.
+    static func exchanges(_ turns: [Turn]) -> (history: [(question: String, answer: String)],
+                                               pending: String?) {
+        var history: [(question: String, answer: String)] = []
+        var question: String?
+        for turn in turns {
+            if turn.voice == .you {
+                question = turn.text
+            } else if let asked = question {
+                history.append((question: asked, answer: turn.text))
+                question = nil
+            }
+        }
+        return (history, question)
+    }
+
+    /// What to tell a model picking this conversation up.
+    ///
+    /// **It says the transcript is partial when it is, and that is why this is
+    /// a function rather than a literal.** Handing a model what survived an
+    /// 8,000-character clamp without saying so invites it to answer as though
+    /// it had read the rest — and `cut` is the only place that fact exists
+    /// (`messageCount` counts turns BEFORE the clamp; the stored text carries
+    /// what survived it). The clamp keeps the OLDEST end by
+    /// `ChatTranscript`'s own ruling, so what is missing is the RECENT end,
+    /// which is exactly the part a continuation would otherwise assume it has.
+    static func continuationInstructions(source: String, cut: Int?) -> String {
+        var text = """
+        You are picking up a conversation this person had with \(source) \
+        somewhere else, and they have brought it here to carry on. The earlier \
+        turns are given to you as they happened. Answer their next message in \
+        that conversation's own terms — do not summarize what was already said, \
+        do not reintroduce yourself, and do not claim to remember anything \
+        beyond the turns you were given.
+        """
+        if let cut, cut > 0 {
+            text += """
+             \(cut) later turns of that conversation are NOT here — only the \
+            earlier part was kept. If what is missing bears on the answer, say \
+            so plainly rather than guessing what it contained.
+            """
+        }
+        return text
+    }
+
     /// How many turns the stored transcript is missing.
     ///
     /// Both numbers already exist on the row: `messageCount` counts turns

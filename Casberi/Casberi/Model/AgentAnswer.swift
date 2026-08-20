@@ -640,6 +640,7 @@ enum AgentAnswer {
                            history: [AgentTurn] = [],
                            provider explicitProvider: AgentProvider? = nil,
                            corpus: [AnswerTools.Snapshot] = [],
+                           systemPrefix: String = "",
                            onPartial: ((String) -> Void)? = nil)
     async -> Result<AgentAnswerResult, AgentAnswerFailure> {
         guard let provider = explicitProvider ?? AgentKey.active,
@@ -695,7 +696,13 @@ enum AgentAnswer {
         // guaranteed `url_not_in_prior_context`.
         let fetchOn = toolsOn && provider.fetchesLinks
 
-        var system = OnDeviceModel.synthesisInstructions(length: "a few plain sentences")
+        // The prefix leads the contract rather than trailing it (2026-08-20):
+        // it says WHAT THIS CONVERSATION IS — an imported chat being carried on
+        // — and every rule below is read in that light. Appended at the end it
+        // would arrive after the grounding contract and the PICKS instructions,
+        // where it reads as an afterthought to a task already described.
+        var system = systemPrefix.isEmpty ? "" : systemPrefix + "\n\n"
+        system += OnDeviceModel.synthesisInstructions(length: "a few plain sentences")
         if toolsOn { system += toolGuidance }
         if fetchOn { system += AgentWebFetch.guidance }
         system += toolsOn ? toolPickInstructions : pickInstructions

@@ -231,6 +231,20 @@ enum NoteSheet {
         case numbered(index: Int, text: String)
         case quote(String)
         case paragraph(String)
+        /// A fenced block, verbatim (2026-08-20). `language` is whatever
+        /// followed the opening fence, or nil — it is a LABEL, never used to
+        /// choose a parser, so an unknown word costs nothing.
+        ///
+        /// Added for the agent rooms rather than the notes room, and it is the
+        /// fifth shape only because it is the one an LLM answer cannot do
+        /// without: ChatGPT, Claude and Claude Code write fenced code
+        /// constantly, and without this the fence markers drew as prose and —
+        /// far worse — every marker rule below applied INSIDE the code, so a
+        /// Python `# TODO` became a heading and a shell `- flag` became a
+        /// bullet. A vault note gains the same fix for free, which is the
+        /// argument for extending this splitter instead of writing a second
+        /// one next to it.
+        case code(language: String?, text: String)
 
         /// The characters this block will draw, for the fold's arithmetic.
         var length: Int {
@@ -239,8 +253,22 @@ enum NoteSheet {
                 return t.count
             case .numbered(_, let t):
                 return t.count
+            case .code(_, let t):
+                return t.count
             }
         }
+    }
+
+    /// Is this line a ``` fence, and what language did it name?
+    ///
+    /// Three backticks minimum, so an inline `` `code` `` span never opens a
+    /// block. The info string is taken whole and trimmed; a fence with nothing
+    /// after it is an unlabelled block.
+    static func fence(_ line: String) -> (isFence: Bool, language: String?) {
+        let trimmed = line.trimmingCharacters(in: .whitespaces)
+        guard trimmed.hasPrefix("```") else { return (false, nil) }
+        let info = trimmed.drop(while: { $0 == "`" }).trimmingCharacters(in: .whitespaces)
+        return (true, info.isEmpty ? nil : info)
     }
 
     /// A body, split into blocks — or one paragraph when the source is not
@@ -269,7 +297,36 @@ enum NoteSheet {
             if !joined.isEmpty { out.append(.paragraph(joined)) }
             para = []
         }
+        // A fence in progress. While it is open NOTHING below applies — that
+        // suspension is the whole point of the case, not a detail of it: inside
+        // a code block a `#` is a comment, a `- ` is a flag, a `> ` is a shell
+        // prompt and a blank line is part of the program.
+        var fenceLines: [String]?
+        var fenceLanguage: String?
+        func closeFence() {
+            guard let lines = fenceLines else { return }
+            // Trailing blank lines go, leading indentation stays: the shape of
+            // a program is its content.
+            let text = lines.joined(separator: "\n")
+                .trimmingCharacters(in: .newlines)
+            if !text.isEmpty { out.append(.code(language: fenceLanguage, text: text)) }
+            fenceLines = nil
+            fenceLanguage = nil
+        }
+
         for raw in body.components(separatedBy: .newlines) {
+            let fenced = fence(raw)
+            if fenceLines != nil {
+                // Only a fence closes a fence.
+                if fenced.isFence { closeFence() } else { fenceLines?.append(raw) }
+                continue
+            }
+            if fenced.isFence {
+                flush()
+                fenceLines = []
+                fenceLanguage = fenced.language
+                continue
+            }
             let line = raw.trimmingCharacters(in: .whitespaces)
             if line.isEmpty { flush(); continue }
             // A thematic break draws nothing — the design system has no
@@ -280,6 +337,12 @@ enum NoteSheet {
             if let block = leader(line) { flush(); out.append(block); continue }
             para.append(line)
         }
+        // An UNCLOSED fence still yields its code. This is not an edge case
+        // here, it is the common one: an agent transcript is stored under an
+        // 8,000-character clamp, so a long answer's last fence is routinely cut
+        // mid-program. Dropping it would delete exactly the part of the answer
+        // somebody opened the sheet to read.
+        closeFence()
         flush()
         return out
     }

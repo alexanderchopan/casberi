@@ -2462,9 +2462,49 @@ struct ExcerptRow: View {
             if thing.previewImageData != nil {
                 PhotoWell(thing: thing, size: 40)
             }
-            LiveTimeText(date: thing.capturedAt)
+            // HOW LONG THE CONVERSATION WAS (2026-08-20). §367 made the sheet
+            // draw a chat as a chat, and the ROW still gave a 61-turn session
+            // and a 3-turn one the same chrome — title, excerpt, time — so the
+            // one fact that separates a real working session from a one-line
+            // question was stored on every row and drawn on none.
+            //
+            // It rides `messageCount`, which is in `FeedScreen`'s prefetch
+            // list, so this costs no fault. The row deliberately says nothing
+            // about the CLAMP: knowing how much was cut needs the parsed turn
+            // count, which means reading `enrichedText` — a heavy column left
+            // out of that prefetch on purpose — for every row on every scroll.
+            // The sheet already carries that clause ("Stored to here…"), which
+            // is where somebody reading the conversation actually needs it.
+            if let count = thing.messageCount, count > 1 {
+                VStack(alignment: .trailing, spacing: 2) {
+                    LiveTimeText(date: thing.capturedAt)
+                    Text(Self.lengthLabel(count: count, source: thing.source))
+                        .dsText(.label12)
+                        .foregroundStyle(DS.textTertiary)
+                }
+            } else {
+                LiveTimeText(date: thing.capturedAt)
+            }
         }
         .padding(.vertical, DS.Space.s2)
+    }
+
+    /// "24 turns" for a conversation with an agent, "24 messages" for one with
+    /// a person.
+    ///
+    /// The split reads `AgentSheet.assistant(for:)` rather than a source list
+    /// of its own, so the word this row uses and the word the sheet uses can
+    /// never disagree — and a fifth agent seat gets the right noun the day its
+    /// speaker label lands. A Snapchat thread and an imported DM are the other
+    /// half: they carry a `messageCount` too, and "turns" is the wrong word for
+    /// people talking.
+    ///
+    /// Never drawn for a count of 1: "1 turn" over a single-prompt Gemini row
+    /// is chrome restating the row's own existence.
+    static func lengthLabel(count: Int, source: String) -> String {
+        AgentSheet.assistant(for: source) != nil
+            ? String(localized: "\(count) turns")
+            : String(localized: "\(count) messages")
     }
 }
 
