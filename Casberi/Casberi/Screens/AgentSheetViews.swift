@@ -141,9 +141,29 @@ struct AgentTurnsView: View {
             Text(verbatim: turn.name)
                 .dsText(.label12)
                 .foregroundStyle(DS.textTertiary)
-            Text(ProseLinks.rendered(turn.text))
-                .dsText(.callout15)
-                .foregroundStyle(DS.textPrimary)
+            // THE AGENT'S SIDE IS MARKDOWN, YOURS IS NOT (2026-08-20).
+            //
+            // Not a preference — the same per-source FACT §399 established for
+            // note bodies, one room over. ChatGPT, Claude and Claude Code emit
+            // markdown by construction: fenced code, headings, numbered steps.
+            // Drawn as prose it rendered its own punctuation — a fence as three
+            // backticks, `**this**` with the asterisks in — and, far worse, an
+            // answer's code block was split by the very markers it contains, so
+            // a Python `# TODO` became a heading.
+            //
+            // The person's side stays plain deliberately, which is also how
+            // these products render it: what somebody typed is what they typed,
+            // and parsing it would eat a literal asterisk they meant. A pasted
+            // fence in a question therefore stays unstyled — under-styling is
+            // the safe direction, and it stays readable either way.
+            //
+            // `foldable: false` because this view already folds, by TURN
+            // ("Show all N turns"). Two folds over one transcript would let a
+            // reader open the conversation and still be looking at a cut answer.
+            NoteProse(text: turn.text,
+                      foldable: false,
+                      markdown: turn.voice == .assistant,
+                      tier: .callout15)
                 .fixedSize(horizontal: false, vertical: true)
                 .multilineTextAlignment(.leading)
                 // A bubble is capped, or the two voices stop being two

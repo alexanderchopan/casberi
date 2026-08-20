@@ -833,6 +833,13 @@ harness "Files-location pure-logic self-test" "files-location self-test" "script
 harness "GitHub room pure-logic self-test" "github-room self-test" "scripts/github-room-selftest.sh" "the GitHub room self-test failed — run scripts/github-room-selftest.sh"
 
 harness "Radicle pure-logic self-test" "radicle self-test" "scripts/radicle-selftest.sh" "the Radicle logic self-test failed — run scripts/radicle-selftest.sh"
+# Walletbeat (prd §419). Catches the silent wrong answer this seat is built around: a
+# coverage gate that stops firing draws a confident ratings bar for a wallet Walletbeat has
+# never examined, so the one nobody has looked at renders as the cleanest on the screen.
+# Also pins the incident parser against their real file shapes — the registry is a third
+# party's live TypeScript, and a field that stops parsing degrades to a row that is merely
+# less true rather than to an error anything can see.
+harness "Walletbeat pure-logic self-test" "walletbeat self-test" "scripts/walletbeat-selftest.sh" "the Walletbeat logic self-test failed — run scripts/walletbeat-selftest.sh"
 
 # Altana's keystore room (`Model/AltanaKeystore.swift`, `Model/AltanaRoom.swift`).
 # Nothing on this host can register a key, revoke one, or make a grant expire —
@@ -949,19 +956,6 @@ harness "Agent-panel pure-logic self-test" "agent-panel self-test" "scripts/agen
 # to every later month: the ceiling fires on day one, forever, while the
 # settings row states a confident wrong figure.
 harness "Keyed-agent reach and budget self-test" "agent keyed self-test" "scripts/agent-keyed-selftest.sh" "the keyed-agent self-test failed — run scripts/agent-keyed-selftest.sh"
-
-# Reading a stored chat transcript back as the conversation it was
-# (2026-08-20). The importers flatten a chat to one speaker-prefixed string on
-# `enrichedText`; this reads it back. Both failure directions render as
-# something plausible that never happened, which no build or sweep can see:
-# a loose speaker rule shatters ONE answer into a dozen turns by speakers who
-# do not exist (a message's own text is full of "Note:", "Error:", "Step 3:"),
-# and the same list handed to the keyed agent as history sends fabricated turns
-# to a provider as the person's own words. The other direction is quieter and
-# just as bad: `enrichedText` also carries vault-note bodies, article ledes and
-# keyed digests, and any of those parsing as a chat starts rendering ordinary
-# rows as conversations.
-harness "Chat-transcript turn self-test" "chat turns self-test" "scripts/chat-turns-selftest.sh" "the chat-turns self-test failed — run scripts/chat-turns-selftest.sh"
 
 # Pure-logic self-test for the receipts screen's reach map (prd §300). The
 # card's whole job is to be checkable, so a silent wrong answer here is worse

@@ -2483,6 +2483,22 @@ struct Composer: View {
             chrome.askWithKey = false
         }
         fillDraft(query)
+        // AN ASK WITH NO QUESTION YET (2026-08-20). A surface can hand the
+        // shell context without a query — a thing sheet carrying an imported
+        // conversation on, where the transcript ends on the agent's answer and
+        // there is no question left hanging. Inventing one would be the app
+        // putting words in somebody's mouth, so the composer rises FOCUSED with
+        // whatever context came with the request still armed, and waits.
+        //
+        // It also closes a real hole: `commit()` on an empty draft is the
+        // stranded-"Thinking…" failure the guard below already exists to
+        // prevent, and until now the only thing stopping an empty `chrome.ask`
+        // reaching it was that nothing sent one.
+        if query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            fieldFocused = true
+            pendingHandoff = false
+            return
+        }
         // 400ms → 120ms (2026-08-16). The old wait was "let the bubble settle",
         // but what settled into it was the draft band: long enough to read
         // "What's going on" appear in the field under a Find chip before the
