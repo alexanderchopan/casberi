@@ -132,9 +132,30 @@ fi
 # script printed the zsh error on its own line each time and `verify.sh` went
 # on to print a green tick beside it. A check that cannot fail proves nothing,
 # which is this file's own stated standard.
+#
+# NO PIPE INTO `grep -q`, and that is a FIX not a style choice (2026-08-19).
+# This ran `sed … "$f" | grep -q 'NLEmbedding'` under this script's own
+# `set -euo pipefail`: `grep -q` exits 0 the instant it matches and closes the
+# pipe, `sed` — still writing a 2,800-line file — takes SIGPIPE and exits 141,
+# and pipefail makes 141 the PIPELINE's status. So the `&&` never fired and the
+# matching file was silently dropped from `THIRD`. Whether it fired at all
+# depended on whether sed happened to finish first, which made this guard a
+# RACE: it missed `DemoSeedAll.swift` on an idle machine and caught it when the
+# box was loaded (found by running the harnesses concurrently, not by reading).
+# The same shape would have swallowed a real third file. Reading sed's whole
+# output into a variable has no pipe, so nothing can be signalled.
+#
+# STRING LITERALS ARE STRIPPED TOO. The guard asks whether a file HOLDS an
+# `NLEmbedding`; `DemoSeedAll` merely NAMES one, in demo row titles that are
+# prose ("serialize NLEmbedding inference (#409)"). Matching those failed the
+# build over a fake issue title — a lint that cries wolf gets turned off within
+# a week, and this one would have been turned off for being right about nothing.
+# Comments were already stripped for exactly this reason; a quoted string is
+# the same class of not-code.
 THIRD=$(for f in $(grep -rl 'NLEmbedding' --include='*.swift' Casberi/ 2>/dev/null); do
           case "$f" in *EmbeddingIndex.swift|*AskCommands.swift) continue;; esac
-          sed 's://.*::; s:^ *///.*::' "$f" | grep -q 'NLEmbedding' && echo "$f"
+          _code=$(sed 's://.*::; s:^ *///.*::; s:"[^"]*"::g' "$f")
+          [[ "$_code" == *NLEmbedding* ]] && echo "$f"
         done || true)
 rm -f "$STRIPPED"
 [[ -z "$THIRD" ]] \
