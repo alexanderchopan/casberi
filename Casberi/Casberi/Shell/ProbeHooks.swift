@@ -893,6 +893,27 @@ enum ProbeHooks {
         Hook(key: "cursorProbe") { _, _ in
             Task { @MainActor in await CursorFetch.diagnose() }
         },
+        // `-cardPointersProbe YES` — CardPointers phase by phase with the
+        // STORED token (prd §420). Every read there needs CardPointers+, so
+        // the subscription state is printed BEFORE anything is called: an
+        // account without it refuses all five tools while `tools/list` still
+        // answers, which is a subscription state and not a broken connection,
+        // and the two are indistinguishable from the room. Prints answer
+        // LENGTHS, never content — this is somebody's card book.
+        Hook(key: "cardPointersProbe") { _, _ in
+            Task { @MainActor in await CardPointersAuth.diagnose() }
+        },
+        // `-cardPointersRoomProbe YES` — the room head off landed rows alone
+        // (prd §420). No network and no subscription needed, so it works
+        // against the demo corpus and against whatever the last real sync
+        // left behind. One NSLog per line (the `-todayProbe` lesson).
+        Hook(key: "cardPointersRoomProbe") { _, context in
+            Task { @MainActor in
+                for line in CardPointersRoomSource.probeLines(context: context) {
+                    NSLog("[Casberi] cardPointersRoom| %@", line)
+                }
+            }
+        },
         // `-cloudflareRunwayProbe YES` — what the Cloudflare room LEADS with
         // (2026-08-03, prd §296): the estate snapshot, then the card's own
         // headline, then one `cfRunwayRow|` line per deadline. One NSLog per
@@ -4309,6 +4330,10 @@ enum ProbeHooks {
                 note("walletbeatHead", source == WalletbeatRoomSource.source
                      ? WalletbeatRoomSource.compose(things: things).map {
                         "\(WalletbeatRoom.headline($0)) · \($0.items.count) wallets"
+                     } : nil)
+                note("cardPointersHead", source == CardPointersRoomSource.source
+                     ? CardPointersRoomSource.compose(things: things).map {
+                        "\($0.headline) · \($0.cards.count) cards · undated \($0.undated)"
                      } : nil)
                 // Unlike the three above this one DOES read `things` (the
                 // runs ARE the subject — see `CursorRoomSource`'s own note),

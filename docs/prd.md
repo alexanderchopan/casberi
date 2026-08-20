@@ -80,6 +80,7 @@ at all.
 | Ruling | What it said | Changed by |
 |---|---|---|
 | §18 | Feed spec | amended by §64 |
+| §36 | Bridge selection ruling: live data only | amended by §420 |
 | §402 | Altana keystore: read Ethereum only, and stay silent on first sight | amended by §403 |
 | §36a | Home cover: an explicit banner outranks the automatic screensh | amended by §36j, superseded by §36o |
 | §36h | Wallet holdings: one treemap per wallet, leads Feed too, tap-t | amended by §36n |
@@ -27718,3 +27719,145 @@ it does not have. The demo seeds the real incidents with their real statuses.
 2026-08-20 and every parse verified against the real files, but nothing on this host can
 make Walletbeat revise a rating or publish an incident, so the revision and heal paths are
 reasoned about rather than observed.
+
+## 420. CardPointers — the offers sitting unused on your cards, and the wire measured before a line was trusted (user: "i want to include Cardpointers. We have many bridges i do not use", then "it is ok if it requires paid account", 2026-08-20)
+
+**§36 declined CardPointers for "no surface at all" and that is no longer true.**
+They shipped an MCP API — the one their Claude and ChatGPT integrations ride — so
+the single fact that ruling rested on is obsolete. **This entry amends §36 to the
+extent of that one parenthetical and nothing else**; the rest of §36 stands, and
+this passes it, because the read is live, on demand and official rather than a
+request-and-wait export. Worth knowing before re-deriving any of this: the ledger
+has cited CardPointers since 2026-07-14 as the pattern the "Coming up" card was
+copying, so the app has been borrowing the idea for a month without being able to
+read the source.
+
+**THE WIRE WAS MEASURED, and that is the whole lesson of this entry.** An earlier
+pass described this protocol by reading their CLI's source, because both
+`cardpointers.com` and `mcp.cardpointers.com` were unreachable from the host that
+wrote it. That description was careful, honest about its grade, and **wrong in
+three ways, each of which alone ships a bridge that silently never returns a
+row**. All three were found in one sitting against a real account, before any
+Swift was trusted:
+
+1. **The host is `mcp.cardpointers.com`, sign-in included.** Device flow reads as
+   "plain REST, outside MCP entirely", which invites the assumption that it lives
+   on the marketing host. It does not: `/api/device/code` and `/api/device/token`
+   are both on the MCP host.
+2. **Responses are SSE-framed** — `event: message` / `data: {…}` — not plain
+   JSON, and the request must send `Accept: application/json, text/event-stream`.
+   The earlier read called this "a POST, a header, one decode." Handing that body
+   to `JSONSerialization` fails on byte one, and the failure is the expensive
+   kind: a nil decode and an account with no offers render identically.
+3. **A PENDING POLL ANSWERS HTTP 400, not 200**, with the reason in the body.
+   `IngestSupport.postJSONStatus` returns `(nil, 400)` and discards the body, so a
+   bridge built on the shared helper would read "they haven't clicked yet" as a
+   hard failure and **sign-in could never complete**. Their own CLI never inspects
+   the status code at all — it pipes the body to `jq` regardless — which is
+   exactly why no amount of reading it would have surfaced this. `CardPointersAuth`
+   carries its own POST for this reason and that reason only.
+
+Also measured: `invalid_grant` ("Device code not found") is a fourth poll error
+beside `authorization_pending` / `access_denied` / `expired_token`, and it is
+TERMINAL — a code unknown now will not become known by asking again, and treating
+it as pending polls their host for fifteen minutes over a code that will never
+work. `X-MCP-Client` was accepted with an undeclared string (`Casberi/0.1`); we
+send a real name anyway, because borrowing their CLI's string is claiming to be
+their software.
+
+**`is_pro` ARRIVES WITH THE TOKEN, and it is the find that shapes the seat.** The
+sign-in response carries `access_token`, `token_type`, `email`, `uuid` and
+`is_pro`. So the app knows what an account can do **before it makes a single MCP
+call** — which turns the central design problem from a discovery into a
+statement. Without it the only way to learn was to connect, read, fail, and leave
+somebody looking at an empty room. With it, a free account's sign-in completes,
+the app says plainly that this account has no CardPointers+, offers their own
+`upgrade_url` as a door, and **does not register the seat as connected** — a seat
+that reads nothing is not a connection, and claiming one is the §83 dead control
+in its most convincing costume. `email` and `uuid` are deliberately not modelled:
+identity we have no use for, and a field never read is a field that cannot leak.
+
+**A free account reads NOTHING — measured, all five tools.** `list_my_cards`,
+`list_my_offers`, `search_my_offers`, `list_profiles` and `recommend_card` every
+one answer `-32001 "CardPointers+ subscription required"` with an `upgrade_url` in
+`error.data`. `recommend_card` is the one a reasonable person expects to be free —
+it recommends from a wallet you could have typed in yourself — and it is not. Note
+`tools/list` DOES answer for a free account, with full schemas; only `tools/call`
+is gated. So the tile states "Requires CardPointers+" **before the tap**, and that
+sentence is now a measurement rather than an inference.
+
+**The paywall is accepted as a cost, by ruling** (user, 2026-08-20: "it is ok if it
+requires paid account", and "We have many bridges i do not use"). **Privacy.com is
+the real precedent** — that seat already requires a paid plan — so "costs money"
+cannot by itself disqualify this. The remaining differences are of DEGREE and are
+worth naming rather than dressed up as principles: Privacy.com's rows are money
+moving, the module doctrine's standing exception, landing into machinery that
+already exists, while these rows need a room built for them; and CardPointers is a
+SECOND-ORDER source, somebody's reading of your issuers' offers rather than the
+issuer itself, which is the shape §36 declined Credit Karma and NerdWallet for.
+That decline was on technical grounds — aggregator-only, no direct read — which
+this now has, so it is not precedent against this, only a note about whose reading
+the data is.
+
+**What would land.** §216 decides it. A card is STATE — twelve cards landing as
+twelve rows is the §223 count-as-a-thing failure — so cards belong in a snapshot
+feeding a room head, the `ASCState` shape. An OFFER is a thing, and so are the
+events around it: redeemed, and a card added. `recommend_card` is not a sync at
+all, it is an ASK, the `WalletDeFiAsk` shape, answered live on the composer path.
+An offer carries an `expiration`, so it lands as a `dueAt` and every piece of
+deadline machinery already built — `NotifySweep`'s generic `deadlineNear`, the
+"Needs you" widget's runway, `KeptAskComposers.overdue` — works with no new code
+in any of them, exactly how App Store Connect's TestFlight expiry reached the lock
+screen in §323. **The unclaimed total is a CEILING, never a saving**: an offer is
+worth its value only to somebody who was going to spend there anyway, and "$312
+waiting for you" is §83's fake status in the one place a person believes it
+instantly.
+
+**It carries no transactions, no points balances and no statements**, so it is not
+a spend source and `Corpus.cardSpendSources` correctly excludes it — that
+membership is a DATA test (`.transaction` rows carrying `priceValue` AND
+`priceCurrency`). It does not overlap Apple Wallet, it composes with it: Apple
+Wallet is the only source here that sees a merchant name (§313), this is the only
+one that knows which offer sits unused on which card, so "you spent at that
+merchant on the card holding its unused offer" is a reading neither can make
+alone. That is the prize, and it is a `CrossSourceEcho` on an EXACT merchant
+match, never a topical one.
+
+**WHAT IS STILL UNMEASURED IS THE HALF THIS SEAT IS FOR.** The account that
+measured the wire is free, so every card and offer PAYLOAD — including the
+`expiration` field the whole deadline design rests on — has never been seen. The
+auth half and the failure path are now facts; the data half is entirely guessed
+field shapes. **That grade belongs in this ledger and in the file headers and
+NOWHERE IN THE APP** (user ruling, 2026-08-20: "we aren't going to say
+'unmeasured' in the app") — the app states what is true for the person ("Requires
+CardPointers+", and the real `is_pro` state), never our own confidence in our
+code.
+
+**Catalog: SHOPPING, not Wallet** (user ruling, 2026-08-20: "don't you think it
+should go in shopping and not wallet?"). It first landed in Wallet on the
+strength of the Apple Wallet pairing, and that was the wrong axis. §222's own
+ruling 3 had already drawn the line — Privacy.com sits in Shopping as card
+RECEIPTS while Gnosis Pay sits in Wallet because it is the ACCOUNT, a Safe
+holding a balance that joins the wallet total — and by that test this is not
+close: CardPointers holds no money, reads no balance and joins no total. An
+offer is a discount at a merchant, which is buying, not holding. The pairing
+with Apple Wallet is unaffected and works across the two groups; a group is
+where somebody looks for a thing, not a claim about what composes with what.
+Worth noting the shape of the miss, since it will recur: the seat was filed
+beside the thing it COMPOSES with rather than beside the thing it IS, and the
+catalog is browsed by the second.
+
+**Also unsettled: their permission.** The person asked said "probably", which is
+not permission, and their CLI ships Business Source License 1.1, non-commercial
+and personal use only — that governs their code rather than their service, but it
+states their posture. A third-party app reading a subscriber's account through
+their AI surface wants a written yes and a declared client string.
+
+**Read-only by CONDUCT, and easy to keep for once**: every tool they expose is a
+read, so unlike Cursor (§303) or Privacy.com there is no write verb to abstain
+from. `Model/CardPointersWire.swift` is Foundation-only by design and
+`scripts/cardpointers-selftest.sh` compiles it WHOLE — 21 assertions and 7
+mutations, each a silent wrong answer: SSE taking the first frame instead of the
+last, the `-32001` code drifting, an absent `is_pro` defaulting to true,
+`invalid_grant` read as pending, the poll interval losing its floor, the host
+drifting to the marketing domain.

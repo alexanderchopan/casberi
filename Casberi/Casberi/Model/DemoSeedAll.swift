@@ -582,6 +582,29 @@ enum DemoSeedAll {
         return nil
     }
 
+    /// CardPointers (prd §420) — offers on two cards, spread so the room's
+    /// head has something true to lead with on the first open: one inside the
+    /// week (so the deadline headline fires), one further out, one snoozed
+    /// (which must NOT reach the head — it is the thing the room is most
+    /// likely to get wrong), and one with no expiry at all (so the "undated"
+    /// clause has a case). A demo whose offers all expired in one week would
+    /// make the head correctly decline and `verify.sh`'s room-head coverage
+    /// read that decline as a gap — the §375 X lesson, two rooms over.
+    private static func cardPointers() -> [Thing] {
+        [
+            ("Amex Gold · Amazon", "cardpointers:offer:demo1", 4.0, "$10 back on $50+", true),
+            ("Amex Gold · Shell", "cardpointers:offer:demo2", 19.0, "20% back, up to $8", true),
+            ("Chase Sapphire · Hilton", "cardpointers:offer:demo3", 2.0, "$50 back on $250+", false),
+            ("Chase Sapphire · Uber", "cardpointers:offer:demo4", 0.0, "$5 back on rides", true),
+        ].map { title, ref, dueInDays, terms, dated in
+            row(.reminder, title, source: "CardPointers", ref: ref, days: 1.0, hour: 9) { thing in
+                thing.summary = terms
+                thing.authorHandle = title.components(separatedBy: " · ").first
+                if dated { thing.dueAt = at(-dueInDays, 12) }
+            }
+        }
+    }
+
     private static func walletbeat() -> [Thing] {
         var out: [Thing] = []
 
@@ -672,6 +695,7 @@ enum DemoSeedAll {
         out += markets()
         out += walletRoom()
         out += walletbeat()
+        out += cardPointers()
         out += appleWallet()
         out += cards()
         out += work()
@@ -3990,6 +4014,7 @@ enum DemoSeedAll {
     /// name · status line · the one sentence the seat says it can do.
     private static let seatTable: [(String, String, String)] = [
         ("Obsidian", "Synced 4m ago", "Reads the notes in your vault."),
+        ("CardPointers", "Synced 6m ago", "Reads the offers on your cards."),
         ("Files", "Synced 12m ago", "Reads a folder you point it at."),
         ("Dropbox", "Synced 1h ago", "Reads the folder you name."),
         ("X", "Imported 412 posts", "Holds the archive you exported."),

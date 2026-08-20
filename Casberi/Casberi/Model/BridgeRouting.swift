@@ -37,6 +37,12 @@ enum BridgeRouter {
         /// moment the first watched wallet registered the seat — and the first wallet
         /// almost always wants a second (prd §419).
         case walletbeat
+        /// CardPointers (prd §420) — its own destination rather than `.token`
+        /// because there is no token to paste: sign-in is a device flow, and
+        /// the screen has a real state between "signed in" and "connected"
+        /// (an account without CardPointers+), which `.token`'s
+        /// `finishesOnConnect` would dismiss straight past.
+        case cardPointers
         /// Circle's public x402 directory (2026-08-06) — a watch list of lanes,
         /// so it must NOT ride `.token`: it has no token at all, and the first
         /// lane usually wants a second.
@@ -239,6 +245,7 @@ enum BridgeRouter {
             case .openSea:        "opensea"
             case .geckoTerminal:  "geckoterminal"
             case .walletbeat:     "walletbeat"
+            case .cardPointers:   "cardpointers"
             case .circleX402:     "x402"
             case .huggingFace:    "huggingface"
             case .radicle:        "radicle"
@@ -352,6 +359,7 @@ enum BridgeRouter {
         Row(offer: "OpenSea",    id: "opensea",    destination: .openSea),
         Row(offer: "GeckoTerminal", id: "geckoterminal", destination: .geckoTerminal),
         Row(offer: "Walletbeat", id: "walletbeat", destination: .walletbeat),
+        Row(offer: "CardPointers", id: "cardpointers", destination: .cardPointers),
         Row(offer: "Circle x402", id: "x402", destination: .circleX402),
         Row(offer: "Hugging Face", id: "huggingface", destination: .huggingFace),
         Row(offer: "Radicle",    id: "radicle",    destination: .radicle),
@@ -451,6 +459,7 @@ struct BridgeDestinationView: View {
         case .openSea:        OpenSeaScreen()
         case .geckoTerminal:  GeckoTerminalScreen()
         case .walletbeat:     WalletbeatScreen()
+        case .cardPointers:   CardPointersScreen()
         case .circleX402:     CircleX402Screen()
         case .huggingFace:    HuggingFaceScreen()
         case .radicle:        RadicleScreen()

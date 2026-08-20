@@ -2557,6 +2557,10 @@ struct FeedScreen: View {
                             thing.authorHandle == repo.name
                         }
                     }
+                case .cardPointers(let room):
+                    CardPointersRoomCard(room: room) { ref in
+                        openBySourceRef(ref, in: visible)
+                    }
                 case .walletbeat(let room):
                     WalletbeatRoomCard(room: room) { ref in
                         // The card names a real row's `sourceRef`, so this lands
@@ -4059,6 +4063,10 @@ struct FeedScreen: View {
         // person's own data at all, but somebody else's review of the software
         // they use. It reads stored ratings beside the landed rows.
         case walletbeat(WalletbeatRoom)
+        // CardPointers (prd §420) — the offers on your cards, led by the one
+        // that runs out soonest. The only head here whose subject is a
+        // DEADLINE somebody else set.
+        case cardPointers(CardPointers.Room)
         // The two CODE rooms (prd §401). GitHub had led with the contributions
         // heatmap since it shipped — a decorative card answering "how much did
         // I write", in the slot the rows that actually need you were competing
@@ -4159,6 +4167,8 @@ struct FeedScreen: View {
             return CursorRoomSource.compose(things: visible).map { .cursor($0) }
         case WalletbeatRoomSource.source:
             return WalletbeatRoomSource.compose(things: visible).map { .walletbeat($0) }
+        case CardPointersRoomSource.source:
+            return CardPointersRoomSource.compose(things: visible).map { .cardPointers($0) }
         case GitHubRoomSource.source:
             return GitHubRoomSource.compose(things: visible).map { .github($0) }
         // Reads no rows at all — its subject is bridge STATE, since no landed

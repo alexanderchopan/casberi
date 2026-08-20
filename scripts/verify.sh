@@ -841,6 +841,16 @@ harness "Radicle pure-logic self-test" "radicle self-test" "scripts/radicle-self
 # less true rather than to an error anything can see.
 harness "Walletbeat pure-logic self-test" "walletbeat self-test" "scripts/walletbeat-selftest.sh" "the Walletbeat logic self-test failed — run scripts/walletbeat-selftest.sh"
 
+# CardPointers (prd §420). The wire was MEASURED once, on 2026-08-20, against a free
+# account — and that measurement corrected three things a careful reading of their CLI had
+# got wrong, each of which alone ships a bridge that silently never returns a row: the host,
+# the SSE framing, and a pending poll answering HTTP 400. Nothing else in this tree can
+# re-derive any of it (their docs are unreachable and their CLI is the thing that was wrong),
+# so this harness is not the best record of that measurement, it is the ONLY one. Every
+# failure it catches is silent: a mis-parsed frame and an account with no offers render
+# identically.
+harness "CardPointers wire self-test" "cardpointers self-test" "scripts/cardpointers-selftest.sh" "the CardPointers wire self-test failed — run scripts/cardpointers-selftest.sh"
+
 # Altana's keystore room (`Model/AltanaKeystore.swift`, `Model/AltanaRoom.swift`).
 # Nothing on this host can register a key, revoke one, or make a grant expire —
 # there are 39 keys on Earth and this project owns none of them — so no device
@@ -1485,6 +1495,7 @@ else
     appleJournalHead  "Apple Journal"
     githubHead        "GitHub"
     radicleHead       "Radicle"
+    cardPointersHead  "CardPointers"
   )
   MISSING_HEADS=()
   for name in "${(k)ROOM_HEADS[@]}"; do

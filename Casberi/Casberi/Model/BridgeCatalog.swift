@@ -220,6 +220,25 @@ enum BridgeCatalog {
                          "Says how much has actually been reviewed, not just what passed",
                          "Vulnerabilities and breaches arrive as they're published"],
               needsSetup: true, added: day(2026, 8, 20)),
+        // SHOPPING, not Wallet (user ruling, 2026-08-20), and Privacy.com is
+        // the precedent that settles it: a credit card already sits in this
+        // group rather than beside the chains. The working line is that Wallet
+        // reads money you HOLD — balances, positions, an Apple Card's standing
+        // — while Shopping reads what you BUY. CardPointers holds no money and
+        // reads no balance; an offer is a discount at a merchant. (It still
+        // pairs with Apple Wallet across the two groups, which is the §420
+        // prize: that seat is the only one here that sees a MERCHANT name,
+        // this is the only one that knows which offer sits unused on which
+        // card.) The tagline names the subscription because every read needs
+        // it — measured, all five of their tools answer "-32001" for a free
+        // account — and a tile that discovered that after the tap is the §83
+        // dead control.
+        Offer(name: "CardPointers", tagline: "Unused card offers — needs CardPointers+", group: "Wallet", connectable: true,
+              summary: "The offers sitting unused on your cards, each with the date it expires, so the ones about to lapse turn up before they do.\n\nSign in on CardPointers' own page — no key to paste, no password in this app.\n\nRequires a CardPointers+ subscription: their offer tools return nothing without one. Read-only — every tool they publish is a read.",
+              features: ["Offers land with their expiry, so a deadline can reach you",
+                         "Sign-in happens on their page, never in here",
+                         "Reads only — it can never activate, spend, or change a card"],
+              needsSetup: true, added: day(2026, 8, 20)),
         // Wallet group by ruling (prd §222, 2026-07-26): a Gnosis Pay account
         // IS a Safe holding your own balance, so it belongs beside the wallets
         // whose total it joins — not Shopping, where Privacy.com's card

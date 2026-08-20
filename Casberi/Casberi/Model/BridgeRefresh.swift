@@ -717,6 +717,17 @@ enum BridgeRefresh {
                 _ = await WalletbeatIngest.refresh(context: context)
             }
         }
+        // CardPointers (prd §420). Gated on the SUBSCRIPTION as well as the
+        // seat: every tool there refuses an account without CardPointers+, so
+        // a sweep for one is a guaranteed round trip to be told no, on every
+        // foreground, forever. `CardPointersIngest.refresh` re-checks the same
+        // thing — this is the cheap gate, not the only one.
+        if connected("cardpointers"), CardPointersAuth.isPro {
+            let s = slot(); Task { @MainActor in
+                await BridgeRefresh.stagger(s)
+                _ = await CardPointersIngest.refresh(context: context)
+            }
+        }
         if ShopifyStore.shared.connected {
             let s = slot(); Task { @MainActor in
                 await BridgeRefresh.stagger(s)

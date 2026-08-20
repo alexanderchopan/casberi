@@ -34,6 +34,12 @@ KNOWN_NON_REACH=(
   privacy.com polymarket.com app.safe.global app.uniswap.org
   aerodrome.finance app.hyperliquid.xyz
   explorer.altana.network
+  cardpointers.com
+  # CardPointers' own site (prd §420) — their sign-in page, which the device
+  # flow opens in the person's browser, and their CardPointers+ page, offered
+  # as the door when an account turns out not to have the subscription. NEVER
+  # fetched: every request this app makes goes to `mcp.cardpointers.com`,
+  # which IS declared, and that includes the device-flow endpoints.
   # Altana's public explorer (prd §403) — where an account's keys open on tap,
   # and the ONLY place a key can actually be revoked (§112: we read and state,
   # they act). NEVER fetched: the seat reads the keystore CONTRACTS over

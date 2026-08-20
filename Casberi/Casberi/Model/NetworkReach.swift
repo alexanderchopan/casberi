@@ -218,6 +218,17 @@ enum NetworkReach {
                  reach: .whenConnected(bridge: "walletbeat"),
                  purpose: "Reads Walletbeat's public review of each wallet app you name, and their published list of wallet security incidents. Carries only the name of the wallet being read; there is no account and no key, so nothing identifies you.",
                  hosts: ["beta.walletbeat.eth.limo", "raw.githubusercontent.com"]),
+        // CardPointers (prd §420). ONE host, and it covers the sign-in too —
+        // the device flow reads as "plain REST outside MCP", which invites the
+        // assumption it lives on their marketing domain; measured 2026-08-20,
+        // `/api/device/code` and `/api/device/token` are both on the MCP host.
+        // `cardpointers.com` appears in this app only as a page their own
+        // sign-in and upgrade links open in your browser, never as a request
+        // of ours, so it is not declared here.
+        Endpoint(service: "CardPointers",
+                 reach: .whenConnected(bridge: "cardpointers"),
+                 purpose: "Reads the offers on your cards and their expiry dates, using a token you granted by signing in on CardPointers' own page. Carries that token and nothing else; no password ever reaches this app.",
+                 hosts: ["mcp.cardpointers.com"]),
         // Radicle (prd §400) — the ONLY entry here whose host the person can
         // change. Radicle has no central host: a seed node is chosen, and a
         // seed someone else names cannot be declared in advance, which is the
