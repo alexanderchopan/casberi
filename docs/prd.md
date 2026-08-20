@@ -26922,3 +26922,60 @@ move rather than a loosening**: it existed to prove `NoteMoments`' two crossings
 were still CALLED, after they shipped in July and nothing reached them for six
 weeks. There is no toast layer left for them to fire into, so there is nothing
 to keep reachable.
+
+## §416 — The wallet room gets section headers; the card labels stay (user: "should there be section headers between things eg instead of titles on the charts", "it's pretty smooth and looking good right now but maybe seems like a long feed", 2026-08-20)
+
+The wallet room stacks up to nine live-state cards before the stream — balance,
+flow, treemap, NFT shelf, risk strip, lending, liquidity, perps, approvals — and
+its arc existed only in the `.wallet` case's own comments: *what you hold, what
+it's doing, who can reach it, what's ahead*. On screen it read as nine slabs of
+equal weight with no landmarks, which is what **"maybe seems like a long feed"**
+is describing. Length was never the complaint; the room's cards are the product's
+differentiator (user, same session: *"i don't think the less risky cards need to
+be collapsed. it is still useful information and differentiates our wallet. all
+the visuals are things other wallets do not do"*). **Collapsing quiet cards was
+proposed and REFUSED on exactly that ground** — so this pass adds structure and
+removes nothing.
+
+**Four headers, each a different question:** *What you hold* (treemap, NFT
+shelf), *What it's doing* (risk, lending, liquidity, perps), *Who can reach it*
+(approvals), *Coming up*. The hero — balance card plus the flow band — gets
+none: a title above the first thing on a screen is noise, the room's name is the
+chip you tapped, and the flow band is the second half of the crown number's own
+sentence (§ the 2026-08-01 placement ruling), not a block of its own.
+
+**The card labels STAY, which is the half the question asked about.** "instead
+of titles on the charts" is right where a header and a label say the same thing
+and wrong where the label tells SIBLINGS apart: "Lending", "Liquidity" and
+"Perps" all sit under *What it's doing* and are indistinguishable without their
+names. Exactly one label goes — `walletComingUpSection`'s, which said precisely
+what its header now says (§208, never say one thing twice). The two cards that
+gain most are the treemap and the NFT shelf, which carried **no label at all**
+and floated unnamed.
+
+**The grammar is the stream's own day header, verbatim** — `heading22` in
+primary ink at the same insets — for two reasons. The room already HAD a
+group-header tier and it was the day names, so "What you hold" and "Today" read
+as peers because they are peers: both are top-level blocks of one room. And a
+second, smaller tier would mean inventing a rung the ramp does not carry between
+`heading22` and `label12`, for one screen.
+
+**A header is a claim that something follows, so every one is gated.** Each card
+self-gates already; a header emitted unconditionally would promise content on
+the wallets that have least of it, and *What it's doing* over a wallet with no
+positions is worse than no header at all. The gates are HOISTED rather than
+restated — `nftShelfEntry` and `walletRiskEntries` moved out of their sections so
+the header and the block ask literally the same question and can never disagree.
+The consequence is that header count scales with what a wallet actually holds: a
+simple wallet sees one header and the stream, a deep one sees four.
+
+**Jump chips and tabs stay ruled out** (asked again, same session). Headers are
+the scroll-native answer to the same need — where am I, how much is left —
+without a second navigation layer, and the room's one pinned control slot is
+already the wallet switcher's (§357: a control that persists across a room change
+mounts on the shell).
+
+**What this deliberately does NOT do:** it adds no new type rung, no new
+`Thing` field, no request, and no CloudKit deploy; and it does not judge whether
+a given card still earns its seat, which is a design review's job and not a
+header's.

@@ -2765,28 +2765,47 @@ struct FeedScreen: View {
             let all = visible.live.filter { !promoted.contains($0.id) }
             let latest = Array(all.prefix(Self.walletTodayRows))
             let led = Set(latest.map(\.id))
+            // The hero, and the only block with no header of its own: a title
+            // above the first thing on a screen is noise (see
+            // `walletGroupHeader` for the whole ruling).
             walletTilesSection(visible, latest: latest, streamTotal: all.count)
             // Answers the question the balance card's own delta pill raises,
             // before the map changes the subject to composition (2026-08-01).
+            // Stays with the hero rather than opening a block, for that same
+            // reason — it is the second half of the crown number's sentence.
             walletFlowSection
-            holdingsBlockSection
             // What you hold that ISN'T fungible, directly under the map that
             // says what is (prd §387, restoring §124a's placement). The two are
             // one "what you hold" pair; everything below changes the subject to
-            // what it's doing and who can reach it.
-            walletNFTSection
-            walletRiskSection
-            walletDeFiSection
-            walletLiquiditySection
-            walletPerpsSection
+            // what it's doing and who can reach it — which is what the headers
+            // added on 2026-08-20 finally say out loud.
+            if walletHoldsSomething {
+                walletGroupHeader(String(localized: "What you hold"))
+                holdingsBlockSection
+                walletNFTSection
+            }
+            if walletDoingSomething {
+                walletGroupHeader(String(localized: "What it's doing"))
+                walletRiskSection
+                walletDeFiSection
+                walletLiquiditySection
+                walletPerpsSection
+            }
             // Last of the state cards: everything above is what your money is
-            // doing, this is who else can reach it (prd §292).
-            walletApprovalsSection
+            // doing, this is who else can reach it (prd §292) — the room's
+            // sharpest change of subject, and the header is where it lands.
+            if !walletLive.exposure.isEmpty {
+                walletGroupHeader(String(localized: "Who can reach it"))
+                walletApprovalsSection
+            }
             // What's still AHEAD, before the history (2026-07-31). The stream
             // below reads backwards from today; these rows are dated forwards,
             // and nothing else in the app shows them any more — see
             // `walletUpcoming` for why they were effectively invisible.
-            walletComingUpSection(upcoming)
+            if !upcoming.isEmpty {
+                walletGroupHeader(String(localized: "Coming up"))
+                walletComingUpSection(upcoming)
+            }
             // …and the rows the card above already led with leave too, for
             // that same reason one level down (§208, never say one thing
             // twice). Purely SUBTRACTIVE: nothing else about the stream
@@ -4629,6 +4648,110 @@ struct FeedScreen: View {
                                          change: nil, venueLabel: $0.label) }
     }
 
+    // MARK: - The wallet room's section headers
+
+    /// A named block of the wallet room (2026-08-20, user ruling: *"should
+    /// there be section headers between things"*).
+    ///
+    /// The room stacks up to nine live-state cards before the stream, and its
+    /// arc — what you hold, what it's doing, who can reach it, what's ahead —
+    /// existed only in the `.wallet` case's own comments. On screen it read as
+    /// nine slabs of equal weight with no landmarks: no orientation, no sense
+    /// of how much was left, which is what "it seems like a long feed" is
+    /// describing. These are the landmarks.
+    ///
+    /// **The card labels STAY.** A header names the block; a card's own
+    /// `WalletSectionLabel` distinguishes it from its SIBLINGS inside that
+    /// block — "Lending", "Liquidity" and "Perps" all sit under "What it's
+    /// doing" and are indistinguishable without their names. The one label
+    /// that goes is `walletComingUpSection`'s, which said exactly what its
+    /// header now says (§208: never say one thing twice).
+    ///
+    /// **The grammar is the stream's own day header**, verbatim — `heading22`
+    /// in primary ink at the same insets. That is deliberate on two counts:
+    /// this room already had a group-header tier and it was the day names, so
+    /// "What you hold" and "Today" are peers because they ARE peers (both are
+    /// top-level blocks of one room); and a second, smaller tier would mean
+    /// inventing a rung the ramp doesn't carry between `heading22` and
+    /// `label12`, for one screen.
+    ///
+    /// **Never rendered over nothing.** Every card here self-gates, so a
+    /// header emitted unconditionally would promise content on the wallets
+    /// that have least of it — a "What it's doing" over a wallet with no
+    /// positions is worse than no header at all, because a header is a claim
+    /// that something follows. Hence the hoisted predicates below: each one
+    /// asks the same question its cards ask, so the header and the block can
+    /// never disagree.
+    ///
+    /// The hero (balance + flow) deliberately gets NO header — a title above
+    /// the first thing on a screen is noise, and the room's own name is the
+    /// chip you tapped to get here.
+    private func walletGroupHeader(_ title: String) -> some View {
+        Section {
+            Text(title)
+                .dsText(.heading22)
+                .foregroundStyle(DS.textPrimary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .accessibilityAddTraits(.isHeader)
+                // Index 0 so the header LEADS its block's stagger rather than
+                // popping in ahead of it — every other row in this room wears
+                // this entrance, and a header that didn't would be the one
+                // thing on screen that arrives without the wave.
+                .modifier(RowEntrance(index: 0, wave: shapeWave, style: entranceStyle))
+                .padding(.leading, DS.Space.s4)
+                .padding(.top, DS.Space.s6)
+                .padding(.bottom, DS.Space.s1)
+                .listRowInsets(EdgeInsets())
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+        }
+    }
+
+    /// The picked-NFT shelf's wallet, or nil when the shelf draws nothing.
+    ///
+    /// Hoisted out of `walletNFTSection` (2026-08-20) so the "What you hold"
+    /// header can ask whether that block has a second card without restating
+    /// the gate — two copies of this condition is how a header starts
+    /// appearing over an absent shelf.
+    private var nftShelfEntry: WalletStore.WatchedAddress? {
+        guard let entry = nftShelfWallet else { return nil }
+        // Gated on state the ROOM owns (`nftHasCollections`, filled by
+        // `loadWalletLive`), never on state the card would have to be alive to
+        // fetch — see that function for the pruning trap this avoids.
+        guard DemoMode.isActive || nftHasCollections
+                || WalletNFTStore.shared.hasPicks(wallet: entry.address)
+        else { return nil }
+        return entry
+    }
+
+    /// Every leveraged position on one axis, or nil when there are fewer than
+    /// two to compare. Hoisted for `nftShelfEntry`'s reason.
+    private var walletRiskEntries: [WalletRiskScale.Entry]? {
+        WalletRiskScaleSource.strip(aave: walletLive.positions,
+                                    morpho: walletLive.morpho,
+                                    hyperliquid: walletLive.hyperliquid)
+    }
+
+    /// Does the "What you hold" block have anything in it — the treemap, the
+    /// NFT shelf, or both.
+    private var walletHoldsSomething: Bool {
+        !blockStream.els.isEmpty || nftShelfEntry != nil
+    }
+
+    /// Does the "What it's doing" block have anything in it.
+    ///
+    /// The risk strip is derived FROM the three books below it, so it can
+    /// never be the only thing here — it is named anyway rather than inferred,
+    /// because "the strip implies a book" is a cross-file fact that would fail
+    /// silently the day either side changes.
+    private var walletDoingSomething: Bool {
+        walletRiskEntries != nil
+            || !walletLive.positions.isEmpty
+            || !walletLive.morpho.isEmpty
+            || !walletLive.uniswap.isEmpty
+            || !walletLive.hyperliquid.positions.isEmpty
+    }
+
     /// Where the money moved (2026-08-01, `WalletFlowBand`) — inflows, the
     /// wallet, outflows, sized by what each was worth when it moved.
     ///
@@ -4695,12 +4818,10 @@ struct FeedScreen: View {
     /// read failed.
     @ViewBuilder
     private var walletNFTSection: some View {
-        // Gated on state the ROOM owns (`nftHasCollections`, filled by
-        // `loadWalletLive`), never on state the card would have to be alive to
-        // fetch — see that function for the pruning trap this avoids.
-        if let entry = nftShelfWallet,
-           DemoMode.isActive || nftHasCollections
-            || WalletNFTStore.shared.hasPicks(wallet: entry.address) {
+        // The gate itself lives in `nftShelfEntry` (2026-08-20) — the "What
+        // you hold" header asks the same question, and one copy is what keeps
+        // the header and this card from ever disagreeing.
+        if let entry = nftShelfEntry {
             Section {
                 WalletNFTShelfCard(
                     wallet: entry.address,
@@ -4723,9 +4844,7 @@ struct FeedScreen: View {
     /// cards already say it better.
     @ViewBuilder
     private var walletRiskSection: some View {
-        if let entries = WalletRiskScaleSource.strip(aave: walletLive.positions,
-                                                     morpho: walletLive.morpho,
-                                                     hyperliquid: walletLive.hyperliquid) {
+        if let entries = walletRiskEntries {
             Section {
                 WalletRiskStrip(entries: entries)
                     .modifier(RowEntrance(index: 2, wave: shapeWave, style: entranceStyle))
@@ -4874,8 +4993,11 @@ struct FeedScreen: View {
         if !upcoming.isEmpty {
             Section {
                 VStack(alignment: .leading, spacing: DS.Space.s1) {
-                    WalletSectionLabel(title: String(localized: "Coming up"))
-                        .padding(.bottom, 2)
+                    // No label of its own since 2026-08-20: the group header
+                    // directly above says "Coming up", and this card is the
+                    // only thing under it (§208 — never say one thing twice).
+                    // Every other card here keeps its label, because every
+                    // other card has siblings to be told apart from.
                     // `keyed` for identity + `live` inside the closure before
                     // any stored read (corollaries 1 and 3): this is a derived
                     // array, and a heal's delete can land in the same graph

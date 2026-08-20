@@ -72061,6 +72061,34 @@
         }
       }
     },
+    "What it's doing": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Lo que está haciendo"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "運用中のもの"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "운용 중인 것"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "资金在做什么"
+          }
+        }
+      }
+    },
     "What lands in your feed": {
       "localizations": {
         "es": {
@@ -73209,6 +73237,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "@%@ 关注的对象。选择任意一个——他们的帖子会像任何被关注的账户一样出现。"
+          }
+        }
+      }
+    },
+    "Who can reach it": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Quién puede acceder"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "アクセスできる相手"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "접근할 수 있는 대상"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "谁能动用它"
           }
         }
       }
