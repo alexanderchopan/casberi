@@ -33,6 +33,21 @@ SHA=$(git -C "$ROOT" rev-parse --short HEAD 2>/dev/null || echo unknown)
 
 # The run. Full launch-survival cycles — the intermittent first-frame crash
 # class is exactly what an unattended nightly is FOR, and nobody is waiting.
+# VERIFY_NO_CACHE: an unattended green is the one nobody re-reads, so no
+# scheduled pass may ever be served a CACHED verdict — `verify.sh`'s skip cache
+# (2026-08-19) trades a re-run for "the harness and every file it names are
+# byte-identical to a run that passed", which is the right trade at a keyboard
+# and the wrong one at 03:20 with nobody looking. Exported rather than set on
+# the command below, so it reaches anything this wrapper grows later.
+#
+# Today it is a BELT, not a fix, and that is worth saying plainly: this nightly
+# drives `verify-mac.sh`, whose logic self-tests are its own DISCOVERED
+# sequential loop with no cache of any kind, so nothing here reads the flag
+# yet. It is set now so that the day that loop gains the cache — or this
+# wrapper calls `verify.sh` — the nightly is already correct rather than
+# quietly cached.
+export VERIFY_NO_CACHE=1
+
 LAUNCH_CYCLES=${LAUNCH_CYCLES:-10} "$ROOT/scripts/verify-mac.sh" > /tmp/nightly-mac-run.log 2>&1
 STATUS=$?
 

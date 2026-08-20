@@ -102,10 +102,15 @@ run_harnesses() {
     fi
   done
 
-  if (( skipped )); then
+  # The cache's STATE is always legible in the log. "51 to run" reads the same
+  # whether the cache was cold or switched off, and on an unattended run that
+  # is exactly the distinction someone reading the log later needs.
+  if (( ! use_cache )); then
+    step "Pure-logic harnesses ($n, up to $jobs at once, cache OFF via VERIFY_NO_CACHE)"
+  elif (( skipped )); then
     step "Pure-logic harnesses ($ran to run, $skipped unchanged since they passed, up to $jobs at once)"
   else
-    step "Pure-logic harnesses ($n, up to $jobs at once)"
+    step "Pure-logic harnesses ($n, up to $jobs at once, cache cold)"
   fi
 
   if (( ran )); then
