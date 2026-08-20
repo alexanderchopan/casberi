@@ -56,29 +56,88 @@ typeset -a _H_LABEL _H_OK _H_SCRIPT _H_MSG
 harness() { _H_LABEL+=("$1"); _H_OK+=("$2"); _H_SCRIPT+=("$3"); _H_MSG+=("$4"); }
 
 run_harnesses() {
-  local n=${#_H_SCRIPT} i rc bad=0
+  local n=${#_H_SCRIPT} i rc bad=0 skipped=0 ran=0
   local jobs; jobs=$(sysctl -n hw.ncpu 2>/dev/null || print 4)
-  step "Pure-logic harnesses ($n, up to $jobs at once)"
   export H_ROOT="$ROOT" H_OUT="$OUT"
-  { for (( i = 1; i <= n; i++ )); do print -r -- "${_H_SCRIPT[i]}"; done } \
-    | xargs -P "$jobs" -I{} zsh -c '
-        s="$1"; b="${s:t:r}"
-        "$H_ROOT/$s" > "$H_OUT/$b.log" 2>&1
-        print $? > "$H_OUT/$b.rc"
-        exit 0
-      ' _ {}
+
+  # ── The skip cache ────────────────────────────────────────────────
+  # These harnesses are PURE: the same script over the same source bytes gives
+  # the same verdict every time, so one whose script and whose every named
+  # input are byte-identical to a run that PASSED has nothing new to say.
+  # `scripts/support/harness-key.py` computes that key (harness + every repo
+  # file it names + the swift version) and carries the full safety argument,
+  # including its stated ceiling: it proves the inputs are unchanged, never
+  # that the input SET is complete.
+  #
+  # OFF for any unattended pass. CI and the nightly export VERIFY_NO_CACHE=1,
+  # because the one unacceptable outcome here is a cached ✓ standing in for a
+  # check that a real change should have re-run — and an unattended green is
+  # exactly the one nobody re-reads. Every skip is PRINTED, never silent.
+  local cache="${VERIFY_CACHE_DIR:-$HOME/Library/Caches/casberi-verify/harness}"
+  local use_cache=1
+  [[ -n "${VERIFY_NO_CACHE:-}" ]] && use_cache=0
+  mkdir -p "$cache"
+
+  typeset -A _KEY
+  if (( use_cache )); then
+    local line name k cnt
+    # One process for all 51, not one each — the keys are cheap, the python
+    # start-up is not.
+    while IFS=$'\t' read -r name k cnt; do
+      # A harness naming NO input is never trusted to a cache: an empty set
+      # cannot prove anything about what changed.
+      (( cnt > 0 )) && _KEY[$name]="$k"
+    done < <(python3 "$ROOT/scripts/support/harness-key.py" \
+               ${_H_SCRIPT[@]/#/$ROOT/} 2>/dev/null || true)
+  fi
+
+  typeset -a _TODO
+  for (( i = 1; i <= n; i++ )); do
+    local b="${_H_SCRIPT[i]:t:r}" nm="${_H_SCRIPT[i]:t}"
+    if (( use_cache )) && [[ -n "${_KEY[$nm]:-}" && -f "$cache/$nm.${_KEY[$nm]}" ]]; then
+      print 0 > "$H_OUT/$b.rc"; print -r -- "cached" > "$H_OUT/$b.log"
+      skipped=$((skipped+1))
+    else
+      _TODO+=("${_H_SCRIPT[i]}"); ran=$((ran+1))
+    fi
+  done
+
+  if (( skipped )); then
+    step "Pure-logic harnesses ($ran to run, $skipped unchanged since they passed, up to $jobs at once)"
+  else
+    step "Pure-logic harnesses ($n, up to $jobs at once)"
+  fi
+
+  if (( ran )); then
+    { for i in "${_TODO[@]}"; do print -r -- "$i"; done } \
+      | xargs -P "$jobs" -I{} zsh -c '
+          s="$1"; b="${s:t:r}"
+          "$H_ROOT/$s" > "$H_OUT/$b.log" 2>&1
+          print $? > "$H_OUT/$b.rc"
+          exit 0
+        ' _ {}
+  fi
+
   # Reported in REGISTRATION order, never completion order: a pass whose lines
   # reshuffle between runs cannot be diffed against the last one.
   for (( i = 1; i <= n; i++ )); do
-    local b="${_H_SCRIPT[i]:t:r}"
+    local b="${_H_SCRIPT[i]:t:r}" nm="${_H_SCRIPT[i]:t}"
     rc=$(<"$H_OUT/$b.rc" 2>/dev/null) || rc=99   # no rc file = never ran
     if [[ "$rc" == 0 ]]; then
-      print -P "%F{green}✓ ${_H_OK[i]}%f"
+      if [[ "$(<"$H_OUT/$b.log" 2>/dev/null)" == "cached" ]]; then
+        print -P "%F{green}✓ ${_H_OK[i]} (unchanged)%f"
+      else
+        print -P "%F{green}✓ ${_H_OK[i]}%f"
+        # Stamped only on a REAL pass, so a failure can never leave a green key
+        # behind for the next run to trust.
+        [[ -n "${_KEY[$nm]:-}" ]] && : > "$cache/$nm.${_KEY[$nm]}"
+      fi
     else
       bad=$((bad+1))
       print -P "%F{red}✗ ${_H_MSG[i]}%f"
       print -P "%F{red}    full log: $OUT/$b.log%f"
       tail -20 "$OUT/$b.log" 2>/dev/null | sed 's/^/    /'
+      [[ -n "${_KEY[$nm]:-}" ]] && rm -f "$cache/$nm.${_KEY[$nm]}"
     fi
   done
   (( bad == 0 )) || fail "$bad of $n pure-logic harnesses failed — see the logs above"
@@ -882,6 +941,15 @@ harness "Receipts-insight pure-logic self-test" "receipts-insight self-test" "sc
 # app's two most-used entrances (`SettleIn`, `RowEntrance`) ignored Reduce
 # Motion from the day they shipped. Neither is visible in a build or a
 # screenshot.
+
+# The skip cache is load-bearing for CORRECTNESS now, not just speed: a key
+# that fails to change when a source does turns a real regression into a
+# printed ✓. So its own self-test runs first, every pass — the rule this repo
+# already applies to every other check, applied to the thing that decides
+# which checks get to be skipped.
+step "Harness-key self-test"
+python3 "$ROOT/scripts/support/harness-key.py" --self-test \
+  || fail "the harness-key self-test failed — the skip cache is unsound, run with VERIFY_NO_CACHE=1"
 
 run_harnesses
 
