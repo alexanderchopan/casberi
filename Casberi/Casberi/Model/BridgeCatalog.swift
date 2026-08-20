@@ -450,7 +450,7 @@ enum BridgeCatalog {
         // Honesty note (2026-07-22): Privacy's key is NOT scoped read-only, so
         // the summary says plainly that the read-only promise is kept by
         // conduct, not by the credential (unlike every other keyed bridge).
-        Offer(name: "Privacy",     tagline: "Your card purchases, in reach",         group: "Shopping",  connectable: true,
+        Offer(name: "Privacy",     tagline: "Your card purchases, in reach",         group: "Wallet",  connectable: true,
               summary: "What you buy with your Privacy.com virtual cards lands in your feed, findable next to everything else.\n\nPrivacy's key can't be scoped read-only, so this only ever reads transactions — never creates, closes, or funds a card.",
               features: ["Each purchase with its merchant and amount",
                          "An API key from your Privacy account, kept in \(DS.device)'s Keychain",
