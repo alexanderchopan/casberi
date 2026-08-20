@@ -682,6 +682,8 @@ enum BridgeCatalog {
         // 2026-08-11, reading the strip's own `chipLabels:` NSLog — this
         // stub had no aliased member and so could not have caught it).
         Offer(name: "0xBow Vault", group: "Wallet"),
+        Offer(name: "Walletbeat",  group: "Wallet"),
+        Offer(name: "CardPointers", group: "Wallet"),
         Offer(name: "Tokens",     group: "Markets"),
         Offer(name: "Kalshi",     group: "Markets"),
         Offer(name: "Polymarket", group: "Markets"),
@@ -720,7 +722,7 @@ let wallet = CategoryFold.memberSet(of: "Wallet")
 check("Markets spans both category groups",
       CategoryFold.members(of: "Markets") == ["Tokens", "Kalshi", "Polymarket", "OpenSea"])
 check("Wallet has its own members",
-      CategoryFold.members(of: "Wallet") == ["Wallet", "Peer", "0xBow Vault"])
+      CategoryFold.members(of: "Wallet") == ["Wallet", "Peer", "0xBow Vault", "Walletbeat", "CardPointers"])
 check("a non-member is not a member", !CategoryFold.isMember("Photos", of: "Markets"))
 // isMember resolves through the catalog alias, exactly like fold — the
 // second place the shipped bug lived (found live, 2026-08-11: this function
@@ -734,6 +736,33 @@ check("isMember rejects a source aliased into a DIFFERENT category",
 check("a category name is recognized", CategoryFold.isCategory("Markets"))
 check("a category name is recognized (Wallet)", CategoryFold.isCategory("Wallet"))
 check("a plain source is not a category", !CategoryFold.isCategory("Kalshi"))
+
+// The fold exceptions (user ruling 2026-08-20). Walletbeat and CardPointers sit in the
+// Wallet GROUP but are not lenses on your addresses the way Aave and Peer are — one
+// reviews the software your money sits in, the other reads offers on your cards — so
+// each keeps its own chip and neither appears as a venue inside the Wallet switcher.
+// Both halves are asserted: a source exempted from the fold but left in the switcher
+// would be reachable twice.
+check("Walletbeat keeps its own chip",
+      CategoryFold.fold(["Walletbeat", "Peer"], category: "Wallet",
+                        members: CategoryFold.memberSet(of: "Wallet")).contains("Walletbeat"))
+check("CardPointers keeps its own chip",
+      CategoryFold.fold(["CardPointers", "Peer"], category: "Wallet",
+                        members: CategoryFold.memberSet(of: "Wallet")).contains("CardPointers"))
+check("a non-exempt Wallet member still folds",
+      !CategoryFold.fold(["Walletbeat", "Peer"], category: "Wallet",
+                         members: CategoryFold.memberSet(of: "Wallet")).contains("Peer"))
+check("an exempt source alone plants no empty cluster chip",
+      CategoryFold.fold(["Walletbeat"], category: "Wallet",
+                        members: CategoryFold.memberSet(of: "Wallet")) == ["Walletbeat"])
+check("the exempt chip lights itself, not its category",
+      CategoryFold.chipLabel(for: "Walletbeat", folded: ["Wallet", "Walletbeat"]) == "Walletbeat")
+check("Walletbeat is not a Wallet switcher venue",
+      !CategoryFold.scopes(category: "Wallet", present: ["Walletbeat", "Peer"]).contains("Walletbeat"))
+check("CardPointers is not a Wallet switcher venue",
+      !CategoryFold.scopes(category: "Wallet", present: ["CardPointers", "Peer"]).contains("CardPointers"))
+check("a non-exempt member is still a venue",
+      CategoryFold.scopes(category: "Wallet", present: ["Walletbeat", "Peer"]).contains("Peer"))
 check("an unknown label is not a category", !CategoryFold.isCategory("Nonsense"))
 
 // --- fold: UNCONDITIONAL now — the whole point of §351 ----------------------
@@ -949,7 +978,11 @@ mutate "scopes follows the caller's order instead of catalog order" \
             return ra != rb ? ra < rb : $0 < $1
         }|||return Array(filtered)' || mfail=1
 mutate "scopes tests the raw member set instead of resolving each present source's own category (THE SHIPPED BUG, a third place)" \
-  'let filtered = present.filter { BridgeCatalog.category(forSource: $0) == category }|||let filtered = present.filter { order.contains($0) }' || mfail=1
+  '!neverFold.contains($0) && BridgeCatalog.category(forSource: $0) == category|||order.contains($0)' || mfail=1
+# Without the chip-side exception both seats vanish into the Wallet cluster again — the
+# exact thing that made them look absent from the demo.
+mutate "the chip-side fold exception is load-bearing" \
+  'guard !neverFold.contains(label) else { folded.append(label); continue }|||guard true || neverFold.contains(label) else { folded.append(label); continue }' || mfail=1
 mutate "landing ignores whether the remembered venue is still present" \
   'present.contains(last) { return last }|||!last.isEmpty { return last }' || mfail=1
 mutate "the Wallet anchor is gone — the chip reopens on whichever rider you last visited (prd §354)" \

@@ -126,11 +126,31 @@ enum CategoryFold {
     /// aliased member to expose it (fixed in `category-fold-selftest.sh`
     /// alongside this). `members` stays as a cheap SKIP for a category with
     /// nothing to ever match, not as the membership test itself.
+    /// Sources that keep their OWN chip and never fold into their category.
+    ///
+    /// A venue switcher says "different views of the same subject" — Aave, Morpho and
+    /// Peer are lenses on YOUR ADDRESSES, so folding them behind one Wallet chip loses
+    /// nothing. These two are not lenses on anything you hold: Walletbeat reviews the
+    /// SOFTWARE your money sits in and CardPointers reads offers on your CARDS, so
+    /// switching to them from a balance is a change of subject, not a change of view.
+    /// Folded, each was reachable only two taps deep inside a switcher of money rooms
+    /// whose rows share nothing with theirs (user ruling 2026-08-20, after both
+    /// disappeared from the strip when they moved into the Wallet group).
+    ///
+    /// Deliberately a SOURCE list, not a category one: the rest of Wallet folds exactly
+    /// as before, and this stays the narrow exception it is rather than turning the fold
+    /// off for a whole band.
+    static let neverFold: Set<String> = ["Walletbeat", "CardPointers"]
+
     static func fold(_ ordered: [String], category: String, members: Set<String>) -> [String] {
         guard !members.isEmpty else { return ordered }
         var folded: [String] = []
         var placed = false
         for label in ordered {
+            // An exception keeps its own chip and does NOT count as a member for the
+            // cluster's placement — otherwise a category whose only present member is
+            // exempt would still plant an empty cluster chip.
+            guard !neverFold.contains(label) else { folded.append(label); continue }
             guard BridgeCatalog.category(forSource: label) == category
             else { folded.append(label); continue }
             if !placed { folded.append(category); placed = true }
@@ -158,6 +178,7 @@ enum CategoryFold {
     /// rather than taking one as a parameter, so a single call answers
     /// correctly no matter which category (if any) `source` belongs to.
     static func chipLabel(for source: String, folded: [String]) -> String {
+        guard !neverFold.contains(source) else { return source }
         guard let category = BridgeCatalog.category(forSource: source), folded.contains(category)
         else { return source }
         return category
@@ -268,7 +289,12 @@ enum CategoryFold {
         // Alias-aware membership FIRST (a present source belonging to some
         // OTHER category must never leak into this switcher), then rank the
         // survivors by their own catalog offer's position.
-        let filtered = present.filter { BridgeCatalog.category(forSource: $0) == category }
+        // A `neverFold` source keeps its own chip, so it must NOT also appear as a venue
+        // in its category's switcher — it would be reachable twice, once as itself and
+        // once inside a cluster it deliberately sits outside of.
+        let filtered = present.filter {
+            !neverFold.contains($0) && BridgeCatalog.category(forSource: $0) == category
+        }
         func rank(_ source: String) -> Int {
             let name = BridgeCatalog.offer(forSource: source)?.name ?? source
             return order.firstIndex(of: name) ?? Int.max
