@@ -10055,6 +10055,34 @@
         }
       }
     },
+    "%lld keys": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld claves"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld個のキー"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld개의 키"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld 把密钥"
+          }
+        }
+      }
+    },
     "%lld keys can sign across %lld accounts": {
       "localizations": {
         "en": {
@@ -10085,6 +10113,68 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "%lld 把密钥可为 %lld 个账户签名"
+          }
+        }
+      }
+    },
+    "%lld keys can sign for %lld accounts": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$lld keys can sign for %2$lld accounts"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld claves pueden firmar por %lld cuentas"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld個のキーが%lld件のアカウントに署名できます"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld개의 키가 %lld개 계정에 서명할 수 있습니다"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld 把密钥可为 %lld 个账户签名"
+          }
+        }
+      }
+    },
+    "%lld keys can sign for more than one of your accounts": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld claves pueden firmar por más de una de tus cuentas"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld個のキーが複数のアカウントに署名できます"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld개의 키가 두 개 이상의 계정에 서명할 수 있습니다"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld 把密钥可为你的多个账户签名"
           }
         }
       }
@@ -10141,6 +10231,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "登记表仍列出的 %lld 把密钥已无法再操作"
+          }
+        }
+      }
+    },
+    "%lld keys were revoked while you were watching": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Se revocaron %lld claves mientras observabas"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "監視中に%lld個のキーが取り消されました"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "지켜보는 동안 %lld개의 키가 철회되었습니다"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "在你关注期间有 %lld 把密钥被撤销"
           }
         }
       }
@@ -16258,6 +16376,40 @@
         }
       }
     },
+    "%lldd · %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$lldd · %2$@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lldd · %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld日 · %@"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld일 · %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld 天 · %@"
+          }
+        }
+      }
+    },
     "%lldh ago": {
       "localizations": {
         "es": {
@@ -16310,6 +16462,40 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "剩 %lld 小时"
+          }
+        }
+      }
+    },
+    "%lldh · %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$lldh · %2$@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lldh · %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld時間 · %@"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld시간 · %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld 小时 · %@"
           }
         }
       }
@@ -17302,6 +17488,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "登记表仍列出的 1 把密钥已无法再操作"
+          }
+        }
+      }
+    },
+    "1 key was revoked while you were watching": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Se revocó 1 clave mientras observabas"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "監視中に1個のキーが取り消されました"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "지켜보는 동안 1개의 키가 철회되었습니다"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "在你关注期间有 1 把密钥被撤销"
           }
         }
       }
@@ -19094,6 +19308,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "24小时 · 5 个价格点"
+          }
+        }
+      }
+    },
+    "<1h · %@": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "<1h · %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "1時間未満 · %@"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "1시간 미만 · %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "不到 1 小时 · %@"
           }
         }
       }
@@ -49191,6 +49433,34 @@
         }
       }
     },
+    "One key can sign for %lld of your accounts": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Una clave puede firmar por %lld de tus cuentas"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "1個のキーが%lld件のアカウントに署名できます"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "키 하나가 %lld개의 계정에 서명할 수 있습니다"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "一把密钥可为你的 %lld 个账户签名"
+          }
+        }
+      }
+    },
     "One line about what your things are up to.": {
       "localizations": {
         "es": {
@@ -71679,6 +71949,34 @@
         }
       }
     },
+    "What expires next": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Qué caduca antes"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "次に期限切れになるもの"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "다음 만료 항목"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "接下来什么会到期"
+          }
+        }
+      }
+    },
     "What goes together": {
       "localizations": {
         "es": {
@@ -83719,6 +84017,34 @@
         }
       }
     },
+    "revoked": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "revocada"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "取り消し済み"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "철회됨"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "已撤销"
+          }
+        }
+      }
+    },
     "root key": {
       "localizations": {
         "es": {
@@ -84220,6 +84546,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "已签名 1 次"
+          }
+        }
+      }
+    },
+    "signs for %lld accounts": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "firma por %lld cuentas"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld件のアカウントに署名します"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld개 계정에 서명함"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "为 %lld 个账户签名"
           }
         }
       }
