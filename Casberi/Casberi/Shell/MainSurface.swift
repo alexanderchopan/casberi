@@ -78,14 +78,6 @@ struct MainSurface: View {
     // `.standard` exactly as before.
     @AppStorage("demo.mode.active", store: ScratchDefaults.standard)
     private var demoActive = false
-    /// Source moments (wallet new highs, token new highs, a Bitrefill refill,
-    /// a quiet account posting again) — the data paths can't reach the
-    /// corpus-arrival watcher that fires the release rain (some aren't things
-    /// at all; others are a FACT about a thing, not its landing), so they
-    /// enqueue here and this surface deals the same berry rain + toast
-    /// (delight 2026-07-15, generalized 2026-07-21 — prd "surprise & delight
-    /// in the source feeds").
-    private let sourceMoments = SourceMoments.shared
     /// Anchors the doors' zoom transitions (each room grows from its door).
     @Namespace private var doorNS
 
@@ -1779,24 +1771,6 @@ struct MainSurface: View {
                 // source.
                 chrome.chipCaught(CategoryFold.chipLabel(for: lead.source, folded: chipLabels),
                                   firstEver: firstEver)
-                // A repo you star shipping a MAJOR release (a clean x.0.0) is a
-                // moment worth marking: a toast names it. One celebration per
-                // arrival batch — the marker is stamped at ingest
-                // (GitHubFeedFetch.isMajorRelease). It used to bump
-                // `refreshPulse` for a berry shower too; the rain is the
-                // PULL's payoff alone now (user ruling 2026-08-11 — ambient
-                // celebrations had it firing constantly).
-                if let major = surfaced.first(where: {
-                    fresh.contains($0.id) && $0.source == "GitHub"
-                        && $0.tags.contains(GitHubFeedFetch.majorReleaseTag)
-                }) {
-                    chrome.flash(String(localized: "\(major.title) is out 🎉"))
-                }
-                // A source crossing a round total of things is a quiet
-                // count-up, said once (prd §36v, generalized per-source
-                // 2026-07-21) — a fact the corpus can prove, never a streak.
-                let sourceCount = surfaced.filter { $0.source == lead.source }.count
-                ThingMilestones.check(source: lead.source, count: sourceCount, chrome: chrome)
                 if firstEver {
                     UserDefaults.standard.set(true, forKey: bloomedKey)
                     // A source with no honest brand color to show blooms
@@ -1812,45 +1786,6 @@ struct MainSurface: View {
                         // timer must not cut a newer bloom short.
                         guard gen == bloomGen else { return }
                         withAnimation(.easeOut(duration: 0.9)) { bloomHue = nil }
-                    }
-                }
-            }
-            // A source moment landed (a wallet or token new high, a Bitrefill
-            // refill, a quiet account posting again) — a toast names the
-            // moment. Moments used to deal the berry rain too (tinted to the
-            // moment's source hue), and with every bridge that gained one the
-            // shower fired more and more often while just reading the feed —
-            // the rain is the PULL's payoff alone now (user ruling
-            // 2026-08-11). A queue (not a single slot) means a moment fired
-            // while backgrounded survives here until this drain runs on
-            // foreground.
-            .onChange(of: sourceMoments.pulse) {
-                let moments = sourceMoments.drain()
-                guard !moments.isEmpty else { return }
-                // Toasts are one slot (ShellChrome.flash crossfades, never
-                // stacks) — showing only `moments.last` silently dropped
-                // every other moment in a busy pass (a widening blind spot
-                // as more bridges gained moments, 2026-07-28). Walk the
-                // batch oldest-first instead, each getting its own toast
-                // window before the next replaces it, so a validator
-                // proposing a block and a mention landing in the same
-                // sweep both get said, not just whichever fired last.
-                Task { @MainActor in
-                    for (index, moment) in moments.enumerated() {
-                        if index > 0 { try? await Task.sleep(for: .seconds(2.2)) }
-                        // A moment is the RARE tier of arrival (prd §384): its
-                        // toast wears its source's mark, and the source's chip
-                        // takes the same catch bob an arrival gets — so a new
-                        // high or a personal best lands visibly differently
-                        // from an ordinary row, without re-opening the
-                        // 2026-08-11 rain ruling (the shower stays the pull's
-                        // payoff alone; this is the chip and the toast, the
-                        // two surfaces that already celebrate).
-                        chrome.flash(moment.text, mark: moment.source)
-                        if let source = moment.source {
-                            chrome.chipCaught(CategoryFold.chipLabel(for: source,
-                                                                     folded: chipLabels))
-                        }
                     }
                 }
             }

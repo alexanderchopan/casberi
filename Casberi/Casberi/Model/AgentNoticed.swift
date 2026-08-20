@@ -18,8 +18,8 @@ import Observation
 ///   1. CROSS-SOURCE ECHO — two different rooms landed things wearing the
 ///      same tag today. The read only a corpus can make.
 ///   2. FULLEST DAY — today holds more captures than any day before it.
-///      High-water seeded SILENTLY on first sight (`SourceMoments`' own
-///      convention), so a fresh install's first day is never a fake record.
+///      High-water seeded SILENTLY on first sight, so a fresh install's first
+///      day is never a fake record.
 ///
 /// RARITY IS THE DESIGN: one notice per calendar day at most, each distinct
 /// notice shown once ever (a capped ledger), and the whole thing stands down
@@ -177,8 +177,8 @@ final class AgentNoticed {
     }
 
     /// Today holds more captures than any day before it. One `fetchCount`
-    /// against a persisted high-water; the first sight SEEDS silently
-    /// (`SourceMoments.notedNewHigh`'s rule), so no fresh install ever opens
+    /// against a persisted high-water; the first sight SEEDS silently, so no
+    /// fresh install ever opens
     /// on a fake record. The floor keeps a two-thing Tuesday from ever being
     /// a "record".
     private func recordDay(context: ModelContext, ledger: Set<String>) -> Notice? {

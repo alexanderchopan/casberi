@@ -456,7 +456,6 @@ enum SafeBridge {
                 }
             }
         }
-        noteDiscovery(count: discovered.count)
         return out
     }
 
@@ -776,8 +775,6 @@ enum SafeBridge {
                     context.insert(thing)
                     SpotlightIndex.index([thing])
                     added += 1
-                    noteThresholdIfMet(chain: chain, safeTxHash: safeTxHash, have: have, required: required,
-                                       tx: tx, safeAddress: safeAddress, facts: facts)
                 } else {
                     // ALREADY LANDED — and until 2026-08-17 that meant the row
                     // was never touched again, while `trackPending` below kept
@@ -884,29 +881,6 @@ enum SafeBridge {
         }
         title += String(localized: " — waiting on others")
         return (title, [])
-    }
-
-    // MARK: - Moments (2026-07-30)
-
-    /// The one moment in this feature that earns the berry rain: a pending
-    /// transaction reaching its threshold. It's the release of real suspense
-    /// — the thing you've been waiting days on can finally execute — and it's
-    /// rare, which is the bar `SourceMoments` is held to everywhere else.
-    ///
-    /// Fired once per `safeTxHash`, on the TRANSITION into met (a transaction
-    /// first seen already-complete is history, not news — the same
-    /// seed-the-baseline-silently rule every sibling cursor obeys).
-    @MainActor
-    private static func noteThresholdIfMet(chain: Chain, safeTxHash: String, have: Int, required: Int,
-                                           tx: [String: Any], safeAddress: String, facts: TokenFacts) {
-        guard required > 0, have >= required else { return }
-        let key = "moment.safe.ready.\(chain.seg).\(safeTxHash)"
-        let defaults = UserDefaults.standard
-        guard defaults.object(forKey: key) == nil else { return }
-        defaults.set(true, forKey: key)
-        SourceMoments.shared.fire(
-            String(localized: "Fully signed — \(describe(tx, chain: chain, safeAddress: safeAddress, facts: facts)) is ready to execute"),
-            source: sourceName)
     }
 
     // MARK: - Loop closers (2026-08-11)
@@ -1191,24 +1165,6 @@ enum SafeBridge {
         }
         out.reachable = answered
         return out
-    }
-
-    /// The discovery moment: the reverse lookup found Safes this person is a
-    /// signer on and never watched. Framed as an invitation, never an alarm —
-    /// finding something FOR you is good news, and the same fact worded as a
-    /// warning would read as an accusation. Fires once ever.
-    @MainActor
-    private static func noteDiscovery(count: Int) {
-        guard count > 0 else { return }
-        let key = "moment.safe.discovered.v1"
-        let defaults = UserDefaults.standard
-        guard defaults.object(forKey: key) == nil else { return }
-        defaults.set(true, forKey: key)
-        SourceMoments.shared.fire(
-            count == 1
-                ? String(localized: "You're a signer on a Safe — its queue is in your feed")
-                : String(localized: "You're a signer on \(count) Safes — their queues are in your feed"),
-            source: sourceName)
     }
 
     @MainActor private static var running = false

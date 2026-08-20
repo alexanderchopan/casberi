@@ -251,10 +251,6 @@ enum TrendingIngest {
 
         var existing = IngestSupport.existingSourceRefs(context, source: "GeckoTerminal")
         let backfill = ArtlessBackfill(context, source: "GeckoTerminal")
-        // Fetched once, not per-token below — the crossing check is a plain
-        // dictionary lookup against this, same shape as PostHogBridge.land's
-        // one keyed fetch.
-        let tokensByRef = IngestSupport.thingsByRef(context, source: "Tokens")
         var added = 0
         var reachedAny = false
 
@@ -311,18 +307,6 @@ enum TrendingIngest {
                 existing.insert(ref)
                 SpotlightIndex.index([thing])
                 added += 1
-                // "You were already watching this" — the crossing only this
-                // app can see: a token just starting to trend that's ALREADY
-                // on the Tokens watchlist (delight pass 2026-07-28). Exact
-                // join, zero extra network cost — `chain.dex` is the same
-                // slug TokenWatch.add stamps into its own sourceRef, so this
-                // is a direct ref lookup, not fuzzy matching.
-                let tokensRef = "tokens:\(chain.dex):\(t.tokenAddress.lowercased())"
-                if let watched = tokensByRef[tokensRef] {
-                    SourceMoments.shared.fire(
-                        String(localized: "\(TokensAsk.name(of: watched.title)) is trending on \(chain.display) — you're already watching it"),
-                        source: "GeckoTerminal")
-                }
             }
         }
         if added > 0 || backfill.any { context.saveHonestly() }

@@ -132,12 +132,9 @@ grep -q 'case "Obsidian":' "$INSIGHT" \
   || { echo "✗ Obsidian is not in FeedInsight.topicMap — the room leads with a heatmap"; exit 1; }
 grep -q 'healTopics(source: "Obsidian"' "$REFRESH" \
   || { echo "✗ nothing runs the vault's topic sweep"; exit 1; }
-# The Notes delight shipped in July and NOTHING CALLED IT until 2026-08-06.
-grep -q 'NoteMoments.checkLinkCrossings' "$REFRESH" \
-  || { echo "✗ NoteMoments.checkLinkCrossings is unreachable again — it was written,"; \
-       echo "  shipped, and never once called for six weeks"; exit 1; }
-grep -q 'NoteMoments.checkWikilinkReachBack' "$REFRESH" \
-  || { echo "✗ NoteMoments.checkWikilinkReachBack is unreachable again"; exit 1; }
+# The two Notes crossings this used to guard (`NoteMoments`) went with the
+# in-app moment bus (2026-08-19) — there is no toast layer left for them to
+# fire into, so there is nothing here to keep reachable.
 grep -q 'markAttention("obsidian"' "$REFRESH" \
   || { echo "✗ an unreadable vault is silent again (prd §284)"; exit 1; }
 

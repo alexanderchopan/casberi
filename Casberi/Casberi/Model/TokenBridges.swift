@@ -1371,7 +1371,6 @@ enum TokenIngest {
             else { continue }
             thing.mark = .done
             changed = true
-            SourceMoments.shared.fire(String(localized: "Done: \(thing.title)"), source: "Todoist")
         }
         if changed { context.saveHonestly() }
     }
@@ -1944,17 +1943,8 @@ enum TokenIngest {
                 changed = true
             }
             guard now.mark != thing.mark else { continue }
-            // The loop-closer moment (delight pass 2026-07-28) — an issue
-            // you were carrying resolving is real news; a plain state EDIT
-            // (todo → doing) isn't, so this only fires on the genuine
-            // transition INTO done, never on every mark change.
-            let justClosed = now.mark == .done && thing.mark != .done
             thing.mark = now.mark
             changed = true
-            if justClosed {
-                SourceMoments.shared.fire(
-                    String(localized: "Done: \(thing.title)"), source: "Linear")
-            }
         }
         if changed { context.saveHonestly() }
     }
@@ -2060,13 +2050,8 @@ enum TokenIngest {
                 changed = true
             }
             guard now.mark != thing.mark else { continue }
-            let justClosed = now.mark == .done && thing.mark != .done
             thing.mark = now.mark
             changed = true
-            if justClosed {
-                SourceMoments.shared.fire(
-                    String(localized: "Done: \(thing.title)"), source: "GitLab")
-            }
         }
         if changed { context.saveHonestly() }
     }
@@ -2215,13 +2200,8 @@ enum TokenIngest {
                 changed = true
             }
             guard now.mark != thing.mark else { continue }
-            let justClosed = now.mark == .done && thing.mark != .done
             thing.mark = now.mark
             changed = true
-            if justClosed {
-                SourceMoments.shared.fire(
-                    String(localized: "Done: \(thing.title)"), source: "Trello")
-            }
         }
         if changed { context.saveHonestly() }
     }
@@ -2343,13 +2323,8 @@ enum TokenIngest {
                 changed = true
             }
             guard now.mark != thing.mark else { continue }
-            let justClosed = now.mark == .done && thing.mark != .done
             thing.mark = now.mark
             changed = true
-            if justClosed {
-                SourceMoments.shared.fire(
-                    String(localized: "Done: \(thing.title)"), source: "Jira")
-            }
         }
         if changed { context.saveHonestly() }
     }

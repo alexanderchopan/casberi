@@ -91,15 +91,6 @@ enum FarcasterSigners {
             SpotlightIndex.index([thing])
             existing.insert(ref)
             added += 1
-
-            // NEWS ONLY (the mention moment's discipline): first sight walks
-            // years of grants, and none of them happened today.
-            if granted, (when ?? .now).timeIntervalSinceNow > -SocialInbound.newsWindow {
-                SourceMoments.shared.fire(
-                    app.map { String(localized: "\($0) can now post as you") }
-                        ?? String(localized: "A new app can post as you"),
-                    source: "Farcaster")
-            }
         }
         if highest > 0 { UserDefaults.standard.set(highest, forKey: key) }
         return added

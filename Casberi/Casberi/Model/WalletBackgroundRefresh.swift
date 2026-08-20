@@ -65,9 +65,8 @@ enum WalletBackgroundRefresh {
             state.complete(task, success: false)
         }
         state.work = Task { @MainActor in
-            // The same read a foreground does: holdings (records the sample,
-            // checks the combined/single new high). Any moment it detects queues
-            // on SourceMoments and shows on the next foreground.
+            // The same read a foreground does: holdings, which records the
+            // value sample the balance sparkline draws from.
             _ = await WalletIngest.topHoldingsByWallet()
             // …and then the notification sweep (prd §306). It runs on whatever
             // has ALREADY landed rather than driving a full bridge refresh:

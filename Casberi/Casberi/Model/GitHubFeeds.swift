@@ -838,13 +838,8 @@ enum GitHubFeedFetch {
         for thing in existing {
             guard let ref = thing.sourceRef, isInvolvedRef(ref), let now = byRef[ref],
                   now.mark != thing.mark else { continue }
-            let justClosed = now.mark == .done && thing.mark != .done
             thing.mark = now.mark
             changed = true
-            if justClosed {
-                SourceMoments.shared.fire(
-                    String(localized: "Closed: \(thing.title)"), source: "GitHub")
-            }
         }
         if changed { context.saveHonestly() }
     }

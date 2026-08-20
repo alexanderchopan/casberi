@@ -1452,25 +1452,6 @@ enum WalletIngest {
                                             holdings: g.topBySymbol)
         } }
         let groups = results.sorted { $0.0 < $1.0 }.compactMap(\.1)
-        // The combined "Across your wallets" total hitting a new high is a
-        // moment (delight 2026-07-15) — fired only with more than one wallet
-        // (a lone wallet's own high rides its per-address mark in recordSample).
-        //
-        // TWO honesty guards, both mirroring §77's combined-line rules:
-        // (1) The mark is scoped to the WATCHED SET's signature, so adding or
-        //     removing a wallet starts a fresh mark (seeded silently) — a
-        //     composition change can never masquerade as a new high (the exact
-        //     +millions-% artifact §77 fixed for the line). (2) Only when every
-        //     watched wallet priced this pass (`groups.count == watched.count`),
-        //     so a wallet intermittently failing to fetch — then recovering —
-        //     doesn't read as a gain either.
-        if watched.count > 1, groups.count == watched.count {
-            let combined = groups.reduce(0.0) { $0 + $1.totalUSD }
-            let signature = watched.map { $0.address.lowercased() }.sorted().joined(separator: ",")
-            if SourceMoments.shared.notedNewHigh(scope: "wallet.combined:\(signature)", value: combined) {
-                SourceMoments.shared.fire(String(localized: "Across your wallets: a new high, \(TokenStats.compact(combined)) 📈"), source: "Wallet")
-            }
-        }
         return groups
     }
 

@@ -63,7 +63,7 @@ enum PredictionTwin {
         case .kalshi:
             let hits = await PolymarketBridge.search(query, limit: 5)
             guard let hit = hits.first(where: {
-                PredictionMoments.titlesMatch(market.title, $0.title)
+                PredictionTitles.match(market.title, $0.title)
             }) else { return nil }
             guard !IngestSupport.hasSourceRef(context, source: "Polymarket",
                                               ref: "\(PolymarketBridge.refPrefix)\(hit.conditionId)")
@@ -74,7 +74,7 @@ enum PredictionTwin {
         case .polymarket:
             let hits = await KalshiWatch.search(query, limit: 5)
             guard let hit = hits.first(where: {
-                PredictionMoments.titlesMatch(market.title, $0.title)
+                PredictionTitles.match(market.title, $0.title)
             }) else { return nil }
             guard !IngestSupport.hasSourceRef(context, source: "Kalshi",
                                               ref: "kalshi:\(hit.ticker)")

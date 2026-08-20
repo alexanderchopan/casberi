@@ -615,10 +615,9 @@ enum FeedFollowIngest {
             }
         }
 
-        // YouTube retitle detection + Reddit postAuthor backfill (2026-07-28,
-        // FeedFollowMoments.swift) — both need the STORED row for an already-
-        // landed ref, lazily fetched once per refresh the same way
-        // `handleless` above is.
+        // YouTube retitle detection + Reddit postAuthor backfill (2026-07-28)
+        // — both need the STORED row for an already-landed ref, lazily
+        // fetched once per refresh the same way `handleless` above is.
         var byRef: [String: Thing]?
         var extraPatched = false
         func storedThing(_ ref: String) -> Thing? {
@@ -642,7 +641,7 @@ enum FeedFollowIngest {
         func itemAuthor(_ raw: String, feedName: String) -> String? {
             guard !raw.isEmpty else { return nil }
             guard kind != .reddit else {
-                let name = FeedFollowMoments.normalizedRedditAuthor(raw)
+                let name = FeedFollowFields.normalizedRedditAuthor(raw)
                 return name.isEmpty ? nil : name
             }
             return FeedParser.author(raw, feedName: feedName)
@@ -716,15 +715,6 @@ enum FeedFollowIngest {
                 let openURL = item.link.isEmpty ? item.mediaURL : item.link
                 let itemTags = item.categories.isEmpty ? showTags : item.categories
 
-                // A video's views doubling since last checked — self-relative,
-                // so it's checked on EVERY sighting (new or already-landed),
-                // not gated behind the dedupe branch below.
-                if kind == .youtube, let views = item.viewCount {
-                    FeedFollowMoments.checkYouTubeBreakout(
-                        ref: ref, title: IngestSupport.decodeHTMLEntities(item.title),
-                        channel: feedName, views: views)
-                }
-
                 if existing.contains(ref) {
                     backfill.patch(ref, image: item.imageURL,
                                    face: feedIcon, handle: feedName)
@@ -732,7 +722,6 @@ enum FeedFollowIngest {
                     if kind == .youtube, let thing = storedThing(ref) {
                         let decoded = IngestSupport.decodeHTMLEntities(item.title)
                         if !decoded.isEmpty, !thing.title.isEmpty, thing.title != decoded {
-                            FeedFollowMoments.fireRetitle(from: thing.title, to: decoded, channel: feedName)
                             thing.title = decoded
                             extraPatched = true
                         }
@@ -797,10 +786,12 @@ enum FeedFollowIngest {
                     thing.postAuthor = author
                 }
                 // Reddit-only (2026-07-28): the post's own first outbound
-                // link — FeedFollowMoments' corpus-join pass reads it on a
-                // later refresh.
+                // link. Nothing reads it today — the corpus-join pass that did
+                // went with the moment bus (2026-08-19) — but it is what a
+                // Reddit row's door would be built from, and it costs one
+                // already-parsed field to keep landing it.
                 if kind == .reddit {
-                    thing.externalLink = FeedFollowMoments.firstExternalLink(item.links)
+                    thing.externalLink = FeedFollowFields.firstExternalLink(item.links)
                 }
                 // The episode's own audio, when the feed declares one. Kept
                 // whether or not it stood in for `content` above: the row's
@@ -809,9 +800,8 @@ enum FeedFollowIngest {
                 // `else if`, NOT a second assignment — one field, two owners.
                 // Reddit items carry enclosures (any image or video post), so
                 // an unconditional write here CLOBBERED the outbound link set
-                // one line above, which is the whole input to
-                // `FeedFollowMoments.checkLinkCrossings` — a silent regression
-                // the moment enclosures started being read (2026-08-06).
+                // one line above — a silent regression the moment enclosures
+                // started being read (2026-08-06).
                 else if !item.mediaURL.isEmpty { thing.externalLink = item.mediaURL }
                 context.insert(thing)
                 existing.insert(ref)

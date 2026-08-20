@@ -365,14 +365,11 @@ enum MorphoDeFi {
     private static func chainId(_ network: String) -> Int? { chains.first(where: { $0.network == network })?.id }
 
     /// Runs both vault-side passes over one shared `book` read: the
-    /// reallocation alert (lands a Thing) and the rate-comparison moment (a
-    /// toast, never a thing — module doctrine again, a rate isn't a tally).
+    /// reallocation alert (lands a Thing).
     @MainActor
     static func syncVaultDelight(context: ModelContext, addresses: [String], existing: Set<String>) async -> Int {
         guard !addresses.isEmpty, let book = await book(addresses: addresses) else { return 0 }
-        let added = syncReallocations(context: context, vaults: book.vaults, existing: existing)
-        await checkRateComparison(vaults: book.vaults)
-        return added
+        return syncReallocations(context: context, vaults: book.vaults, existing: existing)
     }
 
     private static func allocationKey(_ chainId: Int, _ vaultAddress: String) -> String {
@@ -460,45 +457,6 @@ enum MorphoDeFi {
         UserDefaults.standard.set(data, forKey: key)
     }
 
-    private static func rateAheadKey(_ chainId: Int, _ vaultAddress: String) -> String {
-        "morpho.rateahead.\(chainId).\(vaultAddress.lowercased())"
-    }
-
-    /// A meaningful gap, in percentage points — under this, Aave and a
-    /// vault's own rate wobble past each other constantly and a moment
-    /// would fire every week for nothing.
-    private static let rateGapFloor = 0.01
-
-    /// A one-time toast (`SourceMoments`) the moment a held vault's own rate
-    /// falls meaningfully behind Aave Core's for the same asset — never a
-    /// persistent line on the card (a rate isn't a tally), and never
-    /// repeated for the same vault while the gap holds (a bucket, the same
-    /// shape as the liquidation-risk bucket, so it can re-fire if the gap
-    /// closes and reopens later). A vault BEATING Aave never fires — this
-    /// is specifically the "you're leaving yield on the table" nudge, not a
-    /// running commentary on every rate wobble. First sight seeds silently.
-    @MainActor
-    private static func checkRateComparison(vaults: [VaultHolding]) async {
-        let defaults = UserDefaults.standard
-        for vault in vaults {
-            guard vault.usd > 0, let vaultApy = vault.netApy,
-                  let cid = chainId(vault.network), !vault.vaultAddress.isEmpty,
-                  let aaveApy = await AaveRates.coreApy(network: vault.network, symbol: vault.assetSymbol)
-            else { continue }
-            let key = rateAheadKey(cid, vault.vaultAddress)
-            let gap = aaveApy - vaultApy
-            let ahead = gap >= rateGapFloor
-            let hadPriorReading = defaults.object(forKey: key) != nil
-            let wasAhead = defaults.bool(forKey: key)
-            defaults.set(ahead, forKey: key)
-            guard hadPriorReading, ahead, !wasAhead else { continue }
-            let points = Int((gap * 100).rounded())
-            guard points > 0 else { continue }
-            SourceMoments.shared.fire(
-                String(localized: "Aave pays about \(points) point more on \(vault.assetSymbol) than your \(vault.vaultName) vault"),
-                source: "Wallet")
-        }
-    }
 
     // MARK: - Activity (the PeerBridge cursor shape, timestamps not blocks)
 
@@ -847,8 +805,7 @@ enum MorphoDeFi {
         save(fakeLast, forKey: allocationKey(cid, vault.vaultAddress))
         let existing = IngestSupport.existingSourceRefs(context, source: "Wallet")
         let landed = await syncVaultDelight(context: context, addresses: addresses, existing: existing)
-        let moments = SourceMoments.shared.drain().map(\.text)
-        return "\(vault.vaultName): fakeLast=\(fakeLast) landed=\(landed) moments=\(moments)"
+        return "\(vault.vaultName): fakeLast=\(fakeLast) landed=\(landed)"
     }
     #endif
 }

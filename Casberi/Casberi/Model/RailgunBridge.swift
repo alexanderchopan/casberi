@@ -328,7 +328,7 @@ enum RailgunBridge {
                                            direction: .shield, existing: known)
             let unshieldBatch = await things(from: unshieldLogs, wallet: address,
                                              direction: .unshield, existing: known)
-            var landed = shieldBatch.things + unshieldBatch.things
+            let landed = shieldBatch.things + unshieldBatch.things
             // A capped batch HOLDS THE CURSOR at the last move it actually
             // landed, so the remainder is read next pass instead of being
             // skipped for good. Advancing past a truncated window is how a
@@ -349,21 +349,6 @@ enum RailgunBridge {
                 // skipped, permanently.
                 guard context.saveHonestly() else { continue }
                 added += landed.count
-                // Money ARRIVING rains (the Stripe precedent, prd §250) — but
-                // only money that arrived TODAY. "Really inserted" stops a
-                // re-read from re-raining; it does nothing about a backfill,
-                // and first sight here walks years of history, so a wallet
-                // that unshielded six times in 2023 would fire six
-                // celebrations at once for money that landed three years ago.
-                // The freshness gate is the sibling shape (Privacy Pools seeds
-                // anything older than a day silently). Shields never rain:
-                // sending your own money into a pool is not a moment,
-                // receiving it is.
-                for thing in landed
-                where thing.transferDirection == "received"
-                    && Date.now.timeIntervalSince(thing.capturedAt) < 86_400 {
-                    SourceMoments.shared.fire(thing.title, source: sourceName)
-                }
             }
             defaults.set(scanned, forKey: key)
         }

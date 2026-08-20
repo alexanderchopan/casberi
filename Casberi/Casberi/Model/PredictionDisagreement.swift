@@ -1,7 +1,7 @@
 import Foundation
 
 /// The "All" browse scope's own live join (prd §233, 2026-07-29) — reuses
-/// `PredictionMoments.titlesMatch` (the exact word-overlap test the watched-
+/// `PredictionTitles.match` (the exact word-overlap test the watched-
 /// market disagreement MOMENT already fires on) to surface the same
 /// cross-venue comparison at BROWSE time, before either side is watched.
 ///
@@ -25,7 +25,7 @@ enum PredictionDisagreement {
         var pairs: [Pair] = []
         for k in kalshiRows.prefix(limit) {
             let hits = await PolymarketBridge.search(k.title, limit: 3)
-            guard let p = hits.first(where: { PredictionMoments.titlesMatch(k.title, $0.title) }) else { continue }
+            guard let p = hits.first(where: { PredictionTitles.match(k.title, $0.title) }) else { continue }
             pairs.append(Pair(kalshi: k, polymarket: p))
         }
         return pairs
@@ -70,7 +70,7 @@ enum PredictionDisagreement {
         guard !kalshi.isEmpty else { return [] }
         var pairs: [Pair] = []
         for p in polymarketRows.prefix(limit) {
-            guard let k = kalshi.first(where: { PredictionMoments.titlesMatch(p.title, $0.title) })
+            guard let k = kalshi.first(where: { PredictionTitles.match(p.title, $0.title) })
             else { continue }
             pairs.append(Pair(kalshi: k, polymarket: p))
         }

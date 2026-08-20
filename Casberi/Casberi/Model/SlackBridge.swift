@@ -347,18 +347,6 @@ enum SlackIngest {
             context.insert(thing)
             SpotlightIndex.index([thing])
             added += 1
-
-            // A mention is the highest-signal event this bridge has, and
-            // used to land silently (same delight bus a Farcaster/Bluesky
-            // mention already rides). NEWS ONLY: a mention older than a day
-            // heals in quiet — connecting an account shouldn't rain 40
-            // toasts for months of old @s.
-            if when.timeIntervalSinceNow > -86400 {
-                let channelLabel = (channel["name"] as? String).map { "#\($0)" } ?? "Slack"
-                SourceMoments.shared.fire(
-                    String(localized: "@\(username) mentioned you in \(channelLabel)"),
-                    source: "Slack")
-            }
         }
         if added > 0 { context.saveHonestly() }
         return added

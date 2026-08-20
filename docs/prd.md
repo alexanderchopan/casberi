@@ -26857,3 +26857,68 @@ reason, which is what happened here.
 Harness at 149 assertions, mutation-proven seven ways. One survived first
 time, the same class as always: the dedupe guard could not fire because the
 fixture passed a single ghost.
+
+## §411 — The in-app moment bus is deleted (user: "really we should turn off all the in-app notifications bc that's what the 'all page' is for", 2026-08-19)
+
+**Reported as a starter-pack problem and it was a doctrine problem.** A tester
+followed the Farcaster starter pack — 140 accounts in one tap (`FarcasterStarterPack`)
+and said the app now "notifies for everything" and had gone slow. Both halves
+were the same object: `SourceMoments`, the shared delight bus, plus
+`MainSurface`'s drain, which played EVERY queued moment as its own toast **2.2
+seconds apart**, each one also firing a chip catch-bob. One sync that fired
+twenty moments was forty-four seconds of toasts and forty-four seconds of
+animation on the main thread.
+
+**The two worst offenders scaled with roster size, which is exactly what a pack
+changes.** `fireCrossingIfWatched` (both networks) fired whenever TWO WATCHED
+ACCOUNTS replied to or quoted each other — designed as a rare coincidence when
+you watch five people you chose, and the DEFAULT STATE when you follow 140
+accounts from one scene who all follow each other. `SocialMoments.checkReturns`
+had the same shape one step weaker: 140 accounts is 140 chances a day for
+somebody to come back after thirty days quiet.
+
+**The ruling is not a cap, a roster gate or a per-source switch — it is that the
+feed already does this job.** The All page IS the arrival surface; a toast that
+narrates a row landing in it says the same thing twice, two seconds later, in a
+place that scrolls away. So the whole bus is gone: `SourceMoments`,
+`ThingMilestones`, and the five files that existed only to compute moments
+(`SocialMoments`, `NoteMoments`, `MediaMoments`, `PredictionMoments`,
+`FeedFollowMoments`) — 51 fire sites across 28 files, plus the drain, plus the
+GitHub major-release toast and the per-source "N things banked" count-up.
+
+**What that costs, stated rather than glossed.** Roughly two thirds of the fire
+sites narrated a row that lands in the feed anyway, and lose nothing. The rest
+carried a reading with NO ROW BEHIND IT and those readings are simply gone: the
+crossings ("@a and @b are talking"), the quiet returns, likes received (a like
+never lands as a row — the roll on `PostCard` survives, the toast does not),
+every coincidence join ("you already saved it", "you're already watching it",
+"this device already reaches them"), the wallet new highs, "longest run yet",
+"back to X on Steam", and the Aave-beats-your-vault nudge. Deleting that last
+one left `AaveRates` with no caller at all, so it went too, and its DeFiLlama
+host came out of `NetworkReach` with it — the registry is a promise about what
+the app reaches, and it now reaches one host fewer.
+
+**What deliberately stays.** Direct outcome reports of a tap ("Copied", "Saved",
+"Watching @x", every connect failure) are not notifications — they are the
+answer to what you just did, and the starter-pack buttons already relabel
+themselves with their own count ("Followed 140"), which is why those two fires
+were pure duplication of a label the person is looking at. The two present-tense
+alarm lines on the Stripe and App Store Connect screens stay, on a sync you
+asked for, because bad news must say what it is rather than wait to be scrolled
+past. The chip catch-bob, the attention ring, the once-a-day whisper capsule and
+the pull-to-refresh rain all stay: they are the feed's own arrival language, not
+a notification. Lock-screen notifications (§306) are untouched — this ruling is
+about the in-app layer only.
+
+**Two shared helpers survived their files and were renamed rather than kept
+under a name that lies**: `PredictionTitles.match` (the word-overlap test that
+finds a Kalshi market's Polymarket twin — three real features read it) and
+`FeedFollowFields` (a Reddit author name, a post's first outbound link — both
+decide what a landed ROW says). `SocialInbound.MomentLedger` went with the like
+moment it existed to throttle.
+
+**The drift guard in `obsidian-selftest.sh` went too, and that is the honest
+move rather than a loosening**: it existed to prove `NoteMoments`' two crossings
+were still CALLED, after they shipped in July and nothing reached them for six
+weeks. There is no toast layer left for them to fire into, so there is nothing
+to keep reachable.

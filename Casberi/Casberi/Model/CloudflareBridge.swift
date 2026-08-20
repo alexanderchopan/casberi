@@ -832,8 +832,6 @@ extension TokenIngest {
             } else if covered.contains(ref), thing.mark != .done {
                 thing.mark = .done
                 changed = true
-                SourceMoments.shared.fire(
-                    String(localized: "Sorted: \(thing.title)"), source: "Cloudflare")
             }
         }
         if changed { context.saveHonestly() }

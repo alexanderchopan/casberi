@@ -7,8 +7,8 @@ import Observation
 /// rule — "names, not numbers" — but only half of it ever reached a screen.
 /// `readLikes` on both networks filled the post's `likeCount` and then threw
 /// every liker's identity away, except when the liker happened to be an
-/// account you already WATCH, and even then the only output was a
-/// `SourceMoments` toast that scrolls past in a second and lands nothing. So
+/// account you already WATCH, and even then the only output was a toast that
+/// scrolled past in a second and landed nothing. So
 /// "who liked my posts?" — the plainest question this half exists to answer —
 /// had no answer anywhere in the app, on either network. Farcaster had it
 /// worse still: `Notifications.likes` (the §306 "Liked by paulg and 2 others"

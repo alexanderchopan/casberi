@@ -197,16 +197,12 @@ enum FarcasterStarterPack {
     /// Returns how many were new (picking a pack you'd already partly
     /// followed only reports the delta, the follow-import's own rule).
     ///
-    /// Fires a delight moment (the `BlueskyStarterPacks.followAll` pattern)
-    /// only when at least one person was actually new — re-opening a pack
-    /// you've already followed says nothing.
+    /// The count is the ANSWER, not an announcement: the button that calls
+    /// this relabels itself with it ("Followed 140"), which is where somebody
+    /// who just tapped is already looking.
     @discardableResult
     @MainActor
     static func followAll() -> Int {
-        let n = FarcasterStore.shared.add(contentsOf: people.map { ($0.username, $0.fid) })
-        if n > 0 {
-            SourceMoments.shared.fire(String(localized: "Followed \(n) on Farcaster"), source: "Farcaster")
-        }
-        return n
+        FarcasterStore.shared.add(contentsOf: people.map { ($0.username, $0.fid) })
     }
 }

@@ -650,12 +650,6 @@ enum PostHogIngest {
                 tags: ["Milestone"],
                 sourceRef: "posthog:milestone:\(event):\(reached)"
             ))
-            // A milestone IS the count-as-event exception the module doctrine
-            // carves out — it lands as a thing already, but used to land
-            // silently (delight pass 2026-07-28). `state.announced` above is
-            // what makes this fire-once-per-rung; no separate throttle needed.
-            SourceMoments.shared.fire(
-                String(localized: "\(event) crossed \(formatted(reached))"), source: PostHogWatch.source)
         }
         return things
     }

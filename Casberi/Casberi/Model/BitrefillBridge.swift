@@ -214,21 +214,7 @@ enum BitrefillFetch {
         // rising above what it last read, never a drop (topping up isn't
         // news the other direction) — same asymmetric shape as every other
         // moment here. The FIRST read for an account seeds the mark silently.
-        let previous = BitrefillBalance.rawAmount
         BitrefillBalance.set(amount: amount, currency: currency)
-        if let previous, amount > previous * 1.0001 {
-            // `PriceFormat.string` is OPTIONAL, and interpolating it directly
-            // rendered the toast as `Optional("$5.00")` — the compiler's
-            // debug description, in user-facing copy. Unwrapping keeps the
-            // format string (and so the localization key) byte-identical.
-            // A price this can't format is the only case that fires nothing,
-            // and the amount IS the news here — a refill toast with no number
-            // says less than staying quiet.
-            if let money = PriceFormat.string(amount, currency: currency) {
-                let text = String(localized: "Bitrefill balance refilled — \(money) 💳")
-                await MainActor.run { SourceMoments.shared.fire(text, source: "Bitrefill") }
-            }
-        }
         return BitrefillBalance.checkLow(amount: amount, currency: currency)
     }
 

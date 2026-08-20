@@ -24,15 +24,15 @@ enum PredictionCrossings {
     }
 
     /// The first watched token this title names, if any — reuses
-    /// `PredictionMoments.significantWords`/subset test exactly, so "is this
+    /// `PredictionTitles.significantWords`/subset test exactly, so "is this
     /// the same thing?" has one answer whether it's asked at browse time or
     /// at follow time.
     static func crossing(for title: String, tokens: [Thing]) -> String? {
         guard !tokens.isEmpty else { return nil }
-        let marketWords = PredictionMoments.significantWords(title)
+        let marketWords = PredictionTitles.significantWords(title)
         for token in tokens {
             let name = TokensAsk.name(of: token.title)
-            let nameWords = PredictionMoments.significantWords(name)
+            let nameWords = PredictionTitles.significantWords(name)
             guard !nameWords.isEmpty, nameWords.isSubset(of: marketWords) else { continue }
             return name
         }

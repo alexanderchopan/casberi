@@ -276,8 +276,8 @@ final class ShellChrome {
     /// source's own brand hue when the pull happened inside its feed (set by
     /// FeedScreen's `performPull`, cleared to nil for "All"). nil rains the
     /// app's default berry blue (delight pass 2026-07-21). The pull is the
-    /// only writer since 2026-08-11 — SourceMoments used to set it too, back
-    /// when moments dealt the rain.
+    /// only writer since 2026-08-11, and since 2026-08-19 the only thing that
+    /// rains at all — the moment bus that used to set this is gone.
     var refreshHue: Color? = nil
 
     /// Mac's ⌘R (Mac polish, 2026-07-28): a trackpad's overscroll gesture is

@@ -186,7 +186,7 @@ enum NetworkReach {
                  reach: .whenConnected(bridge: "Wallet"),
                  purpose: "Reads your Aave, Spark and Morpho lending positions, Hyperliquid perps/spot/staked HYPE, veAERO locks on Aerodrome, and any Safe signatures awaiting you, for the wallets you watch — keyless, public data. Also reads Aave's public rate to compare against a vault you hold.",
                  hosts: ["blue-api.morpho.org", "app.morpho.org", "app.aave.com", "app.spark.fi",
-                         "api.safe.global", "yields.llama.fi", "api.hyperliquid.xyz"]),
+                         "api.safe.global", "api.hyperliquid.xyz"]),
         Endpoint(service: "Tokens",
                  reach: .whenConnected(bridge: "Tokens"),
                  purpose: "Fetches the public price history of a token you watch to draw its chart on \(DS.device). Carries only the token — nothing about you.",

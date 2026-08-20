@@ -261,10 +261,10 @@ struct StripeScreen: View {
             result = String(localized: "Couldn't reach Stripe — check your connection.")
             resultIsError = true
         }
-        // Money arriving already rains, via `SourceMoments` from the sweep
-        // itself. Money being CHALLENGED must never rain — so the two kinds of
-        // news answer in different registers, and the bad kind says what it is
-        // rather than buzzing anonymously. Only ever on a sync the person is
+        // Money arriving says nothing here — it lands in the feed, which is
+        // where arrivals live (2026-08-19). Money being CHALLENGED still
+        // answers on the screen you are standing on, because the bad kind of
+        // news has to say what it is rather than waiting to be scrolled past. Only ever on a sync the person is
         // present for; the background pass stays silent and lets the feed row
         // and its deadline do the telling.
         if let alarm = StripeIngest.lastPassAlarm {

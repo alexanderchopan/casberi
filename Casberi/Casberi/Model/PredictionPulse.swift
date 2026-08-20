@@ -7,7 +7,7 @@ import SwiftData
 /// gap: a watched market used to go dead the moment KalshiScreen closed
 /// (nothing refreshed it until its OWN sheet reopened and refetched). Now
 /// every watched market's odds refresh each foreground alongside the token
-/// watchlist, and PredictionMoments gets a chance to fire off the delta.
+/// watchlist.
 /// Ephemeral like TokenPulse's cache — prices/odds are perishable, nothing
 /// persists here.
 @MainActor
@@ -124,16 +124,13 @@ final class PredictionPulse {
         }
 
         var out: [String: Pulse] = [:]
-        var moments: [(thing: Thing, before: Double?, market: PredictionMarket)] = []
         var dirty = false
         for (thing, ref, market) in fetched {
             guard let market, thing.isLive else { continue }
-            let before = pulses[ref]?.probability
             out[ref] = Pulse(probability: market.probability, resolved: market.resolved,
                              yesWon: market.yesWon,
                              sinceWatched: thing.watchPriceUsd.map { market.probability - $0 },
                              thin: market.isThin, fetchedAt: stamp)
-            moments.append((thing, before, market))
 
             // A close time can move (an event is postponed, a race is called
             // early), and the deadline lane reads `dueAt` — so keep it true
@@ -152,9 +149,6 @@ final class PredictionPulse {
         }
         if dirty { context.saveHonestly() }
         pulses.merge(out) { _, new in new }
-        if !out.isEmpty {
-            CorpusSignal.shared.bump()
-            PredictionMoments.check(moments, context: context)
-        }
+        if !out.isEmpty { CorpusSignal.shared.bump() }
     }
 }

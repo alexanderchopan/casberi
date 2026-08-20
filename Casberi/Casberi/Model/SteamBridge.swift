@@ -101,16 +101,6 @@ enum SteamIngest {
                   let name = game["name"] as? String else { continue }
             let ref = "steam:\(appID)"
             let mins = (game["playtime_2weeks"] as? Int) ?? 0
-            // A game actively played THIS pass, noted as a return when it
-            // was last seen here 30+ days ago. Reads the LIVE playtime
-            // signal directly rather than any landed Thing — Steam dedupes
-            // a game to ONE thing forever (`existing.contains` below), so a
-            // replay after months away has no second landing to diff a gap
-            // against the way SocialMoments/MediaMoments' other returns do.
-            if mins > 0, SourceMoments.shared.notedReturn(scope: "steam.\(appID)", quietDays: 30) {
-                SourceMoments.shared.fire(
-                    String(localized: "Back to \(name) on Steam"), source: "Steam")
-            }
             guard !existing.contains(ref) else { continue }
             let hours = String(format: "%.1f", Double(mins) / 60)
             let thing = Thing(

@@ -29,7 +29,7 @@ import SwiftUI
 /// ## Rules kept
 ///
 /// **In is green, out is neutral slab — never red.** Arriving money is this
-/// app's one green moment (`SourceMoments` rains for it). Painting outflow red
+/// app's one green note. Painting outflow red
 /// would make every deliberate payment an alarm, which is the ruling
 /// `WalletCompositionStrip` already keeps for "Owed": a debt you opened on
 /// purpose isn't an emergency, and neither is rent.

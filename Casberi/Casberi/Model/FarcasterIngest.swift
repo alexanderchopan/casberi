@@ -171,10 +171,7 @@ final class FarcasterStore {
         channels = []
         // The like rolls go with them (2026-08-07) — reconnecting must not
         // find a roll naming who liked a cast the corpus no longer holds.
-        // The fired-moment ledger goes on the same line, so the two can never
-        // disagree about what a reconnect starts from.
         SocialLikers.shared.forget(refPrefix: "fc:")
-        SocialInbound.MomentLedger.forget(refPrefix: "fc:")
     }
 
     /// Adds a username together with an already-known fid — search resolves
@@ -755,18 +752,6 @@ enum FarcasterIngest {
             // whenever they liked it, read from your cast's side. Same
             // restamp, same three guards, so the two can't disagree.
             resurface(cast, reactedAt: liker.when)
-            // NEWS ONLY, and ONCE. `newsWindow` is a recency test, not a
-            // memory: on its own it re-fired the same like on every foreground
-            // pass for a day, because the read re-asks about the same post each
-            // time and the like is still inside its 24 hours. The ledger is
-            // what makes it news — see `SocialInbound.MomentLedger`.
-            if (liker.when ?? .now).timeIntervalSinceNow > -SocialInbound.newsWindow,
-               let ref = cast.sourceRef,
-               SocialInbound.MomentLedger.notedFirst(
-                   SocialInbound.MomentLedger.likeID(ref: ref, liker: handle)) {
-                SourceMoments.shared.fire(
-                    String(localized: "@\(handle) liked your cast"), source: "Farcaster")
-            }
         }
         guard let ref = cast.sourceRef, !likers.isEmpty else { return }
 
@@ -842,10 +827,6 @@ enum FarcasterIngest {
                 when: when, source: "Farcaster", existing: &existing, context: context) != nil
             else { continue }
             added += 1
-            if (when ?? .now).timeIntervalSinceNow > -SocialInbound.newsWindow {
-                SourceMoments.shared.fire(
-                    String(localized: "@\(username) started following you"), source: "Farcaster")
-            }
         }
         return added
     }
@@ -997,39 +978,7 @@ enum FarcasterIngest {
             landLinkedArticle(linkURL, sharedBy: username, capturedAt: when ?? .now,
                               existing: &existing, context: context)
         }
-        // Item 5 of the 2026-07-27 polish pass: a mention is the highest-
-        // signal event social has, and it used to land silently. Fires the
-        // same delight bus a wallet high or a quiet-account return already
-        // rides. NEWS ONLY (the Privacy Pools/§221 doctrine): a mention
-        // older than a day heals in silently — connecting an account for
-        // the first time shouldn't rain 40 toasts for months of old @s.
-        if why == "mention", (when ?? .now).timeIntervalSinceNow > -86400 {
-            SourceMoments.shared.fire(
-                String(localized: "@\(username) mentioned you"), source: "Farcaster")
-        }
-        // "The crossing" (item 6 of the 2026-07-27 polish pass): two watched
-        // accounts replying to or quoting each other. Detected purely from
-        // data already on the landed thing — `parent`/`quote` both carry the
-        // referenced cast's author — so this is a pure corpus join, not a
-        // network read, and nothing else on the phone can see it.
-        fireCrossingIfWatched(author: username, other: thing.parent?.handle ?? thing.quote?.handle,
-                              when: when)
         return true
-    }
-
-    /// Fires the crossing moment when BOTH sides of a reply/quote are
-    /// accounts this account watches — never when only one is (that's an
-    /// ordinary mention or an ordinary post). NEWS ONLY, the mention
-    /// moment's own discipline: an old crossing heals in silently, so
-    /// connecting an account doesn't rain for months of history.
-    @MainActor
-    private static func fireCrossingIfWatched(author: String, other: String?, when: Date?) {
-        guard let other, other != author,
-              (when ?? .now).timeIntervalSinceNow > -86400 else { return }
-        let watched = Set(FarcasterStore.shared.accounts.map(\.username))
-        guard watched.contains(author), watched.contains(other) else { return }
-        SourceMoments.shared.fire(
-            String(localized: "@\(author) and @\(other) are talking"), source: "Farcaster")
     }
 
     /// Fills the enrichment fields on a cast that landed BEFORE they existed

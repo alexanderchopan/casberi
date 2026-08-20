@@ -828,7 +828,6 @@ enum ASCIngest {
         var versionSeen = ASCState.versionStates
         var buildSeen = ASCState.buildStates
         var standing = ASCState.standing
-        var celebrating: Set<String> = []
         var alarming: Set<String> = []
 
         for appID in names.keys.sorted().prefix(ASCFetch.appCap) {
@@ -847,9 +846,8 @@ enum ASCIngest {
                                                 seen: &versionSeen, firstSight: firstSight)
                 else { continue }
                 landed.append(shaped.thing)
-                if let ref = shaped.thing.sourceRef {
-                    if shaped.state.celebrates { celebrating.insert(ref) }
-                    if shaped.state.alarming { alarming.insert(ref) }
+                if let ref = shaped.thing.sourceRef, shaped.state.alarming {
+                    alarming.insert(ref)
                 }
             }
 
@@ -894,9 +892,6 @@ enum ASCIngest {
         ASCState.seeded = true
 
         let inserted = insert(landed, context: context)
-        for thing in inserted where celebrating.contains(thing.sourceRef ?? "") {
-            SourceMoments.shared.fire(thing.title, source: ASCShape.source)
-        }
         lastPassAlarm = inserted.first { alarming.contains($0.sourceRef ?? "") }?.title
         return inserted.count
     }

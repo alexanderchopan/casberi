@@ -88,20 +88,12 @@ enum BlueskyStarterPacks {
     /// a 30-person pack doesn't re-encode the growing accounts array 30
     /// times. Returns how many were new.
     ///
-    /// Fires a delight moment (item 7 of the 2026-07-27 polish pass) —
-    /// following a whole pack at once is the single biggest act in the
-    /// follow flow, and it used to return a silent number. Only when at
-    /// least one person was actually new: re-opening a pack you already
-    /// followed says nothing, the same restraint every other moment here
-    /// keeps.
+    /// The count is the ANSWER, not an announcement: the button that calls
+    /// this relabels itself with it ("Followed 43"), which is where somebody
+    /// who just tapped is already looking.
     @discardableResult
     @MainActor
-    static func followAll(_ members: [Member], from pack: Pack) -> Int {
-        let n = BlueskyStore.shared.add(contentsOf: members.map(\.handle))
-        if n > 0 {
-            SourceMoments.shared.fire(
-                String(localized: "Followed \(n) from \(pack.name)"), source: "Bluesky")
-        }
-        return n
+    static func followAll(_ members: [Member]) -> Int {
+        BlueskyStore.shared.add(contentsOf: members.map(\.handle))
     }
 }

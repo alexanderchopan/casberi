@@ -820,15 +820,7 @@ enum PrivacyPoolsBridge {
                         thing.walletAddress = e["wallet"]
                         context.insert(thing)
                         SpotlightIndex.index([thing])
-                        if context.saveHonestly() {
-                            alerts += 1
-                            // The clear-to-withdraw flip is THE feature this
-                            // whole poll exists for — it landed as a thing but
-                            // rained nothing (delight pass 2026-07-28). Fires
-                            // once per label: `existing.contains(ref)` above
-                            // guards it, same as every other status flip here.
-                            SourceMoments.shared.fire(title, source: "Privacy Pools")
-                        }
+                        if context.saveHonestly() { alerts += 1 }
                     }
                 }
                 // Resolved either way — done watching this label.
@@ -859,10 +851,7 @@ enum PrivacyPoolsBridge {
                         thing.walletAddress = e["wallet"]
                         context.insert(thing)
                         SpotlightIndex.index([thing])
-                        if context.saveHonestly() {
-                            alerts += 1
-                            SourceMoments.shared.fire(thing.title, source: "Privacy Pools")
-                        }
+                        if context.saveHonestly() { alerts += 1 }
                     }
                 }
                 e["status"] = status

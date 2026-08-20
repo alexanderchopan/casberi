@@ -835,9 +835,9 @@ enum StripeIngest {
 
     /// The most urgent bad news the last pass landed, or nil if it was all
     /// good news (or nothing). Read by `StripeScreen` so a sync the person
-    /// asked for answers in the right register: money arriving already rains
-    /// via `SourceMoments`, and money being challenged must never rain — it
-    /// gets the honest failure tone and says what happened.
+    /// asked for answers in the right register: money arriving says nothing
+    /// (it lands in the feed), and money being challenged gets the honest
+    /// failure tone and says what happened.
     ///
     /// A one-slot mirror of the pass, not a log: the feed holds the history,
     /// this only has to survive from the `await` to the line that reads it.
@@ -961,9 +961,6 @@ enum StripeIngest {
             if shaped.celebrates, let ref = thing.sourceRef { celebrating.insert(ref) }
         }
         let inserted = insert(landed, context: context)
-        for thing in inserted where celebrating.contains(thing.sourceRef ?? "") {
-            SourceMoments.shared.fire(thing.title, source: StripeWatch.source)
-        }
         // Newest-first, and silence sorts ahead of everything because it was
         // prepended — so the one line the screen shows is the one that matters
         // most.

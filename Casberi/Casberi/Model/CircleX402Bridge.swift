@@ -636,10 +636,6 @@ enum X402Ingest {
         // second walk before the room can draw itself.
         X402State.save(sellers: walk.providers.map(\.seller), listings: walk.total,
                        medianPrice: median(walk.providers.flatMap(\.prices)))
-        // Fetched once, not per provider: the crossing below is a plain suffix
-        // check against this, the shape `GeckoTrending`'s watched-token crossing
-        // uses (one keyed read, then lookups).
-        let reached = NetworkLedger.shared.snapshot().map(\.host)
 
         for provider in walk.providers {
             // Quirk 2: a provider whose lanes we can't map still lands.
@@ -680,17 +676,6 @@ enum X402Ingest {
             context.insert(thing)
             SpotlightIndex.index([thing])
             added += 1
-
-            // The crossing only this app can see: a company selling on x402
-            // that this device ALREADY talks to. Zero extra cost — the ledger
-            // is on-device, and this fires only for a row `insert` really
-            // inserted, so a re-read window can't repeat it (the Stripe rule).
-            if let host = provider.registrableHost,
-               reached.contains(where: { $0 == host || $0.hasSuffix("." + host) }) {
-                SourceMoments.shared.fire(
-                    String(localized: "\(provider.name) sells on x402 — this \(DS.device) already reaches them"),
-                    source: source)
-            }
         }
 
         if added > 0 || healed { context.saveHonestly() }

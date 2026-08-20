@@ -253,9 +253,10 @@ fi
 #   * `feeds/videos.xml?channel_id=…` still serving `<entry>` — the whole
 #     bridge.
 #   * `media:statistics views=` on an entry — the only per-video number any
-#     feed this app follows carries, and the sole input to the view-doubling
-#     moment (FeedFollowMoments.checkYouTubeBreakout). It vanishes silently:
-#     the moment simply stops firing.
+#     feed this app follows carries. Nothing renders it since the in-app
+#     moment bus was removed (2026-08-19); it is still parsed, and still
+#     watched here, because it is the one number a YouTube row could ever
+#     show and its disappearance would be silent.
 #
 # A 404 here is AMBER, not red, and that is measured rather than lenient:
 # YouTube answers a client it has decided to throttle with a plain 404 (not a

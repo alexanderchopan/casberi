@@ -240,11 +240,6 @@ enum BridgeRefresh {
             let s = slot(); Task { @MainActor in
                 await BridgeRefresh.stagger(s)
                 _ = await RSSIngest.refresh(context: context)
-                // A blog back after months quiet — the feed-follow kinds have
-                // had this since 2026-07-28 and RSS was left out because it
-                // isn't a `FeedFollowKind`, not because the moment doesn't
-                // fit (2026-08-06). Read-only over what just landed.
-                FeedFollowMoments.checkRSSReturns(context: context)
             }
         }
         // What the articles actually SAY (2026-08-06) — a bounded, ledgered
@@ -270,11 +265,6 @@ enum BridgeRefresh {
                 SocialTopics.reconcile(source: "Bluesky",
                     watchedHandles: BlueskyStore.shared.handles,
                     topics: BlueskyStore.shared.feeds.map(\.name), context: context)
-                // A watched account posting again after a real quiet
-                // stretch is its own moment (delight 2026-07-21) — a
-                // read-only pass over what just landed, touching nothing
-                // in the ingest above.
-                SocialMoments.checkBlueskyReturns(context: context)
             }
             // Delete-sync: a post removed by its author or moderation.
             // Own network round trip and its own hourly throttle.
@@ -290,7 +280,6 @@ enum BridgeRefresh {
                 SocialTopics.reconcile(source: "Farcaster",
                     watchedHandles: FarcasterStore.shared.usernames,
                     topics: FarcasterStore.shared.channels.map(\.name), context: context)
-                SocialMoments.checkFarcasterReturns(context: context)
             }
             let s2 = slot(); Task { @MainActor in
                 await BridgeRefresh.stagger(s2)
@@ -304,7 +293,6 @@ enum BridgeRefresh {
                 SocialTopics.reconcile(source: "Nostr",
                     watchedHandles: NostrStore.shared.accounts.map(\.pubkeyHex),
                     topics: NostrStore.shared.hashtags.map(\.tag), context: context)
-                SocialMoments.checkNostrReturns(context: context)
             }
             // Delete-sync: own network round trip and its own hourly
             // throttle, same shape as Farcaster/Bluesky's heals above.
@@ -333,21 +321,6 @@ enum BridgeRefresh {
                 // landed corpus), so only the corpus-wide checks live here.
                 // Podcasts joined YouTube/Reddit here 2026-07-28 (a show off
                 // hiatus is the exact same shape).
-                if kind == .youtube || kind == .reddit || kind == .podcasts {
-                    FeedFollowMoments.checkReturns(kind, context: context)
-                }
-                if kind == .reddit {
-                    FeedFollowMoments.checkRedditLinkCrossings(context: context)
-                    FeedFollowMoments.checkRedditCrossPosters(context: context)
-                }
-                // A new upload/episode naming an artist you've liked/played
-                // elsewhere in Media — a pure local join, so it's harmless
-                // to re-run once per feed-follow kind (self-throttled by
-                // the freshWindow filter on the YouTube/Podcasts side, same
-                // as every other crossing here).
-                if kind == .youtube || kind == .podcasts {
-                    MediaMoments.checkArtistCrossing(context: context)
-                }
                 // A Short and a twenty-minute review land as the same kind of
                 // row — the feed says nothing about which is which, so this
                 // asks (2026-08-06, `YouTubeShorts`). Bounded, ledgered and
@@ -425,13 +398,11 @@ enum BridgeRefresh {
                 await BridgeRefresh.stagger(s)
                 _ = await WalletIngest.refresh(context: context)
             }
-            // The wallet's delight + faces pass (2026-07-15): fetch the full
-            // holdings (records value samples, checks the combined/single new
-            // high) so a moment fires from a plain foreground on Home, not only
-            // from the Wallet screen. Holdings sample-throttle at 4h. The moments
-            // enqueue on SourceMoments, which MainSurface drains into the berry
-            // rain + toast. Faces resolve here too, so a wallet wears its ENS
-            // avatar before you ever open its screen.
+            // The wallet's value-sample + faces pass (2026-07-15): fetch the
+            // full holdings so a sample is recorded from a plain foreground on
+            // Home, not only from the Wallet screen. Holdings sample-throttle
+            // at 4h. Faces resolve here too, so a wallet wears its ENS avatar
+            // before you ever open its screen.
             let s2 = slot(); Task { @MainActor in
                 await BridgeRefresh.stagger(s2)
                 _ = await WalletIngest.topHoldingsByWallet()
@@ -477,11 +448,6 @@ enum BridgeRefresh {
             let s = slot(); Task { @MainActor in
                 await BridgeRefresh.stagger(s)
                 _ = await SteamIngest.refresh(context: context)
-                // A followed streamer playing a game already in this
-                // library — a pure local join (delight pass 2026-07-28).
-                // Runs after Steam too, not just Twitch, since either
-                // bridge's refresh can be the one that makes the join true.
-                MediaMoments.checkTwitchSteamCrossing(context: context)
             }
         }
         if ObsidianStore.shared.connected {
@@ -497,16 +463,6 @@ enum BridgeRefresh {
                         statusLine: "Couldn't read that vault — reconnect it to resume")
                     return
                 }
-                // The Notes group's own delight (2026-07-28), which until
-                // today NOTHING CALLED — both checks were written, reviewed
-                // and shipped, and no code path ever reached them, so the
-                // moments they exist to fire have never once fired. They run
-                // here because this is the only pass that can make either true:
-                // a crossing needs a note that landed seconds ago, and the
-                // reach-back needs its wikilinks, both of which the refresh
-                // above has just written.
-                NoteMoments.checkLinkCrossings(context: context)
-                NoteMoments.checkWikilinkReachBack(context: context)
                 // Then the treemap terms off the words the sync just stored —
                 // the Files ordering. Store-only and self-terminating, so it
                 // can only ever trail the reader it reads.
@@ -555,23 +511,12 @@ enum BridgeRefresh {
             let s = slot(); Task { @MainActor in
                 await BridgeRefresh.stagger(s)
                 _ = await SlackIngest.refresh(context: context)
-                // Read-only passes over what just landed, touching nothing in
-                // the ingest above — same shape as the other networks' own
-                // return-check, plus the corpus join only Slack can offer
-                // (a mention sharing a link you already saved elsewhere).
-                SocialMoments.checkSlackReturns(context: context)
-                SocialMoments.checkSlackCrossings(context: context)
             }
         }
         if TwitchAuth.connected {
             let s = slot(); Task { @MainActor in
                 await BridgeRefresh.stagger(s)
                 _ = await TwitchIngest.refresh(context: context)
-                // Read-only passes over what just landed, touching nothing
-                // in the ingest above — same shape as the social bridges'
-                // own return-check (delight pass 2026-07-28).
-                MediaMoments.checkTwitchReturns(context: context)
-                MediaMoments.checkTwitchSteamCrossing(context: context)
             }
         }
         if OpenSeaStore.shared.connected {

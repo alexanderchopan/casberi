@@ -210,7 +210,7 @@ struct StarterPackImportSheet: View {
     private func followButton(_ pack: BlueskyStarterPacks.Pack) -> some View {
         Button {
             DSHaptic.tap()
-            let n = BlueskyStarterPacks.followAll(members, from: pack)
+            let n = BlueskyStarterPacks.followAll(members)
             followed = n
             onImport(n)
         } label: {
