@@ -616,7 +616,7 @@ enum DemoSeedAll {
                 source: "Walletbeat", ref: "walletbeat:news:rabby-silent-signature-extraction",
                 days: 1.0, hour: 14,
                 content: "https://\(WalletbeatHost.site)/news/",
-                tags: ["Security", "Vulnerability", "Rabby"]) { thing in
+                tags: ["Vulnerability", "Rabby"]) { thing in
                 thing.authorHandle = "rabby"
                 thing.summary = "A malicious app could queue a fund-draining signature request hidden by a Chrome pop-under bug, and unlocking the wallet signed it without the request ever being seen. Rabby shipped a fix; no funds were reported lost."
             })
@@ -626,7 +626,7 @@ enum DemoSeedAll {
                 source: "Walletbeat", ref: "walletbeat:news:safepal-customer-order-data-exposure",
                 days: 4.0, hour: 11,
                 content: "https://\(WalletbeatHost.site)/news/",
-                tags: ["Security", "Data breach"]) { thing in
+                tags: ["Data breach"]) { thing in
                 thing.summary = "An authorization flaw in SafePal's order-tracking plug-in allowed unauthorized access to customer order records, including shipping details."
             })
 
@@ -635,7 +635,7 @@ enum DemoSeedAll {
                 source: "Walletbeat", ref: "walletbeat:news:trezor-shipmonk-data-breach",
                 days: 7.0, hour: 16,
                 content: "https://\(WalletbeatHost.site)/news/",
-                tags: ["Security", "Data breach"]) { thing in
+                tags: ["Data breach"]) { thing in
                 thing.summary = "A fulfillment partner's breach exposed buyer names and addresses. Keys and devices were untouched — the risk is phishing that knows your name."
             })
 
@@ -645,7 +645,7 @@ enum DemoSeedAll {
                 source: "Walletbeat", ref: "walletbeat:rev:rabby:appIsolation:FAIL:2026-07-20",
                 days: 2.0, hour: 10,
                 content: "https://\(WalletbeatHost.site)/rabby/",
-                tags: ["Rating", "Privacy"]) { thing in
+                tags: ["Rating"]) { thing in
                 thing.authorHandle = "rabby"
                 thing.summary = "Rabby does not have an option to create a new account as part of the app connection flow."
             })

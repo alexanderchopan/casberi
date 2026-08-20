@@ -30,9 +30,16 @@ DIRSCREEN="Casberi/Casberi/Screens/WalletbeatDirectoryScreen.swift"
 FEED="Casberi/Casberi/Screens/FeedScreen.swift"
 PROBES="Casberi/Casberi/Shell/ProbeHooks.swift"
 REACH="Casberi/Casberi/Model/NetworkReach.swift"
+SHEET="Casberi/Casberi/Model/WalletbeatSheet.swift"
+SHEETSRC="Casberi/Casberi/Model/WalletbeatSheetSource.swift"
+SHEETVIEWS="Casberi/Casberi/Screens/WalletbeatSheetViews.swift"
+CARDSCREEN="Casberi/Casberi/Screens/WalletbeatCardScreen.swift"
+FIGURE="Casberi/Casberi/Model/RoomFigure.swift"
+SHEETVIEW="Casberi/Casberi/Screens/ThingSheetView.swift"
+RETRIEVER="Casberi/Casberi/Model/Retriever.swift"
 SNAP="scripts/walletbeat-snapshot.py"
 
-for f in "$RATING" "$NEWS" "$ROOM" "$DIR" "$BRIDGE" "$SRC" "$VIEWS" "$ROWS" "$CARD" "$DIRSCREEN" "$SNAP"; do
+for f in "$RATING" "$NEWS" "$ROOM" "$DIR" "$BRIDGE" "$SRC" "$VIEWS" "$ROWS" "$CARD" "$DIRSCREEN" "$SHEET" "$SHEETSRC" "$SHEETVIEWS" "$CARDSCREEN" "$SNAP"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 
@@ -118,6 +125,30 @@ guard 'WalletbeatNewsParse.openTag' "$TMP/src.nc" \
 # pinned here, where it cannot be luck.
 guard 'return ai == bi ? a.id < b.id : ai < bi' "$RATING" \
   "the card's attribute sort lost its id tiebreak — a report card would reshuffle between opens"
+
+# The sheet arm (prd §419 amendment). BOTH halves: an arm that draws without being
+# subtracted from `contentShown` renders the head AND lets ThingContentView redraw the
+# body underneath it.
+guard 'walletbeatHead(walletbeatShape)' "$SHEETVIEW" \
+  "the Walletbeat sheet arm is gone — its three records fall back to the generic link sheet"
+guard '&& walletbeatShape == nil' "$SHEETVIEW" \
+  "the Walletbeat arm is not subtracted from contentShown — the body would draw twice"
+guard 'WalletbeatReportCard(walletID:' "$SHEETVIEW" \
+  "a watched wallet's sheet no longer draws its report card"
+
+# The chip peek must preview the room it opens — X's and Safe's rule (§334).
+guard 'source == WalletbeatRoomSource.source' "$FIGURE" \
+  "the Walletbeat chip peek no longer previews its head — long-pressing the chip draws nothing"
+# The bar's VALUE is the judged count, never the pass count: a bar drawn from passes ranks
+# the wallet nobody examined alongside one that passed nothing.
+guard 'value: $0.counts.judged' "$FIGURE" \
+  "the peek's bars no longer measure how much was JUDGED — they would imply a verdict"
+
+# §308 facets, and the rule that they only narrow behind a named source.
+guard '"Incident")' "$RETRIEVER" \
+  "the Walletbeat incident facet is gone — 'security incidents in Walletbeat' stops narrowing"
+guard '"Rating")' "$RETRIEVER" \
+  "the Walletbeat rating facet is gone"
 
 # Negative guards: no score, no ranking of wallets by quality, ever.
 if grep -qiE '(qualityScore|overallScore|walletScore|bestWallet)' "$TMP/room.nc" "$TMP/views.nc" "$TMP/src.nc"; then
@@ -576,6 +607,59 @@ let capped = WalletbeatRoom(items: [rabby, ledger], total: 5, snapshotDay: "2026
 check("a folded tail is named", WalletbeatRoom.coverageNote(capped)?.contains("2 of 5") == true)
 
 print("")
+print("Sheet anatomies")
+
+func facts(_ ref: String?, source: String = "Walletbeat",
+           receipt: Bool = false) -> WalletbeatSheet.Facts {
+    WalletbeatSheet.Facts(source: source, sourceRef: ref, isImportReceipt: receipt)
+}
+
+check("a watch ref draws the wallet anatomy",
+      WalletbeatSheet.shape(facts("walletbeat:wallet:rabby")) == .wallet)
+check("a news ref draws the incident anatomy",
+      WalletbeatSheet.shape(facts("walletbeat:news:some-slug")) == .incident)
+check("a revision ref draws the revision anatomy",
+      WalletbeatSheet.shape(facts("walletbeat:rev:rabby:appIsolation:FAIL:2026-07-20")) == .revision)
+
+// Our own note about a sync is not one of these records.
+check("an import receipt keeps the generic sheet",
+      WalletbeatSheet.shape(facts("walletbeat:news:x", receipt: true)) == nil)
+check("another source is never claimed",
+      WalletbeatSheet.shape(facts("walletbeat:wallet:rabby", source: "Wallet")) == nil)
+check("a ref-less row keeps the generic sheet",
+      WalletbeatSheet.shape(facts(nil)) == nil)
+check("an unknown namespace keeps the generic sheet",
+      WalletbeatSheet.shape(facts("walletbeat:other:x")) == nil)
+
+// The ref grammar is ONE grammar — the producer and the parser read the same constants.
+check("the wallet prefix is shared", WalletbeatIdentity.walletPrefix == "walletbeat:wallet:")
+check("the news prefix is shared", WalletbeatNewsParse.refPrefix == WalletbeatIdentity.newsPrefix)
+
+print("")
+print("A revision, read back out of its own ref")
+let rev = WalletbeatSheet.revision(
+    fromRef: "walletbeat:rev:rabby:appIsolation:FAIL:2026-07-20")
+check("the wallet is read", rev?.walletID == "rabby")
+check("the attribute is read", rev?.attributeID == "appIsolation")
+check("the verdict is read", rev?.after == .fail)
+check("the day is read", rev?.day == "2026-07-20")
+
+// A revision landed before the entry carried a date — the stamp is empty, not absent.
+let noDay = WalletbeatSheet.revision(fromRef: "walletbeat:rev:rabby:appIsolation:PASS:")
+check("an empty day reads as none", noDay?.day == nil)
+check("the rest still parses", noDay?.after == .pass)
+
+check("a non-revision ref is refused",
+      WalletbeatSheet.revision(fromRef: "walletbeat:news:x") == nil)
+check("a truncated ref is refused",
+      WalletbeatSheet.revision(fromRef: "walletbeat:rev:rabby") == nil)
+// An unknown verdict must not become a confident wrong one.
+check("an unknown verdict is refused",
+      WalletbeatSheet.revision(fromRef: "walletbeat:rev:r:a:NONSENSE:2026-01-01") == nil)
+check("an empty wallet id is refused",
+      WalletbeatSheet.revision(fromRef: "walletbeat:rev::a:PASS:2026-01-01") == nil)
+
+print("")
 print("The bundled directory")
 check("the directory is populated", WalletbeatDirectory.wallets.count >= 30)
 check("it carries software and hardware",
@@ -638,7 +722,7 @@ if failures > 0 {
 print("walletbeat-selftest: OK — every assertion passed against the shipped source.")
 SWIFT
 
-build() { swiftc -O -o "$TMP/wb-selftest" "$1" "$2" "$3" "$4" "$TMP/main.swift" 2>"$TMP/build.log"; }
+build() { swiftc -O -o "$TMP/wb-selftest" "$1" "$2" "$3" "$4" "$SHEET" "$TMP/main.swift" 2>"$TMP/build.log"; }
 
 echo "Assertions (shipped source, compiled whole)"
 if ! build "$RATING" "$NEWS" "$ROOM" "$DIR"; then
@@ -656,11 +740,12 @@ echo "Mutations (each must be caught)"
 
 mutate() { # mutate <name> <rating|news|room> <from> <to>
   local name="$1" which="$2" from="$3" to="$4"
-  local a="$TMP/m-rating.swift" b="$TMP/m-news.swift" c="$TMP/m-room.swift"
-  cp "$RATING" "$a"; cp "$NEWS" "$b"; cp "$ROOM" "$c"
+  local a="$TMP/m-rating.swift" b="$TMP/m-news.swift" c="$TMP/m-room.swift" d="$TMP/m-sheet.swift"
+  cp "$RATING" "$a"; cp "$NEWS" "$b"; cp "$ROOM" "$c"; cp "$SHEET" "$d"
   local target="$a"
   [[ "$which" == "news" ]] && target="$b"
   [[ "$which" == "room" ]] && target="$c"
+  [[ "$which" == "sheet" ]] && target="$d"
   # Literal replacement through env, never a regex — escaping killed the first cut of
   # every harness in this tree that tried it.
   if ! MUT_FROM="$from" MUT_TO="$to" python3 - "$target" <<'PY'
@@ -675,7 +760,7 @@ PY
   then
     echo "  ✗ $name — the mutation did not apply (the shipped source moved)"; exit 1
   fi
-  if ! swiftc -O -o "$TMP/mut" "$a" "$b" "$c" "$DIR" "$TMP/main.swift" 2>/dev/null; then
+  if ! swiftc -O -o "$TMP/mut" "$a" "$b" "$c" "$DIR" "$d" "$TMP/main.swift" 2>/dev/null; then
     echo "  ✓ $name (rejected at compile)"; return
   fi
   if "$TMP/mut" > /dev/null 2>&1; then
@@ -770,6 +855,22 @@ mutate "an unexamined wallet does not outrank a rated one" room \
 mutate "an unread wallet is not called unrated" room \
   'guard item.read else { return String(localized: "Reading Walletbeat…") }' \
   'guard true else { return String(localized: "Reading Walletbeat…") }'
+
+# A namespace that matches everything makes every row claim an anatomy — including our
+# own import receipt, which would open a wallet report card for a note about a sync.
+mutate "the sheet namespace is exact" sheet \
+  'if ref.hasPrefix(WalletbeatIdentity.walletPrefix) { return .wallet }' \
+  'if ref.hasPrefix("walletbeat") { return .wallet }'
+
+# An import receipt claiming an anatomy is the same failure from the other side.
+mutate "an import receipt is excluded" sheet \
+  'guard f.source == WalletbeatIdentity.source, !f.isImportReceipt else { return nil }' \
+  'guard f.source == WalletbeatIdentity.source else { return nil }'
+
+# An unparseable verdict read as a real one puts a confident wrong word on the sheet.
+mutate "an unknown verdict is refused" sheet \
+  'guard let verdict = WalletbeatVerdict(rawValue: parts[2]) else { return nil }' \
+  'let verdict = WalletbeatVerdict(rawValue: parts[2]) ?? .unrated'
 
 echo ""
 echo "walletbeat-selftest: OK — assertions pass and every mutation is caught."

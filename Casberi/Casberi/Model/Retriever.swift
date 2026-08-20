@@ -858,6 +858,22 @@ enum Retriever {
             (["expired runs", "expired"], "Expired"),
             (["cancelled runs", "cancelled", "canceled"], "Cancelled"),
             (["pull requests", "pull request", "prs"], "PR"),
+            // The Walletbeat room's halves (2026-08-20, prd §419). It holds three
+            // genuinely different records — a wallet's standing review, a security
+            // incident, and Walletbeat revising one of its own ratings — and until now
+            // nothing could ask for one of them.
+            //
+            // The gating rule earns its keep here as much as anywhere in this table:
+            // "security" and "rating" are ordinary English AND words this corpus is full
+            // of (a saved article about security, a film rating). Behind a named source
+            // they narrow; unscoped they can never quietly empty a result.
+            //
+            // "Incident" moves here FROM `HomeComposition.mechanicalTags` rather than
+            // being added in both places — `mechanicalTags` derives from `facetTags`, so
+            // leaving the hand-list entry would be a duplicate in a list whose whole
+            // value is that it is curated (the `Photo` precedent, four rows up).
+            (["security incidents", "incidents", "incident", "breaches", "breach", "vulnerabilities", "vulnerability"], "Incident"),
+            (["rating changes", "revisions", "revision", "ratings", "rating"], "Rating"),
         ]
     }()
 

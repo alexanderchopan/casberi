@@ -109,9 +109,19 @@ struct WalletbeatDirectoryScreen: View {
 					.dsText(.body17)
 					.foregroundStyle(DS.textPrimary)
 					.lineLimit(1)
-				Text(WalletbeatCopy.coverage(counts))
-					.dsText(.label11)
-					.foregroundStyle(DS.textTertiary)
+				HStack(spacing: DS.Space.s2) {
+					Text(WalletbeatCopy.coverage(counts))
+						.dsText(.label11)
+						.foregroundStyle(DS.textTertiary)
+					// Walletbeat's own maturity stage, where they publish one. Hardware
+					// wallets have none in their schema, so this is absent rather than
+					// showing a dash — an empty slot on two-thirds of the list.
+					if let stage = entry.stage {
+						Text(stage)
+							.dsText(.label11).fontWeight(.semibold)
+							.foregroundStyle(DS.textSecondary)
+					}
+				}
 			}
 			Spacer(minLength: DS.Space.s2)
 			WalletbeatShape(counts: counts)

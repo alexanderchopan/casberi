@@ -84,7 +84,7 @@ enum WalletbeatIncidentStatus: String, Codable, Sendable {
 }
 
 /// One citation Walletbeat gives for an incident.
-struct WalletbeatSource: Sendable, Equatable {
+struct WalletbeatSource: Codable, Sendable, Equatable {
 	let label: String
 	let url: String
 }
@@ -109,8 +109,101 @@ struct WalletbeatIncident: Sendable, Equatable {
 	var ref: String { "walletbeat:news:\(slug)" }
 }
 
+// MARK: - What a landed incident's sheet needs
+
+/// The facts an incident's thing sheet draws, kept beside the row rather than inside it.
+///
+/// WHY A BOOK AND NOT `Thing` FIELDS: an incident's severity, status, funds flag and
+/// citations are four more facts than a `.link` row can carry, and every one of them would
+/// be a new stored property — which is a CloudKit Production deploy each (docs/
+/// cloudkit-deploy.md) for data that is re-read from a public document every few hours.
+/// The `X402State`/`ASCState` shape instead: a reading in UserDefaults, keyed by slug.
+///
+/// The first cut put the citations on `enrichedText`, which is retrieval-only by the
+/// 2026-07-15 ruling — so the sheet could not draw them and the sources Walletbeat cites
+/// were, structurally, on no screen at all.
+struct WalletbeatIncidentFacts: Codable, Sendable, Equatable {
+	let slug: String
+	let type: WalletbeatNewsType
+	let severity: WalletbeatSeverity?
+	let status: WalletbeatIncidentStatus
+	let fundsImpacted: Bool?
+	let wallets: [String]
+	let sources: [WalletbeatSource]
+	let publishedAt: Date
+	let updatedAt: Date?
+
+	init(_ incident: WalletbeatIncident) {
+		slug = incident.slug
+		type = incident.type
+		severity = incident.severity
+		status = incident.status
+		fundsImpacted = incident.fundsImpacted
+		wallets = incident.wallets
+		sources = incident.sources
+		publishedAt = incident.publishedAt
+		updatedAt = incident.updatedAt
+	}
+}
+
+enum WalletbeatIncidentBook {
+	private static let key = "walletbeat.incidents"
+
+	/// Walletbeat has published about a dozen incidents in four years, so this is a
+	/// generous ceiling rather than a real constraint — it exists so a registry that starts
+	/// publishing daily cannot grow an unbounded blob in UserDefaults.
+	static let cap = 200
+
+	static func all() -> [String: WalletbeatIncidentFacts] {
+		guard let data = UserDefaults.standard.data(forKey: key),
+			let decoded = try? JSONDecoder().decode([String: WalletbeatIncidentFacts].self, from: data)
+		else { return [:] }
+		return decoded
+	}
+
+	static func facts(_ slug: String) -> WalletbeatIncidentFacts? { all()[slug] }
+
+	/// Facts for a landed row, looked up by its `sourceRef`.
+	static func facts(ref: String?) -> WalletbeatIncidentFacts? {
+		guard let ref, ref.hasPrefix(WalletbeatNewsParse.refPrefix) else { return nil }
+		return facts(String(ref.dropFirst(WalletbeatNewsParse.refPrefix.count)))
+	}
+
+	/// Record what was just read. Called on landing AND on heal, because an incident's
+	/// status is the one fact here that moves after publication — a sheet still reading
+	/// "ongoing" a week after the fix is the worst thing this feed could say.
+	static func record(_ incident: WalletbeatIncident) {
+		var map = all()
+		map[incident.slug] = WalletbeatIncidentFacts(incident)
+		if map.count > cap {
+			// Oldest first, by the incident's own date rather than by insertion — a
+			// backfill lands out of order, so insertion order would drop the newest.
+			for entry in map.values.sorted(by: { $0.publishedAt < $1.publishedAt })
+				.prefix(map.count - cap) {
+				map.removeValue(forKey: entry.slug)
+			}
+		}
+		replace(map)
+	}
+
+	static func replace(_ map: [String: WalletbeatIncidentFacts]) {
+		guard let data = try? JSONEncoder().encode(map) else { return }
+		UserDefaults.standard.set(data, forKey: key)
+	}
+
+	/// Forget only the slugs named — the demo teardown's rule, since a dev install may hold
+	/// real incidents under this same key (prd §401).
+	static func forgetDemo(_ slugs: [String]) {
+		var map = all()
+		for slug in slugs { map.removeValue(forKey: slug) }
+		replace(map)
+	}
+
+	static func forgetAll() { UserDefaults.standard.removeObject(forKey: key) }
+}
+
 enum WalletbeatNewsParse {
-	static let refPrefix = "walletbeat:news:"
+	static let refPrefix = WalletbeatIdentity.newsPrefix
 
 	/// The tag an unresolved incident wears.
 	///

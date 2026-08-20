@@ -1064,6 +1064,47 @@ enum ProbeHooks {
                 NSLog("[Casberi] walletbeatRoom| %@", line)
             }
         },
+        // `-walletbeatSheetProbe YES` — which anatomy each landed row's sheet draws, and
+        // whether the facts behind it are actually there (prd §419 amendment).
+        //
+        // It exists because a sheet falling back to the GENERIC anatomy looks like a
+        // deliberate design rather than a bug: a title, a link and some tags is a
+        // perfectly plausible screen. The two ways it happens are a ref namespace that
+        // stopped matching (§311's silent-quiet class) and an incident whose facts were
+        // never recorded, and only the second is visible from the row itself.
+        Hook(key: "walletbeatSheetProbe") { _, context in
+            let rows = ((try? context.fetch(FetchDescriptor<Thing>(
+                predicate: #Predicate<Thing> { $0.source == "Walletbeat" },
+                sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]))) ?? []).live
+            let book = WalletbeatIncidentBook.all()
+            NSLog("[Casberi] walletbeatSheet| rows=%d incidentBook=%d cards=%d",
+                  rows.count, book.count, WalletbeatState.cards().count)
+            for thing in rows.prefix(30) {
+                let shape = WalletbeatSheetSource.shape(for: thing)
+                var detail = "—"
+                switch shape {
+                case .wallet:
+                    let id = WalletbeatWatch.walletID(from: thing) ?? "?"
+                    detail = "card=\(WalletbeatState.card(id) != nil ? "read" : "NOT READ")"
+                case .incident:
+                    if let facts = WalletbeatIncidentBook.facts(ref: thing.sourceRef) {
+                        detail = "severity=\(facts.severity?.rawValue ?? "none") status=\(facts.status.rawValue) sources=\(facts.sources.count)"
+                    } else {
+                        detail = "NO FACTS — the sheet falls back to prose only"
+                    }
+                case .revision:
+                    if let (rev, attribute) = WalletbeatSheetSource.revisionAttribute(for: thing) {
+                        detail = "\(rev.walletID).\(rev.attributeID)→\(rev.after.rawValue) named=\(attribute != nil)"
+                    } else {
+                        detail = "REF UNPARSED — the sheet falls back to generic"
+                    }
+                case .none:
+                    detail = "GENERIC (import receipt, or a ref no namespace matches)"
+                }
+                NSLog("[Casberi] walletbeatSheet| %@ · %@ · %@",
+                      shape?.rawValue ?? "generic", thing.title.prefix(46).description, detail)
+            }
+        },
         // `-widgetProbe YES` — everything the Home Screen would draw this
         // launch (prd §382).
         //

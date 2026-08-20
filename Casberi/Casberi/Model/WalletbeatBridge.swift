@@ -22,12 +22,16 @@ import SwiftData
 /// shape) rather than a UserDefaults list, so a watched wallet is in the corpus — findable,
 /// askable, and filterable — rather than being a setting that only its own screen can see.
 enum WalletbeatWatch {
-	static let source = "Walletbeat"
-	static let seatID = "walletbeat"
+	// Forwarded, never re-spelled: `WalletbeatIdentity` is the one grammar, and the pure
+	// sheet half reads it too. Two spellings of a ref prefix in two files is precisely
+	// §311, where a bridge stamped `privacypools:dep:` and a room head matched
+	// `privacypools:deposit:` — the room went quiet rather than breaking.
+	static let source = WalletbeatIdentity.source
+	static let seatID = WalletbeatIdentity.seatID
 
-	static let walletPrefix = "walletbeat:wallet:"
-	static let newsPrefix = WalletbeatNewsParse.refPrefix
-	static let revisionPrefix = "walletbeat:rev:"
+	static let walletPrefix = WalletbeatIdentity.walletPrefix
+	static let newsPrefix = WalletbeatIdentity.newsPrefix
+	static let revisionPrefix = WalletbeatIdentity.revisionPrefix
 
 	static func walletRef(_ id: String) -> String { "\(walletPrefix)\(id)" }
 
@@ -109,6 +113,7 @@ enum WalletbeatWatch {
 	static func removeAll(context: ModelContext) {
 		FollowPrune.remove(source: source, context: context) { _ in true }
 		WalletbeatState.forgetAll()
+		WalletbeatIncidentBook.forgetAll()
 	}
 }
 
@@ -368,7 +373,7 @@ enum WalletbeatIngest {
 			// Our own clock would date a months-old revision to today the first time a
 			// second read happens to run — the PeerRoom rule.
 			capturedAt: WalletbeatNewsParse.day(card.lastUpdated ?? "") ?? .now,
-			tags: ["Rating", revision.dimension.label],
+			tags: ["Rating"],
 			sourceRef: ref
 		)
 		thing.authorHandle = walletID
@@ -378,7 +383,7 @@ enum WalletbeatIngest {
 
 	@MainActor
 	private static func incidentThing(_ incident: WalletbeatIncident, context: ModelContext) -> Thing {
-		var tags = ["Security", incident.type.label]
+		var tags = [incident.type.label]
 		// The room head matches this exact tag to count what is still open — see
 		// `WalletbeatNewsParse.openTag`, which both halves read so they cannot drift.
 		if incident.status.isOpen { tags.append(WalletbeatNewsParse.openTag) }
@@ -403,6 +408,10 @@ enum WalletbeatIngest {
 		thing.authorHandle = incident.wallets.first
 		thing.enrichedText = retrievalText(incident)
 		thing.externalLink = "https://\(WalletbeatHost.site)/news/"
+		// The facts the sheet draws — severity, status, the funds flag and Walletbeat's
+		// citations — none of which a `.link` row can carry without four new stored
+		// properties and four CloudKit deploys.
+		WalletbeatIncidentBook.record(incident)
 		return thing
 	}
 
@@ -477,6 +486,7 @@ enum WalletbeatIngest {
 			}
 			// The whole reason to heal: an incident that has since been resolved must stop
 			// counting as open, or the room keeps an alarm lit over something that closed.
+			WalletbeatIncidentBook.record(fresh)
 			let wasOpen = thing.tags.contains(WalletbeatNewsParse.openTag)
 			if fresh.status.isOpen, !wasOpen {
 				thing.tags.append(WalletbeatNewsParse.openTag)

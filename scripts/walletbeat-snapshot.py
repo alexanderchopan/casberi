@@ -139,6 +139,13 @@ def demo_attributes(doc: dict) -> list[dict]:
     """Every attribute of one wallet, for the demo corpus.
 
     Real ratings and real sentences, so the demo shows what the feature actually shows.
+
+    DELIBERATELY WITHOUT `whyItMatters`. Walletbeat's "why does this matter?" prose runs to
+    3,375 characters at its longest, and bundling it for three demo wallets took this
+    generated file from 44KB to 111KB — 67KB of string literals compiled into every
+    shipped binary so that a demo disclosure has something to open. The live parse reads
+    the field, so the disclosure is there the moment real ratings are fetched; the demo
+    simply shows the rest of the card.
     Generated rather than hand-written for the reason every registry here is derived:
     a hand-copied rating goes stale silently and then the demo teaches the wrong thing.
     """

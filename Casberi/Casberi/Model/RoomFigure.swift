@@ -63,6 +63,27 @@ enum RoomFigure {
                                            detail: "\($0.have)/\($0.required)")
                         }))
         }
+        // Walletbeat is the third exception, for X's and Safe's exact reason (prd §419):
+        // its head is a FIGURE — a coverage bar per watched wallet — so leaving it out
+        // makes the peek preview NOTHING (the room has no topic map, no leaderboard and
+        // no heatmap registry entry), and long-pressing the chip draws a blank.
+        //
+        // THE VALUE IS THE JUDGED COUNT, never the pass count. A bar drawn from passes
+        // would rank the wallet nobody has examined alongside one that passed nothing,
+        // which is the single reading this whole feature exists to prevent — and the
+        // `detail` says the fraction out loud so the peek can never imply a verdict the
+        // room's own gate would refuse to draw.
+        if source == WalletbeatRoomSource.source,
+           let room = WalletbeatRoomSource.compose(things: things) {
+            let rows = room.items.prefix(4)
+            guard !rows.isEmpty else { return nil }
+            return card(WalletbeatRoom.headline(room),
+                        WalletbeatRoom.note(room),
+                        .bars(rows.map {
+                            AgentPanel.Bar(label: $0.name, value: $0.counts.judged,
+                                           detail: "\($0.counts.judged)/\($0.counts.applicable)")
+                        }))
+        }
         if let map = FeedInsight.topicMap(source: source, things: things) {
             // Four rows, not six: the inventory of small forms is explicit that
             // a six-cell map's last slot is one grid unit wide and its label

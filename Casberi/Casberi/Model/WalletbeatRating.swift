@@ -209,6 +209,16 @@ struct WalletbeatAttribute: Codable, Sendable, Equatable, Identifiable {
 	let verdict: WalletbeatVerdict
 	/// Walletbeat's own sentence. Displayed verbatim; never rewritten, never summarised.
 	let explanation: String
+	/// Walletbeat's "why does this matter?" prose — the paragraph that says why the
+	/// question is worth asking at all, independent of any wallet's answer to it.
+	///
+	/// OPTIONAL, and that is load-bearing rather than tidy: `WalletbeatCard` is persisted
+	/// as JSON in UserDefaults, and Swift's synthesized decoder does NOT apply a default
+	/// for a missing key. A non-Optional field with a default would have failed the decode
+	/// of every card already on disk — silently, since the store falls back to empty — so
+	/// every wallet would have read "not rated yet" after the update (the `RSSStore.Feed`
+	/// trap, one file over).
+	var whyItMatters: String?
 }
 
 /// A wallet's full ratings as last read from Walletbeat.
@@ -359,7 +369,16 @@ enum WalletbeatRatingParse {
 						name: (meta?["attributeDisplayName"] as? String) ?? attributeID,
 						question: (meta?["shortQuestion"] as? String) ?? "",
 						verdict: verdict,
-						explanation: placeholders.contains(explanation) ? "" : explanation
+						explanation: placeholders.contains(explanation) ? "" : explanation,
+						// Their longest prose, and the only text here that is about the
+						// QUESTION rather than about a wallet — so it stays true whatever
+						// the verdict is, and is worth keeping for a reader who does not
+						// already know why address correlation or chain verification
+						// matters. Collapsed to single spaces the way every other field
+						// here is; their formatter hard-wraps inside string literals.
+						whyItMatters: (meta?["whyItMatters"] as? String)
+							.map { $0.split(whereSeparator: \.isWhitespace).joined(separator: " ") }
+							.flatMap { $0.isEmpty ? nil : $0 }
 					)
 				)
 			}

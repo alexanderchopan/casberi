@@ -50,6 +50,17 @@ KNOWN_SUBJECT = {
     "Book club", "Casberi", "casberi", "Fitness", "Food", "Home",
     "Lisbon trip", "Onchain", "Work",
     "crypto", "economics", "politics", "science", "sports", "tech",
+    # A WALLET'S NAME (prd §419). Walletbeat stamps the affected wallet on each
+    # security incident, and a wallet you use really is something your corpus can
+    # be about — someone with four Rabby incidents has a Rabby theme. So these are
+    # subjects, not the state labels beside them ("Vulnerability", "Unresolved"),
+    # which are ruled mechanical.
+    #
+    # Only "Rabby" appears here because only the demo seeds a wallet name as a
+    # LITERAL; the live bridge resolves the name at run time from the directory,
+    # which this audit reads source text and so cannot see. That is the audit's
+    # stated scope rather than a gap in this ruling.
+    "Rabby",
 }
 
 # Fragments that are not tags at all: interpolated pieces of a computed label.

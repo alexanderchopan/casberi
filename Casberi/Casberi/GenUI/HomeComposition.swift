@@ -79,7 +79,7 @@ enum HomeComposition {
             "Deadline", "Your turn",                      // reminders, Safe
             "Deal",                                       // Deals
             "Delivered", "Module added",                  // Safe, 7579
-            "Deprecated", "Incident", "Issue",
+            "Deprecated", "Issue",
             "Regression", "Resolved",                     // GitHub, Sentry
             "Card", "Payment", "Pending", "Settled",      // Apple Wallet, cards
             "Price drop", "Price rise", "Refund",
@@ -124,6 +124,12 @@ enum HomeComposition {
             "Runway",                                     // Stripe, Cloudflare
             "Shielded",                                   // Privacy Pools
             "Trending", "Watching", "Watchlist",          // discovery, watches
+        // Walletbeat (prd §419). What a row IS, never what it is about: the kind of
+        // wallet, the kind of incident, and whether it is still open. The wallet NAMES
+        // this room also stamps are deliberately absent — "Rabby" really is a subject
+        // somebody's corpus can be about, and the themes map is right to draw it.
+        "Software", "Hardware",                       // which kind of wallet
+        "Vulnerability", "Data breach", "Unresolved", // which kind of incident, and its state
         ])
     }()
 

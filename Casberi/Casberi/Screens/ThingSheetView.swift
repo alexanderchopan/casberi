@@ -482,7 +482,16 @@ struct ThingSheetView: View {
                         .padding(.horizontal, DS.Space.s4)
                         .padding(.top, DS.Space.s3)
                         .settleIn(delay: 0.06)
-                } else if let noteShape {
+                } else if let walletbeatShape {
+                // REPLACES the title block, like the note and receipt arms below: a
+                // watched wallet's title is just the wallet's name, which its own report
+                // card says better, and an incident's title is set inside the anatomy at
+                // reading size rather than printed twice.
+                walletbeatHead(walletbeatShape)
+                    .padding(.horizontal, DS.Space.s4)
+                    .padding(.top, DS.Space.s3)
+                    .settleIn(delay: 0.06)
+            } else if let noteShape {
                     // THE NOTE ANATOMIES (prd §366). Like the Work receipt
                     // above, these REPLACE the title block rather than sitting
                     // over it: an entry's title was cut out of its own first
@@ -550,6 +559,7 @@ struct ThingSheetView: View {
                 // the same URL on every order in the corpus.
                 let contentShown = moneyReceipt == nil && !framedShot
                     && socialShape != .person && noteShape == nil
+                    && walletbeatShape == nil
                     && agentShape != .grant && purchaseReading == nil
                     && (isSocialPost || agentShape == .conversation
                     || (!linkOnlyBody && thing.kind != .event
@@ -1272,6 +1282,36 @@ struct ThingSheetView: View {
     /// title a name the person gave it or a line we cut out of its own body.
     private var noteShape: NoteSheet.Shape? {
         NoteSheetSource.shape(for: thing)
+    }
+
+    /// Which Walletbeat anatomy this thing draws (prd §419 amendment). Three genuinely
+    /// different records land in that room — a standing review, an event, and somebody
+    /// changing their mind — and the generic link sheet served all three as a title and
+    /// a URL.
+    private var walletbeatShape: WalletbeatSheet.Shape? {
+        WalletbeatSheetSource.shape(for: thing)
+    }
+
+    /// The Walletbeat head each shape leads with, in place of the title block.
+    @ViewBuilder
+    private func walletbeatHead(_ shape: WalletbeatSheet.Shape) -> some View {
+        switch shape {
+        case .wallet:
+            // The report card itself, not a link to a website. Before this the room's own
+            // rows opened a generic sheet while the feature's primary surface was
+            // reachable only from the setup screen and the directory.
+            if let walletID = WalletbeatWatch.walletID(from: thing) {
+                WalletbeatReportCard(walletID: walletID,
+                                     showsHeader: false,
+                                     onDismissForAsk: { dismiss() })
+            }
+        case .incident:
+            WalletbeatIncidentHead(thing: thing)
+        case .revision:
+            if let (revision, attribute) = WalletbeatSheetSource.revisionAttribute(for: thing) {
+                WalletbeatRevisionHead(thing: thing, revision: revision, attribute: attribute)
+            }
+        }
     }
 
     /// The head each shape leads with, in place of the title block.

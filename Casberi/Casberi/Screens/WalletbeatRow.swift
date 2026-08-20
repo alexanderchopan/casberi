@@ -97,6 +97,36 @@ struct WalletbeatNewsRow: View {
 
 	@ViewBuilder private var liveBody: some View {
 		let open = thing.tags.contains(WalletbeatNewsParse.openTag)
+		let wallet = thing.authorHandle.flatMap { id in
+			WalletbeatDirectory.wallets.first { $0.id == id }
+		}
+		HStack(alignment: .top, spacing: DS.Space.s3) {
+			// Every other room's rows lead with a disc; these were bare text, which broke
+			// the app's row anatomy and left open-vs-resolved readable only by reading.
+			// The wallet's monogram where an incident names one — and a neutral shield
+			// where it doesn't, which is a real case: Walletbeat's SafePal and Slope
+			// entries name no rated wallet at all.
+			ZStack(alignment: .bottomTrailing) {
+				if let wallet {
+					WalletbeatMark(name: wallet.name, size: 38)
+				} else {
+					RoundedRectangle(cornerRadius: 38 * 0.28, style: .continuous)
+						.fill(DS.surfaceWell)
+						.frame(width: 38, height: 38)
+						.overlay(
+							Image(systemName: "shield")
+								.dsGlyph(15)
+								.foregroundStyle(DS.textTertiary)
+						)
+				}
+				Circle()
+					.fill(open ? DS.attention : DS.confirm)
+					.frame(width: 11, height: 11)
+					.overlay(Circle().strokeBorder(DS.page, lineWidth: 2.5))
+					.offset(x: 3, y: 3)
+			}
+			.accessibilityHidden(true)
+
 		VStack(alignment: .leading, spacing: DS.Space.s2) {
 			HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
 				Text(thing.title)
@@ -123,12 +153,13 @@ struct WalletbeatNewsRow: View {
 						.dsText(.label11).fontWeight(.bold)
 						.foregroundStyle(DS.attention)
 				}
-				ForEach(thing.tags.filter { $0 != "Security" && $0 != WalletbeatNewsParse.openTag }, id: \.self) { tag in
+				ForEach(thing.tags.filter { $0 != WalletbeatNewsParse.openTag }, id: \.self) { tag in
 					Text(tag)
 						.dsText(.label11)
 						.foregroundStyle(DS.textTertiary)
 				}
 			}
+		}
 		}
 	}
 }
