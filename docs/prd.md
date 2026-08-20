@@ -80,6 +80,7 @@ at all.
 | Ruling | What it said | Changed by |
 |---|---|---|
 | §18 | Feed spec | amended by §64 |
+| §36 | Bridge selection ruling: live data only | amended by §418 |
 | §402 | Altana keystore: read Ethereum only, and stay silent on first sight | amended by §403 |
 | §36a | Home cover: an explicit banner outranks the automatic screensh | amended by §36j, superseded by §36o |
 | §36h | Wallet holdings: one treemap per wallet, leads Feed too, tap-t | amended by §36n |
@@ -27392,3 +27393,90 @@ stays one sentence. Anywhere a tappable child is added under
 
 **Costs nothing:** no new `Thing` field, no request, no CloudKit deploy, no new
 type rung. The one renamed symbol has a single call site.
+
+## §418 — CardPointers has a surface now, so §36's grounds are dead; the open question is a paywall on both sides (user: "I asked the CardPointers seeing if we could use their data in anyway and they said we could probably use MCP or CLI… does it help?", 2026-08-20)
+
+**§36 declined CardPointers for "no surface at all" and that is no longer
+true.** They shipped an MCP API — the same one their Claude and ChatGPT
+integrations ride — so the single fact that ruling rested on is obsolete.
+The rest of §36 is untouched and this would pass it: the read is live, on
+demand, and official, not a request-and-wait export. **This entry amends §36
+to the extent of that one parenthetical and nothing else.** Worth knowing
+before re-deriving any of this: the ledger already cites CardPointers as the
+pattern the "Coming up" card was copying, so the app has been borrowing the
+idea since 2026-07-14 without being able to read the source.
+
+**The wire, read off their CLI rather than their docs.** Both
+`cardpointers.com` and `mcp.cardpointers.com` are blocked from this host, so
+the help page could not be opened at all — but their CLI is a bash script
+that states the protocol literally. One endpoint, `POST
+https://mcp.cardpointers.com/mcp`, JSON-RPC 2.0, `Authorization: Bearer`,
+plus `X-MCP-Client: <name>/<version>` — they key on client identity, so a
+Casberi string would be ours to declare. The payload comes back as a JSON
+STRING inside `result.content[0].text`. Auth is **RFC 8628 device flow over
+plain REST, outside MCP entirely**: `POST /api/device/code` → show
+`user_code` and open `verification_uri_complete` → poll `POST
+/api/device/token` for `access_token`. Five tools, all reads:
+`recommend_card`, `list_my_cards`, `list_my_offers`, `search_my_offers`,
+`list_profiles`. JSON-RPC error `-32001` is their "not a subscriber" code and
+carries an `upgrade_url`.
+
+**Three things make it a better technical fit than most of the catalog.** (1)
+An offer carries an `expiration`, so it lands as a `dueAt` and every piece of
+deadline machinery already built — `NotifySweep`'s generic `deadlineNear`,
+the "Needs you" widget's runway, `KeptAskComposers.overdue` — works with no
+new code in any of them, exactly how App Store Connect's TestFlight expiry
+reached the lock screen in §323. (2) Device flow is the first sign-in hop
+here a probe could COMPLETE; every other browser-auth seat (Dropbox, Spotify,
+Reddit) says flatly that its connect cannot run headless. (3) Casberi would
+be an MCP CLIENT, which is new — `Model/MCPServer.swift` is the inverse, a
+Catalyst-only listener — and it needs no library at all: a POST, a header,
+one decode.
+
+**What would land, if it ever does.** §216 decides it. A card is STATE — a
+roster of twelve cards landing as twelve rows is the §223 count-as-a-thing
+failure, so cards belong in a snapshot feeding a room head, the `ASCState`
+shape. An OFFER is a thing, and so are the events around it: redeemed
+(`redeemed_date`), a card added (`added_date`, `approval_date`).
+`recommend_card` is not a sync at all, it is an ASK — the `WalletDeFiAsk`
+shape, answered live on the composer path. **The unclaimed total is a
+CEILING, never a saving**: an offer is worth its value only to somebody who
+was going to spend there anyway, and "$312 waiting for you" is §83's fake
+status in the one place a person would believe it instantly.
+
+**It carries no transactions, no points balances, no statements** — so it is
+not a spend source, and `Corpus.cardSpendSources` correctly excludes it (that
+membership is a DATA test: `.transaction` rows carrying `priceValue` AND
+`priceCurrency`). It does not overlap Apple Wallet, it composes with it:
+Apple Wallet is the only source in this app that sees a merchant name (§313),
+this is the only one that knows which offer sits unused on which card, so
+"you spent at that merchant on the card holding its unused offer" is a
+reading neither can make alone. That is the prize, and it is a
+`CrossSourceEcho` on an EXACT merchant match, never a topical one.
+
+**THE OPEN QUESTION IS NOT TECHNICAL: the paywall stands on both sides.** A
+user must be a CardPointers+ subscriber or the seat answers `-32001` forever,
+which means the tile has to say so before the tap or it is the §83 dead
+control; and we would have to subscribe ourselves to measure it, since
+without an account it ships UNMEASURED — a weak place to ship a seat that
+drives lock-screen deadlines. **Privacy.com is the precedent and it is a real
+one**: that seat already requires a paid plan, so "costs money" cannot by
+itself disqualify this. The remaining differences are of DEGREE and are worth
+naming rather than dressed up as principles — Privacy.com's rows are money
+moving, the module doctrine's standing exception, landing into machinery that
+already exists, while these rows need a room built for them; and CardPointers
+is a SECOND-ORDER source, somebody's reading of your issuers' offers rather
+than the issuer itself, which is the shape §36 declined Credit Karma and
+NerdWallet for. That decline was on technical grounds (aggregator-only, no
+direct read) which this now has, so it is not precedent against this — only a
+note about whose reading the data is.
+
+**Also unsettled: their permission.** The person asked said "probably", which
+is not permission, and their CLI ships Business Source License 1.1,
+non-commercial and personal use only — that governs their code rather than
+their service, but it states their posture. A third-party app reading a
+subscriber's account through their AI surface wants a written yes and a
+declared client string before a line is written.
+
+**Nothing is built and nothing was measured.** Every field above is read off
+their CLI's source, never once off the wire.
