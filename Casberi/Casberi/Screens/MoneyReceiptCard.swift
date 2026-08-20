@@ -388,6 +388,11 @@ struct ReceiptStampPill: View {
 struct MoneyCommentaryCard: View {
     let commentary: MoneyCommentary
 
+    /// How far the note is inset from the paper's leading edge (prd §417).
+    /// Enough that the step is unmistakable at a glance; short enough that a
+    /// two-line sentence doesn't start wrapping to buy it.
+    private static let indent: CGFloat = DS.Space.s6
+
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Space.s1) {
             Text(verbatim: commentary.headline)
@@ -402,9 +407,31 @@ struct MoneyCommentaryCard: View {
         }
         .padding(DS.Space.s4)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(DS.fillFaint,
-                    in: RoundedRectangle(cornerRadius: DS.Radius.card + 4,
-                                         style: .continuous))
+        // A NOTE ON THE RECORD, NOT A SECOND RECORD (2026-08-20, prd §417).
+        // This drew as `DS.fillFaint` at the paper's own width and the paper's
+        // own corner radius, so the sheet showed two slabs of equal authority —
+        // and they are not equal: the receipt is EVIDENCE, stamped from what a
+        // bridge landed, while this is the app's own reading of it. Same words,
+        // same evidence strip; what changed is who is visibly speaking.
+        //
+        // Three things carry that, and each is a grammar the app already owns.
+        // The INDENT is the margin — a note sits beside the thing it annotates,
+        // never squarely on top of it. The TINT is Casberi's own voice, the
+        // same `DS.tint` wash `AddressCard` pours for machinery because "a
+        // contract has no identity of its own to borrow"; the app talking about
+        // somebody else's transaction is exactly that case. And the top-leading
+        // corner is SQUARED — a speech corner, pointing back up at the paper it
+        // is about. No hairline, no arrow, no glyph: the §8 no-lines law holds
+        // with no exception, and the shape does the pointing.
+        .background(DS.tint.opacity(0.08),
+                    in: .rect(topLeadingRadius: 0,
+                              bottomLeadingRadius: DS.Radius.card,
+                              bottomTrailingRadius: DS.Radius.card,
+                              topTrailingRadius: DS.Radius.card,
+                              style: .continuous))
+        // The indent is OUTSIDE the background, so the note's own corners stay
+        // put and only the whole note steps in from the paper's edge.
+        .padding(.leading, Self.indent)
     }
 
     private var subline: String? {

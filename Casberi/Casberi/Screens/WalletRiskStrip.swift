@@ -39,6 +39,20 @@ import SwiftUI
 /// positions and stop, with no overshoot past the far end and no repeat.
 struct WalletRiskStrip: View {
     let entries: [WalletRiskScale.Entry]
+    /// Tapping a dot walks to the card that states that position in full
+    /// (2026-08-20, prd §417).
+    ///
+    /// Under §416's "What it's doing" header this strip is visibly the
+    /// OVERVIEW and the cards below it the detail — which is exactly the pair
+    /// this card's own doc describes ("the cards below state each position in
+    /// its own protocol's units, and this is the one view that puts them in an
+    /// order") and which the reader previously had to reconnect by scrolling
+    /// and matching labels by eye.
+    ///
+    /// nil leaves every dot inert, which is the honesty rule doing its job: a
+    /// dot with nowhere to go must not behave like a control. The card is
+    /// still reachable by scrolling, so nothing here is tap-only.
+    var onPick: ((WalletRiskScale.Entry) -> Void)?
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var travelled = false
@@ -59,6 +73,16 @@ struct WalletRiskStrip: View {
             // liquidation — so the sentence is that order, spoken.
             .accessibilityElement(children: .combine)
             .accessibilityLabel(Text(spokenAxis))
+            // The dots' walk-to-card tap, as actions on the one element the
+            // axis collapses to (prd §417) — a pointer gets a hit target, a
+            // rotor gets a named list, and neither is the only way to the card.
+            .accessibilityActions {
+                if let onPick {
+                    ForEach(entries) { entry in
+                        Button("Open \(entry.label)") { onPick(entry) }
+                    }
+                }
+            }
             HStack {
                 Text("comfortable")
                     .dsText(.label12).foregroundStyle(DS.textTertiary)
@@ -150,14 +174,39 @@ struct WalletRiskStrip: View {
         }
     }
 
+    @ViewBuilder
     private func dot(_ entry: WalletRiskScale.Entry) -> some View {
-        Circle()
+        let mark = Circle()
             .fill(entry.atRisk ? DS.attention : DS.textPrimary)
             .frame(width: dotSize, height: dotSize)
             // The page showing through, not a stroke: a ring in a line colour
             // would be a hairline by another name, and two dots that overlap
             // still need to read as two.
             .overlay(Circle().stroke(DS.page, lineWidth: 3))
+        if let onPick {
+            Button {
+                DSHaptic.selection()
+                onPick(entry)
+            } label: {
+                mark
+                    // A 15pt dot is under half the 44pt touch target, and the
+                    // crowded end of this axis is where dots sit closest — so
+                    // the hit area is grown around the mark WITHOUT growing the
+                    // mark, which carries magnitude and must not change size to
+                    // buy tappability.
+                    .padding(DS.Space.s3)
+                    .contentShape(Circle())
+            }
+            .buttonStyle(.plain)
+            .dsHover()
+            // No label of its own: the container below combines its children
+            // into one spoken axis (see `spokenAxis`), so a label here would be
+            // written and never read. The tap reaches VoiceOver as a custom
+            // ACTION on that combined element instead.
+            .accessibilityHidden(true)
+        } else {
+            mark
+        }
     }
 
     private func label(_ entry: WalletRiskScale.Entry, above: Bool) -> some View {

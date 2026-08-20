@@ -840,6 +840,43 @@ struct RootShell: View {
                       AgentBudget.spentThisMonth.map { AgentBudget.usd($0) } ?? "(unknown)",
                       AgentBudget.pausesLibrarian(AgentBudget.measurableProvider) ? 1 : 0)
             }
+            // Debug hook: `-chatTurnsProbe "<title prefix>"` reads a stored chat
+            // transcript back as TURNS (`ChatTurns`) and NSLogs one
+            // `chatTurn|` line each (the `-todayProbe` truncation lesson), then
+            // the exchange pairing a keyed continuation would send as history.
+            //
+            // It exists because the transcript lives on `enrichedText`, which
+            // is retrieval-only by the 2026-07-15 ruling and drawn by NOTHING —
+            // so a chat that parses into twelve fabricated turns and one that
+            // parses correctly are identical from every screen in the app. The
+            // `parsed=0` case is the one to read carefully: it is CORRECT for
+            // any row whose enrichedText this app didn't write as a
+            // conversation, and a bug only for an imported chat.
+            if let prefix = UserDefaults.standard.string(forKey: "chatTurnsProbe") {
+                Task { @MainActor in
+                    let all = (try? modelContext.fetch(FetchDescriptor<Thing>())) ?? []
+                    guard let thing = all.filter({ $0.isLive && $0.title.hasPrefix(prefix) })
+                        .sorted(by: { $0.capturedAt > $1.capturedAt }).first else {
+                        NSLog("[Casberi] chatTurnsProbe: nothing titled \"%@\"", prefix)
+                        return
+                    }
+                    let turns = ChatTurns.parse(thing.enrichedText)
+                    let partial = ChatTurns.isPartial(parsed: turns,
+                                                      messageCount: thing.messageCount)
+                    NSLog("[Casberi] chatTurnsProbe: \"%@\" source=%@ stored=%d parsed=%d messageCount=%@ partial=%d",
+                          thing.title, thing.source, thing.enrichedText?.count ?? 0,
+                          turns.count, thing.messageCount.map(String.init) ?? "-",
+                          partial ? 1 : 0)
+                    for turn in turns.prefix(20) {
+                        NSLog("[Casberi] chatTurn| %@%@ %@",
+                              turn.isMine ? "→ " : "← ", turn.speaker,
+                              String(turn.text.prefix(90)))
+                    }
+                    let (history, pending) = ChatTurns.exchanges(turns)
+                    NSLog("[Casberi] chatTurnsProbe: exchanges=%d pending=%@",
+                          history.count, pending.map { String($0.prefix(60)) } ?? "(none)")
+                }
+            }
             // Debug hook: `-webFetchProbe "<url>[,<url>]"` runs the page-reading
             // policy (`AgentWebFetch.fetchable`) over URLs WITHOUT asking
             // anything or spending a token — one `webFetch|` line per candidate
@@ -3526,24 +3563,11 @@ struct RootShell: View {
             return .success(KeyedAnswer(doc: proseDoc(
                 "Nothing matches that — a bigger model won't help.")))
         }
-        // CARRYING AN IMPORTED CONVERSATION ON (2026-08-20). A sheet that
-        // asked to continue a chat handed over its turns; they become this
-        // conversation's history exactly once, here — the only place a keyed
-        // answer is composed — and are cleared so the next question somebody
-        // types cannot inherit somebody else's chat.
-        var seedSystem = ""
-        if !chrome.askSeedHistory.isEmpty {
-            keyedHistory = chrome.askSeedHistory
-            seedSystem = chrome.askSeedSystem ?? ""
-            chrome.askSeedHistory = []
-            chrome.askSeedSystem = nil
-        }
         let outcome = await AgentAnswer.synthesize(
             query: query,
             candidates: candidates(hits, terms: Retriever.contentTerms(query)),
             history: keyedHistory,
             provider: provider, corpus: corpus,
-            systemPrefix: seedSystem,
             onPartial: { partial in onProseDoc(self.proseDoc(partial)) })
         guard case .success(let result) = outcome else {
             guard case .failure(let failure) = outcome else { return .failure(.empty) }

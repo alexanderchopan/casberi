@@ -458,55 +458,6 @@ check("a zero-length grant draws no runway",
       grant(granted: now, expires: now).fraction == nil)
 
 print("")
-print("exchanges — turns as PAIRS, for carrying a conversation on (2026-08-20)")
-func turn(_ voice: AgentSheet.Turn.Voice, _ text: String) -> AgentSheet.Turn {
-    AgentSheet.Turn(voice: voice, name: voice == .you ? "You" : "Claude", text: text)
-}
-let straight = [turn(.you, "how do I center a div"), turn(.assistant, "Use flexbox."),
-                turn(.you, "and vertically?"), turn(.assistant, "align-items: center.")]
-let paired = AgentSheet.exchanges(straight)
-check("a two-exchange chat yields two pairs", paired.history.count == 2)
-check("each pair is its own ask and its own answer",
-      paired.history[0].question == "how do I center a div"
-      && paired.history[0].answer == "Use flexbox.")
-check("nothing is pending when the agent spoke last", paired.pending == nil)
-// The clamp keeps the OLDEST end, so a transcript can open on an answer whose
-// question was cut. Inventing one would send words to a provider as the
-// person's own — the most expensive thing this pairing could get wrong.
-let orphaned = AgentSheet.exchanges([turn(.assistant, "as I was saying"),
-                                     turn(.you, "go on"), turn(.assistant, "right")])
-check("an opening answer with no question is DROPPED, never given one",
-      orphaned.history.count == 1 && orphaned.history[0].question == "go on")
-// Two asks in a row — all four of these products allow it. The answer replies
-// to the LATEST one.
-let doubled = AgentSheet.exchanges([turn(.you, "first"),
-                                    turn(.you, "actually, this instead"),
-                                    turn(.assistant, "ok")])
-check("consecutive asks pair the LATEST with the answer",
-      doubled.history.count == 1 && doubled.history[0].question == "actually, this instead")
-// A trailing ask is not half a pair — it is the thing to continue with.
-let trailing = AgentSheet.exchanges([turn(.you, "hi"), turn(.assistant, "hello"),
-                                     turn(.you, "one more thing")])
-check("a trailing ask is not folded into history", trailing.history.count == 1)
-check("…it is returned as the pending ask", trailing.pending == "one more thing")
-check("an empty transcript yields nothing to carry on",
-      AgentSheet.exchanges([]).history.isEmpty && AgentSheet.exchanges([]).pending == nil)
-
-print("")
-print("continuationInstructions — a clamped transcript SAYS it is clamped")
-let whole = AgentSheet.continuationInstructions(source: "ChatGPT", cut: nil)
-let clipped = AgentSheet.continuationInstructions(source: "ChatGPT", cut: 84)
-check("both name the product the conversation came from",
-      whole.contains("ChatGPT") && clipped.contains("ChatGPT"))
-// Handing a model 8,000 characters of a long chat without saying so invites it
-// to answer as though it had read the rest.
-check("a complete transcript makes no excuse", !whole.contains("NOT here"))
-check("a clamped one says how much is missing", clipped.contains("84"))
-check("…and the two really differ, or the argument does nothing", whole != clipped)
-check("a zero cut is not a cut", AgentSheet.continuationInstructions(source: "Claude", cut: 0) ==
-      AgentSheet.continuationInstructions(source: "Claude", cut: nil))
-
-print("")
 if failures > 0 { print("agent-sheet-selftest: ✗ \(failures) assertion(s) failed"); exit(1) }
 print("agent-sheet-selftest: OK — every assertion passed against the shipped source.")
 SWIFT
@@ -638,24 +589,6 @@ mutate "every dated grant is urgent" \
   'default:   return (String(localized: "Expires in \(days) days"), days <= urgentDays)' \
   'default:   return (String(localized: "Expires in \(days) days"), true)'
 # The runway clamp — an expired grant would draw past the end of its own bar.
-# An orphaned answer given an invented question — somebody else's words sent to
-# a provider as the person's own.
-mutate "an answer with no question is paired anyway" \
-  '} else if let asked = question {' \
-  '} else if let asked = question ?? Optional("") {'
-
-# The pending ask swallowed into history: the one thing a continuation is for
-# goes missing, and the conversation resumes with nothing asked.
-mutate "the pending ask is dropped" \
-  'return (history, question)' \
-  'return (history, nil)'
-
-# The clamp goes unmentioned and the model answers half a conversation as
-# though it had all of it.
-mutate "a clamped transcript stops saying so" \
-  'if let cut, cut > 0 {' \
-  'if let cut, cut < 0 {'
-
 mutate "the runway is not clamped" \
   'return min(max(done, 0), 1)' \
   'return done'

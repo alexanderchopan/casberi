@@ -33,6 +33,16 @@ struct WalletPerpsCard: View {
         if !shown.isEmpty {
             VStack(alignment: .leading, spacing: DS.Space.s1) {
                 WalletSectionLabel(title: String(localized: "Perps"))
+                // THE READING (2026-08-20, prd §417) — see
+                // `WalletLiquidityCard.reading` for the ruling. This card went
+                // from an 11pt label straight to rows, so the fact it is
+                // already SORTED by (its own doc's words) "nearest to
+                // liquidation" was information only a reader who knew the sort
+                // order could use. Now it says so.
+                Text(reading.text)
+                    .dsText(.heading22)
+                    .foregroundStyle(reading.risk ? DS.attention : DS.textPrimary)
+                    .fixedSize(horizontal: false, vertical: true)
                     .padding(.bottom, 2)
                 // `Position` is a plain value type (never a `Thing`), keyed on
                 // its own identity. The key spans the ACCOUNT as well as the
@@ -46,6 +56,29 @@ struct WalletPerpsCard: View {
             .padding(DS.Space.s4)
             .dsWidgetSurface(fillOpacity: WalletCardStyle.fill)
         }
+    }
+
+    /// The card's spoken verdict (prd §417), naming the position `shown`
+    /// already ranks first.
+    ///
+    /// **Says nothing about profit**, deliberately: this card has never shown
+    /// PnL and the reading is not the place to start, since an unrealized
+    /// number stated in the largest type on the card reads as money you have.
+    /// It says the same thing the sort does — what is closest to being taken
+    /// from you — and falls back to a plain count when no position carries a
+    /// liquidation price, which is a real state (`liquidationProximity` is nil
+    /// for an unlevered position) and not a failure.
+    private var reading: (text: String, risk: Bool) {
+        guard let worst = shown.first else { return ("", false) }
+        let side = worst.isLong ? String(localized: "long") : String(localized: "short")
+        guard let proximity = worst.liquidationProximity else {
+            return (shown.count == 1
+                    ? String(localized: "One position open")
+                    : String(localized: "\(shown.count) positions open"), false)
+        }
+        let pct = Int((proximity * 100).rounded())
+        return (String(localized: "\(worst.coin) \(side) is \(pct)% from liquidation"),
+                worst.isNearLiquidation)
     }
 
     /// Real positions only, riskiest first.

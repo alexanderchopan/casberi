@@ -765,6 +765,34 @@
         }
       }
     },
+    "%@ %@ is %lld%% from liquidation": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@ %@ está al %lld%% de la liquidación"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@ %@ は清算まで %lld%%"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@ %@은(는) 청산까지 %lld%%"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@ %@ 距离清算 %lld%%"
+          }
+        }
+      }
+    },
     "%@ %@ to %@": {
       "localizations": {
         "en": {
@@ -8323,6 +8351,34 @@
         }
       }
     },
+    "%lld between %@ and %@.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld entre %@ y %@."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld件、%@ から %@ まで。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld건, %@부터 %@까지."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld 项，从 %@ 到 %@。"
+          }
+        }
+      }
+    },
     "%lld bookmarks in": {
       "localizations": {
         "es": {
@@ -11849,6 +11905,34 @@
         }
       }
     },
+    "%lld of %lld positions idle": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld de %lld posiciones inactivas"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld/%lld のポジションが停止中"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld/%lld 포지션이 유휴 상태"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld/%lld 个仓位闲置"
+          }
+        }
+      }
+    },
     "%lld of %lld priced": {
       "localizations": {
         "en": {
@@ -12902,6 +12986,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "%lld 个仓位接近清算线"
+          }
+        }
+      }
+    },
+    "%lld positions open": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld posiciones abiertas"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld件のポジション"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld개 포지션 보유"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld 个持仓"
           }
         }
       }
@@ -14855,6 +14967,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "%lld 条内容"
+          }
+        }
+      }
+    },
+    "%lld things ahead, from %@ to %@.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld próximos, del %@ al %@."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld件の予定、%@ から %@ まで。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld건 예정, %@부터 %@까지."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld 项待办，从 %@ 到 %@。"
           }
         }
       }
@@ -21981,6 +22121,62 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "全部 %lld 笔存入均可提取"
+          }
+        }
+      }
+    },
+    "All %lld positions are earning": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Las %lld posiciones están generando"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld件すべてのポジションが収益中"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld개 포지션 모두 수익 중"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "全部 %lld 个仓位都在赚取"
+          }
+        }
+      }
+    },
+    "All %lld positions are idle": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Las %lld posiciones están inactivas"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld件すべてのポジションが停止中"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld개 포지션 모두 유휴 상태"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "全部 %lld 个仓位都已闲置"
           }
         }
       }
@@ -49513,6 +49709,90 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "回答你的一个常问问题。"
+          }
+        }
+      }
+    },
+    "One position open": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Una posición abierta"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "1件のポジション"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "포지션 1개 보유"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "1 个持仓"
+          }
+        }
+      }
+    },
+    "One thing ahead, %@.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Un próximo, el %@."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "予定1件、%@。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "예정 1건, %@."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "1 项待办，%@。"
+          }
+        }
+      }
+    },
+    "One, on %@.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Uno, el %@."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "1件、%@。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "1건, %@."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "1 项，%@。"
           }
         }
       }
@@ -77186,6 +77466,62 @@
           "stringUnit": {
             "state": "translated",
             "value": "你的图钉，尽在你的订阅流"
+          }
+        }
+      }
+    },
+    "Your position is earning": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Tu posición está generando"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "ポジションは収益中"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "포지션이 수익 중"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "你的仓位正在赚取"
+          }
+        }
+      }
+    },
+    "Your position is idle": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Tu posición está inactiva"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "ポジションは停止中"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "포지션이 유휴 상태"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "你的仓位已闲置"
           }
         }
       }

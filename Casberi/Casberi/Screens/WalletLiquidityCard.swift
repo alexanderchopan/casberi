@@ -36,6 +36,17 @@ struct WalletLiquidityCard: View {
             // them was doing the work of a separator nothing here needs.
             VStack(alignment: .leading, spacing: DS.Space.s2) {
                 WalletSectionLabel(title: String(localized: "Liquidity"))
+                // THE READING (2026-08-20, prd §417). This card jumped from an
+                // 11pt label straight to rows, so "is it working" — the
+                // question its own doc says it exists to answer — had to be
+                // derived by reading every pill. Lending and Approvals have led
+                // with a spoken `heading22` since they shipped; this is that
+                // anatomy finished. The rows are unchanged: the reading says
+                // the verdict, the pills say which position.
+                Text(reading.text)
+                    .dsText(.heading22)
+                    .foregroundStyle(reading.idle ? DS.attention : DS.textPrimary)
+                    .fixedSize(horizontal: false, vertical: true)
                 // `Position` is a plain value type (never a `Thing`), keyed
                 // on its own on-chain identity. The key spans VERSION and
                 // network too: V3 and V4 mint tokenIds from separate
@@ -47,6 +58,30 @@ struct WalletLiquidityCard: View {
             }
             .padding(DS.Space.s3)
             .dsWidgetSurface(fillOpacity: WalletCardStyle.fill)
+        }
+    }
+
+    /// The card's spoken verdict (prd §417) — idle first, because an idle
+    /// position is the only thing here anyone can act on.
+    ///
+    /// **Never sums fees across positions**: two positions can earn in
+    /// different tokens, and a combined "+$59" would be adding what the rows
+    /// deliberately keep apart. So the reading counts POSITIONS, which is a
+    /// unit that always converts, and leaves the money to the pills.
+    private var reading: (text: String, idle: Bool) {
+        let total = book.positions.count
+        let idle = book.positions.filter { !$0.inRange }.count
+        switch idle {
+        case 0:
+            return (total == 1
+                    ? String(localized: "Your position is earning")
+                    : String(localized: "All \(total) positions are earning"), false)
+        case total:
+            return (total == 1
+                    ? String(localized: "Your position is idle")
+                    : String(localized: "All \(total) positions are idle"), true)
+        default:
+            return (String(localized: "\(idle) of \(total) positions idle"), true)
         }
     }
 

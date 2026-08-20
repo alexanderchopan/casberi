@@ -75,19 +75,6 @@ struct NoteProse: View {
     /// the sheet always passes one — a tinted word that does nothing is the
     /// dead control the honesty law bans.
     var onWikilink: ((String) -> Void)?
-    /// The tier the body is set in (2026-08-20).
-    ///
-    /// `reading20` is this view's own ruling and stays the default: on a note
-    /// the body is not an annotation of the thing, it IS the thing. An agent
-    /// TURN is the exception — it sits inside a bubble beside a speaker label,
-    /// where the sheet's hero is the conversation rather than any one message,
-    /// so it is set at `callout15` like the bubble it lives in.
-    ///
-    /// Parameterised rather than forked: the alternative was a second block
-    /// renderer beside this one, and two renderers over one splitter is how a
-    /// code fence starts drawing correctly in one room and as prose in the
-    /// other.
-    var tier: DSTextStyle = .reading20
 
     @State private var expanded = false
 
@@ -161,46 +148,16 @@ struct NoteProse: View {
                     .fill(DS.fillFaint)
                     .frame(width: 2)
                 prose(text)
-                    .dsText(tier)
+                    .dsText(.reading20)
                     .foregroundStyle(DS.textSecondary)
             }
         case .paragraph(let text):
             prose(text)
-                .dsText(tier)
+                .dsText(.reading20)
                 .foregroundStyle(DS.textPrimary)
                 // Words are what people copy a phrase out of, and until §366 no
                 // note body in this app allowed it.
                 .textSelection(.enabled)
-        case .code(let language, let text):
-            // VERBATIM, and monospaced — the two things that make code code.
-            // `Text(verbatim:)` rather than `prose`, because every step `prose`
-            // takes is wrong here: an inline markdown parse would eat the
-            // asterisks in `a * b`, the linkifier would turn a URL in a comment
-            // into a tappable control inside a program, and a wikilink rewrite
-            // would claim `[[i]]` was a note.
-            VStack(alignment: .leading, spacing: 4) {
-                if let language {
-                    Text(verbatim: language)
-                        .dsText(.label12)
-                        .foregroundStyle(DS.textTertiary)
-                }
-                // Scrolls in its own container rather than wrapping: a wrapped
-                // line of code silently changes the shape of the program, and
-                // the page itself must never scroll sideways.
-                ScrollView(.horizontal, showsIndicators: false) {
-                    Text(verbatim: text)
-                        .dsText(.callout15)
-                        .monospaced()
-                        .foregroundStyle(DS.textPrimary)
-                        .textSelection(.enabled)
-                        .fixedSize(horizontal: true, vertical: true)
-                }
-            }
-            .padding(DS.Space.s3)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(DS.fillFaint,
-                        in: RoundedRectangle(cornerRadius: DS.Radius.widget,
-                                             style: .continuous))
         }
     }
 
@@ -209,11 +166,11 @@ struct NoteProse: View {
     private func marked(_ mark: String, _ content: Text) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
             Text(verbatim: mark)
-                .dsText(tier)
+                .dsText(.reading20)
                 .foregroundStyle(DS.textTertiary)
                 .monospacedDigit()
             content
-                .dsText(tier)
+                .dsText(.reading20)
                 .foregroundStyle(DS.textPrimary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)

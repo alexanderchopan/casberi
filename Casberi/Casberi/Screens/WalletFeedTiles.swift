@@ -1143,33 +1143,35 @@ struct WalletLendingCard: View {
 /// With more than one wallet it's also the door to the full allocation: the
 /// treemap says WHAT you hold, this says how much of it is one thing, and the
 /// tray behind it says WHERE each position actually sits.
-struct WalletConcentrationLine: View {
+/// **Was `WalletConcentrationLine`, renamed 2026-08-20 (prd §417) when the
+/// reading it carried was promoted.** The concentration sentence now LEADS the
+/// holdings card at `heading22` — the anatomy Lending and Approvals have always
+/// had — so what is left here is the door alone, and a name saying "line" for a
+/// view that draws a chevron is the kind of drift this codebase renames rather
+/// than tolerates.
+///
+/// Nothing renders with a single wallet: there is no "where" to open, and a
+/// chevron would promise a page that says what the lead just said.
+struct WalletAllocationDoor: View {
     let portfolio: WalletPortfolio
-    /// nil with a single wallet — there's no "where" to open, and a chevron
-    /// would promise a page that says the same thing twice.
+    /// nil with a single wallet — see above.
     let onOpen: (() -> Void)?
 
     var body: some View {
-        if let line = portfolio.concentrationLine {
-            Button { onOpen?() } label: {
+        if let onOpen, portfolio.concentrationLine != nil {
+            Button(action: onOpen) {
                 HStack(spacing: 5) {
-                    Text(line)
-                        .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                    Text("Where it's held")
+                        .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                         .lineLimit(1)
-                    if onOpen != nil {
-                        Text("Where it's held")
-                            .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                            .lineLimit(1)
-                        Image(systemName: "chevron.right")
-                            .dsGlyph(10)
-                            .foregroundStyle(DS.textTertiary)
-                    }
+                    Image(systemName: "chevron.right")
+                        .dsGlyph(10)
+                        .foregroundStyle(DS.textTertiary)
                     Spacer(minLength: 0)
                 }
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .disabled(onOpen == nil)
         }
     }
 }

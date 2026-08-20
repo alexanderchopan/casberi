@@ -829,6 +829,20 @@ struct AddressCard: View {
                         .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
+                // HOW FAR BACK YOU TWO GO (2026-08-20, prd §417). The rows
+                // below are newest-first and answer WHAT; they are silent on
+                // span, so a monthly habit and a single touch in 2024 read
+                // identically until you reach the last row — and the card only
+                // ever shows six. The rail is the journal room's span reading
+                // (§398) applied to an address.
+                //
+                // Every dot the same size, no colour, no rate: the
+                // `AddressConnections` factual-only ruling, on the screen where
+                // you decide whether to trust somebody. It draws the WHOLE
+                // history, not the six rows shown, or the strip would describe
+                // the preview instead of the relationship.
+                WalletRunwayRail(dates: things.compactMap { $0.isLive ? $0.capturedAt : nil },
+                                 sense: .behind)
                 ForEach(Array(Array(things.prefix(6)).keyed.enumerated()), id: \.element.id) { i, row in
                     // Corollary 3 (build 176) — see `ThingRowKeying`.
                     if let thing = row.live {

@@ -396,6 +396,14 @@ struct FeedScreen: View {
     /// what decides between the shelf's invitation line and nothing. Owned by
     /// the room, filled by `loadWalletLive`; see there for why not by the card.
     @State private var nftHasCollections = false
+    /// A card the risk strip asked to be walked to (prd §417), consumed and
+    /// cleared by `listCore`.
+    ///
+    /// Routed through state rather than by threading the `ScrollViewProxy` down
+    /// into `walletRiskSection`: the proxy lives at `feedList` and the strip is
+    /// five call layers below it, so passing it would mean a signature change
+    /// on `shapedSections` and every room's builder — for one tap in one room.
+    @State private var cardScrollTarget: String?
     /// The combined portfolio behind the treemap (2026-07-21, prd §155) — one
     /// derivation the balance headline, the concentration line, and the
     /// allocation tray all read, so nothing on this screen can disagree with
@@ -1955,6 +1963,31 @@ struct FeedScreen: View {
     }
 
     private func listCore(_ proxy: ScrollViewProxy) -> some View {
+        listBody(proxy)
+            // The risk strip's walk-to-card (prd §417). Animated, unlike the
+            // themes fold's settle above: that one is the room's resting
+            // position and this is a MOVE somebody asked for, so it has to be
+            // followable — landing instantly two screens down reads as the room
+            // having jumped rather than as an answer to the tap. Reduce Motion
+            // is honoured by `scrollTo`'s own transaction, which SwiftUI
+            // disables under the setting.
+            //
+            // `.center`, not `.top`: the card is the answer, so it lands in the
+            // middle of the screen with the strip that sent you still visible
+            // above it — the connection is the point.
+            .onChange(of: cardScrollTarget) { _, target in
+                guard let target else { return }
+                withAnimation(DS.Motion.standard) {
+                    proxy.scrollTo(target, anchor: .center)
+                }
+                // Cleared so tapping the SAME dot twice moves twice — an
+                // unchanged binding would fire `onChange` once and then look
+                // broken on every later tap.
+                cardScrollTarget = nil
+            }
+    }
+
+    private func listBody(_ proxy: ScrollViewProxy) -> some View {
         List {
             Group {
                 // The source chips moved to the shell's fixed header
@@ -4732,6 +4765,42 @@ struct FeedScreen: View {
                                     hyperliquid: walletLive.hyperliquid)
     }
 
+    // MARK: - Walking from the risk axis to a card (prd §417)
+
+    /// Scroll anchors for the two cards the risk strip's dots can reach.
+    /// Spelled once here and attached with `.id(…)` below, so the tap and the
+    /// target can't drift apart.
+    private static let lendingAnchor = "wallet.card.lending"
+    private static let perpsAnchor = "wallet.card.perps"
+
+    /// Which card states the position behind a dot, from the entry id
+    /// `WalletRiskScaleSource` stamped.
+    ///
+    /// **Matched on the id's namespace, never on the label** — a label is
+    /// localized display text ("Morpho · wstETH/USDC"), so keying on it would
+    /// send a Spanish device nowhere. nil is a deliberate, safe outcome: a
+    /// protocol that joins the axis without a card here scrolls nowhere rather
+    /// than scrolling to the wrong card.
+    private static func riskCardAnchor(for id: String) -> String? {
+        if id.hasPrefix("aave:") || id.hasPrefix("morpho:") { return lendingAnchor }
+        if id.hasPrefix("hl:") { return perpsAnchor }
+        return nil
+    }
+
+    /// The holdings card's spoken reading, promoted above the map (prd §417).
+    ///
+    /// nil is a normal, correct outcome — `concentrationLine` declines on an
+    /// unpriced or single-position book — and the map then leads on its own,
+    /// which is the same "a card with no reading shows its evidence bare" rule
+    /// `MoneyReceipt.titleFallback` keeps one surface over. Deliberately NOT
+    /// invented from the map's own cells: a sentence assembled here rather than
+    /// by `WalletPortfolio` would be a second definition of concentration, and
+    /// the two would drift.
+    private var concentrationLead: String? {
+        guard let portfolio, !portfolio.isEmpty else { return nil }
+        return portfolio.concentrationLine
+    }
+
     /// Does the "What you hold" block have anything in it — the treemap, the
     /// NFT shelf, or both.
     private var walletHoldsSomething: Bool {
@@ -4846,7 +4915,16 @@ struct FeedScreen: View {
     private var walletRiskSection: some View {
         if let entries = walletRiskEntries {
             Section {
-                WalletRiskStrip(entries: entries)
+                WalletRiskStrip(entries: entries, onPick: { entry in
+                    // Overview → detail (prd §417). The strip ranks every
+                    // leveraged position on one axis; the card below states the
+                    // one you picked in its own protocol's units. The target is
+                    // derived from the entry's OWN id prefix, which
+                    // `WalletRiskScaleSource` already builds — so a new
+                    // protocol joining the axis lands on `nil` and simply
+                    // doesn't scroll, rather than scrolling somewhere wrong.
+                    cardScrollTarget = Self.riskCardAnchor(for: entry.id)
+                })
                     .modifier(RowEntrance(index: 2, wave: shapeWave, style: entranceStyle))
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
@@ -4897,6 +4975,8 @@ struct FeedScreen: View {
         if !walletLive.positions.isEmpty || !walletLive.morpho.isEmpty {
             Section {
                 WalletLendingCard(aave: walletLive.positions, morpho: walletLive.morpho)
+                    // The risk strip's Aave and Morpho dots land here (§417).
+                    .id(Self.lendingAnchor)
                     // Same reveal the balance card and holdings treemap wear —
                     // lending is usually the last of the live reads to land, so
                     // it gets the deepest stagger.
@@ -4938,6 +5018,8 @@ struct FeedScreen: View {
         if !walletLive.hyperliquid.positions.isEmpty {
             Section {
                 WalletPerpsCard(book: walletLive.hyperliquid)
+                    // The risk strip's perp dots land here (§417).
+                    .id(Self.perpsAnchor)
                     .modifier(RowEntrance(index: 4, wave: shapeWave, style: entranceStyle))
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
@@ -5350,6 +5432,21 @@ struct FeedScreen: View {
         if !blockStream.els.isEmpty {
             Section {
                 VStack(alignment: .leading, spacing: DS.Space.s2) {
+                    // THE READING LEADS (2026-08-20, prd §417). This card's one
+                    // sentence — "ETH is 61% of the book" — sat BELOW the map at
+                    // caption size, so the room's biggest drawing said nothing
+                    // until you had read the map and then found the footnote.
+                    // Lending and Approvals have led with their reading at
+                    // `heading22` since they shipped; this is that anatomy
+                    // finished, not a new one. `WalletConcentrationLine` keeps
+                    // its own door and drops to the tail only when it has
+                    // nothing to promote (see `concentrationLead`).
+                    if let lead = concentrationLead {
+                        Text(lead)
+                            .dsText(.heading22).foregroundStyle(DS.textPrimary)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .padding(.horizontal, DS.Space.s4)
+                    }
                     GenRender(id: "root", els: blockStream.els)
                         // A tapped holdings cell opens its token's chart
                         // (2026-07-14): the thing sheet when watched, the quick
@@ -5374,11 +5471,11 @@ struct FeedScreen: View {
                                 route.pushBridge(.wallet)
                             }
                         }
-                    // The map says WHAT you hold; this says how much of it is
-                    // one thing (prd §155) — a read that only means something
-                    // about a whole portfolio.
+                    // The map says WHAT you hold; the LEAD above says how much
+                    // of it is one thing (prd §155, promoted §417). What is
+                    // left down here is the door to the full allocation.
                     if let portfolio, !portfolio.isEmpty {
-                        WalletConcentrationLine(
+                        WalletAllocationDoor(
                             portfolio: portfolio,
                             onOpen: portfolio.walletCount > 1 && selectedWallet == nil
                                 ? { feedSheet = .allocation } : nil)

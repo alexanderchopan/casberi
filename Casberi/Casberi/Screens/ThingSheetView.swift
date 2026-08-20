@@ -2135,61 +2135,12 @@ struct ThingSheetView: View {
     ///
     /// One chip, not a disc: the dial holds the verbs that DO something to
     /// this thing, and this one leaves it to go somewhere else.
-    /// CARRY THIS CONVERSATION ON, on the person's own key (2026-08-20).
-    ///
-    /// An imported chat is the one row in this corpus that was a live
-    /// conversation somewhere else and became a dead record here: §367 made the
-    /// sheet finally DRAW it, and reading it is still all you can do. This is
-    /// the verb that was missing — the turns become the keyed agent's history,
-    /// so the next thing you say lands in the chat it belongs to rather than in
-    /// an empty one.
-    ///
-    /// **Three conditions, and each one is the difference between a real verb
-    /// and a dead control.** A key must be configured (there is no free path
-    /// for this — the on-device model holds no conversation of its own). The
-    /// transcript must have parsed into real exchanges, so a row whose speaker
-    /// labels we cannot read never offers to continue a conversation it cannot
-    /// see. And Bankr is excluded upstream by `AgentAnswer` itself, which
-    /// answers from a wallet rather than from turns somebody handed it.
-    ///
-    /// It seeds the ask with the conversation's own PENDING question when the
-    /// transcript ends on one — the clamp keeps the oldest end, so this is a
-    /// question that really was left hanging — and otherwise opens the composer
-    /// empty for the person to type. It never invents a question.
-    @ViewBuilder
-    private var continueConversation: some View {
-        if thing.isLive, AgentKey.isConfigured, let reading = agentConversation {
-            let paired = AgentSheet.exchanges(reading.turns)
-            if !paired.history.isEmpty {
-                Button {
-                    DSHaptic.tap()
-                    dismiss()
-                    chrome.ask(
-                        paired.pending ?? "",
-                        withKey: true,
-                        seedHistory: paired.history.map {
-                            AgentTurn(question: $0.question, answer: $0.answer)
-                        },
-                        seedSystem: AgentSheet.continuationInstructions(
-                            source: thing.source, cut: reading.cut))
-                } label: {
-                    Chip(text: AgentKey.active.map {
-                            String(localized: "Carry on with \($0.agent)")
-                         } ?? String(localized: "Carry on"),
-                         style: .tint, glyph: "arrow.turn.down.right")
-                }
-                .buttonStyle(.plain)
-            }
-        }
-    }
-
     @ViewBuilder
     private var askAboutThis: some View {
         if thing.isLive {
             let subject = thing.title.trimmingCharacters(in: .whitespacesAndNewlines)
             if !subject.isEmpty {
                 HStack(spacing: DS.Space.s2) {
-                    continueConversation
                     Button {
                         DSHaptic.tap()
                         // Dismiss first: the composer rises over the shell, and

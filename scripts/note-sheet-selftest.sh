@@ -83,22 +83,8 @@ guard "the From spec row stands down for a composed note sentence" \
 
 # The prose tier. This is the fix, spelled as a test: reading tier, primary
 # ink. A `callout15`/`textSecondary` body here is the defect returning.
-#
-# The tier became a PARAMETER on 2026-08-20 so an agent turn could reuse this
-# renderer at bubble size, and the §366 ruling moved with it: it is now the
-# DEFAULT, which is what every note call site takes. Guarded in its new
-# location rather than deleted — a guarded rule that moves takes its guard with
-# it. Both halves matter: the default must be the reading tier, AND the note
-# sheet must not start passing a smaller one, which is the only way the defect
-# could come back now.
-guard "the note body's tier defaults to the reading tier" \
-  'var tier: DSTextStyle = \.reading20' "$VIEWS"
-if grep -qE 'NoteProse\([^)]*tier:' "$VIEW"; then
-  echo "  ✗ the note sheet passes an explicit tier — §366's reading tier is the"
-  echo "    default for a reason: on these sources the body IS the thing."
-  exit 1
-fi
-echo "  ✓ the note sheet takes the default tier rather than overriding it"
+guard "note prose is set at the reading tier" \
+  'dsText\(\.reading20\)' "$VIEWS"
 guard "note prose is set in primary ink" \
   'foregroundStyle\(DS\.textPrimary\)' "$VIEWS"
 
@@ -537,58 +523,6 @@ check("a mixed body splits into its real shapes",
             .bullet("coffee"), .bullet("walk")])
 
 print("")
-print("Fenced code (2026-08-20) — the shape an agent's answer cannot do without")
-check("a fence becomes a code block",
-      NoteSheet.blocks("```\nlet x = 1\n```", markdown: true)
-        == [.code(language: nil, text: "let x = 1")])
-check("the info string is kept as a label",
-      NoteSheet.blocks("```swift\nlet x = 1\n```", markdown: true)
-        == [.code(language: "swift", text: "let x = 1")])
-// THE WHOLE REASON THE CASE EXISTS. Inside a fence a `#` is a comment, a `- `
-// is a flag and a `> ` is a shell prompt. Without the suspension every one of
-// those became a heading, a bullet and a quote — an answer's program silently
-// rewritten as prose.
-check("markers INSIDE a fence are code, not markdown",
-      NoteSheet.blocks("```python\n# TODO: fix\n- flag\n> prompt\n```", markdown: true)
-        == [.code(language: "python", text: "# TODO: fix\n- flag\n> prompt")])
-// Indentation is the shape of a program, so it survives where prose is trimmed.
-check("leading indentation is kept",
-      NoteSheet.blocks("```\nif x:\n    go()\n```", markdown: true)
-        == [.code(language: nil, text: "if x:\n    go()")])
-// A blank line inside a fence is part of the program, not a block break.
-check("a blank line inside a fence does not split it",
-      NoteSheet.blocks("```\na\n\nb\n```", markdown: true)
-        == [.code(language: nil, text: "a\n\nb")])
-// NOT AN EDGE CASE — the common one. Transcripts are stored under an
-// 8,000-character clamp, so a long answer's last fence is routinely cut
-// mid-program, and dropping it deletes what the sheet was opened to read.
-check("an UNCLOSED fence still yields its code",
-      NoteSheet.blocks("intro\n\n```swift\nlet x = 1", markdown: true)
-        == [.paragraph("intro"), .code(language: "swift", text: "let x = 1")])
-check("prose before and after a fence stays prose",
-      NoteSheet.blocks("try this\n```\nrun()\n```\nthen check", markdown: true)
-        == [.paragraph("try this"), .code(language: nil, text: "run()"),
-            .paragraph("then check")])
-// An inline `code` span must never open a block — one backtick is not a fence.
-// The fixture must OPEN with the backtick: "use `let` here" does not start with
-// one, so it passes whatever the prefix test says and proves nothing (caught by
-// this file's own mutation, which is the third fixture this session to give the
-// right answer for the wrong reason).
-check("a line OPENING with an inline span is not a fence",
-      NoteSheet.blocks("`let` is a binding", markdown: true)
-        == [.paragraph("`let` is a binding")])
-check("a double backtick is not a fence either",
-      NoteSheet.blocks("``x`` means literal", markdown: true)
-        == [.paragraph("``x`` means literal")])
-// A non-markdown source is untouched: a `You` note that happens to contain
-// backticks is whatever somebody typed.
-check("a non-markdown body never fences",
-      NoteSheet.blocks("```\nx\n```", markdown: false)
-        == [.paragraph("```\nx\n```")])
-check("an empty fence yields nothing rather than an empty block",
-      NoteSheet.blocks("```\n\n```", markdown: true).isEmpty)
-
-print("")
 print("The fold cuts at a block, never mid-sentence")
 let long = (0..<40).map { "Paragraph number \($0), with enough words in it to matter." }
     .joined(separator: "\n\n")
@@ -825,25 +759,6 @@ mutate "the ceiling never fires" \
 echo ""
 # §399's block grammar. Each of these renders perfectly and says something the
 # note does not.
-# THE FENCE SUSPENSION. Disable it and every marker inside a code block starts
-# applying again, so an answer's Python `# TODO` becomes a heading and its
-# shell `- flag` becomes a bullet — the program silently rewritten as prose.
-mutate "markers apply INSIDE a fenced block again" \
-  'if fenceLines != nil {' \
-  'if false {'
-
-# A clamped transcript's last fence is never closed, so this is the common case
-# rather than an edge one: dropping it deletes exactly the part of the answer
-# somebody opened the sheet to read.
-mutate "an unclosed fence is discarded" \
-  'if !text.isEmpty { out.append(.code(language: fenceLanguage, text: text)) }' \
-  'if false { out.append(.code(language: fenceLanguage, text: text)) }'
-
-# One backtick is an inline span, not a block opener.
-mutate "a single backtick opens a fence" \
-  'guard trimmed.hasPrefix("```") else { return (false, nil) }' \
-  'guard trimmed.hasPrefix("`") else { return (false, nil) }'
-
 mutate "a marker needs no space, so a hashtag becomes a heading" \
   'if hashes <= 6, rest.hasPrefix(" ") {' \
   'if hashes <= 6 {'

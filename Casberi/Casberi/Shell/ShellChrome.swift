@@ -171,27 +171,9 @@ final class ShellChrome {
     /// Reset by the composer on consumption so a later plain `ask` can never
     /// inherit somebody else's request to spend money.
     var askWithKey = false
-    /// Prior turns to CARRY IN before the keyed answer runs (2026-08-20) — an
-    /// imported conversation being picked back up, so a follow-up lands in the
-    /// chat it belongs to rather than in an empty one.
-    ///
-    /// Consumed by `RootShell.keyedAnswerDocument`, which is the only place a
-    /// keyed answer is composed and therefore the only place `keyedHistory` can
-    /// be seeded exactly once. Emptied on consumption for the same reason
-    /// `askWithKey` is: one surface's request to spend must never be inherited
-    /// by the next question somebody types.
-    var askSeedHistory: [AgentTurn] = []
-    /// What to tell the model about the conversation it is joining — that it is
-    /// mid-conversation, and (when true) that the transcript is clamped. Kept
-    /// beside the turns rather than derived from them, because the fact that
-    /// turns are MISSING cannot be recovered from the turns that survived.
-    var askSeedSystem: String?
-    func ask(_ query: String, withKey: Bool = false,
-             seedHistory: [AgentTurn] = [], seedSystem: String? = nil) {
+    func ask(_ query: String, withKey: Bool = false) {
         askRequest = query
         askWithKey = withKey
-        askSeedHistory = seedHistory
-        askSeedSystem = seedSystem
     }
 
     /// The agent rose to be TYPED IN, not to deliver something (2026-07-30) —
