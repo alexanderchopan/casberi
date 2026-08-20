@@ -186,13 +186,56 @@ ok "static audits ($(ls "$ROOT"/scripts/*-audit.py "$ROOT"/scripts/*-audit.sh | 
 # no simulator, no device. They are slow (each compiles), which is why they run
 # BEFORE the build and after the cheap audits — a broken harness should stop
 # the pass before 3 minutes of xcodebuild, not after.
-step "Logic self-tests (all $(ls "$ROOT"/scripts/*-selftest.sh | wc -l | tr -d ' ') discovered)"
+# CONCURRENTLY since 2026-08-19, the same pass that did it for `verify.sh`
+# (32.8min → 15.2min there). These are ~600 optimizing `swiftc` runs and they
+# ran one at a time on one core of eight; that is the largest single cost in an
+# unattended night. Safe as a MEASURED property, not a hope: every harness
+# allocates its scratch through `mktemp`, so no two can collide on a path.
+#
+# `xargs -P`, NOT a hand-rolled `jobs -r` slot loop — job control is OFF in a
+# non-interactive zsh, so `jobs -r` reports NOTHING and such a loop degrades
+# silently to "launch all of them at once", which on 8 cores thrashes to SLOWER
+# than serial while every check still passes. Green, and wrong. That matters
+# more here than it did in `verify.sh`: this runs under launchd, where nobody
+# is watching the wall clock to notice.
+#
+# STILL DISCOVERED, never a hand list — this script's own 2026-08-12 ruling,
+# and the opposite of `verify.sh`'s: there the comment above each invocation is
+# the only record of why a check exists, here the glob is what guarantees a
+# harness added today runs tonight.
+#
+# NO SKIP CACHE, deliberately, and this is the one place that rule is absolute:
+# `verify.sh` may trade a re-run for "unchanged since it passed" because someone
+# is sitting there, but an unattended green is the one nobody re-reads. The
+# nightly exports VERIFY_NO_CACHE=1 for the same reason.
+#
+# OUTPUT IS KEPT, which it never was. The old loop sent every harness to
+# /dev/null and reported bare names, so a failed NIGHT told you which harness
+# broke and nothing about how — and re-running it by hand the next morning is
+# exactly the "passed standalone every time" dead end `category-fold` cost two
+# ~20-minute runs to learn (2026-08-13). At 03:20 there is no one to re-run it.
+step "Logic self-tests (all $(ls "$ROOT"/scripts/*-selftest.sh | wc -l | tr -d ' ') discovered, up to $(sysctl -n hw.ncpu 2>/dev/null || print 4) at once)"
 typeset -a SELFTEST_FAILS
+export MST_OUT="$OUT"
+{ for _st in "$ROOT"/scripts/*-selftest.sh; do print -r -- "$_st"; done } \
+  | xargs -P "$(sysctl -n hw.ncpu 2>/dev/null || print 4)" -I{} zsh -c '
+      s="$1"; b="${s:t:r}"
+      "$s" > "$MST_OUT/selftest-$b.log" 2>&1
+      print $? > "$MST_OUT/selftest-$b.rc"
+      exit 0
+    ' _ {}
+# Collected in glob order so a failing night reads the same way twice.
 for _st in "$ROOT"/scripts/*-selftest.sh; do
-  "$_st" >/dev/null 2>&1 || SELFTEST_FAILS+=("$(basename "$_st")")
+  _b="${_st:t:r}"
+  _rc=$(<"$OUT/selftest-$_b.rc" 2>/dev/null) || _rc=99   # no rc file = never ran
+  if [[ "$_rc" != 0 ]]; then
+    SELFTEST_FAILS+=("${_st:t}")
+    print -P "%F{red}✗ ${_st:t} (rc=$_rc) → $OUT/selftest-$_b.log%f"
+    tail -20 "$OUT/selftest-$_b.log" 2>/dev/null | sed 's/^/    /'
+  fi
 done
 (( ${#SELFTEST_FAILS} == 0 )) \
-  || fail "logic self-test failed: ${SELFTEST_FAILS[*]} — run scripts/<name> for the output"
+  || fail "logic self-test failed: ${SELFTEST_FAILS[*]} — logs above, and in $OUT"
 ok "logic self-tests"
 
 # ── 1. Build ───────────────────────────────────────────────────────────────
