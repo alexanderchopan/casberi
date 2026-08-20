@@ -197,6 +197,126 @@ struct WalletRowValue: View {
     }
 }
 
+/// The shape of what's ahead (2026-08-20, prd §417) — the widget's runway
+/// (§382a) at card scale, above the Coming up rows.
+///
+/// Four rows say WHAT the next things are; a rail says how they're spread —
+/// three deadlines bunched into next week reads completely differently from
+/// three spaced over a quarter, and no list gives that at any length. The
+/// widget's "Needs you" tile has paired the two since §382a; the room drew the
+/// rows alone.
+///
+/// **The invariant is inherited verbatim: the window always CONTAINS now.**
+/// `WidgetRunway.positions` folds the current moment into the range rather than
+/// clamping onto it, so a row that has slipped past its date can never draw
+/// ahead of the marker. That is the whole reason this reuses the widget's
+/// arithmetic instead of restating it: one shape, one set of edge cases, and
+/// the tile and the room can never disagree about the same deadlines.
+///
+/// Declines exactly where the widget's does — nothing to place, or every date
+/// at one moment, which has no shape and would divide by zero. The rows below
+/// say it instead.
+struct WalletRunwayRail: View {
+    /// Which way the window runs. The DRAWING is identical — `WidgetRunway`
+    /// folds `now` into the range either way, so a past span simply puts the
+    /// marker at the right-hand end and a future one at the left. What differs
+    /// is the sentence spoken, and pretending otherwise would have VoiceOver
+    /// announce a decade of transfers as "things ahead".
+    ///
+    /// `.behind` is the address card's history span (prd §417): first contact
+    /// to now, every transfer a dot. The gap between the last dot and the
+    /// marker is the reading a rows-only list can never give — how long since
+    /// you two last spoke.
+    enum Sense { case ahead, behind }
+
+    let dates: [Date]
+    var sense: Sense = .ahead
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var arrived = false
+
+    private let dotSize: CGFloat = 9
+    private let trackHeight: CGFloat = 3
+    private let band: CGFloat = 20
+
+    var body: some View {
+        if let placed = WidgetRunway.positions(for: dates) {
+            GeometryReader { geo in
+                rail(placed, width: geo.size.width)
+            }
+            .frame(height: band)
+            // Dots on a track read as nothing to VoiceOver (§299, the risk
+            // strip's own lesson). The rail's claim is a SPREAD, so that is
+            // what it says; the rows beneath name each item in full.
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(Text(spoken))
+            .onAppear { arrived = true }
+        }
+    }
+
+    private func rail(_ placed: (dots: [Double], now: Double),
+                      width: CGFloat) -> some View {
+        // Dots are inset by their own radius so one at either extreme stays
+        // fully on the track rather than half-hanging off the card — the risk
+        // strip's rule, and the reason `WidgetRunway.pad` exists besides.
+        let inset = dotSize / 2
+        let usable = max(1, width - dotSize)
+        let mid = band / 2
+        return ZStack(alignment: .topLeading) {
+            Capsule()
+                .fill(DS.fillLine)
+                .frame(height: trackHeight)
+                .offset(y: mid - trackHeight / 2)
+                .chartWipe(reduceMotion: reduceMotion)
+
+            // Now, as a notch rather than a dot: it is not one of the things
+            // being placed, and drawing it as one more circle would make the
+            // present read as a fifth deadline.
+            Capsule()
+                .fill(DS.textTertiary)
+                .frame(width: 2, height: 13)
+                .position(x: inset + usable * placed.now, y: mid)
+                .opacity(arrived ? 1 : 0)
+                .animation(reduceMotion ? nil
+                           : DS.Motion.standard.delay(ChartEntrance.lead), value: arrived)
+
+            ForEach(Array(placed.dots.enumerated()), id: \.offset) { index, at in
+                Circle()
+                    .fill(DS.tint)
+                    .frame(width: dotSize, height: dotSize)
+                    .position(x: inset + usable * at, y: mid)
+                    .opacity(arrived ? 1 : 0)
+                    .scaleEffect(arrived ? 1 : 0.5)
+                    .animation(dropIn(index), value: arrived)
+            }
+        }
+    }
+
+    /// Each dot lands after the track it sits on has wiped in — a deadline
+    /// floating over an undrawn axis is a dot in a card.
+    private func dropIn(_ index: Int) -> Animation? {
+        reduceMotion ? nil
+            : .spring(response: 0.55, dampingFraction: 0.85)
+                .delay(ChartEntrance.offset(index: index) + 0.22)
+    }
+
+    private var spoken: String {
+        guard let first = dates.min(), let last = dates.max() else { return "" }
+        let from = first.formatted(.dateTime.month().day())
+        let to = last.formatted(.dateTime.month().day())
+        switch sense {
+        case .ahead:
+            return dates.count == 1
+                ? String(localized: "One thing ahead, \(from).")
+                : String(localized: "\(dates.count) things ahead, from \(from) to \(to).")
+        case .behind:
+            return dates.count == 1
+                ? String(localized: "One, on \(from).")
+                : String(localized: "\(dates.count) between \(from) and \(to).")
+        }
+    }
+}
+
 /// A section's name — the small gray label that does the ranking now that the
 /// cards are gone, with an optional count-link on its trailing edge. The
 /// label IS the door: "Activity · 128 total ›" replaces a centered "See all"
