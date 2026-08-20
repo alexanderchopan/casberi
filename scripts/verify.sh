@@ -20,6 +20,71 @@ mkdir -p "$OUT"
 step() { print -P "%F{cyan}▶ $1%f"; }
 fail() { print -P "%F{red}✗ $1%f"; exit 1; }
 
+# ── Pure-logic harness runner (PERF, 2026-08-19) ───────────────────
+# The 51 harnesses registered below are INDEPENDENT PROCESSES over
+# Foundation-only sources: each compiles its file WHOLE and mutation-tests it
+# by editing a scratch copy and recompiling, so one pass is ~600 optimizing
+# `swiftc` runs. Run strictly one at a time — as they were until this date —
+# that is the bulk of a ~20-minute verify spent on ONE core of eight, and it
+# grows linearly with every harness added.
+#
+# They parallelize safely, and that is a MEASURED property rather than a hope:
+# every one allocates its scratch through `mktemp`, so no two can collide on a
+# path. Nothing here is shared but the read-only source tree.
+#
+# STILL A HAND LIST, deliberately. Each `harness` line names its script
+# literally, so the completeness guard above still finds it by grep, and the
+# comment above each line — the only written record of WHY that check exists —
+# is untouched. A glob would run the same checks while throwing all of that
+# away (`catalog-sync.sh`'s shape).
+#
+# `xargs -P`, NOT a hand-rolled `jobs -r` slot loop. Job control is OFF in a
+# non-interactive zsh, so `jobs -r` reports NOTHING and such a loop degrades
+# silently to "launch all 51 at once" — measured while writing this, and on an
+# 8-core box that thrashes to SLOWER than serial while every check still
+# passes. The bug would have been invisible: green, and wrong.
+#
+# OUTPUT IS KEPT FOR EVERY HARNESS, not just the one that earned the rule.
+# `category-fold` bought that lesson on 2026-08-13 — two ~20-minute runs died
+# having printed nothing but a ✗ because stdout went to /dev/null. A parallel
+# run has to capture anyway, so every harness now gets the diagnosability one
+# of them had to ask for.
+#
+# ALL failures are reported, never just the first: under `fail`'s exit-on-first
+# a second broken harness costs another full pass to discover.
+typeset -a _H_LABEL _H_OK _H_SCRIPT _H_MSG
+harness() { _H_LABEL+=("$1"); _H_OK+=("$2"); _H_SCRIPT+=("$3"); _H_MSG+=("$4"); }
+
+run_harnesses() {
+  local n=${#_H_SCRIPT} i rc bad=0
+  local jobs; jobs=$(sysctl -n hw.ncpu 2>/dev/null || print 4)
+  step "Pure-logic harnesses ($n, up to $jobs at once)"
+  export H_ROOT="$ROOT" H_OUT="$OUT"
+  { for (( i = 1; i <= n; i++ )); do print -r -- "${_H_SCRIPT[i]}"; done } \
+    | xargs -P "$jobs" -I{} zsh -c '
+        s="$1"; b="${s:t:r}"
+        "$H_ROOT/$s" > "$H_OUT/$b.log" 2>&1
+        print $? > "$H_OUT/$b.rc"
+        exit 0
+      ' _ {}
+  # Reported in REGISTRATION order, never completion order: a pass whose lines
+  # reshuffle between runs cannot be diffed against the last one.
+  for (( i = 1; i <= n; i++ )); do
+    local b="${_H_SCRIPT[i]:t:r}"
+    rc=$(<"$H_OUT/$b.rc" 2>/dev/null) || rc=99   # no rc file = never ran
+    if [[ "$rc" == 0 ]]; then
+      print -P "%F{green}✓ ${_H_OK[i]}%f"
+    else
+      bad=$((bad+1))
+      print -P "%F{red}✗ ${_H_MSG[i]}%f"
+      print -P "%F{red}    full log: $OUT/$b.log%f"
+      tail -20 "$OUT/$b.log" 2>/dev/null | sed 's/^/    /'
+    fi
+  done
+  (( bad == 0 )) || fail "$bad of $n pure-logic harnesses failed — see the logs above"
+  print -P "%F{green}✓ all $n pure-logic harnesses%f"
+}
+
 # ── 0. Catalog sync (static, fast — fails before the slow build) ────
 # Enforces BridgeCatalog.offers as the single source of truth for the app
 # catalog, the website #catalog shelf, and the onboarding tiles. See the
@@ -322,20 +387,14 @@ print -P "%F{green}✓ check completeness ($(ls "$ROOT"/scripts/*-selftest.sh "$
 # that drifts from a separately-maintained copy of its tests is worse than no
 # primitive: a wrong checksum is a DIFFERENT BUT VALID address, with no crash
 # and no warning — and the wrong wallet/Safe label rides along with it.
-step "Keccak-256 self-test"
-"$ROOT/scripts/keccak256-selftest.sh" >/dev/null \
-  || fail "the Keccak-256 self-test failed — run scripts/keccak256-selftest.sh"
-print -P "%F{green}✓ keccak256 self-test%f"
+harness "Keccak-256 self-test" "keccak256 self-test" "scripts/keccak256-selftest.sh" "the Keccak-256 self-test failed — run scripts/keccak256-selftest.sh"
 
 # Address safety (`Model/AddressSafety.swift`). Both functions are pure and
 # both fail SILENTLY: a checksum check that answers `unavailable` for
 # everything simply never warns, and a lookalike test with a mis-shaped
 # display key finds nothing. Neither has any on-screen symptom — the screen
 # looks exactly as safe as it did before.
-step "Address-safety self-test"
-"$ROOT/scripts/address-safety-selftest.sh" >/dev/null \
-  || fail "the address-safety self-test failed — run scripts/address-safety-selftest.sh"
-print -P "%F{green}✓ address-safety self-test%f"
+harness "Address-safety self-test" "address-safety self-test" "scripts/address-safety-selftest.sh" "the address-safety self-test failed — run scripts/address-safety-selftest.sh"
 
 # The price surface's honesty rails (2026-08-16). Every failure it catches
 # renders as a perfectly good-looking chart made of real numbers that are about
@@ -346,19 +405,13 @@ print -P "%F{green}✓ address-safety self-test%f"
 # `design-motion-audit.py` structurally cannot reach the Reduce Motion guard
 # here (it carves out `withAnimation` inside an `async` func, and the reveal is
 # called from `load()`).
-step "Price-chart self-test"
-"$ROOT/scripts/price-chart-selftest.sh" >/dev/null \
-  || fail "the price-chart self-test failed — run scripts/price-chart-selftest.sh"
-print -P "%F{green}✓ price-chart self-test%f"
+harness "Price-chart self-test" "price-chart self-test" "scripts/price-chart-selftest.sh" "the price-chart self-test failed — run scripts/price-chart-selftest.sh"
 
 # Wallet visualizations — the flow band's grouping, the distance-to-liquidation
 # axis, the stable share. Arithmetic behind three cards that render perfectly
 # whatever number is in them (it already caught an unparseable allowance
 # printing "$0", i.e. "reaches nothing" for a grant we had failed to read).
-step "Wallet-visualization self-test"
-"$ROOT/scripts/wallet-viz-selftest.sh" >/dev/null \
-  || fail "the wallet-visualization self-test failed — run scripts/wallet-viz-selftest.sh"
-print -P "%F{green}✓ wallet-viz self-test%f"
+harness "Wallet-visualization self-test" "wallet-viz self-test" "scripts/wallet-viz-selftest.sh" "the wallet-visualization self-test failed — run scripts/wallet-viz-selftest.sh"
 
 # The WalletConnect picker's arithmetic (`Model/WalletConnectPlan.swift`, prd
 # §376). The bug it replaces was unreportable, not merely unnoticed: the
@@ -369,43 +422,28 @@ print -P "%F{green}✓ wallet-viz self-test%f"
 # nothing in the app represented it before this. No simulator can reach the
 # real path (no wallet app claims `wc:` there, so `-wcConnectProbe` can only
 # ever time out), which makes this harness the only proof these numbers hold.
-step "WalletConnect-picker self-test"
-"$ROOT/scripts/wallet-connect-plan-selftest.sh" >/dev/null \
-  || fail "the WalletConnect-picker self-test failed — run scripts/wallet-connect-plan-selftest.sh"
-print -P "%F{green}✓ wallet-connect-plan self-test%f"
+harness "WalletConnect-picker self-test" "wallet-connect-plan self-test" "scripts/wallet-connect-plan-selftest.sh" "the WalletConnect-picker self-test failed — run scripts/wallet-connect-plan-selftest.sh"
 
 # The three chat import rooms (ChatGPT / Claude / Gemini) — the shared flatten
 # and clamp, plus ChatGPT's GRAPH walk, which must recover conversation order
 # rather than dictionary order. A transcript in the wrong order still reads as
 # a transcript.
-step "Chat-import self-test"
-"$ROOT/scripts/chatimport-selftest.sh" >/dev/null \
-  || fail "the chat-import self-test failed — run scripts/chatimport-selftest.sh"
-print -P "%F{green}✓ chat-import self-test%f"
+harness "Chat-import self-test" "chat-import self-test" "scripts/chatimport-selftest.sh" "the chat-import self-test failed — run scripts/chatimport-selftest.sh"
 
 # Claude Code import (`ClaudeCodeSession`, compiled WHOLE — Foundation-only by
 # design, which is why it is a separate type from the SwiftData landing beside
 # it).
-step "Claude Code import self-test"
-"$ROOT/scripts/claudecode-selftest.sh" >/dev/null \
-  || fail "the Claude Code import self-test failed — run scripts/claudecode-selftest.sh"
-print -P "%F{green}✓ claude code self-test%f"
+harness "Claude Code import self-test" "claude code self-test" "scripts/claudecode-selftest.sh" "the Claude Code import self-test failed — run scripts/claudecode-selftest.sh"
 
 # The Cursor feed-room head (prd §340), compiled WHOLE and unmodified. Its
 # room is the one whose rows are grouped by a field the bridge stamps
 # elsewhere, so a nil head and a correct empty room look identical.
-step "Cursor-room self-test"
-"$ROOT/scripts/cursor-room-selftest.sh" >/dev/null \
-  || fail "the Cursor-room self-test failed — run scripts/cursor-room-selftest.sh"
-print -P "%F{green}✓ cursor-room self-test%f"
+harness "Cursor-room self-test" "cursor-room self-test" "scripts/cursor-room-selftest.sh" "the Cursor-room self-test failed — run scripts/cursor-room-selftest.sh"
 
 # The brief's two-column front page (prd §274) — the chapter parse, the ref
 # segments cut at each opener, and what spans full width. A mis-cut segment
 # lays out cleanly and silently drops or duplicates a chapter's refs.
-step "Front-page self-test"
-"$ROOT/scripts/frontpage-selftest.sh" >/dev/null \
-  || fail "the front-page self-test failed — run scripts/frontpage-selftest.sh"
-print -P "%F{green}✓ front-page self-test%f"
+harness "Front-page self-test" "front-page self-test" "scripts/frontpage-selftest.sh" "the front-page self-test failed — run scripts/frontpage-selftest.sh"
 
 # Pure-logic self-test for the X work (prd §280). Static, no build, no
 # network: the archive importer was authored against no real X archive, and
@@ -420,15 +458,9 @@ print -P "%F{green}✓ front-page self-test%f"
 # it catches renders as a convincing card: a streak counted across a gap, a
 # six-week journal drawn as a two-year span, silent years skipped so the axis
 # rescales itself, or a year printed as the quantity "2,019".
-step "Journal-room self-test"
-"$ROOT/scripts/journal-room-selftest.sh" >/dev/null \
-  || fail "the journal-room self-test failed — run scripts/journal-room-selftest.sh"
-print -P "%F{green}✓ journal-room self-test%f"
+harness "Journal-room self-test" "journal-room self-test" "scripts/journal-room-selftest.sh" "the journal-room self-test failed — run scripts/journal-room-selftest.sh"
 
-step "X pure-logic self-test"
-"$ROOT/scripts/x-selftest.sh" >/dev/null \
-  || fail "the X logic self-test failed — run scripts/x-selftest.sh"
-print -P "%F{green}✓ X pure-logic self-test%f"
+harness "X pure-logic self-test" "X pure-logic self-test" "scripts/x-selftest.sh" "the X logic self-test failed — run scripts/x-selftest.sh"
 
 # The Instagram room's head and the §395 wiring under it. Same reason as the X
 # row above and one grade stronger: that seat could at least be measured by
@@ -439,10 +471,7 @@ print -P "%F{green}✓ X pure-logic self-test%f"
 # hundred, a year printed as a quantity. It also carries the negative guard that
 # keeps `og:image`'s SIGNED url out of `previewImageURL` — art that 404s within
 # the week, which is precisely what §245 measured and refused.
-step "Instagram pure-logic self-test"
-"$ROOT/scripts/instagram-selftest.sh" >/dev/null \
-  || fail "the Instagram logic self-test failed — run scripts/instagram-selftest.sh"
-print -P "%F{green}✓ Instagram pure-logic self-test%f"
+harness "Instagram pure-logic self-test" "Instagram pure-logic self-test" "scripts/instagram-selftest.sh" "the Instagram logic self-test failed — run scripts/instagram-selftest.sh"
 
 # The All feed's fold decisions (prd §377/§378/§379). Every failure it catches
 # is a silent wrong answer on the LANDING SCREEN that renders perfectly: a
@@ -454,10 +483,7 @@ print -P "%F{green}✓ Instagram pure-logic self-test%f"
 # pulled them into `Model/FeedFold.swift` for exactly this reason — §255 is the
 # record of what an unprovable fold rule costs (a gate that measured THINGS
 # while the feed drew ROWS, wrong for a month, found by eye).
-step "Feed-fold self-test"
-"$ROOT/scripts/feed-fold-selftest.sh" >/dev/null \
-  || fail "the feed-fold self-test failed — run scripts/feed-fold-selftest.sh"
-print -P "%F{green}✓ feed-fold self-test%f"
+harness "Feed-fold self-test" "feed-fold self-test" "scripts/feed-fold-selftest.sh" "the feed-fold self-test failed — run scripts/feed-fold-selftest.sh"
 
 # "Is this address a feed?" — the discriminator every RSS follow hangs off
 # (2026-08-16), from a user report of following a site that publishes none.
@@ -469,10 +495,7 @@ print -P "%F{green}✓ feed-fold self-test%f"
 # its own time budget muting a good address for a week. It also guards the two
 # bounds — a per-candidate timeout and a total crawl budget — that keep one
 # slow host from pinning the whole bridge, which is the reported symptom.
-step "RSS discovery self-test"
-"$ROOT/scripts/rss-discovery-selftest.sh" >/dev/null \
-  || fail "the RSS discovery self-test failed — run scripts/rss-discovery-selftest.sh"
-print -P "%F{green}✓ RSS discovery self-test%f"
+harness "RSS discovery self-test" "RSS discovery self-test" "scripts/rss-discovery-selftest.sh" "the RSS discovery self-test failed — run scripts/rss-discovery-selftest.sh"
 
 # Pure-logic self-test for the Cloudflare DNS change detector (prd §296). Same
 # reasoning as the X harness above: the bridge was authored against Cloudflare's
@@ -480,10 +503,7 @@ print -P "%F{green}✓ RSS discovery self-test%f"
 # failure in `diffDNS` is a silent wrong answer that renders perfectly — a
 # partial read reporting live records as deleted, a proxy flag flipped off
 # passing as no change, a second change to a record deduping into the first.
-step "Cloudflare pure-logic self-test"
-"$ROOT/scripts/cloudflare-selftest.sh" >/dev/null \
-  || fail "the Cloudflare logic self-test failed — run scripts/cloudflare-selftest.sh"
-print -P "%F{green}✓ cloudflare self-test%f"
+harness "Cloudflare pure-logic self-test" "cloudflare self-test" "scripts/cloudflare-selftest.sh" "the Cloudflare logic self-test failed — run scripts/cloudflare-selftest.sh"
 
 # Pure-logic self-test for the Cursor bridge (prd §303). Stronger reason than
 # the two above: those bridges COULD be measured by someone who mints a key,
@@ -494,10 +514,7 @@ print -P "%F{green}✓ cloudflare self-test%f"
 # a Cursor key has no scopes, so the catalog's "never starts one, follows one
 # up, stops one, or deletes one" is kept only by that file issuing GET alone.
 # That promise was prose in the source; here it is mechanical.
-step "Cursor pure-logic self-test"
-"$ROOT/scripts/cursor-selftest.sh" >/dev/null \
-  || fail "the Cursor logic self-test failed — run scripts/cursor-selftest.sh"
-print -P "%F{green}✓ cursor self-test%f"
+harness "Cursor pure-logic self-test" "cursor self-test" "scripts/cursor-selftest.sh" "the Cursor logic self-test failed — run scripts/cursor-selftest.sh"
 
 # Circle x402 (2026-08-06). Unlike the harnesses above this bridge IS
 # measurable — the directory is keyless — and that is exactly why it needs one:
@@ -515,15 +532,9 @@ print -P "%F{green}✓ cursor self-test%f"
 # ever reads" is kept by that one file issuing GET alone. It also pins the
 # claim set: `iss` and `sub` are mutually exclusive in Apple's token spec, and
 # getting it wrong is a 401 indistinguishable from a wrong key.
-step "App Store Connect pure-logic self-test"
-"$ROOT/scripts/appstoreconnect-selftest.sh" >/dev/null \
-  || fail "the App Store Connect logic self-test failed — run scripts/appstoreconnect-selftest.sh"
-print -P "%F{green}✓ app store connect self-test%f"
+harness "App Store Connect pure-logic self-test" "app store connect self-test" "scripts/appstoreconnect-selftest.sh" "the App Store Connect logic self-test failed — run scripts/appstoreconnect-selftest.sh"
 
-step "Circle x402 pure-logic self-test"
-"$ROOT/scripts/x402-selftest.sh" >/dev/null \
-  || fail "the x402 logic self-test failed — run scripts/x402-selftest.sh"
-print -P "%F{green}✓ x402 self-test%f"
+harness "Circle x402 pure-logic self-test" "x402 self-test" "scripts/x402-selftest.sh" "the x402 logic self-test failed — run scripts/x402-selftest.sh"
 
 # The contract between the app and its Home Screen (prd §382, 2026-08-14).
 # Mechanical because the widget extension is the ONE surface nothing else in
@@ -536,10 +547,7 @@ print -P "%F{green}✓ x402 self-test%f"
 # every foreground. It found that last one on its first run: comparing the
 # serialized BYTES of two identical payloads reports a change every time,
 # because `JSONEncoder` is not byte-stable.
-step "Widget payload self-test"
-"$ROOT/scripts/widget-selftest.sh" >/dev/null \
-  || fail "the widget self-test failed — run scripts/widget-selftest.sh"
-print -P "%F{green}✓ widget self-test%f"
+harness "Widget payload self-test" "widget self-test" "scripts/widget-selftest.sh" "the widget self-test failed — run scripts/widget-selftest.sh"
 
 # The sources tray's row packer (2026-08-10). Mechanical because the failure is
 # INVISIBLE: a tray packed one row worse than it could be renders perfectly, it
@@ -547,10 +555,7 @@ print -P "%F{green}✓ widget self-test%f"
 # scrolls, which is the one thing this tray has been redesigned three times to
 # avoid. The harness carries the exact optimiser the app deliberately does NOT
 # ship, and proves the three-line sort still ties it.
-step "Sources-tray packing self-test"
-"$ROOT/scripts/source-packing-selftest.sh" >/dev/null \
-  || fail "the sources-tray packing self-test failed — run scripts/source-packing-selftest.sh"
-print -P "%F{green}✓ source packing self-test%f"
+harness "Sources-tray packing self-test" "source packing self-test" "scripts/source-packing-selftest.sh" "the sources-tray packing self-test failed — run scripts/source-packing-selftest.sh"
 
 # Every folded chip's ordering and resolution rules (prd §351, 2026-08-11 —
 # supersedes the Markets-only harness this line used to run, generalizing it
@@ -561,7 +566,6 @@ print -P "%F{green}✓ source packing self-test%f"
 # no chip at all while you stand in the room; and a category LABEL reaching
 # `FeedFilter.source` puts that name into every query and deep link, where it
 # matches nothing forever with no error anywhere.
-step "Category fold self-test"
 # Output KEPT, not discarded (2026-08-13). This test has now failed twice
 # inside a full run and passed standalone every time it was re-checked
 # afterwards — including with this exact `>/dev/null` invocation — so the
@@ -570,9 +574,7 @@ step "Category fold self-test"
 # to /dev/null and stderr was empty, so two ~20-minute runs were spent
 # learning nothing. Keeping the output makes the next occurrence
 # diagnosable instead of a third mystery.
-"$ROOT/scripts/category-fold-selftest.sh" >"$OUT/category-fold-selftest.log" 2>&1 \
-  || fail "the category fold self-test failed — see $OUT/category-fold-selftest.log (it often passes standalone: scripts/category-fold-selftest.sh)"
-print -P "%F{green}✓ category fold self-test%f"
+harness "Category fold self-test" "category fold self-test" "scripts/category-fold-selftest.sh" "the category fold self-test failed — see $OUT/category-fold-selftest.log (it often passes standalone: scripts/category-fold-selftest.sh)"
 
 # What a chip tap is allowed to FETCH (PERF 2026-08-13). Tapping an agent chip
 # used to materialise the entire store twice on the main actor — once in
@@ -589,10 +591,7 @@ print -P "%F{green}✓ category fold self-test%f"
 # above the paint restores half the latency with nothing on screen to say so.
 # None of it is visible to the build, the sweep, or the nightly perf pass —
 # which times launch, RSS and answer latency, all of them upstream of this work.
-step "Ask-scope self-test"
-"$ROOT/scripts/ask-scope-selftest.sh" >/dev/null \
-  || fail "the ask-scope self-test failed — run scripts/ask-scope-selftest.sh"
-print -P "%F{green}✓ ask-scope self-test%f"
+harness "Ask-scope self-test" "ask-scope self-test" "scripts/ask-scope-selftest.sh" "the ask-scope self-test failed — run scripts/ask-scope-selftest.sh"
 
 # The deterministic figure above a free-text answer's prose (2026-08-15) — the
 # app's own arithmetic over the rows the model is about to read. Every way it
@@ -610,10 +609,7 @@ print -P "%F{green}✓ ask-scope self-test%f"
 # grammar and no `Thing` is read across that suspension (build 250's class, in
 # this very function). Unreachable by every other check here — the synthesis
 # branch needs Apple Intelligence, which no simulator has.
-step "Answer-figure self-test"
-"$ROOT/scripts/answer-figure-selftest.sh" >/dev/null \
-  || fail "the answer-figure self-test failed — run scripts/answer-figure-selftest.sh"
-print -P "%F{green}✓ answer-figure self-test%f"
+harness "Answer-figure self-test" "answer-figure self-test" "scripts/answer-figure-selftest.sh" "the answer-figure self-test failed — run scripts/answer-figure-selftest.sh"
 
 # Whether the All feed's source tint is READABLE (2026-08-14). A `BandRow`'s
 # trailing label wears its source's own brand hue, and this is the second time
@@ -627,10 +623,7 @@ print -P "%F{green}✓ answer-figure self-test%f"
 # surviving mutation forced: clearing the bar is necessary and NOT sufficient —
 # a search that bails to the identity floor also clears it, while washing Wallet
 # blue, Stripe indigo and Aerodrome blue into the same pale tint.
-step "Legible-ink self-test"
-"$ROOT/scripts/legible-ink-selftest.sh" >/dev/null \
-  || fail "the legible-ink self-test failed — run scripts/legible-ink-selftest.sh"
-print -P "%F{green}✓ legible-ink self-test%f"
+harness "Legible-ink self-test" "legible-ink self-test" "scripts/legible-ink-selftest.sh" "the legible-ink self-test failed — run scripts/legible-ink-selftest.sh"
 
 # What anatomy a social thing sheet wears, and the reading under it (prd §363,
 # 2026-08-12). INVISIBLE, and shipped invisible for months: the gate asked
@@ -640,10 +633,7 @@ print -P "%F{green}✓ legible-ink self-test%f"
 # Every one of those renders perfectly. So do the failures this guards against
 # now: a save classified as a post sets a URL as somebody's sentence, and a
 # 2019 archive's counts shown with no date read as numbers just measured.
-step "Social sheet self-test"
-"$ROOT/scripts/social-sheet-selftest.sh" >/dev/null \
-  || fail "the social sheet self-test failed — run scripts/social-sheet-selftest.sh"
-print -P "%F{green}✓ social sheet self-test%f"
+harness "Social sheet self-test" "social sheet self-test" "scripts/social-sheet-selftest.sh" "the social sheet self-test failed — run scripts/social-sheet-selftest.sh"
 
 # An event's enrichment (`Model/EventDetails.swift`, 2026-08-14) — which link
 # in an invite is the way to JOIN the call, and how a collapsed series says it
@@ -657,10 +647,7 @@ print -P "%F{green}✓ social sheet self-test%f"
 # perfectly: a Teams "Join" opening the settings page, a Meet link filed as a
 # location running a Maps SEARCH for a URL, and "Every Tuesday" on a rule that
 # means every OTHER Tuesday.
-step "Calendar self-test"
-"$ROOT/scripts/calendar-selftest.sh" >/dev/null \
-  || fail "the calendar self-test failed — run scripts/calendar-selftest.sh"
-print -P "%F{green}✓ calendar self-test%f"
+harness "Calendar self-test" "calendar self-test" "scripts/calendar-selftest.sh" "the calendar self-test failed — run scripts/calendar-selftest.sh"
 
 # `MailMIME.attachmentNames` (2026-08-14) — the names of what somebody emailed
 # you, read out of bytes THEY wrote. Every header it parses is attacker-
@@ -669,10 +656,7 @@ print -P "%F{green}✓ calendar self-test%f"
 # reported as a file you were sent, or the inverse — a PDF sent
 # `Content-Disposition: inline`, which is extremely common — silently reporting
 # nothing attached. All three render as a perfectly ordinary row.
-step "MIME self-test"
-"$ROOT/scripts/mailmime-selftest.sh" >/dev/null \
-  || fail "the MIME self-test failed — run scripts/mailmime-selftest.sh"
-print -P "%F{green}✓ MIME self-test%f"
+harness "MIME self-test" "MIME self-test" "scripts/mailmime-selftest.sh" "the MIME self-test failed — run scripts/mailmime-selftest.sh"
 
 # What a NOTE thing sheet shows (prd §366, 2026-08-12) — the category whose
 # whole job is to show you words and which showed the fewest of them. Same
@@ -684,10 +668,7 @@ print -P "%F{green}✓ MIME self-test%f"
 # data-loss fix in place — the passage on `content`, the work where a room can
 # rank it, and the heal that is the only thing able to give back the words the
 # old importer threw away.
-step "Note sheet self-test"
-"$ROOT/scripts/note-sheet-selftest.sh" >/dev/null \
-  || fail "the note sheet self-test failed — run scripts/note-sheet-selftest.sh"
-print -P "%F{green}✓ note sheet self-test%f"
+harness "Note sheet self-test" "note sheet self-test" "scripts/note-sheet-selftest.sh" "the note sheet self-test failed — run scripts/note-sheet-selftest.sh"
 
 # What a WORK thing sheet says HAPPENED (prd §364, 2026-08-12). Same class as
 # the social sheet above and the same reason: every failure renders as a
@@ -698,10 +679,7 @@ print -P "%F{green}✓ note sheet self-test%f"
 # come from a stable English tag or a raw state in the ref, NEVER from the
 # localized title, or a device that changed language reports every past
 # failure as a success.
-step "Work sheet self-test"
-"$ROOT/scripts/work-stage-selftest.sh" >/dev/null \
-  || fail "the Work sheet self-test failed — run scripts/work-stage-selftest.sh"
-print -P "%F{green}✓ Work sheet self-test%f"
+harness "Work sheet self-test" "Work sheet self-test" "scripts/work-stage-selftest.sh" "the Work sheet self-test failed — run scripts/work-stage-selftest.sh"
 
 # What an AGENT thing sheet shows (prd §367, 2026-08-12) — the category holding
 # more text than any other and drawing the least of it. The parse is the sharp
@@ -715,10 +693,7 @@ print -P "%F{green}✓ Work sheet self-test%f"
 # YOU. It also holds the clamp clause honest in both directions — an 84-turn
 # chat must say what it is missing, and a chat that was never clamped must not
 # claim turns went missing that never existed.
-step "Agent sheet self-test"
-"$ROOT/scripts/agent-sheet-selftest.sh" >/dev/null \
-  || fail "the agent sheet self-test failed — run scripts/agent-sheet-selftest.sh"
-print -P "%F{green}✓ agent sheet self-test%f"
+harness "Agent sheet self-test" "agent sheet self-test" "scripts/agent-sheet-selftest.sh" "the agent sheet self-test failed — run scripts/agent-sheet-selftest.sh"
 
 # What a PURCHASE sheet says (prd §368, 2026-08-12) — the shopping category's
 # receipt, and the card behind a product you're only watching. Same class as
@@ -729,20 +704,14 @@ print -P "%F{green}✓ agent sheet self-test%f"
 # fork itself: the obvious "does it carry a price" test dresses Railgun, Peer
 # and Bitcoin transfers as card purchases, so the archetype must come from a
 # `sourceRef` prefix this app wrote.
-step "Purchase sheet self-test"
-"$ROOT/scripts/purchase-stage-selftest.sh" >/dev/null \
-  || fail "the purchase sheet self-test failed — run scripts/purchase-stage-selftest.sh"
-print -P "%F{green}✓ purchase sheet self-test%f"
+harness "Purchase sheet self-test" "purchase sheet self-test" "scripts/purchase-stage-selftest.sh" "the purchase sheet self-test failed — run scripts/purchase-stage-selftest.sh"
 
 # Pure-logic self-test for the retriever's scoring primitives (prd §318): term
 # rarity, query coverage, phrase adjacency, match-centered snippets. The
 # failure mode here is the one no build or sweep can see — a RANKING being
 # wrong: a grounding set diluted by one-common-word matches still paints 16
 # plausible rows, and the model's general prose over them reads as an answer.
-step "Retriever pure-logic self-test"
-"$ROOT/scripts/retriever-selftest.sh" >/dev/null \
-  || fail "the retriever logic self-test failed — run scripts/retriever-selftest.sh"
-print -P "%F{green}✓ retriever self-test%f"
+harness "Retriever pure-logic self-test" "retriever self-test" "scripts/retriever-selftest.sh" "the retriever logic self-test failed — run scripts/retriever-selftest.sh"
 
 # The vault reader (2026-08-06), plus the drift guards for the wiring it can't
 # prove. Two of those guards cover SILENT TRUNCATIONS — this bridge and the
@@ -760,15 +729,9 @@ print -P "%F{green}✓ retriever self-test%f"
 # builds, still renders, and quietly spends double. The pure half is the same
 # silent class: an unsorted contract list is the shelf's own cache key, so it
 # misses its cache at random and re-buys the read the window exists to avoid.
-step "Wallet-NFT pure-logic self-test"
-"$ROOT/scripts/wallet-nft-selftest.sh" >/dev/null \
-  || fail "the wallet-NFT logic self-test failed — run scripts/wallet-nft-selftest.sh"
-print -P "%F{green}✓ wallet-nft self-test%f"
+harness "Wallet-NFT pure-logic self-test" "wallet-nft self-test" "scripts/wallet-nft-selftest.sh" "the wallet-NFT logic self-test failed — run scripts/wallet-nft-selftest.sh"
 
-step "Obsidian pure-logic self-test"
-"$ROOT/scripts/obsidian-selftest.sh" >/dev/null \
-  || fail "the Obsidian logic self-test failed — run scripts/obsidian-selftest.sh"
-print -P "%F{green}✓ obsidian self-test%f"
+harness "Obsidian pure-logic self-test" "obsidian self-test" "scripts/obsidian-selftest.sh" "the Obsidian logic self-test failed — run scripts/obsidian-selftest.sh"
 
 # The folder door on a folder-picked file (prd §408, 2026-08-19). Every failure
 # it catches renders as a perfectly ordinary row: a ref that walks upward
@@ -780,10 +743,7 @@ print -P "%F{green}✓ obsidian self-test%f"
 # drift guards cover the half the pure file cannot: the scheme is declared,
 # probed and GATED, both verb dispatchers run it, and the hand-off does not
 # quietly take the pasteboard on the way out.
-step "Files-location pure-logic self-test"
-"$ROOT/scripts/files-location-selftest.sh" >/dev/null \
-  || fail "the Files-location self-test failed — run scripts/files-location-selftest.sh"
-print -P "%F{green}✓ files-location self-test%f"
+harness "Files-location pure-logic self-test" "files-location self-test" "scripts/files-location-selftest.sh" "the Files-location self-test failed — run scripts/files-location-selftest.sh"
 
 # Radicle (prd §400, 2026-08-18). The ONLY proof this bridge has: nothing on
 # this host can open a patch, merge one or close an issue, so no probe and no
@@ -806,14 +766,9 @@ print -P "%F{green}✓ files-location self-test%f"
 # thing. It also guards the two-file MIRROR between `GitHubRoom.Ask`'s raw
 # values and the strings `GitHubFeeds.notificationAsk` stamps, which cannot
 # import each other and would otherwise drift into the head silently vanishing.
-step "GitHub room pure-logic self-test"
-"$ROOT/scripts/github-room-selftest.sh" >/dev/null \
-  || fail "the GitHub room self-test failed — run scripts/github-room-selftest.sh"
-print -P "%F{green}✓ github-room self-test%f"
+harness "GitHub room pure-logic self-test" "github-room self-test" "scripts/github-room-selftest.sh" "the GitHub room self-test failed — run scripts/github-room-selftest.sh"
 
-step "Radicle pure-logic self-test"
-"$ROOT/scripts/radicle-selftest.sh" >/dev/null \
-  || fail "the Radicle logic self-test failed — run scripts/radicle-selftest.sh"
+harness "Radicle pure-logic self-test" "radicle self-test" "scripts/radicle-selftest.sh" "the Radicle logic self-test failed — run scripts/radicle-selftest.sh"
 
 # Altana's keystore room (`Model/AltanaKeystore.swift`, `Model/AltanaRoom.swift`).
 # Nothing on this host can register a key, revoke one, or make a grant expire —
@@ -824,11 +779,7 @@ step "Radicle pure-logic self-test"
 # confident wrong date on a security screen, and the harness proves the witness
 # refuses rather than guesses. It also carries the conduct guard that keeps the
 # catalog's "never registers, revokes, or signs" true.
-step "Altana keystore self-test"
-"$ROOT/scripts/altana-selftest.sh" >/dev/null \
-  || fail "the Altana keystore self-test failed — run scripts/altana-selftest.sh"
-print -P "%F{green}✓ altana self-test%f"
-print -P "%F{green}✓ radicle self-test%f"
+harness "Altana keystore self-test" "altana self-test" "scripts/altana-selftest.sh" "the Altana keystore self-test failed — run scripts/altana-selftest.sh"
 
 # The four bridges added 2026-08-04. Three of them (Sentry, Vercel, PagerDuty)
 # have never run against a live account from this host, so these harnesses are
@@ -846,40 +797,22 @@ print -P "%F{green}✓ radicle self-test%f"
 # RSS and answer latency, and a wrong number here moves none of them. Also
 # carries the drift guards tying the instrument to the sweeps it names and to
 # the off-main-actor hop that fixed them.
-step "Sweep-clock self-test"
-"$ROOT/scripts/sweep-clock-selftest.sh" >/dev/null \
-  || fail "the sweep-clock self-test failed — run scripts/sweep-clock-selftest.sh"
-print -P "%F{green}✓ sweep-clock self-test%f"
+harness "Sweep-clock self-test" "sweep-clock self-test" "scripts/sweep-clock-selftest.sh" "the sweep-clock self-test failed — run scripts/sweep-clock-selftest.sh"
 
 # The one check a live probe can never replace: no key for most of these
 # bridges exists on any machine this is built on, so nothing here or on a
 # device can produce the 401 the feature exists to notice. Also carries the
 # drift guards tying the state machine to the transport funnel that feeds it
 # and the sweep that surfaces it.
-step "Bridge-health self-test"
-"$ROOT/scripts/bridge-health-selftest.sh" >/dev/null \
-  || fail "the bridge-health self-test failed — run scripts/bridge-health-selftest.sh"
-print -P "%F{green}✓ bridge-health self-test%f"
+harness "Bridge-health self-test" "bridge-health self-test" "scripts/bridge-health-selftest.sh" "the bridge-health self-test failed — run scripts/bridge-health-selftest.sh"
 
-step "Sentry pure-logic self-test"
-"$ROOT/scripts/sentry-selftest.sh" >/dev/null \
-  || fail "the Sentry logic self-test failed — run scripts/sentry-selftest.sh"
-print -P "%F{green}✓ sentry self-test%f"
+harness "Sentry pure-logic self-test" "sentry self-test" "scripts/sentry-selftest.sh" "the Sentry logic self-test failed — run scripts/sentry-selftest.sh"
 
-step "Vercel pure-logic self-test"
-"$ROOT/scripts/vercel-selftest.sh" >/dev/null \
-  || fail "the Vercel logic self-test failed — run scripts/vercel-selftest.sh"
-print -P "%F{green}✓ vercel self-test%f"
+harness "Vercel pure-logic self-test" "vercel self-test" "scripts/vercel-selftest.sh" "the Vercel logic self-test failed — run scripts/vercel-selftest.sh"
 
-step "PagerDuty pure-logic self-test"
-"$ROOT/scripts/pagerduty-selftest.sh" >/dev/null \
-  || fail "the PagerDuty logic self-test failed — run scripts/pagerduty-selftest.sh"
-print -P "%F{green}✓ pagerduty self-test%f"
+harness "PagerDuty pure-logic self-test" "pagerduty self-test" "scripts/pagerduty-selftest.sh" "the PagerDuty logic self-test failed — run scripts/pagerduty-selftest.sh"
 
-step "npm/PyPI pure-logic self-test"
-"$ROOT/scripts/packages-selftest.sh" >/dev/null \
-  || fail "the package-registry logic self-test failed — run scripts/packages-selftest.sh"
-print -P "%F{green}✓ packages self-test%f"
+harness "npm/PyPI pure-logic self-test" "packages self-test" "scripts/packages-selftest.sh" "the package-registry logic self-test failed — run scripts/packages-selftest.sh"
 
 # Apple Wallet / FinanceKit (prd §313). Carries more weight than the other
 # room harnesses: NO SIMULATOR SHIPS FINANCEKIT DATA, so the sweep below can
@@ -890,10 +823,7 @@ print -P "%F{green}✓ packages self-test%f"
 # guards the entitlement's own terms (the disconnect that deletes, the
 # no-server line on the setup screen, FinanceKit staying out of the Catalyst
 # entitlements) — those are promises on file with Apple, not preferences.
-step "Apple Wallet pure-logic self-test"
-"$ROOT/scripts/applewallet-selftest.sh" >/dev/null \
-  || fail "the Apple Wallet logic self-test failed — run scripts/applewallet-selftest.sh"
-print -P "%F{green}✓ apple wallet self-test%f"
+harness "Apple Wallet pure-logic self-test" "apple wallet self-test" "scripts/applewallet-selftest.sh" "the Apple Wallet logic self-test failed — run scripts/applewallet-selftest.sh"
 
 # Pure-logic self-test for notifications (prd §306). The ONLY automated check
 # this feature can have: the simulator never runs a BGAppRefreshTask, so the
@@ -901,20 +831,14 @@ print -P "%F{green}✓ apple wallet self-test%f"
 # device the wrong answer arrives hours later on a lock screen with nobody
 # watching. A 3am buzz because quiet hours failed to wrap past midnight, a
 # dispute that never fires, eleven alarms where there should be one and a count.
-step "Notification pure-logic self-test"
-"$ROOT/scripts/notify-selftest.sh" >/dev/null \
-  || fail "the notification logic self-test failed — run scripts/notify-selftest.sh"
-print -P "%F{green}✓ notify self-test%f"
+harness "Notification pure-logic self-test" "notify self-test" "scripts/notify-selftest.sh" "the notification logic self-test failed — run scripts/notify-selftest.sh"
 
 # Pure-logic self-test for the Stripe and PostHog room heads (prd §298). Neither
 # bridge has ever run against a live account from this host, and every failure
 # here is a silent wrong answer: a dispute due tomorrow placed at the far end of
 # the rail, an overdue window sorted last, a metric that stopped firing ranked
 # below a busy one.
-step "Room-head pure-logic self-test"
-"$ROOT/scripts/room-heads-selftest.sh" >/dev/null \
-  || fail "the room-head logic self-test failed — run scripts/room-heads-selftest.sh"
-print -P "%F{green}✓ room-head self-test%f"
+harness "Room-head pure-logic self-test" "room-head self-test" "scripts/room-heads-selftest.sh" "the room-head logic self-test failed — run scripts/room-heads-selftest.sh"
 
 # Pure-logic self-test for the three WALLET-RIDING room heads — Peer, Privacy
 # Pools, Gnosis Pay (prd §349). These seats ride the watched wallets, so there
@@ -924,10 +848,7 @@ print -P "%F{green}✓ room-head self-test%f"
 # purchase (`peer:sell:` also starts `peer:`), a deposit with no state tag
 # claimed as "in review", EUR added to GBP, "up 400%" against a window the room
 # never observed.
-step "Wallet-room pure-logic self-test"
-"$ROOT/scripts/wallet-rooms-selftest.sh" >/dev/null \
-  || fail "the wallet-room logic self-test failed — run scripts/wallet-rooms-selftest.sh"
-print -P "%F{green}✓ wallet-room self-test%f"
+harness "Wallet-room pure-logic self-test" "wallet-room self-test" "scripts/wallet-rooms-selftest.sh" "the wallet-room logic self-test failed — run scripts/wallet-rooms-selftest.sh"
 
 # Pure-logic self-test for the MONEY RECEIPT — every money thing's sheet hero
 # (prd §369). This pass replaced a labelled spec table with SENTENCES, and a
@@ -938,10 +859,7 @@ print -P "%F{green}✓ wallet-room self-test%f"
 # torn edge (a claim of finality over an amount that can still change), "mostly
 # them sending you" over a 3–2 split, a mean reported as "usually", a phishing
 # domain promoted into the currency slot beside the figure.
-step "Money-receipt pure-logic self-test"
-"$ROOT/scripts/money-receipt-selftest.sh" >/dev/null \
-  || fail "the money-receipt logic self-test failed — run scripts/money-receipt-selftest.sh"
-print -P "%F{green}✓ money-receipt self-test%f"
+harness "Money-receipt pure-logic self-test" "money-receipt self-test" "scripts/money-receipt-selftest.sh" "the money-receipt logic self-test failed — run scripts/money-receipt-selftest.sh"
 
 # Pure-logic self-test for the agent's open (prd §332). This is the first screen
 # a person sees every day, and every failure in it renders perfectly: a tile
@@ -949,20 +867,14 @@ print -P "%F{green}✓ money-receipt self-test%f"
 # two threads, threads that reshuffle between opens over identical data. No
 # crash, no empty state, no log line — a build succeeds and the room simply
 # says something untrue in the largest type on it.
-step "Agent-panel pure-logic self-test"
-"$ROOT/scripts/agent-panel-selftest.sh" >/dev/null \
-  || fail "the agent-panel logic self-test failed — run scripts/agent-panel-selftest.sh"
-print -P "%F{green}✓ agent-panel self-test%f"
+harness "Agent-panel pure-logic self-test" "agent-panel self-test" "scripts/agent-panel-selftest.sh" "the agent-panel logic self-test failed — run scripts/agent-panel-selftest.sh"
 
 # Pure-logic self-test for the receipts screen's reach map (prd §300). The
 # card's whole job is to be checkable, so a silent wrong answer here is worse
 # than in any other visualization in the app: an undeclared host folded into
 # "3 more" hides the one row the screen exists to surface, and a truncated tail
 # makes a nine-service ledger look exactly like a six-service one.
-step "Receipts-insight pure-logic self-test"
-"$ROOT/scripts/receipts-insight-selftest.sh" >/dev/null \
-  || fail "the receipts-insight logic self-test failed — run scripts/receipts-insight-selftest.sh"
-print -P "%F{green}✓ receipts-insight self-test%f"
+harness "Receipts-insight pure-logic self-test" "receipts-insight self-test" "scripts/receipts-insight-selftest.sh" "the receipts-insight logic self-test failed — run scripts/receipts-insight-selftest.sh"
 
 # The design system's first mechanical check (prd §299). Every other rule in
 # this file is enforced by a script; the design system was enforced by memory,
@@ -970,6 +882,9 @@ print -P "%F{green}✓ receipts-insight self-test%f"
 # app's two most-used entrances (`SettleIn`, `RowEntrance`) ignored Reduce
 # Motion from the day they shipped. Neither is visible in a build or a
 # screenshot.
+
+run_harnesses
+
 step "Design-motion audit"
 python3 "$ROOT/scripts/design-motion-audit.py" >/dev/null \
   || fail "the design-motion audit failed — run python3 scripts/design-motion-audit.py"
