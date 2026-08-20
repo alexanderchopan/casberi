@@ -220,17 +220,19 @@ enum BridgeCatalog {
                          "Says how much has actually been reviewed, not just what passed",
                          "Vulnerabilities and breaches arrive as they're published"],
               needsSetup: true, added: day(2026, 8, 20)),
-        // SHOPPING, not Wallet (user ruling, 2026-08-20), and Privacy.com is
-        // the precedent that settles it: a credit card already sits in this
-        // group rather than beside the chains. The working line is that Wallet
-        // reads money you HOLD — balances, positions, an Apple Card's standing
-        // — while Shopping reads what you BUY. CardPointers holds no money and
-        // reads no balance; an offer is a discount at a merchant. (It still
-        // pairs with Apple Wallet across the two groups, which is the §420
-        // prize: that seat is the only one here that sees a MERCHANT name,
+        // WALLET group (user ruling, 2026-08-20, prd §420). Settled twice the
+        // same afternoon: first to Shopping on §222's receipts-vs-account
+        // line, then to Wallet on a better one — WALLET IS THE INSTRUMENTS YOU
+        // PAY WITH, SHOPPING IS THE MERCHANTS YOU SPEND AT. Privacy.com moved
+        // here in the same pass for the same reason, so §222's "Privacy.com
+        // sits in Shopping" is amended and must not be cited again. Note this
+        // seat therefore has NO standalone chip — `CategoryFold` folds Wallet's
+        // chips with no floor, so it is a venue in that cluster's switcher, one
+        // tap deeper, knowingly. It still pairs with Apple Wallet across the
+        // catalog: that seat is the only one here that sees a MERCHANT name,
         // this is the only one that knows which offer sits unused on which
-        // card.) The tagline names the subscription because every read needs
-        // it — measured, all five of their tools answer "-32001" for a free
+        // card. The tagline names the subscription because every read needs it
+        // — measured, all five of their tools answer "-32001" for a free
         // account — and a tile that discovered that after the tap is the §83
         // dead control.
         Offer(name: "CardPointers", tagline: "Unused card offers — needs CardPointers+", group: "Wallet", connectable: true,

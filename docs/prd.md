@@ -27833,19 +27833,34 @@ NOWHERE IN THE APP** (user ruling, 2026-08-20: "we aren't going to say
 CardPointers+", and the real `is_pro` state), never our own confidence in our
 code.
 
-**Catalog: SHOPPING, not Wallet** (user ruling, 2026-08-20: "don't you think it
-should go in shopping and not wallet?"). It first landed in Wallet on the
-strength of the Apple Wallet pairing, and that was the wrong axis. §222's own
-ruling 3 had already drawn the line — Privacy.com sits in Shopping as card
-RECEIPTS while Gnosis Pay sits in Wallet because it is the ACCOUNT, a Safe
-holding a balance that joins the wallet total — and by that test this is not
-close: CardPointers holds no money, reads no balance and joins no total. An
-offer is a discount at a merchant, which is buying, not holding. The pairing
-with Apple Wallet is unaffected and works across the two groups; a group is
-where somebody looks for a thing, not a claim about what composes with what.
-Worth noting the shape of the miss, since it will recur: the seat was filed
-beside the thing it COMPOSES with rather than beside the thing it IS, and the
-catalog is browsed by the second.
+**Catalog: the WALLET group** (user ruling, 2026-08-20). This was settled twice
+in one afternoon and both readings are recorded, because the second is a better
+RULE and not merely a different answer. First pass moved it to Shopping on
+§222's line — Privacy.com sits in Shopping as card RECEIPTS, Gnosis Pay in
+Wallet as the ACCOUNT holding a balance that joins the wallet total — and by
+that test CardPointers is not close to Wallet: it holds no money, reads no
+balance, joins no total. The ruling that replaced it draws the line one step
+earlier: **Wallet is the instruments you PAY WITH, Shopping is the merchants
+you SPEND AT.** Privacy.com and CardPointers are both cards, so both belong in
+Wallet, and Shopping keeps Bitrefill, Shopify, Deals and Open Food Facts —
+which makes that group literally about shopping rather than a drawer for
+anything money-adjacent. **§222 ruling 3 is amended accordingly**: Privacy.com
+moved to Wallet in the same pass, so "Privacy.com sits in Shopping" is no
+longer true and must not be cited as precedent again.
+
+**One consequence, and it is a real cost paid knowingly:** `CategoryFold` folds
+a category's chips with no floor, so inside Wallet CardPointers gets no
+standalone chip at all — it becomes a venue in the Wallet cluster's switcher,
+exactly as Apple Wallet and Gnosis Pay already are. That is one tap deeper than
+Shopping would have been. Nothing mechanical would have caught the move either
+way: `catalog-sync.sh` compares the SET of offer names against the website, not
+which shelf a tile sits on.
+
+**Worth keeping, because it will recur:** the first placement filed the seat
+beside the thing it COMPOSES with (Apple Wallet, whose merchant names pair with
+these offers) rather than the thing it IS, and a catalog is browsed by the
+second. The correction did not change the composition, which works across
+groups regardless.
 
 **Also unsettled: their permission.** The person asked said "probably", which is
 not permission, and their CLI ships Business Source License 1.1, non-commercial
