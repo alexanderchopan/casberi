@@ -18,6 +18,11 @@ import SwiftData
 /// shape this codebase keeps deciding against.
 struct AgentModelRow: View {
     let provider: AgentProvider
+    /// Which job this picker chooses for (2026-08-20, `AgentTask`). The ask is
+    /// the default so every existing call site keeps its meaning; the librarian
+    /// row passes `.librarian` and is drawn only where that work is actually
+    /// happening (`AgentLibrarianRow`).
+    var task: AgentTask = .ask
 
     @State private var models: [AgentModelInfo] = []
     @State private var loading = false
@@ -30,19 +35,21 @@ struct AgentModelRow: View {
         if AgentKey.isConfigured(provider), provider != .bankr {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
                 HStack(spacing: DS.Space.s2) {
-                    Text("Model")
+                    Text(task == .librarian ? "Model for organizing" : "Model")
                         .dsText(.callout15).foregroundStyle(DS.textSecondary)
                     Spacer(minLength: DS.Space.s2)
                     // The id, not a prettied label: the id is what actually
                     // goes on the wire, and it is what a provider's own
                     // pricing page is keyed by.
-                    Text(provider.model)
+                    Text(provider.model(for: task))
                         .dsText(.callout15).monospaced()
                         .foregroundStyle(DS.textPrimary)
                         .lineLimit(1).truncationMode(.middle)
                 }
-                if AgentModelStore.chosen(provider) == nil {
-                    Text("The default for \(provider.agent). Providers retire model names — if answers start failing, pick a current one.")
+                if AgentModelStore.chosen(provider, task: task) == nil {
+                    Text(task == .librarian
+                         ? String(localized: "Same model as your questions. Naming a screenshot is small work — a cheaper, faster model usually does it just as well for a fraction of the cost.")
+                         : String(localized: "The default for \(provider.agent). Providers retire model names — if answers start failing, pick a current one."))
                         .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -70,18 +77,20 @@ struct AgentModelRow: View {
                     // turns a settings card into a directory.
                     Menu {
                         Button {
-                            AgentModelStore.set(nil, for: provider)
+                            AgentModelStore.set(nil, for: provider, task: task)
                             tick += 1
                         } label: {
-                            Text("Default (\(provider.defaultModel))")
+                            Text(task == .librarian
+                                 ? String(localized: "Same as questions")
+                                 : String(localized: "Default (\(provider.defaultModel))"))
                         }
                         ForEach(models) { model in
                             Button {
                                 DSHaptic.selection()
-                                AgentModelStore.set(model.id, for: provider)
+                                AgentModelStore.set(model.id, for: provider, task: task)
                                 tick += 1
                             } label: {
-                                if model.id == provider.model {
+                                if model.id == provider.model(for: task) {
                                     Label(model.label, systemImage: "checkmark")
                                 } else {
                                     Text(model.label)
@@ -143,6 +152,15 @@ struct AgentSpendRow: View {
                 if let tokens = entry.tokenLine {
                     Text(tokens)
                         .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                    // Only when there is a hit to report. A "0 served from
+                    // cache" would read as a thing that went wrong, when for a
+                    // short exchange it just means the prompt never reached the
+                    // model's minimum cacheable length.
+                    if let cache = entry.cacheLine {
+                        Text(cache)
+                            .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                 } else {
                     // The honest blank. A "0 in · 0 out" here would claim the
                     // requests were free.
@@ -196,6 +214,10 @@ struct AgentLibrarianRow: View {
     @State private var enabled = AgentLibrarian.isEnabled
     @State private var working = false
     @State private var result: String?
+    /// Never read — mutating it re-evaluates this view so the non-observable
+    /// `AgentBudget` reads fresh after the cap changes (`AgentModelRow`'s own
+    /// trick, same reason).
+    @State private var tick = 0
 
     var body: some View {
         if AgentKey.isConfigured, AgentKey.active != .bankr, !AgentLibrarian.deviceCanDoIt {
@@ -222,6 +244,7 @@ struct AgentLibrarianRow: View {
                     Text("Only words your own things already contain. A chat summary is used to find it again and is never shown.")
                         .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                         .fixedSize(horizontal: false, vertical: true)
+                    AgentBudgetControl(tick: $tick)
                     if working {
                         HStack(spacing: DS.Space.s2) {
                             ProgressView().controlSize(.small)
@@ -243,6 +266,14 @@ struct AgentLibrarianRow: View {
                             .fixedSize(horizontal: false, vertical: true)
                             .settleIn()
                     }
+                    // The organizing model, offered only where organizing is
+                    // actually turned on. It is the same picker the ask uses,
+                    // pointed at a different task — one list read, one shape,
+                    // and the two choices can never drift apart in how they
+                    // resolve.
+                    if let provider = AgentKey.active {
+                        AgentModelRow(provider: provider, task: .librarian)
+                    }
                 }
             }
             .dsListCardRow()
@@ -256,6 +287,77 @@ struct AgentLibrarianRow: View {
             let caught = await AgentLibrarian.catchUp(context: modelContext)
             working = false
             result = caught.line
+        }
+    }
+}
+
+/// A ceiling on what organizing may cost in a month (2026-08-20,
+/// `AgentBudget`).
+///
+/// **It renders for OpenRouter and nobody else, and that is the honest shape
+/// rather than a gap.** A dollar cap can only be enforced where the provider
+/// states dollars, and OpenRouter's free key read is the only place in this
+/// catalog that does. Drawing this control for Anthropic would be a switch that
+/// governs nothing — the dead control the honesty rule bans — so the other
+/// providers get one plain sentence saying why there is no cap to offer,
+/// which is a truer answer than a slider that quietly does nothing.
+///
+/// The amounts are a short menu rather than a text field: a keyboard here
+/// invites "5" and "0.5" and "five", and a free-typed ceiling that fails to
+/// parse is a ceiling somebody believes they set.
+struct AgentBudgetControl: View {
+    @Binding var tick: Int
+
+    private static let choices: [Double] = [1, 3, 5, 10, 25]
+
+    var body: some View {
+        if AgentKey.active == AgentBudget.measurableProvider {
+            VStack(alignment: .leading, spacing: DS.Space.s1) {
+                HStack(spacing: DS.Space.s2) {
+                    Text("Monthly limit")
+                        .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                    Spacer(minLength: DS.Space.s2)
+                    Menu {
+                        Button {
+                            AgentBudget.monthlyCap = nil
+                            tick += 1
+                        } label: { Text("No limit") }
+                        ForEach(Self.choices, id: \.self) { amount in
+                            Button {
+                                DSHaptic.selection()
+                                AgentBudget.monthlyCap = amount
+                                tick += 1
+                            } label: {
+                                if AgentBudget.monthlyCap == amount {
+                                    Label(AgentBudget.usd(amount), systemImage: "checkmark")
+                                } else {
+                                    Text(AgentBudget.usd(amount))
+                                }
+                            }
+                        }
+                    } label: {
+                        Chip(text: AgentBudget.monthlyCap.map { AgentBudget.usd($0) + " a month" }
+                                ?? String(localized: "No limit"),
+                             style: AgentBudget.monthlyCap == nil ? .neutral : .tint,
+                             glyph: "gauge.with.dots.needle.33percent")
+                    }
+                }
+                if let line = AgentBudget.line(for: AgentBudget.measurableProvider) {
+                    Text(line)
+                        .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                // Said out loud because it is the one thing somebody would
+                // otherwise assume wrongly, in the expensive direction: a cap
+                // stops the app spending on its own, and never stops YOU.
+                Text("Counted from what OpenRouter reports this key has used. Your own questions are never blocked.")
+                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        } else if let provider = AgentKey.active {
+            Text("\(provider.company) doesn't report what a key has spent, so there's no limit to set here — the counts above are what we can measure.")
+                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 }

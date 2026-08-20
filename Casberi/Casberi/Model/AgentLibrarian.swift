@@ -30,6 +30,16 @@ import SwiftData
 ///    foreground limits, and `catchUp` — the deliberate "do the backlog now"
 ///    verb — is capped and reports exactly what it did. The spend receipt sits
 ///    directly above the toggle that turns this on.
+/// 4. **Bounded by the MONTH, where a month can be measured** (2026-08-20,
+///    `AgentBudget`). Rule 3 bounds a pass and says nothing about a hundred of
+///    them, which is what a large import turns into. A dollar ceiling is only
+///    honest against a provider that states dollars, so it exists for
+///    OpenRouter and nowhere else — and it stops THIS, never an ask.
+///
+/// **And it runs on its own model** (`AgentTask.librarian`). Naming a
+/// screenshot from its OCR text is not frontier work; before the task split it
+/// was billed as though it were, because one pin per provider meant the model
+/// somebody chose for hard questions also did the filing.
 ///
 /// **The honesty rails are the on-device ones, unchanged.** A keyed title is
 /// still rejected unless `ScreenshotNaming.grounded` says the words really
@@ -53,9 +63,16 @@ enum AgentLibrarian {
     /// Whether a keyed librarian call may actually be made. Bankr is excluded
     /// for the same reason `AgentAnswer.complete` refuses it: it answers from
     /// a wallet, not from text somebody handed it.
+    ///
+    /// A month's ceiling stops it too (2026-08-20, `AgentBudget`) — and only
+    /// this. An ASK is never capped: the person is standing there and chose to
+    /// spend, so refusing them on the strength of a setting from three weeks
+    /// ago is the dead control the honesty rule bans. This is the path that
+    /// spends on the app's own schedule, so this is the path a ceiling governs.
     static var canRun: Bool {
         guard isEnabled, let provider = AgentKey.active else { return false }
-        return provider != .bankr
+        guard provider != .bankr else { return false }
+        return !AgentBudget.pausesLibrarian(provider)
     }
 
     /// True when the local model can do this work for free. The one condition
@@ -94,7 +111,8 @@ enum AgentLibrarian {
         """ + LanguageStore.shared.llmLanguageDirective
         let prompt = "Text read out of the screenshot:\n\(excerpt)\n\nName it in a few plain words, or NONE."
         guard case .success(let raw) = await AgentAnswer.complete(
-            system: system, prompt: prompt, maxTokens: 32) else { return nil }
+            system: system, prompt: prompt, maxTokens: 32,
+            task: .librarian) else { return nil }
         // A chat model answers in a sentence when a title was asked for, so
         // the first line is taken and the usual decorations stripped. The
         // length bounds are `ScreenshotNameModel`'s, for the same reason: a
@@ -128,7 +146,8 @@ enum AgentLibrarian {
         What was it about?
         """
         guard case .success(let raw) = await AgentAnswer.complete(
-            system: system, prompt: prompt, maxTokens: 220) else { return nil }
+            system: system, prompt: prompt, maxTokens: 220,
+            task: .librarian) else { return nil }
         let summary = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         // `ThreadDigest.minimumLength` is about the INPUT; this bounds the
         // output. A one-line answer adds nothing the title didn't, and a very
@@ -149,8 +168,20 @@ enum AgentLibrarian {
         /// Set when the provider refused or the network failed — the
         /// difference between "there was nothing to do" and "we couldn't".
         var failure: AgentAnswerFailure?
+        /// Set when a month's ceiling stopped it (2026-08-20). A third state,
+        /// not a `failure`: `canRun` goes false when the cap is reached, and
+        /// the nearest existing case is `.noKey`, whose sentence is "No key
+        /// saved — add one in Settings" — advice to fix something that isn't
+        /// broken, about a key that is sitting right there. Caught only because
+        /// the budget gate was wired into the same `canRun` the failure line
+        /// reads from.
+        var pausedByBudget = false
 
         var line: String {
+            if pausedByBudget {
+                return AgentBudget.line(for: AgentBudget.measurableProvider)
+                    ?? String(localized: "Your monthly limit is reached — organizing resumes next month.")
+            }
             if let failure { return failure.line }
             if named == 0 && digested == 0 {
                 return String(localized: "Nothing left to organize.")
@@ -182,7 +213,14 @@ enum AgentLibrarian {
     static func catchUp(context: ModelContext) async -> Caught {
         var caught = Caught()
         guard canRun else {
-            caught.failure = .noKey
+            // Which "no" this is matters: a reached ceiling is a setting doing
+            // its job, and reporting it as a missing key sends somebody to
+            // re-paste a key that was never the problem.
+            if let provider = AgentKey.active, AgentBudget.pausesLibrarian(provider) {
+                caught.pausedByBudget = true
+            } else {
+                caught.failure = .noKey
+            }
             return caught
         }
         caught.named = await ScreenshotNaming.sweep(context: context, limit: catchUpNames)

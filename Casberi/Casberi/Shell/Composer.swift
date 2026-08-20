@@ -10,6 +10,8 @@ struct KeyedAnswer {
     let doc: [String]
     var searchedWeb = false
     var imagesSeen = 0
+    /// Saved pages the agent read in full (2026-08-20, `AgentWebFetch`).
+    var pagesRead = 0
     /// How many extra billed rounds the agent spent searching the corpus
     /// itself (2026-08-06, `AgentCorpusTools`). 0 means it answered from the
     /// evidence it was handed, which is the common case and not a failure —
@@ -129,6 +131,8 @@ struct Composer: View {
         /// the settled turn so scrolling back doesn't lose the receipt.
         var searchedWeb = false
         var imagesSeen = 0
+        /// Saved pages read in full (2026-08-20) — carried like the rest.
+        var pagesRead = 0
         /// How many extra billed rounds it spent searching your own things
         /// (2026-08-06). Carried onto the settled turn like the rest.
         var toolRounds = 0
@@ -166,6 +170,10 @@ struct Composer: View {
     /// assumes. Reset per ask alongside `keyedCurrent`.
     @State private var keyedSearchedWeb = false
     @State private var keyedImagesSeen = 0
+    /// Saved pages the keyed agent read in full (2026-08-20). Reset with the
+    /// rest of the receipt on every new answer — observed per answer, never
+    /// carried over.
+    @State private var keyedPagesRead = 0
     /// How many times the CURRENT keyed answer went back to the corpus with a
     /// tool (2026-08-06). Observed from the loop, never assumed — a model that
     /// answered from the evidence it was handed reports 0 and the badge stays
@@ -1644,6 +1652,7 @@ struct Composer: View {
                                             provenanceBadge(keyed: turn.keyed,
                                                             searchedWeb: turn.searchedWeb,
                                                             imagesSeen: turn.imagesSeen,
+                                                            pagesRead: turn.pagesRead,
                                                             toolRounds: turn.toolRounds,
                                                             found: turn.found)
                                         }
@@ -1757,6 +1766,7 @@ struct Composer: View {
                                             provenanceBadge(keyed: keyedCurrent,
                                                             searchedWeb: keyedSearchedWeb,
                                                             imagesSeen: keyedImagesSeen,
+                                                            pagesRead: keyedPagesRead,
                                                             toolRounds: keyedToolRounds,
                                                             found: foundCurrent)
                                         }
@@ -2596,6 +2606,7 @@ struct Composer: View {
         keyedCurrent = false
         keyedSearchedWeb = false
         keyedImagesSeen = 0
+        keyedPagesRead = 0
         keyedToolRounds = 0
         answerFailed = false
         foundCurrent = false
@@ -2712,7 +2723,8 @@ struct Composer: View {
             if answering {
                 turns.append(ConvoTurn(question: currentQuestion, els: answerStream.els,
                                        keyed: keyedCurrent, searchedWeb: keyedSearchedWeb,
-                                       imagesSeen: keyedImagesSeen, toolRounds: keyedToolRounds,
+                                       imagesSeen: keyedImagesSeen, pagesRead: keyedPagesRead,
+                                       toolRounds: keyedToolRounds,
                                        failed: answerFailed,
                                        found: foundCurrent))
             }
@@ -2723,6 +2735,7 @@ struct Composer: View {
             keyedCurrent = false
             keyedSearchedWeb = false
             keyedImagesSeen = 0
+            keyedPagesRead = 0
             keyedToolRounds = 0
             answerFailed = false
             foundCurrent = true
@@ -2780,7 +2793,8 @@ struct Composer: View {
     /// tool running — so this states what happened rather than what was
     /// offered: an agent that could search but didn't never claims it did.
     private func provenanceBadge(keyed: Bool, searchedWeb: Bool = false,
-                                 imagesSeen: Int = 0, toolRounds: Int = 0,
+                                 imagesSeen: Int = 0, pagesRead: Int = 0,
+                                 toolRounds: Int = 0,
                                  found: Bool = false) -> some View {
         var parts: [String] = []
         // Searching your own things leads, because it is the one part of this
@@ -2791,6 +2805,17 @@ struct Composer: View {
             parts.append(String(localized: "searched your things"))
         } else if toolRounds > 1 {
             parts.append(String(localized: "searched your things \(toolRounds) times"))
+        }
+        // Reading a page you saved sits BEFORE searching the web and is
+        // worded to keep them apart, because they are different promises: one
+        // opened a link that is already in your things, the other went out to
+        // pages you never kept. Collapsing both into "searched the web" would
+        // overstate the first and is exactly the conflation the stream reader
+        // had to be fixed to avoid.
+        if pagesRead == 1 {
+            parts.append(String(localized: "read 1 saved page"))
+        } else if pagesRead > 1 {
+            parts.append(String(localized: "read \(pagesRead) saved pages"))
         }
         if searchedWeb { parts.append(String(localized: "searched the web")) }
         if imagesSeen == 1 {
@@ -2886,7 +2911,8 @@ struct Composer: View {
             if answering {
                 turns.append(ConvoTurn(question: currentQuestion, els: answerStream.els,
                                        keyed: keyedCurrent, searchedWeb: keyedSearchedWeb,
-                                       imagesSeen: keyedImagesSeen, toolRounds: keyedToolRounds,
+                                       imagesSeen: keyedImagesSeen, pagesRead: keyedPagesRead,
+                                       toolRounds: keyedToolRounds,
                                        failed: answerFailed,
                                        found: foundCurrent))
             }
@@ -2897,6 +2923,7 @@ struct Composer: View {
             currentStreamed = false
             keyedSearchedWeb = false   // observed per answer, never carried over
             keyedImagesSeen = 0
+            keyedPagesRead = 0
             keyedToolRounds = 0
             answerFailed = false
             foundCurrent = false       // a keyed retry is an answer, not a find
@@ -2934,6 +2961,7 @@ struct Composer: View {
                 currentStreamed = true   // a keyed synthesis is keepable too
                 keyedSearchedWeb = answer.searchedWeb
                 keyedImagesSeen = answer.imagesSeen
+                keyedPagesRead = answer.pagesRead
                 keyedToolRounds = answer.toolRounds
                 // From here a typed follow-up stays on the agent that just
                 // answered — it has the context the on-device model doesn't.
@@ -4100,7 +4128,8 @@ struct Composer: View {
             if answering, !movingBetweenBriefs {
                 turns.append(ConvoTurn(question: currentQuestion, els: answerStream.els,
                                        keyed: keyedCurrent, searchedWeb: keyedSearchedWeb,
-                                       imagesSeen: keyedImagesSeen, toolRounds: keyedToolRounds,
+                                       imagesSeen: keyedImagesSeen, pagesRead: keyedPagesRead,
+                                       toolRounds: keyedToolRounds,
                                        failed: answerFailed,
                                        found: foundCurrent))
             }
@@ -4121,6 +4150,7 @@ struct Composer: View {
                 keyedCurrent = stayKeyed
                 keyedSearchedWeb = false   // observed per answer
                 keyedImagesSeen = 0
+                keyedPagesRead = 0
                 keyedToolRounds = 0
                 answerFailed = false
                 foundCurrent = false       // this is an ANSWER, not a find
@@ -4205,6 +4235,7 @@ struct Composer: View {
                     case .success(let keyed):
                         keyedSearchedWeb = keyed.searchedWeb
                         keyedImagesSeen = keyed.imagesSeen
+                        keyedPagesRead = keyed.pagesRead
                         keyedToolRounds = keyed.toolRounds
                         finalDoc = keyed.doc
                     case .failure:

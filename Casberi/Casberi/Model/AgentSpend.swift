@@ -52,6 +52,19 @@ final class AgentSpend: @unchecked Sendable {
         /// which would claim a free request.
         var inputTokens: Int?
         var outputTokens: Int?
+        /// Input tokens served from a previous request's cache (2026-08-20),
+        /// billed at a fraction of the input rate. Optional for a reason beyond
+        /// honesty: a NON-optional field with a default would break decoding of
+        /// every receipt already on disk, because Swift's synthesized decoder
+        /// calls `decode` for those and `decodeIfPresent` only for Optionals —
+        /// the trap that would have silently unfollowed every feed if
+        /// `RSSStore.Feed` had ever gained a field.
+        var cachedInputTokens: Int?
+        /// Input tokens WRITTEN to the cache, billed at a premium. Kept beside
+        /// the read rather than netted against it: they are the two halves of
+        /// the same trade, and showing only the saving would make a receipt
+        /// into an advertisement.
+        var cacheWriteTokens: Int?
         /// The most recent model id the provider actually answered with, when
         /// it says. Worth keeping: it is the only place a silently rotated
         /// pin becomes visible.
@@ -92,18 +105,26 @@ final class AgentSpend: @unchecked Sendable {
     /// against a stored count leaves the count alone (a provider that reports
     /// sometimes shouldn't erase what it reported before).
     func record(provider: AgentProvider, round: Int = 0,
-                input: Int? = nil, output: Int? = nil, model: String? = nil) {
+                input: Int? = nil, output: Int? = nil, model: String? = nil,
+                cacheRead: Int? = nil, cacheWrite: Int? = nil) {
         let key = provider.rawValue
         let now = Date()
         lock.lock()
         var entry = entries[key] ?? Entry(provider: key, requests: 0, toolRounds: 0,
                                           inputTokens: nil, outputTokens: nil,
+                                          cachedInputTokens: nil, cacheWriteTokens: nil,
                                           model: nil, reportedUSD: nil,
                                           first: now, last: now)
         entry.requests += 1
         if round > 0 { entry.toolRounds += 1 }
         if let input { entry.inputTokens = (entry.inputTokens ?? 0) + input }
         if let output { entry.outputTokens = (entry.outputTokens ?? 0) + output }
+        // A zero is a real reading — "this round hit no cache" — and is
+        // accumulated like any other, so a provider that reports the field
+        // always gets a total rather than a total that appears only once
+        // something was cached.
+        if let cacheRead { entry.cachedInputTokens = (entry.cachedInputTokens ?? 0) + cacheRead }
+        if let cacheWrite { entry.cacheWriteTokens = (entry.cacheWriteTokens ?? 0) + cacheWrite }
         if let model, !model.isEmpty { entry.model = model }
         entry.last = now
         entries[key] = entry
@@ -120,6 +141,7 @@ final class AgentSpend: @unchecked Sendable {
         lock.lock()
         var entry = entries[key] ?? Entry(provider: key, requests: 0, toolRounds: 0,
                                           inputTokens: nil, outputTokens: nil,
+                                          cachedInputTokens: nil, cacheWriteTokens: nil,
                                           model: nil, reportedUSD: nil,
                                           first: now, last: now)
         entry.reportedUSD = usd
@@ -197,6 +219,25 @@ extension AgentSpend.Entry {
         }
         return "\(short(inputTokens)) in · \(short(outputTokens)) out"
     }
+
+    /// "18.4k of that came from cache" (2026-08-20), or nil when this provider
+    /// never reported a cache hit or reported only misses.
+    ///
+    /// A share of `inputTokens`, not a number beside it — every provider here
+    /// counts cached tokens INSIDE the input total, so printing them as a
+    /// separate figure would read as extra spend when it is the opposite.
+    /// Deliberately no percentage and no money: the saving depends on that
+    /// model's cache-read rate, which is exactly the rate table this file
+    /// refuses to keep.
+    var cacheLine: String? {
+        guard let cachedInputTokens, cachedInputTokens > 0 else { return nil }
+        func short(_ n: Int) -> String {
+            if n >= 1_000_000 { return String(format: "%.1fm", Double(n) / 1_000_000) }
+            if n >= 1_000 { return String(format: "%.1fk", Double(n) / 1_000) }
+            return "\(n)"
+        }
+        return String(localized: "\(short(cachedInputTokens)) of that was served from cache.")
+    }
 }
 
 /// OpenRouter's own credit ceiling (2026-08-09) — parsed at the exact call
@@ -252,6 +293,12 @@ enum OpenRouterCredits {
         if let usage = data["usage"] as? Double {
             AgentSpend.shared.recordReported(provider: .openrouter, usd: usage)
         }
+        // The monthly ceiling reads the SAME figure (2026-08-20) — a lifetime
+        // total, folded into a per-month delta by `AgentBudget`. Recorded here
+        // rather than at the cap's own call site so it lands on every read of
+        // this endpoint, including the foreground sweep's, and never needs a
+        // request of its own.
+        if let usage = data["usage"] as? Double { AgentBudget.observe(reportedUSD: usage) }
         let d = UserDefaults.standard
         guard let limit = data["limit"] as? Double else {
             d.removeObject(forKey: limitKey)

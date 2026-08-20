@@ -262,7 +262,20 @@ enum AgentCorpusTools {
     /// An unknown tool name is answered the same way rather than dropped — a
     /// missing result for a call the model made leaves the transcript
     /// malformed on every wire shape here.
-    static func run(_ call: Call, corpus: [AnswerTools.Snapshot], sink: Sink) -> Result {
+    /// `includeLinks` prints each hit's own web address beside it, for a
+    /// provider that can actually READ one (`AgentWebFetch`; today Anthropic
+    /// alone). Off by default and off for everyone else, because a URL is ~20
+    /// input tokens re-sent on every later round of the loop — real money to
+    /// show a model an address it has no tool to open.
+    ///
+    /// This is also the ONLY place those addresses enter the conversation, and
+    /// that is the security property rather than an implementation detail:
+    /// Anthropic's fetcher refuses any URL that did not already appear in the
+    /// transcript, so the set of pages a keyed answer can reach is exactly the
+    /// set of links this person saved AND the tools chose to surface — never a
+    /// URL the model composed.
+    static func run(_ call: Call, corpus: [AnswerTools.Snapshot], sink: Sink,
+                    includeLinks: Bool = false) -> Result {
         let arguments = (try? JSONSerialization.jsonObject(with: Data(call.arguments.utf8)))
             as? [String: Any] ?? [:]
         func string(_ key: String) -> String {
@@ -278,13 +291,16 @@ enum AgentCorpusTools {
                                      : rank(query, scoped, limit: pageLimit)
             content = serialize(hits, sink: sink, empty: query.isEmpty
                 ? "Nothing saved matches that filter."
-                : "Nothing saved matches \"\(query)\".")
+                : "Nothing saved matches \"\(query)\".",
+                includeLinks: includeLinks)
         case "recent_things":
             let scoped = filter(corpus, source: string("source"), kind: string("kind"))
             content = serialize(Array(scoped.prefix(pageLimit)), sink: sink,
-                                empty: "Nothing recent matches that filter.")
+                                empty: "Nothing recent matches that filter.",
+                                includeLinks: includeLinks)
         case "linked_things":
-            content = linked(string("title"), corpus: corpus, sink: sink)
+            content = linked(string("title"), corpus: corpus, sink: sink,
+                             includeLinks: includeLinks)
         case "list_sources":
             content = sourceCensus(corpus)
         default:
@@ -352,7 +368,7 @@ enum AgentCorpusTools {
     /// rule, the same "N more are hidden" honesty) with `edge.reason` where
     /// `kind` sits in the other one.
     private static func linked(_ title: String, corpus: [AnswerTools.Snapshot],
-                               sink: Sink) -> String {
+                               sink: Sink, includeLinks: Bool = false) -> String {
         let needle = title.lowercased()
         guard !needle.isEmpty else { return "Provide a title to look up." }
         guard let target = corpus.first(where: { $0.title.lowercased() == needle }) else {
@@ -381,6 +397,7 @@ enum AgentCorpusTools {
             var line = "#\(label) \(SecretScan.redacted(tie.title)) — \(tie.edge.reason), from \(tie.source), \(snap.when)"
             let excerpt = SecretScan.redacted(snap.text)
             if !excerpt.isEmpty { line += " — \(excerpt)" }
+            if includeLinks, let url = fetchableLink(snap) { line += "\n   \(url)" }
             lines.append(line)
         }
         if safe.count < ties.count {
@@ -395,7 +412,7 @@ enum AgentCorpusTools {
     /// numbers are the sink's, so `#4` means the same thing in round three as
     /// it did in round one.
     private static func serialize(_ hits: [AnswerTools.Snapshot], sink: Sink,
-                                  empty: String) -> String {
+                                  empty: String, includeLinks: Bool = false) -> String {
         let safe = hits.filter { !SecretScan.carriesSecret($0.title + " " + $0.text) }
         guard !safe.isEmpty else { return empty }
         let labels = sink.label(safe.map(\.id))
@@ -404,6 +421,7 @@ enum AgentCorpusTools {
             var line = "#\(label) \(SecretScan.redacted(snap.title)) — \(snap.kind), from \(snap.source), \(snap.when)"
             let excerpt = SecretScan.redacted(snap.text)
             if !excerpt.isEmpty { line += " — \(excerpt)" }
+            if includeLinks, let url = fetchableLink(snap) { line += "\n   \(url)" }
             lines.append(line)
         }
         // A dropped row is NAMED rather than silently missing: the model is
@@ -414,6 +432,21 @@ enum AgentCorpusTools {
             lines.append("(\(hidden) more matched but are hidden because they contain a password or key.)")
         }
         return lines.joined(separator: "\n")
+    }
+
+    /// The address to print beside a hit, or nil to print none.
+    ///
+    /// Two gates, and the second is not redundant with the first.
+    /// `AgentWebFetch.fetchable` rules on the URL's SHAPE — scheme, length,
+    /// private host, a credential in the query. This then re-checks the exact
+    /// string against `SecretScan` and drops it if redaction would change so
+    /// much as a byte, because a redacted URL is not a safer URL, it is a
+    /// broken one: the model would hand `https://…/••••` back for a fetch and
+    /// spend a use on a page that cannot exist. Drop, never mask — the same
+    /// rule this file already applies to a thing whose text carries a secret.
+    private static func fetchableLink(_ snap: AnswerTools.Snapshot) -> String? {
+        guard let url = AgentWebFetch.fetchable(snap.link) else { return nil }
+        return SecretScan.redacted(url) == url ? url : nil
     }
 
     /// The connected sources with counts, biggest first — capped, because a

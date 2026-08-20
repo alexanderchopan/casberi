@@ -780,9 +780,9 @@ struct RootShell: View {
                         // what it was handed, or a real tool loop that went
                         // looking. They produce identical-looking documents,
                         // so a doc dump alone cannot tell them apart.
-                        NSLog("[Casberi] byokProbe(\"%@\") %dms model=%@ rounds=%d searchedWeb=%d images=%d →\n%@",
+                        NSLog("[Casberi] byokProbe(\"%@\") %dms model=%@ rounds=%d searchedWeb=%d pagesRead=%d images=%d →\n%@",
                               q, ms, (AgentKey.active?.model ?? "none"), answer.toolRounds,
-                              answer.searchedWeb ? 1 : 0, answer.imagesSeen,
+                              answer.searchedWeb ? 1 : 0, answer.pagesRead, answer.imagesSeen,
                               answer.doc.joined(separator: "\n"))
                     case .failure(let failure):
                         NSLog("[Casberi] byokProbe(\"%@\") %dms failed=%@ → \"%@\"",
@@ -809,11 +809,99 @@ struct RootShell: View {
                 NSLog("[Casberi] spendProbe: providers=%d requests=%d",
                       entries.count, AgentSpend.shared.totalRequests)
                 for entry in entries {
-                    NSLog("[Casberi] agentSpend| %@ requests=%d toolRounds=%d tokens=%@ model=%@ reported=%@",
+                    NSLog("[Casberi] agentSpend| %@ requests=%d toolRounds=%d tokens=%@ cacheRead=%@ cacheWrite=%@ model=%@ reported=%@",
                           entry.provider, entry.requests, entry.toolRounds,
-                          entry.tokenLine ?? "(not reported)", entry.model ?? "-",
+                          entry.tokenLine ?? "(not reported)",
+                          entry.cachedInputTokens.map(String.init) ?? "(not reported)",
+                          entry.cacheWriteTokens.map(String.init) ?? "(not reported)",
+                          entry.model ?? "-",
                           entry.reportedUSD.map { String(format: "$%.4f", $0) } ?? "-")
                 }
+                // The month's ceiling beside the counts it governs (2026-08-20).
+                // Printed even when unset, because "no cap" and "a cap we
+                // couldn't evaluate" are different states that both leave the
+                // librarian running, and only the second is worth chasing.
+                NSLog("[Casberi] agentBudget| cap=%@ spentThisMonth=%@ baseline=%@ month=%@ pauses=%d",
+                      AgentBudget.monthlyCap.map { AgentBudget.usd($0) } ?? "none",
+                      AgentBudget.spentThisMonth.map { AgentBudget.usd($0) } ?? "(unknown)",
+                      AgentBudget.baseline.map { AgentBudget.usd($0.usd) } ?? "(none)",
+                      AgentBudget.baseline?.month ?? "-",
+                      AgentBudget.pausesLibrarian(AgentBudget.measurableProvider) ? 1 : 0)
+            }
+            // Debug hook: `-agentBudgetCap <usd|clear>` sets the monthly
+            // ceiling headlessly, so the pause branch is exercisable without
+            // waiting for a real month of spending to accumulate. Declared
+            // BEFORE `-librarianProbe` — hooks run in list order, and the
+            // probe must read a store that is already seeded.
+            if let raw = UserDefaults.standard.string(forKey: "agentBudgetCap") {
+                AgentBudget.monthlyCap = raw == "clear" ? nil : Double(raw)
+                NSLog("[Casberi] agentBudgetCap: cap=%@ spent=%@ pauses=%d",
+                      AgentBudget.monthlyCap.map { AgentBudget.usd($0) } ?? "none",
+                      AgentBudget.spentThisMonth.map { AgentBudget.usd($0) } ?? "(unknown)",
+                      AgentBudget.pausesLibrarian(AgentBudget.measurableProvider) ? 1 : 0)
+            }
+            // Debug hook: `-chatTurnsProbe "<title prefix>"` reads a stored chat
+            // transcript back as TURNS (`ChatTurns`) and NSLogs one
+            // `chatTurn|` line each (the `-todayProbe` truncation lesson), then
+            // the exchange pairing a keyed continuation would send as history.
+            //
+            // It exists because the transcript lives on `enrichedText`, which
+            // is retrieval-only by the 2026-07-15 ruling and drawn by NOTHING —
+            // so a chat that parses into twelve fabricated turns and one that
+            // parses correctly are identical from every screen in the app. The
+            // `parsed=0` case is the one to read carefully: it is CORRECT for
+            // any row whose enrichedText this app didn't write as a
+            // conversation, and a bug only for an imported chat.
+            if let prefix = UserDefaults.standard.string(forKey: "chatTurnsProbe") {
+                Task { @MainActor in
+                    let all = (try? modelContext.fetch(FetchDescriptor<Thing>())) ?? []
+                    guard let thing = all.filter({ $0.isLive && $0.title.hasPrefix(prefix) })
+                        .sorted(by: { $0.capturedAt > $1.capturedAt }).first else {
+                        NSLog("[Casberi] chatTurnsProbe: nothing titled \"%@\"", prefix)
+                        return
+                    }
+                    let turns = ChatTurns.parse(thing.enrichedText)
+                    let partial = ChatTurns.isPartial(parsed: turns,
+                                                      messageCount: thing.messageCount)
+                    NSLog("[Casberi] chatTurnsProbe: \"%@\" source=%@ stored=%d parsed=%d messageCount=%@ partial=%d",
+                          thing.title, thing.source, thing.enrichedText?.count ?? 0,
+                          turns.count, thing.messageCount.map(String.init) ?? "-",
+                          partial ? 1 : 0)
+                    for turn in turns.prefix(20) {
+                        NSLog("[Casberi] chatTurn| %@%@ %@",
+                              turn.isMine ? "→ " : "← ", turn.speaker,
+                              String(turn.text.prefix(90)))
+                    }
+                    let (history, pending) = ChatTurns.exchanges(turns)
+                    NSLog("[Casberi] chatTurnsProbe: exchanges=%d pending=%@",
+                          history.count, pending.map { String($0.prefix(60)) } ?? "(none)")
+                }
+            }
+            // Debug hook: `-webFetchProbe "<url>[,<url>]"` runs the page-reading
+            // policy (`AgentWebFetch.fetchable`) over URLs WITHOUT asking
+            // anything or spending a token — one `webFetch|` line per candidate
+            // saying whether it would be shown to the agent and, when it
+            // wouldn't, that it was refused. It exists because the whole
+            // feature is invisible from outside: a link the policy drops and a
+            // link the model simply chose not to read produce byte-identical
+            // answers, and only this separates them.
+            if let raw = UserDefaults.standard.string(forKey: "webFetchProbe") {
+                let candidates = raw == "corpus"
+                    ? (try? modelContext.fetch(FetchDescriptor<Thing>()))?
+                        .prefix(400).compactMap { ThingLinks.canonicalLink($0.content) } ?? []
+                    : raw.components(separatedBy: ",")
+                NSLog("[Casberi] webFetchProbe: tool=%@ maxUses=%d maxContentTokens=%d candidates=%d",
+                      AgentWebFetch.toolType, AgentWebFetch.maxUses,
+                      AgentWebFetch.maxContentTokens, candidates.count)
+                var shown = 0
+                for candidate in candidates {
+                    let verdict = AgentWebFetch.fetchable(candidate)
+                    if verdict != nil { shown += 1 }
+                    NSLog("[Casberi] webFetch| %@ → %@",
+                          String(candidate.prefix(120)), verdict == nil ? "REFUSED" : "shown")
+                }
+                NSLog("[Casberi] webFetchProbe: shown=%d refused=%d",
+                      shown, candidates.count - shown)
             }
             // Debug hook: `-agentCreditsProbe YES` runs OpenRouter's free
             // key-check read (`/v1/auth/key`, no tokens billed) with the

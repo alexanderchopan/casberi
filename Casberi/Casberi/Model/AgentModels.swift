@@ -25,20 +25,50 @@ import Foundation
 /// and there is no egress to most of them. Every read fails to nil, and nil
 /// means "keep using the pin" — so a wrong endpoint costs the picker, never
 /// the answer path.
+/// What a keyed request is FOR (2026-08-20) — because the two jobs this app
+/// asks a key to do want opposite models, and pinning one model per provider
+/// forced them to share.
+///
+/// An ASK is a question somebody is waiting on, over their own things, once:
+/// worth the frontier model. The LIBRARIAN names a screenshot from its OCR text
+/// and writes a findable sentence about a transcript, unattended, hundreds of
+/// times over a backlog — work a cheap fast model does perfectly, where the
+/// frontier model buys nothing and costs ~20× more. `AgentModels`' own doc has
+/// said exactly this since it shipped ("plenty of what this app asks a key to
+/// do … is work a cheap fast model does perfectly for a fraction of the cost")
+/// and there was no way to act on it.
+///
+/// It matters most on OpenRouter, where one key reaches every model there is —
+/// including free ones — so the choice is real rather than a choice between
+/// three tiers of the same vendor.
+enum AgentTask: String, CaseIterable, Sendable {
+    case ask
+    case librarian
+
+    /// The UserDefaults suffix. `ask` carries NONE, so the key it reads is the
+    /// one `agent.model.<provider>` has always been — a person who chose a
+    /// model before this existed keeps it, with no migration.
+    var storeSuffix: String { self == .ask ? "" : "." + rawValue }
+}
+
 enum AgentModelStore {
     private static let prefix = "agent.model."
 
     /// The model this provider should answer with — the person's choice, or
     /// nil to mean "whatever `defaultModel` says". Nil rather than resolving
     /// here so the fallback lives in exactly one place (`AgentProvider.model`).
-    static func chosen(_ provider: AgentProvider) -> String? {
-        let value = UserDefaults.standard.string(forKey: prefix + provider.rawValue)
-        guard let value, !value.isEmpty else { return nil }
-        return value
+    ///
+    /// A librarian read with no librarian choice falls back to the ASK choice
+    /// before it falls back to the pin, so the model somebody deliberately
+    /// picked is never silently replaced by a default they never saw.
+    static func chosen(_ provider: AgentProvider, task: AgentTask = .ask) -> String? {
+        let value = UserDefaults.standard.string(forKey: prefix + provider.rawValue + task.storeSuffix)
+        if let value, !value.isEmpty { return value }
+        return task == .ask ? nil : chosen(provider, task: .ask)
     }
 
-    static func set(_ model: String?, for provider: AgentProvider) {
-        let key = prefix + provider.rawValue
+    static func set(_ model: String?, for provider: AgentProvider, task: AgentTask = .ask) {
+        let key = prefix + provider.rawValue + task.storeSuffix
         guard let model, !model.trimmingCharacters(in: .whitespaces).isEmpty else {
             UserDefaults.standard.removeObject(forKey: key)
             return
@@ -50,15 +80,26 @@ enum AgentModelStore {
     /// every choice. Splits on the FIRST colon — a model id may contain one
     /// (`openai/gpt-4o`, and every OpenRouter id does), a provider raw value
     /// never can.
+    ///
+    /// `-agentLibrarianModel "<provider>:<model id>"` is the same hook for the
+    /// librarian's own choice (2026-08-20). Separate rather than a third
+    /// colon-delimited field: a model id carries colons, so a
+    /// `provider:task:id` spelling would have to split on the first TWO and
+    /// would silently mis-parse the day an id contains no slash.
     static func seedFromLaunchArgs() {
-        guard let raw = UserDefaults.standard.string(forKey: "agentModel") else { return }
+        seed(UserDefaults.standard.string(forKey: "agentModel"), task: .ask)
+        seed(UserDefaults.standard.string(forKey: "agentLibrarianModel"), task: .librarian)
+    }
+
+    private static func seed(_ raw: String?, task: AgentTask) {
+        guard let raw else { return }
         if raw == "clear" {
-            AgentProvider.allCases.forEach { set(nil, for: $0) }
+            AgentProvider.allCases.forEach { set(nil, for: $0, task: task) }
             return
         }
         guard let colon = raw.firstIndex(of: ":"),
               let provider = AgentProvider(rawValue: String(raw[..<colon])) else { return }
-        set(String(raw[raw.index(after: colon)...]), for: provider)
+        set(String(raw[raw.index(after: colon)...]), for: provider, task: task)
     }
 }
 

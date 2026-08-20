@@ -26923,6 +26923,77 @@ were still CALLED, after they shipped in July and nothing reached them for six
 weeks. There is no toast layer left for them to fire into, so there is nothing
 to keep reachable.
 
+## 412. A presented sheet takes the system's concentric corner; nested radii get a name (user: "what polish would you add to the app to level up its design and make it look really professional and native", then "ok lets do all of these", 2026-08-20)
+
+A design-polish audit against iOS 26's own chrome. Three proposals went to the
+user; **one of the three was already shipped and is recorded here as a
+retraction, because an audit that claims credit for existing work is worse than
+one that finds nothing.**
+
+**1. The presented sheet's corner — BUILT.** `ThingSheetView`, `TokenQuickSheet`
+and `SocialPostViews` each pinned `presentationCornerRadius(DS.Radius.sheet)`,
+i.e. 16pt. The display's own corner is ~55pt and iOS 26 draws a presented sheet
+concentric with it, so the pin was overriding the one thing that makes a sheet
+read as a layer OF the device: a 16pt arc inside a 55pt one is not a smaller
+version of the same curve, and the margin between them swells through the bend.
+It is the most-opened surface in the app. Now `DS.Radius.presentedSheet` — nil
+on 26, `sheet` below it — behind one `dsSheetCorner()` modifier, so the decision
+lives in one place rather than in three hand-spelled availability checks.
+
+**This does NOT amend build-brief §8's "sheets 16", and the distinction is the
+whole ruling.** §8 governs a sheet surface WE DRAW — `dsSheetSurface`, `DSTray`,
+every tray that paints its own corner — and every one of those still reads
+`DS.Radius.sheet`, unchanged. The new token governs only the corner UIKit draws
+for us, which §8 predates by two years and never had an opinion about. §8 stays
+law; it simply never covered this.
+
+**2. Soft scroll edges — ALREADY SHIPPED, proposal withdrawn.** The audit
+proposed dissolving content under the fixed chip strip via
+`scrollEdgeEffectStyle(.soft)`. `dsSoftScrollEdges()` has done exactly that
+since 2026-07-23, iOS 26-gated, top and bottom, with a leading edge added for
+the iPad rail on 2026-08-10 — **66 call sites, the feed among them.** Nothing
+was built. Recorded because the near-miss is instructive: the modifier is named
+for its EFFECT (`dsSoftScrollEdges`) while the audit searched for the API
+(`scrollEdgeEffectStyle`), which appears exactly once in the tree, inside that
+modifier's private implementation. A grep for a system API finds a wrapper's
+guts, not its 66 users — check the design layer's own vocabulary before
+concluding a system behaviour is missing.
+
+**3. Nested radii — BUILT, but NARROWED from what was proposed.** The audit
+counted ~39 raw `cornerRadius:` literals in `Screens/`/`GenUI/` sitting outside
+`DS.Radius` and called them drift, on the Face/Mark-ramp precedent. **Reading
+them refuted that.** They are almost entirely 1–7pt graphical primitives — chart
+bars, progress caps, sparkline ends — which are drawing values, not container
+radii, plus a handful of component radii carrying written reasons of their own
+(`PhotoViewer`'s 18, `Composer`'s 26). A sweep would have dressed unrelated
+numbers up as a nesting relationship they do not have, and a lint over them
+would fire on every chart in the app — the cries-wolf failure this repo's audits
+are built to avoid. **No sweep, and deliberately no audit script.**
+
+What survived is the rule itself: `DS.Radius.nested(parent:inset:)` —
+`max(4, parent − inset)`. Two nested rounded rectangles only LOOK evenly inset
+if their corners share a centre; give the child the parent's radius and its arc
+orbits wider than the gap, so the margin swells at each corner.
+
+**The app has exactly ONE nested pair, and that is the design working rather
+than a gap.** The wallet's range control (`WalletFeedTiles`) already did the
+arithmetic — a 10pt track, 3pt of padding, a literal 7pt segment — correct, with
+nothing tying the 7 to the 10. It reads `nested(parent:inset:)` now, so the two
+can never drift apart. Every other candidate turned out to be a standalone
+control on a page or in a List section (`AppsScreen`'s search field,
+`FollowImportSheet`'s filter, `ChipPeek`'s figure well): no rounded parent, no
+correction to make. **§8's no-line rule is why** — the app separates depth by
+TONE, so content sits directly on a card instead of inside a second box drawn on
+it. `MoneyReceiptCard`'s `DS.Radius.card + 4` was checked and deliberately left
+alone: its slab has no rounded child, so it is a softer slab, not concentric
+math.
+
+**Standing lesson, and the reason this entry is longer than what it built:** two
+of three findings in a polish audit of a mature design system were wrong, and
+both were wrong in the same direction — assuming absence from a grep. The system
+was more finished than the audit assumed. Read the design layer's vocabulary and
+the literals' actual context before proposing either a new modifier or a sweep.
+
 ## §416 — The wallet room gets section headers; the card labels stay (user: "should there be section headers between things eg instead of titles on the charts", "it's pretty smooth and looking good right now but maybe seems like a long feed", 2026-08-20)
 
 The wallet room stacks up to nine live-state cards before the stream — balance,
@@ -26979,3 +27050,177 @@ mounts on the shell).
 `Thing` field, no request, and no CloudKit deploy; and it does not judge whether
 a given card still earns its seat, which is a design review's job and not a
 header's.
+
+## 415. The keyed agent stops re-paying for the same prompt, reads the page behind a saved link, and gets a ceiling it can honestly keep (user: "what more can we do with agents? or things like open router?", then "lets do the cache, and fetch, and open router thing", 2026-08-20)
+
+Three changes to the BYOK path, each fixing something that had been true since
+§318 and invisible from every screen. None of them is a new provider or a new
+screen; all three make the key already configured do more for less.
+
+**1. The tool loop stopped re-paying for its own prompt.** `AgentCorpusTools.maxRounds`
+is 3, and its own header says the number is a BILLING bound rather than a
+capability one: "every round is a fresh request carrying the whole transcript so
+far, so round N costs roughly N times the first." That was simply the cost of
+having tools — and it was avoidable the entire time. Anthropic caches a prompt
+PREFIX; the prefix here is enormous and byte-identical across rounds (the
+synthesis contract, the tool schemas, up to sixteen numbered candidates, and up
+to six attached screenshots), while the only part that grows is the tool
+transcript at the end. **Two breakpoints, and where they sit is the whole
+design:** one on the last content block of the current question — a breakpoint
+covers everything BEFORE it in render order (`tools` → `system` → `messages`),
+so that single mark caches all of it — and one on the last message of the
+conversation so far, which is what a follow-up re-reads instead of re-paying
+for. Two of the four allowed, deliberately: `steps` must stay outside, and a
+breakpoint per round would evict the two that matter.
+
+**Anthropic only, and the three silences are each a different reason.** ChatGPT
+and Gemini cache automatically with no parameter to send, so there is nothing to
+do and the hit is merely READ back. OpenRouter would need explicit breakpoints
+for an Anthropic-backed model — but this app pins `openrouter/auto`, whose whole
+point is that the model is chosen per request and is unknown to us, and an
+unrecognized body key on the answer path risks a 400 on the question itself.
+That is `stream_options.include_usage`'s exact reasoning and it lands the same
+way: **a missing saving is far cheaper than a question that won't answer.**
+
+**The saving is on the receipt or it isn't real** — `AgentSpend` grew
+`cachedInputTokens`/`cacheWriteTokens`, both read off each provider's own usage
+and never computed, and the row says "18.4k of that was served from cache." As a
+SHARE of the input total rather than a figure beside it, because every provider
+counts cached tokens INSIDE input and printing them separately would read as
+extra spend when it is the opposite. No percentage and no dollars: the saving
+depends on that model's cache-read rate, which is exactly the rate table
+`AgentSpend` exists to refuse. **Both new fields are Optional and that is not
+style** — Swift's synthesized decoder calls `decode` for a non-Optional with a
+default and `decodeIfPresent` only for Optionals, so a non-Optional field would
+have failed the decode of every receipt already on disk. That is the trap
+recorded against `RSSStore.Feed`, in a second file.
+
+**2. The agent can read the page behind a link you saved.** The corpus is full
+of links whose words were never stored — `LinkTitle` fetches a `<head>` and
+`FeedArticleText` reads the body for RSS and Substack alone — so "what did that
+piece actually argue?" was answered from a headline, fluently. Anthropic's
+`web_fetch` is a SERVER tool: the API fetches inside the same request, so
+nothing here opens a connection, **no host of ours joins `NetworkReach`**, and
+the round costs one request rather than two.
+
+**What makes it usable here rather than merely available is its own security
+rule: it can only fetch a URL that already appeared in the conversation.**
+Claude may not construct one. So the reachable set is exactly the links this
+person saved and the tools chose to show — the grounding contract restated as a
+wire constraint, and the reason this is the one web capability that does not
+widen what a keyed answer may draw on. Web SEARCH brings back pages nobody
+saved and needs a line telling the model to prefer the corpus first; this reads
+the thing they kept, in full. Separate flag (`fetchesLinks`), separate sentence
+on the connect screen, separate badge words ("read 1 saved page", never folded
+into "searched the web").
+
+**The URLs ride the TOOL RESULTS and deliberately not the candidate list.** Two
+reasons, both load-bearing: the candidate list is shared verbatim with the
+on-device model (one contract, two engines), so a line added there changes what
+the free path reads for a capability it does not have; and a URL is ~20 input
+tokens re-sent on every later round, so printing sixteen of them up front is
+real money spent to enable a fetch the model usually doesn't want. A tool result
+carries a URL only for a thing the model went and asked about. It follows that
+page reading is gated on the corpus tools being ON — offered on the single-shot
+path it would declare a tool with an empty reachable set and every attempt would
+be a guaranteed `url_not_in_prior_context`.
+
+**`AgentWebFetch.fetchable` is a gate, not a formality, and every rule has a
+real row in this corpus behind it.** A `Thing.content` is whatever a bridge
+stamped on it: `casberi://` deep links, `obsidian://` vault doors, `file://`
+paths, `photos-redirect://`, signed CDN URLs whose query carries a token
+(Instagram's `og:image` §395, Snapchat's memory downloads §246), and private
+hostnames off a self-hosted PostHog or a followed LAN feed. http/https only, no
+userinfo, no credential-shaped query key, no private host, and nothing over the
+documented 250-character ceiling — a longer URL is a guaranteed `url_too_long`,
+so printing one spends input tokens to buy an error. The original string is
+returned, never a re-serialized one: percent-encoding is not canonical and the
+model hands this exact string back. `AgentCorpusTools` then drops any link whose
+text `SecretScan` would alter, because **a redacted URL is not a safer URL, it
+is a broken one.** Both bounds are BILLING bounds like `maxRounds` — 2 pages,
+12,000 tokens each — with the arithmetic stated: a typical article is ~2,500
+tokens, a large doc page ~25,000, a research-paper PDF ~125,000, so unbounded,
+one saved link turns a question into a dollar.
+
+**The bug this would have introduced, caught before it shipped.** The stream
+reader treated ANY `server_tool_use` block as evidence of a web SEARCH, which
+was correct only while search was the sole server tool. The moment web fetch
+joined the array, every page read would have lit "searched the web" — a false
+statement about provenance, on the one line whose entire job is provenance
+(§83). The block's own `name` now separates them, and the fetch is counted on
+its RESULT block rather than its call, so a refused fetch (a blocked domain, a
+URL never in context) is never counted as a page read.
+
+**3. A month's ceiling, and only where one can honestly be kept.**
+`AgentLibrarian` is the one path that bills without a tap. Its three rules bound
+each PASS and say nothing about the month, so somebody who turns it on and then
+imports a fifteen-year X archive has consented to a small recurring cost and
+bought a large one. **`AgentBudget` exists for OpenRouter and only OpenRouter,
+because a cap you cannot measure is a promise you cannot keep**: `AgentSpend`
+records tokens and refuses to price them, so a dollar cap is only sayable where
+the provider itself states dollars — OpenRouter's free `/v1/auth/key` read, and
+nowhere else in the catalog. Every other provider gets one plain sentence saying
+why there is no cap to offer, rather than a control that silently governs
+nothing.
+
+Three rules, each the difference between a cap and a lie. **The month's spend is
+a DELTA against a baseline we watched** — `data.usage` is a LIFETIME total, so a
+key that has already spent $40 elsewhere would read as instantly over any cap;
+the baseline re-takes at each month boundary, and a reading BELOW it re-baselines
+too, because a lifetime total cannot go backwards and continuing to subtract
+would report a negative spend forever. **An unreadable figure NEVER pauses
+anything** — not knowing and knowing it's fine are different states, and pausing
+on the first is a control that stops the app working whenever the network is
+bad. **It governs the librarian, never an ask**: an ask is a tap, the person is
+standing there and chose to spend, and being refused by a setting they
+configured three weeks ago is the dead control §83 bans.
+
+**A third state, not a failure.** `canRun` goes false when the cap is reached,
+and the nearest existing case was `.noKey`, whose sentence is "No key saved —
+add one in Settings" — advice to fix something that isn't broken, about a key
+sitting right there. `Caught.pausedByBudget` words it correctly. Caught only
+because the gate was wired into the same `canRun` the failure line reads from.
+
+**4. And the librarian runs on its own model.** `AgentModels`' header has said
+since it shipped that "plenty of what this app asks a key to do … is work a
+cheap fast model does perfectly for a fraction of the cost", and there was no
+way to act on it: one pin per provider meant the frontier model somebody chose
+for hard questions was also naming screenshots, unattended, hundreds of times
+over a backlog. `AgentTask` splits them. **`.ask` carries an EMPTY store
+suffix**, so the key it reads is the one `agent.model.<provider>` has always
+been and a choice made before this existed survives with no migration; a
+librarian read with no librarian choice falls back to the ASK choice before the
+pin, so a deliberately picked model is never silently replaced by a default
+nobody saw. It matters most on OpenRouter, where one key reaches every model
+there is, free ones included.
+
+**Guarded by `scripts/agent-keyed-selftest.sh`** (in `verify.sh`):
+`AgentWebFetch` compiled WHOLE and unmodified, `AgentBudget`'s month arithmetic
+extracted by name, 13 mutations, plus drift guards for the two cache
+breakpoints, the name-aware server-tool branch, the links reaching the tool
+results at all, the librarian's model and ceiling — and a NEGATIVE guard that
+`AgentBudget` never reaches `AgentAnswer`, since a ceiling that blocks an ask is
+the control this ruling forbids. Every negative guard reads a COMMENT-STRIPPED
+copy: `AgentAnswer.swift` documents the fix by quoting the broken test verbatim,
+so a raw grep scores the prose explaining the bug as the bug (the Obsidian/Cursor
+lesson, sixth instance).
+
+**The harness's own first mutation finding, and it is the standing lesson here.**
+Eight fixtures asserted that a local-door scheme is refused — `casberi://`,
+`obsidian://`, `file://` and five more — and deleting the scheme check entirely
+left every one of them green, because all eight are ALSO hostless or dotless and
+the host guard one line below was doing the work. The suite proved the right
+result for the wrong reason, exactly as three of `retriever-selftest`'s four
+ranking fixtures once did. A fixture only tests the rule it names if it fails
+the rule it names and passes every other one; `ftp://files.example.com/…` is
+what makes that check load-bearing.
+
+**UNMEASURED against a live key** — no provider key is stored on this build host
+and there is no egress to `api.anthropic.com` from it. Every addition fails
+safe: a cache breakpoint below a model's minimum length simply doesn't cache
+(no error), a refused link is a link the model never sees, and an unreadable
+spend figure never pauses anything. `-webFetchProbe "<url>|corpus"` reports the
+link policy's verdict per URL without spending a token, `-agentBudgetCap <usd>`
+exercises the pause branch without waiting for a real month, and `-byokProbe`
+now reports `pagesRead=` beside `rounds=` because a page read and a page not
+read produce identical-looking answers.

@@ -118,7 +118,15 @@ enum AgentProvider: String, CaseIterable, Identifiable {
     /// `AgentModelStore`). Every call site reads THIS, so a choice reaches the
     /// answer path, the key check and the librarian sweep without any of them
     /// knowing a choice exists.
-    var model: String { AgentModelStore.chosen(self) ?? defaultModel }
+    var model: String { model(for: .ask) }
+
+    /// The model for one KIND of request (2026-08-20). An ask and a librarian
+    /// sweep want opposite models — see `AgentTask` — and until this existed
+    /// they had to share one pin, so a person who picked the frontier model to
+    /// answer questions was also paying it to name screenshots.
+    func model(for task: AgentTask) -> String {
+        AgentModelStore.chosen(self, task: task) ?? defaultModel
+    }
 
     /// The fallback pin, used until the provider's own model list is read and
     /// something is picked from it. Kept because a list read can fail — a pin
@@ -200,6 +208,33 @@ enum AgentProvider: String, CaseIterable, Identifiable {
         }
     }
 
+    /// Whether this agent may READ A PAGE the person already saved
+    /// (2026-08-20, `AgentWebFetch`) — a different promise from `searchesWeb`,
+    /// and a much smaller one, which is why it is a separate flag rather than a
+    /// second consequence of the first.
+    ///
+    /// Web search brings back pages nobody saved: it widens the evidence past
+    /// the corpus, which is why its own guidance has to tell the model to
+    /// prefer the saved things first. Web fetch narrows instead — Anthropic's
+    /// tool refuses any URL that did not already appear in the conversation, so
+    /// the reachable set is exactly the links this person saved and the corpus
+    /// tools chose to show. It reads the thing they kept, in full, rather than
+    /// the excerpt we happened to store.
+    ///
+    /// Anthropic alone, and the two absences are for different reasons. Gemini
+    /// has `url_context`, but this app's Gemini branch already cannot send
+    /// `functionDeclarations` alongside a built-in tool on the generations it
+    /// pins — the corpus tools win that slot, and losing them to gain page
+    /// reading would be a bad trade. Venice, ChatGPT, OpenRouter and Grok
+    /// publish no comparable prior-context-only fetch on the chat endpoint this
+    /// app calls; a general fetcher would be a different, wider promise.
+    var fetchesLinks: Bool {
+        switch self {
+        case .anthropic: true
+        case .openai, .google, .venice, .bankr, .openrouter, .grok: false
+        }
+    }
+
     /// What this agent can additionally do, beyond a plain text answer —
     /// shown on the connect screens so a person picks (or expects) the right
     /// thing (2026-07-21). Every provider here remembers a keyed
@@ -209,7 +244,9 @@ enum AgentProvider: String, CaseIterable, Identifiable {
     /// its divergence.
     var capabilityLine: String? {
         switch self {
-        case .anthropic, .google:
+        case .anthropic:
+            "Also sees your screenshots' own pictures, reads the full page behind a link you saved, remembers this chat's answers so far, and can search the web when your things fall short."
+        case .google:
             "Also sees your screenshots' own pictures, remembers this chat's answers so far, and can search the web when your things fall short."
         case .openai:
             "Also sees your screenshots' own pictures, and remembers this chat's answers so far."
@@ -326,6 +363,17 @@ struct AgentAnswerResult: Sendable {
     let picks: [Int]
     var searchedWeb = false
     var imagesSeen = 0
+    /// How many saved pages the agent actually READ in full (2026-08-20,
+    /// `AgentWebFetch`) — counted from the provider's own result blocks, never
+    /// from the fact that the tool was offered.
+    ///
+    /// A separate number from `searchedWeb` on purpose, and keeping them apart
+    /// fixed a bug this feature would otherwise have introduced: the stream
+    /// reader treated ANY `server_tool_use` block as evidence of a web SEARCH,
+    /// so the moment a second server tool existed, every page read would have
+    /// lit the "searched the web" badge — a claim about where an answer came
+    /// from, made wrongly, on the one line whose whole job is to say that.
+    var pagesRead = 0
     /// Real `Thing` ids the CORPUS TOOLS surfaced and the answer pointed at
     /// (2026-08-06) — the grounding rows for a tool-loop answer, in the order
     /// the model picked them. Empty on the single-shot path, where `picks`
@@ -639,8 +687,17 @@ enum AgentAnswer {
         let toolsOn = !corpus.isEmpty
         guard !candidates.isEmpty || toolsOn else { return .failure(.empty) }
 
+        // Page reading is only reachable when the corpus tools are on: the URLs
+        // it may fetch ride the TOOL RESULTS (see `AgentWebFetch`), and
+        // Anthropic refuses any URL that never appeared in the conversation —
+        // so offering it on the single-shot path would declare a tool with
+        // literally nothing in reach, spending schema tokens to buy a
+        // guaranteed `url_not_in_prior_context`.
+        let fetchOn = toolsOn && provider.fetchesLinks
+
         var system = OnDeviceModel.synthesisInstructions(length: "a few plain sentences")
         if toolsOn { system += toolGuidance }
+        if fetchOn { system += AgentWebFetch.guidance }
         system += toolsOn ? toolPickInstructions : pickInstructions
         if provider.searchesWeb { system += webSearchGuidance }
 
@@ -665,6 +722,7 @@ enum AgentAnswer {
         var steps: [AgentStep] = []
         var finalText = ""
         var searchedWeb = false
+        var pagesRead = 0
         var answeredModel: String?
         var rounds = 0
 
@@ -684,7 +742,8 @@ enum AgentAnswer {
             guard let wire = makeRequest(provider: provider, key: key, system: system,
                                          history: history, userText: userText,
                                          images: images, steps: steps,
-                                         declareTools: declareTools) else {
+                                         declareTools: declareTools,
+                                         offerFetch: fetchOn) else {
                 return .failure(.noKey)
             }
             var request = wire.request
@@ -708,8 +767,11 @@ enum AgentAnswer {
             AgentSpend.shared.record(provider: provider, round: rounds,
                                      input: streamed.inputTokens,
                                      output: streamed.outputTokens,
-                                     model: streamed.model)
+                                     model: streamed.model,
+                                     cacheRead: streamed.cacheReadTokens,
+                                     cacheWrite: streamed.cacheWriteTokens)
             if streamed.searchedWeb { searchedWeb = true }
+            pagesRead += streamed.pagesRead
             if let model = streamed.model { answeredModel = model }
             finalText = streamed.text
 
@@ -718,7 +780,8 @@ enum AgentAnswer {
             rounds += 1
             steps.append(.toolCalls(calls))
             steps.append(.toolResults(calls.map {
-                AgentCorpusTools.run($0, corpus: corpus, sink: sink)
+                AgentCorpusTools.run($0, corpus: corpus, sink: sink,
+                                     includeLinks: fetchOn)
             }))
         }
 
@@ -729,6 +792,7 @@ enum AgentAnswer {
         return .success(AgentAnswerResult(text: text, picks: grounding.picks,
                                           searchedWeb: searchedWeb,
                                           imagesSeen: images.count,
+                                          pagesRead: pagesRead,
                                           toolHitIDs: grounding.toolHitIDs,
                                           toolRounds: rounds,
                                           model: answeredModel))
@@ -751,14 +815,15 @@ enum AgentAnswer {
     /// screenshot would spend a job on a question it has no way to answer.
     static func complete(system: String, prompt: String,
                          provider explicitProvider: AgentProvider? = nil,
-                         maxTokens: Int = 256)
+                         maxTokens: Int = 256,
+                         task: AgentTask = .ask)
     async -> Result<String, AgentAnswerFailure> {
         guard let provider = explicitProvider ?? AgentKey.active,
               provider != .bankr,
               let key = TokenVault.get(provider.vaultKey) else { return .failure(.noKey) }
         guard var wire = makeRequest(provider: provider, key: key, system: system,
                                      history: [], userText: prompt, images: [],
-                                     steps: [], declareTools: false) else {
+                                     steps: [], declareTools: false, task: task) else {
             return .failure(.noKey)
         }
         // `makeRequest` asks for 1024 tokens, which is right for an answer and
@@ -782,7 +847,9 @@ enum AgentAnswer {
         switch await streamText(request, onPartial: nil, parse: wire.parse) {
         case .success(let outcome):
             AgentSpend.shared.record(provider: provider, input: outcome.inputTokens,
-                                     output: outcome.outputTokens, model: outcome.model)
+                                     output: outcome.outputTokens, model: outcome.model,
+                                     cacheRead: outcome.cacheReadTokens,
+                                     cacheWrite: outcome.cacheWriteTokens)
             let text = outcome.text.trimmingCharacters(in: .whitespacesAndNewlines)
             return text.isEmpty ? .failure(.empty) : .success(text)
         case .failure(let failure):
@@ -812,7 +879,9 @@ enum AgentAnswer {
     private static func makeRequest(provider: AgentProvider, key: String, system: String,
                                     history: [AgentTurn], userText: String,
                                     images: [(index: Int, data: Data)],
-                                    steps: [AgentStep], declareTools: Bool)
+                                    steps: [AgentStep], declareTools: Bool,
+                                    offerFetch: Bool = false,
+                                    task: AgentTask = .ask)
     -> (request: URLRequest, parse: ([String: Any]) -> StreamDelta)? {
         var request: URLRequest
         let parse: ([String: Any]) -> StreamDelta
@@ -822,7 +891,7 @@ enum AgentAnswer {
             request.setValue(key, forHTTPHeaderField: "x-api-key")
             request.setValue("2023-06-01", forHTTPHeaderField: "anthropic-version")
             var body: [String: Any] = [
-                "model": provider.model,
+                "model": provider.model(for: task),
                 "max_tokens": 1024,
                 "system": system,
                 "stream": true,
@@ -834,6 +903,17 @@ enum AgentAnswer {
             var tools: [[String: Any]] = []
             if provider.searchesWeb {
                 tools.append(["type": "web_search_20260209", "name": "web_search"])
+            }
+            // Web fetch is offered whenever the corpus tools are in play at all
+            // — INCLUDING the final, no-client-tools round, which is not the
+            // inconsistency it looks like. The "last round declares no tools"
+            // rule exists so the model is never handed a tool whose result it
+            // won't be allowed to see; a server tool resolves inside the same
+            // request, so a page read on the last round still lands in the
+            // answer being written. And by then the URLs are already in the
+            // transcript, which is the only place this tool can fetch from.
+            if provider.fetchesLinks && offerFetch {
+                tools.append(AgentWebFetch.anthropicDeclaration())
             }
             if declareTools { tools += AgentCorpusTools.anthropicDeclarations() }
             if !tools.isEmpty { body["tools"] = tools }
@@ -874,7 +954,7 @@ enum AgentAnswer {
             messages.append(["role": "user", "content": openAIUserContent(userText, images: images)])
             messages += openAISteps(steps)
             var body: [String: Any] = [
-                "model": provider.model,
+                "model": provider.model(for: task),
                 "max_tokens": 1024,
                 "stream": true,
                 "messages": messages,
@@ -901,7 +981,7 @@ enum AgentAnswer {
             parse = openAIDelta
         case .google:
             request = URLRequest(url: URL(string:
-                "https://generativelanguage.googleapis.com/v1beta/models/\(provider.model):streamGenerateContent?alt=sse")!)
+                "https://generativelanguage.googleapis.com/v1beta/models/\(provider.model(for: task)):streamGenerateContent?alt=sse")!)
             request.setValue(key, forHTTPHeaderField: "x-goog-api-key")
             var contents: [[String: Any]] = []
             for turn in history {
@@ -1092,12 +1172,33 @@ enum AgentAnswer {
     /// the provider's own signal that its web-search tool actually ran, a
     /// piece of a tool call, the billed token counts, or an event type this
     /// parser doesn't care about.
+    /// What one round cost, as the provider reported it. A struct rather than a
+    /// five-value case: the cache halves arrived in 2026-08 and a sixth
+    /// positional argument is how a call site starts passing the wrong one.
+    /// Every field is optional and every one means "the provider didn't say"
+    /// rather than zero.
+    private struct Usage {
+        var input: Int?
+        var output: Int?
+        var model: String?
+        /// Tokens served from a previous request's cache — billed at a fraction
+        /// of the input rate. The one number that shows prompt caching working.
+        var cacheRead: Int?
+        /// Tokens written INTO the cache, billed at a premium. Kept apart from
+        /// the read because they are the cost side of the same trade, and a
+        /// receipt that showed only the saving would be an advertisement.
+        var cacheWrite: Int?
+    }
+
     private enum StreamDelta {
         case text(String)
         case refused
         case searched
+        /// The provider's own signal that it read a saved page in full
+        /// (`AgentWebFetch`) — observed, never inferred from offering the tool.
+        case fetched
         case tool([ToolFragment])
-        case usage(input: Int?, output: Int?, model: String?)
+        case usage(Usage)
         case ignore
     }
 
@@ -1108,8 +1209,12 @@ enum AgentAnswer {
         var text = ""
         var refused = false
         var searchedWeb = false
+        /// Pages actually read in full this round.
+        var pagesRead = 0
         var inputTokens: Int?
         var outputTokens: Int?
+        var cacheReadTokens: Int?
+        var cacheWriteTokens: Int?
         var model: String?
         /// Slot number → the call being assembled, in arrival order.
         var toolBuffers: [(index: Int, id: String, name: String, arguments: String)] = []
@@ -1183,16 +1288,20 @@ enum AgentAnswer {
                     outcome.refused = true
                 case .searched:
                     outcome.searchedWeb = true
+                case .fetched:
+                    outcome.pagesRead += 1
                 case .tool(let fragments):
                     fragments.forEach { outcome.absorb($0) }
-                case .usage(let input, let output, let model):
+                case .usage(let usage):
                     // Anthropic reports input on `message_start` and output on
                     // `message_delta`, so the two halves arrive in different
                     // events — each is taken only when present, never
                     // overwriting a count already read with a nil.
-                    if let input { outcome.inputTokens = input }
-                    if let output { outcome.outputTokens = output }
-                    if let model, !model.isEmpty { outcome.model = model }
+                    if let input = usage.input { outcome.inputTokens = input }
+                    if let output = usage.output { outcome.outputTokens = output }
+                    if let read = usage.cacheRead { outcome.cacheReadTokens = read }
+                    if let write = usage.cacheWrite { outcome.cacheWriteTokens = write }
+                    if let model = usage.model, !model.isEmpty { outcome.model = model }
                 case .ignore:
                     continue
                 }
@@ -1221,9 +1330,11 @@ enum AgentAnswer {
         // count rides the closing `message_delta`.
         if type == "message_start", let message = json["message"] as? [String: Any] {
             let usage = message["usage"] as? [String: Any]
-            return .usage(input: usage?["input_tokens"] as? Int,
-                          output: usage?["output_tokens"] as? Int,
-                          model: message["model"] as? String)
+            return .usage(Usage(input: usage?["input_tokens"] as? Int,
+                                output: usage?["output_tokens"] as? Int,
+                                model: message["model"] as? String,
+                                cacheRead: usage?["cache_read_input_tokens"] as? Int,
+                                cacheWrite: usage?["cache_creation_input_tokens"] as? Int))
         }
         if type == "content_block_delta",
            let delta = json["delta"] as? [String: Any] {
@@ -1240,10 +1351,33 @@ enum AgentAnswer {
         if type == "content_block_start",
            let block = json["content_block"] as? [String: Any] {
             let blockType = block["type"] as? String
-            // The search tool actually running opens its own content block —
-            // the observed signal, not the fact that we offered the tool.
-            if blockType == "server_tool_use" || blockType == "web_search_tool_result" {
-                return .searched
+            // A server tool actually running opens its own content block — the
+            // observed signal, not the fact that we offered the tool. WHICH
+            // server tool ran is read off the block's own `name`, and that is
+            // load-bearing rather than tidy: this test used to be
+            // `blockType == "server_tool_use"` alone, which was correct only
+            // while web search was the sole server tool in the array. The
+            // moment web fetch joined it, every page read would have set
+            // `searchedWeb` — an answer that read a page the person saved
+            // claiming it went out and searched the open web, which is a false
+            // statement about provenance on the one line whose entire job is
+            // provenance.
+            if blockType == "server_tool_use" {
+                switch block["name"] as? String {
+                case "web_search": return .searched
+                case "web_fetch":  return .ignore  // counted on its RESULT block
+                default:           return .ignore
+                }
+            }
+            if blockType == "web_search_tool_result" { return .searched }
+            // The fetch is counted on the result rather than the call, so a
+            // fetch that was attempted and refused (a blocked domain, a URL
+            // that never appeared in the transcript) doesn't get counted as a
+            // page read. An error arrives as its own content shape, and only
+            // `web_fetch_result` means a page really landed.
+            if blockType == "web_fetch_tool_result" {
+                let content = block["content"] as? [String: Any]
+                return content?["type"] as? String == "web_fetch_result" ? .fetched : .ignore
             }
             // A CLIENT tool call opens the same way, and is ours to run.
             if blockType == "tool_use", let index = json["index"] as? Int,
@@ -1258,8 +1392,10 @@ enum AgentAnswer {
                 return .refused
             }
             if let usage = json["usage"] as? [String: Any] {
-                return .usage(input: usage["input_tokens"] as? Int,
-                              output: usage["output_tokens"] as? Int, model: nil)
+                return .usage(Usage(input: usage["input_tokens"] as? Int,
+                                    output: usage["output_tokens"] as? Int, model: nil,
+                                    cacheRead: usage["cache_read_input_tokens"] as? Int,
+                                    cacheWrite: usage["cache_creation_input_tokens"] as? Int))
             }
         }
         return .ignore
@@ -1283,9 +1419,16 @@ enum AgentAnswer {
         // The usage chunk arrives last and carries an EMPTY `choices` array,
         // so it is read before the guard below rejects it.
         if let usage = json["usage"] as? [String: Any] {
-            return .usage(input: usage["prompt_tokens"] as? Int,
-                          output: usage["completion_tokens"] as? Int,
-                          model: json["model"] as? String)
+            // ChatGPT and OpenRouter both cache automatically — nothing is sent
+            // to ask for it — and both report the hit in the same nested place.
+            // Read rather than sent, so this costs nothing and stays honest for
+            // a provider that reports none of it.
+            let details = usage["prompt_tokens_details"] as? [String: Any]
+            return .usage(Usage(input: usage["prompt_tokens"] as? Int,
+                                output: usage["completion_tokens"] as? Int,
+                                model: json["model"] as? String,
+                                cacheRead: details?["cached_tokens"] as? Int,
+                                cacheWrite: nil))
         }
         guard let choices = json["choices"] as? [[String: Any]],
               let delta = choices.first?["delta"] as? [String: Any] else { return .ignore }
@@ -1319,9 +1462,12 @@ enum AgentAnswer {
         // the response, so the last one seen wins — which is what `.usage`'s
         // overwrite (rather than add) semantics already give.
         if let usage = json["usageMetadata"] as? [String: Any] {
-            return .usage(input: usage["promptTokenCount"] as? Int,
-                          output: usage["candidatesTokenCount"] as? Int,
-                          model: json["modelVersion"] as? String)
+            // Gemini's implicit caching, likewise read and never asked for.
+            return .usage(Usage(input: usage["promptTokenCount"] as? Int,
+                                output: usage["candidatesTokenCount"] as? Int,
+                                model: json["modelVersion"] as? String,
+                                cacheRead: usage["cachedContentTokenCount"] as? Int,
+                                cacheWrite: nil))
         }
         guard let candidates = json["candidates"] as? [[String: Any]],
               let first = candidates.first else { return .ignore }
@@ -1358,9 +1504,16 @@ enum AgentAnswer {
                                           images: [(index: Int, data: Data)],
                                           steps: [AgentStep]) -> [[String: Any]] {
         var messages: [[String: Any]] = []
-        for turn in history {
+        for (position, turn) in history.enumerated() {
             messages.append(["role": "user", "content": turn.question])
-            messages.append(["role": "assistant", "content": turn.answer])
+            // Breakpoint 1 of 2 — the end of the conversation so far. Stable
+            // across every later exchange, so a follow-up re-reads the whole
+            // history from cache instead of re-paying for it. Block form only
+            // for the one message that carries it; the rest stay bare strings.
+            let isLast = position == history.count - 1
+            messages.append(["role": "assistant",
+                             "content": isLast ? cached([["type": "text", "text": turn.answer]])
+                                               : turn.answer])
         }
         var content: [[String: Any]] = [["type": "text", "text": userText]]
         for (index, data) in images {
@@ -1369,7 +1522,19 @@ enum AgentAnswer {
                             "source": ["type": "base64", "media_type": "image/jpeg",
                                       "data": data.base64EncodedString()]])
         }
-        messages.append(["role": "user", "content": content])
+        // Breakpoint 2 of 2 — the end of the current question. A cache
+        // breakpoint covers everything BEFORE it in render order (tools, then
+        // system, then messages), so this one alone caches the tool schemas,
+        // the whole synthesis contract, the numbered candidates and every
+        // attached screenshot. Those are the expensive, byte-identical part of
+        // every round of a tool loop, and before this they were re-sent whole
+        // three or four times per question — which is the real reason
+        // `AgentCorpusTools.maxRounds` is a billing bound at three.
+        //
+        // Two of the four allowed breakpoints, deliberately: `steps` is what
+        // grows between rounds and must stay outside, and a breakpoint per
+        // round would evict the two that matter.
+        messages.append(["role": "user", "content": cached(content)])
         // The tool loop so far, replayed: Anthropic pairs a result to its call
         // by `tool_use_id`, and every prior call must be present or the API
         // rejects the whole request rather than ignoring the orphan.
@@ -1437,6 +1602,33 @@ enum AgentAnswer {
             }
         }
         return contents
+    }
+
+    /// The same content blocks with a cache breakpoint on the LAST one
+    /// (2026-08-20). Anthropic caches the prefix up to and including a marked
+    /// block, so marking the last block of a message caches everything the
+    /// request has said so far.
+    ///
+    /// **Anthropic only, and the three silences are each for a reason.**
+    /// ChatGPT caches automatically with no parameter at all, so there is
+    /// nothing to send. Gemini's implicit caching is likewise automatic on the
+    /// generations this app pins. OpenRouter WOULD need explicit breakpoints
+    /// for an Anthropic-backed model — but this app pins `openrouter/auto`,
+    /// whose whole point is that the model is chosen per request and unknown to
+    /// us, and an unrecognized body key on the answer path risks a 400 on the
+    /// question itself. That is `stream_options.include_usage`'s exact
+    /// reasoning, and it lands the same way: a missing saving is far cheaper
+    /// than a question that won't answer.
+    ///
+    /// The default 5-minute life is right and 1h is not: the reads this exists
+    /// for are the next rounds of the same loop, seconds apart, and a 1h write
+    /// costs double for a hit nobody is waiting for. A prompt below the model's
+    /// minimum cacheable length simply doesn't cache — no error, so a short
+    /// exchange costs exactly what it did before.
+    private static func cached(_ blocks: [[String: Any]]) -> [[String: Any]] {
+        guard var last = blocks.last else { return blocks }
+        last["cache_control"] = ["type": "ephemeral"]
+        return blocks.dropLast() + [last]
     }
 
     /// A tool call's raw argument string as a dictionary, for the two wires
