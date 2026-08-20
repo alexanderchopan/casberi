@@ -53,7 +53,6 @@ struct AltanaRoomCard: View {
     private static let mark = DS.brandHue(for: "Altana") ?? Color.fixed("#3565e3")
     /// EVERY token is this size. The one rule the last cut broke.
     private static let token: CGFloat = 44
-    private static let faceSize: CGFloat = 30
     /// Above this many accounts the constellation stops being readable and the
     /// card falls back to a plain list — stated rather than discovered.
     static let maxDrawnAccounts = 3
@@ -165,7 +164,7 @@ struct AltanaRoomCard: View {
 
             ForEach(plan.accounts) { node in
                 VStack(spacing: 2) {
-                    WalletFace(address: node.id, size: Self.faceSize, circular: true)
+                    WalletFace(address: node.id, size: DS.Face.rowCircle, circular: true)
                     Text(WalletStore.shortAddress(node.id))
                         .dsText(.label12)
                         .foregroundStyle(DS.textTertiary)
