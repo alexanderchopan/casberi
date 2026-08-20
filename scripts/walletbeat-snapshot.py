@@ -407,14 +407,153 @@ def self_test() -> int:
     return 1 if failures else 0
 
 
+# --------------------------------------------------------------------------------------
+# Wallet icons
+#
+# Walletbeat bundles a logo for every wallet it rates (`public/images/wallets/<id>.<ext>`),
+# MIT-licensed, in the repo this script already reads. That is what makes real marks
+# possible at all: they are snapshotted at ship time beside the ratings, so the app reaches
+# NO image server at run time and no new host joins `NetworkReach`. The first cut of this
+# feature drew a letter monogram for every wallet on the reasoning that the alternative was
+# fetching 32 companies' logos — which was simply wrong about where the logos are.
+#
+# THE FIELD IS CHOSEN PER ICON, and it has to be. Measured across all 32: most are either
+# light artwork or carry their own coloured field, so they read fine on the app's dark
+# well — but `gridplus` and `keystone` are dark artwork on transparency and vanish almost
+# completely against it. A single background colour cannot serve both: on white, Ledger's
+# white outline and Trezor's white lock disappear instead. So each icon's own opaque pixels
+# are measured and only the dark ones get a light plate.
+# --------------------------------------------------------------------------------------
+
+ICON_DIR = "public/images/wallets"
+ICON_PX = 384
+# Below this MEAN luminance an icon is dark artwork and needs a light plate behind it.
+#
+# MEASURED across all 32 on 2026-08-20, and the mean is used rather than a percentile
+# because a percentile gets `gridplus` wrong: its ink is black "GRID" text with a small
+# blue "+", so its p90 is 0.630 while its mean is 0.070 — it reads as bright by the
+# percentile and is nearly invisible on the app's own well. The measured order around this
+# floor is gridplus 0.070, keystone 0.175 | firefly 0.238, ambire 0.245, imkey 0.308,
+# pillarx 0.352 — so 0.20 takes exactly the two that vanished when the whole set was
+# rendered on `DS.surfaceWell` and looked at, and leaves the four that read fine alone.
+DARK_ICON_LUMA = 0.20
+# An icon covering nearly its whole square carries its OWN field and is left alone whatever
+# its luminance — firefly is a dark photograph (mean 0.238, coverage 1.00) and plating it
+# would put a white card behind an image that already has a ground.
+FIELD_COVERAGE = 0.80
+
+
+def icon_source(wallet_id: str, listing: dict) -> str | None:
+    """The file Walletbeat stores for this wallet, whatever its extension."""
+    return listing.get(wallet_id)
+
+
+def render_icon(raw: bytes, suffix: str, out_png: str) -> None:
+    """Rasterise one icon to a square transparent PNG."""
+    import base64 as _b64
+    import subprocess as _sp
+    import tempfile as _tf
+
+    chrome = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+    mime = {"svg": "image/svg+xml", "png": "image/png",
+            "jpg": "image/jpeg", "jpeg": "image/jpeg"}.get(suffix, "image/png")
+    data = _b64.b64encode(raw).decode()
+    with _tf.TemporaryDirectory() as tmp:
+        page = os.path.join(tmp, "i.html")
+        with open(page, "w") as fh:
+            fh.write(
+                "<!DOCTYPE html><html><head><meta charset='utf-8'><style>"
+                "html,body{margin:0;padding:0;background:transparent}"
+                f"body{{width:{ICON_PX}px;height:{ICON_PX}px;display:grid;place-items:center}}"
+                # `max-width` only ever SHRINKS. Four of the 32 (cypherock, daimo, ngrave,
+                # uniswap-wallet) declare a small intrinsic size and rendered as a speck in
+                # the middle of the square — visible only once the whole set was looked at.
+                f"img{{width:100%;height:100%;object-fit:contain;display:block}}"
+                "</style></head><body>"
+                f"<img src='data:{mime};base64,{data}'></body></html>")
+        _sp.run([chrome, "--headless", "--disable-gpu", "--hide-scrollbars",
+                 f"--screenshot={out_png}", f"--window-size={ICON_PX},{ICON_PX}",
+                 "--force-device-scale-factor=1",
+                 "--default-background-color=00000000", page],
+                check=True, capture_output=True)
+
+
+def plate_if_dark(png_path: str) -> bool:
+    """Composite a dark, field-less icon onto a light plate. Returns whether it did."""
+    from PIL import Image, ImageDraw
+    import numpy as _np
+
+    img = Image.open(png_path).convert("RGBA")
+    arr = _np.asarray(img).astype(float) / 255.0
+    alpha = arr[..., 3]
+    opaque = alpha > 0.5
+    if not opaque.any():
+        return False
+    rgb = arr[..., :3][opaque]
+    luma = float((0.2126 * rgb[:, 0] + 0.7152 * rgb[:, 1] + 0.0722 * rgb[:, 2]).mean())
+    coverage = float(opaque.mean())
+    if luma >= DARK_ICON_LUMA or coverage >= FIELD_COVERAGE:
+        return False
+    plate = Image.new("RGBA", img.size, (0, 0, 0, 0))
+    draw = ImageDraw.Draw(plate)
+    draw.rounded_rectangle([0, 0, img.size[0] - 1, img.size[1] - 1],
+                           radius=int(img.size[0] * 0.2237), fill=(255, 255, 255, 255))
+    plate.alpha_composite(img)
+    plate.save(png_path)
+    return True
+
+
+def write_icons() -> None:
+    listing = {}
+    tree = json.loads(fetch(
+        f"https://api.github.com/repos/{'walletbeat/walletbeat'}/git/trees/beta?recursive=1"
+    ).decode())
+    for entry in tree.get("tree", []):
+        path = entry.get("path", "")
+        if path.startswith(ICON_DIR + "/"):
+            name = path.rsplit("/", 1)[1]
+            listing[name.rsplit(".", 1)[0]] = path
+
+    ids = wallet_ids(fetch(INDEX_URL).decode("utf-8"))
+    assets = os.path.join(REPO_ROOT, "Casberi", "Casberi", "Assets.xcassets")
+    plated, missing = [], []
+    for wallet_id in ids:
+        path = icon_source(wallet_id, listing)
+        if not path:
+            missing.append(wallet_id)
+            continue
+        raw = fetch(f"https://raw.githubusercontent.com/walletbeat/walletbeat/beta/{path}")
+        out_dir = os.path.join(assets, f"brand-wb-{wallet_id}.imageset")
+        os.makedirs(out_dir, exist_ok=True)
+        png = os.path.join(out_dir, "icon.png")
+        render_icon(raw, path.rsplit(".", 1)[1].lower(), png)
+        if plate_if_dark(png):
+            plated.append(wallet_id)
+        with open(os.path.join(out_dir, "Contents.json"), "w") as fh:
+            json.dump({"images": [{"filename": "icon.png", "idiom": "universal"}],
+                       "info": {"author": "xcode", "version": 1}}, fh, indent=2)
+    print(f"wrote {len(ids) - len(missing)} wallet icons")
+    if plated:
+        print(f"  plated (dark artwork, no field of its own): {', '.join(plated)}")
+    if missing:
+        # Named, never silent: a wallet with no icon falls back to its monogram, and the
+        # difference between "they publish none" and "the path changed" matters.
+        print(f"  ! no icon published for: {', '.join(missing)}", file=sys.stderr)
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--self-test", action="store_true")
+    ap.add_argument("--icons", action="store_true",
+                    help="also refresh the bundled wallet icons")
     ap.add_argument("--check", action="store_true", help="fail if the checked-in file is stale")
     args = ap.parse_args()
 
     if args.self_test:
         return self_test()
+
+    if args.icons:
+        write_icons()
 
     snapshot = gather()
     rendered = render(snapshot)

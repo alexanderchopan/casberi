@@ -68,7 +68,7 @@ struct WalletbeatRoomCard: View {
 	@ViewBuilder
 	private func row(_ item: WalletbeatRoom.Item) -> some View {
 		HStack(alignment: .center, spacing: DS.Space.s3) {
-			WalletbeatMark(name: item.name)
+			WalletbeatMark(name: item.name, walletID: item.walletID)
 			VStack(alignment: .leading, spacing: 2) {
 				HStack(spacing: DS.Space.s2) {
 					Text(item.name)

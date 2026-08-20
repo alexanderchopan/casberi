@@ -76,7 +76,7 @@ struct WalletbeatReportCard: View {
 	private var header: some View {
 		VStack(alignment: .leading, spacing: DS.Space.s3) {
 			HStack(spacing: DS.Space.s3) {
-				WalletbeatMark(name: name, size: 48)
+				WalletbeatMark(name: name, walletID: walletID, size: 48)
 				VStack(alignment: .leading, spacing: 3) {
 					Text(name)
 						.dsText(.heading22)

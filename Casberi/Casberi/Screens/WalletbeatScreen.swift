@@ -137,7 +137,7 @@ struct WalletbeatScreen: View {
 		// closure, so referring to it here is unresolvable. `MetricDisc` carries the
 		// same number as its own default for the same reason.
 		AssetRosterSlot(label: card?.name ?? thing.title) {
-			WalletbeatMark(name: card?.name ?? thing.title, size: 56)
+			WalletbeatMark(name: card?.name ?? thing.title, walletID: walletID, size: 56)
 		}
 		.onTapGesture {
 			DSHaptic.tap()

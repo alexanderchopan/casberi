@@ -30,7 +30,7 @@ struct WalletbeatWalletRow: View {
 
 		VStack(alignment: .leading, spacing: DS.Space.s2) {
 			HStack(alignment: .center, spacing: DS.Space.s3) {
-				WalletbeatMark(name: thing.title, size: 38)
+				WalletbeatMark(name: card?.name ?? thing.title, walletID: walletID, size: 38)
 				VStack(alignment: .leading, spacing: 2) {
 					Text(card?.name ?? thing.title)
 						.dsText(.body17)
@@ -108,7 +108,7 @@ struct WalletbeatNewsRow: View {
 			// entries name no rated wallet at all.
 			ZStack(alignment: .bottomTrailing) {
 				if let wallet {
-					WalletbeatMark(name: wallet.name, size: 38)
+					WalletbeatMark(name: wallet.name, walletID: wallet.id, size: 38)
 				} else {
 					RoundedRectangle(cornerRadius: 38 * 0.28, style: .continuous)
 						.fill(DS.surfaceWell)

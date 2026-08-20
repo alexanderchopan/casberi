@@ -120,31 +120,57 @@ struct WalletbeatVerdictTag: View {
 	}
 }
 
-/// A wallet's mark.
+/// A wallet's mark — Walletbeat's own icon for it, falling back to a monogram.
 ///
-/// A NEUTRAL MONOGRAM, always, and never a fetched or bundled brand logo. Two reasons and
-/// both are load-bearing: this app bundles marks for apps a person CONNECTS, and it would
-/// be reaching out to 32 companies' image servers to decorate a list (`AssetMark`'s
-/// no-fetch rule); and a wallet's own logo sitting beside somebody else's verdict on it
-/// reads as that company endorsing the verdict.
+/// THE ICONS ARE SNAPSHOTTED, NEVER FETCHED. Walletbeat bundles a logo for every wallet it
+/// rates (`public/images/wallets/`), MIT-licensed, in the same repo the ratings come from —
+/// so `scripts/walletbeat-snapshot.py --icons` writes them into the asset catalogue at ship
+/// time and the app reaches NO image server at run time. That is what makes real marks
+/// possible: the first cut of this drew a letter for every wallet on the reasoning that the
+/// alternative was reaching out to 32 companies, which was simply wrong about where the
+/// logos are.
+///
+/// The MONOGRAM SURVIVES as the fallback and is not decoration: a wallet Walletbeat adds
+/// between our snapshots has a rating before it has a bundled icon here, and a row with a
+/// letter is better than a row with a hole.
 struct WalletbeatMark: View {
 	let name: String
+	/// Walletbeat's own id — what the bundled asset is keyed on. Optional because an
+	/// incident can name a wallet we have no directory entry for.
+	var walletID: String?
 	var size: CGFloat = 32
 
 	private var initial: String {
 		String(name.trimmingCharacters(in: .whitespaces).prefix(1)).uppercased()
 	}
 
+	/// `brand-wb-<id>`, deliberately its own namespace rather than the catalogue's
+	/// `brand-<slug>`: those are marks for apps a person CONNECTS and are styled for that
+	/// grid, and Safe is in both sets. One source, one look, no drift.
+	private var bundled: UIImage? {
+		guard let walletID, !walletID.isEmpty else { return nil }
+		return UIImage(named: "brand-wb-\(walletID)")
+	}
+
 	var body: some View {
 		RoundedRectangle(cornerRadius: size * 0.28, style: .continuous)
 			.fill(DS.surfaceWell)
 			.frame(width: size, height: size)
-			.overlay(
-				Text(initial)
-					.dsText(.badgeInitial11)
-					.fontWeight(.bold)
-					.foregroundStyle(DS.textSecondary)
-			)
+			.overlay {
+				if let bundled {
+					Image(uiImage: bundled)
+						.resizable()
+						.scaledToFit()
+						// Inset so an icon carrying its own square field doesn't collide
+						// with the well's corner; the plated ones sit on the same grid.
+						.padding(size * 0.14)
+				} else {
+					Text(initial)
+						.dsText(.badgeInitial11)
+						.fontWeight(.bold)
+						.foregroundStyle(DS.textSecondary)
+				}
+			}
 			.accessibilityHidden(true)
 	}
 }

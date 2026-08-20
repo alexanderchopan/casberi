@@ -103,7 +103,7 @@ struct WalletbeatDirectoryScreen: View {
 		let counts = entry.overall
 		let watching = watchedIDs.contains(entry.id)
 		HStack(alignment: .center, spacing: DS.Space.s3) {
-			WalletbeatMark(name: entry.name)
+			WalletbeatMark(name: entry.name, walletID: entry.id)
 			VStack(alignment: .leading, spacing: 2) {
 				Text(entry.name)
 					.dsText(.body17)
