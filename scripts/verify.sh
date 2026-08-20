@@ -957,6 +957,19 @@ harness "Agent-panel pure-logic self-test" "agent-panel self-test" "scripts/agen
 # settings row states a confident wrong figure.
 harness "Keyed-agent reach and budget self-test" "agent keyed self-test" "scripts/agent-keyed-selftest.sh" "the keyed-agent self-test failed — run scripts/agent-keyed-selftest.sh"
 
+# Reading a stored chat transcript back as the conversation it was
+# (2026-08-20). The importers flatten a chat to one speaker-prefixed string on
+# `enrichedText`; this reads it back. Both failure directions render as
+# something plausible that never happened, which no build or sweep can see:
+# a loose speaker rule shatters ONE answer into a dozen turns by speakers who
+# do not exist (a message's own text is full of "Note:", "Error:", "Step 3:"),
+# and the same list handed to the keyed agent as history sends fabricated turns
+# to a provider as the person's own words. The other direction is quieter and
+# just as bad: `enrichedText` also carries vault-note bodies, article ledes and
+# keyed digests, and any of those parsing as a chat starts rendering ordinary
+# rows as conversations.
+harness "Chat-transcript turn self-test" "chat turns self-test" "scripts/chat-turns-selftest.sh" "the chat-turns self-test failed — run scripts/chat-turns-selftest.sh"
+
 # Pure-logic self-test for the receipts screen's reach map (prd §300). The
 # card's whole job is to be checkable, so a silent wrong answer here is worse
 # than in any other visualization in the app: an undeclared host folded into

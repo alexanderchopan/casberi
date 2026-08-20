@@ -198,6 +198,8 @@ nav { display: flex; align-items: center; justify-content: space-between; paddin
 .ai-telegram  { background: #229ed9; font-size: 18px; }
 .ai-readwise  { background: #1e3a8a; font-size: 24px; }
 .ai-raindrop  { background: #2f80ed; }
+.ai-walletbeat{ background: #6c5ce7; }
+.beatmark    { width: 62%; height: auto; }
 .ai-rss       { background: #f26522; font-size: 24px; }
 .ai-bluesky   { background: #0085ff; }
 /* Instagram is a gradient brand — a flat fill reads as "some pink app". */

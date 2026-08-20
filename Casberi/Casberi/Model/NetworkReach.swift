@@ -208,6 +208,16 @@ enum NetworkReach {
                  reach: .whenConnected(bridge: "Hugging Face"),
                  purpose: "Reads the new models, datasets and Spaces published by the orgs and people you watch, and — when Daily Papers is on — Hugging Face's own curated daily list with its cover images. Carries only what you watch; there's no account and no key, so nothing identifies you.",
                  hosts: ["huggingface.co", "cdn-thumbnails.huggingface.co"]),
+        // Walletbeat (prd §419). Two hosts and no third: their ratings are
+        // published as JSON on their own beta build, and their security
+        // incidents live only in their public repo, so those are read straight
+        // from raw file storage. There is deliberately NO GitHub API host —
+        // their own `data/news/index.ts` enumerates every incident, so the list
+        // is one plain file read rather than an API call with a rate limit.
+        Endpoint(service: "Walletbeat",
+                 reach: .whenConnected(bridge: "walletbeat"),
+                 purpose: "Reads Walletbeat's public review of each wallet app you name, and their published list of wallet security incidents. Carries only the name of the wallet being read; there is no account and no key, so nothing identifies you.",
+                 hosts: ["beta.walletbeat.eth.limo", "raw.githubusercontent.com"]),
         // Radicle (prd §400) — the ONLY entry here whose host the person can
         // change. Radicle has no central host: a seed node is chosen, and a
         // seed someone else names cannot be declared in advance, which is the

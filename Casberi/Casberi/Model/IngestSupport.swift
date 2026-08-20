@@ -339,6 +339,22 @@ enum IngestSupport {
         return await run(request, service: service)
     }
 
+    /// A 200 with a UTF-8 TEXT body, or nil.
+    ///
+    /// For a public document that is structured but is not JSON — Walletbeat's registry
+    /// entries are TypeScript object literals (prd §419), the shape `XArchiveImport`
+    /// already parses in a file rather than over the wire. It rides the same `send`
+    /// funnel as every other read on purpose: a second door past that funnel is a
+    /// request the receipts screen can never account for (prd §289).
+    static func getText(_ url: URL, headers: [String: String] = [:],
+                        service: String? = nil) async -> String? {
+        var request = URLRequest(url: url)
+        apply(auth: nil, headers: headers, to: &request)
+        guard let (data, http) = await send(request, service: service) else { return nil }
+        guard http.statusCode == 200 else { return nil }
+        return String(data: data, encoding: .utf8)
+    }
+
     static func postJSON(_ url: String, auth: String? = nil, body: [String: Any],
                          headers: [String: String] = [:],
                          service: String? = nil) async -> Any? {

@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Walletbeat room</title>
+<style>
+  :root {
+    --page: #000000;
+    --sheet: #111113;
+    --well: #080809;
+    --text1: #ffffff;
+    --text2: rgba(235,235,245,0.60);
+    --text3: rgba(235,235,245,0.30);
+    --tint: #0a84ff;
+    --wb: #6c5ce7;
+    --pass: #30d158;
+    --partial: #ff9f0a;
+    --fail: #ff453a;
+    --unrated: rgba(235,235,245,0.16);
+    --r-card: 10px;
+    --r-sheet: 16px;
+    --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px;
+    --shadow: 0 10px 30px rgba(0,0,0,0.55);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #0a0a0c; color: var(--text1);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+    padding: 40px 24px 80px;
+  }
+  h1 { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
+  .intro { color: var(--text2); font-size: 14px; line-height: 1.6; max-width: 940px; margin-bottom: 14px; }
+  .intro b { color: var(--text1); font-weight: 600; }
+  .intro p + p { margin-top: 10px; }
+  .callout {
+    max-width: 940px; margin-bottom: 34px; padding: 14px 16px;
+    background: var(--sheet); border-radius: var(--r-sheet); box-shadow: var(--shadow);
+    font-size: 14px; line-height: 1.6; color: var(--text2);
+  }
+  .callout b { color: var(--text1); font-weight: 600; }
+  .callout .k { color: var(--partial); font-weight: 700; display:block; margin-bottom: 5px; font-size:13px; }
+  .rail { display: flex; gap: 40px; flex-wrap: wrap; align-items: flex-start; justify-content: center; }
+  .col { width: 393px; }
+  .dir-title { font-size: 17px; font-weight: 700; margin-bottom: 4px; }
+  .dir-note { color: var(--text2); font-size: 13px; line-height: 1.55; margin-bottom: 14px; min-height: 150px; }
+  .dir-note b { color: var(--text1); font-weight: 600; }
+
+  .phone {
+    width: 393px; height: 852px;
+    background: var(--page); border-radius: 44px;
+    padding: 18px 14px 0;
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.07), 0 24px 60px rgba(0,0,0,0.6);
+    overflow: hidden; position: relative;
+  }
+  .fold { position:absolute; left:0; right:0; bottom:0; height:64px;
+    background: linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.92) 80%); pointer-events:none; }
+  .statusbar { display:flex; justify-content:space-between; padding: 2px 12px 10px; font-size:13px; font-weight:600; }
+
+  .chips { display:flex; gap: var(--s2); padding: 6px 2px 12px; overflow:hidden; }
+  .chip { display:flex; align-items:center; gap:6px; white-space:nowrap;
+    font-size:13px; font-weight:600; color: var(--text2);
+    background: var(--sheet); border-radius: 9999px; padding: 7px 12px; }
+  .chip.on { color:#fff; background: var(--tint); }
+
+  /* ---- the bar ---- */
+  .bar { display:flex; gap:2px; height:8px; }
+  .bar i { display:block; height:100%; border-radius:4px; }
+  .bar .p { background: var(--pass); }
+  .bar .t { background: var(--partial); }
+  .bar .f { background: var(--fail); }
+  .bar .u { background: var(--unrated); }
+  .notrated { font-size:11px; color: var(--text3); text-align:right; }
+
+  /* ---- room head ---- */
+  .head { background: var(--sheet); border-radius: var(--r-sheet);
+    padding: var(--s4); box-shadow: var(--shadow); margin-bottom: 12px; }
+  .head .kicker { font-size:12px; font-weight:600; color: var(--wb); }
+  .head .lede { font-size:22px; font-weight:700; line-height:1.25; margin-top: var(--s2); }
+  .head .note { font-size:13px; color: var(--text2); margin-top: var(--s1); line-height:1.45; }
+  .wrow { display:flex; align-items:center; gap: var(--s3); padding: 9px 0; }
+  .mono { width:32px; height:32px; border-radius:9px; flex:none; background: var(--well);
+    display:grid; place-items:center; font-size:13px; font-weight:700; color: var(--text2); }
+  .wrow .txt { min-width:0; flex:1; }
+  .wrow .t { font-size:17px; }
+  .wrow .s { font-size:13px; color: var(--text3); margin-top:2px; line-height:1.35; }
+  .wrow .s.real { color: var(--text2); }
+  .wrow .shape { width:74px; flex:none; }
+  .browse { font-size:13px; font-weight:600; color: var(--tint); padding-top: var(--s3); }
+  .foot11 { font-size:11px; color: var(--text3); margin-top: var(--s2); line-height:1.45; }
+
+  .day { font-size:13px; font-weight:600; color: var(--text3); padding: 12px 2px 6px; }
+  .nrow { padding: 9px 2px; }
+  .nrow .t { font-size:16px; font-weight:600; line-height:1.3; }
+  .nrow .sum { font-size:13px; color: var(--text2); line-height:1.45; margin-top:4px; }
+  .nrow .tags { font-size:11px; color: var(--text3); margin-top:5px; }
+  .nrow .tags .open { color: var(--partial); font-weight:700; }
+
+  /* ---- sheets ---- */
+  .sheetpage { background: var(--sheet); border-radius: 32px 32px 0 0; margin: 30px -14px 0;
+    height: 804px; padding: 10px 18px 0; box-shadow: var(--shadow); overflow:hidden; }
+  .grab { width:36px; height:5px; border-radius:9999px; background: rgba(235,235,245,0.18); margin: 0 auto 14px; }
+  .sh-head { display:flex; gap: var(--s3); align-items:center; }
+  .sh-disc { width:48px; height:48px; border-radius:13px; background: var(--well); display:grid;
+    place-items:center; font-size:19px; font-weight:700; color: var(--text2); flex:none; }
+  .sh-title { font-size:22px; font-weight:700; }
+  .sh-sub { font-size:11px; color: var(--text3); margin-top:3px; }
+  .watchverb { font-size:13px; font-weight:600; color: var(--tint); margin-top: var(--s3); }
+
+  .card { background: var(--well); border-radius: var(--r-card); padding: var(--s4); margin-top: var(--s4); }
+  .card .cov { font-size:12px; font-weight:600; color: var(--text2); margin-bottom: var(--s3); }
+  .dim { display:flex; align-items:center; gap: var(--s2); padding: 3px 0; }
+  .dim .n { font-size:13px; color: var(--text2); width:112px; flex:none; }
+  .dim .b { flex:1; }
+  .dim .c { font-size:11px; color: var(--text3); width:40px; text-align:right; flex:none; font-variant-numeric: tabular-nums; }
+  .legend { display:flex; gap: var(--s3); margin-top: var(--s3); }
+  .lg { display:flex; align-items:center; gap:5px; font-size:11px; font-weight:600; color: var(--text2); }
+  .lg i { width:7px; height:7px; border-radius:50%; }
+
+  .dimhead { font-size:17px; font-weight:600; margin: 18px 0 10px; }
+  .attr { background: var(--well); border-radius: var(--r-card); padding: var(--s3); margin-bottom: var(--s2); }
+  .attr .top { display:flex; align-items:flex-start; gap: var(--s2); }
+  .attr .an { font-size:16px; font-weight:600; line-height:1.3; flex:1; }
+  .attr .v { display:flex; align-items:center; gap:5px; flex:none; font-size:11px; font-weight:600; }
+  .attr .v i { width:7px; height:7px; border-radius:50%; }
+  .attr .ex { font-size:13px; color: var(--text2); line-height:1.45; margin-top:5px; }
+  .attr .q { font-size:13px; color: var(--text3); line-height:1.45; margin-top:5px; }
+
+  .warncard { background: var(--well); border-radius: var(--r-card); padding: var(--s4); margin-top: var(--s4); }
+  .warncard .h { font-size:17px; font-weight:600; line-height:1.35; }
+  .warncard .b { font-size:13px; color: var(--text2); line-height:1.5; margin-top: var(--s2); }
+
+  /* ---- directory ---- */
+  .navback { font-size:15px; color: var(--tint); padding: 2px 2px 8px; }
+  .navtitle { font-size: 28px; font-weight: 700; padding: 2px 2px 2px; }
+  .navsub { font-size:13px; color: var(--text3); padding: 0 2px 12px; }
+  .seg { display:flex; background: var(--well); border-radius: 9px; padding: 2px; margin-bottom: 12px; }
+  .seg div { flex:1; text-align:center; font-size:13px; font-weight:600; color: var(--text2); padding: 6px; border-radius: 7px; }
+  .seg div.on { background: #3a3a3c; color:#fff; }
+  .sorts { display:flex; gap: var(--s4); padding: 0 2px 8px; }
+  .sort { font-size:13px; color: var(--text3); }
+  .sort.on { color: var(--text1); font-weight:600; }
+  .drow { display:flex; align-items:center; gap: var(--s3); padding: 9px 2px; }
+  .drow .txt { flex:1; min-width:0; }
+  .drow .t { font-size:17px; }
+  .drow .s { font-size:11px; color: var(--text3); margin-top:2px; }
+  .drow .shape { width:74px; flex:none; }
+  .drow .verb { width:58px; text-align:right; flex:none; font-size:11px; font-weight:700; color: var(--tint); }
+  .drow .verb.on { color: var(--text3); font-weight:600; }
+
+  /* ---- connect ---- */
+  .cn-hero { display:flex; flex-direction:column; align-items:center; padding: 16px 0 4px; }
+  .cn-mark { width:74px; height:74px; border-radius:17px; background: var(--sheet); display:grid; place-items:center; box-shadow: var(--shadow); }
+  .beat { width:40px; height:22px; }
+  .cn-name { font-size:22px; font-weight:700; margin-top: 12px; }
+  .mode { font-size:12px; font-weight:700; color: var(--text2); background: var(--sheet); border-radius:9999px; padding: 4px 11px; margin-top: 8px; }
+  .cn-intro { font-size:14px; color: var(--text2); line-height:1.5; text-align:center; padding: 12px 10px 4px; }
+  .slab { background: var(--sheet); border-radius: var(--r-sheet); padding: var(--s3); box-shadow: var(--shadow); margin-top: 14px; }
+  .field { display:flex; align-items:center; background: var(--well); border-radius: var(--r-card);
+    padding: 11px var(--s3); font-size:15px; color: var(--text3); }
+  .field .go { margin-left:auto; font-size:11px; font-weight:700; color: var(--tint); }
+  .sres { display:flex; align-items:center; gap: var(--s3); padding: 9px 2px; }
+  .sres .t { font-size:16px; }
+  .sres .s { font-size:11px; color: var(--text3); margin-top:2px; }
+  .slabnote { font-size:12px; color: var(--text3); line-height:1.45; margin-top: 10px; text-align:center; }
+
+  .foot { color: var(--text3); font-size: 12px; max-width: 940px; margin: 40px auto 0; line-height: 1.6; text-align:center; }
+</style>
+</head>
+<body>
+
+<h1>Walletbeat — built, with real ratings</h1>
+<div class="intro">
+  <p>A keyless <b>Wallet</b>-group seat reading Walletbeat's own published ratings. Every number, sentence and verdict below is <b>real data read live from their registry on 2026-08-20</b> — not illustrative.</p>
+</div>
+
+<div class="callout">
+  <span class="k">What the real data changed</span>
+  The first mock showed confident coloured strips for every wallet. Against real data that was <b>actively dishonest</b>: most wallets are overwhelmingly <b>unrated</b>. Trezor is 0 of 25 attributes judged, Ledger 1 of 25, Uniswap Wallet 1 of 29; sixteen of the 32 sit under a quarter. Only six clear 80%. A bar drawn from raw counts shows the wallet <b>nobody has examined</b> as the cleanest one on screen. So coverage now leads everywhere, and below a measured floor a row says what's missing <b>in words</b> instead of drawing a shape.
+</div>
+
+<div class="rail">
+
+  <!-- FRAME 1 — THE ROOM -->
+  <div class="col">
+    <div class="dir-title">The room</div>
+    <div class="dir-note">The head answers "is there anything about the wallets I use I should know today, and how much has actually been checked?" — never "which is best". Its ranking is a ranking of <b>attention</b>: an unexamined wallet sorts low because there's nothing to read, <b>never because it's safe</b>. Rabby's and MetaMask's sub-lines are Walletbeat's own sentences; Ledger's says what's missing. Incidents run below, day-grouped.</div>
+    <div class="phone">
+      <div class="statusbar"><span>9:41</span><span>&#9679;&#9679;&#9679;</span></div>
+      <div class="chips">
+        <div class="chip">All</div><div class="chip on">Walletbeat</div>
+        <div class="chip">Wallet</div><div class="chip">Farcaster</div><div class="chip">RSS</div>
+      </div>
+
+      <div class="head">
+        <div class="kicker">Walletbeat</div>
+        <div class="lede">Walletbeat faults Rabby on account recovery</div>
+        <div class="note">2 of 3 rated in depth; the rest Walletbeat has barely examined.</div>
+
+        <div class="wrow">
+          <div class="mono">R</div>
+          <div class="txt">
+            <div class="t">Rabby</div>
+            <div class="s real">Rabby does not implement guardian-based account recovery. The user will lose access to their account if they lose their seed phrase.</div>
+          </div>
+          <div class="shape"><div class="bar">
+            <i class="p" style="flex:5"></i><i class="t" style="flex:5"></i><i class="f" style="flex:15"></i><i class="u" style="flex:4"></i>
+          </div></div>
+        </div>
+
+        <div class="wrow">
+          <div class="mono">M</div>
+          <div class="txt">
+            <div class="t">MetaMask</div>
+            <div class="s real">MetaMask's account recovery feature cannot be relied upon in multiple scenarios.</div>
+          </div>
+          <div class="shape"><div class="bar">
+            <i class="p" style="flex:9"></i><i class="t" style="flex:8"></i><i class="f" style="flex:8"></i><i class="u" style="flex:4"></i>
+          </div></div>
+        </div>
+
+        <div class="wrow">
+          <div class="mono">L</div>
+          <div class="txt">
+            <div class="t">Ledger Wallet</div>
+            <div class="s">Only 1 of 25 checks rated so far</div>
+          </div>
+          <div class="shape"><div class="notrated">1 of 25</div></div>
+        </div>
+
+        <div class="browse">Every wallet Walletbeat rates</div>
+        <div class="foot11">Walletbeat's ratings, not ours &middot; read on this device</div>
+      </div>
+
+      <div class="day">Yesterday</div>
+      <div class="nrow">
+        <div class="t">Silent Signature Extraction Vulnerability in Rabby Browser Extension</div>
+        <div class="sum">A malicious app could queue a fund-draining signature request hidden by a Chrome pop-under bug, and unlocking the wallet signed it without the request ever being seen. Rabby shipped a fix; no funds reported lost.</div>
+        <div class="tags">Vulnerability &middot; Rabby</div>
+      </div>
+      <div class="nrow">
+        <div class="t">Walletbeat changed its rating of Rabby's app isolation</div>
+        <div class="sum">Rabby does not have an option to create a new account as part of the app connection flow.</div>
+        <div class="tags">Rating &middot; Privacy</div>
+      </div>
+      <div class="fold"></div>
+    </div>
+  </div>
+
+  <!-- FRAME 2 — REPORT CARD -->
+  <div class="col">
+    <div class="dir-title">A report card — rated in depth</div>
+    <div class="dir-note">Rabby's real ratings: <b>25 of 29 judged</b>. Every attribute is shown, in Walletbeat's order, with Walletbeat's sentence verbatim — nothing selected, nothing scored. The one re-ordering is failures first, a reading order rather than a ranking. <b>Unrated is drawn as grey</b>, never dropped: omitting it would rescale the rest to full width.</div>
+    <div class="phone">
+      <div class="statusbar"><span>9:41</span><span>&#9679;&#9679;&#9679;</span></div>
+      <div class="sheetpage">
+        <div class="grab"></div>
+        <div class="sh-head">
+          <div class="sh-disc">R</div>
+          <div>
+            <div class="sh-title">Rabby</div>
+            <div class="sh-sub">Software wallet &middot; Stage 0 &middot; Walletbeat reviewed 2026-07-20</div>
+          </div>
+        </div>
+        <div class="watchverb">Watching — tap to stop</div>
+
+        <div class="card">
+          <div class="cov">25 of 29 checks rated by Walletbeat</div>
+          <div class="dim"><div class="n">Security</div><div class="b"><div class="bar">
+            <i class="p" style="flex:1"></i><i class="t" style="flex:2"></i><i class="f" style="flex:5"></i></div></div><div class="c">8/8</div></div>
+          <div class="dim"><div class="n">Privacy</div><div class="b"><div class="bar">
+            <i class="f" style="flex:2"></i><i class="u" style="flex:3"></i></div></div><div class="c">2/5</div></div>
+          <div class="dim"><div class="n">Self-sovereignty</div><div class="b"><div class="bar">
+            <i class="p" style="flex:2"></i><i class="f" style="flex:3"></i></div></div><div class="c">5/5</div></div>
+          <div class="dim"><div class="n">Transparency</div><div class="b"><div class="bar">
+            <i class="p" style="flex:1"></i><i class="t" style="flex:1"></i><i class="f" style="flex:2"></i><i class="u" style="flex:1"></i></div></div><div class="c">4/5</div></div>
+          <div class="dim"><div class="n">Ecosystem</div><div class="b"><div class="bar">
+            <i class="p" style="flex:1"></i><i class="t" style="flex:2"></i><i class="f" style="flex:3"></i></div></div><div class="c">6/6</div></div>
+          <div class="legend">
+            <div class="lg"><i style="background:var(--pass)"></i>Passes</div>
+            <div class="lg"><i style="background:var(--partial)"></i>Partly</div>
+            <div class="lg"><i style="background:var(--fail)"></i>Fails</div>
+            <div class="lg"><i style="background:var(--unrated)"></i>Not rated</div>
+          </div>
+        </div>
+
+        <div class="dimhead">Security</div>
+        <div class="attr">
+          <div class="top"><div class="an">Account recovery</div>
+            <div class="v" style="color:var(--fail)"><i style="background:var(--fail)"></i>Fails</div></div>
+          <div class="ex">Rabby does not implement guardian-based account recovery. The user will lose access to their account if they lose their seed phrase.</div>
+        </div>
+        <div class="attr">
+          <div class="top"><div class="an">Scam prevention</div>
+            <div class="v" style="color:var(--fail)"><i style="background:var(--fail)"></i>Fails</div></div>
+          <div class="ex">Rabby warns you about potential scams, but leaks your browsed websites in the process.</div>
+        </div>
+        <div class="attr">
+          <div class="top"><div class="an">Security audits and bounties</div>
+            <div class="v" style="color:var(--fail)"><i style="background:var(--fail)"></i>Fails</div></div>
+          <div class="ex">The most recent security audit for Rabby is over a year old and some security flaws remain.</div>
+        </div>
+        <div class="attr">
+          <div class="top"><div class="an">Hardware wallet support</div>
+            <div class="v" style="color:var(--pass)"><i style="background:var(--pass)"></i>Passes</div></div>
+          <div class="ex">Rabby supports hardware wallets.</div>
+        </div>
+        <div class="fold"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FRAME 3 — THE HONEST STATE -->
+  <div class="col">
+    <div class="dir-title">A report card — not rated</div>
+    <div class="dir-note">The state the first mock got wrong, and the reason the design changed. Trezor is <b>0 of 25 judged</b>. There is no bar here at all — not a grey one, which would read as "rated, and all grey". It says what an absence of information is, in words, and refuses to let it be mistaken for a clean bill of health. Note the sixth dimension: <b>maintenance</b> exists for hardware wallets only.</div>
+    <div class="phone">
+      <div class="statusbar"><span>9:41</span><span>&#9679;&#9679;&#9679;</span></div>
+      <div class="sheetpage">
+        <div class="grab"></div>
+        <div class="sh-head">
+          <div class="sh-disc">T</div>
+          <div>
+            <div class="sh-title">Trezor Wallet</div>
+            <div class="sh-sub">Hardware wallet &middot; Walletbeat reviewed 2025-03-12</div>
+          </div>
+        </div>
+        <div class="watchverb">Watch this wallet</div>
+
+        <div class="warncard">
+          <div class="h">Walletbeat hasn't rated this wallet yet</div>
+          <div class="b">It's listed, and none of its 25 checks has been judged. That's an absence of information, not a clean bill of health.</div>
+        </div>
+
+        <div class="dimhead">Security</div>
+        <div class="attr">
+          <div class="top"><div class="an">Security audits and bounties</div>
+            <div class="v" style="color:var(--text3)"><i style="background:var(--unrated)"></i>Not rated</div></div>
+          <div class="q">Has the wallet been audited, and does it run a bug bounty programme?</div>
+        </div>
+        <div class="attr">
+          <div class="top"><div class="an">Firmware</div>
+            <div class="v" style="color:var(--text3)"><i style="background:var(--unrated)"></i>Not rated</div></div>
+          <div class="q">Can you verify the firmware running on the device?</div>
+        </div>
+        <div class="attr">
+          <div class="top"><div class="an">Supply chain (factory)</div>
+            <div class="v" style="color:var(--text3)"><i style="background:var(--unrated)"></i>Not rated</div></div>
+          <div class="q">Is the device tamper-evident between the factory and you?</div>
+        </div>
+        <div class="dimhead">Maintenance</div>
+        <div class="attr">
+          <div class="top"><div class="an">Maintenance</div>
+            <div class="v" style="color:var(--text3)"><i style="background:var(--unrated)"></i>Not rated</div></div>
+          <div class="q">Is the wallet still actively maintained?</div>
+        </div>
+        <div class="fold"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FRAME 4 — DIRECTORY -->
+  <div class="col">
+    <div class="dir-title">Every wallet</div>
+    <div class="dir-note">All 32, with their real coverage. Default order is <b>alphabetical</b> — a "best first" sort needs a composite Walletbeat doesn't publish and we won't invent. The only re-order offered is <b>Most reviewed</b>, a fact about coverage rather than a judgment of the wallet, sorted by the <b>share</b> judged since hardware wallets have 25 attributes and software 29.</div>
+    <div class="phone">
+      <div class="statusbar"><span>9:41</span><span>&#9679;&#9679;&#9679;</span></div>
+      <div class="navback">&lsaquo; Walletbeat</div>
+      <div class="navtitle">Every wallet</div>
+      <div class="navsub">32 rated by Walletbeat — 21 software, 11 hardware</div>
+      <div class="seg"><div class="on">Software</div><div>Hardware</div></div>
+      <div class="sorts"><div class="sort">A–Z</div><div class="sort on">Most reviewed</div></div>
+
+      <div class="drow"><div class="mono">A</div>
+        <div class="txt"><div class="t">Ambire</div><div class="s">28 of 28 checks rated by Walletbeat</div></div>
+        <div class="shape"><div class="bar"><i class="p" style="flex:11"></i><i class="t" style="flex:9"></i><i class="f" style="flex:8"></i></div></div>
+        <div class="verb">Watch</div></div>
+
+      <div class="drow"><div class="mono">M</div>
+        <div class="txt"><div class="t">MetaMask</div><div class="s">25 of 29 checks rated by Walletbeat</div></div>
+        <div class="shape"><div class="bar"><i class="p" style="flex:9"></i><i class="t" style="flex:8"></i><i class="f" style="flex:8"></i><i class="u" style="flex:4"></i></div></div>
+        <div class="verb on">Watching</div></div>
+
+      <div class="drow"><div class="mono">R</div>
+        <div class="txt"><div class="t">Rabby</div><div class="s">25 of 29 checks rated by Walletbeat</div></div>
+        <div class="shape"><div class="bar"><i class="p" style="flex:5"></i><i class="t" style="flex:5"></i><i class="f" style="flex:15"></i><i class="u" style="flex:4"></i></div></div>
+        <div class="verb on">Watching</div></div>
+
+      <div class="drow"><div class="mono">R</div>
+        <div class="txt"><div class="t">Rainbow</div><div class="s">25 of 29 checks rated by Walletbeat</div></div>
+        <div class="shape"><div class="bar"><i class="p" style="flex:8"></i><i class="t" style="flex:6"></i><i class="f" style="flex:11"></i><i class="u" style="flex:4"></i></div></div>
+        <div class="verb">Watch</div></div>
+
+      <div class="drow"><div class="mono">Z</div>
+        <div class="txt"><div class="t">Zerion</div><div class="s">24 of 29 checks rated by Walletbeat</div></div>
+        <div class="shape"><div class="bar"><i class="p" style="flex:7"></i><i class="t" style="flex:5"></i><i class="f" style="flex:12"></i><i class="u" style="flex:5"></i></div></div>
+        <div class="verb">Watch</div></div>
+
+      <div class="drow"><div class="mono">B</div>
+        <div class="txt"><div class="t">Base App</div><div class="s">15 of 27 checks rated by Walletbeat</div></div>
+        <div class="shape"><div class="bar"><i class="p" style="flex:3"></i><i class="t" style="flex:3"></i><i class="f" style="flex:9"></i><i class="u" style="flex:12"></i></div></div>
+        <div class="verb">Watch</div></div>
+
+      <div class="drow"><div class="mono">S</div>
+        <div class="txt"><div class="t">Safe</div><div class="s">10 of 29 checks rated by Walletbeat</div></div>
+        <div class="shape"><div class="bar"><i class="p" style="flex:7"></i><i class="t" style="flex:1"></i><i class="f" style="flex:2"></i><i class="u" style="flex:19"></i></div></div>
+        <div class="verb">Watch</div></div>
+
+      <div class="drow"><div class="mono">P</div>
+        <div class="txt"><div class="t">Phantom</div><div class="s">6 of 29 checks rated by Walletbeat</div></div>
+        <div class="shape"><div class="notrated">6 of 29</div></div>
+        <div class="verb">Watch</div></div>
+
+      <div class="drow"><div class="mono">U</div>
+        <div class="txt"><div class="t">Uniswap Wallet</div><div class="s">1 of 29 checks rated by Walletbeat</div></div>
+        <div class="shape"><div class="notrated">1 of 29</div></div>
+        <div class="verb">Watch</div></div>
+
+      <div class="drow"><div class="mono">F</div>
+        <div class="txt"><div class="t">Family</div><div class="s">4 of 27 checks rated by Walletbeat</div></div>
+        <div class="shape"><div class="notrated">4 of 27</div></div>
+        <div class="verb">Watch</div></div>
+      <div class="fold"></div>
+    </div>
+  </div>
+
+  <!-- FRAME 5 — CONNECT -->
+  <div class="col">
+    <div class="dir-title">The connect screen</div>
+    <div class="dir-note">One mode chip, one intro sentence — §315's whole prose budget. The search is <b>instant and offline</b>: it runs over a directory bundled at ship time, so naming your wallets needs no network at all. Only the full report card and the incidents are read live. Each result says how much has been examined, which is the fact that decides whether watching it will tell you anything.</div>
+    <div class="phone">
+      <div class="statusbar"><span>9:41</span><span>&#9679;&#9679;&#9679;</span></div>
+      <div class="navback">&lsaquo; Catalog</div>
+      <div class="cn-hero">
+        <div class="cn-mark">
+          <svg class="beat" viewBox="0 0 40 22" fill="none">
+            <path d="M1 12 H9 L13 4 L19 19 L24 8 L27 12 H39" stroke="#6c5ce7" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div class="cn-name">Walletbeat</div>
+        <div class="mode">No account</div>
+      </div>
+      <div class="cn-intro">Name the wallet apps you use and Walletbeat's review of each arrives — where your keys are made, who sees your addresses, who has audited the code. Their judgments, never ours.</div>
+      <div class="slab">
+        <div class="field">le<span class="go">WATCH</span></div>
+        <div class="sres"><div class="mono">L</div>
+          <div><div class="t">Ledger Wallet</div><div class="s">Hardware &middot; 1 of 25 checks rated by Walletbeat</div></div></div>
+        <div class="sres"><div class="mono">E</div>
+          <div><div class="t">Elytro</div><div class="s">Software &middot; 4 of 28 checks rated by Walletbeat</div></div></div>
+        <div class="sres"><div class="mono">K</div>
+          <div><div class="t">Keycard Shell</div><div class="s">Hardware &middot; 4 of 25 checks rated by Walletbeat</div></div></div>
+        <div style="font-size:13px;font-weight:600;color:var(--tint);padding:10px 2px 2px">Browse all 32</div>
+        <div class="slabnote">Security incidents arrive on their own, for every wallet Walletbeat covers.</div>
+      </div>
+      <div class="slabnote" style="padding:0 6px">No account and nothing to sign in. Reads Walletbeat's public registry — nothing about you is sent.</div>
+      <div class="fold"></div>
+    </div>
+  </div>
+
+</div>
+
+<div class="foot">
+  Built 2026-08-20 · <code>prototype/walletbeat-room-v1.html</code> · Every rating, sentence and count on this page was read live from walletbeat/walletbeat's published JSON and verified through the shipped Swift parser. Walletbeat is MIT-licensed and independent; Casberi counts and quotes their judgments and never scores a wallet itself.
+</div>
+
+</body>
+</html>

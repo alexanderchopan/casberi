@@ -1,0 +1,138 @@
+import Foundation
+import SwiftData
+
+/// Builds `WalletbeatRoom` from the corpus plus the stored ratings (prd §419).
+///
+/// The split from `WalletbeatRoom` is the usual one: everything that touches `Thing` or
+/// UserDefaults lives here, so the judgement itself stays Foundation-only and provable.
+enum WalletbeatRoomSource {
+	static let source = WalletbeatWatch.source
+
+	/// Rows the head draws before folding. Four wallets is what a person watches; a fifth
+	/// is named in the coverage note rather than drawn.
+	static let rowCap = 4
+
+	/// How long an incident counts as recent. Thirty days, because these are disclosures
+	/// rather than alerts — a breach three weeks old is still the most important thing
+	/// about a wallet, and Walletbeat publishes roughly one or two a week.
+	static let recencyDays = 30
+
+	@MainActor
+	static func compose(things: [Thing], now: Date = .now) -> WalletbeatRoom? {
+		var watches: [Thing] = []
+		var incidents: [Thing] = []
+		// Filtered live AT THE BOUNDARY, before any stored property is read (corollary 4).
+		for thing in things.live where thing.source == source {
+			if WalletbeatWatch.isWatchRef(thing.sourceRef) {
+				watches.append(thing)
+			} else if WalletbeatWatch.isNewsRef(thing.sourceRef) {
+				incidents.append(thing)
+			}
+		}
+		guard !watches.isEmpty else { return nil }
+
+		let cards = WalletbeatState.cards()
+		let cutoff = now.addingTimeInterval(-Double(recencyDays) * 86_400)
+
+		var items: [WalletbeatRoom.Item] = []
+		for watch in watches {
+			guard let ref = watch.sourceRef, let walletID = WalletbeatWatch.walletID(from: watch) else { continue }
+			let entry = WalletbeatDirectory.wallets.first { $0.id == walletID }
+			let card = cards[walletID]
+
+			// The counts come from the LIVE card when one has been read, and fall back to
+			// the bundled snapshot otherwise — so a wallet watched a moment ago already
+			// draws Walletbeat's real shape instead of an empty row waiting on a request.
+			let counts: WalletbeatCounts = card?.overall ?? entry?.overall ?? .zero
+			let lead: WalletbeatLead = card?.lead
+				?? .unexamined(applicable: counts.applicable)
+
+			let mine = incidents.filter { affects(walletID, thing: $0) }
+			items.append(
+				WalletbeatRoom.Item(
+					id: ref,
+					walletID: walletID,
+					name: card?.name ?? entry?.name ?? watch.title,
+					hardware: card?.hardware ?? entry?.hardware ?? false,
+					counts: counts,
+					lead: lead,
+					openIncidents: mine.filter { isOpen($0) }.count,
+					recentIncidents: mine.filter { $0.capturedAt >= cutoff }.count,
+					read: card != nil
+				)
+			)
+		}
+		guard !items.isEmpty else { return nil }
+
+		let ranked = WalletbeatRoom.ranked(items)
+		return WalletbeatRoom(
+			items: Array(ranked.prefix(rowCap)),
+			total: ranked.count,
+			snapshotDay: WalletbeatDirectory.generated
+		)
+	}
+
+	/// An incident names its wallets by Walletbeat id, which the landing stamps onto
+	/// `authorHandle`. Matched on the id and never on the title: "Ledger" appears inside
+	/// plenty of sentences that are not about Ledger.
+	@MainActor
+	private static func affects(_ walletID: String, thing: Thing) -> Bool {
+		thing.authorHandle == walletID
+	}
+
+	/// Whether an incident is still open, read off the tag the landing wrote.
+	///
+	/// Deliberately conservative: only an incident we can SEE is ongoing counts as open.
+	/// Walletbeat marks most entries resolved or mitigated within days, so treating an
+	/// unreadable status as open would keep a permanent alarm on the room.
+	@MainActor
+	private static func isOpen(_ thing: Thing) -> Bool {
+		thing.tags.contains(WalletbeatNewsParse.openTag)
+	}
+
+	/// `-walletbeatRoomProbe YES`.
+	///
+	/// An empty head has FIVE causes that render as one silence — nothing watched, a first
+	/// sync that has not landed a card yet, a watch whose wallet left Walletbeat's
+	/// directory, ratings that failed to decode, or a compose that changed underneath the
+	/// card — and only the last two are bugs. This names which.
+	@MainActor
+	static func probeLines(context: ModelContext, now: Date = .now) -> [String] {
+		let things = ((try? context.fetch(FetchDescriptor<Thing>(
+			predicate: #Predicate { $0.source == "Walletbeat" },
+			sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]))) ?? []).live
+
+		let watched = WalletbeatWatch.watchedIDs(context: context)
+		let cards = WalletbeatState.cards()
+		var out: [String] = [
+			"watched=\(watched.count) [\(watched.joined(separator: ","))]",
+			"cards=\(cards.count) rows=\(things.count) directory=\(WalletbeatDirectory.wallets.count) snapshot=\(WalletbeatDirectory.generated)",
+			"news=\(things.filter { WalletbeatWatch.isNewsRef($0.sourceRef) }.count) revisions=\(things.filter { WalletbeatWatch.isRevisionRef($0.sourceRef) }.count) newsReadAt=\(WalletbeatState.newsReadAt.map(IngestSupport.isoString) ?? "never")",
+		]
+
+		for id in watched {
+			guard let card = cards[id] else {
+				out.append("card| \(id) — NOT READ YET (no ratings fetched on this device)")
+				continue
+			}
+			let counts = card.overall
+			out.append(
+				"card| \(id) name=\(card.name) coverage=\(card.coverage) judged=\(counts.judged)/\(counts.applicable) pass=\(counts.pass) partial=\(counts.partial) fail=\(counts.fail) unrated=\(counts.unrated) updated=\(card.lastUpdated ?? "-")"
+			)
+		}
+
+		guard let room = compose(things: things, now: now) else {
+			out.append("compose=nil — no card (nothing watched, or every watch row is dead)")
+			return out
+		}
+		out.append("headline=\(WalletbeatRoom.headline(room))")
+		out.append("note=\(WalletbeatRoom.note(room))")
+		out.append("coverageNote=\(WalletbeatRoom.coverageNote(room) ?? "-")")
+		for item in room.items {
+			out.append(
+				"item| \(item.name) coverage=\(item.coverage) read=\(item.read) open=\(item.openIncidents) recent=\(item.recentIncidents) lead=\(WalletbeatRoom.leadLine(item))"
+			)
+		}
+		return out
+	}
+}

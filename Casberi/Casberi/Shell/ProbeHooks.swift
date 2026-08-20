@@ -1005,6 +1005,65 @@ enum ProbeHooks {
                 NSLog("[Casberi] posthogRoom| %@", line)
             }
         },
+        // `-walletbeatWatch "<name[,name]>"` — watch wallets by DISPLAY NAME
+        // (matched against the bundled directory) and sync, so the whole seat
+        // exercises headlessly. Names, not ids, because the id is Walletbeat's
+        // internal spelling ("mtpelerin" is Bridge Wallet) and a probe nobody
+        // can type from memory does not get used.
+        Hook(key: "walletbeatWatch") { spec, context in
+            Task { @MainActor in
+                var named: [String] = []
+                for raw in spec.split(separator: ",") {
+                    let q = String(raw).trimmingCharacters(in: .whitespaces).lowercased()
+                    guard !q.isEmpty else { continue }
+                    guard let entry = WalletbeatDirectory.wallets.first(where: {
+                        $0.name.lowercased() == q || $0.id == q
+                    }) ?? WalletbeatDirectory.wallets.first(where: {
+                        $0.name.lowercased().hasPrefix(q)
+                    }) else {
+                        NSLog("[Casberi] walletbeat| NOT RATED: %@", q)
+                        continue
+                    }
+                    _ = WalletbeatWatch.add(entry, context: context)
+                    named.append(entry.id)
+                }
+                let added = await WalletbeatIngest.refresh(context: context)
+                NSLog("[Casberi] walletbeat| watching %@ — %@ new",
+                      named.isEmpty ? "NOTHING" : named.joined(separator: ","),
+                      added.map(String.init) ?? "UNREACHABLE")
+            }
+        },
+        // `-walletbeatProbe YES` — the read phase by phase, then one line per
+        // watched wallet's ratings and one per landed incident. An empty room
+        // has five causes that render as one silence (nothing watched, a first
+        // sync still in flight, ratings that failed to decode, an unreachable
+        // host, a directory the wallet has left) and only two are bugs.
+        Hook(key: "walletbeatProbe") { _, context in
+            Task { @MainActor in
+                for line in WalletbeatRoomSource.probeLines(context: context) {
+                    NSLog("[Casberi] walletbeat| %@", line)
+                }
+                let files = await WalletbeatFetch.newsFiles()
+                NSLog("[Casberi] walletbeat| newsIndex=%@",
+                      files.map { "\($0.count) entries" } ?? "UNREACHABLE")
+                for id in WalletbeatWatch.watchedIDs(context: context) {
+                    guard let card = await WalletbeatFetch.card(walletID: id) else {
+                        NSLog("[Casberi] walletbeatLive| %@ UNREACHABLE", id)
+                        continue
+                    }
+                    let c = card.overall
+                    NSLog("[Casberi] walletbeatLive| %@ judged=%d/%d coverage=%@ lead=%@",
+                          id, c.judged, c.applicable, String(describing: card.coverage),
+                          String(describing: card.lead))
+                }
+            }
+        },
+        // `-walletbeatRoomProbe YES` — the head alone, no network.
+        Hook(key: "walletbeatRoomProbe") { _, context in
+            for line in WalletbeatRoomSource.probeLines(context: context) {
+                NSLog("[Casberi] walletbeatRoom| %@", line)
+            }
+        },
         // `-widgetProbe YES` — everything the Home Screen would draw this
         // launch (prd §382).
         //
@@ -4205,6 +4264,10 @@ enum ProbeHooks {
                 note("posthogHead", source == "PostHog"
                      ? PostHogRoomSource.compose(things: things).map {
                         "\(PostHogRoom.headline($0)) · \($0.metrics.count) metrics"
+                     } : nil)
+                note("walletbeatHead", source == WalletbeatRoomSource.source
+                     ? WalletbeatRoomSource.compose(things: things).map {
+                        "\(WalletbeatRoom.headline($0)) · \($0.items.count) wallets"
                      } : nil)
                 // Unlike the three above this one DOES read `things` (the
                 // runs ARE the subject — see `CursorRoomSource`'s own note),

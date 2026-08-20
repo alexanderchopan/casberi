@@ -114,7 +114,8 @@ enum BridgeCatalog {
                 "RSS", "Substack", "Podcasts", "Pinterest", "Farcaster",
                 "Bluesky", "Nostr", "OpenSea", "Kalshi", "Shopify", "GeckoTerminal", "Deals",
                 "Circle x402",
-                "Open Food Facts", "Stocktwits", "Hugging Face", "Radicle", "npm", "PyPI", "Altana"]
+                "Open Food Facts", "Stocktwits", "Hugging Face", "Radicle", "npm", "PyPI", "Altana",
+                "Walletbeat"]
             if keyless.contains(name) { return "No account" }
             // Instagram and Snapchat were missed here when they landed
             // (2026-07-31) and TikTok would have been missed the same way:
@@ -210,6 +211,15 @@ enum BridgeCatalog {
                          "A shield sent through Railgun's relayer leaves no public trace at all",
                          "Read from Ethereum's public chain — never the pool's inside"],
               needsSetup: true, added: day(2026, 8, 1)),
+        // Wallet group, and the only seat here that reads no money at all (prd §419):
+        // every other one reads what your funds did, this reads what the SOFTWARE
+        // holding them does. Walletbeat is an independent, MIT-licensed registry.
+        Offer(name: "Walletbeat", tagline: "How your wallet apps actually behave", group: "Wallet", connectable: true,
+              summary: "Walletbeat reviews wallet apps attribute by attribute — where your keys are made, who your addresses get handed to, who has audited the code.\n\nName the wallets you use and their reviews arrive, updating when Walletbeat revises one. Security incidents land too.\n\nNo account, no key. Their judgments, never ours — and where they haven't looked, it says so.",
+              features: ["Walletbeat's own verdict on each check, in their own words",
+                         "Says how much has actually been reviewed, not just what passed",
+                         "Vulnerabilities and breaches arrive as they're published"],
+              needsSetup: true, added: day(2026, 8, 20)),
         // Wallet group by ruling (prd §222, 2026-07-26): a Gnosis Pay account
         // IS a Safe holding your own balance, so it belongs beside the wallets
         // whose total it joins — not Shopping, where Privacy.com's card

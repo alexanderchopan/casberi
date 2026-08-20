@@ -30,6 +30,13 @@ enum BridgeRouter {
         case stocktwits
         case openSea
         case geckoTerminal
+
+        /// Walletbeat is keyless with a WATCH LIST on screen, so it needs its own
+        /// destination rather than riding `.token`: as `.token` it would inherit
+        /// `finishesOnConnect == true` and the raised sheet would dismiss itself the
+        /// moment the first watched wallet registered the seat — and the first wallet
+        /// almost always wants a second (prd §419).
+        case walletbeat
         /// Circle's public x402 directory (2026-08-06) — a watch list of lanes,
         /// so it must NOT ride `.token`: it has no token at all, and the first
         /// lane usually wants a second.
@@ -231,6 +238,7 @@ enum BridgeRouter {
             case .stocktwits:     "stocktwits"
             case .openSea:        "opensea"
             case .geckoTerminal:  "geckoterminal"
+            case .walletbeat:     "walletbeat"
             case .circleX402:     "x402"
             case .huggingFace:    "huggingface"
             case .radicle:        "radicle"
@@ -343,6 +351,7 @@ enum BridgeRouter {
         Row(offer: "Stocktwits", id: "stocktwits", destination: .stocktwits),
         Row(offer: "OpenSea",    id: "opensea",    destination: .openSea),
         Row(offer: "GeckoTerminal", id: "geckoterminal", destination: .geckoTerminal),
+        Row(offer: "Walletbeat", id: "walletbeat", destination: .walletbeat),
         Row(offer: "Circle x402", id: "x402", destination: .circleX402),
         Row(offer: "Hugging Face", id: "huggingface", destination: .huggingFace),
         Row(offer: "Radicle",    id: "radicle",    destination: .radicle),
@@ -441,6 +450,7 @@ struct BridgeDestinationView: View {
         case .stocktwits:     StocktwitsScreen()
         case .openSea:        OpenSeaScreen()
         case .geckoTerminal:  GeckoTerminalScreen()
+        case .walletbeat:     WalletbeatScreen()
         case .circleX402:     CircleX402Screen()
         case .huggingFace:    HuggingFaceScreen()
         case .radicle:        RadicleScreen()

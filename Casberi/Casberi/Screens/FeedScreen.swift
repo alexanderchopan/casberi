@@ -642,7 +642,7 @@ struct FeedScreen: View {
 
     /// The shape a source takes when its chip is in force.
     private enum Shape {
-        case all, photos, wallet, calendar, gmail, chat, social, reminders, bookmarks, notes, you, music, media, tokens, bitrefill, oneclaw, snapchat, files, instagram, x, x402, appStoreConnect, cursor, plain
+        case all, photos, wallet, calendar, gmail, chat, social, reminders, bookmarks, notes, you, music, media, tokens, bitrefill, oneclaw, snapchat, files, instagram, x, x402, appStoreConnect, cursor, walletbeat, plain
 
         /// Rooms whose lead is a GRID of pictures, and which therefore earn the
         /// wide content cap on a regular-width window (2026-08-17).
@@ -748,6 +748,10 @@ struct FeedScreen: View {
             // is an excerpt of a conversation; and `.plain`, which this fell
             // to before, drew the outcome and the report away entirely.
             case "Cursor":              self = .cursor
+            // The LITERAL, like `case "Cursor"` above it — `demo-selftest.py`'s
+            // check F reads this switch to prove every shape has a seeded
+            // source, and it resolves only three indirections by name.
+            case "Walletbeat":          self = .walletbeat
             case "Reminders", "Todoist": self = .reminders
             // This case was written 2026-07-13 for a "Safari" bridge that
             // never shipped — Safari and Chrome exports merged into ONE
@@ -2553,6 +2557,17 @@ struct FeedScreen: View {
                             thing.authorHandle == repo.name
                         }
                     }
+                case .walletbeat(let room):
+                    WalletbeatRoomCard(room: room) { ref in
+                        // The card names a real row's `sourceRef`, so this lands
+                        // exactly — the card itself holds no `Thing` (corollary 5)
+                        // and the lookup happens here, against the live corpus.
+                        openBySourceRef(ref, in: visible)
+                    } onBrowse: {
+                        // Pushed, not raised: this is navigation to a place, not a
+                        // connect act (§219 — Connect raises, Open pushes).
+                        route.path.append(.bridge(.walletbeat))
+                    }
                 case .github(let room):
                     GitHubRoomCard(room: room) { ref in
                         // The card names a real row, so this lands exactly —
@@ -2866,6 +2881,17 @@ struct FeedScreen: View {
             // the new-since divider is a chronological mark, and in a room
             // where every row shares one timestamp it would land arbitrarily.
             groupedSections(x402Lanes(visible), nextEventID: nextEventID)
+        case .walletbeat:
+            // Your watched wallets lead as standing report cards, then the news
+            // below in days. A rating is not an event and must not be filed under
+            // the day it happened to be read; an incident is, and is.
+            let watches = visible.live.filter { WalletbeatWatch.isWatchRef($0.sourceRef) }
+            let rest = visible.live.filter { !WalletbeatWatch.isWatchRef($0.sourceRef) }
+            if !watches.isEmpty {
+                groupedSections([(String(localized: "Your wallets"), watches)], nextEventID: nextEventID)
+            }
+            let days = chronoGroups(rest)
+            groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
         case .cursor:
             // Repositories, not days — see `cursorRepos`. Keeps `boundary:`,
             // unlike x402: these rows carry the run's REAL start, so they span
@@ -4029,6 +4055,10 @@ struct FeedScreen: View {
         case x402(X402Room)
         case appStoreConnect(ASCRoom)
         case cursor(CursorRoom)
+        // Walletbeat (prd §419) — the only head here whose subject is not the
+        // person's own data at all, but somebody else's review of the software
+        // they use. It reads stored ratings beside the landed rows.
+        case walletbeat(WalletbeatRoom)
         // The two CODE rooms (prd §401). GitHub had led with the contributions
         // heatmap since it shipped — a decorative card answering "how much did
         // I write", in the slot the rows that actually need you were competing
@@ -4127,6 +4157,8 @@ struct FeedScreen: View {
             return ASCRoomSource.compose(things: visible).map { .appStoreConnect($0) }
         case CursorRoomSource.source:
             return CursorRoomSource.compose(things: visible).map { .cursor($0) }
+        case WalletbeatRoomSource.source:
+            return WalletbeatRoomSource.compose(things: visible).map { .walletbeat($0) }
         case GitHubRoomSource.source:
             return GitHubRoomSource.compose(things: visible).map { .github($0) }
         // Reads no rows at all — its subject is bridge STATE, since no landed
@@ -6565,6 +6597,21 @@ struct FeedScreen: View {
                             wideArt: wideArt)
                 } else {
                     CursorRow(thing: thing)
+                }
+            case .walletbeat:
+                // Three shapes in one room: a watched wallet is a standing report
+                // card, an incident and a revision are dated news, and our own note
+                // about the sync keeps its plain band the way every other room does.
+                if Corpus.isImportReceipt(thing) {
+                    BandRow(thing: thing,
+                            emphasized: thing.id == nextEventID,
+                            live: false,
+                            imageOnly: imageOnly,
+                            wideArt: wideArt)
+                } else if WalletbeatWatch.isWatchRef(thing.sourceRef) {
+                    WalletbeatWalletRow(thing: thing)
+                } else {
+                    WalletbeatNewsRow(thing: thing)
                 }
             case .bookmarks: ReadingRow(thing: thing)
             default:

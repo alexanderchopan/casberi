@@ -57,7 +57,7 @@ enum DemoSeedAll {
     /// double-seeds a dev install rather than failing loudly. The honest
     /// version of "make it mechanical" here is a check that the stamp moved
     /// when the table did, not a stamp that moves itself.
-    static let version = 2
+    static let version = 3
     private static let versionKey = "demo.fullSeed.version"
 
     /// The three demo-watched tokens — (symbol, name, price, ref index),
@@ -124,6 +124,14 @@ enum DemoSeedAll {
                               // patch and an issue.
                               "radicle:patch:rad:zDEMO",
                               "radicle:issue:rad:zDEMO",
+                              // Walletbeat (prd §419) carries the REAL ref
+                              // shapes for the same reason as Radicle above —
+                              // the room head joins a watch to its stored card
+                              // by the wallet id inside the ref, so a "demo"
+                              // segment would make every seeded wallet resolve
+                              // to no directory entry and draw as unrated.
+                              "walletbeat:wallet:", "walletbeat:news:",
+                              "walletbeat:rev:",
                               // The two PostHog WATCH rows (2026-08-10) carry
                               // the real `PostHogWatch.metricRef` shape for
                               // the same reason — no "demo" segment is
@@ -404,6 +412,9 @@ enum DemoSeedAll {
         // BY NAME (prd §401) — a dev install watches real repos through this
         // same store, so a blanket wipe would take them with it.
         RadicleStore.shared.forgetDemo(rid: "rad:zDEMOheartwood0000000000001")
+        // BY NAME (prd §401), same reasoning: a dev install may watch these very
+        // wallets for real through this same store.
+        WalletbeatState.forgetDemo(demoWalletbeatIDs)
         SafeBridge.clearDemoSnapshot()
         forgetAddressBook()
         // The watched social accounts, by HANDLE — never a blanket wipe, since
@@ -543,6 +554,105 @@ enum DemoSeedAll {
 
     /// Internal so `DemoMode` can pour these in chunks rather than landing
     /// them all in one transaction — see `DemoMode.pourIfNeeded`.
+    // MARK: - Walletbeat (prd §419)
+
+    /// The wallets the demo says you use.
+    ///
+    /// THREE, chosen to exercise the coverage gate rather than to flatter the card:
+    /// Rabby and MetaMask are two of only six wallets Walletbeat has examined in depth,
+    /// and Ledger is one of the many it has barely started on. Seeding three well-rated
+    /// wallets would demo a feature that does not exist — measured 2026-08-20, sixteen of
+    /// the 32 rated wallets have under a quarter of their attributes judged, so "not rated
+    /// yet" is the COMMON row and the demo has to show it.
+    static let demoWalletbeatIDs = ["rabby", "metamask", "ledger"]
+
+    /// The sentence a demo wallet's row leads with — Walletbeat's own, taken from the same
+    /// seeded ratings the report card draws, so the two can never disagree.
+    private static func walletbeatDemoLead(_ id: String) -> String? {
+        guard let attributes = WalletbeatDirectory.demoAttributes[id],
+              let entry = WalletbeatDirectory.wallets.first(where: { $0.id == id })
+        else { return nil }
+        let card = WalletbeatCard(
+            walletID: id, name: entry.name, hardware: entry.hardware, stage: entry.stage,
+            lastUpdated: entry.updated, site: nil, attributes: attributes,
+            fetchedAt: Date(timeIntervalSince1970: 1_787_000_000))
+        if case .finding(let attribute) = card.lead, !attribute.explanation.isEmpty {
+            return attribute.explanation
+        }
+        return nil
+    }
+
+    private static func walletbeat() -> [Thing] {
+        var out: [Thing] = []
+
+        out += [
+            ("rabby", "Rabby", 0.0),
+            ("metamask", "MetaMask", 0.0),
+            ("ledger", "Ledger Wallet", 0.0),
+        ].map { id, name, days in
+            row(.link, name, source: "Walletbeat",
+                ref: WalletbeatWatch.walletRef(id),
+                days: days, hour: 9,
+                content: "https://\(WalletbeatHost.site)/\(id)/",
+                tags: ["Watchlist", id == "ledger" ? "Hardware" : "Software"]) { thing in
+                thing.authorHandle = id
+                // DERIVED from the seeded ratings, never hand-written.
+                //
+                // The first cut hardcoded these and put "MetaMask hides some transaction
+                // fees" on MetaMask's row — which is RABBY's finding. A fabricated
+                // finding attributed to a real company, inside the one feature built to
+                // stop exactly that (§83). Deriving it also keeps the row and the report
+                // card naming the same finding, which hand-written copy cannot promise.
+                thing.summary = walletbeatDemoLead(id)
+            }
+        }
+
+        // REAL incidents, with their REAL statuses. Deliberately no fabricated
+        // "unresolved" row: the open-incident branch is worth demoing, but not at the
+        // price of the demo asserting that a named company currently has an unpatched
+        // vulnerability it does not have.
+        out.append(
+            row(.link, "Silent Signature Extraction Vulnerability in Rabby Browser Extension",
+                source: "Walletbeat", ref: "walletbeat:news:rabby-silent-signature-extraction",
+                days: 1.0, hour: 14,
+                content: "https://\(WalletbeatHost.site)/news/",
+                tags: ["Security", "Vulnerability", "Rabby"]) { thing in
+                thing.authorHandle = "rabby"
+                thing.summary = "A malicious app could queue a fund-draining signature request hidden by a Chrome pop-under bug, and unlocking the wallet signed it without the request ever being seen. Rabby shipped a fix; no funds were reported lost."
+            })
+
+        out.append(
+            row(.link, "Serious · Unauthorized Access to SafePal Customer Order Information",
+                source: "Walletbeat", ref: "walletbeat:news:safepal-customer-order-data-exposure",
+                days: 4.0, hour: 11,
+                content: "https://\(WalletbeatHost.site)/news/",
+                tags: ["Security", "Data breach"]) { thing in
+                thing.summary = "An authorization flaw in SafePal's order-tracking plug-in allowed unauthorized access to customer order records, including shipping details."
+            })
+
+        out.append(
+            row(.link, "Customer Data Exposed in Trezor Shipping Provider Incident",
+                source: "Walletbeat", ref: "walletbeat:news:trezor-shipmonk-data-breach",
+                days: 7.0, hour: 16,
+                content: "https://\(WalletbeatHost.site)/news/",
+                tags: ["Security", "Data breach"]) { thing in
+                thing.summary = "A fulfillment partner's breach exposed buyer names and addresses. Keys and devices were untouched — the risk is phishing that knows your name."
+            })
+
+        // A revision, so the third row shape in this room is demoed too.
+        out.append(
+            row(.link, "Walletbeat changed its rating of Rabby's app isolation",
+                source: "Walletbeat", ref: "walletbeat:rev:rabby:appIsolation:FAIL:2026-07-20",
+                days: 2.0, hour: 10,
+                content: "https://\(WalletbeatHost.site)/rabby/",
+                tags: ["Rating", "Privacy"]) { thing in
+                thing.authorHandle = "rabby"
+                thing.summary = "Rabby does not have an option to create a new account as part of the app connection flow."
+            })
+
+        return out
+    }
+
     static func rooms() -> [Thing] {
         var out: [Thing] = []
         out += photos()
@@ -561,6 +671,7 @@ enum DemoSeedAll {
         out += social()
         out += markets()
         out += walletRoom()
+        out += walletbeat()
         out += appleWallet()
         out += cards()
         out += work()
@@ -3576,6 +3687,30 @@ enum DemoSeedAll {
         // card and float-to-top could never fire — see `TwitchIngest.seedDemo`.
         TwitchIngest.seedDemo(["demo:twitch:0"])
 
+        // 0b · Walletbeat's stored ratings (prd §419). Without these every seeded
+        // wallet reads "not read yet" and the room head draws no bars at all — the
+        // PostHog lesson one seat over: a reading the composer cannot see is a head
+        // that renders as nil while the rows beneath it look perfectly healthy.
+        // `fetchedAt` is a FIXED date, never `.now`: these seeds must be
+        // deterministic, and the field is only ever compared against the refresh
+        // window, never displayed.
+        var walletbeatCards: [String: WalletbeatCard] = [:]
+        for id in demoWalletbeatIDs {
+            guard let attributes = WalletbeatDirectory.demoAttributes[id],
+                  let entry = WalletbeatDirectory.wallets.first(where: { $0.id == id })
+            else { continue }
+            walletbeatCards[id] = WalletbeatCard(
+                walletID: id, name: entry.name, hardware: entry.hardware,
+                stage: entry.stage, lastUpdated: entry.updated, site: nil,
+                attributes: attributes,
+                fetchedAt: Date(timeIntervalSince1970: 1_787_000_000))
+        }
+        if !walletbeatCards.isEmpty {
+            var merged = WalletbeatState.cards()
+            for (id, card) in walletbeatCards { merged[id] = card }
+            WalletbeatState.replace(merged)
+        }
+
         // 1 · The wallet's balance line. Spaced 4h+ apart so `recordSample`'s
         // throttle can never fold them into one point, and the newest sits 5
         // minutes back so a real fetch (there is none on a demo sim) wouldn't
@@ -3915,6 +4050,7 @@ enum DemoSeedAll {
         ("Trello", "Synced 40m ago", "Reads cards assigned to you."),
         ("Cursor", "Synced 1h ago", "Reads cloud agents that finished."),
         ("Radicle", "1 repo", "Reads patches and issues, keyless."),
+        ("Walletbeat", "3 wallets", "Reads public wallet reviews, keyless."),
         ("Sentry", "Synced 20m ago", "Reads what broke."),
         ("Vercel", "Synced 12m ago", "Reads what deployed."),
         ("PagerDuty", "Synced 1h ago", "Reads what paged you."),

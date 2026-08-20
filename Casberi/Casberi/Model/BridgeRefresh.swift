@@ -711,6 +711,12 @@ enum BridgeRefresh {
                 _ = await StocktwitsIngest.refresh(context: context)
             }
         }
+        if connected("walletbeat") {
+            let s = slot(); Task { @MainActor in
+                await BridgeRefresh.stagger(s)
+                _ = await WalletbeatIngest.refresh(context: context)
+            }
+        }
         if ShopifyStore.shared.connected {
             let s = slot(); Task { @MainActor in
                 await BridgeRefresh.stagger(s)
