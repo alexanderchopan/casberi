@@ -139,13 +139,35 @@ struct SourceChips: View {
     @Environment(BridgeStore.self) private var bridges
     @Environment(ShellChrome.self) private var chrome
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    /// The active chip's ink ring glides between chips instead of blinking
-    /// (the old tab lozenge's grammar, motion pass 2026-07-11).
-    @Namespace private var chipRingNS
-    /// The travelling active fill's namespace — see `travellingFill`. Separate
-    /// from the ring's, because the two are different objects and sharing one
-    /// namespace would make each try to become the other.
-    @Namespace private var fillNS
+    /// The ONE namespace the strip's selection travels in — the blue fill on a
+    /// word chip and the ink ring on a mark chip are the SAME object wearing two
+    /// forms (prd §412b, 2026-08-20).
+    ///
+    /// **This replaces two namespaces, and overturns the reasoning that split
+    /// them.** That note said sharing one "would make each try to become the
+    /// other" — true only if they shared a namespace AND an id, which they never
+    /// did, so the split was load-bearing against a collision that could not
+    /// happen. What it cost was real: the fill and the ring each had exactly one
+    /// participant, so a switch from a word chip ("All", any category) to a MARK
+    /// chip (the pinned room, an uncategorized source) had nothing to interpolate
+    /// with — the fill faded out where it stood and the ring faded in where it
+    /// landed. Two states blinking, at the one crossing the 2026-07-14 ruling
+    /// ("selection is an object traveling, not two states blinking") did not
+    /// reach.
+    ///
+    /// Sharing both is SAFE because the two are mutually exclusive by
+    /// construction, not by luck: exactly one chip satisfies `label == active`,
+    /// and within that chip `isWord` decides which form draws — a word chip
+    /// renders the fill and no ring (`if isActive, !isWord`), a mark chip the
+    /// ring and no fill (`wordChipFill` is reached only from the two word
+    /// branches). So there is never more than one source in the group, which is
+    /// the same guarantee the fill already relied on to travel between two word
+    /// chips.
+    ///
+    /// It is also the pattern `WordChipFill`'s own note records as the measured
+    /// winner: one id across two branches of one `if`, which interpolates, rather
+    /// than a hoisted shape positioned from a preference, which teleports.
+    @Namespace private var selectionNS
     /// The label the finger just touched — cleared by the `active` change it
     /// causes. See the horizontal strip's `onChange`: a tapped chip is provably
     /// on screen, so it is the one route that must NOT re-centre, or the
@@ -599,7 +621,7 @@ struct SourceChips: View {
             .minimumScaleFactor(axis == .vertical ? 0.6 : 1)
             .padding(.horizontal, capsulePadH)
             .frame(width: axis == .vertical ? Self.railChipWidth : nil, height: iconSize)
-            .wordChipFill(cornerRadius: iconSize / 2, active: isOn, ns: fillNS)
+            .wordChipFill(cornerRadius: iconSize / 2, active: isOn, ns: selectionNS)
     }
 
     /// Everything the strip SCROLLS — the full order minus "All", which is
@@ -679,7 +701,7 @@ struct SourceChips: View {
                         .frame(width: iconSize, height: iconSize)
                         .clipShape(Circle())
                         .wordChipFill(cornerRadius: iconSize / 2,
-                                      active: isActive, ns: fillNS)
+                                      active: isActive, ns: selectionNS)
                 case Pinboard.room:
                     // The pinned room (2026-08-10) — see `PinnedChipMark`.
                     PinnedChipMark(size: iconSize)
@@ -788,7 +810,12 @@ struct SourceChips: View {
                     if reduceMotion {
                         ring
                     } else {
-                        ring.matchedGeometryEffect(id: "chipRing", in: chipRingNS)
+                        // The SAME group as the word chips' fill (prd §412b) —
+                        // see `selectionNS`. Crossing between a word and a mark
+                        // used to fade, because each form was the only member of
+                        // its own group; now the one blue object travels the gap
+                        // and resolves into a ring on arrival.
+                        ring.matchedGeometryEffect(id: ChipSelection.id, in: selectionNS)
                     }
                 } else if broken {
                     // DASHED, not merely orange (2026-07-21). "Selected" and
@@ -1058,18 +1085,40 @@ private struct WordChipFill: ViewModifier {
         content
             .background {
                 if active {
-                    let fill = Capsule(style: .continuous)
+                    // `.circular`, not `.continuous` (prd §412b). The ring this
+                    // now hands off to has always been spelled `.circular`, on
+                    // that overlay's own recorded reasoning: "with a circular
+                    // corner style a capsule in a square frame is exactly a
+                    // circle, so every circle chip is pixel-identical". The fill
+                    // never got the same correction, so on "All" — a word in a
+                    // SQUARE frame, clipped to a `Circle()` — the blob drew as a
+                    // subtly flattened squircle inside a true circle, and on a
+                    // category capsule its ends were squircled where the ring's
+                    // were semicircular. One style across both forms is also what
+                    // lets the shared group morph between them without a shape
+                    // swap mid-flight.
+                    let fill = Capsule(style: .circular)
                         .fill(DS.tint)
                         .dsGlassBlob()
                     if reduceMotion {
                         fill
                     } else {
-                        fill.matchedGeometryEffect(id: "chipActiveFill", in: ns)
+                        fill.matchedGeometryEffect(id: ChipSelection.id, in: ns)
                     }
                 }
             }
             .dsGlass(cornerRadius: cornerRadius, tint: DS.tint)
     }
+}
+
+/// The one matched-geometry group the strip's selection lives in (prd §412b).
+///
+/// A shared constant rather than two string literals in two files' worth of
+/// scroll distance apart: the fill and the ring only hand off if their ids match
+/// EXACTLY, and a typo would not fail the build — it would silently restore the
+/// fade this fixes, which is the failure mode nobody re-checks for.
+private enum ChipSelection {
+    static let id = "chipSelection"
 }
 
 extension View {

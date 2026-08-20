@@ -27392,3 +27392,70 @@ stays one sentence. Anywhere a tappable child is added under
 
 **Costs nothing:** no new `Thing` field, no request, no CloudKit deploy, no new
 type rung. The one renamed symbol has a single call site.
+
+### 412b. The strip's selection stops blinking at the word↔mark crossing (user: "anything you would do to improve the category chips and the glass on them and the transition between them when selecting?", then "yes fix them.", 2026-08-20)
+
+Asked what to improve about the category chips, their glass, and the selection
+transition. **The honest answer is that almost all of it was already measured
+and correct** — the direction-aware room slide, the glass container the blob
+travels inside, the no-recentre-on-tap rule that gives the morph its distance
+(§359), the interactive glass, the fade into the fixed doors. Two seams were
+not, and both are one-line consequences of decisions that were right in
+isolation.
+
+**1. The selection was TWO objects, so it blinked at the boundary between
+them.** The travelling blue fill lived on id `chipActiveFill` in `fillNS`; the
+sliding ink ring lived on id `chipRing` in `chipRingNS`. Word→word travelled
+and mark→mark travelled, because each group had two members to interpolate
+between. **A switch ACROSS the boundary had one member on each side, so
+neither had anything to interpolate with**: the fill faded out where it stood
+and the ring faded in where it landed. That is precisely the failure the
+2026-07-14 ruling names — "selection is an object traveling, not two states
+blinking" — surviving at the one crossing that ruling never reached, and it is
+reachable in the shipped strip today (`All` or any category → the pinned room,
+or an uncategorized source).
+
+Both forms now share ONE namespace (`selectionNS`) and ONE id
+(`ChipSelection.id`). **The note that split them is overturned, and its
+reasoning is worth stating because it sounded right**: it said sharing one
+namespace "would make each try to become the other". That is true only of a
+shared namespace AND a shared id — which they never had — so the split was
+defending against a collision that could not occur, at the cost of the one
+handoff that could.
+
+**Sharing both is safe by CONSTRUCTION, not by luck.** Exactly one chip
+satisfies `label == active`, and within that chip `isWord` decides which form
+draws: a word chip renders the fill and no ring (the overlay is gated `if
+isActive, !isWord`), a mark chip the ring and no fill (`wordChipFill` is
+reached only from the two word branches). So the group never holds more than
+one source — the same guarantee the fill already depended on to travel between
+two word chips. It is also the shape `WordChipFill`'s own note records as the
+measured winner: one id across two branches of one `if`, which interpolates,
+rather than a hoisted shape positioned from an `anchorPreference`, which
+teleports.
+
+**2. The active blob was not a circle on "All".** The ring has always been
+`Capsule(style: .circular)`, on that overlay's own recorded reasoning — "with a
+circular corner style a capsule in a square frame is exactly a circle, so every
+circle chip is pixel-identical". The FILL never got the same correction and
+stayed `.continuous`, so on "All" — a word in a square frame, clipped to a
+`Circle()` — the blob drew as a subtly flattened squircle inside a true circle,
+and on a category capsule its ends were squircled where the ring's were
+semicircular. Both are `.circular` now, which is also what lets the shared group
+morph between the two forms without swapping shape mid-flight.
+
+**Deliberately NOT changed: the active chip's doubled glass.** The blob carries
+its own `glassEffect` and the resting `dsGlass(tint:)` wrapper still applies
+underneath it at the same geometry, so the active chip stacks two coincident
+materials. Dropping the outer one while active would leave exactly one — but
+this is the form that shipped for weeks and was never the complaint, and this
+file's own history is a record of mock-approved chip changes reverted on device
+within the hour (the bare-gradient-words cut, 2026-08-15/16). It is a change to
+make with eyes on a real screen, not from reasoning.
+
+**Costs nothing:** no new type, no new token, no `Thing` field, no CloudKit
+deploy. `ChipSelection.id` is a shared constant rather than two string literals
+several hundred lines apart, because the two only hand off if their ids match
+exactly — and a typo would not fail the build, it would silently restore the
+fade this fixes, which is the failure nobody re-checks for. Reduce Motion keeps
+both undecorated forms exactly as before.
