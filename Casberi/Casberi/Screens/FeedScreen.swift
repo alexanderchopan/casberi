@@ -4998,6 +4998,14 @@ struct FeedScreen: View {
                     // only thing under it (§208 — never say one thing twice).
                     // Every other card here keeps its label, because every
                     // other card has siblings to be told apart from.
+                    //
+                    // The rail says what the rows can't: whether these are
+                    // bunched or spread (prd §417). Dates are read here, while
+                    // the models are known live, and handed on as plain values
+                    // — `WalletRunwayRail` never holds a `Thing` (the build-188
+                    // leaf rule).
+                    WalletRunwayRail(dates: upcoming.compactMap { $0.isLive ? $0.dueAt : nil })
+                        .padding(.bottom, 2)
                     // `keyed` for identity + `live` inside the closure before
                     // any stored read (corollaries 1 and 3): this is a derived
                     // array, and a heal's delete can land in the same graph
@@ -6247,6 +6255,16 @@ struct FeedScreen: View {
                 ThingShareLink(thing: thing) {
                     Label("Share", systemImage: "square.and.arrow.up")
                 }
+            } preview: {
+                // What the band could not fit (prd §412a) — the full title, the
+                // picture at a size worth looking at, the opening words. Until
+                // this landed the menu had no `preview:` at all, so the system
+                // lifted a snapshot of the 44pt row: a bigger copy of what your
+                // finger was already on. `RowPeek` is one stored property, so
+                // building it per visible row is free; its body — which is what
+                // touches `content` and `previewImageData` — runs only when a
+                // press actually raises it.
+                RowPeek(thing: thing)
             }
     }
 

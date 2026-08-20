@@ -777,7 +777,7 @@ struct ThingSheetView: View {
         .modifier(SheetHaptics(active: onBack == nil && !inlineRest))
         .presentationDetents([.medium, .large], selection: $detent)
         .presentationDragIndicator(.visible)
-        .presentationCornerRadius(DS.Radius.sheet)
+        .dsSheetCorner()
         // Only when pushed (`onBack` set): the eyebrow carries its own back
         // chevron now, so the system's default pushed-view nav bar (and the
         // back button it would ALSO draw) is redundant chrome on top of it.

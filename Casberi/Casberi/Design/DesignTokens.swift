@@ -619,6 +619,80 @@ enum DS {
         /// App-icon squircle ratio — brief §8: 22.37%.
         static let appIconRatio: CGFloat = 0.2237
         static func appIcon(_ size: CGFloat) -> CGFloat { size * appIconRatio }
+
+        /// What a PRESENTED sheet pins its top corner to — and on iOS 26,
+        /// deliberately NOTHING (prd §412, 2026-08-20).
+        ///
+        /// **This does not amend §8's "sheets 16".** That law is about a sheet
+        /// SURFACE WE DRAW — `dsSheetSurface`, `DSTray`, every tray and card
+        /// that paints its own corner — and it is untouched: `sheet` above is
+        /// unchanged and every drawn caller still reads it. This token governs
+        /// only the corner UIKit draws for us on a presented sheet, which §8
+        /// predates by two years and never had an opinion about.
+        ///
+        /// **Why nil is the right value on 26.** The display's own corner is
+        /// ~55pt, and iOS 26 draws a presented sheet concentric with it — the
+        /// sheet reads as a layer OF the device. A 16pt corner inside a 55pt
+        /// one is not a smaller version of the same curve, it is a different
+        /// curve: the margin between the two arcs swells through the bend, and
+        /// the sheet reads as a card taped over the screen rather than as part
+        /// of it. It is the most-opened surface in the app, so it is also the
+        /// most-seen instance of that mismatch.
+        ///
+        /// Below 26 the system corner is the old fixed one, which the sheet
+        /// token was chosen against in the first place — so the pin stays and
+        /// nothing about those devices changes.
+        ///
+        /// A token rather than an `if #available` at each call site, because §8
+        /// is law on that point too ("every value routes through a token") and
+        /// three hand-spelled availability checks is how three sheets end up
+        /// disagreeing about their own corner.
+        static var presentedSheet: CGFloat? {
+            if #available(iOS 26.0, *) { return nil }
+            return sheet
+        }
+
+        /// The radius a rounded thing takes when it sits INSIDE another rounded
+        /// thing — `parent − inset`, floored (prd §412, 2026-08-20).
+        ///
+        /// **Concentric, because a constant margin is the whole claim.** Two
+        /// rounded rectangles nested with an even inset only LOOK evenly inset
+        /// if their corners share a centre. Give the child the parent's own
+        /// radius and its arc orbits wider than the gap allows, so the margin
+        /// visibly swells through the corner and the pair reads as two boxes
+        /// that happen to overlap. Subtract the inset and the two arcs stay
+        /// parallel the whole way round.
+        ///
+        /// **The app already believed this; it just never said so.** The
+        /// wallet's range control spelled the arithmetic inline before this
+        /// existed — a 10pt track with 3pt of padding and a literal 7pt segment
+        /// inside it, correct and with nothing tying the 7 to the 10 it was
+        /// derived from. Naming it is what keeps the next site from guessing.
+        ///
+        /// **It is the app's ONLY nested pair, and that is the design working
+        /// rather than a gap.** Every other rounded-inside-rounded candidate
+        /// turned out to be a standalone control sitting on a page or in a List
+        /// section (`AppsScreen`'s search field, `FollowImportSheet`'s filter,
+        /// `ChipPeek`'s figure well) — no rounded parent, so no concentric
+        /// correction to make. §8's no-line rule is why: the app separates
+        /// depth by TONE, so content sits directly on a card instead of inside
+        /// a second box drawn on it. Expect this helper to stay rare.
+        ///
+        /// **Deliberately NOT applied as a sweep.** The ~39 raw radius literals
+        /// elsewhere in `Screens/`/`GenUI/` are almost entirely 1–7pt graphical
+        /// primitives — chart bars, progress caps, sparkline ends — which are
+        /// drawing values rather than nested containers, plus a handful of
+        /// component radii with written reasons of their own (`PhotoViewer`'s
+        /// 18, `Composer`'s 26). Rewriting those through this helper would
+        /// dress up unrelated numbers as a nesting relationship they do not
+        /// have. This exists for real nesting and nothing else.
+        ///
+        /// The floor is 4: below it a "rounded" corner is visually square, and
+        /// a child inset further than its parent's radius would otherwise ask
+        /// for a negative one.
+        static func nested(parent: CGFloat, inset: CGFloat) -> CGFloat {
+            max(4, parent - inset)
+        }
     }
 
     // MARK: - Motion  — ~250ms, one animation per moment

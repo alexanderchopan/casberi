@@ -3352,3 +3352,137 @@ struct AppReviewRow: View {
         .padding(.vertical, DS.Space.s2)
     }
 }
+
+// MARK: - The row's long-press preview (prd §412a, 2026-08-20)
+
+/// What the feed row had to leave out, shown while your finger is still down.
+///
+/// The long-press menu has been the row's whole verb surface since 2026-07-16
+/// (the both-edge swipe was measured unreachable inside a paged `TabView`), and
+/// it carried NO `preview:` closure — so the system lifted a snapshot of the
+/// 44pt band itself. That is the one thing a preview should never be: a bigger
+/// copy of what you are already looking at.
+///
+/// **The grammar is `AppsScreen.PeekPreview`'s and `ChipPeek`'s, deliberately
+/// unchanged** — same 300pt card, same `surfaceSheet` ground, same `Space.s4`
+/// padding — because the app now peeks in three places and a third dialect
+/// would read as a different app each time. Both of that pattern's recorded
+/// lessons still apply and are already satisfied at the call site: the feed
+/// row's menu is non-empty (an empty menu can suppress the preview outright),
+/// and nothing here may look pressable, since the system's preview layer
+/// swallows touches.
+///
+/// **What it adds over the row, and nothing else.** The band shows a clamped
+/// title, a 26pt thumb and a time; the three things it structurally cannot are
+/// the FULL title (`titleLine` cuts at 80 characters — §303's whole subject),
+/// the picture at a size worth looking at, and the opening of the text. So this
+/// draws exactly those. It deliberately does NOT restate the verbs (they are in
+/// the menu beside it), the project, or the source badge.
+///
+/// **The heavy columns are read HERE on purpose.** `content` is one of the
+/// inline columns the 2026-07-30 pass leaves out of the All room's
+/// `propertiesToFetch`, and `previewImageData` is external storage that
+/// materialises real bytes when touched — which is exactly why they belong in a
+/// preview's BODY rather than in the row. `contextMenu`'s builders are
+/// non-escaping and run at body-build time per row, so this view is built for
+/// every row on screen; its body is not evaluated until a long-press actually
+/// raises it. Keeping the struct to one stored property is what makes that
+/// split free.
+///
+/// Liveness: corollary 5 (build 188) — a `View` storing a `Thing` guards its
+/// OWN body, because SwiftUI re-evaluates a leaf on the model's own observation
+/// with no involvement from the parent that built it. That matters more here
+/// than in an ordinary row: a preview is raised over a live feed and can be on
+/// screen while a foreground bridge sweep deletes the very row it previews.
+struct RowPeek: View {
+    let thing: Thing
+
+    /// The peek card's width — `ChipPeek`'s, so the two never differ by a few
+    /// points in a way that reads as a rendering fault rather than a choice.
+    private static let width: CGFloat = 300
+    /// The picture's width, DERIVED rather than spelled: the card's own padding
+    /// is a token that has already moved once (the 2026-07-25 breathing-room
+    /// pass), and a hardcoded inner width would silently stop fitting.
+    private var mediaWidth: CGFloat { Self.width - DS.Space.s4 * 2 }
+
+    var body: some View {
+        if thing.isLive { liveBody }
+    }
+
+    @ViewBuilder private var liveBody: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s3) {
+            HStack(spacing: DS.Space.s2) {
+                BridgeIcon(name: thing.source, size: DS.Mark.badge)
+                Text(thing.source)
+                    .dsText(.label12)
+                    .foregroundStyle(DS.textTertiary)
+                    .lineLimit(1)
+                Spacer(minLength: 0)
+                Text(thing.capturedAt.formatted(.relative(presentation: .named)))
+                    .dsText(.label12)
+                    .foregroundStyle(DS.textTertiary)
+                    .lineLimit(1)
+            }
+
+            // The full title at reading size. `lineLimit(4)` is a frame bound,
+            // not a clamp on meaning: past four lines this has stopped being a
+            // title and the excerpt below is saying the same thing twice.
+            if !thing.title.isEmpty {
+                Text(thing.title)
+                    .dsText(.reading20)
+                    .foregroundStyle(DS.textPrimary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .lineLimit(4)
+            }
+
+            media
+
+            // The opening of the thing's own words. `summary` first — a bridge
+            // that wrote one chose it as the display line (the Trello card-back
+            // rule) — then `content`. Never `enrichedText`, which is
+            // retrieval-only by the 2026-07-15 ruling and draws on no screen.
+            if let excerpt {
+                Text(excerpt)
+                    .dsText(.subhead13)
+                    .foregroundStyle(DS.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .lineLimit(4)
+            }
+        }
+        .padding(DS.Space.s4)
+        .frame(width: Self.width, alignment: .leading)
+        .background(DS.surfaceSheet)
+    }
+
+    /// The picture, by where its bytes live. A remote URL rides `RemoteArt` at
+    /// the 16:9 the media rooms already use (§219/§254 — one size for "a picture
+    /// worth looking at", never a second invented here); stored bytes and
+    /// screenshots ride `PhotoWell`, which brings its own liveness guard AND the
+    /// `redactionReasons` opt-out — load-bearing here, because a screenshot is
+    /// the most sensitive thing this app holds and a raised preview is exactly
+    /// the kind of surface that survives into an app-switcher snapshot.
+    @ViewBuilder private var media: some View {
+        if let art = thing.previewImageURL, !art.isEmpty {
+            RemoteArt(urlString: art,
+                      width: mediaWidth,
+                      height: (mediaWidth * 9 / 16).rounded(),
+                      fallback: thing.source)
+                .allowsHitTesting(false)
+        } else if thing.previewImageData != nil || thing.kind == .screenshot {
+            PhotoWell(thing: thing, size: mediaWidth)
+                .allowsHitTesting(false)
+        }
+    }
+
+    /// The first real words, or nothing. Suppressed when the title already IS
+    /// the text — every importer that names an entry after its opening line
+    /// stores that line as content's first line, and echoing it under the title
+    /// is §398's own double-read defect arriving on a new surface.
+    private var excerpt: String? {
+        let raw = thing.summary ?? thing.content
+        let text = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else { return nil }
+        guard let below = IngestSupport.bodyBelowTitle(text, title: thing.title) else { return nil }
+        return below
+    }
+}

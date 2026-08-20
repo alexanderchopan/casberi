@@ -346,15 +346,24 @@ struct WalletBalanceHeadline: View {
                         .foregroundStyle(r == range ? DS.textPrimary : DS.textSecondary)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 5)
+                        // Concentric with the track below (prd §412): the
+                        // segment's corner is the track's minus the 3pt inset,
+                        // so the gap around it stays even through the bend
+                        // rather than swelling at each corner. Was the literal
+                        // 7 — the same arithmetic, done once by hand and with
+                        // nothing tying it to the track it belongs to.
                         .background(r == range ? DS.fillStrong : .clear,
-                                    in: RoundedRectangle(cornerRadius: 7, style: .continuous))
+                                    in: RoundedRectangle(
+                                        cornerRadius: DS.Radius.nested(
+                                            parent: DS.Radius.card, inset: 3),
+                                        style: .continuous))
                 }
                 .buttonStyle(.plain)
             }
         }
         .padding(3)
         .background(DS.fillFaint,
-                    in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
         .padding(.top, DS.Space.s2)
     }
 

@@ -382,6 +382,18 @@ extension View {
             // cast onto a white one, four and a half times too heavy.
             .shadow(color: DS.cardShadow, radius: 16, x: 0, y: 12)
     }
+
+    /// The top corner of a PRESENTED sheet (prd §412, 2026-08-20) — the system's
+    /// own concentric curve on iOS 26, the §8 pin below it.
+    ///
+    /// One modifier for all three presented sheets rather than the value spelled
+    /// at each, so `DS.Radius.presentedSheet` — which carries the whole
+    /// argument — is the only place the decision lives. Nothing a sheet DRAWS
+    /// routes through here; `dsSheetSurface` and `DSTray` keep `DS.Radius.sheet`
+    /// exactly as they were.
+    func dsSheetCorner() -> some View {
+        presentationCornerRadius(DS.Radius.presentedSheet)
+    }
 }
 
 extension View {

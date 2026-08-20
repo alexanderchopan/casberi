@@ -27224,3 +27224,77 @@ link policy's verdict per URL without spending a token, `-agentBudgetCap <usd>`
 exercises the pause branch without waiting for a real month, and `-byokProbe`
 now reports `pagesRead=` beside `rounds=` because a page read and a page not
 read produce identical-looking answers.
+
+### 412a. The row's long-press gets a preview; the doors' alarm gets a resolution (user: "what else would you do to add polish", then "lets do 2 and 4", 2026-08-20)
+
+The second pass of §412's audit. Four candidates were grounded first and **two
+died on inspection**, which is now the expected rate for this exercise and
+worth recording as such: pairing haptics with the delight moments turned out to
+be structural already (`Haptics.swift` makes `ShellChrome.flash(tone:)` the only
+thing allowed to fire success/failure, precisely so the buzz and the words
+naming it can never drift), and the wallet crown already odometer-rolls through
+`.numericText` with a Reduce Motion branch. Two survived.
+
+**1. The feed row's long-press preview.** `contextMenu` on the feed row carried
+menu items and **no `preview:` closure**, so the system lifted a snapshot of the
+44pt band — a bigger copy of what your finger was already on. That menu has been
+the row's entire verb surface since 2026-07-16, when the both-edge swipe was
+measured unreachable inside a paged `TabView`, so it is also the most-pressed
+gesture in the app.
+
+`RowPeek` draws the three things the band structurally cannot: the FULL title
+(`titleLine` clamps at 80 characters — §303's own subject), the picture at a
+size worth looking at, and the opening words. It deliberately restates nothing
+the menu beside it already offers.
+
+**The grammar is `AppsScreen.PeekPreview`'s and `ChipPeek`'s, unchanged** — same
+300pt card, same `surfaceSheet` ground, same `Space.s4` padding. The app peeks
+in three places now and a third dialect would read as a different app each time.
+Both of that pattern's recorded lessons are satisfied: the menu is non-empty (an
+empty one can suppress the preview outright) and nothing in the card looks
+pressable, since the preview layer swallows touches.
+
+**The perf split is the whole design.** `contextMenu`'s builders are
+non-escaping and run at body-build time per row — the reason that call site
+already derives its verbs exactly once — so `RowPeek` is constructed for every
+visible row. It holds ONE stored property, which makes that free; everything
+expensive lives in its body, which is not evaluated until a press raises it.
+That is also why the two heaviest columns are read here on purpose: `content` is
+one of the inline columns the 2026-07-30 pass leaves out of the All room's
+`propertiesToFetch`, and `previewImageData` is external storage that
+materialises real bytes when touched. A preview's body is the correct place for
+both; a row is not.
+
+Media routes by where the bytes live — a remote URL through `RemoteArt` at the
+16:9 the media rooms already use (§219/§254: one size for "a picture worth
+looking at", never a second invented here), stored bytes and screenshots through
+`PhotoWell`, which brings its own liveness guard **and the `redactionReasons`
+opt-out**. That last part is load-bearing rather than incidental: a screenshot
+is the most sensitive thing this app holds, and a raised preview is exactly the
+kind of surface that survives into an app-switcher snapshot (§ the 2026-07-25
+fix). The excerpt runs through `IngestSupport.bodyBelowTitle`, so §398's
+double-read defect — every importer that names an entry after its opening line
+storing that line as content's first line — cannot arrive on this new surface.
+
+Liveness is **corollary 5** (build 188): a `View` storing a `Thing` guards its
+own body, because SwiftUI re-evaluates a leaf on the model's own observation
+with no involvement from the parent that built it. It matters more here than in
+an ordinary row — a preview is raised over a live feed and can be on screen
+while a foreground bridge sweep deletes the row it is previewing. The liveness
+audit's check 5 covers it mechanically.
+
+**2. The Apps door's alarm resolves.** The door has pulsed on a broken
+connection since 2026-07-09 and said nothing about the repair: the pulse simply
+stopped, which is also exactly what it looks like when somebody gives up and
+stops noticing it. This app closes every other loop it opens — a write's outcome
+buzzes, money arriving rains, a rejection flashes — and this was the one alarm in
+the shell with no resolution beat. A one-shot `.bounce` now fires when the LAST
+broken connection heals.
+
+**On the way down only, never on the way up.** An alarm that also celebrates
+itself starting reads as decoration, and the repeating pulse is already the whole
+signal there. It rides `value:`, which fires on change, so the counter can only
+advance on a real high→low transition — a door that opens already-healthy has
+nothing to report and stays still — and it stands down under Reduce Motion. Same
+`symbolEffect` vocabulary the door already speaks, so this is one more beat
+rather than a second language.

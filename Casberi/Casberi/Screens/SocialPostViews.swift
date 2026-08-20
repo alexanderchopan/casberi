@@ -278,7 +278,7 @@ struct SocialPostSheet: View {
         }
         .presentationDetents([.medium, .large])
         .presentationDragIndicator(.visible)
-        .presentationCornerRadius(DS.Radius.sheet)
+        .dsSheetCorner()
         .dsInk()
     }
 }

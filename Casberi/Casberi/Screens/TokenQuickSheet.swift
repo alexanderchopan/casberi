@@ -128,7 +128,7 @@ struct TokenQuickSheet: View {
         .dsInk()
         .presentationDetents([.medium, .large])
         .presentationDragIndicator(.visible)
-        .presentationCornerRadius(DS.Radius.sheet)
+        .dsSheetCorner()
         .task {
             // The address IS the query — but the SAME address can be a
             // different token on another chain (the OP-stack WETH predeploy,

@@ -166,13 +166,37 @@ struct AvatarDoor: View {
 /// button, not a tab, and it only lights on actual breakage).
 struct AppsDoor: View {
     @Environment(BridgeStore.self) private var bridges
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var needsAttention: Bool { bridges.attentionCount > 0 }
+
+    /// Bumped when the LAST broken connection heals (prd §412a, 2026-08-20).
+    ///
+    /// The door has announced breakage since 2026-07-09 and said nothing about
+    /// the repair: the pulse simply stopped and the glyph went quiet, which is
+    /// also exactly what it looks like when a person gives up and stops
+    /// noticing it. The app closes every other loop it opens — a write's outcome
+    /// buzzes, money arriving rains, a rejection flashes — and this was the one
+    /// alarm in the shell with no resolution beat.
+    ///
+    /// A one-shot `.bounce` on the way DOWN only, never on the way up: an alarm
+    /// that also celebrates itself starting reads as decoration, and the pulse
+    /// is already the whole signal there. Same `symbolEffect` vocabulary the
+    /// door already speaks, so this adds a beat rather than a second language.
+    @State private var healed = 0
 
     var body: some View {
         Image(systemName: needsAttention ? "square.grid.2x2.fill" : "square.grid.2x2")
             .dsGlyph(21)
             .foregroundStyle(needsAttention ? DS.attention : DS.tint)
             .symbolEffect(.pulse, options: .repeating, isActive: needsAttention)
+            // `value:` fires on CHANGE, so the counter only advances on a real
+            // high→low transition — a door that opens already-healthy has
+            // nothing to report and stays still.
+            .symbolEffect(.bounce, value: healed)
+            .onChange(of: needsAttention) { was, now in
+                guard was, !now, !reduceMotion else { return }
+                healed += 1
+            }
     }
 }
