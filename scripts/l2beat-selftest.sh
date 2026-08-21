@@ -82,6 +82,7 @@ strip_comments "$ROWS"   > "$TMP/rows.nc"
 strip_comments "$DIRSCREEN" > "$TMP/dirscreen.nc"
 strip_comments "$CARDSCREEN" > "$TMP/cardscreen.nc"
 strip_comments "$FIGURE" > "$TMP/figure.nc"
+strip_comments "$CARD"   > "$TMP/card.nc"
 
 echo "Drift guards"
 
@@ -142,6 +143,69 @@ if grep -qE 'sorted.*sentiment|\.sorted \{.*flagged' "$TMP/cardscreen.nc"; then
   echo "✗ the risk card sorts by sentiment — see the axis-order ruling in its own header"
   exit 1
 fi
+
+# ---- §429: the five positions are NAMED, exactly once -----------------------------------
+# The strip's whole design is that the same question is always in the same place, and until
+# §429 nothing in the app said which place — the correspondence was there to be learned with
+# nowhere to learn it. The risk card is that one place.
+guard 'L2beatStripKey(risks: project.orderedRisks,' "$TMP/cardscreen.nc" \
+  "the risk card lost its keyed strip — the five positions are unnamed everywhere again"
+guard '.id(risk.axis)' "$TMP/cardscreen.nc" \
+  "the risk rows lost their anchors — a pick on the strip key would scroll nowhere, silently"
+guard 'onScrollToAxis:' "$TMP/cardscreen.nc" \
+  "the card screen no longer hands in a scroll — the key becomes a legend on its own screen"
+# The key belongs ONLY where a cell is wide enough to carry a word. A 62-point directory
+# column and a 74-point room-head column are not, which is why the bare strip still exists.
+if grep -qF 'L2beatStripKey' "$TMP/rows.nc" "$TMP/card.nc"; then
+  echo "✗ the keyed strip is drawn on a ROW — those cells are ~14pt wide and cannot carry a name"
+  exit 1
+fi
+# §83: the key is tappable only where a host can act on the pick. The thing sheet embeds this
+# card inside a scroll it does not own, so a required handler would make it a dead control.
+guard 'var onPick: ((L2beatRiskAxis) -> Void)?' "$TMP/views.nc" \
+  "the strip key's pick stopped being optional — it is a dead control in the thing sheet"
+
+# ---- §429: one asks toggle, not five links ----------------------------------------------
+guard 'showsAsks: showsAsks,' "$TMP/cardscreen.nc" \
+  "the asks toggle no longer reaches the rows"
+if grep -qF 'What this asks' "$TMP/cardscreen.nc"; then
+  echo "✗ the per-row asks link is back — five identical controls against five different sentences"
+  exit 1
+fi
+
+# ---- §429: an event carries its date ----------------------------------------------------
+# "On record" is the section arguing that an assessment cannot say whether anything has
+# actually GONE WRONG. It shipped drawing those events undated, so a 2021 exploit and last
+# month's halt read identically on the card built to tell them apart.
+guard 'L2beatCopy.day(thing.capturedAt)' "$TMP/cardscreen.nc" \
+  "the card's milestone rows lost their dates — a 2021 exploit reads like last month's halt"
+guard 'L2beatIncidentAge.mark(latest: $0, withinDays: L2beatRoomSource.recencyDays)' "$TMP/dirscreen.nc" \
+  "the directory's incident marker lost its date, or grew a recency window of its own (§311)"
+guard 'project.lead.shortLabel' "$TMP/dirscreen.nc" \
+  "the directory row no longer names WHICH question L2BEAT leads with"
+if grep -qF 'L2beatCopy.stripShort' "$TMP/dirscreen.nc"; then
+  echo "✗ the directory row prints the tally again — it says in words what the strip says in colour"
+  exit 1
+fi
+
+# ---- §429: the comparison table is searchable, and its stage sort GROUPS ------------------
+# THE CALL, not the declaration — §422's lesson, and this guard's own first run earned it
+# again: `grep -F searchField` matches `private var searchField` too, so deleting the field
+# from the page left the guard green over a directory with no search on it.
+if grep -qE '^[[:space:]]+searchField$' "$TMP/dirscreen.nc"; then
+  echo "  ✓ the directory mounts its search field"
+else
+  echo "✗ the directory lost its search — 105 rows, and the only search is on the connect screen"
+  exit 1
+fi
+guard 'TextField(String(localized: "Search chains"), text: $query)' "$TMP/dirscreen.nc" \
+  "the directory's search field is gone or no longer bound to the query"
+guard 'if !searching {' "$TMP/dirscreen.nc" \
+  "the order buttons no longer stand down for a search — an ordering of three matches"
+guard 'private var bands: [Band]' "$TMP/dirscreen.nc" \
+  "the stage sort is a flat list again — the screen's own header says that says nothing"
+guard 'head.stage?.meaning' "$TMP/dirscreen.nc" \
+  "a stage band no longer states what its rung MEANS, which is the whole reason it groups"
 
 # ---- Read-only ---------------------------------------------------------------------------
 # There is no endpoint to write to, and that is the promise the connect screen makes.
@@ -411,6 +475,85 @@ check("only a flagged lead is concerning",
 // The honeypot again, end to end: the lead must SEE the nested bad reading.
 check("the lead promotes a nested flagged reading",
       project(risks: [risk(.sequencerFailure, "Self sequence", .good), honeypot]).lead.isConcerning)
+
+print("")
+print("The lead's dense form (prd §429 — the directory row)")
+
+// It REPLACED a tally. The row printed "2 of 5 flagged" two inches from a strip saying
+// exactly that in colour, so its one line of words repeated the drawing beside it. What
+// the strip cannot carry at sixty points is WHICH of the five, which is what this says.
+check("a flagged lead names the axis, not a count",
+      project(risks: [risk(.exitWindow, "None", .bad)]).lead.shortLabel == "Exit window flagged")
+check("it is never a count",
+      !project(risks: [risk(.exitWindow, "None", .bad),
+                       risk(.stateValidation, "None", .bad)]).lead.shortLabel.contains("2"))
+// A caveat and a flag are L2BEAT's two different calls and must read as two different
+// things — collapsing them would state a severity they did not.
+check("a warning lead reads as a caveat, not a flag",
+      project(risks: [risk(.dataAvailability, "External", .warning)]).lead.shortLabel
+        == "Data availability has a caveat")
+// §428's standing rule, in the newest place it could be broken.
+check("a clean chain is said to have nothing flagged, never to be safe",
+      project(risks: clean).lead.shortLabel == "Nothing flagged")
+check("an unread chain says so rather than claiming nothing was found",
+      project(risks: []).lead.shortLabel == "Not assessed")
+// The nested reading again: the phrase must agree with the severity that chose it.
+check("a nested flagged reading reaches the phrase",
+      project(risks: [honeypot]).lead.shortLabel.hasSuffix("flagged"))
+
+print("")
+print("The strip's key (prd §429 — the five positions, named)")
+
+// The strip's whole design is that the same question is always in the same place, and
+// until §429 nothing in the app said WHICH place. These five names are the only place it
+// is learnable, so they must be five DISTINCT non-empty words in the axis order the strip
+// paints.
+let shortNames = L2beatRiskAxis.allCases.map(\.shortLabel)
+check("every axis has a short name", shortNames.allSatisfy { !$0.isEmpty })
+check("the five short names are distinct", Set(shortNames).count == 5)
+check("there is exactly one per cell", shortNames.count == L2beatRiskAxis.allCases.count)
+// A "short" label that is the full one teaches nothing a 62-point column can render.
+check("each is no longer than the label it shortens",
+      L2beatRiskAxis.allCases.allSatisfy { $0.shortLabel.count <= $0.label.count })
+check("the key is in L2BEAT's own axis order",
+      L2beatRiskAxis.allCases.map(\.rawValue)
+        == ["sequencerFailure", "stateValidation", "dataAvailability", "exitWindow",
+            "proposerFailure"])
+
+print("")
+print("How old an incident is (prd §429)")
+
+// The window is the ROOM HEAD'S, handed in — two definitions of "recent" in one feature
+// drift, and then the room ranks a chain first that the directory draws as old news.
+let today = Date(timeIntervalSince1970: 1_780_000_000)
+let ageCal: Calendar = {
+    var c = Calendar(identifier: .gregorian)
+    c.timeZone = TimeZone(identifier: "UTC") ?? .gmt
+    return c
+}()
+func daysAgo(_ n: Int) -> Date { today.addingTimeInterval(-Double(n) * 86_400) }
+
+check("today is inside the window", L2beatIncidentAge.isRecent(today, now: today, withinDays: 90))
+check("one day inside the window is recent",
+      L2beatIncidentAge.isRecent(daysAgo(89), now: today, withinDays: 90))
+check("one day outside is not",
+      !L2beatIncidentAge.isRecent(daysAgo(91), now: today, withinDays: 90))
+// The boundary itself, because an off-by-one here is a row that changes colour a day early
+// or late and nothing else in the app can see it.
+check("the boundary day counts as recent",
+      L2beatIncidentAge.isRecent(daysAgo(90), now: today, withinDays: 90))
+
+let fresh = L2beatIncidentAge.mark(latest: daysAgo(3), now: today, withinDays: 90, calendar: ageCal)
+check("a recent incident is the bare word", fresh.text == "Incident")
+check("and it is marked recent, which is what earns the attention colour", fresh.recent)
+
+let old = L2beatIncidentAge.mark(latest: daysAgo(1500), now: today, withinDays: 90, calendar: ageCal)
+check("an old incident carries its year", old.text.contains(String(ageCal.component(.year, from: daysAgo(1500)))))
+check("and it is NOT marked recent", !old.recent)
+// §375's defect, which `String(localized:)` reproduces for any interpolated Int: a year
+// printed as a quantity ("Incident 2,022") in the row's most decision-relevant word.
+check("the year is not group-separated", !old.text.contains(",") && !old.text.contains("."))
+check("an old mark still says what it is", old.text.hasPrefix("Incident"))
 
 print("")
 print("Order and counting")
@@ -932,6 +1075,42 @@ mutate "the note must count how many passed Stage 0" room \
   'return String(localized: "mixed")'
 mutate "the followed head must name how many chains" room \
   'let across = news.chains == 1' 'let across = true || news.chains == 1'
+# §429 — the lead's dense form. Every one of these renders as a perfectly good-looking row.
+# Anchored on the phrase, NOT on `return risk.worstSentiment == .bad`: that substring's first
+# occurrence in this file is `L2beatLead.isConcerning`, so the obvious anchor mutates a
+# different function and leaves this one untested — the "right result for the wrong reason"
+# class, caught here before it shipped.
+mutate "a caveat must not be reported as a flag" rating \
+  '? String(localized: "\(risk.axis.label) flagged")' \
+  '? String(localized: "\(risk.axis.label) has a caveat")'
+mutate "a clean chain must not be called safe in the dense form too" rating \
+  'return String(localized: "Nothing flagged")' 'return String(localized: "Safe")'
+mutate "an unassessed chain must not read as clean" rating \
+  'return String(localized: "Not assessed")' 'return String(localized: "Nothing flagged")'
+# §429 — the strip's key. Two names the same is a key that teaches the wrong position, which
+# is worse than no key: it makes a wrong reading of every strip in the app feel learned.
+mutate "two axes must not share a short name" rating \
+  'case .stateValidation: return String(localized: "State")' \
+  'case .stateValidation: return String(localized: "Data")'
+mutate "a short name must actually be short" rating \
+  'case .exitWindow: return String(localized: "Exit")' \
+  'case .exitWindow: return String(localized: "Exit window, in full, again")'
+# §429 — how old an incident is.
+mutate "the recency boundary must include its own day" news \
+  'date >= now.addingTimeInterval(-Double(withinDays) * 86_400)' \
+  'date > now.addingTimeInterval(-Double(withinDays) * 86_400)'
+mutate "an old incident must carry its year" news \
+  'let year = String(calendar.component(.year, from: latest))' \
+  'let year = ""'
+# §375's defect: a year printed as a QUANTITY ("Incident 2,022"), in the most
+# decision-relevant word on a row somebody uses to choose where to put money.
+mutate "the year must not be group-separated" news \
+  'let year = String(calendar.component(.year, from: latest))' \
+  'let year = calendar.component(.year, from: latest).formatted()'
+mutate "a recent incident must not be dated" news \
+  'return (String(localized: "Incident"), true)' \
+  'return (String(localized: "Incident \(calendar.component(.year, from: latest))"), true)'
+
 # The sheet grammar.
 mutate "a stage revision ref must not read as a risk one" sheet \
   'if parts[1] == stageSubject {' 'if false {'

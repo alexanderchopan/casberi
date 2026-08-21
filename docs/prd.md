@@ -28811,6 +28811,122 @@ the rotating walk have only ever run in the harness and in the reasoning. Every 
 safe — an unreachable summary leaves the bundle drawing, an unparseable milestone is skipped,
 an unknown sentiment reads `unknown` and never `good`.
 
+## 429. The L2BEAT surfaces, past §428 — an event with no date, a sort that said nothing, and a strip nothing ever named (user: "how would you improve the UI of the l2beat experience", then "do it all", 2026-08-21)
+
+§428 landed the feature whole and six days of its design decisions are deliberate refusals
+that should not be re-litigated: the risk card never re-sorts its five, the strip's cells are
+equal because five findings are a tally and not a magnitude, no surface computes a composite,
+and there is no "safest" sort. Asked how to improve the experience, the honest first move was
+to read §428 before reading the code — the §418 lesson, and it held: most of what looked
+improvable was a ruling. Five things were not.
+
+### 1. AN EVENT WITH NO DATE IS HALF AN EVENT
+
+The risk card's "On record" section exists because *an assessment is a standing judgment and
+an incident is an event, so neither substitutes for the other* — its own words. It then drew
+the events **undated**. A 2021 exploit and a halt from last month were the same sentence in
+the same voice, on the card whose whole argument is "and then this happened". Every row
+carries its day now (`L2beatCopy.day`, one formatter shared with the milestone sheet's own
+stamp, so the two cannot spell one day two ways).
+
+**Absolute, never relative**, and that is the rule rather than the taste: "four years ago" is
+arithmetic the reader has to undo before the event can be placed against anything else they
+know, and this section sits under a stage and five risk cells that are all statements about
+NOW — a relative age is the one reading among them that quietly keeps moving.
+`LiveTimeText`'s relative form stays right in the FEED, where a row is news arriving.
+
+The same defect had a **worse form on the directory**, which is the screen where somebody
+decides which chain to trust: it marked every chain with any incident ON RECORD with one
+word in the attention colour, ever. `L2beatIncidentAge.mark` draws the line — inside the
+window it is "Incident" in attention, outside it is "Incident 2022" in the quiet ink — and
+**the window is the room head's own** (`L2beatRoomSource.recencyDays`), handed in rather than
+redeclared. Two definitions of "recent" in one feature drift, and then the room ranks a chain
+first that the directory draws as old news: §311's shape, where the halves stop agreeing and
+nothing breaks loudly enough to notice.
+
+### 2. THE STAGE SORT NOW GROUPS, BECAUSE THE SCREEN'S OWN HEADER SAID IT OTHERWISE SAYS NOTHING
+
+`L2beatDirectoryScreen`'s header records the measurement that 76 of 105 are Stage 0 and 19
+are off the ladder — *"a stage sort over a list that is three-quarters one value mostly
+reshuffles ties"* — and then offered exactly that sort as a flat list. Choosing it reordered
+105 rows and told the reader nothing.
+
+Banded, it says how many chains sit on each rung **and what the rung means**, which until now
+could only be reached by opening a card, one chain at a time, on the screen whose entire job
+is comparing them. The bands are the **consecutive runs of the already-ordered list**, cut
+rather than regrouped, so a heading can never disagree with the order it heads. A run of
+chains L2BEAT does not place on the ladder is headed "Not staged" and sits last — never
+beneath the bottom rung, which would state the ranking L2BEAT declined to make — and it
+deliberately holds BOTH `Not applicable` and any rung word this build does not recognise:
+neither is a place on the ladder, both already sorted last, and splitting them would put a
+heading over a band of one unrecognised string.
+
+### 3. THE COMPARISON TABLE HAD NO SEARCH
+
+The CONNECT screen has had an instant offline search since the seat shipped. The directory —
+the surface actually built for finding one chain among 105 — made you scroll. It has the same
+prefix-first ranking, spelled the same way, so typing "ba" offers Base before Abstract on both
+screens and neither reshuffles between keystrokes over one match set.
+
+Two decisions. The **order buttons hide while searching** (the §200 shape): an ordering is a
+statement about a whole list, and three matches have no order worth choosing. And **a miss
+inside the chosen layer is not the same answer as a miss in the registry** — on a two-tab
+screen the difference is one tap away, so the empty note names the other tab's match count
+rather than leaving somebody to conclude L2BEAT doesn't cover their chain.
+
+### 4. THE STRIP'S POSITIONAL CODE WAS NEVER TAUGHT ANYWHERE
+
+The strip's whole design is that *the same question is always in the same place, so the eye
+can compare two rows without reading either*. **Nothing in the app ever said which place.**
+The correspondence was there to be learned with nowhere to learn it, which made the strip a
+decoration for everyone who had not gone and read `L2beatRiskAxis`. The card's legend explains
+the COLOURS and had nothing to say about the columns.
+
+`L2beatStripKey` is that one place: five cells over five names, on the risk card, directly
+above the five rows it summarises in the same order. Learn it once and every strip in the app
+pays off. `L2beatRiskAxis.shortLabel` is **a shortening of OUR OWN label** — `label` is
+already ours, since their `wireName` is Title Case and the design system bans that — and no
+value, sentence or verdict L2BEAT publishes is abbreviated anywhere in this feature.
+
+A pick hands back the axis and scrolls the card to that row, anchored `.center` because the
+five read as a set and pinning one to the top hides the four it is being compared against.
+**`onPick` is optional and that is §83, not laziness**: the thing sheet embeds this same card
+inside a scroll it does not own, so there is nothing there for a tap to drive, and a cell that
+looks tappable and cannot move anything is the dead control this app bans. Absent a handler
+the key is a legend, drawn identically.
+
+### 5. THE ROW SPENT ITS WORDS REPEATING THE DRAWING BESIDE IT
+
+A directory row printed "2 of 5 flagged" two inches from a strip that says exactly that in
+colour. The fix is NOT to delete the words — `L2beatSentimentTag`'s own rule is that a
+colour-only verdict is unreadable in greyscale and to anyone who has not learned the palette,
+and that rule is kept rather than traded. `L2beatLead.shortLabel` says the one fact the strip
+cannot carry at sixty points: **WHICH of the five L2BEAT leads with** ("Exit window flagged"),
+chosen by the fixed ladder `L2beatProject.lead` already computes. It stands down entirely
+under review, where the chip beside it says the same word and L2BEAT is telling you not to
+lean on the readings.
+
+Same shape on the card: **"What this asks" was repeated on all five rows**, so the card's
+most-repeated element was a control rather than a reading — five identical tinted lines
+competing with L2BEAT's five different sentences. It is one toggle over the section now, which
+is also what it actually is: those five lines are about the QUESTIONS and never about this
+chain's answers, so they are wanted together or not at all.
+
+### 6. What is guarded, and what is still unmeasured
+
+`shortLabel` (both of them) and `L2beatIncidentAge` are pure and live in the Foundation-only
+files `l2beat-selftest.sh` compiles WHOLE, because nothing on this host can make L2BEAT record
+an incident — the harness is not the best proof these numbers are right, it is the only one.
+The recency boundary, the year's stringification (§375's "2,019 was your loudest year" defect,
+which `String(localized:)` will reproduce for any interpolated `Int`), the lead phrase's
+refusal to call a clean chain safe, and every one of the five axis names being distinct are
+mutation-proven. Drift guards tie the card to the keyed strip, the milestone rows to a date,
+and the directory's recency test to `L2beatRoomSource.recencyDays` rather than a number of
+its own.
+
+**Still UNMEASURED, unchanged from §428**: no sweep has ever run against a device, so none of
+these surfaces has drawn a live reading.
+
 ## 430. Four Walletbeat facts, three of which were already in the corpus (user: "how if at all would you improve the UI and UX of the walletbeat experience", then "OK do all", 2026-08-21)
 
 Amends §419, §421 and §422.

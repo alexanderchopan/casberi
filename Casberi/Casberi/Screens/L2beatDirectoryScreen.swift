@@ -97,7 +97,7 @@ struct L2beatDirectoryScreen: View {
 		return List {
 			Section {
 				VStack(alignment: .leading, spacing: DS.Space.s3) {
-					EmptyView()
+					searchField
 
 					Picker("", selection: $layer) {
 						ForEach(Layer.allCases) { Text($0.label).tag($0) }
