@@ -20,6 +20,53 @@ mkdir -p "$OUT"
 step() { print -P "%F{cyan}▶ $1%f"; }
 fail() { print -P "%F{red}✗ $1%f"; exit 1; }
 
+# ── Mac verify runs IN PARALLEL (user rule, 2026-08-21) ────────────
+# One command verifies both platforms: the Catalyst compile gate below proves
+# the Mac still BUILDS, verify-mac.sh is the only pass that proves it still
+# RUNS, and the two being separate scripts was discovered by the user, not
+# chosen. So verify-mac.sh is launched in the background here and GATED at the
+# end of this pass — a red Mac run fails verify.sh.
+#
+# Safe concurrently by construction, not hope: the derivedData dirs never
+# overlap (CasberiDD/CasberiCatalystDD here, CasberiMacDD there), every
+# harness scratches through mktemp, and verify-mac.sh never touches the
+# simulator. LAUNCH_CYCLES / SKIP_LIVE / VERIFY_NO_CACHE propagate through the
+# environment, so one knob tunes both passes.
+#
+#   SKIP_MAC=1     opt out (offline docs-only runs, or when the Mac pass is
+#                  being driven separately).
+#   --build-only   never launches it — that flag is the quick compile gate,
+#                  and the Catalyst compile below already covers the Mac half.
+#
+# If a verify-mac.sh is ALREADY running (the nightly, another session), the
+# launch is SKIPPED AND SAID — a second run against the same CasberiMacDD
+# would fight its build DB — and the closing gate says this pass did not
+# certify the Mac, so the skip can't read as a green.
+MACPID=""
+MACLOG="$OUT/verify-mac-parallel.log"
+if [[ "${1:-}" == "--build-only" || -n "${SKIP_MAC:-}" ]]; then
+  [[ -n "${SKIP_MAC:-}" ]] && print -P "%F{yellow}⚠ Mac verify skipped (SKIP_MAC=1) — this pass certifies iOS only%f"
+elif pgrep -f "scripts/verify-mac.sh" >/dev/null 2>&1; then
+  print -P "%F{yellow}⚠ a verify-mac.sh is already running — not starting a second (shared CasberiMacDD); this pass will NOT gate on the Mac%f"
+else
+  "$ROOT/scripts/verify-mac.sh" >"$MACLOG" 2>&1 &
+  MACPID=$!
+  step "Mac verify launched in parallel (pid $MACPID) → $MACLOG"
+fi
+# On an iOS failure the parallel Mac run is stopped rather than orphaned: its
+# verdict would be about a tree that is about to change, and a leftover
+# xcodebuild + GUI launch cycle churning behind a red pass reads as a hang.
+# The kill is pid-scoped (this run's own child), never a bare pkill.
+_mac_reap() {
+  local rc=$?
+  if [[ -n "$MACPID" ]] && kill -0 "$MACPID" 2>/dev/null && (( rc != 0 )); then
+    pkill -P "$MACPID" 2>/dev/null || true
+    kill "$MACPID" 2>/dev/null || true
+    print -P "%F{yellow}⚠ iOS pass failed — the parallel Mac verify was stopped (partial log: $MACLOG)%f"
+  fi
+}
+trap _mac_reap EXIT
+
 # ── Pure-logic harness runner (PERF, 2026-08-19) ───────────────────
 # The 51 harnesses registered below are INDEPENDENT PROCESSES over
 # Foundation-only sources: each compiles its file WHOLE and mutation-tests it
@@ -1951,6 +1998,28 @@ else
       fail "All-room features the demo cannot draw: ${ALLFEED_MISSING[*]} — see $ALLFEED_LOG"
     fi
   fi
+fi
+
+# ── Mac verify gate (user rule, 2026-08-21 — launched at the top) ──────────
+# The wait is LAST so the whole iOS pass ran alongside it; wall time is now
+# max(iOS, Mac), and verify-mac.sh (build + cold launches + probes + perf) is
+# usually the long pole. Gated, not reported: a green verify.sh means BOTH
+# platforms, running — not just compiling.
+if [[ -n "$MACPID" ]]; then
+  step "Mac verify (parallel — waiting)"
+  if wait "$MACPID"; then
+    grep -E "^SUMMARY" "$MACLOG" || true
+    print -P "%F{green}✓ verify-mac.sh green ($(grep -m1 -o 'OUTPUT_DIR .*' "$MACLOG" | cut -d' ' -f2-))%f"
+  else
+    tail -30 "$MACLOG"
+    fail "verify-mac.sh failed — full log: $MACLOG"
+  fi
+elif [[ "${1:-}" != "--build-only" ]]; then
+  # Reached when SKIP_MAC=1 or another verify-mac.sh was already running.
+  # Said again at the end because the launch-time note scrolled away 15
+  # minutes ago, and a closing ✓ with a silent gap is the failure mode this
+  # repo's checks exist to prevent.
+  print -P "%F{yellow}⚠ this pass did NOT gate on the Mac (skipped or already running elsewhere)%f"
 fi
 
 print -P "%F{green}✓ verify complete → $OUT%f"
