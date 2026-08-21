@@ -31,6 +31,15 @@ import Foundation
 /// relationship matters — exactly the analysis this card was told not to do.
 /// The amounts are still stated, per wallet, in words.
 ///
+/// ## A node is a door (2026-08-20)
+///
+/// Tapping a connected address opens the book's own address card — the same
+/// screen its row on the book opens, showing the same `AddressActivity`
+/// history this card counted. It stays inside the factual ruling because a
+/// door asserts nothing: it goes where the card is already pointing. It also
+/// gives an already-NAMED node somewhere to go, which the naming button below
+/// (which skips them by definition) never could.
+///
 /// PURE AND FOUNDATION-ONLY, like `WalletFlow` and for the same reason: the
 /// failure mode here is a WRONG COUNT, which renders perfectly and looks right.
 /// `scripts/wallet-viz-selftest.sh` compiles this file AS SHIPPED and feeds it
@@ -47,6 +56,14 @@ enum AddressConnections {
         /// The other address, folded to the book's key (lowercased hex on EVM,
         /// case preserved on Solana — `AddressBook.key(for:)` owns that rule).
         let addressKey: String
+        /// The address as it actually LANDED, unfolded — carried beside the key
+        /// because a node is a DOOR now (2026-08-20). The address card it opens
+        /// prints this string in full, warns about look-alikes against it and
+        /// builds its explorer link from it, so handing that screen the folded
+        /// form would strip the EIP-55 checksum from the one surface whose
+        /// whole job is telling two similar addresses apart. The key remains
+        /// the identity; this is only ever displayed and passed onward.
+        let address: String
         /// What to call it: your name for it, a known handle, else the short
         /// form. Never a raw full hash — the title rule every wallet surface
         /// already keeps.
@@ -72,6 +89,8 @@ enum AddressConnections {
     /// A connected address — one row on the left of the spine.
     struct Node: Identifiable, Equatable {
         let id: String
+        /// The unfolded address behind `id`, for the door. See `Edge.address`.
+        let address: String
         let name: String
         /// How many transactions there were, across every wallet it reaches.
         let count: Int
@@ -105,6 +124,24 @@ enum AddressConnections {
         /// Named rather than drawn as empty nodes — an absence reads better as
         /// a sentence.
         let untouchedWalletNames: [String]
+        /// The connected addresses that are COUNTED but not drawn, in the same
+        /// first-dealt order the drawn ones are in (2026-08-20).
+        ///
+        /// They are named rather than only tallied because `nodeLimit` cuts by
+        /// first-appearance order, which means the undrawn set is by
+        /// construction the NEWEST connections — a relationship formed today
+        /// can never enter the picture, and "2 more aren't drawn" was its only
+        /// trace. Naming is what the card already does for an absence it can't
+        /// draw (`untouchedWalletNames`), and it ranks nothing: the order is
+        /// the order the drawing is in.
+        let hiddenNames: [String]
+        /// The first unnamed CONNECTED address — over every connection, drawn
+        /// or not. Stored rather than computed off `nodes` (2026-08-20): it
+        /// used to scan the drawn prefix alone, so once the six drawn addresses
+        /// were all named the card's ONE action vanished while an unnamed
+        /// connection sat undrawn behind the cap. A display cap is not an
+        /// accounting rule, and it is not an action rule either.
+        let firstUnnamed: Node?
 
         /// True when there is nothing connected. Not the same as the map being
         /// nil: nil means the card cannot say anything at all (fewer than two
@@ -112,12 +149,10 @@ enum AddressConnections {
         var isEmpty: Bool { connectedCount == 0 }
 
         /// How many connected addresses are counted but not drawn. Stated by
-        /// the card — the no-silent-caps rule.
+        /// the card — the no-silent-caps rule. Derived from the COUNT rather
+        /// than from `hiddenNames.count` so it stays an accounting statement:
+        /// the two must agree, and the harness asserts they do.
         var hiddenCount: Int { max(0, connectedCount - nodes.count) }
-
-        /// The first unnamed connected address, which is the card's one action.
-        /// First rather than "the busiest": picking by size would be a ranking.
-        var firstUnnamed: Node? { nodes.first { !$0.named } }
     }
 
     /// A connection needs two of your wallets to exist at all, so a person
@@ -144,7 +179,8 @@ enum AddressConnections {
 
         // Group by address, keeping first-appearance order.
         var order: [String] = []
-        var byAddress: [String: (name: String, named: Bool, count: Int, wallets: [String])] = [:]
+        var byAddress: [String: (address: String, name: String, named: Bool,
+                                 count: Int, wallets: [String])] = [:]
         for edge in edges {
             // An edge to a wallet we no longer watch is history about a watch
             // that ended — it can't contribute to a count phrased "your
@@ -155,7 +191,11 @@ enum AddressConnections {
             guard edge.addressKey != edge.walletKey else { continue }
             if byAddress[edge.addressKey] == nil {
                 order.append(edge.addressKey)
-                byAddress[edge.addressKey] = (edge.addressName, edge.named, 0, [])
+                // The first SPELLING wins for the same reason the first name
+                // does: a door that opens a differently-cased address between
+                // two passes over identical data reads as broken.
+                byAddress[edge.addressKey] = (edge.address, edge.addressName,
+                                              edge.named, 0, [])
             }
             var entry = byAddress[edge.addressKey]!
             entry.count += 1
@@ -174,7 +214,8 @@ enum AddressConnections {
         var connected: [Node] = []
         for key in order {
             guard let entry = byAddress[key], entry.wallets.count >= 2 else { continue }
-            connected.append(Node(id: key, name: entry.name, count: entry.count,
+            connected.append(Node(id: key, address: entry.address,
+                                  name: entry.name, count: entry.count,
                                   named: entry.named,
                                   // Rendered in YOUR watch order, not the order
                                   // the transfers happened to land in, so two
@@ -184,7 +225,8 @@ enum AddressConnections {
 
         guard !connected.isEmpty else {
             return Map(nodes: [], columns: [], connectedCount: 0,
-                       untouchedWalletNames: watched.map(\.name))
+                       untouchedWalletNames: watched.map(\.name),
+                       hiddenNames: [], firstUnnamed: nil)
         }
 
         let connectedKeys = Set(connected.map(\.id))
@@ -201,10 +243,15 @@ enum AddressConnections {
             .map { Column(id: $0.key, name: $0.name, usd: totals[$0.key]) }
         let untouched = watched.filter { !touched.contains($0.key) }.map(\.name)
 
-        return Map(nodes: Array(connected.prefix(nodeLimit)),
+        let drawn = Array(connected.prefix(nodeLimit))
+        return Map(nodes: drawn,
                    columns: columns,
                    connectedCount: connected.count,
-                   untouchedWalletNames: untouched)
+                   untouchedWalletNames: untouched,
+                   hiddenNames: connected.dropFirst(drawn.count).map(\.name),
+                   // Over every connection, never the drawn prefix — see the
+                   // property's own doc for the action that used to disappear.
+                   firstUnnamed: connected.first { !$0.named })
     }
 
     // MARK: - The card's words
@@ -229,12 +276,34 @@ enum AddressConnections {
         }
     }
 
-    /// "and 2 more" — the drawn-vs-counted gap, never silent.
-    static func hiddenNote(_ hidden: Int) -> String? {
+    /// How many undrawn connections are NAMED before the sentence gives up and
+    /// counts the rest. Three, because a fourth name turns a caveat into a
+    /// paragraph — and the count in front of them is the truth either way.
+    static let hiddenNameLimit = 3
+
+    /// The drawn-vs-counted gap, never silent — and named where it can be
+    /// (2026-08-20). `hidden` always leads, so the sentence states the whole
+    /// truth even when the list is trimmed to `hiddenNameLimit`.
+    ///
+    /// Order is `hiddenNames`' own, which is the drawing's own: naming is not
+    /// ranking. Falls back to the bare count when nothing could be named,
+    /// which keeps the note honest rather than absent.
+    static func hiddenNote(hidden: Int, names: [String]) -> String? {
         guard hidden > 0 else { return nil }
+        let shown = Array(names.prefix(hiddenNameLimit))
+        guard !shown.isEmpty else {
+            return hidden == 1
+                ? String(localized: "1 more isn't drawn.")
+                : String(localized: "\(hidden) more aren't drawn.")
+        }
+        let list = shown.joined(separator: ", ")
+        let rest = hidden - shown.count
+        if rest > 0 {
+            return String(localized: "\(hidden) more aren't drawn: \(list) and \(rest) others.")
+        }
         return hidden == 1
-            ? String(localized: "1 more isn't drawn.")
-            : String(localized: "\(hidden) more aren't drawn.")
+            ? String(localized: "1 more isn't drawn: \(list).")
+            : String(localized: "\(hidden) more aren't drawn: \(list).")
     }
 
     /// The wallets nothing connected reaches, as a sentence rather than empty

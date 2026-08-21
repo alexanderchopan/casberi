@@ -64,6 +64,10 @@ extension AddressConnections {
 
             let label = WalletIngest.knownLabel(for: counterparty)
             out.append(Edge(addressKey: AddressBook.key(for: counterparty),
+                            // The landed spelling, unfolded — the door opens
+                            // the address card with it, which prints it in full
+                            // and compares it against look-alikes.
+                            address: counterparty,
                             addressName: label ?? WalletStore.shortAddress(counterparty),
                             named: label != nil,
                             walletKey: AddressBook.key(for: owner),
@@ -132,7 +136,16 @@ extension AddressConnections {
         for node in map.nodes {
             out.append("connRow| \(node.name) | transactions=\(node.count) "
                         + "| named=\(node.named ? "YES" : "NO") "
-                        + "| wallets=\(node.walletKeys.count)")
+                        + "| wallets=\(node.walletKeys.count) "
+                        // The door's destination. Printed because a node whose
+                        // address never landed opens the wrong card silently.
+                        + "| opens=\(node.address)")
+        }
+        // The undrawn tail, by name. `hiddenCount` alone cannot say whether the
+        // cap is hiding a stranger you should name or six shops you already
+        // know, and the newest connections are always the ones behind it.
+        for name in map.hiddenNames {
+            out.append("connHidden| \(name)")
         }
         for column in map.columns {
             out.append("connWallet| \(column.name) | "
@@ -142,7 +155,15 @@ extension AddressConnections {
                                     connectedCount: map.connectedCount) {
             out.append("note: \(note)")
         }
-        if let target = map.firstUnnamed { out.append("button→ name \(target.name)") }
+        if let note = hiddenNote(hidden: map.hiddenCount, names: map.hiddenNames) {
+            out.append("note: \(note)")
+        }
+        // Says whether the target is one of the DRAWN rows, because the bug
+        // this replaced was exactly a target that existed and was unreachable.
+        if let target = map.firstUnnamed {
+            let drawn = map.nodes.contains { $0.id == target.id }
+            out.append("button→ name \(target.name) (drawn=\(drawn ? "YES" : "NO"))")
+        }
         return out
     }
 }

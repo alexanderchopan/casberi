@@ -868,8 +868,28 @@ struct WalletScreen: View {
         if let connections {
             Section {
                 AddressConnectionsCard(map: connections) { node in
-                    namingAddress = node.id
+                    // The LANDED spelling, not the folded key: `setName` and
+                    // `CounterpartyRetitle` both fold it themselves, but
+                    // `realName`'s auto-name test compares against the address
+                    // it was handed, and a lowercased hex is not the form the
+                    // book filed.
+                    namingAddress = node.address
                     namingDraft = ""
+                } onOpen: { node in
+                    // Through the book's OWN sheet slot, so a connected address
+                    // opens the identical card its row on the book opens — and
+                    // so the card carries no presentation of its own (CLAUDE.md,
+                    // "one screen, one `.sheet`").
+                    //
+                    // An address the book has never heard of gets an ephemeral
+                    // entry rather than no door: `AddressCard` reads the book
+                    // first and falls back to what it was handed, and Rename
+                    // there files it for real. Refusing to open would shut the
+                    // door on exactly the addresses this card exists to surface.
+                    bookSheet = .entry(AddressBook.shared.entry(for: node.address)
+                                        ?? AddressBook.Entry(address: node.address,
+                                                             name: node.name,
+                                                             addedAt: .now))
                 }
             }
             .listRowInsets(EdgeInsets(top: DS.Space.s6, leading: DS.Space.s4,

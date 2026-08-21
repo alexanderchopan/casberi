@@ -470,6 +470,16 @@ struct AddressCard: View {
     /// Live, so a rename or a kind landing repaints the card.
     private var current: AddressBook.Entry { book.entry(for: entry.address) ?? entry }
 
+    /// Whether the book actually HOLDS this address (2026-08-20).
+    ///
+    /// The card can be opened for one it doesn't: the connections card's nodes
+    /// became doors (prd §295 follow-up), and a connected address nobody has
+    /// ever named is precisely the one worth opening — so the entry handed in
+    /// may be ephemeral, invented for the trip. Everything here still reads
+    /// correctly off it; the only line that would LIE is `addedAt`, which
+    /// would print "named today" about an address that was never named.
+    private var isInBook: Bool { book.entry(for: entry.address) != nil }
+
     /// The corpus's own record of this address — counterparty transactions
     /// plus its own Peer/Pool activity (see `AddressActivity`), newest first.
     private var history: [Thing] {
@@ -624,7 +634,15 @@ struct AddressCard: View {
             ?? String(localized: "Wallet")
         var parts: [String] = [kindWord]
         if let provenance = current.provenance { parts.append(provenance) }
-        parts.append(String(localized: "named \(current.addedAt.formatted(.dateTime.month(.abbreviated).day()))"))
+        // An address reached through a door rather than through the book has no
+        // naming date to state, and stating today's would be the fake status
+        // §83 bans. It says what is true instead — which doubles as the reason
+        // the Rename button above is worth pressing.
+        if isInBook {
+            parts.append(String(localized: "named \(current.addedAt.formatted(.dateTime.month(.abbreviated).day()))"))
+        } else {
+            parts.append(String(localized: "not in your book"))
+        }
         return parts.joined(separator: " · ")
     }
 

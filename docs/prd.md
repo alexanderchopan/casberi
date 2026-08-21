@@ -15736,6 +15736,78 @@ and an unpriced leg contributing `$0` instead of nothing. `-connectionsProbe
 YES` reports the read phase by phase with the excluded tallies — an empty card
 has four causes that render as the same silence and only one of them is a bug.
 
+### §295 follow-up — a node is a door, and the cap stopped hiding things (user: "how would you improve the address book for wallets and connected addresses diagram if at all", then "ok do all", 2026-08-20)
+
+Asked what would improve this card, most of the obvious answers were already
+refused above with reasons — weighted ribbons, a hue, a most-active order, an
+edge from a shared counterparty — and none of them come back here. The ruling
+holds. Three things changed instead, and **one of them is a shipped bug**.
+
+**1. The naming prompt could vanish behind the display cap.** `firstUnnamed`
+scanned `nodes`, which is `connected.prefix(nodeLimit)` — so once the drawn six
+were all named, the card's naming action disappeared while an unnamed
+connection sat undrawn behind the cap. Invisible from outside: a card with no
+button looks exactly like a card with nothing left to name. §295 already ruled
+that *a display cap is not an accounting rule* and made the totals cover the
+undrawn addresses; this is the same ruling one step further — **it is not an
+action rule either**. `Map.firstUnnamed` is stored now, computed over every
+connection. A consequence worth stating: the button can target an address that
+is not on screen, which is correct, and is why it names the address rather than
+saying "Name this address".
+
+**2. The undrawn tail is NAMED, not just counted.** `nodeLimit` cuts by
+first-appearance order, so everything behind it is by construction a *newer*
+connection than everything drawn — a relationship formed today can never enter
+the picture, and "2 more aren't drawn" was its only trace. Naming is what this
+card already does for an absence it cannot draw (`untouchedWalletNames`), and
+it ranks nothing: the order is the drawing's own. The count always leads, so a
+list trimmed at `hiddenNameLimit` (3, because a fourth name turns a caveat into
+a paragraph) still states the whole truth and counts what it did not print.
+
+**3. A node is a door.** Tapping a connected address opens the book's own
+address card — the same screen its row on the book opens, over the same
+`AddressActivity` history this card counted. It stays inside the factual ruling
+because **a door asserts nothing**: it goes where the card was already
+pointing. It is also the only thing an already-NAMED node can do, since the
+naming prompt skips them by definition. Routed through `WalletScreen`'s
+existing `bookSheet` slot as a closure, never a `.sheet` of the card's own — a
+presentation inside a `List` row resolves to the same presenting controller and
+the row's tap tears down the sheet it just started (paid three times).
+
+Two things the door forced, both honesty rather than plumbing. The `Edge`/`Node`
+now carry the **unfolded address** beside the book key: the address card prints
+it in full, warns about look-alikes against it and builds its explorer link
+from it, so handing that screen a lowercased hex would strip the EIP-55
+checksum on the one surface whose whole job is telling two similar addresses
+apart. First spelling wins, for the reason the first NAME wins — a door that
+opens a differently-cased address between two passes over identical data reads
+as broken. And `AddressCard` can now be opened for an address **the book has
+never held**, which is precisely the case worth opening; its "named 20 Aug"
+clause would have claimed you named it today, so it says *"not in your book"*
+instead (§83), which doubles as the reason to press Rename.
+
+**Accessibility got better, not worse.** The spine was one combined element
+reading a single sentence, correct while nothing on it was actionable — a
+combined element would now swallow the node buttons and leave VoiceOver no way
+to open an address. It is `.contain` now: each node carries its own sentence
+("Mom, 4 transactions, reaches Main, Trading") *on the control that acts on
+it*, each wallet column reads as one item, and the `Path` is hidden, since it
+reads as nothing and everything it draws is spoken by the node it leaves from.
+
+**Declined:** tap-to-highlight one node's ribbons. At six nodes and five
+wallets the same-weight monochrome curves genuinely stop being traceable, but
+the tap is better spent on the door, and a matrix redesign would re-litigate
+the mock already chosen.
+
+**Verified.** `scripts/wallet-viz-selftest.sh` (276 → 342 checks), **mutation-
+proven six ways**, each a silent wrong answer: the shipped `firstUnnamed` bug
+itself, a tail counted but never named, a door carrying the folded key, the
+LAST spelling winning, a trimmed list that swallows what it left out, and a
+list that never trims. `-connectionsProbe` now prints each node's door
+destination, one `connHidden|` line per undrawn address, and whether the naming
+target is drawn — that last one because the bug this fixed was exactly a target
+that existed and was unreachable.
+
 ## §296 — Cloudflare: the dates behind a site you run (2026-08-03)
 
 The bridge landed first (`Model/CloudflareBridge.swift`, seat `cloudflare`,

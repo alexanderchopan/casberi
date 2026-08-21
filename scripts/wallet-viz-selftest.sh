@@ -798,10 +798,14 @@ eq(WalletUserOps.word(nil, at: 0), 0, "absent data reads zero")
 
 typealias Conn = AddressConnections
 
+// `spelling` is the UNFOLDED address the door opens with — defaulted to an
+// obviously-different form of the key so any test that reads it proves the
+// node carried the landed spelling rather than the folded one.
 func edge(_ address: String, _ wallet: String,
           usd: Double? = nil, named: Bool = false,
-          name: String? = nil) -> Conn.Edge {
-    Conn.Edge(addressKey: address, addressName: name ?? address,
+          name: String? = nil, spelling: String? = nil) -> Conn.Edge {
+    Conn.Edge(addressKey: address, address: spelling ?? address.uppercased(),
+              addressName: name ?? address,
               named: named, walletKey: wallet, usd: usd)
 }
 func watched(_ keys: String...) -> [Conn.WatchedWallet] {
@@ -906,6 +910,45 @@ check(capped?.nodes.count == Conn.nodeLimit, "…only `nodeLimit` are drawn")
 check(capped?.hiddenCount == 1, "…and the gap is stated")
 eq(capped?.columns.first?.usd, Double(Conn.nodeLimit + 1) * 10,
    "the total covers the undrawn ones too — a display cap is not an accounting rule")
+check(capped?.hiddenNames.count == capped?.hiddenCount,
+      "the named tail and the counted gap agree — they are spelled separately")
+check(capped?.hiddenNames == ["a\(Conn.nodeLimit)"],
+      "…and the tail is the NEWEST connection, which is what the cap always cuts")
+
+// THE ACTION MUST NOT VANISH BEHIND THE CAP. `firstUnnamed` used to scan the
+// drawn prefix alone, so a book whose drawn six were all named lost the card's
+// naming prompt entirely while an unnamed connection sat undrawn behind it —
+// invisible, since a card with no button looks exactly like a card with
+// nothing left to name. A display cap is not an action rule either.
+var capNamed: [Conn.Edge] = []
+for i in 0..<Conn.nodeLimit {
+    capNamed.append(edge("n\(i)", "main", named: true, name: "Named \(i)"))
+    capNamed.append(edge("n\(i)", "trading", named: true, name: "Named \(i)"))
+}
+capNamed.append(edge("stranger", "main"))
+capNamed.append(edge("stranger", "trading"))
+let behindCap = Conn.map(edges: capNamed, watched: watched("main", "trading"))
+check(behindCap?.nodes.count == Conn.nodeLimit, "every drawn node is named")
+check(behindCap?.nodes.allSatisfy(\.named) == true, "…all of them")
+check(behindCap?.firstUnnamed?.id == "stranger",
+      "…and the prompt still targets the unnamed one behind the cap")
+
+// ── the door carries the LANDED spelling, not the folded key ──────────────
+// The address card it opens prints the address in full, warns about
+// look-alikes against it and builds its explorer link from it, so a folded
+// hex would strip the EIP-55 checksum on the one screen whose job is telling
+// two similar addresses apart.
+let spelled = Conn.map(edges: [edge("0xabc", "main", spelling: "0xAbC"),
+                               edge("0xabc", "trading", spelling: "0xabc")],
+                       watched: watched("main", "trading"))
+check(spelled?.nodes.first?.id == "0xabc", "the KEY stays the folded identity")
+check(spelled?.nodes.first?.address == "0xAbC",
+      "…while the door gets the spelling as it landed")
+check(Conn.map(edges: [edge("0xabc", "main", spelling: "0xabc"),
+                       edge("0xabc", "trading", spelling: "0xAbC")],
+               watched: watched("main", "trading"))?.nodes.first?.address == "0xabc",
+      "the FIRST spelling wins — a door that changes address between two "
+        + "passes over identical data reads as broken")
 
 // ── the words ─────────────────────────────────────────────────────────────
 check(Conn.headline(count: 0).contains("None"), "zero says none")
@@ -916,8 +959,32 @@ check(Conn.subhead(count: 0) == nil,
       "no definition under a negative — the headline is already the whole answer")
 check(Conn.subhead(count: 1) != nil && Conn.subhead(count: 2) != nil,
       "…but it is said whenever there IS something connected")
-check(Conn.hiddenNote(0) == nil, "nothing hidden, nothing said")
-check(Conn.hiddenNote(1) != nil && Conn.hiddenNote(4) != nil, "…otherwise always said")
+check(Conn.hiddenNote(hidden: 0, names: []) == nil, "nothing hidden, nothing said")
+check(Conn.hiddenNote(hidden: 1, names: []) != nil
+        && Conn.hiddenNote(hidden: 4, names: []) != nil,
+      "…otherwise always said, even when nothing could be named")
+
+// ── the undrawn tail is NAMED, not just counted ───────────────────────────
+// `nodeLimit` cuts by first-appearance order, so everything behind the cap is
+// by construction a NEWER connection than everything drawn — a relationship
+// formed today can never enter the picture. "2 more aren't drawn" was its only
+// trace, which is a silent cap wearing a number.
+check(Conn.hiddenNote(hidden: 1, names: ["Shop"])?.contains("Shop") == true,
+      "one undrawn connection is NAMED")
+let twoHidden = Conn.hiddenNote(hidden: 2, names: ["Shop", "Mom"])
+check(twoHidden?.contains("Shop") == true && twoHidden?.contains("Mom") == true,
+      "…and so are two")
+check(twoHidden?.contains("2") == true,
+      "…with the count still leading, so the sentence states the whole truth")
+// The trim is where a caveat would otherwise become a paragraph. The COUNT
+// never trims — only the list does — so the note cannot understate the gap.
+let manyHidden = Conn.hiddenNote(hidden: 9,
+                                 names: ["A", "B", "C", "D", "E", "F", "G", "H", "I"])
+check(manyHidden?.contains("9") == true, "a long tail still states its real size")
+check(manyHidden?.contains("C") == true && manyHidden?.contains("D") == false,
+      "…names only `hiddenNameLimit` of them")
+check(manyHidden?.contains("6") == true, "…and counts the rest it did not name")
+check(Conn.hiddenNameLimit == 3, "…which is three")
 check(Conn.untouchedNote(["COLD"], connectedCount: 0) == nil,
       "at zero connections the wallet list is the headline repeated, so it is silent")
 check(Conn.untouchedNote([], connectedCount: 2) == nil, "nothing unreached, nothing said")

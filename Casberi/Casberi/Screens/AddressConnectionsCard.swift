@@ -23,6 +23,13 @@ import SwiftUI
 /// - **Order is the order you first dealt with each address**, never count and
 ///   never dollars. Sorting would rank.
 ///
+/// Two interactions, and neither of them analyses anything (2026-08-20): a
+/// node is a DOOR onto that address's own card, and the naming prompt below
+/// still targets the first address nobody has named. The door came second
+/// because a named node had nowhere to go — the prompt skips them by
+/// definition — and because the card was already counting the exact history
+/// the address card renders.
+///
 /// FLAT BY LAW like its neighbours — a plain VStack and one `Path`, no generic
 /// `Widget`/`Row` mount (the render-depth lesson, paid three times).
 ///
@@ -33,6 +40,15 @@ struct AddressConnectionsCard: View {
     /// Names an address that nobody has named. Hands back the SHORT form for
     /// the alert's title; the card holds no hex of its own.
     var onName: (AddressConnections.Node) -> Void
+    /// Opens a connected address's own card (2026-08-20) — the same screen the
+    /// book's row opens, over the same history this card counted.
+    ///
+    /// A CLOSURE, never a `.sheet` of this card's own: a presentation attached
+    /// to a view inside a `List` row resolves to the same presenting
+    /// controller as the screen's, and the row's tap then tears down the sheet
+    /// it just started (CLAUDE.md, "one screen, one `.sheet`", paid three
+    /// times). The Wallet manager routes this through the slot it already has.
+    var onOpen: (AddressConnections.Node) -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// **The ribbons draw themselves** (2026-08-03, prd §297) — a `trim` across
@@ -103,8 +119,20 @@ struct AddressConnectionsCard: View {
                 // in the order they're already listed (first dealt with), so
                 // the arrival ranks nothing the card doesn't.
                 ForEach(Array(map.nodes.enumerated()), id: \.element.id) { index, node in
-                    nodeRow(node)
-                        .chartArrival(index: index, reduceMotion: reduceMotion)
+                    Button {
+                        DSHaptic.selection()
+                        onOpen(node)
+                    } label: {
+                        nodeRow(node)
+                    }
+                    .buttonStyle(.plain)
+                    // The node's own sentence, on the node — what the combined
+                    // figure below used to read out in one breath. VoiceOver
+                    // gets strictly more here than it did: the same facts, now
+                    // attached to the control that acts on them.
+                    .accessibilityLabel(Text(nodeDescription(node)))
+                    .accessibilityHint(Text("Opens this address"))
+                    .chartArrival(index: index, reduceMotion: reduceMotion)
                 }
             }
             .frame(width: Self.sideWidth, height: height)
@@ -116,15 +144,20 @@ struct AddressConnectionsCard: View {
             VStack(spacing: 0) {
                 ForEach(Array(map.columns.enumerated()), id: \.element.id) { index, column in
                     columnRow(column)
+                        // One item per wallet ("Main, $1,240"), not two stray
+                        // labels — the name and its total are one fact.
+                        .accessibilityElement(children: .combine)
                         .chartArrival(index: index, reduceMotion: reduceMotion)
                 }
             }
             .frame(width: Self.sideWidth, height: height)
         }
-        // The picture is one figure, not a list of controls — VoiceOver reads
-        // the sentence the drawing makes rather than twelve stray labels.
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(Text(spineDescription))
+        // CONTAIN, not combine (2026-08-20). The spine used to be one figure
+        // reading a single sentence, which was right while nothing on it was
+        // actionable; a combined element would now swallow the node buttons
+        // and leave VoiceOver no way to open an address. Each node carries its
+        // own sentence instead, so nothing is lost by splitting the figure up.
+        .accessibilityElement(children: .contain)
     }
 
     private func nodeRow(_ node: AddressConnections.Node) -> some View {
@@ -141,6 +174,10 @@ struct AddressConnectionsCard: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .frame(height: Self.rowHeight)
+        // The whole row is the door, not just the glyphs in it. Without this a
+        // `.plain` button's hit region follows the rendered text, so a short
+        // name ("Mom") would leave most of its own row dead to the touch.
+        .contentShape(Rectangle())
     }
 
     private func columnRow(_ column: AddressConnections.Column) -> some View {
@@ -201,6 +238,10 @@ struct AddressConnectionsCard: View {
             // and at `ChartEntrance.wipe` a busy map is a flicker.
             withAnimation(.easeInOut(duration: 1.1).delay(ChartEntrance.lead)) { drawn = 1 }
         }
+        // A `Path` reads as nothing to VoiceOver, and everything it draws is
+        // now spoken by the node it leaves from ("…reaches Main, Trading").
+        // Hidden rather than left as an empty element between the two columns.
+        .accessibilityHidden(true)
     }
 
     /// Where a side's stack starts, so a short side centres against the tall one.
@@ -214,13 +255,18 @@ struct AddressConnectionsCard: View {
 
     // MARK: - The action, and the caveats
 
-    /// The card's ONE action, and only when a connected address has no name.
+    /// The card's naming prompt, and only when a connected address has no name.
     ///
     /// An address that has moved real money with two of your wallets and still
     /// reads as hex is the best naming prompt this app can show — and naming it
     /// rewrites every landed transfer that carries it (`CounterpartyRetitle`),
     /// so one tap fixes the past as well as the future. It targets the FIRST
     /// unnamed one; picking the busiest would be a ranking.
+    ///
+    /// Its target is drawn from EVERY connection, not the drawn six, so the
+    /// prompt cannot vanish behind the display cap (`Map.firstUnnamed`). That
+    /// means it can name a node that isn't on screen — correct, and why the
+    /// button says which address it is rather than just "Name this address".
     private func nameButton(_ target: AddressConnections.Node) -> some View {
         Button {
             DSHaptic.selection()
@@ -244,7 +290,10 @@ struct AddressConnectionsCard: View {
     @ViewBuilder
     private var notes: some View {
         VStack(alignment: .leading, spacing: 2) {
-            if let hidden = AddressConnections.hiddenNote(map.hiddenCount) {
+            // Named, not just counted: the cap cuts by first-dealt order, so
+            // everything behind it is a NEWER connection than everything drawn.
+            if let hidden = AddressConnections.hiddenNote(hidden: map.hiddenCount,
+                                                          names: map.hiddenNames) {
                 note(hidden)
             }
             if let untouched = AddressConnections.untouchedNote(
@@ -272,15 +321,13 @@ struct AddressConnectionsCard: View {
                    : String(localized: "\(count) transactions")
     }
 
-    /// The spine as a sentence, for VoiceOver — the same facts the drawing
-    /// carries, since a `Path` reads as nothing at all.
-    private var spineDescription: String {
-        map.nodes.map { node in
-            let wallets = node.walletKeys.compactMap { key in
-                map.columns.first { $0.id == key }?.name
-            }
-            return String(localized:
-                "\(node.name), \(transactionCount(node.count)), reaches \(wallets.joined(separator: ", "))")
-        }.joined(separator: ". ")
+    /// One node's ribbons as a sentence, for VoiceOver — the facts the drawing
+    /// carries for this row, since a `Path` reads as nothing at all.
+    private func nodeDescription(_ node: AddressConnections.Node) -> String {
+        let wallets = node.walletKeys.compactMap { key in
+            map.columns.first { $0.id == key }?.name
+        }
+        return String(localized:
+            "\(node.name), \(transactionCount(node.count)), reaches \(wallets.joined(separator: ", "))")
     }
 }
