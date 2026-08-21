@@ -127,7 +127,7 @@ struct TokenQuickSheet: View {
         }
         .dsInk()
         .presentationDetents([.medium, .large])
-        .dsMacPageSheet()
+        .dsPageSheet()
         .presentationDragIndicator(.visible)
         .dsSheetCorner()
         .task {

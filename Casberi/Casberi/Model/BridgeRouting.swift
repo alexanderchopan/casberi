@@ -584,6 +584,22 @@ struct ConnectFormSheet: View {
                 }
         }
         .presentationDragIndicator(.visible)
+        // **This sheet had NO sizing of any kind, and it is the one that got
+        // reported (2026-08-20, user: "these modals are way too small, user has
+        // to scroll to read them in a tiny box").**
+        //
+        // Mac stopped raising this at all earlier the same day, so the Mac pass
+        // never looked at it as a sheet — but an iPad presents it as a form
+        // sheet exactly like a Mac did, and it holds a WHOLE setup screen:
+        // a hero card, an "Open X settings" button, three steps of instructions,
+        // a toggle and a folder picker, in a ~540x620 box. `.page` gives it the
+        // window instead.
+        //
+        // The general lesson, which is why `dsPageSheet` is now idiom-gated
+        // rather than `#if targetEnvironment(macCatalyst)`: "the Mac is the odd
+        // one out" was the wrong frame. Every REGULAR idiom sizes its sheets,
+        // and iPad had been quietly living with the same box all along.
+        .dsPageSheet()
         .onChange(of: live) { _, isLive in
             // A beat, so the screen's own success moment (the icon's coin
             // flip, the proof line counting up) is seen rather than cut off

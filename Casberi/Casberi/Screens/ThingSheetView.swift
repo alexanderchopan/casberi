@@ -622,6 +622,16 @@ struct ThingSheetView: View {
                     SafeQueueCard(check: check)
                         .padding(.horizontal, DS.Space.s4)
                         .padding(.top, DS.Space.s3)
+                    // The ask (prd §425). Under the queue card because that
+                    // card is what says WHO is still waiting; this is the one
+                    // seat in it that is yours. Draws nothing until the chain
+                    // has answered every refusal.
+                    if case .pending = check.status, let ref = thing.sourceRef,
+                       SignerKey.presence() != .none {
+                        SafeSignBlock(sourceRef: ref)
+                            .padding(.horizontal, DS.Space.s4)
+                            .padding(.top, DS.Space.s3)
+                    }
                 }
                 if let nudge = namePrompt {
                     NameAddressPrompt(address: nudge.address, count: nudge.count,
@@ -791,7 +801,7 @@ struct ThingSheetView: View {
         // card. It is the fallback door for a thing (a row tap fills the
         // detail pane instead), but every deep link, Spotlight hand-off
         // and pane-less state still arrives here.
-        .dsMacPageSheet()
+        .dsPageSheet()
         .presentationDragIndicator(.visible)
         .dsSheetCorner()
         // Only when pushed (`onBack` set): the eyebrow carries its own back

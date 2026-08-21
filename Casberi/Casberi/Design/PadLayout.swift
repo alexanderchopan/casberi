@@ -78,7 +78,7 @@ enum PadLayout {
     /// was the whole requirement. It is the wrong floor for the shape this app
     /// actually has on a Mac: a detail pane four rows tall is a slot, not a
     /// pane, and a `DSTray` states a height in the 560–660 band that a 480pt
-    /// window can only clamp (see `DSMacSheet`). 640 clears the common trays
+    /// window can only clamp (see `DSSheetSize`). 640 clears the common trays
     /// outright and still asks less of a display than any Mac has offered in a
     /// decade — the smallest current Mac screen is 1280×800.
     static var macMinWindowSize: CGSize {

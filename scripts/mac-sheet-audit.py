@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Every sheet in this app must have decided what it does on a Mac.
+"""Every sheet in this app must have decided how big it is on a REGULAR idiom.
 
 **Why this is mechanical rather than remembered (2026-08-20).** Catalyst
 honours NONE of iOS's sheet sizing: `presentationDetents`, the drag indicator
@@ -21,7 +21,7 @@ sheets. So a new `.sheet` ships phone-sized and nothing says a word.
 Two checks:
 
   1. A view declaring `presentationDetents` must ALSO declare a Mac sizing
-     (`dsMacSheetSize`, `dsMacPageSheet`, or `presentationSizing`) in the same
+     (`dsSizedSheet`, `dsPageSheet`, or `presentationSizing`) in the same
      struct. Detents are the caller SAYING what size it wants; on Mac that
      sentence is dropped on the floor, so the two belong together and drift
      apart silently.
@@ -57,7 +57,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 SOURCES = [ROOT / "Casberi" / "Casberi", ROOT / "Casberi" / "Shared"]
 
-MAC_SIZING = re.compile(r"\.(dsMacSheetSize|dsMacPageSheet|presentationSizing)\s*\(")
+MAC_SIZING = re.compile(r"\.(dsSizedSheet|dsPageSheet|presentationSizing)\s*\(")
 DETENTS = re.compile(r"\.presentationDetents\s*\(")
 STRUCT = re.compile(r"^\s*(?:public\s+|private\s+|fileprivate\s+|internal\s+)?struct\s+(\w+)")
 
@@ -67,6 +67,8 @@ NO_DETENT_SHEETS = {
     "AddressBookViews.swift": "AddressCard — presented from the thing sheet's face tap AND the wallet book, both inside a switch, so the size is declared in the view rather than twice at two call sites.",
     "WalletbeatCardScreen.swift": "WalletbeatCardScreen — presented from the Walletbeat room and from its directory; a report you read, so it takes the page size.",
     "AccountScreen.swift": "Diagnostics and How-it-works, both plain sheets with no sizing of their own; sized at the call site because neither view is presented anywhere else.",
+    "BridgeRouting.swift": "ConnectFormSheet — the sheet that got REPORTED (2026-08-20, \"way too small, user has to scroll to read them in a tiny box\"). It had no detents and no sizing at all, so on iPad it was the default ~540x620 box holding a whole setup screen. The first cut of this audit missed it precisely because Mac pushes it rather than raising it, so it is not a sheet there — which is the reason this file checks the IDIOM-gated helpers rather than anything Mac-specific.",
+    "BridgeConnectedState.swift": "BridgeConnectionSheet — the credentials door raised from inside a setup screen, i.e. the second modal in a connect flow.",
 }
 
 # Full-window by nature on every platform — nothing to decide.
@@ -175,7 +177,7 @@ def check_detents(files):
                 findings.append(
                     f"{rel(path)}:{idx+1} `{owner[0]}` declares presentationDetents "
                     f"with no Mac sizing — it renders as a fixed ~540x620 form sheet on Catalyst. "
-                    f"Add .dsMacSheetSize(h) for a tray or .dsMacPageSheet() for a reading sheet."
+                    f"Add .dsSizedSheet(h) for a tray or .dsPageSheet() for a reading sheet."
                 )
     return findings
 
@@ -221,7 +223,7 @@ struct Good: View {
     var body: some View {
         Text("x")
         .presentationDetents([.medium, .large])
-        .dsMacPageSheet()
+        .dsPageSheet()
     }
 }
 """
@@ -236,7 +238,7 @@ struct Bad: View {
 COMMENT_ONLY = """
 struct Sneaky: View {
     var body: some View {
-        // We call .dsMacPageSheet() elsewhere, honest.
+        // We call .dsPageSheet() elsewhere, honest.
         Text("x")
         .presentationDetents([.medium])
     }
@@ -247,7 +249,7 @@ struct Tray: View {
     var body: some View {
         Text("x")
         .presentationDetents([.height(400)])
-        .dsMacSheetSize(400)
+        .dsSizedSheet(400)
     }
 }
 """
@@ -265,7 +267,7 @@ struct First: View {
     var body: some View {
         Text("a")
         .presentationDetents([.large])
-        .dsMacPageSheet()
+        .dsPageSheet()
     }
 }
 struct Second: View {

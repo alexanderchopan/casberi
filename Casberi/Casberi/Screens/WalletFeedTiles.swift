@@ -1617,7 +1617,7 @@ struct WalletWorthALookTray: View {
             // detents fix.
             ThingSheetView(thing: thing, onBack: { path.removeLast() })
                 .presentationDetents(trayDetents)
-                .dsMacSheetSize(trayHeight)
+                .dsSizedSheet(trayHeight)
                 .dsInk()
         }
         }

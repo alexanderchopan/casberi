@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// The one tray scaffold — the design-system rule for every bottom sheet.
 ///
@@ -79,8 +80,8 @@ struct DSTray<Content: View>: View {
         .padding(.bottom, DS.Space.s6)
         .presentationDetents(detents ?? [.height(height)])
         // …and the Mac twin of that line, because the line above does NOTHING
-        // there (2026-08-20). See `dsMacSheetSize`.
-        .dsMacSheetSize(height)
+        // there (2026-08-20). See `dsSizedSheet`.
+        .dsSizedSheet(height)
         .presentationDragIndicator(.visible)
         // THE SHEET'S OWN DIM, which nothing here had ever touched (2026-08-16).
         //
@@ -191,7 +192,27 @@ struct DSTray<Content: View>: View {
 /// (sheet), and it wants to be its own session rather than a rider on a sizing
 /// fix — so what ships is every tray correctly SIZED for a window, which is
 /// the half that was actually broken.
-enum DSMacSheet {
+enum DSSheetSize {
+    /// **Where a sheet is a BOX rather than the bottom of the screen.**
+    ///
+    /// This is the one `userInterfaceIdiom` check in the app, and the reason it
+    /// has to be the idiom rather than the size class is the trap this whole
+    /// file exists for: a presented form sheet reports a **COMPACT** horizontal
+    /// size class to its own content, whatever the window behind it. So the
+    /// usual gate (`horizontalSizeClass == .regular`, which every other
+    /// adaptation here uses) reads `false` inside the very sheet it would be
+    /// asked to size, and is worse than useless — it is confidently wrong.
+    ///
+    /// iPhone is excluded on purpose: there a sheet is already full width and
+    /// its detents are real, so a sizing proposal has nothing to fix and could
+    /// only fight them.
+    static var sizesSheets: Bool {
+        switch UIDevice.current.userInterfaceIdiom {
+        case .pad, .mac: true
+        default: false
+        }
+    }
+
     /// A Mac dialog, not a phone column and not a page. Comfortably under
     /// `PadLayout.macMinWindowSize.width` so it can never be the thing that
     /// makes a sheet wider than the window it sits in.
@@ -213,13 +234,13 @@ extension View {
     /// The Mac twin of `presentationDetents(.height(h))` — a no-op on touch,
     /// where the detent is real and this would fight it.
     @ViewBuilder
-    func dsMacSheetSize(_ height: CGFloat,
-                        width: CGFloat = DSMacSheet.macSheetWidth) -> some View {
-        #if targetEnvironment(macCatalyst)
-        presentationSizing(DSMacSheet.Sizing(width: width, height: height))
-        #else
-        self
-        #endif
+    func dsSizedSheet(_ height: CGFloat,
+                        width: CGFloat = DSSheetSize.macSheetWidth) -> some View {
+        if DSSheetSize.sizesSheets {
+            presentationSizing(DSSheetSize.Sizing(width: width, height: height))
+        } else {
+            self
+        }
     }
 
     /// The Mac twin of `presentationDetents([.medium, .large])` — a READING
@@ -236,12 +257,12 @@ extension View {
     ///
     /// A no-op on touch, where the detents are real and this would fight them.
     @ViewBuilder
-    func dsMacPageSheet() -> some View {
-        #if targetEnvironment(macCatalyst)
-        presentationSizing(.page)
-        #else
-        self
-        #endif
+    func dsPageSheet() -> some View {
+        if DSSheetSize.sizesSheets {
+            presentationSizing(.page)
+        } else {
+            self
+        }
     }
 }
 
