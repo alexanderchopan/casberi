@@ -448,7 +448,12 @@ struct MainSurface: View {
             SettingsScreen()
                 .navigationTransition(.zoom(sourceID: "settingsDoor", in: doorNS))
         case .bridge(let dest):
+            // Mac's connect form is PUSHED, not raised (see
+            // `Destination.raisedByConnect`), so the one behaviour the sheet
+            // owned — a one-shot form leaving once its key lands — rides here
+            // instead. No-op on touch, where the sheet still owns it.
             BridgeDestinationView(destination: dest)
+                .connectPushWatcher(dest)
         case .appDetail(let name):
             if let offer = BridgeCatalog.offers.first(where: { $0.name == name }) {
                 AppDetailScreen(offer: offer)

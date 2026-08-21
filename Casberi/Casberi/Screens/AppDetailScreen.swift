@@ -178,7 +178,14 @@ struct AppDetailScreen: View {
         // and a bloom underneath it would be the same news told twice, once
         // where it can't be seen.
         let dest = BridgeRouter.destination(forOffer: offer.name)
-        raisedForm = dest?.raisedByConnect == true && dest?.finishesOnConnect == true
+        // `finishesOnConnect` ALONE, since 2026-08-20. It used to also demand
+        // `raisedByConnect`, which was exactly equivalent on touch — no
+        // destination is `finishesOnConnect` and pushed there — and became
+        // wrong the day Mac started pushing every connect form: this flag means
+        // "the form will leave on its own and hand the payoff back to me", and
+        // on Mac it leaves by popping (`ConnectPushWatcher`) rather than by
+        // dismissing. Asking how it leaves was never the question.
+        raisedForm = dest?.finishesOnConnect == true
         route.openSetup(forOffer: offer.name)
     }
 

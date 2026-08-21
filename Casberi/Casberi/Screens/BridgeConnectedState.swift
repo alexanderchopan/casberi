@@ -157,6 +157,16 @@ struct BridgeConnectionSheet<Content: View>: View {
             }
         }
         .presentationDetents([.large])
+        // `.large` is inert on Catalyst (see `DSMacSheet`), so this sheet —
+        // raised from INSIDE a setup screen, i.e. the second modal in a
+        // connect flow — was a ~540×620 card holding a form built for a
+        // reading column. `.page` rather than `DSMacSheet.Sizing`: this is the
+        // one sheet here whose iOS twin asks for the WHOLE height, and `.page`
+        // is the system's own "a large sheet, sized to this window", which
+        // needs no arithmetic of ours and cannot outgrow its container.
+        #if targetEnvironment(macCatalyst)
+        .presentationSizing(.page)
+        #endif
         .presentationBackground(DS.surfaceSheet)
         .dsColorScheme()
     }

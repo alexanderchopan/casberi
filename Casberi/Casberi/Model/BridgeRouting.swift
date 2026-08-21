@@ -170,13 +170,47 @@ enum BridgeRouter {
         /// through `HomeRoute`, which is the stack BEHIND a sheet — so opening
         /// it in one would send its doors somewhere the person can't see. It's
         /// also where Peer/0xBow's Connect lands (§209).
+        /// **NOTHING raises on Mac (2026-08-20, user: "when you go to connect
+        /// an app a small modal pops up").**
+        ///
+        /// The reasoning above is a TOUCH argument and it stays true on touch:
+        /// a phone has one screen, so raising a form over the page that sold it
+        /// to you really is cheaper than walking a door. A Mac window is not one
+        /// screen, and Catalyst does not present this the way iOS does — a modal
+        /// with no explicit sizing becomes a **form sheet**, a fixed ~540×620
+        /// card floating in the middle of whatever the window's real size is.
+        /// So the argument inverts on three counts:
+        ///
+        ///   • The card is the same size in a 2000pt window as in a 980pt one,
+        ///     which is the definition of a layout made for another device.
+        ///   • A Catalyst form sheet reports **compact** horizontal size class,
+        ///     so `dsAdaptiveContentWidth()` — which every setup screen wears —
+        ///     is a no-op inside it. The form gets phone layout in a phone-sized
+        ///     box on a desktop.
+        ///   • The rail lives OUTSIDE the navigation stack and survives a push,
+        ///     so a pushed connect form keeps the app's primary navigation
+        ///     beside it. A sheet covers it.
+        ///
+        /// Pushing costs nothing that raising was buying: there IS no back-stack
+        /// to walk on a Mac (⌘[ and the chevron are one gesture, and the rail
+        /// never left), and the one behaviour the sheet owned — a one-shot form
+        /// leaving once its key lands — is preserved by `ConnectPushWatcher`,
+        /// which pops on exactly the same signal after exactly the same beat.
+        ///
+        /// The iOS exception below is about MECHANICS rather than taxonomy (a
+        /// room that pushes its own doors through the stack behind a sheet), and
+        /// on Mac that exception is simply the universal case.
         var raisedByConnect: Bool {
+            #if targetEnvironment(macCatalyst)
+            return false
+            #else
             switch self {
             case .wallet, .walletHistory, .walletConnection, .detail:
-                false
+                return false
             default:
-                true
+                return true
             }
+            #endif
         }
 
         /// Whether the raised sheet leaves ON ITS OWN once the connection goes
@@ -560,5 +594,59 @@ struct ConnectFormSheet: View {
                 dismiss()
             }
         }
+    }
+}
+
+/// `ConnectFormSheet`'s one rule, kept for the PUSHED form Mac gets instead
+/// (2026-08-20 — see `Destination.raisedByConnect` for why Mac pushes).
+///
+/// A one-shot form is FINISHED the moment its credential lands, and leaving
+/// someone staring at a manager they arrived at by pasting a key is the thing
+/// the sheet's self-dismissal exists to prevent. That reasoning is about the
+/// FORM, not about the presentation, so it survives the move: same signal (the
+/// seat reaching `.connected`), same 700ms beat so the screen's own success
+/// moment is seen, and a pop instead of a dismiss.
+///
+/// **It pops only if this screen is still on top.** `goBack()` removes the last
+/// node unconditionally, so a person who navigated onward inside the setup
+/// screen during the beat would otherwise have a frame they were reading pulled
+/// out from under them. Equality is exact — `Destination` is `Hashable` because
+/// `HomeRoute.Node` requires it — so the guard can name the very frame it means.
+///
+/// Applied to EVERY pushed `.bridge` rather than only to connect pushes, which
+/// is safe by construction: `onChange` fires on a CHANGE, and an Open push is
+/// already connected at mount, so `live` never transitions and the timer never
+/// starts. A destination that isn't `finishesOnConnect` is excluded outright.
+private struct ConnectPushWatcher: ViewModifier {
+    let destination: BridgeRouter.Destination
+    @Environment(BridgeStore.self) private var store
+    @Environment(HomeRoute.self) private var route
+
+    private var live: Bool {
+        store.bridges.first { $0.id == destination.id }?.status == .connected
+    }
+
+    func body(content: Content) -> some View {
+        content.onChange(of: live) { _, isLive in
+            guard isLive, destination.finishesOnConnect else { return }
+            Task { @MainActor in
+                try? await Task.sleep(for: .milliseconds(700))
+                guard route.path.last == .bridge(destination) else { return }
+                route.goBack()
+            }
+        }
+    }
+}
+
+extension View {
+    /// Mac only — see `ConnectPushWatcher`. A no-op elsewhere, where the same
+    /// behaviour is `ConnectFormSheet`'s.
+    @ViewBuilder
+    func connectPushWatcher(_ destination: BridgeRouter.Destination) -> some View {
+        #if targetEnvironment(macCatalyst)
+        modifier(ConnectPushWatcher(destination: destination))
+        #else
+        self
+        #endif
     }
 }

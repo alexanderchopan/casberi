@@ -78,6 +78,9 @@ struct DSTray<Content: View>: View {
         .padding(.top, DS.Space.s6)
         .padding(.bottom, DS.Space.s6)
         .presentationDetents(detents ?? [.height(height)])
+        // …and the Mac twin of that line, because the line above does NOTHING
+        // there (2026-08-20). See `dsMacSheetSize`.
+        .dsMacSheetSize(height)
         .presentationDragIndicator(.visible)
         // THE SHEET'S OWN DIM, which nothing here had ever touched (2026-08-16).
         //
@@ -125,6 +128,72 @@ struct DSTray<Content: View>: View {
         } else {
             tray.presentationBackground(DS.surfaceSheet).dsColorScheme()
         }
+    }
+}
+
+// MARK: - The Mac's sheet sizing
+
+/// **Every `presentationDetents` line in this app is a no-op on Mac
+/// (2026-08-20, user: "some of the mac design looks like it was made for
+/// mobile").**
+///
+/// Catalyst has no sheet detents, no drag indicator and no background
+/// interaction — a modal with no explicit sizing presents as a **form sheet**,
+/// a fixed ~540×620 card centred in the window whatever the window's real size
+/// is. So the ~14 trays and the 10 `BridgeConnectionSheet`s all rendered at one
+/// borrowed size, each one computed for a phone: `DSTray`'s whole contract is
+/// that a tray STATES its height (and `AccountDetailSheet`'s own comment notes
+/// that "DSTray clips at a fixed detent, so the tallest reachable state must be
+/// sized for") — and on Mac that number was being thrown away.
+///
+/// `presentationSizing` (iOS 18+, which is this app's floor) is the supported
+/// lever and it does bind on Catalyst. Two things about it worth knowing before
+/// changing this:
+///
+///   • **`PresentationSizingContext` is an EMPTY struct** in the SDK — it
+///     carries no container size — so a custom sizing cannot clamp itself
+///     against the window. It proposes; the presentation clamps.
+///   • That clamping is therefore load-bearing, and it is the SAME behaviour
+///     these trays already rely on for touch: `privacyHeight` reaches ~900pt
+///     and an iPhone SE is 568 tall, so a tray taller than its container is an
+///     established, tolerated state rather than a new risk this introduces.
+///     `PadLayout.macMinWindowSize`'s height is set so the common trays clear
+///     it outright.
+///
+/// The WIDTH is the real gain. A tray's content was laid out for a phone column
+/// and the form sheet gave it ~540 minus padding; `macSheetWidth` gives it a
+/// proper dialog without letting it become a page — a language picker has no
+/// business filling a desktop window, which is why this is a stated width and
+/// not `.page`.
+enum DSMacSheet {
+    /// A Mac dialog, not a phone column and not a page. Comfortably under
+    /// `PadLayout.macMinWindowSize.width` so it can never be the thing that
+    /// makes a sheet wider than the window it sits in.
+    static let macSheetWidth: CGFloat = 620
+
+    /// Proposes an absolute size. See the type doc for why it cannot consult
+    /// the container.
+    struct Sizing: PresentationSizing {
+        let width: CGFloat
+        let height: CGFloat
+        func proposedSize(for root: PresentationSizingRoot,
+                          context: PresentationSizingContext) -> ProposedViewSize {
+            ProposedViewSize(width: width, height: height)
+        }
+    }
+}
+
+extension View {
+    /// The Mac twin of `presentationDetents(.height(h))` — a no-op on touch,
+    /// where the detent is real and this would fight it.
+    @ViewBuilder
+    func dsMacSheetSize(_ height: CGFloat,
+                        width: CGFloat = DSMacSheet.macSheetWidth) -> some View {
+        #if targetEnvironment(macCatalyst)
+        presentationSizing(DSMacSheet.Sizing(width: width, height: height))
+        #else
+        self
+        #endif
     }
 }
 

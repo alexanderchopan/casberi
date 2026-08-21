@@ -124,6 +124,39 @@ struct SourcesOverlay: View {
     /// panel away.
     private static let expandDistance: CGFloat = 60
 
+    /// **On Mac this is a floating panel beside the rail, not a bottom sheet
+    /// (2026-08-20).**
+    ///
+    /// The move off `.sheet` (above) already made this a view in the app's own
+    /// hierarchy, and everything it bought applies on a Mac too. What did NOT
+    /// travel is the SHAPE: full-bleed to the window's bottom edge, square
+    /// bottom corners because they sit off-screen, and a rise-from-the-bottom
+    /// transition are all statements about a phone — a surface pinned to the
+    /// edge your thumb reaches from. A desktop window has no such edge, and a
+    /// 2000pt-wide panel holding a grid of 56pt marks is the "made for mobile"
+    /// reading in its purest form.
+    ///
+    /// So on Mac it floats: a stated width, clear of every edge, all four
+    /// corners rounded because all four are visible, anchored beside the rail
+    /// — which is both where it is opened from (the catalogue door at the
+    /// rail's head) and what it is a bigger map of.
+    ///
+    /// Everything else is deliberately unchanged, including the drag: a
+    /// trackpad drives it fine, and Escape and click-outside were always the
+    /// primary dismissals here.
+    private var macPanel: Bool {
+        #if targetEnvironment(macCatalyst)
+        true
+        #else
+        false
+        #endif
+    }
+
+    /// Wide enough for the grid's own columns, far short of a window. Paired
+    /// with `PadLayout.railWidth` below so the panel sits beside the rail
+    /// rather than over it.
+    private static let macPanelWidth: CGFloat = 460
+
     var body: some View {
         let panel = SourcesTray(labels: labels, active: active,
                                 onPick: onPick, onDismiss: onDismiss,
@@ -143,7 +176,7 @@ struct SourcesOverlay: View {
             let canGrow = full > resting + 1
             let height = expanded && canGrow ? full : resting
 
-            ZStack(alignment: .bottom) {
+            ZStack(alignment: macPanel ? .bottomLeading : .bottom) {
                 // The catcher — paints nothing, closes on a tap. See the doc.
                 Color.clear
                     .contentShape(Rectangle())
@@ -165,9 +198,13 @@ struct SourcesOverlay: View {
                         .gesture(dragGesture(height: height, canGrow: canGrow))
                     panel
                 }
-                .frame(height: height)
+                .frame(width: macPanel ? Self.macPanelWidth : nil, height: height)
                 .background { glass }
                 .clipShape(shape)
+                // Clear of the window's edges, and clear of the rail — AFTER
+                // the clip, so it insets the panel rather than its glass.
+                .padding(.leading, macPanel ? PadLayout.railWidth + DS.Space.s4 : 0)
+                .padding(.bottom, macPanel ? DS.Space.s4 : 0)
                 // Downward only. An upward drag changes the HEIGHT on release
                 // rather than offsetting the panel — lifting it would open a
                 // gap under a surface that is anchored to the bottom edge.
@@ -178,21 +215,36 @@ struct SourcesOverlay: View {
                     if canGrow { withAnimation(DS.Motion.standard) { expanded.toggle() } }
                 }
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+            .frame(maxWidth: .infinity, maxHeight: .infinity,
+                   alignment: macPanel ? .bottomLeading : .bottom)
         }
         .ignoresSafeArea()
-        .transition(reduceMotion ? .opacity : .move(edge: .bottom))
+        .transition(transition)
     }
 
-    /// Top corners only: the panel is anchored to the bottom edge, and
+    /// A phone panel RISES from the edge it is pinned to. A floating one has no
+    /// edge to rise from, so it arrives where it will sit — the standard Mac
+    /// reading, and the same anchor it is scaled about.
+    private var transition: AnyTransition {
+        if reduceMotion { return .opacity }
+        if macPanel {
+            return .opacity.combined(with: .scale(scale: 0.96, anchor: .bottomLeading))
+        }
+        return .move(edge: .bottom)
+    }
+
+    /// Top corners only on touch: the panel is anchored to the bottom edge, and
     /// rounding the two corners that sit off-screen would be a radius nobody
-    /// can see costing a clip everybody pays for.
+    /// can see costing a clip everybody pays for. On Mac it floats clear of
+    /// every edge, so all four corners are visible and all four are rounded —
+    /// the square pair would read as a sheet that had been cut off.
     private var shape: UnevenRoundedRectangle {
-        UnevenRoundedRectangle(topLeadingRadius: DS.Radius.sheet,
-                               bottomLeadingRadius: 0,
-                               bottomTrailingRadius: 0,
-                               topTrailingRadius: DS.Radius.sheet,
-                               style: .continuous)
+        let bottom = macPanel ? DS.Radius.sheet : 0
+        return UnevenRoundedRectangle(topLeadingRadius: DS.Radius.sheet,
+                                      bottomLeadingRadius: bottom,
+                                      bottomTrailingRadius: bottom,
+                                      topTrailingRadius: DS.Radius.sheet,
+                                      style: .continuous)
     }
 
     /// Grabber + title + the All capsule: the panel's chrome, and its drag

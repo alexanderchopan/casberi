@@ -49,8 +49,40 @@ enum PadLayout {
     /// it had prevented. Both sites read this now, so a future rail-width
     /// change moves one number.
     static let macMinContentWidth: CGFloat = 560
+    /// **The Mac floor is `minWidthForPane`, not the content column (2026-08-20).**
+    ///
+    /// The floor was 648 (`macMinContentWidth + railWidth`) against a pane
+    /// threshold of 980, so every Mac window from the floor up to 980 rendered
+    /// with NO detail pane — and a shell with no pane throws a modal sheet for
+    /// every row tap (`PadDetailSelection.present` returns false and the caller
+    /// falls back). That is the single largest reason the Mac build read as a
+    /// phone app: the app's most common interaction, opening a thing, was a
+    /// centred card over the window instead of the list-and-detail shape the
+    /// pane was built for, at any window narrower than a 13" iPad in portrait.
+    ///
+    /// Raising the floor rather than lowering `minWidthForPane` is the honest
+    /// direction, and the arithmetic is why: a pane is `paneWidth(for:)`, floored
+    /// at 400, and the rail takes a fixed 88 — so a threshold of 900 would leave
+    /// the list column 412pt, narrower than the pane beside it, which is a
+    /// sidebar wearing a list's name. 980 keeps the list at ~492 and the pane at
+    /// its 400 floor, both readable. A Mac can always give 980 points of width;
+    /// an iPad mini genuinely cannot, which is why the THRESHOLD stays where it
+    /// is and only the Mac's floor moves.
+    ///
+    /// The DEBUG `-macWindowSize` harness still reaches narrower windows — it
+    /// lowers `minimumSize` before asking, deliberately (see
+    /// `RootShell.applyMacWindowSizeOverride`), so the narrow-layout branches
+    /// stay measurable even though no shipped window can sit in them.
+    /// The HEIGHT moved with it, 480 → 640. 480 was chosen when a Mac window
+    /// was one scrolling column and "a handful of feed rows above the composer"
+    /// was the whole requirement. It is the wrong floor for the shape this app
+    /// actually has on a Mac: a detail pane four rows tall is a slot, not a
+    /// pane, and a `DSTray` states a height in the 560–660 band that a 480pt
+    /// window can only clamp (see `DSMacSheet`). 640 clears the common trays
+    /// outright and still asks less of a display than any Mac has offered in a
+    /// decade — the smallest current Mac screen is 1280×800.
     static var macMinWindowSize: CGSize {
-        CGSize(width: macMinContentWidth + railWidth, height: 480)
+        CGSize(width: max(macMinContentWidth + railWidth, minWidthForPane), height: 640)
     }
 
     /// The first-launch window size. Deliberately clear of `minWidthForPane`:
