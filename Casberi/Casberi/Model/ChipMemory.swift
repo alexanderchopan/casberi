@@ -30,6 +30,15 @@ enum ChipMemory {
     /// front slot.
     static func visited(_ source: String) {
         guard source != "All" else { return }
+        // The demo keeps its OWN record of the same event (prd §422): the
+        // counters here are wiped per-source by `DemoSeedAll.teardown`, so
+        // by the time the onboarding fork asks what somebody opened, the
+        // answer has already been erased. Forwarded from this one place
+        // rather than from `visited`'s six call sites — and in this
+        // direction because `ChipMemory` already knows about the demo
+        // (`seedDemo`/`forgetDemo` below) while `DemoMode` knows nothing
+        // about chips.
+        DemoMode.noteRoomVisit(source)
         var c = counts
         c[source, default: 0] += 1
         counts = c

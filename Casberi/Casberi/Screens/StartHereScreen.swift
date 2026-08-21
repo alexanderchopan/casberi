@@ -43,6 +43,18 @@ import SwiftData
 /// than "Skip" — skip lands you nowhere, this lands you where the old CTA went,
 /// so nothing is lost for someone who came to browse.
 ///
+/// **What §422 changed (2026-08-20), and what it deliberately didn't.** Three
+/// things, none of them structural: the subline names the hand-over for
+/// somebody arriving from the demo (which, since the greeting's CTA became
+/// "Try the demo", is most people — and the screen greeted them as if the last
+/// few minutes had not happened); the cards are ORDERED by what they opened in
+/// the demo (`StartAppetite`, never hidden and never re-weighted); and the one
+/// arm that acts in place hands back to the feed BEFORE its walk rather than
+/// after it, so the rows are watched arriving instead of being revealed
+/// already landed. The card shape, the wording, the cost lines, the figures
+/// and the pick-one rule are all untouched, and the toggle tripwire above
+/// still stands.
+///
 struct StartHereScreen: View {
     /// Ends onboarding. A non-nil node is where to land afterwards (the wallet
     /// manager, the catalog); nil means the feed, which is the right answer
@@ -56,8 +68,14 @@ struct StartHereScreen: View {
     @State private var arrived = false
     /// The files card is the one option that does its work HERE rather than
     /// handing off to a screen, so it needs its own in-place state — the
-    /// picker plus a folder walk is seconds, not instant, and a card that
-    /// looked inert while working would read as a dead control.
+    /// system picker is a hop, not an instant.
+    ///
+    /// Since §422 the folder WALK no longer happens under this card (the
+    /// screen hands back first and the walk lands into the feed), so
+    /// `connectingFolder` is chiefly a re-entrancy guard; the spinner it
+    /// still drives covers only the frames of the leaving transition, which
+    /// is the right amount of acknowledgement for a tap that is already on
+    /// its way somewhere.
     @State private var pickingFolder = false
     @State private var connectingFolder = false
     @State private var showFollow = false
@@ -65,6 +83,12 @@ struct StartHereScreen: View {
     /// and their bridge state is fast but not instant, and a card that looked
     /// inert while working would read as a dead control.
     @State private var enteringDemo = false
+    /// Which arm leads (prd §422). Read ONCE, as this screen is first made,
+    /// rather than per body pass — a fork whose cards reshuffle under
+    /// somebody's thumb is worse than one that never reorders at all.
+    @State private var order: [StartAppetite.Arm] =
+        StartAppetite.order(visits: DemoMode.roomVisits,
+                            category: BridgeCatalog.category(forSource:))
 
     var body: some View {
         ScrollView {
@@ -77,44 +101,39 @@ struct StartHereScreen: View {
                         .foregroundStyle(DS.textPrimary)
                         .minimumScaleFactor(0.8)
                         .fixedSize(horizontal: false, vertical: true)
-                    Text("Pick one. The rest can wait.")
-                        .dsText(.body17)
-                        .foregroundStyle(DS.textSecondary)
-                        .fixedSize(horizontal: false, vertical: true)
+                    // The subline names the HAND-OVER for somebody arriving
+                    // from the demo (prd §422). Since 2026-08-07 that is this
+                    // screen's main audience — the greeting's own CTA enters
+                    // the demo — and it was greeting them with the words
+                    // written for a first-timer, as if the last few minutes
+                    // had not happened. The question above is unchanged and
+                    // right for both; only the answer's framing moves.
+                    Group {
+                        if DemoMode.hasSeen {
+                            Text("That was sample data. Now with your own things.")
+                        } else {
+                            Text("Pick one. The rest can wait.")
+                        }
+                    }
+                    .dsText(.body17)
+                    .foregroundStyle(DS.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
                 }
                 .padding(.top, DS.Space.s2)
                 .startArrive(arrived, delay: 0.05)
 
-                card(figure: .treemap, hue: .blue,
-                     title: "Show me my files",
-                     line: "Pick any folder — Downloads, iCloud Drive, anywhere.",
-                     cost: "Opens the Files picker",
-                     busy: connectingFolder) {
-                    DSHaptic.tap()
-                    pickingFolder = true
+                // The order is the PERSON'S whenever the demo gave them a
+                // chance to say (prd §422) — every card is still drawn, in
+                // the same shape and at the same weight, so §217's "one
+                // decision, not three offers of different weight" holds. Only
+                // which one is read first moves, and only on evidence they
+                // produced themselves. `StartAppetite.defaultOrder`, i.e. the
+                // screen exactly as §217 shipped it, whenever there is no
+                // signal — which is most people.
+                ForEach(Array(order.enumerated()), id: \.element) { index, arm in
+                    armCard(arm)
+                        .startArrive(arrived, delay: 0.15 + Double(index) * 0.10)
                 }
-                .startArrive(arrived, delay: 0.15)
-
-                card(figure: .curve, hue: .green,
-                     title: "Watch a wallet",
-                     line: "Enter an ENS, paste an address, or connect your wallet app.",
-                     cost: "No account needed") {
-                    // The wallet manager already IS all three doors (§202's
-                    // roster and §188's "Connect a wallet app" button), so this
-                    // hands off rather than growing a fourth address field.
-                    DSHaptic.tap()
-                    onStart(.bridge(.wallet))
-                }
-                .startArrive(arrived, delay: 0.25)
-
-                card(figure: .faces, hue: .purple,
-                     title: "Follow someone I read",
-                     line: "A Bluesky or Farcaster handle, or a feed.",
-                     cost: "No sign-in") {
-                    DSHaptic.tap()
-                    showFollow = true
-                }
-                .startArrive(arrived, delay: 0.35)
 
                 // The fourth answer — and it is HIDDEN once the demo has been
                 // seen, which is the common case now that it is the greeting's
@@ -131,7 +150,7 @@ struct StartHereScreen: View {
                         DSHaptic.tap()
                         enterDemo()
                     }
-                    .startArrive(arrived, delay: 0.45)
+                    .startArrive(arrived, delay: 0.15 + Double(order.count) * 0.10)
                 }
             }
             .padding(.horizontal, DS.Space.s4)
@@ -243,30 +262,97 @@ struct StartHereScreen: View {
         #endif
     }
 
-    /// The one card that acts in place. A folder that can't be read is NOT a
-    /// dead end — the person still leaves onboarding (into the feed, where
-    /// the catalog door is), and the flash says what happened rather than
-    /// leaving the tap unexplained.
+    /// Each arm's card. One `card(…)` shape for all three, so the fork still
+    /// reads as one decision however `StartAppetite` orders them.
+    @ViewBuilder
+    private func armCard(_ arm: StartAppetite.Arm) -> some View {
+        switch arm {
+        case .files:
+            card(figure: .treemap, hue: .blue,
+                 title: "Show me my files",
+                 line: "Pick any folder — Downloads, iCloud Drive, anywhere.",
+                 cost: "Opens the Files picker",
+                 busy: connectingFolder) {
+                DSHaptic.tap()
+                pickingFolder = true
+            }
+        case .wallet:
+            card(figure: .curve, hue: .green,
+                 title: "Watch a wallet",
+                 line: "Enter an ENS, paste an address, or connect your wallet app.",
+                 cost: "No account needed") {
+                // The wallet manager already IS all three doors (§202's
+                // roster and §188's "Connect a wallet app" button), so this
+                // hands off rather than growing a fourth address field. It
+                // is also the arm that already had §422's one-tap example,
+                // and has since §202: the manager's own "Peek at
+                // vitalik.eth" chip.
+                DSHaptic.tap()
+                onStart(.bridge(.wallet))
+            }
+        case .follow:
+            card(figure: .faces, hue: .purple,
+                 title: "Follow someone I read",
+                 line: "A Bluesky or Farcaster handle, or a feed.",
+                 cost: "No sign-in") {
+                DSHaptic.tap()
+                showFollow = true
+            }
+        }
+    }
+
+    /// The one card that acts in place — and it now leaves FIRST and lets
+    /// the folder walk land rows into a feed that is already on screen
+    /// (prd §422).
+    ///
+    /// **Why the order flipped.** It used to hold the card on a spinner for
+    /// the whole walk and then hand back a feed that was already full, which
+    /// reads as a screenshot rather than as an app that just did something.
+    /// That is the exact failure `DemoMode.pourIfNeeded` exists to prevent
+    /// one screen earlier — "lifting first and pouring after lets them watch
+    /// the app fill … the one moment that shows what this product actually
+    /// does rather than describing it" — and the fork's own arms never got
+    /// that treatment, so the single most persuasive second of a new install
+    /// was happening off-screen behind a spinner.
+    ///
+    /// **The environment values are copied into locals BEFORE the hand-off.**
+    /// `onStart` tears this screen down, and an `@Environment` wrapper read
+    /// afterwards is reading a dead view's storage. The `Task` is
+    /// unstructured and has no parent task, so nothing cancels it when the
+    /// view goes — the same reasoning `WalletConnect`'s detached teardown
+    /// records ("it must not inherit the screen's cancellation").
+    ///
+    /// A folder that can't be read is still NOT a dead end: the person is
+    /// already in the feed, where the catalog door is, and the flash says
+    /// what happened rather than leaving the tap unexplained.
     private func connectFolder() {
         guard !connectingFolder else { return }
         connectingFolder = true
+        let context = modelContext
+        let bridges = store
+        let shell = chrome
+        onStart(nil)
         Task { @MainActor in
-            let added = await FilesIngest.refresh(context: modelContext)
-            connectingFolder = false
+            let added = await FilesIngest.refresh(context: context)
             NSLog("[Casberi] startFolder: %@", added.map { "\($0) in" } ?? "unreadable")
             guard let added else {
                 FilesStore.shared.disconnect()
-                chrome.flash("Couldn't read that folder — try again from the catalog")
-                onStart(nil)
+                shell.flash("Couldn't read that folder — try again from the catalog",
+                            tone: .failure)
                 return
             }
             let proof = added > 0
             ? String(localized: "\(added) files in")
             : String(localized: "Synced just now")
-            _ = store.registerConnected(id: "files", name: "Files", proof: proof,
-                                        can: ["Reads the folder you picked.",
-                                              "Read-only — never edits a file."])
-            onStart(nil)
+            _ = bridges.registerConnected(id: "files", name: "Files", proof: proof,
+                                          can: ["Reads the folder you picked.",
+                                                "Read-only — never edits a file."])
+            // The greeting wears the source's own mark (prd §384) — whose
+            // things these are, said before a word is read. It reuses the
+            // seat's own `proof` string rather than composing a second one,
+            // so the toast and the catalog row can never disagree about how
+            // much arrived.
+            shell.flash(proof, tone: .success, mark: "Files")
         }
     }
 
@@ -462,11 +548,61 @@ struct StartFollowScreen: View {
             case .feed:      "feed URL"
             }
         }
+        /// A REAL name, measured against the live service, never a
+        /// plausible-looking fake (prd §422).
+        ///
+        /// `alice.bsky.social` / `alice` / `example.com/feed.xml` taught the
+        /// SHAPE of the answer and left the stall exactly where it was:
+        /// somebody who doesn't already have a name in mind still faces an
+        /// empty field with no way forward, and that field is where this arm
+        /// loses people. §217's own amendment blessed the fix and named its
+        /// shape — "a greyed `nasa.gov` in the Follow form's Feed field … it
+        /// removes a decision rather than adding one, since the real stall is
+        /// the empty field after the card, not the card."
+        ///
+        /// **Re-measure before changing one.** A placeholder that resolves to
+        /// nothing is worse than a fake, because it is a name somebody will
+        /// actually type. Measured 2026-08-20:
+        ///   • `nasa.gov` does NOT resolve on Bluesky — which is exactly what
+        ///     the amendment suggested, so the blessed example was wrong for
+        ///     two of the three arms; `theverge.com` resolves.
+        ///   • `vitalik.eth` is fid 5650 on Farcaster (user's own pick).
+        ///   • `https://www.nasa.gov/feed/` serves `application/rss+xml`.
+        ///
+        /// All three are institutions or public figures posting publicly, and
+        /// none is `dwr` (standing rule: never in a demo).
         var example: String {
             switch self {
-            case .bluesky:   "alice.bsky.social"
-            case .farcaster: "alice"
-            case .feed:      "https://example.com/feed.xml"
+            case .bluesky:   "theverge.com"
+            case .farcaster: "vitalik.eth"
+            case .feed:      "https://www.nasa.gov/feed/"
+            }
+        }
+
+        /// What the one-tap door calls the example — nil for Farcaster, which
+        /// already has a STRICTLY BETTER door in that slot
+        /// (`FarcasterPackDoor`: a whole hand-picked list, with faces, behind
+        /// a sheet you can look at before committing). Two doors on one form
+        /// would be the second question §217's tripwire keeps off this
+        /// screen; Farcaster's placeholder carries the real name instead.
+        ///
+        /// A feed is entered as a URL and named by its host: a door reading
+        /// "Follow https://www.nasa.gov/feed/" is a field value wearing a
+        /// verb.
+        var exampleName: String? {
+            switch self {
+            case .bluesky:   "theverge.com"
+            case .farcaster: nil
+            case .feed:      "nasa.gov"
+            }
+        }
+
+        /// The catalog seat whose mark rides this arm's toast (prd §384).
+        var mark: String {
+            switch self {
+            case .bluesky:   "Bluesky"
+            case .farcaster: "Farcaster"
+            case .feed:      "RSS"
             }
         }
     }
@@ -477,8 +613,6 @@ struct StartFollowScreen: View {
     @State private var name = ""
     @State private var working = false
     @FocusState private var fieldFocused: Bool
-
-    private var trimmed: String { name.trimmingCharacters(in: .whitespacesAndNewlines) }
 
     var body: some View {
         ScrollView {
@@ -504,16 +638,19 @@ struct StartFollowScreen: View {
                                text: $name,
                                buttonLabel: "Follow",
                                focus: $fieldFocused,
-                               action: follow)
+                               action: { follow(name) })
+                // Every arm now has exactly ONE door in this slot (prd §422),
+                // which is the symmetry that was missing: Farcaster had a
+                // starter pack and the other two had an empty field.
+                Text("or")
+                    .dsText(.label12).foregroundStyle(DS.textTertiary)
+                    .frame(maxWidth: .infinity, alignment: .center)
                 // Farcaster's pack (2026-08-08) — this screen otherwise
                 // requires already knowing a name, which is exactly the
                 // wall a starter pack exists to route around. Shown only
                 // for Farcaster: Bluesky's own pack lives one screen later,
                 // on its setup screen, once connected.
                 if network == .farcaster {
-                    Text("or")
-                        .dsText(.label12).foregroundStyle(DS.textTertiary)
-                        .frame(maxWidth: .infinity, alignment: .center)
                     // Syncs the moment the follow lands (sheet still open,
                     // "Followed N" showing) but only ENDS onboarding once
                     // the tray actually closes — calling `onStart` while the
@@ -527,6 +664,8 @@ struct StartFollowScreen: View {
                         },
                         onDismissAfterFollow: { onStart(nil) }
                     )
+                } else if let named = network.exampleName {
+                    exampleDoor(named)
                 }
             }
             .padding(.horizontal, DS.Space.s4)
@@ -553,46 +692,106 @@ struct StartFollowScreen: View {
             let net = String(spec[spec.startIndex..<cut])
             name = String(spec[spec.index(after: cut)...])
             network = Network.allCases.first { $0.rawValue.lowercased() == net.lowercased() } ?? .bluesky
+            let typed = name
             Task { @MainActor in
                 try? await Task.sleep(for: .seconds(1))
-                follow()
+                follow(typed)
             }
         }
         #endif
     }
 
-    /// Follows, syncs, and leaves — landing in the feed, where what just
-    /// arrived is the thing to look at. A failure still ends onboarding and
-    /// says so: stranding someone on a form is worse than an honest miss.
-    private func follow() {
-        let handle = trimmed
-        guard !handle.isEmpty, !working else { return }
+    /// The one-tap example (prd §422). It really follows, and the label
+    /// names exactly whom — the same act the wallet arm's "Peek at
+    /// vitalik.eth" chip has performed since §202, and the same slot and row
+    /// shape `FarcasterPackDoor` wears for the third network. A door that
+    /// only FILLED the field would leave the person one tap short of the
+    /// rows, which is the stall this exists to remove.
+    private func exampleDoor(_ named: String) -> some View {
+        Button {
+            DSHaptic.tap()
+            follow(network.example)
+        } label: {
+            HStack(spacing: DS.Space.s3) {
+                BridgeIcon(name: network.mark, size: DS.Mark.list, circular: false)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("Follow \(named)")
+                        .dsText(.body17).foregroundStyle(DS.textPrimary)
+                    // Says it is an EXAMPLE rather than a recommendation —
+                    // this screen is establishing trust, and a stranger's
+                    // name presented as a suggestion is a claim about taste
+                    // we have no grounds for (§83).
+                    Text("An example, so you can watch rows land")
+                        .dsText(.label12).foregroundStyle(DS.textTertiary)
+                }
+                Spacer(minLength: 0)
+            }
+            .dsListCardRow()
+        }
+        .buttonStyle(.plain)
+        .disabled(working)
+    }
+
+    /// A feed is entered as a URL and spoken about by its host.
+    private func spoken(_ handle: String) -> String {
+        guard network == .feed, let host = URL(string: handle)?.host() else { return handle }
+        return host.hasPrefix("www.") ? String(host.dropFirst(4)) : host
+    }
+
+    /// Registers the follow, LEAVES, and lets the sync land rows into a feed
+    /// that is already on screen (prd §422).
+    ///
+    /// **Why the order flipped** — the same reasoning as `connectFolder`, and
+    /// it bites harder here: a first sync of a busy account is seconds, all
+    /// of which were spent on a disabled form, and the feed then appeared
+    /// pre-filled. Watching your own follow arrive is the whole proof.
+    ///
+    /// The follow is registered BEFORE the hand-off, so it is durable even
+    /// if the sync that follows reaches nothing. The environment values are
+    /// copied into locals first (this screen is torn down by `onStart`), and
+    /// the `Task` is unstructured, so nothing cancels it.
+    ///
+    /// A failure still says so rather than stranding anyone: by then they
+    /// are in the feed, where the catalog door is.
+    private func follow(_ handle: String) {
+        let who = handle.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !who.isEmpty, !working else { return }
         working = true
         DSHaptic.tap()
+        let context = modelContext
+        let shell = chrome
+        let net = network
+        switch net {
+        case .bluesky:   BlueskyStore.shared.add(who)
+        case .farcaster: FarcasterStore.shared.add(who)
+        case .feed:      RSSStore.shared.add(who)
+        }
+        onStart(nil)
+        // ONE toast, at the hand-off, wearing the network's own mark (§384).
+        // Deliberately no second toast when the rows land: the rows landing
+        // IS the report, and saying it twice spends the moment this change
+        // exists to create.
+        shell.flash("Following \(spoken(who))", mark: net.mark)
         Task { @MainActor in
             let landed: Int?
-            switch network {
+            switch net {
             case .bluesky:
-                BlueskyStore.shared.add(handle)
-                landed = await BlueskyIngest.refresh(context: modelContext)
+                landed = await BlueskyIngest.refresh(context: context)
             case .farcaster:
-                FarcasterStore.shared.add(handle)
-                landed = await FarcasterIngest.refresh(context: modelContext)
+                landed = await FarcasterIngest.refresh(context: context)
             case .feed:
-                RSSStore.shared.add(handle)
                 // A follow the person just made, so it waits its turn rather
                 // than being dropped by a foreground sweep that happens to be
                 // mid-pass — the onboarding fork's whole job is to show
                 // something arriving.
-                landed = await RSSIngest.refresh(context: modelContext, waitForInFlight: true)
+                landed = await RSSIngest.refresh(context: context, waitForInFlight: true)
             }
-            working = false
-            NSLog("[Casberi] startFollow: %@ %@ → %@", network.rawValue, handle,
+            NSLog("[Casberi] startFollow: %@ %@ → %@", net.rawValue, who,
                   landed.map { "\($0) in" } ?? "FAILED")
             if landed == nil {
-                chrome.flash("Couldn't reach \(network.rawValue) — try again from the catalog")
+                shell.flash("Couldn't reach \(net.rawValue) — try again from the catalog",
+                            tone: .failure)
             }
-            onStart(nil)
         }
     }
 }

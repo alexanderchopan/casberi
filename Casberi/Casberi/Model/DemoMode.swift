@@ -114,6 +114,44 @@ enum DemoMode {
     /// merely a non-crashing one.)
     private static let primedMintAsk = "overdue"
 
+    /// The rooms somebody actually OPENED while the demo was furnished —
+    /// read by the onboarding fork to decide which card to lead with
+    /// (prd §422, `StartAppetite`).
+    ///
+    /// **Why this can't just read `ChipMemory`.** That store already counts
+    /// room opens, and `DemoSeedAll.teardown` calls
+    /// `ChipMemory.forgetDemo(demoVisits.keys)` on the way out — which
+    /// removes those keys OUTRIGHT, seeded weight and the person's own taps
+    /// together. That is the correct behaviour there (leaving must not leave
+    /// a stranger's tap-learning behind), and it means every source the demo
+    /// furnishes has its count erased at exactly the moment the fork needs
+    /// it. So the fork keeps its own record, of the person's taps only.
+    ///
+    /// Cleared by `begin` and NOT by `exit`, deliberately: a second demo run
+    /// starts a fresh record, and the record has to outlive the demo by one
+    /// screen or it answers nothing. It is counts against source names in
+    /// local defaults — the same shape and the same reach as `ChipMemory`
+    /// and `AskMemory`, with no edit surface and nothing that leaves.
+    private static let roomVisitsKey = "demo.mode.roomVisits"
+
+    static var roomVisits: [String: Int] {
+        ScratchDefaults.standard.dictionary(forKey: roomVisitsKey) as? [String: Int] ?? [:]
+    }
+
+    /// Record a room open. A no-op outside the demo, so the ordinary
+    /// tap-learning path pays one `Bool` read for it.
+    ///
+    /// "All" is excluded for `ChipMemory.visited`'s own reason: it is the
+    /// baseline every session starts from, not a room competing for a front
+    /// slot — and here it would also be the one label that maps to no
+    /// catalog category at all.
+    nonisolated static func noteRoomVisit(_ source: String) {
+        guard source != "All", isActive else { return }
+        var visits = roomVisits
+        visits[source, default: 0] += 1
+        ScratchDefaults.standard.set(visits, forKey: roomVisitsKey)
+    }
+
     /// Set while the rows have been promised but not yet poured.
     private static let pendingKey = "demo.mode.pourPending"
 
@@ -144,6 +182,10 @@ enum DemoMode {
         ScratchDefaults.standard.set(true, forKey: activeKey)
         ScratchDefaults.standard.set(true, forKey: pendingKey)
         ScratchDefaults.standard.set(true, forKey: seenKey)
+        // A fresh run, a fresh record of what gets opened in it — see
+        // `roomVisitsKey`. Cleared here rather than on exit so the fork can
+        // still read the run that just ended.
+        ScratchDefaults.standard.removeObject(forKey: roomVisitsKey)
         // The catalog must not contradict the feed: rooms full of rows over a
         // catalog claiming nothing is connected reads as a bug. `bridges`
         // persists on write, so this survives relaunch with no init path of

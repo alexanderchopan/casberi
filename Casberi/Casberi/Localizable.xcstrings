@@ -11449,6 +11449,74 @@
         }
       }
     },
+    "%lld more aren't drawn: %@ and %lld others.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$lld more aren't drawn: %2$@ and %3$lld others."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%1$lld más no se muestran: %2$@ y otros %3$lld."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "他に%1$lld件は表示されません: %2$@、ほか%3$lld件。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%1$lld개는 표시되지 않습니다: %2$@ 외 %3$lld개."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "另有 %1$lld 项未绘制：%2$@ 和其他 %3$lld 项。"
+          }
+        }
+      }
+    },
+    "%lld more aren't drawn: %@.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$lld more aren't drawn: %2$@."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%1$lld más no se muestran: %2$@."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "他に%1$lld件は表示されません: %2$@。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%1$lld개는 표시되지 않습니다: %2$@."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "另有 %1$lld 项未绘制：%2$@。"
+          }
+        }
+      }
+    },
     "%lld more assets": {
       "localizations": {
         "es": {
@@ -18586,6 +18654,34 @@
         }
       }
     },
+    "1 more isn't drawn: %@.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Otro más no se muestra: %@."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "もう1件は表示されません: %@。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "1개는 표시되지 않습니다: %@."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "另有 1 项未绘制：%@。"
+          }
+        }
+      }
+    },
     "1 more merchant": {
       "localizations": {
         "es": {
@@ -23803,6 +23899,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "一集"
+          }
+        }
+      }
+    },
+    "An example, so you can watch rows land": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Un ejemplo, para que veas llegar las filas"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "例として——行が届く様子を見られます"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "예시입니다. 항목이 도착하는 걸 볼 수 있어요"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "一个示例，让你看到内容陆续到达"
           }
         }
       }
@@ -53190,6 +53314,34 @@
         }
       }
     },
+    "Opens this address": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Abre esta dirección"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "このアドレスを開きます"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "이 주소를 엽니다"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "打开这个地址"
+          }
+        }
+      }
+    },
     "Opens this app": {
       "localizations": {
         "es": {
@@ -63879,6 +64031,34 @@
         }
       }
     },
+    "Security problem in a wallet you use": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Problema de seguridad en una cartera que usas"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "使用中のウォレットにセキュリティ上の問題"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "사용 중인 지갑의 보안 문제"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "你在用的钱包存在安全问题"
+          }
+        }
+      }
+    },
     "See all %lld": {
       "localizations": {
         "es": {
@@ -68820,6 +69000,34 @@
         }
       }
     },
+    "That was sample data. Now with your own things.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Eso eran datos de ejemplo. Ahora con tus propias cosas."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "今のはサンプルデータです。次はあなた自身のもので。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "방금은 샘플 데이터였어요. 이제 당신의 것으로."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "刚才是示例数据。现在换成你自己的东西。"
+          }
+        }
+      }
+    },
     "That's %@.": {
       "localizations": {
         "es": {
@@ -71985,6 +72193,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "未解决"
+          }
+        }
+      }
+    },
+    "Unresolved incident": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Incidente sin resolver"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "未解決のインシデント"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "해결되지 않은 인시던트"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "未解决的事件"
           }
         }
       }
@@ -78655,6 +78891,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "你收藏了 %@ 个账号的 %@ 条帖子"
+          }
+        }
+      }
+    },
+    "You use this": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Tú usas esto"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "あなたが使用中"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "사용 중"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "你在使用"
           }
         }
       }
@@ -86203,6 +86467,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "没有关注中的项目"
+          }
+        }
+      }
+    },
+    "not in your book": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "no está en tu libreta"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "アドレス帳にありません"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "주소록에 없음"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "不在你的通讯录中"
           }
         }
       }

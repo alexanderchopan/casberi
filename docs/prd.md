@@ -80,6 +80,7 @@ at all.
 | Ruling | What it said | Changed by |
 |---|---|---|
 | §18 | Feed spec | amended by §64 |
+| §217 | The onboarding fork: three verbs, and a held-open placeholder example | amended by §424 |
 | §36 | Bridge selection ruling: live data only | amended by §420 |
 | §402 | Altana keystore: read Ethereum only, and stay silent on first sight | amended by §403 |
 | §419 | Walletbeat: the seat exists only while a wallet is watched | amended by §421 |
@@ -28193,3 +28194,157 @@ exemption's own assertions did: Walletbeat must vanish from the strip behind the
 chip AND appear inside that chip's switcher. Exempt-and-in-the-switcher is reachable
 twice; folded-and-absent is reachable never, which is the failure the day-long exemption
 was written to fix and the one to keep an eye on.
+
+## 424. The onboarding fork: watch it arrive, a real name to start from, and an order that answers the person in front of you (user: "how would you improve the onboarding fork's UI and stickiness and make it engaging", then "ok do all 4", "you can use vitalik.eth for wallet suggestion", "for farcaster you can use vitalik.eth too", 2026-08-20)
+
+Four changes to `StartHereScreen`, and the shape of the screen is untouched: three cards, one
+verb each, pick-one, the cost lines, the room figures, the "Browse the catalog" escape hatch.
+§217's tripwire still stands and nothing here goes near it — **no card grew a toggle, and no
+card grew a second question.** This amends §217 and completes its own held-open amendment.
+
+**The diagnosis, and where the leak actually was.** Asked how to make the fork stickier, the
+honest answer was that the fork is fine and the second after it is not. Two of the three arms
+ACT IN PLACE, and both did their work the wrong way round: `follow()` added the account, then
+awaited the whole first sync while the person sat on a disabled form, and only then handed back
+a feed that was **already full of their posts**. `connectFolder()` did the same with a folder
+walk. So the single most persuasive moment a new install has — your own things landing, one
+after another — happened off-screen, behind a spinner, and what the person actually saw was a
+finished feed that reads as a screenshot.
+
+That is not a new insight in this codebase, which is what makes it embarrassing rather than
+subtle: `DemoMode.begin`/`pourIfNeeded` were split in two on 2026-08-07 for precisely this
+reason, and that split's own doc says why — "lifting first and pouring after lets them watch the
+app fill … the one moment that shows what this product actually does rather than describing it."
+The demo got the treatment. The fork's own arms, one screen away, never did.
+
+**1. Both acting arms hand back FIRST.** `onStart(nil)` now runs before the sync rather than
+after it, and the sync lands rows into a feed that is already on screen, wearing `RowEntrance`
+like every other arrival. Three details are load-bearing:
+
+  • **The store write happens before the hand-off.** `BlueskyStore.add` / `RSSStore.add` /
+    `FilesStore.setFolder` all run first, so the follow is durable even if the sync that
+    follows reaches nothing at all. Only the READ moved.
+  • **The environment is copied into locals before leaving.** `onStart` tears the screen down,
+    and an `@Environment` wrapper read afterwards is reading a dead view's storage. The `Task`
+    is unstructured and parentless, so nothing cancels it when the view goes — the same
+    reasoning `WalletConnect`'s detached teardown records ("it must not inherit the screen's
+    cancellation").
+  • **A failure is still not a dead end**, which was already §217's rule and is easier to keep
+    now: the person is in the feed, where the catalog door is, and the flash says what happened.
+
+**2. The examples are real, and one tap follows them.** §217's own amendment held this open and
+named its shape — "a greyed `nasa.gov` in the Follow form's Feed field … it removes a decision
+rather than adding one, since the real stall is the empty field after the card, not the card."
+It was right about the stall and wrong about the name. `alice.bsky.social` / `alice` /
+`example.com/feed.xml` taught the SHAPE of the answer and left somebody who doesn't already have
+a name in mind exactly where they were.
+
+**MEASURED, and the measurement changed the answer.** `nasa.gov` does NOT resolve as a Bluesky
+handle — the amendment's own suggestion would have shipped a placeholder that fails for the very
+person who trusts it. Live, keyless, this day: `theverge.com` resolves on Bluesky, `vitalik.eth`
+is fid 5650 on Farcaster (the user's own pick, for both this and the wallet), and
+`https://www.nasa.gov/feed/` serves `application/rss+xml`. Standing rule recorded in the source:
+**a placeholder that resolves to nothing is worse than an obvious fake, because it is a name
+somebody will actually type** — re-measure before changing one.
+
+Each network now has exactly ONE door in the "or" slot, which is the symmetry that was missing:
+Farcaster keeps `FarcasterPackDoor` (strictly better than a single name — a hand-picked list,
+with faces, behind a sheet you can look at before committing) and carries `vitalik.eth` as its
+placeholder; Bluesky and Feed get a one-tap door that really follows. Following rather than
+merely FILLING is the app's own established pattern for this, not a new one — the wallet arm's
+`peekChip` has watched `vitalik.eth` on tap since §202, which is also why the wallet arm needed
+nothing here: **it already had this feature, and finding that out cost one grep.** The door's
+subtitle says "An example" out loud, because a stranger's name presented as a recommendation is
+a claim about taste we have no grounds for (§83) on the screen where trust is established.
+
+**3. The fork answers the person in front of it.** Since 2026-08-07 the greeting's CTA enters
+the demo, so this screen's main audience is somebody LEAVING one — and it greeted them with the
+words written for a first-timer, as if the last few minutes hadn't happened. Two changes: the
+subline names the hand-over ("That was sample data. Now with your own things."), and the cards
+are ORDERED by what they actually opened in the demo (`Model/StartAppetite.swift`).
+
+  • **It orders, it never hides.** All three cards are always drawn, same shape, same weight —
+    §217's "one decision, not three offers of different weight" is intact. Only which is read
+    first moves, and only on evidence the person produced themselves.
+  • **The map is DELIBERATELY PARTIAL.** Wallet/Markets argue for the wallet card, Social/Reading
+    for follow, Life/Notes for files — and Work, Agents, Media and Shopping argue for NOTHING. A
+    demo spent in the Linear room says nothing about whether somebody's own things live in a
+    folder, a wallet or a feed, and inventing a correspondence would be a guess dressed as a
+    preference. **A fork that reorders on no evidence is worse than one that never reorders.**
+  • **Categories, not a hand list** — `BridgeCatalog.category(forSource:)`, the registry the
+    Sources Tray already groups by, so a seat added tomorrow is covered the day it lands.
+  • **The signal could not come from `ChipMemory`, and finding out why was the whole problem.**
+    That store already counts room opens — and `DemoSeedAll.teardown` calls
+    `ChipMemory.forgetDemo(demoVisits.keys)`, which removes those keys OUTRIGHT, seeded weight
+    and the person's own taps together. That is correct there (leaving must not leave a
+    stranger's tap-learning behind) and it means **every source the demo furnishes has its count
+    erased at exactly the moment the fork needs it.** So `DemoMode` keeps its own record, of the
+    person's taps only, cleared by `begin` and deliberately NOT by `exit` — it has to outlive the
+    demo by one screen or it answers nothing.
+  • **Read once, as the screen is made.** A fork whose cards reshuffle under somebody's thumb is
+    worse than one that never reorders, so the sort is a TOTAL order (score, then default
+    position) rather than relying on `sorted` being stable — which the standard library does not
+    promise, whatever `ChipMemory`'s own comment assumes.
+
+**4. The greeting wears the source's mark.** The hand-off toast carries `mark:` (§384), so
+"Following theverge.com" arrives beside the Bluesky mark and the files arm reuses the seat's own
+`proof` string rather than composing a second one — the toast and the catalog row cannot
+disagree about how much landed. Deliberately ONE toast and not two: **the rows landing IS the
+report**, and saying it twice spends the moment change 1 exists to create.
+
+**Guarded by `scripts/start-fork-selftest.sh`** (in `verify.sh`), which compiles `StartAppetite`
+WHOLE and unmodified — Foundation-only by design, the catalog resolver passed IN as a closure
+precisely so the harness needs no `BridgeCatalog` stub and proves the file that ships. 30
+assertions, 7 mutations, plus drift guards for the signal's three links (recorded in
+`ChipMemory`, surviving `DemoMode.begin`, read by the fork), for the measured examples, and for
+the leave-first change itself — **checked POSITIONALLY rather than by presence**, since
+`onStart(nil)` and the `Task` both exist in either order and which comes first is the entire
+feature. Mutation-proven against the real tree: reverting the follow arm to await-then-leave
+turns it red. Its negative guards read a COMMENT-STRIPPED copy, because the source documents the
+retired fakes by quoting them (the Obsidian/Cursor lesson, sixth instance) — and the stripper
+tracks string literals rather than cutting at the first `//`, which is load-bearing here for one
+specific reason: the value it must not corrupt is `"https://www.nasa.gov/feed/"`.
+
+**Two of its own fixtures were wrong on the first run, both the same class**, and both are now
+written with their premise stated: a zero-scoring arm sinks to LAST, so "wallet leads" is not
+"follow is buried". And the partial-map test could not have failed as first written — an
+unmapped category yields the default order and `.files` already leads it — so it now pairs a
+LOUD unmapped category with a QUIET mapped one, where mapping Work to `.files` would visibly
+invert the result. **A fixture only tests the rule it names if it fails that rule and passes
+every other one** (§418's lesson, third instance).
+
+**Not built, deliberately:** a progress checklist or completion meter (a tally, which the module
+doctrine forbids and which turns a one-second question into a chore), a fourth card (§217's
+amendment, still right), figures carrying plausible numbers (§83, and `StartFigureMark`'s own
+rule), and any toggle anywhere (§217's tripwire).
+
+### 424a. The demo's Photos room said "Not connected" (found in the same pass)
+
+Asked to verify the demo connects EVERY bridge with real rows and shows each in the sources
+tray, the answer is **no, and 16 of the 18 gaps are structural and documented** — ten
+balance-only seats that fold into `WalletPortfolio` and never own a source, four BYOK providers
+that land no `Thing` at all, Apple Notes riding `source: "You"` (`chiplessSources`), and
+Contacts/HomeKit deliberately findable-but-not-browsable (§365). All 78 `seatTable` seats really
+do have rows; the "seat marked connected with nothing behind it" failure does not exist today.
+
+**Two were real, and one was a live bug.** `Photos` read `status: .paused` /
+`statusLine: "Not connected"` while `DemoSeedAll.photos()` seeds the screenshot rows that make
+the demo's single biggest room — so the feed was full, the tray carried the chip, and the catalog
+said the app was not connected. `BridgeApp.demo`'s own comment says that table exists to prevent
+exactly this ("a room full of rows whose app reads 'not connected'"), arrived at from the other
+direction. It survived because `demo-selftest.py`'s check G tests MEMBERSHIP and never status,
+and the eight legacy seats live in `BridgeStore.swift` rather than in `seatTable`, so check G
+could only ever test them by name. Fixed, and made mechanical: **check K** asserts a legacy seat
+with rows reads connected, AND that a seat exempted as unconnected really seeds nothing — both
+halves, so neither kind of drift can hide. Mutation-proven against the real bug.
+
+`Reminders` is the second and is left alone with its reason recorded: it seeds zero rows (the
+overdue kept-ask the demo primes is carried by a Todoist row, not a Reminders one), so a paused
+seat is the honest reading. `KNOWN_UNCONNECTED_LEGACY_SEAT` holds it, and check K fails if rows
+ever land for it — the answer then is to connect the seat, not to widen the set.
+
+**Its "seeded" test is check E's literal rule, not the tighter `source: "X"`**, and that was this
+check's own first-run correction: ChatGPT and Claude build their rows from a `chats` array taking
+`source: c.1`, so a `source:` grep reported two fully-furnished rooms as unseeded. Measured
+across all eight — every seat that furnishes anything carries at least one literal, and Reminders
+carries exactly zero.

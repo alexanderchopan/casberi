@@ -325,7 +325,16 @@ struct BridgeApp: Identifiable, Codable {
               can: ["Brings in your chats.", "Does work when you ask."]),
         .init(id: "rem",   name: "Reminders", status: .paused,    statusLine: "Paused",
               can: ["Reads your reminders.", "Adds reminders when you ask."]),
-        .init(id: "pho",   name: "Photos",    status: .paused,    statusLine: "Not connected",
+        // CONNECTED, and it had to be (2026-08-20). This seat read
+        // `.paused` / "Not connected" while `DemoSeedAll.photos()` seeds the
+        // screenshot rows that make the demo's single biggest room — so the
+        // furnished feed showed a full Photos room, the sources tray showed
+        // its chip, and the catalog said the app was not connected. That is
+        // precisely the contradiction the comment below says this table
+        // exists to prevent, arrived at from the other direction, and it
+        // survived because `demo-selftest.py`'s legacy-seat check tested
+        // MEMBERSHIP and never status (fixed in the same pass).
+        .init(id: "pho",   name: "Photos",    status: .connected, statusLine: "Synced just now",
               can: ["Reads screenshots you take."]),
         // Claude chats, imported from the official export (PRD S9 "import"
         // grade) — one chat thing per conversation, kept findable.

@@ -135,6 +135,10 @@ DEMO_FILES = {
     "ThingContent": CASBERI / "Screens/ThingContent.swift",
     "ZerionAPI": CASBERI / "Model/ZerionAPI.swift",
     "WalletIngest": CASBERI / "Model/WalletIngest.swift",
+    # Read-only reference for check K — the eight LEGACY demo seats live in
+    # `BridgeApp.demo` here rather than in `DemoSeedAll.seatTable`, which is
+    # exactly why check G could only ever test them by name (2026-08-20).
+    "BridgeStore": CASBERI / "Model/BridgeStore.swift",
 }
 
 # Check J — the reads a VIEW makes on its own, which `BridgeRefresh`'s demo
@@ -645,6 +649,76 @@ def check_g_catalog_offers_have_demo_seats(files_text):
               offer in demo_seat_catalog_names, True)
 
 
+# The eight legacy seats check G can only test by NAME, since they live in
+# `BridgeApp.demo` rather than in `seatTable`.
+LEGACY_DEMO_SEATS = {"Gmail", "Calendar", "ChatGPT", "Reminders", "Photos",
+                     "Claude", "Wallet", "Tokens"}
+
+# A legacy seat that is allowed to read as not-connected — and it may only
+# stay here while the demo seeds NO rows for it. Reminders is the one: the
+# overdue kept-ask the demo primes is carried by a Todoist row
+# (`DemoSeedAll.schedule`'s "Book the dentist"), not by a Reminders row, so
+# this seat furnishes nothing and a paused seat is the honest reading of
+# that. If rows ever land for it, check K fails and the answer is to connect
+# the seat, not to widen this set.
+KNOWN_UNCONNECTED_LEGACY_SEAT = {"Reminders"}
+
+
+def check_k_legacy_seats_match_their_rows(files_text):
+    """Check K — a legacy demo seat with ROWS must read CONNECTED.
+
+    Check G tests membership and never status, which is how `Photos` shipped
+    as `.paused` / "Not connected" while `DemoSeedAll.photos()` seeded the
+    screenshot rows that make the demo's single biggest room: the feed was
+    full, the sources tray carried the chip, and the catalog said the app was
+    not connected (found 2026-08-20). `BridgeStore.demo`'s own comment says
+    that table exists to stop exactly this — "a room full of rows whose app
+    reads 'not connected'" — and nothing enforced it in the other direction.
+
+    Both halves are checked, so neither kind of drift can hide: a seat with
+    rows must be connected, and a seat exempted as unconnected must really
+    have no rows."""
+    demo_clean = strip_comments(files_text["DemoSeedAll"])
+    store_clean = strip_comments(files_text["BridgeStore"])
+    # "Seeded" is check E's rule — the name appears as a quoted literal —
+    # and NOT the tighter `source: "X"`, which was this check's own first cut
+    # and reported ChatGPT and Claude as unseeded while both furnish real
+    # rooms: their rows are built from a `chats` array and take
+    # `source: c.1`, so the source name lives in a tuple literal that a
+    # `source:` grep structurally cannot see. Measured across all eight
+    # (2026-08-20): every seat that furnishes anything carries at least one
+    # literal, and Reminders carries exactly zero, so the two cases separate
+    # cleanly.
+    #
+    # The known looseness runs one way only and is the harmless one: a name
+    # appearing in some non-seeding literal would count as seeded and demand
+    # the seat read connected, which for a legacy seat is the right answer
+    # anyway. The EXEMPTION half stays strict — zero literals, no exceptions
+    # — so a seat cannot be excused while quietly furnishing a room.
+    seeded = {name for name in LEGACY_DEMO_SEATS if f'"{name}"' in demo_clean}
+    for name in sorted(LEGACY_DEMO_SEATS):
+        # The seat's own `.init(…)` line in `BridgeApp.demo`, matched from the
+        # name to the end of its status so a neighbouring seat can't answer
+        # for it.
+        entry = re.search(r'name:\s*"' + re.escape(name) + r'"\s*,\s*status:\s*\.(\w+)',
+                          store_clean)
+        if entry is None:
+            check(f'K · legacy seat "{name}" found in BridgeApp.demo', False, True)
+            continue
+        connected = entry.group(1) == "connected"
+        if name in KNOWN_UNCONNECTED_LEGACY_SEAT:
+            check(f'K · exempt seat "{name}" really seeds no rows',
+                  name not in seeded, True)
+        elif name in seeded:
+            check(f'K · seeded legacy seat "{name}" reads connected', connected, True)
+        else:
+            # Not seeded and not exempt: it furnishes nothing and claims to be
+            # working — the "eight seats furnish nothing" shape check E exists
+            # for, in the one table check E cannot see.
+            check(f'K · unseeded legacy seat "{name}" is exempted with a reason',
+                  not connected, True)
+
+
 # Check H closes the loop check G's own construction left open. A room-head
 # bridge whose state is `private` (Safe) cannot be seeded from
 # `DemoSeedAll.swift` at all — no `KNOWN_*` exemption in check G can make
@@ -840,6 +914,7 @@ def run_checks(files_text):
     check_e_seat_names_have_rows(files_text)
     check_f_shape_coverage(files_text)
     check_g_catalog_offers_have_demo_seats(files_text)
+    check_k_legacy_seats_match_their_rows(files_text)
     check_h_state_owning_bridges_seed_themselves(files_text)
     check_i_wallet_counterparties_are_named(files_text)
     return len(failures) == before

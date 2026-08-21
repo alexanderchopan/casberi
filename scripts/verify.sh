@@ -537,6 +537,23 @@ harness "X pure-logic self-test" "X pure-logic self-test" "scripts/x-selftest.sh
 # the week, which is precisely what §245 measured and refused.
 harness "Instagram pure-logic self-test" "Instagram pure-logic self-test" "scripts/instagram-selftest.sh" "the Instagram logic self-test failed — run scripts/instagram-selftest.sh"
 
+# The onboarding fork's card ordering (prd §422) — the screen where a new
+# person decides whether to keep the app, so every failure here is expensive
+# and every one of them renders as a perfectly good fork: leading with the
+# card they showed the LEAST interest in, cards that reshuffle between two
+# draws of identical data, or reordering on no evidence at all because a
+# category that argues for nothing got mapped to an arm anyway.
+#
+# Its drift half matters more than its arithmetic. The signal is written in
+# `ChipMemory`, has to survive a teardown that erases the store it shadows,
+# and is read one screen later by the fork — break any link and the fork
+# silently returns to a fixed order with every assertion still green. It also
+# guards the two acting arms handing back to the feed BEFORE their sync
+# (positionally, not by presence: both calls exist in either order and which
+# comes first IS the feature), and that the three follow examples stay the
+# ones measured against the live services rather than plausible fakes.
+harness "Onboarding-fork self-test" "onboarding-fork self-test" "scripts/start-fork-selftest.sh" "the onboarding-fork self-test failed — run scripts/start-fork-selftest.sh"
+
 # The All feed's fold decisions (prd §377/§378/§379). Every failure it catches
 # is a silent wrong answer on the LANDING SCREEN that renders perfectly: a
 # screenshot run collapsing into a sentence about it, five songs off one record
