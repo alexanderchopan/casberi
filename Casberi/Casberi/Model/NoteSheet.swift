@@ -271,8 +271,7 @@ enum NoteSheet {
         return (true, info.isEmpty ? nil : info)
     }
 
-    /// A body, split into blocks — or one paragraph when the source is not
-    /// markdown.
+    /// A body, split into blocks.
     ///
     /// **`markdown` is a per-source FACT, not a preference.** Day One and
     /// Obsidian store markdown. Apple Journal's body is HTML run through
@@ -285,10 +284,19 @@ enum NoteSheet {
     /// kept rather than joined, which is where this departs from strict
     /// markdown and does so knowingly: a journal entry's line breaks are the
     /// writer's, and CommonMark would run them together into one wall.
+    ///
+    /// **THE FLAG GOVERNS MARKERS, NOT SPLITTING (2026-08-21).** It used to do
+    /// both — a non-markdown body returned as ONE paragraph — and the two are
+    /// different facts. Whether `- ` is a bullet or a dash depends on who wrote
+    /// the file; whether a blank line ends a paragraph does not, because nobody
+    /// writing anything means a blank line literally. Conflating them cost the
+    /// fold: `folded` cuts between blocks, so a single-block body can never
+    /// fold, and every non-markdown source was left with the twelve-line clamp
+    /// this whole pass exists to replace. Markers, fences and thematic breaks
+    /// stay gated; paragraph breaks are universal.
     static func blocks(_ text: String, markdown: Bool) -> [Block] {
         let body = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !body.isEmpty else { return [] }
-        guard markdown else { return [.paragraph(body)] }
 
         var out: [Block] = []
         var para: [String] = []
@@ -314,27 +322,39 @@ enum NoteSheet {
             fenceLanguage = nil
         }
 
+        // The per-source half, named so it reads as the fact it is — and so the
+        // harness has ONE anchor for "markers are gated" rather than gating the
+        // two blocks below under a bare `markdown` a mutation can't tell apart.
+        let takesMarkers = markdown
+
         for raw in body.components(separatedBy: .newlines) {
-            let fenced = fence(raw)
-            if fenceLines != nil {
-                // Only a fence closes a fence.
-                if fenced.isFence { closeFence() } else { fenceLines?.append(raw) }
-                continue
-            }
-            if fenced.isFence {
-                flush()
-                fenceLines = []
-                fenceLanguage = fenced.language
-                continue
+            if takesMarkers {
+                let fenced = fence(raw)
+                if fenceLines != nil {
+                    // Only a fence closes a fence.
+                    if fenced.isFence { closeFence() } else { fenceLines?.append(raw) }
+                    continue
+                }
+                if fenced.isFence {
+                    flush()
+                    fenceLines = []
+                    fenceLanguage = fenced.language
+                    continue
+                }
             }
             let line = raw.trimmingCharacters(in: .whitespaces)
+            // The one rule that applies to every source: a blank line ends a
+            // paragraph. See the type doc — this is deliberately OUTSIDE the
+            // `markdown` gate.
             if line.isEmpty { flush(); continue }
-            // A thematic break draws nothing — the design system has no
-            // hairlines — so it acts as the paragraph break it already is
-            // rather than printing "---" as a line of prose.
-            if line.allSatisfy({ $0 == "-" }) && line.count >= 3 { flush(); continue }
-            if line.allSatisfy({ $0 == "*" }) && line.count >= 3 { flush(); continue }
-            if let block = leader(line) { flush(); out.append(block); continue }
+            if takesMarkers {
+                // A thematic break draws nothing — the design system has no
+                // hairlines — so it acts as the paragraph break it already is
+                // rather than printing "---" as a line of prose.
+                if line.allSatisfy({ $0 == "-" }) && line.count >= 3 { flush(); continue }
+                if line.allSatisfy({ $0 == "*" }) && line.count >= 3 { flush(); continue }
+                if let block = leader(line) { flush(); out.append(block); continue }
+            }
             para.append(line)
         }
         // An UNCLOSED fence still yields its code. This is not an edge case

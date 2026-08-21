@@ -88,6 +88,17 @@ struct NoteProse: View {
     /// code fence starts drawing correctly in one room and as prose in the
     /// other.
     var tier: DSTextStyle = .reading20
+    /// The ink the prose is set in (2026-08-21).
+    ///
+    /// `textPrimary` is this view's own ruling and stays the default, for the
+    /// same reason `reading20` is: on a note the body IS the thing. The generic
+    /// thing sheet is the exception — there the body really is an annotation
+    /// under a fact (a reminder's note, a contact's detail), which is why that
+    /// branch has always drawn it secondary, and borrowing the fold must not
+    /// silently re-rank the whole category's type.
+    ///
+    /// Parameterised for the reason `tier` was: one splitter, one renderer.
+    var ink: Color = DS.textPrimary
 
     @State private var expanded = false
 
@@ -167,7 +178,7 @@ struct NoteProse: View {
         case .paragraph(let text):
             prose(text)
                 .dsText(tier)
-                .foregroundStyle(DS.textPrimary)
+                .foregroundStyle(ink)
                 // Words are what people copy a phrase out of, and until §366 no
                 // note body in this app allowed it.
                 .textSelection(.enabled)

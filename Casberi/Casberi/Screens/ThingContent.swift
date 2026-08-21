@@ -283,6 +283,45 @@ struct ThingContentView: View {
                 // A starred / watched repo leads with its preview, then the
                 // language dot and the "since you starred" line.
                 GitHubStarContent(thing: thing)
+            } else if FeedArticleText.sources.contains(thing.source),
+                      let body = thing.enrichedText?
+                          .trimmingCharacters(in: .whitespacesAndNewlines),
+                      !body.isEmpty {
+                // THE ARTICLE, AT LAST (2026-08-21). `FeedArticleText` has
+                // fetched the readable body of every RSS and Substack link since
+                // it shipped, and NO VIEW HAS EVER DRAWN IT: the row showed a
+                // headline, the sheet showed a preview card, and the words sat
+                // in the store reachable only by asking a question about them.
+                //
+                // This is the Obsidian exception (§320) for the same reason and
+                // with the same shape — `enrichedText` stays retrieval-only as
+                // the rule, and this is the fourth NAMED carve-out, not a
+                // reversal. There the vault bridge read somebody's notes,
+                // indexed them, and showed nobody the note; here the feed
+                // bridge reads somebody's articles, indexes them, and shows
+                // nobody the article. A reader that already paid for the fetch
+                // and then withholds it is the strangest possible outcome.
+                //
+                // Membership is `FeedArticleText.sources` itself, never a
+                // literal pair: the fetcher's own list decides who has a body
+                // to draw, so a third source added there is drawn here the same
+                // day rather than fetched into silence.
+                //
+                // The preview card stays ABOVE it — the article's own art and
+                // its door out to the site are not replaced by its text.
+                if let url = Capture.detectURL(
+                    in: thing.content.isEmpty ? thing.title : thing.content) {
+                    LinkPreviewCard(url: url, storedImageURL: thing.previewImageURL)
+                }
+                // Defaults, unlike the generic branch below: on an article the
+                // body IS the thing (§366's own test), so it is set at
+                // `reading20` in primary ink rather than as a footnote under a
+                // fact. `markdown: false` — this is scraped prose, and nobody
+                // wrote it as markdown.
+                NoteProse(text: body, markdown: false)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, DS.Space.s4)
+                    .padding(.bottom, DS.Space.s3)
             } else if let url = Capture.detectURL(in: thing.content.isEmpty ? thing.title : thing.content) {
                 LinkPreviewCard(url: url, storedImageURL: thing.previewImageURL)
             } else if let art = thing.previewImageURL, !art.isEmpty {
@@ -501,9 +540,30 @@ struct ThingContentView: View {
                     .padding(.horizontal, DS.Space.s4)
                     .padding(.bottom, DS.Space.s3)
             } else if !thing.content.isEmpty, !Self.bareLinkBody(thing) {
-                Text(ProseLinks.rendered(thing.content))
-                    .dsText(.callout15).foregroundStyle(DS.textSecondary)
-                    .lineLimit(12)
+                // FOLDED AT A BLOCK, NOT CLAMPED AT TWELVE LINES (2026-08-21).
+                // §366 gave the note category a real disclosure and left every
+                // OTHER source on the silent cut — so a Reddit save, a Slack
+                // message, a Linear description and a Notion block all still
+                // ended mid-sentence with no "more" and nothing to scroll, in
+                // the branch that catches every source without an anatomy of
+                // its own. This is that fix, for the rooms nobody went back for.
+                //
+                // `markdown: false` deliberately: whether a body is markdown is
+                // a per-source FACT (`NoteSheetSource.markdownSources`) and this
+                // branch is reached by every source that has no anatomy, so
+                // there is no source here to make the claim about. `prose()`
+                // falls through to exactly the `ProseLinks.rendered` this line
+                // used to call, so link rendering is unchanged.
+                //
+                // Tier and ink are pinned to what this branch has always drawn.
+                // Borrowing the fold must not re-rank the category's type: here
+                // the body really is an annotation under a fact, which is the
+                // case §366 carved the note sources OUT of.
+                NoteProse(text: thing.content,
+                          markdown: false,
+                          tier: .callout15,
+                          ink: DS.textSecondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, DS.Space.s4)
                     .padding(.bottom, DS.Space.s3)
             }

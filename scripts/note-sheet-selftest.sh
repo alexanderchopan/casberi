@@ -487,10 +487,30 @@ check("a future date reads as just now",
 print("")
 print("")
 print("The body's own structure (prd §399)")
-// A source whose body is NOT markdown is one paragraph, whatever it contains —
+// A source whose body is NOT markdown takes no MARKERS, whatever it contains —
 // the whole point of the per-source fact. A dash somebody typed is a dash.
-check("a non-markdown body is one paragraph",
+check("a non-markdown body takes no markers",
       NoteSheet.blocks("- milk\n- bread", markdown: false) == [.paragraph("- milk\n- bread")])
+// …but a blank line ends a paragraph for EVERY source (2026-08-21). The flag
+// governs markers, not splitting. Without this the body is one block, `folded`
+// has nothing to cut between, and every non-markdown source keeps the
+// twelve-line clamp §399 exists to replace — a mutation that reads as a
+// harmless simplification and silently disables the fold.
+check("a blank line splits a non-markdown body",
+      NoteSheet.blocks("First para.\n\nSecond para.", markdown: false)
+        == [.paragraph("First para."), .paragraph("Second para.")])
+// The departure from CommonMark survives the change: a SINGLE newline is the
+// writer's line break and is kept inside the paragraph, not split on.
+check("a single newline does not split a non-markdown body",
+      NoteSheet.blocks("One line.\nNext line.", markdown: false)
+        == [.paragraph("One line.\nNext line.")])
+// And the fold can now actually reach a non-markdown body, which is the whole
+// point of the split — asserted as the OUTCOME, since the two checks above
+// would both pass against a splitter whose blocks nothing ever folds.
+check("a long non-markdown body folds",
+      NoteSheet.folded(NoteSheet.blocks(
+        (0..<40).map { "Paragraph \($0), long enough to count toward the budget." }
+            .joined(separator: "\n\n"), markdown: false)).count < 40)
 check("an empty body has no blocks", NoteSheet.blocks("   \n\n ", markdown: true).isEmpty)
 check("a heading is a heading",
       NoteSheet.blocks("# Monday", markdown: true) == [.heading(level: 1, text: "Monday")])
@@ -862,8 +882,15 @@ mutate "single newlines are joined the way CommonMark would" \
   'para.joined(separator: "\n")' \
   'para.joined(separator: " ")'
 mutate "a non-markdown body is parsed as markdown anyway" \
-  'guard markdown else { return [.paragraph(body)] }' \
-  'guard true else { return [.paragraph(body)] }'
+  'let takesMarkers = markdown' \
+  'let takesMarkers = true'
+# The 2026-08-21 split, from the other side: putting the blank-line break back
+# under the per-source gate returns every non-markdown body to ONE block, which
+# `folded` cannot cut — so the fold silently dies and the twelve-line clamp is
+# back everywhere §366 did not reach. It reads as tidying the gate up.
+mutate "the blank-line break is gated per source again" \
+  'if line.isEmpty { flush(); continue }' \
+  'if line.isEmpty && takesMarkers { flush(); continue }'
 # A fold that keeps nothing shows an empty opening above a "read the rest".
 mutate "the fold can keep no blocks at all" \
   'if !out.isEmpty && used >= limit { break }' \
