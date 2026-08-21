@@ -403,6 +403,51 @@ else
 fi
 
 hr
+# Walletbeat (prd §419) — the bundled directory still matches what they publish.
+#
+# `Model/WalletbeatDirectory.swift` is a SNAPSHOT: 32 wallets' rating counts,
+# generated at ship time because fetching every wallet's ~342KB report to draw a
+# list is 11MB for a screen that must open instantly and offline. So the whole
+# directory ages silently — Walletbeat re-rates a wallet, our row keeps drawing
+# yesterday's counts under their name, and nothing on the device can tell.
+#
+# It is HERE and not in verify.sh because `--check` regathers from
+# `beta.walletbeat.eth.limo` — that pass is all-local and deterministic by
+# contract. The generator's PURE half (`--self-test`) runs there instead.
+#
+# Amber, never red, and never a build failure: stale is a REGENERATE ERRAND for
+# the next ship (docs/testflight-handoff.md), not a broken app — the snapshot in
+# the tree is still Walletbeat's real judgment, just an older one.
+#
+# BOUNDED, unlike every curl row above. Those carry `--max-time`; this is a
+# python walk of 32 documents with a 60s per-request timeout of its own, so a
+# hung host could hold an unattended nightly for minutes. macOS ships no
+# `timeout(1)` (verify-mac.sh's own lesson), so the watchdog is spelled out, and
+# a signal death (> 128) is read as unreachable — which is what a hang means.
+WB_OUT=$(mktemp)
+"${0:h}/walletbeat-snapshot.py" --check >"$WB_OUT" 2>&1 &
+WBPID=$!
+( sleep 180; kill -9 $WBPID 2>/dev/null ) >/dev/null 2>&1 &
+WBDOG=$!
+wait $WBPID; WBRC=$?
+kill $WBDOG 2>/dev/null
+wb=$(<"$WB_OUT"); rm -f "$WB_OUT"
+if (( WBRC > 128 )); then
+  warn "Walletbeat snapshot — check timed out after 180s (their host is slow or hung); the bundled directory is unverified this run"
+elif [[ "$wb" == *"walletbeat directory is current"* ]]; then
+  pass "Walletbeat snapshot — the bundled directory matches what they publish today"
+elif [[ "$wb" == *"STALE"* ]]; then
+  # Split from the unreachable case on purpose. Stale is a fact about OUR tree
+  # and is acted on; unreachable is a fact about THEIR host and is not, and a
+  # single row for both would have somebody regenerating against a site that is
+  # down (which `gather` refuses to do anyway — a partial snapshot would drop
+  # wallets from the directory, reading as "Walletbeat doesn't rate it").
+  warn "Walletbeat snapshot — STALE: their ratings moved since it was generated; run scripts/walletbeat-snapshot.py before the next ship"
+else
+  warn "Walletbeat snapshot — couldn't check (host or index unreachable): $(print -r -- "$wb" | tail -1 | cut -c1-80)"
+fi
+
+hr
 if (( RED == 0 && AMBER == 0 )); then
   print -P "%F{green}All live-integration hosts healthy.%f"
 elif (( RED == 0 )); then

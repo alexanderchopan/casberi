@@ -219,6 +219,27 @@ step "PRD index audit"
 "$ROOT/scripts/prd-index-audit.py" || fail "the PRD ledger's numbering or citations drifted — see the output above"
 print -P "%F{green}✓ prd index audit%f"
 
+# The generator behind `Model/WalletbeatDirectory.swift` (prd §419), proving its
+# own rules still hold. PURE — it runs against fixtures, reaches no host, and is
+# therefore the half of this generator that belongs in a deterministic pass; the
+# STALENESS half needs the network and lives in `live-integrations.sh` instead.
+#
+# It is here because the self-test existed and NOTHING RAN IT — the same class
+# §422 found twice in this feature (`NoteMoments.checkLinkCrossings` and
+# `checkWikilinkReachBack` shipped with no caller). What it catches is a
+# generator that has stopped distilling correctly: an EXEMPT rating folded into
+# UNRATED, an unknown rating silently dropped (which SHRINKS the bar rather than
+# erroring), a hardware wallet losing its `maintenance` dimension, or a quote in
+# a wallet name breaking the Swift file it emits. Every one of those renders as
+# a perfectly plausible directory row carrying Walletbeat's name over numbers
+# they did not publish (§83). Note this file is a `*-snapshot.py`, so the
+# "Self-test completeness" guard above — which globs `*-selftest.*` and
+# `*-audit.*` — could never have found it.
+step "Walletbeat snapshot generator self-test"
+"$ROOT/scripts/walletbeat-snapshot.py" --self-test >/dev/null \
+  || fail "the Walletbeat snapshot generator's own self-test failed — the generator is broken, so the next regenerate would write a wrong directory"
+print -P "%F{green}✓ walletbeat snapshot generator self-test%f"
+
 # The Themes treemap draws every tag it isn't told to exclude, so a bridge's own
 # state label ("Post", "Watchlist", "Pending") clusters as a THEME — and being
 # machine-stamped on every row it lands, it outnumbers any real subject by
@@ -1538,6 +1559,7 @@ else
     githubHead        "GitHub"
     radicleHead       "Radicle"
     cardPointersHead  "CardPointers"
+    walletbeatHead    "Walletbeat"
   )
   MISSING_HEADS=()
   for name in "${(k)ROOM_HEADS[@]}"; do
