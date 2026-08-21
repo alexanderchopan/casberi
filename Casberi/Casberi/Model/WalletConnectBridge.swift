@@ -418,6 +418,12 @@ enum WalletConnectBridge {
         }
         guard let session = await settled else { return .timedOut }
 
+        // WHICH APP, not just which addresses (prd §430). The peer names itself
+        // and the session is about to be destroyed, so this is the only moment
+        // the fact exists — it feeds Walletbeat's seat, which otherwise asks
+        // people to type a wallet name the handshake already knew. Recorded
+        // BEFORE the teardown for that reason, and it reaches nothing.
+        WalletConnectApps.record(appNamed: session.peer.name)
         let found = accounts(from: session)
 
         // Read first, then kill — and hand the addresses back only once the
@@ -472,6 +478,12 @@ enum WalletConnectBridge {
         await MainActor.run { AppKit.present() }
 
         guard let session = await settled else { return .timedOut }
+        // WHICH APP, not just which addresses (prd §430). The peer names itself
+        // and the session is about to be destroyed, so this is the only moment
+        // the fact exists — it feeds Walletbeat's seat, which otherwise asks
+        // people to type a wallet name the handshake already knew. Recorded
+        // BEFORE the teardown for that reason, and it reaches nothing.
+        WalletConnectApps.record(appNamed: session.peer.name)
         let found = accounts(from: session)
         if let failure = await tearDownShielded(topic: session.topic) {
             throw ConnectError.tearDownFailed(topic: session.topic, underlying: failure)

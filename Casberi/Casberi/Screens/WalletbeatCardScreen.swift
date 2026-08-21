@@ -28,6 +28,10 @@ struct WalletbeatReportCard: View {
 	@State private var failed = false
 	@State private var watching = false
 	@State private var incidents: [KeyedThing] = []
+	/// What Walletbeat has changed its mind about since this device started watching,
+	/// keyed by attribute (prd §430). Empty for an unwatched wallet, which is correct —
+	/// nothing was ever read to compare against.
+	@State private var revised: [String: WalletbeatSheet.Revision] = [:]
 
 	private var entry: WalletbeatEntry? {
 		WalletbeatDirectory.wallets.first { $0.id == walletID }
@@ -243,7 +247,8 @@ struct WalletbeatReportCard: View {
 					.foregroundStyle(DS.textPrimary)
 				VStack(alignment: .leading, spacing: DS.Space.s4) {
 					ForEach(attributes) { attribute in
-						WalletbeatAttributeRow(attribute: attribute)
+						WalletbeatAttributeRow(attribute: attribute,
+											   revision: revised[attribute.id])
 					}
 				}
 				.padding(DS.Space.s4)
@@ -326,6 +331,7 @@ struct WalletbeatReportCard: View {
 	private func load() async {
 		watching = WalletbeatWatch.watchedIDs(context: modelContext).contains(walletID)
 		incidents = WalletbeatSheetSource.incidents(forWallet: walletID, context: modelContext)
+		revised = WalletbeatSheetSource.revisions(forWallet: walletID, context: modelContext)
 		// A stored card draws instantly; the live read then replaces it. Both are shown
 		// the same way, because a cached rating and a fresh one are equally Walletbeat's.
 		if let stored = WalletbeatState.card(walletID) { card = stored }
@@ -359,6 +365,9 @@ struct WalletbeatReportCard: View {
 /// their own answer to why the question is worth asking at all.
 struct WalletbeatAttributeRow: View {
 	let attribute: WalletbeatAttribute
+	/// Walletbeat changing its mind about THIS attribute, if this device saw it happen
+	/// (prd §430). Nil is the common case and draws nothing.
+	var revision: WalletbeatSheet.Revision?
 
 	@State private var expanded = false
 
@@ -385,6 +394,22 @@ struct WalletbeatAttributeRow: View {
 					.dsText(.subhead13)
 					.foregroundStyle(DS.textTertiary)
 					.fixedSize(horizontal: false, vertical: true)
+			}
+
+			// WHAT MOVED, and when. Last, because it is a fact about the verdict's
+			// HISTORY and everything above it is the verdict itself — a reader wants to
+			// know what Walletbeat says before they want to know when it changed.
+			//
+			// Their date and their words for both verdicts; nothing here is our reading
+			// of the change. A revision with no recorded before says only that it moved,
+			// rather than reaching for the card as it stands today to fill the gap —
+			// that would be a different moment's verdict wearing this one's date.
+			if let revision {
+				Text(Self.revisedLine(revision))
+					.dsText(.label11)
+					.foregroundStyle(DS.textTertiary)
+					.fixedSize(horizontal: false, vertical: true)
+					.padding(.top, DS.Space.s1)
 			}
 
 			if let why = attribute.whyItMatters, !why.isEmpty {
@@ -414,6 +439,34 @@ struct WalletbeatAttributeRow: View {
 			}
 		}
 	}
+
+	/// "Walletbeat changed this from Partly on 22 Jul 2026".
+	///
+	/// The day is Walletbeat's own `lastUpdated` string. It is FORMATTED when it parses
+	/// and printed verbatim when it does not — their spelling of a date is readable
+	/// either way, and dropping it would be losing the fact to tidy the sentence.
+	static func revisedLine(_ revision: WalletbeatSheet.Revision) -> String {
+		let when = revision.day.map { raw -> String in
+			WalletbeatNewsParse.day(raw).map { Self.day.string(from: $0) } ?? raw
+		}
+		switch (revision.before, when) {
+		case (let before?, let when?):
+			return String(localized: "Walletbeat changed this from \(WalletbeatCopy.label(before)) on \(when)")
+		case (let before?, nil):
+			return String(localized: "Walletbeat changed this from \(WalletbeatCopy.label(before))")
+		case (nil, let when?):
+			return String(localized: "Walletbeat revised this on \(when)")
+		case (nil, nil):
+			return String(localized: "Walletbeat has revised this")
+		}
+	}
+
+	private static let day: DateFormatter = {
+		let f = DateFormatter()
+		f.dateStyle = .medium
+		f.timeStyle = .none
+		return f
+	}()
 }
 
 /// Walletbeat's prose, rendered.

@@ -1071,6 +1071,43 @@ enum ProbeHooks {
                       added.map(String.init) ?? (on ? "UNREACHABLE" : "-"))
             }
         },
+        // `-walletbeatConnectedApp "<name[,name]>"|clear` — pretend a wallet app
+        // announced itself over WalletConnect (prd §430).
+        //
+        // Declared BEFORE the probes (hooks run in list order) so a run can seed a
+        // sighting and read the join in one launch. It exists because the state it
+        // seeds is UNREACHABLE any other way here: the real record is written from a
+        // settled WalletConnect session's peer metadata, no simulator has a wallet app
+        // to settle one, and this project has never observed a real `AppMetadata.name`.
+        // So the resolver's own fixtures live in the harness and this is what proves
+        // the wiring — that a name really reaches the setup screen's offer, the
+        // directory's marker and the room's button.
+        //
+        // Takes the app's OWN name ("Safe{Wallet}", "Ledger"), never a Walletbeat id:
+        // feeding it an id would test the table against itself and prove nothing about
+        // the transform that makes the join work at all.
+        Hook(key: "walletbeatConnectedApp") { spec, context in
+            if spec.lowercased() == "clear" {
+                WalletConnectApps.forgetAll()
+                NSLog("[Casberi] walletbeatApp| cleared")
+                return
+            }
+            for raw in spec.split(separator: ",") {
+                let name = String(raw).trimmingCharacters(in: .whitespaces)
+                guard !name.isEmpty else { continue }
+                WalletConnectApps.record(appNamed: name)
+                let id = WalletbeatMatch.walletID(
+                    forAppNamed: name,
+                    in: WalletbeatDirectory.wallets.map { (id: $0.id, name: $0.name) })
+                NSLog("[Casberi] walletbeatApp| \"%@\" key=%@ → %@",
+                      name, WalletbeatMatch.key(name) ?? "-", id ?? "NOT RATED")
+            }
+            Task { @MainActor in
+                let offered = WalletbeatWatch.connectedSuggestions(context: context)
+                NSLog("[Casberi] walletbeatApp| offering=%@",
+                      offered.isEmpty ? "NOTHING" : offered.map(\.name).joined(separator: ","))
+            }
+        },
         // `-walletbeatProbe YES` — the read phase by phase, then one line per
         // watched wallet's ratings and one per landed incident. An empty room
         // has five causes that render as one silence (nothing watched, a first
@@ -1132,7 +1169,10 @@ enum ProbeHooks {
                     }
                 case .revision:
                     if let (rev, attribute) = WalletbeatSheetSource.revisionAttribute(for: thing) {
-                        detail = "\(rev.walletID).\(rev.attributeID)→\(rev.after.rawValue) named=\(attribute != nil)"
+                        // The BEFORE is the §430 field and is printed apart from the
+                        // after: a row landed before it existed reads `before=none`,
+                        // which is the honest state and not a parse failure.
+                        detail = "\(rev.walletID).\(rev.attributeID) \(rev.before?.rawValue ?? "none")→\(rev.after.rawValue) named=\(attribute != nil)"
                     } else {
                         detail = "REF UNPARSED — the sheet falls back to generic"
                     }

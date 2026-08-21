@@ -50,6 +50,10 @@ struct WalletbeatDirectoryScreen: View {
 	/// has an unresolved breach, which is landed data one join away. The single
 	/// most decision-relevant fact on the screen was the one it withheld.
 	@State private var openIncidents: Set<String> = []
+	/// Wallets whose app has really announced itself to this device over WalletConnect
+	/// (prd §430). The one fact on this screen that is about the PERSON rather than about
+	/// the wallet, which is why it is drawn apart from the finding line below it.
+	@State private var connected: Set<String> = []
 	@State private var opened: String?
 
 	var body: some View {
@@ -116,6 +120,17 @@ struct WalletbeatDirectoryScreen: View {
 					.dsText(.body17)
 					.foregroundStyle(DS.textPrimary)
 					.lineLimit(1)
+				// ITS OWN LINE, deliberately. It could be squeezed into the fact line
+				// below, but that line's order is §422's ruling — an unresolved incident
+				// leads it because it outranks coverage — and this is not a finding at
+				// all: it says which of the thirty-two rows are about software this
+				// person actually runs. Different question, different line, and the
+				// ruling below is left exactly as it was.
+				if connected.contains(entry.id) {
+					Text(WalletbeatCopy.connectedMarker)
+						.dsText(.label11).fontWeight(.semibold)
+						.foregroundStyle(DS.tint)
+				}
 				HStack(spacing: DS.Space.s2) {
 					// FIRST, and in words. It outranks coverage because coverage
 					// describes how much Walletbeat has looked, and this
@@ -204,6 +219,10 @@ struct WalletbeatDirectoryScreen: View {
 			WalletbeatIncidentBook.all().values
 				.filter { $0.status.isOpen }
 				.flatMap(\.wallets))
+		// Resolved on every load rather than stored resolved, so a wallet Walletbeat has
+		// added since the sighting starts being marked with no migration — see
+		// `WalletConnectApps`, which keeps the app's raw name for exactly this reason.
+		connected = WalletbeatWatch.connectedIDs()
 	}
 
 	private func watch(_ entry: WalletbeatEntry) {

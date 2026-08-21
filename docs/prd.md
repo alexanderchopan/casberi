@@ -86,8 +86,9 @@ at all.
 | §217 | The onboarding fork: three verbs, and a held-open placeholder example | amended by §424 |
 | §36 | Bridge selection ruling: live data only | amended by §420 |
 | §402 | Altana keystore: read Ethereum only, and stay silent on first sight | amended by §403 |
-| §419 | Walletbeat: the seat exists only while a wallet is watched | amended by §421 |
-| §421 | Walletbeat's two tiers: following and watching | amended by §422 |
+| §419 | Walletbeat: the seat exists only while a wallet is watched | amended by §421, §430 |
+| §421 | Walletbeat's two tiers: following and watching | amended by §422, §430 |
+| §422 | Three Walletbeat facts that were landed and on no screen | amended by §430 |
 | §420 | Walletbeat and CardPointers keep their own chips (amendment) | reversed for Walletbeat by §423 |
 | §36a | Home cover: an explicit banner outranks the automatic screensh | amended by §36j, superseded by §36o |
 | §36h | Wallet holdings: one treemap per wallet, leads Feed too, tap-t | amended by §36n |
@@ -28809,3 +28810,215 @@ the audit outright if it ever gains a way to make a request; the bridge's own ho
 the rotating walk have only ever run in the harness and in the reasoning. Every read fails
 safe — an unreachable summary leaves the bundle drawing, an unparseable milestone is skipped,
 an unknown sentiment reads `unknown` and never `good`.
+
+## 430. Four Walletbeat facts, three of which were already in the corpus (user: "how if at all would you improve the UI and UX of the walletbeat experience", then "OK do all", 2026-08-21)
+
+Amends §419, §421 and §422.
+
+**Most of what an audit reaches for here has already been decided and should not be
+re-litigated.** §419 through §423 made four passes in one day, and the obvious improvements
+are refusals with reasons that still hold: no composite score (Walletbeat publishes none,
+so inventing one puts our weighting behind their name), no best-first sort, no side-by-side
+comparison of two wallets (§422 — sixteen of the thirty-two are mostly unexamined, so a
+comparison is mostly unknowns rendered as a verdict). The standing lesson from §418 held
+again: **read a mature room's most recent ledger entry before proposing anything, because
+the code will not tell you which of its gaps were deliberate.**
+
+What was left is four items. **Three of them read nothing new at all** — the facts were
+landed and no surface said them, the shape §422 already found three times. The fourth is
+§419's own §8, held open there and built here.
+
+### 1. Which wallet app you use, learned rather than typed
+
+§419's naming step is a list of thirty-two wallets and a search field — homework, on the
+one seat whose whole claim is that it speaks about YOUR software. §419 §8 named the way
+out and declined to build it: a settled WalletConnect session's `peer` metadata NAMES the
+wallet app, and nothing stored it.
+
+**The record is written BEFORE the teardown, which is the only moment the fact exists.**
+`WalletConnectBridge` reads a settled session for its accounts and destroys it on the spot,
+deliberately (§84's promise is that no address reaches a caller by any path where the
+session carrying it survives) — so the peer name dies with it unless it is taken there.
+Both connect paths take it; neither returns it, since a `ConnectOutcome` carrying it would
+make every caller responsible for a fact only one of them wants.
+
+**THE RAW NAME IS STORED, NEVER THE ID IT RESOLVES TO**, and that is the decision the whole
+feature rests on. Walletbeat rates thirty-two wallets today and will rate more; a resolved
+id freezes today's directory into the record, while a raw name is re-resolved on every read
+— so a wallet they add next month starts being offered to somebody who connected with it
+last year, for free and with no migration. It is also what makes every held item in §5
+below cheap rather than a rewrite.
+
+**THE ASYMMETRY THAT SHAPES EVERY RULE: a miss costs nothing and a wrong match offers
+somebody a security review of software they do not run**, on the screen where they decide
+what to trust with their keys. So the match is exact after normalisation — never a prefix,
+never a substring — and **an ambiguous key resolves to NOTHING** rather than to whichever
+entry was listed first.
+
+**The one transform is MEASURED, and without it the feature would never once have fired.**
+Walletbeat's display names systematically append the word the app itself does not: "Ledger
+Wallet", "Trezor Wallet", "Keystone Wallet", "Cypherock Wallet", "GridPlus Wallet",
+"Firefly Wallet", "Uniswap Wallet" — while a WalletConnect peer calls itself "Ledger". A
+strict comparison therefore misses nearly every hardware wallet in the registry, and misses
+it SILENTLY, which is §311 exactly: no offer ever appears and nothing says why. So a
+trailing `wallet` token is dropped from both sides. **Only that one word**: stripping "app",
+"live" or "suite" as well would start folding genuinely different products together, and a
+fold is a wrong answer where a miss is merely no answer. It earns its keep in both
+directions — Safe's app announces itself as `Safe{Wallet}` and lands on Walletbeat's "Safe"
+— and it does **not** fold SafePal onto Safe, which matters because SafePal is named in
+Walletbeat's own incident feed. A wallet actually called "Wallet" keeps its name rather than
+normalising to nothing.
+
+**The collision check runs against the SHIPPED SNAPSHOT, not a fixture.** Measured
+2026-08-21: no key is claimed by two wallets across the real thirty-two, and all sixty-four
+spellings (each display name, each Walletbeat id) resolve to their own entry. So the
+ambiguity rule never has to fire today, and a rename on Walletbeat's side that would create
+one **fails the build** instead of silently offering the wrong wallet's review.
+
+**Three surfaces, all of which already existed.** The setup screen offers the matches ABOVE
+the field, because they are the answer to the question the field asks. The directory marks
+the rows. The room's one button names the wallet.
+
+**The button naming a wallet does not break §421's rule and it is worth saying why.** That
+rule — this head NEVER names a wallet — is about the HEADLINE, where promoting whichever of
+thirty-two happened to be newest reads as a warning about software the person may not use.
+This is an OFFER, on a button whose entire job is already the naming step, and its grounds
+are the person's own handshake rather than our pick. Every reason the headline rule exists
+is absent. It names a wallet **only while nothing is watched**: once one is named the
+button's job is the rest of the registry again, and a label that went on naming one wallet
+forever would be a nag rather than a shortcut.
+
+**The marker's words are deliberately NOT §422's "You use this".** That phrase, on an
+incident row, means "about a wallet you WATCH" — a fact about the watch list. This means
+"an app that really connected to this device" — a fact about handshakes. One phrase over two
+different pieces of evidence is how a reader stops being able to tell what either is
+claiming. It also never says the bare word "connected", which in this app is the CATALOG's
+word for a seat that is switched on, and a wallet in that list is connected to nothing.
+
+**The sightings survive Walletbeat's disconnect, deliberately.** §401's by-name teardown
+rule says a seat takes what the seat planted; this was planted by the WalletConnect flow and
+Walletbeat merely reads it.
+
+Costs nothing: two local records, no request, no new `Thing` property, no CloudKit deploy.
+
+**UNMEASURED, and structurally so:** this host has no wallet app and no device, so no real
+`AppMetadata.name` has ever been observed by this project. What IS measured is the other
+side of the join — Walletbeat's own thirty-two display names — and that measurement is what
+forced the transform above. `-walletbeatConnectedApp "<name>"` seeds a sighting because the
+state is otherwise unreachable here, the same reason `-walletbeatFollow` exists; it takes
+the APP's own name and never a Walletbeat id, since feeding it an id tests the table against
+itself and proves nothing about the transform that makes the join work.
+
+### 2. An incident that names your wallet is a door to its review
+
+The report card already cross-links to landed incidents ("On record"). The incident named
+its wallets as a joined string — a dead end at exactly the moment its reader has the next
+question, since **a rating is a standing judgment and an incident is an event, so neither
+substitutes for the other**: a wallet can rate well and have been breached last week.
+
+One wallet per LINE rather than a wrapping row of chips: a name is a door here, and a door
+clipped by its neighbour is a door nobody finds. Three named wallets is three lines, which
+is the honest size of that fact.
+
+**A wallet Walletbeat does not rate is still named and is deliberately not a door.** Their
+SafePal and Slope entries name no rated wallet at all (§419 §4), so the id falls back to
+itself — an incident naming a wallet we cannot name is still about that wallet — and
+offering a report card that does not exist is the dead control §83 bans.
+
+One `.sheet`, on the head, which is itself inside a presented sheet — the one place this app
+allows a nested presentation (`ReplyingToRow`'s ruling), and it hangs off the live body so a
+row deleted underneath takes the card down with it.
+
+### 3. A revision remembers where it came from
+
+The revision sheet drew the verdict a rating LANDED on and stated its own reason: "painting
+an arrow from a 'before' we never stored would be inventing the half of the story that
+matters most". That was right about the sheet and wrong about the world — **the before was
+never missing**: `WalletbeatRevisions.between` holds it at the moment of detection, and the
+ref threw it away. It is the last component of the ref now.
+
+**APPENDED, never inserted, and that is the whole migration.** A ref already in the corpus
+has four components, keeps parsing as one, yields no before, and draws exactly what it
+always drew. Nothing re-lands either: a revision is detected exactly once, by diffing the
+STORED card against the fresh one, and the stored card becomes the fresh one in the same
+pass.
+
+**It is still never INFERRED.** An old row does not get a before reconstructed from the card
+as it stands today — that would be a different moment's verdict wearing this one's date, and
+the sheet's original refusal applies to it with full force.
+
+Two parse rules, each a silent wrong answer otherwise. An unreadable fifth component reads
+as ABSENT rather than failing the whole ref: a revision whose before we cannot spell is
+still a revision, and refusing the ref would drop the row's entire anatomy over its least
+important field. And an entry Walletbeat has never dated writes an EMPTY day, so the before
+sits after an empty component (`…:PASS::FAIL`) — the one shape a naive index reads as the
+date, and it is pinned.
+
+### 4. The card says what has moved since you started watching
+
+A revision lands as a feed row and scrolls away, so somebody re-opening a card they have
+read before had no way to see what had changed. The card is where that question is asked and
+the answer was already in the corpus, one join away — the same shape §422 used for the
+directory's open incidents.
+
+**LANDED ROWS ONLY**, which is §422's own bound and the honest one: this marks what the
+person's corpus can show, so a wallet watched since Tuesday is marked from Tuesday onward
+and never claims to know what Walletbeat did before that. A wallet never watched has no
+revisions and the card draws none — correct, since nothing was ever read to compare against.
+
+Newest wins on an attribute revised twice, because the card is about where it stands now.
+Their date and their words for both verdicts; the day is formatted when it parses and
+printed verbatim when it does not, since their spelling of a date is readable either way and
+dropping it would be losing the fact to tidy the sentence. It sits LAST in the row: a reader
+wants to know what Walletbeat says before they want to know when it changed.
+
+### 5. Deliberately not built
+
+**The peer's `url`.** `AppMetadata` carries the wallet's official domain, which is a second
+and stronger key — it would catch "Ledger Live", which the name transform misses. It needs a
+`website` column in the bundled directory, so a snapshot regeneration, for a signal that
+only helps where the name already fails. Held rather than half-built — and cheap to add
+later precisely because of the decision in §1: every sighting already recorded is
+re-resolved by whatever the matcher becomes.
+
+**A dismissal for a suggestion.** There is none, and that is the design: watching removes
+it, and ignoring it costs one row on a setup screen. A dismissal is state that has to be
+stored, migrated, and eventually explained.
+
+**Anything that ranks the offers.** The suggestion list is ordered by the SIGHTING and by
+nothing else — it is a record of what the person did, and sorting it by coverage or by
+findings would turn that record into a ranking of their software, which is §419's central
+rule.
+
+### 6. What the demo shows, and the two things it deliberately does not
+
+The incident's new door IS demoed for free: the demo seeds real incidents and their facts
+(§422 §4), those incidents name real wallets, and every one of them resolves in the bundled
+directory — so the sheet really opens a report card in the one corpus `verify.sh` can walk.
+
+**A WalletConnect sighting is NOT seeded, and a rating revision is NOT seeded.** The demo
+fabricates a corpus freely, but both of these would be a different kind of claim. A sighting
+says THIS DEVICE shook hands with a named wallet app — a statement about the person's own
+history, and the offer's entire honesty rests on its grounds being real. A revision says
+WALLETBEAT CHANGED ITS MIND about a named company's software on a named date, which is
+§419's own demo ruling exactly: it seeds the real incidents with their real statuses
+precisely so the demo never asserts something about a real company that is not true.
+
+So the offer, the marker and the card's revision line are **undemoed**, and `verify.sh`
+therefore cannot cover them. Said plainly rather than fixed by fabricating a handshake —
+`-walletbeatConnectedApp` is the headless door for anyone who wants to see them.
+
+### 7. What the harness gained
+
+`scripts/walletbeat-selftest.sh` compiles `WalletbeatMatch` WHOLE and unmodified — a fifth
+Foundation-only file, with the directory resolver taking its candidates as a parameter so
+the fixtures are precise and the real snapshot can still be run through the same function.
+Forty-eight new assertions, eight mutations, ten drift guards.
+
+The sharpest of them is not a fixture at all: **the collision assertion runs over the
+shipped snapshot**, so the one rule that could silently offer the wrong wallet's review is
+checked against Walletbeat's real names rather than against names we chose. The mutations
+that matter most are the two that fail invisibly — removing the trailing-`wallet` transform
+(every hardware wallet stops resolving, no offer ever appears, nothing says why) and
+accepting an ambiguous key (the first-listed entry wins, and a person is offered a review of
+software they do not run).

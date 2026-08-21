@@ -50,15 +50,24 @@ enum WalletbeatSheet {
 
 	/// A revision's before/after, read back out of its own ref.
 	///
-	/// The ref is `walletbeat:rev:<wallet>:<attribute>:<verdict>:<date>` — written by
-	/// `WalletbeatIngest.revisionRef` and parsed only here, so the two halves are one
+	/// The ref is `walletbeat:rev:<wallet>:<attribute>:<verdict>:<date>:<before>` — written
+	/// by `WalletbeatIngest.revisionRef` and parsed only here, so the two halves are one
 	/// grammar rather than two hardcoded spellings (§311's lesson: a producer and a
 	/// consumer that disagree make the surface go QUIET rather than break).
+	///
+	/// THE LAST COMPONENT IS OPTIONAL AND MUST STAY THAT WAY (prd §430). Every revision
+	/// landed before that field existed has four components, and those rows are in the
+	/// corpus for good — a parse that demanded five would turn each of them into a
+	/// generic link sheet, silently, which is the exact class §311 names.
 	struct Revision: Equatable, Sendable {
 		var walletID: String
 		var attributeID: String
 		var after: WalletbeatVerdict
 		var day: String?
+		/// The verdict Walletbeat moved AWAY from, where the ref records one. Nil for
+		/// every row landed before §430 — never `.unrated` as a stand-in, which would
+		/// report a changed rating as a first rating.
+		var before: WalletbeatVerdict?
 	}
 
 	static func revision(fromRef ref: String) -> Revision? {
@@ -68,8 +77,13 @@ enum WalletbeatSheet {
 		guard parts.count >= 3 else { return nil }
 		guard let verdict = WalletbeatVerdict(rawValue: parts[2]) else { return nil }
 		let day = parts.count > 3 && !parts[3].isEmpty ? parts[3] : nil
+		// An unreadable fifth component reads as ABSENT rather than failing the parse: a
+		// revision whose before we cannot spell is still a revision, and refusing the
+		// whole ref would drop the row's anatomy over its least important field.
+		let before = parts.count > 4 ? WalletbeatVerdict(rawValue: parts[4]) : nil
 		guard !parts[0].isEmpty, !parts[1].isEmpty else { return nil }
-		return Revision(walletID: parts[0], attributeID: parts[1], after: verdict, day: day)
+		return Revision(walletID: parts[0], attributeID: parts[1], after: verdict,
+						day: day, before: before)
 	}
 }
 

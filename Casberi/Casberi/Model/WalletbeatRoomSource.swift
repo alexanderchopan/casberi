@@ -35,6 +35,17 @@ enum WalletbeatRoomSource {
 		guard !watches.isEmpty || !incidents.isEmpty else { return nil }
 
 		let cards = WalletbeatState.cards()
+		// Read once per compose, off two local records — no request, and nothing is
+		// resolved that the directory does not currently rate (prd §430).
+		let connectedName = WalletbeatMatch.suggestions(
+			apps: WalletConnectApps.sightings(),
+			// From the ROWS this compose is already holding, never a second fetch: the
+			// head must never offer a wallet it is about to draw as watched, and a list
+			// read separately can disagree with the one on screen.
+			watched: watches.compactMap { WalletbeatWatch.walletID(from: $0) },
+			entries: WalletbeatDirectory.wallets.map { (id: $0.id, name: $0.name) })
+			.first
+			.flatMap { id in WalletbeatDirectory.wallets.first { $0.id == id }?.name }
 		let cutoff = now.addingTimeInterval(-Double(recencyDays) * 86_400)
 		let news = newsSummary(incidents, cutoff: cutoff)
 
@@ -71,7 +82,8 @@ enum WalletbeatRoomSource {
 		guard !items.isEmpty else {
 			guard let news else { return nil }
 			return WalletbeatRoom(
-				items: [], total: 0, snapshotDay: WalletbeatDirectory.generated, news: news)
+				items: [], total: 0, snapshotDay: WalletbeatDirectory.generated, news: news,
+				connectedName: connectedName)
 		}
 
 		let ranked = WalletbeatRoom.ranked(items)
@@ -79,7 +91,8 @@ enum WalletbeatRoomSource {
 			items: Array(ranked.prefix(rowCap)),
 			total: ranked.count,
 			snapshotDay: WalletbeatDirectory.generated,
-			news: news
+			news: news,
+			connectedName: connectedName
 		)
 	}
 
@@ -136,6 +149,24 @@ enum WalletbeatRoomSource {
 			"news=\(things.filter { WalletbeatWatch.isNewsRef($0.sourceRef) }.count) revisions=\(things.filter { WalletbeatWatch.isRevisionRef($0.sourceRef) }.count) newsReadAt=\(WalletbeatState.newsReadAt.map(IngestSupport.isoString) ?? "never")",
 		]
 
+		// The WalletConnect join (prd §430). It has FOUR states that all render as one
+		// absent offer — no handshake has ever settled on this device, an app whose name
+		// Walletbeat does not rate, a name whose key is claimed by two entries and is
+		// therefore refused, and every match already watched — and only the third is a
+		// bug. The raw names are printed beside what they resolved to, because the whole
+		// join is that one arrow.
+		let sightings = WalletConnectApps.sightings().sorted { $0.seenAt > $1.seenAt }
+		let table = WalletbeatMatch.index(
+			WalletbeatDirectory.wallets.map { (id: $0.id, name: $0.name) })
+		out.append("apps=\(sightings.count) keys=\(table.count)")
+		for app in sightings {
+			let key = WalletbeatMatch.key(app.name) ?? "-"
+			let hit = table[key]
+			out.append(
+				"app| \"\(app.name)\" key=\(key) → \(hit ?? "NOT RATED") watched=\(hit.map { watched.contains($0) } ?? false)")
+		}
+        
+
 		for id in watched {
 			guard let card = cards[id] else {
 				out.append("card| \(id) — NOT READ YET (no ratings fetched on this device)")
@@ -157,6 +188,7 @@ enum WalletbeatRoomSource {
 			out.append("news| none landed")
 		}
 		out.append("headline=\(WalletbeatRoom.headline(room))")
+		out.append("browseLabel=\(WalletbeatRoom.browseLabel(room))")
 		out.append("note=\(WalletbeatRoom.note(room))")
 		out.append("coverageNote=\(WalletbeatRoom.coverageNote(room) ?? "-")")
 		for item in room.items {

@@ -46,6 +46,45 @@ enum WalletbeatSheetSource {
 			.map(KeyedThing.init)
 	}
 
+	/// Every rating revision this device has landed for one wallet, newest first, keyed by
+	/// the attribute it changed (prd §430).
+	///
+	/// WHY THE REPORT CARD NEEDS THIS: a revision lands as a feed row and scrolls away, so
+	/// somebody re-opening a card they have read before had no way to see what had moved
+	/// since. The card is where that question is asked, and the answer was already in the
+	/// corpus one join away — the same shape §422 used for the directory's open incidents.
+	///
+	/// LANDED ROWS ONLY, which is the honest bound and the same one §422 states: this marks
+	/// what the person's own corpus can show, so a wallet watched since Tuesday is marked
+	/// for Tuesday onward and never claims to know what Walletbeat did before that. A
+	/// wallet never watched at all has no revisions here and the card draws none — correct,
+	/// since nothing was ever read to compare against.
+	///
+	/// NEWEST WINS on a repeated attribute: Walletbeat can revise the same attribute twice,
+	/// and the card is about where it stands now.
+	@MainActor
+	static func revisions(forWallet walletID: String, context: ModelContext)
+		-> [String: WalletbeatSheet.Revision] {
+		let source = WalletbeatIdentity.source
+		var descriptor = FetchDescriptor<Thing>(
+			predicate: #Predicate<Thing> {
+				$0.source == source && $0.authorHandle == walletID
+			},
+			sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
+		// The same bound `incidents` takes, for the same reason: this is a second query
+		// behind the ratings read, on a card drawn every open.
+		descriptor.fetchLimit = 64
+		var out: [String: WalletbeatSheet.Revision] = [:]
+		for thing in ((try? context.fetch(descriptor)) ?? []).live {
+			guard let ref = thing.sourceRef, WalletbeatWatch.isRevisionRef(ref) else { continue }
+			guard let revision = WalletbeatSheet.revision(fromRef: ref) else { continue }
+			// Newest first from the sort, so the first sighting of an attribute is the
+			// one that stands and later (older) ones are dropped.
+			if out[revision.attributeID] == nil { out[revision.attributeID] = revision }
+		}
+		return out
+	}
+
 	/// The attribute a revision names, resolved against the stored card so the sheet can
 	/// show what Walletbeat actually says about it now.
 	///

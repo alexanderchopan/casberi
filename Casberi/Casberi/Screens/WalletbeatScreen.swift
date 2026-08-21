@@ -26,6 +26,9 @@ struct WalletbeatScreen: View {
 	/// Walletbeat's incidents, which is what their registry publishes about the ecosystem
 	/// and which this bridge fetches WHOLE, filtered by nothing.
 	@State private var following = WalletbeatWatch.following
+	/// Wallet apps this device has really connected with over WalletConnect, that
+	/// Walletbeat rates and nothing here watches yet (prd §430).
+	@State private var suggested: [WalletbeatEntry] = []
 
 	private var connected: Bool { following || !watched.isEmpty }
 
@@ -82,6 +85,12 @@ struct WalletbeatScreen: View {
 	private var watchSection: some View {
 		Section {
 			VStack(alignment: .leading, spacing: DS.Space.s2) {
+				// ABOVE the field, because it is the answer to the question the field
+				// asks. §419's naming step is a search over 32 wallets, and for anybody
+				// who has ever connected a wallet the app already knew which one — the
+				// handshake's peer metadata names it (prd §430).
+				suggestionRows
+
 				DSSlabField(
 					placeholder: String(localized: "Wallet name"),
 					text: $queryField,
@@ -133,6 +142,48 @@ struct WalletbeatScreen: View {
 			}
 		}
 		.dsSlabSection()
+	}
+
+	/// The offer, and its GROUNDS in the same breath.
+	///
+	/// A bare list of wallet names here would be a recommendation — a claim about which
+	/// wallets are worth watching, which is the one claim this whole feature refuses to
+	/// make (§419). Saying where the names came from turns it into what it actually is: a
+	/// record of what this person already did, handed back so they need not retype it.
+	///
+	/// A plain header rather than a `DSSlabNote`: this screen already carries the two §315
+	/// allows, and the sentence is a heading for the rows under it rather than fine print.
+	@ViewBuilder
+	private var suggestionRows: some View {
+		if !suggested.isEmpty {
+			Text(WalletbeatCopy.connectedOffer(suggested.count))
+				.dsText(.label12).fontWeight(.semibold)
+				.foregroundStyle(DS.textSecondary)
+			ForEach(suggested) { entry in
+				Button(action: { watch(entry) }) {
+					HStack(spacing: DS.Space.s3) {
+						WalletbeatMark(name: entry.name, walletID: entry.id)
+						VStack(alignment: .leading, spacing: 0) {
+							Text(entry.name).dsText(.body17)
+								.foregroundStyle(DS.textPrimary).lineLimit(1)
+							Text(subtitle(entry)).dsText(.subhead13)
+								.foregroundStyle(DS.textTertiary).lineLimit(1)
+						}
+						Spacer()
+						// The DIRECTORY's word for this act, in its sentence case, not
+						// the field's uppercase `actionLabel` above: this is a card row
+						// offering the same verb the directory's rows offer, and one act
+						// spelled two ways across two screens is the drift `WalletbeatCopy`
+						// exists to stop.
+						Text(String(localized: "Watch"))
+							.dsText(.label11).fontWeight(.bold)
+							.foregroundStyle(DS.tint)
+					}
+				}
+				.buttonStyle(.plain)
+				.dsListCardRow()
+			}
+		}
 	}
 
 	private var rosterSection: some View {
@@ -219,6 +270,9 @@ struct WalletbeatScreen: View {
 			sortBy: [SortDescriptor(\.title)]))) ?? [])
 			.live
 			.filter { WalletbeatWatch.isWatchRef($0.sourceRef) }
+		// Recomputed with the watch list, so watching a suggestion removes it from the
+		// offer in the same pass rather than leaving a row whose button now does nothing.
+		suggested = WalletbeatWatch.connectedSuggestions(context: modelContext)
 	}
 
 	private func follow() {

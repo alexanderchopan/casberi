@@ -61,17 +61,29 @@ struct WalletbeatRoom: Equatable {
 	let total: Int
 	/// The day the bundled directory was taken, for the honest staleness line.
 	let snapshotDay: String
+	/// A wallet app this device has really connected with and does not yet watch, if
+	/// there is one (prd §430). The NAME, because that is all the label needs.
+	///
+	/// §421 rules that this head NEVER NAMES A WALLET, and that ruling is untouched:
+	/// it is about the HEADLINE, where promoting whichever of thirty-two happened to be
+	/// newest reads as a warning about software the person may not use. This names a
+	/// wallet on the BROWSE BUTTON, it is an offer rather than a finding, and its grounds
+	/// are the person's own handshake rather than our pick — every reason the headline
+	/// rule exists is absent here.
+	let connectedName: String?
 	/// Present whenever any incident has landed. Nil is "none landed", never "none exist" —
 	/// a first sync that has not run yet must not read as a clean ecosystem.
 	let news: News?
 
 	/// Spelled out rather than left to the memberwise initializer so `news` can default:
 	/// every existing call site and fixture built a watch-led room and still means to.
-	init(items: [Item], total: Int, snapshotDay: String, news: News? = nil) {
+	init(items: [Item], total: Int, snapshotDay: String, news: News? = nil,
+		 connectedName: String? = nil) {
 		self.items = items
 		self.total = total
 		self.snapshotDay = snapshotDay
 		self.news = news
+		self.connectedName = connectedName
 	}
 
 	var isEmpty: Bool { items.isEmpty }
@@ -220,6 +232,27 @@ struct WalletbeatRoom: Equatable {
 			return String(localized: "Walletbeat's security incidents arrive here. Name the wallet apps you use to add their reviews.")
 		}
 		return String(localized: "\(news.total) landed so far. Name the wallet apps you use and Walletbeat's review of each arrives too — where its keys are made, who sees your addresses.")
+	}
+
+	/// What the room's one button says.
+	///
+	/// The button has always been the door to the directory, and §421 already made its
+	/// label follow the tier — "browse" describes the screen rather than the reason to
+	/// open it. This takes that one step further where the app has the evidence: somebody
+	/// who has connected a wallet does not want to browse thirty-two, they want to name
+	/// the one they use, and the handshake already said which (prd §430).
+	///
+	/// NAMED ONLY WHILE NOTHING IS WATCHED. Once a wallet is named the button's job is the
+	/// rest of the registry again, and a label that went on naming one wallet forever
+	/// would be a nag rather than a shortcut.
+	static func browseLabel(_ room: WalletbeatRoom) -> String {
+		guard room.items.isEmpty else {
+			return String(localized: "Every wallet Walletbeat rates")
+		}
+		if let name = room.connectedName {
+			return String(localized: "Watch \(name) — you've connected with it")
+		}
+		return String(localized: "Watch the wallet apps you use")
 	}
 
 	static func coverageNote(_ room: WalletbeatRoom) -> String? {

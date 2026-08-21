@@ -82,6 +82,43 @@ enum WalletbeatWatch {
 			.sorted()
 	}
 
+	// MARK: The wallets you already told us about
+
+	/// Wallet apps this device has connected with that Walletbeat rates and you do not yet
+	/// watch, most recently connected first (prd §430).
+	///
+	/// §419's naming step is a list of 32 and a search field — homework, on a seat whose
+	/// whole point is that it speaks about YOUR software. A settled WalletConnect session
+	/// already names the app, so for anybody who has connected a wallet the answer was in
+	/// the app all along and nobody had asked it.
+	///
+	/// The whole join is a read of two local records. No request, no `Thing` property, no
+	/// CloudKit deploy, and — because `WalletConnectApps` stores the app's raw name rather
+	/// than a resolved id — a wallet Walletbeat adds after the sighting starts being offered
+	/// with no migration.
+	@MainActor
+	static func connectedSuggestions(context: ModelContext) -> [WalletbeatEntry] {
+		let ids = WalletbeatMatch.suggestions(
+			apps: WalletConnectApps.sightings(),
+			watched: watchedIDs(context: context),
+			entries: WalletbeatDirectory.wallets.map { (id: $0.id, name: $0.name) })
+		// Resolved back to entries in the SUGGESTION's order, never the directory's: this
+		// is a list of what the person did, and re-sorting it alphabetically would lose the
+		// only ordering it has any grounds for.
+		return ids.compactMap { id in WalletbeatDirectory.wallets.first { $0.id == id } }
+	}
+
+	/// Every wallet a connected app resolves to, watched or not — what a row uses to say
+	/// "you've connected with this". Unordered by design; callers key on it.
+	static func connectedIDs() -> Set<String> {
+		let table = WalletbeatMatch.index(
+			WalletbeatDirectory.wallets.map { (id: $0.id, name: $0.name) })
+		return Set(WalletConnectApps.sightings().compactMap { sighting -> String? in
+			guard let key = WalletbeatMatch.key(sighting.name) else { return nil }
+			return table[key]
+		})
+	}
+
 	/// Watch a wallet. Returns nil when it is already watched.
 	@MainActor
 	@discardableResult
@@ -395,7 +432,20 @@ enum WalletbeatIngest {
 		// The entry's own revision date is part of the identity, so a rating that goes
 		// FAIL → PASS → FAIL lands twice rather than deduping against its own history.
 		let stamp = card.lastUpdated ?? ""
-		return "\(WalletbeatWatch.revisionPrefix)\(walletID):\(revision.attributeID):\(revision.after.rawValue):\(stamp)"
+		// THE VERDICT IT CAME FROM, appended last (prd §430).
+		//
+		// The sheet could only ever draw where a revision LANDED, and said so in its own
+		// words: "painting an arrow from a 'before' we never stored would be inventing the
+		// half of the story that matters most". The before was never missing from the
+		// world — `WalletbeatRevisions.between` holds it at the moment of detection and
+		// this ref threw it away — so it is recorded here, going forward.
+		//
+		// APPENDED, never inserted, and that is the whole migration: a ref already in the
+		// corpus has four components and keeps parsing as one, yielding no before and the
+		// sheet it always drew. Nothing re-lands either — a revision is detected exactly
+		// once, by diffing the STORED card against the fresh one, and the stored card
+		// becomes the fresh one in the same pass.
+		return "\(WalletbeatWatch.revisionPrefix)\(walletID):\(revision.attributeID):\(revision.after.rawValue):\(stamp):\(revision.before.rawValue)"
 	}
 
 	@MainActor

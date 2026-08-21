@@ -227,4 +227,23 @@ enum WalletbeatCopy {
 	/// How Walletbeat's own attribution reads. Every surface says this; none of them ever
 	/// states a rating as the app's own finding.
 	static let attribution = String(localized: "Walletbeat's ratings, not ours")
+
+	/// That a wallet app announced itself to this device over WalletConnect (prd §430).
+	///
+	/// DELIBERATELY NOT §422's "You use this", which the incident row wears. That phrase
+	/// means "an incident about a wallet you WATCH" — a fact about your watch list — and
+	/// this means "an app that really connected here" — a fact about your handshakes. One
+	/// phrase over two different pieces of evidence is how a reader stops being able to
+	/// tell what either of them is claiming.
+	///
+	/// It also never says the bare word "connected", which in this app is the CATALOG's
+	/// word for a seat that is switched on. A wallet in this list is connected to nothing.
+	static let connectedMarker = String(localized: "You've connected with this")
+
+	/// The same fact as an offer, on the screen where naming happens.
+	static func connectedOffer(_ count: Int) -> String {
+		count == 1
+			? String(localized: "You've connected with this wallet app")
+			: String(localized: "You've connected with these wallet apps")
+	}
 }

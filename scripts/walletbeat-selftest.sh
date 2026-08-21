@@ -34,6 +34,10 @@ DEMO="Casberi/Casberi/Model/DemoSeedAll.swift"
 PROBES="Casberi/Casberi/Shell/ProbeHooks.swift"
 REACH="Casberi/Casberi/Model/NetworkReach.swift"
 SHEET="Casberi/Casberi/Model/WalletbeatSheet.swift"
+MATCH="Casberi/Casberi/Model/WalletbeatMatch.swift"
+APPS="Casberi/Casberi/Model/WalletConnectApps.swift"
+WCBRIDGE="Casberi/Casberi/Model/WalletConnectBridge.swift"
+SETUP="Casberi/Casberi/Screens/WalletbeatScreen.swift"
 SHEETSRC="Casberi/Casberi/Model/WalletbeatSheetSource.swift"
 SHEETVIEWS="Casberi/Casberi/Screens/WalletbeatSheetViews.swift"
 CARDSCREEN="Casberi/Casberi/Screens/WalletbeatCardScreen.swift"
@@ -42,7 +46,7 @@ SHEETVIEW="Casberi/Casberi/Screens/ThingSheetView.swift"
 RETRIEVER="Casberi/Casberi/Model/Retriever.swift"
 SNAP="scripts/walletbeat-snapshot.py"
 
-for f in "$RATING" "$NEWS" "$ROOM" "$DIR" "$BRIDGE" "$SRC" "$VIEWS" "$ROWS" "$CARD" "$DIRSCREEN" "$SHEET" "$SHEETSRC" "$SHEETVIEWS" "$CARDSCREEN" "$SNAP"; do
+for f in "$RATING" "$NEWS" "$ROOM" "$DIR" "$BRIDGE" "$SRC" "$VIEWS" "$ROWS" "$CARD" "$DIRSCREEN" "$SHEET" "$SHEETSRC" "$SHEETVIEWS" "$CARDSCREEN" "$MATCH" "$APPS" "$WCBRIDGE" "$SETUP" "$SNAP"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 
@@ -257,6 +261,92 @@ if grep -qE 'status: \.ongoing' "$TMP/demo.nc"; then
   echo "✗ the demo seeds an ONGOING incident — it must not assert a real company is currently exposed"
   exit 1
 fi
+
+# --------------------------------------------------------------------------------------
+# The WalletConnect join, the incident's door, and the revision's before (prd §430).
+#
+# The join's failure is SILENT in the way this bridge has already shipped once: no offer
+# appears, and from outside that is indistinguishable from having connected no wallet at
+# all. Every guard here defends one link of a chain nothing else in the tree can see.
+# --------------------------------------------------------------------------------------
+strip_comments "$WCBRIDGE" > "$TMP/wc.nc"
+strip_comments "$APPS" > "$TMP/apps.nc"
+strip_comments "$CARD" > "$TMP/card.nc"
+strip_comments "$SHEETVIEWS" > "$TMP/sheetviews.nc"
+
+# BOTH connect paths, counted rather than merely present: `connect(open:)` and
+# `connectViaModal` are two doors to the same handshake, and a person on a phone takes the
+# modal one — a guard satisfied by the other door would prove nothing about them.
+wc_records=$(grep -cF 'WalletConnectApps.record(appNamed: session.peer.name)' "$TMP/wc.nc" || true)
+if [[ "$wc_records" != "2" ]]; then
+  echo "✗ the peer name is recorded on $wc_records of the 2 connect paths — the modal path is the one a phone takes"
+  exit 1
+fi
+# POSITIONALLY, because both orders compile and which comes first is the entire feature
+# (§424's lesson): the session is destroyed the moment it is read, so a record placed after
+# the teardown is reading a session that no longer exists.
+if ! python3 - "$TMP/wc.nc" <<'PYW'
+import sys
+lines = open(sys.argv[1]).read().split("\n")
+rec = [i for i, l in enumerate(lines) if "WalletConnectApps.record(appNamed:" in l]
+tear = [i for i, l in enumerate(lines) if "tearDownShielded(topic:" in l]
+sys.exit(0 if len(rec) == 2 and len(tear) >= 2 and all(r < t for r, t in zip(rec, sorted(tear))) else 1)
+PYW
+then
+  echo "✗ the peer name is recorded AFTER the session is torn down — there is nothing left to read"
+  exit 1
+fi
+# THE RAW NAME, never a resolved id. Resolving at write time freezes today's directory into
+# the record, so a wallet Walletbeat adds later is never offered to somebody who connected
+# with it last year — and it is what makes every held item in §430 §5 cheap.
+if grep -qE 'WalletbeatMatch|WalletbeatDirectory|WalletbeatEntry' "$TMP/apps.nc"; then
+  echo "✗ the sightings book resolves a wallet id at write time — it must store the app's raw name"
+  exit 1
+fi
+# Not Walletbeat's data (§401's by-name rule): the seat's teardown takes what the SEAT
+# planted, and this was planted by the WalletConnect flow.
+if grep -qF 'WalletConnectApps.forgetAll()' "$TMP/bridge.nc"; then
+  echo "✗ Walletbeat's disconnect clears the WalletConnect sightings — they are not its data"
+  exit 1
+fi
+guard 'WalletbeatWatch.connectedSuggestions(context: modelContext)' "$SETUP" \
+  "the setup screen no longer offers the wallets you have connected with — naming is homework again"
+guard 'WalletbeatWatch.connectedIDs()' "$DIRSCREEN" \
+  "the directory no longer marks the wallets whose apps have really connected here"
+guard 'WalletbeatCopy.connectedMarker' "$DIRSCREEN" \
+  "the directory spells its own marker — three surfaces describing one fact in three words"
+guard 'WalletbeatRoom.browseLabel(room)' "$CARD" \
+  "the room card composes its own button label — the one piece of this room's copy nothing proves"
+# The NEGATIVE half: a label composed in the view is a label the harness never sees.
+if grep -qF 'Watch the wallet apps you use' "$TMP/card.nc"; then
+  echo "✗ the room card carries button copy of its own again (§430 — every word lives in WalletbeatRoom)"
+  exit 1
+fi
+guard 'connectedName: connectedName' "$TMP/src.nc" \
+  "the room source no longer carries the connected wallet through — the button can never name one"
+guard 'watched: watches.compactMap { WalletbeatWatch.walletID(from: $0) }' "$TMP/src.nc" \
+  "the head's offer no longer excludes on the rows it is holding — it could offer a wallet it draws as watched"
+guard 'walletbeatConnectedApp' "$PROBES" \
+  "-walletbeatConnectedApp is gone; a sighting has no headless door and no simulator can make one"
+
+# The before, written and read. Appended LAST so a four-component ref keeps parsing.
+guard ':\(revision.before.rawValue)' "$TMP/bridge.nc" \
+  "a revision no longer records the verdict it moved from"
+guard 'parts.count > 4 ? WalletbeatVerdict(rawValue: parts[4]) : nil' "$SHEET" \
+  "the revision ref's before is read from the wrong component, or not at all"
+guard 'if let before = revision.before {' "$TMP/sheetviews.nc" \
+  "the revision sheet stopped drawing the pair — it would show only where a rating landed"
+
+# The card says what has moved, and the incident is a door to the card.
+guard 'WalletbeatSheetSource.revisions(forWallet: walletID, context: modelContext)' "$CARDSCREEN" \
+  "the report card no longer joins the revisions it has landed — 'what changed?' is unanswerable again"
+guard 'revision: revised[attribute.id]' "$CARDSCREEN" \
+  "the card joins revisions and never hands them to a row"
+guard 'WalletbeatCardScreen(walletID: walletID)' "$TMP/sheetviews.nc" \
+  "an incident no longer opens the report card of a wallet it names — the sheet is a dead end again"
+# A wallet Walletbeat does not rate has no card, so it must not be offered one (§83).
+guard 'if let entry = WalletbeatDirectory.wallets.first(where: { $0.id == id })' "$TMP/sheetviews.nc" \
+  "an unrated wallet is offered a report card that does not exist"
 
 echo "  ✓ all drift guards hold"
 echo ""
@@ -879,6 +969,163 @@ let demoThin = WalletbeatDirectory.demoAttributes["ledger"].map { attrs -> Bool 
 check("the demo seeds a wallet past the coverage gate", demoDeep)
 check("the demo seeds a wallet below it, so 'not rated' is demoed too", demoThin)
 
+
+// --------------------------------------------------------------------------------------
+// The WalletConnect join (prd §430).
+//
+// A MISS COSTS NOTHING and a WRONG MATCH offers somebody a security review of software
+// they do not run, so every assertion below is about refusing rather than reaching.
+// --------------------------------------------------------------------------------------
+print("")
+print("Which wallet app you use")
+
+check("a plain name is its own key", WalletbeatMatch.key("Rabby") == "rabby")
+check("case and spacing collapse", WalletbeatMatch.key("  MetaMask ") == "metamask")
+check("punctuation is a separator, not a character",
+      WalletbeatMatch.key("Safe{Wallet}") == "safe")
+check("an id's own separators collapse the same way",
+      WalletbeatMatch.key("uniswap-wallet") == "uniswap")
+
+// THE MEASURED TRANSFORM. Walletbeat appends "Wallet" where the app itself does not, so
+// without this the join misses nearly every hardware wallet in the registry — and misses
+// silently, which is the whole failure class.
+check("Walletbeat's trailing 'Wallet' is dropped",
+      WalletbeatMatch.key("Ledger Wallet") == "ledger")
+check("...so the app's own name lands on the same key",
+      WalletbeatMatch.key("Ledger") == WalletbeatMatch.key("Ledger Wallet"))
+check("a wallet actually called Wallet keeps its name",
+      WalletbeatMatch.key("Wallet") == "wallet")
+check("only a TRAILING 'wallet' goes", WalletbeatMatch.key("Wallet Guard") == "walletguard")
+check("nothing but punctuation is not a name", WalletbeatMatch.key(" -- ") == nil)
+check("an empty name is not a name", WalletbeatMatch.key("") == nil)
+
+// The collision the transform could have caused, and did not. SafePal is named in
+// Walletbeat's own incident feed, so folding it onto Safe would mark the wrong wallet.
+check("stripping 'wallet' does not fold SafePal onto Safe",
+      WalletbeatMatch.key("SafePal") != WalletbeatMatch.key("Safe{Wallet}"))
+
+let real = WalletbeatDirectory.wallets.map { (id: $0.id, name: $0.name) }
+
+// AGAINST THE SHIPPED SNAPSHOT, not a fixture: the table is built out of Walletbeat's own
+// names, so a rename on their side is what would break it, and this is where that gets
+// caught. A key claimed by two wallets resolves to NOTHING by design — this asserts the
+// design never has to fire.
+var claimed: [String: Set<String>] = [:]
+for entry in real {
+    for spelling in [entry.name, entry.id] {
+        if let k = WalletbeatMatch.key(spelling) { claimed[k, default: []].insert(entry.id) }
+    }
+}
+check("no two rated wallets share a comparison key",
+      claimed.allSatisfy { $0.value.count == 1 })
+check("every rated wallet resolves from its own display name",
+      real.allSatisfy { WalletbeatMatch.walletID(forAppNamed: $0.name, in: real) == $0.id })
+check("every rated wallet resolves from Walletbeat's own id",
+      real.allSatisfy { WalletbeatMatch.walletID(forAppNamed: $0.id, in: real) == $0.id })
+
+// The three the transform exists for, named individually so a regression says WHICH.
+check("Ledger resolves", WalletbeatMatch.walletID(forAppNamed: "Ledger", in: real) == "ledger")
+check("Trezor resolves", WalletbeatMatch.walletID(forAppNamed: "Trezor", in: real) == "trezor")
+check("Keystone resolves", WalletbeatMatch.walletID(forAppNamed: "Keystone", in: real) == "keystone")
+check("Safe's own app name resolves",
+      WalletbeatMatch.walletID(forAppNamed: "Safe{Wallet}", in: real) == "safe")
+check("an id Walletbeat spells its own way resolves",
+      WalletbeatMatch.walletID(forAppNamed: "OneKey", in: real) == "onekey")
+
+// A wallet Walletbeat does not rate is the COMMON answer here and must be silent.
+check("a wallet Walletbeat does not rate resolves to nothing",
+      WalletbeatMatch.walletID(forAppNamed: "Trust Wallet", in: real) == nil)
+check("a near-miss is not a match",
+      WalletbeatMatch.walletID(forAppNamed: "Rabby Points", in: real) == nil)
+
+// AMBIGUITY IS REFUSED. Two entries that would key alike take each other out rather than
+// resolving to whichever was listed first.
+let colliding = [(id: "one", name: "Foo"), (id: "two", name: "Foo Wallet")]
+check("an ambiguous key resolves to nothing",
+      WalletbeatMatch.walletID(forAppNamed: "Foo", in: colliding) == nil)
+check("...and takes the other spelling with it",
+      WalletbeatMatch.walletID(forAppNamed: "Foo Wallet", in: colliding) == nil)
+
+print("")
+print("What gets offered")
+
+let t0 = Date(timeIntervalSince1970: 1_000_000)
+let apps: [(name: String, seenAt: Date)] = [
+    (name: "Rabby", seenAt: t0),
+    (name: "MetaMask", seenAt: t0.addingTimeInterval(600)),
+    (name: "Trust Wallet", seenAt: t0.addingTimeInterval(900)),
+]
+check("the most recent handshake leads",
+      WalletbeatMatch.suggestions(apps: apps, watched: [], entries: real) == ["metamask", "rabby"])
+check("a wallet Walletbeat does not rate is not offered",
+      WalletbeatMatch.suggestions(apps: apps, watched: [], entries: real).contains("trust") == false)
+check("a wallet already watched is not offered",
+      WalletbeatMatch.suggestions(apps: apps, watched: ["metamask"], entries: real) == ["rabby"])
+check("nothing to offer is an empty list, not a nil",
+      WalletbeatMatch.suggestions(apps: apps, watched: ["metamask", "rabby"], entries: real).isEmpty)
+// One wallet reached by two spellings is ONE offer.
+check("two spellings of one wallet are offered once",
+      WalletbeatMatch.suggestions(
+        apps: [(name: "Safe", seenAt: t0), (name: "Safe{Wallet}", seenAt: t0.addingTimeInterval(60))],
+        watched: [], entries: real) == ["safe"])
+check("no handshake at all offers nothing",
+      WalletbeatMatch.suggestions(apps: [], watched: [], entries: real).isEmpty)
+
+print("")
+print("The room's one button")
+
+let noWatches = WalletbeatRoom(items: [], total: 0, snapshotDay: "2026-08-20",
+                               news: WalletbeatRoom.News(total: 3, open: 0, recent: 1),
+                               connectedName: "Rabby")
+check("with nothing watched it names the wallet you connected with",
+      WalletbeatRoom.browseLabel(noWatches).contains("Rabby"))
+let noWatchesNoApp = WalletbeatRoom(items: [], total: 0, snapshotDay: "2026-08-20",
+                                    news: WalletbeatRoom.News(total: 3, open: 0, recent: 1))
+check("with no handshake it keeps §421's verb",
+      WalletbeatRoom.browseLabel(noWatchesNoApp).contains("Rabby") == false
+        && WalletbeatRoom.browseLabel(noWatchesNoApp).isEmpty == false)
+// Once anything is watched the button's job is the rest of the registry again — a label
+// that went on naming one wallet forever is a nag, not a shortcut.
+let watching = WalletbeatRoom(
+    items: [WalletbeatRoom.Item(id: "walletbeat:wallet:zerion", walletID: "zerion",
+                                name: "Zerion", hardware: false,
+                                counts: counts(pass: 20, fail: 4, unrated: 5),
+                                lead: .noFailures(judged: 24, applicable: 29),
+                                openIncidents: 0, recentIncidents: 0, read: true)],
+    total: 1, snapshotDay: "2026-08-20", news: nil, connectedName: "Rabby")
+check("a watched room stops naming a wallet on its button",
+      WalletbeatRoom.browseLabel(watching).contains("Rabby") == false)
+
+print("")
+print("A revision remembers where it came from")
+
+// The §430 field, and the migration that matters more than it: a ref landed before the
+// field existed has FOUR components and must keep parsing as one.
+let legacy = "walletbeat:rev:rabby:addressCorrelation:FAIL:2026-07-22"
+let modern = legacy + ":PARTIAL"
+check("a ref written before §430 still parses",
+      WalletbeatSheet.revision(fromRef: legacy)?.after == .fail)
+check("...and reports no before rather than guessing one",
+      WalletbeatSheet.revision(fromRef: legacy)?.before == nil)
+check("a ref written after §430 carries the verdict it moved from",
+      WalletbeatSheet.revision(fromRef: modern)?.before == .partial)
+check("the after is unmoved by the new field",
+      WalletbeatSheet.revision(fromRef: modern)?.after == .fail)
+check("the day is unmoved by the new field",
+      WalletbeatSheet.revision(fromRef: modern)?.day == "2026-07-22")
+// An entry Walletbeat has never dated writes an EMPTY day, so the before sits after an
+// empty component — the one shape a naive index would read as the date.
+check("an undated revision still yields its before",
+      WalletbeatSheet.revision(fromRef: "walletbeat:rev:rabby:a:PASS::FAIL")?.before == .fail)
+check("...and still reports no day",
+      WalletbeatSheet.revision(fromRef: "walletbeat:rev:rabby:a:PASS::FAIL")?.day == nil)
+// A before we cannot spell is ABSENT, never a refusal: the row's anatomy must not be lost
+// over its least important field.
+check("an unreadable before does not fail the whole ref",
+      WalletbeatSheet.revision(fromRef: "walletbeat:rev:rabby:a:PASS:2026-01-01:WAT")?.after == .pass)
+check("...and reads as absent",
+      WalletbeatSheet.revision(fromRef: "walletbeat:rev:rabby:a:PASS:2026-01-01:WAT")?.before == nil)
+
 print("")
 if failures > 0 {
     print("walletbeat-selftest: ✗ \(failures) assertion(s) failed")
@@ -887,10 +1134,10 @@ if failures > 0 {
 print("walletbeat-selftest: OK — every assertion passed against the shipped source.")
 SWIFT
 
-build() { swiftc -O -o "$TMP/wb-selftest" "$1" "$2" "$3" "$4" "$SHEET" "$TMP/main.swift" 2>"$TMP/build.log"; }
+build() { swiftc -O -o "$TMP/wb-selftest" "$1" "$2" "$3" "$4" "$SHEET" "$5" "$TMP/main.swift" 2>"$TMP/build.log"; }
 
 echo "Assertions (shipped source, compiled whole)"
-if ! build "$RATING" "$NEWS" "$ROOM" "$DIR"; then
+if ! build "$RATING" "$NEWS" "$ROOM" "$DIR" "$MATCH"; then
   echo "✗ harness failed to compile against the shipped source"
   grep -E 'error:' "$TMP/build.log" | head -20
   exit 1
@@ -903,14 +1150,16 @@ fi
 echo ""
 echo "Mutations (each must be caught)"
 
-mutate() { # mutate <name> <rating|news|room> <from> <to>
+mutate() { # mutate <name> <rating|news|room|sheet|match> <from> <to>
   local name="$1" which="$2" from="$3" to="$4"
   local a="$TMP/m-rating.swift" b="$TMP/m-news.swift" c="$TMP/m-room.swift" d="$TMP/m-sheet.swift"
-  cp "$RATING" "$a"; cp "$NEWS" "$b"; cp "$ROOM" "$c"; cp "$SHEET" "$d"
+  local e="$TMP/m-match.swift"
+  cp "$RATING" "$a"; cp "$NEWS" "$b"; cp "$ROOM" "$c"; cp "$SHEET" "$d"; cp "$MATCH" "$e"
   local target="$a"
   [[ "$which" == "news" ]] && target="$b"
   [[ "$which" == "room" ]] && target="$c"
   [[ "$which" == "sheet" ]] && target="$d"
+  [[ "$which" == "match" ]] && target="$e"
   # Literal replacement through env, never a regex — escaping killed the first cut of
   # every harness in this tree that tried it.
   if ! MUT_FROM="$from" MUT_TO="$to" python3 - "$target" <<'PY'
@@ -925,7 +1174,7 @@ PY
   then
     echo "  ✗ $name — the mutation did not apply (the shipped source moved)"; exit 1
   fi
-  if ! swiftc -O -o "$TMP/mut" "$a" "$b" "$c" "$DIR" "$d" "$TMP/main.swift" 2>/dev/null; then
+  if ! swiftc -O -o "$TMP/mut" "$a" "$b" "$c" "$DIR" "$d" "$e" "$TMP/main.swift" 2>/dev/null; then
     echo "  ✓ $name (rejected at compile)"; return
   fi
   if "$TMP/mut" > /dev/null 2>&1; then
@@ -1056,6 +1305,53 @@ mutate "the followed note must carry the upgrade" room \
 mutate "a followed room must still attribute" room \
   "Walletbeat's reading, not ours · every wallet they cover" \
   "Read on this device"
+
+# --------------------------------------------------------------------------------------
+# The WalletConnect join and the revision's before (prd §430).
+# --------------------------------------------------------------------------------------
+
+# THE MEASURED TRANSFORM. Without it "Ledger" never matches "Ledger Wallet" and the offer
+# simply never appears — for nearly every hardware wallet in the registry, silently.
+mutate "Walletbeat's trailing 'Wallet' must be dropped" match \
+  'if tokens.count > 1, tokens.last == "wallet" { tokens.removeLast() }' \
+  'if tokens.count > 99, tokens.last == "wallet" { tokens.removeLast() }'
+
+# ...and only a TRAILING one. Dropping the word anywhere folds "Wallet Guard" onto a
+# stranger, which is the wrong-answer half of this asymmetry.
+mutate "only a trailing 'wallet' may go" match \
+  'if tokens.count > 1, tokens.last == "wallet" { tokens.removeLast() }' \
+  'if tokens.count > 1 { tokens.removeAll { $0 == "wallet" } }'
+
+# AMBIGUITY IS REFUSED. Resolving to whichever entry came first is how somebody is offered
+# a security review of software they do not run.
+mutate "an ambiguous key must resolve to nothing" match \
+  'return claims.compactMapValues { $0.count == 1 ? $0.first : nil }' \
+  'return claims.compactMapValues { $0.first }'
+
+# The three rules the offer list keeps.
+mutate "a wallet already watched must not be offered" match \
+  'guard !already.contains(id), seen.insert(id).inserted else { continue }' \
+  'guard seen.insert(id).inserted else { continue }'
+mutate "one wallet reached twice is one offer" match \
+  'guard !already.contains(id), seen.insert(id).inserted else { continue }' \
+  'guard !already.contains(id) else { continue }'
+mutate "the most recent handshake must lead" match \
+  'for app in apps.sorted(by: { $0.seenAt > $1.seenAt }) {' \
+  'for app in apps {'
+
+# The button names a wallet only while nothing is watched — otherwise it is a nag.
+mutate "a watched room must stop naming a wallet" room \
+  '		guard room.items.isEmpty else {' \
+  '		guard true else {'
+
+# THE MIGRATION. A ref landed before §430 has four components and must keep its anatomy.
+mutate "a ref written before the before existed must still parse" sheet \
+  'guard parts.count >= 3 else { return nil }' \
+  'guard parts.count >= 5 else { return nil }'
+# The empty-day shape is the one a naive index reads as the date.
+mutate "the before is read from its own component" sheet \
+  'let before = parts.count > 4 ? WalletbeatVerdict(rawValue: parts[4]) : nil' \
+  'let before = parts.count > 3 ? WalletbeatVerdict(rawValue: parts[3]) : nil'
 
 echo ""
 echo "walletbeat-selftest: OK — assertions pass and every mutation is caught."

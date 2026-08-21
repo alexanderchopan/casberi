@@ -15,6 +15,8 @@ struct WalletbeatIncidentHead: View {
 	let thing: Thing
 
 	@Environment(\.openURL) private var openURL
+	/// The wallet whose report card is open over this sheet (prd §430).
+	@State private var openedWallet: String?
 
 	var body: some View {
 		if thing.isLive { liveBody }
@@ -45,6 +47,13 @@ struct WalletbeatIncidentHead: View {
 			stamp(facts)
 		}
 		.frame(maxWidth: .infinity, alignment: .leading)
+		// ONE presentation on this view, and it lives here rather than on a row: the
+		// head is itself inside a presented sheet, which is the one place this app
+		// allows a nested `.sheet` (`ReplyingToRow`'s ruling). It hangs off `liveBody`
+		// so a row deleted underneath takes the card down with it.
+		.sheet(item: $openedWallet) { walletID in
+			WalletbeatCardScreen(walletID: walletID)
+		}
 	}
 
 	/// Kind, status, and Walletbeat's severity — attributed, never stated as ours.
@@ -82,7 +91,7 @@ struct WalletbeatIncidentHead: View {
 	private func factCard(_ facts: WalletbeatIncidentFacts) -> some View {
 		VStack(alignment: .leading, spacing: DS.Space.s2) {
 			if !facts.wallets.isEmpty {
-				factRow(String(localized: "Affects"), affectedNames(facts.wallets))
+				affectedRow(facts.wallets)
 			}
 			if let funds = facts.fundsImpacted {
 				// The two readings are genuinely different and both are worth saying: a
@@ -116,13 +125,59 @@ struct WalletbeatIncidentHead: View {
 		}
 	}
 
-	/// A wallet id is Walletbeat's internal spelling, so it is resolved to the name a
-	/// person would say. An id we don't carry falls back to itself rather than vanishing —
-	/// an incident naming a wallet we can't name is still about that wallet.
-	private func affectedNames(_ ids: [String]) -> String {
-		ids.map { id in
-			WalletbeatDirectory.wallets.first { $0.id == id }?.name ?? id
-		}.joined(separator: ", ")
+	/// Who it affected — and a door to what Walletbeat says about each of them (prd §430).
+	///
+	/// This line was a joined string, which made the sheet a dead end at exactly the
+	/// moment its reader has the next question: a rating is a standing judgment and an
+	/// incident is an event, so reading about a breach is precisely when somebody wants
+	/// the report card. The card already cross-links the other way ("On record"); this is
+	/// the direction that was missing.
+	///
+	/// ONE WALLET PER LINE rather than a wrapping row of chips: a name is a door here, and
+	/// a door clipped by its neighbour is a door nobody finds. Three named wallets is
+	/// three lines, which is the honest size of that fact.
+	///
+	/// A WALLET WE DO NOT CARRY IS STILL NAMED, and is deliberately NOT a door: Walletbeat
+	/// files incidents against products they do not rate (their SafePal and Slope entries
+	/// name no rated wallet at all), so the id falls back to itself — an incident naming a
+	/// wallet we cannot name is still about that wallet — and offering a report card that
+	/// does not exist would be the dead control §83 bans.
+	@ViewBuilder
+	private func affectedRow(_ ids: [String]) -> some View {
+		HStack(alignment: .firstTextBaseline, spacing: DS.Space.s3) {
+			Text(String(localized: "Affects"))
+				.dsText(.subhead13)
+				.foregroundStyle(DS.textTertiary)
+			Spacer(minLength: DS.Space.s2)
+			VStack(alignment: .trailing, spacing: DS.Space.s1) {
+				ForEach(ids, id: \.self) { id in
+					if let entry = WalletbeatDirectory.wallets.first(where: { $0.id == id }) {
+						Button {
+							DSHaptic.tap()
+							openedWallet = id
+						} label: {
+							HStack(spacing: DS.Space.s1 + 2) {
+								Text(entry.name)
+									.dsText(.subhead13).fontWeight(.semibold)
+									.foregroundStyle(DS.tint)
+									.multilineTextAlignment(.trailing)
+								Image(systemName: "chevron.right")
+									.dsGlyph(10, weight: .bold)
+									.foregroundStyle(DS.tint)
+							}
+						}
+						.buttonStyle(.plain)
+						.dsHover()
+						.accessibilityLabel(Text(String(localized: "What Walletbeat says about \(entry.name)")))
+					} else {
+						Text(id)
+							.dsText(.subhead13).fontWeight(.semibold)
+							.foregroundStyle(DS.textPrimary)
+							.multilineTextAlignment(.trailing)
+					}
+				}
+			}
+		}
 	}
 
 	/// Walletbeat's own citations, each a door to the original disclosure.
@@ -208,16 +263,34 @@ struct WalletbeatRevisionHead: View {
 					.foregroundStyle(DS.textTertiary)
 			}
 
-			// The verdict it moved TO. Deliberately not a before→after pair: the ref
-			// records only where it landed, and painting an arrow from a "before" we
-			// never stored would be inventing the half of the story that matters most.
+			// BEFORE → AFTER where the ref records a before, and the verdict alone
+			// where it does not (prd §430).
+			//
+			// This surface drew the landing verdict alone for as long as it existed, and
+			// its own note said why: the ref recorded nothing else, and "painting an arrow
+			// from a 'before' we never stored would be inventing the half of the story
+			// that matters most". The before is stored now. It is still never INFERRED —
+			// a row landed before that change has no before, and draws exactly what it
+			// always drew rather than guessing one from the card as it stands today,
+			// which would be a different reading of a different moment.
 			HStack(spacing: DS.Space.s3) {
+				if let before = revision.before {
+					WalletbeatVerdictTag(verdict: before)
+					Image(systemName: "arrow.right")
+						.dsGlyph(11)
+						.foregroundStyle(DS.textTertiary)
+						.accessibilityHidden(true)
+				}
 				WalletbeatVerdictTag(verdict: revision.after)
 				Spacer(minLength: 0)
 			}
 			.padding(DS.Space.s4)
 			.frame(maxWidth: .infinity, alignment: .leading)
 			.dsWidgetSurface()
+			.accessibilityElement(children: .combine)
+			.accessibilityLabel(Text(revision.before.map {
+				String(localized: "Walletbeat moved this from \(WalletbeatCopy.label($0)) to \(WalletbeatCopy.label(revision.after))")
+			} ?? WalletbeatCopy.label(revision.after)))
 
 			if let summary = thing.summary, !summary.isEmpty {
 				Text(summary)
