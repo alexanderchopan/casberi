@@ -32,3 +32,4 @@ website-deploy.zip
 design/launch-video/frames/
 design/launch-video/rec-apple-vid-out/
 design/launch-video/rec-farcaster-out/
+__pycache__/
