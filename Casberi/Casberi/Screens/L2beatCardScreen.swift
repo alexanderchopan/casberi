@@ -24,6 +24,11 @@ struct L2beatRiskCard: View {
 	var showsHeader = true
 	/// Handed in only where there is a sheet to close before the composer rises.
 	var onDismissForAsk: (() -> Void)?
+	/// Handed in only by a host that OWNS the scroll this card sits inside — which is the
+	/// screen and not the thing sheet. Absent, the strip key is a legend rather than a
+	/// control, because a cell that looks tappable and cannot move anything is exactly the
+	/// dead control §83 bans.
+	var onScrollToAxis: ((L2beatRiskAxis) -> Void)?
 
 	@Environment(\.modelContext) private var modelContext
 	@Environment(BridgeStore.self) private var store
@@ -35,6 +40,11 @@ struct L2beatRiskCard: View {
 	@State private var watching = false
 	@State private var milestones: [KeyedThing] = []
 	@State private var live = false
+	/// The axis picked off the strip key, so the key and the row it scrolled to agree about
+	/// where you are.
+	@State private var focusedAxis: L2beatRiskAxis?
+	/// ONE toggle for all five rows, not five links (see `riskSection`).
+	@State private var showsAsks = false
 
 	var name: String { project?.name ?? chainID }
 
@@ -136,13 +146,29 @@ struct L2beatRiskCard: View {
 					.foregroundStyle(DS.textSecondary)
 					.fixedSize(horizontal: false, vertical: true)
 			}
-			L2beatStrip(risks: project.orderedRisks, height: 10)
+			// THE KEYED strip, and only here. Every other surface draws the bare five cells,
+			// whose whole design is that the same question is always in the same place —
+			// and until this landed nothing in the app said which place. This is where that
+			// is learned, one card above the five rows it summarises.
+			L2beatStripKey(risks: project.orderedRisks,
+						   onPick: axisPick,
+						   focused: focusedAxis)
 				.padding(.top, DS.Space.s1)
 			legend
 		}
 		.padding(DS.Space.s4)
 		.frame(maxWidth: .infinity, alignment: .leading)
 		.dsWidgetSurface()
+	}
+
+	/// What a tap on the strip key does — remember the axis, then ask the host to scroll.
+	/// Nil where no host can, which is what keeps the key from being a dead control.
+	private var axisPick: ((L2beatRiskAxis) -> Void)? {
+		guard let onScrollToAxis else { return nil }
+		return { axis in
+			withAnimation(DS.Motion.standard) { focusedAxis = axis }
+			onScrollToAxis(axis)
+		}
 	}
 
 	private var legend: some View {
@@ -159,6 +185,12 @@ struct L2beatRiskCard: View {
 	/// An assessment is a standing judgment and an incident is an event, so neither
 	/// substitutes for the other — a chain can assess well and still have been halted
 	/// last month.
+	///
+	/// EVERY ROW CARRIES ITS DAY, and that is a fix rather than a nicety: recency is the
+	/// load-bearing fact of a section whose whole argument is "and then this happened", and
+	/// this card listed a 2021 exploit and last month's halt in one undated voice with
+	/// nothing to tell them apart. The date sits on the row rather than in a sort note
+	/// because a reader placing an event needs the year, not the rank.
 	private var milestoneCrossLink: some View {
 		VStack(alignment: .leading, spacing: DS.Space.s2) {
 			Text(String(localized: "On record"))
@@ -172,11 +204,16 @@ struct L2beatRiskCard: View {
 								? DS.attention : DS.fillStrong)
 							.frame(width: 8, height: 8)
 							.padding(.top, 6)
-						Text(thing.title)
-							.dsText(.subhead13)
-							.foregroundStyle(DS.textSecondary)
-							.lineLimit(2)
-							.fixedSize(horizontal: false, vertical: true)
+						VStack(alignment: .leading, spacing: 1) {
+							Text(thing.title)
+								.dsText(.subhead13)
+								.foregroundStyle(DS.textSecondary)
+								.lineLimit(2)
+								.fixedSize(horizontal: false, vertical: true)
+							Text(L2beatCopy.day(thing.capturedAt))
+								.dsText(.label11)
+								.foregroundStyle(DS.textTertiary)
+						}
 						Spacer(minLength: 0)
 					}
 				}
@@ -193,16 +230,43 @@ struct L2beatRiskCard: View {
 	///
 	/// The elevation ladder (§61): a grouped section lifts as ONE card and its interior rows
 	/// separate by spacing — never by lines, and never by their own shadows.
+	/// ONE TOGGLE, NOT FIVE LINKS. "What this asks" was repeated on every row, so the card's
+	/// most-repeated element was a control rather than a reading — five identical tinted
+	/// lines competing with L2BEAT's five different sentences. It is one question asked once
+	/// of the whole section, which is also what it actually is: the five lines behind it are
+	/// about the QUESTIONS and never about this chain's answers, so they are either wanted
+	/// together or not at all.
 	@ViewBuilder
 	private func riskSection(_ project: L2beatProject) -> some View {
 		if !project.risks.isEmpty {
 			VStack(alignment: .leading, spacing: DS.Space.s3) {
-				Text(String(localized: "What L2BEAT checks"))
-					.dsText(.heading17)
-					.foregroundStyle(DS.textPrimary)
+				HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+					Text(String(localized: "What L2BEAT checks"))
+						.dsText(.heading17)
+						.foregroundStyle(DS.textPrimary)
+					Spacer(minLength: DS.Space.s2)
+					Button {
+						DSHaptic.tap()
+						withAnimation(DS.Motion.standard) { showsAsks.toggle() }
+					} label: {
+						Text(showsAsks
+							? String(localized: "Hide what these ask")
+							: String(localized: "What these ask"))
+							.dsText(.label11)
+							.foregroundStyle(DS.tint)
+					}
+					.buttonStyle(.plain)
+					.dsHover()
+				}
 				VStack(alignment: .leading, spacing: DS.Space.s4) {
 					ForEach(project.orderedRisks) { risk in
-						L2beatRiskRow(risk: risk)
+						L2beatRiskRow(risk: risk,
+									  showsAsks: showsAsks,
+									  focused: focusedAxis == risk.axis)
+							// The strip key's pick scrolls here. An explicit id rather than
+							// the ForEach's own, so the anchor survives a change of identity
+							// on `L2beatRisk`.
+							.id(risk.axis)
 					}
 				}
 				.padding(DS.Space.s4)
@@ -312,8 +376,11 @@ struct L2beatRiskCard: View {
 /// where they publish one.
 struct L2beatRiskRow: View {
 	let risk: L2beatRisk
-
-	@State private var expanded = false
+	/// Owned by the SECTION, not the row — one question asked once of all five.
+	var showsAsks = false
+	/// This is the axis picked off the strip key. A soft fill, never a rule: the design law's
+	/// no-hairlines ban is about lines that divide, and this is a selection.
+	var focused = false
 
 	var body: some View {
 		VStack(alignment: .leading, spacing: DS.Space.s1 + 2) {
@@ -365,31 +432,30 @@ struct L2beatRiskRow: View {
 				.padding(.top, DS.Space.s1)
 			}
 
-			// What the axis ASKS — ours, and the only text in this feature that is. Folded
-			// by default so L2BEAT's own words lead every row.
-			if expanded {
+			// What the axis ASKS — ours, and the only text in this feature that is. Folded by
+			// default so L2BEAT's own words lead every row, and unfolded by the section's one
+			// toggle rather than by a link repeated five times down the card.
+			if showsAsks {
 				Text(risk.axis.asks)
 					.dsText(.label11)
 					.foregroundStyle(DS.textTertiary)
 					.fixedSize(horizontal: false, vertical: true)
 					.padding(.top, DS.Space.s1)
-			} else {
-				Button {
-					withAnimation(DS.Motion.standard) { expanded = true }
-				} label: {
-					Text(String(localized: "What this asks"))
-						.dsText(.label11)
-						.foregroundStyle(DS.tint)
-				}
-				.buttonStyle(.plain)
-				.dsHover()
-				.padding(.top, DS.Space.s1)
 			}
 		}
+		.padding(focused ? DS.Space.s2 : 0)
+		.background(
+			RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous)
+				.fill(focused ? DS.fillFaint : .clear)
+		)
 	}
 }
 
 /// The risk card as its own screen — what the directory and the setup roster open.
+///
+/// It owns the scroll, so it is the one host that can answer a tap on the strip key. The
+/// thing sheet embeds the same card inside a scroll it does not own and hands in nothing,
+/// which is why `onScrollToAxis` is optional rather than assumed.
 struct L2beatCardScreen: View {
 	let chainID: String
 
@@ -397,9 +463,20 @@ struct L2beatCardScreen: View {
 
 	var body: some View {
 		NavigationStack {
-			ScrollView {
-				L2beatRiskCard(chainID: chainID, onDismissForAsk: { dismiss() })
-					.padding(DS.Space.s4)
+			ScrollViewReader { proxy in
+				ScrollView {
+					L2beatRiskCard(
+						chainID: chainID,
+						onDismissForAsk: { dismiss() },
+						// `.center`, not `.top`: the five rows read as a set, and pinning the
+						// picked one to the top hides the four it is being compared against.
+						onScrollToAxis: { axis in
+							withAnimation(DS.Motion.standard) {
+								proxy.scrollTo(axis, anchor: .center)
+							}
+						})
+						.padding(DS.Space.s4)
+				}
 			}
 			.dsPageBackground()
 			.dsSoftScrollEdges()

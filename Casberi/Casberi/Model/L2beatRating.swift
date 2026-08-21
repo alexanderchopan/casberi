@@ -61,6 +61,28 @@ enum L2beatRiskAxis: String, CaseIterable, Codable, Sendable {
 		}
 	}
 
+	/// The axis name at STRIP WIDTH — one word per cell.
+	///
+	/// It exists so the five positions can be NAMED once, on the risk card, under the strip
+	/// they belong to. The strip's whole design is that the same question is always in the
+	/// same place; until this landed, nowhere in the app said which place, so the
+	/// correspondence was there to be learned with nothing to learn it from.
+	///
+	/// A SHORTENING OF OUR OWN LABEL, never of L2BEAT's reading. `label` is already ours —
+	/// their `wireName` is Title Case and the design system bans that — and this is the same
+	/// name with the shared noun dropped, which is unambiguous precisely because all five
+	/// appear together. No value, sentence or verdict L2BEAT publishes is abbreviated
+	/// anywhere in this feature.
+	var shortLabel: String {
+		switch self {
+		case .sequencerFailure: return String(localized: "Sequencer")
+		case .stateValidation: return String(localized: "State")
+		case .dataAvailability: return String(localized: "Data")
+		case .exitWindow: return String(localized: "Exit")
+		case .proposerFailure: return String(localized: "Proposer")
+		}
+	}
+
 	/// What the axis is ASKING, in plain words.
 	///
 	/// OURS, AND THE ONLY TEXT IN THIS FEATURE THAT IS. Every verdict, value and sentence
@@ -340,6 +362,33 @@ enum L2beatLead: Sendable, Equatable {
 		switch self {
 		case .finding(let risk): return risk.worstSentiment == .bad
 		case .unread, .underReview, .nothingFlagged: return false
+		}
+	}
+
+	/// The dense form for a directory row — WHICH question L2BEAT leads with, in a phrase.
+	///
+	/// IT REPLACES A TALLY. The row used to print "2 of 5 flagged" two points from a strip
+	/// that says exactly that in colour, so the one line of words on a browse row spent
+	/// itself repeating the drawing beside it. The strip is what lets two rows be compared
+	/// without reading either; this is the one fact it cannot carry at sixty points — which
+	/// of the five — and it stays a WORD, so the row still reads in greyscale and to anyone
+	/// who has not learned the palette (`L2beatSentimentTag`'s rule, kept rather than traded).
+	///
+	/// Never a count and never a verdict: it names L2BEAT's own leading call, chosen by the
+	/// fixed ladder in `L2beatProject.lead`, and a chain with nothing flagged is said to have
+	/// nothing flagged rather than being called safe.
+	var shortLabel: String {
+		switch self {
+		case .unread:
+			return String(localized: "Not assessed")
+		case .underReview:
+			return String(localized: "Under review")
+		case .finding(let risk):
+			return risk.worstSentiment == .bad
+				? String(localized: "\(risk.axis.label) flagged")
+				: String(localized: "\(risk.axis.label) has a caveat")
+		case .nothingFlagged:
+			return String(localized: "Nothing flagged")
 		}
 	}
 }

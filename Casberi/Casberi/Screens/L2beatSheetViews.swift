@@ -148,18 +148,13 @@ struct L2beatMilestoneHead: View {
 	/// Provenance said, never implied.
 	@ViewBuilder
 	private func stamp(_ facts: L2beatMilestoneFacts?) -> some View {
-		Text(String(localized: "Recorded \(Self.day.string(from: thing.capturedAt)) · From L2BEAT, an open registry of layer-2 risk"))
+		// `L2beatCopy.day` rather than a formatter of this file's own: the risk card lists
+		// these same milestones under "On record" and two formatters spell one day two ways.
+		Text(String(localized: "Recorded \(L2beatCopy.day(thing.capturedAt)) · From L2BEAT, an open registry of layer-2 risk"))
 			.dsText(.label11)
 			.foregroundStyle(DS.textTertiary)
 			.fixedSize(horizontal: false, vertical: true)
 	}
-
-	private static let day: DateFormatter = {
-		let f = DateFormatter()
-		f.dateStyle = .medium
-		f.timeStyle = .none
-		return f
-	}()
 }
 
 /// L2BEAT changing its reading — only meaningful as what it moved to.

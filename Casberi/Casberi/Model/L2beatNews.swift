@@ -34,6 +34,49 @@ enum L2beatMilestoneKind: String, Codable, Sendable {
 	var isIncident: Bool { self == .incident }
 }
 
+// MARK: - How old an incident is
+
+/// How a chain's incident history reads on a row with no room for a date.
+///
+/// IT EXISTS BECAUSE THE DIRECTORY SHIPPED WITHOUT IT. That screen marked every chain with
+/// any incident ON RECORD — the same word, in the same attention colour, whether L2BEAT
+/// recorded it last month or in 2021 — on the one screen a person uses to decide where to
+/// put money. An assessment is a standing judgment and an incident is an event, which is
+/// exactly why the cross-link exists; an event with no date is half an event.
+///
+/// THE WINDOW IS THE ROOM HEAD'S OWN (`L2beatRoomSource.recencyDays`), handed in rather
+/// than redeclared. Two definitions of "recent" in one feature drift, and then the room
+/// ranks a chain first that the directory draws as old news — §311's shape, where the two
+/// halves stop agreeing and nothing breaks loudly enough to notice.
+///
+/// Pure, so the harness can prove it: nothing on this host can make L2BEAT record an
+/// incident, so these are numbers no other check here will ever see.
+enum L2beatIncidentAge {
+	/// Inside the window, by the room head's own reckoning.
+	static func isRecent(_ date: Date, now: Date, withinDays: Int) -> Bool {
+		date >= now.addingTimeInterval(-Double(withinDays) * 86_400)
+	}
+
+	/// `("Incident", true)` inside the window, `("Incident 2022", false)` outside.
+	///
+	/// THE YEAR AND NEVER A RELATIVE PHRASE. "Four years ago" is arithmetic the reader then
+	/// has to undo before it can be placed against anything else they know, and this row
+	/// sits beside a stage and five risk cells that are all statements about NOW — a
+	/// relative age is the one reading among them that quietly keeps moving.
+	///
+	/// The year is stringified BEFORE it is interpolated: `String(localized:)` groups an
+	/// `Int`, so the obvious spelling prints "Incident 2,022" — the §375 defect, which
+	/// shipped as "2,019 was your loudest year" in a headline before a harness caught it.
+	static func mark(latest: Date, now: Date = .now, withinDays: Int,
+					 calendar: Calendar = .current) -> (text: String, recent: Bool) {
+		if isRecent(latest, now: now, withinDays: withinDays) {
+			return (String(localized: "Incident"), true)
+		}
+		let year = String(calendar.component(.year, from: latest))
+		return (String(localized: "Incident \(year)"), false)
+	}
+}
+
 /// One milestone, as L2BEAT records it.
 struct L2beatMilestone: Sendable, Equatable, Codable {
 	/// The project's `id` — their repo directory name, which is what this joins on. Never

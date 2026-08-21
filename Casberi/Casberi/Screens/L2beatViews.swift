@@ -45,6 +45,78 @@ struct L2beatStrip: View {
 	}
 }
 
+/// The strip WITH ITS KEY — the one place in the app the five positions are NAMED.
+///
+/// The bare `L2beatStrip` above is drawn on a room row, a directory row and a roster; its
+/// whole design is that the same question is always in the same place, so the eye can
+/// compare two chains without reading either. Nowhere said WHICH place. The correspondence
+/// was there to be learned and there was nothing anywhere to learn it from, which made the
+/// strip a decoration for everyone who had not gone and read `L2beatRiskAxis`.
+///
+/// So it lives on the RISK CARD, directly above the five rows it summarises: five cells,
+/// five names, and the same five sentences underneath in the same order. Learn it once here
+/// and every strip in the app pays off.
+///
+/// A pick HANDS BACK THE AXIS and does nothing itself, so the card can scroll to the row it
+/// names without this view knowing a scroll exists. `onPick` is optional and that is §83,
+/// not laziness: the thing sheet embeds this card inside a scroll it does not own, so there
+/// is nothing there for a tap to drive — and a cell that looks tappable and isn't is the
+/// dead control this app bans. Absent a handler this is a legend, drawn identically.
+struct L2beatStripKey: View {
+	let risks: [L2beatRisk]
+	/// Supplied only by a host that can act on the pick. See above.
+	var onPick: ((L2beatRiskAxis) -> Void)?
+	/// The axis the host is currently showing, drawn heavier so the key and the rows below
+	/// agree about where you are.
+	var focused: L2beatRiskAxis?
+
+	@Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+	private static let cellHeight: CGFloat = 10
+
+	var body: some View {
+		// One wipe over the whole key rather than one per cell: it is a single object
+		// arriving, and it arrives in the order it is read (§299, and it honours Reduce
+		// Motion through the same modifier the bare strip uses).
+		HStack(alignment: .top, spacing: 2) {
+			ForEach(L2beatRiskAxis.allCases, id: \.self) { axis in
+				column(axis).frame(maxWidth: .infinity)
+			}
+		}
+		.chartWipe(reduceMotion: reduceMotion)
+	}
+
+	@ViewBuilder
+	private func column(_ axis: L2beatRiskAxis) -> some View {
+		let risk = risks.first { $0.axis == axis }
+		let sentiment = risk?.sentiment ?? .unknown
+		let body = VStack(spacing: 5) {
+			RoundedRectangle(cornerRadius: Self.cellHeight / 2, style: .continuous)
+				.fill(L2beatCopy.color(sentiment))
+				.frame(height: Self.cellHeight)
+			Text(axis.shortLabel)
+				.dsText(.label11)
+				.fontWeight(focused == axis ? .semibold : .regular)
+				.foregroundStyle(focused == axis ? DS.textPrimary : DS.textTertiary)
+				.lineLimit(1)
+				.minimumScaleFactor(0.75)
+		}
+		.contentShape(Rectangle())
+		// The FULL axis name and L2BEAT's own word for the reading — a screen reader hearing
+		// "Sequencer" learns less than the strip's own readout already tells it.
+		.accessibilityElement(children: .ignore)
+		.accessibilityLabel(Text("\(axis.label): \(L2beatCopy.label(sentiment))"))
+
+		if let onPick {
+			Button { DSHaptic.tap(); onPick(axis) } label: { body }
+				.buttonStyle(.plain)
+				.dsHover()
+		} else {
+			body
+		}
+	}
+}
+
 /// L2BEAT's own stage, as a pill.
 ///
 /// THEIR COMPOSITE, CITED AND NEVER COMPUTED — and the reason §419's "invent no composite"
@@ -197,6 +269,26 @@ enum L2beatCopy {
 		}
 		return "\(stage.label). \(stage.meaning)"
 	}
+
+	/// A recorded day, spelled the same way on every surface that shows one.
+	///
+	/// ABSOLUTE, NEVER RELATIVE, and that is the whole reason it exists. L2BEAT's record runs
+	/// back five years, so a card answering "has anything actually gone wrong here" was
+	/// listing an exploit from 2021 and a halt from last month in the same voice with nothing
+	/// to tell them apart — recency is the load-bearing fact of that section and it was the
+	/// one thing missing. `LiveTimeText`'s relative form is right in the FEED, where a row is
+	/// news arriving; it is wrong on a record, where the year is what places the event.
+	///
+	/// One formatter, shared, so the risk card's cross-link and the milestone sheet's own
+	/// stamp cannot spell the same day two ways.
+	static func day(_ date: Date) -> String { dayFormatter.string(from: date) }
+
+	private static let dayFormatter: DateFormatter = {
+		let formatter = DateFormatter()
+		formatter.dateStyle = .medium
+		formatter.timeStyle = .none
+		return formatter
+	}()
 
 	/// "2 flagged, 1 caveat, 2 fine" — the strip's short form for a row with no room for it.
 	static func stripShort(_ risks: [L2beatRisk]) -> String {
