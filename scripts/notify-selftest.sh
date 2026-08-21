@@ -97,6 +97,38 @@ guard "the attachment ladder falls to the source mark before nothing" \
 guard "payouts stay unwired while paid and failed are indistinguishable" \
       'NOT WIRED, deliberately' "$SWEEP"
 
+# ── the Walletbeat alarm's four gates (prd §422) ────────────────────────────
+# `NotifySweep` is @MainActor + SwiftData, so it cannot be compiled here; these
+# guard the wiring the compiled `NotifyPlan` half cannot see. Every one of them
+# fails SILENTLY in the direction that matters most: drop the watch-list test
+# and the app alarms about a wallet somebody has never opened, which is the
+# fastest way to have notifications switched off for good.
+guard "the Walletbeat alarm reads Walletbeat's own facts, never the row's title" \
+      'WalletbeatIncidentBook\.facts\(ref: ref\)' "$SWEEP"
+guard "only high and critical alarm" \
+      'severity >= \.high' "$SWEEP"
+guard "a resolved incident never alarms" \
+      'facts\.status\.isOpen' "$SWEEP"
+guard "the incident must name a wallet the person actually watches" \
+      'facts\.wallets\.contains\(where: \{ watchedWallets\.contains\(\$0\) \}\)' "$SWEEP"
+# The watch list comes from the CORPUS (§419's watch-is-a-Thing decision), so it
+# can never disagree with the rows in the feed. A version that read a store
+# instead would be one more thing to keep in step.
+guard "the watch list is derived from the rows the sweep already holds" \
+      'live\.compactMap \{ WalletbeatWatch\.walletID\(from: \$0\) \}' "$SWEEP"
+# FOLLOWING ALONE MUST NEVER ALARM. The empty default is what makes that true
+# for any caller that forgets, and it is the difference between this feature
+# and a security-news firehose pointed at a lock screen.
+guard "an unspecified watch list defaults to empty, so nothing alarms" \
+      'watchedWallets: Set<String> = \[\]' "$SWEEP"
+# A rating revision is Walletbeat changing its own mind, not something that
+# happened to you — the same test that keeps a card spend quiet (§313).
+if grep -qE 'WalletbeatWatch\.isRevisionRef' "$SWEEP"; then
+  printf '  ✗ DRIFT: a Walletbeat rating REVISION reaches the classifier (§422 — it is not news about you)\n'; fail=1
+else
+  printf '  ✓ a rating revision never notifies\n'
+fi
+
 # ── the entitlement and the promise, tied together (prd §306, 2026-08-14) ──
 # `interruptionLevel = .timeSensitive` is a line that COMPILES AND RUNS
 # whether or not the app is allowed to mean it: without the entitlement iOS
@@ -215,6 +247,21 @@ ok(NotifyKind.moneyIn.severity == 0, "arrivals never compete for the alarm slot"
 // tie with the arrivals and lose every tie-break — this asserts it didn't.
 ok(NotifyKind.priceRose.cls == .alarm, "a price rise is an alarm")
 ok(NotifyKind.priceRose.severity > 0, "a price rise has a real severity, not the default 0")
+
+// ── the Walletbeat alarm's rank, and both of its boundaries (prd §422) ──────
+// Asserted as a SANDWICH rather than against one neighbour: the ruling is that
+// a flaw in the software holding your keys outranks one revocable approval and
+// is outranked by a position actually about to be sold, and a test naming only
+// one side would pass with the kind ranked off the end of the ladder.
+ok(NotifyKind.walletIncident.cls == .alarm, "a wallet incident is an alarm")
+ok(NotifyKind.walletIncident.severity > NotifyKind.approvalGranted.severity,
+   "a flaw in the wallet itself outranks one revocable approval")
+ok(NotifyKind.walletIncident.severity < NotifyKind.positionAtRisk.severity,
+   "a disclosed risk is outranked by money actually about to be sold")
+// No clock, so no Focus break — `positionAtRisk`'s own rule, for the same
+// reason: a disclosure states no deadline, only a risk that may never land.
+ok(!NotifyKind.walletIncident.isTimeSensitive,
+   "a wallet incident never breaks a Focus — it carries no stated clock")
 ok(NotifyKind.poolCleared.severity > NotifyKind.priceRose.severity, "good news outranks a rise already charged")
 ok(!NotifyKind.priceRose.isTimeSensitive, "a price rise never breaks a Focus")
 
@@ -400,6 +447,15 @@ mutate "a held notification waits a full day too long" \
        's/return today > now \? today : cal/return cal/'
 mutate "money arrivals stop collapsing (four dust transfers, four buzzes)" \
        's/matching: \{ \$0\.kind == \.moneyIn \}/matching: { _ in false }/'
+# The two boundaries of §422's rank, each mutated on its own — moving it to the
+# top of the ladder is as wrong as burying it, and one fixture cannot say both.
+mutate "a wallet incident sinks below a revocable approval" \
+       's/case \.walletIncident:   return 82/case .walletIncident:   return 5/'
+mutate "a wallet incident outranks a live liquidation" \
+       's/case \.walletIncident:   return 82/case .walletIncident:   return 99/'
+mutate "a wallet incident claims the Focus-breaking level" \
+       's/self == \.disputeOpened \|\| self == \.deadlineNear/self == .disputeOpened || self == .deadlineNear || self == .walletIncident/'
+
 mutate "the two groups share one count, so an alarm absorbs transfers" \
        's/matching: \{ \$0\.kind == \.moneyIn \}/matching: { \$0.cls != .whisper }/'
 
@@ -463,6 +519,56 @@ enum ASCVersionState: String {
 enum WalletIngest { static let holdingFloor: Double = 1.0 }
 enum StripeWatch { static let source = "Stripe" }
 enum AppleWalletBridge { static let sourceName = "Apple Wallet" }
+
+// Walletbeat (prd §422). These four ARE asserted against, unlike the
+// compile-only stubs above, so each mirrors the real shape rather than merely
+// satisfying the type checker. The BOOK is a plain in-memory dictionary here —
+// the real one is UserDefaults-backed, which a harness cannot and should not
+// reach; what is under test is the four gates, not the store.
+enum WalletbeatSeverity: String, Comparable {
+    case low = "LOW", medium = "MEDIUM", high = "HIGH", critical = "CRITICAL"
+    private var order: Int {
+        switch self {
+        case .low: return 0
+        case .medium: return 1
+        case .high: return 2
+        case .critical: return 3
+        }
+    }
+    static func < (a: Self, b: Self) -> Bool { a.order < b.order }
+}
+enum WalletbeatIncidentStatus: String {
+    case ongoing = "ONGOING", mitigated = "MITIGATED"
+    case resolved = "RESOLVED", unknown = "UNKNOWN"
+    // Mirrors the shipped rule: mitigated is NOT resolved, and an unreadable
+    // status is deliberately NOT open (the room head's conservative reading).
+    var isOpen: Bool { self == .ongoing || self == .mitigated }
+}
+struct WalletbeatIncidentFacts {
+    var slug: String
+    var severity: WalletbeatSeverity?
+    var status: WalletbeatIncidentStatus
+    var wallets: [String]
+}
+enum WalletbeatNewsParse { static let refPrefix = "walletbeat:news:" }
+enum WalletbeatWatch {
+    static let walletPrefix = "walletbeat:wallet:"
+    static func walletID(from thing: Thing) -> String? {
+        guard let ref = thing.sourceRef, ref.hasPrefix(walletPrefix) else { return nil }
+        return String(ref.dropFirst(walletPrefix.count))
+    }
+    static func isNewsRef(_ ref: String?) -> Bool {
+        ref?.hasPrefix(WalletbeatNewsParse.refPrefix) ?? false
+    }
+}
+enum WalletbeatIncidentBook {
+    nonisolated(unsafe) static var stub: [String: WalletbeatIncidentFacts] = [:]
+    static func all() -> [String: WalletbeatIncidentFacts] { stub }
+    static func facts(ref: String?) -> WalletbeatIncidentFacts? {
+        guard let ref, ref.hasPrefix(WalletbeatNewsParse.refPrefix) else { return nil }
+        return stub[String(ref.dropFirst(WalletbeatNewsParse.refPrefix.count))]
+    }
+}
 SWIFT
 
 cat > "$sweepwork/main.swift" <<'SWIFT'
@@ -529,8 +635,65 @@ func runFixtures() {
     ok(NotifySweep.classify(row(ref: "stripe:runway:low:1700000000", source: "Stripe"), now: now) != nil,
        "a runway row is classified by its ref prefix, not by falling through to Stripe's tag checks")
 
+    // ── Walletbeat: four gates, and each fixture fails ONE of them ────────────
+    // Every case below is a real incident shape Walletbeat has published, and
+    // each renders identically in the feed — the whole difference is whether
+    // the right-hand slot is spent. `watched` deliberately holds a wallet that
+    // is NOT the subject of most fixtures, so a gate that stops working shows
+    // up as an alarm about somebody else's software.
+    let watched: Set<String> = ["ledger", "rabby"]
+    func incident(_ slug: String, _ severity: WalletbeatSeverity?,
+                  _ status: WalletbeatIncidentStatus, _ wallets: [String]) -> Thing {
+        WalletbeatIncidentBook.stub[slug] =
+            WalletbeatIncidentFacts(slug: slug, severity: severity, status: status, wallets: wallets)
+        return row(ref: "walletbeat:news:" + slug, source: "Walletbeat", tags: ["Vulnerability"])
+    }
+
+    ok(NotifySweep.classify(incident("a", .critical, .ongoing, ["ledger"]),
+                            now: now, watchedWallets: watched) == .walletIncident,
+       "a critical, ongoing incident naming a watched wallet alarms")
+    ok(NotifySweep.classify(incident("b", .high, .mitigated, ["rabby"]),
+                            now: now, watchedWallets: watched) == .walletIncident,
+       "MITIGATED is still open — contained is not fixed, and your data is still out")
+    ok(NotifySweep.classify(incident("c", .critical, .ongoing, ["safepal"]),
+                            now: now, watchedWallets: watched) == nil,
+       "a critical incident about a wallet you do not use never alarms")
+    ok(NotifySweep.classify(incident("d", .critical, .ongoing, ["ledger"]),
+                            now: now, watchedWallets: []) == nil,
+       "FOLLOWING ALONE NEVER ALARMS — the whole free tier is feed rows")
+    ok(NotifySweep.classify(incident("e", .medium, .ongoing, ["ledger"]),
+                            now: now, watchedWallets: watched) == nil,
+       "a medium-severity incident never alarms, however open")
+    ok(NotifySweep.classify(incident("f", .critical, .resolved, ["ledger"]),
+                            now: now, watchedWallets: watched) == nil,
+       "a resolved incident never alarms")
+    ok(NotifySweep.classify(incident("g", nil, .ongoing, ["ledger"]),
+                            now: now, watchedWallets: watched) == nil,
+       "an ungraded incident never alarms — an alarm we cannot grade, we do not send")
+    // The BOOK, not `authorHandle`: an incident naming three wallets keeps only
+    // the first on the row, so a join through the row would leave a Ledger user
+    // unwarned about an incident filed under SafePal first.
+    ok(NotifySweep.classify(incident("h", .critical, .ongoing, ["safepal", "ledger"]),
+                            now: now, watchedWallets: watched) == .walletIncident,
+       "a multi-wallet incident matches on ANY named wallet, not just the first")
+    // A row whose facts were never recorded — a decode failure, or a book
+    // cleared while its rows remain. Declines rather than guessing.
+    ok(NotifySweep.classify(row(ref: "walletbeat:news:unknown-slug", source: "Walletbeat"),
+                            now: now, watchedWallets: watched) == nil,
+       "an incident with no recorded facts never alarms")
+    // The OTHER two Walletbeat row shapes must not be swallowed by a loose
+    // prefix — a watch row is a standing report card and a revision is
+    // Walletbeat changing its own mind.
+    ok(NotifySweep.classify(row(ref: "walletbeat:wallet:ledger", source: "Walletbeat"),
+                            now: now, watchedWallets: watched) == nil,
+       "a watched-wallet row is not an incident")
+    ok(NotifySweep.classify(row(ref: "walletbeat:rev:ledger:keyStorage:FAIL:2026-08-20",
+                                source: "Walletbeat", tags: ["Rating"]),
+                            now: now, watchedWallets: watched) == nil,
+       "a rating revision never alarms")
+
     // ── headline() never returns empty for a kind classify() can produce ──────
-    for k: NotifyKind in [.positionAtRisk, .agentRunFailed, .runningLow] {
+    for k: NotifyKind in [.positionAtRisk, .agentRunFailed, .runningLow, .walletIncident] {
         ok(!NotifySweep.headline(k).isEmpty, "\(k) has a non-empty headline")
     }
 }

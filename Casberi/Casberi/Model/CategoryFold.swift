@@ -130,17 +130,26 @@ enum CategoryFold {
     ///
     /// A venue switcher says "different views of the same subject" — Aave, Morpho and
     /// Peer are lenses on YOUR ADDRESSES, so folding them behind one Wallet chip loses
-    /// nothing. These two are not lenses on anything you hold: Walletbeat reviews the
-    /// SOFTWARE your money sits in and CardPointers reads offers on your CARDS, so
-    /// switching to them from a balance is a change of subject, not a change of view.
-    /// Folded, each was reachable only two taps deep inside a switcher of money rooms
-    /// whose rows share nothing with theirs (user ruling 2026-08-20, after both
-    /// disappeared from the strip when they moved into the Wallet group).
+    /// nothing.
+    ///
+    /// **WALLETBEAT WAS HERE FOR A DAY AND IS NOT (user ruling 2026-08-20, prd §423).**
+    /// It was exempted the same morning on the argument that reviewing the SOFTWARE your
+    /// money sits in is a change of subject rather than a change of view. The ruling is
+    /// that it is a SOURCE ROOM in the Wallet band like any other, and belongs behind
+    /// that chip: a top-level chip is what the strip gives a whole category, and spending
+    /// one on a single seat is what the fold exists to stop. The report the exemption was
+    /// written for — "I don't see Walletbeat" — was really about a room that had just
+    /// moved bands, and the venue switcher is the answer to it.
+    ///
+    /// CardPointers stays, and the difference is its SUBJECT: every other Wallet member
+    /// reads addresses or the software holding them, while CardPointers reads offers on
+    /// cards from banks — nothing it shows is about a wallet at all, so a switcher
+    /// promising "another view of this" would not be telling the truth.
     ///
     /// Deliberately a SOURCE list, not a category one: the rest of Wallet folds exactly
     /// as before, and this stays the narrow exception it is rather than turning the fold
     /// off for a whole band.
-    static let neverFold: Set<String> = ["Walletbeat", "CardPointers"]
+    static let neverFold: Set<String> = ["CardPointers"]
 
     static func fold(_ ordered: [String], category: String, members: Set<String>) -> [String] {
         guard !members.isEmpty else { return ordered }

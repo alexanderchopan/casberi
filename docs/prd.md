@@ -83,6 +83,8 @@ at all.
 | §36 | Bridge selection ruling: live data only | amended by §420 |
 | §402 | Altana keystore: read Ethereum only, and stay silent on first sight | amended by §403 |
 | §419 | Walletbeat: the seat exists only while a wallet is watched | amended by §421 |
+| §421 | Walletbeat's two tiers: following and watching | amended by §422 |
+| §420 | Walletbeat and CardPointers keep their own chips (amendment) | reversed for Walletbeat by §423 |
 | §36a | Home cover: an explicit banner outranks the automatic screensh | amended by §36j, superseded by §36o |
 | §36h | Wallet holdings: one treemap per wallet, leads Feed too, tap-t | amended by §36n |
 | §36j | Home cover is 2-tier now: a set banner, or black | superseded by §36o |
@@ -28051,3 +28053,143 @@ in this repo:** the quiet sentence also ends "in the last 30 days", so a check a
 that phrase passed whether or not the recent branch was reached, and the mutation survived.
 The standing rule again: **a fixture only tests the rule it names if it fails that rule and
 passes every other one.**
+
+## 422. Three Walletbeat facts that were landed and on no screen (user: "how else can we improve the walletbeat experience and design", then "ok, do 1, 2, 4", 2026-08-20)
+
+Amends §421. Nothing here reads anything new from Walletbeat — every fact below was
+already in the corpus or in `WalletbeatIncidentBook`, and the only thing missing was a
+surface saying it. Three of them; a fourth (offering to watch the wallet a
+WalletConnect session names) is deliberately left for its own pass, and a fifth —
+side-by-side comparison of two wallets — is DECLINED for §419's central reason: sixteen
+of the thirty-two are mostly unexamined, so a comparison is mostly unknowns rendered as
+a verdict, which is our ranking wearing Walletbeat's name.
+
+### 1. A serious, unresolved incident about a wallet you use notifies
+
+`NotifyKind.walletIncident`. Every other alarm in `NotifySweep` is about money that has
+already moved or is about to; this one is about **the software holding it**, which makes
+it the only alarm in that file nobody else can send — a wallet vendor disclosing its own
+vulnerability does not push you a notification, and the wallet you are about to open is
+the last place you would look.
+
+**Four gates, each load-bearing, each mutation-proven against the real tree:**
+
+1. **A wallet you WATCH.** Following alone never alarms — the free tier is the
+   ecosystem's incidents as feed rows, which is what it promises; the right-hand slot is
+   for the wallet in your own pocket. The watch list is derived from the rows the sweep
+   already holds rather than read from a store, which is §419's watch-is-a-`Thing`
+   decision paying off twice: no parameter to thread down, and a marker that can never
+   disagree with the watch rows in the same feed.
+2. **HIGH or CRITICAL**, Walletbeat's own grade, never ours.
+3. **Still open**, and `MITIGATED` counts as open — contained is not fixed and your data
+   is still out, which is §419's own distinction reused where it costs something.
+4. **Facts from the BOOK, never the row's title.** Severity leads the title as
+   "Critical · …" / "Serious · …", both `String(localized:)`, so matching them would
+   work in English and silently stop alarming on a translated device — `NotifySweep`'s
+   opening rule. The book also holds the FULL wallet list where the row keeps only
+   `wallets.first` on `authorHandle`, so an incident naming several wallets is matched
+   against all of them. **No book entry declines**: an alarm we cannot grade is an alarm
+   we have no business sending.
+
+**Severity 82, asserted as a SANDWICH** — above `approvalGranted` (80) because an
+approval is ONE contract you granted and can revoke in a minute while this reaches
+everything in that wallet with nothing to revoke, and below `positionAtRisk` (85)
+because that is a definite loss on a live price where this is a disclosed risk that may
+never be exploited against you. A test naming only one neighbour passes with the kind
+ranked off the end of the ladder, so both are pinned and each is mutated separately.
+
+**Not time-sensitive**, following `positionAtRisk` exactly: a disclosure states no clock.
+That also means no entitlement question — the Focus-breaking level stays with the two
+alarms that carry a real deadline.
+
+**A rating REVISION never notifies**, and the absence is a decision: it is Walletbeat
+changing its own mind, not something that happened to you. The same test that keeps a
+card spend quiet (§313).
+
+### 2. The row says when an incident is about a wallet you use
+
+An incident tagged "Ledger" read identically whether or not you watch Ledger, and the
+tag cannot tell them apart. "You use this" LEADS the row's tag strip, in the tint rather
+than `DS.attention` — which in that row means unresolved and must keep meaning only
+that.
+
+Read through the BOOK for the reason above, with `authorHandle` as the fallback when no
+facts were recorded. **The failure the book prevents is exactly backwards from the
+intuition**: a Ledger user reading an incident Walletbeat filed under SafePal *and*
+Ledger would see no marker at all, and the multi-wallet incidents are the serious ones.
+
+The row does not fetch. The set is handed in from the room, which already holds the
+watch rows a fetch would go looking for — guarded as a negative, since a row that
+fetches is a row that fetches once per scroll.
+
+### 3. The directory says which wallets have an unresolved incident
+
+`WalletbeatDirectoryScreen` is where somebody chooses which wallet to trust, and it drew
+coverage and a maturity stage while withholding the single most decision-relevant fact
+on the screen — that one of these wallets has an unresolved breach, landed and one join
+away. "Unresolved incident" leads the row's fact line, ahead of coverage: coverage says
+how much Walletbeat has looked, this says what they found and have not seen fixed.
+
+Open only. A permanent warning on a wallet whose bug was fixed years ago is §83 pointing
+the other way, and it is guarded.
+
+### 4. The demo seeds the incident book, which nothing ever did
+
+`WalletbeatIncidentBook.forgetDemo` existed (§401's by-name teardown rule) with nothing
+to forget: the demo landed incident ROWS and never their facts. So the sheet's fact card
+drew nothing in the demo, the sheet-anatomy check passed over a head with an empty body,
+and both markers above would have read empty in the one corpus `verify.sh` can walk.
+
+Seeded with **real statuses**, which holds the demo's own standing ruling that it must
+never assert a named company currently has an unpatched hole — so all three are resolved
+or mitigated, the OPEN branch stays undemoed, and `verify.sh` therefore cannot cover the
+notification this feeds. Said plainly rather than fixed by fabricating one.
+
+### 5. What the harnesses gained
+
+`notify-selftest.sh`: 11 new fixtures (each failing exactly one gate), 7 drift guards, 3
+mutations, and real stubs for `WalletbeatIncidentBook`/`WalletbeatWatch` rather than the
+compile-only kind — the four gates are asserted, not merely typed. Mutation-proven
+against the real `NotifySweep` four ways: removing the watch gate, the severity floor,
+the resolved gate, or inventing facts for an unbooked incident all go red.
+
+`walletbeat-selftest.sh`: 9 drift guards, mutation-proven against the real tree.
+
+**One guard was caught proving the right result for the wrong reason, and it took TWO
+corrections** — the fifth instance of this class in this harness and worth the retelling.
+"The demo seeds the book" grepped for `seedWalletbeatIncidents()`; commenting the call
+out left the literal in the file and the guard passed (the Obsidian/Cursor lesson).
+Reading a comment-STRIPPED copy still passed, because the bare name also appears in
+`private static func seedWalletbeatIncidents() {`. **A guard that matches a function's
+own declaration proves the function exists, never that anything calls it** — which is
+the whole failure it was written to catch. It is anchored to the call site now, and both
+corrections came from mutating the real tree rather than from reading.
+
+## 423. Walletbeat folds into Wallet after all — a source room does not get a top-level chip (user: "the wallet beat icon when followed is in the category chip header", "it is NOT supposed to be there", "it should be in the wallet section", "it's a source room", 2026-08-20)
+
+Reverses the §419/§420 amendment of the same morning, which added
+`CategoryFold.neverFold = ["Walletbeat", "CardPointers"]`.
+
+That amendment was written against the report "I don't see Walletbeat in the demo", and
+its reasoning was that a venue switcher says "different views of the same subject" —
+Aave, Morpho and Peer are lenses on your addresses, while Walletbeat reviews the
+software your money sits in, so switching to it from a balance is a change of subject
+rather than a change of view.
+
+**The ruling is that it is a source room in the Wallet band like any other, and belongs
+behind that chip.** A top-level chip is what the strip gives a whole CATEGORY, and
+spending one on a single seat is the thing `CategoryFold` exists to stop. The original
+report was about a room that had just changed bands, and the venue switcher is the
+answer to it — one tap inside Wallet, where every other wallet-adjacent room lives.
+
+**CardPointers stays exempt, and the difference is its SUBJECT**: every other Wallet
+member reads addresses or the software holding them, while CardPointers reads offers on
+cards from banks — nothing it shows is about a wallet at all, so a switcher promising
+"another view of this" would not be telling the truth. Left as the user's call if that
+should change too.
+
+`category-fold-selftest.sh` asserts BOTH halves of the reversal for the same reason the
+exemption's own assertions did: Walletbeat must vanish from the strip behind the Wallet
+chip AND appear inside that chip's switcher. Exempt-and-in-the-switcher is reachable
+twice; folded-and-absent is reachable never, which is the failure the day-long exemption
+was written to fix and the one to keep an eye on.

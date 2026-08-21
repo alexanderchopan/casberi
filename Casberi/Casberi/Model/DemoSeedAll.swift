@@ -415,6 +415,7 @@ enum DemoSeedAll {
         // BY NAME (prd §401), same reasoning: a dev install may watch these very
         // wallets for real through this same store.
         WalletbeatState.forgetDemo(demoWalletbeatIDs)
+        WalletbeatIncidentBook.forgetDemo(demoWalletbeatSlugs)
         SafeBridge.clearDemoSnapshot()
         forgetAddressBook()
         // The watched social accounts, by HANDLE — never a blanket wipe, since
@@ -662,6 +663,19 @@ enum DemoSeedAll {
                 thing.summary = "A fulfillment partner's breach exposed buyer names and addresses. Keys and devices were untouched — the risk is phishing that knows your name."
             })
 
+        // The INCIDENT BOOK, which nothing seeded until now (prd §422) — so the
+        // sheet's fact card, the row's "you use this" marker and the directory's
+        // unresolved flag all read a store that was empty in the demo, and the
+        // sheet-anatomy check passed over a head drawing nothing beneath it. The
+        // teardown half already existed (`WalletbeatIncidentBook.forgetDemo`,
+        // §401) with nothing to forget.
+        //
+        // REAL statuses, holding the ruling above: every one of these was fixed
+        // or contained, so nothing here claims a named company currently has an
+        // unpatched hole. That means the OPEN branch stays undemoed — correct,
+        // and the reason `verify.sh` cannot cover the notification this feeds.
+        seedWalletbeatIncidents()
+
         // A revision, so the third row shape in this room is demoed too.
         out.append(
             row(.link, "Walletbeat changed its rating of Rabby's app isolation",
@@ -674,6 +688,54 @@ enum DemoSeedAll {
             })
 
         return out
+    }
+
+    /// The slugs this demo plants in `WalletbeatIncidentBook`, so the teardown can
+    /// take exactly those and leave a dev install's real incidents alone (§401).
+    static let demoWalletbeatSlugs = [
+        "rabby-silent-signature-extraction",
+        "safepal-customer-order-data-exposure",
+        "trezor-shipmonk-data-breach",
+    ]
+
+    private static func seedWalletbeatIncidents() {
+        // Severities match the ROW TITLES above and cannot drift from them by
+        // accident: `WalletbeatIngest.incidentTitle` prefixes "Serious · " at
+        // exactly `.high`, which is why SafePal's demo row wears that word and
+        // the other two do not.
+        let facts: [WalletbeatIncident] = [
+            WalletbeatIncident(
+                slug: "rabby-silent-signature-extraction",
+                title: "Silent Signature Extraction Vulnerability in Rabby Browser Extension",
+                summary: "A malicious app could queue a fund-draining signature request hidden by a Chrome pop-under bug.",
+                type: .vulnerability, severity: .medium, status: .resolved,
+                publishedAt: Date().addingTimeInterval(-1 * 86_400), updatedAt: nil,
+                wallets: ["rabby"], fundsImpacted: false,
+                sources: [WalletbeatSource(label: "Rabby security advisory",
+                                           url: "https://\(WalletbeatHost.site)/news/")]),
+            WalletbeatIncident(
+                slug: "safepal-customer-order-data-exposure",
+                title: "Unauthorized Access to SafePal Customer Order Information",
+                summary: "An authorization flaw in SafePal's order-tracking plug-in exposed customer order records.",
+                type: .dataBreach, severity: .high, status: .mitigated,
+                publishedAt: Date().addingTimeInterval(-4 * 86_400), updatedAt: nil,
+                // Legitimately EMPTY — SafePal is not a wallet Walletbeat rates,
+                // which is the documented real case and the one that proves the
+                // marker declines rather than guessing.
+                wallets: [], fundsImpacted: false,
+                sources: [WalletbeatSource(label: "Disclosure",
+                                           url: "https://\(WalletbeatHost.site)/news/")]),
+            WalletbeatIncident(
+                slug: "trezor-shipmonk-data-breach",
+                title: "Customer Data Exposed in Trezor Shipping Provider Incident",
+                summary: "A fulfillment partner's breach exposed buyer names and addresses.",
+                type: .dataBreach, severity: .medium, status: .resolved,
+                publishedAt: Date().addingTimeInterval(-7 * 86_400), updatedAt: nil,
+                wallets: ["trezor"], fundsImpacted: false,
+                sources: [WalletbeatSource(label: "Trezor statement",
+                                           url: "https://\(WalletbeatHost.site)/news/")]),
+        ]
+        for incident in facts { WalletbeatIncidentBook.record(incident) }
     }
 
     static func rooms() -> [Thing] {

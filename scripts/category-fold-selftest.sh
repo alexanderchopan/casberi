@@ -737,32 +737,39 @@ check("a category name is recognized", CategoryFold.isCategory("Markets"))
 check("a category name is recognized (Wallet)", CategoryFold.isCategory("Wallet"))
 check("a plain source is not a category", !CategoryFold.isCategory("Kalshi"))
 
-// The fold exceptions (user ruling 2026-08-20). Walletbeat and CardPointers sit in the
-// Wallet GROUP but are not lenses on your addresses the way Aave and Peer are — one
-// reviews the software your money sits in, the other reads offers on your cards — so
-// each keeps its own chip and neither appears as a venue inside the Wallet switcher.
-// Both halves are asserted: a source exempted from the fold but left in the switcher
-// would be reachable twice.
-check("Walletbeat keeps its own chip",
-      CategoryFold.fold(["Walletbeat", "Peer"], category: "Wallet",
-                        members: CategoryFold.memberSet(of: "Wallet")).contains("Walletbeat"))
+// The fold exception, now ONE source (user ruling 2026-08-20, prd §423). CardPointers
+// sits in the Wallet GROUP and reads offers on cards from banks — nothing it shows is
+// about a wallet, so it keeps its own chip and never appears as a venue inside the
+// Wallet switcher. Both halves are asserted: a source exempted from the fold but left
+// in the switcher would be reachable twice.
 check("CardPointers keeps its own chip",
       CategoryFold.fold(["CardPointers", "Peer"], category: "Wallet",
                         members: CategoryFold.memberSet(of: "Wallet")).contains("CardPointers"))
 check("a non-exempt Wallet member still folds",
-      !CategoryFold.fold(["Walletbeat", "Peer"], category: "Wallet",
+      !CategoryFold.fold(["CardPointers", "Peer"], category: "Wallet",
                          members: CategoryFold.memberSet(of: "Wallet")).contains("Peer"))
 check("an exempt source alone plants no empty cluster chip",
-      CategoryFold.fold(["Walletbeat"], category: "Wallet",
-                        members: CategoryFold.memberSet(of: "Wallet")) == ["Walletbeat"])
+      CategoryFold.fold(["CardPointers"], category: "Wallet",
+                        members: CategoryFold.memberSet(of: "Wallet")) == ["CardPointers"])
 check("the exempt chip lights itself, not its category",
-      CategoryFold.chipLabel(for: "Walletbeat", folded: ["Wallet", "Walletbeat"]) == "Walletbeat")
-check("Walletbeat is not a Wallet switcher venue",
-      !CategoryFold.scopes(category: "Wallet", present: ["Walletbeat", "Peer"]).contains("Walletbeat"))
+      CategoryFold.chipLabel(for: "CardPointers", folded: ["Wallet", "CardPointers"]) == "CardPointers")
 check("CardPointers is not a Wallet switcher venue",
       !CategoryFold.scopes(category: "Wallet", present: ["CardPointers", "Peer"]).contains("CardPointers"))
 check("a non-exempt member is still a venue",
-      CategoryFold.scopes(category: "Wallet", present: ["Walletbeat", "Peer"]).contains("Peer"))
+      CategoryFold.scopes(category: "Wallet", present: ["CardPointers", "Peer"]).contains("Peer"))
+
+// WALLETBEAT FOLDS, and both halves are asserted for the same reason the exemption's
+// were: it is a source room in the Wallet band, so it must vanish from the strip behind
+// the Wallet chip AND appear inside that chip's switcher. Exempt-and-in-the-switcher is
+// reachable twice; folded-and-absent is reachable never, which is what the day-long
+// exemption was written to fix and is the failure to keep an eye on.
+check("Walletbeat folds into Wallet",
+      !CategoryFold.fold(["Walletbeat", "Peer"], category: "Wallet",
+                         members: CategoryFold.memberSet(of: "Wallet")).contains("Walletbeat"))
+check("Walletbeat's chip reads as its category",
+      CategoryFold.chipLabel(for: "Walletbeat", folded: ["Wallet"]) == "Wallet")
+check("Walletbeat IS a Wallet switcher venue",
+      CategoryFold.scopes(category: "Wallet", present: ["Walletbeat", "Peer"]).contains("Walletbeat"))
 check("an unknown label is not a category", !CategoryFold.isCategory("Nonsense"))
 
 // --- fold: UNCONDITIONAL now — the whole point of §351 ----------------------

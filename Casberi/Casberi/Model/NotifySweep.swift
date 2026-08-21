@@ -41,9 +41,16 @@ enum NotifySweep {
         var out: [NotifyPlan] = []
         var photos: [String: Data] = [:]
         let fresh = live.filter { $0.capturedAt > now.addingTimeInterval(-newsWindow) }
+        // The wallet apps the person said they use (prd §422). Derived from the
+        // corpus rather than passed in, and that is §419's design paying off:
+        // the Walletbeat watch IS a `Thing`, so the rows this sweep already
+        // holds carry the whole list — no store to read, no parameter to thread
+        // down from a caller, and nothing that can be out of date with what the
+        // feed is showing.
+        let watchedWallets = Set(live.compactMap { WalletbeatWatch.walletID(from: $0) })
 
         for thing in fresh {
-            guard let kind = classify(thing, now: now) else { continue }
+            guard let kind = classify(thing, now: now, watchedWallets: watchedWallets) else { continue }
             guard let id = thing.sourceRef else { continue }
             out.append(NotifyPlan(
                 id: "row:" + id,
@@ -77,7 +84,7 @@ enum NotifySweep {
             // A dispute already alarmed on the day it opened, wearing its own
             // deadline. Alarming again as a generic deadline would be the same
             // news twice in two voices.
-            guard classify(thing, now: now) != .disputeOpened else { continue }
+            guard classify(thing, now: now, watchedWallets: watchedWallets) != .disputeOpened else { continue }
             let phrase = NotifyRules.deadlinePhrase(due, now: now, calendar: .current)
             out.append(NotifyPlan(
                 id: "due:" + ref,
@@ -118,8 +125,27 @@ enum NotifySweep {
             return false
         }
         let dated = live.filter { $0.dueAt != nil }
+        // Walletbeat's four gates, counted separately (prd §422). A serious
+        // incident that does not alarm is the HEALTHY answer for almost every
+        // corpus — most people watch a wallet nothing has happened to — and it
+        // has four causes that render as the same silence: nothing watched, the
+        // incident names a wallet you do not use, it is resolved, or Walletbeat
+        // graded it below high. Only a missing BOOK entry is a bug, so that one
+        // is counted apart from the rest.
+        let watched = Set(live.compactMap { WalletbeatWatch.walletID(from: $0) })
+        let incidents = live.filter { WalletbeatWatch.isNewsRef($0.sourceRef) }
+        let booked = incidents.filter { WalletbeatIncidentBook.facts(ref: $0.sourceRef) != nil }
+        let serious = booked.filter {
+            guard let severity = WalletbeatIncidentBook.facts(ref: $0.sourceRef)?.severity
+            else { return false }
+            return severity >= .high
+        }
         return [
             "live=\(live.count) inNewsWindow=\(fresh.count) (window=\(Int(newsWindow / 3600))h)",
+            "walletbeatWatched=\(watched.count) incidents=\(incidents.count) "
+                + "withFacts=\(booked.count) highOrCritical=\(serious.count) "
+                + "stillOpen=\(booked.filter { WalletbeatIncidentBook.facts(ref: $0.sourceRef)?.status.isOpen == true }.count) "
+                + "namingAWatchedWallet=\(booked.filter { t in WalletbeatIncidentBook.facts(ref: t.sourceRef)?.wallets.contains(where: { watched.contains($0) }) == true }.count)",
             "received=\(received.count) filteredAsDust=\(dusted.count) "
                 + "(flagged=\(received.filter(\.isFlagged).count) "
                 + "belowFloor=\(received.filter { ($0.transferUSD ?? .infinity) < WalletIngest.holdingFloor }.count) "
@@ -132,8 +158,44 @@ enum NotifySweep {
     /// The one place an event becomes a class. Anything this returns nil for
     /// stays in the feed and waits, which is the normal outcome for the
     /// overwhelming majority of rows.
-    static func classify(_ thing: Thing, now: Date) -> NotifyKind? {
+    /// `watchedWallets` defaults to EMPTY, which means "nothing is watched" and
+    /// so declines every Walletbeat incident. That default is deliberate and
+    /// fail-safe in the direction that matters: a caller who forgets it gets
+    /// silence rather than an alarm about a wallet somebody does not use.
+    static func classify(_ thing: Thing, now: Date,
+                         watchedWallets: Set<String> = []) -> NotifyKind? {
         guard let ref = thing.sourceRef else { return nil }
+
+        // — Walletbeat: a serious, still-open incident naming a wallet app the
+        //   person told us they use (prd §422). Three gates, each load-bearing.
+        //
+        //   THE FACTS COME FROM THE BOOK, NEVER THE ROW'S TITLE. Severity leads
+        //   the title as "Critical · …" / "Serious · …" — both `String(localized:)`,
+        //   so matching them would work in English and silently stop alarming on
+        //   a Spanish device, which is this file's opening rule. The book holds
+        //   Walletbeat's own machine values, and it also holds the FULL wallet
+        //   list where the row keeps only `wallets.first` on `authorHandle`, so
+        //   an incident naming three wallets is matched against all three.
+        //
+        //   No book entry means no severity, and that declines: an alarm we
+        //   cannot grade is an alarm we have no business sending.
+        //
+        //   FOLLOWING ALONE NEVER ALARMS. Someone who follows Walletbeat and
+        //   watches nothing gets the ecosystem's incidents as feed rows, which
+        //   is what they asked for; the right-hand slot is reserved for the
+        //   wallet in their own pocket.
+        if ref.hasPrefix(WalletbeatNewsParse.refPrefix) {
+            guard let facts = WalletbeatIncidentBook.facts(ref: ref),
+                  let severity = facts.severity, severity >= .high,
+                  facts.status.isOpen,
+                  facts.wallets.contains(where: { watchedWallets.contains($0) })
+            else { return nil }
+            return .walletIncident
+        }
+        // A rating REVISION never notifies, and this absence is a decision. It
+        // is Walletbeat changing its own reading of a wallet — real, worth a
+        // row, and not something that happened to you or that asks anything of
+        // you. The same test that keeps a card spend quiet.
 
         // — App Store Connect: a verdict that STOPS a release. The ref carries
         //   the state (`asc:version:<id>:<STATE>` — see `ASCIngest`), so this
@@ -314,6 +376,10 @@ enum NotifySweep {
         case .positionAtRisk:   return String(localized: "Close to liquidation")
         case .approvalGranted:  return String(localized: "Something new can move your funds")
         case .safeSignatureNeeded: return String(localized: "Your signature is needed")
+        // Says the fact the row cannot: that this is YOUR wallet. The body
+        // already leads with Walletbeat's own severity word and the incident's
+        // own title, so repeating either here would say one thing twice.
+        case .walletIncident:   return String(localized: "Security problem in a wallet you use")
         case .poolProofNeeded:  return String(localized: "Privacy Pools needs a response")
         case .poolCleared:      return String(localized: "Clear to withdraw")
         case .paymentsSilent:   return String(localized: "Payments went quiet")

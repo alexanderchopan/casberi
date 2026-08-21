@@ -90,6 +90,11 @@ struct WalletbeatWalletRow: View {
 /// A security incident, or a rating revision — both are things that happened on a day.
 struct WalletbeatNewsRow: View {
 	let thing: Thing
+	/// The wallet apps the person said they use (prd §422). Handed in rather than
+	/// looked up here: a row must not fetch, and the room already holds the watch
+	/// rows it would fetch. Empty for a follower who watches nothing, which is the
+	/// common case and correctly draws no marker.
+	var watchedWallets: Set<String> = []
 
 	var body: some View {
 		if thing.isLive { liveBody }
@@ -100,6 +105,13 @@ struct WalletbeatNewsRow: View {
 		let wallet = thing.authorHandle.flatMap { id in
 			WalletbeatDirectory.wallets.first { $0.id == id }
 		}
+		// Whether this names a wallet the person actually uses. Read off the
+		// BOOK, never off `authorHandle` alone: the row keeps `wallets.first`
+		// and an incident can name several, so a Ledger user reading an
+		// incident filed under SafePal-and-Ledger would see no marker at all.
+		let mine = WalletbeatIncidentBook.facts(ref: thing.sourceRef)
+			.map { facts in facts.wallets.contains { watchedWallets.contains($0) } }
+			?? thing.authorHandle.map { watchedWallets.contains($0) } ?? false
 		HStack(alignment: .top, spacing: DS.Space.s3) {
 			// Every other room's rows lead with a disc; these were bare text, which broke
 			// the app's row anatomy and left open-vs-resolved readable only by reading.
@@ -146,6 +158,17 @@ struct WalletbeatNewsRow: View {
 			}
 
 			HStack(spacing: DS.Space.s2) {
+				// LEADS the strip, because it is the fact that decides whether
+				// this row is about you at all — an incident naming Ledger reads
+				// identically to one naming a wallet you have never opened, and
+				// the tag saying "Ledger" cannot tell them apart. In the tint
+				// rather than `DS.attention`, which in this row means unresolved
+				// and must keep meaning only that.
+				if mine {
+					Text(String(localized: "You use this"))
+						.dsText(.label11).fontWeight(.bold)
+						.foregroundStyle(DS.tint)
+				}
 				// The kind and, when it is still open, that fact — in words. A state that
 				// exists only as a colour is a state a lot of people never receive.
 				if open {

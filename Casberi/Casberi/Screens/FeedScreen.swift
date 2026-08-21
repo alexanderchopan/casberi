@@ -888,6 +888,21 @@ struct FeedScreen: View {
     /// `@State` on the promise that someone else guards is how both crashes
     /// happened. `visible` filters `.live` itself now — see below.
     @State private var debouncedAllSnapshot: [Thing]?
+    /// The wallet apps the person said they use, for the Walletbeat room's
+    /// incident rows (prd §422). Derived from the room's own rows rather than
+    /// fetched — §419's decision to make the watch a `Thing` is what makes that
+    /// possible, and it means the marker can never disagree with the watch rows
+    /// sitting directly above it in the same feed.
+    ///
+    /// Scoped to that room by construction: the only caller is `shapedRow`'s
+    /// `.walletbeat` case, so this walk costs nothing in any other room. Its
+    /// bound is that room's own size — 32 wallets and a dozen incidents — so
+    /// the per-row recomputation is a few hundred string compares, not the
+    /// corpus-wide walk this file's perf history warns about.
+    private var walletbeatWatchedIDs: Set<String> {
+        Set(visible.live.compactMap { WalletbeatWatch.walletID(from: $0) })
+    }
+
     private var visible: [Thing] {
         // Non-All rooms read their own source-filtered @Query directly — that
         // array is SwiftData-coordinated (its elements are live), so no
@@ -6625,7 +6640,8 @@ struct FeedScreen: View {
                 } else if WalletbeatWatch.isWatchRef(thing.sourceRef) {
                     WalletbeatWalletRow(thing: thing)
                 } else {
-                    WalletbeatNewsRow(thing: thing)
+                    WalletbeatNewsRow(thing: thing,
+                                      watchedWallets: walletbeatWatchedIDs)
                 }
             case .bookmarks: ReadingRow(thing: thing)
             default:

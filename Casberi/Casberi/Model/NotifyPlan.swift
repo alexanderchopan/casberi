@@ -76,6 +76,14 @@ enum NotifyKind: String, Sendable, CaseIterable {
     /// kind — that's structurally the same "something new can move your
     /// funds" news an ERC-20 approval carries.
     case safeSignatureNeeded
+    /// Walletbeat published a HIGH or CRITICAL security incident that is still
+    /// open and names a wallet app the person told us they use (2026-08-20,
+    /// prd §422). Every other alarm here is about money that has already moved
+    /// or is about to; this one is about the SOFTWARE HOLDING IT, which is the
+    /// only alarm in this file nobody else can send — a wallet vendor
+    /// disclosing its own vulnerability does not push you a notification, and
+    /// the wallet you are about to open is the last place you would look.
+    case walletIncident
     // — arrival
     case moneyIn
     case payoutPaid
@@ -89,7 +97,8 @@ enum NotifyKind: String, Sendable, CaseIterable {
         switch self {
         case .disputeOpened, .deadlineNear, .positionAtRisk, .approvalGranted,
              .poolProofNeeded, .poolCleared, .paymentsSilent, .priceRose,
-             .appRejected, .agentRunFailed, .runningLow, .safeSignatureNeeded:
+             .appRejected, .agentRunFailed, .runningLow, .safeSignatureNeeded,
+             .walletIncident:
             return .alarm
         case .moneyIn, .payoutPaid, .likesReceived, .repliesReceived, .followersGained:
             return .arrival
@@ -114,6 +123,14 @@ enum NotifyKind: String, Sendable, CaseIterable {
         // urgency (no clock stated), and severity here is about which alarm
         // wins a BATCH, not about how loudly it should ring.
         case .positionAtRisk:   return 85
+        // A serious, unresolved flaw in the software holding your keys.
+        // ABOVE `approvalGranted` and below `positionAtRisk`, and both
+        // boundaries are the ruling: an approval is ONE contract you granted
+        // and can revoke in a minute, while this reaches everything in that
+        // wallet and there is nothing to revoke — but a position near
+        // liquidation is a definite loss on a live price, where this is a
+        // disclosed risk that may never be exploited against you.
+        case .walletIncident:   return 82
         case .approvalGranted:  return 80    // something CAN take funds
         // Action required, no clock stated — the exact shape of
         // `poolProofNeeded` below, ranked one above it: a Safe signature

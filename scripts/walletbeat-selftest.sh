@@ -30,6 +30,7 @@ DIRSCREEN="Casberi/Casberi/Screens/WalletbeatDirectoryScreen.swift"
 FEED="Casberi/Casberi/Screens/FeedScreen.swift"
 ROUTE="Casberi/Casberi/Shell/HomeRoute.swift"
 SURFACE="Casberi/Casberi/Shell/MainSurface.swift"
+DEMO="Casberi/Casberi/Model/DemoSeedAll.swift"
 PROBES="Casberi/Casberi/Shell/ProbeHooks.swift"
 REACH="Casberi/Casberi/Model/NetworkReach.swift"
 SHEET="Casberi/Casberi/Model/WalletbeatSheet.swift"
@@ -74,6 +75,7 @@ strip_comments "$ROOM" > "$TMP/room.nc"
 strip_comments "$SRC" > "$TMP/src.nc"
 strip_comments "$VIEWS" > "$TMP/views.nc"
 strip_comments "$BRIDGE" > "$TMP/bridge.nc"
+strip_comments "$DEMO" > "$TMP/demo.nc"
 
 echo "Drift guards"
 
@@ -204,6 +206,57 @@ if grep -qF 'route.path.append(.bridge(.walletbeat))' "$FEED"; then
 fi
 guard 'walletbeatFollow' "$PROBES" \
   "-walletbeatFollow is gone; following with nothing watched has no headless door"
+
+# --------------------------------------------------------------------------------------
+# Whether a row is about a wallet YOU use, and whether a wallet has an open incident
+# (prd §422). Both facts were landed and on no screen; both are read from the BOOK.
+#
+# THE BOOK, NEVER `authorHandle`, and this is the guard worth understanding: the row
+# stamps `wallets.first` only, so an incident Walletbeat files under SafePal AND Ledger
+# reaches a Ledger user's feed wearing no marker at all if the join goes through the row.
+# The failure is silent and it is exactly backwards — the multi-wallet incidents are the
+# serious ones.
+# --------------------------------------------------------------------------------------
+guard 'WalletbeatIncidentBook.facts(ref: thing.sourceRef)' "$ROWS" \
+  "the news row no longer reads the incident book — a multi-wallet incident would lose its marker"
+guard 'var watchedWallets: Set<String> = []' "$ROWS" \
+  "the news row no longer takes the watch list; it would have to fetch, which a row must never do"
+guard 'watchedWallets: walletbeatWatchedIDs' "$FEED" \
+  "FeedScreen no longer hands the room's watch list to its incident rows"
+guard 'WalletbeatWatch.walletID(from: $0)' "$FEED" \
+  "the feed's watch list is no longer derived from the room's own rows"
+# A row must not fetch. The whole reason the set is handed in is that the room already
+# holds the watch rows a fetch would go looking for.
+if grep -qE 'FetchDescriptor|modelContext' "$ROWS"; then
+  echo "✗ a Walletbeat row fetches — the watch list is handed in precisely so it cannot"
+  exit 1
+fi
+guard 'openIncidents.contains(entry.id)' "$DIRSCREEN" \
+  "the directory stopped marking wallets with an unresolved incident"
+guard '.filter { $0.status.isOpen }' "$DIRSCREEN" \
+  "the directory marks RESOLVED incidents too — a permanent warning on a wallet whose bug was fixed"
+guard 'WalletbeatIncidentBook.forgetDemo(demoWalletbeatSlugs)' "$TMP/demo.nc" \
+  "the demo no longer forgets its seeded incidents by slug (§401 — a dev install holds real ones)"
+# THE CALL, not the declaration, and on a STRIPPED copy — two corrections, both bought
+# by mutating the real tree. Commenting the call out left the literal in the file (the
+# Obsidian/Cursor lesson), and stripping comments alone STILL passed, because the bare
+# name also appears in `private static func seedWalletbeatIncidents() {`. A guard that
+# matches a function's own declaration proves the function exists, never that anything
+# calls it — which is the whole failure it was written to catch.
+# Spelled out rather than through `guard`, which is `grep -F` here: this one needs a
+# REGEX to tell the call from the declaration, and a fixed string cannot.
+if grep -qE '^[[:space:]]+seedWalletbeatIncidents\(\)$' "$TMP/demo.nc"; then
+  echo "  ✓ the demo seeds the incident book"
+else
+  echo "✗ the demo no longer seeds the incident book — the sheet's fact card and both new markers read empty"
+  exit 1
+fi
+# The demo must never claim a named company currently has an unpatched hole. Its own
+# ruling, and the reason the OPEN branch stays undemoed.
+if grep -qE 'status: \.ongoing' "$TMP/demo.nc"; then
+  echo "✗ the demo seeds an ONGOING incident — it must not assert a real company is currently exposed"
+  exit 1
+fi
 
 echo "  ✓ all drift guards hold"
 echo ""

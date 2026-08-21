@@ -43,6 +43,13 @@ struct WalletbeatDirectoryScreen: View {
 	@State private var kind: Kind = .software
 	@State private var order: Order = .name
 	@State private var watchedIDs: Set<String> = []
+	/// Wallets with an incident Walletbeat still lists as open (prd §422).
+	///
+	/// This screen is where somebody chooses which wallet to trust, and until now
+	/// it drew coverage and a maturity stage — but not that one of these wallets
+	/// has an unresolved breach, which is landed data one join away. The single
+	/// most decision-relevant fact on the screen was the one it withheld.
+	@State private var openIncidents: Set<String> = []
 	@State private var opened: String?
 
 	var body: some View {
@@ -110,6 +117,14 @@ struct WalletbeatDirectoryScreen: View {
 					.foregroundStyle(DS.textPrimary)
 					.lineLimit(1)
 				HStack(spacing: DS.Space.s2) {
+					// FIRST, and in words. It outranks coverage because coverage
+					// describes how much Walletbeat has looked, and this
+					// describes what they found and have not seen fixed.
+					if openIncidents.contains(entry.id) {
+						Text(String(localized: "Unresolved incident"))
+							.dsText(.label11).fontWeight(.bold)
+							.foregroundStyle(DS.attention)
+					}
 					Text(WalletbeatCopy.coverage(counts))
 						.dsText(.label11)
 						.foregroundStyle(DS.textTertiary)
@@ -174,6 +189,21 @@ struct WalletbeatDirectoryScreen: View {
 
 	private func load() {
 		watchedIDs = Set(WalletbeatWatch.watchedIDs(context: modelContext))
+		// From the BOOK, not from the rows' `authorHandle`: the row keeps only
+		// `wallets.first` and an incident can name several, so a join on the row
+		// would leave the second and third wallets unmarked. The book is also
+		// where the STATUS lives, and a resolved incident must not mark anything
+		// — a permanent warning on a wallet whose bug was fixed years ago is the
+		// §83 fake status pointing the other way.
+		//
+		// Landed incidents only, so this marks what the person's own corpus can
+		// show. Someone who has never synced sees no markers rather than a claim
+		// we cannot back — the same honesty the head's "Reading Walletbeat…"
+		// keeps.
+		openIncidents = Set(
+			WalletbeatIncidentBook.all().values
+				.filter { $0.status.isOpen }
+				.flatMap(\.wallets))
 	}
 
 	private func watch(_ entry: WalletbeatEntry) {
