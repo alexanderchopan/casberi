@@ -4327,6 +4327,34 @@
         }
       }
     },
+    "%@ needs %lld of its %lld owners, so every one of them is load-bearing. If this phone is lost or its Face ID is re-enrolled, that Safe can never be signed for again — and its owners can't be changed either, because that takes a signature too. Add one more owner.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@ necesita %lld de sus %lld propietarios, así que todos son imprescindibles. Si pierdes este teléfono o vuelves a registrar su Face ID, ese Safe no se podrá volver a firmar nunca, y tampoco se podrán cambiar sus propietarios, porque eso también requiere una firma. Añade un propietario más."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@ は %lld 人のオーナーのうち %lld 人を必要とするため、全員が欠かせません。この端末を失うか Face ID を登録し直すと、その Safe には二度と署名できなくなり、オーナーの変更もできません。変更にも署名が必要だからです。オーナーをもう 1 人追加してください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@은(는) 소유자 %lld명 중 %lld명이 필요하므로 모두가 필수입니다. 이 기기를 잃어버리거나 Face ID를 다시 등록하면 그 Safe에는 다시 서명할 수 없고, 소유자도 바꿀 수 없습니다. 소유자 변경에도 서명이 필요하기 때문입니다. 소유자를 한 명 더 추가하세요."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@ 需要其 %lld 位所有者中的 %lld 位，因此每一位都不可或缺。如果这台手机丢失或重新录入 Face ID，那个 Safe 将再也无法签名，也无法更改所有者——因为更改同样需要签名。请再添加一位所有者。"
+          }
+        }
+      }
+    },
     "%@ needs attention.": {
       "localizations": {
         "es": {
@@ -20756,6 +20784,34 @@
         }
       }
     },
+    "A batch of several calls. Casberi won't summarise a batch — read it in your Safe app before signing.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Un lote de varias llamadas. Casberi no resume un lote: léelo en tu app de Safe antes de firmar."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "複数の呼び出しをまとめたバッチです。Casberi はバッチを要約しません。署名する前に Safe アプリで確認してください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "여러 호출을 묶은 배치입니다. Casberi는 배치를 요약하지 않습니다. 서명하기 전에 Safe 앱에서 확인하세요."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "这是多个调用组成的批次。Casberi 不会概括批次内容，签名前请在 Safe 应用中查看。"
+          }
+        }
+      }
+    },
     "A blank name removes it from your book.": {
       "localizations": {
         "es": {
@@ -22443,6 +22499,34 @@
         }
       }
     },
+    "Add this address as an owner from your other wallet and set the threshold to 2. Casberi will notice when you have.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Añade esta dirección como propietario desde tu otra cartera y pon el umbral en 2. Casberi lo detectará cuando lo hagas."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "この住所を別のウォレットからオーナーとして追加し、しきい値を 2 に設定してください。設定すると Casberi が気づきます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "다른 지갑에서 이 주소를 소유자로 추가하고 임계값을 2로 설정하세요. 설정하면 Casberi가 알아챕니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "在你的另一个钱包中把这个地址添加为所有者，并把阈值设为 2。完成后 Casberi 会自动发现。"
+          }
+        }
+      }
+    },
     "Add to a group": {
       "localizations": {
         "es": {
@@ -22747,6 +22831,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "地址、ENS、.sol"
+          }
+        }
+      }
+    },
+    "Adds %@ as an owner and sets the threshold to %@.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Añade a %@ como propietario y pone el umbral en %@."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@ をオーナーとして追加し、しきい値を %@ に設定します。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@을(를) 소유자로 추가하고 임계값을 %@(으)로 설정합니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "将 %@ 添加为所有者，并把阈值设为 %@。"
           }
         }
       }
@@ -27645,6 +27757,34 @@
         }
       }
     },
+    "Cancels whatever else is proposed at this position. Moves nothing.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Cancela lo que haya propuesto en esta posición. No mueve nada."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "この位置に提案されている他のものを取り消します。資金は動きません。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "이 위치에 제안된 다른 거래를 취소합니다. 자금은 움직이지 않습니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "取消在此位置提出的其他交易。不转移任何资金。"
+          }
+        }
+      }
+    },
     "Capped": {
       "localizations": {
         "es": {
@@ -27993,6 +28133,62 @@
         }
       }
     },
+    "Casberi can't read what this does. It calls %@ on %@. Hash %@.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Casberi no puede leer qué hace esto. Llama a %@ en %@. Hash %@."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Casberi はこの内容を読み取れません。%@ を %@ に対して呼び出します。ハッシュ %@。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Casberi가 이 거래의 내용을 읽지 못했습니다. %@을(를) %@에서 호출합니다. 해시 %@."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Casberi 无法读懂这笔交易。它在 %@ 上调用 %@。哈希 %@。"
+          }
+        }
+      }
+    },
+    "Casberi can't sign on this chain — it can't re-check the hash against the Safe there, and it won't sign one it worked out alone.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Casberi no puede firmar en esta cadena: no puede volver a comprobar el hash con el Safe allí, y no firma uno que haya calculado solo."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Casberi はこのチェーンでは署名できません。そのチェーンの Safe に対してハッシュを再確認できないため、自分だけで求めたハッシュには署名しません。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Casberi는 이 체인에서 서명할 수 없습니다. 그곳의 Safe에 해시를 다시 확인할 수 없고, 혼자 계산한 해시에는 서명하지 않습니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Casberi 无法在这条链上签名——它无法向该链上的 Safe 复核哈希，也不会为自己单独算出的哈希签名。"
+          }
+        }
+      }
+    },
     "Casberi has no server. Every request below goes straight from %@ to the service named.": {
       "localizations": {
         "es": {
@@ -28073,6 +28269,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "仅限 Casberi — 你的设备语言保持不变。"
+          }
+        }
+      }
+    },
+    "Casberi signs; it can't execute. Another owner sends it.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Casberi firma; no puede ejecutar. Otro propietario la envía."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Casberi は署名するだけで、実行はできません。送信は別のオーナーが行います。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Casberi는 서명만 하고 실행하지는 않습니다. 전송은 다른 소유자가 합니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Casberi 只签名，不能执行。由另一位所有者发送。"
           }
         }
       }
@@ -28326,6 +28550,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "更换照片"
+          }
+        }
+      }
+    },
+    "Changes how many signatures this Safe needs to %@.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Cambia a %@ el número de firmas que necesita este Safe."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "この Safe に必要な署名数を %@ に変更します。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "이 Safe에 필요한 서명 수를 %@(으)로 변경합니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "把这个 Safe 需要的签名数改为 %@。"
           }
         }
       }
@@ -31094,6 +31346,34 @@
         }
       }
     },
+    "Couldn't make the key on this device.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "No se pudo crear la clave en este dispositivo."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "この端末で鍵を作成できませんでした。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "이 기기에서 키를 만들지 못했습니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "无法在本设备上创建密钥。"
+          }
+        }
+      }
+    },
     "Couldn't open Dropbox's sign-in page — try again.": {
       "localizations": {
         "es": {
@@ -32046,6 +32326,34 @@
         }
       }
     },
+    "Couldn't reach the chain to re-check this transaction, so Casberi won't sign it. Try again in a moment.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "No se pudo contactar con la cadena para volver a comprobar esta transacción, así que Casberi no la firmará. Inténtalo de nuevo en un momento."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "このトランザクションを再確認するためにチェーンへ接続できなかったため、Casberi は署名しません。しばらくしてからもう一度お試しください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "이 거래를 다시 확인하기 위해 체인에 연결하지 못해 Casberi가 서명하지 않습니다. 잠시 후 다시 시도하세요."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "无法连接链来复核这笔交易，因此 Casberi 不会签名。请稍后再试。"
+          }
+        }
+      }
+    },
     "Couldn't reach the chain — check your connection.": {
       "localizations": {
         "es": {
@@ -32640,6 +32948,34 @@
         }
       }
     },
+    "Couldn't read this proposal well enough to sign it.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "No se pudo leer esta propuesta lo bastante bien como para firmarla."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "この提案を署名できるほど正確に読み取れませんでした。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "이 제안을 서명할 수 있을 만큼 정확히 읽지 못했습니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "无法充分读懂这项提案，因此不能签名。"
+          }
+        }
+      }
+    },
     "Couldn't read your card: %@": {
       "localizations": {
         "es": {
@@ -32888,6 +33224,34 @@
           "stringUnit": {
             "state": "translated",
             "value": "无法登录 — 检查地址和应用专用密码。"
+          }
+        }
+      }
+    },
+    "Couldn't sign on this device.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "No se pudo firmar en este dispositivo."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "この端末では署名できませんでした。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "이 기기에서 서명하지 못했습니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "无法在本设备上签名。"
           }
         }
       }
@@ -33746,6 +34110,34 @@
         }
       }
     },
+    "Delete the key": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Eliminar la clave"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "鍵を削除"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "키 삭제"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "删除密钥"
+          }
+        }
+      }
+    },
     "Delete this group?": {
       "localizations": {
         "es": {
@@ -33770,6 +34162,62 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "删除此分组？"
+          }
+        }
+      }
+    },
+    "Delete this phone's key": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Eliminar la clave de este teléfono"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "この端末の鍵を削除"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "이 기기의 키 삭제"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "删除本机的密钥"
+          }
+        }
+      }
+    },
+    "Delete this phone's signing key?": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "¿Eliminar la clave de firma de este teléfono?"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "この端末の署名鍵を削除しますか？"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "이 기기의 서명 키를 삭제할까요?"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "要删除本机的签名密钥吗？"
           }
         }
       }
@@ -36783,6 +37231,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "关注"
+          }
+        }
+      }
+    },
+    "Face ID didn't unlock the key.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Face ID no desbloqueó la clave."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Face ID で鍵のロックを解除できませんでした。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Face ID로 키를 잠금 해제하지 못했습니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Face ID 未能解锁该密钥。"
           }
         }
       }
@@ -43219,6 +43695,62 @@
         }
       }
     },
+    "Lets %@ move funds without any signature at all.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Permite que %@ mueva fondos sin ninguna firma."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@ が署名なしで資金を動かせるようになります。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@이(가) 서명 없이 자금을 옮길 수 있게 합니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "允许 %@ 在完全不需要签名的情况下转移资金。"
+          }
+        }
+      }
+    },
+    "Lets %@ spend up to %@ base units of %@.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Permite que %@ gaste hasta %@ unidades base de %@."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@ が %@ の基本単位 %@ まで使えるようになります。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@이(가) %@의 기본 단위 %@까지 사용할 수 있게 합니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "允许 %@ 最多花费 %@ 个 %@ 的基本单位。"
+          }
+        }
+      }
+    },
     "Life": {
       "extractionState": "manual",
       "localizations": {
@@ -44246,6 +44778,62 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "维护"
+          }
+        }
+      }
+    },
+    "Make a new key": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Crear una clave nueva"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "新しい鍵を作成"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "새 키 만들기"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "创建新密钥"
+          }
+        }
+      }
+    },
+    "Make this phone a signer": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Convertir este teléfono en firmante"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "この端末を署名者にする"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "이 기기를 서명자로 만들기"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "把这台手机变成签名者"
           }
         }
       }
@@ -45535,6 +46123,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "涨跌幅优先"
+          }
+        }
+      }
+    },
+    "Moves tokens from %@ to %@.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Mueve tokens de %@ a %@."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@ から %@ へトークンを移動します。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@에서 %@(으)로 토큰을 옮깁니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "把代币从 %@ 转到 %@。"
           }
         }
       }
@@ -57249,6 +57865,34 @@
         }
       }
     },
+    "Puts %@ in front of every transaction.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Pone a %@ delante de cada transacción."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@ をすべてのトランザクションの前に置きます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@을(를) 모든 거래 앞에 놓습니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "把 %@ 放在每一笔交易之前。"
+          }
+        }
+      }
+    },
     "PyPI": {
       "localizations": {
         "es": {
@@ -61492,6 +62136,34 @@
         }
       }
     },
+    "Removes %@ as an owner.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Elimina a %@ como propietario."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@ をオーナーから外します。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@을(를) 소유자에서 제거합니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "把 %@ 从所有者中移除。"
+          }
+        }
+      }
+    },
     "Removing takes out only what came from %@. Everything else stays, and importing again brings it all back.": {
       "localizations": {
         "es": {
@@ -61802,6 +62474,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "已被替换——在此位置执行了另一笔交易。"
+          }
+        }
+      }
+    },
+    "Replaces owner %@ with %@.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Sustituye al propietario %@ por %@."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "オーナー %@ を %@ に置き換えます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "소유자 %@을(를) %@(으)로 교체합니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "把所有者 %@ 替换为 %@。"
           }
         }
       }
@@ -64367,6 +65067,34 @@
         }
       }
     },
+    "Sends %@ wei to %@.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Envía %@ wei a %@."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@ wei を %@ に送ります。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@ wei를 %@에 보냅니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "向 %@ 发送 %@ wei。"
+          }
+        }
+      }
+    },
     "Sent": {
       "localizations": {
         "es": {
@@ -64643,6 +65371,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "已设置为自动续期——但如果背后绑定的银行卡已过期，仍会失败。"
+          }
+        }
+      }
+    },
+    "Set up a Safe": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Crear un Safe"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Safe を作成"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Safe 만들기"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "创建一个 Safe"
           }
         }
       }
@@ -65591,6 +66347,34 @@
         }
       }
     },
+    "Sign": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Firmar"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "署名"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "서명"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "签名"
+          }
+        }
+      }
+    },
     "Sign in if asked — the token appears on the page.": {
       "extractionState": "manual",
       "localizations": {
@@ -65700,6 +66484,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "使用 GitHub 登录 — 或粘贴令牌 — 你选择的信息源以及你关注的任何仓库都会持续到达。这里的关注是私密的。"
+          }
+        }
+      }
+    },
+    "Sign this Safe transaction": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Firmar esta transacción de Safe"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "この Safe のトランザクションに署名"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "이 Safe 거래에 서명"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "为这笔 Safe 交易签名"
           }
         }
       }
@@ -65817,6 +66629,34 @@
         }
       }
     },
+    "Signed": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Firmada"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "署名しました"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "서명 완료"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "已签名"
+          }
+        }
+      }
+    },
     "Signed %lld times": {
       "localizations": {
         "es": {
@@ -65841,6 +66681,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "已签名 %lld 次"
+          }
+        }
+      }
+    },
+    "Signed from this phone.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Firmada desde este teléfono."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "この端末から署名しました。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "이 기기에서 서명했습니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "已从本机签名。"
           }
         }
       }
@@ -65985,6 +66853,62 @@
         }
       }
     },
+    "Signed, but Safe's service didn't take it — the signature is on your clipboard": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Firmada, pero el servicio de Safe no la aceptó: la firma está en tu portapapeles"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "署名しましたが Safe のサービスが受け付けませんでした。署名はクリップボードにあります"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "서명했지만 Safe 서비스가 받지 않았습니다. 서명은 클립보드에 있습니다"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "已签名，但 Safe 的服务未接受——签名已复制到剪贴板"
+          }
+        }
+      }
+    },
+    "Signing for %lld Safe. Losing this phone would still leave enough owners to change that (%lld to spare).": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Firmando para %lld Safe. Perder este teléfono dejaría propietarios suficientes para cambiarlo (%lld de margen)."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld 件の Safe に署名しています。この端末を失っても、変更に足りるだけのオーナーが残ります（余裕 %lld 人）。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Safe %lld개에 서명하고 있습니다. 이 기기를 잃어도 변경에 필요한 소유자는 남습니다(여유 %lld명)."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "正在为 %lld 个 Safe 签名。即使丢失这台手机，剩余所有者仍足以做出更改（余量 %lld 位）。"
+          }
+        }
+      }
+    },
     "Signing happens in your Safe app — never here.": {
       "localizations": {
         "es": {
@@ -66009,6 +66933,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "签名在你的 Safe App 中完成 — 从不在这里。"
+          }
+        }
+      }
+    },
+    "Signing…": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Firmando…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "署名中…"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "서명하는 중…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "正在签名…"
           }
         }
       }
@@ -69292,6 +70244,34 @@
         }
       }
     },
+    "The Safe's own hash for this transaction doesn't match what Casberi worked out. Don't sign this anywhere until you know why.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "El hash que el propio Safe da para esta transacción no coincide con el que calculó Casberi. No la firmes en ningún sitio hasta saber por qué."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "このトランザクションについて Safe 自身が示すハッシュが、Casberi の計算結果と一致しません。理由が分かるまで、どこでも署名しないでください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "이 거래에 대해 Safe가 알려준 해시가 Casberi가 계산한 값과 다릅니다. 이유를 알기 전까지는 어디에서도 서명하지 마세요."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Safe 给出的这笔交易哈希与 Casberi 算出的不一致。在弄清原因之前，不要在任何地方签名。"
+          }
+        }
+      }
+    },
     "The addresses and their names stay in your book — only the grouping goes.": {
       "localizations": {
         "es": {
@@ -70056,6 +71036,62 @@
         }
       }
     },
+    "The signature didn't come back as this phone's address, so Casberi threw it away.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "La firma no se correspondía con la dirección de este teléfono, así que Casberi la descartó."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "署名がこの端末のアドレスとして復元されなかったため、Casberi は破棄しました。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "서명이 이 기기의 주소로 복원되지 않아 Casberi가 폐기했습니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "签名恢复出的地址不是本机地址，因此 Casberi 已将其丢弃。"
+          }
+        }
+      }
+    },
+    "The signing key is gone.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "La clave de firma ya no está."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "署名鍵は削除されました。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "서명 키가 삭제되었습니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "签名密钥已删除。"
+          }
+        }
+      }
+    },
     "Their %@": {
       "localizations": {
         "es": {
@@ -70249,6 +71285,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "主题"
+          }
+        }
+      }
+    },
+    "There is no copy and no recovery phrase — this key exists only here. Have another owner swap this address out of the Safe first, or the Safe is one signature short. No undo.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "No hay copia ni frase de recuperación: esta clave solo existe aquí. Pide antes a otro propietario que sustituya esta dirección en el Safe, o al Safe le faltará una firma. Sin deshacer."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "コピーもリカバリーフレーズもありません。この鍵はここにしか存在しません。先に別のオーナーにこのアドレスを Safe から入れ替えてもらってください。そうしないと Safe は署名が 1 つ足りなくなります。取り消しはできません。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "복사본도 복구 구문도 없습니다. 이 키는 여기에만 있습니다. 먼저 다른 소유자가 이 주소를 Safe에서 교체하게 하세요. 그러지 않으면 Safe는 서명이 하나 모자라게 됩니다. 되돌릴 수 없습니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "没有副本，也没有助记词——这个密钥只存在于这里。请先让另一位所有者把这个地址从 Safe 中换掉，否则 Safe 会永远少一个签名。无法撤销。"
           }
         }
       }
@@ -70617,6 +71681,62 @@
         }
       }
     },
+    "This Safe executes on %lld signature, so signing here would let one key spend on its own. Raise the threshold to 2 first.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Este Safe se ejecuta con %lld firma, así que firmar aquí dejaría que una sola clave gastara por su cuenta. Sube antes el umbral a 2."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "この Safe は署名 %lld 件で実行されるため、ここで署名すると鍵 1 本だけで送金できてしまいます。先にしきい値を 2 に上げてください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "이 Safe는 서명 %lld개로 실행되므로, 여기서 서명하면 키 하나만으로 자금을 쓸 수 있게 됩니다. 먼저 임계값을 2로 올리세요."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "这个 Safe 只需 %lld 个签名即可执行，在这里签名会让单一密钥就能动用资金。请先把阈值提高到 2。"
+          }
+        }
+      }
+    },
+    "This Safe needs every owner it has. If this phone goes, it can't be signed for again — or repaired, since that needs a signature too.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Este Safe necesita a todos sus propietarios. Si este teléfono desaparece, no se podrá volver a firmar, ni arreglar, porque eso también requiere una firma."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "この Safe はすべてのオーナーを必要とします。この端末が失われると、二度と署名できず、修復もできません。修復にも署名が必要だからです。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "이 Safe는 모든 소유자가 필요합니다. 이 기기가 사라지면 다시 서명할 수 없고, 복구도 할 수 없습니다. 복구에도 서명이 필요하기 때문입니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "这个 Safe 需要它的每一位所有者。如果这台手机没了，它将无法再签名，也无法修复——因为修复同样需要签名。"
+          }
+        }
+      }
+    },
     "This account doesn't have CardPointers+": {
       "localizations": {
         "es": {
@@ -70725,6 +71845,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "仅限本应用 — 你的设备语言保持不变。"
+          }
+        }
+      }
+    },
+    "This device has no Face ID or Touch ID set up. The key is only worth having behind one, so Casberi won't make it.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Este dispositivo no tiene Face ID ni Touch ID configurados. La clave solo merece la pena detrás de uno, así que Casberi no la creará."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "この端末では Face ID も Touch ID も設定されていません。この鍵はそれらの背後にあってこそ意味があるため、Casberi は作成しません。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "이 기기에는 Face ID나 Touch ID가 설정되어 있지 않습니다. 이 키는 그 뒤에 있을 때만 의미가 있으므로 Casberi는 만들지 않습니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "本设备未设置 Face ID 或 Touch ID。这个密钥只有在其保护下才有意义，因此 Casberi 不会创建它。"
           }
         }
       }
@@ -70903,6 +72051,34 @@
         }
       }
     },
+    "This is the fix: it gives the Safe an owner to spare, so losing one key stops being final.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Esta es la solución: da al Safe un propietario de margen, así perder una clave deja de ser definitivo."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "これが解決策です。Safe に余裕のあるオーナーを 1 人加えるので、鍵を 1 つ失っても取り返しがつかなくなることはなくなります。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "이것이 해결책입니다. Safe에 여유 소유자를 한 명 더해, 키 하나를 잃어도 되돌릴 수 없는 일이 되지 않습니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "这就是解决办法：它为 Safe 增加一位备用所有者，丢失一把密钥不再是无可挽回的事。"
+          }
+        }
+      }
+    },
     "This is where it starts · %@": {
       "localizations": {
         "es": {
@@ -70983,6 +72159,146 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "本月"
+          }
+        }
+      }
+    },
+    "This phone": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Este teléfono"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "この端末"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "이 기기"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "这台手机"
+          }
+        }
+      }
+    },
+    "This phone has no signing key.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Este teléfono no tiene clave de firma."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "この端末には署名鍵がありません。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "이 기기에는 서명 키가 없습니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "本机没有签名密钥。"
+          }
+        }
+      }
+    },
+    "This phone isn't an owner of this Safe yet. Add its address from your other wallet.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Este teléfono aún no es propietario de este Safe. Añade su dirección desde tu otra cartera."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "この端末はまだこの Safe のオーナーではありません。別のウォレットからこのアドレスを追加してください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "이 기기는 아직 이 Safe의 소유자가 아닙니다. 다른 지갑에서 이 주소를 추가하세요."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "本机还不是这个 Safe 的所有者。请在你的另一个钱包中添加它的地址。"
+          }
+        }
+      }
+    },
+    "This phone's signing key is gone — Face ID was re-enrolled, which erases it by design. Make a new one in the Safe screen and have another owner swap the old address out.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "La clave de firma de este teléfono ya no está: se volvió a registrar Face ID, lo que la borra por diseño. Crea una nueva en la pantalla de Safe y pide a otro propietario que sustituya la dirección antigua."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "この端末の署名鍵はもうありません。Face ID が再登録され、設計上それによって消去されます。Safe 画面で新しい鍵を作り、別のオーナーに古いアドレスを入れ替えてもらってください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "이 기기의 서명 키가 사라졌습니다. Face ID가 다시 등록되었고, 설계상 그때 키는 지워집니다. Safe 화면에서 새 키를 만들고 다른 소유자에게 예전 주소를 교체해 달라고 하세요."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "本机的签名密钥已不存在——Face ID 被重新录入，按设计会将其抹除。请在 Safe 页面创建新密钥，并让另一位所有者把旧地址替换掉。"
+          }
+        }
+      }
+    },
+    "This phone's signing key is gone. Face ID was re-enrolled on this device, which erases it by design — there is no copy. Make a new one, and have another owner swap the old address out of the Safe.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "La clave de firma de este teléfono ya no está. Se volvió a registrar Face ID en este dispositivo, lo que la borra por diseño: no hay copia. Crea una nueva y pide a otro propietario que sustituya la dirección antigua en el Safe."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "この端末の署名鍵はもうありません。この端末で Face ID が再登録され、設計上それによって消去されます。コピーはありません。新しい鍵を作り、別のオーナーに Safe の古いアドレスを入れ替えてもらってください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "이 기기의 서명 키가 사라졌습니다. 이 기기에서 Face ID가 다시 등록되었고, 설계상 그때 키는 지워집니다. 사본은 없습니다. 새 키를 만들고 다른 소유자에게 Safe의 예전 주소를 교체해 달라고 하세요."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "本机的签名密钥已不存在。此设备重新录入了 Face ID，按设计会将其抹除——没有副本。请创建新密钥，并让另一位所有者把 Safe 中的旧地址替换掉。"
           }
         }
       }
@@ -71547,6 +72863,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "交易"
+          }
+        }
+      }
+    },
+    "Transfers %@ base units of %@ to %@.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Transfiere %@ unidades base de %@ a %@."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@ の基本単位 %@ を %@ に送ります。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@의 기본 단위 %@을(를) %@에 보냅니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "把 %@ 个 %@ 的基本单位转给 %@。"
           }
         }
       }
@@ -78895,6 +80239,62 @@
         }
       }
     },
+    "You signed a Safe transaction from this phone": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Firmaste una transacción de Safe desde este teléfono"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "この端末から Safe のトランザクションに署名しました"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "이 기기에서 Safe 거래에 서명했습니다"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "你从本机为一笔 Safe 交易签了名"
+          }
+        }
+      }
+    },
+    "You signed a Safe transaction from this phone — Safe's service didn't take it": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Firmaste una transacción de Safe desde este teléfono: el servicio de Safe no la aceptó"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "この端末から Safe のトランザクションに署名しましたが、Safe のサービスは受け付けませんでした"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "이 기기에서 Safe 거래에 서명했지만 Safe 서비스가 받지 않았습니다"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "你从本机为一笔 Safe 交易签了名——Safe 的服务未接受"
+          }
+        }
+      }
+    },
     "You use this": {
       "localizations": {
         "es": {
@@ -79133,6 +80533,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "达到 %lld 次确认时会通知你。"
+          }
+        }
+      }
+    },
+    "You'll need a Safe to add it to. Make one with your other wallet as the first owner, then add this address as the second.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Necesitarás un Safe al que añadirla. Crea uno con tu otra cartera como primer propietario y luego añade esta dirección como segundo."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "追加先となる Safe が必要です。別のウォレットを最初のオーナーとして Safe を作成し、次にこのアドレスを 2 人目のオーナーとして追加してください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "추가할 Safe가 필요합니다. 다른 지갑을 첫 번째 소유자로 해서 Safe를 만든 뒤, 이 주소를 두 번째 소유자로 추가하세요."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "你需要一个 Safe 来添加它。先用你的另一个钱包作为第一位所有者创建一个，然后把这个地址添加为第二位。"
           }
         }
       }
@@ -81786,6 +83214,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "有 1 笔交易需要你的签名"
+          }
+        }
+      }
+    },
+    "Your signing address is ready": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Tu dirección de firma está lista"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "署名用アドレスの準備ができました"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "서명 주소가 준비되었습니다"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "你的签名地址已就绪"
           }
         }
       }

@@ -382,10 +382,18 @@ enum BridgeCatalog {
         // SIGNER on a Safe, not just a directly-watched Safe address) and its
         // own alert class (owner/threshold/module changes) — too much to
         // fold into one bullet under Wallet's summary honestly.
-        Offer(name: "Safe",        tagline: "Your Safe's signature queue, live",     group: "Wallet",    connectable: true,
-              summary: "Watch a Safe — or just your own wallet, if it's one of the signers — and its pending signature queue lands in your feed.\n\nNo account, no key, read-only: signing always happens in your own Safe app.",
+        // The summary said "signing always happens in your own Safe app" until
+        // 2026-08-21, and prd §425 made that false — the §303 tripwire class,
+        // caught by reading rather than by any check, because the setup-copy
+        // audit governs the SCREEN's intro and this is the product page.
+        // Whatever this offer claims about signing has to move in the same
+        // commit as the code that signs.
+        Offer(name: "Safe",        tagline: "Your Safe's queue — and this phone as a signer", group: "Wallet",    connectable: true,
+              summary: "Watch a Safe — or just your own wallet, if it's one of the signers — and its pending signature queue lands in your feed.\n\nThis phone can also be one of the Safe's owners. Make a key here, add it from your other wallet, set the threshold to 2, and your computer can't spend without your phone's yes.",
               features: ["Finds every Safe you're a signer on, not just the ones you watch",
                          "Says when yours is the signature still missing",
+                         "Signs from this phone behind Face ID — it can never execute, and holds no funds",
+                         "Reads the transaction off the chain and refuses if the Safe's own hash disagrees",
                          "Alerts on a new owner, a changed threshold, or a new module",
                          "Ethereum, Base, Arbitrum, Optimism, Polygon and Gnosis Chain"
               ],

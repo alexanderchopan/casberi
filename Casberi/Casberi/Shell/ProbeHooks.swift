@@ -3027,6 +3027,66 @@ enum ProbeHooks {
                 }
             }
         },
+        // `-signerProbe YES` — this phone as a Safe co-signer (prd §425),
+        // one NSLog per fact (the `-todayProbe` truncation lesson).
+        //
+        // It exists because "no Sign button" has SEVEN causes that render as
+        // one blank space and only two are bugs: no key on this phone, no
+        // pending Safe transaction in the corpus, the Safe is on a chain the
+        // rail cannot read, the threshold is 1, this phone is not an owner,
+        // the chain did not answer, or the hashes disagree. The last is the
+        // only one that means something is WRONG, and it is the one that must
+        // never be mistaken for a network hiccup.
+        //
+        // It SIGNS NOTHING. There is no biometric prompt in a headless run and
+        // never should be — a probe that could spend a Face ID is a probe
+        // nobody can put in a sweep. Everything up to the tap is exercised,
+        // which is every refusal.
+        Hook(key: "signerProbe") { _, context in
+            Task { @MainActor in
+                NSLog("signer| key=%@ address=%@ biometry=%@",
+                      String(describing: SignerKey.presence()),
+                      SignerKey.address() ?? "-",
+                      SignerKey.biometryAvailable() ? "yes" : "no")
+                // The N-of-N reading (prd §426). It is the one fact on this
+                // probe that is about the SAFE rather than the phone, and the
+                // one whose absence is silent: a 2-of-2 looks exactly like a
+                // 2-of-3 everywhere else in the app.
+                let standing = await SafeSigner.standing()
+                NSLog("signer| signsFor=%d reachable=%@ truncated=%@",
+                      standing.safes.count,
+                      standing.reachable ? "yes" : "no",
+                      standing.truncated ? "yes" : "no")
+                for safe in standing.safes {
+                    NSLog("signer| %@ %@ %d-of-%d spare=%d noSpareOwner=%@",
+                          safe.seg, safe.safeAddress, safe.threshold, safe.ownerCount,
+                          safe.spareOwners, safe.hasNoSpareOwner ? "YES" : "no")
+                }
+                var descriptor = FetchDescriptor<Thing>(
+                    predicate: #Predicate { $0.source == "Safe" })
+                descriptor.fetchLimit = 50
+                let rows = (try? context.fetch(descriptor)) ?? []
+                let pending = rows.compactMap(\.sourceRef)
+                    .filter { $0.hasPrefix("wallet:safe:") }
+                NSLog("signer| pendingRows=%d", pending.count)
+                for ref in pending.prefix(5) {
+                    let bits = ref.split(separator: ":", maxSplits: 3).map(String.init)
+                    guard bits.count == 4 else { continue }
+                    let seg = bits[2], hash = bits[3]
+                    guard SafeSigner.canSign(onSegment: seg) else {
+                        NSLog("signer| %@ chainUnsupported=%@", hash, seg); continue
+                    }
+                    switch await SafeSigner.prepare(seg: seg, safeTxHash: hash) {
+                    case .success(let ready):
+                        NSLog("signer| %@ READY have=%d/%d reading=%@ decoded=%@",
+                              hash, ready.have, ready.required,
+                              String(describing: ready.reading), ready.reading.isDecoded ? "yes" : "no")
+                    case .failure(let refusal):
+                        NSLog("signer| %@ REFUSED %@", hash, String(describing: refusal))
+                    }
+                }
+            }
+        },
         // `-safeProbe YES` NSLogs which watched wallets are detected Safes
         // per chain and their pending queue counts (or the honest
         // unreachable/none). Pairs with `-walletAddress` (a Safe address, to

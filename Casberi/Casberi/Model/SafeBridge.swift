@@ -1124,9 +1124,21 @@ enum SafeBridge {
     /// Solana accounts are skipped — Safe is EVM only, and asking about a
     /// base58 address is a request that can only ever 404.
     @MainActor
+    /// `requireExecuted: false` drops the `nonce > 0` spam filter, and there
+    /// is exactly one caller allowed to ask for that: `SafeSigner`, about the
+    /// address THIS APP generated moments ago (prd §426 amendment). The filter
+    /// exists because `/owners/{addr}/safes/` answers for any address ever
+    /// named an owner and a decoy Safe is free to deploy — but a decoy has to
+    /// be deployed naming an address that already exists, and a freshly
+    /// generated 32-byte key has never appeared anywhere. So for that one
+    /// address the spam risk is not merely low, it is impossible by
+    /// construction — while a brand-new 2-of-2 the person just added us to
+    /// has `nonce == 0` and would otherwise be invisible on the very screen
+    /// that has to warn them about it.
     static func signerSafes(for addresses: [String],
                             budget: Duration = .seconds(8),
-                            detailBudget: Int = 12) async -> SignerLookup {
+                            detailBudget: Int = 12,
+                            requireExecuted: Bool = true) async -> SignerLookup {
         let owners = addresses.filter { ENS.isHexAddress($0) }
         guard !owners.isEmpty else { return SignerLookup() }
 
@@ -1151,7 +1163,7 @@ enum SafeBridge {
                     guard ContinuousClock.now < deadline else { out.truncated = true; break }
                     details += 1
                     guard let detail = await safeDetail(chain: chain, address: safeAddress),
-                          detail.nonce > 0,
+                          !requireExecuted || detail.nonce > 0,
                           // The reverse index says "was named an owner"; this
                           // says "is one now". A removed signer must not be
                           // offered a wallet they can no longer act on.

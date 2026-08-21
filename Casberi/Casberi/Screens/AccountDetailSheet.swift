@@ -43,6 +43,7 @@ struct AccountDetailSheet: View {
     @State private var exportURL: URL?
     @State private var confirmDelete = false
     @State private var confirmDeleteAccess = false
+    @State private var confirmDeleteSigner = false
     @State private var importing = false
     @State private var importResult: String?
     @State private var deleteResult: String?
@@ -144,6 +145,16 @@ struct AccountDetailSheet: View {
         } message: {
             Text("Your things, voice recordings, and photo — \(DS.device) and iCloud. Your app connections and keys stay. No undo.")
         }
+        .confirmationDialog("Delete this phone's signing key?",
+                            isPresented: $confirmDeleteSigner, titleVisibility: .visible) {
+            Button("Delete the key", role: .destructive) {
+                SignerKey.delete()
+                deleteResult = String(localized: "The signing key is gone.")
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("There is no copy and no recovery phrase — this key exists only here. Have another owner swap this address out of the Safe first, or the Safe is one signature short. No undo.")
+        }
         .confirmationDialog("Delete Casberi's access?",
                             isPresented: $confirmDeleteAccess, titleVisibility: .visible) {
             Button("Delete all access", role: .destructive) { deleteAccess() }
@@ -192,6 +203,18 @@ struct AccountDetailSheet: View {
                     dangerLabel("Delete access")
                 }
                 .buttonStyle(.plain)
+                // A THIRD verb, and only when there is a key (prd §425). It is
+                // not folded into "Delete access" on purpose: that wipe is one
+                // service-wide Keychain call, and a token deleted by mistake is
+                // re-pasted, while this key deleted by mistake needs somebody
+                // ELSE to send an on-chain `swapOwner` before the Safe works
+                // again. Different cost, different verb, different sentence.
+                if SignerKey.exists {
+                    Button { confirmDeleteSigner = true } label: {
+                        dangerLabel("Delete signing key")
+                    }
+                    .buttonStyle(.plain)
+                }
             }
             .frame(maxWidth: .infinity)
             // Outcome lines arrive with the settle beat — a result, not a flicker.

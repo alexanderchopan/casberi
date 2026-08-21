@@ -11,6 +11,7 @@
 		CC000000000000000000002B /* CasberiWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = CC0000000000000000000022 /* CasberiWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		CE0000000000000000000001 /* WalletConnect in Frameworks */ = {isa = PBXBuildFile; productRef = CE0000000000000000000002 /* WalletConnect */; };
 		CE0000000000000000000005 /* ReownAppKit in Frameworks */ = {isa = PBXBuildFile; platformFilter = ios; productRef = CE0000000000000000000004 /* ReownAppKit */; };
+		CE0000000000000000000007 /* P256K in Frameworks */ = {isa = PBXBuildFile; productRef = CE0000000000000000000006 /* P256K */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -127,6 +128,7 @@
 			files = (
 				CE0000000000000000000001 /* WalletConnect in Frameworks */,
 				CE0000000000000000000005 /* ReownAppKit in Frameworks */,
+				CE0000000000000000000007 /* P256K in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -311,6 +313,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				CE0000000000000000000003 /* XCRemoteSwiftPackageReference "reown-swift" */,
+				CE0000000000000000000008 /* XCRemoteSwiftPackageReference "swift-secp256k1" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = CA0000000000000000000003 /* Products */;
@@ -551,6 +554,7 @@
 				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "Casberi reads your events so your day lands as things.";
 				INFOPLIST_KEY_NSCameraUsageDescription = "Casberi scans a product's barcode so its item lands in your feed.";
 				INFOPLIST_KEY_NSContactsUsageDescription = "Casberi reads your contacts so the people you know become findable — search-only, never shown in your feed.";
+				INFOPLIST_KEY_NSFaceIDUsageDescription = "Casberi asks for Face ID before this phone signs a Safe transaction, so a signature always costs your face.";
 				INFOPLIST_KEY_NSFinancialDataUsageDescription = "Casberi reads your Apple Card, Apple Cash and Savings transactions on this device so your spending appears in your feed. It stays on this device, is never uploaded, and can't spend or move money.";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "Casberi reads your workouts so they land in your feed.";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Casberi only reads your workouts so they land in your feed — it never writes to Health.";
@@ -604,6 +608,7 @@
 				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "Casberi reads your events so your day lands as things.";
 				INFOPLIST_KEY_NSCameraUsageDescription = "Casberi scans a product's barcode so its item lands in your feed.";
 				INFOPLIST_KEY_NSContactsUsageDescription = "Casberi reads your contacts so the people you know become findable — search-only, never shown in your feed.";
+				INFOPLIST_KEY_NSFaceIDUsageDescription = "Casberi asks for Face ID before this phone signs a Safe transaction, so a signature always costs your face.";
 				INFOPLIST_KEY_NSFinancialDataUsageDescription = "Casberi reads your Apple Card, Apple Cash and Savings transactions on this device so your spending appears in your feed. It stays on this device, is never uploaded, and can't spend or move money.";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "Casberi reads your workouts so they land in your feed.";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Casberi only reads your workouts so they land in your feed — it never writes to Health.";
@@ -838,6 +843,14 @@
 				version = 2.3.0;
 			};
 		};
+		CE0000000000000000000008 /* XCRemoteSwiftPackageReference "swift-secp256k1" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/21-DOT-DEV/swift-secp256k1";
+			requirement = {
+				kind = exactVersion;
+				version = 0.21.1;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -850,6 +863,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = CE0000000000000000000003 /* XCRemoteSwiftPackageReference "reown-swift" */;
 			productName = ReownAppKit;
+		};
+		CE0000000000000000000006 /* P256K */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = CE0000000000000000000008 /* XCRemoteSwiftPackageReference "swift-secp256k1" */;
+			productName = P256K;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

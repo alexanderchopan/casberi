@@ -213,6 +213,42 @@
         }
       }
     },
+    "NSFaceIDUsageDescription": {
+      "comment": "Why the app asks for Face ID before signing a Safe transaction (prd §425)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Casberi asks for Face ID before this phone signs a Safe transaction, so a signature always costs your face."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Casberi pide Face ID antes de que este teléfono firme una transacción de Safe, para que cada firma cueste tu cara."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Casberi はこの端末が Safe のトランザクションに署名する前に Face ID を求めます。署名には必ずあなたの顔が必要です。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Casberi는 이 기기가 Safe 거래에 서명하기 전에 Face ID를 요청합니다. 서명에는 언제나 얼굴 인증이 필요합니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在本设备为 Safe 交易签名之前，Casberi 会要求 Face ID，因此每次签名都需要你的面容。"
+          }
+        }
+      }
+    },
     "NSFinancialDataUsageDescription": {
       "comment": "Why the app reads Apple Card / Apple Cash / Savings data (FinanceKit)",
       "extractionState": "manual",

@@ -971,6 +971,17 @@ harness "Wallet-room pure-logic self-test" "wallet-room self-test" "scripts/wall
 # torn edge (a claim of finality over an amount that can still change), "mostly
 # them sending you" over a 3–2 split, a mean reported as "usually", a phishing
 # domain promoted into the currency slot beside the figure.
+# The Safe co-signer's arithmetic and its six refusals (prd §425). Every other
+# harness here guards a wrong READING; this one guards a wrong SIGNATURE — a
+# wrong domain separator, type hash, ABI padding or inlined `data` field
+# produces a signature that is well-formed, recovers to a real address, and is
+# valid over a DIFFERENT transaction than the one shown. Nothing in a build, a
+# screen sweep, a probe or even a device test can see that: the screen is
+# right, the tap is right, and the money leaves. It also holds the conduct
+# guard for this app's FIRST outbound write (one POST of one signature to
+# Safe's own service) and the no-export-path assertion on the key.
+harness "Safe co-signer self-test" "safetx self-test" "scripts/safetx-selftest.sh" "the Safe co-signer self-test failed — run scripts/safetx-selftest.sh"
+
 harness "Money-receipt pure-logic self-test" "money-receipt self-test" "scripts/money-receipt-selftest.sh" "the money-receipt logic self-test failed — run scripts/money-receipt-selftest.sh"
 
 # Pure-logic self-test for the agent's open (prd §332). This is the first screen

@@ -184,7 +184,12 @@ enum NetworkReach {
                          "sns-sdk-proxy.bonfida.workers.dev", "lite-api.jup.ag"]),
         Endpoint(service: "Wallet DeFi & Safe",
                  reach: .whenConnected(bridge: "Wallet"),
-                 purpose: "Reads your Aave, Spark and Morpho lending positions, Hyperliquid perps/spot/staked HYPE, veAERO locks on Aerodrome, and any Safe signatures awaiting you, for the wallets you watch — keyless, public data. Also reads Aave's public rate to compare against a vault you hold.",
+                 // The one SEND in this registry, and it is named in the same
+                 // breath as the reads rather than filed somewhere quieter
+                 // (prd §425). Everything else this app does is a read; if a
+                 // person is going to scan one line on this screen, it should
+                 // be the line where something leaves.
+                 purpose: "Reads your Aave, Spark and Morpho lending positions, Hyperliquid perps/spot/staked HYPE, veAERO locks on Aerodrome, and any Safe signatures awaiting you, for the wallets you watch — keyless, public data. Also reads Aave's public rate to compare against a vault you hold. If you make this phone a Safe signer and tap Sign, one 65-byte signature is sent to Safe's own service — the only thing Casberi ever sends anywhere.",
                  hosts: ["blue-api.morpho.org", "app.morpho.org", "app.aave.com", "app.spark.fi",
                          "api.safe.global", "api.hyperliquid.xyz"]),
         Endpoint(service: "Tokens",

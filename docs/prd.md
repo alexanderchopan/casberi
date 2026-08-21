@@ -80,6 +80,9 @@ at all.
 | Ruling | What it said | Changed by |
 |---|---|---|
 | §18 | Feed spec | amended by §64 |
+| §112 | Wallet: reads and previews in-app, signatures always elsewhere | narrowed by §425 |
+| §425 | The Safe co-signer: the key, the rail, the six refusals | amended by §426, §427 |
+| §426 | Building §425: the flag, the pin, the sixth fixture | amended by §427 |
 | §217 | The onboarding fork: three verbs, and a held-open placeholder example | amended by §424 |
 | §36 | Bridge selection ruling: live data only | amended by §420 |
 | §402 | Altana keystore: read Ethereum only, and stay silent on first sight | amended by §403 |
@@ -28348,3 +28351,269 @@ check's own first-run correction: ChatGPT and Claude build their rows from a `ch
 `source: c.1`, so a `source:` grep reported two fully-furnished rooms as unseeded. Measured
 across all eight — every seat that furnishes anything carries at least one literal, and Reminders
 carries exactly zero.
+
+## 425. A key that can sign and can never spend — Casberi as a Safe co-signer (user: "would it be possible to make Casberi have a Wallet that can sign but doesn't hold money?", then "just wondering if we could make Casberi an alternative signer for things or like for multi sig", "could we do it without requiring a server or a Wallet factory?", "ok lets do this. the benefit is having a signer not tied to a wallet a user has funds in", 2026-08-21)
+
+**This amends §112**, which has been the standing wallet ruling since it was written: reads and
+previews in-app, **signatures always elsewhere**. That ruling is not overturned — it is narrowed
+to everything except one surface, and the surface it now excludes is defined so tightly that the
+promise §112 exists to protect gets *stronger* here rather than weaker. Mechanics live in
+`docs/signer-spec.md`; this entry is the reasoning and the refusals.
+
+**The question, and why the first answer to it was wrong.** "A wallet that can sign but doesn't
+hold money" reads as a property of an address, and as a property of an address it is unkeepable:
+anyone can send funds to any address unasked, so nothing can keep a wallet empty by policy, and
+a key with no balance still moves other people's money the moment it is registered somewhere as
+an authority — a Safe owner, a session key, a Farcaster signer. **Money follows authority, not
+balance.** The version that works is the user's own second framing: a **co-signer in an N-of-M
+Safe**, where "cannot spend" stops being a policy we promise and becomes a fact the Safe contract
+enforces. One key is one vote. It is the strongest honesty grade this catalog has ever had — the
+`TokenBridge.setupIntro` ladder runs MINTED / SCOPED / CONDUCT, and this sits above all three,
+because the guarantee is neither a scope somebody ticked nor a verb we decline to call: it is
+arithmetic in a contract we do not control.
+
+**Why it fits here rather than being a wallet app in a corpus app.** Casberi already reads Safe's
+owners, threshold, nonce and pending queue, and already draws the sentence *"2 of 3 signatures
+collected — your signature is needed"* (2026-07-30). That sentence has always been a **dead end**:
+the app that knows your signature is needed is the one app that cannot provide it, so the person
+leaves. The differentiated half — knowing what needs you, and explaining a transaction without
+lying about it — is the half that is built. What is missing is a key, a hash and a consent tap.
+
+**The product is the desktop split, not the single phone.** Both keys on one phone is two
+witnesses, not two locks: it does nothing against theft of the device, and the copy may never
+imply otherwise. What it defends is deception — a second independent rendering of the transaction
+before it can move. The real pitch is **your computer proposes, your phone confirms**: the browser
+wallet, the one exposed to every dapp and phishing page, can no longer spend alone, and a drained
+desktop key becomes an unsigned request sitting on a lock screen. This is how a bank already
+works, which is why it needs no explaining. The honest cost, which the setup copy must carry: the
+protection applies to money **in the Safe, at a new address** — an existing wallet is not upgraded
+in place, it becomes the proposer.
+
+**No server and no factory, and each is a separate answer.** The factory question is decided by
+the key: a plain secp256k1 key is a valid Safe owner via `ecrecover` on every chain, so there is
+nothing to deploy and the entire registration is the person running `addOwner` from their desktop
+— **Casberi signs nothing during its own onboarding**. A factory only appears on the Secure
+Enclave route, because the Enclave speaks P-256 and a Safe can accept that only through a deployed
+WebAuthn signer contract; that route stays available as a later `swapOwner` upgrade and is not
+built now. The server question is decided by transport, and the fallback tier reaches nothing at
+all: the transaction comes in by paste or deep link, Casberi verifies it against chain state,
+signs, and hands 65 bytes back out. Safe's own transaction service is a convenience on top, not a
+dependency — and note the co-signer **never needs gas**, since another owner executes, so the
+address stays empty for life, which is the user's original request satisfied literally.
+
+**EIP-7702 was considered and is REFUSED, and this is the one to write down.** It looks like it
+removes the new-address annoyance — delegate the existing EOA to Safe code, keep the address, add
+Casberi as a co-owner. But under 7702 the EOA's own key retains root authority: a compromised
+desktop key simply undoes the delegation and spends. That **silently voids the entire promise
+while every screen still says it holds**, which is §83's fake status in the place it would be most
+expensive to believe. A real Safe at a new address is what makes the sentence true.
+
+**The rail that makes the cryptography safe is not care, it is a second opinion.** The whole
+feature rests on one number, the `safeTxHash`, and a wrong domain separator or type hash produces
+a signature that is well-formed, recovers to a real address, and is either rejected or — far worse
+— valid over a *different* transaction than the one previewed. No build, screen sweep or UI test
+can see that. So: **never sign a hash we computed alone.** Before signing, `eth_call`
+`getTransactionHash` on the Safe itself and require agreement, refusing on mismatch *and* on
+failure to read. That single call turns every encoding mistake into a decline instead of a wrong
+signature, and it handles Safe version drift for free — a pre-1.3.0 Safe uses a different EIP-712
+domain, disagrees, and is refused with no version table for us to maintain. The local encoder
+still exists, because it is what the remote answer is checked *against*; a lone remote number is a
+figure handed to us by whichever RPC host answered.
+
+**The constants are computed, never recalled** (`scripts/support/safetx-vectors.py`, whose own
+Keccak-256 is checked against four published vectors first, since `hashlib.sha3_256` is the NIST
+padding variant and reaching for it is the easiest way to produce confidently wrong constants).
+Five fixtures are pinned, and three of them exist only to prove that `nonce`, `chainId` and
+`operation` are each really inside the preimage — a signer that dropped `nonce` would let a
+signature replay at a later nonce, and one that dropped `chainId` would let a mainnet signature
+execute on a testnet Safe at the same address.
+
+**Six refusals, each an assertion rather than a sentence.** Refuse when the threshold is below 2
+(a 1-of-N Safe naming us is a custodial wallet wearing a multisig's clothes); refuse when the
+chain does not currently list our key as an owner; refuse on any hash mismatch; refuse to sign
+anything that is not a SafeTx — no `personal_sign` of arbitrary text, no free-form typed data, no
+`eth_sendTransaction`, guarded as a negative grep on a comment-stripped copy because the spec
+documents the forbidden methods by naming them (the Obsidian/Cursor lesson, sixth instance);
+refuse to summarise calldata that did not decode, showing the selector and the hash instead; and
+have no export path at all.
+
+**No seed phrase, and that is the security model rather than a missing feature.** The key is born
+on this phone, is stored device-only and non-synchronizable with a biometric gate so every
+signature costs a Face ID, and dies with the phone. A recovery phrase would be a second copy of
+the key sitting in a drawer, which defeats "this phone's yes" exactly. Recovery lives one level
+up: the remaining owners `swapOwner` a lost phone out — the threshold *is* the recovery story, and
+it is also why the setup copy should steer a 2-of-2 toward 2-of-3 with a cheap third key kept
+offline, since 2-of-2 means losing either key freezes the funds. Casberi therefore skips the
+entire backup ceremony every wallet app is stuck with: setup is one tap and an address on screen.
+
+**Deliberately NOT built, with reasons.** An execute path (Casberi would need gas and would stop
+being a pure co-signer); packing other owners' signatures; a WalletConnect wallet peer, though
+`ReownWalletKit` is already inside the pinned `reown-swift` package and unlinked, so tier 2 is
+research already done rather than a question; and an app-open Face ID lock, which protects the
+corpus rather than the key and must be argued on its own merits instead of being smuggled in here
+— the key is already gated at the only moment that matters.
+
+**Grade: SPEC ONLY.** Authored on Linux with no Xcode and no Swift toolchain. The constants are
+verified and the Swift is unwritten; whether `swift-secp256k1` compiles for Mac Catalyst is
+unmeasured, and `verify.sh` step 1b is the gate that will say. Nothing before a device test
+against a real 2-of-3 Safe holding trivial funds counts as evidence.
+
+## 426. Building §425 — what the spec got right, the two things it got wrong, and the four questions it left unmeasured (2026-08-21)
+
+§425 and `docs/signer-spec.md` were authored on Linux with no Xcode and no Swift toolchain, and
+graded themselves **SPEC ONLY**. This is the build. Every constant in §3 of the spec survived
+contact unchanged — the five pinned `safeTxHash` fixtures, both type hashes, and all six Safe
+selectors reproduce byte-for-byte from Swift on the first run, which is what deriving them rather
+than recalling them bought. What follows is only the parts that moved.
+
+**The spec's five fixtures could not catch two real transpositions, and the harness found that
+itself.** All five leave `safeTxGas`, `baseGas`, `gasPrice`, `gasToken` and `refundReceiver` at
+zero, which makes the last five words of the struct hash indistinguishable from one another — so a
+signer that swapped `safeTxGas` with `baseGas`, or `gasToken` with `refundReceiver`, reproduced
+every one of them exactly. The spec's own §10 lists "swap `baseGas`/`safeTxGas` order" as a
+mutation the harness must survive; it did not, on the first run, and green. A **sixth fixture**
+with every field distinct is now derived in `scripts/support/safetx-vectors.py` beside the other
+five. The standing rule this re-earns, third time in this repo: **a fixture only tests the rule it
+names if it FAILS that rule and passes every other one.**
+
+**`.privateKeyUsage` is dropped, and this is a correction rather than a shortcut.** The spec asks
+for `SecAccessControlCreateWithFlags(..., [.biometryCurrentSet, .privateKeyUsage])`. That second
+flag governs a Secure Enclave `kSecClassKey`; this is a raw secp256k1 scalar in a generic password
+item, because the Enclave speaks P-256 and a Safe can only accept one through a deployed WebAuthn
+signer contract — which §425 explicitly does not build. Including it would be a flag with nothing
+to govern. `.biometryCurrentSet` is kept exactly as specified, including its real cost:
+**re-enrolling Face ID destroys the key**, and recovery is then another owner's `swapOwner`. That
+is on the setup screen in the one gray sentence §315 allows the section, spent on the cost rather
+than the pitch, because before the tap is the only moment where it changes what somebody does — it
+is the argument for 2-of-3 over 2-of-2.
+
+**The curve library is pinned to 0.21.1, not the newest 0.23.2, and the reason is a BUILD property
+rather than a crypto one.** From 0.22.0, `21-DOT-DEV/swift-secp256k1` assembles its `P256K` module
+with a SwiftPM **build-tool plugin**, and Xcode refuses to run an unvalidated plugin from the
+command line: measured 2026-08-21, the Catalyst build fails at `Validate plug-in
+"SharedSourcesPlugin"` and succeeds only with `-skipPackagePluginValidation`. Taking that would
+mean adding the flag to eight `xcodebuild` sites (`verify.sh` ×3, `verify-mac.sh`,
+`testflight.sh` ×2, `testflight-mac.sh` ×2) and turning plugin fingerprint validation off on
+every build of the app that holds a signing key, kept correct by remembering a flag. 0.21.1
+predates the plugin, resolves to a clean graph — SwiftPM prunes its ungated dev dependencies, so
+SwiftLint/SwiftFormat/lefthook/tuist never enter `Package.resolved`, measured — and its signing
+API is strictly better here: `signature(for:)` **throws** where 0.23.2 calls `fatalError`, so a
+library fault becomes a decline instead of a crash on the signing screen. Pinned by exact revision
+`8c62aba8`. **Trap worth keeping:** downgrading across a traits boundary fails with "Traits […]
+have been enabled on package that declares no traits" until `Package.resolved` is reverted — the
+stale resolve file, not any cache, is what holds the trait set.
+
+**The spec's §11 listed four unmeasured questions. Three are now answered.** (1) Whether
+`swift-secp256k1` builds for Mac Catalyst: **it does**, both versions, verified through
+`verify.sh`'s own step-1b gate. (2) The confirmations POST: read from the service's OWN source
+rather than docs prose (`SafeMultisigConfirmationSerializer`) — a single `signature` field, hex,
+≥65 bytes, POSTed to `multisig-transactions/<safe_tx_hash>/confirmations/`, answered **201**. Note
+the spec's `/safes/{address}/…` path is wrong; the address is not in it. (3) Per-chain Safe
+deployments: unchanged, the §5 rail makes them safe by construction. (4) **Still unmeasured, and
+it is the one that matters**: nothing has been signed against a real Safe. Step 9 of the spec's
+build order stands.
+
+**Two things the build added that the spec did not ask for.** A **recovered-address self-check**:
+after signing, the public key is recovered back out of our own signature and required to be this
+phone's address, or the bytes are thrown away. One extra curve operation proves three things at
+once — the digest signed is the digest asked for, the recovery id names the right one of four
+candidates, and the cached address still belongs to the stored key. And **`SafeCalldata` reads the
+raw bytes** rather than the transaction service's `dataDecoded`: a decode handed to us by a
+service is a claim about the transaction we are being asked to authorize, made by a party that is
+not the chain. `SafeBridge.describe` still uses `dataDecoded` for feed rows, which is the right
+trade there and the wrong one on a signing screen. An unrecognised selector — or a KNOWN selector
+whose arguments do not read — shows the four bytes and the hash and says it cannot read it, which
+is §8.5 as an assertion rather than a sentence.
+
+**Gnosis Chain cannot be signed on, and the refusal is deliberate rather than an omission.**
+`WalletApprovals` carries no Gnosis RPC host, so the §5 rail could not run there — and a chain
+where the cross-check cannot run is a chain where this app must not sign. `SafeBridge` still READS
+Gnosis Safes exactly as before; only signing declines, and the card says so in words rather than
+drawing no button.
+
+**Grade: BUILT, UNSIGNED.** `scripts/safetx-selftest.sh` compiles `SafeTransaction.swift` whole and
+unmodified, pins all six derived fixtures against the derivation's own output, and is
+mutation-proven twenty-four ways — sixteen against the arithmetic, eight against the refusals,
+including the spec's own "let `threshold == 1` through". iOS and Mac Catalyst both build. What has
+never happened is a signature over a real Safe transaction on a real device, and until it does,
+nothing here is evidence that it works.
+
+## 427. The multisig that cannot be repaired, and the key that dies quietly — two failures §425 could create and did not say (user: "but we can't create a risk for a situation where a multisig would be locked, the owner would just have to change the multi sig rules", 2026-08-21)
+
+**Amends §425 and §426.** Both entries treated "the key dies with the phone" as a cost the person
+accepts. That is true, and it is not the whole account, because the cost is not always the same
+size — in one Safe configuration it is an errand and in another it is the end of the money.
+
+**The correction that starts this.** The instinct behind the question was that an owner could
+simply change the multisig's rules afterwards. **They cannot.** `swapOwner`, `removeOwner` and
+`changeThreshold` are executed BY the Safe on itself: they are ordinary Safe transactions and they
+need the threshold met like anything else. So in an **N-of-N** — two owners needing two, three
+needing three — a single lost key means the Safe can never be signed for again AND can never be
+repaired. There is no admin path and no Safe-side override. The funds are finished. (One
+exception: an enabled module executes without signatures, so a Safe carrying a recovery module can
+dig itself out. This app can see that a module exists and cannot tell a recovery module from any
+other kind, so it does not count on it — a warning softened by a module we have not read is a
+warning that lies in the expensive direction.)
+
+**A second correction, in the other direction, and it matters for the flag argument.**
+Re-enrolling Face ID does not produce a new signing key. The key is 32 random bytes in the
+Keychain and the biometric is only the lock on the drawer; it is not an input to the key. Under
+`.biometryAny` a re-enrollment leaves the same bytes, the same address and a still-valid Safe
+owner, with nothing to re-apply anywhere. It is **`.biometryCurrentSet` that creates the errand**,
+by destroying the item. So "they would have to update the Safe regardless" is not true, and the
+flag's cost is real rather than a wash.
+
+**The flag was kept anyway, and the reason is the user's own first instinct.** A changed enrolled
+set is a changed authority: adding an alternate appearance silently widens who can sign, and the
+Safe has no way to see that happen. `.biometryCurrentSet` turns a silent widening into a loud
+failure, which is what the promise "**your** yes, on this phone" actually requires.
+
+**What settled it is that the flag cannot carry the constraint either way.** A device-only key
+with no seed phrase can vanish with the phone under ANY access-control flag — §425 accepts that in
+so many words. `.biometryAny` removes exactly one of several causes and would have felt like
+handling the risk while leaving the real failure fully live. **The lock hazard is structural, so
+it needs a structural answer, and the flag is only a frequency dial on it.**
+
+**The structural answer, three parts.** (1) **`SafeSigner.Standing`** reads each Safe's owner
+count and threshold FROM THE CHAIN and states `hasNoSpareOwner` when they are equal — on the setup
+screen, about the person's own Safe, rather than as the abstract "prefer 2-of-3" advice that was
+already there and that nobody acts on. It never draws an all-clear from a read that did not
+answer, because silence and "you are fine" must not look alike here. (2) **It is never a
+refusal**, and that is the subtle half: in a 2-of-2 that names this phone, declining to sign IS
+the lock we are trying to prevent — our signature is the one the Safe is waiting for. So the sign
+block says the fact and signs anyway, and `scripts/safetx-selftest.sh` carries a NEGATIVE guard,
+mutation-proven, that no refusal is ever built out of `hasNoSpareOwner`. (3) **The repair is
+recognised**: `Ready.addsASpareOwner` is true for an `addOwnerWithThreshold` that does not raise
+the threshold to match, so the one transaction somebody in that state should be hurried through is
+greeted rather than warned about — and an `addOwner` that DOES raise the threshold leaves the Safe
+exactly as stuck, so it is not.
+
+**Discovery needed one filter dropped, and the reason is worth keeping.**
+`SafeBridge.signerSafes` demands `nonce > 0` because `/owners/{addr}/safes/` answers for any
+address ever named an owner and a decoy Safe is free to deploy (vitalik.eth returns 59 on
+mainnet, overwhelmingly not his). That filter is right for a watched wallet and wrong for this
+one address: **a decoy has to name an address that already exists, and a freshly generated
+32-byte key has never appeared anywhere**, so the spam risk is impossible by construction — while
+a brand-new 2-of-2 the person has just added us to has `nonce == 0` and would otherwise be
+invisible on the exact screen that has to warn about it. `requireExecuted: false` has one caller
+and says so.
+
+**The key could die without the app ever admitting it, which is the other half.**
+`.biometryCurrentSet` destroys the Keychain item; the cached address in UserDefaults survives.
+So the app went on showing a signer and a Sign button, and the tap failed with the **same sentence
+a cancelled Face ID prompt gives** — a control that looks live and is permanently dead, §83 on the
+screen where it costs most. `SignerKey.presence()` separates `.none` / `.present` / `.destroyed`
+by an **attribute-only** Keychain query (no `kSecReturnData`), so it decrypts nothing and raises no
+prompt and can run on every screen appearance. An unreadable keychain reports `.present`, never
+`.destroyed`: that sentence sends somebody to arrange an on-chain transaction, and it must not be
+said on a maybe. UNVERIFIED on a device — the no-prompt property of an attribute-only query
+against an access-control item is documented behaviour this project has not watched happen.
+
+**Two guard defects this pass found in its own harness, both the same shape.** The no-export guard
+counted `SecItemCopyMatching` and so read `presence()`'s honest attribute-only query as a second
+reader of the private bytes; it counts `kSecReturnData` now, which is the line that actually
+decrypts the scalar. And `prepare`'s chain reads were guarded by a bare `SafeCall.getThresholdSelector`
+name grep, which kept passing once `standing()` introduced a second call site — so the mutation
+that removes the read that GATES SIGNING survived. Both guards are anchored to `prepare`'s own
+call sites now. The standing rule, restated: **a guard must prove the condition is the whole
+condition, not that the words appear somewhere in the file.**
