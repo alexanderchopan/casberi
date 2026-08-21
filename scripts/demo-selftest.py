@@ -430,6 +430,50 @@ def check_d_seat_names_are_real(files_text):
               resolved in catalog_names, True)
 
 
+def check_l_seat_names_resolve_at_runtime(files_text):
+    """Check L — every `seatTable` name resolves through the rule the APP
+    actually runs, `BridgeCatalog.offer(forSource:)`: exact match, else an
+    offer whose name ends in `" " + source`.
+
+    Check D above proves the same names resolve through this SCRIPT's
+    `KNOWN_CATALOG_ALIAS`, which is a hand table and a different resolution —
+    so D passing says nothing about whether the shipped function answers. The
+    two agree today and nothing was making them.
+
+    It matters because `RoomGear` — the room's settings door — is gated on
+    exactly this call: a demo seat the shipped rule can't resolve draws no
+    gear, silently, in the one mode built to show every room working. That is
+    also the honest behaviour for a source with no seat, which is why the
+    failure is invisible rather than broken.
+
+    `KNOWN_NO_CATALOG_SEAT` is the escape hatch and carries its reason — a
+    voice note connects nothing, so it correctly has no gear."""
+    names, _ = extract_seat_table(files_text["DemoSeedAll"])
+    if names is None:
+        check("L · seatTable found", False, True)
+        return
+    catalog_names = extract_catalog_names(files_text["BridgeCatalog"])
+
+    def resolves(source):
+        if source in catalog_names:
+            return True
+        # The space boundary is the rule, never `contains`: a bare substring
+        # test files "Deals" under "Open Food Facts" the first time an offer
+        # name happens to carry the word. Mirrors `offer(forSource:)`.
+        return any(name.endswith(" " + source) for name in catalog_names)
+
+    for name in names:
+        if name in KNOWN_NO_CATALOG_SEAT:
+            # Asserted the other way too, or the hatch silently widens: a name
+            # listed here that DOES resolve is a stale exemption hiding a seat
+            # that has since gained a catalog entry.
+            check(f'L · "{name}" is exempt and really has no offer',
+                  not resolves(name), True)
+            continue
+        check(f'L · seatTable "{name}" resolves via offer(forSource:)',
+              resolves(name), True)
+
+
 def check_e_seat_names_have_rows(files_text):
     """Check E — every `seatTable` name appears as a literal string
     somewhere OUTSIDE the table's own declaration — i.e., in one of the
@@ -911,6 +955,7 @@ def run_checks(files_text):
     check_j_per_view_reads_gated(files_text)
     check_c_no_source_collision(files_text)
     check_d_seat_names_are_real(files_text)
+    check_l_seat_names_resolve_at_runtime(files_text)
     check_e_seat_names_have_rows(files_text)
     check_f_shape_coverage(files_text)
     check_g_catalog_offers_have_demo_seats(files_text)

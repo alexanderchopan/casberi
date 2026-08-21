@@ -29138,3 +29138,73 @@ that matter most are the two that fail invisibly — removing the trailing-`wall
 (every hardware wallet stops resolving, no offer ever appears, nothing says why) and
 accepting an ambiguous key (the first-listed entry wins, and a person is offered a review of
 software they do not run).
+
+## 431. The room's own settings door (2026-08-21)
+
+A scoped room had no route to the seat behind it. The only in-room door was
+`RoomQuiet`'s copy, which appears exactly when the seat is broken or empty — so
+a healthy Farcaster room whose watch list you wanted to edit sent you back out
+to the catalogue to find Farcaster among a hundred offers. This was raised
+before and waved off as "the catalogue is fine, it saves space"; the answer here
+is that it was dismissed rather than solved.
+
+**A gear on glass, floating top-trailing, one tap to that source's setup
+screen.** No long-press, no panel, no second state (user ruling: "there should
+be no press and hold… it should literally be a gear on glass"). `RoomGear`,
+mounted on `MainSurface`.
+
+**Three designs were drawn and two rejected, for one reason each.** A gear as a
+fixed tail on the chip strip: rejected because a control in shared chrome
+inherits the scope of that chrome, and the strip's other fixed controls (the
+avatar, the catalogue door) are genuinely app-wide, so a third disc beside them
+reads as the third app-wide thing. A named capsule carrying the source's mark
+and word: rejected as too much furniture for a rare act, and it covered a row.
+**What makes the bare gear legible is PRESENCE, not labelling** — it is drawn
+only in a room with a seat behind it, never in All, You, Voice or Pinned, so at
+the moment it is on screen there is exactly one thing it can be about; and it
+sits in the room's own body rather than in the strip head.
+
+**The tap count is the smaller half of the argument.** Settings is a rare act,
+so shaving four taps and a visual search off it is a nicety. The real gain is
+the thing the catalogue route can never do: **say that a seat has stopped
+working while you are standing in its room.** Today a broken seat just stops
+landing rows, which from the reader's side is indistinguishable from having
+nothing new — §311's failure. An `attention` seat takes the destructive tint and
+a dot, and is the one state that never fades on scroll.
+
+**It never resolves a fold, and must not learn to.** `MainSurface.go(to:)`
+already turns a category chip into a real venue before writing
+`FeedFilter.source` (§351), so by the time the gear sees a source it is a
+source. A second resolver is how the two drift and the gear opens the wrong
+seat's screen.
+
+**Placement is MEASURED, and both obvious placements failed on device first.**
+An overlay does not inherit the safe area a `.safeAreaInset(edge: .top)`
+reserves — attached on either side of that modifier the gear rendered level with
+the demo banner, on top of the chrome it was meant to sit under. A constant
+would have been worse: the band is three optional rows deep (demo banner, venue
+switcher, face rail) and shrinks again when the strip minimizes, so any number
+read out of the code is right for exactly one state. `BandHeightKey` publishes
+the band's real height and the gear pads by it.
+
+**Demo parity is mechanical, per the 2026-08-08 standing rule.**
+`demo-selftest.py` gained **check L**: every `DemoSeedAll.seatTable` name must
+resolve through the rule the app actually runs — `BridgeCatalog.offer(forSource:)`,
+exact match else a space-boundary suffix. Check D already proved those names
+resolve through that SCRIPT's own `KNOWN_CATALOG_ALIAS`, which is a different
+resolution and a hand table; the two agreed and nothing was making them. It
+matters because the gear is gated on that call, so a demo seat the shipped rule
+cannot resolve draws no gear, silently, in the mode built to show every room
+working — and that is also the correct behaviour for a seatless source, which is
+what makes the failure invisible. Mutation-proven twice against the real tree (a
+name that cannot resolve; a name resolving only by bare substring rather than on
+the space boundary). 78 of 79 seats resolve; `Voice` is exempt with its reason
+and the exemption is asserted in BOTH directions, so it cannot go stale.
+
+**Cost:** one view on the floating layer. No new stored field, no request, no
+CloudKit deploy — the seat resolves from `BridgeCatalog` and the alert state
+from `BridgeApp.Status`, both already computed for `BridgeDetailScreen`. On the
+shell rather than on `FeedScreen`, so it survives a room change instead of dying
+with the `.id()` subtree (§357), and inside the `NavigationStack` so a pushed
+room covers it — a settings door floating over a screen it does not configure is
+the dead control §83 bans, wearing a live control's clothes.

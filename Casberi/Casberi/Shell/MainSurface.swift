@@ -215,6 +215,15 @@ struct MainSurface: View {
         // measured above — the band still wears the feed's own geometry, it
         // just no longer has to reach outside itself to get it.
         bandContent
+            // Publishes the band's real height so `RoomGear` can float just
+            // below it — see `BandHeightKey` for why this is measured rather
+            // than a constant, and which two placements failed on device first.
+            .background {
+                GeometryReader { proxy in
+                    Color.clear.preference(key: BandHeightKey.self,
+                                           value: proxy.size.height)
+                }
+            }
             .frame(maxWidth: showsRail ? PadLayout.readingMaxWidth : .infinity,
                    alignment: .leading)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -1453,6 +1462,9 @@ struct MainSurface: View {
     /// Which edge the incoming room slides from — set by `go(to:)` BEFORE the
     /// source changes, so both halves of the transition read the same answer.
     @State private var slideEdge: Edge = .trailing
+    /// The top band's measured height, so `RoomGear` floats just below it
+    /// rather than on top of it. See `BandHeightKey`.
+    @State private var bandHeight: CGFloat = 0
 
     /// The one door every source switch walks through (prd §265): chip taps and
     /// swipes both come here, so direction, the tag reset, and tap-learning
@@ -1639,6 +1651,29 @@ struct MainSurface: View {
             // two differ on exactly one thing: this strip is allowed to
             // vanish into a pushed room and the rail is not.
             .safeAreaInset(edge: .top, spacing: 0) { topInset }
+            // THE ROOM'S OWN SETTINGS DOOR (2026-08-21) — see `RoomGear` for
+            // why a bare gear is legible here and why the room needed one.
+            //
+            // Offset by the band's MEASURED height, not by the safe area and
+            // not by a constant. Both obvious placements were tried on device
+            // and both put the gear level with the demo banner: an overlay does
+            // not inherit the safe area a `.safeAreaInset` reserves, whichever
+            // side of the modifier it is attached on. See `BandHeightKey`.
+            //
+            // INSIDE the NavigationStack, like `topInset` and for the same
+            // reason: a pushed room must cover it. A settings door floating over
+            // a screen it does not configure is the dead control the honesty law
+            // bans, wearing a live control's clothes.
+            //
+            // On the SHELL rather than on `FeedScreen`, so it survives a room
+            // change instead of dying with the `.id()` subtree (§357). It reads
+            // `filter.source`, which `go(to:)` has already resolved out of any
+            // category label — never a fold label (§351).
+            .overlay(alignment: .topTrailing) {
+                RoomGear(source: filter.source)
+                    .padding(.top, bandHeight)
+            }
+            .onPreferenceChange(BandHeightKey.self) { bandHeight = $0 }
             // The detail pane (2026-07-25) — the iPad half of "a row tap
             // opens a thing". A trailing inset rather than an HStack sibling
             // so every modifier already hanging off the pager (the crown
