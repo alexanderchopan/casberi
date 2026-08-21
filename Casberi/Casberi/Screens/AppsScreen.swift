@@ -361,8 +361,23 @@ struct AppsScreen: View {
             // Both hooks stay: the push is what the screenshot sweep wants
             // (a full screen, no presentation to dismiss), the raise is what
             // the crash gate wants. See scripts/verify-mac.sh step 2c.
+            //
+            // **On Mac `openSetup` PUSHES now (2026-08-20, see
+            // `Destination.raisedByConnect`), so this hook says which door it
+            // actually took.** The word matters: the line above claimed
+            // "raising" unconditionally, so on Mac the gate reading it would
+            // have gone green while describing a presentation that no longer
+            // happens — a check passing for the wrong reason, which is worse
+            // than one that fails. Note the 2.1(a) crash class itself cannot
+            // arise on the pushed door: a push inherits the stack's
+            // environment, and it was a sheet's own hosting controller not
+            // inheriting it that trapped. The gate is still worth running
+            // there — it exercises the door a PERSON takes, which is the
+            // lesson that bought it — it just proves something different now.
             if let name = UserDefaults.standard.string(forKey: "connectTap") {
-                NSLog("[Casberi] connectTap| raising connect form for %@", name)
+                let raises = BridgeRouter.destination(forOffer: name)?.raisedByConnect == true
+                NSLog("[Casberi] connectTap| %@ connect form for %@",
+                      raises ? "raising" : "pushing", name)
                 route.openSetup(forOffer: name)
             }
             if let name = UserDefaults.standard.string(forKey: "openSetup") {

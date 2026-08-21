@@ -334,10 +334,28 @@ ok "app group container ($GROUP_LINE)"
 # system permission behind it, so a failure here is the presentation and only
 # the presentation. The reviewer's card happened to be Apple Notes; the bug
 # never was.
-step "Connect raises its form without crashing"
+# **What this proves on Mac CHANGED on 2026-08-20, and the grep had to change
+# with it.** `raisedByConnect` is false for everything on Catalyst now (see
+# `BridgeRouter.Destination`), so `route.openSetup` pushes the form into the
+# navigation stack instead of raising it as a sheet. Two consequences, both
+# worth stating rather than discovering:
+#
+#   • The 2.1(a) trap this step was built for CANNOT occur on that door — a
+#     push inherits the stack's environment, and the bug was a sheet's own
+#     hosting controller not inheriting it. The step is kept anyway because
+#     its real lesson was "exercise the door a PERSON takes, not the one a
+#     probe can reach"; that lesson outlives the presentation it was learned
+#     from, and the iOS side still raises.
+#   • The probe's own log line no longer says "raising" on Mac — it names the
+#     door it took. Matching the bare marker rather than the verb is what
+#     keeps this honest in BOTH directions: a build from before that change
+#     still says "raising" and still matches, and a stale grep for "raising"
+#     would otherwise have gone green on Mac while describing a presentation
+#     that no longer happens.
+step "Connect opens its form without crashing"
 CONNECT_LOG="$OUT/connect.log"
 launch "$CONNECT_LOG" -deeplink casberi://account -connectTap "RSS"
-if ! wait_for "$CONNECT_LOG" 'connectTap\| raising' 20; then
+if ! wait_for "$CONNECT_LOG" 'connectTap\|' 20; then
   quit_app
   fail "connect probe never fired (see $CONNECT_LOG)"
 fi
@@ -345,14 +363,14 @@ fi
 # enough — and the process being GONE is the finding, not a log line.
 sleep 3
 if [[ -z "$(app_pid)" ]]; then
-  fail "app DIED raising the connect form — every setup bridge's Connect is broken (see $CONNECT_LOG)"
+  fail "app DIED opening the connect form — every setup bridge's Connect is broken (see $CONNECT_LOG)"
 fi
 if grep -q "Fatal error" "$CONNECT_LOG"; then
   quit_app
   fail "connect form raised a Swift fatal error: $(grep -m1 'Fatal error' "$CONNECT_LOG")"
 fi
 quit_app
-ok "connect form raises (RSS)"
+ok "connect form opens (RSS)"
 
 # ── 3. Screen sweep ────────────────────────────────────────────────────────
 # The app renders its own key window (see the `-macSnapshot` rationale above)
