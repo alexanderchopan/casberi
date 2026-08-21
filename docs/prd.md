@@ -80,6 +80,7 @@ at all.
 | Ruling | What it said | Changed by |
 |---|---|---|
 | §18 | Feed spec | amended by §64 |
+| §112 | The preparing surface: reads and previews in-app, signatures always elsewhere | amended by §425 (narrowed — still holds everywhere except a Safe co-signature) |
 | §217 | The onboarding fork: three verbs, and a held-open placeholder example | amended by §424 |
 | §36 | Bridge selection ruling: live data only | amended by §420 |
 | §402 | Altana keystore: read Ethereum only, and stay silent on first sight | amended by §403 |
@@ -28348,3 +28349,109 @@ check's own first-run correction: ChatGPT and Claude build their rows from a `ch
 `source: c.1`, so a `source:` grep reported two fully-furnished rooms as unseeded. Measured
 across all eight — every seat that furnishes anything carries at least one literal, and Reminders
 carries exactly zero.
+
+## 425. A key that can sign and can never spend — Casberi as a Safe co-signer (user: "would it be possible to make Casberi have a Wallet that can sign but doesn't hold money?", then "just wondering if we could make Casberi an alternative signer for things or like for multi sig", "could we do it without requiring a server or a Wallet factory?", "ok lets do this. the benefit is having a signer not tied to a wallet a user has funds in", 2026-08-21)
+
+**This amends §112**, which has been the standing wallet ruling since it was written: reads and
+previews in-app, **signatures always elsewhere**. That ruling is not overturned — it is narrowed
+to everything except one surface, and the surface it now excludes is defined so tightly that the
+promise §112 exists to protect gets *stronger* here rather than weaker. Mechanics live in
+`docs/signer-spec.md`; this entry is the reasoning and the refusals.
+
+**The question, and why the first answer to it was wrong.** "A wallet that can sign but doesn't
+hold money" reads as a property of an address, and as a property of an address it is unkeepable:
+anyone can send funds to any address unasked, so nothing can keep a wallet empty by policy, and
+a key with no balance still moves other people's money the moment it is registered somewhere as
+an authority — a Safe owner, a session key, a Farcaster signer. **Money follows authority, not
+balance.** The version that works is the user's own second framing: a **co-signer in an N-of-M
+Safe**, where "cannot spend" stops being a policy we promise and becomes a fact the Safe contract
+enforces. One key is one vote. It is the strongest honesty grade this catalog has ever had — the
+`TokenBridge.setupIntro` ladder runs MINTED / SCOPED / CONDUCT, and this sits above all three,
+because the guarantee is neither a scope somebody ticked nor a verb we decline to call: it is
+arithmetic in a contract we do not control.
+
+**Why it fits here rather than being a wallet app in a corpus app.** Casberi already reads Safe's
+owners, threshold, nonce and pending queue, and already draws the sentence *"2 of 3 signatures
+collected — your signature is needed"* (2026-07-30). That sentence has always been a **dead end**:
+the app that knows your signature is needed is the one app that cannot provide it, so the person
+leaves. The differentiated half — knowing what needs you, and explaining a transaction without
+lying about it — is the half that is built. What is missing is a key, a hash and a consent tap.
+
+**The product is the desktop split, not the single phone.** Both keys on one phone is two
+witnesses, not two locks: it does nothing against theft of the device, and the copy may never
+imply otherwise. What it defends is deception — a second independent rendering of the transaction
+before it can move. The real pitch is **your computer proposes, your phone confirms**: the browser
+wallet, the one exposed to every dapp and phishing page, can no longer spend alone, and a drained
+desktop key becomes an unsigned request sitting on a lock screen. This is how a bank already
+works, which is why it needs no explaining. The honest cost, which the setup copy must carry: the
+protection applies to money **in the Safe, at a new address** — an existing wallet is not upgraded
+in place, it becomes the proposer.
+
+**No server and no factory, and each is a separate answer.** The factory question is decided by
+the key: a plain secp256k1 key is a valid Safe owner via `ecrecover` on every chain, so there is
+nothing to deploy and the entire registration is the person running `addOwner` from their desktop
+— **Casberi signs nothing during its own onboarding**. A factory only appears on the Secure
+Enclave route, because the Enclave speaks P-256 and a Safe can accept that only through a deployed
+WebAuthn signer contract; that route stays available as a later `swapOwner` upgrade and is not
+built now. The server question is decided by transport, and the fallback tier reaches nothing at
+all: the transaction comes in by paste or deep link, Casberi verifies it against chain state,
+signs, and hands 65 bytes back out. Safe's own transaction service is a convenience on top, not a
+dependency — and note the co-signer **never needs gas**, since another owner executes, so the
+address stays empty for life, which is the user's original request satisfied literally.
+
+**EIP-7702 was considered and is REFUSED, and this is the one to write down.** It looks like it
+removes the new-address annoyance — delegate the existing EOA to Safe code, keep the address, add
+Casberi as a co-owner. But under 7702 the EOA's own key retains root authority: a compromised
+desktop key simply undoes the delegation and spends. That **silently voids the entire promise
+while every screen still says it holds**, which is §83's fake status in the place it would be most
+expensive to believe. A real Safe at a new address is what makes the sentence true.
+
+**The rail that makes the cryptography safe is not care, it is a second opinion.** The whole
+feature rests on one number, the `safeTxHash`, and a wrong domain separator or type hash produces
+a signature that is well-formed, recovers to a real address, and is either rejected or — far worse
+— valid over a *different* transaction than the one previewed. No build, screen sweep or UI test
+can see that. So: **never sign a hash we computed alone.** Before signing, `eth_call`
+`getTransactionHash` on the Safe itself and require agreement, refusing on mismatch *and* on
+failure to read. That single call turns every encoding mistake into a decline instead of a wrong
+signature, and it handles Safe version drift for free — a pre-1.3.0 Safe uses a different EIP-712
+domain, disagrees, and is refused with no version table for us to maintain. The local encoder
+still exists, because it is what the remote answer is checked *against*; a lone remote number is a
+figure handed to us by whichever RPC host answered.
+
+**The constants are computed, never recalled** (`scripts/support/safetx-vectors.py`, whose own
+Keccak-256 is checked against four published vectors first, since `hashlib.sha3_256` is the NIST
+padding variant and reaching for it is the easiest way to produce confidently wrong constants).
+Five fixtures are pinned, and three of them exist only to prove that `nonce`, `chainId` and
+`operation` are each really inside the preimage — a signer that dropped `nonce` would let a
+signature replay at a later nonce, and one that dropped `chainId` would let a mainnet signature
+execute on a testnet Safe at the same address.
+
+**Six refusals, each an assertion rather than a sentence.** Refuse when the threshold is below 2
+(a 1-of-N Safe naming us is a custodial wallet wearing a multisig's clothes); refuse when the
+chain does not currently list our key as an owner; refuse on any hash mismatch; refuse to sign
+anything that is not a SafeTx — no `personal_sign` of arbitrary text, no free-form typed data, no
+`eth_sendTransaction`, guarded as a negative grep on a comment-stripped copy because the spec
+documents the forbidden methods by naming them (the Obsidian/Cursor lesson, sixth instance);
+refuse to summarise calldata that did not decode, showing the selector and the hash instead; and
+have no export path at all.
+
+**No seed phrase, and that is the security model rather than a missing feature.** The key is born
+on this phone, is stored device-only and non-synchronizable with a biometric gate so every
+signature costs a Face ID, and dies with the phone. A recovery phrase would be a second copy of
+the key sitting in a drawer, which defeats "this phone's yes" exactly. Recovery lives one level
+up: the remaining owners `swapOwner` a lost phone out — the threshold *is* the recovery story, and
+it is also why the setup copy should steer a 2-of-2 toward 2-of-3 with a cheap third key kept
+offline, since 2-of-2 means losing either key freezes the funds. Casberi therefore skips the
+entire backup ceremony every wallet app is stuck with: setup is one tap and an address on screen.
+
+**Deliberately NOT built, with reasons.** An execute path (Casberi would need gas and would stop
+being a pure co-signer); packing other owners' signatures; a WalletConnect wallet peer, though
+`ReownWalletKit` is already inside the pinned `reown-swift` package and unlinked, so tier 2 is
+research already done rather than a question; and an app-open Face ID lock, which protects the
+corpus rather than the key and must be argued on its own merits instead of being smuggled in here
+— the key is already gated at the only moment that matters.
+
+**Grade: SPEC ONLY.** Authored on Linux with no Xcode and no Swift toolchain. The constants are
+verified and the Swift is unwritten; whether `swift-secp256k1` compiles for Mac Catalyst is
+unmeasured, and `verify.sh` step 1b is the gate that will say. Nothing before a device test
+against a real 2-of-3 Safe holding trivial funds counts as evidence.
