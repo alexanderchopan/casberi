@@ -165,6 +165,32 @@ struct DSTray<Content: View>: View {
 /// proper dialog without letting it become a page — a language picker has no
 /// business filling a desktop window, which is why this is a stated width and
 /// not `.page`.
+/// # A POPOVER was the obvious Mac answer, and it is declined (2026-08-20)
+///
+/// On macOS a picker anchored to the control that opened it is the native
+/// shape, and several of these trays are pickers — a language list, an NFT
+/// chooser, a wallet tile's drill-down. So `.popover` was the first proposal.
+///
+/// It is refused because of where these presentations LIVE. A popover anchors
+/// to the view it is attached to, and every `.sheet` in this app is attached
+/// to its SCREEN ROOT, never to the row or button that triggers it. That is
+/// not an accident to be tidied up: it is the standing rule this codebase paid
+/// for three times ("a feed ROW never carries a presentation of its own — one
+/// screen, one `.sheet`"), because a `.sheet` attached inside a `List` row
+/// resolves to the same presenting controller as the row's tap and tears its
+/// own presentation down mid-transition — the "opens half way and closes"
+/// report. Converting these in place would anchor every popover to the whole
+/// screen's bounds, which is not anchoring at all; converting them properly
+/// means moving presentations back onto rows, which is the bug class by name.
+///
+/// The honest middle path exists and is NOT built here: hoist the trigger's
+/// frame with an anchor preference and hand it to a root-level popover as
+/// `attachmentAnchor: .rect(...)`. That keeps one presentation per screen AND
+/// anchors correctly. It is a real design pass across ~14 call sites with a
+/// per-site judgement about whether each tray is a picker (popover) or a task
+/// (sheet), and it wants to be its own session rather than a rider on a sizing
+/// fix — so what ships is every tray correctly SIZED for a window, which is
+/// the half that was actually broken.
 enum DSMacSheet {
     /// A Mac dialog, not a phone column and not a page. Comfortably under
     /// `PadLayout.macMinWindowSize.width` so it can never be the thing that
@@ -191,6 +217,28 @@ extension View {
                         width: CGFloat = DSMacSheet.macSheetWidth) -> some View {
         #if targetEnvironment(macCatalyst)
         presentationSizing(DSMacSheet.Sizing(width: width, height: height))
+        #else
+        self
+        #endif
+    }
+
+    /// The Mac twin of `presentationDetents([.medium, .large])` — a READING
+    /// sheet rather than a tray.
+    ///
+    /// `.page` rather than a stated size, and the distinction is the whole
+    /// reason there are two helpers. A tray STATES its height because its
+    /// content is a known number of rows; a reading sheet (a thing, a profile,
+    /// a token card) holds whatever it holds, and `[.medium, .large]` is
+    /// exactly the caller saying "size this to the screen, and let me drag it".
+    /// `.page` is the system's own answer to that on a window — proportional
+    /// to the container, clamped by it, and needing no arithmetic of ours that
+    /// could outgrow a small window.
+    ///
+    /// A no-op on touch, where the detents are real and this would fight them.
+    @ViewBuilder
+    func dsMacPageSheet() -> some View {
+        #if targetEnvironment(macCatalyst)
+        presentationSizing(.page)
         #else
         self
         #endif

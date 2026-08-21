@@ -457,5 +457,6 @@ struct WalletbeatCardScreen: View {
 				}
 			}
 		}
+		.dsMacPageSheet()
 	}
 }

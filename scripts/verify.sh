@@ -384,6 +384,20 @@ python3 "$ROOT/scripts/mac-parity-audit.py" --self-test >/dev/null \
 python3 "$ROOT/scripts/mac-parity-audit.py" || fail "Mac parity drifted — see the output above"
 print -P "%F{green}✓ mac parity audit%f"
 
+# The parity NEITHER the Catalyst compile NOR the parity audit above can see
+# (2026-08-20). Catalyst honours none of iOS's sheet sizing — `presentationDetents`
+# is inert there — so a modal with no explicit sizing becomes a fixed ~540x620
+# form sheet, the same size in a 2000pt window as in a 980pt one, reporting a
+# COMPACT size class so `dsAdaptiveContentWidth()` no-ops inside it. That was
+# the whole of the "made for mobile" report. It is invisible to every other
+# check here: it compiles, the iOS build is unaffected by construction, and
+# even `verify-mac.sh` opens none of these sheets during its five-screen sweep.
+step "Mac sheet audit"
+python3 "$ROOT/scripts/mac-sheet-audit.py" --self-test >/dev/null \
+  || fail "the Mac sheet audit's own self-test failed — the check is broken, not the code"
+python3 "$ROOT/scripts/mac-sheet-audit.py" || fail "a sheet has no Mac sizing — see the output above"
+print -P "%F{green}✓ mac sheet audit%f"
+
 # Demo↔bridge parity: does the demo produce the same SHAPE of record the real
 # bridge produces? `demo-selftest.py` checks the demo against itself and the
 # catalog; this asks whether a seeded row could pass for a real one. Its own

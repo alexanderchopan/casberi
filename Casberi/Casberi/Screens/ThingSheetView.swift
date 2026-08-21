@@ -786,6 +786,12 @@ struct ThingSheetView: View {
         // A second listener in one presentation buzzes twice.
         .modifier(SheetHaptics(active: onBack == nil && !inlineRest))
         .presentationDetents([.medium, .large], selection: $detent)
+        // The Mac twin — detents are inert on Catalyst, so the app's
+        // MOST-OPENED sheet was rendering at the default ~540x620 form
+        // card. It is the fallback door for a thing (a row tap fills the
+        // detail pane instead), but every deep link, Spotlight hand-off
+        // and pane-less state still arrives here.
+        .dsMacPageSheet()
         .presentationDragIndicator(.visible)
         .dsSheetCorner()
         // Only when pushed (`onBack` set): the eyebrow carries its own back

@@ -580,6 +580,11 @@ struct AddressCard: View {
         }
         .presentationBackground(DS.surfaceSheet)
         .dsColorScheme()
+        // Declared HERE rather than at its call sites (2026-08-20): this
+        // card is presented from the thing sheet's face tap AND the wallet
+        // book, both inside a `switch`, so a call-site size would have to
+        // be written twice and could drift.
+        .dsMacPageSheet()
     }
 
     /// A wallet is a who and owns a hue; a contract or a Safe is machinery and

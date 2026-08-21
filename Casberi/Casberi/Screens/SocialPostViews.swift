@@ -277,6 +277,7 @@ struct SocialPostSheet: View {
                 }
         }
         .presentationDetents([.medium, .large])
+        .dsMacPageSheet()
         .presentationDragIndicator(.visible)
         .dsSheetCorner()
         .dsInk()

@@ -62,11 +62,11 @@ struct SettingsScreen: View {
             .dsScreenTitle("Settings")
             .onAppear { markMilestone() }
             .sheet(isPresented: $diagnosticsOpen) {
-                NavigationStack { DiagnosticsScreen() }
+                NavigationStack { DiagnosticsScreen() }.dsMacPageSheet()
             }
             .sheet(item: $detail) { AccountDetailSheet(detail: $0) }
             .sheet(isPresented: $languageOpen) { LanguagePickerSheet() }
-            .sheet(isPresented: $howItWorksOpen) { HowItWorksSheet() }
+            .sheet(isPresented: $howItWorksOpen) { HowItWorksSheet().dsMacPageSheet() }
             .photosPicker(isPresented: $avatarPickerOpen,
                           selection: $avatarSelection, matching: .images)
             // A set photo can come off, not just be replaced — every setting
