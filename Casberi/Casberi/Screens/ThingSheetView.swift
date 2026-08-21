@@ -482,7 +482,12 @@ struct ThingSheetView: View {
                         .padding(.horizontal, DS.Space.s4)
                         .padding(.top, DS.Space.s3)
                         .settleIn(delay: 0.06)
-                } else if let walletbeatShape {
+                } else if let l2beatShape {
+                l2beatHead(l2beatShape)
+                    .padding(.horizontal, DS.Space.s4)
+                    .padding(.top, DS.Space.s3)
+                    .settleIn(delay: 0.06)
+            } else if let walletbeatShape {
                 // REPLACES the title block, like the note and receipt arms below: a
                 // watched wallet's title is just the wallet's name, which its own report
                 // card says better, and an incident's title is set inside the anatomy at
@@ -559,7 +564,7 @@ struct ThingSheetView: View {
                 // the same URL on every order in the corpus.
                 let contentShown = moneyReceipt == nil && !framedShot
                     && socialShape != .person && noteShape == nil
-                    && walletbeatShape == nil
+                    && walletbeatShape == nil && l2beatShape == nil
                     && agentShape != .grant && purchaseReading == nil
                     && (isSocialPost || agentShape == .conversation
                     || (!linkOnlyBody && thing.kind != .event
@@ -1306,6 +1311,34 @@ struct ThingSheetView: View {
     /// a URL.
     private var walletbeatShape: WalletbeatSheet.Shape? {
         WalletbeatSheetSource.shape(for: thing)
+    }
+
+    /// Which L2BEAT anatomy this thing draws (prd §428). The same three records as
+    /// Walletbeat's room one layer down — a standing assessment, an event, and somebody
+    /// changing their reading — and the generic link sheet served all three alike.
+    private var l2beatShape: L2beatSheet.Shape? {
+        L2beatSheetSource.shape(for: thing)
+    }
+
+    /// The L2BEAT head each shape leads with, in place of the title block.
+    @ViewBuilder
+    private func l2beatHead(_ shape: L2beatSheet.Shape) -> some View {
+        switch shape {
+        case .chain:
+            // The risk card itself, not a link to a website.
+            if let chainID = L2beatWatch.chainID(from: thing) {
+                L2beatRiskCard(chainID: chainID,
+                               showsHeader: false,
+                               onDismissForAsk: { dismiss() })
+            }
+        case .milestone:
+            L2beatMilestoneHead(thing: thing)
+        case .revision:
+            if let (revision, project, risk) = L2beatSheetSource.revisionSubject(for: thing) {
+                L2beatRevisionHead(thing: thing, revision: revision,
+                                   project: project, risk: risk)
+            }
+        }
     }
 
     /// The Walletbeat head each shape leads with, in place of the title block.

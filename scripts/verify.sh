@@ -240,6 +240,19 @@ step "Walletbeat snapshot generator self-test"
   || fail "the Walletbeat snapshot generator's own self-test failed — the generator is broken, so the next regenerate would write a wrong directory"
 print -P "%F{green}✓ walletbeat snapshot generator self-test%f"
 
+# The L2BEAT bundle's GENERATOR, self-tested (prd §428). Pure and offline — it exercises the
+# distilling, the milestone parse and the Swift rendering against fixtures, so a change to
+# how the snapshot is built is caught here rather than at the next regeneration.
+#
+# Its `--check` (does the checked-in bundle still match what L2BEAT publishes) is NOT here
+# and must not be: that needs network, which would break this pass's deterministic contract
+# — the same line `live-integrations.sh` exists on the other side of. It runs there,
+# warn-only, and again at ship time.
+step "L2BEAT snapshot generator self-test"
+python3 "$ROOT/scripts/l2beat-snapshot.py" --self-test >/dev/null \
+  || fail "the L2BEAT snapshot generator's self-test failed — run scripts/l2beat-snapshot.py --self-test"
+print -P "%F{green}✓ l2beat snapshot generator%f"
+
 # The Themes treemap draws every tag it isn't told to exclude, so a bridge's own
 # state label ("Post", "Watchlist", "Pending") clusters as a THEME — and being
 # machine-stamped on every row it lands, it outnumbers any real subject by
@@ -892,6 +905,16 @@ harness "Radicle pure-logic self-test" "radicle self-test" "scripts/radicle-self
 # party's live TypeScript, and a field that stops parsing degrades to a row that is merely
 # less true rather than to an error anything can see.
 harness "Walletbeat pure-logic self-test" "walletbeat self-test" "scripts/walletbeat-selftest.sh" "the Walletbeat logic self-test failed — run scripts/walletbeat-selftest.sh"
+
+# L2BEAT (prd §428). Walletbeat's twin one layer down, and the failures it catches are the
+# same class wearing different words: a sentiment that silently defaults to good paints a
+# clean strip for a chain L2BEAT flagged, and a stage that sorts "not applicable" as a zero
+# turns a cited composite into an invented league table. Its sharpest guard is the SECOND
+# READING — thirteen risks publish a `regular` block beneath the headline one, Arbitrum's
+# exit window among them, and dropping it or merging it both render perfectly. The data is a
+# third party's live document served from an UNDOCUMENTED site endpoint (their documented
+# API is keyed), so nothing else in this tree can see any of it.
+harness "L2BEAT pure-logic self-test" "l2beat self-test" "scripts/l2beat-selftest.sh" "the L2BEAT logic self-test failed — run scripts/l2beat-selftest.sh"
 
 # CardPointers (prd §420). The wire was MEASURED once, on 2026-08-20, against a free
 # account — and that measurement corrected three things a careful reading of their CLI had
@@ -1560,6 +1583,8 @@ else
     radicleHead       "Radicle"
     cardPointersHead  "CardPointers"
     walletbeatHead    "Walletbeat"
+
+    l2beatHead        "L2BEAT"
   )
   MISSING_HEADS=()
   for name in "${(k)ROOM_HEADS[@]}"; do

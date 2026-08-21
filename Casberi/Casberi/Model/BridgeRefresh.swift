@@ -717,6 +717,12 @@ enum BridgeRefresh {
                 _ = await WalletbeatIngest.refresh(context: context)
             }
         }
+        if connected("l2beat") {
+            let s = slot(); Task { @MainActor in
+                await BridgeRefresh.stagger(s)
+                _ = await L2beatIngest.refresh(context: context)
+            }
+        }
         // CardPointers (prd §420). Gated on the SUBSCRIPTION as well as the
         // seat: every tool there refuses an account without CardPointers+, so
         // a sweep for one is a guaranteed round trip to be told no, on every

@@ -642,7 +642,7 @@ struct FeedScreen: View {
 
     /// The shape a source takes when its chip is in force.
     private enum Shape {
-        case all, photos, wallet, calendar, gmail, chat, social, reminders, bookmarks, notes, you, music, media, tokens, bitrefill, oneclaw, snapchat, files, instagram, x, x402, appStoreConnect, cursor, walletbeat, plain
+        case all, photos, wallet, calendar, gmail, chat, social, reminders, bookmarks, notes, you, music, media, tokens, bitrefill, oneclaw, snapchat, files, instagram, x, x402, appStoreConnect, cursor, walletbeat, l2beat, plain
 
         /// Rooms whose lead is a GRID of pictures, and which therefore earn the
         /// wide content cap on a regular-width window (2026-08-17).
@@ -752,6 +752,9 @@ struct FeedScreen: View {
             // check F reads this switch to prove every shape has a seeded
             // source, and it resolves only three indirections by name.
             case "Walletbeat":          self = .walletbeat
+            // The LITERAL, for the same reason as `case "Walletbeat"` above —
+            // `demo-selftest.py`'s check F reads this switch by name.
+            case "L2BEAT":              self = .l2beat
             case "Reminders", "Todoist": self = .reminders
             // This case was written 2026-07-13 for a "Safari" bridge that
             // never shipped — Safari and Chrome exports merged into ONE
@@ -901,6 +904,17 @@ struct FeedScreen: View {
     /// corpus-wide walk this file's perf history warns about.
     private var walletbeatWatchedIDs: Set<String> {
         Set(visible.live.compactMap { WalletbeatWatch.walletID(from: $0) })
+    }
+
+    /// The chains the person said they use, for the L2BEAT room's milestone rows
+    /// (prd §428). Derived from the room's own rows rather than fetched — making
+    /// the watch a `Thing` is what makes that possible, and it means the marker
+    /// can never disagree with the watch rows sitting above it in the same feed.
+    ///
+    /// Scoped to that room by construction: the only caller is `shapedRow`'s
+    /// `.l2beat` case, so this walk costs nothing in any other room.
+    private var l2beatWatchedIDs: Set<String> {
+        Set(visible.live.compactMap { L2beatWatch.chainID(from: $0) })
     }
 
     private var visible: [Thing] {
@@ -2591,6 +2605,15 @@ struct FeedScreen: View {
                         // plus a second tap (prd §421).
                         route.path.append(.walletbeatDirectory)
                     }
+                case .l2beat(let room):
+                    L2beatRoomCard(room: room) { ref in
+                        openBySourceRef(ref, in: visible)
+                    } onBrowse: {
+                        // Pushed, not raised (§219 — Connect raises, Open pushes), and
+                        // straight to the directory rather than via the connect screen
+                        // (§234 — a browse is mounted by the room).
+                        route.path.append(.l2beatDirectory)
+                    }
                 case .github(let room):
                     GitHubRoomCard(room: room) { ref in
                         // The card names a real row, so this lands exactly —
@@ -2912,6 +2935,17 @@ struct FeedScreen: View {
             let rest = visible.live.filter { !WalletbeatWatch.isWatchRef($0.sourceRef) }
             if !watches.isEmpty {
                 groupedSections([(String(localized: "Your wallets"), watches)], nextEventID: nextEventID)
+            }
+            let days = chronoGroups(rest)
+            groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
+        case .l2beat:
+            // Your watched chains lead as standing assessments, then the timeline
+            // below in days. An assessment is not an event and must not be filed
+            // under the day it happened to be read; a milestone is, and is.
+            let watches = visible.live.filter { L2beatWatch.isChainRef($0.sourceRef) }
+            let rest = visible.live.filter { !L2beatWatch.isChainRef($0.sourceRef) }
+            if !watches.isEmpty {
+                groupedSections([(String(localized: "Your chains"), watches)], nextEventID: nextEventID)
             }
             let days = chronoGroups(rest)
             groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
@@ -4082,6 +4116,10 @@ struct FeedScreen: View {
         // person's own data at all, but somebody else's review of the software
         // they use. It reads stored ratings beside the landed rows.
         case walletbeat(WalletbeatRoom)
+        // L2BEAT (prd §428) — Walletbeat's twin one layer down: somebody else's
+        // review of the RAILS the person's money sits on, rather than of their
+        // own data. It reads stored assessments beside the landed rows.
+        case l2beat(L2beatRoom)
         // CardPointers (prd §420) — the offers on your cards, led by the one
         // that runs out soonest. The only head here whose subject is a
         // DEADLINE somebody else set.
@@ -4186,6 +4224,8 @@ struct FeedScreen: View {
             return CursorRoomSource.compose(things: visible).map { .cursor($0) }
         case WalletbeatRoomSource.source:
             return WalletbeatRoomSource.compose(things: visible).map { .walletbeat($0) }
+        case L2beatRoomSource.source:
+            return L2beatRoomSource.compose(things: visible).map { .l2beat($0) }
         case CardPointersRoomSource.source:
             return CardPointersRoomSource.compose(things: visible).map { .cardPointers($0) }
         case GitHubRoomSource.source:
@@ -6642,6 +6682,21 @@ struct FeedScreen: View {
                 } else {
                     WalletbeatNewsRow(thing: thing,
                                       watchedWallets: walletbeatWatchedIDs)
+                }
+            case .l2beat:
+                // Three shapes in one room: a watched chain is a standing assessment,
+                // a milestone and a revision are dated news, and our own note about
+                // the sync keeps its plain band the way every other room does.
+                if Corpus.isImportReceipt(thing) {
+                    BandRow(thing: thing,
+                            emphasized: thing.id == nextEventID,
+                            live: false,
+                            imageOnly: imageOnly,
+                            wideArt: wideArt)
+                } else if L2beatWatch.isChainRef(thing.sourceRef) {
+                    L2beatChainRow(thing: thing)
+                } else {
+                    L2beatNewsRow(thing: thing, watchedChains: l2beatWatchedIDs)
                 }
             case .bookmarks: ReadingRow(thing: thing)
             default:

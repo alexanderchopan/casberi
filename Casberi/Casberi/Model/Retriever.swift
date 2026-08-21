@@ -874,6 +874,17 @@ enum Retriever {
             // value is that it is curated (the `Photo` precedent, four rows up).
             (["security incidents", "incidents", "incident", "breaches", "breach", "vulnerabilities", "vulnerability"], "Incident"),
             (["rating changes", "revisions", "revision", "ratings", "rating"], "Rating"),
+            // The L2BEAT room's own halves (2026-08-21, prd §428). "Incident" and
+            // "Rating" above are SHARED with Walletbeat rather than re-listed — both
+            // rooms stamp the same two tags for the same two meanings, and a second
+            // entry mapping the same words to the same tag is a duplicate in a curated
+            // table (`mechanicalTags`' own "Photo" lesson).
+            //
+            // "Stage" without a qualifier is deliberately here: it is ordinary English,
+            // which is exactly what the gating rule exists for, and behind a named source
+            // it is the only word anybody would use for L2BEAT's rung.
+            (["milestones", "milestone", "upgrades", "upgrade", "launches", "launch"], "Milestone"),
+            (["stage changes", "stages", "stage"], "Stage"),
         ]
     }()
 

@@ -240,6 +240,12 @@ enum BridgeGlyph {
         // card is the neutral shape: it says an assessment exists, not how it
         // came out.
         case "walletbeat": return "list.clipboard"
+        // L2BEAT assesses the RAILS, so the glyph is the stack of them. A shield
+        // or a seal would read as "approved", which is a verdict this seat does
+        // not hold for 76 of the 105 chains it covers (§83); `list.clipboard` is
+        // taken by Walletbeat, whose job this most resembles, and reusing it
+        // would make two different registries indistinguishable in the strip.
+        case "l2beat": return "square.stack.3d.up"
         // The offers sitting unused on your cards — a reward, not a card. The
         // card glyphs are taken by the seats that ARE cards (Privacy, Apple
         // Wallet), and reusing one would file this beside them as a third card.

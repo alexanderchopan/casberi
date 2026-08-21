@@ -115,7 +115,7 @@ enum BridgeCatalog {
                 "Bluesky", "Nostr", "OpenSea", "Kalshi", "Shopify", "GeckoTerminal", "Deals",
                 "Circle x402",
                 "Open Food Facts", "Stocktwits", "Hugging Face", "Radicle", "npm", "PyPI", "Altana",
-                "Walletbeat"]
+                "Walletbeat", "L2BEAT"]
             if keyless.contains(name) { return "No account" }
             // Instagram and Snapchat were missed here when they landed
             // (2026-07-31) and TikTok would have been missed the same way:
@@ -461,6 +461,21 @@ enum BridgeCatalog {
                          "Each row opens to its live on-device chart",
                          "Fetched straight from the public API by \(DS.device)"],
               needsSetup: true),
+        // MARKETS, by user ruling (2026-08-21, prd §428). Not an obvious call and
+        // the alternative was named before it was made: L2BEAT reviews CHAINS, so
+        // Wallet — where Walletbeat sits reviewing wallet apps — is the other
+        // defensible home. Markets wins because this is a venue you go to in order
+        // to compare things before committing, which is what every other seat in
+        // this group is, while Wallet's seats are all lenses on money you already
+        // hold. It therefore has NO standalone chip: `CategoryFold` folds Markets
+        // at a floor of one, so it is a venue in that cluster's switcher (§423's
+        // ruling, which retired Walletbeat's own chip for the same reason).
+        Offer(name: "L2BEAT", tagline: "How safe the chains you use really are", group: "Markets", connectable: true,
+              summary: "L2BEAT assesses every Ethereum layer 2 on five questions — whether you can force a transaction in, what proves the chain's balances are real, and how long you'd have to get out if the rules changed.\n\nFollow them and the incidents they record arrive in your feed, for every chain they cover. Name the chains you use and each one's full assessment comes too, with their own stage rating.\n\nNo account, no key. Their judgments, never ours.",
+              features: ["L2BEAT's own reading of each risk, in their own words",
+                         "Their Stage 0/1/2 rating — cited, never computed here",
+                         "Incidents and upgrades arrive as they're recorded"],
+              needsSetup: true, added: day(2026, 8, 21)),
         Offer(name: "Circle x402", tagline: "The APIs that sell to agents",          group: "Markets",   connectable: true,
               summary: "The companies selling APIs to AI agents land in your feed — each with what it sells and what a call costs.\n\nFetched straight from Circle's public directory: no account, no key. Read-only — nothing here pays for a call.",
               needsSetup: true, added: day(2026, 8, 6)),

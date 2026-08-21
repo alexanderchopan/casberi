@@ -28617,3 +28617,195 @@ name grep, which kept passing once `standing()` introduced a second call site �
 that removes the read that GATES SIGNING survived. Both guards are anchored to `prepare`'s own
 call sites now. The standing rule, restated: **a guard must prove the condition is the whole
 condition, not that the words appear somewhere in the file.**
+
+## 428. L2BEAT — the rails your money sits on, reviewed by somebody independent (user: "in the same way we added walletbeat, could we add l2beat?", then "i imagine we would add it to markets", "full walletbeat parity", 2026-08-21)
+
+§419 gave the app a seat that reads what the SOFTWARE holding your money does. This is the
+same idea one layer down: what the RAILS underneath are made of. [L2BEAT](https://l2beat.com)
+assesses every Ethereum layer 2 on five questions — can you force a transaction in when the
+operator stops taking them, what stops the chain reporting a balance that isn't real, is the
+data published where anyone can rebuild your balance from it, how long would you have to get
+out if the rules changed, and can your funds still leave if the party posting state
+disappears — and publishes its own Stage 0/1/2 ladder over the answers.
+
+### 1. It is CHEAPER than Walletbeat, and the measurements say so
+
+The instinct was that L2BEAT is the bigger, more complex registry. Measured 2026-08-21, the
+opposite is true of the part this feature reads:
+
+| | Walletbeat (§419) | L2BEAT |
+|---|---|---|
+| Subjects | 32 wallets | **105** (89 L2, 16 L3) |
+| Rated axes per subject | ~25–29 attributes over 6 dimensions | **exactly 5, on 105 of 105** |
+| Coverage gaps | 16 of 32 under a quarter examined, two at zero | **none** |
+| Vocabulary | free-text attribute names | closed: 6/8/6/3/6 distinct values per axis |
+| Composite | they publish none | **they publish `stage`** |
+| Cost of the whole registry | ~342KB **per wallet** | **290KB for all 105, one request** |
+
+Three consequences, each of which deletes work §419 had to do.
+
+**THE COVERAGE GATE IS NOT PORTED, AND ITS ABSENCE IS A DECISION.** `WalletbeatCoverage`,
+its measured 0.7/0.3 floors, `showsShape` and the top two rungs of the lead ladder exist
+because most wallets are barely examined — a bar drawn from raw counts shows the wallet
+nobody has looked at as the cleanest on the screen. L2BEAT has no such hole, so a five-cell
+strip is honest for every chain with no gate in front of it. **If that ever stops being
+true — a project landing with fewer than five risks — the strip must gain a gate before it
+gains a cell**, and the harness asserts the invariant so the day it breaks is visible.
+
+**§419'S "NEVER INVENT A COMPOSITE" IS SATISFIED BY CITATION RATHER THAN REFUSAL.** L2BEAT
+publishes the ladder their whole methodology exists to produce, so the honest move is to
+show theirs and compute nothing. Measured: 76 Stage 0, 6 Stage 1, 4 Stage 2, 19 "Not
+applicable". `L2beatStage` is an enum rather than the raw string it could have been,
+because the three real rungs ORDER and "Not applicable" does not — **a chain L2BEAT excludes
+from the ladder is not a worse Stage 0**, and any code sorting on the raw string would place
+it as one. `rung` is `nil` there, never zero, and the directory sorts those chains LAST
+rather than beneath the bottom rung.
+
+**THE DIRECTORY BECOMES A REAL COMPARISON TABLE** — five fixed columns, 105 rows — which
+Walletbeat's ragged attribute sets could never support. §419 had to refuse every order but
+the alphabet and coverage; here "by stage" is THEIR order presented and "most flagged" is a
+count of THEIR calls, the same category of fact as §419's "most reviewed". There is still no
+"safest" sort, and the harness fails the build if one appears.
+
+### 2. Two traps measured before a line was written, both of which render perfectly
+
+**THE SECOND READING.** Thirteen risks carry a `regular` block and four a `warning` block
+beneath the headline one. Arbitrum — the most-watched chain on the list — is among them: its
+Exit Window is `value: "None", sentiment: bad` at the top with
+`regular: { value: "10d", sentiment: warning }` underneath. The top level is the EMERGENCY
+case (contracts are instantly upgradable); `regular` is the ordinary one (a non-emergency
+upgrade leaves you ten days). **Reading only the top level throws away the number an
+Arbitrum user actually wants; reading only `regular` states a reassurance L2BEAT explicitly
+did not make; merging them into one sentiment is us editing their call.** So both are kept
+and drawn one under the other, and the strip shows the headline verbatim.
+
+The one place the nested block wins is the LEAD — which of their sentences to say first.
+Measured, this changes the reading of exactly 2 of 525 risks, and one of them is
+`cartesi-prt-honeypot-v2`'s Exit Window: `neutral` at the top with **"the single hardcoded
+address can withdraw all funds"** one line down. Leading with something mild there is §419's
+Rabby failure exactly — a naive read handing back the opposite of what the people we cite
+actually said.
+
+**THE TWO IDENTIFIERS.** `id` is the project's own directory name in L2BEAT's repo, which
+the milestone read joins on; `slug` is the segment in their public URL. They differ for TEN
+of the 105 — `optimism`/`op-mainnet`, `zksync2`/`zksync-era`, `worldchain`/`world`,
+`roninnetwork`/`ronin-network` and six more. **Measured directly: joining the milestone walk
+on `slug` reads 226 milestones across 95 chains; joining on `id` reads 274 across 105.** The
+slug join loses 48 milestones and 4 incidents including all 21 of OP Mainnet's, and loses
+them SILENTLY — a chain with no config file at that path reads exactly like a chain with no
+milestones. Both identifiers are guarded, in both directions.
+
+Two smaller ones, both encoded: `"None"` is a VALUE, L2BEAT's own word for "there is no exit
+window", not an absence; and `l2beat.com/api/*` sits behind Cloudflare and answers
+`error code: 1015` to a burst — the fifth quick request in a row was refused — so the app
+makes ONE request per sweep and the generator paces every fetch.
+
+### 3. The door, stated as what it is
+
+The read is `l2beat.com/api/scaling/summary`: keyless, 290KB, all 105 projects with stage,
+category, `isUnderReview` and all five risks. **It is their SITE's own data endpoint, not
+their documented API** — `api.l2beat.com` answers 401 without a key, measured. So there is no
+contract behind this shape, which is the one real weakness in the bridge and is named in the
+source, in `NetworkReach`'s own comment, and in `live-integrations.sh`, which asserts the
+three fields the whole room rests on (`projects`, `stage`, `risks[].sentiment`) nightly. A
+rename empties the room silently otherwise.
+
+Milestones are the §419 problem one product over: L2BEAT publishes machine-readable JSON for
+risk and NOTHING for the timeline. Their project pages render it and one of those pages is
+4.5MB, so a scrape per chain is not a read this app can make. The source of truth is the
+`milestones:` array in `packages/config/src/projects/<id>/<id>.ts` — a flat object literal,
+the X-archive precedent, parsed by field with every field failing safe to nil.
+
+### 4. Two tiers, and the split is a measurement
+
+FOLLOWING is free and brings L2BEAT's recorded INCIDENTS, for every chain they cover.
+WATCHING a chain adds its risk card, its whole timeline, and a revision row when L2BEAT
+changes one of its own readings. §421's shape, and here the tier line falls where the data
+does: **274 milestones, of which 33 are incidents and 193 are launches and upgrades**. So
+incidents are the ecosystem feed and general milestones are detail about a chain you named —
+a follower's feed of 274 launch notes would not be a security feed at all.
+
+The same split governs revisions, for the same reason: **a STAGE move lands for every chain
+and a risk revision only for a watched one.** 105 chains' worth of risk revisions in the feed
+of somebody who watches none is a firehose; a chain reaching Stage 1 is the single most
+reported thing this data produces.
+
+The bundled snapshot carries the 37 incidents (~8KB) and not the other 237 — measured, all
+274 is ~56KB of string literals in every shipped binary, which is §419's `whyItMatters`
+decision with the same answer. The complete RISK table IS bundled, and affordably, because
+525 risks carry only **110 distinct explanations** between them: L2BEAT writes one per
+reading and reuses it, so a dedup table takes 83KB of literals down to under 20KB. That is
+what lets the bundle be complete where §419's had to be counts-only.
+
+Between ship-time snapshots the incident feed is kept current by a ROTATING WALK: eight
+chains a pass, oldest-visited first, so the whole registry is re-read about every thirteen
+sweeps while any single sweep costs eight small file reads. Watched chains are always read
+and never wait their turn.
+
+### 5. No notification, and the absence is a decision
+
+Every instinct says an incident on a chain you watch belongs on the lock screen. **L2BEAT's
+milestone schema carries no severity and no status.** Their recorded incidents run from
+"Security Council patches a governance DoS, no funds at risk" to a bridge exploit draining
+116,500 rsETH, and there is nothing in the data separating them. Alarming on the class as a
+whole spends a lock-screen slot on a patch note; grading them ourselves is the §83 fake
+status in the one feature built to stop it. The row still arrives in the feed and the room
+head still ranks it first. **Revisit the day L2BEAT publishes a severity** — guarded as a
+negative grep so nobody adds one without reading this.
+
+### 6. Markets, by user ruling — and the alternative named before it was taken
+
+L2BEAT reviews CHAINS, so Wallet — where §423 put Walletbeat, reviewing wallet apps — is the
+other defensible home. Markets wins because this is a venue you go to in order to COMPARE
+things before committing, which is what every other seat in that group is, while Wallet's
+seats are all lenses on money you already hold. It therefore has **no standalone chip**:
+`CategoryFold` folds Markets at a floor of one, so it is a venue in that cluster's switcher —
+§423's ruling, which retired Walletbeat's own chip for exactly this reason.
+
+### 7. What was built, and what has not been measured
+
+`L2beatRating` (the five axes, their sentiment, their stage, the lead), `L2beatNews` (the
+milestone parse and its book), `L2beatSheet`/`L2beatSheetSource` (three anatomies),
+`L2beatBridge` (both tiers, the state, the sync), `L2beatRoom`/`L2beatRoomSource` (the head),
+and five screens. `scripts/l2beat-snapshot.py` generates the bundle and the 105 chain marks
+(their own 128px PNGs, 0.4–2.6KB each — snapshotted at ship time so **no image host joins
+`NetworkReach` for a picture**), with `--check` failing the build when the bundle is stale
+and 51 self-test cases of its own.
+
+The RISK CARD never re-sorts its five, and this is a deliberate divergence from §419: that
+card put a wallet's failures first inside each dimension, a defensible reading order over
+twenty-nine ragged attributes. Here there are five, the same five on every chain, and the
+strip beside every row paints them in this exact order — so a flagged-first card would break
+the one correspondence that lets somebody glance at a strip and know which question is red
+without reading a word.
+
+`scripts/l2beat-selftest.sh` compiles all four Foundation-only files plus the generated
+bundle WHOLE and unmodified — ~150 assertions, 25 mutations, ~60 drift guards. **It is not
+the best proof these numbers are right, it is the only one**: nothing on this host can make
+L2BEAT re-rate a chain or record an incident. It earned three corrections on its own first
+runs, all one shape — **a fixture only tests the rule it names if it FAILS that rule and
+passes every other one**: the nested-sentence mutation survived because both existing
+fixtures had either no nested sentence or a nested reading that never won; the field-anchor
+mutation survived because `sourceUrl` cannot collide with `url` at all (`range(of:)` is
+case-sensitive, and the capital U saves it) so `subtitle:`/`title:` had to replace it; and
+its own peek guard fired on `RoomFigure`'s comment explaining the rule, which is the
+comment-stripped-copy lesson for the fifth time and the first time in a guard written the
+same afternoon as the prose it tripped over.
+
+The parse itself was corrected twice by that harness before shipping: it accepted an EMPTY
+risk value (the emptiness check existed only in the Python generator), and it returned risks
+in the payload's order rather than ours — which matters because these are PERSISTED, so a
+reading decoded from disk months later must paint the same five cells in the same five places.
+
+**`network-reach-audit.sh` gained its first file-level exemption**, and it is guarded rather
+than trusted. The generated bundle holds L2BEAT's own citation URL for every incident —
+eleven third-party hosts, every one a page the person's browser opens on tap. Listing them by
+name would be a check that cries wolf, since the next regeneration brings a new set and turns
+the audit red at ship time for no reason. The file is excluded from the host scan and fails
+the audit outright if it ever gains a way to make a request; the bridge's own hosts live in
+`L2beatHost`, in a scanned file. Proven able to fail before it landed.
+
+**UNMEASURED**: no sweep has run against a device, so the ingest, the revision detection and
+the rotating walk have only ever run in the harness and in the reasoning. Every read fails
+safe — an unreachable summary leaves the bundle drawing, an unparseable milestone is skipped,
+an unknown sentiment reads `unknown` and never `good`.

@@ -84,6 +84,26 @@ enum RoomFigure {
                                            detail: "\($0.counts.judged)/\($0.counts.applicable)")
                         }))
         }
+        // L2BEAT is the fourth exception, for Walletbeat's exact reason (prd §428):
+        // its head is a FIGURE, so leaving it out makes the peek preview NOTHING — the
+        // room has no topic map, no leaderboard and no heatmap registry entry.
+        //
+        // THE VALUE IS HOW MANY OF THE FIVE L2BEAT FLAGS, and the `detail` says the
+        // fraction out loud. Deliberately NOT the stage rung: a bar chart of rungs is a
+        // league table of chains, which is the one reading this feature refuses to draw
+        // — and at tile scale, with no legend, a taller bar reads as better rather than
+        // as "more was flagged".
+        if source == L2beatRoomSource.source,
+           let room = L2beatRoomSource.compose(things: things) {
+            let rows = room.items.prefix(4)
+            guard !rows.isEmpty else { return nil }
+            return card(L2beatRoom.headline(room),
+                        L2beatRoom.note(room),
+                        .bars(rows.map {
+                            AgentPanel.Bar(label: $0.name, value: $0.flagged,
+                                           detail: "\($0.flagged)/\($0.risks.count)")
+                        }))
+        }
         if let map = FeedInsight.topicMap(source: source, things: things) {
             // Four rows, not six: the inventory of small forms is explicit that
             // a six-cell map's last slot is one grid unit wide and its label

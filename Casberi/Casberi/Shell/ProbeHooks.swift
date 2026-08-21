@@ -1143,6 +1143,125 @@ enum ProbeHooks {
                       shape?.rawValue ?? "generic", thing.title.prefix(46).description, detail)
             }
         },
+        // `-l2beatFollow YES|NO` — the free tier, headless (prd §428).
+        //
+        // Declared BEFORE the probes (hooks run in list order) so a run can follow and
+        // then read in one launch. It exists because following with NOTHING watched is
+        // the state that could not be reached any other way here: the connect screen's
+        // button is the only door, and no simulator run taps it.
+        Hook(key: "l2beatFollow") { value, context in
+            let on = value.uppercased() != "NO"
+            L2beatWatch.following = on
+            Task { @MainActor in
+                let added = on ? await L2beatIngest.refresh(context: context) : nil
+                NSLog("[Casberi] l2beatFollow| following=%@ watched=%d landed=%@",
+                      on ? "YES" : "NO",
+                      L2beatWatch.watchedIDs(context: context).count,
+                      added.map(String.init) ?? (on ? "UNREACHABLE" : "-"))
+            }
+        },
+        // `-l2beatWatch "<id[,id]>"` — watch chains headlessly, by L2BEAT's own project
+        // id (`arbitrum`, `zksync2`, `optimism` — the REPO id, not the URL slug; those
+        // differ for ten of the 105 and the probe says so when an id misses).
+        //
+        // Resolved against the bundled directory, so it needs no network and works on a
+        // device that has never synced.
+        Hook(key: "l2beatWatch") { value, context in
+            var watched: [String] = []
+            var missed: [String] = []
+            for raw in value.split(separator: ",") {
+                let id = raw.trimmingCharacters(in: .whitespaces)
+                guard !id.isEmpty else { continue }
+                guard let project = L2beatState.best(id) else { missed.append(id); continue }
+                if L2beatWatch.add(project, context: context) != nil { watched.append(id) }
+            }
+            NSLog("[Casberi] l2beatWatch| added=%@ alreadyOrMissing=%@ watching=%d",
+                  watched.joined(separator: ",").isEmpty ? "-" : watched.joined(separator: ","),
+                  missed.joined(separator: ",").isEmpty ? "-" : missed.joined(separator: ","),
+                  L2beatWatch.watchedIDs(context: context).count)
+        },
+        // `-l2beatProbe YES` — the read phase by phase, then one line per watched chain
+        // and the milestone walk's own targets.
+        //
+        // An empty room has five causes that render as one silence (nothing watched and
+        // nothing followed, a first sync still in flight, an assessment that failed to
+        // decode, an unreachable host, a chain that left L2BEAT's registry) and only two
+        // are bugs. One NSLog per line, the `-todayProbe` truncation lesson.
+        Hook(key: "l2beatProbe") { _, context in
+            Task { @MainActor in
+                for line in L2beatRoomSource.probeLines(context: context) {
+                    NSLog("[Casberi] l2beat| %@", line)
+                }
+                let watched = L2beatWatch.watchedIDs(context: context)
+                let targets = L2beatIngest.milestoneTargets(watched: watched)
+                NSLog("[Casberi] l2beat| milestoneTargets=%d [%@]",
+                      targets.count, targets.prefix(12).joined(separator: ","))
+                let fresh = await L2beatFetch.summary()
+                NSLog("[Casberi] l2beat| summary=%@",
+                      fresh.isEmpty ? "UNREACHABLE" : "\(fresh.count) projects")
+                for id in watched {
+                    guard let live = fresh.first(where: { $0.id == id }) else {
+                        NSLog("[Casberi] l2beatLive| %@ — NOT IN L2BEAT'S SUMMARY", id)
+                        continue
+                    }
+                    NSLog("[Casberi] l2beatLive| %@ stage=%@ review=%@ flagged=%d/%d",
+                          live.name, live.stage?.rawValue ?? "-",
+                          live.underReview ? "YES" : "no", live.flagged, live.risks.count)
+                }
+            }
+        },
+        // `-l2beatRoomProbe YES` — the head alone, no network.
+        Hook(key: "l2beatRoomProbe") { _, context in
+            for line in L2beatRoomSource.probeLines(context: context) {
+                NSLog("[Casberi] l2beatRoom| %@", line)
+            }
+        },
+        // `-l2beatSheetProbe YES` — which anatomy each landed row's sheet draws, and
+        // whether the facts behind it are actually there (prd §428).
+        //
+        // It exists because a sheet falling back to the GENERIC anatomy looks like a
+        // deliberate design rather than a bug: a title, a link and some tags is a
+        // perfectly plausible screen. The two ways it happens are a ref namespace that
+        // stopped matching (§311's silent-quiet class) and a milestone whose facts were
+        // never recorded, and only the second is visible from the row itself.
+        Hook(key: "l2beatSheetProbe") { _, context in
+            let rows = ((try? context.fetch(FetchDescriptor<Thing>(
+                predicate: #Predicate<Thing> { $0.source == "L2BEAT" },
+                sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]))) ?? []).live
+            let book = L2beatMilestoneBook.all()
+            NSLog("[Casberi] l2beatSheet| rows=%d milestoneBook=%d assessments=%d",
+                  rows.count, book.count, L2beatState.projects().count)
+            for thing in rows.prefix(30) {
+                let shape = L2beatSheetSource.shape(for: thing)
+                var detail = "—"
+                switch shape {
+                case .chain:
+                    let id = L2beatWatch.chainID(from: thing) ?? "?"
+                    let read = L2beatState.project(id) != nil
+                        ? "live" : (L2beatDirectory.project(id) != nil ? "bundled" : "NONE")
+                    detail = "assessment=\(read)"
+                case .milestone:
+                    if let facts = L2beatMilestoneBook.facts(ref: thing.sourceRef) {
+                        detail = "kind=\(facts.kind.rawValue) chain=\(facts.projectID) url=\(facts.url != nil)"
+                    } else {
+                        detail = "NO FACTS — the sheet falls back to prose only"
+                    }
+                case .revision:
+                    if let (rev, project, risk) = L2beatSheetSource.revisionSubject(for: thing) {
+                        let subject = rev.isStageMove
+                            ? "stage→\(rev.afterStage?.rawValue ?? "?")"
+                            : "\(rev.axis?.rawValue ?? "?")→\(rev.afterSentiment?.rawValue ?? "?")"
+                        detail = "\(rev.projectID).\(subject) named=\(project != nil) risk=\(risk != nil)"
+                    } else {
+                        detail = "REF UNPARSED — the sheet falls back to generic"
+                    }
+                case .none:
+                    detail = "GENERIC (import receipt, or a ref no namespace matches)"
+                }
+                NSLog("[Casberi] l2beatSheet| %@ · %@ · %@",
+                      shape?.rawValue ?? "generic", thing.title.prefix(46).description, detail)
+            }
+        },
         // `-widgetProbe YES` — everything the Home Screen would draw this
         // launch (prd §382).
         //
@@ -4407,6 +4526,10 @@ enum ProbeHooks {
                 note("walletbeatHead", source == WalletbeatRoomSource.source
                      ? WalletbeatRoomSource.compose(things: things).map {
                         "\(WalletbeatRoom.headline($0)) · \($0.items.count) wallets"
+                     } : nil)
+                note("l2beatHead", source == L2beatRoomSource.source
+                     ? L2beatRoomSource.compose(things: things).map {
+                        "\(L2beatRoom.headline($0)) · \($0.items.count) chains"
                      } : nil)
                 note("cardPointersHead", source == CardPointersRoomSource.source
                      ? CardPointersRoomSource.compose(things: things).map {

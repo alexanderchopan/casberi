@@ -130,6 +130,13 @@ enum HomeComposition {
         // somebody's corpus can be about, and the themes map is right to draw it.
         "Software", "Hardware",                       // which kind of wallet
         "Vulnerability", "Data breach", "Unresolved", // which kind of incident, and its state
+        // L2BEAT (prd §428). Same principle: what a row IS, never what it is about.
+        // The chain NAMES this room also stamps are deliberately absent — "Base" really
+        // is a subject somebody's corpus can be about, and the themes map is right to
+        // draw it. "Incident" is already above, from Walletbeat's own entry.
+        "Layer 2", "Layer 3",                         // which layer a chain sits on
+        "Stage 0", "Stage 1", "Stage 2",              // L2BEAT's own rung, not a subject
+        "Milestone", "Stage",                         // which kind of record
         ])
     }()
 

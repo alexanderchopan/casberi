@@ -462,6 +462,8 @@ struct MainSurface: View {
             ProjectDetailScreen(projectName: name)
         case .walletbeatDirectory:
             WalletbeatDirectoryScreen()
+        case .l2beatDirectory:
+            L2beatDirectoryScreen()
         case .startHere:
             // Reached after leaving the demo, so "finishing" is a pop
             // rather than the end of onboarding — a non-nil node still

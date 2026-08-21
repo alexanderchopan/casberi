@@ -156,11 +156,36 @@ KNOWN_NON_REACH=(
   t.co
 )
 
+# A GENERATED CITATION TABLE is excluded from the scan, and this is the one file-level
+# exemption here (prd §428).
+#
+# `L2beatDirectory.swift` is written by `scripts/l2beat-snapshot.py` and holds L2BEAT's own
+# `url` for every incident they have recorded — measured 2026-08-21, eleven third-party
+# hosts (`forum.arbitrum.foundation`, `status.base.org`, `zksync.mirror.xyz`, …), every one
+# of them a page the PERSON's browser opens on tap, never a request this app makes. They
+# belong in KNOWN_NON_REACH by category, and listing them by name would be a check that
+# cries wolf: the next snapshot regeneration brings a new set and turns this audit red at
+# ship time for no reason at all.
+#
+# The exemption is GUARDED rather than trusted. The file is data by construction — the
+# generator emits struct literals and nothing else — so it fails the audit outright if it
+# ever gains a way to make a request. The bridge's OWN hosts live in `L2beatHost`, in a
+# different file, which is scanned normally.
+GENERATED_CITATIONS="L2beatDirectory.swift"
+if [[ -f "Casberi/Casberi/Model/$GENERATED_CITATIONS" ]] \
+   && grep -qE "URLSession|IngestSupport|getJSON|getText|dataTask|URLRequest" \
+      "Casberi/Casberi/Model/$GENERATED_CITATIONS"; then
+  echo "network-reach-audit: ✗ $GENERATED_CITATIONS makes a request."
+  echo "  It is excluded from the host scan on the promise that it is data only."
+  exit 1
+fi
+
 # Every host literal the app references (app + shared sources), minus our own
 # domain and localhost. Excludes the registry file itself. (bash 3.2-portable —
 # no mapfile; macOS ships the old bash.)
 HOSTS=$(
   grep -rohE "https://[a-zA-Z0-9.-]+" --include="*.swift" \
+    --exclude="$GENERATED_CITATIONS" \
     Casberi/Casberi Casberi/Shared \
     | sed 's|https://||' \
     | grep -viE "casberi\.app|localhost|127\.0\.0\.1|w3\.org|apple\.com/DTD" \

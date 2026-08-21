@@ -37,6 +37,11 @@ enum BridgeRouter {
         /// moment the first watched wallet registered the seat — and the first wallet
         /// almost always wants a second (prd §419).
         case walletbeat
+        /// L2BEAT, for Walletbeat's exact reason (prd §428): keyless, with a WATCH
+        /// LIST on screen, so as `.token` it would inherit `finishesOnConnect == true`
+        /// and the raised sheet would dismiss itself the moment the first watched
+        /// chain registered the seat — and the first chain almost always wants a second.
+        case l2beat
         /// CardPointers (prd §420) — its own destination rather than `.token`
         /// because there is no token to paste: sign-in is a device flow, and
         /// the screen has a real state between "signed in" and "connected"
@@ -279,6 +284,7 @@ enum BridgeRouter {
             case .openSea:        "opensea"
             case .geckoTerminal:  "geckoterminal"
             case .walletbeat:     "walletbeat"
+            case .l2beat:         "l2beat"
             case .cardPointers:   "cardpointers"
             case .circleX402:     "x402"
             case .huggingFace:    "huggingface"
@@ -393,6 +399,7 @@ enum BridgeRouter {
         Row(offer: "OpenSea",    id: "opensea",    destination: .openSea),
         Row(offer: "GeckoTerminal", id: "geckoterminal", destination: .geckoTerminal),
         Row(offer: "Walletbeat", id: "walletbeat", destination: .walletbeat),
+        Row(offer: "L2BEAT",     id: "l2beat",     destination: .l2beat),
         Row(offer: "CardPointers", id: "cardpointers", destination: .cardPointers),
         Row(offer: "Circle x402", id: "x402", destination: .circleX402),
         Row(offer: "Hugging Face", id: "huggingface", destination: .huggingFace),
@@ -493,6 +500,7 @@ struct BridgeDestinationView: View {
         case .openSea:        OpenSeaScreen()
         case .geckoTerminal:  GeckoTerminalScreen()
         case .walletbeat:     WalletbeatScreen()
+        case .l2beat:         L2beatScreen()
         case .cardPointers:   CardPointersScreen()
         case .circleX402:     CircleX402Screen()
         case .huggingFace:    HuggingFaceScreen()

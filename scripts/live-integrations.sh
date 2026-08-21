@@ -448,6 +448,91 @@ else
 fi
 
 hr
+# ---------------------------------------------------------------------------
+# L2BEAT (prd §428) — the one bridge here whose read has NO CONTRACT behind it.
+#
+# `l2beat.com/api/*` is their SITE's own data endpoint, undocumented and
+# unversioned; their documented API (`api.l2beat.com`) answers 401 without a
+# key. Three single fields carry the whole room, and a rename to any of them
+# empties it SILENTLY — a room with no chains and a room whose parse stopped
+# matching render identically. Nothing else in this tree can see that.
+# ---------------------------------------------------------------------------
+print -P "%F{244}L2BEAT — the undocumented site endpoint the room rests on%f"
+L2B=$(curl -s --max-time 30 "https://l2beat.com/api/scaling/summary" 2>/dev/null)
+if [[ -z "$L2B" ]]; then
+  fail "L2BEAT — the summary endpoint is unreachable"
+else
+  # 1. The envelope. No `projects` key and the directory reads as empty.
+  n=$(print -r -- "$L2B" | python3 -c '
+import json,sys
+try: d=json.load(sys.stdin)
+except Exception: print(-1); raise SystemExit
+p=d.get("projects")
+print(len(p) if isinstance(p,dict) else -1)' 2>/dev/null)
+  if [[ "$n" == "-1" || -z "$n" ]]; then
+    fail "L2BEAT — no \`projects\` map in the summary; the site API's shape changed"
+  elif (( n < 50 )); then
+    warn "L2BEAT — only $n projects (105 measured 2026-08-21); the walk may be truncating"
+  else
+    pass "L2BEAT — $n projects in one keyless request"
+  fi
+  # 2. The stage, which is the one composite this feature is allowed to show.
+  # 3. The five axes and their sentiment, which is the whole strip.
+  shape=$(print -r -- "$L2B" | python3 -c '
+import json,sys,collections
+d=json.load(sys.stdin); p=d.get("projects") or {}
+staged=sum(1 for v in p.values() if v.get("stage"))
+five=sum(1 for v in p.values() if len(v.get("risks") or [])==5)
+axes={r["name"] for v in p.values() for r in (v.get("risks") or [])}
+sent={r.get("sentiment") for v in p.values() for r in (v.get("risks") or [])}
+want={"Sequencer Failure","State Validation","Data Availability","Exit Window","Proposer Failure"}
+print(staged, five, int(want <= axes), "|".join(sorted(s for s in sent if s not in ("good","warning","bad","neutral"))))' 2>/dev/null)
+  staged=${shape%% *}; rest=${shape#* }; five=${rest%% *}; rest2=${rest#* }
+  hasaxes=${rest2%% *}; oddsent=${rest2#* }
+  if [[ "$staged" == "0" || -z "$staged" ]]; then
+    fail "L2BEAT — no project carries a \`stage\`; the ladder this room cites is gone"
+  else
+    pass "L2BEAT — $staged projects still carry a stage"
+  fi
+  if [[ "$hasaxes" != "1" ]]; then
+    fail "L2BEAT — one of the five risk axes was renamed; the strip drops a cell silently"
+  else
+    pass "L2BEAT — all five risk axes still named as the app matches them"
+  fi
+  if [[ "$five" != "$n" ]]; then
+    # Not fatal: a project with fewer than five is still a real chain and still
+    # lands. But the five-cell strip is drawn WITHOUT a coverage gate on the
+    # measured fact that every project has five, so this is the day that gets
+    # revisited (see §428's own note).
+    warn "L2BEAT — $five of $n projects carry all five risks; the strip's no-gate assumption is weakening"
+  else
+    pass "L2BEAT — every project still carries all five risks"
+  fi
+  if [[ -n "$oddsent" && "$oddsent" != " " ]]; then
+    warn "L2BEAT — unrecognised sentiment(s): $oddsent (they read as 'not read', never as good)"
+  fi
+  # 4. Is the BUNDLED snapshot still what L2BEAT publishes? Warn-only and here
+  #    rather than in `verify.sh`, which is all-local by contract. A stale
+  #    bundle is not a bug — it is exactly as current as the last ship, and the
+  #    room says so — but it is the signal to regenerate before cutting a build.
+  if python3 scripts/l2beat-snapshot.py --check >/dev/null 2>&1; then
+    pass "L2BEAT — the bundled directory still matches what they publish"
+  else
+    warn "L2BEAT — the bundled directory is STALE; run scripts/l2beat-snapshot.py before shipping"
+  fi
+  # 5. The milestone door, joined on the REPO ID and not the slug — the ten
+  #    divergent projects are why (§428). OP Mainnet is one of them, so it is
+  #    the right canary: if this 404s, the join has been flipped back.
+  code=$(curl -s -o /dev/null -w '%{http_code}' --max-time "$TIMEOUT" \
+    "https://raw.githubusercontent.com/l2beat/l2beat/main/packages/config/src/projects/optimism/optimism.ts" 2>/dev/null)
+  if [[ "$code" == "200" ]]; then
+    pass "L2BEAT — the milestone file resolves by repo id (optimism, whose slug is op-mainnet)"
+  else
+    fail "L2BEAT — the milestone file for OP Mainnet answered http $code; the repo layout moved"
+  fi
+fi
+
+hr
 if (( RED == 0 && AMBER == 0 )); then
   print -P "%F{green}All live-integration hosts healthy.%f"
 elif (( RED == 0 )); then

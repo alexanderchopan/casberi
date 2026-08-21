@@ -71,6 +71,10 @@ final class HomeRoute {
         /// catalog and a second tap. The connect screen keeps its own link, which is the
         /// naming step rather than a browse.
         case walletbeatDirectory
+        /// L2BEAT's full directory (prd §428) — its own node for the same reason
+        /// Walletbeat's has one: §234's ruling that a browse belongs at the head of the
+        /// room, never behind the setup screen.
+        case l2beatDirectory
     }
     var path: [Node] = []
 

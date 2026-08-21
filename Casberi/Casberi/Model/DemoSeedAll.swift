@@ -132,6 +132,12 @@ enum DemoSeedAll {
                               // to no directory entry and draw as unrated.
                               "walletbeat:wallet:", "walletbeat:news:",
                               "walletbeat:rev:",
+                              // L2BEAT (prd §428) carries the REAL ref shapes for
+                              // Walletbeat's exact reason above — the room head joins
+                              // a watch to its assessment by the project id inside the
+                              // ref, so a "demo" segment would make every seeded chain
+                              // resolve to no directory entry and draw as unassessed.
+                              "l2beat:chain:", "l2beat:news:", "l2beat:rev:",
                               // The two PostHog WATCH rows (2026-08-10) carry
                               // the real `PostHogWatch.metricRef` shape for
                               // the same reason — no "demo" segment is
@@ -416,6 +422,11 @@ enum DemoSeedAll {
         // wallets for real through this same store.
         WalletbeatState.forgetDemo(demoWalletbeatIDs)
         WalletbeatIncidentBook.forgetDemo(demoWalletbeatSlugs)
+        // BY NAME (prd §401), same reasoning. `L2beatState` is deliberately NOT
+        // touched: the demo seeds no assessment into it — the bundled directory
+        // already answers for every chain, which is exactly what a device that
+        // has never synced sees, so the demo shows the real first-run state.
+        L2beatMilestoneBook.forgetDemo(demoL2beatKeys)
         SafeBridge.clearDemoSnapshot()
         forgetAddressBook()
         // The watched social accounts, by HANDLE — never a blanket wipe, since
@@ -698,6 +709,126 @@ enum DemoSeedAll {
         "trezor-shipmonk-data-breach",
     ]
 
+    // MARK: - L2BEAT (prd §428)
+
+    /// The chains the demo says you use.
+    ///
+    /// Read from the SNAPSHOT's own list rather than re-spelled here, so the demo and the
+    /// generator can never disagree about which three the bundle was built around.
+    /// `scripts/l2beat-snapshot.py` picks them to exercise the range rather than to
+    /// flatter the card: one on a higher rung, one at the bottom with a flagged sequencer,
+    /// and Arbitrum because its exit window is the measured second-reading case.
+    static var demoL2beatIDs: [String] { L2beatDirectory.demoChains }
+
+    /// How many of L2BEAT's recorded incidents the demo lands.
+    ///
+    /// Six, which at the time of writing reaches back about three months — far enough that
+    /// the room's 90-day window has something in it AND something outside it, which is the
+    /// pair the head's two branches need to be worth demoing.
+    private static let demoL2beatIncidentCount = 6
+
+    /// The incidents the demo lands: the newest few across the whole registry, plus the
+    /// newest for each watched chain so the risk card's "On record" section is not empty.
+    ///
+    /// DERIVED FROM THE BUNDLE, never hand-written — the rule the Walletbeat demo lead
+    /// already follows, and stronger here because these are real companies and real
+    /// outages. Their REAL dates are kept too, so the timeline is the one the feature
+    /// actually produces rather than three rows invented to look recent.
+    private static var demoL2beatMilestones: [L2beatMilestone] {
+        let all = L2beatDirectory.seededIncidents
+        var picked = Array(all.prefix(demoL2beatIncidentCount))
+        var seen = Set(picked.map(\.ref))
+        for id in demoL2beatIDs {
+            guard let hit = all.first(where: { $0.projectID == id }),
+                  seen.insert(hit.ref).inserted
+            else { continue }
+            picked.append(hit)
+        }
+        return picked
+    }
+
+    /// The keys this demo plants in `L2beatMilestoneBook`, so the teardown can take
+    /// exactly those and leave a dev install's real milestones alone (§401).
+    static var demoL2beatKeys: [String] {
+        demoL2beatMilestones.map { String($0.ref.dropFirst(L2beatIdentity.newsPrefix.count)) }
+    }
+
+    private static func l2beat() -> [Thing] {
+        var out: [Thing] = []
+
+        out += demoL2beatIDs.compactMap { id -> Thing? in
+            guard let project = L2beatDirectory.project(id) else { return nil }
+            var tags = ["Watchlist", project.layer.label]
+            if let stage = project.stage, stage != .notApplicable { tags.append(stage.label) }
+            return row(.link, project.name, source: "L2BEAT",
+                       ref: L2beatWatch.chainRef(id),
+                       days: 0.0, hour: 9,
+                       content: project.pageURL?.absoluteString ?? "",
+                       tags: tags) { thing in
+                thing.authorHandle = id
+                // DERIVED from the bundled assessment, never hand-written — the same rule
+                // the Walletbeat demo lead follows, and for the same reason: a fabricated
+                // finding attributed to a real chain, inside the one feature built to stop
+                // exactly that (§83). Deriving it also keeps the row and the risk card
+                // naming the same finding, which hand-written copy cannot promise.
+                if case .finding(let risk) = project.lead, !risk.worstExplanation.isEmpty {
+                    thing.summary = risk.worstExplanation
+                }
+            }
+        }
+
+        // REAL incidents at their REAL dates, derived from the bundle. Nothing here is
+        // invented, so the demo cannot claim an outage a named chain did not have.
+        for milestone in demoL2beatMilestones {
+            let project = L2beatDirectory.project(milestone.projectID)
+            var tags = [L2beatMilestoneKind.incident.label]
+            if let project { tags.append(project.name) }
+            let daysAgo = max(Date.now.timeIntervalSince(milestone.date) / 86_400, 0)
+            out.append(
+                row(.link, L2beatIngest.milestoneTitle(milestone, project: project),
+                    source: "L2BEAT", ref: milestone.ref,
+                    days: daysAgo, hour: 13,
+                    content: milestone.url ?? project?.pageURL?.absoluteString ?? "",
+                    tags: tags) { thing in
+                    thing.authorHandle = milestone.projectID
+                    thing.summary = milestone.summary
+                    thing.externalLink = project?.pageURL?.absoluteString
+                })
+        }
+
+        // The MILESTONE BOOK, so the sheet's fact card and the directory's incident flag
+        // read a store that is actually populated — the gap §422 found in Walletbeat's own
+        // demo, closed here on the first pass rather than three days later.
+        seedL2beatMilestones()
+
+        // A stage move, so the third row shape in this room is demoed too — and the one
+        // that is the whole reason to follow this registry. REAL: Base really did reach
+        // Stage 1, which is why the bundled snapshot has it there.
+        if let base = L2beatDirectory.project("base"), let stage = base.stage {
+            let day = "2026-08-19"
+            out.append(
+                row(.link, L2beatIngest.revisionTitle(
+                        project: base, change: .stage(before: .stage0, after: stage)),
+                    source: "L2BEAT",
+                    ref: "\(L2beatIdentity.revisionPrefix)base:\(L2beatSheet.stageSubject):\(L2beatSheet.token(for: stage)):\(day)",
+                    days: 2.0, hour: 10,
+                    content: base.pageURL?.absoluteString ?? "",
+                    tags: ["Rating", "Stage"]) { thing in
+                    thing.authorHandle = "base"
+                    thing.summary = stage.meaning
+                })
+        }
+
+        return out
+    }
+
+    private static func seedL2beatMilestones() {
+        for milestone in demoL2beatMilestones {
+            L2beatMilestoneBook.record(
+                milestone, projectName: L2beatDirectory.project(milestone.projectID)?.name)
+        }
+    }
+
     private static func seedWalletbeatIncidents() {
         // Severities match the ROW TITLES above and cannot drift from them by
         // accident: `WalletbeatIngest.incidentTitle` prefixes "Serious · " at
@@ -757,6 +888,7 @@ enum DemoSeedAll {
         out += markets()
         out += walletRoom()
         out += walletbeat()
+        out += l2beat()
         out += cardPointers()
         out += appleWallet()
         out += cards()
@@ -4138,6 +4270,7 @@ enum DemoSeedAll {
         ("Cursor", "Synced 1h ago", "Reads cloud agents that finished."),
         ("Radicle", "1 repo", "Reads patches and issues, keyless."),
         ("Walletbeat", "3 wallets", "Reads public wallet reviews, keyless."),
+        ("L2BEAT", "3 chains", "Reads public layer-2 risk reviews, keyless."),
         ("Sentry", "Synced 20m ago", "Reads what broke."),
         ("Vercel", "Synced 12m ago", "Reads what deployed."),
         ("PagerDuty", "Synced 1h ago", "Reads what paged you."),

@@ -223,6 +223,20 @@ enum NetworkReach {
                  reach: .whenConnected(bridge: "walletbeat"),
                  purpose: "Reads Walletbeat's public review of each wallet app you name, and their published list of wallet security incidents. Carries only the name of the wallet being read; there is no account and no key, so nothing identifies you.",
                  hosts: ["beta.walletbeat.eth.limo", "raw.githubusercontent.com"]),
+        // L2BEAT (prd §428). Two hosts and no third: their risk assessment is
+        // published as JSON on their own site, and the milestones live only in
+        // their public repo, so those are read straight from raw file storage.
+        // There is deliberately NO GitHub API host — the file for a project is
+        // at a path derived from its own id, so the walk is plain file reads
+        // rather than an API call with a rate limit.
+        //
+        // NOTE `l2beat.com` is their SITE's own data endpoint, not the
+        // documented API: measured 2026-08-21, `api.l2beat.com` answers 401
+        // without a key. Disclosed as what it is.
+        Endpoint(service: "L2BEAT",
+                 reach: .whenConnected(bridge: "l2beat"),
+                 purpose: "Reads L2BEAT's public risk assessment of every chain they cover, and the incidents they have recorded. Carries nothing about you — not even which chains you watch, since one request returns them all; there is no account and no key.",
+                 hosts: ["l2beat.com", "raw.githubusercontent.com"]),
         // CardPointers (prd §420). ONE host, and it covers the sign-in too —
         // the device flow reads as "plain REST outside MCP", which invites the
         // assumption it lives on their marketing domain; measured 2026-08-20,

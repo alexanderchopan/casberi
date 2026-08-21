@@ -120,6 +120,14 @@ extension DS {
         // seat shipped with for an afternoon, and the hue is theirs rather than
         // a purple picked to look distinct from the Wallet group's blue.
         case "walletbeat":          return Color.fixed("#f96681")
+        // L2BEAT's own heart, taken from their site icon (`static/icon.svg`,
+        // `.heart { fill: #f9347b }`; their dark-mode variant is `#bd114f`).
+        // Uncomfortably close to Walletbeat's coral above and kept anyway: both
+        // are the registry's REAL brand colour, and picking a different hue to
+        // separate two seats is the invented-brand-colour move `AssetMark`
+        // refuses. They never sit adjacent — one is a Wallet venue and this is a
+        // Markets one — and the marks themselves are nothing alike.
+        case "l2beat":              return Color.fixed("#f9347b")
 
         // Circle's mark is a logo-on-white lockup (the PostHog/Hugging Face
         // shape), so the brand is the mark, not the field — and the mark is a
