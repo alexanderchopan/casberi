@@ -2054,6 +2054,34 @@
         }
       }
     },
+    "%@ doesn't report what a key has spent, so there's no limit to set here — the counts above are what we can measure.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@ no informa de lo que ha gastado una clave, así que aquí no hay ningún límite que fijar: los recuentos de arriba son lo que podemos medir."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@ はキーの使用額を報告しないため、ここで設定できる上限はありません。上の件数が測定できる範囲です。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@는 키가 얼마를 썼는지 알려주지 않으므로 여기서 설정할 한도가 없습니다. 위의 수치가 측정할 수 있는 전부입니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@ 不会报告某个密钥花了多少，因此这里没有可设置的上限——上面的计数就是我们能测量的全部。"
+          }
+        }
+      }
+    },
     "%@ doesn't seed anything called that.": {
       "localizations": {
         "es": {
@@ -2491,6 +2519,62 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "%@ 关注了你"
+          }
+        }
+      }
+    },
+    "%@ had a security incident recently": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@ tuvo un incidente de seguridad hace poco"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@ で最近セキュリティインシデントが発生しました"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@에서 최근 보안 사고가 있었습니다"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@ 最近发生过安全事件"
+          }
+        }
+      }
+    },
+    "%@ has an unresolved security incident": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@ tiene un incidente de seguridad sin resolver"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@ に未解決のセキュリティインシデントがあります"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@에 해결되지 않은 보안 사고가 있습니다"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@ 有一起未解决的安全事件"
           }
         }
       }
@@ -4301,6 +4385,102 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "%@ / %@ %@"
+          }
+        }
+      }
+    },
+    "%@ of %@ used this month.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$@ of %2$@ used this month."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@ de %@ usados este mes."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "今月は %@ / %@ を使用しました。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "이번 달 %@ / %@ 사용."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "本月已使用 %@，共 %@。"
+          }
+        }
+      }
+    },
+    "%@ of %@ used — organizing is paused until next month. Asking still works.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$@ of %2$@ used — organizing is paused until next month. Asking still works."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@ de %@ usados: la organización queda en pausa hasta el mes que viene. Preguntar sigue funcionando."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@ / %@ を使用しました。整理は来月まで停止しますが、質問は引き続き使えます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@ / %@ 사용 — 정리는 다음 달까지 중지됩니다. 질문은 계속 됩니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "已使用 %@，共 %@ — 整理暂停至下月。提问仍可使用。"
+          }
+        }
+      }
+    },
+    "%@ of that was served from cache.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@ de eso se sirvió desde la caché."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "そのうち %@ はキャッシュから返されました。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "그중 %@는 캐시에서 제공되었습니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "其中 %@ 来自缓存。"
           }
         }
       }
@@ -6617,6 +6797,34 @@
         }
       }
     },
+    "%@ · not rated yet": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@ · aún sin valorar"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@ · 未評価"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@ · 아직 평가 없음"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@ · 尚未评级"
+          }
+        }
+      }
+    },
     "%@ · not watching long enough to compare": {
       "localizations": {
         "es": {
@@ -8553,6 +8761,34 @@
         }
       }
     },
+    "%lld checks rated, none failing": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld comprobaciones valoradas, ninguna suspendida"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld 項目が評価済み、不合格はありません"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld개 항목 평가됨, 불합격 없음"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "已评级 %lld 项，无一不合格"
+          }
+        }
+      }
+    },
     "%lld collections": {
       "localizations": {
         "es": {
@@ -9497,6 +9733,34 @@
         }
       }
     },
+    "%lld fail": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld suspenden"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld 件不合格"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld개 불합격"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld 项不合格"
+          }
+        }
+      }
+    },
     "%lld files in": {
       "localizations": {
         "es": {
@@ -10319,6 +10583,34 @@
         }
       }
     },
+    "%lld landed so far. Name the wallet apps you use and Walletbeat's review of each arrives too — where its keys are made, who sees your addresses.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld han llegado hasta ahora. Nombra las apps de monedero que usas y también llegará la reseña de Walletbeat sobre cada una: dónde se generan sus claves, quién ve tus direcciones."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "これまでに %lld 件が届いています。使っているウォレットアプリを指定すると、鍵がどこで生成されるか、誰があなたのアドレスを見るかなど、Walletbeat による各アプリの評価も届きます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "지금까지 %lld건이 도착했습니다. 사용하는 지갑 앱을 지정하면 키가 어디서 생성되는지, 누가 주소를 보는지 등 Walletbeat의 각 앱 평가도 함께 도착합니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "目前已收到 %lld 条。指明你使用的钱包应用，Walletbeat 对每个应用的评价也会一并到达——密钥在哪里生成、谁能看到你的地址。"
+          }
+        }
+      }
+    },
     "%lld landed…": {
       "localizations": {
         "es": {
@@ -10700,6 +10992,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "%lld 次提及"
+          }
+        }
+      }
+    },
+    "%lld messages": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld mensajes"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld 件のメッセージ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "메시지 %lld개"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld 条消息"
           }
         }
       }
@@ -11269,6 +11589,34 @@
         }
       }
     },
+    "%lld more offers with no end date": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld ofertas más sin fecha de fin"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "終了日のないオファーがほかに %lld 件"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "종료일이 없는 혜택 %lld개 더"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "另有 %lld 项没有结束日期的优惠"
+          }
+        }
+      }
+    },
     "%lld more overdue": {
       "localizations": {
         "es": {
@@ -11815,6 +12163,34 @@
         }
       }
     },
+    "%lld not rated": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld sin valorar"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld 件未評価"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld개 미평가"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld 项未评级"
+          }
+        }
+      }
+    },
     "%lld not read yet": {
       "localizations": {
         "es": {
@@ -11905,6 +12281,40 @@
         }
       }
     },
+    "%lld of %lld checks rated by Walletbeat": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$lld of %2$lld checks rated by Walletbeat"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld de %lld comprobaciones valoradas por Walletbeat"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat が %lld / %lld 項目を評価済み"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat가 %lld / %lld개 항목 평가"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat 已评级 %lld / %lld 项"
+          }
+        }
+      }
+    },
     "%lld of %lld positions idle": {
       "localizations": {
         "es": {
@@ -11963,6 +12373,40 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "%lld/%lld 项有价格"
+          }
+        }
+      }
+    },
+    "%lld of %lld rated in depth; the rest Walletbeat has barely examined.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$lld of %2$lld rated in depth; the rest Walletbeat has barely examined."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld de %lld valorados a fondo; al resto Walletbeat apenas lo ha examinado."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld / %lld が詳しく評価されています。残りは Walletbeat がほとんど調べていません。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld / %lld개가 깊이 있게 평가되었고, 나머지는 Walletbeat가 거의 살펴보지 않았습니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld / %lld 已深入评级；其余 Walletbeat 几乎未曾检视。"
           }
         }
       }
@@ -12459,6 +12903,90 @@
         }
       }
     },
+    "%lld offers": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld ofertas"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld 件のオファー"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "혜택 %lld개"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld 项优惠"
+          }
+        }
+      }
+    },
+    "%lld offers expire this week": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld ofertas caducan esta semana"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "今週 %lld 件のオファーが期限切れになります"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "이번 주에 혜택 %lld개가 만료됩니다"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "本周有 %lld 项优惠到期"
+          }
+        }
+      }
+    },
+    "%lld offers waiting": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld ofertas esperando"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld 件のオファーが待っています"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "대기 중인 혜택 %lld개"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld 项优惠待用"
+          }
+        }
+      }
+    },
     "%lld older": {
       "localizations": {
         "es": {
@@ -12769,6 +13297,62 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "%lld 项已逾期"
+          }
+        }
+      }
+    },
+    "%lld partly": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld en parte"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld 件が一部"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld개 부분 충족"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld 项部分符合"
+          }
+        }
+      }
+    },
+    "%lld pass": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld aprueban"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld 件合格"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld개 합격"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld 项合格"
           }
         }
       }
@@ -15966,6 +16550,62 @@
         }
       }
     },
+    "%lld wallet security incidents are still unresolved": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld incidentes de seguridad de monederos siguen sin resolverse"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "ウォレットのセキュリティインシデント %lld 件が未解決です"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "지갑 보안 사고 %lld건이 아직 해결되지 않았습니다"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld 起钱包安全事件仍未解决"
+          }
+        }
+      }
+    },
+    "%lld wallet security incidents in the last 30 days": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld incidentes de seguridad de monederos en los últimos 30 días"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "過去 30 日間にウォレットのセキュリティインシデントが %lld 件"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "지난 30일간 지갑 보안 사고 %lld건"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "过去 30 天有 %lld 起钱包安全事件"
+          }
+        }
+      }
+    },
     "%lld was your loudest year — %@ posts": {
       "localizations": {
         "en": {
@@ -16428,6 +17068,40 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "%lld 分钟期限的密钥"
+          }
+        }
+      }
+    },
+    "%lld/%lld": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$lld/%2$lld"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld/%lld"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld/%lld"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld/%lld"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld/%lld"
           }
         }
       }
@@ -17940,6 +18614,34 @@
         }
       }
     },
+    "1 more offer with no end date": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "1 oferta más sin fecha de fin"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "終了日のないオファーがほかに 1 件"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "종료일이 없는 혜택 1개 더"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "另有 1 项没有结束日期的优惠"
+          }
+        }
+      }
+    },
     "1 more pending": {
       "localizations": {
         "es": {
@@ -18272,6 +18974,90 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "你的地址中有 1 个已连接"
+          }
+        }
+      }
+    },
+    "1 offer": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "1 oferta"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "オファー 1 件"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "혜택 1개"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "1 项优惠"
+          }
+        }
+      }
+    },
+    "1 offer expires this week": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "1 oferta caduca esta semana"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "今週 1 件のオファーが期限切れになります"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "이번 주에 혜택 1개가 만료됩니다"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "本周有 1 项优惠到期"
+          }
+        }
+      }
+    },
+    "1 offer waiting": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "1 oferta esperando"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "オファー 1 件が待っています"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "대기 중인 혜택 1개"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "1 项优惠待用"
           }
         }
       }
@@ -21955,6 +22741,34 @@
         }
       }
     },
+    "Affects": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Afecta a"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "影響範囲"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "영향 대상"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "影响"
+          }
+        }
+      }
+    },
     "Agent": {
       "extractionState": "manual",
       "localizations": {
@@ -22205,6 +23019,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "全部 %lld 个头寸都在区间内。"
+          }
+        }
+      }
+    },
+    "All %lld rated in depth — Walletbeat's own judgments, attribute by attribute.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Los %lld valorados a fondo: los juicios propios de Walletbeat, atributo por atributo."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld 件すべてが詳しく評価されています。属性ごとの Walletbeat 自身の判断です。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld개 모두 깊이 있게 평가됨 — 속성별 Walletbeat 자체 판단입니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "全部 %lld 个均已深入评级——Walletbeat 自己的判断，逐项而定。"
           }
         }
       }
@@ -25977,6 +26819,34 @@
         }
       }
     },
+    "Browse all 32": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Ver los 32"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "32 件すべてを見る"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "32개 모두 보기"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "浏览全部 32 个"
+          }
+        }
+      }
+    },
     "Browse the catalog": {
       "localizations": {
         "es": {
@@ -26713,6 +27583,40 @@
         }
       }
     },
+    "Capped at %@ a month. Nothing read from %@ yet this month.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Capped at %1$@ a month. Nothing read from %2$@ yet this month."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Limitado a %@ al mes. Este mes aún no se ha leído nada de %@."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "月あたり %@ が上限です。今月はまだ %@ から何も読み取っていません。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "월 %@로 제한됩니다. 이번 달에는 아직 %@에서 아무것도 읽지 않았습니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "每月上限 %@。本月尚未从 %@ 读取任何内容。"
+          }
+        }
+      }
+    },
     "Card": {
       "localizations": {
         "es": {
@@ -26765,6 +27669,118 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "卡片交易"
+          }
+        }
+      }
+    },
+    "CardPointers gave an answer we couldn't read.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "CardPointers dio una respuesta que no pudimos leer."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "CardPointers から読み取れない応答が返りました。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "CardPointers가 읽을 수 없는 응답을 보냈습니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "CardPointers 返回了无法解读的响应。"
+          }
+        }
+      }
+    },
+    "CardPointers+": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "CardPointers+"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "CardPointers+"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "CardPointers+"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "CardPointers+"
+          }
+        }
+      }
+    },
+    "Carry on": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Continuar"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "続ける"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "이어가기"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "继续"
+          }
+        }
+      }
+    },
+    "Carry on with %@": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Continuar con %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@ で続ける"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@로 이어가기"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "用 %@ 继续"
           }
         }
       }
@@ -29027,6 +30043,34 @@
         }
       }
     },
+    "Connected.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Conectado."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "接続しました。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "연결되었습니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "已连接。"
+          }
+        }
+      }
+    },
     "Connected. %lld in.": {
       "localizations": {
         "es": {
@@ -30178,6 +31222,34 @@
         }
       }
     },
+    "Couldn't reach CardPointers.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "No se pudo conectar con CardPointers."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "CardPointers に接続できませんでした。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "CardPointers에 연결할 수 없습니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "无法连接 CardPointers。"
+          }
+        }
+      }
+    },
     "Couldn't reach Circle — check your connection.": {
       "localizations": {
         "es": {
@@ -30706,6 +31778,62 @@
           "stringUnit": {
             "state": "translated",
             "value": "无法连接 Twitch — 检查你的网络连接。"
+          }
+        }
+      }
+    },
+    "Couldn't reach Walletbeat — check your connection.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "No se pudo conectar con Walletbeat: revisa tu conexión."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat に接続できませんでした。接続を確認してください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat에 연결할 수 없습니다 — 연결을 확인하세요."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "无法连接 Walletbeat——请检查网络。"
+          }
+        }
+      }
+    },
+    "Couldn't reach Walletbeat. The counts above are from when this app was last updated.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "No se pudo conectar con Walletbeat. Los recuentos de arriba son de la última actualización de esta app."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat に接続できませんでした。上の件数はこのアプリを最後に更新した時点のものです。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat에 연결할 수 없습니다. 위 수치는 이 앱을 마지막으로 업데이트한 시점의 것입니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "无法连接 Walletbeat。上面的计数来自本应用上次更新时。"
           }
         }
       }
@@ -31668,6 +32796,34 @@
         }
       }
     },
+    "Counted from what OpenRouter reports this key has used. Your own questions are never blocked.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Contado a partir de lo que OpenRouter informa que ha usado esta clave. Tus propias preguntas nunca se bloquean."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "OpenRouter が報告するこのキーの使用量から集計しています。あなた自身の質問がブロックされることはありません。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "OpenRouter가 보고한 이 키의 사용량으로 집계합니다. 사용자의 질문이 차단되는 일은 없습니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "根据 OpenRouter 报告的该密钥用量统计。你自己的提问永远不会被拦截。"
+          }
+        }
+      }
+    },
     "Counted on %@. Your bill is %@'s — see %@.": {
       "localizations": {
         "en": {
@@ -31934,6 +33090,34 @@
         }
       }
     },
+    "Critical": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Crítico"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "致命的"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "치명적"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "致命"
+          }
+        }
+      }
+    },
     "Cursor": {
       "localizations": {
         "es": {
@@ -32070,6 +33254,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "深色"
+          }
+        }
+      }
+    },
+    "Data breach": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Filtración de datos"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "データ侵害"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "데이터 유출"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "数据泄露"
           }
         }
       }
@@ -33782,6 +34994,34 @@
         }
       }
     },
+    "Ecosystem": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Ecosistema"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "エコシステム"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "생태계"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "生态系统"
+          }
+        }
+      }
+    },
     "Edit": {
       "localizations": {
         "es": {
@@ -34459,6 +35699,34 @@
         }
       }
     },
+    "Every rating here is Walletbeat's own judgment, in their words. Casberi reads their public review and never scores a wallet itself.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Cada valoración aquí es el juicio propio de Walletbeat, con sus palabras. Casberi lee su reseña pública y nunca puntúa un monedero por su cuenta."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "ここでの評価はすべて Walletbeat 自身の判断であり、その言葉のままです。Casberi は公開されたレビューを読むだけで、ウォレットを自ら採点することはありません。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "여기의 모든 평가는 Walletbeat 자신의 판단이며 그들의 표현 그대로입니다. Casberi는 공개된 리뷰를 읽을 뿐, 지갑을 직접 채점하지 않습니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "此处每一项评级都是 Walletbeat 自己的判断，用的是他们的措辞。Casberi 只读取其公开评价，从不自行为钱包打分。"
+          }
+        }
+      }
+    },
     "Every review is finished": {
       "localizations": {
         "es": {
@@ -34539,6 +35807,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "这里保存的每一个令牌、密钥和邮箱密码 — 已连接的应用将停止同步，已配对的客户端将断开连接。你的内容会保留。\n\n照片和日历的访问权限属于系统；请在 %@ 中撤销。无法撤销此操作。"
+          }
+        }
+      }
+    },
+    "Every wallet Walletbeat rates": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Todos los monederos que valora Walletbeat"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat が評価するすべてのウォレット"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat가 평가하는 모든 지갑"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat 评级的所有钱包"
           }
         }
       }
@@ -35419,6 +36715,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "处理失败"
+          }
+        }
+      }
+    },
+    "Fails": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Suspende"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "不合格"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "불합격"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "不合格"
           }
         }
       }
@@ -36550,6 +37874,34 @@
         }
       }
     },
+    "Follow the security news": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Seguir las noticias de seguridad"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "セキュリティニュースをフォロー"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "보안 소식 팔로우"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "关注安全动态"
+          }
+        }
+      }
+    },
     "Followed %lld": {
       "localizations": {
         "es": {
@@ -36776,6 +38128,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "正在关注该话题标签…"
+          }
+        }
+      }
+    },
+    "Following the news": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Siguiendo las noticias"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "ニュースをフォロー中"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "소식 팔로우 중"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "正在关注动态"
           }
         }
       }
@@ -37364,6 +38744,34 @@
         }
       }
     },
+    "Full review on Walletbeat": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Reseña completa en Walletbeat"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat で全評価を見る"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat에서 전체 리뷰 보기"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "在 Walletbeat 查看完整评价"
+          }
+        }
+      }
+    },
     "Fully signed — %@ is ready to execute": {
       "localizations": {
         "es": {
@@ -37416,6 +38824,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "签名已完成 — 已准备好执行"
+          }
+        }
+      }
+    },
+    "Funds at risk": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Fondos en riesgo"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "資金へのリスクあり"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "자금 위험"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "资金面临风险"
           }
         }
       }
@@ -38175,6 +39611,62 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "已发生"
+          }
+        }
+      }
+    },
+    "Hardware": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Hardware"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "ハードウェア"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "하드웨어"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "硬件"
+          }
+        }
+      }
+    },
+    "Hardware wallet": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Monedero de hardware"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "ハードウェアウォレット"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "하드웨어 지갑"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "硬件钱包"
           }
         }
       }
@@ -39751,6 +41243,34 @@
         }
       }
     },
+    "Incident": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Incidente"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "インシデント"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "사고"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "事件"
+          }
+        }
+      }
+    },
     "Include private messages": {
       "localizations": {
         "es": {
@@ -40056,6 +41576,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "它会随此地址的每一次后续转账一同生效。留空即可清除。"
+          }
+        }
+      }
+    },
+    "It's listed, and none of its %lld checks has been judged. That's an absence of information, not a clean bill of health.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Está en la lista y ninguna de sus %lld comprobaciones ha sido valorada. Eso es ausencia de información, no un certificado de buena salud."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "掲載はされていますが、%lld 項目のいずれも判定されていません。これは情報がないということであり、問題なしという意味ではありません。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "목록에는 있지만 %lld개 항목 중 어느 것도 판정되지 않았습니다. 이는 정보가 없다는 뜻이지, 문제가 없다는 뜻이 아닙니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "它在列表中，但 %lld 项检查无一被判定。这是信息的缺失，而非健康证明。"
           }
         }
       }
@@ -41206,6 +42754,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "最后动静 %@"
+          }
+        }
+      }
+    },
+    "Last revised": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Última revisión"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "最終改訂"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "마지막 개정"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "最后修订"
           }
         }
       }
@@ -42522,6 +44098,34 @@
         }
       }
     },
+    "Maintenance": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Mantenimiento"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "メンテナンス"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "유지 관리"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "维护"
+          }
+        }
+      }
+    },
     "Manage": {
       "localizations": {
         "es": {
@@ -43205,6 +44809,34 @@
         }
       }
     },
+    "Mitigated": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Mitigado"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "緩和済み"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "완화됨"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "已缓解"
+          }
+        }
+      }
+    },
     "Model": {
       "localizations": {
         "es": {
@@ -43229,6 +44861,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "模型"
+          }
+        }
+      }
+    },
+    "Model for organizing": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Modelo para organizar"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "整理に使うモデル"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "정리에 쓸 모델"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "用于整理的模型"
           }
         }
       }
@@ -43313,6 +44973,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "资金被提出争议"
+          }
+        }
+      }
+    },
+    "Monthly limit": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Límite mensual"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "月間上限"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "월 한도"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "每月上限"
           }
         }
       }
@@ -43481,6 +45169,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "最近的%@"
+          }
+        }
+      }
+    },
+    "Most reviewed": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Más revisados"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "評価が多い順"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "가장 많이 평가됨"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "评价最多"
           }
         }
       }
@@ -43807,6 +45523,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "我的一周"
+          }
+        }
+      }
+    },
+    "N/A": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "N/D"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "該当なし"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "해당 없음"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "不适用"
           }
         }
       }
@@ -46040,6 +47784,34 @@
         }
       }
     },
+    "No limit": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Sin límite"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "上限なし"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "한도 없음"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "无上限"
+          }
+        }
+      }
+    },
     "No live price for this token — view on Dexscreener": {
       "localizations": {
         "es": {
@@ -46522,6 +48294,34 @@
         }
       }
     },
+    "No wallet security incidents in the last 30 days": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Ningún incidente de seguridad de monederos en los últimos 30 días"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "過去 30 日間にウォレットのセキュリティインシデントはありません"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "지난 30일간 지갑 보안 사고 없음"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "过去 30 天没有钱包安全事件"
+          }
+        }
+      }
+    },
     "No wash — a wallet you open still wears its own color": {
       "localizations": {
         "es": {
@@ -46546,6 +48346,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "无色彩叠加 — 打开的钱包仍保留自己的颜色"
+          }
+        }
+      }
+    },
+    "No, by Walletbeat's reading": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "No, según la lectura de Walletbeat"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat の判断では「いいえ」"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat의 판단으로는 아니요"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "按 Walletbeat 的判断：否"
           }
         }
       }
@@ -46914,6 +48742,62 @@
         }
       }
     },
+    "Not rated": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Sin valorar"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "未評価"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "미평가"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "未评级"
+          }
+        }
+      }
+    },
+    "Not rated yet": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Aún sin valorar"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "まだ評価されていません"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "아직 평가되지 않음"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "尚未评级"
+          }
+        }
+      }
+    },
     "Not read on this device yet": {
       "localizations": {
         "es": {
@@ -47136,6 +49020,34 @@
           "stringUnit": {
             "state": "translated",
             "value": "笔记"
+          }
+        }
+      }
+    },
+    "Nothing Walletbeat checked on %@ failed": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Nada de lo que Walletbeat comprobó en %@ suspendió"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat が %@ について確認した項目に不合格はありません"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat가 %@에 대해 확인한 항목 중 불합격은 없습니다"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat 对 %@ 检查的项目均未不合格"
           }
         }
       }
@@ -49348,6 +51260,34 @@
         }
       }
     },
+    "On record": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Registrado"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "記録あり"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "기록됨"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "有记录"
+          }
+        }
+      }
+    },
     "On sale": {
       "localizations": {
         "es": {
@@ -49769,6 +51709,62 @@
         }
       }
     },
+    "One wallet security incident in the last 30 days": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Un incidente de seguridad de monederos en los últimos 30 días"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "過去 30 日間にウォレットのセキュリティインシデントが 1 件"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "지난 30일간 지갑 보안 사고 1건"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "过去 30 天有 1 起钱包安全事件"
+          }
+        }
+      }
+    },
+    "One wallet security incident is still unresolved": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Un incidente de seguridad de monederos sigue sin resolverse"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "ウォレットのセキュリティインシデント 1 件が未解決です"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "지갑 보안 사고 1건이 아직 해결되지 않았습니다"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "1 起钱包安全事件仍未解决"
+          }
+        }
+      }
+    },
     "One, on %@.": {
       "localizations": {
         "es": {
@@ -49850,6 +51846,102 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "一次性导入 —— 条目会变成可查找的笔记，日期按你书写时标注。照片暂时留在导出文件里。再次导入只会添加新的部分。"
+          }
+        }
+      }
+    },
+    "Ongoing": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "En curso"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "継続中"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "진행 중"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "进行中"
+          }
+        }
+      }
+    },
+    "Only %lld of %lld checks are judged, which is too few to compare against another wallet.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Only %1$lld of %2$lld checks are judged, which is too few to compare against another wallet."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Solo %lld de %lld comprobaciones están valoradas, muy pocas para comparar con otro monedero."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "判定済みは %lld / %lld 項目のみで、他のウォレットと比べるには少なすぎます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld / %lld개 항목만 판정되어 다른 지갑과 비교하기에는 너무 적습니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "仅 %lld / %lld 项被判定，不足以与另一个钱包比较。"
+          }
+        }
+      }
+    },
+    "Only %lld of %lld checks rated so far": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Only %1$lld of %2$lld checks rated so far"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Solo %lld de %lld comprobaciones valoradas hasta ahora"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "現時点で評価済みは %lld / %lld 項目のみ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "지금까지 %lld / %lld개 항목만 평가됨"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "目前仅评级 %lld / %lld 项"
           }
         }
       }
@@ -52077,6 +54169,62 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "配对客户端"
+          }
+        }
+      }
+    },
+    "Partly": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "En parte"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "一部"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "부분 충족"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "部分符合"
+          }
+        }
+      }
+    },
+    "Passes": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Aprueba"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "合格"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "합격"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "合格"
           }
         }
       }
@@ -54704,6 +56852,34 @@
         }
       }
     },
+    "Published %@ · From Walletbeat, an open registry of wallet practices": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Publicado %@ · De Walletbeat, un registro abierto de prácticas de monederos"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "公開 %@ · ウォレットの実践に関するオープンな登録簿 Walletbeat より"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "게시 %@ · 지갑 관행에 대한 공개 등록부 Walletbeat 제공"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "发布于 %@ · 来自 Walletbeat，一个公开的钱包实践登记册"
+          }
+        }
+      }
+    },
     "Pull request": {
       "localizations": {
         "es": {
@@ -55141,6 +57317,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "Railgun 无法告诉你是谁发送的——在资金池内，发送方按设计是匿名的。"
+          }
+        }
+      }
+    },
+    "Rated in depth — Walletbeat's own judgments, attribute by attribute.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Valorado a fondo: los juicios propios de Walletbeat, atributo por atributo."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "詳しく評価されています。属性ごとの Walletbeat 自身の判断です。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "깊이 있게 평가됨 — 속성별 Walletbeat 자체 판단입니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "已深入评级——Walletbeat 自己的判断，逐项而定。"
           }
         }
       }
@@ -55709,6 +57913,34 @@
         }
       }
     },
+    "Read-only — no account, no key, and nothing about you is sent.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Solo lectura: sin cuenta, sin clave y no se envía nada sobre ti."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "読み取り専用。アカウントも鍵も不要で、あなたに関する情報は送信されません。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "읽기 전용 — 계정도 키도 없고, 사용자에 관한 정보는 전송되지 않습니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "只读——无需账户、无需密钥，也不会发送任何关于你的信息。"
+          }
+        }
+      }
+    },
     "Read-only — public price data only.": {
       "extractionState": "manual",
       "localizations": {
@@ -56102,6 +58334,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "正在读取 Stripe…"
+          }
+        }
+      }
+    },
+    "Reading Walletbeat…": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Leyendo Walletbeat…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat を読み込み中…"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat 읽는 중…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "正在读取 Walletbeat…"
           }
         }
       }
@@ -56886,6 +59146,62 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "正在读取…"
+          }
+        }
+      }
+    },
+    "Reads Walletbeat's public ratings for the wallets you name.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Lee las valoraciones públicas de Walletbeat de los monederos que indiques."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "指定したウォレットについて、Walletbeat の公開評価を読み取ります。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "지정한 지갑에 대한 Walletbeat의 공개 평가를 읽습니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "读取 Walletbeat 对你指明的钱包的公开评级。"
+          }
+        }
+      }
+    },
+    "Reads Walletbeat's published wallet security incidents.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Lee los incidentes de seguridad de monederos publicados por Walletbeat."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat が公開しているウォレットのセキュリティインシデントを読み取ります。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat가 공개한 지갑 보안 사고를 읽습니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "读取 Walletbeat 发布的钱包安全事件。"
           }
         }
       }
@@ -59591,6 +61907,34 @@
         }
       }
     },
+    "Reported": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Notificado"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "報告済み"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "보고됨"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "已报告"
+          }
+        }
+      }
+    },
     "Reposted": {
       "localizations": {
         "es": {
@@ -60379,6 +62723,62 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "%1$@ 上的 Safe · %2$@ 是签名者"
+          }
+        }
+      }
+    },
+    "Same as questions": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Igual que las preguntas"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "質問と同じ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "질문과 동일"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "与提问相同"
+          }
+        }
+      }
+    },
+    "Same model as your questions. Naming a screenshot is small work — a cheaper, faster model usually does it just as well for a fraction of the cost.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "El mismo modelo que tus preguntas. Poner nombre a una captura es un trabajo menor: un modelo más barato y rápido suele hacerlo igual de bien por una fracción del coste."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "質問と同じモデルです。スクリーンショットに名前を付けるのは小さな作業で、より安く速いモデルでも同等の結果をわずかなコストで得られることがほとんどです。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "질문과 같은 모델입니다. 스크린샷에 이름을 붙이는 일은 가벼운 작업이라, 더 저렴하고 빠른 모델도 대개 훨씬 적은 비용으로 똑같이 해냅니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "与提问使用同一模型。为截图命名是件小事——更便宜、更快的模型通常做得一样好，成本只是零头。"
           }
         }
       }
@@ -61423,6 +63823,62 @@
         }
       }
     },
+    "Security": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Seguridad"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "セキュリティ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "보안"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "安全"
+          }
+        }
+      }
+    },
+    "Security incidents arrive on their own, for every wallet Walletbeat covers.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Los incidentes de seguridad llegan por su cuenta, de todos los monederos que cubre Walletbeat."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "セキュリティインシデントは、Walletbeat が扱うすべてのウォレットについて自動的に届きます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "보안 사고는 Walletbeat가 다루는 모든 지갑에 대해 자동으로 도착합니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "安全事件会自动到达，涵盖 Walletbeat 收录的每一个钱包。"
+          }
+        }
+      }
+    },
     "See all %lld": {
       "localizations": {
         "es": {
@@ -61647,6 +64103,34 @@
         }
       }
     },
+    "Self-sovereignty": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Autosoberanía"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "自己主権"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "자기주권"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "自主权"
+          }
+        }
+      }
+    },
     "Send": {
       "localizations": {
         "es": {
@@ -61867,6 +64351,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "Sentry 拒绝了该请求。请检查令牌 — 如果你的组织位于欧盟区域或为自托管，还需检查主机地址。"
+          }
+        }
+      }
+    },
+    "Serious": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Grave"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "深刻"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "심각"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "严重"
           }
         }
       }
@@ -62753,6 +65265,40 @@
         }
       }
     },
+    "Showing %lld of %lld · Walletbeat's ratings, read on this device": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Showing %1$lld of %2$lld · Walletbeat's ratings, read on this device"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Mostrando %lld de %lld · Valoraciones de Walletbeat, leídas en este dispositivo"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld / %lld 件を表示 · この端末で読み取った Walletbeat の評価"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld / %lld개 표시 · 이 기기에서 읽은 Walletbeat의 평가"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "显示 %lld / %lld · Walletbeat 的评级，在本设备上读取"
+          }
+        }
+      }
+    },
     "Showing the %lld closest.": {
       "localizations": {
         "es": {
@@ -63565,6 +66111,62 @@
           "stringUnit": {
             "state": "translated",
             "value": "社交"
+          }
+        }
+      }
+    },
+    "Software": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Software"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "ソフトウェア"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "소프트웨어"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "软件"
+          }
+        }
+      }
+    },
+    "Software wallet": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Monedero de software"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "ソフトウェアウォレット"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "소프트웨어 지갑"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "软件钱包"
           }
         }
       }
@@ -66650,6 +69252,34 @@
         }
       }
     },
+    "The code expired. Try again.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "El código caducó. Inténtalo de nuevo."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "コードの有効期限が切れました。もう一度お試しください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "코드가 만료되었습니다. 다시 시도하세요."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "验证码已过期，请重试。"
+          }
+        }
+      }
+    },
     "The code lives on Bitrefill's own page.": {
       "localizations": {
         "es": {
@@ -67246,6 +69876,34 @@
         }
       }
     },
+    "Their offer tools need the subscription. Nothing was connected.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Sus herramientas de ofertas requieren la suscripción. No se conectó nada."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "オファー関連の機能にはサブスクリプションが必要です。何も接続されていません。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "혜택 도구에는 구독이 필요합니다. 아무것도 연결되지 않았습니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "其优惠功能需要订阅。未连接任何内容。"
+          }
+        }
+      }
+    },
     "Their posting rhythm": {
       "localizations": {
         "es": {
@@ -67747,6 +70405,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "此 %@ 无法共享财务数据。仅限美国，且需要 iOS 17.4。"
+          }
+        }
+      }
+    },
+    "This account doesn't have CardPointers+": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Esta cuenta no tiene CardPointers+"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "このアカウントには CardPointers+ がありません"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "이 계정에는 CardPointers+가 없습니다"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "此账户没有 CardPointers+"
           }
         }
       }
@@ -68685,6 +71371,34 @@
         }
       }
     },
+    "Transparency": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Transparencia"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "透明性"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "투명성"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "透明度"
+          }
+        }
+      }
+    },
     "Trello answered — no cards are assigned to you. Casberi reads cards you're a member of, so add yourself to one and sync again.": {
       "localizations": {
         "es": {
@@ -69243,6 +71957,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "已取消置顶"
+          }
+        }
+      }
+    },
+    "Unresolved": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Sin resolver"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "未解決"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "미해결"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "未解决"
           }
         }
       }
@@ -69881,6 +72623,34 @@
         }
       }
     },
+    "Vulnerability": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Vulnerabilidad"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "脆弱性"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "취약점"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "漏洞"
+          }
+        }
+      }
+    },
     "WATCH": {
       "localizations": {
         "es": {
@@ -70017,6 +72787,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "等待审核"
+          }
+        }
+      }
+    },
+    "Waiting for you to approve…": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Esperando tu aprobación…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "承認をお待ちしています…"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "승인을 기다리는 중…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "等待你批准…"
           }
         }
       }
@@ -70423,6 +73221,612 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "钱包密钥"
+          }
+        }
+      }
+    },
+    "Wallet name": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Nombre del monedero"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "ウォレット名"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "지갑 이름"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "钱包名称"
+          }
+        }
+      }
+    },
+    "Walletbeat": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat"
+          }
+        }
+      }
+    },
+    "Walletbeat %@ %@'s %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Walletbeat %1$@ %2$@'s %3$@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat %1$@ %3$@ de %2$@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat が %2$@ の%3$@を%1$@"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat가 %2$@의 %3$@을(를) %1$@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat %1$@ %2$@ 的%3$@"
+          }
+        }
+      }
+    },
+    "Walletbeat doesn't rate that one. It reviews 32 wallets so far.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat no valora ese. Por ahora revisa 32 monederos."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "そのウォレットは Walletbeat の評価対象ではありません。現在 32 件を評価しています。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat는 그 지갑을 평가하지 않습니다. 현재 32개 지갑을 검토합니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat 未评级该钱包。目前它评价 32 个钱包。"
+          }
+        }
+      }
+    },
+    "Walletbeat faults %@ on %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Walletbeat faults %1$@ on %2$@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat critica %1$@ por %2$@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat は %1$@ の%2$@を問題としています"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat는 %1$@의 %2$@을(를) 문제로 봅니다"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat 认为 %1$@ 在%2$@上不合格"
+          }
+        }
+      }
+    },
+    "Walletbeat has barely started on this wallet": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat apenas ha empezado con este monedero"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat はこのウォレットの評価をほとんど始めていません"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat는 이 지갑을 이제 막 살펴보기 시작했습니다"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat 对这个钱包才刚起步"
+          }
+        }
+      }
+    },
+    "Walletbeat hasn't examined %@ yet": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat aún no ha examinado %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat はまだ %@ を調べていません"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat는 아직 %@를 살펴보지 않았습니다"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat 尚未检视 %@"
+          }
+        }
+      }
+    },
+    "Walletbeat hasn't examined your wallets yet": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat aún no ha examinado tus monederos"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat はまだあなたのウォレットを調べていません"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat는 아직 사용자의 지갑을 살펴보지 않았습니다"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat 尚未检视你的钱包"
+          }
+        }
+      }
+    },
+    "Walletbeat hasn't rated this wallet yet": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat aún no ha valorado este monedero"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat はまだこのウォレットを評価していません"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat는 아직 이 지갑을 평가하지 않았습니다"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat 尚未评级这个钱包"
+          }
+        }
+      }
+    },
+    "Walletbeat lists these wallets but has judged almost nothing about them so far.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat incluye estos monederos, pero hasta ahora casi no ha juzgado nada sobre ellos."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat はこれらのウォレットを掲載していますが、これまでほとんど判定していません。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat가 이 지갑들을 목록에 올렸지만 지금까지 거의 판정하지 않았습니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat 收录了这些钱包，但至今几乎未作判定。"
+          }
+        }
+      }
+    },
+    "Walletbeat partly faults %@ on %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Walletbeat partly faults %1$@ on %2$@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat critica en parte %1$@ por %2$@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat は %1$@ の%2$@を一部問題としています"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat는 %1$@의 %2$@을(를) 일부 문제로 봅니다"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat 认为 %1$@ 在%2$@上部分不合格"
+          }
+        }
+      }
+    },
+    "Walletbeat rates it %@": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat lo califica como %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat の評価は %@ です"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat는 %@로 평가합니다"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat 将其评为 %@"
+          }
+        }
+      }
+    },
+    "Walletbeat reviewed %@": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat revisó %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat が %@ を評価しました"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat가 %@를 검토했습니다"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat 评价了 %@"
+          }
+        }
+      }
+    },
+    "Walletbeat revised its review": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat revisó su reseña"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat がレビューを改訂しました"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat가 리뷰를 개정했습니다"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat 修订了评价"
+          }
+        }
+      }
+    },
+    "Walletbeat's entry was revised %@ · their judgment, not ours": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "La entrada de Walletbeat se revisó %@ · su juicio, no el nuestro"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat の項目は %@ に改訂されました · 判断は当社ではなく彼らのものです"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat의 항목이 %@에 개정되었습니다 · 우리가 아닌 그들의 판단입니다"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat 的条目于 %@ 修订 · 是他们的判断，不是我们的"
+          }
+        }
+      }
+    },
+    "Walletbeat's own judgment, not ours": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Juicio propio de Walletbeat, no nuestro"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat 自身の判断であり、当社のものではありません"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat 자체의 판단이며 우리의 판단이 아닙니다"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat 自己的判断，而非我们的"
+          }
+        }
+      }
+    },
+    "Walletbeat's ratings, not ours": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Valoraciones de Walletbeat, no nuestras"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat の評価であり、当社のものではありません"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat의 평가이며 우리의 것이 아닙니다"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat 的评级，而非我们的"
+          }
+        }
+      }
+    },
+    "Walletbeat's ratings, not ours · read on this device": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Valoraciones de Walletbeat, no nuestras · leídas en este dispositivo"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat の評価であり当社のものではありません · この端末で読み取り"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat의 평가이며 우리의 것이 아닙니다 · 이 기기에서 읽음"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat 的评级，而非我们的 · 在本设备上读取"
+          }
+        }
+      }
+    },
+    "Walletbeat's ratings, not ours. A wallet marked not rated is one they haven't examined yet — it isn't a verdict.\n\nRatings as of %@; the wallets you watch are read live.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Valoraciones de Walletbeat, no nuestras. Un monedero marcado como no valorado es uno que aún no han examinado: no es un veredicto.\n\nValoraciones a fecha de %@; los monederos que sigues se leen en directo."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat の評価であり、当社のものではありません。「未評価」と表示されたウォレットは、まだ調べられていないということであり、判定ではありません。\n\n評価は %@ 時点のものです。ウォッチ中のウォレットはリアルタイムで読み取られます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat의 평가이며 우리의 것이 아닙니다. 미평가로 표시된 지갑은 아직 살펴보지 않았다는 뜻이며 판정이 아닙니다.\n\n%@ 기준 평가입니다. 지켜보는 지갑은 실시간으로 읽습니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat 的评级，而非我们的。标记为未评级的钱包只是尚未被检视，并不是结论。\n\n评级截至 %@；你关注的钱包为实时读取。"
+          }
+        }
+      }
+    },
+    "Walletbeat's reading, not ours · every wallet they cover": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "La lectura de Walletbeat, no la nuestra · todos los monederos que cubren"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat の見解であり当社のものではありません · 対象のすべてのウォレット"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat의 판단이며 우리의 것이 아닙니다 · 그들이 다루는 모든 지갑"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat 的判断，而非我们的 · 他们收录的每个钱包"
+          }
+        }
+      }
+    },
+    "Walletbeat's security incidents arrive here. Name the wallet apps you use to add their reviews.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Los incidentes de seguridad de Walletbeat llegan aquí. Nombra las apps de monedero que usas para añadir sus reseñas."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat のセキュリティインシデントはここに届きます。使っているウォレットアプリを指定すると、その評価も追加されます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat의 보안 사고가 여기에 도착합니다. 사용하는 지갑 앱을 지정하면 해당 리뷰도 추가됩니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat 的安全事件会到达这里。指明你使用的钱包应用，即可加入它们的评价。"
           }
         }
       }
@@ -70910,6 +74314,34 @@
         }
       }
     },
+    "Watch the wallet apps you use": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Sigue las apps de monedero que usas"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "使っているウォレットアプリをウォッチ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "사용하는 지갑 앱 지켜보기"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "关注你使用的钱包应用"
+          }
+        }
+      }
+    },
     "Watch their wallet": {
       "localizations": {
         "es": {
@@ -70962,6 +74394,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "关注此代币"
+          }
+        }
+      }
+    },
+    "Watch this wallet": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Seguir este monedero"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "このウォレットをウォッチ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "이 지갑 지켜보기"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "关注这个钱包"
           }
         }
       }
@@ -71735,6 +75195,34 @@
         }
       }
     },
+    "Watching %lld · tap for its review, hold to stop watching": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Siguiendo %lld · toca para ver su reseña, mantén pulsado para dejar de seguir"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld 件をウォッチ中 · タップで評価、長押しでウォッチ解除"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld개 지켜보는 중 · 탭하면 리뷰, 길게 누르면 해제"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "正在关注 %lld 个 · 点按查看评价，长按取消关注"
+          }
+        }
+      }
+    },
     "Watching %lld — the cap. Unwatch one first, or name this address instead.": {
       "localizations": {
         "es": {
@@ -72117,6 +75605,34 @@
         }
       }
     },
+    "Watching — tap to stop": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Siguiendo: toca para dejar de seguir"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "ウォッチ中 · タップで解除"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "지켜보는 중 — 탭하면 해제"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "关注中——点按取消"
+          }
+        }
+      }
+    },
     "Watchlist": {
       "localizations": {
         "es": {
@@ -72225,6 +75741,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "周末"
+          }
+        }
+      }
+    },
+    "What does Walletbeat say about %@?": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "¿Qué dice Walletbeat sobre %@?"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@ について Walletbeat はどう言っていますか？"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat는 %@에 대해 뭐라고 하나요?"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat 怎么评价 %@？"
           }
         }
       }
@@ -73689,6 +77233,34 @@
         }
       }
     },
+    "Why this matters — %lld words": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Por qué importa: %lld palabras"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "なぜ重要か — %lld 語"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "왜 중요한가 — %lld단어"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "为何重要 — %lld 字"
+          }
+        }
+      }
+    },
     "Withdrew %@": {
       "localizations": {
         "es": {
@@ -74061,6 +77633,34 @@
         }
       }
     },
+    "Yes, by Walletbeat's reading": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Sí, según la lectura de Walletbeat"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat の判断では「はい」"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Walletbeat의 판단으로는 예"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "按 Walletbeat 的判断：是"
+          }
+        }
+      }
+    },
     "Yesterday": {
       "localizations": {
         "es": {
@@ -74315,6 +77915,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "你在 GitHub 上拒绝了——未连接任何内容。"
+          }
+        }
+      }
+    },
+    "You declined the request.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Rechazaste la solicitud."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "リクエストを拒否しました。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "요청을 거부했습니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "你已拒绝该请求。"
           }
         }
       }
@@ -76781,6 +80409,34 @@
         }
       }
     },
+    "Your code": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Tu código"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "あなたのコード"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "내 코드"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "你的验证码"
+          }
+        }
+      }
+    },
     "Your day": {
       "localizations": {
         "es": {
@@ -77290,6 +80946,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "你的密钥被拒绝了 — 请在设置中查看。"
+          }
+        }
+      }
+    },
+    "Your monthly limit is reached — organizing resumes next month.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Has alcanzado tu límite mensual: la organización se reanuda el mes que viene."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "月間上限に達しました。整理は来月再開します。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "월 한도에 도달했습니다 — 정리는 다음 달에 재개됩니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "已达每月上限——整理将于下月恢复。"
           }
         }
       }
@@ -79857,6 +83541,34 @@
         }
       }
     },
+    "changed its rating of": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "cambió su valoración de"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "の評価を変更しました"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "의 평가를 변경했습니다"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "更改了对"
+          }
+        }
+      }
+    },
     "changed its signature threshold from %lld to %lld": {
       "localizations": {
         "en": {
@@ -79915,6 +83627,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "宽裕"
+          }
+        }
+      }
+    },
+    "critical severity": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "gravedad crítica"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "重大度: 致命的"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "심각도: 치명적"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "严重程度：致命"
           }
         }
       }
@@ -80957,6 +84697,34 @@
         }
       }
     },
+    "high severity": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "gravedad alta"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "重大度: 高"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "심각도: 높음"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "严重程度：高"
+          }
+        }
+      }
+    },
     "huggingface.co/%@": {
       "localizations": {
         "es": {
@@ -81606,6 +85374,34 @@
         }
       }
     },
+    "low severity": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "gravedad baja"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "重大度: 低"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "심각도: 낮음"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "严重程度：低"
+          }
+        }
+      }
+    },
     "marked": {
       "localizations": {
         "es": {
@@ -81658,6 +85454,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "在这本书中标记"
+          }
+        }
+      }
+    },
+    "medium severity": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "gravedad media"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "重大度: 中"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "심각도: 보통"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "严重程度：中"
           }
         }
       }
@@ -82299,6 +86123,34 @@
         }
       }
     },
+    "no longer rated": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "ya no valorado"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "評価対象外になりました"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "더 이상 평가되지 않음"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "不再评级"
+          }
+        }
+      }
+    },
     "no runs for %lld days": {
       "localizations": {
         "es": {
@@ -82631,6 +86483,62 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "现在"
+          }
+        }
+      }
+    },
+    "now rated": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "ahora valorado"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "評価されました"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "이제 평가됨"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "现已评级"
+          }
+        }
+      }
+    },
+    "now rates": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "ahora valora"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "を評価しました"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "을(를) 평가합니다"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "现评级"
           }
         }
       }
@@ -83708,6 +87616,34 @@
         }
       }
     },
+    "read %lld saved pages": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "leyó %lld páginas guardadas"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "保存済みページを %lld 件読み取りました"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "저장된 페이지 %lld개를 읽음"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "读取了 %lld 个已保存页面"
+          }
+        }
+      }
+    },
     "read %lld screenshots": {
       "localizations": {
         "es": {
@@ -83760,6 +87696,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "读取了 1 个对话"
+          }
+        }
+      }
+    },
+    "read 1 saved page": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "leyó 1 página guardada"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "保存済みページを 1 件読み取りました"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "저장된 페이지 1개를 읽음"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "读取了 1 个已保存页面"
           }
         }
       }
