@@ -215,7 +215,7 @@ enum BridgeCatalog {
         // every other one reads what your funds did, this reads what the SOFTWARE
         // holding them does. Walletbeat is an independent, MIT-licensed registry.
         Offer(name: "Walletbeat", tagline: "How your wallet apps actually behave", group: "Wallet", connectable: true,
-              summary: "Walletbeat reviews wallet apps attribute by attribute — where your keys are made, who your addresses get handed to, who has audited the code.\n\nName the wallets you use and their reviews arrive, updating when Walletbeat revises one. Security incidents land too.\n\nNo account, no key. Their judgments, never ours — and where they haven't looked, it says so.",
+              summary: "Walletbeat reviews wallet apps attribute by attribute — where your keys are made, who your addresses get handed to, who has audited the code.\n\nFollow them and the wallet security incidents they publish arrive in your feed, for every wallet they cover. Name the wallets you use and their full reviews arrive too, updating when Walletbeat revises one.\n\nNo account, no key. Their judgments, never ours — and where they haven't looked, it says so.",
               features: ["Walletbeat's own verdict on each check, in their own words",
                          "Says how much has actually been reviewed, not just what passed",
                          "Vulnerabilities and breaches arrive as they're published"],

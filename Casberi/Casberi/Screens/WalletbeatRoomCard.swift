@@ -42,8 +42,14 @@ struct WalletbeatRoomCard: View {
 			}
 			.padding(.top, DS.Space.s3)
 
+			// The label is the VERB the tier is missing (prd §421). Following alone, the
+			// useful next act is naming your own wallets — "browse" describes the screen
+			// rather than the reason to open it, and this is the only door to that screen
+			// from inside the room.
 			Button(action: { DSHaptic.tap(); onBrowse() }) {
-				Text(String(localized: "Every wallet Walletbeat rates"))
+				Text(room.items.isEmpty
+					? String(localized: "Watch the wallet apps you use")
+					: String(localized: "Every wallet Walletbeat rates"))
 					.dsText(.subhead13).fontWeight(.semibold)
 					.foregroundStyle(DS.tint)
 			}

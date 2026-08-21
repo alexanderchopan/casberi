@@ -28,6 +28,8 @@ ROWS="Casberi/Casberi/Screens/WalletbeatRow.swift"
 CARD="Casberi/Casberi/Screens/WalletbeatRoomCard.swift"
 DIRSCREEN="Casberi/Casberi/Screens/WalletbeatDirectoryScreen.swift"
 FEED="Casberi/Casberi/Screens/FeedScreen.swift"
+ROUTE="Casberi/Casberi/Shell/HomeRoute.swift"
+SURFACE="Casberi/Casberi/Shell/MainSurface.swift"
 PROBES="Casberi/Casberi/Shell/ProbeHooks.swift"
 REACH="Casberi/Casberi/Model/NetworkReach.swift"
 SHEET="Casberi/Casberi/Model/WalletbeatSheet.swift"
@@ -166,6 +168,43 @@ if grep -qE 'httpMethod|postJSON|deleteJSON|"POST"|"PUT"|"DELETE"' "$TMP/bridge.
   echo "✗ WalletbeatBridge gained a write verb — the seat promises read-only"
   exit 1
 fi
+# --------------------------------------------------------------------------------------
+# The two tiers (prd §421). Following alone reads the incidents; watching adds the cards.
+#
+# Every one of these guards a failure that is SILENT: the seat simply goes quiet, which
+# from outside is indistinguishable from Walletbeat having published nothing. That is
+# §311 exactly, and it is the shape this bridge already shipped once — the incident read
+# was gated on the watch list while the incidents themselves were never filtered by it.
+# --------------------------------------------------------------------------------------
+guard 'guard WalletbeatWatch.following || !watched.isEmpty' "$TMP/bridge.nc" \
+  "the sync is gated on the watch list again — following alone would read nothing, silently"
+guard 'guard following || count > 0' "$TMP/bridge.nc" \
+  "the seat no longer registers for a follower — no seat means BridgeRefresh never sweeps it"
+guard 'following = true' "$TMP/bridge.nc" \
+  "watching no longer implies following — the incidents would stop arriving for a watcher"
+guard 'following = false' "$TMP/bridge.nc" \
+  "disconnect no longer clears the follow flag — the seat would re-register itself"
+# The room composes for EITHER tier. Demanding a watch here is the same silent gate one
+# file over: incidents land, the chip appears, and the head returns nil above them.
+guard '!watches.isEmpty || !incidents.isEmpty' "$TMP/src.nc" \
+  "the room head demands a watched wallet again — a follower's incidents would head nothing"
+guard 'newsSummary(incidents' "$TMP/src.nc" \
+  "the room no longer summarises the incidents — the followed head has nothing to say"
+# §234's ruling: a browse is mounted by the ROOM, "never by a setup screen". Routing
+# through the connect screen is what made reading the list a trip into the catalog.
+guard 'route.path.append(.walletbeatDirectory)' "$FEED" \
+  "the room's browse no longer opens the directory directly"
+guard 'case walletbeatDirectory' "$ROUTE" \
+  "the directory lost its own route node — the room can only reach it via the catalog"
+guard 'case .walletbeatDirectory:' "$SURFACE" \
+  "the directory route node is declared but never resolved to a screen"
+if grep -qF 'route.path.append(.bridge(.walletbeat))' "$FEED"; then
+  echo "✗ the room's browse pushes the CONNECT screen again (§234 — connecting is not browsing)"
+  exit 1
+fi
+guard 'walletbeatFollow' "$PROBES" \
+  "-walletbeatFollow is gone; following with nothing watched has no headless door"
+
 echo "  ✓ all drift guards hold"
 echo ""
 
@@ -607,6 +646,79 @@ let capped = WalletbeatRoom(items: [rabby, ledger], total: 5, snapshotDay: "2026
 check("a folded tail is named", WalletbeatRoom.coverageNote(capped)?.contains("2 of 5") == true)
 
 print("")
+print("The followed head — no wallet watched (prd §421)")
+
+func newsRoom(total: Int, open: Int = 0, recent: Int = 0) -> WalletbeatRoom {
+    WalletbeatRoom(items: [], total: 0, snapshotDay: "2026-08-20",
+                   news: WalletbeatRoom.News(total: total, open: open, recent: recent))
+}
+
+// STANDING outranks volume: one thing still open asks something of you, a busy month
+// that closed does not.
+let openOne = newsRoom(total: 9, open: 1, recent: 4)
+check("an unresolved incident leads the followed head",
+      WalletbeatRoom.headline(openOne).contains("unresolved"))
+check("one is said as one, not as a figure",
+      WalletbeatRoom.headline(openOne).contains("One"))
+let openMany = newsRoom(total: 12, open: 3, recent: 9)
+check("several unresolved are counted",
+      WalletbeatRoom.headline(openMany).contains("3"))
+// The busier window must NOT win while something is open — this fixture has nine recent
+// against one open, so it fails if the order is ever flipped.
+check("open beats recent even when recent is far larger",
+      WalletbeatRoom.headline(newsRoom(total: 20, open: 1, recent: 19)).contains("unresolved"))
+
+// COUNTED, not merely dated: the quiet sentence also ends in "in the last 30 days", so a
+// fixture asserting that phrase passes whether or not the recent branch was reached. Its
+// first cut did exactly that and the mutation survived — a fixture only tests the rule it
+// names if it fails that rule and passes every other one.
+let recentOnly = newsRoom(total: 9, open: 0, recent: 2)
+check("a closed but recent window says how many, in the window",
+      WalletbeatRoom.headline(recentOnly).contains("2 wallet security incidents in the last 30 days"))
+check("a recent window is never reported as quiet",
+      WalletbeatRoom.headline(recentOnly).hasPrefix("No") == false)
+check("one recent incident is said as one",
+      WalletbeatRoom.headline(newsRoom(total: 3, open: 0, recent: 1)).contains("One wallet security incident in the last 30 days"))
+check("a closed window never says unresolved",
+      WalletbeatRoom.headline(recentOnly).contains("unresolved") == false)
+
+let quiet = newsRoom(total: 9, open: 0, recent: 0)
+check("a quiet window is a real answer, not an empty frame",
+      WalletbeatRoom.headline(quiet).contains("No wallet security incidents"))
+
+// THE HONESTY GATE, and the sharpest thing here: nothing landed is a fact about the READ,
+// never a clean bill of health for thirty-two wallets.
+let nothingRead = WalletbeatRoom(items: [], total: 0, snapshotDay: "2026-08-20", news: nil)
+check("no incident landed reads as reading, not as none exist",
+      WalletbeatRoom.headline(nothingRead).contains("Reading"))
+check("no incident landed never claims a quiet window",
+      WalletbeatRoom.headline(nothingRead).contains("No wallet security") == false)
+
+// The second line is always the upgrade — what following does NOT cover.
+check("the followed note names the upgrade",
+      WalletbeatRoom.note(openOne).contains("Name the wallet apps you use"))
+check("the followed note before anything lands still names the upgrade",
+      WalletbeatRoom.note(nothingRead).contains("Name the wallet apps you use"))
+
+// It never names a wallet: the incidents are rows directly beneath, and promoting one of
+// thirty-two into the headline reads as a warning about software you may not use.
+check("the followed headline names no wallet",
+      WalletbeatRoom.headline(openOne).contains("Rabby") == false)
+
+check("a followed room attributes in its small print",
+      WalletbeatRoom.coverageNote(openOne)?.contains("Walletbeat") == true)
+check("a room with neither wallets nor news has no small print",
+      WalletbeatRoom.coverageNote(nothingRead) == nil)
+check("a followed room is empty of wallets", openOne.isEmpty)
+
+// A watched room still carries the news summary without letting it take the headline —
+// the wallet you named outranks the ecosystem.
+let watchedWithNews = WalletbeatRoom(items: [rabby], total: 1, snapshotDay: "2026-08-20",
+                                     news: WalletbeatRoom.News(total: 9, open: 2, recent: 3))
+check("a watched wallet still leads its own head",
+      WalletbeatRoom.headline(watchedWithNews).contains("Rabby"))
+
+print("")
 print("Sheet anatomies")
 
 func facts(_ ref: String?, source: String = "Walletbeat",
@@ -871,6 +983,26 @@ mutate "an import receipt is excluded" sheet \
 mutate "an unknown verdict is refused" sheet \
   'guard let verdict = WalletbeatVerdict(rawValue: parts[2]) else { return nil }' \
   'let verdict = WalletbeatVerdict(rawValue: parts[2]) ?? .unrated'
+
+# The two tiers (prd §421). Each of these renders perfectly and says the wrong thing.
+#
+# The first is the sharpest: a followed seat whose first read has not landed yet would
+# announce a clean ecosystem for all thirty-two wallets. The anchor carries its own
+# comment line because "Reading Walletbeat…" is also `note`'s unread branch and
+# `leadLine`'s, and the replacement takes the FIRST match.
+mutate "nothing landed must not read as a quiet ecosystem" room \
+  $'// what is known.\n\t\t\treturn String(localized: "Reading Walletbeat…")' \
+  $'// what is known.\n\t\t\treturn String(localized: "No wallet security incidents in the last 30 days")'
+mutate "open must outrank recent" room \
+  'if news.open > 0 {' 'if news.open > 99 {'
+mutate "the recent window must be reported" room \
+  'if news.recent > 0 {' 'if news.recent > 99 {'
+mutate "the followed note must carry the upgrade" room \
+  "Name the wallet apps you use and Walletbeat's review of each arrives too" \
+  "Walletbeat publishes these on their own schedule"
+mutate "a followed room must still attribute" room \
+  "Walletbeat's reading, not ours · every wallet they cover" \
+  "Read on this device"
 
 echo ""
 echo "walletbeat-selftest: OK — assertions pass and every mutation is caught."

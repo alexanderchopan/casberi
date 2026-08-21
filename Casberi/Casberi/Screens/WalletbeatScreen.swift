@@ -22,14 +22,19 @@ struct WalletbeatScreen: View {
 	@State private var opened: String?
 	@FocusState private var fieldFocused: Bool
 
-	private var connected: Bool { !watched.isEmpty }
+	/// Both tiers (prd §421). Following alone is a real connected state — it reads
+	/// Walletbeat's incidents, which is what their registry publishes about the ecosystem
+	/// and which this bridge fetches WHOLE, filtered by nothing.
+	@State private var following = WalletbeatWatch.following
+
+	private var connected: Bool { following || !watched.isEmpty }
 
 	var body: some View {
 		List {
 			BridgeSetupHeader(
 				name: "Walletbeat",
 				mode: .noAccount,
-				intro: "Name the wallet apps you use and Walletbeat's review of each arrives — where your keys are made, who sees your addresses, who has audited the code. Their judgments, never ours.",
+				intro: "Follow Walletbeat and the wallet security incidents they publish arrive in your feed. Name the wallet apps you use and each one's full review comes too — their judgments, never ours.",
 				connected: connected,
 				flipTrigger: flipTrigger)
 
@@ -37,7 +42,11 @@ struct WalletbeatScreen: View {
 
 			if connected {
 				rosterSection
-				ChipLiveNote(name: "Walletbeat", verb: "for your wallets' reviews.")
+				ChipLiveNote(
+					name: "Walletbeat",
+					verb: watched.isEmpty
+						? "for wallet security news."
+						: "for security news and your wallets' reviews.")
 					.listRowSeparator(.hidden)
 				BridgeDisconnectSection(
 					bridgeID: WalletbeatWatch.seatID,
@@ -60,6 +69,7 @@ struct WalletbeatScreen: View {
 			WalletbeatCardScreen(walletID: walletID)
 		}
 		.onAppear {
+			following = WalletbeatWatch.following
 			load()
 			// Opening the screen doesn't connect — the person taps a wallet to watch it.
 			// Only refresh if something is already watched: viewing is not consent.
@@ -110,7 +120,16 @@ struct WalletbeatScreen: View {
 				}
 				.buttonStyle(.plain)
 
-				DSSlabNote(text: String(localized: "Security incidents arrive on their own, for every wallet Walletbeat covers."))
+				if following {
+					DSSlabNote(text: String(localized: "Security incidents arrive on their own, for every wallet Walletbeat covers."))
+				} else {
+					// The free tier, and the reason it has its own button: the incidents
+					// are about the whole registry, so there is nothing to name before
+					// they can arrive. Before §421 they were gated behind watching a
+					// wallet — not a decision anyone took, just the watch list doubling
+					// as the connect act.
+					DSSlabButton(title: String(localized: "Follow the security news"), action: follow)
+				}
 			}
 		}
 		.dsSlabSection()
@@ -202,6 +221,16 @@ struct WalletbeatScreen: View {
 			.filter { WalletbeatWatch.isWatchRef($0.sourceRef) }
 	}
 
+	private func follow() {
+		DSHaptic.tap()
+		let wasConnected = connected
+		WalletbeatWatch.following = true
+		following = true
+		WalletbeatWatch.registerBridge(store: store, context: modelContext)
+		if !wasConnected { flipTrigger += 1 }
+		Task { await sync() }
+	}
+
 	private func watchTyped() {
 		guard let first = hits.first else { return }
 		watch(first)
@@ -211,6 +240,9 @@ struct WalletbeatScreen: View {
 		let wasEmpty = watched.isEmpty
 		guard WalletbeatWatch.add(entry, context: modelContext) != nil else { return }
 		queryField = ""
+		// `add` turns following on (watching implies following) — mirror it, or the
+		// screen keeps offering a Follow button for a seat that is already following.
+		following = WalletbeatWatch.following
 		load()
 		WalletbeatWatch.registerBridge(store: store, context: modelContext)
 		if wasEmpty { flipTrigger += 1 }
@@ -225,8 +257,11 @@ struct WalletbeatScreen: View {
 			syncPending = false
 			let added = await WalletbeatIngest.refresh(context: modelContext)
 			load()
+			following = WalletbeatWatch.following
 			WalletbeatWatch.registerBridge(store: store, context: modelContext)
-			guard !watched.isEmpty else { return }
+			// Not gated on the watch list any more: a follower with nothing watched has
+			// really just read the registry and is owed the same result line.
+			guard connected else { return }
 			if let added {
 				result = added > 0
 					? String(localized: "\(added) new")

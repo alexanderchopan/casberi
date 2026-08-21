@@ -1054,6 +1054,23 @@ enum ProbeHooks {
                       added.map(String.init) ?? "UNREACHABLE")
             }
         },
+        // `-walletbeatFollow YES|NO` — the free tier, headless (prd §421).
+        //
+        // Declared BEFORE the probes (hooks run in list order) so a run can follow and
+        // then read in one launch. It exists because following with NOTHING watched is
+        // the state that could not be reached any other way here: the connect screen's
+        // button is the only door, and no simulator run taps it.
+        Hook(key: "walletbeatFollow") { value, context in
+            let on = value.uppercased() != "NO"
+            WalletbeatWatch.following = on
+            Task { @MainActor in
+                let added = on ? await WalletbeatIngest.refresh(context: context) : nil
+                NSLog("[Casberi] walletbeatFollow| following=%@ watched=%d landed=%@",
+                      on ? "YES" : "NO",
+                      WalletbeatWatch.watchedIDs(context: context).count,
+                      added.map(String.init) ?? (on ? "UNREACHABLE" : "-"))
+            }
+        },
         // `-walletbeatProbe YES` — the read phase by phase, then one line per
         // watched wallet's ratings and one per landed incident. An empty room
         // has five causes that render as one silence (nothing watched, a first

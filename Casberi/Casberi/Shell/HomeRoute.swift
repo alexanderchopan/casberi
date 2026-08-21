@@ -62,6 +62,15 @@ final class HomeRoute {
         /// as the catalog grew past sixty seats. The catalog stays one tap
         /// away on the fork itself.
         case startHere
+        /// Walletbeat's full directory (prd §421).
+        ///
+        /// Its own node so the ROOM can reach it in one push. §234 already ruled that a
+        /// browse belongs at the head of the room and "never by a setup screen —
+        /// connecting an exchange is not browsing it"; this screen was reachable only
+        /// through the connect screen, so reading the directory meant a trip into the
+        /// catalog and a second tap. The connect screen keeps its own link, which is the
+        /// naming step rather than a browse.
+        case walletbeatDirectory
     }
     var path: [Node] = []
 

@@ -40,6 +40,37 @@ enum WalletbeatWatch {
 		return String(ref.dropFirst(walletPrefix.count))
 	}
 
+	// MARK: Following
+
+	/// Whether the seat is ON, independent of whether any wallet is watched (prd §421).
+	///
+	/// TWO TIERS OVER ONE SEAT, the address book's shape (§169): FOLLOWING is free and
+	/// gets you Walletbeat's security news — which is what their registry publishes about
+	/// the whole ecosystem, and which this bridge has always fetched WHOLE, filtered by
+	/// nothing. WATCHING a wallet is the upgrade: it adds that wallet's report card, its
+	/// rating revisions, and a head that ranks what needs reading.
+	///
+	/// Before this the seat existed only while something was watched, so the incident feed
+	/// — already global in the data — was gated behind naming a wallet first. That was not
+	/// a decision anyone took; it fell out of the watch list doubling as the connect act.
+	///
+	/// A flag rather than a `Thing`, because there is no entity to be: a watch names a
+	/// wallet and this names nothing. The `X402State`/`ASCState` shape.
+	private static let followingKey = "walletbeat.following"
+
+	static var following: Bool {
+		get { UserDefaults.standard.bool(forKey: followingKey) }
+		set { UserDefaults.standard.set(newValue, forKey: followingKey) }
+	}
+
+	/// The seat is on when it is followed OR anything is watched. The second half is the
+	/// migration: an install that watched wallets before this flag existed has `false`
+	/// stored and must stay connected — reading its watch list is what says so.
+	@MainActor
+	static func isOn(context: ModelContext) -> Bool {
+		following || !watchedIDs(context: context).isEmpty
+	}
+
 	static func isWatchRef(_ ref: String?) -> Bool { ref?.hasPrefix(walletPrefix) ?? false }
 	static func isNewsRef(_ ref: String?) -> Bool { ref?.hasPrefix(newsPrefix) ?? false }
 	static func isRevisionRef(_ ref: String?) -> Bool { ref?.hasPrefix(revisionPrefix) ?? false }
@@ -57,6 +88,9 @@ enum WalletbeatWatch {
 	static func add(_ entry: WalletbeatEntry, context: ModelContext) -> Thing? {
 		let ref = walletRef(entry.id)
 		guard !IngestSupport.hasSourceRef(context, source: source, ref: ref) else { return nil }
+		// Watching implies following: the news has always arrived for anyone watching a
+		// wallet, and nothing about naming one is a reason to stop reading the incidents.
+		following = true
 		let thing = Thing(
 			kind: .link,
 			title: IngestSupport.titleLine(entry.name),
@@ -96,13 +130,20 @@ enum WalletbeatWatch {
 	@MainActor
 	static func registerBridge(store: BridgeStore, context: ModelContext) {
 		let count = watchedIDs(context: context).count
-		guard count > 0 else { store.remove(seatID); return }
+		guard following || count > 0 else { store.remove(seatID); return }
+		// The proof says which TIER is on, because "connected" covering both tiers would
+		// leave someone who only follows unable to tell whether their watches took.
+		let proof = count > 0
+			? String(localized: "\(count) watched")
+			: String(localized: "Following the news")
 		store.registerConnected(
 			id: seatID,
 			name: source,
-			proof: String(localized: "\(count) watched"),
+			proof: proof,
 			can: [
-				String(localized: "Reads Walletbeat's public ratings for the wallets you name."),
+				count > 0
+					? String(localized: "Reads Walletbeat's public ratings for the wallets you name.")
+					: String(localized: "Reads Walletbeat's published wallet security incidents."),
 				String(localized: "Read-only — no account, no key, and nothing about you is sent."),
 			]
 		)
@@ -112,6 +153,7 @@ enum WalletbeatWatch {
 	@MainActor
 	static func removeAll(context: ModelContext) {
 		FollowPrune.remove(source: source, context: context) { _ in true }
+		following = false
 		WalletbeatState.forgetAll()
 		WalletbeatIncidentBook.forgetAll()
 	}
@@ -273,7 +315,9 @@ enum WalletbeatIngest {
 		guard !DemoMode.isActive else { return 0 }
 
 		let watched = WalletbeatWatch.watchedIDs(context: context)
-		guard !watched.isEmpty else { return 0 }
+		// Following alone is enough to read (prd §421). The ratings loop below iterates
+		// `watched`, so an empty list skips it for free and only the incidents run.
+		guard WalletbeatWatch.following || !watched.isEmpty else { return 0 }
 
 		var existing = IngestSupport.existingSourceRefs(context, source: source)
 		var added = 0

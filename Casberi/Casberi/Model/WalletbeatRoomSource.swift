@@ -29,10 +29,14 @@ enum WalletbeatRoomSource {
 				incidents.append(thing)
 			}
 		}
-		guard !watches.isEmpty else { return nil }
+		// Either tier composes a head (prd §421): watched wallets rank, and a follower with
+		// no watches gets the incident standing. Neither present means no room at all —
+		// the chip only exists when rows do.
+		guard !watches.isEmpty || !incidents.isEmpty else { return nil }
 
 		let cards = WalletbeatState.cards()
 		let cutoff = now.addingTimeInterval(-Double(recencyDays) * 86_400)
+		let news = newsSummary(incidents, cutoff: cutoff)
 
 		var items: [WalletbeatRoom.Item] = []
 		for watch in watches {
@@ -62,13 +66,35 @@ enum WalletbeatRoomSource {
 				)
 			)
 		}
-		guard !items.isEmpty else { return nil }
+		// A watch whose row is dead falls through to the news head rather than to nothing:
+		// the incidents are still landed rows and still have a standing to report.
+		guard !items.isEmpty else {
+			guard let news else { return nil }
+			return WalletbeatRoom(
+				items: [], total: 0, snapshotDay: WalletbeatDirectory.generated, news: news)
+		}
 
 		let ranked = WalletbeatRoom.ranked(items)
 		return WalletbeatRoom(
 			items: Array(ranked.prefix(rowCap)),
 			total: ranked.count,
-			snapshotDay: WalletbeatDirectory.generated
+			snapshotDay: WalletbeatDirectory.generated,
+			news: news
+		)
+	}
+
+	/// The whole registry's incident standing, for the followed-but-unwatched head.
+	///
+	/// Nil when nothing has landed, and deliberately NOT a zeroed summary: "none landed"
+	/// and "none exist" are different claims, and only the second would be a clean bill of
+	/// health for every wallet Walletbeat covers.
+	@MainActor
+	private static func newsSummary(_ incidents: [Thing], cutoff: Date) -> WalletbeatRoom.News? {
+		guard !incidents.isEmpty else { return nil }
+		return WalletbeatRoom.News(
+			total: incidents.count,
+			open: incidents.filter { isOpen($0) }.count,
+			recent: incidents.filter { $0.capturedAt >= cutoff }.count
 		)
 	}
 
@@ -105,7 +131,7 @@ enum WalletbeatRoomSource {
 		let watched = WalletbeatWatch.watchedIDs(context: context)
 		let cards = WalletbeatState.cards()
 		var out: [String] = [
-			"watched=\(watched.count) [\(watched.joined(separator: ","))]",
+			"following=\(WalletbeatWatch.following) watched=\(watched.count) [\(watched.joined(separator: ","))]",
 			"cards=\(cards.count) rows=\(things.count) directory=\(WalletbeatDirectory.wallets.count) snapshot=\(WalletbeatDirectory.generated)",
 			"news=\(things.filter { WalletbeatWatch.isNewsRef($0.sourceRef) }.count) revisions=\(things.filter { WalletbeatWatch.isRevisionRef($0.sourceRef) }.count) newsReadAt=\(WalletbeatState.newsReadAt.map(IngestSupport.isoString) ?? "never")",
 		]
@@ -122,8 +148,13 @@ enum WalletbeatRoomSource {
 		}
 
 		guard let room = compose(things: things, now: now) else {
-			out.append("compose=nil — no card (nothing watched, or every watch row is dead)")
+			out.append("compose=nil — no card (nothing watched AND no incident landed)")
 			return out
+		}
+		if let news = room.news {
+			out.append("news| total=\(news.total) open=\(news.open) recent=\(news.recent)")
+		} else {
+			out.append("news| none landed")
 		}
 		out.append("headline=\(WalletbeatRoom.headline(room))")
 		out.append("note=\(WalletbeatRoom.note(room))")

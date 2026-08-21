@@ -2569,8 +2569,12 @@ struct FeedScreen: View {
                         openBySourceRef(ref, in: visible)
                     } onBrowse: {
                         // Pushed, not raised: this is navigation to a place, not a
-                        // connect act (§219 — Connect raises, Open pushes).
-                        route.path.append(.bridge(.walletbeat))
+                        // connect act (§219 — Connect raises, Open pushes). Straight to
+                        // the directory, never via the connect screen: §234's ruling is
+                        // that a browse is mounted by the room, and routing through the
+                        // setup screen made reading the list a trip into the catalog
+                        // plus a second tap (prd §421).
+                        route.path.append(.walletbeatDirectory)
                     }
                 case .github(let room):
                     GitHubRoomCard(room: room) { ref in

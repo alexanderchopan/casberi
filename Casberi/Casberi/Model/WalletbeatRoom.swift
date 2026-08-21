@@ -41,12 +41,38 @@ struct WalletbeatRoom: Equatable {
 		var coverage: WalletbeatCoverage { .of(counts) }
 	}
 
+	/// Walletbeat's published incidents, across their WHOLE registry — not filtered to the
+	/// watch list, because that is not what the registry is (prd §421).
+	///
+	/// This is the half you get for FOLLOWING alone. It is summarised rather than listed
+	/// because the incidents are already rows in the room beneath the head; what the head
+	/// adds is the standing they have — how many are still open, and how recent.
+	struct News: Equatable {
+		let total: Int
+		/// Still ongoing or unknown, read off the tag the landing wrote — never inferred.
+		let open: Int
+		/// Inside the room's recency window, open or not.
+		let recent: Int
+	}
+
 	let items: [Item]
 	/// Every watched wallet, before the display cap — so the headline can never disagree
 	/// with the coverage note beneath it.
 	let total: Int
 	/// The day the bundled directory was taken, for the honest staleness line.
 	let snapshotDay: String
+	/// Present whenever any incident has landed. Nil is "none landed", never "none exist" —
+	/// a first sync that has not run yet must not read as a clean ecosystem.
+	let news: News?
+
+	/// Spelled out rather than left to the memberwise initializer so `news` can default:
+	/// every existing call site and fixture built a watch-led room and still means to.
+	init(items: [Item], total: Int, snapshotDay: String, news: News? = nil) {
+		self.items = items
+		self.total = total
+		self.snapshotDay = snapshotDay
+		self.news = news
+	}
 
 	var isEmpty: Bool { items.isEmpty }
 
@@ -90,9 +116,7 @@ struct WalletbeatRoom: Equatable {
 	/// The one sentence at the top. Always about the wallet that ranked first, so the
 	/// headline and the first row can never describe different things.
 	static func headline(_ room: WalletbeatRoom) -> String {
-		guard let top = room.items.first else {
-			return String(localized: "Nothing watched yet")
-		}
+		guard let top = room.items.first else { return newsHeadline(room) }
 		if top.openIncidents > 0 {
 			return String(localized: "\(top.name) has an unresolved security incident")
 		}
@@ -119,9 +143,7 @@ struct WalletbeatRoom: Equatable {
 	/// The line under the headline. Never repeats it: it carries the SECOND fact, which is
 	/// always how much has been looked at.
 	static func note(_ room: WalletbeatRoom) -> String {
-		guard !room.items.isEmpty else {
-			return String(localized: "Name the wallet apps you use and Walletbeat's review of each arrives here.")
-		}
+		guard !room.items.isEmpty else { return newsNote(room) }
 		let unread = room.items.filter { !$0.read }.count
 		if unread == room.total {
 			return String(localized: "Reading Walletbeat…")
@@ -158,8 +180,54 @@ struct WalletbeatRoom: Equatable {
 	/// The small print. States the snapshot's own age, because a directory bundled with the
 	/// app is exactly as current as the last ship and pretending otherwise is the kind of
 	/// quiet staleness §83 exists to prevent.
+	// MARK: The news-led head
+
+	/// What the head says when the seat is FOLLOWED and nothing is watched (prd §421).
+	///
+	/// It leads with STANDING, not volume: an unresolved incident is the only thing here
+	/// that asks anything of you, so it outranks a busier month in which everything was
+	/// closed. A quiet window says so plainly rather than drawing an empty frame — "no
+	/// incidents in thirty days" is a real answer and the one most people will see.
+	///
+	/// It never names a wallet. The incidents are rows in the room directly beneath this
+	/// card, and a headline naming one of thirty-two wallets somebody may not use would
+	/// promote whichever happened to be newest into a warning about their own software.
+	static func newsHeadline(_ room: WalletbeatRoom) -> String {
+		guard let news = room.news, news.total > 0 else {
+			// No incident has landed on this device yet, which is a fact about the read
+			// rather than about the world — §83's rule in the one room built to report
+			// what is known.
+			return String(localized: "Reading Walletbeat…")
+		}
+		if news.open > 0 {
+			return news.open == 1
+				? String(localized: "One wallet security incident is still unresolved")
+				: String(localized: "\(news.open) wallet security incidents are still unresolved")
+		}
+		if news.recent > 0 {
+			return news.recent == 1
+				? String(localized: "One wallet security incident in the last 30 days")
+				: String(localized: "\(news.recent) wallet security incidents in the last 30 days")
+		}
+		return String(localized: "No wallet security incidents in the last 30 days")
+	}
+
+	/// The second line. Always the UPGRADE, because the head's job here is to say what
+	/// following does not cover: incidents are about wallets in general, and a review of
+	/// the wallet in your pocket needs you to name it.
+	static func newsNote(_ room: WalletbeatRoom) -> String {
+		guard let news = room.news, news.total > 0 else {
+			return String(localized: "Walletbeat's security incidents arrive here. Name the wallet apps you use to add their reviews.")
+		}
+		return String(localized: "\(news.total) landed so far. Name the wallet apps you use and Walletbeat's review of each arrives too — where its keys are made, who sees your addresses.")
+	}
+
 	static func coverageNote(_ room: WalletbeatRoom) -> String? {
-		guard !room.items.isEmpty else { return nil }
+		guard !room.items.isEmpty else {
+			return room.news == nil
+				? nil
+				: String(localized: "Walletbeat's reading, not ours · every wallet they cover")
+		}
 		let shown = room.items.count
 		if shown < room.total {
 			return String(localized: "Showing \(shown) of \(room.total) · Walletbeat's ratings, read on this device")

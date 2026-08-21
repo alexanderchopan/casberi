@@ -82,6 +82,7 @@ at all.
 | §18 | Feed spec | amended by §64 |
 | §36 | Bridge selection ruling: live data only | amended by §420 |
 | §402 | Altana keystore: read Ethereum only, and stay silent on first sight | amended by §403 |
+| §419 | Walletbeat: the seat exists only while a wallet is watched | amended by §421 |
 | §36a | Home cover: an explicit banner outranks the automatic screensh | amended by §36j, superseded by §36o |
 | §36h | Wallet holdings: one treemap per wallet, leads Feed too, tap-t | amended by §36n |
 | §36j | Home cover is 2-tier now: a set banner, or black | superseded by §36o |
@@ -27876,3 +27877,105 @@ mutations, each a silent wrong answer: SSE taking the first frame instead of the
 last, the `-32001` code drifting, an absent `is_pro` defaulting to true,
 `invalid_grant` read as pending, the poll interval losing its floor, the host
 drifting to the marketing domain.
+
+## 421. Walletbeat is a publication you follow, and its directory belongs to the room (user: "so we didn't do walletbeat how i wanted, i wanted it as a feed in the app, not just if you follow a wallet… maybe what you did is better i can't tell. wdyt", then "i guess it is better to choose which wallets to watch", then "yes do it", 2026-08-20)
+
+Amends §419. Its watch list stands — the disagreement turned out to be about a gate
+nobody chose, not about the design.
+
+**The report was that Walletbeat should be something you FOLLOW, with its updates arriving
+in the feed, rather than something that only speaks about wallets you have named.** Half
+of that was already true in the data and switched off by accident. `WalletbeatIngest`
+reads the incident registry WHOLE — `data/news/index.ts` enumerates every entry and
+nothing in the walk filters by the watch list, because an incident is a fact about the
+ecosystem and Walletbeat publishes it that way. The only thing standing between a person
+and that feed was `guard !watched.isEmpty else { return 0 }`, plus a `registerBridge` that
+dropped the seat at zero watches. **Neither was a decision: they fell out of the watch
+list doubling as the connect act.** So the seat existed only while a wallet was named, and
+the security news — the half that needs no naming at all — was gated behind doing homework
+first.
+
+The other half of the report was wrong, and the user reached the same answer unprompted
+before this was built: **ratings SHOULD be per-wallet.** A rating revision is per
+ATTRIBUTE, 32 wallets against ~25 attributes each, so an ungated revision feed is noise in
+a room whose whole claim is that it says what is known about YOUR software. And "which
+wallet apps do you use" is a cheap question with a durable answer — the one kind of
+question a connect screen has earned the right to ask.
+
+### 1. Two tiers over one seat
+
+The address book's shape (§169: naming is free, watching is the capped upgrade), here as
+following vs watching.
+
+**FOLLOWING** is free and gets you Walletbeat's published incidents, for every wallet they
+cover. **WATCHING** a wallet adds that wallet's report card, its rating revisions, and a
+head that ranks what needs reading. Watching implies following — the incidents have always
+arrived for anyone watching a wallet, and naming one is no reason to stop reading them.
+
+`WalletbeatWatch.following` is a flag, not a `Thing`, **because there is no entity to be**:
+a watch names a wallet and this names nothing. The `X402State`/`ASCState` shape.
+
+**The migration is `isOn`, and it is load-bearing:** an install that watched wallets before
+this flag existed has `false` stored, so "is the seat on" is `following || !watched.isEmpty`
+everywhere it is asked. Reading the flag alone would silently disconnect every existing
+Walletbeat user on upgrade — a seat that vanishes with its rows still in the feed.
+
+The seat's PROOF line says which tier is on ("3 watched" / "Following the news"), because
+one word covering both leaves somebody who only follows unable to tell whether their
+watches took.
+
+### 2. The head the free tier gets
+
+`WalletbeatRoom.News` — total, open, recent — summarised rather than listed, because the
+incidents are already rows in the room directly beneath the head. What the head adds is
+their STANDING.
+
+**It leads with standing, never volume.** One thing still unresolved asks something of
+you; a busy month in which everything closed does not. A quiet window says so plainly
+("No wallet security incidents in the last 30 days") rather than drawing an empty frame —
+that is a real answer and the one most people will see.
+
+**It never names a wallet.** Promoting whichever of thirty-two happened to be newest into
+the headline reads as a warning about software the person may not use. The wallet-led head
+is unchanged and still wins whenever anything is watched.
+
+**Nothing landed reads as "Reading Walletbeat…", never as a quiet ecosystem** — that is a
+fact about the READ, and stating it as a fact about the world would be a clean bill of
+health for all 32 wallets, issued by a sync that has not run. §83 in the room built to
+report what is known. `News` is nil rather than zeroed for the same reason, and the
+harness pins it as its sharpest mutation.
+
+The second line is always the UPGRADE, because the head's job here is to say what
+following does not cover.
+
+### 3. The directory belongs to the room
+
+**§234 already ruled this and Walletbeat got it wrong:** a browse is mounted at the head of
+the ROOM, "never by a setup screen — connecting an exchange is not browsing it".
+`WalletbeatDirectoryScreen` was reachable from exactly one place, the connect screen, so
+reading the list of rated wallets meant a trip into the catalog and a second tap — and the
+room's own "Every wallet Walletbeat rates" button pushed the connect screen to get there.
+
+It has its own `HomeRoute.Node` now and the room pushes it directly. The connect screen
+keeps its link, which is the NAMING step rather than a browse. The card's label follows
+the tier: a follower with nothing watched is offered "Watch the wallet apps you use",
+because "browse" describes the screen rather than the reason to open it.
+
+### 4. What is guarded
+
+`scripts/walletbeat-selftest.sh` gains 20 assertions, 5 mutations and 10 drift guards.
+Every guard here defends a SILENT failure: re-gate the sync on the watch list, or demand a
+watch in `compose`, and the seat simply goes quiet — which from outside is indistinguishable
+from Walletbeat having published nothing. **That is §311 exactly, and this bridge already
+shipped one instance of it.** A negative guard fails the build if the room's browse ever
+points back at the connect screen.
+
+`-walletbeatFollow YES|NO` is the headless door, declared before the probes so a run can
+follow and read in one launch; it exists because following with NOTHING watched is the one
+state no simulator run could otherwise reach — the connect screen's button is its only door.
+
+**One fixture was caught proving the right result for the wrong reason, for the fourth time
+in this repo:** the quiet sentence also ends "in the last 30 days", so a check asserting
+that phrase passed whether or not the recent branch was reached, and the mutation survived.
+The standing rule again: **a fixture only tests the rule it names if it fails that rule and
+passes every other one.**
