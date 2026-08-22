@@ -572,6 +572,15 @@ harness "Price-chart self-test" "price-chart self-test" "scripts/price-chart-sel
 # printing "$0", i.e. "reaches nothing" for a grant we had failed to read).
 harness "Wallet-visualization self-test" "wallet-viz self-test" "scripts/wallet-viz-selftest.sh" "the wallet-visualization self-test failed — run scripts/wallet-viz-selftest.sh"
 
+# The wallet manager's map (prd §435) — where every body in the sky sits. Every
+# way this can be wrong draws a beautiful picture that says something false: a
+# person placed between two wallets they never touched, two people stacked on
+# one spot, a layout that reshuffles between opens, a group named over a
+# cluster that isn't its own. It also carries the negatives no assertion can
+# reach — no link carries a weight (§295), and no figure appears anywhere on
+# this screen (the 2026-08-21 ruling).
+harness "Address-sky layout self-test" "address-sky self-test" "scripts/address-sky-selftest.sh" "the address-sky self-test failed — run scripts/address-sky-selftest.sh"
+
 # The WalletConnect picker's arithmetic (`Model/WalletConnectPlan.swift`, prd
 # §376). The bug it replaces was unreportable, not merely unnoticed: the
 # connect door looped `WalletStore.add` over every shared account and flagged

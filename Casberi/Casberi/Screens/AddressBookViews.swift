@@ -323,7 +323,18 @@ struct AddressMark: View {
                             .foregroundStyle(DS.textSecondary)
                     }
             } else {
-                WalletFace(address: entry.address, size: size)
+                // CIRCULAR (prd §433, 2026-08-21). This view's own header has
+                // said "a wallet is a WHO … everything else is machinery and
+                // wears a square glyph" since §169, and the roster shelf drew
+                // it that way — but every OTHER use of this mark took
+                // `WalletFace`'s squircle default, so in the list a wallet and
+                // a contract were both rounded rectangles and the whole
+                // round-vs-square rule came down to colour-vs-gray. The face
+                // is now the same shape wherever an address is a person: the
+                // shelf, the book row, the group deck, the address card, the
+                // preview under the field. §362's ruling, one screen down —
+                // "the best way to make it simple is things being the same."
+                WalletFace(address: entry.address, size: size, circular: true)
             }
         }
         // The kind reveal (prd §171, 2026-07-22). Detection lands
@@ -454,6 +465,7 @@ struct AddressCard: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
     @Environment(\.openURL) private var openURL
+    @Environment(BridgeStore.self) private var bridges
     private var book = AddressBook.shared
     @State private var renaming = false
     @State private var nameDraft = ""
@@ -492,7 +504,11 @@ struct AddressCard: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: DS.Space.s3) {
-                    AddressMark(entry: current, size: 64)
+                    // 76, up from 64 (prd §435) — this sheet is a PROFILE and
+                    // its subject is a person, so the face leads at a size the
+                    // sky's own watched bodies are drawn at rather than one
+                    // step under it. Same mark, same round-vs-square rule.
+                    AddressMark(entry: current, size: DS.Face.profile)
                         .padding(.top, DS.Space.s4)
                     // The NAME reveal (2026-08-01) — `AddressMark`'s kind
                     // turn-over (prd §171) applied to the other half of the
@@ -503,7 +519,7 @@ struct AddressCard: View {
                     // at it. Same transition as the mark beside it, so the two
                     // halves of "what is this" resolve in one visual language.
                     Text(current.name)
-                        .dsText(.heading22).foregroundStyle(DS.textPrimary)
+                        .dsText(.heading28).foregroundStyle(DS.textPrimary)
                         .multilineTextAlignment(.center)
                         .transition(.scale(scale: 0.9).combined(with: .opacity))
                         .id(current.name)
@@ -512,6 +528,7 @@ struct AddressCard: View {
                         .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                     bitcoinVintageLine
 
+                    watchPill
                     lookalikeWarning
                     exposureSection
                     groupRow
@@ -533,12 +550,18 @@ struct AddressCard: View {
             // Mom everywhere); machinery pours in Casberi's own tint, because
             // a contract has no identity of its own to borrow.
             .background(alignment: .top) {
+                // Deepened 0.26 → 0.40 (prd §435). §171 established the pour
+                // and §435 spent it: this is the one sheet in the app whose
+                // whole subject IS an identity, so the colour is the content,
+                // not a tint on it. Machinery still pours the app's own tint —
+                // a contract has no identity to borrow — so the deepening
+                // makes the who/machinery split MORE legible, not less.
                 LinearGradient(stops: [
-                    .init(color: pourHue.opacity(0.26), location: 0),
-                    .init(color: pourHue.opacity(0.08), location: 0.45),
+                    .init(color: pourHue.opacity(0.40), location: 0),
+                    .init(color: pourHue.opacity(0.12), location: 0.45),
                     .init(color: pourHue.opacity(0), location: 1),
                 ], startPoint: .top, endPoint: .bottom)
-                    .frame(height: 320)
+                    .frame(height: 340)
                     .frame(maxHeight: .infinity, alignment: .top)
                     .ignoresSafeArea()
                     .allowsHitTesting(false)
@@ -651,6 +674,90 @@ struct AddressCard: View {
             parts.append(String(localized: "not in your book"))
         }
         return parts.joined(separator: " · ")
+    }
+
+    /// THE VERB THIS SCREEN NEVER HAD (prd §435, 2026-08-21).
+    ///
+    /// The address card is where you decide what an address is to you — it
+    /// carries the name, the groups, the live approvals, the whole history —
+    /// and until now the one decision it could not take was the only one that
+    /// changes anything: whether to WATCH. That verb lived exclusively on a
+    /// star in the book row behind this sheet, so the screen that made the case
+    /// had to be dismissed before the case could be acted on.
+    ///
+    /// Three states and no dead control (§83). Watching offers to stop;
+    /// not-watching offers to start; at the cap it says so plainly and stays
+    /// inert rather than raising an alert that repeats a fact it could have
+    /// printed. A CONTRACT gets no pill at all: `WalletStore` can technically
+    /// watch one, but a contract has no holdings and no feed of its own, so
+    /// offering it would be an invitation to spend one of five slots on
+    /// nothing.
+    ///
+    /// It wears the address's OWN hue, the same one the pour behind it and the
+    /// face above it carry, because at this size a tinted button IS the
+    /// person. Machinery would borrow the app tint — see `pourHue` — which is
+    /// exactly why machinery doesn't get one.
+    @ViewBuilder
+    private var watchPill: some View {
+        switch current.kind {
+        case .contract, .safe:
+            EmptyView()
+        case .wallet, .unknown, .smartAccount:
+            let store = WalletStore.shared
+            let watching = store.addresses.contains {
+                store.scopeMatches(current.address, scope: $0.address)
+            }
+            let full = !watching && !store.canWatchMore
+            Button {
+                toggleWatch(watching: watching)
+            } label: {
+                Text(watching ? String(localized: "Watching")
+                     : full ? String(localized: "Watching \(WalletStore.watchLimit) already")
+                     : String(localized: "Watch \(current.name)"))
+                    .dsText(.heading17)
+                    .foregroundStyle(watching || full ? DS.textSecondary : .white)
+                    .lineLimit(1)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: DS.Hit.min + 6)
+                    .background(watching || full ? AnyShapeStyle(DS.fillFaint)
+                                                 : AnyShapeStyle(pourHue),
+                                in: Capsule(style: .continuous))
+                    .contentShape(Capsule(style: .continuous))
+            }
+            .buttonStyle(PressSpring())
+            .disabled(full)
+            .accessibilityLabel(Text(watching ? "Watching \(current.name), tap to stop"
+                                              : "Watch \(current.name)"))
+        }
+    }
+
+    /// Start or stop watching, with the same consequences the book row's star
+    /// has always carried — the wallet-riding seats reconciled on the way in
+    /// (§207) and this address's landed rows pruned on the way out (§286).
+    /// Written once here rather than shared with `WalletScreen.toggleWatch`
+    /// because that one also drives the row's promote animation and its cap
+    /// alert, neither of which exists on a sheet.
+    private func toggleWatch(watching: Bool) {
+        DSHaptic.tap()
+        let store = WalletStore.shared
+        if watching {
+            guard let i = store.addresses.firstIndex(where: {
+                store.scopeMatches(current.address, scope: $0.address)
+            }) else { return }
+            let gone = store.addresses[i].address
+            withAnimation(DS.Motion.standard) { store.remove(at: IndexSet(integer: i)) }
+            FollowPrune.removeWallet(address: gone,
+                                     stillWatched: store.addresses.map(\.address),
+                                     context: modelContext)
+            return
+        }
+        if case .added = store.outcome(ofAdding: current.address, label: current.name) {
+            DSHaptic.success()
+            // Watching is consent (§207) — the wallet-riding seats are on the
+            // moment a wallet is. `BridgeStore` is an environment object rather
+            // than a singleton, so this sheet asks for it by name.
+            bridges.reconcileWalletSeats()
+        }
     }
 
     /// Naming, and the history catching up (2026-08-01).
@@ -826,18 +933,28 @@ struct AddressCard: View {
         .dsHover()
     }
 
+    /// The address, as one chip under the name (prd §435).
+    ///
+    /// It was a full-width card holding the whole address over two lines with
+    /// a separate Copy button — correct, and the heaviest object on a screen
+    /// whose subject is a person. A capsule reads as an identity handle, which
+    /// is what an address is on a profile.
+    ///
+    /// **It still shows every character**, middle-truncated rather than
+    /// clipped, because the one screen that exists to tell two look-alike
+    /// addresses apart cannot be the screen that hides their difference —
+    /// `lookalikeWarning` above prints both in full for exactly that reason.
     private var addressRow: some View {
-        HStack(spacing: DS.Space.s3) {
+        HStack(spacing: DS.Space.s2) {
             Text(current.address)
-                .dsText(.subhead13).foregroundStyle(DS.textSecondary)
-                .monospaced()
-                .lineLimit(2)
-                .multilineTextAlignment(.leading)
-            Spacer(minLength: 0)
+                .dsText(.mono13).foregroundStyle(DS.textSecondary)
+                .lineLimit(1)
+                .truncationMode(.middle)
             CopyAddressButton(address: current.address, expanded: true)
         }
-        .padding(DS.Space.s3)
-        .dsWidgetSurface(fillOpacity: WalletCardStyle.fill)
+        .padding(.horizontal, DS.Space.s3)
+        .padding(.vertical, DS.Space.s2)
+        .background(DS.fillFaint, in: Capsule(style: .continuous))
     }
 
     @ViewBuilder

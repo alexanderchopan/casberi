@@ -28,6 +28,39 @@ private enum BookSort: CaseIterable, Hashable {
     }
 }
 
+/// A resolved ENS/SNS name, tied to the draft that asked for it (prd §433).
+private struct ResolvedDraft: Equatable {
+    let input: String
+    let address: String
+}
+
+/// One block of the book's list (prd §433, 2026-08-21) — the ungrouped
+/// addresses, or one group.
+///
+/// Groups used to be a FILTER: a chip row above the list, a selection, and the
+/// list narrowing in place. Three things were wrong with that and all three
+/// read as "half thought out". The row occupied the chrome whether or not you
+/// used groups (with none, it held a lone "New group" verb and nothing to
+/// filter); selecting a chip put the whole book into a mode with no visible
+/// exit but another chip; and a group's own verbs — rename, delete — lived
+/// inside the SORT menu, which is not where anybody looks for them.
+///
+/// So a group is a SECTION now. It exists on the page exactly when it exists
+/// in the book, it carries its own faces and its own menu, and there is no
+/// state to be in. Every header's count matches the rows beneath it exactly —
+/// which the filter could never promise, since it counted the book and showed
+/// a slice.
+///
+/// An address filed under two groups draws under both, deliberately: it IS in
+/// both, and picking one to hide it from would make a group's own count lie.
+/// The ungrouped block is the only one that excludes by membership.
+private struct BookBlock: Identifiable {
+    /// nil for the ungrouped block.
+    let group: String?
+    let rows: [AddressBook.Entry]
+    var id: String { group ?? "\u{0}ungrouped" }
+}
+
 /// What the book is presenting — one address's card, or the door that makes a
 /// group. See `WalletScreen.bookSheet` for why these share a slot.
 private enum BookSheetRoute: Identifiable {
@@ -81,10 +114,6 @@ struct WalletScreen: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(BridgeStore.self) private var store
     @State private var syncing = false
-    /// Each watched wallet's total USD, keyed the address book's way (prd
-    /// §212, 2026-07-25) — what the roster slots and the shelf note read. The
-    /// same `topHoldingsByWallet` call `sync` already made and threw away.
-    @State private var walletTotals: [String: Double] = [:]
     @State private var result: String?
     @State private var resultIsError = false
     /// True when a non-error result still needs the person's eyes (the
@@ -131,7 +160,7 @@ struct WalletScreen: View {
     @State private var bookSort: BookSort = .recent
     /// Every entry's landed-activity count, keyed the book's way. CACHED
     /// (2026-08-01): this was a computed property running an unscoped corpus
-    /// fetch plus a full walk, and `sortedBookEntries` reads it — so with
+    /// fetch plus a full walk, and `ordered` reads it — so with
     /// "Most active" selected it ran on every body evaluation, which means
     /// once per keystroke in the omnibox above it, on the main thread. Built
     /// on appear and after each sync instead; the corpus doesn't change
@@ -142,13 +171,45 @@ struct WalletScreen: View {
     /// a corpus fetch plus a walk, and the corpus doesn't change between an
     /// appear and a sync without one of them firing.
     @State private var connections: AddressConnections.Map?
+    /// The same reading, laid out (prd §435). Held rather than computed per
+    /// body pass for the reason `connections` is: it is a corpus fetch plus a
+    /// walk, and it is read by a `GeometryReader` that re-evaluates on every
+    /// scroll.
+    @State private var sky: AddressSky.Sky?
     /// The connected address being named, and the draft. Naming here is the
     /// same act as naming from a transfer's sheet — it rewrites every landed
     /// transfer carrying that address (`CounterpartyRetitle`).
     @State private var namingAddress: String?
     @State private var namingDraft = ""
-    /// The group being viewed, or nil for the whole book (2026-08-01).
-    @State private var selectedGroup: String?
+    /// The group a rename or delete is aimed at (prd §433, 2026-08-21). This
+    /// was `selectedGroup` — a FILTER, set by a chip row above the list, which
+    /// put the book into a mode and put the group's own verbs two levels down
+    /// inside the Sort menu. Groups are sections of the list now, so there is
+    /// nothing to select; what's left is which one a menu is acting on.
+    @State private var groupUnderEdit: String?
+    /// The row that was just starred, and a token to fire its lift once (prd
+    /// §433). The app's own `connectPromote` grammar — written for an app
+    /// taking its connected seat in the catalog shelf — and this is the same
+    /// event one screen over: an address promoted from named to watched, which
+    /// also re-sorts it to the top of its section. Without the lift the row
+    /// simply teleports, which reads as the list glitching rather than as the
+    /// thing you just did.
+    @State private var promotedEntryID: String?
+    @State private var promoteToken = 0
+    /// Which group folders are SHUT (prd §433), by the book's own case-fold.
+    ///
+    /// Held for the visit rather than persisted, deliberately. A closed folder
+    /// is a reading posture — "I'm looking at something else right now" — not
+    /// a preference about the book, and a manager that opens with three of its
+    /// four groups shut because of a tap last Tuesday hides addresses from the
+    /// person who came to find one. Closed by choice, open by default, every
+    /// time the screen opens.
+    @State private var closedGroups: Set<String> = []
+    /// What the typed ENS/SNS name resolved to, keyed by the input that asked.
+    /// Keyed rather than bare so a slow answer for "vitalik.eth" can never
+    /// paint itself under a draft that has since become something else — the
+    /// preview's whole value is that it describes what is in the field NOW.
+    @State private var resolvedDraft: ResolvedDraft?
     /// The entry a brand-new group is being created for — group creation only
     /// ever happens while filing something, because a group with no members
     /// doesn't exist in this model (see `AddressBook`'s groups section).
@@ -182,7 +243,7 @@ struct WalletScreen: View {
             // Wallet feed. One shape whether zero or five are watched, so the
             // screen never has to choose between an "empty state" and a
             // "connected state" — it's just how full the shelf is today.
-            rosterSection
+            skySection
                 .listRowInsets(EdgeInsets())
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
@@ -231,6 +292,12 @@ struct WalletScreen: View {
                                     secondaryAction: justName,
                                     action: { isBulk ? addAll() : watch() })
                     fieldNotice(isBulk: isBulk)
+                    // What you're about to add, before you add it (prd §433).
+                    // Keyed on the ADDRESS, not the draft: animating on the
+                    // draft would re-run this spring on every keystroke, and
+                    // the moment worth showing is the face arriving.
+                    addressPreview(isBulk: isBulk)
+                        .animation(DS.Motion.standard, value: previewAddress)
                     if WalletConnectBridge.isAvailable {
                         connectRow
                     }
@@ -256,9 +323,7 @@ struct WalletScreen: View {
             .listRowBackground(Color.clear)
             .listRowSeparator(.hidden)
             statusSection
-            groupChipsSection
             bookSection
-            connectionsSection
             // The connection plumbing, at the foot of the page — chains and
             // teardown are the one thing here nobody revisits, so it sits after
             // the list rather than between the verbs and the names.
@@ -287,6 +352,10 @@ struct WalletScreen: View {
         // Ask the chain what the unnamed-kind entries are, a few at a time —
         // keyless, and only for entries that haven't been checked (prd §169).
         .task { await AddressKind.detectPending() }
+        // Re-keyed on every draft, so SwiftUI cancels the last lookup before
+        // starting the next — which is what makes the debounce inside actually
+        // debounce rather than queue.
+        .task(id: draft) { await resolvePreview() }
         .alert("Name this wallet",
                isPresented: Binding(get: { renamingID != nil },
                                     set: { if !$0 { renamingID = nil } })) {
@@ -328,24 +397,19 @@ struct WalletScreen: View {
                 Task { await wallet.loadAvatars() }
             }
         }
-        // A group stops existing the moment its last member is unfiled — which
-        // can happen from the address card, from a row's context menu, or by
-        // removing the address itself, none of which know the book is being
-        // filtered by it. Left alone, the filter would sit on a name no chip
-        // shows and the list would read as empty for no visible reason. Only
-        // the menu's own Delete cleared it before.
-        //
-        // This does re-walk the book once per body pass, which is the shape
-        // §266 just took `historyCounts` apart for — but not the same cost:
-        // that was an unscoped CORPUS fetch, this is a dictionary walk over a
-        // list that stays scannable at fifty rows. It sits at screen level
-        // rather than on the chips section, which already has `groupNames` in
-        // hand, because that section doesn't render for an empty book — and
-        // emptying the book is one of the ways a selected group stops existing.
+        // A group that stops existing takes any menu aimed at it with it
+        // (prd §433). This used to clear a FILTER — a group could be unfiled
+        // from the address card, from a row's context menu, or by removing the
+        // address itself, none of which knew the list was scoped to it, so the
+        // book read as empty for no visible reason. The filter is gone; what
+        // survives is the smaller version of the same hazard, an open rename
+        // or delete pointed at a name the book no longer has.
         .onChange(of: book.groupNames) { _, groups in
-            if let group = selectedGroup,
+            if let group = groupUnderEdit,
                !groups.contains(where: { AddressBook.sameGroup($0, group) }) {
-                withAnimation(DS.Motion.standard) { selectedGroup = nil }
+                groupUnderEdit = nil
+                renamingGroup = false
+                confirmDeleteGroup = false
             }
         }
         // A tapped holdings cell (2026-07-14): the token's own chart — its
@@ -369,11 +433,12 @@ struct WalletScreen: View {
             case .entry(let entry):
                 AddressCard(entry: entry)
             case .newGroup:
-                // Select what was just made: a group you created and then had
-                // to go find is a filing cabinet, not a filing gesture.
-                NewGroupSheet { group in
-                    withAnimation(DS.Motion.standard) { selectedGroup = group }
-                }
+                // Nothing to select any more (prd §433) — a new group is a new
+                // SECTION, already in the list under its own name, so the
+                // gesture that made it is finished when the sheet closes. It
+                // was a chip selection before, because the group was only
+                // visible while it was the one being filtered to.
+                NewGroupSheet { _ in }
             case .connectPicker(let accounts):
                 WalletConnectPickerSheet(shared: accounts) { added in
                     if added > 0 { sync() }
@@ -412,29 +477,33 @@ struct WalletScreen: View {
         .alert("Rename group", isPresented: $renamingGroup) {
             TextField("Name", text: $groupDraft)
             Button("Save") {
-                if let group = selectedGroup {
+                if let group = groupUnderEdit {
                     book.renameGroup(group, to: groupDraft)
-                    // Follow the group being viewed to its new name, or the
-                    // filter would sit on a group that no longer exists and
-                    // show an empty list.
-                    selectedGroup = groupDraft.trimmingCharacters(in: .whitespacesAndNewlines)
                     DSHaptic.success()
                 }
+                groupUnderEdit = nil
             }
-            Button("Cancel", role: .cancel) { }
+            Button("Cancel", role: .cancel) { groupUnderEdit = nil }
         }
-        .confirmationDialog("Delete this group?", isPresented: $confirmDeleteGroup,
+        // The title stays a LITERAL so it localizes; the group's own name
+        // rides the message below, which is a `Text` and localizes too. A
+        // runtime-interpolated title takes the non-localized `String` overload
+        // and ships English to every other language.
+        .confirmationDialog("Delete this group?",
+                            isPresented: $confirmDeleteGroup,
                             titleVisibility: .visible) {
             Button("Delete group", role: .destructive) {
-                if let group = selectedGroup {
+                if let group = groupUnderEdit {
                     book.deleteGroup(group)
-                    selectedGroup = nil
                     DSHaptic.tap()
                 }
+                groupUnderEdit = nil
             }
-            Button("Cancel", role: .cancel) { }
+            Button("Cancel", role: .cancel) { groupUnderEdit = nil }
         } message: {
-            Text("The addresses and their names stay in your book — only the grouping goes.")
+            Text(groupUnderEdit.map {
+                String(localized: "Deleting “\($0)” keeps every address and every name in your book — only the grouping goes.")
+            } ?? String(localized: "The addresses and their names stay in your book — only the grouping goes."))
         }
     }
 
@@ -452,13 +521,11 @@ struct WalletScreen: View {
             // beside them stay put reads as stale.
             refreshActivityCounts()
             refreshConnections()
-            // Keep what the read already cost us (prd §212) — the roster slots
-            // and the shelf note draw off this. Groups with no address are the
-            // combined one; it would double every total if counted.
-            walletTotals = totals.reduce(into: [:]) { acc, group in
-                guard let address = group.address else { return }
-                acc[AddressBook.key(for: address)] = group.totalUSD
-            }
+            // The per-wallet totals this read produces are DELIBERATELY not
+            // kept (prd §435) — no surface on this screen draws a figure any
+            // more. `totals` is still read because the sentence below needs to
+            // tell "nothing has landed yet" apart from "nothing is there", and
+            // that question is about whether the chain answered at all.
             guard let added else {
                 result = String(localized: "Couldn't reach the chain — check your connection.")
                 resultIsError = true
@@ -494,12 +561,113 @@ struct WalletScreen: View {
     /// every slot you aren't. The cap stops being a sentence you hit and
     /// becomes a shape you can see filling: five faces means full, and no
     /// separate "limit reached" card has to say so.
+    // MARK: - The sky (prd §435)
+
+    /// Your onchain world as one picture — the drawing, then the one line that
+    /// says how full it is.
+    ///
+    /// It REPLACES three sections rather than adding a fourth: the roster
+    /// shelf, the connections spine and the group face decks were three
+    /// renderings of one graph, which is why this screen read as a settings
+    /// page however its sections were ordered. See `AddressSky`.
+    ///
+    /// **The shelf is still here and is the honest fallback.** Below two
+    /// watched wallets there is no graph to draw — a lone wallet has nothing
+    /// to be connected TO — so the sky declines and the shelf takes the slot,
+    /// which is also exactly the state a new person is in. The empty slots, the
+    /// cap-as-a-shape and every §182 ruling survive intact for that case.
+    @ViewBuilder
+    private var skySection: some View {
+        if let sky {
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                AddressSkyView(sky: sky) { body in
+                    bookSheet = .entry(book.entry(for: body.address)
+                                        ?? AddressBook.Entry(address: body.address,
+                                                             name: body.name,
+                                                             addedAt: .now))
+                } onPickSlot: {
+                    addressFieldFocused = true
+                }
+                // A drawing needs a stated height — `GeometryReader` inside a
+                // List row would otherwise collapse to nothing. Square, so the
+                // ring is a ring at every width.
+                .frame(height: skyHeight)
+                skyCaption
+                skyNotes
+            }
+            .padding(.top, DS.Space.s2)
+            // Marked seen only once it has actually BEEN on screen (see
+            // `AddressSkySource.markSeen`) — flagging at build time would
+            // make a new connection new for as long as it took to compose the
+            // view and never let it draw itself as new at all.
+            .onAppear {
+                AddressSkySource.markSeen(sky.connectedBodies.map(\.id))
+            }
+        } else {
+            rosterSection
+        }
+    }
+
+    /// Tall enough for the ring plus the captions the view hangs under each
+    /// body, capped so a big iPad column doesn't hand the sky half the screen.
+    private var skyHeight: CGFloat { 340 }
+
+    /// How full the sky is. The CAP is said here rather than drawn, which is
+    /// the one §182 ruling this pass amends: a dashed ring per unused watch
+    /// works in a row and does not work in a map, where three of them orbiting
+    /// beside two real wallets read as three unnamed accounts. One invitation
+    /// is drawn; the arithmetic is a sentence. No figure — see §435.
+    private var skyCaption: some View {
+        HStack(spacing: 5) {
+            Text("\(wallet.addresses.count) of \(WalletStore.watchLimit) watched")
+                .dsText(.label12).foregroundStyle(DS.textTertiary)
+            // "6 of 27 connected" — the whole relationship between the two
+            // tiers in five words (prd §435 amendment). Naming is unlimited
+            // and watching is capped at five, so a book of forty can put a
+            // handful of faces in the sky; without the book's own size beside
+            // the connected count, the gap between what you have named and
+            // what is drawn has to be inferred, and a picture you have to
+            // infer the completeness of is one you can't trust.
+            if let connections, connections.connectedCount > 0, book.count > 0 {
+                Text("· \(connections.connectedCount) of \(book.count) connected")
+                    .dsText(.label12).foregroundStyle(DS.textTertiary)
+                    .monospacedDigit()
+            }
+            if syncing {
+                ProgressView().controlSize(.mini)
+                    .padding(.leading, 2)
+            }
+        }
+        .padding(.horizontal, DS.Space.s4)
+    }
+
     private var rosterSection: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: DS.Space.s3) {
-                    ForEach(wallet.addresses) { addr in
+                    ForEach(Array(wallet.addresses.enumerated()), id: \.element.id) { index, addr in
                         rosterSlot(addr)
+                            // The shelf ARRIVES (prd §433) — faces settling
+                            // one after another, the same entrance grammar the
+                            // book rows below just gained and every feed row
+                            // has always had. This screen is opened more than
+                            // any other in Wallet and, until now, snapped into
+                            // existence fully formed.
+                            .staggerIn(index: index, step: 0.05)
+                            // The face LANDS in the shelf (prd §433,
+                            // 2026-08-21). §212 already leaned on this moment
+                            // in prose — it retired the footer that explained
+                            // the star, on the grounds that "tapping a star
+                            // visibly drops the wallet into the shelf at the
+                            // top of the same screen, which teaches it better
+                            // than the sentence did" — and then the wallet
+                            // simply appeared, with no drop to see. This is
+                            // that sentence made true: a slot arrives from
+                            // slightly below and settles, so a star tapped
+                            // eight rows down has a visible consequence.
+                            .transition(.scale(scale: 0.6, anchor: .bottom)
+                                .combined(with: .opacity)
+                                .combined(with: .offset(y: 14)))
                     }
                     if wallet.canWatchMore {
                         ForEach(0..<(WalletStore.watchLimit - wallet.addresses.count), id: \.self) { _ in
@@ -507,22 +675,16 @@ struct WalletScreen: View {
                         }
                     }
                 }
+                .animation(DS.Motion.standard, value: wallet.addresses.count)
                 .padding(.horizontal, DS.Space.s4)
                 .padding(.vertical, DS.Space.s1)
             }
-            // The shelf's own one line — how full it is, what it's worth, and
-            // (while a read is in flight) that it's reading (prd §212,
-            // 2026-07-25). The syncing state used to be a separate status
-            // block below the verbs; a spinner belongs on the thing being
-            // read, not in a row of its own.
+            // The shelf's own one line — how full it is and, while a read is
+            // in flight, that it's reading (prd §212, 2026-07-25; the total it
+            // also carried was struck out by §435 — see `skySection`).
             HStack(spacing: 5) {
                 Text("\(wallet.addresses.count) of \(WalletStore.watchLimit) watched")
                     .dsText(.label12).foregroundStyle(DS.textTertiary)
-                if let total = watchedTotal {
-                    Text("· \(WalletValue.money(total))")
-                        .dsText(.label12).foregroundStyle(DS.textSecondary)
-                        .monospacedDigit()
-                }
                 if syncing {
                     ProgressView().controlSize(.mini)
                         .padding(.leading, 2)
@@ -531,13 +693,6 @@ struct WalletScreen: View {
             .padding(.horizontal, DS.Space.s4)
         }
         .padding(.top, DS.Space.s2)
-    }
-
-    /// Everything watched, summed — nil until a holdings read has landed, so
-    /// the line never claims a $0 portfolio it simply hasn't read yet.
-    private var watchedTotal: Double? {
-        let sum = walletTotals.values.reduce(0, +)
-        return sum > 0 ? sum : nil
     }
 
     /// One watched wallet's face — tap renames (the row's own tap-again
@@ -561,18 +716,13 @@ struct WalletScreen: View {
                     .dsText(.label12).fontWeight(.semibold)
                     .foregroundStyle(DS.textPrimary)
                     .lineLimit(1)
-                // What it's WORTH, under the name (prd §212, 2026-07-25) — the
-                // one fact the roster was missing, and the reason a shelf of
-                // faces is worth looking at rather than just tapping. Falls
-                // back to the short address until a holdings read lands, and
-                // stays silent when the name IS the short address (printing it
-                // twice reads as a stutter).
-                if let usd = walletTotals[AddressBook.key(for: addr.address)], usd > 0 {
-                    Text(WalletValue.money(usd))
-                        .dsText(.label12).foregroundStyle(DS.textSecondary)
-                        .monospacedDigit()
-                        .lineLimit(1)
-                } else if wallet.displayName(for: addr) != addr.short {
+                // NO FIGURE HERE (user ruling, 2026-08-21, prd §435: "we do not
+                // want balances showing with addresses, we have that
+                // elsewhere"). §212 put each wallet's USD total under its face,
+                // which made the manager a second balance sheet beside the
+                // feed's crown card — the one place that reading belongs. The
+                // slot says who it is and nothing about what it holds.
+                if wallet.displayName(for: addr) != addr.short {
                     Text(addr.short)
                         .dsText(.label12).foregroundStyle(DS.textTertiary)
                         .lineLimit(1)
@@ -582,13 +732,32 @@ struct WalletScreen: View {
         }
         .frame(width: rosterSlotWidth)
         .contentShape(Rectangle())
+        // ONE FACE, ONE MEANING (prd §433, 2026-08-21). This face tapped to
+        // RENAME while the identical face in the book row below it, in the
+        // shell's scope rail, and in the balance card's chips all did
+        // something else — so the same picture of the same wallet meant three
+        // different verbs depending on how far down the screen it was. It
+        // opens the address card now, exactly like its row: the card is where
+        // the whole address lives, and it carries Rename itself (with the
+        // history cascade this alert never had). The alert stays for the
+        // context menu below, which is where a rename belongs — a deliberate
+        // press, not the primary tap on a portrait.
         .onTapGesture {
-            DSHaptic.tap()
-            renameDraft = addr.label
-            renamingID = addr.id
+            DSHaptic.selection()
+            bookSheet = .entry(book.entry(for: addr.address)
+                                ?? AddressBook.Entry(address: addr.address,
+                                                     name: wallet.displayName(for: addr),
+                                                     addedAt: .now))
         }
         .dsTapCard()
         .contextMenu {
+            Button {
+                DSHaptic.tap()
+                renameDraft = addr.label
+                renamingID = addr.id
+            } label: {
+                Label("Rename", systemImage: "pencil")
+            }
             Button {
                 DSPasteboard.copySensitive(addr.address)
                 DSHaptic.success()
@@ -670,22 +839,65 @@ struct WalletScreen: View {
     /// separate screen for everyone else) was the actual "which page is
     /// this on" confusion; one list with a "Watching" mark on the entries
     /// that are is the honest merge, not two views pretending to be one.
-    private var sortedBookEntries: [AddressBook.Entry] {
-        var matched = book.search(newAddress)
-        // The group filter narrows whatever the search returned, so typing
-        // inside a group searches that group — one field, two narrowings, no
-        // second input.
-        if let selectedGroup { matched = matched.filter { $0.isIn(selectedGroup) } }
+    /// One sort, applied everywhere the book is drawn.
+    ///
+    /// WATCHED FIRST, but only under the default order (prd §433, 2026-08-21).
+    /// The book's own baseline is insertion recency, which meant a bulk paste
+    /// of forty names could push all five of your watched wallets off the
+    /// bottom of the screen — in the manager whose whole job is them. Starring
+    /// an address is the person's own statement that it matters more than the
+    /// rest, so honouring it in the default order invents nothing.
+    ///
+    /// It deliberately does NOT survive an explicit sort: picking "Name" and
+    /// getting a watched bucket first is the app overriding a choice that was
+    /// just made, and "Most active" already has its evidence printed on every
+    /// row. A stated order stays the order.
+    private func ordered(_ entries: [AddressBook.Entry]) -> [AddressBook.Entry] {
         switch bookSort {
         case .recent:
-            return matched
+            // Stable: `book.all` is already newest-first, and a partition
+            // preserves that within each half.
+            let watched = entries.filter(isWatched)
+            guard !watched.isEmpty else { return entries }
+            let watchedIDs = Set(watched.map(\.id))
+            return watched + entries.filter { !watchedIDs.contains($0.id) }
         case .name:
-            return matched.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+            return entries.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
         case .mostActive:
-            return matched.sorted {
+            return entries.sorted {
                 (activityCounts[$0.id] ?? 0) > (activityCounts[$1.id] ?? 0)
             }
         }
+    }
+
+    /// The book, partitioned into the list's sections (prd §433).
+    ///
+    /// Ungrouped leads, then one block per group. That order is not
+    /// alphabetical accident: in the ordinary book the ungrouped block is
+    /// where your own watched wallets live — nobody files their own cold
+    /// wallet under "Family" — so leading with it is what keeps them above the
+    /// fold. A group whose members are all filtered out by the search simply
+    /// doesn't render.
+    ///
+    /// While SEARCHING, the partition collapses to one flat block: sectioning
+    /// four matches under three headers is noise, and the person is looking
+    /// for one row, not for where it's filed.
+    private var bookBlocks: [BookBlock] {
+        let matched = book.search(newAddress)
+        guard draft.isEmpty else {
+            return matched.isEmpty ? [] : [BookBlock(group: nil, rows: ordered(matched))]
+        }
+        var blocks: [BookBlock] = []
+        let ungrouped = matched.filter { $0.groupNames.isEmpty }
+        if !ungrouped.isEmpty {
+            blocks.append(BookBlock(group: nil, rows: ordered(ungrouped)))
+        }
+        for group in book.groupNames {
+            let rows = matched.filter { $0.isIn(group) }
+            guard !rows.isEmpty else { continue }
+            blocks.append(BookBlock(group: group, rows: ordered(rows)))
+        }
+        return blocks
     }
 
     /// Rebuilds the activity cache. Shares ONE definition of activity with the
@@ -701,6 +913,7 @@ struct WalletScreen: View {
     /// rendering empty.
     private func refreshConnections() {
         connections = AddressConnections.map(context: modelContext)
+        sky = AddressSkySource.sky(context: modelContext)
     }
 
     /// Names a connected address, then brings its landed transfers into line —
@@ -724,285 +937,204 @@ struct WalletScreen: View {
         wallet.addresses.contains { wallet.scopeMatches(entry.address, scope: $0.address) }
     }
 
-    /// The group filter (2026-08-01) — a scrolling row of chips above the list.
+    // MARK: - A group, as a section of the list (prd §433, 2026-08-21)
+
+    /// A group's own header — its faces, its name, what it holds, and the
+    /// hinge it opens on.
     ///
-    /// AMENDED the same day (user: "I don't see how to create groups"). This
-    /// rendered only once a group existed, on the argument that the feature
-    /// should cost nothing until it's used. The cost it actually carried was
-    /// the opposite one: with no groups there was no group UI anywhere on the
-    /// screen, so the only doors in were a long-press on a row or a tap into an
-    /// address card — both of which you have to already know about. A feature
-    /// whose entire surface appears only after you've used it can't be found.
+    /// This replaces the chip that used to select it. The faces are the same
+    /// ones the chip carried and for the same reason (2026-08-01): a number
+    /// beside a group name says how many are in it, which nobody wonders,
+    /// while the faces say WHO — the only thing a group of addresses is for.
+    /// What they gain here is room to behave like a stack of photographs
+    /// rather than three 18pt marks squeezed into a capsule beside a word.
     ///
-    /// So the row draws whenever the book holds anything, and when there are no
-    /// groups it holds exactly one chip: the verb. Nothing to filter, nothing
-    /// claiming a group exists — just the way in.
-    @ViewBuilder
-    private var groupChipsSection: some View {
-        let groups = book.groupNames
-        if book.count > 0 {
-            Section {
-                VStack(alignment: .leading, spacing: DS.Space.s2) {
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: DS.Space.s2) {
-                            // "All" is a filter, and a filter over one state
-                            // isn't one — it appears with the groups it selects
-                            // between.
-                            if !groups.isEmpty {
-                                groupChip(nil, label: String(localized: "All"))
-                                ForEach(groups, id: \.self) { groupChip($0, label: $0) }
+    /// A GROUP OPENS AND CLOSES, and that is what makes it a folder rather than
+    /// a heading (prd §433). Closed, the faces TIGHTEN into a deck and the
+    /// group is one row; open, they FAN APART and its addresses are underneath.
+    /// The fan is the whole idea in one gesture — the same faces, held together
+    /// or spread out — and it costs a book of 27 across four groups about four
+    /// taps to survey instead of a scroll. Closed is never the default: a book
+    /// is a list you read, and a screen that opens with everything shut hides
+    /// its own contents to look tidy.
+    ///
+    /// The group's VERBS live here too, in a menu on the header itself. They
+    /// were inside the Sort menu before, which is a place you go to change an
+    /// order — so renaming "Famly" meant selecting its chip, opening a control
+    /// labelled with the current sort, and finding a section named after the
+    /// group. Now they're on the group.
+    ///
+    /// Handed the block's OWN rows rather than re-reading `entries(inGroup:)`,
+    /// which sorts the whole book and then filters it — once per group, once
+    /// per body pass. They are the same set by construction: a group header
+    /// only renders when nothing is typed, and with an empty draft `bookBlocks`
+    /// hands each group its complete membership.
+    private func groupHeader(_ group: String, entries: [AddressBook.Entry]) -> some View {
+        let open = !closedGroups.contains(AddressBook.key(forGroup: group))
+        return HStack(spacing: DS.Space.s2) {
+            Button {
+                DSHaptic.selection()
+                withAnimation(DS.Motion.standard) { toggleGroup(group) }
+            } label: {
+                HStack(spacing: DS.Space.s2) {
+                    if !entries.isEmpty {
+                        // The deck. `spacing` is the fan: closed they overlap
+                        // almost entirely, open they stand apart. Negative
+                        // spacing means the FIRST face is on top, which is the
+                        // right way round for a stack you're looking down at.
+                        HStack(spacing: open ? -5 : -13) {
+                            ForEach(entries.prefix(3)) { entry in
+                                AddressMark(entry: entry, size: DS.Face.badge)
+                                    // The face's own separation, since nothing
+                                    // in this app draws a line: each mark
+                                    // punches the page colour out from under
+                                    // the one behind it.
+                                    .overlay(Circle().strokeBorder(DS.surfaceWell,
+                                                                   lineWidth: 1.5))
                             }
-                            newGroupChip
                         }
-                        .padding(.horizontal, DS.Space.s4)
-                        .padding(.vertical, 2)
+                        // A closed deck leans, the way a stack of cards does.
+                        // Two degrees — enough to read as held rather than
+                        // aligned, not enough to look broken.
+                        .rotationEffect(.degrees(open ? 0 : -3))
                     }
-                    if let selectedGroup { groupNote(selectedGroup) }
-                }
-            }
-            .listRowInsets(EdgeInsets(top: DS.Space.s3, leading: 0, bottom: 0, trailing: 0))
-            .listRowBackground(Color.clear)
-            .listRowSeparator(.hidden)
-        }
-    }
-
-    /// The verb, sitting in the row it fills. Tinted rather than gray, which is
-    /// the whole difference between it and the chips beside it: those select,
-    /// this one does something. No border — nothing in this app draws a line
-    /// (design law), so the tint carries it alone.
-    private var newGroupChip: some View {
-        Button {
-            DSHaptic.selection()
-            bookSheet = .newGroup
-        } label: {
-            HStack(spacing: DS.Space.s1) {
-                Image(systemName: "folder.badge.plus")
-                    .dsGlyph(12)
-                Text("New group")
-                    .dsText(.subhead13).fontWeight(.semibold)
-                    .lineLimit(1)
-            }
-            .foregroundStyle(DS.tint)
-            .padding(.horizontal, DS.Space.s3)
-            .padding(.vertical, DS.Space.s2)
-            .background(DS.tintDim, in: Capsule(style: .continuous))
-            .contentShape(Capsule(style: .continuous))
-        }
-        .buttonStyle(PressSpring())
-    }
-
-    private func groupChip(_ group: String?, label: String) -> some View {
-        let selected = selectedGroup == group
-        // A group's FACES, not its count (2026-08-01). A number beside a group
-        // name says how many are in it, which nobody wonders; the faces say
-        // WHO, which is the only thing a group of addresses is actually for —
-        // and they're already drawn everywhere else, so "Family" starts
-        // looking like your family. Through `AddressMark`, so the book's own
-        // round-face-for-a-who / square-glyph-for-machinery rule holds inside
-        // the chip too. "All" gets none: every face in the book is not a face.
-        let faces = group.map { Array(book.entries(inGroup: $0).prefix(3)) } ?? []
-        return Button {
-            DSHaptic.selection()
-            withAnimation(DS.Motion.standard) { selectedGroup = group }
-        } label: {
-            HStack(spacing: DS.Space.s2) {
-                if !faces.isEmpty {
-                    HStack(spacing: -6) {
-                        ForEach(faces) { entry in
-                            AddressMark(entry: entry, size: 18)
-                                .overlay(
-                                    Circle().strokeBorder(
-                                        selected ? DS.tint : DS.surfaceWell, lineWidth: 1.5))
-                        }
+                    VStack(alignment: .leading, spacing: 0) {
+                        Text(group)
+                            .dsText(.label12).fontWeight(.semibold)
+                            .foregroundStyle(DS.textSecondary)
+                            .lineLimit(1)
+                        Text(groupNote(group, entries: entries))
+                            .dsText(.label12).foregroundStyle(DS.textTertiary)
+                            .monospacedDigit()
+                            .lineLimit(1)
                     }
+                    Image(systemName: "chevron.down")
+                        .dsGlyph(10, weight: .bold)
+                        .foregroundStyle(DS.textTertiary)
+                        .rotationEffect(.degrees(open ? 0 : -90))
+                    Spacer(minLength: 0)
                 }
-                Text(label)
-                    .dsText(.subhead13).fontWeight(.semibold)
-                    .foregroundStyle(selected ? .white : DS.textSecondary)
-                    .lineLimit(1)
+                .contentShape(Rectangle())
             }
-            .padding(.horizontal, DS.Space.s3)
-            .padding(.vertical, DS.Space.s2)
-            .background(selected ? DS.tint : DS.fillFaint,
-                        in: Capsule(style: .continuous))
-            .contentShape(Capsule(style: .continuous))
+            .buttonStyle(.plain)
+            .accessibilityLabel(Text(open ? "\(group), open" : "\(group), closed"))
+            .accessibilityHint(Text(open ? "Closes this group" : "Opens this group"))
+            Menu {
+                Button {
+                    groupDraft = group
+                    groupUnderEdit = group
+                    renamingGroup = true
+                } label: { Label("Rename group", systemImage: "pencil") }
+                Button(role: .destructive) {
+                    groupUnderEdit = group
+                    confirmDeleteGroup = true
+                } label: { Label("Delete group", systemImage: "folder.badge.minus") }
+            } label: {
+                Image(systemName: "ellipsis")
+                    .dsGlyph(13, weight: .semibold)
+                    .foregroundStyle(DS.textTertiary)
+                    .frame(width: 32, height: 28)
+                    .contentShape(Rectangle())
+            }
+            .accessibilityLabel(Text("Manage \(group)"))
         }
-        .buttonStyle(PressSpring())
     }
 
-    /// What a group holds — and, when any of it is watched, what that part is
-    /// worth. The value NEVER claims to be the group's: only watched wallets
-    /// have their holdings read (naming is free, watching is the upgrade), so
-    /// a group of forty named addresses with two watched can only honestly
-    /// price those two, and the sentence says which.
-    private func groupNote(_ group: String) -> some View {
-        let entries = book.entries(inGroup: group)
-        let watchedEntries = entries.filter(isWatched)
-        let total = watchedEntries.reduce(into: 0.0) { sum, entry in
-            sum += walletTotals[entry.id] ?? 0
-        }
-        var parts = [String(localized: "\(entries.count) addresses")]
-        if watchedEntries.isEmpty {
-            parts.append(String(localized: "none watched"))
-        } else if total > 0 {
-            parts.append(String(localized: "\(watchedEntries.count) watched worth \(WalletValue.money(total))"))
-        } else {
-            parts.append(String(localized: "\(watchedEntries.count) watched"))
-        }
-        return Text(parts.joined(separator: " · "))
-            .dsText(.label12).foregroundStyle(DS.textTertiary)
-            .monospacedDigit()
-            .padding(.horizontal, DS.Space.s4)
+    /// Opens or closes a group. Folded through `AddressBook.key(forGroup:)`,
+    /// the same fold `sameGroup` uses, so "family" and "Family" are one
+    /// folder — matching the book's own model, where they are one group.
+    private func toggleGroup(_ group: String) {
+        let key = AddressBook.key(forGroup: group)
+        if closedGroups.contains(key) { closedGroups.remove(key) }
+        else { closedGroups.insert(key) }
     }
 
-    /// The book's own summary (prd §295) — last card on the page, after the
-    /// rows it describes and before the connection plumbing nobody revisits.
+    /// What a group holds — how many addresses, how many of them you watch.
     ///
-    /// It declines twice, quietly: no card at all below two watched wallets
-    /// (`map` returns nil — a connection cannot exist), and one sentence when
-    /// two or more are watched and nothing connects them. The second is a real
-    /// answer and worth printing; the first is a question the person hasn't
-    /// asked yet.
+    /// It used to price the watched part ("2 watched worth $8,900"), which
+    /// §435 struck out with every other figure on this screen (user ruling,
+    /// 2026-08-21). A group is a set of people; how much they are worth is not
+    /// a fact about the set, and the feed's crown owns the money reading.
+    private func groupNote(_ group: String, entries: [AddressBook.Entry]) -> String {
+        let watchedCount = entries.filter(isWatched).count
+        var parts = [String(localized: "\(entries.count) addresses")]
+        parts.append(watchedCount == 0
+                     ? String(localized: "none watched")
+                     : String(localized: "\(watchedCount) watched"))
+        return parts.joined(separator: " · ")
+    }
+
+    /// THE THREE FACTS THE PICTURE CANNOT DRAW (prd §435).
+    ///
+    /// `AddressConnectionsCard` — the two-column spine §295 built and §433
+    /// promoted above the book — is DELETED, not demoted: the sky and the card
+    /// decline on the identical condition (fewer than two watched wallets), so
+    /// keeping it would have meant two drawings of one reading on one screen,
+    /// which is the exact fault this pass exists to fix.
+    ///
+    /// What the card said in WORDS survives here, because none of it is
+    /// drawable and all of it is load-bearing:
+    ///
+    /// - **the undrawn tail, NAMED** — `nodeLimit` cuts by first-dealt order,
+    ///   so the undrawn set is by construction the NEWEST connections; a
+    ///   relationship formed today can never enter the picture, and a bare "2
+    ///   more" was its only trace (2026-08-20's own ruling, kept verbatim);
+    /// - **a watched wallet nothing reaches**, said rather than drawn as an
+    ///   empty node — an absence reads better as a sentence;
+    /// - **the first unnamed connection**, over EVERY connection rather than
+    ///   the drawn prefix, which is the card's one action and the reason
+    ///   `firstUnnamed` is stored rather than computed off `nodes`.
     @ViewBuilder
-    private var connectionsSection: some View {
-        if let connections {
-            Section {
-                AddressConnectionsCard(map: connections) { node in
-                    // The LANDED spelling, not the folded key: `setName` and
-                    // `CounterpartyRetitle` both fold it themselves, but
-                    // `realName`'s auto-name test compares against the address
-                    // it was handed, and a lowercased hex is not the form the
-                    // book filed.
-                    namingAddress = node.address
-                    namingDraft = ""
-                } onOpen: { node in
-                    // Through the book's OWN sheet slot, so a connected address
-                    // opens the identical card its row on the book opens — and
-                    // so the card carries no presentation of its own (CLAUDE.md,
-                    // "one screen, one `.sheet`").
-                    //
-                    // An address the book has never heard of gets an ephemeral
-                    // entry rather than no door: `AddressCard` reads the book
-                    // first and falls back to what it was handed, and Rename
-                    // there files it for real. Refusing to open would shut the
-                    // door on exactly the addresses this card exists to surface.
-                    bookSheet = .entry(AddressBook.shared.entry(for: node.address)
-                                        ?? AddressBook.Entry(address: node.address,
-                                                             name: node.name,
-                                                             addedAt: .now))
+    private var skyNotes: some View {
+        if let connections, !connections.isEmpty {
+            VStack(alignment: .leading, spacing: DS.Space.s1) {
+                if connections.hiddenCount > 0 {
+                    skyNote(String(localized: "\(connections.hiddenCount) more not drawn: \(connections.hiddenNames.joined(separator: ", "))"))
+                }
+                if !connections.untouchedWalletNames.isEmpty {
+                    skyNote(String(localized: "Nothing connects to \(connections.untouchedWalletNames.joined(separator: ", ")) yet."))
+                }
+                if let unnamed = connections.firstUnnamed {
+                    Button {
+                        DSHaptic.tap()
+                        namingAddress = unnamed.address
+                        namingDraft = ""
+                    } label: {
+                        Text("Name \(unnamed.name)")
+                            .dsText(.label12).fontWeight(.semibold)
+                            .foregroundStyle(DS.tint)
+                    }
+                    .buttonStyle(PressSpring())
                 }
             }
-            .listRowInsets(EdgeInsets(top: DS.Space.s6, leading: DS.Space.s4,
-                                      bottom: 0, trailing: DS.Space.s4))
-            .listRowBackground(Color.clear)
-            .listRowSeparator(.hidden)
+            .padding(.horizontal, DS.Space.s4)
         }
     }
 
+    private func skyNote(_ text: String) -> some View {
+        Text(text)
+            .dsText(.label12).foregroundStyle(DS.textTertiary)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// The book — one section per block (prd §433, 2026-08-21).
+    ///
+    /// It was ONE section carrying whatever the group filter had left. Now the
+    /// ungrouped addresses lead, each group follows as its own labelled shelf,
+    /// and the head of the list keeps the count and the sort exactly as §212
+    /// placed them.
     @ViewBuilder
     private var bookSection: some View {
-        // All three computed ONCE per pass, not per row and not per read.
-        // `sortedBookEntries` re-runs a search, a filter and a sort every time
-        // it's touched, and it's touched three times here; `groupNames` walks
-        // and sorts the whole book, and it lives inside the ROW's context menu,
-        // so reading it there made a fifty-row book quadratic — the exact cost
-        // `collidingKeys` was hoisted to avoid.
-        let rows = sortedBookEntries
+        // Computed ONCE per pass, not per row and not per section.
+        // `bookBlocks` re-runs a search, a partition and a sort every time it's
+        // touched; `groupNames` walks and sorts the whole book and lives inside
+        // the ROW's context menu, so reading it there made a fifty-row book
+        // quadratic — the exact cost `collidingKeys` was hoisted to avoid.
+        let blocks = bookBlocks
         let colliding = book.collidingKeys
         let groups = book.groupNames
-        if !rows.isEmpty {
-            Section {
-                ForEach(rows) { entry in
-                    Button {
-                        DSHaptic.selection()
-                        bookSheet = .entry(entry)
-                    } label: {
-                        bookRow(entry, colliding: colliding.contains(entry.id), groups: groups)
-                    }
-                    .buttonStyle(.plain)
-                    // Removal lives in the row's context menu now (prd §212),
-                    // beside Copy — the same gesture the roster slots above
-                    // already teach, and one less grammar on the page. It also
-                    // squares the row with the design law's own reading:
-                    // swipe verbs are READS; a write belongs behind a
-                    // deliberate press.
-                    .listRowBackground(Color.clear)
-                    // The insets go with the card — see the same note on
-                    // `WalletHistoryScreen`. `WalletRow`'s own vertical
-                    // padding carries the rhythm.
-                    .listRowInsets(EdgeInsets(top: 0, leading: DS.Space.s4,
-                                              bottom: 0, trailing: DS.Space.s4))
-                }
-            } header: {
-                // The page's list, not a section on it (prd §212, 2026-07-25)
-                // — a small gray label wearing its count and its sort, the
-                // same anatomy the wallet feed's own section labels use.
-                HStack(spacing: DS.Space.s2) {
-                    // Wears the SCOPE, not always the book: inside a group the
-                    // count that matters is the group's, and the chip above
-                    // already says which group you're in.
-                    Text("\(selectedGroup ?? String(localized: "Address book")) · \(rows.count)")
-                        .dsText(.label12).fontWeight(.semibold)
-                        .foregroundStyle(DS.textSecondary)
-                        .monospacedDigit()
-                        .lineLimit(1)
-                    Spacer(minLength: 0)
-                    Menu {
-                        Picker("Sort by", selection: $bookSort) {
-                            ForEach(BookSort.allCases, id: \.self) { sort in
-                                Text(sort.label).tag(sort)
-                            }
-                        }
-                        // The paste-out half of the round trip. The Data tray
-                        // owns BACKUP (it carries the book losslessly now);
-                        // this is the other job — names into another app — and
-                        // it rides a menu that already existed rather than
-                        // becoming a block on a page §212 fought to shorten.
-                        Section {
-                            Button {
-                                DSPasteboard.copySensitive(book.exportText())
-                                DSHaptic.success()
-                            } label: {
-                                Label("Copy all as text", systemImage: "doc.on.doc")
-                            }
-                        }
-                        // Group management, all of it, in one place: the chip
-                        // row carries the verb where you'd look for it, and
-                        // this carries it where rename and delete already are.
-                        Section {
-                            Button {
-                                bookSheet = .newGroup
-                            } label: { Label("New group…", systemImage: "folder.badge.plus") }
-                        }
-                        if let group = selectedGroup {
-                            Section(group) {
-                                Button {
-                                    groupDraft = group
-                                    renamingGroup = true
-                                } label: { Label("Rename group", systemImage: "pencil") }
-                                Button(role: .destructive) {
-                                    confirmDeleteGroup = true
-                                } label: { Label("Delete group", systemImage: "folder.badge.minus") }
-                            }
-                        }
-                    } label: {
-                        HStack(spacing: 3) {
-                            Text(bookSort.label).dsText(.label12).fontWeight(.semibold)
-                            Image(systemName: "arrow.up.arrow.down")
-                                .dsGlyph(10, weight: .bold)
-                        }
-                        .foregroundStyle(bookSort == .recent ? DS.textTertiary : DS.tint)
-                    }
-                    .accessibilityLabel(Text("Sort: \(bookSort.label)"))
-                }
-            }
-            // The footer paragraph retired here (prd §212). It taught the star
-            // in two sentences — but tapping a star visibly drops the wallet
-            // into the shelf at the top of the same screen, which teaches it
-            // better than the sentence did, and "one gray sentence per screen"
-            // (§190) was already spent on the read-only promise above.
-            .listRowSeparator(.hidden)
-        } else {
+        if blocks.isEmpty {
             // The book rendered NOTHING when it was empty (2026-08-01), which
             // made three different states look identical: a book you haven't
             // started, a search that missed, and a group you've emptied. The
@@ -1018,16 +1150,150 @@ struct WalletScreen: View {
                                       bottom: 0, trailing: DS.Space.s4))
             .listRowBackground(Color.clear)
             .listRowSeparator(.hidden)
+        } else {
+            ForEach(Array(blocks.enumerated()), id: \.element.id) { index, block in
+                Section {
+                    // A closed folder shows no rows — the header alone. The
+                    // ungrouped block has no folder and is never closed.
+                    ForEach(Array(visibleRows(of: block).enumerated()),
+                            id: \.element.id) { row, entry in
+                        Button {
+                            DSHaptic.selection()
+                            bookSheet = .entry(entry)
+                        } label: {
+                            bookRow(entry, colliding: colliding.contains(entry.id),
+                                    groups: groups)
+                        }
+                        .buttonStyle(.plain)
+                        // The promotion, felt (prd §433) — see
+                        // `promotedEntryID`. Reads `isTarget` at fire time, so
+                        // starring one row never lifts another.
+                        .connectPromote(isTarget: entry.id == promotedEntryID,
+                                        token: promoteToken)
+                        // The entrance this list never had (prd §433). Every
+                        // other list in the app arrives; `AddressConnectionsCard`
+                        // even says so in its own header ("the Wallet manager
+                        // doesn't use RowEntrance, so it didn't inherit the fade
+                        // every feed card gets"). Capped so a long book's tail
+                        // isn't still arriving after the scroll, and Reduce
+                        // Motion is handled inside `settleIn`.
+                        .settleIn(delay: Double(min(row, 8)) * 0.02)
+                        // Removal lives in the row's context menu now (prd §212),
+                        // beside Copy — the same gesture the roster slots above
+                        // already teach, and one less grammar on the page. It also
+                        // squares the row with the design law's own reading:
+                        // swipe verbs are READS; a write belongs behind a
+                        // deliberate press.
+                        .listRowBackground(Color.clear)
+                        // The insets go with the card — see the same note on
+                        // `WalletHistoryScreen`. `WalletRow`'s own vertical
+                        // padding carries the rhythm.
+                        .listRowInsets(EdgeInsets(top: 0, leading: DS.Space.s4,
+                                                  bottom: 0, trailing: DS.Space.s4))
+                    }
+                } header: {
+                    // The list's own head rides the FIRST section whatever
+                    // that section is. It used to be gated on the block being
+                    // the ungrouped one, which quietly deleted the sort menu,
+                    // "Copy all as text" and "New group…" for anyone who had
+                    // filed EVERY address into a group — the whole head, gone,
+                    // because the block it was pinned to wasn't there.
+                    VStack(alignment: .leading, spacing: DS.Space.s2) {
+                        if index == 0 { bookListHeader(count: block.rows.count) }
+                        if let group = block.group {
+                            groupHeader(group, entries: block.rows)
+                        }
+                    }
+                }
+                // The footer paragraph retired here (prd §212). It taught the star
+                // in two sentences — but tapping a star visibly drops the wallet
+                // into the shelf at the top of the same screen, which teaches it
+                // better than the sentence did, and "one gray sentence per screen"
+                // (§190) was already spent on the read-only promise above.
+                .listRowSeparator(.hidden)
+            }
         }
     }
 
-    /// Which nothing this is.
+    /// What a block actually draws — nothing when its folder is shut.
+    ///
+    /// The rows are DROPPED rather than hidden, so a closed group costs the
+    /// List no cells at all; on a book with four groups that is most of the
+    /// screen's row count. A search re-opens everything by construction: the
+    /// searching case returns one ungrouped block, which has no folder.
+    private func visibleRows(of block: BookBlock) -> [AddressBook.Entry] {
+        guard let group = block.group else { return block.rows }
+        return closedGroups.contains(AddressBook.key(forGroup: group)) ? [] : block.rows
+    }
+
+    /// The head of the list — its count and its sort (prd §212, 2026-07-25),
+    /// a small gray label wearing the same anatomy the wallet feed's own
+    /// section labels use.
+    ///
+    /// The COUNT is the whole book's, not this block's, and that is the
+    /// correction §433 made: it used to read the scope, which under the group
+    /// filter meant the head of a 27-address book could say "Family · 4". Now
+    /// the head says how big your book is and each group says how big it is,
+    /// which is two facts instead of one fact wearing two meanings. The
+    /// searching case is the exception and states itself.
+    private func bookListHeader(count: Int) -> some View {
+        HStack(spacing: DS.Space.s2) {
+            Text(draft.isEmpty
+                 ? String(localized: "Address book · \(book.count)")
+                 : String(localized: "\(count) matching"))
+                .dsText(.label12).fontWeight(.semibold)
+                .foregroundStyle(DS.textSecondary)
+                .monospacedDigit()
+                .lineLimit(1)
+            Spacer(minLength: 0)
+            Menu {
+                Picker("Sort by", selection: $bookSort) {
+                    ForEach(BookSort.allCases, id: \.self) { sort in
+                        Text(sort.label).tag(sort)
+                    }
+                }
+                // The paste-out half of the round trip. The Data tray
+                // owns BACKUP (it carries the book losslessly now);
+                // this is the other job — names into another app — and
+                // it rides a menu that already existed rather than
+                // becoming a block on a page §212 fought to shorten.
+                Section {
+                    Button {
+                        DSPasteboard.copySensitive(book.exportText())
+                        DSHaptic.success()
+                    } label: {
+                        Label("Copy all as text", systemImage: "doc.on.doc")
+                    }
+                }
+                // The one group verb with nowhere else to be. Rename and
+                // delete moved onto the group's own header (prd §433) — they
+                // act on a group, so they belong on it — but CREATING one has
+                // no header to sit on until it exists, which is the same
+                // discovery problem §266's amendment solved with a chip. It
+                // keeps its door here and in every row's Groups menu.
+                Section {
+                    Button {
+                        bookSheet = .newGroup
+                    } label: { Label("New group…", systemImage: "folder.badge.plus") }
+                }
+            } label: {
+                HStack(spacing: 3) {
+                    Text(bookSort.label).dsText(.label12).fontWeight(.semibold)
+                    Image(systemName: "arrow.up.arrow.down")
+                        .dsGlyph(10, weight: .bold)
+                }
+                .foregroundStyle(bookSort == .recent ? DS.textTertiary : DS.tint)
+            }
+            .accessibilityLabel(Text("Sort: \(bookSort.label)"))
+        }
+    }
+
+    /// Which nothing this is. The emptied-group case retired with the filter
+    /// (prd §433) — a group with no members no longer has a section to be
+    /// empty in, because it no longer exists in the book at all.
     private var emptyBookLine: String {
         if !draft.isEmpty {
             return String(localized: "No name or address here matches “\(draft)”.")
-        }
-        if let selectedGroup {
-            return String(localized: "Nothing in \(selectedGroup) yet — hold any address below and file it here.")
         }
         return String(localized: "No names yet. Name an address and every transfer reads by that name.")
     }
@@ -1065,6 +1331,12 @@ struct WalletScreen: View {
                             .foregroundStyle(DS.destructive)
                     }
                 }
+                // RELATIONSHIP facts, never money (prd §435). §433 briefly put
+                // a watched wallet's total in front of this line; the ruling
+                // the same day struck every figure off this screen, so the
+                // subline is back to what it has always been best at — how
+                // much you have dealt, what the address turned out to be,
+                // where it came from.
                 Text(entry.subline(activity: activityCounts[entry.id]))
                     .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                     .lineLimit(1)
@@ -1131,7 +1403,14 @@ struct WalletScreen: View {
                 wallet.scopeMatches(entry.address, scope: $0.address)
             }) {
                 let gone = wallet.addresses[i].address
-                wallet.remove(at: IndexSet(integer: i))
+                // Animated, so the shelf face leaves the way it arrived and
+                // the row walks back down its section instead of jumping
+                // (prd §433). Unwatching re-sorts too — the default order puts
+                // watched first — so an un-animated demotion is the same
+                // teleport the promotion had.
+                withAnimation(DS.Motion.standard) {
+                    wallet.remove(at: IndexSet(integer: i))
+                }
                 // Its rows leave with it (prd §286) — same as the roster's
                 // own Remove Wallet above.
                 FollowPrune.removeWallet(
@@ -1141,9 +1420,18 @@ struct WalletScreen: View {
             }
             return
         }
-        switch wallet.outcome(ofAdding: entry.address, label: entry.name) {
+        // Wrapped so the shelf slot arrives and the row walks up to the
+        // watched half of its section, rather than both snapping into place
+        // (prd §433). `promotedEntryID` is set FIRST so the row already knows
+        // it is the target when the token bumps.
+        promotedEntryID = entry.id
+        let outcome = withAnimation(DS.Motion.standard) {
+            wallet.outcome(ofAdding: entry.address, label: entry.name)
+        }
+        switch outcome {
         case .added:
             DSHaptic.success()
+            promoteToken &+= 1
             sync()
         case .limitReached:
             watchCapHit = true
@@ -1217,6 +1505,121 @@ struct WalletScreen: View {
                        String(localized: "A list — ADD ALL names them. Watching stays capped at \(WalletStore.watchLimit)."))
         } else if let bulkResult {
             noticeLine("checkmark.circle.fill", DS.confirm, bulkResult)
+        }
+    }
+
+    // MARK: - The preview (prd §433, 2026-08-21)
+
+    /// What the typed address resolves to, RIGHT NOW: its face, its name, and
+    /// the one thing the book already knows about it.
+    ///
+    /// The setup screen's whole job is the moment between pasting an address
+    /// and committing it, and until this it said nothing in that moment — you
+    /// typed a 42-character string and pressed a verb, and the first proof the
+    /// app had understood anything was a row appearing afterwards. The face is
+    /// the proof, and it costs NOTHING: `WalletFace`'s identicon is
+    /// deterministic from the address, so this is literally the same face the
+    /// row will wear, drawn a second early. No balance is shown and none is
+    /// read — that would be a metered call fired on every keystroke, and a
+    /// figure here would be a claim about a wallet nobody has agreed to watch.
+    ///
+    /// It stands DOWN for a bulk paste (there is no one face to draw) and for a
+    /// lookalike or a failed checksum, where the notice above is telling you to
+    /// stop and a portrait underneath it is an invitation.
+    @ViewBuilder
+    private func addressPreview(isBulk: Bool) -> some View {
+        if !isBulk, !draft.isEmpty, !draftIsUnsafe {
+            if let address = previewAddress {
+                let known = book.entry(for: address)
+                HStack(spacing: DS.Space.s3) {
+                    // `list`, not `row`: this is the same portrait the book
+                    // rows below draw, and choosing whether this is the
+                    // address you meant is the whole point of the moment.
+                    WalletFace(address: address, size: DS.Face.list, circular: true)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(known?.name ?? draft)
+                            .dsText(.callout15).fontWeight(.semibold)
+                            .foregroundStyle(DS.textPrimary)
+                            .lineLimit(1)
+                        Text(previewFact(address: address, known: known))
+                            .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                            .lineLimit(1)
+                    }
+                    Spacer(minLength: 0)
+                }
+                .padding(.vertical, DS.Space.s2)
+                .padding(.horizontal, DS.Space.s3)
+                .background(DS.fillFaint,
+                            in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+                .transition(.opacity.combined(with: .scale(scale: 0.97, anchor: .top)))
+            } else if resolving {
+                // A name being looked up is the one case worth a waiting tell:
+                // the answer is a real network read, and silence here reads as
+                // "it didn't recognise that".
+                HStack(spacing: DS.Space.s2) {
+                    ProgressView().controlSize(.mini)
+                    Text("Looking up \(draft)…")
+                        .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                    Spacer(minLength: 0)
+                }
+                .padding(.horizontal, DS.Space.s1)
+            }
+        }
+    }
+
+    /// The address the preview is about — what was typed when it's already an
+    /// address, otherwise whatever the resolver answered FOR THIS DRAFT.
+    private var previewAddress: String? {
+        if book.looksLikeAddress(draft) { return draft }
+        if let resolvedDraft, resolvedDraft.input == draft { return resolvedDraft.address }
+        return nil
+    }
+
+    private var resolving: Bool {
+        (SNS.looksLikeName(draft) || ENS.looksLikeName(draft)) && previewAddress == nil
+    }
+
+    /// A destructive notice is on screen — see `fieldNotice`.
+    private var draftIsUnsafe: Bool {
+        !book.lookalikes(of: draft).isEmpty || AddressSafety.checksum(draft) == .failed
+    }
+
+    /// The one line under the name. Ordered by what changes what you'd do:
+    /// already watching (the verb would do nothing), already named (the verb
+    /// would rename), then what it IS. A name that resolved says so with the
+    /// address it resolved to — that is the app showing its working, and the
+    /// most reassuring thing it can say before you commit.
+    private func previewFact(address: String, known: AddressBook.Entry?) -> String {
+        if let known, isWatched(known) { return String(localized: "Already watching") }
+        var parts: [String] = []
+        if address != draft { parts.append(WalletStore.shortAddress(address)) }
+        if known != nil { parts.append(String(localized: "already in your book")) }
+        if let label = known?.kind.label { parts.append(label) }
+        else if let script = BitcoinAddress.scriptKind(address) { parts.append(script) }
+        return parts.isEmpty
+            ? String(localized: "New address")
+            : parts.joined(separator: " · ")
+    }
+
+    /// Resolves a typed ENS/SNS name for the preview, debounced.
+    ///
+    /// Debounced because this fires per keystroke and "vitalik.eth" is nine
+    /// prefixes that each look like a name; the pause is what makes it one
+    /// request instead of nine. Nothing is watched, nothing is named, nothing
+    /// is written — the answer only ever paints a face.
+    private func resolvePreview() async {
+        let asked = draft
+        guard SNS.looksLikeName(asked) || ENS.looksLikeName(asked) else { return }
+        try? await Task.sleep(for: .milliseconds(450))
+        guard !Task.isCancelled else { return }
+        // `.sol` first, exactly like `watch()` — `ENS.looksLikeName` takes ANY
+        // dotted string and would send a `.sol` name to the ENS resolver,
+        // which answers with a null address rather than an error.
+        let hit = SNS.looksLikeName(asked)
+            ? await SNS.resolve(asked) : await ENS.resolve(asked)
+        guard !Task.isCancelled, let hit else { return }
+        withAnimation(DS.Motion.standard) {
+            resolvedDraft = ResolvedDraft(input: asked, address: hit)
         }
     }
 

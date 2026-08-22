@@ -493,6 +493,12 @@ enum DS {
         /// three times the height of the words it belongs to and outshout them.
         /// One value would either break every row or break every tap.
         static let shelf: CGFloat = 56
+        /// A sheet whose whole SUBJECT is the identity — the address card
+        /// (prd §435, 2026-08-21). One rung above `shelf` because a shelf face
+        /// is one of several and this one is alone on the screen with its own
+        /// name under it; a face that leads a profile at the same size as a
+        /// face in a row of five reads as a list that lost its list.
+        static let profile: CGFloat = 76
     }
 
     /// The touch-target floor, as a token so a control can't drift under it

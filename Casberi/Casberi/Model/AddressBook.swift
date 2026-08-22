@@ -502,6 +502,15 @@ final class AddressBook {
         a.caseInsensitiveCompare(b) == .orderedSame
     }
 
+    /// The same fold `sameGroup` compares on, as a KEY — for a caller that has
+    /// to hold group state in a set or a dictionary rather than compare two
+    /// names (prd §433: which folders the wallet manager has closed). Spelled
+    /// here rather than at the call site so a `Set<String>` of groups can never
+    /// disagree with `sameGroup` about whether "family" and "Family" are one.
+    static func key(forGroup name: String) -> String {
+        name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+    }
+
     /// Every group in use, alphabetical — for display. Sorted, so callers that
     /// only need a lookup use `canonicalGroupName` instead.
     var groupNames: [String] {

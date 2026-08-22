@@ -41,6 +41,7 @@ import pathlib
 import collections
 
 CALL = re.compile(r'\b(WalletFace|RemoteThumb|BridgeIcon)\s*\((.{0,240}?)\)', re.S)
+COMMENT = re.compile(r'^[ \t]*///?.*$|(?<![:"\w])//[^\n]*$', re.M)
 SIZE = re.compile(r'size:\s*([A-Za-z0-9_.]+)')
 TIERS = ("badge", "row", "list", "shelf")
 
@@ -49,8 +50,23 @@ TIERS = ("badge", "row", "list", "shelf")
 CHIP_METRICS = {"iconSize", "Self.iconSize"}
 
 
+def uncommented(src: str) -> str:
+    """The source with comment BODIES blanked, lines and columns preserved.
+
+    A file that DOCUMENTS this rule by naming what it must not do —
+    "`WalletFace(size: someFunction())` is exactly how a raw number gets back
+    onto a face" — used to fail against its own explanation (2026-08-21). Same
+    class as the Obsidian, Cursor, Instagram, journal-room and one-inference
+    guards, all of which read a comment-stripped copy for the same reason; this
+    audit was the one that grepped raw source. Blanked rather than deleted so
+    every reported line number still points where it did.
+    """
+    return COMMENT.sub(lambda m: " " * len(m.group(0)), src)
+
+
 def faces(src: str):
     """Yield (kind, size_expr, line) for every face-shaped call in `src`."""
+    src = uncommented(src)
     for m in CALL.finditer(src):
         kind, args = m.group(1), m.group(2)
         sz = SIZE.search(args)
@@ -63,6 +79,7 @@ def faces(src: str):
 
 def resolves_to_tier(name: str, src: str) -> bool:
     """Does a named constant's own declaration read a DS.Face tier?"""
+    src = uncommented(src)
     bare = name.split(".")[-1]
     decl = re.search(
         r'(?:let|var)\s+%s\s*:?[^=\n]*=\s*([^\n]+)' % re.escape(bare), src)
@@ -102,6 +119,14 @@ CLEAN_CONST = ('private let rosterFaceSize: CGFloat = DS.Face.shelf\n'
                'WalletFace(address: a, size: rosterFaceSize, circular: true)')
 CLEAN_SQUARE = 'BridgeIcon(name: n, size: 46)'          # square mark, not a face
 CLEAN_CHIP = 'BridgeIcon(name: n, size: iconSize, circular: true)'
+# A file that EXPLAINS the rule by naming what it must not do. Both halves are
+# in the fixture on purpose: the comment names a dirty call and the real call
+# below it is clean, so a fixture that only carried the comment would pass for
+# the wrong reason (2026-08-21 — this audit's own first comment-blind run).
+CLEAN_DOCUMENTED = ('// `WalletFace(size: someFunction())` is how a raw number\n'
+                    '// gets back onto a face — never do this.\n'
+                    '/// Nor `WalletFace(address: a, size: 44, circular: true)`.\n'
+                    'WalletFace(address: a, size: DS.Face.list, circular: true)')
 
 
 def self_test(tmp: pathlib.Path) -> None:
@@ -114,6 +139,7 @@ def self_test(tmp: pathlib.Path) -> None:
         ("a constant that resolves to a tier", CLEAN_CONST, False),
         ("a SQUARE brand mark (not a face)", CLEAN_SQUARE, False),
         ("the documented chip-metric escape", CLEAN_CHIP, False),
+        ("a comment that NAMES a dirty call", CLEAN_DOCUMENTED, False),
     ]
     for label, body, should_flag in cases:
         d = tmp / "selftest"

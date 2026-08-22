@@ -29302,6 +29302,54 @@ was a line number that moved between two reads of the same file** — the plan s
 2001, grep said 2047, a third read said 2076. Re-run the filter in this entry to
 finish those two files once the tree is quiet.
 
+## 433. The wallet manager, rebalanced — the reading that was last, the groups that were a mode, and one face that meant three things (user: "how if at all would you improve the wallet address / contacts experience? i love seeing the addresses that are connected, but also wonder if a user has several they may not see that on the screen unless they scroll… even the way we have groups and folders looks like half thought out features… the wallet set up screen should be absolutely top notch… we need the way you do groups to be cool too… lets add some subtle surprise and delight there too. this really needs to be amazing b/c it is one of the most frequently visited screens in the app", 2026-08-21)
+
+Three prototypes were drawn (overview-first, a contacts-app hero slab, a swipeable passport deck) and the first was chosen. Everything here is a rearrangement or a grammar correction of pieces that already existed; **no ruling is overturned, no new fact is invented, and nothing new is read from the network.** §295's factual-only ruling over the connections card stands untouched (equal ribbons, no hue, first-dealt order), §202's star stays the watch verb, §170's cap stays a shape you can see rather than a sentence you hit.
+
+### 1. The card everybody likes was LAST
+
+`AddressConnectionsCard` sat after every book row, so on a book of 27 the one reading this screen makes that nothing else in the app can make was roughly 1,600pt down — past a list you scroll to MANAGE rather than to read. It now sits directly under the verbs and above the book. Nothing about the card changed.
+
+Two related orderings landed with it, and both are answers to the same reported worry ("a user may have several and not see that unless they scroll"). The book's default order puts **watched first** — starring is the person's own statement that an address matters more than the rest, so honouring it in the default order invents nothing — and it does NOT survive an explicit sort, because picking "Name" and getting a watched bucket anyway is the app overriding a choice just made. And a watched row now wears **what it's worth** ahead of the rest of its subline. That figure was already on the screen, under the face on the shelf; the row stated an address while the shelf stated a value, so scrolling the book meant losing the only fact that ranks them. Watched only — watching is what buys the holdings read, and printing a dash beside a merely-named address would imply we looked. Masked by §374 through `WalletValue.money`, exactly like the shelf.
+
+### 2. Groups were a MODE, and now they are folders
+
+The chip row is deleted. Three things about it read as half-finished and all three were structural: it occupied the chrome whether or not you used groups (with none it held a lone "New group" verb and nothing to filter); selecting a chip put the whole book into a filtered state whose only exit was another chip; and a group's own verbs — rename, delete — lived inside the **Sort** menu, which is where you go to change an order.
+
+A group is a **section** now. It exists on the page exactly when it exists in the book, it carries its own faces and its own ⋯ menu, and there is no state to be in. The list is partitioned: ungrouped leads (which is where your own watched wallets live — nobody files their own cold wallet under "Family", so leading with it is what keeps them above the fold), then one block per group. **Every header's count matches the rows beneath it**, which the filter could never promise since it counted the book and showed a slice. An address in two groups draws under both, deliberately: it IS in both, and picking one to hide it from would make a group's own count lie. While searching, the partition collapses to one flat block — sectioning four matches under three headers is noise.
+
+**And a group OPENS AND CLOSES, which is what makes it a folder rather than a heading.** Closed, its faces tighten into a leaning deck and the group is one row; open, they fan apart and its addresses are underneath. The fan is the whole idea in one gesture — the same faces, held together or spread out — and it turns a four-group book from a scroll into about four taps. **Closed is never the default and the state is not persisted**: a closed folder is a reading posture, not a preference about the book, and a manager that opens with three of its four groups shut because of a tap last Tuesday hides addresses from the person who came to find one. The faces themselves are unchanged and kept for the reason 2026-08-01 gave: a number beside a group name says how many are in it, which nobody wonders, while the faces say WHO.
+
+Creating a group keeps its door in the list head's menu and in every row's Groups menu — it has no header to sit on until it exists, which is the same discovery problem §266's amendment solved with a chip.
+
+### 3. ONE FACE, ONE MEANING
+
+`AddressMark`'s own header has said since §169 that "a wallet is a WHO … everything else is machinery and wears a square glyph" — and only the roster shelf drew it that way. Every other use took `WalletFace`'s squircle default, so in the list a wallet and a contract were both rounded rectangles and the entire round-versus-square rule came down to colour-versus-gray. The face is circular now wherever an address is a person: shelf, book row, group deck, address card, the preview under the field.
+
+The **tap** was worse than the shape. The roster face tapped to RENAME while the identical face in the book row below it, in the shell's scope rail (§362) and in the balance card's chips all did something else — the same picture of the same wallet meaning three different verbs depending on how far down the screen it was. It opens the address card now, exactly like its row. Rename moves into the context menu, which is where a rename belongs: a deliberate press, not the primary tap on a portrait — and the card's own Rename carries the history cascade the alert never had.
+
+### 4. The setup moment: the face arrives BEFORE you commit
+
+The screen's whole job is the second between pasting an address and pressing a verb, and it said nothing in that second — you typed 42 characters and the first proof the app had understood anything was a row appearing afterwards. A preview now materializes under the field: the address's face, its name, and the one thing the book already knows ("Already watching" / "already in your book" / the kind / **the address a typed ENS name resolved to**, which is the app showing its working and the most reassuring thing it can say before you commit).
+
+**It costs nothing and claims nothing.** The identicon is deterministic from the address, so this is literally the same face the row will wear, drawn a second early. No balance is shown and none is read — that would be a metered call per keystroke, and a figure here would be a claim about a wallet nobody has agreed to watch. The ENS/SNS lookup is debounced at 450ms and re-keyed per draft, so a slow answer for "vitalik.eth" can never paint itself under a draft that has since become something else. It stands down for a bulk paste (no one face to draw) and for a lookalike or a failed checksum, where the notice above is telling you to stop and a portrait underneath it is an invitation.
+
+### 5. The delight, all in the house grammar
+
+This is among the most-visited screens in the app and it had almost no motion of its own — `AddressConnectionsCard`'s own header says so ("the Wallet manager doesn't use `RowEntrance`, so it didn't inherit the fade every feed card gets"). Five additions, every one an existing modifier from `MicroMotion`, so every one is already Reduce-Motion-guarded:
+
+1. **The book rows arrive** (`settleIn`, capped at eight so a long book's tail isn't still landing after the scroll).
+2. **The shelf arrives** (`staggerIn`) — faces settling one after another on open.
+3. **The face LANDS when you watch.** §212 already leaned on this moment in prose: it retired the footer that explained the star on the grounds that "tapping a star visibly drops the wallet into the shelf at the top of the same screen, which teaches it better than the sentence did" — and then the wallet simply appeared, with no drop to see. A scale-and-offset transition makes that sentence true.
+4. **The starred row LIFTS** (`connectPromote`) — written for an app taking its connected seat in the catalog shelf, and this is the same event one screen over. It matters more here than it looks, because watched-first means the row also MOVES; without the lift it teleports, which reads as the list glitching rather than as the thing you just did. Unwatching is animated for the same reason.
+5. **The total ROLLS** (`contentTransition(.numericText())`) when a read lands — the one number on this screen that moves by itself was also the only one that moved invisibly. Keyed on the ROUNDED string, not the Double: a portfolio ticks by fractions of a cent all day, and rolling on every one of those is a nervous tic, not a moment.
+
+Deliberately NOT built: a `matchedGeometryEffect` flying the row's face up into its shelf ring. It is the better version of (3) and (4) together, and it spans a `List` row and a horizontal `ScrollView` — a pairing SwiftUI does not reliably match across, and one no static check here can verify. The transition pair is the honest version that can be shipped without a device to watch it on.
+
+### What this does not touch
+
+The connections card's contents (§295 and its 2026-08-20 follow-up), the watch cap (§170), what the star means (§202), the read-only promise, the field's two verbs and the bulk paste (§212, 2026-08-01), the Connection door at the foot, or any bridge. No new `Thing` property, no CloudKit deploy, no new network read beyond the ENS/SNS resolve the WATCH verb already makes — moved half a second earlier.
+
 ## 434. The swipe and the rise, as one perf pass — and the one thing a person is now shown a beat later (user: "the app is starting to lag, swiping between screens, and also the agent launching is still janky — for a split second it tries to launch the composer only and you see a greeting glitch on top of the composer before the brief shows. it's unacceptable", 2026-08-21)
 
 The full record is `docs/perf-swipe-and-rise-spec.md`. This entry is the ledger's
@@ -29404,3 +29452,71 @@ the two instruments that were missing: `swipePerf|` (step → mount → heads �
 rows) and `risePhase|` (raise → consumed → commit → firstDoc). The rise in
 particular is animation-frame timing, which a simulator distorts; one device
 trace closes it.
+
+## 435. The map IS the manager — five renderings of one graph, fused into three (user: "how would you make it gorgeous and like cash app this screen and it's sub screens… none of these are inspiring… WE DO NOT WANT BALANCES SHOWING WITH ADDRESSES WE HAVE THAT ELSEWHERE… i imagine how the wallet looks today w/ different sections. and here there are connections, address book, who you follow, groups, and presumably some history with each if you open them", 2026-08-21)
+
+§433 rebalanced this screen and the user's own diagnosis of what remained is the ruling: **the manager was five sections that were all renderings of the same graph** — a shelf of the watched wallets, a connections card of who reaches two of them, group headers with face decks, a book row per address, and a card per person behind a tap. Reordering them (§433) helped and could not fix it, because the problem was that there were five. This is three: **the MAP** (who is in your world and how they relate), **the LIST** (the record), **the CARD** (one person's history, one tap in).
+
+Two Cash-App-shaped takes were drawn first and rejected as uninspiring; a third — the sky — was chosen and then extended from a hero card into the screen's whole top half.
+
+### 1. NO BALANCES. Anywhere on this screen.
+
+Emphatic user ruling, and it reverses two earlier ones. §212 put each wallet's USD total under its face on the roster shelf ("the reason a shelf of faces is worth looking at rather than just tapping"); §433 that same morning put a watched wallet's total in front of its book-row subline. Both are struck out, along with the shelf's summed total and the group note's "2 watched worth $8,900". **The manager is a PEOPLE screen; the Wallet feed's crown balance card owns the money reading, once.** Duplicating figures beside identity makes every surface a balance sheet and dilutes the one place that reading belongs. `walletTotals` is deleted entirely — `topHoldingsByWallet` is still called, but only so the sync sentence can tell "nothing has landed yet" from "nothing is there". Enforced as a negative grep in the harness: `WalletValue.money` may not appear in `WalletScreen` or the sky at all.
+
+### 2. The sky (`AddressSky`, `AddressSkyView`)
+
+The watched wallets on a ring, the people who reach two or more of them floating between the ones they reach, a line wherever a transfer actually landed, and a group's name written where its members happen to cluster. It replaces the roster shelf, the connections spine **and** the group face decks.
+
+**It asserts nothing §295 didn't.** Every link is the same width and the same colour — a connection exists or it doesn't, and scaling one by volume would be a claim about which relationship matters. Nothing is ranked: ring order is your own watch order, and a connected body's position is decided by which wallets it reaches, which is the same fact its links already state. A watched body is bigger because you CHOSE it, never because of what it holds.
+
+**Positions are deterministic, never physics.** The layout is a pure function of (watch order, wallets reached, group membership) — no forces, no randomness, no settling. Not a preference: a map that reshuffles between two opens over identical data reads as broken, which is the lesson `agent-panel-selftest` already paid for with its tile sort. The harness asserts identical input yields identical output.
+
+**The three numbers that carry it, each with its reason.** `inwardPull` 0.62 — at 1.0 a body sits exactly on the chord between its two wallets and swallows its own links, so both legs stay visible only because it is pulled toward the centre. `twinSpread` 0.115 — two people reaching the SAME pair share a midpoint exactly, so without it a book of six connections draws five; they spread along the PERPENDICULAR of their approach, or they slide along the very links they belong to. `ringRadius` 0.33 — bounded so a body plus its caption fits the field.
+
+**The cap is said, not drawn — the one §182 ruling this amends.** The shelf drew a dashed ring per unused watch, which works in a row and does not work in a map: three dashed circles orbiting beside two real wallets read as three unnamed accounts, not as headroom. One invitation is drawn, joining the ring as a real slot (so watching visibly re-spaces the sky it joins); the arithmetic goes back to being a sentence underneath.
+
+**A new connection draws itself LAST and dashed**, so the map is seen growing rather than arriving already grown. `AddressSkySource` keeps a seen-set in UserDefaults — not a `Thing` field: "have you looked at this" is a fact about this device's screen, and seeing it on the iPhone must not make it old on the Mac. **First sight seeds silently**, or a year of history announces itself as today's news (the Hyperliquid 2026-07-30 bug in a new room).
+
+**The shelf survives as the honest fallback.** Below two watched wallets there is no graph — a lone wallet has nothing to be connected TO — so the sky declines and the shelf takes the slot, which is also exactly the state a new person is in. §182's empty slots and cap-as-a-shape are intact for that case.
+
+### 3. Groups became CONSTELLATIONS
+
+This is the answer to "the way we do groups looks half thought out", and it is the third shape groups have had in three weeks: a chip that put the book in a mode (§266/§267), a folder section in the list (§433 this morning), and now a **region**. Members are already scattered across the sky by who they deal with; the ones that sit near each other get their name written between them. **Nothing moves to make a group tidier** — the position is earned by the graph and the label follows it, never the reverse. A group whose members are on opposite sides gets its label in the middle, which is the honest answer: those two people have nothing to do with each other.
+
+Two members minimum (a label beside one face is that face's second caption), case-folded to the book's own key, alphabetical so two can never swap between passes. The folder/fan sections from §433 stay in the LIST below — the same data one level down.
+
+### 4. `AddressConnectionsCard` is DELETED
+
+Not demoted. The sky and the card decline on the identical condition, so keeping it would have meant two drawings of one reading on one screen — the exact fault this pass exists to fix. Its three WORD facts survive underneath the sky, because none is drawable and all are load-bearing: the undrawn tail **named** (the cap cuts by first-dealt order, so the undrawn set is by construction the NEWEST connections — 2026-08-20's ruling, kept verbatim), a watched wallet nothing reaches (an absence reads better as a sentence), and the first unnamed connection over EVERY connection rather than the drawn prefix (the card's one action). `AddressConnections` the MODEL is untouched and is what the sky reads — one definition of "connected", or a map and a card start disagreeing about the same book.
+
+### 5. The card became a profile
+
+The Cash App note that survived the rejection. Face 64 → `DS.Face.profile` (76, a new rung: a face leading a profile at the same size as one in a row of five reads as a list that lost its list), name `heading22` → `heading28`, the pour deepened 0.26 → 0.40 — this is the one sheet whose whole subject IS an identity, so the colour is the content. Machinery still pours the app tint, which makes the who/machinery split MORE legible, not less. The address becomes a **capsule chip**, middle-truncated with Copy inside it, instead of a full-width two-line card — still every character, because the screen that exists to tell look-alikes apart cannot hide their difference.
+
+**And it gained the verb it never had.** The address card carries the name, the groups, the live approvals and the whole history — and until now could not take the one decision that changes anything: whether to WATCH. That lived exclusively on a star in the row behind the sheet, so the screen making the case had to be dismissed before the case could be acted on. One pill in the address's own hue, three states, no dead control (§83): Watching / Watch / "Watching 5 already" and inert. **A contract gets no pill** — `WalletStore` can technically watch one, but a contract has no holdings and no feed, so offering it invites spending one of five slots on nothing.
+
+### The harness (`scripts/address-sky-selftest.sh`, in `verify.sh`)
+
+`AddressSky` compiled WHOLE and unmodified — Foundation-only by design for exactly this reason — 40 assertions, 10 mutations, 14 drift guards. It is the only proof these positions are right: every failure mode here renders as a beautiful picture that says something false, and nothing in a build, a screen sweep or any static audit can see it.
+
+**Two lessons paid for on its first runs.** (1) **A zsh trap worth generalising: inside a FUNCTION, `$0` is the function's own name, not the script's path** — the mutation prober re-invoked itself as `probe --run`, which is not a command, so the entire self-test printed its header and exited silently having proven nothing. Capture the path once at the top (`SELF="${0:A}"`) before any function can shadow it. (2) **The `inwardPull` mutation SURVIVED**: sending a body all the way to its wallets' midpoint still leaves it nearer both of them than the third and still inside the ring, so both existing assertions passed while the body sat exactly on the line joining them. The assertion that discriminates is perpendicular distance from the chord. Standing rule, third instance in this repo: **a fixture only tests the rule it names if it FAILS that rule and passes every other one.**
+
+### Amendment, same day — the ring is watched-only for a DATA reason, not the cap
+
+Asked directly (*"you can add many addresses to your address book but only follow 5. how does that change the connected address chart? we limit it to the five you watch?"*). Yes for the ring, no for everyone else, and the distinction is load-bearing enough that it is now in `AddressSky`'s own header:
+
+Every edge comes from a landed `Wallet` transaction, and `WalletIngest` reads the chain **only for addresses you watch**. A named-but-unwatched address therefore has no history of its own in the corpus at all — it appears solely as the COUNTERPARTY of a watched wallet's transaction. We cannot know who else it dealt with, because we never asked.
+
+So **the ring is the five you watch; everybody floating between them is your book**, capped by nothing but `AddressConnections.nodeLimit`. Naming stays unlimited in the picture exactly as it is in the book: name forty addresses and any of them can appear the moment it turns out to connect two of your wallets. Raising the watch cap would make the RING bigger; it would not change who is eligible to float.
+
+Written down because the plausible misreading — "the cap limits the chart" — leads a future pass to put named addresses on the ring, which draws a ring of bodies that can never have an edge between them.
+
+One change followed: the caption now reads **"3 of 5 watched · 6 of 27 connected"**. It stated the connected count alone, so the gap between what you have named and what is drawn had to be inferred, and a picture whose completeness you have to infer is one you can't trust.
+
+### What this does not touch
+
+`AddressConnections`'s own arithmetic and every §295 fact, the star as the watch verb (§202), the cap (§170), the field and its two verbs plus §433's preview, the read-only promise, the Connection door, the book's folder sections, the address card's exposure/history/groups. No new `Thing` property, no CloudKit deploy, no new network read.
+
+### Unproven
+
+No simulator run and no device: the sky has never been drawn on a screen. Its arithmetic is harness-proven, its wiring is not.
