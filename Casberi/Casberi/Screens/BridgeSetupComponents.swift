@@ -405,7 +405,7 @@ struct BridgeFieldRow: View {
                 .animation(DS.Motion.standard, value: text.isEmpty)
                 .armedPop(!text.isEmpty)
                 .disabled(text.isEmpty)
-                .buttonStyle(.plain)
+                .buttonStyle(PressSpring())
         }
         .padding(.vertical, DS.Space.s1)
         .dsListCardRow()

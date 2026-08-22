@@ -934,7 +934,7 @@ struct AppsScreen: View {
                                         in: RoundedRectangle(cornerRadius: DS.Radius.control, style: .continuous))
                             .contentShape(Rectangle())
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(PressSpring())
                         .accessibilityLabel("Jump to \(cat.name)")
                     }
                 }

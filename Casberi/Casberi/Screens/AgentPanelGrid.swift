@@ -200,7 +200,7 @@ struct AgentPanelGrid: View {
             .contentShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
             .dsHover()
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressSpring())
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(card.source): \(card.title)")
         .modifier(TileEntrance(index: index, reduceMotion: reduceMotion))

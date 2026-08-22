@@ -826,7 +826,7 @@ private struct LinkPreviewCard: View {
             .background(DS.fillFaint,
                         in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressSpring())
         // Hover on the CARD, before the padding — the lift belongs to the
         // card's own silhouette, not the gutter around it.
         .dsHover()
@@ -1042,6 +1042,7 @@ private struct VoiceContent: View {
                         toggle()
                     } label: {
                         Image(systemName: playing ? "pause.circle.fill" : "play.circle.fill")
+                            .dsSymbolSwap(playing)
                             .dsGlyph(28, weight: .regular)
                             .foregroundStyle(DS.tint)
                             .dsTapTarget(Circle())
@@ -2081,7 +2082,7 @@ private struct TokenChartContent: View {
                     .background(DS.tint, in: Capsule(style: .continuous))
                     .contentShape(Capsule(style: .continuous))
             }
-            .buttonStyle(.plain)
+            .buttonStyle(PressSpring())
             .dsHover()
         }
     }

@@ -207,7 +207,8 @@ struct FollowImportSheet: View {
                             in: RoundedRectangle(cornerRadius: DS.Radius.control,
                                                  style: .continuous))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressSpring())
+        .armedPop(n > 0)
         .disabled(n == 0)
     }
 

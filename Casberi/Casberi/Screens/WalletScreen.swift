@@ -788,7 +788,7 @@ struct WalletScreen: View {
             .background(DS.tintDim, in: Capsule(style: .continuous))
             .contentShape(Capsule(style: .continuous))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressSpring())
     }
 
     private func groupChip(_ group: String?, label: String) -> some View {
@@ -827,7 +827,7 @@ struct WalletScreen: View {
                         in: Capsule(style: .continuous))
             .contentShape(Capsule(style: .continuous))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressSpring())
     }
 
     /// What a group holds — and, when any of it is watched, what that part is
@@ -1113,6 +1113,7 @@ struct WalletScreen: View {
             toggleWatch(entry, currentlyWatched: watched)
         } label: {
             Image(systemName: watched ? "star.fill" : "star")
+                .dsSymbolSwap(watched)
                 .dsGlyph(17, weight: .medium)
                 .foregroundStyle(watched ? DS.tint : DS.textTertiary)
                 .frame(width: 32, height: 32)
@@ -1279,7 +1280,7 @@ struct WalletScreen: View {
             .background(DS.tint.opacity(0.12), in: Capsule(style: .continuous))
             .contentShape(Capsule(style: .continuous))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressSpring())
         .listRowBackground(Color.clear)
         .listRowInsets(EdgeInsets(top: DS.Space.s1, leading: DS.Space.s4,
                                   bottom: 0, trailing: DS.Space.s4))

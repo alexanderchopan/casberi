@@ -219,7 +219,7 @@ struct AltanaKeyCard: View {
                             .padding(.vertical, DS.Space.s2)
                             .background(DS.surfaceWell, in: Capsule())
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(PressSpring())
                 }
                 Spacer(minLength: 0)
             }

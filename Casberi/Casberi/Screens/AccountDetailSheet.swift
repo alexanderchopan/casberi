@@ -625,7 +625,8 @@ struct AccountDetailSheet: View {
                                     in: Capsule(style: .continuous))
                         .animation(DS.Motion.standard, value: keySaveOff)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(PressSpring())
+                .armedPop(!keySaveOff)
                 .disabled(keySaveOff)
             }
             if keyConfigured {

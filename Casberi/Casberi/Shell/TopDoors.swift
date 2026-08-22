@@ -187,6 +187,7 @@ struct AppsDoor: View {
 
     var body: some View {
         Image(systemName: needsAttention ? "square.grid.2x2.fill" : "square.grid.2x2")
+            .dsSymbolSwap(needsAttention)
             .dsGlyph(21)
             .foregroundStyle(needsAttention ? DS.attention : DS.tint)
             .symbolEffect(.pulse, options: .repeating, isActive: needsAttention)

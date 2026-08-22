@@ -3937,7 +3937,7 @@ private struct GenContactSheet: View {
                                           fallback: nil,
                                           cornerRadius: DS.Radius.control)
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(PressLift())
                             .disabled(shot.id.isEmpty)
                             .chartArrival(index: i, reduceMotion: reduceMotion)
                         }

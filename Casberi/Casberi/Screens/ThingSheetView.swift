@@ -2122,6 +2122,7 @@ struct ThingSheetView: View {
             } label: {
                 HStack(spacing: DS.Space.s2) {
                     Image(systemName: tracking ? "bell.badge.slash" : "bell.badge")
+                        .dsSymbolSwap(tracking)
                         .accessibilityHidden(true)
                         .dsGlyph(14, weight: .regular)
                     Text(tracking

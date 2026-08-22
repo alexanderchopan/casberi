@@ -127,7 +127,7 @@ struct FarcasterPackSheet: View {
                 .background(followed != nil ? DS.gray100 : DS.tint,
                             in: RoundedRectangle(cornerRadius: DS.Radius.control, style: .continuous))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressSpring())
         .disabled(followed != nil)
     }
 }

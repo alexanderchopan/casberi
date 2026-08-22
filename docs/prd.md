@@ -29208,3 +29208,83 @@ shell rather than on `FeedScreen`, so it survives a room change instead of dying
 with the `.id()` subtree (§357), and inside the `NavigationStack` so a pushed
 room covers it — a settings door floating over a screen it does not configure is
 the dead control §83 bans, wearing a live control's clothes.
+
+## 432. Three micro-motions the design system already had a word for, and five proposals it turned out had already shipped (user: "how can we add extremely small surprise and delight in the app? like little microanimations?… are we good now?… could there be more? and super subtle in places without it slowing the app down", then "ok do all", 2026-08-21)
+
+**The answer to "are we good now" is yes, and the audit that produced this entry
+was wrong five times out of six in the same direction §412 already named.** Five
+of six proposals were already built: `symbolEffect` (9 sites), numeric rolls
+(24), the money receipt's tear (animated, haptic'd, §369 — better than what was
+proposed), the venue switcher's selection tick, and the composer send's bounce.
+§411's ruling is what makes "yes" the right answer at the doctrine level too —
+the whole in-app moment bus was deleted because the feed already narrates
+arrivals, so anything added here has to be IN PLACE, on a control the person is
+touching, and never a notification wearing an animation.
+
+**What was actually missing was not a new effect but the EXISTING vocabulary's
+reach.** The design system has three press styles with written reasons
+(`PressSpring` for tiles and pills, `PressLift` for a photograph, `RowPress` for
+a feed row) and 672 `.buttonStyle(.plain)` against 59 `PressSpring`. A filtered
+count — a Button whose own label paints a `Capsule`/`RoundedRectangle`, i.e. the
+thing `PressSpring`'s doc comment describes — found **55 pills, tiles and cards
+across the app with no press feel at all**. 44 landed here; the rest are held
+(see below).
+
+**Three exclusions, each a real distinction rather than a filter artefact.**
+(1) **Interactive glass owns its own press** — `dsGlass` AND `dsGlassProminent`
+both apply `.interactive()` on iOS 26, so a scale on top would be a second press
+feel on one control; every glass-labelled button is excluded, and this is the
+reason the answer is not simply "sweep them all". (2) **Text-only secondaries**
+("Not now", "Show 3 more") get nothing — a bare word dipping reads as a glitch,
+not a button, and the window-based detection matched them only because a sibling
+button's capsule sat inside the window. (3) `RowPress` exists for the case where
+the slab is a `listRowBackground` a ButtonStyle cannot reach; every site here
+paints its background INSIDE the label, so `PressSpring` is correct even on the
+large cards and the RowPress bucket was dropped after being built.
+
+**The symbol swap — `dsSymbolSwap`, in `MicroMotion.swift`.** The app had
+**fifteen** `Image(systemName: flag ? "a" : "b")` and exactly ONE of them
+morphed (`AccountScreen`'s Theme sun↔moon, spelled inline). The other fourteen
+hard-cut: one glyph on one frame, a different glyph on the next, which reads as
+a redraw rather than as the control answering. SF Symbols has had the morph
+since iOS 17 and the render server interpolates it, so the only reason they
+didn't have it was that there was no word for it. Eleven took it — copy→check
+(three screens), magnifier→✕, play→pause, bell→bell-slash, star→star-fill.
+
+**The `.animation` inside that modifier is load-bearing, not decoration.**
+`contentTransition` plays only when the change driving it is itself animated,
+and these flags are almost all flipped from a plain button action with no
+`withAnimation` anywhere near them — so the transition ALONE would have been a
+modifier that does nothing, shipped everywhere, invisible. Binding an animation
+to the same value is what makes it real. Reduce Motion takes `.identity` and
+drops the animation with it, so nothing half-honours the preference.
+
+**Chevrons are deliberately NOT in it.** A disclosure chevron's register is
+rotation, not replacement; morphing `chevron.down` into `chevron.up` is a
+different gesture's grammar and would have been the sweep dressing up unrelated
+glyphs as one family — §412's finding, one modifier over.
+
+**`armedPop` went from 2 call sites to 6, and gained the guard that reach
+exposed.** Four hand-rolled CTAs swap their own fill on an armed boolean (the
+§83 rule that `.disabled` dims a label, not a fill) and none of them popped. The
+modifier had **no Reduce Motion guard** — and could not have been caught, because
+`design-motion-audit`'s check 1 is scoped to ENTRANCES on purpose (§299), and a
+pop on a value change is neither an entrance nor a drawing. The fill swap is
+what carries the meaning; the spring is the flourish, and the flourish is what
+the preference exists to drop.
+
+**Cost, since the question asked for it: zero per frame.** A `ButtonStyle` is a
+scale on a value already being observed, `contentTransition` is a render-server
+interpolation, and `armedPop` is one spring per arming. Nothing added here polls,
+loops, or runs on appearance — the only looping motion in the app is still
+`breathing()`, and only while something real is in flight.
+
+**Held, not skipped, and the reason is worth recording:** a second Claude session
+was editing `FeedScreen.swift`, `Composer.swift`, `RootShell.swift`,
+`TodayBrief.swift` and `CorpusSignal.swift` live (the perf/rise spec), and this
+work is line-number-addressed whole-file rewriting. Nine press sites (6 in the
+feed, 3 in the composer) and two symbol swaps are deliberately unlanded rather
+than risk clobbering another session's in-flight work. **The tell that saved it
+was a line number that moved between two reads of the same file** — the plan said
+2001, grep said 2047, a third read said 2076. Re-run the filter in this entry to
+finish those two files once the tree is quiet.

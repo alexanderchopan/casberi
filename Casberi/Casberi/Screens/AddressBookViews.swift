@@ -260,7 +260,8 @@ struct NewGroupSheet: View {
                             in: RoundedRectangle(cornerRadius: DS.Radius.control,
                                                  style: .continuous))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressSpring())
+        .armedPop(ready)
         .disabled(!ready)
     }
 
@@ -362,6 +363,7 @@ struct CopyAddressButton: View {
                         .foregroundStyle(copied ? DS.confirm : DS.tint)
                 } else {
                     Image(systemName: copied ? "checkmark" : "doc.on.doc")
+                        .dsSymbolSwap(copied)
                         .dsGlyph(12)
                         .foregroundStyle(copied ? DS.confirm : DS.textSecondary)
                         .frame(width: 28, height: 28)
@@ -371,7 +373,7 @@ struct CopyAddressButton: View {
             }
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressSpring())
         .dsHover()
         .accessibilityLabel(copied ? "Address copied" : "Copy address")
         // The compact form is a bare glyph, so the tooltip names the verb

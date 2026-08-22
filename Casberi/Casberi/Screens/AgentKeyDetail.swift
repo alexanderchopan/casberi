@@ -406,6 +406,7 @@ struct MCPServerRow: View {
                     .fixedSize(horizontal: false, vertical: true)
                 HStack(spacing: DS.Space.s2) {
                     Image(systemName: running ? "checkmark.circle.fill" : "circle.dotted")
+                        .dsSymbolSwap(running)
                         .foregroundStyle(running ? DS.confirm : DS.textTertiary)
                         .accessibilityHidden(true)
                     Text(running ? MCPServer.endpoint : String(localized: "Not listening"))

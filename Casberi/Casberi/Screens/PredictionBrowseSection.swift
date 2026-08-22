@@ -377,13 +377,14 @@ struct PredictionBrowseSection: View {
                         }
                     } label: {
                         Image(systemName: searching ? "xmark" : "magnifyingglass")
+                            .dsSymbolSwap(searching)
                             .dsGlyph(13)
                             .foregroundStyle(searching ? .white : DS.textSecondary)
                             .frame(width: 34, height: 30)
                             .background(Capsule().fill(searching ? DS.tint : DS.fillFaint))
                             .dsTapTarget(Capsule())
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(PressSpring())
                     .accessibilityLabel(searching ? "Close search" : "Search markets")
 
                     viewChip(.all, label: String(localized: "All"))
@@ -453,7 +454,7 @@ struct PredictionBrowseSection: View {
                 .padding(.horizontal, DS.Space.s3).padding(.vertical, 7)
                 .background(Capsule().fill(isOn ? DS.tint : DS.fillFaint))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressSpring())
     }
 
     // MARK: - Loading

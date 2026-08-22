@@ -816,7 +816,7 @@ struct TokenChartView<R: PriceRange, Fallback: View>: View {
                         .background(r == range ? DS.fillFaint : .clear,
                                     in: Capsule(style: .continuous))
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(PressSpring())
             }
         }
     }

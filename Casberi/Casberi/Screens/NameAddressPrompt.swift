@@ -111,7 +111,7 @@ struct NameAddressPrompt: View {
                         .padding(.vertical, 7)
                         .background(Capsule().fill(DS.tint))
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(PressSpring())
                 Button {
                     DSHaptic.tap()
                     onDismiss()

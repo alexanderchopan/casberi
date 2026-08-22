@@ -212,7 +212,7 @@ struct WalletApprovalExposureCard: View {
                 .background(DS.textPrimary,
                             in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressSpring())
         .padding(.top, DS.Space.s3)
     }
 }

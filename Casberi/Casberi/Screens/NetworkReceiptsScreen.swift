@@ -235,6 +235,7 @@ private struct ReachCard: View {
         let tone = clean ? DS.confirm : DS.attention
         return HStack(spacing: 4) {
             Image(systemName: clean ? "checkmark" : "exclamationmark.triangle.fill")
+                .dsSymbolSwap(clean)
                 .dsGlyph(10, weight: .bold)
             Text(word).dsText(.label12).fontWeight(.semibold)
         }

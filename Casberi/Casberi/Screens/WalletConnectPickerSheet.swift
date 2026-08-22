@@ -237,7 +237,8 @@ struct WalletConnectPickerSheet: View {
                             in: RoundedRectangle(cornerRadius: DS.Radius.control,
                                                  style: .continuous))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressSpring())
+        .armedPop(n > 0 || closing)
         .disabled(n == 0 && !closing)
     }
 

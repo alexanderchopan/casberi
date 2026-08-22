@@ -358,7 +358,7 @@ struct WalletBalanceHeadline: View {
                                             parent: DS.Radius.card, inset: 3),
                                         style: .continuous))
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(PressSpring())
             }
         }
         .padding(3)
@@ -469,7 +469,7 @@ struct WalletWarningsStrip: View {
                                 in: RoundedRectangle(cornerRadius: DS.Radius.widget,
                                                      style: .continuous))
             }
-            .buttonStyle(.plain)
+            .buttonStyle(PressSpring())
         }
     }
 }
@@ -1667,7 +1667,7 @@ struct WalletWorthALookTray: View {
             .padding(.horizontal, DS.Space.s4 - 2).padding(.vertical, 9)
             .background(Capsule().fill(active ? DS.textPrimary : DS.surfaceWell))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressSpring())
     }
 
     // MARK: - Just so you know (the aware pile, collapsed + mutable)
@@ -1759,7 +1759,7 @@ struct WalletWorthALookTray: View {
                         .fill(DS.surfaceWell))
                 .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(PressSpring())
 
             if awareExpanded {
                 VStack(spacing: 0) {
@@ -1840,7 +1840,7 @@ struct WalletWorthALookTray: View {
                     .padding(.horizontal, DS.Space.s3).padding(.vertical, 7)
                     .background(Capsule().fill(DS.tint.opacity(0.16)))
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(PressSpring())
             }
         }
         // A REAL SURFACE per row (2026-07-31, prd §241 variant A). These were

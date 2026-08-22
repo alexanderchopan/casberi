@@ -383,6 +383,7 @@ struct TokenSetupScreen: View {
                         Button(action: { copyCode(code.userCode) }) {
                             HStack(spacing: DS.Space.s1) {
                                 Image(systemName: codeCopied ? "checkmark" : "doc.on.doc")
+                                    .dsSymbolSwap(codeCopied)
                                     .dsGlyph(13)
                                 Text(codeCopied ? "Copied" : "Copy").dsText(.subhead13).fontWeight(.semibold)
                             }
@@ -392,7 +393,7 @@ struct TokenSetupScreen: View {
                             .background(DS.gray100, in: Capsule(style: .continuous))
                             .contentShape(Capsule(style: .continuous))
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(PressSpring())
                     }
                     .padding(DS.Space.s3)
                     .frame(maxWidth: .infinity)

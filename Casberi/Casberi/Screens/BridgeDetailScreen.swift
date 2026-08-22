@@ -128,13 +128,13 @@ struct BridgeDetailScreen: View {
                         .dsText(.body17).foregroundStyle(DS.textPrimary)
                         .frame(maxWidth: .infinity).frame(height: 44)
                         .background(DS.gray100, in: Capsule(style: .continuous))
-                        .buttonStyle(.plain)
+                        .buttonStyle(PressSpring())
 
                         Button("Remove") { confirmRemove = true }
                             .dsText(.body17).foregroundStyle(DS.destructive)
                             .frame(maxWidth: .infinity).frame(height: 44)
                             .background(DS.gray100, in: Capsule(style: .continuous))
-                            .buttonStyle(.plain)
+                            .buttonStyle(PressSpring())
                     }
                 }
                 .padding(DS.Space.s4)

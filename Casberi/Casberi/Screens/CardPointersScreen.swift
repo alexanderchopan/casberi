@@ -86,6 +86,7 @@ struct CardPointersScreen: View {
                         Button(action: { copyCode(pending.userCode) }) {
                             HStack(spacing: DS.Space.s1) {
                                 Image(systemName: codeCopied ? "checkmark" : "doc.on.doc")
+                                    .dsSymbolSwap(codeCopied)
                                     .dsGlyph(13)
                                 Text(codeCopied ? "Copied" : "Copy")
                                     .dsText(.subhead13).fontWeight(.semibold)
@@ -96,7 +97,7 @@ struct CardPointersScreen: View {
                             .background(DS.gray100, in: Capsule(style: .continuous))
                             .contentShape(Capsule(style: .continuous))
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(PressSpring())
                     }
                     HStack(spacing: DS.Space.s2) {
                         ProgressView().controlSize(.small)

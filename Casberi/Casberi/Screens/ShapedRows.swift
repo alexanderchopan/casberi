@@ -2136,13 +2136,13 @@ struct ApprovalCard: View {
                         .padding(.horizontal, DS.Space.s4).frame(height: 32)
                         .background(DS.confirm, in: Capsule(style: .continuous))
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(PressSpring())
                 Button(action: onDeny) {
                     Text("Deny").dsText(.label12).foregroundStyle(DS.textPrimary)
                         .padding(.horizontal, DS.Space.s4).frame(height: 32)
                         .background(DS.fillFaint, in: Capsule(style: .continuous))
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(PressSpring())
                 Spacer()
                 LiveTimeText(date: thing.capturedAt)
             }

@@ -571,7 +571,7 @@ struct SocialProfileCard: View {
                 .frame(height: 28)
                 .background(watch.on ? DS.tintDim : DS.gray100, in: Capsule(style: .continuous))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressSpring())
     }
 
     /// Their follow graph as a picker (prd §169/§184) — moved here from the
@@ -593,7 +593,7 @@ struct SocialProfileCard: View {
                         in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressSpring())
     }
 
     private var header: some View {
@@ -645,7 +645,7 @@ struct SocialProfileCard: View {
                             in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
                 .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(PressSpring())
         }
     }
 
@@ -669,7 +669,7 @@ struct SocialProfileCard: View {
                         in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressSpring())
     }
 
     /// "Are they on the other network too?" — a SEARCH, never a claim. Nothing
@@ -698,7 +698,7 @@ struct SocialProfileCard: View {
                                                          style: .continuous))
                         .contentShape(Rectangle())
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(PressSpring())
                 } else if elsewhere.isEmpty {
                     Text("No \(other) account by that name.")
                         .dsText(.callout15).foregroundStyle(DS.textTertiary)

@@ -478,7 +478,7 @@ struct NoteSameDayShelf: View {
             }
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressLift())
         .dsHover()
         .accessibilityLabel(Text("\(thing.title), from \(thing.source)"))
     }
@@ -724,7 +724,7 @@ struct NoteNeighbourDoors: View {
                                                  style: .continuous))
                 .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(PressSpring())
             .dsHover()
             .accessibilityElement(children: .combine)
             .accessibilityLabel(Text(trailing

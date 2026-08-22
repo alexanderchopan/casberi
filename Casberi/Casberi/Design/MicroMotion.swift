@@ -39,12 +39,19 @@ extension View {
 private struct ArmedPop: ViewModifier {
     let armed: Bool
     @State private var up = false
+    /// Added 2026-08-21, when this went from two call sites to six: the pop is
+    /// a value-change animation, which `design-motion-audit`'s check 1
+    /// deliberately does not police (it scopes to entrances) — so the guard was
+    /// missing here and nothing could have said so. The disabled→live FILL
+    /// swap is what carries the meaning; the spring is the flourish on top, and
+    /// it is the flourish this preference exists to drop.
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     func body(content: Content) -> some View {
         content
             .scaleEffect(up ? 1.08 : 1)
             .onChange(of: armed) { _, now in
-                guard now else { return }
+                guard now, !reduceMotion else { return }
                 withAnimation(.spring(response: 0.18, dampingFraction: 0.5)) { up = true }
                 Task { @MainActor in
                     try? await Task.sleep(for: .milliseconds(140))
@@ -381,4 +388,48 @@ private struct Breathe: ViewModifier {
 
 extension View {
     func breathing() -> some View { modifier(Breathe()) }
+}
+
+// MARK: - Symbol swap (a glyph that changes MORPHS into the new one)
+
+/// The swap feel for an `Image(systemName:)` whose symbol is chosen by a
+/// ternary — a copy button becoming a checkmark, a magnifier becoming an ✕, a
+/// play becoming a pause (2026-08-21).
+///
+/// **Why this is a modifier and not fifteen hand-spelled ternaries.** The app
+/// had exactly ONE symbol that morphed — `AccountScreen`'s Theme sun↔moon,
+/// which spells `contentTransition(reduceMotion ? .identity : …)` inline — and
+/// fourteen more that HARD-CUT: the glyph is one thing on one frame and a
+/// different thing on the next, which reads as a redraw rather than as the
+/// control answering you. SF Symbols has had the morph since iOS 17 and it
+/// costs nothing (the render server interpolates it), so the only reason the
+/// other fourteen didn't have it was that nobody had a word for it.
+///
+/// **The `.animation` is load-bearing, not decoration.** `contentTransition`
+/// plays only when the change that drives it is itself animated, and these
+/// flags are almost all flipped from a plain button action with no
+/// `withAnimation` around them — so the transition alone would be a modifier
+/// that does nothing, which is worse than not adding it. Binding the animation
+/// to the SAME value is what guarantees the morph actually runs.
+///
+/// Reduce Motion takes `.identity` (an instant swap, which is the honest
+/// answer — the glyph still changes, it just doesn't travel) and drops the
+/// animation with it, so nothing is left half-honouring the preference.
+private struct SymbolSwap<V: Equatable>: ViewModifier {
+    let value: V
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    func body(content: Content) -> some View {
+        content
+            .contentTransition(reduceMotion ? .identity : .symbolEffect(.replace))
+            .animation(reduceMotion ? nil : DS.Motion.standard, value: value)
+    }
+}
+
+extension View {
+    /// One glyph morphing into the next whenever `value` changes — for an
+    /// `Image(systemName:)` picked by a ternary off that same value.
+    func dsSymbolSwap<V: Equatable>(_ value: V) -> some View {
+        modifier(SymbolSwap(value: value))
+    }
 }

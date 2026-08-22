@@ -396,7 +396,7 @@ private struct AgentSurface: View {
                                 in: RoundedRectangle(cornerRadius: DS.Radius.control,
                                                      style: .continuous))
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(PressSpring())
                 .opacity(ask.id == "recipes" ? 0.55 : 1)   // the decayed example
                 .transition(.opacity.combined(with: .scale(scale: 0.92)))
             }
@@ -568,7 +568,7 @@ private struct GenerativeThingView: View {
                         .padding(.horizontal, DS.Space.s3).padding(.vertical, DS.Space.s2)
                         .background(DS.tint.opacity(0.12), in: Capsule())
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(PressSpring())
                 }
 
                 VStack(alignment: .leading, spacing: DS.Space.s3) {

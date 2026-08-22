@@ -391,7 +391,7 @@ struct SafeSignBlock: View {
                 .background(signing ? DS.gray100 : DS.tint, in: Capsule(style: .continuous))
                 .contentShape(Capsule(style: .continuous))
             }
-            .buttonStyle(.plain)
+            .buttonStyle(PressSpring())
             .disabled(signing)
             Text("Casberi signs; it can't execute. Another owner sends it.")
                 .dsText(.subhead13).foregroundStyle(DS.textTertiary)
