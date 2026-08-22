@@ -29279,7 +29279,20 @@ interpolation, and `armedPop` is one spring per arming. Nothing added here polls
 loops, or runs on appearance — the only looping motion in the app is still
 `breathing()`, and only while something real is in flight.
 
-**Held, not skipped, and the reason is worth recording:** a second Claude session
+**The eleven held sites LANDED the same session, once the technique was made
+safe rather than by waiting for quiet.** The two files were copied to a
+scratchpad first, so a clobber was recoverable; the filter was re-run against a
+fresh read (the line numbers had moved again — 2001 → 2047 → 2076 → 2086); and
+the result was proven by diffing the backup against the written file, which
+showed EXACTLY the eleven intended lines and nothing else. Six press sites in
+the feed, three in the composer, and the composer's two symbol swaps
+(sparkles↔ask glyph, mic↔stop). **They are deliberately NOT in this commit**:
+those files carry another session's uncommitted work, and committing them would
+take that work under this message and push it to a public remote — the inverse
+of the hazard that rule exists for. The eleven lines sit in the working tree and
+ride whichever commit closes that session's own pass.
+
+**The original hold, and the reason it is worth recording:** a second Claude session
 was editing `FeedScreen.swift`, `Composer.swift`, `RootShell.swift`,
 `TodayBrief.swift` and `CorpusSignal.swift` live (the perf/rise spec), and this
 work is line-number-addressed whole-file rewriting. Nine press sites (6 in the
