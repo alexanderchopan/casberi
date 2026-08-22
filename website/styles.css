@@ -1647,11 +1647,6 @@ a:hover { color: #FF2D87; }
 .nav-links a:hover { color: #FF2D87; }
 .bvid.deep .bk { color: #FF2D87; }
 .bvid.deep p a { color: #fff; }
-.slab-get { background: #0b0c0f; }
-.slab-get h2 { color: #FF2D87; }
-.slab-get .slab-sub { color: rgba(255,255,255,.75); }
-.slab-get .cta-ink { background: #FF2D87 !important; color: #fff !important; }
-.slab-mark { width: 130px; height: 130px; margin: 0 auto 8px; display: block; }
 
 
 /* static product shots in the band and the wallet trio */
@@ -1664,3 +1659,38 @@ a:hover { color: #FF2D87; }
 .w-trio .fphone:first-child { transform: rotate(-2deg); }
 .w-trio .fphone:last-child { transform: rotate(2deg); }
 .w-heroband { overflow: visible; padding-bottom: 120px; }
+
+
+/* why as pictures: the argument at a glance */
+.why-duo2 { display: grid; grid-template-columns: 1fr 1fr; gap: 26px; margin-top: 22px; }
+@media (max-width: 760px) { .why-duo2 { grid-template-columns: 1fr; } }
+.why-fig { margin: 0; }
+.why-fig .scat, .why-fig .minifeed { margin-top: 0; height: 250px; }
+.why-fig figcaption { margin-top: 16px; font-size: 27px; font-weight: 800;
+  letter-spacing: -.02em; color: #fff; text-wrap: balance; }
+.why-fig .wno { font-style: normal; color: rgba(255,255,255,.5); }
+.why-fig .wyes { font-style: normal;
+  background: linear-gradient(100deg, #3b8cf0, #855dcd 55%, #d9376e);
+  -webkit-background-clip: text; background-clip: text; color: transparent; }
+.steps-line { margin-top: 30px; font-size: 17.5px; color: var(--muted); }
+.steps-line b { color: var(--ink); font-weight: 750; }
+.steps-line .arr { color: var(--blue-bright); padding: 0 7px; font-weight: 700; }
+.hero-trust { margin-top: 18px; font-size: 14.5px; color: var(--faint); letter-spacing: .01em; }
+
+/* catalog as an icon wall: names on hover */
+.cat-line { font-size: 14px; color: var(--faint); margin: -14px 0 6px; }
+.cat-line .bk-count { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12.5px;
+  color: var(--blue-bright); }
+.cat-line a { color: var(--muted); }
+.store-flow .shelf { padding: 14px 14px 10px; }
+.store-flow .mini-cell { display: inline-flex; width: auto; padding: 4px; }
+.store-flow .mini-cell .ai { width: 34px; height: 34px; border-radius: 9px; }
+.store-flow .mini-cell > span { display: none; }
+.store-flow .mini-cell:hover > span { display: block; position: absolute;
+  bottom: calc(100% + 7px); left: 50%; transform: translateX(-50%);
+  background: #000; color: #fff; font-size: 12px; font-weight: 650;
+  padding: 5px 11px; border-radius: 8px; white-space: nowrap; z-index: 6;
+  box-shadow: 0 4px 14px rgba(0,0,0,.5); }
+#catalog .mini-cell[data-tag]::after { display: none !important; }
+
+.why-fig .minifeed { height: 250px; max-height: none; }
