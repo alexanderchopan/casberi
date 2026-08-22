@@ -1842,3 +1842,18 @@ a:hover { color: #FF2D87; }
 .w-anchor .head { flex: none; padding-top: 2px; }
 .w-anchor .w-chips { margin-top: 0; padding-top: 12px; flex: none; max-width: 200px; }
 .w-anchor .w-chip { background: rgba(255,255,255,.18); color: #fff; }
+
+
+/* ===== why, final form (G1b-2): the statement, left-aligned, words only ===== */
+.why4 { display: flex; flex-direction: column; gap: 10px; margin-top: 30px; }
+.why4-line { font-family: 'Figtree', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: clamp(28px, 3.3vw, 42px); font-weight: 900; letter-spacing: -.04em;
+  line-height: 1.18; max-width: 860px; margin: 0; color: var(--ink); }
+.why4-line .q { color: #7c8492; }
+.feedgrad { background: linear-gradient(100deg, #3b8cf0, #855dcd 55%, #d9376e);
+  -webkit-background-clip: text; background-clip: text; color: transparent; }
+.why4-verbs { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 30px; }
+.why4-verbs span { font-family: 'Figtree', -apple-system, sans-serif; font-size: 15px;
+  font-weight: 700; color: var(--ink); background: rgba(255,255,255,.05);
+  border-radius: 999px; padding: 12px 21px; }
+.why4-verbs .agent { color: #FF2D87; background: rgba(255,45,135,.10); }
