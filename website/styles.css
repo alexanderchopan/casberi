@@ -1728,3 +1728,42 @@ a:hover { color: #FF2D87; }
 .store-flow .shelf .cells, .store-flow .shelf { flex-wrap: nowrap; }
 .store-flow .shelf { flex-wrap: wrap; }
 .store-flow .shelf .mini-cell { padding: 3px; }
+
+
+/* ===== redo pass: hero columns, why composition, B-square band, compact wall ===== */
+.hc-col { display: flex; flex-direction: column; gap: 10px; align-items: flex-end; }
+.hc-col:last-child { align-items: flex-start; }
+.hc-mark { width: 104px; height: 104px; }
+
+.why-flow { display: grid; grid-template-columns: 1fr auto 1fr; gap: 22px; align-items: center;
+  margin-top: 22px; }
+@media (max-width: 860px) { .why-flow { grid-template-columns: 1fr; } .wf-mark { display: none; } }
+.wf-mark { width: 72px; height: 72px; }
+.wf-side .scat { margin-top: 0; height: 230px; }
+.wf-side .minifeed { margin-top: 0; height: 230px; max-height: none; }
+.wf-cap { margin-top: 14px; font-size: 24px; font-weight: 800; letter-spacing: -.02em;
+  color: #fff; font-family: 'Figtree', -apple-system, sans-serif; text-wrap: balance; }
+.wf-cap .wno { font-style: normal; color: rgba(255,255,255,.5); }
+.wf-cap .wyes { font-style: normal;
+  background: linear-gradient(100deg, #3b8cf0, #855dcd 55%, #d9376e);
+  -webkit-background-clip: text; background-clip: text; color: transparent; }
+
+/* B's square cards: word + count + product, nothing else */
+.bvids { grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 620px) { .bvids { grid-template-columns: 1fr; } }
+.bvid { min-height: 480px; padding: 26px 26px 0; border-radius: 28px; }
+.bvid h3 { font-size: 44px; }
+.bvid .bk { margin: 8px 0 0; }
+.bstage { min-height: 300px; margin-top: 14px; }
+.bstage .fphone { width: 250px; }
+
+/* the wall, compact: tight tiles, capped width so rows pack */
+.store-flow { max-width: 940px; }
+.store-flow .shelf { gap: 12px; padding: 2px 0; }
+.store-flow .shelf > h3 { width: 66px; font-size: 11.5px; padding-top: 7px; }
+.store-flow .mini-cell { padding: 2px; }
+.store-flow .mini-cell .ai { width: 30px; height: 30px; border-radius: 8px; }
+
+/* wallet page: trio spacing safe at mid widths */
+.w-trio { margin: -60px 20px 0; }
+@media (max-width: 1000px) { .w-trio .fphone { max-width: 210px; } }
