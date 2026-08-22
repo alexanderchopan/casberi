@@ -1955,7 +1955,9 @@ a:hover { color: #FF2D87; }
   border-radius: 18px; display: flex; align-items: center; }
 .w-shotbox img { width: 100%; display: block; }
 .w-shotbox.anchor-top { align-items: flex-start; }
-.w-cell .say { font-size: 15.5px; color: var(--muted); line-height: 1.5; margin-top: 12px; }
+.w-cell h3 { font-family: 'Figtree', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 17px; font-weight: 800; letter-spacing: -.02em; color: var(--ink); margin-top: 14px; }
+.w-cell .say { font-size: 15px; color: var(--muted); line-height: 1.5; margin-top: 4px; }
 .w-cell .w-chips { margin-top: 10px; }
 
 /* What the Wallet also reads, as coverage rather than as more boxes. */
