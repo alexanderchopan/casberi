@@ -62,6 +62,12 @@ if [[ "${1:-}" == "--self-test" ]]; then
   probe "an unchanged copy passes" "s/__nothing__/__nothing__/" "no"
   probe "the two-wallet floor removed" "s/watched.count >= minWallets/watched.count >= 0/" "yes"
   probe "twins no longer spread apart" "s/static let twinSpread = 0.115/static let twinSpread = 0.0/" "yes"
+  # sin(π/2) is 1, so this freezes the cluster ring at the two-twin radius —
+  # the n=2 fixture still passes exactly, and only the three- and six-twin
+  # spacing assertions can catch it. That is the point: it proves the larger
+  # clusters are load-bearing fixtures, not decoration on the pair case.
+  probe "the twin ring's radius no longer scales with the cluster" \
+    "s/Double.pi \/ Double(max(total, 2))/Double.pi \/ 2/" "yes"
   probe "the inward pull sent to the midpoint" "s/static let inwardPull = 0.62/static let inwardPull = 1.0/" "yes"
   probe "a body reaching one wallet still drawn" "s/guard keys.count >= 2 else { continue }/guard keys.count >= 1 else { continue }/" "yes"
   probe "links to unwatched wallets kept" "s/let keys = node.walletKeys.filter { walletAt\[\$0\] != nil }/let keys = node.walletKeys/" "yes"
@@ -213,7 +219,10 @@ let flipped = AddressSky.layout(watched: two,
                                 canWatchMore: false)!
 check(dist(flipped.connectedBodies[0].at, flipped.connectedBodies[1].at) > 0.05,
       "the twin cluster is order-insensitive")
-// Three twins keep the middle one on the shared midpoint.
+// Three twins ring their shared midpoint: the cluster's CENTROID is the
+// point a lone body would take (a regular ring's centroid is its centre),
+// and every pair sits exactly one spread apart — for a triangle every pair
+// is a neighbouring chord.
 let trips = AddressSky.layout(watched: two,
                               connected: [connected("p", ["A", "B"]),
                                           connected("q", ["A", "B"]),
@@ -222,12 +231,48 @@ let trips = AddressSky.layout(watched: two,
 let solo = AddressSky.layout(watched: two,
                              connected: [connected("q", ["A", "B"])],
                              canWatchMore: false)!
-check(trips.connectedBodies[1].at == solo.connectedBodies[0].at,
-      "with three twins the middle one keeps the exact midpoint")
+let tripPts = trips.connectedBodies.map(\.at)
+check(near(tripPts.map(\.x).reduce(0, +) / 3, solo.connectedBodies[0].at.x)
+      && near(tripPts.map(\.y).reduce(0, +) / 3, solo.connectedBodies[0].at.y),
+      "a twin cluster is centred on the shared midpoint")
+check((0..<3).allSatisfy { i in (0..<3).allSatisfy { j in
+    i == j || near(dist(tripPts[i], tripPts[j]), AddressSky.twinSpread, 0.001)
+} }, "three twins each sit one spread from both others")
 // Two wallets sit exactly opposite, so their midpoint IS the centre — the
 // degenerate case the perpendicular would divide by zero on.
 check(trips.connectedBodies.allSatisfy { $0.at.x.isFinite && $0.at.y.isFinite },
       "an on-centre midpoint spreads rather than producing NaN")
+
+// ---- the chain bug (2026-08-22, prd §436) --------------------------------
+// SIX twins over TWO wallets — the sky's first real drawing, and the shape
+// the straight-line spread was never checked at. At the minimum wallet count
+// every connected address reaches the same pair BY CONSTRUCTION, so the
+// whole drawn set (`AddressConnections.nodeLimit` is 6) is one cluster; the
+// old perpendicular chain spanned 0.575 of the field and ran clean through
+// both watched faces (measured against the old arithmetic: wallet clearance
+// 0.063 where face-to-face needs 0.135, extent 0.358 past the 0.33 ring).
+// Every assertion here FAILS the chain and passes the ring — the standing
+// fixture rule, applied to the bug that motivated the fix.
+let six = AddressSky.layout(
+    watched: two,
+    connected: (0..<6).map { connected("t\($0)", ["A", "B"]) },
+    canWatchMore: true)!
+check(six.connectedBodies.count == 6, "all six twins are drawn")
+let sixPts = six.connectedBodies.map(\.at)
+check((0..<6).allSatisfy { i in (0..<6).allSatisfy { j in
+    i == j || dist(sixPts[i], sixPts[j]) > AddressSky.twinSpread - 0.001
+} }, "no pair of six twins crowds below one spread")
+check(sixPts.allSatisfy {
+    dist($0, AddressSky.Point(x: 0.5, y: 0.5))
+        + AddressSky.connectedDiameter / 2 < AddressSky.ringRadius
+}, "the cluster stays inside the watched ring, bodies included")
+// Face to face, against every ring body — wallets AND the open slot. The
+// chain's endpoints landed on both wallets' faces; that is the screenshot.
+let ringFaces = six.bodies.filter { $0.kind != .connected }
+let faceClearance = (AddressSky.watchedDiameter + AddressSky.connectedDiameter) / 2
+check(sixPts.allSatisfy { p in
+    ringFaces.allSatisfy { dist(p, $0.at) > faceClearance }
+}, "no twin lands on a watched face or the open slot")
 
 // ---- determinism ---------------------------------------------------------
 // CEILING, stated so nobody trusts this further than it goes: both calls run in

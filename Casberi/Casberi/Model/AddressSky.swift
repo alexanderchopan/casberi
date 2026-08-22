@@ -183,9 +183,12 @@ enum AddressSky {
     /// visible as two separate lines, which is the whole reading.
     static let inwardPull = 0.62
 
-    /// How far apart two bodies reaching the SAME set of wallets are spread.
-    /// They share a midpoint exactly, so without this they draw on top of each
-    /// other and two people read as one.
+    /// How far apart two NEIGHBOURING bodies of a twin cluster sit — the
+    /// chord between adjacent bodies on the cluster's own small ring (see
+    /// `spread`). Bodies reaching the SAME set of wallets share a midpoint
+    /// exactly, so without this they draw on top of each other and two people
+    /// read as one. Just above `connectedDiameter`, so neighbours clear each
+    /// other without the cluster ballooning.
     static let twinSpread = 0.115
 
     // MARK: - The layout
@@ -353,24 +356,41 @@ enum AddressSky {
         Point(x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t)
     }
 
-    /// Spreads `total` bodies that share one midpoint, along the perpendicular
-    /// of the line from the centre out to that midpoint — so a cluster opens
-    /// ACROSS its own connection rather than along it, where it would slide
-    /// onto the links it belongs to.
+    /// Spreads `total` bodies that share one midpoint around a small ring ON
+    /// that midpoint, sized so neighbouring bodies sit exactly `twinSpread`
+    /// apart (radius = spread / (2·sin(π/n)), the chord formula inverted).
     ///
-    /// Centred on the shared point: with two bodies they sit half a spread
-    /// either side, with three the middle one keeps the exact midpoint. A
-    /// degenerate case — a midpoint sitting exactly on the centre, which two
-    /// wallets opposite each other on the ring produce — falls back to a
-    /// horizontal spread rather than dividing by zero.
+    /// It was a straight line along the perpendicular of the cluster's own
+    /// approach to the centre — fine at the two or three twins it was written
+    /// against, and a guaranteed failure at the MINIMUM wallet count it was
+    /// never checked at: with exactly two wallets watched, every connected
+    /// address reaches the same pair by construction, so the whole drawn set
+    /// is ONE cluster, and six twins on a straight line span 0.575 of the
+    /// field — a chain running clean through both watched faces, each caption
+    /// under the face behind it (seen on device 2026-08-22, the sky's first
+    /// real drawing; prd §436). A ring is bounded instead: six bodies reach
+    /// 0.23 across, inside the watched ring with room to spare, and the
+    /// harness pins that exact case.
+    ///
+    /// Two twins are the ring's own degenerate case — half a spread either
+    /// side of the shared point, byte-identical to the line this replaces, so
+    /// nothing about the smallest cluster moved. The ring starts at the
+    /// perpendicular of the cluster's approach to the centre (the direction
+    /// the line used, so a pair still opens ACROSS its own connection rather
+    /// than along it), and the same on-centre fallback stands: two wallets
+    /// exactly opposite each other put the midpoint ON the centre, where the
+    /// perpendicular is undefined.
     private static func spread(_ point: Point, around centre: Point,
                                index: Int, of total: Int) -> Point {
         let dx = point.x - centre.x
         let dy = point.y - centre.y
         let length = (dx * dx + dy * dy).squareRoot()
         let (px, py) = length < 0.0001 ? (1.0, 0.0) : (-dy / length, dx / length)
-        let offset = (Double(index) - Double(total - 1) / 2) * twinSpread
-        return Point(x: point.x + px * offset, y: point.y + py * offset)
+        let (rx, ry) = length < 0.0001 ? (0.0, 1.0) : (dx / length, dy / length)
+        let radius = twinSpread / (2 * sin(Double.pi / Double(max(total, 2))))
+        let angle = 2 * Double.pi * Double(index) / Double(total)
+        return Point(x: point.x - (px * cos(angle) - rx * sin(angle)) * radius,
+                     y: point.y - (py * cos(angle) - ry * sin(angle)) * radius)
     }
 
     private static func signature(_ keys: [String]) -> String {

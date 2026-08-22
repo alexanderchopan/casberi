@@ -80,6 +80,7 @@ at all.
 | Ruling | What it said | Changed by |
 |---|---|---|
 | §18 | Feed spec | amended by §64 |
+| §435 | The sky: twins spread on a straight perpendicular; caption "N of M connected" against the book's size | amended by §436 |
 | §112 | Wallet: reads and previews in-app, signatures always elsewhere | narrowed by §425 |
 | §425 | The Safe co-signer: the key, the rail, the six refusals | amended by §426, §427 |
 | §426 | Building §425: the flag, the pin, the sixth fixture | amended by §427 |
@@ -29520,3 +29521,25 @@ One change followed: the caption now reads **"3 of 5 watched · 6 of 27 connecte
 ### Unproven
 
 No simulator run and no device: the sky has never been drawn on a screen. Its arithmetic is harness-proven, its wiring is not.
+
+## 436. The sky's first real drawing found the two shapes the harness never posed (user: "this is messed up. This is not how connected addresses are supposed to look", with a screenshot, 2026-08-22)
+
+§435 closed with "the sky has never been drawn on a screen. Its arithmetic is harness-proven, its wiring is not." The first device to draw it produced the report above: six connected bodies in an overlapping diagonal chain running clean through both watched wallets' faces, every caption buried under the bubble after it, and the caption beneath the drawing reading **"2 of 5 watched · 8 of 5 connected"** — eight out of five. Two defects, and neither is a wiring bug: both are in the arithmetic the harness proved, posed at inputs the harness never posed. This entry **amends §435** twice.
+
+### 1. The twin spread is a RING now, not a line
+
+`AddressSky.spread` laid a twin cluster along a straight perpendicular at `twinSpread` steps, and its own doc reasoned about "two bodies… with three the middle one" — it was written against two or three twins and never checked at more. But the minimum wallet count makes the large cluster the GUARANTEED shape, not an edge case: **with exactly two wallets watched, every connected address reaches the same pair by construction**, so the whole drawn set (`nodeLimit` is 6) is one cluster. Measured against the shipped arithmetic at that input: the chain spans **0.575** of the field, reaches **0.358** from the centre (past the 0.33 ring), and passes **0.063** from a wallet's position where face-to-face needs 0.135 — which is precisely the screenshot: endpoints on both watched faces, captions under bubbles.
+
+The cluster is a small ring on the shared midpoint now, radius `twinSpread / (2·sin(π/n))` — the chord formula inverted, so **neighbouring bodies still sit exactly one spread apart** and nothing about the density ruling changed, but the span grows bounded instead of linearly: six bodies reach 0.23 across, clearance to the nearest watched face 0.182. Two properties made the change safe to land without a device: **two twins are the ring's own degenerate case** (sin(π/2) = 1 puts them half a spread either side of the shared point, byte-identical to the line, so the smallest cluster — and every existing fixture over it — moved nothing), and the ring starts at the perpendicular of the cluster's approach, so a pair still opens across its own connection rather than along it. The on-centre degenerate fallback (two wallets exactly opposite) stands.
+
+### 2. The caption's denominator was WRONG, not unluckily sized
+
+§435's amendment ruled the caption pair the connected count with the book's size ("6 of 27 connected") so completeness could be read. The pairing rested on connected ⊆ book, **which the data has never guaranteed**: a connected address is a COUNTERPARTY read off landed `Wallet` transfers (`AddressConnectionsSource.edges`), in the book or not — nobody has to have named it. Eight connected counterparties over a book of five is a perfectly healthy corpus, and the caption renders it as impossible arithmetic on the screen §433 called one of the most frequently visited in the app. The caption reads **"· 8 connected"** now. What the amendment wanted survives where it is true: the drawn-vs-counted gap is the "N more not drawn: …" note directly beneath (which the screenshot shows working — "2 more not drawn: …9b43, …2359"), and the book states its own size on its section header just below.
+
+### The harness grew the case that was missing, under its own standing rule
+
+`address-sky-selftest.sh`: the three-twin fixture now asserts the cluster is CENTRED on the shared midpoint and every pair sits one spread apart (replacing "the middle one keeps the exact midpoint", a property of the chain, not a ruling); a **six-twins-over-two-wallets fixture** — the screenshot as a test — asserts no pair crowds below one spread, the cluster stays inside the watched ring bodies included, and no twin lands within face-to-face distance of any ring body, every one of which measurably FAILS the chain and passes the ring; and a new mutation freezes the ring radius at the two-twin value (`sin(π/2)`), which the n=2 fixture cannot catch by construction — proving the larger clusters are load-bearing fixtures, not decoration on the pair case.
+
+### Unbuilt
+
+Authored on Linux with no Xcode and no Swift toolchain, the recurring grade: the harness has not run and no simulator has drawn the new ring. The geometry was verified numerically (a Python mirror of the exact arithmetic, old against new, at the screenshot's own input) — the numbers above are measured from it, not estimated. Run `scripts/verify.sh` before trusting; the six-twin fixture is written to fail the old code two independent ways, so a wrongly-applied fix cannot pass it.
