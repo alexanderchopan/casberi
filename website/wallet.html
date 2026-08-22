@@ -3,13 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Casberi — The Wallet</title>
-<meta name="description" content="Paste an address — or connect a wallet — and its whole onchain life lands in your feed. Apple Card too. Read-only, always.">
-<meta property="og:title" content="Casberi — The Wallet">
+<title>Casberi &mdash; The Wallet</title>
+<meta name="description" content="Paste an address &mdash; or connect a wallet &mdash; and its whole onchain life lands in your feed. Apple Card too. Read-only, always.">
+<meta property="og:title" content="Casberi &mdash; The Wallet">
 <meta property="og:description" content="Everything the Wallet reads: EVM, Bitcoin, Solana and Apple Card. Read-only, always.">
 <meta property="og:type" content="website">
 <link rel="icon" href="icons/casberi-octopus.png">
-<link rel="stylesheet" href="styles.css?v=202608221400">
+<link rel="stylesheet" href="styles.css?v=202608222040">
 </head>
 <body>
 
@@ -29,84 +29,225 @@
 
 <div class="wrap">
 
-  <div class="w-heroband"><header class="w-hero" style="padding-top:0">
-    <p class="m-eyebrow">The Wallet</p>
-    <h1>Everything the Wallet reads.</h1>
-    <p class="sub">Paste an address. Its whole onchain life lands in your feed &mdash; your real-world cards beside it.</p>
+  <!-- the hero: one flat colour, the phone bleeding off its bottom edge -->
+  <header class="w-hero">
+    <div class="copy">
+      <p class="m-eyebrow">The Wallet</p>
+      <h1>Everything the Wallet reads.</h1>
+      <p class="sub">Paste an address. Its whole onchain life lands in your feed &mdash; your cards beside it. Never trades, never moves funds.</p>
+      <div class="cta-row" style="justify-content:flex-start;margin-top:32px">
+        <a class="cta cta-ink" href="https://testflight.apple.com/join/xBD4tYZh" target="_blank" rel="noopener">Get it on TestFlight</a>
+      </div>
+    </div>
+    <div class="shot">
+      <img src="flow/room-wallet.jpg" alt="The Wallet room: one total across every watched wallet, its balance curve, and the transfers under it." loading="lazy">
+    </div>
   </header>
 
+  <!-- the four, at full strength — each carrying what it covers -->
   <div class="w-nets">
-    <div class="w-net"><b><i style="background:#7c3aed"></i>EVM</b></div>
-    <div class="w-net"><b><i style="background:#e8961c"></i>Bitcoin</b></div>
-    <div class="w-net"><b><i style="background:#2bc16a"></i>Solana</b></div>
-    <div class="w-net card"><b><i style="background:#1c66db"></i>Your cards</b><div class="fmt">Apple Card &middot; Privacy.com &middot; ether.fi &middot; Gnosis Pay</div></div>
-  </div>
-  <p class="w-never">Never trades &middot; never moves funds</p>
+    <div class="w-net w-field w-violet"><span class="fmt">Ethereum &middot; Base<br>Arbitrum &middot; Optimism<br>Polygon &middot; Gnosis</span><b>EVM</b></div>
+    <div class="w-net w-field w-amber"><span class="fmt">UTXO &middot; mempool<br>confirmations<br>halving countdown</span><b>Bitcoin</b></div>
+    <div class="w-net w-field w-green"><span class="fmt">SPL &middot; stake accounts<br>Jupiter &middot; Bonfida<br>.sol names</span><b>Solana</b></div>
+    <div class="w-net w-field w-blue"><span class="fmt">Apple Card &middot; Privacy.com<br>ether.fi &middot; Gnosis Pay</span><b>Your cards</b></div>
   </div>
 
-  <div class="w-trio">
-    <div class="fphone"><span class="fisland"></span><img class="still" src="flow/room-wallet.jpg" alt="What you hold — one total across every wallet." loading="lazy"></div>
-    <div class="fphone" style="border-radius:26px"><img class="still" src="flow/wallet-sankey.jpg" alt="Where it moved — money in and out, by counterparty." loading="lazy" style="object-fit:contain;object-position:center;background:#0b0910"></div>
-    <div class="fphone"><span class="fisland"></span><img class="still" src="flow/wallet-connected.jpg" alt="Which of your addresses have transacted with each other." loading="lazy"></div>
+  <!-- the room, scrolled: one card per frame, the words beside the frame -->
+  <section style="margin-top:88px">
+    <p class="w-eyebrow">Features</p>
+
+    <div class="w-spine">
+
+      <div class="beat">
+        <p class="w-plede">Balance</p>
+        <p class="say">One total across every watched wallet, with its curve.</p>
+      </div>
+      <div class="w-frame top"><img src="flow/viz-balance.jpg" alt="Balance: one total across every watched wallet, with its curve." loading="lazy"></div>
+
+      <div class="beat">
+        <p class="w-plede">Flow map</p>
+        <p class="say">Money in and out, banded by counterparty.</p>
+      </div>
+      <div class="w-frame"><img src="flow/viz-flow.jpg" alt="Where it moved: money in and out since you started watching, banded by counterparty." loading="lazy"></div>
+
+      <div class="beat">
+        <p class="w-plede">Lending</p>
+        <p class="say">Collateral, debt and health factor, per protocol.</p>
+      </div>
+      <div class="w-frame"><img src="flow/viz-lending.jpg" alt="Lending: Aave, Spark and Morpho with health factors and amounts." loading="lazy"></div>
+
+      <div class="beat">
+        <p class="w-plede">Distance to liquidation</p>
+        <p class="say">Every borrow on one axis.</p>
+      </div>
+      <div class="w-frame"><img src="flow/viz-liquidation.jpg" alt="Distance to liquidation: every borrow on one axis, from comfortable to liquidation." loading="lazy"></div>
+
+      <div class="beat">
+        <p class="w-plede">Locked</p>
+        <p class="say">What is locked, and how much voting power is left.</p>
+      </div>
+      <div class="w-frame"><img src="flow/viz-melt.jpg" alt="Locked: 12,977 AERO with 41% of its voting power left, and a permanent lock that never decays." loading="lazy"></div>
+
+      <div class="beat">
+        <p class="w-plede">Connected addresses</p>
+        <p class="say">Which of your addresses share counterparties.</p>
+      </div>
+      <div class="w-frame anchor-top"><img src="flow/viz-connected.jpg" alt="Connected: which of your addresses have transacted with the same counterparties." loading="lazy"></div>
+
+      <div class="beat">
+        <p class="w-plede">NFTs</p>
+        <p class="say">You pick which collections show. Airdropped spam never does.</p>
+      </div>
+      <div class="w-frame drawn">
+        <div class="card">
+          <div style="display:flex; align-items:flex-start; justify-content:space-between">
+            <div>
+              <p class="lbl">NFTs</p>
+              <p style="font-size:15px; font-weight:600; color:var(--ink); margin-top:2px">3 collections</p>
+            </div>
+            <span style="font-size:13px; font-weight:500; color:var(--blue-bright)">Edit</span>
+          </div>
+          <div class="nft-grid">
+            <img src="flow/nft-1.png" alt="" loading="lazy">
+            <img src="flow/nft-2.png" alt="" loading="lazy">
+            <img src="flow/nft-3.png" alt="" loading="lazy">
+          </div>
+        </div>
+      </div>
+
+      <div class="beat">
+        <p class="w-plede">Needs you</p>
+        <p class="say">Approvals, signatures and proofs with a clock on them.</p>
+      </div>
+      <div class="w-frame drawn tail">
+        <div class="card">
+          <p class="lbl">Needs you</p>
+          <div class="needs-list">
+            <div><b>Uniswap can still reach $4,180</b><span style="color:var(--berry)">approval &middot; 8 months old</span></div>
+            <div><b>Safe is one signature short</b><span style="color:var(--k-rem)">2 of 3</span></div>
+            <div><b>A deposit is waiting on proof</b><span style="color:var(--k-rem)">Privacy Pools &middot; 4 days</span></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- WHAT'S AT RISK — the one that earns a full field -->
+  <section class="w-risk w-field w-berry" style="padding-top:54px;padding-bottom:54px">
+    <div>
+      <p class="w-eyebrow">What&rsquo;s at risk</p>
+      <h2 class="w-lede">Revoke preview &mdash; never signs.</h2>
+      <ul class="w-rest">
+        <li>Approvals by dollars reachable</li>
+        <li>Delegation alerts</li>
+        <li>Who else can act as the account</li>
+      </ul>
+    </div>
+    <div>
+      <div class="w-chips" style="margin-top:0">
+        <span class="w-chip">Permit2</span><span class="w-chip">EIP-7702</span><span class="w-chip">ERC-4337</span><span class="w-chip">ERC-7579</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- the rest — six panels, each led by its own best line -->
+  <div class="w-panels">
+
+    <div class="w-panel w-field w-dark">
+      <p class="w-eyebrow">Lending &amp; liquidity</p>
+      <p class="w-plede">Locks, and how far they melted.</p>
+      <ul class="w-rest">
+        <li>Collateral, debt, health factor</li>
+        <li>Vaults and isolated markets</li>
+        <li>Concentrated liquidity V3 + V4</li>
+        <li>Perps, spot, staking</li>
+      </ul>
+      <div class="w-chips">
+        <span class="w-chip">Aave</span><span class="w-chip">Spark</span><span class="w-chip">Morpho</span><span class="w-chip">Uniswap</span><span class="w-chip">Hyperliquid</span><span class="w-chip">Aerodrome</span><span class="w-chip">ether.fi</span>
+      </div>
+    </div>
+
+    <div class="w-panel w-field w-dark">
+      <p class="w-eyebrow" style="color:#12ff80">Safe</p>
+      <p class="w-plede">Co-sign from a device key &mdash; never spend alone.</p>
+      <ul class="w-rest">
+        <li>Pending queue &mdash; &ldquo;2 of 3 signatures&rdquo;</li>
+        <li>Live confirmation counts</li>
+        <li>Safes you&rsquo;re a signer on</li>
+        <li>Owner and threshold changes</li>
+      </ul>
+      <div class="w-chips">
+        <span class="w-chip own">multisig</span><span class="w-chip">Transaction Service</span><span class="w-chip">co-signer</span>
+      </div>
+    </div>
+
+    <div class="w-panel w-field w-purple">
+      <p class="w-eyebrow">Privacy</p>
+      <p class="w-plede">The clear-to-withdraw moment.</p>
+      <ul class="w-rest">
+        <li>Shielded deposits</li>
+        <li>Ragequit exits, reclaimed</li>
+        <li>Shields and unshields</li>
+        <li>Anonymity-set cover</li>
+      </ul>
+      <div class="w-chips">
+        <span class="w-chip">Privacy Pools</span><span class="w-chip">Railgun</span>
+      </div>
+    </div>
+
+    <div class="w-panel w-field w-amber">
+      <p class="w-eyebrow">Bitcoin</p>
+      <p class="w-plede">Told when a transfer settles.</p>
+      <ul class="w-rest">
+        <li>Confirmations, or the mempool</li>
+        <li>Halving countdown, by block</li>
+        <li>Dormancy &mdash; &ldquo;not since 2021&rdquo;</li>
+        <li>UTXO consolidation, and its cost</li>
+      </ul>
+      <div class="w-chips">
+        <span class="w-chip">UTXO</span><span class="w-chip">mempool.space</span><span class="w-chip">blockstream.info</span><span class="w-chip">keyless</span>
+      </div>
+    </div>
+
+    <div class="w-panel w-field w-green">
+      <p class="w-eyebrow">Solana</p>
+      <p class="w-plede">Swap, receive, send &mdash; venue named.</p>
+      <ul class="w-rest">
+        <li>Mentions dropped, not counted</li>
+        <li>Fees and rent backed out</li>
+        <li>Native stake accounts</li>
+        <li>active &middot; activating &middot; inactive</li>
+      </ul>
+      <div class="w-chips">
+        <span class="w-chip">SVM</span><span class="w-chip">Jupiter</span><span class="w-chip">Bonfida</span><span class="w-chip">batched RPC</span>
+      </div>
+    </div>
+
+    <div class="w-panel w-field w-blue">
+      <p class="w-eyebrow">Cards &amp; onramp</p>
+      <p class="w-plede">The one source with a merchant name.</p>
+      <ul class="w-rest">
+        <li>Apple Card, Cash and Savings</li>
+        <li>Visa spends settling onchain</li>
+        <li>Privacy.com virtual-card purchases</li>
+        <li>Fiat bought onchain &mdash; &ldquo;25 USDC with Venmo&rdquo;</li>
+      </ul>
+      <div class="w-chips">
+        <span class="w-chip">Apple Wallet</span><span class="w-chip">Privacy.com</span><span class="w-chip">Gnosis Pay</span><span class="w-chip">ether.fi Cash</span><span class="w-chip">Peer</span><span class="w-chip">CardPointers</span>
+      </div>
+    </div>
+
   </div>
 
-  <div class="w-grid">
-    <div class="w-card">
-      <div class="head"><h2>What you hold</h2></div>
-      <ul><li>Priced treemap, every token</li><li>One total across all wallets</li><li>Balance curve, and what moved it</li><li>Concentration &middot; stable share</li><li>Deposited / Locked / Owed</li></ul>
-      <div class="w-chips"><span class="w-chip">Tokens</span><span class="w-chip">Staked SOL</span><span class="w-chip">Validators</span><span class="w-chip">Exchanges</span></div>
-    </div>
-    <div class="w-card">
-      <div class="head"><h2>What moved</h2></div>
-      <ul><li>Transfers in and out</li><li>Money in vs out, by counterparty</li><li>Gas spent, per chain</li><li>Airdrop spam filtered</li><li>Address poisoning caught</li></ul>
-      <div class="w-chips"><span class="w-chip">Ethereum</span><span class="w-chip">Base</span><span class="w-chip">Arbitrum</span><span class="w-chip">Optimism</span><span class="w-chip">Polygon</span><span class="w-chip">Gnosis</span><span class="w-chip">Solana</span><span class="w-chip">Bitcoin</span><span class="w-chip">NFTs</span></div>
-    </div>
-    <div class="w-card" style="background: rgba(224,52,92,.09)">
-      <div class="head"><h2>What&rsquo;s at risk</h2></div>
-      <ul><li>Approvals by dollars reachable</li><li>Revoke preview &mdash; never signs</li><li>Delegation alerts</li><li>Who else can act as the account</li><li>Liquidation distance, one axis</li></ul>
-      <div class="w-chips"><span class="w-chip">Permit2</span><span class="w-chip">EIP-7702</span><span class="w-chip">ERC-4337</span><span class="w-chip">ERC-7579</span></div>
-    </div>
-    <div class="w-card" style="background: rgba(22,115,230,.13)">
-      <div class="head"><h2>Cards &amp; onramp</h2><span class="corner">4 bridges</span></div>
-      <ul><li><b style='color:var(--ink)'>Apple Card, Cash and Savings</b></li><li>Visa spends settling onchain</li><li>Privacy.com virtual-card purchases</li><li>The one source with a merchant name</li><li>Fiat bought onchain &mdash; &ldquo;25 USDC with Venmo&rdquo;</li></ul>
-      <div class="w-chips"><span class="w-chip">Apple Wallet</span><span class="w-chip">Privacy.com</span><span class="w-chip">Gnosis Pay</span><span class="w-chip">ether.fi Cash</span><span class="w-chip">Peer</span><span class="w-chip">CardPointers</span></div>
-    </div>
-    <div class="w-card">
-      <div class="head"><h2>Lending &amp; liquidity</h2><span class="corner">7 bridges</span></div>
-      <ul><li>Collateral, debt, health factor</li><li>Vaults and isolated markets</li><li>Concentrated liquidity V3 + V4</li><li>Perps, spot, staking</li><li>Locks, and how far they melted</li></ul>
-      <div class="w-chips"><span class="w-chip">Aave</span><span class="w-chip">Spark</span><span class="w-chip">Morpho</span><span class="w-chip">Uniswap</span><span class="w-chip">Hyperliquid</span><span class="w-chip">Aerodrome</span><span class="w-chip">ether.fi</span></div>
-    </div>
-    <div class="w-card">
-      <div class="head"><h2>Safe</h2><span class="corner">multisig</span></div>
-      <ul><li>Pending queue &mdash; &ldquo;2 of 3 signatures&rdquo;</li><li>Live confirmation counts</li><li>Safes you&rsquo;re a signer on</li><li>Owner and threshold changes</li><li><b style='color:var(--ink)'>Co-sign from a device key</b> &mdash; never spend alone</li></ul>
-      <div class="w-chips"><span class="w-chip">Transaction Service</span><span class="w-chip">co-signer</span></div>
-    </div>
-    <div class="w-card" style="background: rgba(191,90,242,.08)">
-      <div class="head"><h2>Privacy</h2><span class="corner">2 bridges</span></div>
-      <ul><li>Shielded deposits</li><li>The clear-to-withdraw moment</li><li>Ragequit exits, reclaimed</li><li>Shields and unshields</li><li>Anonymity-set cover</li></ul>
-      <div class="w-chips"><span class="w-chip">Privacy Pools</span><span class="w-chip">Railgun</span></div>
-    </div>
-    <div class="w-card" style="background: rgba(232,150,28,.10)">
-      <div class="head"><h2 class="amber">Bitcoin</h2><span class="corner">UTXO</span></div>
-      <ul><li>Confirmations, or the mempool</li><li>Told when a transfer settles</li><li>Halving countdown, by block</li><li>Dormancy &mdash; &ldquo;not since 2021&rdquo;</li><li>UTXO consolidation, and its cost</li></ul>
-      <div class="w-chips"><span class="w-chip">mempool.space</span><span class="w-chip">blockstream.info</span><span class="w-chip">keyless</span></div>
-    </div>
-    <div class="w-card" style="background: rgba(43,193,106,.09)">
-      <div class="head"><h2 class="green">Solana</h2><span class="corner">SVM</span></div>
-      <ul><li>Swap, receive, send &mdash; venue named</li><li>Mentions dropped, not counted</li><li>Fees and rent backed out</li><li>Native stake accounts</li><li>active &middot; activating &middot; inactive</li></ul>
-      <div class="w-chips"><span class="w-chip">Jupiter</span><span class="w-chip">Bonfida</span><span class="w-chip">batched RPC</span></div>
-    </div>
-  </div>
-
-
-  <section class="slab-get" style="border-radius:34px;margin-top:40px">
-    <h2 style="font-size:clamp(40px,6vw,72px)">Watch it all.</h2>
+  <section class="slab-get w-close">
+    <h2>Watch it all.</h2>
     <p class="slab-sub">Free. Read-only. On your phone in a minute.</p>
     <div class="cta-row"><a class="cta cta-ink" href="https://testflight.apple.com/join/xBD4tYZh" target="_blank" rel="noopener">Get it on TestFlight</a></div>
   </section>
 
   <div class="w-foot">
-    <span>22 apps &middot; 9 networks &middot; iPhone &middot; iPad &middot; Mac</span>
+    <span>iPhone &middot; iPad &middot; Mac</span>
     <span><a href="index.html#catalog" style="color:var(--blue-bright)">See every app &rarr;</a></span>
   </div>
 
@@ -115,7 +256,7 @@
 <footer>
   <div class="wrap">
     <p class="tagline">Your apps, in one place. No account, no server, all on device.</p>
-    <p>© 2026 Casberi · <a href="docs.html">Docs</a> · <a href="privacy.html">Privacy</a> · <a href="mailto:privacy@casberi.app">Contact</a> · <a href="https://x.com/casberi_app">@casberi_app</a></p>
+    <p>&copy; 2026 Casberi &middot; <a href="docs.html">Docs</a> &middot; <a href="privacy.html">Privacy</a> &middot; <a href="mailto:privacy@casberi.app">Contact</a> &middot; <a href="https://x.com/casberi_app">@casberi_app</a></p>
   </div>
 </footer>
 
