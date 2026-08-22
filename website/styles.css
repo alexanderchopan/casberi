@@ -584,18 +584,19 @@ p.lede strong { color: var(--ink); font-weight: 600; }
    Work) is no longer forced to be four screens tall to stay in its column,
    and the chips reflow at any width, so the same rule serves phone and
    desktop with no breakpoint of its own. */
-.store-flow { display: flex; flex-direction: column; gap: 12px; }
-.shelf { display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
-  background: var(--surface); border-radius: 18px; padding: 14px 14px 15px; }
-/* The heading owns its own line — `flex-basis: 100%` rather than a separate
-   wrapper element, so the markup is untouched and `catalog-sync.sh` still
-   reads the shelf exactly as it did. */
-.shelf > h3 { flex: 0 0 100%; font-size: 15px; font-weight: 750;
-  letter-spacing: -0.01em; margin: 0 0 4px 2px; }
-/* A chip now sizes to its own name instead of filling a column. */
-.mini-cell { display: inline-flex; align-items: center; gap: 9px;
-  flex: 0 0 auto; padding: 5px 13px 5px 6px; border-radius: 999px;
-  background: rgba(255,255,255,.045); }
+.store-flow { display: block; columns: 4; column-gap: 16px; }
+@media (max-width: 1000px) { .store-flow { columns: 3; } }
+@media (max-width: 760px) { .store-flow { columns: 2; } }
+@media (max-width: 480px) { .store-flow { columns: 1; } }
+.shelf { display: block; break-inside: avoid; margin: 0 0 16px;
+  background: rgba(255,255,255,.035); border-radius: 20px; padding: 18px 18px 12px; }
+.shelf > h3 { font-size: 15px; font-weight: 750; margin-bottom: 10px; color: var(--ink); }
+.mini-cell { display: flex; width: 100%; box-sizing: border-box; align-items: center; gap: 10px;
+  background: transparent; border-radius: 10px; padding: 7px 4px; }
+.mini-cell .ai { width: 28px; height: 28px; border-radius: 8px; flex: none; }
+.mini-cell span { font-size: 13.5px; font-weight: 600; white-space: nowrap; overflow: hidden;
+  text-overflow: ellipsis; }
+.mini-cell .soon { font-style: normal; font-size: 11px; font-weight: 700; margin-left: auto; }
 .mini-cell:hover { background: rgba(255,255,255,.09); }
 .mini-cell .ai { width: 26px; height: 26px; border-radius: 7.5px;
   font-size: 12px; flex: none; }
@@ -1549,25 +1550,34 @@ footer .tagline { font-size: 16px; font-weight: 600; color: var(--ink); margin-b
 .plain-note { font-size: 14px; color: var(--faint); margin-top: 34px; }
 .plain-note b { color: var(--muted); font-weight: 650; }
 
-/* ---------- builders band (#builders) ---------- */
-.bvids { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-top: 44px; }
-@media (max-width: 860px) { .bvids { grid-template-columns: 1fr; gap: 34px; } }
-.bstage { position: relative; height: 360px; overflow: hidden; border-radius: 22px;
-  background: radial-gradient(120% 110% at 30% 0%, rgba(22,115,230,.16), rgba(255,255,255,.02) 62%); }
-.bstage .fphone { width: 190px; transform: rotate(-1.4deg); top: 26px; }
-.bvid:nth-child(even) .bstage .fphone { transform: rotate(1.4deg); }
-.bvid .cap { display: flex; align-items: baseline; justify-content: space-between; margin: 18px 2px 4px; }
-.bvid .cap h3 { font-size: 21px; font-weight: 800; letter-spacing: -.02em; margin: 0; }
-.bvid .cap .bk { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 11.5px;
-  color: var(--blue-bright); }
-.bvid p { font-size: 14.5px; color: var(--muted); margin: 0 2px; line-height: 1.55; }
-.bvid p a { color: var(--blue-bright); white-space: nowrap; }
-
+/* ---------- builders band (#builders) — flat color, product-first ---------- */
+.bvids { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-top: 40px; }
+@media (max-width: 860px) { .bvids { grid-template-columns: 1fr; gap: 18px; } }
+.bvid { position: relative; border-radius: 32px; overflow: hidden; padding: 34px 30px 0;
+  display: flex; flex-direction: column; min-height: 640px; }
+.bvid.blue  { background: #1673e6; }
+.bvid.ink   { background: #14171d; }
+.bvid.deep  { background: #0b3d99; }
+.bvid h3 { font-size: 52px; font-weight: 850; letter-spacing: -.035em; color: #fff;
+  margin: 0; line-height: 1; }
+.bvid .bk { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12px;
+  color: rgba(255,255,255,.66); display: block; margin: 10px 0 6px; }
+.bvid p { font-size: 16px; color: rgba(255,255,255,.9); margin: 0; line-height: 1.5; }
+.bvid p a { color: #fff; text-decoration: underline; text-underline-offset: 3px; white-space: nowrap; }
+.bvid .tiles { margin: 14px 0 0; }
+.bstage { position: relative; flex: 1; min-height: 330px; margin: 22px 0 0; }
+.bstage .cyc { position: absolute; inset: 0; }
+.bstage .fphone { position: absolute; left: 50%; top: 0; transform: translateX(-50%) rotate(-2deg);
+  width: 240px; border-radius: 30px 30px 0 0;
+  box-shadow: 0 0 0 6px rgba(0,0,0,.4), 0 24px 60px rgba(0,0,0,.45); }
+.bvid:nth-child(2) .bstage .fphone { transform: translateX(-50%) rotate(2deg); }
 /* app-tile strips */
 .tiles { display: flex; align-items: center; gap: 7px; margin: 13px 2px 0; }
-.tiles .tile .ai { width: 24px; height: 24px; border-radius: 7px; display: flex; }
+.tiles .tile .ai { width: 24px; height: 24px; border-radius: 7px; display: flex;
+  box-shadow: 0 0 0 1px rgba(255,255,255,.14); }
 .tile-more { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 11px;
   color: var(--faint); margin-left: 3px; }
+.bvid .tile-more { color: rgba(255,255,255,.7); }
 
 .bfoot2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 42px; }
 @media (max-width: 760px) { .bfoot2 { grid-template-columns: 1fr; } }
@@ -1577,6 +1587,19 @@ footer .tagline { font-size: 16px; font-weight: 600; color: var(--ink); margin-b
   max-width: 660px; margin: 46px 0 0; text-wrap: balance; }
 
 /* ---------- wallet page ---------- */
+.w-heroband { background: linear-gradient(170deg, #2079f2 0%, #0d47b0 100%);
+  border-radius: 34px; padding: 54px 48px 44px; margin-top: 22px; }
+@media (max-width: 640px) { .w-heroband { padding: 36px 26px 30px; border-radius: 26px; } }
+.w-heroband .m-eyebrow { color: rgba(255,255,255,.8); }
+.w-heroband h1 { color: #fff; }
+.w-heroband p.sub { color: rgba(255,255,255,.88); }
+.w-heroband .w-net { background: rgba(255,255,255,.14); }
+.w-heroband .w-net b { color: #fff; }
+.w-heroband .w-net .fmt { color: rgba(255,255,255,.7); }
+.w-heroband .w-never { display: inline-block; background: #fff; color: var(--berry);
+  border-radius: 999px; padding: 9px 18px; font-weight: 700; margin-top: 20px; }
+.w-cta { text-align: center; padding: 40px 0 26px; }
+.w-cta .cta { display: inline-block; }
 .w-hero { padding: 54px 0 6px; }
 .w-hero h1 { font-size: clamp(40px, 6vw, 68px); font-weight: 800; letter-spacing: -.035em;
   line-height: 1.04; max-width: 780px; text-wrap: balance; }

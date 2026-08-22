@@ -9,7 +9,7 @@
 <meta property="og:description" content="Everything the Wallet reads: EVM, Bitcoin, Solana and Apple Card. Read-only, always.">
 <meta property="og:type" content="website">
 <link rel="icon" href="icons/casberi-logo.png">
-<link rel="stylesheet" href="styles.css?v=202608211900">
+<link rel="stylesheet" href="styles.css?v=202608212120">
 </head>
 <body>
 
@@ -29,7 +29,7 @@
 
 <div class="wrap">
 
-  <header class="w-hero">
+  <div class="w-heroband"><header class="w-hero" style="padding-top:0">
     <p class="m-eyebrow">The Wallet</p>
     <h1>Everything the Wallet reads.</h1>
     <p class="sub">Paste an address &mdash; or connect a wallet &mdash; and its whole onchain life lands in your feed. <b style="color:var(--ink);font-weight:650">Your real-world cards land beside it.</b></p>
@@ -42,6 +42,7 @@
     <div class="w-net card"><b><i style="background:#1c66db"></i>Your cards</b><div class="fmt">Apple Card &middot; Privacy.com</div></div>
   </div>
   <p class="w-never">Never trades &middot; never moves funds</p>
+  </div>
 
   <div class="w-grid">
     <div class="w-card">
@@ -89,6 +90,15 @@
       <ul><li>Swap, receive, send &mdash; venue named</li><li>Mentions dropped, not counted</li><li>Fees and rent backed out</li><li>Native stake accounts</li><li>active &middot; activating &middot; inactive</li></ul>
       <div class="w-chips"><span class="w-chip">Jupiter</span><span class="w-chip">Bonfida</span><span class="w-chip">batched RPC</span></div>
     </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px" class="w-shots">
+    <img src="flow/viz-balance.jpg" alt="The balance curve — one total, and what moved it." style="width:100%;border-radius:22px" loading="lazy">
+    <img src="flow/viz-melt.jpg" alt="A lock's melt — decayed voting power against the locked amount." style="width:100%;border-radius:22px" loading="lazy">
+  </div>
+
+  <div class="w-cta">
+    <a class="cta" href="https://testflight.apple.com/join/xBD4tYZh">Get it on TestFlight</a>
   </div>
 
   <div class="w-foot">
