@@ -1434,6 +1434,40 @@
         }
       }
     },
+    "%@ and %@ have moved funds to each other.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$@ and %2$@ have moved funds to each other."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%1$@ y %2$@ se han enviado fondos."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%1$@と%2$@は互いに資金を移動しています。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%1$@과(와) %2$@이(가) 서로 자금을 옮겼습니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%1$@ 与 %2$@ 之间有过资金往来。"
+          }
+        }
+      }
+    },
     "%@ and %@ have signed.": {
       "localizations": {
         "en": {
@@ -10143,6 +10177,40 @@
         }
       }
     },
+    "%lld filed under %@.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$lld filed under %2$@."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%1$lld archivadas en %2$@."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%1$lld件を「%2$@」に分類しました。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%1$lld개를 %2$@에 정리했습니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "已将 %1$lld 个归入「%2$@」。"
+          }
+        }
+      }
+    },
     "%lld files in": {
       "localizations": {
         "es": {
@@ -10307,6 +10375,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "%lld 项授权"
+          }
+        }
+      }
+    },
+    "%lld groups": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld grupos"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld個のグループ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "그룹 %lld개"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld 个分组"
           }
         }
       }
@@ -13479,6 +13575,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "你的地址中有 %lld 个已连接"
+          }
+        }
+      }
+    },
+    "%lld of your wallets have moved funds to each other.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld de tus carteras se han enviado fondos entre sí."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "あなたのウォレットのうち%lld個が互いに資金を移動しています。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "내 지갑 %lld개가 서로 자금을 옮겼습니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "你的 %lld 个钱包之间有过资金往来。"
           }
         }
       }
@@ -18422,6 +18546,34 @@
         }
       }
     },
+    "1 address": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "1 dirección"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "1件のアドレス"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "주소 1개"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "1 个地址"
+          }
+        }
+      }
+    },
     "1 agent run in %@": {
       "localizations": {
         "es": {
@@ -18922,6 +19074,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "1 项授权"
+          }
+        }
+      }
+    },
+    "1 group": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "1 grupo"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "1個のグループ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "그룹 1개"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "1 个分组"
           }
         }
       }
@@ -24681,6 +24861,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "金额"
+          }
+        }
+      }
+    },
+    "An address can sit in more than one group. Untick one and tick another to move it.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Una dirección puede estar en varios grupos. Desmarca uno y marca otro para moverla."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "アドレスは複数のグループに入れられます。移動するには、一方のチェックを外して別のグループにチェックを入れてください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "주소는 여러 그룹에 속할 수 있습니다. 옮기려면 한 곳의 체크를 해제하고 다른 곳에 체크하세요."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "一个地址可以同时属于多个分组。取消勾选一个、勾选另一个即可移动。"
           }
         }
       }
@@ -36426,6 +36634,34 @@
         }
       }
     },
+    "Drop to file here": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Suelta para archivar aquí"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "ここにドロップして分類"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "여기에 놓아 정리"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "拖到这里归入"
+          }
+        }
+      }
+    },
     "Dropbox wouldn't finish the sign-in — tap Connect to start again.": {
       "localizations": {
         "es": {
@@ -38745,6 +38981,90 @@
         }
       }
     },
+    "File this paste": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Archivar lo pegado"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "貼り付けた分を分類"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "붙여넣은 항목 정리"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "归类粘贴的内容"
+          }
+        }
+      }
+    },
+    "File under": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Archivar en"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "分類先"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "정리할 그룹"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "归入"
+          }
+        }
+      }
+    },
+    "Filed here": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Archivada aquí"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "ここに分類済み"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "여기에 정리됨"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "已归入此处"
+          }
+        }
+      }
+    },
     "Files %@ under a new group.": {
       "localizations": {
         "es": {
@@ -38769,6 +39089,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "将 %@ 归入一个新分组。"
+          }
+        }
+      }
+    },
+    "Files the %lld addresses you just added under a new group.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Archiva en un grupo nuevo las %lld direcciones que acabas de añadir."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "追加したばかりの%lld件のアドレスを新しいグループに分類します。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "방금 추가한 주소 %lld개를 새 그룹에 정리합니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "将你刚添加的 %lld 个地址归入一个新分组。"
           }
         }
       }
@@ -42188,6 +42536,34 @@
         }
       }
     },
+    "How they connect": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Cómo se conectan"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "つながり方"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "어떻게 연결되어 있는지"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "它们如何相连"
+          }
+        }
+      }
+    },
     "How they turned out": {
       "localizations": {
         "es": {
@@ -43433,6 +43809,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "包含私信"
+          }
+        }
+      }
+    },
+    "Index": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Índice"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "索引"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "색인"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "索引"
           }
         }
       }
@@ -48725,6 +49129,34 @@
         }
       }
     },
+    "Move…": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Mover…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "移動…"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "옮기기…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "移动…"
+          }
+        }
+      }
+    },
     "Mute — stop badging my feed": {
       "localizations": {
         "es": {
@@ -51318,6 +51750,34 @@
         }
       }
     },
+    "No name, address or group here matches “%@”.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Ningún nombre, dirección ni grupo coincide con «%@»."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "「%@」に一致する名前・アドレス・グループはありません。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "“%@”와(과) 일치하는 이름, 주소, 그룹이 없습니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "没有名称、地址或分组与「%@」匹配。"
+          }
+        }
+      }
+    },
     "No names yet. Name an address and every transfer reads by that name.": {
       "localizations": {
         "es": {
@@ -52020,6 +52480,34 @@
           "stringUnit": {
             "state": "translated",
             "value": "未连接"
+          }
+        }
+      }
+    },
+    "Not filed here": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "No archivada aquí"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "ここには未分類"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "여기에 정리되지 않음"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "未归入此处"
           }
         }
       }
@@ -67158,6 +67646,34 @@
         }
       }
     },
+    "Saved · %lld": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Guardadas · %lld"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "保存済み · %lld"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "저장됨 · %lld"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "已保存 · %lld"
+          }
+        }
+      }
+    },
     "Saved. It's in your feed.": {
       "localizations": {
         "es": {
@@ -67801,6 +68317,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "搜索内容"
+          }
+        }
+      }
+    },
+    "Search, or paste an address": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Busca o pega una dirección"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "検索、またはアドレスを貼り付け"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "검색하거나 주소를 붙여넣으세요"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "搜索，或粘贴一个地址"
           }
         }
       }
@@ -76817,6 +77361,34 @@
         }
       }
     },
+    "Unfile": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Quitar del grupo"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "分類を解除"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "그룹에서 빼기"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "移出分组"
+          }
+        }
+      }
+    },
     "Unknown": {
       "localizations": {
         "es": {
@@ -79429,6 +80001,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "关注一个 Safe，或为其签名的钱包。"
+          }
+        }
+      }
+    },
+    "Watch a second address to see how they connect.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Sigue una segunda dirección para ver cómo se conectan."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "つながりを見るには、2つ目のアドレスをウォッチしてください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "연결 관계를 보려면 두 번째 주소를 지켜보세요."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "关注第二个地址，即可看到它们如何相连。"
           }
         }
       }
