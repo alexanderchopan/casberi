@@ -1829,3 +1829,16 @@ a:hover { color: #FF2D87; }
   padding: 26px 18px; }
 .sb-tile { display: flex; justify-content: center; }
 .sb-tile .ai { width: 44px; height: 44px; border-radius: 12px; }
+
+
+/* ===== W2: nine hues on ink — no flood, the domains are the color ===== */
+.w-hero .w-never { margin-top: 18px; }
+.w-anchor { grid-column: 1 / -1; background: #1673e6 !important;
+  flex-direction: row; align-items: flex-start; justify-content: space-between; gap: 30px; }
+.w-anchor h2, .w-anchor li { color: #fff; }
+.w-anchor li { color: rgba(255,255,255,.88); }
+.w-anchor ul { columns: 2; column-gap: 40px; margin-top: 0; flex-grow: 1; }
+@media (max-width: 700px) { .w-anchor { flex-direction: column; } .w-anchor ul { columns: 1; } }
+.w-anchor .head { flex: none; padding-top: 2px; }
+.w-anchor .w-chips { margin-top: 0; padding-top: 12px; flex: none; max-width: 200px; }
+.w-anchor .w-chip { background: rgba(255,255,255,.18); color: #fff; }
