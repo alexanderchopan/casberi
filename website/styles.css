@@ -1784,10 +1784,20 @@ a:hover { color: #FF2D87; }
 .w-heroband .w-net .fmt { color: rgba(255,255,255,.78); }
 
 
-/* the creature and its chat windows arrive AFTER the rain has fallen */
-.hero-creature { opacity: 0; animation: hcIn .6s ease 1.15s forwards; }
-@keyframes hcIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
-@media (prefers-reduced-motion: reduce) { .hero-creature { opacity: 1; animation: none; } }
+/* the creature arrives once the rain has fallen (last tile lands ~3.2s);
+   then it deals its chat windows outward, one at a time */
+.hc-mark { opacity: 0; transform: scale(.6); animation: hcPop .5s cubic-bezier(.34,1.4,.5,1) 3.25s forwards; }
+@keyframes hcPop { to { opacity: 1; transform: scale(1); } }
+.hc-row { opacity: 0; }
+.hc-col:first-child .hc-row:nth-child(1) { animation: hcDealL .45s ease-out 3.7s forwards; }
+.hc-col:first-child .hc-row:nth-child(2) { animation: hcDealL .45s ease-out 4.0s forwards; }
+.hc-col:last-child  .hc-row:nth-child(1) { animation: hcDealR .45s ease-out 3.85s forwards; }
+.hc-col:last-child  .hc-row:nth-child(2) { animation: hcDealR .45s ease-out 4.15s forwards; }
+@keyframes hcDealL { from { opacity: 0; transform: translateX(26px); } to { opacity: 1; } }
+@keyframes hcDealR { from { opacity: 0; transform: translateX(-26px); } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .hc-mark, .hc-row { opacity: 1; transform: none; animation: none; }
+}
 
 /* ===== why redo: chaos of real icons -> the real app ===== */
 .why2 { display: grid; grid-template-columns: 1fr 96px 1fr; gap: 8px; align-items: center; margin-top: 24px; }
