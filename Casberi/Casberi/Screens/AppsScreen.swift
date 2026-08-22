@@ -340,7 +340,22 @@ struct AppsScreen: View {
             }
             #if DEBUG
             if UserDefaults.standard.bool(forKey: "openPair") { pairing = true }
-            if UserDefaults.standard.bool(forKey: "openWallet") { probe = .wallet }
+            // `-openWallet YES` takes the TRACKED route (prd §442, found on a
+            // device). It used to set `probe`, which is a
+            // `navigationDestination(item:)` binding of this screen's own —
+            // so the manager arrived on a frame `HomeRoute.path` does not
+            // know about, and anything the manager later PUSHED through
+            // `route.push` was silently dropped (CLAUDE.md's own
+            // "a plain NavigationLink pushes a frame the bound path doesn't
+            // track"). §440 gave the manager a real push for the first time —
+            // a group's own screen — and it opened from the app and did
+            // nothing under the probe, which is the shape this file's
+            // neighbouring comment already warns about: a probe that opens a
+            // screen by a route no person can take proves the screen and
+            // never the act.
+            if UserDefaults.standard.bool(forKey: "openWallet") {
+                route.pushBridge(.wallet)
+            }
             if let name = UserDefaults.standard.string(forKey: "openApp") { probe = .app(name) }
             // `-openSetup "<Offer name>"` pushes a bridge's setup screen
             // directly — the token/handle field screens have no deep link.

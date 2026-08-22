@@ -29753,3 +29753,35 @@ Group cards reordered by activity (alphabetical is stable, and a strip that resh
 ### Unproven
 
 The build is green on both platforms and every harness and audit passes. **No simulator run and no device**: the flight's two anchors, the drop absorb and the scrubber bubble are all gesture-driven and none of them can be exercised by a static check — and the drag that feeds the absorb is the same `draggable`/`contextMenu` arbitration §440 already flagged as unverified on hardware.
+
+## 442. What the first device drawing of §440 found — five things a build cannot see (2026-08-22)
+
+§440 and §441 shipped green: both platforms built, every audit passed, the harness caught all thirteen of its mutations, and `verify.sh` came back clean with zero warnings. Then the screen was opened on a simulator for the first time. **Five defects, none of which any static check could have seen**, which is the same lesson §436 recorded about the sky and is worth recording again in the room that replaced it: a harness proves arithmetic, and a layout is not arithmetic.
+
+### 1. The shelf showed FOUR slots and said "2 of 5"
+
+§182's entire claim is that the cap is "structure you can see rather than copy you hit" — and at `rosterSlotWidth` 74 the fifth slot sat off the right edge of a 390pt screen. So the one picture in this app whose job is to show a limit was showing four fifths of it, under a caption stating five. 64pt with `s2` spacing fits all five inside the page margin (5 × 64 + 4 × 8 = 352 against 360). **The number and the picture now agree**, which is the only thing that made the shelf worth drawing.
+
+### 2. The spine card was as wide as its own longest line
+
+A `VStack` sizes to its content, so the card stopped a third short of the field above it — reading as a layout fault rather than as a card. `.frame(maxWidth: .infinity, alignment: .leading)`.
+
+### 3. The list was twenty-six section gaps
+
+A `Section` per letter is what buys sticky headings and the scrubber's anchors, and under `insetGrouped` it also buys a full section gap between every one of them. Measured on the device: **seven rows a screen where Contacts fits twelve**, on the list whose whole job is finding one row out of twenty-seven. `.listSectionSpacing(.compact)`, and the section header's own `.padding(.top)` dropped a rung — it was adding a fourth helping of air on top of the List's.
+
+### 4. The connect row was the loudest thing on the screen
+
+It was still `DSSlabButton` — a full-width filled blue call to action. §440 put it beside a field that is the PRIMARY way in, so the loudest control on the screen was the second choice. It is a row now, the same weight as the Connection door at the foot: a mark, a sentence, a chevron. **The busy state keeps its spinner and its "tap to cancel" wording**, because the wait is real and §83 requires the way out.
+
+### 5. THE PROBE TOOK A DOOR NO PERSON TAKES — and so proved nothing
+
+Tapping a group card did nothing. The push was correct; the ROUTE the probe arrived by was not. `-openWallet` set `AppsScreen`'s own `navigationDestination(item:)` binding, so the manager landed on a frame `HomeRoute.path` does not track — and CLAUDE.md's own rule says appending to `path` while an untracked frame is on top silently drops it. §440 gave the manager its first real push (a group's own screen), which therefore worked from the app and did nothing under the probe.
+
+**The comment two lines above the bug already said this**, verbatim, about a different hook: *"A probe that opens the screen by a route no person can take proves the screen, never the act."* That was written after a sheet presentation went unexercised and shipped a crash to App Store review. Same file, same class, one hook over. `-openWallet` uses `route.pushBridge(.wallet)` now — the door a Connect actually takes.
+
+**The generalisable rule**: when a screen gains its FIRST outbound push, re-check every probe that reaches it. A probe route that was harmless while the screen was a leaf becomes a lie the moment it isn't.
+
+### What the device confirmed working
+
+The A–Z sections and their sticky headings, the scrubber, the recency subline ("2 together · 4 days ago", "1 together · August"), the kind labels, the group card's face deck and its "3 addresses · none watched", `NewGroupSheet` → a card appearing in the strip → the group's own screen with its ⋯ menu. The spine's own drawing is still UNSEEN — this corpus has no address reaching two watched wallets, which is the honest common case and exactly what the "None of your addresses are connected" state is for.

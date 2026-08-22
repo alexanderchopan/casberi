@@ -134,6 +134,11 @@ struct AddressSpineCard: View {
 
             notes
         }
+        // FULL WIDTH (prd §442, seen on a device). A `VStack` sizes to its
+        // content, so the card was as wide as its own longest wrapped line —
+        // it stopped a third of the way short of the field above it and read
+        // as a layout fault rather than as a card.
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(DS.Space.s4)
         .dsWidgetSurface(fillOpacity: WalletCardStyle.fill)
     }

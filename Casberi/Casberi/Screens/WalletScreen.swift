@@ -220,7 +220,13 @@ struct WalletScreen: View {
     @Query(walletRecentDescriptor) private var recent: [Thing]
 
     private let rosterFaceSize: CGFloat = DS.Face.shelf
-    private let rosterSlotWidth: CGFloat = 74
+    /// Sized so ALL FIVE slots fit a phone's width without scrolling (prd
+    /// §442). §182's whole claim is that the cap is "structure you can see
+    /// rather than copy you hit", and at 74 the fifth slot sat off the right
+    /// edge — so a shelf reading "2 of 5" showed four, which is the one thing
+    /// a picture of a cap must not do. 5 × 64 + 4 × 8 = 352 against the 360
+    /// a 390pt screen leaves inside the page margin.
+    private let rosterSlotWidth: CGFloat = 64
     /// The two label lines under a roster face, height-locked so a watched
     /// slot and an empty one line up. Named rather than written twice: the
     /// two call sites MUST agree or a half-full shelf steps.
@@ -265,6 +271,13 @@ struct WalletScreen: View {
                     .listRowSeparator(.hidden)
             }
             .listStyle(.insetGrouped)
+            // TIGHTENED (prd §442, seen on a device). A Section per letter is
+            // what buys sticky headings and the scrubber's anchors, and under
+            // `insetGrouped` it also buys a full section gap between every
+            // one of them — so a book of twenty-six letters was twenty-six
+            // gaps, about seven rows a screen where Contacts fits twelve. The
+            // headings stay; the air between them goes.
+            .listSectionSpacing(.compact)
             .scrollContentBackground(.hidden)
             .dsAdaptiveContentWidth()
             .dsPageBackground()
@@ -838,7 +851,10 @@ struct WalletScreen: View {
             }
         }
         .padding(.horizontal, inset ? DS.Space.s4 : 0)
-        .padding(.top, DS.Space.s4)
+        // The List already spaces its sections; this used to add a fourth
+        // rung of air on top of that and was most of why the screen read as
+        // half-empty on a phone.
+        .padding(.top, DS.Space.s2)
     }
 
     // MARK: - The roster (prd §182)
@@ -864,7 +880,7 @@ struct WalletScreen: View {
     private var rosterSection: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: DS.Space.s3) {
+                HStack(spacing: DS.Space.s2) {
                     ForEach(Array(wallet.addresses.enumerated()), id: \.element.id) { index, addr in
                         rosterSlot(addr)
                             // The shelf ARRIVES (prd §433) — faces settling
@@ -1824,15 +1840,55 @@ struct WalletScreen: View {
     /// beside the omnibox's Watch, so it wears the same filled capsule that
     /// verb does, and the explanatory line sits UNDER the button rather than
     /// inside it — a button says what it does in as few words as it can.
+    /// The automatic way in — a ROW, not a call to action (prd §442, seen on
+    /// a device).
+    ///
+    /// It was a full-width filled `DSSlabButton`, which is right for a screen
+    /// whose one job is to connect something and wrong here: §440 put this
+    /// beside a field that is the primary way in, and the blue slab outshouted
+    /// it — the loudest thing on the screen was the SECOND choice. It is the
+    /// same weight as the Connection door at the foot now: a mark, a sentence,
+    /// a chevron.
+    ///
+    /// The BUSY state keeps the spinner and the "tap to cancel" wording,
+    /// because the wait is real and the person needs the way out (§83 — the
+    /// proposal runs to a five-minute expiry, and somebody who chose not to
+    /// approve must not find a stuck control).
     private var connectRow: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
-            DSSlabButton(title: connecting ? "Waiting — tap to cancel"
-                                               : "Connect a wallet app",
-                             systemImage: "wallet.pass.fill",
-                             busy: connecting) {
+            Button {
                 DSHaptic.tap()
                 if connecting { cancelConnect() } else { connectWallet() }
+            } label: {
+                HStack(spacing: DS.Space.s3) {
+                    Image(systemName: "wallet.pass.fill")
+                        .dsGlyph(15, weight: .medium)
+                        .foregroundStyle(DS.tint)
+                        .frame(width: 34, height: 34)
+                        .background(DS.tintDim, in: RoundedRectangle(
+                            cornerRadius: DS.Radius.appIcon(34), style: .continuous))
+                    Text(connecting ? "Waiting — tap to cancel" : "Connect a wallet app")
+                        .dsText(.heading17).foregroundStyle(DS.textPrimary)
+                        .lineLimit(1)
+                    Spacer(minLength: 0)
+                    if connecting {
+                        ProgressView().controlSize(.small)
+                    } else {
+                        Image(systemName: "chevron.right")
+                            .dsGlyph(12, weight: .semibold)
+                            .foregroundStyle(DS.textTertiary)
+                    }
+                }
+                .padding(.horizontal, DS.Space.s3)
+                .padding(.vertical, 11)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(DS.surfaceRaised, in: RoundedRectangle(
+                    cornerRadius: DS.Radius.card, style: .continuous))
+                .contentShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
             }
+            .buttonStyle(PressSpring())
+            .accessibilityLabel(Text(connecting ? "Waiting for your wallet, tap to cancel"
+                                                : "Connect a wallet app"))
             // "Hands over the address — read-only, never signs" retired here
             // (prd §189): it said the same thing as the screen's one sentence
             // two lines below it, and a button with a caption is two blocks
