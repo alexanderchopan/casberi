@@ -1938,34 +1938,13 @@ a:hover { color: #FF2D87; }
   margin: 26px 0 0; font-family: ui-monospace, "SF Mono", Menlo, monospace;
   font-size: 12.5px; color: var(--faint); }
 
-/* ===== the Wallet page's features (2026-08-22) — a 3-column grid of picture
-   boxes, each with one line of caption BELOW it. No headings: every card names
-   itself in the picture, so a title above the line is the same words twice.
-   A box with no picture is not a box, it is a paragraph wearing a surface —
-   which is what the six-panel wall was, and why it is gone. ===== */
-.w-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 34px 22px; margin-top: 40px; }
-@media (max-width: 980px) { .w-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 30px 20px; } }
-@media (max-width: 640px) { .w-grid { grid-template-columns: 1fr; gap: 26px; } }
-
-/* One window size for every box, so the grid reads as one set rather than a
-   row of differently-cropped pictures. A crop taller than its window anchors
-   to the top — centring slices the card's own headline in half. */
-.w-shotbox { aspect-ratio: 4 / 3; overflow: hidden; background: #000;
-  border-radius: 18px; display: flex; align-items: center; }
-.w-shotbox img { width: 100%; display: block; }
-.w-shotbox.anchor-top { align-items: flex-start; }
-.w-cell h3 { font-family: 'Figtree', -apple-system, BlinkMacSystemFont, sans-serif;
-  font-size: 17px; font-weight: 800; letter-spacing: -.02em; color: var(--ink); margin-top: 14px; }
-.w-cell .say { font-size: 15px; color: var(--muted); line-height: 1.5; margin-top: 4px; }
-.w-cell .w-chips { margin-top: 10px; }
-
-/* What the Wallet also reads, as coverage rather than as more boxes. */
-.w-also { margin-top: 74px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 28px 40px; }
-@media (max-width: 980px) { .w-also { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (max-width: 640px) { .w-also { grid-template-columns: 1fr; gap: 24px; } }
-.w-also h4 { font-family: 'Figtree', -apple-system, sans-serif; font-size: 17px;
-  font-weight: 800; letter-spacing: -.02em; color: var(--ink); }
-.w-also p { font-size: 15px; color: var(--muted); line-height: 1.5; margin-top: 4px; }
-.w-also .w-chips { margin-top: 10px; }
+/* ===== the drawings, as one loop (2026-08-23) — fourteen visualizations in
+   a grid was a specimen tray: every box the same size, so nothing mattered
+   more than anything else, and fourteen different natural aspect ratios
+   forced into one window either stranded the wide ones in dead black or
+   sliced the tall ones off. One reel instead, and the nine panels below say
+   what it covers. ===== */
+.w-reel { width: 100%; display: block; border-radius: 22px; margin-top: 34px;
+  background: var(--bg); }
+.w-reel + .w-chips { margin-top: 20px; }
+@media (max-width: 640px) { .w-reel { border-radius: 16px; } }
