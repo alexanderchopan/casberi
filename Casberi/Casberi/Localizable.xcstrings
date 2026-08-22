@@ -66146,6 +66146,34 @@
         }
       }
     },
+    "Rename this address": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Cambiar el nombre de esta dirección"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "このアドレスの名前を変更"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "이 주소 이름 변경"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "重命名此地址"
+          }
+        }
+      }
+    },
     "Repaid %@ on Morpho": {
       "localizations": {
         "es": {
@@ -67501,6 +67529,62 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "缩写相同，地址不同。请仔细复制。"
+          }
+        }
+      }
+    },
+    "Same short form, different address. The first character that differs is marked below.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Misma forma corta, dirección distinta. El primer carácter que difiere está marcado abajo."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "短縮表示は同じですが、別のアドレスです。最初に異なる文字に下で印を付けています。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "짧은 형태는 같지만 다른 주소입니다. 처음 달라지는 문자를 아래에 표시했습니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "缩写相同，但地址不同。首个不同的字符已在下方标出。"
+          }
+        }
+      }
+    },
+    "Same short form, different address. They first differ at character %lld, marked below.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Misma forma corta, dirección distinta. Difieren por primera vez en el carácter %lld, marcado abajo."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "短縮表示は同じですが、別のアドレスです。最初に異なるのは %lld 文字目で、下に印を付けています。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "짧은 형태는 같지만 다른 주소입니다. 처음 달라지는 곳은 %lld번째 문자이며, 아래에 표시했습니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "缩写相同，但地址不同。第 %lld 个字符起首次出现差异，已在下方标出。"
           }
         }
       }
@@ -88899,6 +88983,34 @@
         }
       }
     },
+    "Your wallets it has dealt with": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Tus carteras con las que ha operado"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "このアドレスと取引のあるウォレット"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "이 주소와 거래한 내 지갑"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "与其有过往来的钱包"
+          }
+        }
+      }
+    },
     "Your week, by the hour": {
       "localizations": {
         "es": {
@@ -89011,6 +89123,34 @@
         }
       }
     },
+    "^[%lld address](inflect: true) picked": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "^[%lld dirección](inflect: true) seleccionada"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld 件のアドレスを選択"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "주소 %lld개 선택됨"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "已选择 %lld 个地址"
+          }
+        }
+      }
+    },
     "^[%lld transaction](inflect: true)": {
       "localizations": {
         "es": {
@@ -89035,6 +89175,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "%lld 笔交易"
+          }
+        }
+      }
+    },
+    "^[%lld transaction](inflect: true) with %@": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "^[%lld transacción](inflect: true) con %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%2$@ との取引 %1$lld 件"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%2$@와(과)의 거래 %1$lld건"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "与 %2$@ 的 %1$lld 笔交易"
           }
         }
       }

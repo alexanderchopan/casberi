@@ -267,11 +267,70 @@ struct NewGroupSheet: View {
                 if let existing = matchingGroup {
                     note(String(localized: "You already have “\(existing)” — these get added to it."))
                 }
+                cover
                 if book.count > 8 { filterField }
                 list
                 createButton
             }
         }
+    }
+
+    /// THE GROUP'S COVER, FORMING AS YOU BUILD IT (2026-08-22, prd §444).
+    ///
+    /// This sheet asks for two things — a name and a set — and until now the
+    /// set existed only as ticks scattered down a scrolling list, so the thing
+    /// being made was never visible as a thing. Every group in the app is drawn
+    /// as a deck of its members' faces (`AddressGroupCard`, and since §444 the
+    /// filing sheet's own rows); this is that same deck, assembling.
+    ///
+    /// It is not a preview of a screen elsewhere, it IS the object: a face
+    /// joining the deck is the tick you just made, which is why the deck grows
+    /// from the leading edge and the button below it counts the same set.
+    ///
+    /// Absent until the first pick, deliberately — an empty deck above an
+    /// untouched list is a frame around nothing, and the row's own well
+    /// (which exists so a flight has somewhere to land) has no equivalent job
+    /// here.
+    @ViewBuilder
+    private var cover: some View {
+        let chosen = pickedEntries
+        if !chosen.isEmpty {
+            HStack(spacing: -8) {
+                ForEach(chosen.prefix(Self.coverFaces)) { entry in
+                    AddressMark(entry: entry, size: DS.Face.list)
+                        // `AddressGroupCard`'s deck, spelled the same way — one
+                        // deck across the app. Nothing here draws a line, so a
+                        // mark punches the sheet colour out from under the one
+                        // behind it.
+                        .overlay(Circle().strokeBorder(DS.surfaceSheet, lineWidth: 2))
+                        // A face JOINING grows into the deck; the ones already
+                        // in it hold still.
+                        .transition(.scale(scale: 0.4).combined(with: .opacity))
+                }
+                if chosen.count > Self.coverFaces {
+                    Text("+\(chosen.count - Self.coverFaces)")
+                        .dsText(.label12).foregroundStyle(DS.textSecondary)
+                        .monospacedDigit()
+                        .padding(.leading, DS.Space.s3)
+                }
+                Spacer(minLength: 0)
+            }
+            .frame(height: DS.Face.list)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(Text("^[\(chosen.count) address](inflect: true) picked"))
+        }
+    }
+
+    /// How many faces the cover shows before it starts counting. Five, because
+    /// that is where a leading-anchored deck at `DS.Face.list` stops fitting
+    /// beside its own tally inside the tray's margins.
+    private static let coverFaces = 5
+
+    /// The picked entries in the BOOK's order, not tap order — the deck must
+    /// match the group it is about to make, and a group has no memory of which
+    /// address you ticked first.
+    private var pickedEntries: [AddressBook.Entry] {
+        book.all.filter { picked.contains($0.id) }
     }
 
     private func note(_ text: String) -> some View {
@@ -331,7 +390,10 @@ struct NewGroupSheet: View {
         let on = picked.contains(entry.id)
         return Button {
             DSHaptic.tap()
-            withAnimation(DS.Motion.standard) {
+            // One animation for the tick AND the cover above it: they are the
+            // same event, and two `withAnimation`s would let the face land
+            // before or after the checkmark it belongs to.
+            withAnimation(DS.Motion.bubble) {
                 if on { picked.remove(entry.id) } else { picked.insert(entry.id) }
             }
         } label: {
@@ -584,7 +646,9 @@ struct AddressCard: View {
     @Environment(\.openURL) private var openURL
     @Environment(BridgeStore.self) private var bridges
     private var book = AddressBook.shared
-    @State private var renaming = false
+    /// Naming happens IN PLACE now (prd §444) — see `nameField`.
+    @State private var editingName = false
+    @FocusState private var nameFocused: Bool
     @State private var nameDraft = ""
     @State private var addingGroup = false
     @State private var groupDraft = ""
@@ -625,11 +689,19 @@ struct AddressCard: View {
     var body: some View {
         NavigationStack {
             ScrollView {
+                // ONE fetch per body pass (2026-08-22, prd §444). `history` is
+                // a computed property that walks the corpus, and it had two
+                // readers before this pass and would have had three after —
+                // the §441 cost, one screen down, arriving the same way it did
+                // there. A `let` in the builder rather than `@State`, so no
+                // reader can ever be handed an array older than this pass.
+                let things = history
                 VStack(spacing: 0) {
                     identityHeader
                     lookalikeBand
-                    lede
-                    historySection
+                    lede(things)
+                    reachedWallets(things)
+                    historySection(things)
                     detailsList
                     // Room for the pinned verb bar. `DS.Hit.min` plus the
                     // bar's own padding — spelled from the token so the two
@@ -668,13 +740,6 @@ struct AddressCard: View {
                 }
             }
             .safeAreaInset(edge: .bottom, spacing: 0) { watchBar }
-            .alert("Name this address", isPresented: $renaming) {
-                TextField("Name", text: $nameDraft)
-                Button("Save") { rename(to: nameDraft) }
-                Button("Cancel", role: .cancel) { }
-            } message: {
-                Text("A blank name removes it from your book.")
-            }
             .alert("New group", isPresented: $addingGroup) {
                 TextField("Name (e.g. Family, Cold)", text: $groupDraft)
                 Button("Create") {
@@ -719,19 +784,10 @@ struct AddressCard: View {
     /// page, a band belongs to a different app.
     private var identityHeader: some View {
         VStack(spacing: 0) {
+            // THE FACE IS MADE OF THE ADDRESS (prd §444) — see `AddressReveal`.
             AddressMark(entry: current, size: DS.Face.profile)
-            Text(current.name)
-                .dsText(.heading28).foregroundStyle(DS.textPrimary)
-                .multilineTextAlignment(.center)
-                // The NAME reveal (2026-08-01) — `AddressMark`'s kind
-                // turn-over (prd §171) applied to the other half of the
-                // question. An address added bare stands under its own short
-                // form; a beat later reverse ENS answers, or a typed `.eth`
-                // resolves and `reconcileAliases` re-keys the row, and the
-                // card learns what to call it while you are looking at it.
-                .transition(.scale(scale: 0.9).combined(with: .opacity))
-                .id(current.name)
-                .animation(DS.Motion.standard, value: current.name)
+                .addressFaceReveal(hue: pourHue, isFace: current.kind.glyph == nil)
+            nameField
                 .padding(.top, DS.Space.s3)
             Text(kindLine)
                 .dsText(.subhead13).foregroundStyle(DS.textTertiary)
@@ -767,10 +823,7 @@ struct AddressCard: View {
     /// is where a profile's secondary verbs live.
     private var overflowMenu: some View {
         Menu {
-            Button {
-                nameDraft = current.name
-                renaming = true
-            } label: { Label("Rename", systemImage: "pencil") }
+            Button { beginRename() } label: { Label("Rename", systemImage: "pencil") }
             if isInBook {
                 Button(role: .destructive) {
                     rename(to: "")
@@ -787,6 +840,117 @@ struct AddressCard: View {
         .accessibilityLabel(Text("More"))
     }
 
+    /// THE NAME, EDITED WHERE IT STANDS (2026-08-22, prd §444).
+    ///
+    /// **Why the alert had to go.** Naming is the act this card exists for —
+    /// `rename(to:)`'s own header says a name "rewrites every transaction
+    /// you've ever had with this address, all at once, and that is the entire
+    /// argument for naming anything", and §441 built the cascade that shows it
+    /// sweeping down the history. An `.alert` covers the card while you type,
+    /// so the cascade ran under a dimmed screen behind a dialog and was over
+    /// by the time the dialog dismissed. The one moment the card was built
+    /// around could not be watched from the card.
+    ///
+    /// Committing on BLUR as well as on submit, because a sheet has a dozen
+    /// ways to leave a field and losing a typed name to any of them is the
+    /// worse failure. `commitName` is idempotent for exactly that reason —
+    /// submit drops focus, so both paths fire on every hardware return.
+    ///
+    /// The pencil appears only while the name is a PLACEHOLDER the app minted
+    /// (`WalletStore.isAutoName` — `…44b1`, not something anybody typed),
+    /// which is precisely when naming is the thing to do. Once it carries a
+    /// real name the invitation would be chrome on the hero, and the labelled
+    /// verb still lives in the overflow menu.
+    @ViewBuilder
+    private var nameField: some View {
+        if editingName {
+            VStack(spacing: DS.Space.s2) {
+                TextField("Name", text: $nameDraft)
+                    .dsText(.heading28)
+                    .foregroundStyle(DS.textPrimary)
+                    .multilineTextAlignment(.center)
+                    .textInputAutocapitalization(.words)
+                    .autocorrectionDisabled()
+                    .submitLabel(.done)
+                    .focused($nameFocused)
+                    .onSubmit { commitName() }
+                    .padding(.horizontal, DS.Space.s3)
+                    .frame(minHeight: DS.Hit.min)
+                    .background(DS.surfaceWell,
+                                in: RoundedRectangle(cornerRadius: DS.Radius.control,
+                                                     style: .continuous))
+                    .padding(.horizontal, DS.Space.s4)
+                // The one consequence a field cannot state by its shape. It
+                // sat in the alert's message; without a container to carry it
+                // the field has to, and only while the field is open.
+                Text("A blank name removes it from your book.")
+                    .dsText(.label12).foregroundStyle(DS.textTertiary)
+            }
+            .onAppear {
+                // One turn later: a `@FocusState` set in the same turn the
+                // field first appears is read before the field exists to take
+                // it, and the keyboard silently never rises.
+                DispatchQueue.main.async { nameFocused = true }
+            }
+            .onChange(of: nameFocused) { _, focused in
+                if !focused { commitName() }
+            }
+        } else {
+            Button { beginRename() } label: {
+                HStack(spacing: DS.Space.s2) {
+                    Text(current.name)
+                        .dsText(.heading28).foregroundStyle(DS.textPrimary)
+                        .multilineTextAlignment(.center)
+                        // The NAME reveal (2026-08-01) — `AddressMark`'s kind
+                        // turn-over (prd §171) applied to the other half of the
+                        // question. An address added bare stands under its own
+                        // short form; a beat later reverse ENS answers, or a
+                        // typed `.eth` resolves and `reconcileAliases` re-keys
+                        // the row, and the card learns what to call it while
+                        // you are looking at it.
+                        .transition(.scale(scale: 0.9).combined(with: .opacity))
+                        .id(current.name)
+                        .animation(DS.Motion.standard, value: current.name)
+                    if unnamed {
+                        Image(systemName: "pencil")
+                            .dsGlyph(13)
+                            .foregroundStyle(DS.textTertiary)
+                    }
+                }
+                .contentShape(Rectangle())
+                .dsTapTarget()
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(Text(current.name))
+            .accessibilityHint(Text("Rename this address"))
+        }
+    }
+
+    /// Whether this address is still standing under a name the app minted for
+    /// it rather than one anybody chose. `isAutoName` and never a comparison
+    /// against `shortAddress` — books written before the tail-only ruling hold
+    /// the old spelling, and that function is the only thing that knows both.
+    private var unnamed: Bool {
+        WalletStore.isAutoName(current.name, for: current.address)
+    }
+
+    private func beginRename() {
+        nameDraft = current.name
+        DSHaptic.tap()
+        withAnimation(DS.Motion.standard) { editingName = true }
+    }
+
+    /// Idempotent on purpose — submit drops focus, so both the `onSubmit` and
+    /// the `onChange` fire for one hardware return.
+    private func commitName() {
+        guard editingName else { return }
+        withAnimation(DS.Motion.standard) { editingName = false }
+        nameFocused = false
+        let typed = nameDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard typed != current.name else { return }
+        rename(to: typed)
+    }
+
     /// The address, as one chip under the name (prd §435).
     ///
     /// **It still shows every character**, middle-truncated rather than
@@ -799,6 +963,9 @@ struct AddressCard: View {
                 .dsText(.mono13).foregroundStyle(DS.textSecondary)
                 .lineLimit(1)
                 .truncationMode(.middle)
+                // Fills in from its ends — the part a short form shows, then
+                // the part it hides (prd §444, `AddressReveal`).
+                .addressEndsFirst()
             CopyAddressButton(address: current.address, expanded: true)
         }
         .padding(.horizontal, DS.Space.s3)
@@ -923,7 +1090,8 @@ struct AddressCard: View {
     // MARK: - Trouble
 
     /// The address(es) already in this book that PRINT the same as this one
-    /// (2026-08-01), as a FIELD rather than a card (prd §443).
+    /// (2026-08-01), as a FIELD rather than a card (prd §443), with the
+    /// comparison MADE rather than asked for (2026-08-22, prd §444).
     ///
     /// A card is a container of information and this is a CONDITION of the
     /// screen, so it takes the full width and its own ground — the one thing
@@ -931,13 +1099,28 @@ struct AddressCard: View {
     /// Both addresses print in full and un-truncated, which is the only form
     /// of this warning anyone can act on.
     ///
+    /// **§444: it used to end on "compare every character before you copy",
+    /// which is the app handing back the one job it is better at.** Forty-two
+    /// characters is past what anybody checks honestly, and the check people
+    /// actually perform — glance at the ends — is precisely the one a
+    /// poisoning address is BUILT to survive. So `AddressDiff` finds where the
+    /// two part, the shared head and the shared tail dim because they are the
+    /// parts that cannot help, and the first character that differs wears a
+    /// marker. For the poisoning shape that is character 3, so telling them
+    /// apart costs one glance instead of forty-two.
+    ///
     /// It says what the app knows and stops. It does NOT accuse either side of
     /// being the impostor: the book cannot know which one you meant, and a
-    /// wrong accusation on a security notice is worse than none.
+    /// wrong accusation on a security notice is worse than none. The marker is
+    /// therefore the same on both addresses — it points at a POSITION, never at
+    /// a culprit.
     @ViewBuilder
     private var lookalikeBand: some View {
         let twins = book.lookalikes(of: current.address)
         if !twins.isEmpty {
+            let fold = foldsCase(twins.map(\.address))
+            let mine = AddressDiff.combined(current.address, against: twins.map(\.address),
+                                            foldCase: fold)
             VStack(alignment: .leading, spacing: DS.Space.s2) {
                 HStack(spacing: DS.Space.s2) {
                     Image(systemName: "exclamationmark.triangle.fill")
@@ -947,25 +1130,15 @@ struct AddressCard: View {
                         .dsText(.heading17)
                         .foregroundStyle(DS.textPrimary)
                 }
-                Text("Same short form, different address. Compare every character before you copy.")
+                Text(partingLine(mine, twins: twins.count))
                     .dsText(.subhead13).foregroundStyle(DS.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
                 VStack(alignment: .leading, spacing: DS.Space.s2) {
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text("This one")
-                            .dsText(.label12).foregroundStyle(DS.textTertiary)
-                        Text(current.address)
-                            .dsText(.mono13).foregroundStyle(DS.textPrimary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
+                    diffRow(String(localized: "This one"), current.address, mine)
                     ForEach(twins) { twin in
-                        VStack(alignment: .leading, spacing: 1) {
-                            Text(twin.name)
-                                .dsText(.label12).foregroundStyle(DS.textTertiary)
-                            Text(twin.address)
-                                .dsText(.mono13).foregroundStyle(DS.textPrimary)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
+                        diffRow(twin.name, twin.address,
+                                AddressDiff.compare(twin.address, with: current.address,
+                                                    foldCase: fold))
                     }
                 }
                 .padding(.top, DS.Space.s1)
@@ -975,6 +1148,89 @@ struct AddressCard: View {
             .padding(.vertical, DS.Space.s3)
             .background(DS.destructive.opacity(0.16))
         }
+    }
+
+    /// One labelled address, drawn as its diff runs.
+    ///
+    /// The runs are `AddressDiff`'s, never this view's — the comparison is
+    /// harness-proven and a second spelling of it here is a second answer.
+    /// Concatenated into ONE `Text` so the characters flow and wrap as a single
+    /// string: an `HStack` of runs would let the line break between them and
+    /// put a space where the address has none, which on this screen is a
+    /// different address.
+    private func diffRow(_ label: String, _ address: String,
+                         _ comparison: AddressDiff.Comparison) -> some View {
+        VStack(alignment: .leading, spacing: 1) {
+            Text(label)
+                .dsText(.label12).foregroundStyle(DS.textTertiary)
+            AddressDiff.segments(of: address, comparison: comparison)
+                .reduce(Text(verbatim: "")) { acc, segment in
+                    acc + inked(segment)
+                }
+                .dsText(.mono13)
+                .fixedSize(horizontal: false, vertical: true)
+                // The whole address, read out as one string. Splitting it into
+                // runs for VoiceOver would read the marker as a pause in the
+                // middle of an address.
+                .accessibilityLabel(Text(address))
+        }
+    }
+
+    /// A run's ink. Shared characters recede, the parting character is the
+    /// only thing carrying colour, and everything after it is ordinary text.
+    ///
+    /// The marker is `DS.destructive` because the band is, and because the
+    /// alternative — the address's own hue — would give the two look-alikes
+    /// two different markers and imply the colours mean something about which
+    /// is which.
+    private func inked(_ segment: AddressDiff.Segment) -> Text {
+        switch segment.run {
+        case .shared:
+            return Text(verbatim: segment.text).foregroundStyle(DS.textTertiary)
+        case .pivot:
+            return Text(verbatim: segment.text)
+                .foregroundStyle(DS.destructive)
+                .fontWeight(.bold)
+        case .differing:
+            return Text(verbatim: segment.text).foregroundStyle(DS.textPrimary)
+        }
+    }
+
+    /// The sentence over the two addresses — the fact, then where to look.
+    ///
+    /// Nil-safe on the pivot rather than force-unwrapped: two entries the book
+    /// calls look-alikes cannot be character-identical, and the screen this
+    /// runs on is the one where a crash is least acceptable, so the impossible
+    /// case gets the old sentence rather than a trap.
+    /// Several twins get the general sentence, not a number. `combined` takes
+    /// the EARLIEST parting across them while each twin row is marked from its
+    /// own pairwise comparison, so naming one character would point at a
+    /// position some of the visible markers do not occupy — the sentence and
+    /// the ink disagreeing on the one screen whose entire job is telling you
+    /// exactly where to look.
+    private func partingLine(_ comparison: AddressDiff.Comparison,
+                             twins: Int) -> String {
+        guard twins == 1, let position = comparison.pivotPosition else {
+            return String(localized: "Same short form, different address. The first character that differs is marked below.")
+        }
+        return String(localized: "Same short form, different address. They first differ at character \(position), marked below.")
+    }
+
+    /// Whether a case difference between these addresses is a difference at
+    /// all (prd §444).
+    ///
+    /// EIP-55 encodes a checksum in the CASE of a hex address's letters, so one
+    /// address legitimately prints `0xAbC…` here and `0xabc…` there — comparing
+    /// those raw marks character 3 on two spellings of the SAME money. Base58
+    /// (Solana, Bitcoin) is the reverse: case is the value, and folding it
+    /// hides a real difference.
+    ///
+    /// EVERY side must be hex, not just this one: one base58 twin in the set
+    /// and the fold would erase the case differences it carries. The test is
+    /// `ENS.isHexAddress`, the app's own, so this can never drift from what
+    /// `AddressSafety` means by a hex address.
+    private func foldsCase(_ others: [String]) -> Bool {
+        ENS.isHexAddress(current.address) && others.allSatisfy(ENS.isHexAddress)
     }
 
     // MARK: - The lede
@@ -991,11 +1247,11 @@ struct AddressCard: View {
     /// one `@ViewBuilder` rather than two independent sections that would
     /// otherwise both claim the top of the page.
     @ViewBuilder
-    private var lede: some View {
+    private func lede(_ things: [Thing]) -> some View {
         if let exposure, !exposure.isEmpty {
             exposureLede(exposure)
         } else {
-            relationshipLede
+            relationshipLede(things)
         }
     }
 
@@ -1089,8 +1345,7 @@ struct AddressCard: View {
     /// section (what shipped) reads as the screen being broken; one quiet line
     /// says the app looked.
     @ViewBuilder
-    private var relationshipLede: some View {
-        let things = history
+    private func relationshipLede(_ things: [Thing]) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             if things.isEmpty {
                 VStack(spacing: 2) {
@@ -1135,6 +1390,111 @@ struct AddressCard: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, DS.Space.s4)
         .padding(.top, DS.Space.s4 + 5)
+    }
+
+    // MARK: - Which of your wallets
+
+    /// WHICH OF YOUR WALLETS THIS ADDRESS DEALS WITH (2026-08-22, prd §444).
+    ///
+    /// The card answered "how much have we dealt" and "what did we do", and
+    /// never "with whom, on my side" — which on a book of five watched wallets
+    /// is half of what an address IS to you. `AddressConnections` has computed
+    /// exactly this since §295 and draws it on the manager's spine; here it is
+    /// about the one address you are standing in front of, off rows already in
+    /// hand. No request, no new field, no CloudKit deploy.
+    ///
+    /// **Its floor is `AddressConnections`' own, and for the same reason.**
+    /// Below two watched wallets every counterparty reaches your only wallet by
+    /// definition, so the strip would print a fact that is true of every
+    /// address in the book and says nothing about this one.
+    ///
+    /// Only `Wallet` rows count. Peer and Privacy Pools stamp `walletAddress`
+    /// with the SUBJECT's own address (see `AddressActivity.key`), so counting
+    /// those would list this address as one of your wallets.
+    ///
+    /// Facts only, per §295: your own watch order (never a ranking), a count
+    /// per leg (never an amount — §435 owns that), no colour, no rate.
+    @ViewBuilder
+    private func reachedWallets(_ things: [Thing]) -> some View {
+        let legs = walletLegs(things)
+        if !legs.isEmpty, WalletStore.shared.addresses.count > 1 {
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                // No count in the caption: the chips are countable and a
+                // tally beside a list of the things it counts is the module
+                // doctrine's own "never a count" in miniature.
+                Text("Your wallets it has dealt with")
+                    .dsText(.label12).foregroundStyle(DS.textSecondary)
+                ScrollView(.horizontal) {
+                    HStack(spacing: DS.Space.s2) {
+                        ForEach(legs) { leg in
+                            HStack(spacing: DS.Space.s2) {
+                                WalletFace(address: leg.address,
+                                           size: DS.Face.badge, circular: true)
+                                Text(leg.name)
+                                    .dsText(.label12).foregroundStyle(DS.textPrimary)
+                                    .lineLimit(1)
+                                Text("\(leg.count)")
+                                    .dsText(.label12).foregroundStyle(DS.textTertiary)
+                                    .monospacedDigit()
+                            }
+                            .padding(.horizontal, DS.Space.s3)
+                            .padding(.vertical, 6)
+                            .background(DS.fillFaint, in: Capsule(style: .continuous))
+                            .accessibilityElement(children: .combine)
+                            .accessibilityLabel(
+                                Text("^[\(leg.count) transaction](inflect: true) with \(leg.name)"))
+                        }
+                    }
+                    .padding(.horizontal, DS.Space.s4)
+                }
+                .scrollIndicators(.hidden)
+                // The strip scrolls, so its own padding is inside the scroll
+                // view and this one must not double it.
+                .padding(.horizontal, -DS.Space.s4)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, DS.Space.s4)
+            .padding(.top, DS.Space.s4)
+            .settleIn(delay: 0.08)
+        }
+    }
+
+    /// One of your wallets, and how many of these rows it is on.
+    private struct WalletLeg: Identifiable {
+        let id: String
+        let address: String
+        let name: String
+        let count: Int
+    }
+
+    /// Your wallets that appear in this address's history, in YOUR watch order.
+    ///
+    /// `.isLive` per row rather than a re-filter of the array: the caller's
+    /// `let` was filtered at the boundary, and a delete can land between that
+    /// and this walk (corollary 6's reasoning without the await).
+    private func walletLegs(_ things: [Thing]) -> [WalletLeg] {
+        // The subject itself is never one of the wallets it dealt WITH. A
+        // wallet that transferred to itself files that row under its own key
+        // (`AddressActivity.key` reads the counterparty), so without this the
+        // strip on your own wallet's card lists that wallet as somebody it
+        // deals with — `AddressConnections` drops self-transfers for the same
+        // reason and this walk has to do it too.
+        let subject = AddressBook.key(for: current.address)
+        var counts: [String: Int] = [:]
+        for thing in things where thing.isLive && thing.source == "Wallet" {
+            guard let owner = thing.walletAddress, !owner.isEmpty else { continue }
+            let key = AddressBook.key(for: owner)
+            guard key != subject else { continue }
+            counts[key, default: 0] += 1
+        }
+        guard !counts.isEmpty else { return [] }
+        return WalletStore.shared.addresses.compactMap { watched in
+            let key = AddressBook.key(for: watched.address)
+            guard let count = counts[key] else { return nil }
+            return WalletLeg(id: key, address: watched.address,
+                             name: watched.label.isEmpty ? watched.short : watched.label,
+                             count: count)
+        }
     }
 
     /// "since Mar 3 · net −0.80 ETH" — the two facts a count alone can't say.
@@ -1193,8 +1553,7 @@ struct AddressCard: View {
     /// above has already said so in a sentence, and a second empty section
     /// under it would say it twice.
     @ViewBuilder
-    private var historySection: some View {
-        let things = history
+    private func historySection(_ things: [Thing]) -> some View {
         if !things.isEmpty {
             VStack(spacing: 0) {
                 ForEach(Array(Array(things.prefix(6)).keyed.enumerated()), id: \.element.id) { i, row in
@@ -1561,10 +1920,13 @@ struct AddressHistoryScreen: View {
 
 /// Publishes a flight anchor only when there is one to publish (prd §441).
 ///
+/// Shared with the filing sheet since §444, where the head's key is derived
+/// from the flight in progress and is therefore nil most of the time.
+///
 /// A modifier rather than an `if` in the view body: branching there would give
 /// the mark two different identities depending on whether the screen it is on
 /// has a shelf, which churns the row on every re-render.
-private struct OptionalFlightAnchor: ViewModifier {
+struct OptionalFlightAnchor: ViewModifier {
     let key: String?
     func body(content: Content) -> some View {
         if let key { content.flightAnchor(key) } else { content }

@@ -29839,3 +29839,83 @@ This entry was written as §442 and renumbered to §443 before it landed: anothe
 ### Unproven
 
 The build is green on iOS Simulator and Mac Catalyst, every audit and both address harnesses pass, and the string catalog is level with source in all five languages. **No simulator run and no device**: the scroll hand-off, the pinned bar over a scrolling record, the group-chip menu and the look-alike band's full-width ground are all rendering behaviour no static check can exercise.
+
+## 444. Six moves on the address book's sheets — the comparison made, the name edited where it stands, the filing given a flight (user: "how would you add surprise and delight and level up the design of the sheets in the address book? we did a couple turns on them but we didn't quite get them", then "ok do all", 2026-08-22)
+
+§443 RANKED the address card's content and §441 spent its delight on the LIST behind it. The result is a sheet that is correctly ordered and completely still: the only motion inside any address sheet was the rename cascade, and the two secondary sheets — "File under" and "New group" — had never had a delight pass at all. Six moves, all six built.
+
+### 1. The look-alike band does the comparison instead of asking for it
+
+The band has printed both addresses in full since §443 and ended on "compare every character before you copy". That is the app handing back the one job it is better at. Forty-two characters is past what anybody checks honestly, and the check people actually perform — glance at the ends — is precisely the one a poisoning address is BUILT to survive.
+
+`Model/AddressDiff.swift` finds where the two part. The shared head and the shared tail dim, because they are the parts that cannot help; the FIRST character that differs wears a marker; and the sentence above says which character it is. For the poisoning shape that is character 3, right after `0x`, so telling two look-alikes apart costs one glance.
+
+**Why the first difference and not every difference.** `WalletStore.shortAddress` truncates to the last four characters, so two look-alikes agree on four and disagree on almost all the rest — highlighting every differing character paints ~94% of a hex string and says nothing.
+
+**The case rule is not cosmetic.** EIP-55 encodes a checksum in the CASE of a hex address's letters, so one address legitimately prints `0xAbC…` here and `0xabc…` there; comparing those raw marks character 3 on two spellings of the SAME money, which on a security notice is a false alarm pointing at the wrong character. base58 (Solana, Bitcoin) is the reverse — case IS the value, and folding it hides a real difference. So the caller passes the answer, using `ENS.isHexAddress`, the app's own test, and EVERY side must be hex: one base58 twin in the set and the fold would erase the case differences it carries. The fold itself is ASCII-only, deliberately — `AddressSafety` carries a confusables table because non-ASCII reaches this app in address-shaped strings, and a Unicode-aware fold maps U+212A KELVIN SIGN onto `k`.
+
+The marker is the same on both addresses. It points at a POSITION, never at a culprit: the book cannot know which one you meant, and a wrong accusation on a security notice is worse than none.
+
+### 2. The face is made of the address
+
+`AddressMark`'s own header has said "a wallet is a WHO" since §169 and `WalletFace.tint` derives the card's entire colour from the address's bytes. The card stated that in prose and drew it as a static picture with a string underneath, so the one relationship worth teaching — this face IS these characters — was never once shown happening.
+
+`Screens/AddressReveal.swift`: the identicon settles while a ring in its own derived hue sweeps once around it (a dial closing says "this was worked out"; an expanding halo says "this arrived"), then the address fills in FROM ITS ENDS. The direction is the point — the ends are the part a short form has always shown you and the middle is the part every wallet app hides, which is exactly the part the band above exists to make you look at. The screen's argument and its motion say the same thing.
+
+Two clocks, not one, and it is not the double-deal `FlowFigure` is exempted for: that objection is about independent clocks on a strip arriving as one object. These are one element each, started in the same frame, on durations chosen to hand off — and a shared clock would have to cross the name and the kind line to reach the chip, which the motion audit cannot follow across a struct boundary, so it would cost an exemption to buy nothing.
+
+### 3. Filing flies
+
+§441 built `AddressFlight` — a face crossing the gap from a book row to a shelf slot — and wired it to starring only. Filing, the other thing you do to an address, from a sheet built for nothing else, had a checkmark appearing as its entire feedback. The same apparatus now runs in the opposite direction: the move sheet's head face travels into the group's own deck, which takes the hit exactly as `AddressGroupCard`'s does when a row is dropped on it.
+
+Two things the overlay had to gain. The size ends are RAMP TOKENS the caller passes (`fromSize`/`toSize`), because this flight SHRINKS — 36pt head to a 26pt deck — where the star flight grows; the §441 ruling that the size never comes off the anchor rects is unchanged and is now guarded in its sharper form (the overlay may not read `width`/`height` off either rect at all). And the flight is keyed on the GROUP rather than the address, because the two ends of one flight must share an id and here the destination changes per tap while the subject is a single view — so the head publishes its anchor under whichever group is currently taking it.
+
+Unfiling gets no flight: there is nowhere for a face to go, and running the arc backwards would say the address came OUT of a group and INTO the head, which is not what the head is. Reduce Motion still gets the absorb; the face simply does not travel.
+
+### 4. A group wears its members
+
+"File under" was a checkmark, a word and a tally — three things, none of which names a single person, on the screen where the question is "which of my piles does this belong on". You file by recognising people. Each row now carries a deck of its members' faces, through `AddressBook.groupMembers(limit:)` — ONE walk, mirroring `groupCounts`' own reasoning, because `entries(inGroup:)` sorts the whole book and asking it per row sorts it once per group on every body pass.
+
+An EMPTY group still draws a dashed well, and that is not tidiness: it is where a filed face lands, so the flight always has somewhere to arrive, and it says "nobody in here yet" in the same gesture. Without it a brand-new group is the one row the flight cannot aim at — which is precisely the row you have just made in order to file something into it.
+
+"New group" gets the same object one step earlier: the picked faces assemble into the group's cover as you tick, so the thing being made is visible as a thing rather than as ticks scattered down a scrolling list. One `withAnimation` drives the tick and the cover together, because they are the same event.
+
+### 5. The name is edited where it stands
+
+Naming is the act this card exists for. `rename(to:)`'s own header says a name "rewrites every transaction you've ever had with this address, all at once, and that is the entire argument for naming anything", and §441 built the cascade that shows it sweeping down the history — and then §169's `.alert` covered the card while you typed, so the cascade ran behind a dimmed screen and was over by the time the dialog dismissed. **The one moment the card was built around could not be watched from the card.**
+
+The name is a field in place now, committing on blur as well as on submit (a sheet has a dozen ways to leave a field and losing a typed name to any of them is the worse failure; `commitName` is idempotent because submit drops focus and both paths fire on one hardware return). A pencil appears only while the name is still a placeholder the app minted (`WalletStore.isAutoName`, never a comparison against `shortAddress` — books written before the tail-only ruling hold the old spelling), which is precisely when naming is the thing to do; once it carries a real name the invitation would be chrome on the hero, and the labelled verb still lives in the overflow menu.
+
+### 6. Which of your wallets
+
+The card answered "how much have we dealt" and "what did we do", and never "with whom, on my side" — which on a book of five watched wallets is half of what an address IS to you. `AddressConnections` has computed exactly this since §295 and draws it on the manager's spine; here it is about the one address in front of you, off rows already in hand. No request, no new `Thing` field, no CloudKit deploy.
+
+Its floor is `AddressConnections`' own and for the same reason: below two watched wallets every counterparty reaches your only wallet by definition, so the strip would print a fact true of every address in the book. Only `Wallet` rows count — Peer and Privacy Pools stamp `walletAddress` with the SUBJECT's own address (`AddressActivity.key`), so counting those would list this address as one of your wallets. Facts only per §295: your own watch order, never a ranking; a count per leg, never an amount (§435 owns money); no colour, no rate. The caption carries no tally, because a tally beside a list of the things it counts is the module doctrine's "never a count" in miniature.
+
+### One cost paid on the way
+
+`history` is a computed property that walks the corpus, and the card had two readers of it before this pass and would have had three after. It is a single `let` in the builder now, threaded down — §441's cost, one screen down, arriving the same way it did there. A `let` rather than `@State`, so no reader can ever be handed an array older than this pass.
+
+### The harnesses
+
+`scripts/address-diff-selftest.sh` (new, in `verify.sh`): `AddressDiff.swift` compiled WHOLE and unmodified, 36 assertions, 12 mutations, 8 drift guards, negative guards on a comment-stripped copy. Every failure renders as a perfectly ordinary highlighted character — an off-by-one marks the wrong column and the person concludes two addresses agree past a point they do not; overlapping head and tail runs leave a warning that prints two strings and marks nothing, i.e. the exact failure the band exists to prevent.
+
+`scripts/address-book-selftest.sh` gained the filing flight's guards and lost none: the ramp-size ruling is now asserted in both directions (the ends are tokens, and the overlay may not read a dimension off an anchor rect), and the group deck, its landing anchor and its absorb each have a line.
+
+**`face-ramp-audit.py` learned one resolution hop**, which is a real correction rather than an exemption: it read a constant's own declaration and stopped, so a face interpolated between two ramp tiers — which is what a travelling face is — could never resolve. Two new fixtures pin it, including the same interpolation between two RAW numbers, which is still flagged; without that second one the hop would be an unconditional pass wearing a resolver's clothes.
+
+### What the review caught
+
+Four, all found by reading the diff rather than by any check, and each fixed here.
+
+**A finished flight erased the one that replaced it.** `withAnimation`'s completion fires for an INTERRUPTED animation too, so filing two groups in quick succession — which the sheet's own footer invites, "an address can sit in more than one group" — let the first flight's completion run `flying = nil` while the second was still crossing the tray. The face vanished halfway, which is exactly the absent-feature reading the deferred launch exists to prevent. Both the clear and the deck's absorb timer are now guarded on the flight still being their own.
+
+**The ring cut through a square.** `AddressMark` draws a contract and a Safe as a rounded SQUARE, and a circle inset far enough to clear a 76pt square's edges is nowhere near clear of its corners. The ring is gated on the mark being a face — which is also what it means: "this face was worked out from this address" is a claim about an identicon, and machinery has none. Machinery keeps the settle.
+
+**The sentence could name a character no marker occupied.** With two look-alikes, `combined` takes the EARLIEST parting while each twin row is marked from its own pairwise comparison — so "they first differ at character 5" could sit above a twin marked at character 9. Several twins get the general sentence and no number; one twin, which is the overwhelmingly common case, keeps the position.
+
+**A self-transfer listed a wallet as somebody it deals with.** `AddressActivity.key` files a Wallet row under its COUNTERPARTY, so a wallet that transferred to itself files under its own key and appeared in its own "Your wallets it has dealt with" strip. `AddressConnections` drops self-transfers for this reason; this walk does too now.
+
+### Unproven
+
+iOS Simulator and Mac Catalyst build green, every static audit passes, both address harnesses pass, and the string catalog is level with source in all five languages. **No simulator run and no device.** Every one of the six is gesture- or render-driven and no static check can exercise one: the diff's ink at Dynamic Type sizes, the ring sweep, the ends-first mask, the filing flight's arc inside a tray, the deck's absorb, the inline field's keyboard, and the wallets strip's horizontal scroll.

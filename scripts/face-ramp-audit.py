@@ -77,16 +77,44 @@ def faces(src: str):
         yield kind, sz.group(1), src[: m.start()].count("\n") + 1
 
 
-def resolves_to_tier(name: str, src: str) -> bool:
-    """Does a named constant's own declaration read a DS.Face tier?"""
+IDENT = re.compile(r'[A-Za-z_][A-Za-z0-9_.]*')
+
+
+def resolves_to_tier(name: str, src: str, seen: frozenset = frozenset()) -> bool:
+    """Does a named constant's own declaration read a DS.Face tier?
+
+    ONE EXTRA HOP (2026-08-22, prd §444). `AddressFlightOverlay` interpolates a
+    travelling face between two ends that ARE ramp tiers — but they arrive as
+    parameters, so the local it computes reads `fromSize + (toSize - fromSize)
+    * progress` and names no tier itself. The rule is satisfied and the first
+    cut of this resolver could not see it: it read one declaration and stopped.
+
+    So an expression naming no tier is followed through the identifiers it
+    DOES name, depth-bounded and cycle-guarded. ANY of them resolving is
+    enough, which is deliberately permissive — the alternative is demanding
+    that every identifier resolve, and `progress` is a bare `let progress:
+    CGFloat` parameter with no initialiser at all, so a strict rule would
+    reject the one shape this hop exists for. A constant built out of a raw
+    number and nothing else still resolves to nothing and is still flagged,
+    which is the case the fixtures pin.
+    """
     src = uncommented(src)
     bare = name.split(".")[-1]
+    if bare in seen or len(seen) > 3:
+        return False
     decl = re.search(
         r'(?:let|var)\s+%s\s*:?[^=\n]*=\s*([^\n]+)' % re.escape(bare), src)
     if not decl:
         decl = re.search(
             r'(?:let|var)\s+%s\s*:[^{\n]+\{\s*([^}\n]+)\}' % re.escape(bare), src)
-    return bool(decl and "DS.Face." in decl.group(1))
+    if not decl:
+        return False
+    expr = decl.group(1)
+    if "DS.Face." in expr:
+        return True
+    return any(resolves_to_tier(ident, src, seen | {bare})
+               for ident in IDENT.findall(expr)
+               if ident.split(".")[-1] != bare)
 
 
 def audit(root: pathlib.Path):
@@ -119,6 +147,20 @@ CLEAN_CONST = ('private let rosterFaceSize: CGFloat = DS.Face.shelf\n'
                'WalletFace(address: a, size: rosterFaceSize, circular: true)')
 CLEAN_SQUARE = 'BridgeIcon(name: n, size: 46)'          # square mark, not a face
 CLEAN_CHIP = 'BridgeIcon(name: n, size: iconSize, circular: true)'
+# A face INTERPOLATED between two ramp tiers — the travelling face of
+# `AddressFlightOverlay` (prd §441/§444). The ends are tiers; the local that
+# mixes them names neither, so this only passes with the extra hop above.
+CLEAN_INTERP = ('var fromSize: CGFloat = DS.Face.list\n'
+                'var toSize: CGFloat = DS.Face.shelf\n'
+                'let size = fromSize + (toSize - fromSize) * progress\n'
+                'WalletFace(address: a, size: size, circular: true)')
+# The same shape with neither end on the ramp — still a raw number reaching a
+# face through two hops, and still flagged. Without this the hop above would be
+# an unconditional pass wearing a resolver's clothes.
+DIRTY_INTERP = ('var fromSize: CGFloat = 36\n'
+                'var toSize: CGFloat = 56\n'
+                'let size = fromSize + (toSize - fromSize) * progress\n'
+                'WalletFace(address: a, size: size, circular: true)')
 # A file that EXPLAINS the rule by naming what it must not do. Both halves are
 # in the fixture on purpose: the comment names a dirty call and the real call
 # below it is clean, so a fixture that only carried the comment would pass for
@@ -139,6 +181,8 @@ def self_test(tmp: pathlib.Path) -> None:
         ("a constant that resolves to a tier", CLEAN_CONST, False),
         ("a SQUARE brand mark (not a face)", CLEAN_SQUARE, False),
         ("the documented chip-metric escape", CLEAN_CHIP, False),
+        ("a face interpolated between two tiers", CLEAN_INTERP, False),
+        ("…the same interpolation between two raw numbers", DIRTY_INTERP, True),
         ("a comment that NAMES a dirty call", CLEAN_DOCUMENTED, False),
     ]
     for label, body, should_flag in cases:

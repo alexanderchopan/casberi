@@ -572,6 +572,25 @@ final class AddressBook {
         return out
     }
 
+    /// The first few members of every group, in ONE walk (2026-08-22, prd §444).
+    ///
+    /// The filing sheet draws a deck of faces per row — you file by recognising
+    /// people, not by reading a word — and `entries(inGroup:)` sorts the whole
+    /// book, which is the exact cost `groupCounts` above exists to avoid, one
+    /// question over. `all`'s own order, so the deck and the group screen behind
+    /// it agree about who leads.
+    func groupMembers(limit: Int) -> [String: [Entry]] {
+        var out: [String: [Entry]] = [:]
+        for entry in all {
+            for name in entry.groupNames {
+                let key = Self.key(forGroup: name)
+                guard (out[key]?.count ?? 0) < limit else { continue }
+                out[key, default: []].append(entry)
+            }
+        }
+        return out
+    }
+
     /// The one read-modify-write behind every group edit: transform the group
     /// list of each named key, stamp what changed, and write the dictionary
     /// back ONCE — which matters because `entries`' own `didSet` persists and

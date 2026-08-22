@@ -318,8 +318,23 @@ struct AddressMoveSheet: View {
 
     @Bindable private var book = AddressBook.shared
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var newGroup = false
     @State private var draft = ""
+    /// The face in the air, and how far along it is (prd §444).
+    @State private var flying: FlightingFace?
+    @State private var flightProgress: CGFloat = 0
+    /// The group key that took a face one beat ago — see `AddressGroupCard`,
+    /// whose deck does the same thing when a row is dropped on it.
+    @State private var absorbing: String?
+
+    /// The size a face draws at in a row's deck. Named rather than spelled at
+    /// both ends, because it is also where the flight LANDS: a flight that
+    /// shrinks to a different number than the deck draws arrives as a face
+    /// popping to its real size on touchdown.
+    static let deckFace: CGFloat = DS.Face.row
+    /// How many faces a deck shows before it starts counting.
+    private static let deckLimit = 3
 
     /// Read back off the book every pass rather than captured, so a tick
     /// reflects the write immediately — `entry` is a value handed in when the
@@ -332,32 +347,21 @@ struct AddressMoveSheet: View {
     /// upside down.
     private var trayHeight: CGFloat {
         let rows = CGFloat(book.groupNames.count + 1)   // + "New group…"
-        return min(660, max(320, 190 + rows * 46))
+        return min(660, max(320, 190 + rows * 52))
     }
 
     var body: some View {
         DSTray(title: String(localized: "File under"), height: trayHeight) {
             VStack(alignment: .leading, spacing: 0) {
-                HStack(spacing: DS.Space.s3) {
-                    AddressMark(entry: live, size: DS.Face.list)
-                    VStack(alignment: .leading, spacing: 0) {
-                        Text(live.name)
-                            .dsText(.heading22).foregroundStyle(DS.textPrimary)
-                            .lineLimit(1)
-                        Text(live.short)
-                            .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                            .lineLimit(1)
-                    }
-                    Spacer(minLength: 0)
-                }
-                .padding(.bottom, DS.Space.s4)
-
-                // Counted ONCE for the whole sheet: `entries(inGroup:)` sorts
-                // the entire book, so asking it inside the row loop sorts it
-                // once per group every body pass.
+                head
+                // Counted ONCE for the whole sheet: both of these walk the book,
+                // and asking them inside the row loop walks it once per group
+                // every body pass.
                 let counts = book.groupCounts
+                let members = book.groupMembers(limit: Self.deckLimit)
                 ForEach(book.groupNames, id: \.self) { name in
-                    groupRow(name, count: counts[AddressBook.key(forGroup: name)] ?? 0)
+                    let key = AddressBook.key(forGroup: name)
+                    groupRow(name, count: counts[key] ?? 0, members: members[key] ?? [])
                 }
 
                 Button {
@@ -384,6 +388,19 @@ struct AddressMoveSheet: View {
                     .padding(.top, DS.Space.s2)
             }
         }
+        // THE FILING FLIGHT (prd §444). The star flight's own apparatus, run in
+        // the opposite direction: §441 gave starring a face that crosses the
+        // gap and left filing — the other thing you do to an address, from a
+        // sheet built for nothing else — with a checkmark appearing as its
+        // entire feedback. One overlay over the whole tray, so the face can
+        // cross from the head into any row.
+        .overlayPreferenceValue(AddressFlightAnchors.self) { anchors in
+            AddressFlightOverlay(flight: flying, anchors: anchors,
+                                 progress: flightProgress,
+                                 fromKey: "head:", toKey: "group:",
+                                 fromSize: DS.Face.list,
+                                 toSize: AddressMoveSheet.deckFace)
+        }
         .alert("New group", isPresented: $newGroup) {
             TextField("Name (e.g. Family, Cold)", text: $draft)
             Button("Create") {
@@ -396,12 +413,35 @@ struct AddressMoveSheet: View {
         }
     }
 
-    private func groupRow(_ name: String, count: Int) -> some View {
+    /// Who is being filed. Its face is the one that flies, so it publishes an
+    /// anchor under whichever group is currently taking it.
+    ///
+    /// **The two ends of one flight have to share an id**, and here they cannot
+    /// be the same thing: the destination changes per tap while the subject is
+    /// a single view. So the flight is keyed on the GROUP and the head answers
+    /// to that key — which is also what lets one overlay serve every row.
+    private var head: some View {
+        HStack(spacing: DS.Space.s3) {
+            AddressMark(entry: live, size: DS.Face.list)
+                .modifier(OptionalFlightAnchor(key: flying.map { "head:" + $0.id }))
+            VStack(alignment: .leading, spacing: 0) {
+                Text(live.name)
+                    .dsText(.heading22).foregroundStyle(DS.textPrimary)
+                    .lineLimit(1)
+                Text(live.short)
+                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                    .lineLimit(1)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.bottom, DS.Space.s4)
+    }
+
+    private func groupRow(_ name: String, count: Int,
+                          members: [AddressBook.Entry]) -> some View {
         let filed = live.isIn(name)
         return Button {
-            DSHaptic.tap()
-            if filed { book.removeFromGroup(name, address: live.address) }
-            else { book.addToGroup(name, address: live.address) }
+            toggle(name, filed: filed)
         } label: {
             HStack(spacing: DS.Space.s3) {
                 Image(systemName: "checkmark")
@@ -412,16 +452,133 @@ struct AddressMoveSheet: View {
                 Text(name)
                     .dsText(.body17).foregroundStyle(DS.textPrimary)
                     .lineLimit(1)
-                Spacer(minLength: 0)
+                Spacer(minLength: DS.Space.s2)
+                deck(members, name: name)
                 Text("\(count)")
                     .dsText(.label12).foregroundStyle(DS.textTertiary)
                     .monospacedDigit()
             }
-            .padding(.vertical, DS.Space.s3)
+            .padding(.vertical, DS.Space.s2 + 2)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .accessibilityLabel(Text(name))
         .accessibilityValue(Text(filed ? "Filed here" : "Not filed here"))
+    }
+
+    /// WHO IS ALREADY IN THIS GROUP (prd §444).
+    ///
+    /// The row was a checkmark, a word and a tally — three things, none of
+    /// which names a single person, on the screen where the question is "which
+    /// of my piles does this belong on". A group is its members, so the row
+    /// wears them.
+    ///
+    /// An EMPTY group still draws a well, and that is not a placeholder for
+    /// tidiness: it is where a filed face lands, so the flight always has
+    /// somewhere to arrive, and it says "nobody in here yet" in the same
+    /// gesture. Without it a brand-new group is the one row the flight cannot
+    /// aim at — which is precisely the row you have just made in order to file
+    /// something into it.
+    private func deck(_ members: [AddressBook.Entry], name: String) -> some View {
+        HStack(spacing: -6) {
+            ForEach(members) { member in
+                AddressMark(entry: member, size: Self.deckFace)
+                    // `AddressGroupCard`'s own deck, spelled the same way —
+                    // one deck across the app, or the strip on the manager and
+                    // the rows in here are two different objects claiming to
+                    // be the same group. Nothing in this app draws a line, so
+                    // each mark punches the sheet colour out from under the one
+                    // behind it.
+                    .overlay(Circle().strokeBorder(DS.surfaceSheet, lineWidth: 1.5))
+                    // A face joining GROWS into the deck; the ones already
+                    // there hold still.
+                    .transition(.scale(scale: 0.4).combined(with: .opacity))
+            }
+            if members.isEmpty {
+                // An empty group still draws its well, and not for tidiness:
+                // it is where a filed face LANDS, so the flight always has
+                // somewhere to arrive. Without it a brand-new group is the one
+                // row the flight cannot aim at — which is precisely the row you
+                // just made in order to file something into it.
+                Circle().fill(DS.fillFaint)
+                    .frame(width: Self.deckFace, height: Self.deckFace)
+            }
+        }
+        .flightAnchor("group:" + AddressBook.key(forGroup: name))
+        .animation(DS.Motion.standard, value: members.map(\.id))
+        // The deck TAKES the hit, exactly as `AddressGroupCard`'s does when a
+        // row is dropped onto it — one flag falling back to nil, never a
+        // keyframed pulse.
+        .scaleEffect(absorbing == AddressBook.key(forGroup: name) ? 1.1 : 1,
+                     anchor: .trailing)
+        .animation(DS.Motion.bubble, value: absorbing)
+        .accessibilityHidden(true)
+    }
+
+    /// File or unfile, and send the face if it is a filing.
+    ///
+    /// Unfiling gets no flight: there is nowhere for a face to go, and running
+    /// the arc backwards would say the address came OUT of a group and into
+    /// the head, which is not what the head is.
+    private func toggle(_ name: String, filed: Bool) {
+        if filed {
+            DSHaptic.tap()
+            book.removeFromGroup(name, address: live.address)
+            return
+        }
+        DSHaptic.success()
+        book.addToGroup(name, address: live.address)
+        launchFlight(into: AddressBook.key(forGroup: name))
+    }
+
+    /// Sends the face across the tray.
+    ///
+    /// Deferred by one runloop turn ON PURPOSE — `WalletScreen.launchFlight`'s
+    /// own lesson: the destination deck does not exist in its final form until
+    /// the write above has been observed and the body re-run, so publishing in
+    /// the same turn can give the overlay a `from` anchor and no `to`, which
+    /// draws nothing at all and reads as the feature being absent. The head's
+    /// anchor is published in that same re-run, since its key is derived from
+    /// `flying`.
+    private func launchFlight(into key: String) {
+        guard !reduceMotion else {
+            // The deck still takes the hit — the face simply does not travel.
+            absorb(key)
+            return
+        }
+        flightProgress = 0
+        flying = FlightingFace(id: key, address: live.address, glyph: live.kind.glyph)
+        DispatchQueue.main.async {
+            withAnimation(.spring(duration: 0.48, bounce: 0.14)) {
+                flightProgress = 1
+            } completion: {
+                // Cleared only after the animation really ends — clearing on a
+                // timer races a slow frame and leaves the face parked mid-air.
+                //
+                // **And only if this flight is still the one in the air.** The
+                // footer under these rows says an address can sit in several
+                // groups, so filing two of them in quick succession is the
+                // ordinary use of this sheet, not an edge — and an
+                // unconditional clear here is a FINISHED flight erasing the
+                // one that replaced it, which lands as a face vanishing
+                // halfway across the tray. `withAnimation`'s completion fires
+                // for an interrupted animation too, so the guard is on the
+                // identity of the flight and never on the timing.
+                guard flying?.id == key else { return }
+                flying = nil
+                flightProgress = 0
+                absorb(key)
+            }
+        }
+    }
+
+    /// The deck's one-beat weight, and the same "still mine?" guard: a second
+    /// filing must not have its absorb cut short by the first one's timer.
+    private func absorb(_ key: String) {
+        absorbing = key
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.24) {
+            guard absorbing == key else { return }
+            absorbing = nil
+        }
     }
 }

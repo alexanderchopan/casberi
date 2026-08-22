@@ -34,6 +34,17 @@ struct FlightingFace: Equatable {
     /// The address, for the face itself. Held rather than looked up, because
     /// the row it came from may re-sort out from under the flight.
     let address: String
+    /// The SF Symbol a non-wallet mark wears, or nil for a face (2026-08-22,
+    /// prd §444) — `AddressBook.Kind.glyph`'s own answer, carried rather than
+    /// re-derived for the same reason `address` is.
+    ///
+    /// It exists because §444 let the flight carry things starring never
+    /// could. The star is offered on wallets alone, so the travelling view was
+    /// hardcoded to `WalletFace` and was always right; filing is offered on
+    /// ANYTHING in the book, so filing a contract sent a coloured identicon
+    /// out of a grey square glyph — the one thing a flight must not do, since
+    /// its whole job is saying "this is the same object, moved".
+    var glyph: String? = nil
 }
 
 /// Where a flight starts and ends. Both halves publish into one dictionary so
@@ -61,19 +72,36 @@ extension View {
 
 /// The travelling face, drawn over the whole screen.
 ///
-/// Interpolates position AND size: a face leaves a 36pt row and arrives in a
-/// 56pt slot, and a constant-size flight reads as a sticker sliding rather than
-/// as the row becoming the slot.
+/// Interpolates position AND size: a starred face leaves a 36pt row and arrives
+/// in a 56pt slot, a filed one leaves a 36pt sheet head and arrives in a 26pt
+/// deck, and a constant-size flight reads as a sticker sliding rather than as
+/// the one becoming the other.
 struct AddressFlightOverlay: View {
     let flight: FlightingFace?
     let anchors: [String: Anchor<CGRect>]
     let progress: CGFloat
+    /// Which pair of anchors this flight runs between, and the two RAMP sizes
+    /// its ends are drawn at (2026-08-22, prd §444).
+    ///
+    /// The star flight is the default and is unchanged: a book row's
+    /// `DS.Face.list` to a shelf slot's `DS.Face.shelf`. Filing an address into
+    /// a group reuses the whole apparatus in the opposite direction — the move
+    /// sheet's own head face down into the group's deck — which is a SHRINKING
+    /// flight, so the sizes cannot be constants here.
+    ///
+    /// Parameters rather than a second overlay: two copies of an arc drift, and
+    /// then the same face travels two different ways depending on which screen
+    /// you filed from.
+    var fromKey: String = "row:"
+    var toKey: String = "slot:"
+    var fromSize: CGFloat = DS.Face.list
+    var toSize: CGFloat = DS.Face.shelf
 
     var body: some View {
         GeometryReader { proxy in
             if let flight,
-               let from = anchors["row:" + flight.id],
-               let to = anchors["slot:" + flight.id] {
+               let from = anchors[fromKey + flight.id],
+               let to = anchors[toKey + flight.id] {
                 let a = proxy[from], b = proxy[to]
                 // Eased on the CALLER's animation; this is a pure function of
                 // `progress`, so the curve lives in one place.
@@ -82,11 +110,11 @@ struct AddressFlightOverlay: View {
                 // rects are the mark's LAYOUT frame, which is the same number
                 // today and stops being it the moment either mark gains a
                 // border, a badge or a padding — and then the flight would
-                // begin at a size the face has never actually been. The row
-                // draws `DS.Face.list` and the slot draws `DS.Face.shelf`, so
-                // those are the two ends; the anchors are asked only for WHERE,
+                // begin at a size the face has never actually been. Both ends
+                // are therefore RAMP tokens passed in by the caller
+                // (`fromSize`/`toSize`); the anchors are asked only for WHERE,
                 // which is the thing they alone can answer.
-                let size = DS.Face.list + (DS.Face.shelf - DS.Face.list) * progress
+                let size = fromSize + (toSize - fromSize) * progress
                 let x = a.midX + (b.midX - a.midX) * progress
                 // A shallow ARC rather than a straight line. The two points are
                 // nearly always in the same column (the shelf is at the top,
@@ -96,7 +124,19 @@ struct AddressFlightOverlay: View {
                 let lift = min(64, abs(b.midY - a.midY) * 0.18)
                 let arc = -sin(progress * .pi) * lift
                 let y = a.midY + (b.midY - a.midY) * progress + arc
-                WalletFace(address: flight.address, size: size, circular: true)
+                Group {
+                    if let glyph = flight.glyph {
+                        RoundedRectangle(cornerRadius: size * 0.28, style: .continuous)
+                            .fill(DS.fillFaint)
+                            .overlay {
+                                Image(systemName: glyph)
+                                    .font(.system(size: size * 0.42, weight: .semibold))
+                                    .foregroundStyle(DS.textSecondary)
+                            }
+                    } else {
+                        WalletFace(address: flight.address, size: size, circular: true)
+                    }
+                }
                     .frame(width: size, height: size)
                     .position(x: x, y: y)
                     // Fades out only at the very end, so the face is solid for

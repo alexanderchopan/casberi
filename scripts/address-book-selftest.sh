@@ -71,6 +71,7 @@ src = re.sub(r'//.*$', '', src, flags=re.M)
 sys.stdout.write(src)
 PY
 }
+strip_comments "$FLIGHT" > "$TMP/flight-bare.swift"
 strip_comments "$SPINE"  > "$TMP/spine-bare.swift"
 strip_comments "$SCREEN" > "$TMP/screen-bare.swift"
 strip_comments "$GROUPS" > "$TMP/groups-bare.swift"
@@ -135,8 +136,34 @@ grep -q 'launchFlight(entry)' "$SCREEN" \
   || { echo "✗ starring an address no longer sends its face to the shelf (§212's own claimed moment)"; exit 1; }
 grep -q 'flightAnchor("slot:" + AddressBook.key(for: addr.address))' "$SCREEN" \
   || { echo "✗ the shelf slot no longer publishes a landing anchor, or stopped keying it the BOOK's way — a watch stored as 'vitalik.eth' would never find its own row"; exit 1; }
-grep -q 'DS.Face.list + (DS.Face.shelf - DS.Face.list) \* progress' "$FLIGHT" \
-  || { echo "✗ the flight sizes itself off the anchor rects again — those are layout frames and stop matching the face the moment a mark gains a border"; exit 1; }
+# The flight is shared by the star (row → shelf) and the filing move (sheet head
+# → group deck) since §444, so the two ends are RAMP tokens the caller passes.
+# The ruling is unchanged and this is the sharper form of it: the size may never
+# be read off the anchor rects, which are layout frames and stop matching the
+# face the moment a mark gains a border.
+grep -q 'let size = fromSize + (toSize - fromSize) \* progress' "$FLIGHT" \
+  || { echo "✗ the flight no longer interpolates between two ramp sizes"; exit 1; }
+grep -q 'var fromSize: CGFloat = DS.Face.list' "$FLIGHT" \
+  || { echo "✗ the star flight's start stopped being a ramp token"; exit 1; }
+grep -q 'var toSize: CGFloat = DS.Face.shelf' "$FLIGHT" \
+  || { echo "✗ the star flight's end stopped being a ramp token"; exit 1; }
+grep -qE '\b[ab]\.(width|height|size)\b' "$TMP/flight-bare.swift" \
+  && { echo "✗ the flight sizes itself off the anchor rects again — those are layout frames and stop matching the face the moment a mark gains a border"; exit 1; }
+
+# THE FILING FLIGHT (§444) — the same face, the other direction. Filing was the
+# one gesture in the book whose whole feedback was a checkmark appearing.
+grep -q 'fromKey: "head:", toKey: "group:"' "$GROUPS" \
+  || { echo "✗ filing an address no longer sends its face into the group — the tick would be the only feedback again"; exit 1; }
+grep -q 'flightAnchor("group:" + AddressBook.key(forGroup: name))' "$GROUPS" \
+  || { echo "✗ a group row no longer publishes a landing anchor, or stopped keying it the BOOK's way — a group typed in another case would never find its own row"; exit 1; }
+grep -q 'toSize: AddressMoveSheet.deckFace' "$GROUPS" \
+  || { echo "✗ the filing flight stopped ending at the deck's own face size"; exit 1; }
+grep -q 'absorbing == AddressBook.key(forGroup: name)' "$GROUPS" \
+  || { echo "✗ the group row no longer takes the hit when a face lands in it"; exit 1; }
+# A group row wears the faces of who is in it (§444) — you file by recognising
+# people, and a checkmark, a word and a tally names none of them.
+grep -q 'AddressMark(entry: member' "$GROUPS" \
+  || { echo "✗ a group row lost its members' faces"; exit 1; }
 grep -q 'absorbing == key' "$SCREEN" \
   || { echo "✗ a dropped face is no longer absorbed by the deck"; exit 1; }
 grep -q 'litNode' "$SPINE" \

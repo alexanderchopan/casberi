@@ -581,6 +581,15 @@ harness "Wallet-visualization self-test" "wallet-viz self-test" "scripts/wallet-
 # this screen (the 2026-08-21 ruling).
 harness "Address-book shape self-test" "address-book self-test" "scripts/address-book-selftest.sh" "the address-book self-test failed — run scripts/address-book-selftest.sh"
 
+# WHERE TWO LOOK-ALIKE ADDRESSES PART (prd §444) — the arithmetic behind the
+# address card's poisoning warning. Every failure renders as a perfectly
+# ordinary highlighted character: an off-by-one marks the wrong column and the
+# person concludes two addresses agree past a point they do not; the EIP-55
+# case fold applied where it must not be hides a real difference, and not
+# applied where it must be marks two spellings of ONE address; overlapping head
+# and tail runs leave a warning that prints two strings and marks nothing.
+harness "Address-diff self-test" "address-diff self-test" "scripts/address-diff-selftest.sh" "the address-diff self-test failed — run scripts/address-diff-selftest.sh"
+
 # Every row on an address's own profile (prd §443). The split it guards is the
 # one place in the app where a stamped amount is re-composed for DISPLAY rather
 # than read whole, and every way it can be wrong renders as an ordinary row on
