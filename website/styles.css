@@ -1880,3 +1880,7 @@ a:hover { color: #FF2D87; }
 .hero-facts span { font-size: 11px; font-weight: 650; color: var(--faint);
   background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.06);
   border-radius: 999px; padding: 5px 12px; }
+
+
+/* availability is a fact, not a promise — it reads a shade brighter */
+.hero-facts .plat { color: var(--muted); border-color: rgba(255,255,255,.10); }
