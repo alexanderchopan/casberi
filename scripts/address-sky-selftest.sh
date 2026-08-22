@@ -62,13 +62,25 @@ if [[ "${1:-}" == "--self-test" ]]; then
   probe "an unchanged copy passes" "s/__nothing__/__nothing__/" "no"
   probe "the two-wallet floor removed" "s/watched.count >= minWallets/watched.count >= 0/" "yes"
   probe "twins no longer spread apart" "s/static let twinSpread = 0.115/static let twinSpread = 0.0/" "yes"
-  # sin(π/2) is 1, so this freezes the cluster ring at the two-twin radius —
-  # the n=2 fixture still passes exactly, and only the three- and six-twin
-  # spacing assertions can catch it. That is the point: it proves the larger
-  # clusters are load-bearing fixtures, not decoration on the pair case.
-  probe "the twin ring's radius no longer scales with the cluster" \
-    "s/Double.pi \/ Double(max(total, 2))/Double.pi \/ 2/" "yes"
-  probe "the inward pull sent to the midpoint" "s/static let inwardPull = 0.62/static let inwardPull = 1.0/" "yes"
+  # The twins stop spreading at all — every body in a cluster takes the shared
+  # angle and they stack, which is the failure `twinSpread` exists to prevent.
+  # The sweep's own mutation: relaxation off, so bodies keep the bearing they
+  # asked for and two different pairs land on one spot — the defect the real
+  # numbers showed and no per-shape fixture could.
+  probe "collisions between different clusters go unresolved" \
+    "s/placed\[i\] = max(placed\[i\], placed\[i - 1\] + step)/placed[i] = placed[i]/" "yes"
+  probe "the twin spread collapses to nothing" \
+    "s/twinSpread \/ (2 \* connectedRadius)/0.0 * connectedRadius/" "yes"
+  # THE TWO RINGS, collapsed onto one (prd §437). Every connected body lands on
+  # the watched ring, where nothing but an angle keeps it off a wallet's face.
+  probe "the connected ring moved onto the watched one" \
+    "s/static let connectedRadius = 0.19/static let connectedRadius = 0.33/" "yes"
+  # THE CIRCULAR MEAN, replaced by a plain average of angles — the one
+  # arithmetic mistake this placement can make that still renders perfectly:
+  # a body reaching the ring's last and first wallets lands exactly opposite
+  # the pair it reaches, and its links cross a drawing they have no business in.
+  probe "the angle between wallets averaged straight instead of around" \
+    "s|return atan2(y, x)|return angles.reduce(0, +) / Double(angles.count)|" "yes"
   probe "a body reaching one wallet still drawn" "s/guard keys.count >= 2 else { continue }/guard keys.count >= 1 else { continue }/" "yes"
   probe "links to unwatched wallets kept" "s/let keys = node.walletKeys.filter { walletAt\[\$0\] != nil }/let keys = node.walletKeys/" "yes"
   probe "a one-member group named" "s/guard list.count >= 2, let name/guard list.count >= 1, let name/" "yes"
@@ -80,8 +92,21 @@ if [[ "${1:-}" == "--self-test" ]]; then
   # noise to re-run through. Reversing the comparator fails every time, and the
   # drift guard below catches the deletion deterministically.
   probe "constellations sorted the wrong way" "s/== .orderedAscending }/== .orderedDescending }/" "yes"
-  probe "the ring no longer starts at the top" "s/let angle = -Double.pi \/ 2/let angle = Double.pi \/ 2/" "yes"
-  probe "twin signature stops sorting" "s/keys.sorted().joined/keys.joined/" "yes"
+  # Re-anchored when `ringPoint(index:of:)` became `ringAngle(index:of:)`
+  # (prd §437): the old expression matched nothing, so the probe ran a CLEAN
+  # copy and reported it as a surviving mutation. A guarded function that
+  # moves takes its guard with it — and a mutation that matches nothing is a
+  # check that proves nothing, which is why this harness fails loudly on it.
+  probe "the ring no longer starts at the top" \
+    "s|return -Double.pi / 2 + (2|return Double.pi / 2 + (2|" "yes"
+  # Re-aimed when the bearing replaced the wallet-set signature as what a
+  # cluster is grouped on (prd §437): the old expression matched nothing, so
+  # the probe ran a clean copy and reported it as surviving. What it defended
+  # is still real and now lives in `meanAngle` — the fallback must be a
+  # function of the SET, so reading `first` instead of the lowest makes
+  # "reaches A and B" and "reaches B and A" land in different places.
+  probe "the degenerate bearing reads arrival order instead of the set" \
+    "s/guard let lowest = angles.min()/guard let lowest = angles.first/" "yes"
   print "address-sky-selftest: self-test OK"
 fi
 
@@ -219,10 +244,20 @@ let flipped = AddressSky.layout(watched: two,
                                 canWatchMore: false)!
 check(dist(flipped.connectedBodies[0].at, flipped.connectedBodies[1].at) > 0.05,
       "the twin cluster is order-insensitive")
-// Three twins ring their shared midpoint: the cluster's CENTROID is the
-// point a lone body would take (a regular ring's centroid is its centre),
-// and every pair sits exactly one spread apart — for a triangle every pair
-// is a neighbouring chord.
+// Stronger, and the form that actually pins it: flipping the key order must
+// produce the SAME PLACES, not merely two places that don't collide. The weak
+// form passes over a layout that reads arrival order, because the relaxation
+// pushes whatever it is given apart either way.
+check(zip(twins.connectedBodies, flipped.connectedBodies).allSatisfy {
+    near($0.at.x, $1.at.x) && near($0.at.y, $1.at.y)
+}, "flipping the wallet order changes nothing about where anybody lands")
+// Three twins spread along the connected ring, centred on their shared
+// ANGLE: the MIDDLE body takes exactly the point a lone body would (its
+// offset from the shared angle is zero by construction), and each
+// NEIGHBOURING pair is one spread apart. Not the centroid and not every
+// pair, which is what a cluster on an arc stops being (prd §437): three
+// points on an arc have a centroid pulled in toward their own chord, and
+// the outer two of three sit two steps apart, not one.
 let trips = AddressSky.layout(watched: two,
                               connected: [connected("p", ["A", "B"]),
                                           connected("q", ["A", "B"]),
@@ -232,14 +267,23 @@ let solo = AddressSky.layout(watched: two,
                              connected: [connected("q", ["A", "B"])],
                              canWatchMore: false)!
 let tripPts = trips.connectedBodies.map(\.at)
-check(near(tripPts.map(\.x).reduce(0, +) / 3, solo.connectedBodies[0].at.x)
-      && near(tripPts.map(\.y).reduce(0, +) / 3, solo.connectedBodies[0].at.y),
-      "a twin cluster is centred on the shared midpoint")
-check((0..<3).allSatisfy { i in (0..<3).allSatisfy { j in
-    i == j || near(dist(tripPts[i], tripPts[j]), AddressSky.twinSpread, 0.001)
-} }, "three twins each sit one spread from both others")
-// Two wallets sit exactly opposite, so their midpoint IS the centre — the
-// degenerate case the perpendicular would divide by zero on.
+check(near(tripPts[1].x, solo.connectedBodies[0].at.x)
+      && near(tripPts[1].y, solo.connectedBodies[0].at.y),
+      "a twin cluster is centred on the shared angle")
+check(near(dist(tripPts[0], tripPts[1]), AddressSky.twinSpread, 0.001)
+      && near(dist(tripPts[1], tripPts[2]), AddressSky.twinSpread, 0.001),
+      "neighbouring twins sit exactly one spread apart")
+// The OUTER pair is two steps along the arc, so it must be strictly further
+// than one spread — the assertion that catches a spread which stopped
+// scaling with the cluster and just stacked every body on its neighbour.
+check(dist(tripPts[0], tripPts[2]) > AddressSky.twinSpread * 1.5,
+      "the ends of a three-twin cluster sit further apart than neighbours")
+// Every body still sits on the connected ring — the arc cannot drift off it.
+check(tripPts.allSatisfy {
+    near(dist($0, AddressSky.Point(x: 0.5, y: 0.5)), AddressSky.connectedRadius, 0.0001)
+}, "a spread twin stays on the connected ring")
+// Two wallets sit exactly opposite, so their angles cancel — the degenerate
+// case the circular mean would return atan2(0, 0) on.
 check(trips.connectedBodies.allSatisfy { $0.at.x.isFinite && $0.at.y.isFinite },
       "an on-centre midpoint spreads rather than producing NaN")
 
@@ -273,6 +317,143 @@ let faceClearance = (AddressSky.watchedDiameter + AddressSky.connectedDiameter) 
 check(sixPts.allSatisfy { p in
     ringFaces.allSatisfy { dist(p, $0.at) > faceClearance }
 }, "no twin lands on a watched face or the open slot")
+
+// ---- the two rings, and the crossing link (prd §437, 2026-08-22) ---------
+// The reading this pass exists for. A connected body used to be pulled toward
+// the centre from the midpoint of the wallets it reached, which put every one
+// at a different distance from the middle and — for two wallets facing each
+// other — exactly ON it. Now it sits on its OWN ring at the angle between
+// them, and the link is a straight line from that ring to the outer one.
+
+// (1) Every connected body is on the connected ring, whatever it reaches.
+let ringed = AddressSky.layout(
+    watched: three,
+    connected: [connected("m", ["A", "B"]), connected("n", ["B", "C"]),
+                connected("o", ["A", "C"]), connected("p", ["A", "B", "C"])],
+    canWatchMore: false)!
+check(ringed.connectedBodies.allSatisfy {
+    near(dist($0.at, AddressSky.Point(x: 0.5, y: 0.5)), AddressSky.connectedRadius, 0.0001)
+}, "every connected body sits on the connected ring")
+
+// (2) A connected body and a watched one can NEVER stack, however close their
+// angles run — the guarantee the two radii buy, which no arrangement of twin
+// spreading could ever make on one ring. Proven at the worst case the layout
+// allows rather than on a friendly fixture: a body reaching three wallets sits
+// at the mean of all three, which for an evenly-spaced ring cancels to the
+// degenerate case and lands it on the same bearing as a wallet.
+let radialGap = AddressSky.ringRadius - AddressSky.connectedRadius
+check(radialGap > (AddressSky.watchedDiameter + AddressSky.connectedDiameter) / 2,
+      "the two rings are further apart than two faces are wide")
+check(ringed.connectedBodies.allSatisfy { body in
+    ringed.bodies.filter { $0.kind != .connected }
+        .allSatisfy { dist(body.at, $0.at) > (AddressSky.watchedDiameter + AddressSky.connectedDiameter) / 2 }
+}, "no connected body can land on a watched face")
+
+// (3) THE CROSSING. Two wallets far apart on the ring must produce a link that
+// passes through the middle of the drawing — not an arc hugging its rim. With
+// three wallets, the two that A-and-C's body reaches are 240° apart, so its
+// two links together span the ring. Measured as: the link's own closest
+// approach to the centre is well inside the connected ring.
+func closestToCentre(_ link: AddressSky.Link) -> Double {
+    let c = AddressSky.Point(x: 0.5, y: 0.5)
+    let dx = link.to.x - link.from.x, dy = link.to.y - link.from.y
+    let len2 = dx * dx + dy * dy
+    guard len2 > 0 else { return dist(link.from, c) }
+    var t = ((c.x - link.from.x) * dx + (c.y - link.from.y) * dy) / len2
+    t = max(0, min(1, t))
+    return dist(AddressSky.Point(x: link.from.x + dx * t, y: link.from.y + dy * t), c)
+}
+let wide = AddressSky.layout(watched: three,
+                             connected: [connected("o", ["A", "C"])],
+                             canWatchMore: false)!
+check(wide.links.allSatisfy { closestToCentre($0) < AddressSky.connectedRadius },
+      "a link between far-apart wallets passes through the middle")
+// And the converse, which is what makes the one above a real test rather than
+// a property of every link: a body whose wallets are NEIGHBOURS draws short
+// links that stay out near the rim. Four wallets put A and B one step apart.
+let four = [AddressSky.Wallet(key: "A", address: "0xA", name: "A"),
+            AddressSky.Wallet(key: "B", address: "0xB", name: "B"),
+            AddressSky.Wallet(key: "C", address: "0xC", name: "C"),
+            AddressSky.Wallet(key: "D", address: "0xD", name: "D")]
+let near2 = AddressSky.layout(watched: four,
+                              connected: [connected("q", ["A", "B"])],
+                              canWatchMore: false)!
+check(near2.links.allSatisfy { closestToCentre($0) > AddressSky.connectedRadius * 0.5 },
+      "a link between neighbouring wallets stays out of the middle")
+
+// (4) The circular mean, at the wrap. A body reaching the LAST wallet on the
+// ring and the FIRST must sit between them across the top, not on the far
+// side: a plain average of angles would put it exactly opposite, which is the
+// one arithmetic mistake this placement can make and which renders perfectly.
+let wrapped = AddressSky.layout(watched: four,
+                                connected: [connected("w", ["A", "D"])],
+                                canWatchMore: false)!
+let wp = wrapped.connectedBodies[0].at
+let wa = wrapped.watchedBodies[0].at, wd = wrapped.watchedBodies[3].at
+let wb = wrapped.watchedBodies[1].at, wc = wrapped.watchedBodies[2].at
+check(dist(wp, wa) < dist(wp, wb) && dist(wp, wa) < dist(wp, wc)
+      && dist(wp, wd) < dist(wp, wb) && dist(wp, wd) < dist(wp, wc),
+      "a body reaching the ring's last and first wallets sits between them, not opposite")
+
+// ---- THE SWEEP: no two bodies overlap, in any shape the layout allows -----
+//
+// The assertion that was missing, and the reason it was missing is worth more
+// than the assertion. Every fixture above poses ONE shape and checks it; the
+// spreading was written per-cluster, so it was proven on clusters. Bodies that
+// collide WITHOUT sharing a cluster — two different pairs of wallets whose
+// bearings happen to coincide, or merely to land a fraction apart — were
+// invisible to every one of them. Drawing the real numbers found two people on
+// one spot (prd §437); this walks every shape instead of trusting a fixture to
+// have been the representative one.
+func sweep() -> (body: Double, ring: Double) {
+    var worstBody = 9.0, worstRing = 9.0
+    for n in 2...5 {
+        let ws = (0..<n).map { AddressSky.Wallet(key: "W\($0)", address: "0xW\($0)", name: "w\($0)") }
+        for slot in [true, false] {
+            var conns: [AddressSky.Connected] = []
+            var i = 0
+            for a in 0..<n {
+                for b in (a + 1)..<n {
+                    conns.append(connected("c\(i)", ["W\(a)", "W\(b)"])); i += 1
+                }
+            }
+            // A body reaching THREE wallets takes the mean of all three, which
+            // on an even ring cancels — the degenerate bearing, in the middle
+            // of a crowd.
+            if n >= 3 { conns.append(connected("t", (0..<3).map { "W\($0)" })) }
+            guard let s = AddressSky.layout(watched: ws, connected: conns,
+                                            canWatchMore: slot) else { continue }
+            let cb = s.connectedBodies
+            for x in 0..<cb.count {
+                for y in (x + 1)..<cb.count { worstBody = min(worstBody, dist(cb[x].at, cb[y].at)) }
+            }
+            for c in cb {
+                for r in s.bodies where r.kind != .connected {
+                    worstRing = min(worstRing, dist(c.at, r.at))
+                }
+            }
+        }
+    }
+    // And the cap's own worst case: every drawn body in ONE cluster.
+    let sixAll = AddressSky.layout(
+        watched: two, connected: (0..<6).map { connected("s\($0)", ["A", "B"]) },
+        canWatchMore: true)!
+    let sb = sixAll.connectedBodies
+    for x in 0..<sb.count {
+        for y in (x + 1)..<sb.count { worstBody = min(worstBody, dist(sb[x].at, sb[y].at)) }
+    }
+    for c in sb {
+        for r in sixAll.bodies where r.kind != .connected {
+            worstRing = min(worstRing, dist(c.at, r.at))
+        }
+    }
+    return (worstBody, worstRing)
+}
+let swept = sweep()
+check(swept.body >= AddressSky.connectedDiameter,
+      "in every shape, no two connected bodies overlap")
+check(swept.ring >= (AddressSky.watchedDiameter + AddressSky.connectedDiameter) / 2,
+      "in every shape, no connected body overlaps a ring body")
 
 // ---- determinism ---------------------------------------------------------
 // CEILING, stated so nobody trusts this further than it goes: both calls run in
@@ -396,6 +577,40 @@ guard "the view draws bodies on the DS.Face ramp, watched a rung above the rest"
 guard "the layout's watched diameter is the larger of the two" \
   "python3 -c \"import re,sys; t=open('$SRC').read(); w=float(re.search(r'watchedDiameter = ([0-9.]+)',t).group(1)); c=float(re.search(r'connectedDiameter = ([0-9.]+)',t).group(1)); sys.exit(0 if w>c else 1)\""
 
+# THE FIELD (prd §437). The layout's diameters are the `DS.Face` ramp divided
+# by the field the view is actually given — `WalletScreen.skyHeight` minus
+# `AddressSkyView`'s inset on each side. Four numbers in three files, and no
+# one of them can state the relationship, which is how 0.165/0.105 came to
+# describe a 340pt field while the screen handed the drawing 280: every
+# clearance assertion in this harness passed, in units a fifth too generous,
+# and the faces overlapped on the real screen. Checked to 3%, since the ramp
+# will not divide evenly into a round height.
+guard "the layout's diameters are the face ramp over the field the screen gives it" \
+  "python3 - <<'EOF'
+import re, sys
+sky = open('$SRC').read(); view = open('$VIEW').read(); screen = open('$SCREEN').read()
+tok = open('Casberi/Casberi/Design/DesignTokens.swift').read()
+def f(t, p): return float(re.search(p, t).group(1))
+height = f(screen, r'private var skyHeight: CGFloat \{ ([0-9.]+) \}')
+inset  = f(view,   r'private let inset: CGFloat = ([0-9.]+)')
+field  = height - inset * 2
+shelf  = f(tok, r'static let shelf: CGFloat = ([0-9.]+)')
+lst    = f(tok, r'static let list: CGFloat = ([0-9.]+)')
+w      = f(sky, r'static let watchedDiameter = ([0-9.]+)')
+c      = f(sky, r'static let connectedDiameter = ([0-9.]+)')
+bad = [n for n, got, want in (('watched', w, shelf/field), ('connected', c, lst/field))
+       if abs(got - want) / want > 0.03]
+sys.exit(1 if bad else 0)
+EOF"
+
+# The two clearances that field buys, asserted where the numbers live rather
+# than only inside a fixture: a body can sit directly under a wallet (a mean
+# angle landing on a third wallet's bearing), and twins sit one spread apart.
+guard "the rings clear a face radially" \
+  "python3 -c \"import re,sys; t=open('$SRC').read(); g=lambda p: float(re.search(p,t).group(1)); sys.exit(0 if g(r'ringRadius = ([0-9.]+)') - g(r'connectedRadius = ([0-9.]+)') >= (g(r'watchedDiameter = ([0-9.]+)') + g(r'connectedDiameter = ([0-9.]+)'))/2 else 1)\""
+guard "one twin spread clears two connected faces" \
+  "python3 -c \"import re,sys; t=open('$SRC').read(); g=lambda p: float(re.search(p,t).group(1)); sys.exit(0 if g(r'twinSpread = ([0-9.]+)') >= g(r'connectedDiameter = ([0-9.]+)') else 1)\""
+
 # §295's rulings, as negatives. A weighted or hued link would render perfectly.
 guard "no link is stroked with a computed width" \
   "! strip '$VIEW' | grep -qE 'lineWidth: *[a-z_]'"
@@ -434,9 +649,44 @@ guard "a first-sight connection is never flagged new" \
 guard "Reduce Motion finishes both trims immediately" \
   "grep -q 'guard !reduceMotion else { drawn = 1; newDrawn = 1; return }' '$VIEW'"
 
-# The shelf is the fallback below two wallets, so it cannot be deleted.
+# The shelf is the fallback at ONE watched wallet, so it cannot be deleted.
 guard "the manager still falls back to the shelf" \
   "grep -q 'rosterSection' '$SCREEN'"
+
+# ---- prd §437, 2026-08-22 -------------------------------------------------
+
+# LINKS ARE STRAIGHT. The bow toward the centre is what made every connection
+# read as an arc hugging the interior; a curve creeping back turns the
+# crossing assertions above into statements about a line the view no longer
+# draws. Comment-stripped, because the source explains the change by naming
+# the call it used to make.
+guard "no link is drawn as a curve" \
+  "! strip '$VIEW' | grep -qE 'addQuadCurve|addCurve|addArc'"
+
+# ZERO WATCHED gets the sky's own empty state, not the shelf's row of five
+# dashed cap slots. Both halves are checked — the view has to exist, and the
+# screen has to reach it on exactly the empty case — because either one alone
+# is satisfied by a view nothing renders.
+guard "the empty sky view exists" \
+  "grep -q 'struct AddressSkyEmptyView' '$VIEW'"
+# Comment-stripped: the screen EXPLAINS this branch by naming the view, so a
+# raw grep is satisfied by the paragraph above the code (the Obsidian/Cursor
+# lesson, eighth instance) — it would keep passing over a deleted branch.
+#
+# A HERE-STRING, never `strip … | grep -q …`, and that is not style: this
+# script runs under `pipefail`, `grep -q` exits the instant it matches, and the
+# `sed` still writing a 1,900-line file takes SIGPIPE and exits 141 — which
+# pipefail then makes the pipeline's status. So the piped spelling FAILS on a
+# perfectly good tree, which is how it was caught here (CLAUDE.md records the
+# same race costing `ondevice-selftest` a guard that silently matched nothing).
+# The negative guards above are safe only because their grep never matches and
+# so never closes the pipe early.
+guard "the manager reaches it on an empty roster" \
+  "grep -q 'wallet.addresses.isEmpty' <<< \"\$(strip '$SCREEN')\" && grep -q 'AddressSkyEmptyView' <<< \"\$(strip '$SCREEN')\""
+# It draws no identicon: there is no address yet, and a face over one nobody
+# has entered is the invented identity §83 bans.
+guard "the empty sky draws no face" \
+  "! strip '$VIEW' | sed -n '/struct AddressSkyEmptyView/,\$p' | grep -q 'WalletFace'"
 
 if (( fail )); then
   print "address-sky-selftest: DRIFT"

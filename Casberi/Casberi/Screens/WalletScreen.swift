@@ -603,6 +603,18 @@ struct WalletScreen: View {
             .onAppear {
                 AddressSkySource.markSeen(sky.connectedBodies.map(\.id))
             }
+        } else if wallet.addresses.isEmpty {
+            // Nothing watched at all — the sky's own empty state (prd §437),
+            // not the shelf. See `AddressSkyEmptyView`: at ZERO the shelf is a
+            // row of five dashed circles, which is a picture of the cap shown
+            // to somebody who has not yet met the feature. At ONE it is an
+            // honest part-filled shelf, so that case still falls through.
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                AddressSkyEmptyView { addressFieldFocused = true }
+                    .frame(height: skyHeight)
+                skyCaption
+            }
+            .padding(.top, DS.Space.s2)
         } else {
             rosterSection
         }
@@ -610,7 +622,17 @@ struct WalletScreen: View {
 
     /// Tall enough for the ring plus the captions the view hangs under each
     /// body, capped so a big iPad column doesn't hand the sky half the screen.
-    private var skyHeight: CGFloat { 340 }
+    ///
+    /// 400 AND NOT 340, and the 60 is not padding (prd §437). `AddressSky`'s
+    /// body diameters are the `DS.Face` ramp over the FIELD — 56/340 and
+    /// 36/340 — but the field is this height minus `AddressSkyView`'s 30pt
+    /// inset on each side, so at 340 the drawing had 280 and every clearance
+    /// the layout and its harness argue about was computed in units a fifth
+    /// too generous. Nothing was visibly broken and nothing could be: the
+    /// assertions all passed, in the wrong units. Raising this to 400 makes
+    /// the field the 340 those numbers have always described. Tied to both by
+    /// a drift guard in `address-sky-selftest.sh`.
+    private var skyHeight: CGFloat { 400 }
 
     /// How full the sky is. The CAP is said here rather than drawn, which is
     /// the one §182 ruling this pass amends: a dashed ring per unused watch

@@ -87,11 +87,19 @@ struct AddressSkyView: View {
                     let from = point(link.from, in: field)
                     let to = point(link.to, in: field)
                     path.move(to: from)
-                    // A gentle bow toward the centre, so two links between the
-                    // same pair of neighbours stay distinguishable and the sky
-                    // reads as orbits rather than as a wire diagram. The bow is
-                    // geometry, not weight: every link bows the same amount.
-                    path.addQuadCurve(to: to, control: bow(from: from, to: to, in: field))
+                    // STRAIGHT (prd §437, 2026-08-22). It bowed toward the
+                    // centre, on the reasoning that the sky should read as
+                    // orbits rather than as a wire diagram — and paired with
+                    // bodies that were themselves pulled toward the centre,
+                    // that made every connection a short arc hugging the
+                    // interior. The drawing read as rings inside rings, which
+                    // is a picture of nothing: the one thing it has to say is
+                    // that THIS address reached THOSE wallets. A straight line
+                    // from a body on the inner ring to a wallet on the outer
+                    // one crosses the drawing when the two wallets are far
+                    // apart and stays short when they are neighbours, so the
+                    // geometry itself says how far a connection reaches.
+                    path.addLine(to: to)
                 }
             }
             .trim(from: 0, to: settled ? drawn : newDrawn)
@@ -100,14 +108,6 @@ struct AddressSkyView: View {
                                        dash: settled ? [] : [3, 4]))
             .allowsHitTesting(false)
         }
-    }
-
-    /// Pulls the control point a little toward the middle of the drawing.
-    private func bow(from: CGPoint, to: CGPoint, in field: CGSize) -> CGPoint {
-        let mid = CGPoint(x: (from.x + to.x) / 2, y: (from.y + to.y) / 2)
-        let centre = CGPoint(x: field.width / 2, y: field.height / 2)
-        return CGPoint(x: mid.x + (centre.x - mid.x) * 0.18,
-                       y: mid.y + (centre.y - mid.y) * 0.18)
     }
 
     // MARK: - Bodies
@@ -213,5 +213,116 @@ struct AddressSkyView: View {
             .delay(ChartEntrance.lead + ChartEntrance.wipe + 0.25)) {
             newDrawn = 1
         }
+    }
+}
+
+/// THE SKY BEFORE THERE IS ONE (prd §437, 2026-08-22).
+///
+/// `AddressSky.layout` returns nil under two watched wallets, and the manager
+/// fell through to the roster shelf for both of those states. For ONE watched
+/// wallet that is right — a face and four empty slots is an honest picture of
+/// a shelf part-filled. For ZERO it is not: a row of five identical dashed
+/// circles is a picture of the CAP, offered to somebody who has not yet met
+/// the feature and has no use for its ceiling. It also throws away the one
+/// thing this screen now knows how to say, which is what the drawing is FOR.
+///
+/// So an empty manager gets the same ring, with one invitation on it where the
+/// first wallet will sit and the seats its world will draw into left quiet.
+/// Nothing here is a control except the invitation itself, and nothing claims
+/// a number: the cap is a sentence on the caption line below, exactly as it is
+/// once the sky is real.
+///
+/// It draws no `WalletFace`, because there is no address to draw one of — an
+/// identicon over an address nobody has entered is the invented identity §83
+/// bans, on the screen where trust is being established.
+struct AddressSkyEmptyView: View {
+    var onPickSlot: () -> Void
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    /// The same inset the real sky uses, for the same reason — the caption
+    /// hangs below its body and the top body needs room above it.
+    private let inset: CGFloat = 30
+
+    var body: some View {
+        GeometryReader { geo in
+            let field = CGSize(width: geo.size.width - inset * 2,
+                               height: geo.size.height - inset * 2)
+            ZStack {
+                // The ring the wallets will sit on, at the radius they will sit
+                // at — so the invitation is not floating in space, it is
+                // standing in the first seat of something.
+                Circle()
+                    .strokeBorder(DS.fillLine, lineWidth: 1.5)
+                    .frame(width: AddressSky.ringRadius * 2 * field.width,
+                           height: AddressSky.ringRadius * 2 * field.height)
+                    .allowsHitTesting(false)
+                // Where the people you deal with will draw. Quiet dots rather
+                // than dashed faces: a dashed circle is an invitation and these
+                // are not — nothing about them is tappable, and three more
+                // invitations would read as three more things to do.
+                ForEach(seats, id: \.self) { angle in
+                    Circle()
+                        .fill(DS.fillStrong)
+                        .frame(width: 8, height: 8)
+                        .position(point(angle: angle,
+                                        radius: AddressSky.connectedRadius,
+                                        in: field))
+                        .allowsHitTesting(false)
+                }
+                invitation
+                    .position(point(angle: -.pi / 2,
+                                    radius: AddressSky.ringRadius, in: field))
+                Text("Who it reaches draws here")
+                    .dsText(.label12)
+                    .foregroundStyle(DS.textTertiary)
+                    .position(x: field.width / 2, y: field.height / 2)
+                    .allowsHitTesting(false)
+                    .chartArrival(index: 0, delay: ChartEntrance.lead + 0.35,
+                                  reduceMotion: reduceMotion)
+            }
+            .frame(width: field.width, height: field.height)
+            .padding(inset)
+        }
+    }
+
+    /// Three seats, evenly spaced on the connected ring and deliberately NOT
+    /// at the top — the top is the invitation's, and a seat under it would
+    /// read as its caption.
+    private var seats: [Double] {
+        (0..<3).map { -Double.pi / 2 + Double.pi / 2 + 2 * Double.pi * Double($0) / 3 }
+    }
+
+    private var invitation: some View {
+        VStack(spacing: 5) {
+            Circle()
+                .strokeBorder(DS.tint.opacity(0.7),
+                              style: StrokeStyle(lineWidth: 2, lineCap: .round,
+                                                 dash: [5, 6]))
+                .frame(width: DS.Face.shelf, height: DS.Face.shelf)
+                .overlay {
+                    Image(systemName: "plus")
+                        .dsGlyph(18)
+                        .foregroundStyle(DS.textSecondary)
+                }
+            Text("Your first wallet")
+                .dsText(.label12).fontWeight(.semibold)
+                .foregroundStyle(DS.textSecondary)
+                .lineLimit(1)
+        }
+        .frame(width: max(DS.Face.shelf, 96))
+        .contentShape(Rectangle())
+        .onTapGesture {
+            DSHaptic.selection()
+            onPickSlot()
+        }
+        .dsTapCard()
+        .accessibilityLabel(Text("Watch your first address"))
+        .chartArrival(index: 0, reduceMotion: reduceMotion)
+    }
+
+    private func point(angle: Double, radius: Double, in field: CGSize) -> CGPoint {
+        CGPoint(x: (0.5 + radius * cos(angle)) * field.width,
+                y: (0.5 + radius * sin(angle)) * field.height)
     }
 }

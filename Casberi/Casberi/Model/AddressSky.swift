@@ -8,9 +8,10 @@ import Foundation
 /// address, and a card per person behind a tap. Five sections, one graph —
 /// which is why the screen read as a settings page no matter how the sections
 /// were reordered. This is three of those five fused into one drawing: the
-/// watched wallets on a ring, the people who deal with two or more of them
-/// floating between the ones they reach, a line wherever a transfer actually
-/// landed, and a group's members named where they cluster.
+/// watched wallets on a ring, the people who deal with two or more of them on
+/// their own ring inside it at the angle between the wallets they reach, a
+/// straight line wherever a transfer actually landed, and a group's members
+/// named where they cluster.
 ///
 /// ## It asserts nothing §295 didn't already assert
 ///
@@ -23,7 +24,7 @@ import Foundation
 /// which is the same fact the line already states. A body is not bigger because
 /// it matters more; it is bigger because you watch it.
 ///
-/// ## Why the RING is watched-only, and the floating bodies are not
+/// ## Why the OUTER ring is watched-only, and the inner one is not
 ///
 /// This looks like the watch cap (§170) reaching into the picture and it is
 /// NOT — it is a data limit, and confusing the two is how a future pass
@@ -37,12 +38,19 @@ import Foundation
 /// dealt with otherwise, because we never asked.
 ///
 /// Which is exactly the right split, and it means naming stays unlimited in the
-/// picture as well as in the book: **the ring is the five you watch; everybody
-/// floating between them is your book**, capped by nothing but
+/// picture as well as in the book: **the outer ring is the five you watch; the
+/// inner ring is your book**, capped by nothing but
 /// `AddressConnections.nodeLimit`. Name forty addresses and any of them can
 /// appear the moment it turns out to connect two of your wallets. Raising the
-/// watch cap would make the ring bigger; it would not change who is eligible to
-/// float.
+/// watch cap would make the outer ring busier; it would not change who is
+/// eligible to sit on the inner one.
+///
+/// The two rings are also what keeps the drawing legible without an assertion
+/// to defend it (prd §437): a connected body and a watched wallet sit at
+/// different radii, so however close their angles run they can never stack on
+/// one spot, and a link between them is a straight line from one ring to the
+/// other — long and crossing the middle when the wallets are far apart, short
+/// when they are neighbours.
 ///
 /// ## Positions are DETERMINISTIC, never physics
 ///
@@ -174,21 +182,65 @@ enum AddressSky {
     /// never because it is worth more: no size, hue or position anywhere in
     /// this file is read off money (user ruling 2026-08-21 — the manager shows
     /// no balances at all, the feed's crown owns that reading).
+    /// These are the `DS.Face` ramp over the FIELD, and the field is
+    /// `WalletScreen.skyHeight` minus the view's inset on each side — which is
+    /// the fact that was wrong (prd §437). 0.165 and 0.105 are 56/340 and
+    /// 36/340, so they have always described a 340pt field; the screen handed
+    /// the drawing `skyHeight` 340 and the view insets 30 a side, leaving 280.
+    /// Every clearance argument in this file and its harness is made in these
+    /// units, so a fifth of the room they all assumed did not exist: a body
+    /// directly inside a wallet cleared it by 39pt where two faces need 46.
+    /// Nothing here changed — `skyHeight` did, to 400, so the field really is
+    /// the 340 these numbers describe. A drift guard now ties all four
+    /// together, because this is not a fact any of them can state alone.
     static let watchedDiameter = 0.165
     static let connectedDiameter = 0.105
 
-    /// How far in from its wallets' midpoint a connected body sits. At 1.0 it
-    /// would sit exactly on the line between them and the link would vanish
-    /// under it; pulled toward the centre, both legs of the connection stay
-    /// visible as two separate lines, which is the whole reading.
-    static let inwardPull = 0.62
+    /// The radius the CONNECTED bodies sit at — their own ring, inside the
+    /// watched one (prd §437, 2026-08-22).
+    ///
+    /// It was a pull toward the centre from the midpoint of the wallets a body
+    /// reached (`inwardPull`, 0.62), which put every body at a different
+    /// distance from the middle and, for two wallets facing each other, put it
+    /// exactly ON the centre. That is where the drawing lost its subject: with
+    /// the links bowed toward the middle as well, a connection read as a short
+    /// arc hugging the interior, and the whole picture read as rings inside
+    /// rings rather than as anybody reaching anybody.
+    ///
+    /// A body sits at its own ring at the ANGLE of the wallets it reaches
+    /// instead, which buys three things at once. Its two links are straight
+    /// lines to two points on the outer ring, so a body reaching wallets on
+    /// opposite sides draws a line CROSSING the middle — the reading the
+    /// drawing exists for. It can never collide with a wallet however close
+    /// their angles run, because they are on different rings — the "two people
+    /// stacked on one spot" failure, made impossible by construction rather
+    /// than by an assertion. And twins spread along an ARC, which is bounded
+    /// by the ring itself (see `spread`).
+    ///
+    /// Far enough inside `ringRadius` that a `connectedDiameter` body clears a
+    /// `watchedDiameter` one RADIALLY — which is the binding case rather than a
+    /// corner one: a body reaching two wallets with a third between them takes
+    /// that third one's bearing exactly, so it sits directly under a face, and
+    /// with five watched that shape is reachable several ways. 0.33 − 0.19 =
+    /// 0.14, against the two half-diameters summing to 0.135.
+    ///
+    /// It is also bounded from BELOW, which is the constraint that decides it:
+    /// two wallets 120° apart put the midpoint of their chord at 0.33·cos60° =
+    /// 0.165, and a body sitting there lies ON its own two links and swallows
+    /// them (the §435 ruling the harness still asserts). So this has to clear
+    /// the chord from outside while clearing a face from inside — a window
+    /// that only exists at all because the field is 340 (see the diameters).
+    static let connectedRadius = 0.19
 
-    /// How far apart two NEIGHBOURING bodies of a twin cluster sit — the
-    /// chord between adjacent bodies on the cluster's own small ring (see
-    /// `spread`). Bodies reaching the SAME set of wallets share a midpoint
-    /// exactly, so without this they draw on top of each other and two people
-    /// read as one. Just above `connectedDiameter`, so neighbours clear each
-    /// other without the cluster ballooning.
+    /// How far apart two NEIGHBOURING bodies of a twin cluster sit — the chord
+    /// between adjacent bodies along the connected ring (see `spread`). Bodies
+    /// reaching the SAME set of wallets share an angle exactly, so without this
+    /// they draw on top of each other and two people read as one. Just above
+    /// `connectedDiameter`, so neighbours clear each other without the cluster
+    /// swallowing the ring. On the 340pt field this is 39pt against two
+    /// `list` faces needing 36 — it clears, which on the 280pt field the
+    /// drawing was actually given it did not (32pt against 36), so the cluster
+    /// this constant exists to un-stack was itself overlapping (prd §437).
     static let twinSpread = 0.115
 
     // MARK: - The layout
@@ -219,9 +271,15 @@ enum AddressSky {
 
         var bodies: [Body] = []
         var walletAt: [String: Point] = [:]
+        // The wallet's ANGLE is kept beside its point: a connected body's place
+        // is now an angle on its own ring, so the midpoint that decides it has
+        // to be taken around the circle rather than across it.
+        var walletAngle: [String: Double] = [:]
         for (index, wallet) in watched.enumerated() {
-            let point = ringPoint(index: index, of: ringCount, around: centre)
+            let angle = ringAngle(index: index, of: ringCount)
+            let point = ringPoint(angle: angle, radius: ringRadius, around: centre)
             walletAt[wallet.key] = point
+            walletAngle[wallet.key] = angle
             bodies.append(Body(id: wallet.key, address: wallet.address,
                                name: wallet.name, kind: .watched,
                                at: point))
@@ -229,15 +287,15 @@ enum AddressSky {
         if canWatchMore {
             bodies.append(Body(id: openSlotID, address: "", name: "",
                                kind: .openSlot,
-                               at: ringPoint(index: watched.count,
-                                             of: ringCount, around: centre)))
+                               at: ringPoint(angle: ringAngle(index: watched.count,
+                                                              of: ringCount),
+                                             radius: ringRadius, around: centre)))
         }
 
-        // Every connected body sits at the midpoint of the wallets it reaches,
-        // pulled toward the centre. That is not a judgement about it — it is
-        // the same fact its links already draw, made legible before you trace
-        // them: somebody who deals with two of your wallets sits between those
-        // two.
+        // Every connected body sits on its OWN ring, at the angle between the
+        // wallets it reaches. That is not a judgement about it — it is the same
+        // fact its links already draw, made legible before you trace them:
+        // somebody who deals with two of your wallets sits between those two.
         //
         // Reaching a wallet we no longer watch cannot move anything, so those
         // keys are dropped; a body left reaching fewer than two is not a
@@ -249,27 +307,24 @@ enum AddressSky {
             placeable.append((node, keys))
         }
 
-        // Bodies reaching the SAME set of wallets share a midpoint exactly, so
-        // they are counted first and then spread along the perpendicular of
-        // their own approach to the centre. Grouped by a SORTED signature, so
-        // "reaches A and B" and "reaches B and A" are one cluster.
-        var twinCount: [String: Int] = [:]
-        for item in placeable {
-            twinCount[signature(item.keys), default: 0] += 1
+        // Every bearing the outer ring already occupies — wallets AND the
+        // invitation, since a body tucked under the open slot reads exactly as
+        // badly as one tucked under a wallet.
+        let ringAngles = (0..<ringCount).map { ringAngle(index: $0, of: ringCount) }
+
+        // Where each body WANTS to be: the angle between the wallets it
+        // reaches. Collisions are resolved afterwards, over the whole set at
+        // once — see `resolveBearings`.
+        let wanted = placeable.map {
+            meanAngle(of: $0.keys.compactMap { walletAngle[$0] }, avoiding: ringAngles)
         }
+        let bearings = resolveBearings(wanted)
 
         var links: [Link] = []
         var placed: [String: Point] = [:]
-        var seenInCluster: [String: Int] = [:]
-        for item in placeable {
-            let key = signature(item.keys)
-            let index = seenInCluster[key, default: 0]
-            seenInCluster[key] = index + 1
-            let anchor = midpoint(of: item.keys.compactMap { walletAt[$0] })
-            var point = lerp(from: centre, to: anchor, by: inwardPull)
-            if let total = twinCount[key], total > 1 {
-                point = spread(point, around: centre, index: index, of: total)
-            }
+        for (offset, item) in placeable.enumerated() {
+            let point = ringPoint(angle: bearings[offset], radius: connectedRadius,
+                                  around: centre)
             placed[item.node.key] = point
             bodies.append(Body(id: item.node.key, address: item.node.address,
                                name: item.node.name, kind: .connected,
@@ -334,15 +389,108 @@ enum AddressSky {
 
     // MARK: - Arithmetic
 
-    /// Slot `index` of `total` on the ring. Starts at the TOP and goes
+    /// The angle of slot `index` of `total`. Starts at the TOP and goes
     /// clockwise, which is the reading order of a clock face and therefore the
     /// order somebody will assume; anything else makes "first watched" a fact
     /// you have to be told.
-    private static func ringPoint(index: Int, of total: Int, around centre: Point) -> Point {
-        guard total > 0 else { return centre }
-        let angle = -Double.pi / 2 + (2 * Double.pi * Double(index) / Double(total))
-        return Point(x: centre.x + ringRadius * cos(angle),
-                     y: centre.y + ringRadius * sin(angle))
+    private static func ringAngle(index: Int, of total: Int) -> Double {
+        guard total > 0 else { return -Double.pi / 2 }
+        return -Double.pi / 2 + (2 * Double.pi * Double(index) / Double(total))
+    }
+
+    /// A point at `angle` on a ring of `radius`. Both rings — the watched one
+    /// and the connected one — are placed through here, so they can never drift
+    /// out of concentric.
+    private static func ringPoint(angle: Double, radius: Double,
+                                  around centre: Point) -> Point {
+        Point(x: centre.x + radius * cos(angle),
+              y: centre.y + radius * sin(angle))
+    }
+
+    /// The angle BETWEEN a set of wallets, taken around the circle.
+    ///
+    /// A plain average of angles is wrong on a circle — the mean of 350° and
+    /// 10° is 180°, the far side — so this is the standard circular mean:
+    /// average the unit vectors and read the direction back. For two wallets
+    /// that lands exactly on the midpoint of the SHORTER arc, which is what
+    /// "between them" means to somebody looking at the drawing.
+    ///
+    /// Two wallets facing each other across the ring have no midpoint: both
+    /// arcs are equal and the vectors cancel to zero. That is not an edge case
+    /// to be tolerated but the MINIMUM case to be expected — two watched
+    /// wallets and no open slot puts them exactly opposite — so it resolves
+    /// deterministically to a quarter turn clockwise of the LOWEST angle,
+    /// rather than to whatever `atan2(0, 0)` happens to return.
+    ///
+    /// The lowest and not the first, which is the whole of its correctness:
+    /// the fallback has to be a function of the SET, exactly as the vector
+    /// mean above it is. Reading `angles.first` made the answer depend on the
+    /// order the wallet keys arrived in, so "reaches A and B" and "reaches B
+    /// and A" — one relationship, two spellings — landed a quarter of the ring
+    /// apart, and the twin cluster that is supposed to hold them together
+    /// never formed. Caught by the harness's own order-insensitivity mutation
+    /// on the day this was written (prd §437).
+    ///
+    /// Which bearing it takes is not cosmetic, and the answer is "the emptiest
+    /// one". Measured on the first real dump of the shipped arithmetic — three
+    /// wallets plus the invitation, a body reaching the top and bottom ones —
+    /// the naive perpendicular put that body on the same bearing as the wallet
+    /// to the east, 0.14 away, which the model's own diameters pass (they need
+    /// 0.135) and a NARROW SCREEN does not: the view draws faces at fixed
+    /// points, so on a 280pt-wide field 0.14 is 39pt between centres where a
+    /// `shelf` and a `list` face need 46. A body tucked radially under
+    /// somebody else's face is exactly the reading this whole pass exists to
+    /// end, and it would have shipped looking fine on the device it was
+    /// checked on.
+    ///
+    /// Taking the OTHER perpendicular does not save it — with four ring slots
+    /// both perpendiculars are occupied — and it does not have to, because for
+    /// two wallets facing each other the two arcs are equal and **every**
+    /// bearing lies between them. So the candidates are the midpoints of the
+    /// gaps in the occupied ring, and the winner is the one furthest from
+    /// anything already there, ties going to the lowest bearing so the choice
+    /// stays a pure function of the set.
+    private static func meanAngle(of angles: [Double],
+                                  avoiding others: [Double]) -> Double {
+        guard let lowest = angles.min() else { return -Double.pi / 2 }
+        let x = angles.reduce(0) { $0 + cos($1) }
+        let y = angles.reduce(0) { $0 + sin($1) }
+        guard (x * x + y * y).squareRoot() > 0.0001 else {
+            return emptiestBearing(fallback: lowest + Double.pi / 2, among: others)
+        }
+        return atan2(y, x)
+    }
+
+    /// The midpoint of the widest gap in an occupied ring — where a body can
+    /// stand without sitting under anybody. Falls back to the caller's own
+    /// bearing when there is nothing to avoid.
+    private static func emptiestBearing(fallback: Double, among others: [Double]) -> Double {
+        guard others.count > 1 else { return fallback }
+        let sorted = others.sorted()
+        var best = fallback
+        var bestClearance = clearance(of: fallback, from: others)
+        for (index, angle) in sorted.enumerated() {
+            let next = index + 1 < sorted.count ? sorted[index + 1] : sorted[0] + 2 * Double.pi
+            let candidate = (angle + next) / 2
+            let gap = clearance(of: candidate, from: others)
+            // Strictly greater, so a tie keeps the earlier — and the ring is
+            // walked in sorted order, which makes "earlier" the lowest bearing
+            // rather than whichever the caller happened to hand over first.
+            if gap > bestClearance + 0.0001 {
+                best = candidate
+                bestClearance = gap
+            }
+        }
+        return best
+    }
+
+    /// How far `angle` is from the nearest of `others`, around the circle.
+    private static func clearance(of angle: Double, from others: [Double]) -> Double {
+        others.reduce(Double.pi) { best, other in
+            var gap = abs((angle - other).truncatingRemainder(dividingBy: 2 * Double.pi))
+            if gap > Double.pi { gap = 2 * Double.pi - gap }
+            return min(best, gap)
+        }
     }
 
     private static func midpoint(of points: [Point]) -> Point {
@@ -352,48 +500,62 @@ enum AddressSky {
                      y: points.reduce(0) { $0 + $1.y } / n)
     }
 
-    private static func lerp(from a: Point, to b: Point, by t: Double) -> Point {
-        Point(x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t)
-    }
-
-    /// Spreads `total` bodies that share one midpoint around a small ring ON
-    /// that midpoint, sized so neighbouring bodies sit exactly `twinSpread`
-    /// apart (radius = spread / (2·sin(π/n)), the chord formula inverted).
+    /// Pushes bodies apart until no two are closer than `twinSpread`, over the
+    /// WHOLE set at once, and returns each one's final bearing in the order it
+    /// was handed over.
     ///
-    /// It was a straight line along the perpendicular of the cluster's own
-    /// approach to the centre — fine at the two or three twins it was written
-    /// against, and a guaranteed failure at the MINIMUM wallet count it was
-    /// never checked at: with exactly two wallets watched, every connected
-    /// address reaches the same pair by construction, so the whole drawn set
-    /// is ONE cluster, and six twins on a straight line span 0.575 of the
-    /// field — a chain running clean through both watched faces, each caption
-    /// under the face behind it (seen on device 2026-08-22, the sky's first
-    /// real drawing; prd §436). A ring is bounded instead: six bodies reach
-    /// 0.23 across, inside the watched ring with room to spare, and the
-    /// harness pins that exact case.
+    /// This replaces a per-cluster spread that grouped bodies by the set of
+    /// wallets they reached (prd §436) and then, briefly, by their exact
+    /// bearing (§437). Both were too narrow, and the second only looked
+    /// sufficient: two bodies collide when their bearings are CLOSE, not when
+    /// they are equal, and a set of five watched wallets produces plenty of
+    /// pairs a fraction of a step apart. Measured across every shape the
+    /// layout allows, grouping by exact bearing still left two faces 0.017
+    /// apart where they need 0.105 — bodies visibly overlapping, in a file
+    /// whose header names "two people stacked on one spot" as the failure it
+    /// exists to prevent. Separation is a property of the whole ring, so it is
+    /// computed over the whole ring.
     ///
-    /// Two twins are the ring's own degenerate case — half a spread either
-    /// side of the shared point, byte-identical to the line this replaces, so
-    /// nothing about the smallest cluster moved. The ring starts at the
-    /// perpendicular of the cluster's approach to the centre (the direction
-    /// the line used, so a pair still opens ACROSS its own connection rather
-    /// than along it), and the same on-centre fallback stands: two wallets
-    /// exactly opposite each other put the midpoint ON the centre, where the
-    /// perpendicular is undefined.
-    private static func spread(_ point: Point, around centre: Point,
-                               index: Int, of total: Int) -> Point {
-        let dx = point.x - centre.x
-        let dy = point.y - centre.y
-        let length = (dx * dx + dy * dy).squareRoot()
-        let (px, py) = length < 0.0001 ? (1.0, 0.0) : (-dy / length, dx / length)
-        let (rx, ry) = length < 0.0001 ? (0.0, 1.0) : (dx / length, dy / length)
-        let radius = twinSpread / (2 * sin(Double.pi / Double(max(total, 2))))
-        let angle = 2 * Double.pi * Double(index) / Double(total)
-        return Point(x: point.x - (px * cos(angle) - rx * sin(angle)) * radius,
-                     y: point.y - (py * cos(angle) - ry * sin(angle)) * radius)
-    }
+    /// Sorted by bearing and then by ORIGINAL POSITION, never by hash order:
+    /// the sort has to be total or two bodies swap places between opens over
+    /// identical data, which is the `agent-panel-selftest` lesson this file
+    /// already cites. Then the standard one-dimensional relaxation — walk in
+    /// order, push each body to at least a step past the one before — and a
+    /// final shift by the MEAN displacement, so a cluster ends up centred on
+    /// what it asked for rather than pushed off to one side. A group of twins
+    /// that all wanted one bearing therefore lands symmetrically around it,
+    /// exactly as §436's small ring did.
+    ///
+    /// When the bodies cannot all fit (`count · step` past a full turn) they
+    /// are spaced evenly instead: at the cap of six that never happens, so it
+    /// is a guarantee rather than a behaviour anybody will see.
+    private static func resolveBearings(_ wanted: [Double]) -> [Double] {
+        guard wanted.count > 1 else { return wanted }
+        let step = 2 * asin(min(1, twinSpread / (2 * connectedRadius)))
+        var order = Array(wanted.indices)
+        order.sort { wanted[$0] == wanted[$1] ? $0 < $1 : wanted[$0] < wanted[$1] }
 
-    private static func signature(_ keys: [String]) -> String {
-        keys.sorted().joined(separator: "|")
+        var placed = order.map { wanted[$0] }
+        if Double(placed.count) * step >= 2 * Double.pi {
+            let even = 2 * Double.pi / Double(placed.count)
+            for i in placed.indices { placed[i] = placed[0] + Double(i) * even }
+        } else {
+            for i in 1..<placed.count {
+                placed[i] = max(placed[i], placed[i - 1] + step)
+            }
+            // The wrap: the last body must also clear the first, going round.
+            let overlap = (placed[0] + 2 * Double.pi) - (placed[placed.count - 1] + step)
+            if overlap < 0 {
+                let even = 2 * Double.pi / Double(placed.count)
+                for i in placed.indices { placed[i] = placed[0] + Double(i) * even }
+            }
+        }
+        // Centre the result on what was asked for, so nothing drifts forward.
+        let shift = zip(placed, order).reduce(0.0) { $0 + ($1.0 - wanted[$1.1]) }
+            / Double(placed.count)
+
+        var out = wanted
+        for (slot, index) in order.enumerated() { out[index] = placed[slot] - shift }
+        return out
     }
 }
