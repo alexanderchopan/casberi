@@ -1459,8 +1459,8 @@ footer .tagline { font-size: 16px; font-weight: 600; color: var(--ink); margin-b
    the reader had to infer the model — and the inference was the burden.
    These three sentences are the whole product, in the order you meet it,
    and the slabs below are now just the long version of each. */
-.today { padding-bottom: 84px; }
-.today .m-h2 { font-size: clamp(40px, 5.6vw, 68px); letter-spacing: -.05em;
+.today { padding-bottom: 48px; }
+.today .m-h2 { font-size: clamp(30px, 3.6vw, 44px); letter-spacing: -.04em;
   line-height: .98; font-weight: 800; }
 /* the problem reads muted, the answer reads lit — the section IS the
    contrast, so the type carries it instead of a decorative bar */
@@ -1487,15 +1487,15 @@ footer .tagline { font-size: 16px; font-weight: 600; color: var(--ink); margin-b
 /* Why-it-exists goes side by side: the mess on the left, the feed on the
    right, drawn with the catalog's own real icons — the argument shown, not
    just said. */
-.why-duo { display: grid; grid-template-columns: 1fr 1fr; gap: 56px;
+.why-duo { display: grid; grid-template-columns: 1fr 1fr; gap: 44px;
   align-items: start; margin-top: 6px; }
-.why-half .today-lede { font-size: 16.5px; margin-top: 16px; min-height: 4.6em; }
-.scat { position: relative; height: 320px; margin-top: 28px;
+.why-half .today-lede { font-size: 14.5px; margin-top: 10px; min-height: 0; max-width: 460px; }
+.scat { position: relative; height: 210px; margin-top: 18px;
   border-radius: 24px; background: rgba(255,255,255,.025);
   box-shadow: inset 0 0 0 1px rgba(255,255,255,.05); overflow: hidden; }
-.scat img { position: absolute; width: 64px; height: 64px; border-radius: 16px;
+.scat img { position: absolute; width: 50px; height: 50px; border-radius: 13px;
   box-shadow: 0 10px 26px rgba(0,0,0,.5); opacity: .88; }
-.minifeed { margin-top: 28px; border-radius: 24px; padding: 20px 22px;
+.minifeed { margin-top: 18px; border-radius: 20px; padding: 16px 18px; max-height: 210px; overflow: hidden;
   height: 320px; background: linear-gradient(180deg, rgba(46,99,255,.10), rgba(255,255,255,.025) 40%);
   box-shadow: inset 0 0 0 1px rgba(255,255,255,.06); overflow: hidden; }
 .mfchips { display: flex; gap: 10px; margin-bottom: 18px; }
@@ -1538,27 +1538,28 @@ footer .tagline { font-size: 16px; font-weight: 600; color: var(--ink); margin-b
 
 
 /* ---------- plain story: three numbered beats (§why) ---------- */
-.steps3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 40px; margin-top: 40px;
+.steps3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 28px; margin-top: 30px;
   list-style: none; padding: 0; }
 @media (max-width: 760px) { .steps3 { grid-template-columns: 1fr; gap: 26px; } }
 .steps3 li { list-style: none; margin: 0; }
-.steps3 .n { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 13px;
-  color: var(--blue-bright); display: block; margin-bottom: 12px; }
-.steps3 b { display: block; font-size: 24px; font-weight: 800; letter-spacing: -.02em;
-  margin-bottom: 8px; color: var(--ink); }
-.steps3 span { font-size: 15.5px; color: var(--muted); line-height: 1.55; }
-.plain-note { font-size: 14px; color: var(--faint); margin-top: 34px; }
-.plain-note b { color: var(--muted); font-weight: 650; }
+.steps3 .n { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12px;
+  color: var(--blue-bright); display: block; margin-bottom: 7px; }
+.steps3 b { display: block; font-size: 19px; font-weight: 800; letter-spacing: -.02em;
+  margin-bottom: 5px; color: var(--ink); }
+.steps3 span { font-size: 14px; color: var(--muted); line-height: 1.5; }
+.plain-note { font-size: 13.5px; color: var(--faint); margin-top: 24px; }
+.plain-note b { color: #FF2D87; font-weight: 700; }
 
 /* ---------- builders band (#builders) — flat color, product-first ---------- */
-.bvids { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-top: 40px; }
-@media (max-width: 860px) { .bvids { grid-template-columns: 1fr; gap: 18px; } }
-.bvid { position: relative; border-radius: 32px; overflow: hidden; padding: 34px 30px 0;
-  display: flex; flex-direction: column; min-height: 640px; }
+.bvids { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-top: 40px; }
+@media (max-width: 1100px) { .bvids { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 620px) { .bvids { grid-template-columns: 1fr; } }
+.bvid { position: relative; border-radius: 30px; overflow: hidden; padding: 28px 24px 0;
+  display: flex; flex-direction: column; min-height: 560px; }
 .bvid.blue  { background: #1673e6; }
 .bvid.ink   { background: #14171d; }
-.bvid.deep  { background: #0b3d99; }
-.bvid h3 { font-size: 52px; font-weight: 850; letter-spacing: -.035em; color: #fff;
+.bvid.deep  { background: #14171d; }
+.bvid h3 { font-size: 38px; font-weight: 850; letter-spacing: -.035em; color: #fff;
   margin: 0; line-height: 1; }
 .bvid .bk { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12px;
   color: rgba(255,255,255,.66); display: block; margin: 10px 0 6px; }
@@ -1568,7 +1569,7 @@ footer .tagline { font-size: 16px; font-weight: 600; color: var(--ink); margin-b
 .bstage { position: relative; flex: 1; min-height: 330px; margin: 22px 0 0; }
 .bstage .cyc { position: absolute; inset: 0; }
 .bstage .fphone { position: absolute; left: 50%; top: 0; transform: translateX(-50%) rotate(-2deg);
-  width: 240px; border-radius: 30px 30px 0 0;
+  width: 216px; border-radius: 30px 30px 0 0;
   box-shadow: 0 0 0 6px rgba(0,0,0,.4), 0 24px 60px rgba(0,0,0,.45); }
 .bvid:nth-child(2) .bstage .fphone { transform: translateX(-50%) rotate(2deg); }
 /* app-tile strips */
@@ -1638,3 +1639,28 @@ footer .tagline { font-size: 16px; font-weight: 600; color: var(--ink); margin-b
 .w-foot { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px;
   margin: 30px 0 20px; font-family: ui-monospace, "SF Mono", Menlo, monospace;
   font-size: 12px; color: var(--faint); }
+
+
+/* ---------- pink pass: the creature's color as voice, not paint ---------- */
+::selection { background: #FF2D87; color: #fff; }
+a:hover { color: #FF2D87; }
+.nav-links a:hover { color: #FF2D87; }
+.bvid.deep .bk { color: #FF2D87; }
+.bvid.deep p a { color: #fff; }
+.slab-get { background: #0b0c0f; }
+.slab-get h2 { color: #FF2D87; }
+.slab-get .slab-sub { color: rgba(255,255,255,.75); }
+.slab-get .cta-ink { background: #FF2D87 !important; color: #fff !important; }
+.slab-mark { width: 130px; height: 130px; margin: 0 auto 8px; display: block; }
+
+
+/* static product shots in the band and the wallet trio */
+.bvid .fphone img.still, .w-trio .fphone img.still { opacity: 1; animation: none; }
+.w-trio { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px;
+  margin: -70px 40px 0; position: relative; z-index: 2; }
+@media (max-width: 760px) { .w-trio { grid-template-columns: 1fr; margin: -50px 10px 0; } }
+.w-trio .fphone { position: relative; width: 100%; max-width: 250px; margin: 0 auto;
+  transform: rotate(0deg); }
+.w-trio .fphone:first-child { transform: rotate(-2deg); }
+.w-trio .fphone:last-child { transform: rotate(2deg); }
+.w-heroband { overflow: visible; padding-bottom: 120px; }
