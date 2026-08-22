@@ -621,15 +621,20 @@ struct WalletScreen: View {
         HStack(spacing: 5) {
             Text("\(wallet.addresses.count) of \(WalletStore.watchLimit) watched")
                 .dsText(.label12).foregroundStyle(DS.textTertiary)
-            // "6 of 27 connected" — the whole relationship between the two
-            // tiers in five words (prd §435 amendment). Naming is unlimited
-            // and watching is capped at five, so a book of forty can put a
-            // handful of faces in the sky; without the book's own size beside
-            // the connected count, the gap between what you have named and
-            // what is drawn has to be inferred, and a picture you have to
-            // infer the completeness of is one you can't trust.
-            if let connections, connections.connectedCount > 0, book.count > 0 {
-                Text("· \(connections.connectedCount) of \(book.count) connected")
+            // "8 connected" — every address the corpus can prove reaches two
+            // or more of your wallets, drawn or behind the cap (the note
+            // below the drawing names the undrawn tail). The §435 amendment
+            // paired this with the book's own size ("6 of 27 connected") so
+            // completeness could be read off the caption, and the pairing was
+            // WRONG, not merely unluckily sized: a connected address is a
+            // COUNTERPARTY read off landed transfers, in the book or not, so
+            // the book's length is not this count's denominator — the first
+            // device to draw the sky printed "8 of 5 connected" (2026-08-22,
+            // prd §436). The book states its own size on its section header
+            // just below, and the completeness the amendment wanted is the
+            // "N more not drawn" note's job, where it is true.
+            if let connections, connections.connectedCount > 0 {
+                Text("· \(connections.connectedCount) connected")
                     .dsText(.label12).foregroundStyle(DS.textTertiary)
                     .monospacedDigit()
             }
