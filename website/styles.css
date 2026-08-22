@@ -1650,7 +1650,7 @@ a:hover { color: #FF2D87; }
 
 
 /* static product shots in the band and the wallet trio */
-.bvid .fphone img.still, .w-trio .fphone img.still { opacity: 1; animation: none; }
+.fphone img.still { opacity: 1 !important; animation: none !important; }
 .w-trio { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px;
   margin: -70px 40px 0; position: relative; z-index: 2; }
 @media (max-width: 760px) { .w-trio { grid-template-columns: 1fr; margin: -50px 10px 0; } }
@@ -1767,3 +1767,42 @@ a:hover { color: #FF2D87; }
 /* wallet page: trio spacing safe at mid widths */
 .w-trio { margin: -60px 20px 0; }
 @media (max-width: 1000px) { .w-trio .fphone { max-width: 210px; } }
+
+
+/* wall alignment: label is a fixed gutter; every wrapped row starts at the tile column */
+.store-flow .shelf { position: relative; padding-left: 82px; }
+.store-flow .shelf > h3 { position: absolute; left: 0; top: 9px; width: 66px; }
+@media (max-width: 560px) {
+  .store-flow .shelf { padding-left: 0; padding-top: 20px; }
+  .store-flow .shelf > h3 { top: 0; left: 2px; width: auto; text-align: left; }
+}
+
+
+/* wallet hero: legible on blue, all four sources equal */
+.w-heroband p.sub { color: rgba(255,255,255,.92); }
+.w-heroband .w-net, .w-heroband .w-net.card { background: rgba(255,255,255,.16); }
+.w-heroband .w-net .fmt { color: rgba(255,255,255,.78); }
+
+
+/* the creature and its chat windows arrive AFTER the rain has fallen */
+.hero-creature { opacity: 0; animation: hcIn .6s ease 1.15s forwards; }
+@keyframes hcIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .hero-creature { opacity: 1; animation: none; } }
+
+/* ===== why redo: chaos of real icons -> the real app ===== */
+.why2 { display: grid; grid-template-columns: 1fr 96px 1fr; gap: 8px; align-items: center; margin-top: 24px; }
+@media (max-width: 860px) { .why2 { grid-template-columns: 1fr; } .why2-arrows { display: none; } }
+.why2-side { display: flex; flex-direction: column; gap: 16px; align-items: center; }
+.why2 .scat { width: 100%; height: 300px; margin: 0; }
+.why2 .scat img { width: 56px; height: 56px; border-radius: 14px; }
+.why2-phone { position: relative; width: 250px; }
+.why2-phone .fphone { position: relative; width: 250px; transform: none; border-radius: 26px 26px 0 0; }
+.why2-phone { height: 300px; overflow: hidden; border-radius: 26px 26px 0 0; }
+.why2-arrows { display: flex; flex-direction: column; gap: 18px; align-items: center; }
+.why2-arrows svg { display: block; }
+.wf2-cap { font-size: 25px; font-weight: 800; letter-spacing: -.02em; color: #fff;
+  font-family: 'Figtree', -apple-system, sans-serif; text-wrap: balance; text-align: center; }
+.wf2-cap .wno { font-style: normal; color: rgba(255,255,255,.5); }
+.wf2-cap .wyes { font-style: normal;
+  background: linear-gradient(100deg, #3b8cf0, #855dcd 55%, #d9376e);
+  -webkit-background-clip: text; background-clip: text; color: transparent; }
