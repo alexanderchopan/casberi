@@ -1864,3 +1864,19 @@ a:hover { color: #FF2D87; }
 /* the chat windows carry real morsels now, not skeletons */
 .hc-txt { font-size: 12.5px; font-weight: 650; color: rgba(255,255,255,.88); white-space: nowrap; }
 .hero-creature { margin: 6px 0 14px; }
+
+
+/* ===== hero H2b: the statement is the hero ===== */
+.hero-prob { font-family: 'Figtree', -apple-system, sans-serif; font-size: 16.5px;
+  font-weight: 700; letter-spacing: -.01em; line-height: 1.45; color: #7c8492;
+  max-width: 540px; margin: 14px auto 0; }
+.hero-prob b { color: var(--ink); font-weight: 750; }
+.hero .hero-pay { font-size: clamp(28px, 3.4vw, 36px); font-weight: 900;
+  letter-spacing: -.045em; line-height: 1.08; margin: 10px auto 0; max-width: 700px; }
+.hero .hero-pay em { font-style: normal; }
+.hero-verbs { justify-content: center; margin: 22px auto 4px; }
+.hero-verbs span { font-size: 14px; padding: 10px 18px; }
+.hero-facts { display: flex; gap: 7px; flex-wrap: wrap; justify-content: center; margin-top: 20px; }
+.hero-facts span { font-size: 11px; font-weight: 650; color: var(--faint);
+  background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.06);
+  border-radius: 999px; padding: 5px 12px; }
