@@ -79770,6 +79770,34 @@
         }
       }
     },
+    "Watch your first address": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Sigue tu primera dirección"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "最初のアドレスを監視"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "첫 주소 보기"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "关注你的第一个地址"
+          }
+        }
+      }
+    },
     "Watches the tokens you add.": {
       "extractionState": "manual",
       "localizations": {
@@ -82657,6 +82685,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "你在读谁？"
+          }
+        }
+      }
+    },
+    "Who it reaches draws here": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Aquí se dibuja con quién conecta"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "つながる相手はここに描かれます"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "연결된 상대가 여기에 그려집니다"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "它连接的对象会画在这里"
           }
         }
       }
@@ -86484,6 +86540,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "你的第一项内容"
+          }
+        }
+      }
+    },
+    "Your first wallet": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Tu primera cartera"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "最初のウォレット"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "첫 번째 지갑"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "你的第一个钱包"
           }
         }
       }
