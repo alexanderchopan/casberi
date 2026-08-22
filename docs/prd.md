@@ -29785,3 +29785,57 @@ Tapping a group card did nothing. The push was correct; the ROUTE the probe arri
 ### What the device confirmed working
 
 The A–Z sections and their sticky headings, the scrubber, the recency subline ("2 together · 4 days ago", "1 together · August"), the kind labels, the group card's face deck and its "3 addresses · none watched", `NewGroupSheet` → a card appearing in the strip → the group's own screen with its ⋯ menu. The spine's own drawing is still UNSEEN — this corpus has no address reaching two watched wallets, which is the honest common case and exactly what the "None of your addresses are connected" state is for.
+
+## 443. The address sheet, ranked — one subject, one number, one verb (user: "how would you improve the design of an address thing sheet from the wallet set up page, think like cash app", then "if we go with your proposal, how else would you improve your design", then "ok, build it", 2026-08-22)
+
+§435 already took one Cash-App-shaped run at this card — face 64 → `DS.Face.profile`, name `heading22` → `heading28`, the pour 0.26 → 0.40, the address as a capsule chip, and the watch verb it never had. What was left after that is not more colour. It is **RANK**: the screen had five `dsWidgetSurface` cards at one weight (a look-alike security notice, the live approvals, groups, the history, a link to Etherscan), a lede made of metadata, its best reading tenth, and its one decision scrolling away.
+
+Reviewed as four artboards against the shipped screen before any code: today, the proposal, the proposal with trouble on it, and the proposal as a contract. **Two things the user rejected in that review are recorded because both were mine:** deepening the pour into a coloured header BAND (0.40 → 0.62 with a hard bottom edge and the content standing on it) — "cheesy", and correctly so, since a wash belongs to the page and a band belongs to a different app; and labelling three states of one design "Proposed", which read as three competing proposals. The pour ships at exactly the §435 recipe, unchanged.
+
+### 1. The lede is the RELATIONSHIP, and it is ranked against the exposure
+
+"24 transactions · since Mar 3 · net −0.80 ETH" moves from 12pt grey inside the fifth card to `stat24` on the page with no card at all, the §417 span rail under it. **It is not a balance and §435 is intact**: that ruling struck every USD total off the manager because the Wallet feed's crown card owns the money reading once — this is a count of the corpus's own rows plus the native-unit net `HistorySummary` already computed, neither of which is a holding and neither of which is stated anywhere else in the app.
+
+**One lede, chosen by consequence, never two stacked.** A standing permission outranks a record, so when `WalletApprovalExposure` answers with live grants it takes the slot and the count steps down — displaced, never dropped. Same ordering every room head already uses (`sourceHead` → `topicMap` → `leaderboard`), and the reason the two are one `@ViewBuilder` rather than two sections that would both claim the top of the page. The four exposure states stay exactly as §372 drew them, and the un-read state (`nil`) falls to the relationship rather than claiming an exposure nobody has read yet.
+
+**The empty case is a sentence, not a zero.** "0 transactions" at `stat24` is a zero dressed as a reading, and the state is the most common one there is — the moment right after you name an address, which is usually the moment right before you watch it. Silently omitting the section (what shipped) reads as the screen being broken; one quiet line says the app looked.
+
+### 2. A row stops restating the screen's own subject
+
+On Mom's profile, under a 76pt portrait of Mom with her name at `heading28`, every row read "Sent 0.25 ETH **to Mom**" — the screen naming itself six times, in the widest part of the string, which pushed the date (the per-row fact the eye is actually scanning for) onto a second line under an already-clamped title.
+
+The verb leads, the stamped amount trails with its sign, the date rides under the amount, so **direction reads straight down the right edge** instead of sitting mid-sentence at six different horizontal positions. `Model/AddressHistoryRow.swift` owns the split, Foundation-only, compiled WHOLE by its own harness. Three rules carry it: facts come from **stamped fields** and never from a parsed title (§363 — a localized title reorders, and a row landed before those fields existed has its number only inside prose, which is why `fallbackTitle` is a parameter and an unsplittable row keeps its whole sentence); the counterparty is dropped **only because the screen IS the counterparty**, which is why this lives beside the card rather than inside `WalletValue` — the elision is a property of the surface, and the feed must keep naming who it dealt with; and the **SIGN survives §374's mask while the figure does not**, the identical ruling `summaryLine` already makes for the net line one section up.
+
+**NO VERDICT COLOUR**, and it is a ruling rather than an omission: "+120 USDC" in `DS.confirm` congratulates you for your mother paying you back and congratulates you identically for a stranger dusting your wallet. On the screen where you decide whether to trust somebody, direction is a fact and wears the text ramp like every other fact. Enforced as a negative grep scoped to the row builder — the look-alike band on the same screen legitimately uses `DS.destructive`, so a whole-file grep would either fail forever or be switched off within a week.
+
+**The stated cost, taken deliberately:** a split row has no counterparty clause left in it, so §441's rename cascade has nothing to sweep on those rows. It still runs for every row that keeps a full sentence, and the "See all" screen keeps full titles precisely so the cascade keeps a stage.
+
+### 3. Trouble is a FIELD, not a fifth card
+
+The look-alike warning goes edge to edge on its own `DS.destructive` ground. A card is a container of information; this is a **condition of the screen**, and the one thing on the sheet that must not be mistakable for another widget in the stack. It also does what the card could not: prints **both** addresses in full and un-truncated, which is the only form of this warning anyone can act on. It still accuses neither side — the book cannot know which one you meant, and a wrong accusation on a security notice is worse than none.
+
+### 4. Groups are identity, the rest is a list
+
+"Family · Cold" is a fact about who this address is to you — the same kind of fact as its name and its face — not a preference you set, so it rides as chips under the address and the trailing `+` opens the very same `GroupMenuItems` menu the card row opened. No verb moved or was lost, and the empty state still draws ("Add to a group"), because a control that appears only once you already have groups leaves the feature discoverable solely by long-pressing a row in the list behind the sheet.
+
+What is left — the naming date and the explorer door — is two settings-shaped facts, so they are ONE container with the rows touching, where they were two separately shadowed cards each holding a single row at the exact weight the security notice wears. **Month headers go from the card** (every row now carries its own date, so a header states it twice) **and arrive on the "See all" screen**, which is not an inconsistency but the same rule answered at two lengths: six rows need no headers, two hundred are unscannable without them.
+
+### 5. The verb pins, and the name hands off
+
+The watch pill sat mid-scroll, so by the time the history had finished making the case for watching, the verb was off screen. It is a `safeAreaInset` bar in the address's own hue at thumb height, three states and no dead control (§83) exactly as §435 defined them. Rename leaves the top-**leading** toolbar slot — where iOS puts Back and Cancel — for a `•••` menu, joined by "Remove from book" (which was already reachable only as "type a blank name" buried in an alert's message).
+
+**A CONTRACT gets no bar at all**, and that is the test the pattern had to pass rather than an exception to it: `WalletStore` can technically watch a contract, but a contract has no holdings and no feed, so offering it invites spending one of five slots on nothing — and an empty bar hovering over the sheet is the dead control twice over. The sheet simply ends at the details list.
+
+The name hands off to the inline nav title as the header leaves (`onScrollGeometryChange`, fade over the last 24pt of a 96pt run, so the two never both read as the title). The subject of this sheet is an identity, and until now it left the screen entirely the moment you began reading the history that belongs to it.
+
+### The harness (`scripts/address-history-row-selftest.sh`, in `verify.sh`)
+
+`AddressHistoryRow` compiled WHOLE and unmodified — 31 assertions, 9 mutations, 8 drift guards. Every failure it catches renders as a perfectly ordinary row on the one screen where you decide whether to trust somebody: a sent transfer wearing a `+`, a spoofed token's trailing phishing domain promoted into the one slot §374's mask leaves visible, a stamped "-0.25" printing "−−0.25", a masked figure that survived the mask anyway, a masked row that no longer says which way the money ran, or an approval that quietly lost its sentence. Its negative guards read a COMMENT-STRIPPED copy, because both files document these rules by naming the very APIs they must not reach for (the Obsidian/Cursor lesson, eighth instance).
+
+### Collision, and the standing rule that caught it
+
+This entry was written as §442 and renumbered to §443 before it landed: another session took 442 while this one was building, which is precisely the class `prd-index-audit` exists for and which no written reminder can prevent (neither session can see the other's uncommitted work). Twenty citations moved together. **The audit is what found it** — run it after adding citations, not only before.
+
+### Unproven
+
+The build is green on iOS Simulator and Mac Catalyst, every audit and both address harnesses pass, and the string catalog is level with source in all five languages. **No simulator run and no device**: the scroll hand-off, the pinned bar over a scrolling record, the group-chip menu and the look-alike band's full-width ground are all rendering behaviour no static check can exercise.

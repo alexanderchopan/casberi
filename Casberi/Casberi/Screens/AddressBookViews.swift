@@ -617,86 +617,57 @@ struct AddressCard: View {
         AddressActivity.history(for: entry.address, in: modelContext)
     }
 
+    /// How far the sheet has been scrolled, for the header/nav hand-off below.
+    /// Zero until the first geometry callback, so a sheet that never scrolls
+    /// never shows a title.
+    @State private var scrolled: CGFloat = 0
+
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(spacing: DS.Space.s3) {
-                    // 76, up from 64 (prd §435) — this sheet is a PROFILE and
-                    // its subject is a person, so the face leads at a size the
-                    // sky's own watched bodies are drawn at rather than one
-                    // step under it. Same mark, same round-vs-square rule.
-                    AddressMark(entry: current, size: DS.Face.profile)
-                        .padding(.top, DS.Space.s4)
-                    // The NAME reveal (2026-08-01) — `AddressMark`'s kind
-                    // turn-over (prd §171) applied to the other half of the
-                    // question. An address added bare stands under its own
-                    // short form; a beat later reverse ENS answers, or a typed
-                    // `.eth` resolves and `reconcileAliases` re-keys the row,
-                    // and the card learns what to call it while you're looking
-                    // at it. Same transition as the mark beside it, so the two
-                    // halves of "what is this" resolve in one visual language.
-                    Text(current.name)
-                        .dsText(.heading28).foregroundStyle(DS.textPrimary)
-                        .multilineTextAlignment(.center)
-                        .transition(.scale(scale: 0.9).combined(with: .opacity))
-                        .id(current.name)
-                        .animation(DS.Motion.standard, value: current.name)
-                    Text(kindLine)
-                        .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                    bitcoinVintageLine
-
-                    watchPill
-                    lookalikeWarning
-                    exposureSection
-                    groupRow
-                    addressRow
+                VStack(spacing: 0) {
+                    identityHeader
+                    lookalikeBand
+                    lede
                     historySection
-                    explorerRow
+                    detailsList
+                    // Room for the pinned verb bar. `DS.Hit.min` plus the
+                    // bar's own padding — spelled from the token so the two
+                    // cannot drift apart.
+                    Color.clear.frame(height: watchPillShown ? DS.Hit.min + 46 : DS.Space.s4)
                 }
-                .padding(DS.Space.s4)
             }
             .scrollIndicators(.hidden)
             .dsAdaptiveContentWidth()
-            // This address's OWN weather (prd §171, 2026-07-22). §129 kept the
-            // wash exactly where the source IS the subject — the app-detail
-            // page, the bridge setup header, the token quick sheet — and a
-            // person's card is that case precisely: the subject of this screen
-            // is an identity, so the screen wears its color. A wallet pours in
-            // its face tint (the same hue its identicon, its switcher chip and
-            // its band in the combined sheet already carry, so Mom looks like
-            // Mom everywhere); machinery pours in Casberi's own tint, because
-            // a contract has no identity of its own to borrow.
-            .background(alignment: .top) {
-                // Deepened 0.26 → 0.40 (prd §435). §171 established the pour
-                // and §435 spent it: this is the one sheet in the app whose
-                // whole subject IS an identity, so the colour is the content,
-                // not a tint on it. Machinery still pours the app's own tint —
-                // a contract has no identity to borrow — so the deepening
-                // makes the who/machinery split MORE legible, not less.
-                LinearGradient(stops: [
-                    .init(color: pourHue.opacity(0.40), location: 0),
-                    .init(color: pourHue.opacity(0.12), location: 0.45),
-                    .init(color: pourHue.opacity(0), location: 1),
-                ], startPoint: .top, endPoint: .bottom)
-                    .frame(height: 340)
-                    .frame(maxHeight: .infinity, alignment: .top)
-                    .ignoresSafeArea()
-                    .allowsHitTesting(false)
+            // The name hands off to the nav title as the header leaves
+            // (2026-08-22, prd §443). The subject of this sheet is an
+            // identity, and until now it left the screen entirely the moment
+            // you started reading the history that belongs to it. 96 is where
+            // the 76pt face has cleared the bar; the fade is over the last 24
+            // so the two never both read as the title.
+            .onScrollGeometryChange(for: CGFloat.self) { geo in
+                max(0, geo.contentOffset.y + geo.contentInsets.top)
+            } action: { _, new in
+                guard abs(scrolled - new) > 1 else { return }
+                scrolled = new
             }
             .dsPageBackground()
-            .navigationTitle("Address")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button("Rename") {
-                        nameDraft = current.name
-                        renaming = true
-                    }.tint(DS.tint)
+                ToolbarItem(placement: .principal) {
+                    Text(current.name)
+                        .dsText(.heading17)
+                        .foregroundStyle(DS.textPrimary)
+                        .lineLimit(1)
+                        .opacity(titleReveal)
+                        .accessibilityHidden(titleReveal < 0.5)
                 }
+                ToolbarItem(placement: .topBarLeading) { overflowMenu }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { dismiss() }.tint(DS.tint)
                 }
             }
+            .safeAreaInset(edge: .bottom, spacing: 0) { watchBar }
             .alert("Name this address", isPresented: $renaming) {
                 TextField("Name", text: $nameDraft)
                 Button("Save") { rename(to: nameDraft) }
@@ -727,6 +698,164 @@ struct AddressCard: View {
         // book, both inside a `switch`, so a call-site size would have to
         // be written twice and could drift.
         .dsPageSheet()
+    }
+
+    /// 0 while the face is still on screen, 1 once it has cleared the bar.
+    private var titleReveal: Double {
+        min(1, max(0, (scrolled - 72) / 24))
+    }
+
+    // MARK: - Identity
+
+    /// The face, the name, what it is, the address, and the groups it is filed
+    /// under — everything answering "who is this", in one field wearing this
+    /// address's own colour (prd §443).
+    ///
+    /// The pour is EXACTLY the §171/§435 recipe and deliberately unchanged: it
+    /// is the app's §129 idiom (a screen whose subject IS the thing wears its
+    /// colour), shared with the app-detail page, the bridge setup header, the
+    /// token quick sheet and the money receipt card. Deepening it into a
+    /// coloured header BAND was tried and rejected — a wash belongs to the
+    /// page, a band belongs to a different app.
+    private var identityHeader: some View {
+        VStack(spacing: 0) {
+            AddressMark(entry: current, size: DS.Face.profile)
+            Text(current.name)
+                .dsText(.heading28).foregroundStyle(DS.textPrimary)
+                .multilineTextAlignment(.center)
+                // The NAME reveal (2026-08-01) — `AddressMark`'s kind
+                // turn-over (prd §171) applied to the other half of the
+                // question. An address added bare stands under its own short
+                // form; a beat later reverse ENS answers, or a typed `.eth`
+                // resolves and `reconcileAliases` re-keys the row, and the
+                // card learns what to call it while you are looking at it.
+                .transition(.scale(scale: 0.9).combined(with: .opacity))
+                .id(current.name)
+                .animation(DS.Motion.standard, value: current.name)
+                .padding(.top, DS.Space.s3)
+            Text(kindLine)
+                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                .padding(.top, 1)
+            bitcoinVintageLine
+            addressChip
+                .padding(.top, DS.Space.s3)
+            groupChips
+                .padding(.top, DS.Space.s2)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.top, DS.Space.s3)
+        .padding(.bottom, DS.Space.s4)
+        .background(alignment: .top) {
+            LinearGradient(stops: [
+                .init(color: pourHue.opacity(0.40), location: 0),
+                .init(color: pourHue.opacity(0.12), location: 0.45),
+                .init(color: pourHue.opacity(0), location: 1),
+            ], startPoint: .top, endPoint: .bottom)
+                .frame(height: 340)
+                .frame(maxHeight: .infinity, alignment: .top)
+                .ignoresSafeArea()
+                .allowsHitTesting(false)
+        }
+    }
+
+    /// Rename, and the door out of the book — the two verbs that are not this
+    /// screen's decision (prd §443).
+    ///
+    /// Rename used to be a top-LEADING toolbar button, which is where iOS puts
+    /// Back and Cancel; a destructive-looking position for the one control
+    /// that rewrites every title you have with this address. An overflow menu
+    /// is where a profile's secondary verbs live.
+    private var overflowMenu: some View {
+        Menu {
+            Button {
+                nameDraft = current.name
+                renaming = true
+            } label: { Label("Rename", systemImage: "pencil") }
+            if isInBook {
+                Button(role: .destructive) {
+                    rename(to: "")
+                } label: { Label("Remove from book", systemImage: "trash") }
+            }
+        } label: {
+            Image(systemName: "ellipsis")
+                .dsGlyph(15)
+                .foregroundStyle(DS.textPrimary)
+                .frame(width: 32, height: 32)
+                .background(DS.fillStrong, in: Circle())
+                .dsTapTarget(Circle())
+        }
+        .accessibilityLabel(Text("More"))
+    }
+
+    /// The address, as one chip under the name (prd §435).
+    ///
+    /// **It still shows every character**, middle-truncated rather than
+    /// clipped, because the one screen that exists to tell two look-alike
+    /// addresses apart cannot be the screen that hides their difference —
+    /// `lookalikeBand` below prints both in full for exactly that reason.
+    private var addressChip: some View {
+        HStack(spacing: DS.Space.s2) {
+            Text(current.address)
+                .dsText(.mono13).foregroundStyle(DS.textSecondary)
+                .lineLimit(1)
+                .truncationMode(.middle)
+            CopyAddressButton(address: current.address, expanded: true)
+        }
+        .padding(.horizontal, DS.Space.s3)
+        .padding(.vertical, DS.Space.s2)
+        .background(DS.fillFaint, in: Capsule(style: .continuous))
+        .padding(.horizontal, DS.Space.s4)
+    }
+
+    /// Which groups this address is filed under, as chips beside its name
+    /// (2026-08-22, prd §443).
+    ///
+    /// It was a full-width menu card down among the settings-shaped rows, and
+    /// that is the wrong reading of what a group IS: "Family" is a fact about
+    /// who this address is to you, the same kind of fact as its name and its
+    /// face, not a preference you set. So it rides with the identity, and the
+    /// trailing `+` opens the very same `GroupMenuItems` menu the card row
+    /// opened — no verb was moved or lost.
+    ///
+    /// Always present, empty included: a control that only appears once you
+    /// already have groups leaves the feature discoverable solely by
+    /// long-pressing a row in the list behind this sheet.
+    private var groupChips: some View {
+        let groups = current.groupNames
+        return Menu {
+            GroupMenuItems(entry: current, groups: book.groupNames) {
+                groupDraft = ""
+                addingGroup = true
+            }
+        } label: {
+            HStack(spacing: DS.Space.s1 + 2) {
+                ForEach(groups, id: \.self) { name in
+                    Text(name)
+                        .dsText(.label12).foregroundStyle(DS.textPrimary)
+                        .padding(.horizontal, DS.Space.s3)
+                        .padding(.vertical, 6)
+                        .background(DS.fillFaint, in: Capsule(style: .continuous))
+                }
+                if groups.isEmpty {
+                    Text("Add to a group")
+                        .dsText(.label12).foregroundStyle(DS.textSecondary)
+                        .padding(.horizontal, DS.Space.s3)
+                        .padding(.vertical, 6)
+                        .background(DS.fillFaint, in: Capsule(style: .continuous))
+                } else {
+                    Image(systemName: "plus")
+                        .dsGlyph(10)
+                        .foregroundStyle(DS.textSecondary)
+                        .frame(width: 26, height: 26)
+                        .background(DS.fillFaint, in: Circle())
+                }
+            }
+            .contentShape(Rectangle())
+            .dsTapTarget()
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text(groups.isEmpty ? "Add to a group"
+                                                : "Groups: \(groups.joined(separator: ", "))"))
     }
 
     /// A wallet is a who and owns a hue; a contract or a Safe is machinery and
@@ -768,6 +897,7 @@ struct AddressCard: View {
                 Text("\(amount) · oldest piece from \(since.formatted(.dateTime.month(.wide).year()))")
                     .dsText(.subhead13).foregroundStyle(DS.textSecondary)
                     .multilineTextAlignment(.center)
+                    .padding(.horizontal, DS.Space.s4)
             } else {
                 Text(verbatim: amount)
                     .dsText(.subhead13).foregroundStyle(DS.textSecondary)
@@ -775,190 +905,111 @@ struct AddressCard: View {
         }
     }
 
+    /// What it is, and where it came from — the naming DATE has moved to the
+    /// details list (prd §443). It was the weakest of the three facts and it
+    /// sat last, which reads as the punchline of the line introducing the
+    /// person. An address reached through a door rather than through the book
+    /// still says so here, because that one changes what the screen can claim.
     private var kindLine: String {
         let kindWord = current.kind.label
             ?? BitcoinAddress.scriptKind(current.address)
             ?? String(localized: "Wallet")
         var parts: [String] = [kindWord]
         if let provenance = current.provenance { parts.append(provenance) }
-        // An address reached through a door rather than through the book has no
-        // naming date to state, and stating today's would be the fake status
-        // §83 bans. It says what is true instead — which doubles as the reason
-        // the Rename button above is worth pressing.
-        if isInBook {
-            parts.append(String(localized: "named \(current.addedAt.formatted(.dateTime.month(.abbreviated).day()))"))
-        } else {
-            parts.append(String(localized: "not in your book"))
-        }
+        if !isInBook { parts.append(String(localized: "not in your book")) }
         return parts.joined(separator: " · ")
     }
 
-    /// THE VERB THIS SCREEN NEVER HAD (prd §435, 2026-08-21).
-    ///
-    /// The address card is where you decide what an address is to you — it
-    /// carries the name, the groups, the live approvals, the whole history —
-    /// and until now the one decision it could not take was the only one that
-    /// changes anything: whether to WATCH. That verb lived exclusively on a
-    /// star in the book row behind this sheet, so the screen that made the case
-    /// had to be dismissed before the case could be acted on.
-    ///
-    /// Three states and no dead control (§83). Watching offers to stop;
-    /// not-watching offers to start; at the cap it says so plainly and stays
-    /// inert rather than raising an alert that repeats a fact it could have
-    /// printed. A CONTRACT gets no pill at all: `WalletStore` can technically
-    /// watch one, but a contract has no holdings and no feed of its own, so
-    /// offering it would be an invitation to spend one of five slots on
-    /// nothing.
-    ///
-    /// It wears the address's OWN hue, the same one the pour behind it and the
-    /// face above it carry, because at this size a tinted button IS the
-    /// person. Machinery would borrow the app tint — see `pourHue` — which is
-    /// exactly why machinery doesn't get one.
-    @ViewBuilder
-    private var watchPill: some View {
-        switch current.kind {
-        case .contract, .safe:
-            EmptyView()
-        case .wallet, .unknown, .smartAccount:
-            let store = WalletStore.shared
-            let watching = store.addresses.contains {
-                store.scopeMatches(current.address, scope: $0.address)
-            }
-            let full = !watching && !store.canWatchMore
-            Button {
-                toggleWatch(watching: watching)
-            } label: {
-                Text(watching ? String(localized: "Watching")
-                     : full ? String(localized: "Watching \(WalletStore.watchLimit) already")
-                     : String(localized: "Watch \(current.name)"))
-                    .dsText(.heading17)
-                    .foregroundStyle(watching || full ? DS.textSecondary : .white)
-                    .lineLimit(1)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: DS.Hit.min + 6)
-                    .background(watching || full ? AnyShapeStyle(DS.fillFaint)
-                                                 : AnyShapeStyle(pourHue),
-                                in: Capsule(style: .continuous))
-                    .contentShape(Capsule(style: .continuous))
-            }
-            .buttonStyle(PressSpring())
-            .disabled(full)
-            .accessibilityLabel(Text(watching ? "Watching \(current.name), tap to stop"
-                                              : "Watch \(current.name)"))
-        }
-    }
-
-    /// Start or stop watching, with the same consequences the book row's star
-    /// has always carried — the wallet-riding seats reconciled on the way in
-    /// (§207) and this address's landed rows pruned on the way out (§286).
-    /// Written once here rather than shared with `WalletScreen.toggleWatch`
-    /// because that one also drives the row's promote animation and its cap
-    /// alert, neither of which exists on a sheet.
-    private func toggleWatch(watching: Bool) {
-        DSHaptic.tap()
-        let store = WalletStore.shared
-        if watching {
-            guard let i = store.addresses.firstIndex(where: {
-                store.scopeMatches(current.address, scope: $0.address)
-            }) else { return }
-            let gone = store.addresses[i].address
-            withAnimation(DS.Motion.standard) { store.remove(at: IndexSet(integer: i)) }
-            FollowPrune.removeWallet(address: gone,
-                                     stillWatched: store.addresses.map(\.address),
-                                     context: modelContext)
-            return
-        }
-        if case .added = store.outcome(ofAdding: current.address, label: current.name) {
-            DSHaptic.success()
-            // Watching is consent (§207) — the wallet-riding seats are on the
-            // moment a wallet is. `BridgeStore` is an environment object rather
-            // than a singleton, so this sheet asks for it by name.
-            bridges.reconcileWalletSeats()
-        }
-    }
-
-    /// Naming, and the history catching up (2026-08-01).
-    ///
-    /// **The moment this card was missing.** A name isn't a label on one row —
-    /// it rewrites every transaction you've ever had with this address, all at
-    /// once, and that is the entire argument for naming anything. The card
-    /// already had those transactions on screen and changed them silently, so
-    /// the one thing worth seeing happened invisibly.
-    ///
-    /// `renameCascade` is bumped after the rewrite lands; the history rows key
-    /// their animation off it and cross-fade a beat apart (see
-    /// `historySection`), so the change reads as sweeping down the list rather
-    /// than as a redraw. Nothing is claimed if nothing changed: a rename that
-    /// rewrote no titles (a contract's approvals carry no counterparty clause)
-    /// simply doesn't cascade.
-    private func rename(to name: String) {
-        book.setName(name, for: entry.address)
-        let changed = CounterpartyRetitle.applyCurrentName(for: entry.address,
-                                                           in: modelContext)
-        DSHaptic.success()
-        guard changed > 0 else { return }
-        withAnimation(DS.Motion.standard) { renameCascade += 1 }
-    }
+    // MARK: - Trouble
 
     /// The address(es) already in this book that PRINT the same as this one
-    /// (2026-08-01). Shown as a card rather than a glyph because here there is
-    /// room to name the twin and show both addresses in full — which is the
-    /// only form of this warning that lets someone actually resolve it.
+    /// (2026-08-01), as a FIELD rather than a card (prd §443).
+    ///
+    /// A card is a container of information and this is a CONDITION of the
+    /// screen, so it takes the full width and its own ground — the one thing
+    /// on the sheet that cannot be mistaken for another widget in the stack.
+    /// Both addresses print in full and un-truncated, which is the only form
+    /// of this warning anyone can act on.
     ///
     /// It says what the app knows and stops. It does NOT accuse either side of
     /// being the impostor: the book cannot know which one you meant, and a
     /// wrong accusation on a security notice is worse than none.
     @ViewBuilder
-    private var lookalikeWarning: some View {
+    private var lookalikeBand: some View {
         let twins = book.lookalikes(of: current.address)
         if !twins.isEmpty {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
                 HStack(spacing: DS.Space.s2) {
                     Image(systemName: "exclamationmark.triangle.fill")
-                        .dsGlyph(13)
+                        .dsGlyph(14)
                         .foregroundStyle(DS.destructive)
                     Text("Another address looks just like this one")
-                        .dsText(.body17).fontWeight(.semibold)
+                        .dsText(.heading17)
                         .foregroundStyle(DS.textPrimary)
                 }
-                Text("Same short form, different address. Copy carefully.")
+                Text("Same short form, different address. Compare every character before you copy.")
                     .dsText(.subhead13).foregroundStyle(DS.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
-                ForEach(twins) { twin in
+                VStack(alignment: .leading, spacing: DS.Space.s2) {
                     VStack(alignment: .leading, spacing: 1) {
-                        Text(twin.name).dsText(.subhead13).fontWeight(.semibold)
-                            .foregroundStyle(DS.textPrimary)
-                        Text(twin.address)
+                        Text("This one")
                             .dsText(.label12).foregroundStyle(DS.textTertiary)
-                            .monospaced()
-                            .lineLimit(2)
+                        Text(current.address)
+                            .dsText(.mono13).foregroundStyle(DS.textPrimary)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    ForEach(twins) { twin in
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(twin.name)
+                                .dsText(.label12).foregroundStyle(DS.textTertiary)
+                            Text(twin.address)
+                                .dsText(.mono13).foregroundStyle(DS.textPrimary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
                 }
+                .padding(.top, DS.Space.s1)
             }
-            .padding(DS.Space.s3)
-            .dsWidgetSurface(fillOpacity: WalletCardStyle.fill)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, DS.Space.s4)
+            .padding(.vertical, DS.Space.s3)
+            .background(DS.destructive.opacity(0.16))
         }
     }
 
-    /// WHAT THIS ADDRESS CAN MOVE RIGHT NOW (2026-08-13, prd §372) — the live
-    /// allowances it holds over your tokens, read the moment the card opens.
+    // MARK: - The lede
+
+    /// The one reading this screen leads with — RANKED, never stacked
+    /// (2026-08-22, prd §443).
     ///
-    /// Placed directly under the lookalike warning and above everything else,
-    /// on the card's own consequence ordering: a lookalike is a danger, this
-    /// is a standing permission, and both outrank what you did together. The
-    /// history section beneath it has always listed these same approval rows
-    /// (an approval is a `Wallet` thing whose counterparty is the spender, so
-    /// `AddressActivity` files it here) dressed identically to every transfer,
-    /// which is exactly why the fact needed lifting out rather than adding.
+    /// A standing permission outranks a record: an address that can move your
+    /// tokens right now is the sentence that has to be read first, and the
+    /// count of what you have done together steps down to its own section
+    /// header. Displaced, never dropped. It is the same ordering by
+    /// consequence every room head in the app already uses
+    /// (`sourceHead` → `topicMap` → `leaderboard`), and it is why these are
+    /// one `@ViewBuilder` rather than two independent sections that would
+    /// otherwise both claim the top of the page.
+    @ViewBuilder
+    private var lede: some View {
+        if let exposure, !exposure.isEmpty {
+            exposureLede(exposure)
+        } else {
+            relationshipLede
+        }
+    }
+
+    /// WHAT THIS ADDRESS CAN MOVE RIGHT NOW (2026-08-13, prd §372), as the
+    /// page's lede rather than a card in the stack (prd §443).
     ///
     /// Four states, and three of them are absences that must not be confused:
-    /// the read hasn't answered (`nil` — no section), it answered and there
-    /// are no live grants (no section: an address that can move nothing is the
-    /// overwhelmingly common case and a green "nothing to worry about" panel
-    /// on every contact is chrome), it answered with grants nobody could price
-    /// (rows and the footnote, no headline — `unpricedNote` already carries
-    /// this), and it answered with a real figure.
+    /// the read hasn't answered (`nil` — the relationship leads, since we
+    /// cannot claim an exposure we have not read), it answered and there are
+    /// no live grants (the relationship leads: an address that can move
+    /// nothing is the overwhelmingly common case and a green
+    /// "nothing to worry about" panel on every contact is chrome), it answered
+    /// with grants nobody could price (rows and the footnote, no figure —
+    /// `unpricedNote` carries this), and it answered with a real figure.
     ///
     /// §292 owns every number here and none is recomputed: `stateLine`,
     /// `money`, `unpricedNote` and the priced-first row order all come from
@@ -970,24 +1021,31 @@ struct AddressCard: View {
     /// one spender here and it is the hero at the top of the screen, so
     /// counting it would print "1 spender" under its own name.
     @ViewBuilder
-    private var exposureSection: some View {
-        if let exposure, !exposure.isEmpty {
-            VStack(alignment: .leading, spacing: DS.Space.s2) {
-                Text("What they can move")
-                    .dsText(.label12).foregroundStyle(DS.textSecondary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                // Only when something could actually be priced. A total of $0
-                // printed over unpriceable grants is the "never 0 standing in
-                // for unknown" rule the arithmetic already keeps.
-                if !exposure.priced.isEmpty {
-                    Text(WalletValue.exactMoney(exposure.total))
-                        .dsText(.heading22).foregroundStyle(DS.textPrimary)
-                        .monospacedDigit()
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    Text("of your tokens, right now")
-                        .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
+    private func exposureLede(_ exposure: WalletApprovalExposure) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: DS.Space.s1 + 2) {
+                Image(systemName: "lock.open.fill")
+                    .dsGlyph(12)
+                    .foregroundStyle(DS.attention)
+                Text("They can move your tokens right now")
+                    .dsText(.label12).foregroundStyle(DS.attention)
+            }
+            // Only when something could actually be priced. A total of $0
+            // printed over unpriceable grants is the "never 0 standing in
+            // for unknown" rule the arithmetic already keeps.
+            if !exposure.priced.isEmpty {
+                Text(WalletValue.exactMoney(exposure.total))
+                    .dsText(.stat24).foregroundStyle(DS.textPrimary)
+                    .monospacedDigit()
+                    .padding(.top, DS.Space.s1)
+            }
+            if let note = exposure.unpricedNote {
+                Text(note)
+                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, 1)
+            }
+            VStack(spacing: 0) {
                 ForEach(exposure.all) { grant in
                     HStack(spacing: DS.Space.s3) {
                         Text(grant.stateLine)
@@ -1002,91 +1060,60 @@ struct AddressCard: View {
                             .foregroundStyle(grant.usd == nil ? DS.textTertiary : DS.textSecondary)
                             .monospacedDigit()
                     }
-                }
-                if let note = exposure.unpricedNote {
-                    Text(note)
-                        .dsText(.label12).foregroundStyle(DS.textTertiary)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, DS.Space.s3 + 2)
+                    .padding(.vertical, DS.Space.s3)
                 }
             }
-            .padding(DS.Space.s3)
             .dsWidgetSurface(fillOpacity: WalletCardStyle.fill)
-            .settleIn(delay: 0.05)
+            .padding(.top, DS.Space.s3)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, DS.Space.s4)
+        .padding(.top, DS.Space.s4 + 5)
+        .settleIn(delay: 0.05)
     }
 
-    /// Which groups this address is filed under, and the door to file it
-    /// (2026-08-01). Always present: a card that only showed groups once you
-    /// had them would leave the feature discoverable solely by long-pressing a
-    /// row, which is where the verb lives but not where anyone looks first.
-    private var groupRow: some View {
-        let groups = current.groupNames
-        return Menu {
-            GroupMenuItems(entry: current, groups: book.groupNames) {
-                groupDraft = ""
-                addingGroup = true
-            }
-        } label: {
-            HStack(spacing: DS.Space.s2) {
-                Image(systemName: "folder")
-                    .dsGlyph(13)
-                    .foregroundStyle(DS.textTertiary)
-                Text(groups.isEmpty ? String(localized: "Add to a group")
-                                    : groups.joined(separator: ", "))
-                    .dsText(.callout15)
-                    .foregroundStyle(groups.isEmpty ? DS.textSecondary : DS.textPrimary)
-                    .lineLimit(1)
-                Spacer(minLength: 0)
-                Image(systemName: "chevron.up.chevron.down")
-                    .dsGlyph(10)
-                    .foregroundStyle(DS.textTertiary)
-            }
-            .padding(DS.Space.s3)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .dsWidgetSurface(fillOpacity: WalletCardStyle.fill)
-        .dsHover()
-    }
-
-    /// The address, as one chip under the name (prd §435).
+    /// How much you two have dealt, and over how long — the one reading this
+    /// screen owns and no other surface in the app states (prd §443).
     ///
-    /// It was a full-width card holding the whole address over two lines with
-    /// a separate Copy button — correct, and the heaviest object on a screen
-    /// whose subject is a person. A capsule reads as an identity handle, which
-    /// is what an address is on a profile.
+    /// **It is not a balance and §435 is intact.** That ruling struck every
+    /// USD total off the manager because the Wallet feed's crown card owns the
+    /// money reading once; this is a COUNT of the corpus's own rows plus the
+    /// native-unit net the summary already computed, neither of which is a
+    /// holding and neither of which is stated anywhere else.
     ///
-    /// **It still shows every character**, middle-truncated rather than
-    /// clipped, because the one screen that exists to tell two look-alike
-    /// addresses apart cannot be the screen that hides their difference —
-    /// `lookalikeWarning` above prints both in full for exactly that reason.
-    private var addressRow: some View {
-        HStack(spacing: DS.Space.s2) {
-            Text(current.address)
-                .dsText(.mono13).foregroundStyle(DS.textSecondary)
-                .lineLimit(1)
-                .truncationMode(.middle)
-            CopyAddressButton(address: current.address, expanded: true)
-        }
-        .padding(.horizontal, DS.Space.s3)
-        .padding(.vertical, DS.Space.s2)
-        .background(DS.fillFaint, in: Capsule(style: .continuous))
-    }
-
+    /// The empty case is a sentence, not a zero. "0 transactions" at
+    /// `stat24` is a zero dressed as a reading, and the state is the most
+    /// common one there is — the moment right after you name an address, which
+    /// is usually the moment right before you watch it. Silently omitting the
+    /// section (what shipped) reads as the screen being broken; one quiet line
+    /// says the app looked.
     @ViewBuilder
-    private var historySection: some View {
+    private var relationshipLede: some View {
         let things = history
-        if !things.isEmpty {
-            let summary = HistorySummary(things)
-            VStack(alignment: .leading, spacing: DS.Space.s2) {
-                Text("Your history together · \(things.count)")
+        VStack(alignment: .leading, spacing: 0) {
+            if things.isEmpty {
+                VStack(spacing: 2) {
+                    Text("No history together yet")
+                        .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                    Text("Transfers between your wallets and this address will show here.")
+                        .dsText(.label12).foregroundStyle(DS.textTertiary)
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .frame(maxWidth: .infinity)
+            } else {
+                let summary = HistorySummary(things)
+                Text("Your history together")
                     .dsText(.label12).foregroundStyle(DS.textSecondary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                Text("^[\(things.count) transaction](inflect: true)")
+                    .dsText(.stat24).foregroundStyle(DS.textPrimary)
+                    .monospacedDigit()
+                    .padding(.top, DS.Space.s1)
                 if let line = summaryLine(for: summary) {
                     Text(line)
                         .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.top, 1)
                 }
                 // HOW FAR BACK YOU TWO GO (2026-08-20, prd §417). The rows
                 // below are newest-first and answer WHAT; they are silent on
@@ -1102,57 +1129,12 @@ struct AddressCard: View {
                 // the preview instead of the relationship.
                 WalletRunwayRail(dates: things.compactMap { $0.isLive ? $0.capturedAt : nil },
                                  sense: .behind)
-                ForEach(Array(Array(things.prefix(6)).keyed.enumerated()), id: \.element.id) { i, row in
-                    // Corollary 3 (build 176) — see `ThingRowKeying`.
-                    if let thing = row.live {
-                        HStack(spacing: DS.Space.s3) {
-                            KindGlyph(kind: thing.kind, size: 26)
-                            VStack(alignment: .leading, spacing: 1) {
-                                Text(WalletValue.title(thing)).dsText(.subhead13)
-                                    .foregroundStyle(DS.textPrimary).lineLimit(1)
-                                    // The rename cascade (see `rename(to:)`) —
-                                    // each row picks up the new name a beat
-                                    // after the one above it, so a name
-                                    // visibly sweeps down your history with
-                                    // this address instead of the list simply
-                                    // being different afterwards.
-                                    .contentTransition(.opacity)
-                                    .animation(DS.Motion.standard.delay(Double(i) * 0.06),
-                                               value: renameCascade)
-                                Text(thing.capturedAt.formatted(.dateTime.month(.abbreviated).day()))
-                                    .dsText(.label12).foregroundStyle(DS.textTertiary)
-                            }
-                            Spacer(minLength: 0)
-                        }
-                        // The cascade (prd §171) — the app's own sheet grammar,
-                        // which this card was missing: your history with someone
-                        // arrives a beat at a time rather than as a slab.
-                        .settleIn(delay: 0.05 + Double(i) * 0.04)
-                    }
-                }
-                if things.count > 6 {
-                    NavigationLink {
-                        AddressHistoryScreen(entry: current)
-                    } label: {
-                        HStack(spacing: DS.Space.s2) {
-                            Text("See all \(things.count)")
-                                .dsText(.subhead13).fontWeight(.semibold)
-                                .foregroundStyle(DS.tint)
-                            Spacer(minLength: 0)
-                            Image(systemName: "chevron.right")
-                                .dsGlyph(11)
-                                .foregroundStyle(DS.textTertiary)
-                        }
-                        .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    .dsHover()
-                    .padding(.top, 2)
-                }
+                    .padding(.top, DS.Space.s3)
             }
-            .padding(DS.Space.s3)
-            .dsWidgetSurface(fillOpacity: WalletCardStyle.fill)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, DS.Space.s4)
+        .padding(.top, DS.Space.s4 + 5)
     }
 
     /// "since Mar 3 · net −0.80 ETH" — the two facts a count alone can't say.
@@ -1190,6 +1172,129 @@ struct AddressCard: View {
         f.maximumFractionDigits = 4
         f.minimumFractionDigits = 0
         return f.string(from: NSNumber(value: value)) ?? String(format: "%.4f", value)
+    }
+
+    // MARK: - The record
+
+    /// Your history with this address, as a LIST rather than a card
+    /// (2026-08-22, prd §443).
+    ///
+    /// Three things changed and each has its own reason. The rows are
+    /// full-width and uncontained — a record is a list, and wrapping a list in
+    /// a rounded rectangle makes it a widget ABOUT a list. The verb leads and
+    /// the stamped amount trails (see `AddressHistoryRow`, which owns that
+    /// split and is harness-proven), so direction reads down one edge instead
+    /// of being buried mid-sentence at six horizontal positions. And there are
+    /// no month headers: every row now carries its own date in the trailing
+    /// slot, so a header would state it twice. The "See all" screen keeps its
+    /// headers — at two hundred rows they earn their place.
+    ///
+    /// When the relationship is empty this draws nothing at all: the lede
+    /// above has already said so in a sentence, and a second empty section
+    /// under it would say it twice.
+    @ViewBuilder
+    private var historySection: some View {
+        let things = history
+        if !things.isEmpty {
+            VStack(spacing: 0) {
+                ForEach(Array(Array(things.prefix(6)).keyed.enumerated()), id: \.element.id) { i, row in
+                    // Corollary 3 (build 176) — see `ThingRowKeying`.
+                    if let thing = row.live {
+                        historyRow(thing, index: i)
+                    }
+                }
+                if things.count > 6 {
+                    NavigationLink {
+                        AddressHistoryScreen(entry: current)
+                    } label: {
+                        HStack(spacing: DS.Space.s2) {
+                            Text("See all \(things.count)")
+                                .dsText(.subhead13).fontWeight(.semibold)
+                                .foregroundStyle(DS.tint)
+                            Spacer(minLength: 0)
+                            Image(systemName: "chevron.right")
+                                .dsGlyph(11)
+                                .foregroundStyle(DS.textTertiary)
+                        }
+                        .contentShape(Rectangle())
+                        .dsTapTarget()
+                    }
+                    .buttonStyle(.plain)
+                    .dsHover()
+                    .padding(.top, DS.Space.s3)
+                }
+            }
+            .padding(.horizontal, DS.Space.s4)
+            .padding(.top, DS.Space.s4 + 9)
+        }
+    }
+
+    /// One row. The amount wears the plain text ramp and NO state colour —
+    /// green on an inbound transfer congratulates you for being paid back and
+    /// congratulates you identically for being dusted by a stranger. On this
+    /// screen direction is a fact, not a verdict (prd §443).
+    private func historyRow(_ thing: Thing, index: Int) -> some View {
+        let parts = AddressHistoryRow.parts(direction: thing.transferDirection,
+                                            amount: thing.transferAmount,
+                                            fallbackTitle: WalletValue.title(thing),
+                                            hidden: BalancePrivacy.shared.hidden,
+                                            mask: BalancePrivacy.mask)
+        return HStack(alignment: .top, spacing: DS.Space.s3) {
+            KindGlyph(kind: thing.kind, size: 26)
+            Text(parts.lead)
+                .dsText(.subhead13)
+                .foregroundStyle(DS.textPrimary)
+                .lineLimit(2)
+                // The rename cascade (see `rename(to:)`) — each row picks up
+                // the new name a beat after the one above it. It still runs
+                // for every row that keeps a full sentence; a split row has no
+                // counterparty left in it to sweep, which is the stated cost
+                // of the split.
+                .contentTransition(.opacity)
+                .animation(DS.Motion.standard.delay(Double(index) * 0.06),
+                           value: renameCascade)
+            Spacer(minLength: DS.Space.s2)
+            VStack(alignment: .trailing, spacing: 1) {
+                if let amount = parts.amount {
+                    Text(amount)
+                        .dsText(.mono13)
+                        .foregroundStyle(DS.textPrimary)
+                        .monospacedDigit()
+                        .lineLimit(1)
+                }
+                Text(thing.capturedAt.formatted(.dateTime.month(.abbreviated).day()))
+                    .dsText(.label12).foregroundStyle(DS.textTertiary)
+            }
+        }
+        .padding(.vertical, 9)
+        // The cascade (prd §171) — the app's own sheet grammar: your history
+        // with someone arrives a beat at a time rather than as a slab.
+        .settleIn(delay: 0.05 + Double(index) * 0.04)
+    }
+
+    // MARK: - Details
+
+    /// The settings-shaped facts, in ONE list with the rows touching
+    /// (2026-08-22, prd §443) — where they were two separately shadowed cards
+    /// each holding a single row, drawn at exactly the weight the security
+    /// notice above them wears.
+    private var detailsList: some View {
+        VStack(spacing: 0) {
+            if isInBook {
+                HStack(spacing: DS.Space.s3) {
+                    Text("Named").dsText(.callout15).foregroundStyle(DS.textSecondary)
+                    Spacer(minLength: 0)
+                    Text(current.addedAt.formatted(.dateTime.month(.abbreviated).day()))
+                        .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                }
+                .padding(.horizontal, DS.Space.s3 + 2)
+                .padding(.vertical, DS.Space.s3 + 1)
+            }
+            explorerRow
+        }
+        .dsWidgetSurface(fillOpacity: WalletCardStyle.fill)
+        .padding(.horizontal, DS.Space.s4)
+        .padding(.top, DS.Space.s4 + 9)
     }
 
     /// The door out, per family (2026-08-01). It used to be Etherscan or
@@ -1235,19 +1340,142 @@ struct AddressCard: View {
                 openURL(url)
             } label: {
                 HStack(spacing: DS.Space.s2) {
-                    Text(link.label).dsText(.callout15).foregroundStyle(DS.textSecondary)
+                    Text(link.label).dsText(.callout15).foregroundStyle(DS.textPrimary)
+                    Spacer(minLength: 0)
                     Image(systemName: "arrow.up.right")
                         .dsGlyph(12)
                         .foregroundStyle(DS.textTertiary)
-                    Spacer(minLength: 0)
                 }
-                .padding(DS.Space.s3)
+                .padding(.horizontal, DS.Space.s3 + 2)
+                .padding(.vertical, DS.Space.s3 + 1)
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .dsWidgetSurface(fillOpacity: WalletCardStyle.fill)
             .dsHover()
         }
+    }
+
+    // MARK: - The verb
+
+    /// Whether this address has a watch decision at all — a CONTRACT does not
+    /// (see `watchBar`), so the bar is not drawn and the sheet simply ends.
+    private var watchPillShown: Bool {
+        switch current.kind {
+        case .contract, .safe:                 return false
+        case .wallet, .unknown, .smartAccount: return true
+        }
+    }
+
+    /// THE VERB THIS SCREEN NEVER HAD (prd §435), now PINNED (prd §443).
+    ///
+    /// The address card is where you decide what an address is to you — it
+    /// carries the name, the groups, the live approvals, the whole history —
+    /// and §435 finally gave it the one decision that changes anything. It
+    /// then put that decision mid-scroll, so by the time the history had
+    /// finished making the case for watching, the verb was off screen. A
+    /// pinned bar keeps it at thumb height for the whole argument.
+    ///
+    /// Three states and no dead control (§83). Watching offers to stop;
+    /// not-watching offers to start; at the cap it says so plainly and stays
+    /// inert rather than raising an alert that repeats a fact it could have
+    /// printed. A CONTRACT gets no bar at all: `WalletStore` can technically
+    /// watch one, but a contract has no holdings and no feed of its own, so
+    /// offering it would be an invitation to spend one of five slots on
+    /// nothing — and an empty bar hovering over the sheet would be the dead
+    /// control twice over.
+    ///
+    /// It wears the address's OWN hue, the same one the pour behind it and the
+    /// face above it carry, because at this size a tinted button IS the
+    /// person. Machinery would borrow the app tint — see `pourHue` — which is
+    /// exactly why machinery doesn't get one.
+    @ViewBuilder
+    private var watchBar: some View {
+        if watchPillShown {
+            let store = WalletStore.shared
+            let watching = store.addresses.contains {
+                store.scopeMatches(current.address, scope: $0.address)
+            }
+            let full = !watching && !store.canWatchMore
+            Button {
+                toggleWatch(watching: watching)
+            } label: {
+                Text(watching ? String(localized: "Watching")
+                     : full ? String(localized: "Watching \(WalletStore.watchLimit) already")
+                     : String(localized: "Watch \(current.name)"))
+                    .dsText(.heading17)
+                    .foregroundStyle(watching || full ? DS.textSecondary : .white)
+                    .lineLimit(1)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: DS.Hit.min + 6)
+                    .background(watching || full ? AnyShapeStyle(DS.fillFaint)
+                                                 : AnyShapeStyle(pourHue),
+                                in: Capsule(style: .continuous))
+                    .contentShape(Capsule(style: .continuous))
+            }
+            .buttonStyle(PressSpring())
+            .disabled(full)
+            .accessibilityLabel(Text(watching ? "Watching \(current.name), tap to stop"
+                                              : "Watch \(current.name)"))
+            .padding(.horizontal, DS.Space.s4)
+            .padding(.top, DS.Space.s3)
+            .padding(.bottom, DS.Space.s2)
+            // Glass, and no hairline above it — §8's no-lines law has zero
+            // exceptions, so the bar is separated from the record by its own
+            // material and nothing else.
+            .background(.ultraThinMaterial)
+        }
+    }
+
+    /// Start or stop watching, with the same consequences the book row's star
+    /// has always carried — the wallet-riding seats reconciled on the way in
+    /// (§207) and this address's landed rows pruned on the way out (§286).
+    /// Written once here rather than shared with `WalletScreen.toggleWatch`
+    /// because that one also drives the row's promote animation and its cap
+    /// alert, neither of which exists on a sheet.
+    private func toggleWatch(watching: Bool) {
+        DSHaptic.tap()
+        let store = WalletStore.shared
+        if watching {
+            guard let i = store.addresses.firstIndex(where: {
+                store.scopeMatches(current.address, scope: $0.address)
+            }) else { return }
+            let gone = store.addresses[i].address
+            withAnimation(DS.Motion.standard) { store.remove(at: IndexSet(integer: i)) }
+            FollowPrune.removeWallet(address: gone,
+                                     stillWatched: store.addresses.map(\.address),
+                                     context: modelContext)
+            return
+        }
+        if case .added = store.outcome(ofAdding: current.address, label: current.name) {
+            DSHaptic.success()
+            // Watching is consent (§207) — the wallet-riding seats are on the
+            // moment a wallet is. `BridgeStore` is an environment object rather
+            // than a singleton, so this sheet asks for it by name.
+            bridges.reconcileWalletSeats()
+        }
+    }
+
+    /// Naming, and the history catching up (2026-08-01).
+    ///
+    /// **The moment this card was missing.** A name isn't a label on one row —
+    /// it rewrites every transaction you've ever had with this address, all at
+    /// once, and that is the entire argument for naming anything. The card
+    /// already had those transactions on screen and changed them silently, so
+    /// the one thing worth seeing happened invisibly.
+    ///
+    /// `renameCascade` is bumped after the rewrite lands; the history rows
+    /// stagger their cross-fade off it (see `historyRow`), so the change reads
+    /// as sweeping down the list rather than as a redraw. Nothing is claimed
+    /// if nothing changed: a rename that rewrote no titles simply doesn't
+    /// cascade — which since §443 includes every row the card split, since a
+    /// split row has no counterparty clause left to rewrite.
+    private func rename(to name: String) {
+        book.setName(name, for: entry.address)
+        let changed = CounterpartyRetitle.applyCurrentName(for: entry.address,
+                                                           in: modelContext)
+        DSHaptic.success()
+        guard changed > 0 else { return }
+        withAnimation(DS.Motion.standard) { renameCascade += 1 }
     }
 }
 
@@ -1263,27 +1491,64 @@ struct AddressHistoryScreen: View {
         AddressActivity.history(for: entry.address, in: modelContext)
     }
 
+    /// The history in month buckets, newest first — headers the CARD
+    /// deliberately does not draw (2026-08-22, prd §443).
+    ///
+    /// The card's six rows each carry their own date in the trailing slot, so
+    /// a header there would say it twice; at two hundred rows a header is the
+    /// only thing that makes the list scannable, so this is not an
+    /// inconsistency between the two surfaces but the same rule answered at
+    /// two different lengths.
+    ///
+    /// `.live` at the boundary, per corollary 4 — this hands arrays onward.
+    private var months: [(key: Date, rows: [Thing])] {
+        var order: [Date] = []
+        var buckets: [Date: [Thing]] = [:]
+        let calendar = Calendar.current
+        for thing in history where thing.isLive {
+            let month = calendar.date(from: calendar.dateComponents([.year, .month],
+                                                                    from: thing.capturedAt))
+                ?? thing.capturedAt
+            if buckets[month] == nil { order.append(month) }
+            buckets[month, default: []].append(thing)
+        }
+        return order.map { ($0, buckets[$0] ?? []) }
+    }
+
     var body: some View {
         List {
-            // `.keyed` per the CLAUDE.md rule against keying a ForEach on a
-            // derived array of raw `Thing` refs — see `ThingRowKeying.swift`.
-            ForEach(history.keyed) { row in
-                // Corollary 3 (build 176) — see `ThingRowKeying`.
-                if let thing = row.live {
-                    HStack(spacing: DS.Space.s3) {
-                        KindGlyph(kind: thing.kind, size: 26)
-                        VStack(alignment: .leading, spacing: 1) {
-                            Text(WalletValue.title(thing)).dsText(.subhead13)
-                                .foregroundStyle(DS.textPrimary).lineLimit(1)
-                            Text(thing.capturedAt.formatted(.dateTime.month(.abbreviated).day().year()))
-                                .dsText(.label12).foregroundStyle(DS.textTertiary)
+            ForEach(months, id: \.key) { month in
+                Section {
+                    // `.keyed` per the CLAUDE.md rule against keying a ForEach
+                    // on a derived array of raw `Thing` refs — see
+                    // `ThingRowKeying.swift`.
+                    ForEach(month.rows.keyed) { row in
+                        // Corollary 3 (build 176) — see `ThingRowKeying`.
+                        if let thing = row.live {
+                            HStack(spacing: DS.Space.s3) {
+                                KindGlyph(kind: thing.kind, size: 26)
+                                // The FULL title here, counterparty clause and
+                                // all — unlike the card, this screen is not
+                                // itself the counterparty, and it is where
+                                // §441's rename cascade keeps a stage.
+                                Text(WalletValue.title(thing)).dsText(.subhead13)
+                                    .foregroundStyle(DS.textPrimary).lineLimit(2)
+                                Spacer(minLength: DS.Space.s2)
+                                Text(thing.capturedAt.formatted(.dateTime.month(.abbreviated).day()))
+                                    .dsText(.label12).foregroundStyle(DS.textTertiary)
+                            }
                         }
-                        Spacer(minLength: 0)
                     }
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(Color.clear)
+                } header: {
+                    Text(month.key.formatted(.dateTime.month(.wide).year()))
+                        .dsText(.label12).foregroundStyle(DS.textSecondary)
+                        .textCase(nil)
                 }
+                .listRowInsets(EdgeInsets(top: 0, leading: DS.Space.s4,
+                                          bottom: 0, trailing: DS.Space.s4))
             }
-            .listRowSeparator(.hidden)
-            .listRowBackground(Color.clear)
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)

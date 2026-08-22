@@ -581,6 +581,17 @@ harness "Wallet-visualization self-test" "wallet-viz self-test" "scripts/wallet-
 # this screen (the 2026-08-21 ruling).
 harness "Address-book shape self-test" "address-book self-test" "scripts/address-book-selftest.sh" "the address-book self-test failed — run scripts/address-book-selftest.sh"
 
+# Every row on an address's own profile (prd §443). The split it guards is the
+# one place in the app where a stamped amount is re-composed for DISPLAY rather
+# than read whole, and every way it can be wrong renders as an ordinary row on
+# the screen where you decide whether to trust somebody: a sent transfer
+# wearing a `+`, a spoofed token's phishing domain promoted into the one slot
+# §374's mask leaves visible, a masked figure that survived the mask anyway, or
+# an approval that quietly lost its sentence. It also carries the negative no
+# assertion can reach — the row never paints a verdict colour over what is,
+# on this screen, a fact.
+harness "Address history row self-test" "address history row self-test" "scripts/address-history-row-selftest.sh" "the address history-row self-test failed — run scripts/address-history-row-selftest.sh"
+
 # The WalletConnect picker's arithmetic (`Model/WalletConnectPlan.swift`, prd
 # §376). The bug it replaces was unreportable, not merely unnoticed: the
 # connect door looped `WalletStore.add` over every shared account and flagged

@@ -31039,6 +31039,34 @@
         }
       }
     },
+    "Connect a wallet app": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Conectar una app de cartera"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "ウォレットアプリを接続"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "지갑 앱 연결"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "连接钱包应用"
+          }
+        }
+      }
+    },
     "Connect an app and it lands here.": {
       "localizations": {
         "es": {
@@ -41849,6 +41877,34 @@
         }
       }
     },
+    "Groups: %@": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Grupos: %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "グループ：%@"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "그룹: %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "分组：%@"
+          }
+        }
+      }
+    },
     "Grow": {
       "localizations": {
         "es": {
@@ -48663,6 +48719,34 @@
         }
       }
     },
+    "More": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Más"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "その他"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "더 보기"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "更多"
+          }
+        }
+      }
+    },
     "More from this book": {
       "localizations": {
         "es": {
@@ -49713,6 +49797,34 @@
           "stringUnit": {
             "state": "translated",
             "value": "名称、符号、地址或链接"
+          }
+        }
+      }
+    },
+    "Named": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Nombrada"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "名前を付けた日"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "이름 지정"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "命名于"
           }
         }
       }
@@ -51466,6 +51578,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "自你开始关注以来没有花费过 Gas 费。"
+          }
+        }
+      }
+    },
+    "No history together yet": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Aún no hay historial en común"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "まだやり取りはありません"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "아직 함께한 기록이 없습니다"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "你们之间还没有往来"
           }
         }
       }
@@ -65558,6 +65698,34 @@
         }
       }
     },
+    "Remove from book": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Quitar de la libreta"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "アドレス帳から削除"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "주소록에서 삭제"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "从地址簿中移除"
+          }
+        }
+      }
+    },
     "Remove its things too": {
       "localizations": {
         "es": {
@@ -67277,6 +67445,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "与提问使用同一模型。为截图命名是件小事——更便宜、更快的模型通常做得一样好，成本只是零头。"
+          }
+        }
+      }
+    },
+    "Same short form, different address. Compare every character before you copy.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Misma forma corta, dirección distinta. Compara cada carácter antes de copiar."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "短縮表示は同じですが、別のアドレスです。コピーする前にすべての文字を確認してください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "짧은 형태는 같지만 다른 주소입니다. 복사하기 전에 모든 문자를 비교하세요."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "缩写相同，但地址不同。复制前请逐个字符核对。"
           }
         }
       }
@@ -75529,6 +75725,34 @@
         }
       }
     },
+    "They can move your tokens right now": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Ahora mismo pueden mover tus tokens"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "現在、あなたのトークンを動かせます"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "지금 내 토큰을 옮길 수 있습니다"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "目前可以转移你的代币"
+          }
+        }
+      }
+    },
     "Thin book": {
       "localizations": {
         "es": {
@@ -76175,6 +76399,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "本月"
+          }
+        }
+      }
+    },
+    "This one": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Esta"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "このアドレス"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "이 주소"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "当前地址"
           }
         }
       }
@@ -76907,6 +77159,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "把 %@ 个 %@ 的基本单位转给 %@。"
+          }
+        }
+      }
+    },
+    "Transfers between your wallets and this address will show here.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Aquí aparecerán las transferencias entre tus carteras y esta dirección."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "あなたのウォレットとこのアドレスの間の送受信がここに表示されます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "내 지갑과 이 주소 사이의 전송 내역이 여기에 표시됩니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "你的钱包与此地址之间的转账将显示在这里。"
           }
         }
       }
@@ -78499,6 +78779,34 @@
         }
       }
     },
+    "Waiting for your wallet, tap to cancel": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Esperando tu cartera; toca para cancelar"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "ウォレットを待っています。タップでキャンセル"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "지갑을 기다리는 중입니다. 탭하여 취소"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "正在等待你的钱包，点按可取消"
+          }
+        }
+      }
+    },
     "Waiting on %@": {
       "localizations": {
         "es": {
@@ -78789,6 +79097,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "等待发送"
+          }
+        }
+      }
+    },
+    "Waiting — tap to cancel": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Esperando: toca para cancelar"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "待機中 — タップでキャンセル"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "대기 중 — 탭하여 취소"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "等待中 — 点按取消"
           }
         }
       }
@@ -88671,6 +89007,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "由你来允许"
+          }
+        }
+      }
+    },
+    "^[%lld transaction](inflect: true)": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "^[%lld transacción](inflect: true)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld 件の取引"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "거래 %lld건"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld 笔交易"
           }
         }
       }
