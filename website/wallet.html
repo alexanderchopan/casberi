@@ -3,13 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Casberi &mdash; The Wallet</title>
-<meta name="description" content="Paste an address &mdash; or connect a wallet &mdash; and its whole onchain life lands in your feed. Apple Card too. Read-only, always.">
+<title>Casberi &mdash; The Wallet, drawn</title>
+<meta name="description" content="Most wallets give you a number and a list. Casberi draws it &mdash; treemaps, flow maps, liquidation axes, connection graphs. Read-only, always.">
 <meta property="og:title" content="Casberi &mdash; The Wallet">
-<meta property="og:description" content="Everything the Wallet reads: EVM, Bitcoin, Solana and Apple Card. Read-only, always.">
+<meta property="og:description" content="A wallet that draws what it reads: treemaps, flow maps, liquidation axes, connection graphs. Read-only, always.">
 <meta property="og:type" content="website">
 <link rel="icon" href="icons/casberi-octopus.png">
-<link rel="stylesheet" href="styles.css?v=202608230130">
+<link rel="stylesheet" href="styles.css?v=202608230215">
 </head>
 <body>
 
@@ -33,8 +33,8 @@
   <header class="w-hero">
     <div class="copy">
       <p class="m-eyebrow">The Wallet</p>
-      <h1>Everything the Wallet reads.</h1>
-      <p class="sub">Paste an address. Its whole onchain life lands in your feed &mdash; your cards beside it. Never trades, never moves funds.</p>
+      <h1>Your wallet, drawn.</h1>
+      <p class="sub">Most wallets give you a number and a list. Paste an address and Casberi draws what it finds &mdash; and never trades, never moves funds.</p>
       <div class="cta-row" style="justify-content:flex-start;margin-top:32px">
         <a class="cta cta-ink" href="https://testflight.apple.com/join/xBD4tYZh" target="_blank" rel="noopener">Get it on TestFlight</a>
       </div>
@@ -54,98 +54,85 @@
 
   <!-- the features: a 3-column grid of picture boxes, one line under each -->
   <section style="margin-top:88px">
-    <p class="w-eyebrow">Features</p>
+    <p class="w-eyebrow">What it draws</p>
 
     <div class="w-grid">
-
-      <div class="w-cell">
-        <div class="w-shotbox"><img src="flow/viz-balance.jpg?v=202608230130" alt="Balance: one total across every watched wallet, with its curve." loading="lazy"></div>
-        <h3>Balance</h3>
-        <div class="w-chips"><span class="w-chip">combined</span><span class="w-chip">per wallet</span></div>
-      </div>
 
       <div class="w-cell">
         <div class="w-shotbox"><img src="flow/viz-holdings.jpg?v=202608230130" alt="What you hold: every token, sized by what it is worth." loading="lazy"></div>
         <h3>Holdings</h3>
         <div class="w-chips"><span class="w-chip">priced</span><span class="w-chip">every token</span></div>
       </div>
-
       <div class="w-cell">
         <div class="w-shotbox"><img src="flow/viz-flow.jpg?v=202608230130" alt="Where it moved: money in and out since you started watching, banded by counterparty." loading="lazy"></div>
         <h3>Flow map</h3>
         <div class="w-chips"><span class="w-chip">counterparty</span><span class="w-chip">since watched</span></div>
       </div>
-
-      <div class="w-cell">
-        <div class="w-shotbox"><img src="flow/viz-protocols2.jpg?v=202608230130" alt="In protocols: deposited across Uniswap and Hyperliquid, and a risk strip." loading="lazy"></div>
-        <h3>In protocols</h3>
-        <div class="w-chips"><span class="w-chip">Deposited</span><span class="w-chip">Locked</span><span class="w-chip">Owed</span></div>
-      </div>
-
-      <div class="w-cell">
-        <div class="w-shotbox"><img src="flow/viz-lending.jpg?v=202608230130" alt="Lending: Aave, Spark and Morpho with health factors and amounts." loading="lazy"></div>
-        <h3>Lending</h3>
-        <div class="w-chips"><span class="w-chip">Aave</span><span class="w-chip">Morpho</span><span class="w-chip">Spark</span></div>
-      </div>
-
-      <div class="w-cell">
-        <div class="w-shotbox"><img src="flow/viz-liquidation.jpg?v=202608230130" alt="Distance to liquidation: every borrow on one axis, from comfortable to liquidation." loading="lazy"></div>
-        <h3>Distance to liquidation</h3>
-        <div class="w-chips"><span class="w-chip">health factor</span><span class="w-chip">one axis</span></div>
-      </div>
-
-      <div class="w-cell">
-        <div class="w-shotbox"><img src="flow/viz-liquidity.jpg?v=202608230130" alt="Liquidity: four Uniswap positions, one of them idle and out of range." loading="lazy"></div>
-        <h3>Liquidity</h3>
-        <div class="w-chips"><span class="w-chip">Uniswap v3</span><span class="w-chip">v4</span></div>
-      </div>
-
-      <div class="w-cell">
-        <div class="w-shotbox"><img src="flow/viz-melt.jpg?v=202608230130" alt="Locked: 12,977 AERO with 41% of its voting power left, and a permanent lock that never decays." loading="lazy"></div>
-        <h3>Locked</h3>
-        <div class="w-chips"><span class="w-chip">Aerodrome</span><span class="w-chip">veAERO</span></div>
-      </div>
-
       <div class="w-cell">
         <div class="w-shotbox anchor-top"><img src="flow/viz-connected.jpg?v=202608230130" alt="Connected: which of your addresses have transacted with the same counterparties." loading="lazy"></div>
         <h3>Connected addresses</h3>
         <div class="w-chips"><span class="w-chip">no inference</span><span class="w-chip">spam excluded</span></div>
       </div>
-
+      <div class="w-cell">
+        <div class="w-shotbox"><img src="flow/viz-liquidation.jpg?v=202608230130" alt="Distance to liquidation: every borrow on one axis, from comfortable to liquidation." loading="lazy"></div>
+        <h3>Distance to liquidation</h3>
+        <div class="w-chips"><span class="w-chip">health factor</span><span class="w-chip">one axis</span></div>
+      </div>
+      <div class="w-cell">
+        <div class="w-shotbox"><img src="flow/viz-melt.jpg?v=202608230130" alt="Locked: 12,977 AERO with 41% of its voting power left, and a permanent lock that never decays." loading="lazy"></div>
+        <h3>Locked</h3>
+        <div class="w-chips"><span class="w-chip">Aerodrome</span><span class="w-chip">veAERO</span></div>
+      </div>
+      <div class="w-cell">
+        <div class="w-shotbox anchor-top"><img src="flow/viz-safe.jpg?v=202608230130" alt="Safe: your signature is needed on one transaction, with each pending transaction's signature count." loading="lazy"></div>
+        <h3>Safe</h3>
+        <div class="w-chips"><span class="w-chip">multisig</span><span class="w-chip">2 of 3</span></div>
+      </div>
+      <div class="w-cell">
+        <div class="w-shotbox anchor-top"><img src="flow/viz-privacypools.jpg?v=202608230130" alt="Privacy Pools: a deposit needs your proof, with the four states and how long each has waited." loading="lazy"></div>
+        <h3>Privacy Pools</h3>
+        <div class="w-chips"><span class="w-chip">Privacy Pools</span><span class="w-chip">Railgun</span></div>
+      </div>
+      <div class="w-cell">
+        <div class="w-shotbox anchor-top"><img src="flow/viz-cards.jpg?v=202608230130" alt="Apple Wallet: this month's spend by merchant, and a subscription that went up 30%." loading="lazy"></div>
+        <h3>Cards</h3>
+        <div class="w-chips"><span class="w-chip">Apple Wallet</span><span class="w-chip">Gnosis Pay</span><span class="w-chip">Privacy.com</span><span class="w-chip">ether.fi Cash</span><span class="w-chip">CardPointers</span><span class="w-chip">Peer</span></div>
+      </div>
+      <div class="w-cell">
+        <div class="w-shotbox"><img src="flow/viz-liquidity.jpg?v=202608230130" alt="Liquidity: four Uniswap positions, one of them idle and out of range." loading="lazy"></div>
+        <h3>Liquidity</h3>
+        <div class="w-chips"><span class="w-chip">Uniswap v3</span><span class="w-chip">v4</span></div>
+      </div>
+      <div class="w-cell">
+        <div class="w-shotbox"><img src="flow/viz-balance.jpg?v=202608230130" alt="Balance: one total across every watched wallet, with its curve." loading="lazy"></div>
+        <h3>Balance</h3>
+        <div class="w-chips"><span class="w-chip">combined</span><span class="w-chip">per wallet</span></div>
+      </div>
+      <div class="w-cell">
+        <div class="w-shotbox"><img src="flow/viz-protocols2.jpg?v=202608230130" alt="In protocols: deposited across Uniswap and Hyperliquid, and a risk strip." loading="lazy"></div>
+        <h3>In protocols</h3>
+        <div class="w-chips"><span class="w-chip">Deposited</span><span class="w-chip">Locked</span><span class="w-chip">Owed</span></div>
+      </div>
+      <div class="w-cell">
+        <div class="w-shotbox"><img src="flow/viz-lending.jpg?v=202608230130" alt="Lending: Aave, Spark and Morpho with health factors and amounts." loading="lazy"></div>
+        <h3>Lending</h3>
+        <div class="w-chips"><span class="w-chip">Aave</span><span class="w-chip">Morpho</span><span class="w-chip">Spark</span></div>
+      </div>
       <div class="w-cell">
         <div class="w-shotbox anchor-top"><img src="flow/viz-nftpicker.jpg?v=202608230130" alt="Show which NFTs: a picker of every collection the wallet holds." loading="lazy"></div>
         <h3>NFTs</h3>
         <div class="w-chips"><span class="w-chip">you pick</span><span class="w-chip">no airdrops</span></div>
       </div>
-
-
       <div class="w-cell">
         <div class="w-shotbox"><img src="flow/viz-needsyou.jpg?v=202608230130" alt="Needs you: a dispute, two transactions short a signature, and an overdue reminder." loading="lazy"></div>
         <h3>Needs you</h3>
         <div class="w-chips"><span class="w-chip">Permit2</span><span class="w-chip">EIP-7702</span><span class="w-chip">ERC-4337</span></div>
       </div>
 
-      <div class="w-cell">
-        <div class="w-shotbox anchor-top"><img src="flow/viz-safe.jpg?v=202608230130" alt="Safe: your signature is needed on one transaction, with each pending transaction's signature count." loading="lazy"></div>
-        <h3>Safe</h3>
-        <div class="w-chips"><span class="w-chip">multisig</span><span class="w-chip">2 of 3</span></div>
-      </div>
-
-      <div class="w-cell">
-        <div class="w-shotbox anchor-top"><img src="flow/viz-privacypools.jpg?v=202608230130" alt="Privacy Pools: a deposit needs your proof, with the four states and how long each has waited." loading="lazy"></div>
-        <h3>Privacy Pools</h3>
-        <div class="w-chips"><span class="w-chip">Privacy Pools</span><span class="w-chip">Railgun</span></div>
-      </div>
-
-      <div class="w-cell">
-        <div class="w-shotbox anchor-top"><img src="flow/viz-cards.jpg?v=202608230130" alt="Apple Wallet: this month's spend by merchant, and a subscription that went up 30%." loading="lazy"></div>
-        <h3>Cards</h3>
-        <div class="w-chips"><span class="w-chip">Apple Wallet</span><span class="w-chip">Gnosis Pay</span><span class="w-chip">Privacy.com</span><span class="w-chip">ether.fi Cash</span><span class="w-chip">CardPointers</span><span class="w-chip">Peer</span></div>
-      </div>
-
     </div>
 
-    <div class="w-also">
+    <p class="w-eyebrow" style="margin-top:74px">Also read, not yet drawn</p>
+    <div class="w-also" style="margin-top:0">
       <div>
         <h4>Bitcoin</h4>
         <p>Told when a transfer settles. Confirmations or the mempool, dormancy, UTXO consolidation and its cost.</p>
