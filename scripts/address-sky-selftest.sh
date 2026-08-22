@@ -99,14 +99,16 @@ if [[ "${1:-}" == "--self-test" ]]; then
   # check that proves nothing, which is why this harness fails loudly on it.
   probe "the ring no longer starts at the top" \
     "s|return -Double.pi / 2 + (2|return Double.pi / 2 + (2|" "yes"
-  # Re-aimed when the bearing replaced the wallet-set signature as what a
-  # cluster is grouped on (prd §437): the old expression matched nothing, so
-  # the probe ran a clean copy and reported it as surviving. What it defended
-  # is still real and now lives in `meanAngle` — the fallback must be a
-  # function of the SET, so reading `first` instead of the lowest makes
-  # "reaches A and B" and "reaches B and A" land in different places.
-  probe "the degenerate bearing reads arrival order instead of the set" \
-    "s/guard let lowest = angles.min()/guard let lowest = angles.first/" "yes"
+  # Re-aimed twice (prd §437, then §438 — its first target was deleted with
+  # the wallet-set signature, its second became dead code when emptiestBearing
+  # took the decision over, and a mutation of dead code is unkillable by
+  # definition, which is exactly what the SURVIVED report said). What it
+  # defends now is the live rule: a body whose wallets face each other stands
+  # in the ring's emptiest gap, never under somebody's face. Breaking the
+  # better-candidate comparison makes every candidate lose, so the body lands
+  # on the default top bearing — directly inside the first wallet.
+  probe "the degenerate body stops seeking the emptiest gap" \
+    "s/if gap > bestClearance + 0.0001/if gap > bestClearance + 9.9/" "yes"
   print "address-sky-selftest: self-test OK"
 fi
 
@@ -230,13 +232,20 @@ check(strandedOnly.connectedBodies.isEmpty,
       "an address left reaching one watched wallet stops being a connection")
 
 // ---- twins ---------------------------------------------------------------
+// AT TWO WALLETS THE CONNECTED SET IS A WHEEL (prd §438): every drawn body
+// reaches the same pair by construction and the pair faces each other, so a
+// bearing carries no information — the bodies distribute EVENLY around the
+// whole connected ring instead of packing at the minimum step, which is what
+// drew the reported crescent of touching faces. Two bodies therefore sit
+// OPPOSITE each other: a full diameter apart, not one twinSpread.
 let twins = AddressSky.layout(watched: two,
                               connected: [connected("p", ["A", "B"]),
                                           connected("q", ["A", "B"])],
                               canWatchMore: false)!
 let tp = twins.connectedBodies[0].at, tq = twins.connectedBodies[1].at
 check(dist(tp, tq) > 0.05, "two people reaching the same pair do not stack")
-check(near(dist(tp, tq), AddressSky.twinSpread, 0.001), "twins spread by exactly one spread")
+check(near(dist(tp, tq), 2 * AddressSky.connectedRadius, 0.001),
+      "at two wallets, two connected bodies sit opposite each other")
 // Order-insensitive: "A,B" and "B,A" are ONE cluster.
 let flipped = AddressSky.layout(watched: two,
                                 connected: [connected("p", ["A", "B"]),
@@ -245,19 +254,27 @@ let flipped = AddressSky.layout(watched: two,
 check(dist(flipped.connectedBodies[0].at, flipped.connectedBodies[1].at) > 0.05,
       "the twin cluster is order-insensitive")
 // Stronger, and the form that actually pins it: flipping the key order must
-// produce the SAME PLACES, not merely two places that don't collide. The weak
-// form passes over a layout that reads arrival order, because the relaxation
-// pushes whatever it is given apart either way.
+// produce the SAME PLACES, not merely two places that don't collide.
 check(zip(twins.connectedBodies, flipped.connectedBodies).allSatisfy {
     near($0.at.x, $1.at.x) && near($0.at.y, $1.at.y)
 }, "flipping the wallet order changes nothing about where anybody lands")
-// Three twins spread along the connected ring, centred on their shared
-// ANGLE: the MIDDLE body takes exactly the point a lone body would (its
-// offset from the shared angle is zero by construction), and each
-// NEIGHBOURING pair is one spread apart. Not the centroid and not every
-// pair, which is what a cluster on an arc stops being (prd §437): three
-// points on an arc have a centroid pulled in toward their own chord, and
-// the outer two of three sit two steps apart, not one.
+// And the THREE-OR-MORE regime, where a bearing IS a fact and the minimal
+// separation is the behaviour: two bodies reaching the same pair among three
+// wallets sit exactly one twinSpread apart — with a FLOOR, because under the
+// spread-to-zero mutations near(x, 0) is satisfied by two stacked bodies and
+// the fixture must fail them, not bless them.
+let trio = AddressSky.layout(watched: three,
+                             connected: [connected("p3", ["A", "B"]),
+                                         connected("q3", ["A", "B"])],
+                             canWatchMore: false)!
+let t3p = trio.connectedBodies[0].at, t3q = trio.connectedBodies[1].at
+check(near(dist(t3p, t3q), AddressSky.twinSpread, 0.002) && dist(t3p, t3q) > 0.05,
+      "at three wallets, same-pair twins sit exactly one spread apart")
+// Three bodies over two wallets are the wheel at n=3: evenly spaced, a third
+// of a turn apart (chord 2·r·sin 60°), with the FIRST body standing exactly
+// where a lone one would — the wheel starts at the same emptiest gap a single
+// body is sent to, so growing from one to three moves nothing about where the
+// picture begins.
 let trips = AddressSky.layout(watched: two,
                               connected: [connected("p", ["A", "B"]),
                                           connected("q", ["A", "B"]),
@@ -267,17 +284,14 @@ let solo = AddressSky.layout(watched: two,
                              connected: [connected("q", ["A", "B"])],
                              canWatchMore: false)!
 let tripPts = trips.connectedBodies.map(\.at)
-check(near(tripPts[1].x, solo.connectedBodies[0].at.x)
-      && near(tripPts[1].y, solo.connectedBodies[0].at.y),
-      "a twin cluster is centred on the shared angle")
-check(near(dist(tripPts[0], tripPts[1]), AddressSky.twinSpread, 0.001)
-      && near(dist(tripPts[1], tripPts[2]), AddressSky.twinSpread, 0.001),
-      "neighbouring twins sit exactly one spread apart")
-// The OUTER pair is two steps along the arc, so it must be strictly further
-// than one spread — the assertion that catches a spread which stopped
-// scaling with the cluster and just stacked every body on its neighbour.
-check(dist(tripPts[0], tripPts[2]) > AddressSky.twinSpread * 1.5,
-      "the ends of a three-twin cluster sit further apart than neighbours")
+check(near(tripPts[0].x, solo.connectedBodies[0].at.x)
+      && near(tripPts[0].y, solo.connectedBodies[0].at.y),
+      "the wheel starts where a lone body stands")
+let third = 2 * AddressSky.connectedRadius * sin(Double.pi / 3)
+check(near(dist(tripPts[0], tripPts[1]), third, 0.002)
+      && near(dist(tripPts[1], tripPts[2]), third, 0.002)
+      && near(dist(tripPts[0], tripPts[2]), third, 0.002),
+      "three bodies over two wallets sit a third of a turn apart")
 // Every body still sits on the connected ring — the arc cannot drift off it.
 check(tripPts.allSatisfy {
     near(dist($0, AddressSky.Point(x: 0.5, y: 0.5)), AddressSky.connectedRadius, 0.0001)
@@ -380,6 +394,30 @@ let near2 = AddressSky.layout(watched: four,
                               canWatchMore: false)!
 check(near2.links.allSatisfy { closestToCentre($0) > AddressSky.connectedRadius * 0.5 },
       "a link between neighbouring wallets stays out of the middle")
+
+// (3b) The DEGENERATE bearing at four wallets — where it still runs now that
+// the two-wallet sky is a wheel and never calls the mean at all (prd §438).
+// A body reaching two OPPOSITE wallets of four has both arcs equal: the
+// vectors cancel, the fallback fires, and it must be a function of the SET —
+// the same body spelled "W0 and W2" and "W2 and W0" is one relationship and
+// lands in one place. This fixture is what keeps the arrival-order mutation
+// killable; the two-wallet fixture that used to cover it no longer reaches
+// the code.
+let anti = AddressSky.layout(watched: four,
+                             connected: [connected("g", ["A", "C"])],
+                             canWatchMore: false)!
+let antiFlipped = AddressSky.layout(watched: four,
+                                    connected: [connected("g", ["C", "A"])],
+                                    canWatchMore: false)!
+check(near(anti.connectedBodies[0].at.x, antiFlipped.connectedBodies[0].at.x)
+      && near(anti.connectedBodies[0].at.y, antiFlipped.connectedBodies[0].at.y),
+      "a body reaching opposite wallets lands in one place however its keys are spelled")
+// And it stands in an EMPTY gap — never radially under a wallet, which is
+// where the default bearing puts it if the gap search stops working. At the
+// emptiest gap of four wallets the nearest face is ~0.23 away; directly under
+// one it is exactly the radial 0.14.
+check(anti.watchedBodies.allSatisfy { dist(anti.connectedBodies[0].at, $0.at) > 0.16 },
+      "a body reaching opposite wallets stands clear of every face, in the ring's emptiest gap")
 
 // (4) The circular mean, at the wrap. A body reaching the LAST wallet on the
 // ring and the FIRST must sit between them across the top, not on the far

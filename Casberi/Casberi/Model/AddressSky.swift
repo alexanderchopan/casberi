@@ -312,13 +312,40 @@ enum AddressSky {
         // badly as one tucked under a wallet.
         let ringAngles = (0..<ringCount).map { ringAngle(index: $0, of: ringCount) }
 
-        // Where each body WANTS to be: the angle between the wallets it
-        // reaches. Collisions are resolved afterwards, over the whole set at
-        // once — see `resolveBearings`.
-        let wanted = placeable.map {
-            meanAngle(of: $0.keys.compactMap { walletAngle[$0] }, avoiding: ringAngles)
+        // Where each body sits. TWO REGIMES, split at the minimum wallet
+        // count, and the split is the fix for the sky's first user report at
+        // that count ("my addresses are NOT in a circle, they are still in
+        // some weird cluster", with a screenshot, prd §438).
+        //
+        // With exactly TWO wallets watched, every connected address reaches
+        // the same pair by construction, and the pair faces each other across
+        // the ring — so "between them" is every bearing equally, and each
+        // body's bearing carries no information at all. Handing six identical
+        // wishes to `resolveBearings` packed them shoulder-to-shoulder at the
+        // minimum step: every assertion about clearance held, and the drawing
+        // was a crescent of touching faces with nothing circular anywhere in
+        // it. When the bearing means nothing, use it to say the one thing
+        // left worth saying — that these bodies share an orbit: distribute
+        // them evenly around the WHOLE connected ring, starting from the
+        // emptiest gap in the outer one. Deterministic (input order, fixed
+        // start), order-of-keys-insensitive (no key is even read), and every
+        // link still tells the truth, since each body links to both wallets
+        // wherever it stands.
+        //
+        // With THREE or more, a bearing is a fact — "between A and B" is a
+        // place C is not — so bodies keep the angle between the wallets they
+        // reach and `resolveBearings` separates them minimally.
+        let bearings: [Double]
+        if watched.count == 2 && !placeable.isEmpty {
+            let start = emptiestBearing(among: ringAngles)
+            let step = 2 * Double.pi / Double(placeable.count)
+            bearings = placeable.indices.map { start + Double($0) * step }
+        } else {
+            let wanted = placeable.map {
+                meanAngle(of: $0.keys.compactMap { walletAngle[$0] }, avoiding: ringAngles)
+            }
+            bearings = resolveBearings(wanted)
         }
-        let bearings = resolveBearings(wanted)
 
         var links: [Link] = []
         var placed: [String: Point] = [:]
@@ -422,14 +449,13 @@ enum AddressSky {
     /// deterministically to a quarter turn clockwise of the LOWEST angle,
     /// rather than to whatever `atan2(0, 0)` happens to return.
     ///
-    /// The lowest and not the first, which is the whole of its correctness:
-    /// the fallback has to be a function of the SET, exactly as the vector
-    /// mean above it is. Reading `angles.first` made the answer depend on the
-    /// order the wallet keys arrived in, so "reaches A and B" and "reaches B
-    /// and A" — one relationship, two spellings — landed a quarter of the ring
-    /// apart, and the twin cluster that is supposed to hold them together
-    /// never formed. Caught by the harness's own order-insensitivity mutation
-    /// on the day this was written (prd §437).
+    /// The degenerate answer is a pure function of the OCCUPIED RING — it
+    /// reads nothing of the caller's key order, which is what makes "reaches
+    /// A and C" and "reaches C and A" one place by construction. (An earlier
+    /// cut kept a caller-derived fallback angle here; once `emptiestBearing`
+    /// decided the real answer that fallback was dead code wearing a
+    /// correctness argument, and dead code in the one branch the harness
+    /// mutation-tests is how a mutation goes unkillable — prd §438.)
     ///
     /// Which bearing it takes is not cosmetic, and the answer is "the emptiest
     /// one". Measured on the first real dump of the shipped arithmetic — three
@@ -452,23 +478,24 @@ enum AddressSky {
     /// stays a pure function of the set.
     private static func meanAngle(of angles: [Double],
                                   avoiding others: [Double]) -> Double {
-        guard let lowest = angles.min() else { return -Double.pi / 2 }
+        guard !angles.isEmpty else { return -Double.pi / 2 }
         let x = angles.reduce(0) { $0 + cos($1) }
         let y = angles.reduce(0) { $0 + sin($1) }
         guard (x * x + y * y).squareRoot() > 0.0001 else {
-            return emptiestBearing(fallback: lowest + Double.pi / 2, among: others)
+            return emptiestBearing(among: others)
         }
         return atan2(y, x)
     }
 
     /// The midpoint of the widest gap in an occupied ring — where a body can
-    /// stand without sitting under anybody. Falls back to the caller's own
-    /// bearing when there is nothing to avoid.
-    private static func emptiestBearing(fallback: Double, among others: [Double]) -> Double {
-        guard others.count > 1 else { return fallback }
+    /// stand without sitting under anybody. This is the whole answer for a
+    /// body whose wallets face each other: every bearing is equally between
+    /// them, so the only fact left to honour is where the ring is EMPTY.
+    private static func emptiestBearing(among others: [Double]) -> Double {
+        guard !others.isEmpty else { return -Double.pi / 2 }
         let sorted = others.sorted()
-        var best = fallback
-        var bestClearance = clearance(of: fallback, from: others)
+        var best = -Double.pi / 2
+        var bestClearance = -1.0
         for (index, angle) in sorted.enumerated() {
             let next = index + 1 < sorted.count ? sorted[index + 1] : sorted[0] + 2 * Double.pi
             let candidate = (angle + next) / 2

@@ -140,6 +140,7 @@ or by description rather than by `§N`.
 | the store / onboarding batches | a Connect screen with per-source rows | §96 — the connect screen died 2026-07-16; connecting happens in the catalog |
 | §435 (the sky) | a connected body pulled toward the centre from its wallets' midpoint, links bowed toward the centre, and a caption pairing the connected count with the book's size | §436 — the caption states the count alone (connected is a counterparty, never a subset of the book); §437 — connected bodies sit on their own ring at the angle between the wallets they reach, and links are straight |
 | §436 (the twin ring) | a twin cluster as a small ring built on the shared midpoint | §437 — twins spread along the connected ring they already sit on; neighbouring twins are still exactly one `twinSpread` apart, so the density ruling stands |
+| §437 (two-wallet placement) | a two-wallet sky's bodies separated at the minimum step, and no ring stroke drawn | §438 — at two wallets the bodies distribute evenly around the whole connected ring (a bearing carries no information there), and both rings are drawn |
 
 ### Renumbered entries
 
@@ -29599,3 +29600,27 @@ Asked for; already true. The manager's order is sky → the WATCH/NAME field →
 The layout is compiled and exercised against the real arithmetic rather than the mockup, which is what found §1b: three wallets place their connected bodies between the pairs they reach, six twins over two wallets span 0.175 × 0.380 (bounded by the connected ring, against the 0.575 chain §436 replaced), and a sweep of every shape the layout allows — two to five wallets, with and without the invitation, every pair plus a three-reach body — puts the worst face clearance at 0.14 against the 0.135 needed. The build is green and the harness passes with every mutation and guard proven able to fire, including the three new ones over the field.
 
 **No device has drawn it.** The empty state in particular has only ever been reasoned about — one `GeometryReader`, three dots and an invitation — and "it compiles" is not "it looks right"; the taller sky in particular is a judgement (400pt is a lot of an iPhone screen for one drawing) that only looking can settle.
+
+## 438. The two-wallet sky is a wheel, and the rings are drawn (user: "i din't understand my addresses are NOT in a circle, they are still in some weird cluster. what is going on w/ all this?", with a screenshot, 2026-08-22)
+
+§437 shipped and the first device to draw it produced the report above: six connected faces in a curved clump between two watched wallets, nothing circular anywhere on the screen. The computed layout for that corpus reproduces the screenshot exactly — the code did precisely what it was designed to do, and the design was wrong twice, both times AT THE MINIMUM WALLET COUNT, which is the most common corpus and keeps being treated as an edge case (§436 made this exact observation about the twin chain; this is the same lesson at the next layer up). This entry **amends §437** twice.
+
+### 1. At two wallets, the bodies distribute around the WHOLE ring
+
+With exactly two wallets watched, every connected address reaches the same pair by construction, and the pair faces each other across the ring — so "between them" is every bearing equally, and a body's bearing carries no information at all. `resolveBearings`, handed six identical wishes, packed them shoulder-to-shoulder at the minimum step: every clearance assertion held (closest pair 38pt against 36 needed) and the drawing was a crescent of touching faces. When the bearing means nothing, it is free to say the one thing left worth saying — that these bodies share an orbit: they distribute EVENLY around the whole connected ring now, starting from the emptiest gap in the outer one. For the reported corpus that is a hexagon, neighbours 63pt apart. Deliberately scoped to `watched.count == 2`: at three or more, a bearing IS a fact ("between A and B" is a place C is not), so bodies keep the angle between the wallets they reach and the minimal separation stands.
+
+### 2. The rings are DRAWN
+
+The drawing claimed everything sat on two rings and never drew either one — the §435 mockup had the circle stroke and the shipped view only ever drew bodies and links, so with two wallets and the invitation there were three points from which no one could infer a circle. `AddressSkyView` strokes both rings now (`DS.fillLine`, 1.5pt; ellipses, because positions scale x and y by the field's own sides), the inner one only once somebody is on it — an empty orbit is decoration. The empty state has drawn its ring since §437; this is the real sky catching up with its own empty state.
+
+### The dead code a mutation found
+
+Re-proving the harness surfaced a third thing: `meanAngle`'s degenerate fallback still computed a caller-derived angle (§437's "lowest, not first" correctness argument) and then handed it to `emptiestBearing`, which never used it — the ring always has three-plus slots when the mean runs, so the fallback argument was dead code wearing a correctness argument. The arrival-order mutation aimed at it was therefore UNKILLABLE, which is exactly what the SURVIVED report said. The fallback parameter is deleted; the degenerate answer is a pure function of the occupied ring by construction; the mutation is re-aimed at the live rule (break the gap search and the body lands radially under the first wallet, which a new fixture rejects). Standing rule, second instance today: a mutation that survives is a defect in the ASSERTION or in the CODE'S OWN reachability, never noise.
+
+### The fixtures moved with the regime
+
+The two-wallet twin fixtures asserted the crescent (pairs one `twinSpread` apart) and were rewritten to the wheel (a pair sits opposite; three sit a third of a turn apart; the wheel starts where a lone body stands). What they defended did not vanish — a NEW three-wallet fixture pins same-pair twins at exactly one `twinSpread`, with a floor so the spread-to-zero mutations cannot satisfy it by stacking, and a four-wallet antipodal fixture keeps the degenerate branch order-insensitive now that two-wallet corpora never reach it. The sweep, the face-clearance and on-ring assertions all pass unchanged over the wheel.
+
+### Unseen
+
+The build is green and the harness passes with every mutation proven. No device has drawn the wheel or the ring strokes; the geometry for the reported corpus is verified numerically (hexagon, 63pt neighbours, 47pt to the nearest ring body against 46 needed — the margins are real but thin, and only a screen says whether thin reads as fine).

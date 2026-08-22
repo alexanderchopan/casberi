@@ -49,6 +49,21 @@ struct AddressSkyView: View {
             let field = CGSize(width: geo.size.width - inset * 2,
                                height: geo.size.height - inset * 2)
             ZStack {
+                // THE RINGS THEMSELVES (prd §438). The drawing claimed
+                // everything sat on two rings and never drew either one, so
+                // with two wallets and a handful of connected addresses there
+                // was nothing circular on the screen at all — the report was
+                // "my addresses are NOT in a circle", and it was right.
+                // The empty state has drawn its ring since the day it shipped;
+                // the real sky now draws both of its own. Ellipses, not
+                // Circles, because positions scale x and y by the field's own
+                // sides and the strokes must pass through the faces they hold.
+                // The inner ring only once somebody is on it — an empty orbit
+                // is decoration.
+                ringStroke(radius: AddressSky.ringRadius, in: field)
+                if !sky.connectedBodies.isEmpty {
+                    ringStroke(radius: AddressSky.connectedRadius, in: field)
+                }
                 // Constellation labels sit UNDER the bodies: a group name is
                 // the region's word, and a face landing on top of it is the
                 // correct occlusion — the members are the subject, the label
@@ -67,6 +82,14 @@ struct AddressSkyView: View {
             .padding(inset)
             .onAppear(perform: start)
         }
+    }
+
+    private func ringStroke(radius: Double, in field: CGSize) -> some View {
+        Ellipse()
+            .strokeBorder(DS.fillLine, lineWidth: 1.5)
+            .frame(width: radius * 2 * field.width, height: radius * 2 * field.height)
+            .position(x: field.width / 2, y: field.height / 2)
+            .allowsHitTesting(false)
     }
 
     // MARK: - Links
