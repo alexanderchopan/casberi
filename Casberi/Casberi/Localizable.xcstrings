@@ -7999,6 +7999,34 @@
         }
       }
     },
+    "%@, closed": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@, cerrado"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@、閉じています"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@, 닫힘"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@，已折叠"
+          }
+        }
+      }
+    },
     "%@, from %@": {
       "localizations": {
         "en": {
@@ -8057,6 +8085,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "%@，需要重新连接"
+          }
+        }
+      }
+    },
+    "%@, open": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@, abierto"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@、開いています"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@, 열림"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@，已展开"
           }
         }
       }
@@ -11300,6 +11356,34 @@
         }
       }
     },
+    "%lld matching": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld coincidencias"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld件が一致"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld개 일치"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld 个匹配"
+          }
+        }
+      }
+    },
     "%lld memories": {
       "localizations": {
         "es": {
@@ -12041,6 +12125,40 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "另有 %lld 家商户"
+          }
+        }
+      }
+    },
+    "%lld more not drawn: %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$lld more not drawn: %2$@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%1$lld más sin dibujar: %2$@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "他%1$lld件は未描画: %2$@"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%1$lld개 더 표시되지 않음: %2$@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "另有 %1$lld 个未绘制：%2$@"
           }
         }
       }
@@ -23297,6 +23415,34 @@
         }
       }
     },
+    "Address book · %lld": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Libreta de direcciones · %lld"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "アドレス帳 · %lld"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "주소록 · %lld"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "地址簿 · %lld"
+          }
+        }
+      }
+    },
     "Address copied": {
       "localizations": {
         "es": {
@@ -24171,6 +24317,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "已经在你的订阅流中。"
+          }
+        }
+      }
+    },
+    "Already watching": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Ya en seguimiento"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "すでに監視中"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "이미 보는 중"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "已在关注"
           }
         }
       }
@@ -30236,6 +30410,34 @@
         }
       }
     },
+    "Closes this group": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Cierra este grupo"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "このグループを閉じます"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "이 그룹을 닫습니다"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "折叠此分组"
+          }
+        }
+      }
+    },
     "Closing soon": {
       "localizations": {
         "es": {
@@ -35162,6 +35364,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "删除分组不会删除地址。"
+          }
+        }
+      }
+    },
+    "Deleting “%@” keeps every address and every name in your book — only the grouping goes.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Al eliminar “%@” se conservan todas las direcciones y todos los nombres de tu libreta: solo desaparece la agrupación."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "「%@」を削除しても、アドレス帳のすべてのアドレスと名前は残ります。なくなるのはグループ分けだけです。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "“%@”을(를) 삭제해도 주소록의 모든 주소와 이름은 그대로 남고, 그룹만 사라집니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "删除“%@”不会影响地址簿中的任何地址和名称，只会移除该分组。"
           }
         }
       }
@@ -46813,6 +47043,34 @@
         }
       }
     },
+    "Looking up %@…": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Buscando %@…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@を検索中…"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@ 조회 중…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "正在查找 %@…"
+          }
+        }
+      }
+    },
     "Looks like %@ — but it's a different address. Check every character.": {
       "localizations": {
         "es": {
@@ -47118,6 +47376,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "管理"
+          }
+        }
+      }
+    },
+    "Manage %@": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Gestionar %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@を管理"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@ 관리"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "管理 %@"
           }
         }
       }
@@ -49388,6 +49674,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "新建窗口"
+          }
+        }
+      }
+    },
+    "New address": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Dirección nueva"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "新しいアドレス"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "새 주소"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "新地址"
           }
         }
       }
@@ -52380,6 +52694,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "没有任何已连接的内容会访问 %@。"
+          }
+        }
+      }
+    },
+    "Nothing connects to %@ yet.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Todavía nada conecta con %@."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@につながるものはまだありません。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "아직 %@에 연결된 것이 없습니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "目前还没有任何东西连接到 %@。"
           }
         }
       }
@@ -56602,6 +56944,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "打开此货币"
+          }
+        }
+      }
+    },
+    "Opens this group": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Abre este grupo"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "このグループを開きます"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "이 그룹을 엽니다"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "展开此分组"
           }
         }
       }
@@ -79119,6 +79489,34 @@
         }
       }
     },
+    "Watch another address": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Seguir otra dirección"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "別のアドレスを監視"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "다른 주소 보기"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "关注另一个地址"
+          }
+        }
+      }
+    },
     "Watch every lane": {
       "localizations": {
         "es": {
@@ -88389,6 +88787,34 @@
         }
       }
     },
+    "already in your book": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "ya está en tu libreta"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "すでにアドレス帳にあります"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "이미 주소록에 있음"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "已在你的地址簿中"
+          }
+        }
+      }
+    },
     "an": {
       "localizations": {
         "es": {
@@ -96477,6 +96903,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "· %@"
+          }
+        }
+      }
+    },
+    "· %lld connected": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "· %lld conectadas"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "· %lld件が接続"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "· %lld개 연결됨"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "· %lld 个已连接"
           }
         }
       }
