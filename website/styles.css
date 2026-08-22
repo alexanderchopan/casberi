@@ -1694,3 +1694,37 @@ a:hover { color: #FF2D87; }
 #catalog .mini-cell[data-tag]::after { display: none !important; }
 
 .why-fig .minifeed { height: 250px; max-height: none; }
+
+
+/* the creature among the rain, holding a couple of feed rows */
+.hero-creature { display: flex; align-items: center; justify-content: center; gap: 16px;
+  margin: 2px 0 12px; }
+.hc-mark { width: 92px; height: 92px; }
+.hc-row { display: flex; align-items: center; gap: 9px; background: var(--surface);
+  border-radius: 13px; padding: 9px 13px; box-shadow: 0 8px 24px rgba(0,0,0,.35); }
+.hc-l { transform: rotate(-4deg); } .hc-r { transform: rotate(4deg); }
+.hc-ai { width: 20px; height: 20px; border-radius: 6px; flex: none; }
+.hc-bar { height: 7px; border-radius: 4px; background: rgba(255,255,255,.16); }
+.hc-row i { font-style: normal; font-size: 10.5px; color: var(--faint); }
+@media (max-width: 600px) { .hc-row { display: none; } .hc-mark { width: 76px; height: 76px; } }
+
+/* band rhythm: counts in each card's accent, Life in navy */
+.bvid.navy { background: #0b3d99; }
+.bvid.ink .bk { color: #3b8cf0; }
+
+
+/* D — Figtree (the wordmark's face) owns display type; body stays system */
+.hero h1, .m-h2, .why-fig figcaption, .bvid h3, .slab-get h2,
+.w-hero h1, .w-card h2, .steps-line b, .shelf > h3 {
+  font-family: 'Figtree', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* C — the catalog as one open wall: margin labels, no shelf boxes */
+.store-flow { columns: auto; display: flex; flex-direction: column; gap: 6px; }
+.store-flow .shelf { display: flex; align-items: flex-start; gap: 16px;
+  background: none; border-radius: 0; padding: 4px 0; margin: 0; }
+.store-flow .shelf > h3 { width: 76px; flex: none; text-align: right;
+  font-size: 12.5px; font-weight: 700; color: var(--faint); padding-top: 9px; margin: 0; }
+.store-flow .shelf .cells, .store-flow .shelf { flex-wrap: nowrap; }
+.store-flow .shelf { flex-wrap: wrap; }
+.store-flow .shelf .mini-cell { padding: 3px; }
