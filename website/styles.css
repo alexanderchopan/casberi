@@ -1791,8 +1791,10 @@ a:hover { color: #FF2D87; }
 .hc-row { opacity: 0; }
 .hc-col:first-child .hc-row:nth-child(1) { animation: hcDealL .45s ease-out 3.7s forwards; }
 .hc-col:first-child .hc-row:nth-child(2) { animation: hcDealL .45s ease-out 4.0s forwards; }
+.hc-col:first-child .hc-row:nth-child(3) { animation: hcDealL .45s ease-out 4.3s forwards; }
 .hc-col:last-child  .hc-row:nth-child(1) { animation: hcDealR .45s ease-out 3.85s forwards; }
 .hc-col:last-child  .hc-row:nth-child(2) { animation: hcDealR .45s ease-out 4.15s forwards; }
+.hc-col:last-child  .hc-row:nth-child(3) { animation: hcDealR .45s ease-out 4.45s forwards; }
 @keyframes hcDealL { from { opacity: 0; transform: translateX(26px); } to { opacity: 1; } }
 @keyframes hcDealR { from { opacity: 0; transform: translateX(-26px); } to { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) {
@@ -1857,3 +1859,8 @@ a:hover { color: #FF2D87; }
   font-weight: 700; color: var(--ink); background: rgba(255,255,255,.05);
   border-radius: 999px; padding: 12px 21px; }
 .why4-verbs .agent { color: #FF2D87; background: rgba(255,45,135,.10); }
+
+
+/* the chat windows carry real morsels now, not skeletons */
+.hc-txt { font-size: 12.5px; font-weight: 650; color: rgba(255,255,255,.88); white-space: nowrap; }
+.hero-creature { margin: 6px 0 14px; }
