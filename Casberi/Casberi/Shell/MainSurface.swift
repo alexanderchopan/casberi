@@ -473,6 +473,8 @@ struct MainSurface: View {
             WalletbeatDirectoryScreen()
         case .l2beatDirectory:
             L2beatDirectoryScreen()
+        case .addressGroup(let name):
+            AddressGroupScreen(group: name)
         case .startHere:
             // Reached after leaving the demo, so "finishing" is a pop
             // rather than the end of onboarding — a non-nil node still

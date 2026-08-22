@@ -26,12 +26,28 @@ extension AddressConnections {
     /// Builds the map from the corpus, or nil when the card can't say anything.
     @MainActor
     static func map(context: ModelContext) -> Map? {
+        map(things: AddressActivity.relevant(in: context))
+    }
+
+    /// The same map from things ALREADY FETCHED (2026-08-22, prd §441).
+    ///
+    /// The manager opens by building this map and an activity summary, and
+    /// both walked their own corpus fetch — two fetches, back to back, on the
+    /// main actor, in `onAppear`, over overlapping predicates. `AddressActivity`
+    /// fetches Wallet + Peer + Privacy Pools and this needs Wallet, a strict
+    /// subset, so one walk answers both.
+    ///
+    /// The array is `.live` at its boundary by `relevant(in:)`'s own contract
+    /// (corollary 4), which is why this may read stored properties without
+    /// re-filtering.
+    @MainActor
+    static func map(things: [Thing]) -> Map? {
         let watched = WalletStore.shared.addresses.map {
             WatchedWallet(key: AddressBook.key(for: $0.address),
                           name: $0.label.isEmpty ? $0.short : $0.label)
         }
         guard watched.count >= minWallets else { return nil }
-        return map(edges: edges(in: context), watched: watched)
+        return map(edges: edges(from: things), watched: watched)
     }
 
     /// Every landed transfer that could be a connection, OLDEST FIRST — the
@@ -42,12 +58,22 @@ extension AddressConnections {
     /// promised to whoever reads it later).
     @MainActor
     static func edges(in context: ModelContext) -> [Edge] {
-        let fetched = (try? context.fetch(FetchDescriptor<Thing>(
-            predicate: #Predicate { $0.source == "Wallet" },
-            sortBy: [SortDescriptor(\.capturedAt, order: .forward)]))) ?? []
+        edges(from: AddressActivity.relevant(in: context))
+    }
 
+    /// The same edges from things already fetched — see `map(things:)`.
+    ///
+    /// **Sorted here rather than trusted from the caller.** `AddressActivity`
+    /// hands its array back NEWEST first (its own readings want that) and node
+    /// order in the map is FIRST-DEALT order, which §295 rules is the one
+    /// ordering this card may have. Taking the caller's order would silently
+    /// reverse the spine — a card that renders perfectly and lists the newest
+    /// relationship as the oldest.
+    @MainActor
+    static func edges(from things: [Thing]) -> [Edge] {
         var out: [Edge] = []
-        for thing in fetched.live {
+        for thing in things.sorted(by: { $0.capturedAt < $1.capturedAt }) {
+            guard thing.source == "Wallet" else { continue }
             guard thing.kind == .transaction else { continue }
             // Spam never becomes a connection. An address-poisoning duster who
             // hits four of your wallets from one address would otherwise land
@@ -151,6 +177,12 @@ extension AddressConnections {
             out.append("connWallet| \(column.name) | "
                         + (column.usd.map { String(format: "$%.2f", $0) } ?? "unpriced"))
         }
+        // §439's pairs — the reading the whole feature was asked for by name,
+        // so its absence from this dump would be the probe missing the one
+        // line the report was about.
+        for link in map.walletLinks {
+            out.append("connYours| \(link.a) <-> \(link.b)")
+        }
         if let note = untouchedNote(map.untouchedWalletNames,
                                     connectedCount: map.connectedCount) {
             out.append("note: \(note)")
@@ -165,5 +197,74 @@ extension AddressConnections {
             out.append("button→ name \(target.name) (drawn=\(drawn ? "YES" : "NO"))")
         }
         return out
+    }
+}
+
+/// What's new on the spine since you last looked (2026-08-22, prd §441).
+///
+/// **The one part of the sky that worked, kept.** §435 had `AddressSkySource`
+/// hold a seen-set so a new link could draw itself LAST and dashed — the map
+/// seen GROWING rather than arriving already grown. The sky went; this did not
+/// deserve to go with it.
+///
+/// **UserDefaults, not a `Thing` field**, for the reason §435 gave and which is
+/// unchanged: "have you looked at this" is a fact about THIS DEVICE'S SCREEN,
+/// and seeing a connection on the iPhone must not make it old on the Mac. It is
+/// also not worth a CloudKit Production deploy.
+///
+/// **First sight seeds SILENTLY.** A book with a year of history would
+/// otherwise announce every relationship in it as today's news — the
+/// Hyperliquid 2026-07-30 bug, which this project has now re-earned in enough
+/// rooms that seeding-on-first-sight is the default assumption for any
+/// what's-new ledger.
+///
+/// Held OUTSIDE `AddressConnections.Node` deliberately: that type is compiled
+/// as shipped by `wallet-viz-selftest.sh` against fixtures that construct it
+/// directly, and a field only a screen reads would make every one of those
+/// fixtures carry a value the arithmetic never touches.
+enum AddressConnectionsSeen {
+    private static let key = "wallet.connections.seen.v1"
+    private static let seededKey = "wallet.connections.seeded.v1"
+    /// Bounded, because a book can gain connections forever and this is a
+    /// cleartext preference. Far above any real book; the cap exists so the
+    /// list cannot grow without limit, not because anyone will reach it.
+    private static let cap = 400
+
+    private static var seen: Set<String> {
+        get { Set(UserDefaults.standard.stringArray(forKey: key) ?? []) }
+        set {
+            UserDefaults.standard.set(Array(newValue.prefix(cap)), forKey: key)
+        }
+    }
+
+    /// The connected addresses this device has never drawn.
+    ///
+    /// Returns EMPTY on first sight and records everything, so a corpus that
+    /// predates the feature is never narrated as news.
+    @MainActor
+    static func unseen(in map: AddressConnections.Map?) -> Set<String> {
+        guard let map else { return [] }
+        // Over EVERY connection, not the drawn prefix: an address behind the
+        // display cap that later rises into view has already been seen, and
+        // re-dashing it would announce a relationship formed months ago.
+        let all = Set(map.nodes.map(\.id)).union(map.hiddenNames.map { $0 })
+        let defaults = UserDefaults.standard
+        guard defaults.bool(forKey: seededKey) else {
+            defaults.set(true, forKey: seededKey)
+            seen = all
+            return []
+        }
+        return all.subtracting(seen)
+    }
+
+    /// Marks what is on screen as seen — called once the card has actually
+    /// BEEN drawn.
+    ///
+    /// Flagging at build time would make a new connection new for exactly as
+    /// long as it took to compose the view and never let it draw itself as new
+    /// at all (§435's own lesson, kept verbatim).
+    @MainActor
+    static func markSeen(_ ids: some Sequence<String>) {
+        seen = seen.union(ids)
     }
 }

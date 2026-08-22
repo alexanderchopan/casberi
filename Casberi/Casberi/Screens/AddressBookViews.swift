@@ -42,11 +42,21 @@ extension AddressBook.Entry {
     /// an empty line") and needs the caller to handle a nil, which is a change
     /// in a file another pass is currently rewriting — worth doing, not worth
     /// entangling this with.
-    func subline(activity: Int?) -> String {
+    /// `activity` gained its DATE on 2026-08-22 (prd §440). "12 together"
+    /// reads identically whether the last of those twelve was on Tuesday or
+    /// in 2023, so the count alone could not separate a correspondent from a
+    /// stranger — which is the distinction a book of forty is read for. The
+    /// phrase is `AddressBookShape.lastPhrase`'s, stated only when there is a
+    /// count to attach it to: a date with no dealings behind it would be
+    /// describing something the count says didn't happen.
+    func subline(activity: AddressActivity.Summary?) -> String {
         var parts: [String] = []
         if !WalletStore.isAutoName(name, for: address) { parts.append(short) }
-        if let activity, activity > 0 {
-            parts.append(String(localized: "\(activity) together"))
+        if let activity, activity.count > 0 {
+            parts.append(String(localized: "\(activity.count) together"))
+            if let when = AddressBookShape.lastPhrase(activity.lastAt) {
+                parts.append(when)
+            }
         }
         // A Bitcoin address's "kind" is its script type (Legacy/P2SH/Native
         // SegWit/Taproot) — a different axis than `kind.label`'s who-vs-
@@ -99,6 +109,113 @@ struct GroupMenuItems: View {
                 Label("New group…", systemImage: "folder.badge.plus")
             }
         }
+    }
+}
+
+/// Where a book row's tap can go (prd §440) — ONE presentation per screen.
+///
+/// A route rather than three `.sheet` modifiers, for the reason FeedScreen
+/// learned the hard way and this file's own callers have re-learned twice:
+/// sibling `.sheet`s on one screen start silently self-dismissing each other's
+/// first tap. Shared between the manager and the group screen so both offer
+/// the same three doors and neither grows a fourth of its own.
+enum AddressBookSheetRoute: Identifiable {
+    case entry(AddressBook.Entry)
+    /// The filing sheet (prd §440).
+    case move(AddressBook.Entry)
+    case newGroup
+    /// What a settled WalletConnect session handed over, on its way to the
+    /// picker (2026-08-13, prd §376). Routed through this enum rather than
+    /// hung off the manager as a fourth `.sheet` for the reason above.
+    case connectPicker([WalletConnectBridge.ConnectedAccount])
+
+    /// Spelled out rather than computed off the payload, so two cases can
+    /// never collide on an address whose key happens to read like a sentinel.
+    var id: String {
+        switch self {
+        case .entry(let e):  return "entry:" + e.id
+        case .move(let e):   return "move:" + e.id
+        case .newGroup:      return "newGroup"
+        // Keyed by the addresses themselves: connecting the same wallet twice
+        // is the same sheet, and a fresh identity would re-present it over
+        // itself mid-dismiss.
+        case .connectPicker(let a): return "connect:" + a.map(\.address).joined(separator: ",")
+        }
+    }
+}
+
+/// ONE row anatomy for the address book, wherever it is drawn (prd §440) —
+/// the manager's list, a group's screen, a search result.
+///
+/// It exists because there were two: the manager built its own row inline and
+/// the group sections drew a variant of it, so a change to the subline reached
+/// one and not the other. The row is the app's most-repeated address surface;
+/// two spellings of it is two books.
+///
+/// The star is OPTIONAL, and its absence is a real state rather than a
+/// disabled control: inside a group the watch verb belongs on the address's
+/// own card, and a star in a list that isn't the watch list would be a second
+/// place to spend one of five slots from.
+struct AddressBookRow: View {
+    let entry: AddressBook.Entry
+    let activity: AddressActivity.Summary?
+    let watched: Bool
+    /// Two entries whose SHORT forms print identically (2026-08-01). The book
+    /// is the only place that can see this, because it is the only place both
+    /// addresses are written down — and the row is where it has to be said,
+    /// since the truncation that hides the difference is right beside it.
+    let colliding: Bool
+    /// Publishes the MARK's frame as a star-flight endpoint (prd §441). nil
+    /// where there is no flight to launch — the group screen's rows.
+    var markAnchor: String?
+    /// nil draws no star at all — see the note above.
+    var onToggleWatch: (() -> Void)?
+
+    var body: some View {
+        HStack(spacing: DS.Space.s3) {
+            AddressMark(entry: entry, size: DS.Face.list)
+                .modifier(OptionalFlightAnchor(key: markAnchor))
+            VStack(alignment: .leading, spacing: 1) {
+                HStack(spacing: DS.Space.s1) {
+                    Text(entry.name)
+                        .dsText(.heading17).foregroundStyle(DS.textPrimary)
+                        .lineLimit(1)
+                        // The name reveal (2026-08-01), the list's quieter
+                        // form: a bare-added row renamed by reverse ENS
+                        // cross-fades rather than snapping. Deliberately NOT a
+                        // `.id()` swap, which churns row identity inside a
+                        // List; `contentTransition` gets the same moment with
+                        // none of that.
+                        .contentTransition(.opacity)
+                        .animation(DS.Motion.standard, value: entry.name)
+                    if colliding {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .dsGlyph(11)
+                            .foregroundStyle(DS.destructive)
+                    }
+                }
+                // RELATIONSHIP facts, never money (§435).
+                Text(entry.subline(activity: activity))
+                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                    .lineLimit(1)
+            }
+            Spacer(minLength: DS.Space.s2)
+            if let onToggleWatch {
+                Button(action: onToggleWatch) {
+                    Image(systemName: watched ? "star.fill" : "star")
+                        .dsSymbolSwap(watched)
+                        .dsGlyph(17, weight: .medium)
+                        .foregroundStyle(watched ? DS.tint : DS.textTertiary)
+                        .frame(width: 32, height: 32)
+                        .dsTapTarget()
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(Text(watched ? "Watching \(entry.name), tap to stop"
+                                                 : "Watch \(entry.name)"))
+            }
+        }
+        .padding(.vertical, DS.Space.s2)
+        .contentShape(Rectangle())
     }
 }
 
@@ -1173,5 +1290,18 @@ struct AddressHistoryScreen: View {
         .dsPageBackground()
         .navigationTitle(entry.name)
         .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+
+/// Publishes a flight anchor only when there is one to publish (prd §441).
+///
+/// A modifier rather than an `if` in the view body: branching there would give
+/// the mark two different identities depending on whether the screen it is on
+/// has a shelf, which churns the row on every re-render.
+private struct OptionalFlightAnchor: ViewModifier {
+    let key: String?
+    func body(content: Content) -> some View {
+        if let key { content.flightAnchor(key) } else { content }
     }
 }

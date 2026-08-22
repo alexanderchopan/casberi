@@ -355,10 +355,13 @@ final class AddressBook {
     /// `subline`: a field the person can read and cannot search reads as a
     /// broken search, whichever field it is.
     ///
-    /// Group matching goes through `sameGroup`'s folding rather than a raw
-    /// `contains`, so a search agrees with the book about what one group IS —
-    /// but only for a WHOLE-name match; a partial query still falls back to
-    /// substring, since someone typing "fam" hasn't named a group yet.
+    /// Group matching goes through `AddressBookShape.groupMatches` — a
+    /// whole-name fold, falling back to substring for a partial query, since
+    /// someone typing "fam" hasn't named a group yet. That rule was spelled
+    /// inline here until 2026-08-22 (prd §440), when the search field gained
+    /// GROUP RESULTS of its own: two places deciding what "fam" finds is two
+    /// places to disagree, and the disagreement renders as a group offered as
+    /// a result whose own rows are missing from the list beneath it.
     func search(_ query: String) -> [Entry] {
         let q = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         guard !q.isEmpty else { return all }
@@ -366,10 +369,20 @@ final class AddressBook {
             if entry.name.lowercased().contains(q) { return true }
             if entry.address.lowercased().contains(q) { return true }
             if let provenance = entry.provenance, provenance.lowercased().contains(q) { return true }
-            return entry.groupNames.contains {
-                Self.sameGroup($0, q) || $0.lowercased().contains(q)
-            }
+            return entry.groupNames.contains { AddressBookShape.groupMatches($0, query: q) }
         }
+    }
+
+    /// The groups a search query names (prd §440) — what the field offers
+    /// ABOVE the matching rows, so typing "fam" opens Family rather than
+    /// merely listing the four addresses in it.
+    ///
+    /// §267's whole ruling is that the omnibox is where a group becomes
+    /// findable. It has filtered ROWS by group since 2026-08-13; the group
+    /// itself was still not a result you could act on, which is the half that
+    /// makes the chip §433 deleted actually unnecessary.
+    func matchingGroups(_ query: String) -> [String] {
+        AddressBookShape.matchingGroups(groupNames, query: query)
     }
 
     // MARK: - Writing
@@ -540,6 +553,23 @@ final class AddressBook {
 
     func entries(inGroup name: String) -> [Entry] {
         all.filter { $0.isIn(name) }
+    }
+
+    /// Every group's size in ONE walk, keyed the book's own way (prd §440).
+    ///
+    /// `entries(inGroup:)` sorts the whole book, so a caller drawing a row per
+    /// group — the filing sheet, the manager's strip — sorts it once per group
+    /// on every body pass. This is the same question asked once. Keyed through
+    /// `key(forGroup:)` so a lookup can never disagree with `sameGroup` about
+    /// whether "family" and "Family" are one group.
+    var groupCounts: [String: Int] {
+        var out: [String: Int] = [:]
+        for entry in entries.values {
+            for name in entry.groupNames {
+                out[Self.key(forGroup: name), default: 0] += 1
+            }
+        }
+        return out
     }
 
     /// The one read-modify-write behind every group edit: transform the group

@@ -579,7 +579,7 @@ harness "Wallet-visualization self-test" "wallet-viz self-test" "scripts/wallet-
 # cluster that isn't its own. It also carries the negatives no assertion can
 # reach — no link carries a weight (§295), and no figure appears anywhere on
 # this screen (the 2026-08-21 ruling).
-harness "Address-sky layout self-test" "address-sky self-test" "scripts/address-sky-selftest.sh" "the address-sky self-test failed — run scripts/address-sky-selftest.sh"
+harness "Address-book shape self-test" "address-book self-test" "scripts/address-book-selftest.sh" "the address-book self-test failed — run scripts/address-book-selftest.sh"
 
 # The WalletConnect picker's arithmetic (`Model/WalletConnectPlan.swift`, prd
 # §376). The bug it replaces was unreportable, not merely unnoticed: the

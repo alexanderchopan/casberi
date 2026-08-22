@@ -1,0 +1,592 @@
+<meta charset="utf-8">
+<title>Address Book</title>
+<style>
+:root{
+  --page:#0b0b0d; --card:#141416; --raised:#1a1a1c; --well:#080809;
+  --t1:#ffffff; --t2:#ffffffb3; --t3:#ffffff73; --t4:#ffffff4d;
+  --faint:#ffffff0a; --line:#ffffff1a; --strong:#ffffff29;
+  --tint:#1673e6; --tintdim:#1673e629; --destructive:#ff453a; --confirm:#30d158;
+  --r-card:10px; --r-sheet:16px; --r-ctl:12px; --r-pill:999px;
+  --s1:4px; --s2:8px; --s3:12px; --s4:15px; --s6:24px; --s8:32px;
+  --ink:#e8e8ea; --paper:#f6f6f8;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--paper);color:#111;
+  font:400 16px/1.55 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",system-ui,sans-serif;
+  padding:40px 24px 80px;-webkit-font-smoothing:antialiased}
+:root:not([data-theme="light"]) body{}
+.wrap{max-width:1400px;margin:0 auto}
+h1{font:700 30px/1.15 -apple-system,system-ui;letter-spacing:-.02em;margin-bottom:8px}
+.lede{color:#5b5b66;max-width:74ch;margin-bottom:6px}
+.lede b{color:#111}
+.rule{height:1px;background:#00000012;margin:28px 0}
+h2.dir{font:700 20px/1.2 -apple-system,system-ui;margin-bottom:2px;letter-spacing:-.01em}
+h2.dir .rec{font:600 11px/1 -apple-system;background:var(--tint);color:#fff;
+  padding:4px 8px;border-radius:999px;vertical-align:3px;margin-left:8px;letter-spacing:.02em}
+.dirnote{color:#5b5b66;font-size:14px;max-width:46ch;margin:6px 0 16px}
+.frame{display:flex;flex-direction:column}
+.row{display:flex;gap:36px;flex-wrap:wrap;align-items:flex-start}
+.col{flex:0 0 auto;width:390px}
+
+/* ---------- phone ---------- */
+.phone{width:390px;height:844px;background:var(--page);border-radius:44px;
+  box-shadow:0 2px 4px #0000001a,0 18px 50px #00000040,0 0 0 10px #202024,0 0 0 11px #3a3a40;
+  overflow:hidden;position:relative;color:var(--t1);
+  font:400 16px/1.4 -apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif}
+.phone .scroll{height:100%;overflow-y:auto;overflow-x:hidden;scrollbar-width:none}
+.phone .scroll::-webkit-scrollbar{display:none}
+.status{height:54px;display:flex;align-items:flex-end;justify-content:space-between;
+  padding:0 28px 6px;font:600 15px/1 -apple-system;color:var(--t1)}
+.status .r{display:flex;gap:5px;align-items:center;opacity:.9}
+.pad{padding:0 var(--s4)}
+.homebar{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);
+  width:140px;height:5px;border-radius:3px;background:#ffffff59}
+
+/* ---------- type ---------- */
+.h34{font:700 34px/1.15 ui-rounded,"SF Pro Rounded",-apple-system,system-ui,sans-serif;letter-spacing:-.02em}
+.h28{font:700 28px/1.2 ui-rounded,"SF Pro Rounded",-apple-system,system-ui,sans-serif;letter-spacing:-.02em}
+.h22{font:700 22px/1.27 ui-rounded,"SF Pro Rounded",-apple-system,system-ui,sans-serif;letter-spacing:-.01em}
+.h17{font:600 18px/1.33 -apple-system;letter-spacing:-.01em}
+.b17{font:400 18px/1.44 -apple-system}
+.c15{font:400 16px/1.44 -apple-system}
+.s13{font:400 14px/1.5 -apple-system}
+.l12{font:500 12px/1.33 -apple-system}
+.mono{font-family:ui-monospace,"SF Mono",monospace;font-size:12px}
+.t1{color:var(--t1)}.t2{color:var(--t2)}.t3{color:var(--t3)}.tint{color:var(--tint)}
+.sb{font-weight:600}.num{font-variant-numeric:tabular-nums}
+
+/* ---------- face ---------- */
+.face{display:inline-block;border-radius:50%;position:relative;overflow:hidden;flex:none;
+  vertical-align:middle}
+.face.sq{border-radius:22.37%}
+.face .blobs{position:absolute;inset:0;display:block}
+.face .blobs i{position:absolute;left:0;top:0;border-radius:50%;display:block}
+.ring{box-shadow:0 0 0 2px var(--page)}
+
+/* ---------- search ---------- */
+.search{display:flex;align-items:center;gap:8px;background:var(--faint);
+  border-radius:var(--r-ctl);padding:11px 12px;color:var(--t3);margin-bottom:var(--s3)}
+.search svg{opacity:.6;flex:none}
+
+/* ---------- section head ---------- */
+.sechead{display:flex;align-items:baseline;justify-content:space-between;
+  padding:var(--s6) 0 var(--s3)}
+.sechead .ttl{font:600 12px/1.33 -apple-system;color:var(--t2)}
+.sechead .act{font:600 12px/1.33 -apple-system;color:var(--tint)}
+.sechead .cnt{font:500 12px/1.33 -apple-system;color:var(--t3);font-variant-numeric:tabular-nums}
+
+/* ---------- watched shelf ---------- */
+.shelf{display:flex;gap:var(--s3);justify-content:space-between}
+.slot{display:flex;flex-direction:column;align-items:center;gap:7px;width:62px}
+.slot .nm{font:600 12px/1.33 -apple-system;color:var(--t1);max-width:66px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center}
+.slot .sub{font:500 12px/1.33 -apple-system;color:var(--t3)}
+.empty{width:56px;height:56px;border-radius:50%;border:1.5px dashed #ffffff59;
+  display:grid;place-items:center;color:var(--t3);font-size:18px}
+
+/* ---------- card ---------- */
+.card{background:var(--card);border-radius:var(--r-card);padding:var(--s4)}
+.card.raised{background:var(--raised)}
+
+/* ---------- spine ---------- */
+.spine{display:flex;gap:var(--s2);align-items:center;margin-top:var(--s4)}
+.spine .side{display:flex;flex-direction:column;gap:0;width:112px}
+.spine .side.r{align-items:flex-start}
+.spine .node{height:38px;display:flex;align-items:center;gap:8px}
+.spine .node .nm{font:400 14px/1.2 -apple-system;color:var(--t2);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.spine .node.mine .nm{color:var(--t1);font-weight:600}
+.spine svg{flex:1}
+
+/* ---------- group cards ---------- */
+.groups{display:flex;gap:var(--s3);overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
+.groups::-webkit-scrollbar{display:none}
+.gcard{flex:none;width:150px;background:var(--card);border-radius:var(--r-card);
+  padding:var(--s3);display:flex;flex-direction:column;gap:10px}
+.gcard .deck{display:flex}
+.gcard .deck .face{margin-left:-6px;box-shadow:0 0 0 1.5px var(--card)}
+.gcard .deck .face:first-child{margin-left:0}
+.gcard .nm{font:600 14px/1.2 -apple-system}
+.gcard .mt{font:500 12px/1.2 -apple-system;color:var(--t3);font-variant-numeric:tabular-nums}
+.gcard.new{border:1.5px dashed #ffffff2e;background:transparent;
+  align-items:center;justify-content:center;color:var(--t3);gap:6px}
+.gcard.drop{outline:2px solid var(--tint);background:var(--tintdim)}
+
+/* ---------- list ---------- */
+.lrow{display:flex;align-items:center;gap:var(--s3);padding:9px 0;position:relative}
+.lrow .txt{flex:1;min-width:0}
+.lrow .nm{font:600 18px/1.33 -apple-system;letter-spacing:-.01em;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lrow .sub{font:400 14px/1.4 -apple-system;color:var(--t3);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.star{width:32px;height:32px;display:grid;place-items:center;color:var(--t3);font-size:17px;flex:none}
+.star.on{color:var(--tint)}
+.alpha{font:600 12px/1.33 -apple-system;color:var(--t2);padding:var(--s4) 0 6px;
+  position:sticky;top:0;background:linear-gradient(var(--page) 70%,transparent);z-index:2}
+.scrub{position:absolute;right:3px;top:300px;display:flex;flex-direction:column;
+  gap:1px;font:600 10px/1 -apple-system;color:var(--t3);align-items:center}
+
+/* ---------- segmented ---------- */
+.seg{display:flex;background:var(--faint);border-radius:var(--r-ctl);padding:3px;gap:2px;
+  margin-bottom:var(--s2)}
+.seg div{flex:1;text-align:center;padding:7px 0;border-radius:9px;
+  font:600 14px/1.2 -apple-system;color:var(--t2)}
+.seg div.on{background:#3a3a3ccc;color:var(--t1);box-shadow:0 1px 2px #00000040}
+
+/* ---------- swipe ---------- */
+.swipe{display:flex;align-items:stretch;gap:0;margin:0 calc(var(--s4) * -1);padding-left:var(--s4)}
+.swipe .body{flex:1;min-width:0}
+.swipe .acts{display:flex;flex:none}
+.swipe .acts div{width:74px;display:grid;place-items:center;gap:4px;
+  font:600 11px/1.2 -apple-system;color:#fff;text-align:center}
+.swipe .acts .mv{background:var(--tint)}
+.swipe .acts .wt{background:#8e8e93}
+.swipe .acts .rm{background:var(--destructive)}
+
+/* ---------- sheet ---------- */
+.sheetwrap{position:absolute;inset:0;background:#00000080;border-radius:44px;
+  display:flex;align-items:flex-end}
+.sheet{width:100%;background:var(--raised);border-radius:var(--r-sheet) var(--r-sheet) 0 0;
+  padding:var(--s4) var(--s4) 34px;max-height:74%}
+.grab{width:36px;height:5px;border-radius:3px;background:var(--strong);margin:0 auto var(--s4)}
+.opt{display:flex;align-items:center;gap:var(--s3);padding:11px 0}
+.opt .chk{width:22px;color:var(--tint);font-size:15px;flex:none}
+
+/* ---------- shelves (C) ---------- */
+.hshelf{display:flex;gap:var(--s3);overflow-x:auto;scrollbar-width:none;padding:2px 0 4px}
+.hshelf::-webkit-scrollbar{display:none}
+.hslot{flex:none;width:60px;display:flex;flex-direction:column;align-items:center;gap:6px}
+.hslot .nm{font:500 12px/1.2 -apple-system;color:var(--t2);max-width:60px;text-align:center;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dragging{transform:scale(1.12) rotate(-4deg);box-shadow:0 8px 22px #00000073}
+
+/* ---------- annotations ---------- */
+.ann{margin-top:16px;font-size:13.5px;line-height:1.6;color:#42424c}
+.ann b{color:#111}
+.ann ul{margin:6px 0 0 18px}
+.ann li{margin-bottom:5px}
+.pill{display:inline-block;font:600 10px/1 -apple-system;padding:4px 7px;border-radius:5px;
+  background:#0000000d;color:#42424c;margin-right:5px;vertical-align:1px}
+.cap{font:600 11px/1.2 -apple-system;color:#8a8a94;text-align:center;margin-top:10px;
+  letter-spacing:.01em}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]) body{background:#0d0d0f;color:#f2f2f5}
+  :root:not([data-theme="light"]) .lede,
+  :root:not([data-theme="light"]) .dirnote{color:#a0a0aa}
+  :root:not([data-theme="light"]) .lede b,
+  :root:not([data-theme="light"]) h1,
+  :root:not([data-theme="light"]) h2.dir,
+  :root:not([data-theme="light"]) .ann b{color:#f2f2f5}
+  :root:not([data-theme="light"]) .ann{color:#b5b5c0}
+  :root:not([data-theme="light"]) .rule{background:#ffffff14}
+  :root:not([data-theme="light"]) .pill{background:#ffffff14;color:#b5b5c0}
+}
+</style>
+
+<div class="wrap">
+<h1>The address book, redesigned</h1>
+<p class="lede">Three directions for the wallet manager. Everything here obeys the standing rulings: <b>no balances anywhere on this screen</b> (§435), no hairlines, sentence-case headers, one gesture per row. Faces are the real seeded identicons from <b>WalletFace.swift</b>, so what you see is what the app draws.</p>
+<p class="lede">All three answer the same four asks: <b>watched</b> (capped at 5), <b>saved</b> (N), <b>groups</b>, <b>move an address between groups</b> — and each shows connections <b>only across the five you watch</b>, which is the one set the corpus can actually prove relationships for.</p>
+
+<div class="rule"></div>
+<div class="row" id="frames"></div>
+
+<div class="rule"></div>
+<h2 class="dir">The move gesture, three ways</h2>
+<p class="dirnote">Filing an address is currently a long-press → Groups → tick list. These are the doors that replace it.</p>
+<div class="row" id="moves"></div>
+</div>
+
+<script>
+// Faithful port of WalletFace's seeded identicon (Design/WalletFace.swift).
+const U64 = (1n << 64n) - 1n;
+function seedOf(addr) {
+  let s = 1n;
+  for (const b of new TextEncoder().encode(addr.toLowerCase())) s = (s * 31n + BigInt(b)) & U64;
+  const next = () => { s = (s * 6364136223846793005n + 1442695040888963407n) & U64;
+                       return Number(s >> 32n) / 4294967295; };
+  const base = next();
+  const alt = (base + 0.12 + next() * 0.18) % 1;
+  return { base, alt, b1: [next() - 0.5, next() - 0.5], b2: [next() - 0.5, next() - 0.5] };
+}
+function hsb(h, s, b) {           // SwiftUI Color(hue:saturation:brightness:)
+  const i = Math.floor(h * 6), f = h * 6 - i, p = b * (1 - s),
+        q = b * (1 - f * s), t = b * (1 - (1 - f) * s);
+  let r, g, bl;
+  switch (i % 6) {
+    case 0: [r,g,bl] = [b,t,p]; break;  case 1: [r,g,bl] = [q,b,p]; break;
+    case 2: [r,g,bl] = [p,b,t]; break;  case 3: [r,g,bl] = [p,q,b]; break;
+    case 4: [r,g,bl] = [t,p,b]; break;  default: [r,g,bl] = [b,p,q];
+  }
+  return `rgb(${Math.round(r*255)},${Math.round(g*255)},${Math.round(bl*255)})`;
+}
+function faceCSS(addr, d) {
+  const k = seedOf(addr);
+  const c1 = hsb(k.base, 0.62, 0.82), c2 = hsb(k.alt, 0.70, 0.72);
+  return { bg: `linear-gradient(135deg, ${c1}, ${c2})`,
+           b1: { s: d*0.5,  x: k.b1[0]*d*0.6, y: k.b1[1]*d*0.6 },
+           b2: { s: d*0.42, x: k.b2[0]*d*0.7, y: k.b2[1]*d*0.7 },
+           blur: d*0.06, tint: hsb(k.base, 0.68, 0.78) };
+}
+function face(addr, d, cls = '') {
+  const f = faceCSS(addr, d);
+  return `<span class="face ${cls}" style="width:${d}px;height:${d}px;background:${f.bg}">
+    <span class="blobs" style="filter:blur(${f.blur}px)">
+      <i style="width:${f.b1.s}px;height:${f.b1.s}px;transform:translate(${f.b1.x}px,${f.b1.y}px);background:rgba(255,255,255,.22)"></i>
+      <i style="width:${f.b2.s}px;height:${f.b2.s}px;transform:translate(${f.b2.x}px,${f.b2.y}px);background:rgba(0,0,0,.12)"></i>
+    </span></span>`;
+}
+</script>
+<script>
+/* ───────────── data ───────────── */
+const W = [
+  {n:'Main',    a:'0x9a2E4f1b7C8d3A5e6F0b2C4d8E1a3B5c7D9e0F12'},
+  {n:'Cold',    a:'0x4f1B8c2D6e9A0b3C5d7E1f4A8b2C6d0E3f5A7b91'},
+  {n:'Trading', a:'0xc7D3a5B9e2F406c8D1b3A7e5F9c2B4d6E8a0C135'},
+];
+const CONN = [
+  {n:'Coinbase',  a:'0x71C7656EC7ab88b098defB751B7401B5f6d8976F', reach:['Main','Cold']},
+  {n:'Mom',       a:'0x2a8B4C6d0E1f3A5b7C9d2E4f6A8b0C1d3E5f7A92', reach:['Main','Trading']},
+  {n:'Uniswap',   a:'0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D', reach:['Cold','Trading']},
+  {n:'Relay',     a:'0xf5A1c3E7b9D204a6C8e0B2d4F6a8C0e2B4d6F810', reach:['Main','Cold']},
+  {n:'0x88a1…4c', a:'0x88a1B3c5D7e9F0a2B4c6D8e0F2a4B6c8D0e2F401', reach:['Main','Trading'], unnamed:true},
+];
+const GROUPS = [
+  {n:'Family',   m:['Mom','Dad','Sister','Nan'],            w:1},
+  {n:'Work',     m:['Payroll','Vendor','Ops','Treasury','Grants','Audit'], w:0},
+  {n:'Cold',     m:['Cold','Vault'],                        w:1},
+];
+const BOOK = [
+  ['Alice','0x1b2C…9f','12 transfers'],['Audit','0x88fA…21','Contract'],
+  ['Bankless','0x4d0e…77','3 transfers'],['Cold','0x4f1B…91','Watching · 40 transfers',1],
+  ['Coinbase','0x71C7…6F','Reaches Main, Cold'],['Dad','0x33aa…b1','2 transfers'],
+  ['Grants','0x9012…4e','Safe'],['Main','0x9a2E…12','Watching · 128 transfers',1],
+  ['Mom','0x2a8B…92','Reaches Main, Trading'],['Nan','0x77cd…03','1 transfer'],
+  ['Ops','0xab41…5d','Contract'],['Payroll','0x0c9E…8a','Smart account'],
+  ['Relay','0xf5A1…10','Reaches Main, Cold'],['Sister','0x6e2f…bb','4 transfers'],
+  ['Trading','0xc7D3…35','Watching · 61 transfers',1],['Treasury','0x5511…9c','Safe'],
+  ['Uniswap','0x7a25…8D','Contract'],['Vault','0xdd10…7e','Cold storage'],
+  ['Vendor','0x2f80…41','8 transfers'],
+];
+const addrOf = n => (BOOK.find(b=>b[0]===n)||[])[1] ? n+'|seed' : n+'|seed';
+const seedFor = n => 'seed:'+n;
+
+/* ───────────── atoms ───────────── */
+const svgSearch = `<svg width="15" height="15" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.8"/><path d="M11 11l3.5 3.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>`;
+const chev = d => `<svg width="10" height="10" viewBox="0 0 10 10" style="transform:rotate(${d}deg)"><path d="M2 3.5L5 6.5L8 3.5" stroke="currentColor" stroke-width="1.7" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+const star = on => `<span class="star ${on?'on':''}">${on?'★':'☆'}</span>`;
+
+function statusbar(){return `<div class="status"><span>9:41</span>
+  <span class="r"><svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx=".7"/><rect x="4.5" y="5" width="3" height="6" rx=".7"/><rect x="9" y="2.5" width="3" height="8.5" rx=".7"/><rect x="13.5" y="0" width="3" height="11" rx=".7"/></svg>
+  <svg width="25" height="12" viewBox="0 0 25 12" fill="none"><rect x=".5" y=".5" width="21" height="11" rx="3.2" stroke="currentColor" opacity=".4"/><rect x="2" y="2" width="16" height="8" rx="2" fill="currentColor"/><path d="M23 4v4c1-.4 1.3-1 1.3-2S24 4.4 23 4z" fill="currentColor" opacity=".4"/></svg></span></div>`;}
+
+function navTitle(t, plus=true){
+  return `<div class="pad" style="padding-top:6px;display:flex;align-items:center;justify-content:space-between">
+    <div class="h34">${t}</div>
+    ${plus?`<div style="width:34px;height:34px;border-radius:50%;background:var(--faint);display:grid;place-items:center;font-size:20px;color:var(--tint);font-weight:300">+</div>`:''}
+  </div>`;
+}
+function searchBar(txt='Search, or paste an address'){
+  return `<div class="pad" style="margin-top:var(--s3)"><div class="search"><span>${svgSearch}</span><span class="c15">${txt}</span></div></div>`;
+}
+function sechead(t, right='', tintRight=false){
+  return `<div class="sechead"><span class="ttl">${t}</span>
+    <span class="${tintRight?'act':'cnt'}">${right}</span></div>`;
+}
+
+/* watched shelf: exactly 5 slots so the cap is a shape */
+function shelf(){
+  let h = '<div class="shelf">';
+  W.forEach(w=>{ h += `<div class="slot">${face(w.a,56)}<div class="nm">${w.n}</div></div>`; });
+  for (let i=W.length;i<5;i++) h += `<div class="slot"><div class="empty">+</div><div class="sub">Watch</div></div>`;
+  return h+'</div>';
+}
+
+/* the bipartite spine — "like we used to", scoped to the watched five */
+function spine(){
+  const H = 38, n = CONN.length, h = n*H;
+  const yL = i => i*H + H/2;
+  const yR = i => (h - W.length*H)/2 + i*H + H/2;
+  let paths = '';
+  CONN.forEach((c,i)=>{ c.reach.forEach(r=>{
+    const j = W.findIndex(w=>w.n===r); if(j<0) return;
+    const x0=0, x1=100, y0=yL(i), y1=yR(j);
+    paths += `<path d="M${x0} ${y0} C${x0+42} ${y0} ${x1-42} ${y1} ${x1} ${y1}"
+      stroke="#ffffff2e" stroke-width="1.5" fill="none"/>`;
+  });});
+  // §439 — two of YOUR OWN wallets that pay each other: a bracket on the right
+  const a = yR(0), b = yR(1);
+  paths += `<path d="M${100} ${a} C${118} ${a} ${118} ${b} ${100} ${b}"
+    stroke="var(--tint)" stroke-width="2.5" fill="none" stroke-linecap="round"/>`;
+  let L = '<div class="side">'; CONN.forEach(c=>{
+    L += `<div class="node">${face(c.a,22)}<span class="nm">${c.n}</span></div>`;});
+  L += '</div>';
+  let R = `<div class="side r" style="margin-top:${(h-W.length*H)/2}px">`;
+  W.forEach(w=>{ R += `<div class="node mine">${face(w.a,22)}<span class="nm">${w.n}</span></div>`;});
+  R += '</div>';
+  return `<div class="spine">${L}
+    <svg viewBox="0 -6 118 ${h+12}" height="${h}" preserveAspectRatio="none">${paths}</svg>
+    ${R}</div>`;
+}
+
+function connCard(){
+  return `<div class="card">
+    <div class="l12 t3 sb">Connected</div>
+    <div class="h22" style="margin-top:var(--s2)">5 addresses reach more than one of your wallets.</div>
+    ${spine()}
+    <div class="s13 t3" style="margin-top:var(--s4)">Main and Cold have moved funds to each other.</div>
+    <div class="s13 t3" style="margin-top:var(--s1)">2 more not drawn: Relayer, 0x41b0…7a</div>
+    <div class="l12 tint sb" style="margin-top:var(--s3)">Name 0x88a1…4c</div>
+  </div>`;
+}
+
+function groupStrip(){
+  let h = '<div class="groups">';
+  GROUPS.forEach(g=>{
+    let deck=''; g.m.slice(0,4).forEach(m=> deck += face(seedFor(m),26));
+    h += `<div class="gcard"><div class="deck">${deck}</div>
+      <div><div class="nm">${g.n}</div>
+      <div class="mt">${g.m.length} addresses · ${g.w?g.w+' watched':'none watched'}</div></div></div>`;
+  });
+  h += `<div class="gcard new"><div style="font-size:20px;font-weight:300">+</div>
+        <div class="l12">New group</div></div>`;
+  return h+'</div>';
+}
+
+function bookRows(list, alpha=false){
+  let h='', letter='';
+  list.forEach(b=>{
+    if(alpha && b[0][0]!==letter){ letter=b[0][0]; h+=`<div class="alpha">${letter}</div>`; }
+    h += `<div class="lrow">${face(seedFor(b[0]),36)}
+      <div class="txt"><div class="nm">${b[0]}</div><div class="sub">${b[2]}</div></div>
+      ${star(!!b[3])}</div>`;
+  });
+  return h;
+}
+
+/* ───────────── A — Sections ───────────── */
+function dirA(){
+  return `<div class="frame"><div class="phone"><div class="scroll">
+    ${statusbar()}
+    ${navTitle('Addresses')}
+    ${searchBar()}
+    <div class="pad">
+      ${sechead('Watching','3 of 5')}
+      ${shelf()}
+      ${sechead('How they connect')}
+      ${connCard()}
+      ${sechead('Groups','New',true)}
+    </div>
+    <div style="padding-left:var(--s4)">${groupStrip()}</div>
+    <div class="pad">
+      ${sechead('Saved','19 · Recent ▾')}
+      ${bookRows(BOOK.slice(0,7))}
+    </div>
+    <div style="height:80px"></div>
+  </div><div class="homebar"></div></div>
+  <div class="cap">A · Sections</div></div>`;
+}
+
+/* ───────────── B — Scopes ───────────── */
+function dirB(){
+  return `<div class="frame"><div class="phone"><div class="scroll">
+    ${statusbar()}
+    ${navTitle('Addresses')}
+    ${searchBar()}
+    <div class="pad">
+      <div class="seg"><div class="on">Watching</div><div>Saved</div><div>Groups</div></div>
+      <div class="sechead" style="padding-top:var(--s4)"><span class="ttl">3 of 5 watched</span>
+        <span class="act">Watch another</span></div>
+      ${W.map(w=>`<div class="lrow">${face(w.a,44)}
+        <div class="txt"><div class="nm">${w.n}</div>
+        <div class="sub">${w.n==='Main'?'128 transfers · reaches Cold':w.n==='Cold'?'40 transfers · reaches Main':'61 transfers'}</div></div>
+        ${star(true)}</div>`).join('')}
+      <div class="lrow" style="opacity:.55">
+        <div class="empty" style="width:44px;height:44px;font-size:16px">+</div>
+        <div class="txt"><div class="nm t3" style="font-weight:500">Two slots open</div>
+        <div class="sub">Watching starts a feed and reads the chain</div></div></div>
+      ${sechead('How they connect')}
+      ${connCard()}
+    </div>
+    <div style="height:80px"></div>
+  </div><div class="homebar"></div></div>
+  <div class="cap">B · Scopes — “Watching”</div></div>`;
+}
+function dirBsaved(){
+  const L='ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map(c=>`<span>${c}</span>`).join('');
+  return `<div class="frame"><div class="phone"><div class="scroll">
+    ${statusbar()}
+    ${navTitle('Addresses')}
+    ${searchBar()}
+    <div class="pad">
+      <div class="seg"><div>Watching</div><div class="on">Saved</div><div>Groups</div></div>
+      ${bookRows(BOOK.slice(0,10),true)}
+      <div class="swipe" style="margin-top:2px">
+        <div class="body lrow" style="padding-right:8px">${face(seedFor('Nan'),36)}
+          <div class="txt"><div class="nm">Nan</div><div class="sub">1 transfer</div></div></div>
+        <div class="acts"><div class="mv">📁<br>Move</div><div class="wt">☆<br>Watch</div><div class="rm">🗑<br>Remove</div></div>
+      </div>
+      ${bookRows(BOOK.slice(10,13),true)}
+    </div>
+    <div style="height:80px"></div>
+  </div>
+  <div class="scrub">${L}</div>
+  <div class="homebar"></div></div>
+  <div class="cap">B · “Saved” — A–Z, swipe to move</div></div>`;
+}
+function dirBgroups(){
+  let cards='';
+  GROUPS.forEach(g=>{
+    let deck=''; g.m.slice(0,4).forEach(m=> deck += face(seedFor(m),30));
+    cards += `<div class="gcard" style="width:auto;flex:1 1 46%;min-width:0">
+      <div class="deck">${deck}</div>
+      <div><div class="nm" style="font-size:16px">${g.n}</div>
+      <div class="mt">${g.m.length} addresses</div></div></div>`;
+  });
+  cards += `<div class="gcard new" style="width:auto;flex:1 1 46%;min-height:104px">
+    <div style="font-size:22px;font-weight:300">+</div><div class="l12">New group</div></div>`;
+  return `<div class="frame"><div class="phone"><div class="scroll">
+    ${statusbar()}
+    ${navTitle('Addresses')}
+    ${searchBar()}
+    <div class="pad">
+      <div class="seg"><div>Watching</div><div>Saved</div><div class="on">Groups</div></div>
+      <div style="display:flex;flex-wrap:wrap;gap:var(--s3);margin-top:var(--s4)">${cards}</div>
+      ${sechead('Not in a group','15')}
+      ${bookRows(BOOK.filter(b=>!b[3]).slice(0,5))}
+    </div>
+    <div style="height:80px"></div>
+  </div><div class="homebar"></div></div>
+  <div class="cap">B · “Groups”</div></div>`;
+}
+
+/* ───────────── C — Shelves ───────────── */
+function shelfRow(title, count, members, watched){
+  let h = `<div class="sechead" style="padding:var(--s6) 0 var(--s2)">
+    <span class="ttl">${title}</span><span class="cnt">${count}</span></div><div class="hshelf">`;
+  members.forEach((m,i)=>{
+    const drag = (title==='Not in a group' && i===0) ? 'dragging' : '';
+    h += `<div class="hslot"><span class="${drag}" style="display:block">${face(seedFor(m),52)}</span><div class="nm">${m}</div></div>`;
+  });
+  if(watched) for(let i=members.length;i<5;i++)
+    h += `<div class="hslot"><div class="empty" style="width:52px;height:52px">+</div><div class="nm">Watch</div></div>`;
+  return h+'</div>';
+}
+function dirC(){
+  return `<div class="frame"><div class="phone"><div class="scroll">
+    ${statusbar()}
+    ${navTitle('Addresses')}
+    ${searchBar()}
+    <div class="pad">
+      ${shelfRow('Watching','3 of 5', W.map(w=>w.n), true)}
+      <div class="card" style="margin-top:var(--s4);padding:var(--s3) var(--s4)">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <div><div class="l12 t3 sb">Connected</div>
+          <div class="h17" style="margin-top:2px">5 reach two of your wallets</div></div>
+          <span class="t3">${chev(0)}</span></div>
+      </div>
+      <div style="position:relative">
+        ${shelfRow('Family','4', GROUPS[0].m, false)}
+      </div>
+      <div class="gcard drop" style="width:auto;margin-top:var(--s2);flex-direction:row;
+        align-items:center;gap:var(--s2);padding:10px var(--s3)">
+        <span class="l12 sb tint">Drop to file under Work</span></div>
+      ${shelfRow('Work','6', GROUPS[1].m, false)}
+      ${shelfRow('Not in a group','15', ['Alice','Bankless','Vendor','Audit','Relay'], false)}
+      <div style="display:flex;gap:var(--s2);margin-top:var(--s6)">
+        <div class="gcard new" style="flex:1;width:auto;flex-direction:row;gap:6px;padding:11px">
+          <span style="font-size:15px">+</span><span class="l12">New group</span></div>
+        <div class="gcard" style="flex:1;width:auto;align-items:center;justify-content:center;padding:11px">
+          <span class="l12 sb tint">See all 19 as a list</span></div>
+      </div>
+    </div>
+    <div style="height:80px"></div>
+  </div><div class="homebar"></div></div>
+  <div class="cap">C · Shelves — drag a face between rows</div></div>`;
+}
+
+/* ───────────── move sheets ───────────── */
+function moveSheet(){
+  const opts = [['Family',1],['Work',0],['Cold',0]];
+  return `<div class="frame"><div class="phone"><div class="scroll" style="filter:brightness(.5)">
+    ${statusbar()}${navTitle('Addresses')}${searchBar()}
+    <div class="pad">${bookRows(BOOK.slice(0,8),true)}</div></div>
+    <div class="sheetwrap"><div class="sheet">
+      <div class="grab"></div>
+      <div style="display:flex;align-items:center;gap:var(--s3);margin-bottom:var(--s4)">
+        ${face(seedFor('Nan'),44)}
+        <div><div class="h22">Nan</div><div class="s13 t3">0x77cd…03</div></div></div>
+      <div class="l12 t3 sb" style="margin-bottom:var(--s1)">File under</div>
+      ${opts.map(o=>`<div class="opt"><span class="chk">${o[1]?'✓':''}</span>
+        <span class="b17" style="flex:1">${o[0]}</span>
+        <span class="l12 t3">${o[0]==='Family'?'4':o[0]==='Work'?'6':'2'}</span></div>`).join('')}
+      <div class="opt"><span class="chk tint" style="font-size:18px;font-weight:300">+</span>
+        <span class="b17 tint" style="flex:1">New group…</span></div>
+    </div></div><div class="homebar"></div></div>
+  <div class="cap">Move — the sheet behind swipe → Move</div></div>`;
+}
+function editMode(){
+  return `<div class="frame"><div class="phone"><div class="scroll">
+    ${statusbar()}
+    <div class="pad" style="padding-top:6px;display:flex;align-items:center;justify-content:space-between">
+      <div class="c15 tint">Done</div><div class="h17">3 selected</div><div class="c15 tint sb">Move…</div></div>
+    ${searchBar()}
+    <div class="pad">
+      ${BOOK.slice(0,9).map((b,i)=>`<div class="lrow">
+        <span style="color:${i<3?'var(--tint)':'var(--t4)'};font-size:19px;flex:none">${i<3?'☑':'☐'}</span>
+        ${face(seedFor(b[0]),36)}
+        <div class="txt"><div class="nm">${b[0]}</div><div class="sub">${b[2]}</div></div></div>`).join('')}
+    </div>
+  </div><div class="homebar"></div></div>
+  <div class="cap">Edit — multi-select, then Move…</div></div>`;
+}
+
+/* ───────────── mount ───────────── */
+const F = document.getElementById('frames');
+function block(title, rec, note, frames, ann){
+  const d = document.createElement('div');
+  d.style.cssText = 'flex:0 0 auto;margin-bottom:8px';
+  d.innerHTML = `<h2 class="dir">${title}${rec?'<span class="rec">RECOMMENDED</span>':''}</h2>
+    <p class="dirnote">${note}</p>
+    <div style="display:flex;gap:28px">${frames.join('')}</div>
+    <div class="ann" style="max-width:${frames.length>1?'830px':'390px'}">${ann}</div>`;
+  F.appendChild(d);
+}
+block('A · Sections', true,
+  'Everything on one scroll, each section a different reading — who, how, your filing, the record.',
+  [dirA()],
+  `<ul>
+   <li><b>Five slots, always.</b> The cap is a shape, not a sentence — three faces and two dashed rings.</li>
+   <li><b>The spine is back</b> (§295's shape, "like we used to"), scoped to the watched five, because those are the only addresses the chain was read for. Same-weight ribbons, no ranking, no hue — the §295 factual ruling intact.</li>
+   <li><b>The blue bracket</b> on the right is §439: two of <i>your own</i> wallets that pay each other. It reads as a relationship because it has a face at both ends.</li>
+   <li><b>Groups are cards you scroll</b> — a face deck says <i>who</i>, which is the only thing a group is for.</li>
+   <li><b>The list is the record</b> and stays complete; watched rows wear a filled star.</li>
+   <li>Cost: the list starts ~1.2 screens down. Mitigated by search, which is pinned at the top and reaches everything.</li>
+   </ul>`);
+block('B · Scopes', false,
+  'One screen, three scopes. Nothing is ever more than a tap away and each scope is a complete thought.',
+  [dirB(), dirBsaved(), dirBgroups()],
+  `<ul>
+   <li><b>Watching</b> gets full rows instead of a shelf — room for each wallet's own subline, and the two open slots stated as a row rather than a dashed circle.</li>
+   <li><b>Saved</b> is Contacts: sticky letters, an A–Z scrubber, and a swipe carrying <span class="pill">MOVE</span><span class="pill">WATCH</span><span class="pill">REMOVE</span>.</li>
+   <li><b>Groups</b> is a real surface — a grid of decks, tap one to open its list, drag a row onto one to file it.</li>
+   <li>Risk: §202 merged the roster and a separate book screen precisely because two surfaces caused “which page is this on”. A scope control is one screen — but it is the closest of the three to re-creating that.</li>
+   </ul>`);
+block('C · Shelves', false,
+  'Every group is a horizontal shelf of faces. Moving an address between groups is dragging it from one row to another.',
+  [dirC()],
+  `<ul>
+   <li><b>The move gesture is the whole idea</b> — pick a face up, drop it on another shelf. No menu, no sheet, no tick list.</li>
+   <li>Watching is just the top shelf, capped at five, with the connections card folded underneath it.</li>
+   <li>Bold and memorable; the strongest answer yet to “groups look half thought out”.</li>
+   <li>Cost: <b>finding</b> an address among 27 in horizontal rows is worse than a list, so it needs the “See all as a list” escape hatch and leans hard on search. Drag-and-drop is also the most expensive thing here to build and the hardest to make feel right.</li>
+   </ul>`);
+
+const M = document.getElementById('moves');
+M.innerHTML = `<div><div style="display:flex;gap:28px">${moveSheet()}${editMode()}</div>
+  <div class="ann" style="max-width:830px"><ul>
+  <li><b>Swipe → Move</b> opens the sheet on the left: the address, its current filing ticked, every group, and “New group…” at the bottom. One address, one gesture, two taps.</li>
+  <li><b>Edit → multi-select → Move…</b> is the bulk door, for the paste-forty-addresses case the field already supports.</li>
+  <li>A group stays a <i>label on entries</i> (AddressBook's model, untouched): moving is an unlabel plus a label, so nothing new is stored and a group with no members still simply stops existing.</li>
+  </ul></div></div>`;
+</script>

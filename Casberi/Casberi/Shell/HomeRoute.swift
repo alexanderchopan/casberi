@@ -75,6 +75,14 @@ final class HomeRoute {
         /// Walletbeat's has one: §234's ruling that a browse belongs at the head of the
         /// room, never behind the setup screen.
         case l2beatDirectory
+        /// One address-book group, opened (prd §440).
+        ///
+        /// Keyed by the group's NAME, which is also its identity in the model
+        /// — there are no group ids because there is no group store. A rename
+        /// therefore invalidates a pushed screen, which `AddressGroupScreen`
+        /// handles by popping itself rather than by this node holding a
+        /// stabler key it has no way to get.
+        case addressGroup(String)
     }
     var path: [Node] = []
 
@@ -110,6 +118,12 @@ final class HomeRoute {
     /// Push an offer's product page on top of wherever the stack sits.
     @MainActor func pushAppDetail(_ offerName: String) {
         path.append(.appDetail(offerName))
+    }
+
+    /// Push any node on top of wherever the stack sits — the general form of
+    /// `pushBridge`/`pushAppDetail`, for a destination that is neither.
+    @MainActor func push(_ node: Node) {
+        path.append(node)
     }
 
     /// The connect FORM, raised over whatever the person was looking at (prd

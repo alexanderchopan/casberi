@@ -111,6 +111,25 @@ enum AddressConnections {
         let usd: Double?
     }
 
+    /// TWO OF YOUR OWN WALLETS THAT HAVE DEALT WITH EACH OTHER DIRECTLY
+    /// (prd §439).
+    ///
+    /// The reading this whole feature is named for and never had. Everything
+    /// above is a SHARED COUNTERPARTY — "you both dealt with somebody else" —
+    /// which is an inference about two wallets made through a third party. The
+    /// plainest fact of all is the one it skipped: did money move between
+    /// these two wallets, directly? It is in the same landed transfers the
+    /// rest of this file reads, and nothing was looking for it, so somebody
+    /// watching exactly two wallets that pay each other every week saw an
+    /// empty picture and asked, correctly, what the diagram was even for.
+    ///
+    /// Ordered by the watch order, so a pair is one link and never two.
+    struct WalletLink: Identifiable, Equatable {
+        var id: String { "\(a)|\(b)" }
+        let a: String
+        let b: String
+    }
+
     /// The whole reading.
     struct Map: Equatable {
         /// The connected addresses that are DRAWN — capped at `nodeLimit`.
@@ -142,11 +161,13 @@ enum AddressConnections {
         /// connection sat undrawn behind the cap. A display cap is not an
         /// accounting rule, and it is not an action rule either.
         let firstUnnamed: Node?
+        /// Pairs of YOUR wallets that have transacted with each other (§439).
+        let walletLinks: [WalletLink]
 
         /// True when there is nothing connected. Not the same as the map being
         /// nil: nil means the card cannot say anything at all (fewer than two
         /// wallets watched), this means it can and the answer is none.
-        var isEmpty: Bool { connectedCount == 0 }
+        var isEmpty: Bool { connectedCount == 0 && walletLinks.isEmpty }
 
         /// How many connected addresses are counted but not drawn. Stated by
         /// the card — the no-silent-caps rule. Derived from the COUNT rather
@@ -181,6 +202,14 @@ enum AddressConnections {
         var order: [String] = []
         var byAddress: [String: (address: String, name: String, named: Bool,
                                  count: Int, wallets: [String])] = [:]
+        // Your own wallets dealing with each other, collected as they go by
+        // (§439). An edge whose COUNTERPARTY is itself a watched wallet is not
+        // a third party at all — it is the two of them, and it belongs on the
+        // ring between them rather than as a body floating off it.
+        var linkedPairs: Set<String> = []
+        var walletLinks: [WalletLink] = []
+        let watchOrder = watched.map(\.key)
+
         for edge in edges {
             // An edge to a wallet we no longer watch is history about a watch
             // that ended — it can't contribute to a count phrased "your
@@ -189,6 +218,27 @@ enum AddressConnections {
             guard watchedKeys.contains(edge.walletKey) else { continue }
             // A transfer between an address and itself is not a relationship.
             guard edge.addressKey != edge.walletKey else { continue }
+
+            // TWO OF YOURS. Recorded as a link and then dropped, so it can
+            // never also become a `Node`: a watched wallet reaching two others
+            // used to satisfy the connected test and be drawn a SECOND time on
+            // the inner ring, wearing the same id as its own body on the outer
+            // one — one wallet, two faces, and a duplicate key inside the
+            // view's `ForEach`, which is the reused-id trap this project has a
+            // crash class for. Found by asking what a direct link would do
+            // (§439).
+            if watchedKeys.contains(edge.addressKey) {
+                // Ordered by the watch order so A-then-B and B-then-A are the
+                // same link, recorded once.
+                let ia = watchOrder.firstIndex(of: edge.addressKey) ?? 0
+                let ib = watchOrder.firstIndex(of: edge.walletKey) ?? 0
+                let pair = ia <= ib
+                    ? WalletLink(a: edge.addressKey, b: edge.walletKey)
+                    : WalletLink(a: edge.walletKey, b: edge.addressKey)
+                if linkedPairs.insert(pair.id).inserted { walletLinks.append(pair) }
+                continue
+            }
+
             if byAddress[edge.addressKey] == nil {
                 order.append(edge.addressKey)
                 // The first SPELLING wins for the same reason the first name
@@ -226,7 +276,8 @@ enum AddressConnections {
         guard !connected.isEmpty else {
             return Map(nodes: [], columns: [], connectedCount: 0,
                        untouchedWalletNames: watched.map(\.name),
-                       hiddenNames: [], firstUnnamed: nil)
+                       hiddenNames: [], firstUnnamed: nil,
+                       walletLinks: walletLinks)
         }
 
         let connectedKeys = Set(connected.map(\.id))
@@ -251,7 +302,8 @@ enum AddressConnections {
                    hiddenNames: connected.dropFirst(drawn.count).map(\.name),
                    // Over every connection, never the drawn prefix — see the
                    // property's own doc for the action that used to disappear.
-                   firstUnnamed: connected.first { !$0.named })
+                   firstUnnamed: connected.first { !$0.named },
+                   walletLinks: walletLinks)
     }
 
     // MARK: - The card's words

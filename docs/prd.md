@@ -80,7 +80,10 @@ at all.
 | Ruling | What it said | Changed by |
 |---|---|---|
 | §18 | Feed spec | amended by §64 |
-| §435 | The sky: twins spread on a straight perpendicular; caption "N of M connected" against the book's size | amended by §436 |
+| §435 | The sky: twins spread on a straight perpendicular; caption "N of M connected" against the book's size | amended by §436, superseded by §440 |
+| §433 | The wallet manager: groups as folder SECTIONS of the book, list ordered recent-with-watched-first | amended by §440 |
+| §437 | The sky reads as rings inside rings | amended by §438, superseded by §440 |
+| §438 | The two-wallet sky is a wheel | superseded by §440 |
 | §112 | Wallet: reads and previews in-app, signatures always elsewhere | narrowed by §425 |
 | §425 | The Safe co-signer: the key, the rail, the six refusals | amended by §426, §427 |
 | §426 | Building §425: the flag, the pin, the sixth fixture | amended by §427 |
@@ -29624,3 +29627,129 @@ The two-wallet twin fixtures asserted the crescent (pairs one `twinSpread` apart
 ### Unseen
 
 The build is green and the harness passes with every mutation proven. No device has drawn the wheel or the ring strokes; the geometry for the reported corpus is verified numerically (hexagon, 63pt neighbours, 47pt to the nearest ring body against 46 needed — the margins are real but thin, and only a screen says whether thin reads as fine).
+
+## 439. Two of your own wallets, joined — the plainest reading the map never made (user: "it still isn't showing me if the two wallets I am following are connected", 2026-08-22)
+
+Everything §295 through §438 drew is a SHARED COUNTERPARTY — "you both dealt with somebody else" — which is an inference about two wallets made through a third party. The plainest fact of all was the one it skipped: **did money move between these two wallets, directly?** It is in the same landed transfers the rest of `AddressConnections` reads, and nothing was looking for it, so somebody watching exactly two wallets that pay each other every week saw a picture with no line between them and asked, correctly, what the diagram was for.
+
+`AddressConnections.WalletLink` collects it as the edges go by: an edge whose COUNTERPARTY is itself a watched wallet is not a third party at all. Ordered by the watch order, so a pair is one link and never two. **Recorded and then DROPPED**, or a watched wallet reaching two others satisfies the connected test and is drawn a second time as a floating body wearing the same id as its own place on the ring — one wallet, two faces, and a duplicate key inside a `ForEach`, which is the reused-id trap this project has a crash class for.
+
+`Map.isEmpty` widened with it: a book whose only relationship is between two of your own is not an empty map, and reading it as one prints "nothing is connected" over the very fact being reported.
+
+## 440. The address book, rebuilt — the spine restored, the sky retired, and groups given a room (user: "we need to totally redesign the wallet set up screen which is basically an address book… watched, followed/saved, and groups… a way to move an address between groups… could show those connected like we used to… i want a really gorgeous address book how cash app might do it or apple", then "A. lets do it", then "ok do all", 2026-08-22)
+
+Three mockup directions were drawn (`design/address-book/address-book-mocks.html`) and A was chosen and then iterated (`address-book-A.html`). This entry **supersedes §435** on the drawing and **amends §433** on the list.
+
+### 1. THE SKY IS DELETED. The spine is back.
+
+§435 fused the roster, the connections card and the group decks into one drawing on the grounds that they were five renderings of one graph. Four device drawings followed — §436 (a diagonal chain through both wallets' faces), §437 (rings inside rings), §438 (a clump that was meant to be a wheel), §439 (the one relationship it had never shown) — and the map still could not be read.
+
+**The fault was never the arithmetic.** Every one of those was harness-proven before it shipped; `address-sky-selftest.sh` was 40 assertions, 10 mutations and 14 drift guards and it passed every time. The fault is that **a force-free graph layout has to answer a different geometric question for every corpus shape**, and this corpus is almost always the minimum one — which §436 observed about the twin chain, §438 repeated one layer up, and neither generalised.
+
+A spine answers ONE question and answers it the same way every time: connected addresses on the left, your wallets on the right, one ribbon per landed relationship. Two wallets or five, one counterparty or six, it is the same picture with more rows. **There is no shape it can collapse into.** `AddressSky`, `AddressSkySource`, `AddressSkyView` and their harness are deleted; `AddressConnections` — the MODEL, including §439 — is untouched and is what the new card reads.
+
+**What `AddressSpineCard` adds to §295's**: faces on both sides, so the picture is made of the same identities the rest of the screen is made of rather than two columns of text; a naming affordance ON an unnamed node (a dashed ring and a pencil) as well as in the button below it, which targets the first unnamed over EVERY connection including undrawn ones and therefore cannot live on a node; and §439's bracket, the one line on the card with a face at both ends, plus its sentence — the drawing is the right way to SHOW that fact and not a reliable way to READ it, since at two watched wallets there is nothing else on the card to compare it against.
+
+Everything §295 ruled survives: same-weight ribbons, no hue, no ranking, first-dealt order. **And no money**, which is the one thing this card does that §295's did not — §435's ruling struck every figure off this screen, so `Column.usd` is deliberately unread here and a negative grep enforces it.
+
+### 2. Four sections, each a different reading
+
+The §435 diagnosis was right that five renderings of one graph is the fault; the fix is not one drawing, it is four sections that don't repeat each other. **The way in** (the field and the connect door), **who you watch** (the shelf), **how they connect** (the spine), **the record** (the book) — with groups as a strip of doors between the last two.
+
+**There is no `+`.** It could only ever duplicate the field, and it cannot be the connect door either: connecting has a waiting state and can sprout a manual-pairing card under it, neither of which a nav-bar glyph has anywhere to put. Two doors, two shapes — and the connect row **steps aside the moment you type**, since it is only relevant on an empty field.
+
+**One field, two jobs, decided by what you typed.** Words filter the book; an address arms the verbs and brings up §433's preview. That was already how the model worked — `book.search(draft)` and `addressPreview` have read the same string since §433 — and what changes is that the field says so and everything which is not the book folds away while you search it.
+
+### 3. Groups get a room — the fourth shape in three weeks, and the first with somewhere to be
+
+A chip that put the book in a mode (§266/§267), a folder section in the list (§433), a constellation on a drawing (§435), and now **a card in a strip and a screen behind it**. The three before it shared one fault: a group had no place to BE — it was a filter, a heading, or a label floating over a picture, never a thing you could stand inside, rename from, or drag an address onto. Rename and delete act on a group, so they live on the group's own toolbar rather than inside a sort menu (§433) or on a heading in somebody else's list.
+
+**Nothing in the model changes.** A group is still a label on entries: no store, no ids, no empty groups. §433's reasoning for killing the group FILTER stands untouched, and is exactly why the strip is a set of DOORS rather than a set of selections.
+
+**Moving an address between groups — three doors, and two of them exist so the feature survives the third misbehaving on a device.** Drag a row onto a group card (`draggable` + `dropDestination`, payload the ADDRESS so a list that re-sorts mid-drag cannot file the wrong row — **UNVERIFIED on hardware**, since `draggable` and `contextMenu` coexist only by UIKit's own long-press arbitration). Swipe → Move, which **opens the filing sheet and writes nothing** — the design law's "swipe verbs are reads; a write belongs behind a deliberate press" is kept by making the swipe a door and letting the sheet take the consent, and `allowsFullSwipe: false` is guarded for the same reason. And the context menu's tick list, which §266 built and is unchanged.
+
+The sheet **ticks rather than picks**, and that is the model showing through: `Entry.groups` is an array, so a single-select "move" would have to invent a rule for which membership it destroys. Moving is untick-one-tick-another, which the sheet says in its one gray line.
+
+**A pasted list can be filed in one act.** `addToGroup(_:addresses:)` has existed since 2026-08-01 for exactly this and had no caller that could reach it with a real batch; the paste's confirmation now offers every group as a chip. The set is taken as the DIFFERENCE across the write, so a re-paste of addresses already in the book offers nothing — correct, since nothing new arrived to file.
+
+### 4. The list is A–Z, and its shape is testable
+
+`AddressBookShape` is Foundation-only and owns the order, the sectioning, the group-match rule and the recency phrase — a sort that decides what a list looks like and can never be tested is the shape of thing this project has stopped writing. `scripts/address-book-selftest.sh` compiles it whole: ~60 assertions, 13 mutations, 20 drift guards, replacing the sky's harness in `verify.sh`.
+
+**A–Z is the default, reversing §433.** That ruling existed for a stated reason — "a bulk paste of forty names could push all five of your watched wallets off the bottom of the screen" — and the shelf now holds those five unconditionally whatever the list does. The reason is spent, and letter headings plus a scrubber are how somebody finds one row out of twenty-seven. Recent and Most active keep their places in the menu.
+
+**`#` is a real bucket, not a fallback**, and this book needs it more than a contacts app does: `WalletStore.add` files a bare address under its own short form, so every unnamed wallet is literally called `…44b1` and forty pasted addresses would otherwise give the index a dozen headings nobody can aim at. It sorts AFTER the letters, matching where its heading is printed — the one arrangement that is visibly wrong is a `#` row leading a list whose `#` heading is at the bottom.
+
+**Every order is TOTAL**, and the ties are the common case rather than a corner: a bulk paste writes forty entries inside one millisecond and forty un-dealt-with addresses all have an activity of zero. A list that reshuffles between body passes reads as broken — `agent-panel-selftest`'s tile-sort lesson, which `AddressSky` then paid for again with its bearings.
+
+**The scrubber offers present letters only.** A strip offering `Q` on a book with no Q is §83's dead control wearing twenty-six tiny copies; the letters come from the sections actually rendered, so the strip and the list cannot disagree.
+
+### 5. Three smaller things that were each a gap
+
+**A search finds GROUPS, not just their members.** §267's whole ruling is that the omnibox is where a group becomes findable, and it could only ever find a group's rows. The match rule moved into `AddressBookShape` and `AddressBook.search` is now its caller — two spellings of "what does fam find" is two places to disagree, and the disagreement renders as a group offered as a result whose own rows are missing from the list beneath it.
+
+**A row says WHEN you last dealt, not only how much.** "12 together" reads identically whether the last of those twelve was on Tuesday or in 2023, which is the distinction a book of forty is read for. It costs nothing — `AddressActivity.all` is already sorted newest-first, so the first thing seen for a key IS its most recent. The rungs get coarser as they get older on purpose: "241 days ago" is arithmetic nobody wanted, and at that distance the month is the fact. No amount, no direction, no rate — §435's ruling and §295's, both.
+
+**Empty states are designed rather than left to fall out**, which is the correction §436–§438 kept paying for: the minimum corpus is the COMMON one here. Nothing watched draws no spine card at all (there is nothing to connect and the shelf is already the invitation); one wallet draws a line and not a card (a card headed "Connected" over that fact reads as broken rather than not-yet-applicable); two or more with nothing shared draws the card stating none, which is a real answer.
+
+### 6. Wide layout
+
+iPad and Mac Catalyst put the shelf and the spine side by side. Not decoration: on a phone the spine is the second thing you scroll to and the book the third, which is right at 390 points; at 1,000 the same stack leaves the book below the fold on a screen two thirds empty — and this is the manager most likely to be open on the Mac, which `verify-mac.sh` sweeps every night.
+
+### The defect the harness found on its first run
+
+`lastPhrase` handed its `DateFormatter` a calendar and not that calendar's TIME ZONE, so the phrase was rendered in the system zone while the year comparison above it compared in another: an instant at midnight UTC on January 1st is still December where the device is, so the comparison said "this year, name the month" and the formatter answered **December — last year's month, printed as though it were this one**. Caught by the boundary fixture, which is the one place it is visible.
+
+### Unproven
+
+No simulator run and no device. The build is green, `address-book-selftest.sh` passes with every mutation caught, and the drag-to-file gesture is the one thing here that cannot be proven without hardware — which is why there are three ways to move an address and only one of them depends on it.
+
+## 441. Five moments and three walks — the address book's delight pass (user: "now based on the experience we have how would you add surprise and delight? improve the UI? smooth the UX?", then "do all", 2026-08-22)
+
+§440 built the screen; this is what it earns once you use it. Five moments and three costs, and the rule every one of them obeys is §79's: **a moment is animated only when something real happened.** Nothing here animates an arrival, a re-render or a scroll.
+
+### 1. The star flight — a sentence §212 wrote and never built
+
+§212 retired the footer explaining the star on the grounds that "tapping a star visibly drops the wallet into the shelf at the top of the same screen, which teaches it better than the sentence did" — and then **the wallet simply appeared**. §433 added `connectPromote` (the row lifts) and a slot transition (the shelf scales in), which are two animations that do not know about each other: nothing crosses the gap, so nothing says the row and the slot are the same wallet.
+
+`AddressFlight.swift` sends the face across. **An overlay and not `matchedGeometryEffect`**, because that modifier moves one view between two positions when exactly ONE is the source, and here both persist — starring an address does not remove its row. Flipping `isSource` between two views that both stay on screen is the shape that produces the ghost-and-snap.
+
+Three things it gets right that a first cut would not. The endpoints are **anchors published by the views themselves**, never measured constants: the row's position depends on the sort, the scroll offset and how many groups sit above it. The **size comes off the ramp** (`DS.Face.list` → `DS.Face.shelf`) and not off those anchor rects, which are layout frames and stop matching the face the moment either mark gains a border — caught by `face-ramp-audit`, whose finding was a real defect rather than a lint. And it **arcs**: the two points are nearly always in the same column, so a straight interpolation is a vertical slide, which reads as scrolling rather than travelling.
+
+The launch is deferred one runloop turn on purpose — the shelf slot does not exist until the write has been observed and the body re-run, so publishing in the same turn gives the overlay a `from` and no `to`, which draws nothing and reads as the feature being absent rather than broken.
+
+**The anchor key is the BOOK's key**, not the raw address: a watch may be stored under the spelling it was added with ("vitalik.eth") while the book holds the resolved address, so keying on the raw string would leave the two anchors unable to find each other on exactly the wallets people bother to name.
+
+### 2. The deck absorbs a dropped face
+
+A drop used to make the new mark simply be there. Now the joining face grows into the deck and the stack takes the weight of it once. **A one-shot flag from the screen, not a diff of membership**: the book is `@Observable`, so the card has already re-rendered with the new face by the time anything could compare before and after.
+
+### 3. The ribbon lights before the sheet covers it
+
+Every ribbon is the same weight by §295's ruling, which is right as a resting state and leaves a tap with nothing confirming it landed on the row you meant. A tapped node now lights its own ribbons in the tint for ~240ms **before** `onOpen` fires. It stays inside the factual ruling: it is a transient answer to a gesture, not a claim about which relationship matters — and Reduce Motion skips straight through, since the card it opens carries the same facts in words.
+
+### 4. A new connection arrives dashed
+
+**The one part of the sky that worked, kept.** `AddressConnectionsSeen` holds the seen-set in UserDefaults for §435's own unchanged reason — "have you looked at this" is a fact about THIS DEVICE'S SCREEN, and seeing a connection on the iPhone must not make it old on the Mac. First sight seeds silently (the Hyperliquid 2026-07-30 bug, re-earned in enough rooms that seeding-on-first-sight is now the default assumption for any what's-new ledger), and it is marked seen only once the card has actually BEEN on screen.
+
+Held **outside** `AddressConnections.Node`: that type is compiled as shipped by `wallet-viz-selftest.sh` against fixtures that construct it directly, and a field only a screen reads would make every one of those carry a value the arithmetic never touches. The unseen set is computed over EVERY connection rather than the drawn prefix, so an address that rises out from behind the display cap is not announced as new months late.
+
+### 5. The scrubber says which letter
+
+The strip is 18 points wide at 10pt type — right for a resting index, unreadable with a thumb over it. A large glyph now floats to the leading side while scrubbing, where the finger is not, tracking the touch continuously while the scroll callback still fires only on a change of letter.
+
+### The three walks
+
+**`book.search` ran four times per body pass** — the sections, the id map, the header's count and the scrubber's overlay — each re-filtering the whole book. The fix is not a cache across passes (the book is `@Observable`; a pass only happens when something really changed) but computing it ONCE within the pass and threading it down. `entriesByID` is deleted; it existed only to re-run that search.
+
+**Two corpus fetches became one.** `refreshActivityCounts` and `refreshConnections` each ran a fetch plus a full walk, back to back in `onAppear` and again after every sync, over overlapping predicates — `AddressConnections` reads Wallet things and `AddressActivity` reads Wallet + Peer + Privacy Pools, a strict superset. `AddressActivity.relevant(in:)` exposes the fetch and both readings take it. **`edges(from:)` re-sorts rather than trusting the caller's order**, which is load-bearing: `AddressActivity` hands back newest-first for its own readings, and node order on the spine is FIRST-DEALT by §295's ruling — taking the given order would silently reverse the spine, a card that renders perfectly and lists the newest relationship as the oldest.
+
+**The search fold is one `let`.** `draft.isEmpty` was re-derived at four branch points; it is computed once and passed.
+
+### Deliberately not
+
+Group cards reordered by activity (alphabetical is stable, and a strip that reshuffles between opens reads as broken — the lesson `agent-panel-selftest` and `AddressSky` both paid for), and a haptic on scroll (the scrubber's selection tick is enough; a second turns the screen into a rattle).
+
+### Unproven
+
+The build is green on both platforms and every harness and audit passes. **No simulator run and no device**: the flight's two anchors, the drop absorb and the scrubber bubble are all gesture-driven and none of them can be exercised by a static check — and the drag that feeds the absorb is the same `draggable`/`contextMenu` arbitration §440 already flagged as unverified on hardware.
