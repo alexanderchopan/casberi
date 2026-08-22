@@ -1107,6 +1107,19 @@ harness "Keyed-agent reach and budget self-test" "agent keyed self-test" "script
 # makes a nine-service ledger look exactly like a six-service one.
 harness "Receipts-insight pure-logic self-test" "receipts-insight self-test" "scripts/receipts-insight-selftest.sh" "the receipts-insight logic self-test failed — run scripts/receipts-insight-selftest.sh"
 
+# The 2026-08-21 perf pass's two invariants (see the script's own header). Both
+# removed a real cost from a path a person feels, and both are correct only
+# while a condition holds that nothing else here can see: the room-head cache
+# must never hold a `Thing` (a model reference outliving its mount is the
+# SwiftData liveness class this repo has six corollaries for, arriving by a
+# seventh route none of them covers), and the head must never be computed while
+# the swipe's transient row bound is set (a head over the newest 150 rows,
+# presented as the room's own reading, is the §83 fake status the 2026-08-14
+# "no permanent fetchLimit" ruling exists to refuse — reintroduced by the very
+# change written not to break it). Both failures build green, pass every audit,
+# render perfectly, and are simply wrong.
+harness "Room-perf invariants self-test" "room-perf self-test" "scripts/room-perf-selftest.sh" "the room-perf self-test failed — run scripts/room-perf-selftest.sh"
+
 # The design system's first mechanical check (prd §299). Every other rule in
 # this file is enforced by a script; the design system was enforced by memory,
 # which is how fourteen data drawings shipped with no entrance and how the

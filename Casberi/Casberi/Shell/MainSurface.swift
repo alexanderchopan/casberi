@@ -1497,9 +1497,60 @@ struct MainSurface: View {
         }
         guard target != filter.source else { return }
         slideEdge = direction(from: filter.source, to: target)
+        // THE SLIDE GETS ITS FRAMES (PERF 2026-08-21) — see `swipeRowBudget`.
+        // Set BEFORE the source changes, so the incoming `FeedScreen`'s very
+        // first `init` already carries the bound; setting it after would build
+        // the unbounded query once and then throw it away, which is the whole
+        // cost, paid and discarded.
+        swipeRowBudget = Self.swipeRowBudgetRows
+        swipeBudgetGeneration &+= 1
+        SwipeClock.step(to: target)
         withAnimation(DS.Motion.standard) {
             filter.source = target
         }
+    }
+
+    /// A transient bound on the incoming room's query, for the length of the
+    /// slide (PERF 2026-08-21, prd §434 ruling 2). See `FeedScreen.rowBudget`,
+    /// which carries the full reasoning and the honesty argument.
+    ///
+    /// It lives HERE rather than inside `FeedScreen` because §265's transition
+    /// is a REMOUNT and `@Query`'s descriptor is fixed at `init` — so the only
+    /// place that can bound the incoming room's first fetch is the parent that
+    /// builds it. That is also why it must be part of `FeedScreen`'s
+    /// `Equatable`: clearing it is a parameter change, and a parameter change
+    /// is the only thing that re-runs `init` and re-arms the query.
+    @State private var swipeRowBudget: Int?
+
+    /// Which swipe the current budget belongs to, so a fast second swipe can
+    /// never have the FIRST one's timer clear its bound out from under it.
+    /// Bumped per step and captured by the release task, the same guarded-timer
+    /// shape `chrome.risingBriefTitle` uses one screen over.
+    @State private var swipeBudgetGeneration = 0
+
+    /// 150 rows — five of the feed's own 30-row windows.
+    ///
+    /// Not a tuning knob but an arithmetic one: the room windows at
+    /// `windowRowTarget` and grows by that much per "Show older" tap, so this
+    /// is the smallest bound that cannot change a single pixel of the first
+    /// paint, with four spare windows nobody can open inside a slide.
+    private static let swipeRowBudgetRows = 150
+
+    /// Release the bound once the slide has had the main actor to itself.
+    ///
+    /// Keyed on the SOURCE, so it re-arms per room change and a superseded
+    /// swipe's task is cancelled by SwiftUI rather than racing this one. The
+    /// generation check is the second guard, for the case the cancellation
+    /// lands after the sleep has already returned.
+    private func releaseSwipeBudget() async {
+        guard swipeRowBudget != nil else { return }
+        let generation = swipeBudgetGeneration
+        // Just past `DS.Motion.standard`'s own settle — long enough that the
+        // full fetch lands after the last animated frame, short enough that the
+        // head follows the room rather than trailing it.
+        try? await Task.sleep(for: .milliseconds(360))
+        guard !Task.isCancelled, swipeBudgetGeneration == generation else { return }
+        swipeRowBudget = nil
     }
 
     /// Which edge the incoming room slides from.
@@ -1603,7 +1654,8 @@ struct MainSurface: View {
             // List's own scroll view, mounted by FeedScreen), which hands its
             // one-step decision up through `chrome.pageStep` below.
             ZStack {
-                FeedScreen(source: filter.source, isActive: true, nearActive: true)
+                FeedScreen(source: filter.source, isActive: true, nearActive: true,
+                           rowBudget: swipeRowBudget)
                     // See `FeedScreen: Equatable` — this is what stops a
                     // MainSurface render from rebuilding the whole feed
                     // (measured 15 body builds → 2).
@@ -1624,6 +1676,8 @@ struct MainSurface: View {
                                && !chrome.walkInPushedRoom },
                     step: { delta in step(delta) })
             }
+            // Hands the room back its whole query once the slide is over.
+            .task(id: filter.source) { await releaseSwipeBudget() }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             // The strip FLOATS over the feed rather than sitting above it
             // (2026-07-20). It was a VStack sibling, which meant nothing ever

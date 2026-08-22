@@ -52,7 +52,7 @@ xcrun simctl terminate "$DEVICE" "$BUNDLE" 2>/dev/null || true
 # re-measured by hand to act on it. A stream is the cheap half of a perf
 # pass; discarding it to keep the log tidy costs the whole diagnosis.
 xcrun simctl spawn "$DEVICE" log stream \
-  --predicate 'process == "Casberi" AND (eventMessage CONTAINS "launchTimer" OR eventMessage CONTAINS "answerProbe(" OR eventMessage CONTAINS "launchPerf" OR eventMessage CONTAINS "askPerf|")' \
+  --predicate 'process == "Casberi" AND (eventMessage CONTAINS "launchTimer" OR eventMessage CONTAINS "answerProbe(" OR eventMessage CONTAINS "launchPerf" OR eventMessage CONTAINS "askPerf|" OR eventMessage CONTAINS "risePhase|" OR eventMessage CONTAINS "swipePerf|")' \
   --style compact > "$LOG" 2>/dev/null &
 LOGPID=$!
 sleep 1
@@ -145,6 +145,37 @@ TS=$(date +%Y-%m-%dT%H:%M:%S)
       print -r -- "  $span"
     done
   fi
+  # ── The two spans of the 2026-08-21 pass ──────────────────────────────
+  # Same contract as `askPerf|` above and for the same reason: REPORTED,
+  # never gated, never a CSV column.
+  #
+  # `risePhase|` is the agent open as a SEQUENCE OF STATES — raise →
+  # consumed → commit → firstDoc. The reported jank ("it tries to launch the
+  # composer only and you see a greeting glitch") was never a single slow
+  # number; it was three surfaces for one tap, which no bracketed latency can
+  # show. A missing `firstDoc` means that open showed scaffolding until it was
+  # completely finished.
+  #
+  # `swipePerf|` is a room change — step → mount → heads → rows. `step`→`rows`
+  # is what a person feels as the swipe being slow, and the marks between it
+  # separate the two costs (materialising the room, deriving its head) whose
+  # fixes are different. `memo=hit|miss` says whether the head came from the
+  # cross-mount cache; a trace with no `heads` line means the head declined or
+  # the swipe's row budget was still held.
+  #
+  # NOTE these need driving — a headless `perf.sh` run neither swipes nor opens
+  # the agent, so an empty section here is the normal reading, not a finding.
+  # `-composerCycles <n>` exercises the rise; the swipe needs a real gesture or
+  # a `casberi://feed/source/<X>` deep link per room.
+  for marker in risePhase swipePerf; do
+    if grep -q "$marker|" "$LOG" 2>/dev/null; then
+      print -r -- ""
+      print -r -- "$marker (DEBUG markers, not gated):"
+      grep -o "$marker| [^\"]*" "$LOG" | sed "s/^$marker| //" | while read -r span; do
+        print -r -- "  $span"
+      done
+    fi
+  done
   print -r -- ""
   # ── Span breakdown (the WHY behind the launch number) ─────────────────
   # Reported, never flagged: these are DEBUG-only markers and the three

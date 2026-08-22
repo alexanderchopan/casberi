@@ -29301,3 +29301,106 @@ than risk clobbering another session's in-flight work. **The tell that saved it
 was a line number that moved between two reads of the same file** — the plan said
 2001, grep said 2047, a third read said 2076. Re-run the filter in this entry to
 finish those two files once the tree is quiet.
+
+## 434. The swipe and the rise, as one perf pass — and the one thing a person is now shown a beat later (user: "the app is starting to lag, swiping between screens, and also the agent launching is still janky — for a split second it tries to launch the composer only and you see a greeting glitch on top of the composer before the brief shows. it's unacceptable", 2026-08-21)
+
+The full record is `docs/perf-swipe-and-rise-spec.md`. This entry is the ledger's
+half: the two rulings that change what somebody SEES, and the one that does not
+change what they see and had to be argued anyway.
+
+### 1. A room's head may arrive a beat after its rows, once per room per launch
+
+Until this pass the head chain — `sourceHead`, then the topic treemap, the
+leaderboard, the distribution, the mosaic — was derived inline in the feed's
+body, i.e. once per body evaluation, over the room's entire contents. §265 made
+a room change a REMOUNT, so every swipe paid that from zero, several times, on
+the main actor, inside the frames the slide animation needed. It is now computed
+once per (room, revision) and cached ACROSS the remount.
+
+The visible consequence, stated because it is a real one: a room you have never
+opened this launch draws no head until the computation lands — the same nothing
+a head that DECLINES already draws — and then draws it. A room you have already
+visited paints its head immediately from the cache. So the cost is one beat, on
+first entry, per room, per launch.
+
+That is the right trade and not a close call. The alternative is what was
+happening: every entry to every room, including the fortieth, stuttering the
+slide to avoid a single first-entry beat.
+
+### 2. The head is DEFERRED during a swipe, never computed over a truncated room
+
+The swipe now bounds the incoming room's query to 150 rows for ~360ms so the
+slide gets the main actor. **This does not reverse the 2026-08-14 ruling** that
+refuses a permanent `fetchLimit` on a source room. That ruling's reason is that
+a head computed over a slice is a claim about the whole room that isn't true —
+"your loudest year" over the newest 150 posts is §83's fake status in the room
+whose entire promise is that it holds your history. So the head task DECLINES
+outright while the bound is set, and computes over everything once it lifts.
+Deferred, never truncated. The bound is arithmetic rather than taste: the feed
+windows at 30 rows, so the first paint is pixel-identical with four spare
+windows nobody can open inside a slide.
+
+Guarded mechanically (`scripts/room-perf-selftest.sh`), because both halves of
+this — the decline, and the cache holding no `Thing` — fail INVISIBLY: green
+build, green audits, a card that renders perfectly and is simply wrong.
+
+### 3. The agent rises INTO the answer's frame, not into an empty one
+
+The reported "greeting glitch" was three surfaces for one tap. §386's `handingOff`
+(2026-08-16) and the rest-greeting's own gate (2026-08-17) each correctly stopped
+a surface painting into the handoff window — and what they left behind was an
+EMPTY bubble, because every band in the composer is gated on either `restChrome`
+or `answering` and during the handoff neither holds. Then `commit()` flipped
+`answering` and the brief's masthead mounted as a new band in its own
+transaction: a greeting and a date, alone, above a skeleton, before any document
+existed.
+
+The ruling: **an open that owes an answer shows that answer's FRAME from the
+first frame.** The handoff window renders the same header the live turn will
+wear over the same skeleton it will wear, both from one shared view apiece, so
+`commit()` changes only the CONTENT inside a frame already standing. The
+question lift — the felt hand-off from field to answer — is suppressed for a
+handoff, because the header is already standing exactly where it would slide up
+to; it remains for a typed ask, where it means what it always meant.
+
+The whisper capsule is untouched and stands the rising frame down: its title
+travel (§167 item 1) is an approved choreography and shares a
+`matchedGeometryEffect` id, and two live views on one matched id is undefined.
+
+### 4. The last brief survives the launch, gated by the CALENDAR
+
+§386k paints the previous brief instantly while the fresh one composes, and
+shipped it in memory only — which reserved the worst case (nothing to paint, so
+scaffolding until the corpus compose returns) for the FIRST open of every
+launch, i.e. the most common tap.
+
+It is now kept for the calendar day. **The staleness gate is the calendar and
+not a timeout**, and that is the whole of why it is honest: this document is
+about TODAY — composed from today's window, its masthead says today's date, its
+lede counts what arrived today — so a doc composed today describes today at any
+hour it is read, and a doc composed on any other day describes a day that is
+over. Yesterday's brief is never restored. There is no age threshold to argue
+about, now or later.
+
+§83 holds for the reason it held in memory: this is a document on its way to
+being replaced, bounded by `liveReadBudget`, every figure of which was true when
+composed. What persisting it changes is only whether the reader looks at a real
+brief or at pulsing rectangles while that happens.
+
+### What this does not touch
+
+The brief's content, the typewriter (§386k's 2026-08-16 pacing), the composer's
+two doors (§386o), the rest surface, the discrete room transition (§265), the
+folded-category switcher (§351/§357), what any head SAYS, or any bridge. No new
+`Thing` property and no CloudKit deploy.
+
+### Unmeasured, and instrumented so it need not stay that way
+
+Nothing here was measured — it shipped on build, audits and code reasoning per
+the standing ruling, and every change is structural (work removed or reordered)
+rather than tuned. Both symptoms sat outside every span `perf.sh` times, which
+is how four green nightlies coexisted with the report, so the pass also lands
+the two instruments that were missing: `swipePerf|` (step → mount → heads →
+rows) and `risePhase|` (raise → consumed → commit → firstDoc). The rise in
+particular is animation-frame timing, which a simulator distorts; one device
+trace closes it.

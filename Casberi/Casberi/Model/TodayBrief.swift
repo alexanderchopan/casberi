@@ -2696,10 +2696,70 @@ enum TodayBrief {
     /// outlive the rows it plots.
     @MainActor private static var mapCache: (signature: String, line: String?)?
 
-    /// The doc last shown to a person this session (prd §386k) — painted
-    /// instantly on the next rise while the fresh compose runs. In-memory
-    /// only, written beside `recordModuleDigests` under the same guards.
-    @MainActor static var lastPresentedDoc: [String]?
+    /// The doc last shown to a person (prd §386k) — painted instantly on the
+    /// next rise while the fresh compose runs. Written beside
+    /// `recordModuleDigests`, under the same guards.
+    ///
+    /// KEPT ACROSS LAUNCHES SINCE 2026-08-21 (prd §434 ruling 4), and the
+    /// launch boundary is
+    /// exactly where it was needed. §386k shipped this in memory only, on the
+    /// stated trade that "a doc from a previous launch could be a day stale" —
+    /// true, and it made the FIRST open of every launch the one open with no
+    /// cached doc at all. That is the open where the reported jank lives: with
+    /// nothing to paint, the rise shows scaffolding until the corpus compose
+    /// returns, so the worst case was reserved for the most common tap.
+    ///
+    /// THE STALENESS PROBLEM IS ANSWERED BY THE CALENDAR, NOT BY A TIMEOUT.
+    /// This document is about TODAY — it is composed from today's window, its
+    /// masthead says today's date, and its lede counts what arrived today. A
+    /// doc composed today therefore describes today whatever hour it is read
+    /// at, and a doc composed on any other day describes a day that is over.
+    /// So the gate is same-calendar-day and nothing else: no age threshold, no
+    /// tuning knob, no "how stale is too stale" judgment that would have to be
+    /// re-litigated. Yesterday's brief is simply never restored.
+    ///
+    /// §83 holds for the same reason it held in memory: this is a document on
+    /// its way to being REPLACED, bounded by `liveReadBudget`, and every figure
+    /// in it was true when composed. What the persistence changes is only
+    /// whether the reader looks at a real brief or at pulsing rectangles while
+    /// that happens.
+    ///
+    /// `UserDefaults.standard`, deliberately NOT the app group: no extension
+    /// composes or reads a brief, and the widget carries its own payload
+    /// (`WidgetPayload`) with its own §374 rules. A store nobody else reads
+    /// cannot leak into a surface that has its own contract.
+    @MainActor static var lastPresentedDoc: [String]? {
+        get {
+            if let held = presentedDocCache { return held }
+            // Restored lazily rather than at launch: most launches never open
+            // the agent, and this is two small reads on the one path that does.
+            guard let stamp = UserDefaults.standard.object(forKey: presentedDocDayKey) as? Date,
+                  Calendar.current.isDateInToday(stamp),
+                  let doc = UserDefaults.standard.stringArray(forKey: presentedDocKey),
+                  !doc.isEmpty
+            else { return nil }
+            presentedDocCache = doc
+            return doc
+        }
+        set {
+            presentedDocCache = newValue
+            guard let doc = newValue, !doc.isEmpty else {
+                UserDefaults.standard.removeObject(forKey: presentedDocKey)
+                UserDefaults.standard.removeObject(forKey: presentedDocDayKey)
+                return
+            }
+            UserDefaults.standard.set(doc, forKey: presentedDocKey)
+            UserDefaults.standard.set(Date.now, forKey: presentedDocDayKey)
+        }
+    }
+
+    /// The in-memory half, so a re-read inside one session never touches disk.
+    /// Distinct from the stored value on purpose: a nil here means "not read
+    /// back yet", never "there is none" — which is why the getter falls through
+    /// to the store rather than treating nil as an answer.
+    @MainActor private static var presentedDocCache: [String]?
+    private static let presentedDocKey = "brief.lastPresentedDoc"
+    private static let presentedDocDayKey = "brief.lastPresentedDocAt"
 
     private static func clusterMap(context: ModelContext) async -> String? {
         // THE SIGNATURE IS ASKED FIRST, AND CHEAPLY (PERF 2026-08-18).

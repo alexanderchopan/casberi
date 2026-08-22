@@ -2756,10 +2756,13 @@ struct RootShell: View {
             // paints. Painting this session's previous doc through the
             // partial channel makes the rise feel instant; the fresh partial
             // replaces it the moment the corpus half composes, and the
-            // quiet-set then says honestly what didn't change. SESSION-ONLY
-            // (`AgentOpenCache`'s own trade): a doc from a previous launch
-            // could be a day stale, but within a session it is minutes old
-            // and about to be corrected either way.
+            // quiet-set then says honestly what didn't change.
+            //
+            // ACROSS LAUNCHES since 2026-08-21 — see `lastPresentedDoc`, which
+            // now keeps the doc for the calendar day rather than the session.
+            // Session-only left the FIRST open of every launch with nothing to
+            // paint, which is the one open the jank was reported against: the
+            // most common tap was getting the worst case.
             var paintedCached = false
             if let cached = TodayBrief.lastPresentedDoc {
                 onPartialDoc(cached)

@@ -407,6 +407,20 @@ struct Composer: View {
     /// this is the second half of; set the moment the request is consumed and
     /// cleared once the answer owns the screen.
     @State private var pendingHandoff = false
+
+    /// The rising frame really painted for THIS handoff (PERF 2026-08-21), so
+    /// the live turn that replaces it must not also play the question lift.
+    ///
+    /// That lift is the felt hand-off from FIELD to answer — right for a typed
+    /// ask, wrong here, because the header is already standing in the exact
+    /// place it would slide up to. Animating it anyway is the pop this whole
+    /// pass removes, one layer in. Written from `consumeAskRequest` rather than
+    /// derived in the body: state written from the body path is the loop the
+    /// 2026-08-11 source-rail fix was made of.
+    @State private var risingFramePainted = false
+
+    /// When this open began — the zero of every `risePhase|` line.
+    @State private var riseT0: Date?
     @State private var voice = VoiceCapture()
     /// True when the draft arrived by paste — the one typed-ish path that
     /// still captures (pasting is bringing a thing in, not talking).
@@ -656,6 +670,60 @@ struct Composer: View {
     /// makes `answering` true.
     private var handingOff: Bool {
         chrome.askRequest != nil || pendingHandoff
+    }
+
+    /// The question this open OWES an answer to, before `commit()` has made it
+    /// `currentQuestion` (PERF 2026-08-21).
+    ///
+    /// Two spellings because the request is handed over in two steps and there
+    /// is a window between them: `chrome.askRequest` holds it from the raise
+    /// until `consumeAskRequest` clears it, and from that instant `draft` holds
+    /// it (`fillDraft(query)` is the very next line) until `commit()` runs.
+    /// `pendingHandoff` is what says the second half is genuinely a handoff
+    /// rather than something typed — the same flag `handingOff` already reads,
+    /// so the two can never disagree about whether an answer is owed.
+    private var pendingAsk: String? {
+        if let request = chrome.askRequest { return request }
+        guard pendingHandoff else { return nil }
+        let typed = draft.trimmingCharacters(in: .whitespacesAndNewlines)
+        return typed.isEmpty ? nil : typed
+    }
+
+    /// THE OPEN RISES INTO THE ANSWER'S OWN FRAME (PERF 2026-08-21, prd §434
+    /// ruling 3, reported:
+    /// "for a split second it tries to launch the composer only and you see a
+    /// greeting glitch on top of the composer before the brief shows").
+    ///
+    /// Three surfaces were being shown for one tap, and the fixes that removed
+    /// the first two are what made the third visible. `handingOff` (2026-08-16)
+    /// and the greeting's own `!handingOff` gate (2026-08-17) correctly stopped
+    /// the REST surface painting into the handoff window — but what they left
+    /// behind is an EMPTY bubble, because every band in `openBubble` is gated on
+    /// either `restChrome` or `answering` and during the handoff neither holds.
+    /// Then `commit()` flips `answering` and the brief's masthead mounts — the
+    /// greeting and its date, alone above a skeleton, as a NEW band appearing in
+    /// its own transaction. That is the reported glitch: empty, then a greeting,
+    /// then the document, one tap.
+    ///
+    /// So the handoff window renders the ANSWER'S frame rather than nothing: the
+    /// same header the live turn will wear, over the same skeleton it will wear,
+    /// from the first frame. `commit()` then changes only the CONTENT inside a
+    /// frame that is already standing, which is what the rise was always meant to
+    /// look like. Both halves come from one shared view apiece (`turnHeader`,
+    /// `answerSkeleton`), so the rising frame and the real one cannot drift into
+    /// looking like two different screens — which would be this bug wearing a
+    /// smaller costume.
+    ///
+    /// STANDS DOWN FOR THE WHISPER, and that gate is load-bearing rather than
+    /// tidy: the capsule's tap flies `chrome.risingBriefTitle`, a proxy title
+    /// RootShell renders with `matchedGeometryEffect(id: "whisperTitleMorph")`
+    /// in the SAME namespace this header uses (`glassNamespace: agentMorph`).
+    /// Two live views sharing one matched id is undefined, and the whisper's
+    /// choreography is already approved and already covers this window.
+    private var risingHandoff: Bool {
+        isOpen && !answering && !isRecording
+            && chrome.risingBriefTitle == nil
+            && pendingAsk != nil
     }
 
     private func restChrome(keepBrief: Bool) -> Bool {
@@ -1358,7 +1426,32 @@ struct Composer: View {
                                           @ViewBuilder content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: DS.Space.s1) {
             if !question.isEmpty {
-                Group {
+                turnHeader(question: question)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, DS.Space.s4)
+                    // The question lift (delight, 2026-07-21): a freshly-sent
+                    // ask rises into its header rather than popping cold —
+                    // the felt hand-off from field to answer. Settled turns
+                    // (scroll-back) never animate; this plays once, for the
+                    // turn that just became live.
+                    .transition(animateIn
+                                ? .move(edge: .bottom).combined(with: .opacity)
+                                : .identity)
+            }
+            content()
+        }
+    }
+
+    /// A turn's header, as ONE view — shared by the live turn, every settled
+    /// turn, and the rising frame the handoff window paints (`risingHandoff`).
+    ///
+    /// Extracted 2026-08-21 for the reason this codebase keeps re-learning: the
+    /// rising frame's whole job is to be INDISTINGUISHABLE from the real one, so
+    /// a second copy of this markup would reintroduce the pop it exists to
+    /// remove, in a form nobody would think to look for.
+    @ViewBuilder
+    private func turnHeader(question: String) -> some View {
+        Group {
                     // The Today brief wears a MASTHEAD, not the typed question
                     // (2026-07-22). The whisper capsule promises "Your
                     // Wednesday brief"; landing on a screen titled "How's my
@@ -1399,20 +1492,28 @@ struct Composer: View {
                             .dsText(.heading17)
                             .foregroundStyle(DS.textPrimary)
                     }
-                }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, DS.Space.s4)
-                    // The question lift (delight, 2026-07-21): a freshly-sent
-                    // ask rises into its header rather than popping cold —
-                    // the felt hand-off from field to answer. Settled turns
-                    // (scroll-back) never animate; this plays once, for the
-                    // turn that just became live.
-                    .transition(animateIn
-                                ? .move(edge: .bottom).combined(with: .opacity)
-                                : .identity)
-            }
-            content()
         }
+    }
+
+    /// The shape of an answer that hasn't come — as ONE view, shared by the
+    /// live turn and the rising frame above it (2026-08-21, the `turnHeader`
+    /// reasoning: the two must be the same pixels or the handoff pops).
+    ///
+    /// Three shapes, not one (2026-08-09, user: "i'd rather see it look like
+    /// generative UI preparing to populate") — a short lede-shaped line, a tall
+    /// hero-shaped block, then note-shaped rows, echoing the real brief's own
+    /// layout (`DayLede` → `MoneyHero`/`TagMap` → `DayNotes`) rather than one
+    /// undifferentiated rectangle. Each pulses on its own clock
+    /// (`GenSkeletonPulse`), so the group breathes like something is assembling.
+    private var answerSkeleton: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            GenSkeletonBlock(minHeight: 26)
+            GenSkeletonBlock(minHeight: 120)
+            GenSkeletonRow()
+            GenSkeletonRow()
+        }
+        .transition(.opacity)
+        .accessibilityLabel("Working")
     }
 
     /// A follow-up asked from INSIDE an answer (the Today brief's residue
@@ -1605,6 +1706,27 @@ struct Composer: View {
             // above the card. Touching the field means "I want to ask", and
             // the answer comes back the moment focus leaves with nothing
             // typed, so nothing is lost: the turns are still in `turns`.
+            //
+            // THE RISING FRAME (PERF 2026-08-21) — the handoff window's own
+            // band, standing exactly where the live turn is about to stand and
+            // wearing exactly what it will wear. See `risingHandoff` for why an
+            // open that owes an answer used to paint nothing at all here and
+            // then grow a lone greeting. `turns.isEmpty` because a follow-up
+            // asked from inside a conversation already has the previous turns
+            // on screen and needs no scaffold; `!askSurfaceShowing` mirrors the
+            // real turn's own gate so the focus door still clears the document.
+            if risingHandoff, turns.isEmpty, !askSurfaceShowing,
+               let pending = pendingAsk {
+                VStack(alignment: .leading, spacing: DS.Space.s1) {
+                    turnHeader(question: pending)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, DS.Space.s4)
+                    answerSkeleton
+                        .padding(.horizontal, DS.Space.s4)
+                }
+                .padding(.top, DS.Space.s2)
+                .dsAdaptiveContentWidth(.reading)
+            }
             if (!turns.isEmpty || answering), !askSurfaceShowing {
                 ScrollViewReader { proxy in
                     VStack(alignment: .leading, spacing: 0) {
@@ -1671,7 +1793,23 @@ struct Composer: View {
                                     GenFrontPage.qualifies(turn.els) ? .wide : .reading)
                             }
                             if answering {
-                                convoTurn(question: currentQuestion, animateIn: true) {
+                                // `animateIn` is the question LIFT — the felt
+                                // hand-off from field to answer, right for a
+                                // typed ask and wrong for a handoff whose
+                                // header is already standing in the exact place
+                                // it would slide up to (PERF 2026-08-21, see
+                                // `risingFramePainted`).
+                                //
+                                // `turns.isEmpty` bounds it to the turn the
+                                // rising frame actually scaffolded — its own
+                                // gate is the same condition. Without that, the
+                                // flag outlives its turn and a TYPED follow-up
+                                // asked from inside the conversation silently
+                                // loses the lift, which is the one place that
+                                // gesture means exactly what it was built to
+                                // mean.
+                                convoTurn(question: currentQuestion,
+                                          animateIn: !(risingFramePainted && turns.isEmpty)) {
                                     VStack(alignment: .leading, spacing: DS.Space.s2) {
                                         // The wait, drawn as the SHAPE of the
                                         // answer coming (2026-07-31). A
@@ -1727,14 +1865,7 @@ struct Composer: View {
                                         // its job and the content speaks for
                                         // itself.
                                         if inFlight, answerStream.els.isEmpty {
-                                            VStack(alignment: .leading, spacing: DS.Space.s2) {
-                                                GenSkeletonBlock(minHeight: 26)
-                                                GenSkeletonBlock(minHeight: 120)
-                                                GenSkeletonRow()
-                                                GenSkeletonRow()
-                                            }
-                                            .transition(.opacity)
-                                            .accessibilityLabel("Working")
+                                            answerSkeleton
                                         }
                                         GenRender(id: "root", els: answerStream.els)
                                             .textSelection(.enabled)
@@ -2289,6 +2420,8 @@ struct Composer: View {
         .modifier(MorphMatch(ns: embedded ? glassNamespace : nil))
         .task(id: isOpen) {
             if isOpen {
+                riseT0 = .now
+                risePhase("raise")
                 // Flip BEFORE the heavy synchronous work, then yield once —
                 // guarantees SwiftUI gets one real render pass with the
                 // skeleton board visible before `computeSuggestions()`
@@ -2437,6 +2570,13 @@ struct Composer: View {
             guard isOpen, request != nil else { return }
             Task { await consumeAskRequest() }
         }
+        // The instrument's closing bracket (PERF 2026-08-21) — the first pixel
+        // of a real document, which is the only end of the rise that matters.
+        // `els` going non-empty is the same signal the skeleton's own gate
+        // reads, so the line lands exactly when the scaffolding stands down.
+        .onChange(of: answerStream.els.isEmpty) { _, empty in
+            if !empty { risePhase("firstDoc") }
+        }
         // The placeholder cycler retired with the cycle itself (2026-08-15) —
         // see the field's own note. It was also the composer's one piece of
         // permanently-looping motion, which the motion law only ever
@@ -2470,7 +2610,15 @@ struct Composer: View {
         // Take the hold BEFORE clearing the request, or `handingOff` reads
         // false for the window below and the rest surface paints into it.
         pendingHandoff = true
+        // Read BEFORE the request is cleared and BEFORE the turn commits: this
+        // is the one moment the rising frame's own condition is knowable from
+        // an action rather than from the body. `turns.isEmpty` is the frame's
+        // other gate, restated here so a follow-up inside a conversation still
+        // gets its lift (nothing scaffolded it).
+        risingFramePainted = chrome.risingBriefTitle == nil && turns.isEmpty
+            && !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         chrome.askRequest = nil
+        risePhase("consumed")
         // A surface that asked for a KEYED answer (a thing sheet's "Ask about
         // this") gets the same arc a tap on the verb gives: the free
         // on-device answer runs first and the keyed one fires itself the
@@ -2497,6 +2645,7 @@ struct Composer: View {
         if query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             fieldFocused = true
             pendingHandoff = false
+            risingFramePainted = false
             return
         }
         // 400ms → 120ms (2026-08-16). The old wait was "let the bubble settle",
@@ -2511,11 +2660,41 @@ struct Composer: View {
         // try? above swallows that CancellationError, so without this guard
         // commit() would fire an empty ask into a CLOSED composer and strand
         // "Thinking…" for the next open (review 2026-07-11).
-        guard !Task.isCancelled, isOpen else { pendingHandoff = false; return }
+        guard !Task.isCancelled, isOpen else {
+            pendingHandoff = false
+            risingFramePainted = false
+            return
+        }
+        risePhase("commit")
         commit()
         // Released only now: `commit()` sets `answering`, so from here the
         // answer itself keeps the rest surface down and the hold is spent.
         pendingHandoff = false
+    }
+
+    /// `risePhase|` — what is actually on screen, ms by ms, from the raise to
+    /// the first pixel of a document (PERF 2026-08-21). DEBUG only.
+    ///
+    /// It exists because the reported jank ("it tries to launch the composer
+    /// only and you see a greeting glitch") is a SEQUENCE OF STATES, and no
+    /// instrument in this app could show one. `perf.sh`'s answer latency starts
+    /// inside the answer path; `askPerf|` brackets entry→paint. Neither can say
+    /// what stood on screen in between, which is the entire complaint — so
+    /// three passes each correctly removed a cost and the surface still read as
+    /// three screens for one tap.
+    ///
+    /// One NSLog per flip (the `-todayProbe` truncation lesson), each carrying
+    /// the ms since the raise plus the four flags that decide what draws. A
+    /// missing `firstDoc` line is a finding, not a gap: it means this open
+    /// showed scaffolding until it was completely finished.
+    private func risePhase(_ event: String) {
+        #if DEBUG
+        guard let t0 = riseT0 else { return }
+        NSLog("[Casberi] risePhase| %@ at=%dms handingOff=%d rising=%d answering=%d turns=%d",
+              event, Int(Date.now.timeIntervalSince(t0) * 1000),
+              handingOff ? 1 : 0, risingHandoff ? 1 : 0,
+              answering ? 1 : 0, turns.count)
+        #endif
     }
 
     /// DEBUG hook: `simctl launch ... -uiAnswerProbe "what's my week"` opens
@@ -2614,6 +2793,8 @@ struct Composer: View {
         draft = ""      // close clears the draft (composer spec)
         answering = false
         pendingHandoff = false
+        risingFramePainted = false
+        riseT0 = nil
         pasted = false
         chipsAppeared = false
         turns = []
@@ -3279,7 +3460,7 @@ struct Composer: View {
                                                          style: .continuous))
                         .dsHover()
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(PressSpring())
                     // Keeping was ONE-WAY until now (2026-08-10, user: "how
                     // does someone remove it"). `KeptAskStore.remove` has
                     // existed since the store did, and its only callers were a
@@ -3362,6 +3543,7 @@ struct Composer: View {
                                 Circle().fill(DS.tint).frame(width: 7, height: 7)
                             } else {
                                 Image(systemName: isAway ? "sparkles" : ask.glyph)
+                                    .dsSymbolSwap(isAway)
                                     .accessibilityHidden(true)
                                     .dsGlyph(13)
                                     .foregroundStyle(DS.tint)
@@ -3396,7 +3578,7 @@ struct Composer: View {
                                                          style: .continuous))
                         .dsHover()
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(PressSpring())
                     .modifier(ChipEntrance(index: i, shown: chipsAppeared, reduceMotion: reduceMotion))
                 }
                 }
@@ -3683,6 +3865,7 @@ struct Composer: View {
                 else { DSHaptic.tap(); Task { await voice.start() } }
             } label: {
                 Image(systemName: isRecording ? "stop.circle.fill" : "mic")
+                    .dsSymbolSwap(isRecording)
                     .dsGlyph(17, weight: .regular)
                     .foregroundStyle(isRecording ? DS.destructive : DS.textSecondary)
                     .frame(width: 36, height: 36)
@@ -3789,7 +3972,7 @@ struct Composer: View {
                             in: Capsule(style: .continuous))
                 .dsHover()
             }
-            .buttonStyle(.plain)
+            .buttonStyle(PressSpring())
             .accessibilityLabel(hasDraft && !isRecording ? (pasted ? "Keep" : "Ask") : "Send")
             .modifier(SendTooltip(glyphOnly: !(hasDraft && !isRecording)))
         }

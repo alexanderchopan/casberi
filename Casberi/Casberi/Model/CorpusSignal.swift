@@ -50,4 +50,27 @@ extension Corpus {
     static func revision(in context: ModelContext) -> Revision {
         Revision(count: count(in: context), signal: CorpusSignal.shared.revision)
     }
+
+    /// The same pair, scoped to ONE source (PERF 2026-08-21).
+    ///
+    /// A source room already has a predicated `@Query` coordinating its ROWS,
+    /// which is why `.idle` was the right answer for everything a room's own
+    /// list does. It is the wrong answer for anything computed ABOUT the room —
+    /// the head chain — because that needs a key it can be memoised against,
+    /// and the only key available was `things.count`, which is the property
+    /// wrapper's getter and therefore materialises every row it counts (the
+    /// 2026-08-06 measurement, and the trap `corpusRevision`'s own doc records).
+    ///
+    /// A scoped SQL `COUNT` answers the same question with no model
+    /// instantiation at all. The `signal` term is deliberately the GLOBAL one:
+    /// `CorpusSignal` doesn't record which source a retag touched, and a head
+    /// recomputed once too often is a cost, while one recomputed too rarely is
+    /// a card that disagrees with the rows under it.
+    @MainActor
+    static func revision(in context: ModelContext, source: String) -> Revision {
+        var d = FetchDescriptor<Thing>(predicate: #Predicate<Thing> { $0.source == source })
+        d.propertiesToFetch = []
+        let n = (try? context.fetchCount(d)) ?? 0
+        return Revision(count: n, signal: CorpusSignal.shared.revision)
+    }
 }

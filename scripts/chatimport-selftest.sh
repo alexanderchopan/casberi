@@ -124,8 +124,26 @@ PY
 # The map is consulted for EVERY room by source, so registering a case really
 # does reach the feed. Named here because it is the half the cases above can't
 # prove on their own.
-[[ -f "$FEEDSCREEN" ]] && { grep -q 'FeedInsight.topicMap(source: source, things: visible)' "$FEEDSCREEN" \
-  || { echo "✗ the feed no longer consults the topic map by source — registering a case reaches nothing"; exit 1; } }
+#
+# PINNED TO THE INVARIANT, NOT TO ONE CALL SITE (2026-08-21). This used to
+# demand the literal `FeedInsight.topicMap(source: source, things: visible)`,
+# and it went red the moment the perf pass moved that call out of the body and
+# into `recomputeHeads()` — a change that altered WHEN the map is consulted and
+# not WHETHER. A guard that fails on a rename teaches people to edit the guard,
+# which is how a guard stops being read. So: the call must exist somewhere in
+# the file, keyed by source, AND the head chain the feed renders must still read
+# the answer — both halves, because either alone can be satisfied by a call
+# whose result nothing draws.
+if [[ -f "$FEEDSCREEN" ]]; then
+  grep -q 'FeedInsight.topicMap(source: source' "$FEEDSCREEN" \
+    || { echo "✗ the feed no longer consults the topic map by source — registering a case reaches nothing"; exit 1; }
+  # Across lines: the render is a gate chain wrapped onto a second line, so a
+  # line-wise grep would answer "no" on a perfectly healthy file — which is the
+  # same false alarm this guard was just rewritten to stop making.
+  perl -0777 -ne 'exit(0) if /let topicMap\s*=.*?\?\s*(heads\?\.topicMap|FeedInsight\.topicMap)/s; exit(1)' \
+    "$FEEDSCREEN" \
+    || { echo "✗ the feed computes a topic map and never renders it"; exit 1; }
+fi
 
 # 6. PENDING WIRING (2026-08-08). `healTopics` is called per-source and there
 #    is no call for these three anywhere, so their `ocrTopics` stay empty and

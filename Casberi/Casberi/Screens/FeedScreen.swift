@@ -55,6 +55,12 @@ import Translation
 extension FeedScreen: Equatable {
     static func == (a: FeedScreen, b: FeedScreen) -> Bool {
         a.source == b.source && a.isActive == b.isActive && a.nearActive == b.nearActive
+            // `rowBudget` MUST be here (PERF 2026-08-21). It is the swipe's
+            // transient fetch bound, and it changes by being CLEARED — so if
+            // this comparison could not see it, the room would keep its
+            // 150-row query for the life of the mount and "Show older" would
+            // stop at the bound with nothing on screen able to say why.
+            && a.rowBudget == b.rowBudget
     }
 }
 
@@ -87,6 +93,35 @@ struct FeedScreen: View {
 
     /// Latches true the first time this page is active/near, so a page already
     /// assembled once stays assembled — the built set only ever grows, spread
+    /// A TRANSIENT bound on the room's own query, for the length of a swipe
+    /// (PERF 2026-08-21, prd §434 ruling 2) — nil at rest, which is every state
+    /// but that one.
+    ///
+    /// THE COST IT REMOVES. §265 made a room change a remount, so the incoming
+    /// room's `@Query` materialises from zero on every swipe — and a source
+    /// room's query is deliberately UNBOUNDED (see the `else` branch of `init`
+    /// and its 2026-08-14 note: the room heads must see the full span, so a
+    /// permanent `fetchLimit` was written there and taken back out). A bulk
+    /// import puts thousands of rows under one source, so that materialisation
+    /// — the 2026-08-06 profile's dominant main-thread cost, `swift_conformsTo`
+    /// / `Hasher.combine` / retain-release, SwiftData making models — lands in
+    /// the frames the slide animation is trying to draw. It grows with every
+    /// import, which is why this arrived as "the app is STARTING to lag".
+    ///
+    /// WHY IT IS NOT THE 2026-08-14 RULING REVERSED. That ruling refuses a
+    /// PERMANENT bound because a room head computed over a truncated slice is a
+    /// claim about the whole room that isn't true — "your loudest year" over
+    /// the newest 150 posts. Nothing here is computed over the slice: the head
+    /// task declines outright while this is set (see `.task(id: headKey)`), so
+    /// the room draws no head for a few hundred milliseconds and then draws the
+    /// real one, over everything. Deferred, never truncated.
+    ///
+    /// WHAT IT BOUNDS is only what RENDERS, and the room windows at
+    /// `windowRowTarget` (30) rows anyway — so at 150 the first paint is
+    /// pixel-identical to the unbounded one, with four more windows of headroom
+    /// than a person can open inside the transition.
+    let rowBudget: Int?
+
     /// across the person's own swipes instead of all at once on launch.
     @State private var everBuilt = false
 
@@ -112,8 +147,9 @@ struct FeedScreen: View {
     @Environment(HomeRoute.self) private var route
     @Environment(PadDetailSelection.self) private var detail
 
-    init(source: String, isActive: Bool, nearActive: Bool = true) {
+    init(source: String, isActive: Bool, nearActive: Bool = true, rowBudget: Int? = nil) {
         self.source = source
+        self.rowBudget = rowBudget
         self.isActive = isActive
         self.nearActive = nearActive
         if source == "All" {
@@ -165,7 +201,7 @@ struct FeedScreen: View {
             // HONESTY (§83): a bound the person can reach must never render as
             // "you're all caught up". `reachedFetchCeiling` below says so
             // plainly at the edge instead.
-            d.fetchLimit = Self.allRoomFetchLimit
+            d.fetchLimit = min(Self.allRoomFetchLimit, rowBudget ?? .max)
             _things = Query(d)
         } else if Pinboard.isPinnedRoom(source) {
             // The pinned room is the one room that is not a source, so it is
@@ -182,7 +218,8 @@ struct FeedScreen: View {
             // as long as you made it by hand, so there is no corpus-scale
             // growth to bound and a ceiling here could hide a row you pinned
             // on purpose — the one place in the app where that would be
-            // unambiguously wrong.
+            // unambiguously wrong. `rowBudget` is ignored here for the same
+            // reason: there is no corpus-scale materialisation to defer.
             _things = Query(filter: #Predicate<Thing> { $0.pinnedAt != nil },
                             sort: \Thing.pinnedAt, order: .reverse)
         } else {
@@ -223,9 +260,17 @@ struct FeedScreen: View {
             // to ask, not a default to assume — and the columns alone are the
             // half that needs no ruling, since it changes what each row COSTS
             // and never what any derivation SEES.
+            //
+            // A TRANSIENT bound is a different question from the permanent one
+            // refused above, and this is where it lands (PERF 2026-08-21). See
+            // `rowBudget`: it is set only for the length of a swipe, and the
+            // head chain declines to compute while it is set — so nothing here
+            // ever describes a truncated room, which is the entire objection
+            // the paragraph above raises. Deferred, never truncated.
             var d = FetchDescriptor<Thing>(predicate: #Predicate<Thing> { $0.source == source },
                                            sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
             d.propertiesToFetch = Self.lightColumns
+            if let rowBudget { d.fetchLimit = rowBudget }
             _things = Query(d)
         }
     }
@@ -1008,6 +1053,148 @@ struct FeedScreen: View {
     private var corpusRevision: Corpus.Revision {
         guard source == "All", filter.tag == "All" else { return .idle }
         return Corpus.revision(in: modelContext)
+    }
+
+    // MARK: - The room's head, memoised
+
+    /// The registry answers a room's head is chosen from (PERF 2026-08-21,
+    /// prd §434 ruling 1).
+    ///
+    /// None of these holds a `Thing` — `FeedInsight`'s four are plain value
+    /// types over counts and labels, and `SourceHead`'s cases carry room models
+    /// whose own contract is that they hand back a value and let the VIEW do
+    /// the lookup (see the `sourceHead` render below, which says so). That is
+    /// what makes this cacheable at all: a cache of model references would be
+    /// the SwiftData liveness class this file documents at length, arriving by
+    /// the one route none of its six corollaries covers.
+    private struct RoomHeads {
+        let sourceHead: SourceHead?
+        let topicMap: FeedInsight.TopicMap?
+        let leaderboard: FeedInsight.Leaderboard?
+        let distribution: FeedInsight.Distribution?
+        let mosaic: FeedInsight.Mosaic?
+    }
+
+    /// The last head computed for each room, kept ACROSS the mount.
+    ///
+    /// This is the half that makes a swipe cheap, and it exists because §265's
+    /// discrete transition is a remount: `MainSurface` carries
+    /// `.id(filter.source)`, so every swipe destroys this screen and builds a
+    /// new one, and anything held in `@State` is gone. The head chain was
+    /// therefore recomputed from zero on EVERY entry to EVERY room, over the
+    /// room's whole contents, on the main actor, inside the frames the slide
+    /// animation needs — which is the reported "lag swiping between screens".
+    ///
+    /// Static, not `@State`, for exactly that reason. `AgentOpenCache` is the
+    /// same shape for the same reason one screen over.
+    ///
+    /// Bounded by the number of rooms, which is bounded by the catalog, and
+    /// each entry is a handful of labels and counts — so there is no eviction
+    /// policy here on purpose, because there is nothing to evict.
+    ///
+    /// KEYED BY `headIdentity`, NOT BY SOURCE. Keying by source alone would
+    /// hand back a head computed under a DIFFERENT scope — leave a wallet-scoped
+    /// room, come back unscoped, and the card describes rows that are not on
+    /// screen. It self-corrects a frame later, which makes it worse rather than
+    /// better: a card that is briefly wrong and then right is a card nobody can
+    /// trust, and §83 is not a rule about how long a claim is false for. A miss
+    /// draws no head, which is the honest answer while one is being computed.
+    @MainActor private static var headMemo: [String: RoomHeads] = [:]
+
+    /// What this room's head draws from right now. Seeded from `headMemo` and
+    /// refreshed by the task below, so a room you have already visited paints
+    /// its head immediately and a room you have not shows none until the first
+    /// computation lands — the same nothing a head that DECLINES draws.
+    @State private var heads: RoomHeads?
+
+    /// What the head is memoised AGAINST — everything that can change what it
+    /// says, and nothing that can't.
+    ///
+    /// `Corpus.revision(in:source:)` is the content term and is two indexed
+    /// reads rather than a materialisation (see its own doc). The scopes are in
+    /// here because the head describes `visible`, and `visible` is narrowed by
+    /// the wallet rail, the person rail and the tag filter — a head that
+    /// survived a scope change would be a card describing rows that are no
+    /// longer on screen, which is the §83 disagreement this file already
+    /// forbids one level up in `shapedSections`.
+    private var headIdentity: String {
+        let revision = source == "All"
+            ? Corpus.revision(in: modelContext)
+            : Corpus.revision(in: modelContext, source: source)
+        return [source, filter.tag, selectedWallet ?? "", chrome.personScope ?? "",
+                x402Lane ?? "",
+                // Bridge state is the one input a corpus revision cannot see —
+                // `sourceHead` reads a Stripe balance, PostHog readings, an ASC
+                // standing, none of which is a `Thing`. A pull is when somebody
+                // is explicitly asking for new numbers, so it re-keys here.
+                // Residual, stated: a BACKGROUND sweep that updates bridge state
+                // and lands no row leaves the head reading until the next
+                // arrival. Acceptable because a sweep that changes a reading
+                // almost always lands the row that changed it, and because the
+                // alternative is recomputing the whole chain on a timer.
+                String(chrome.refreshPulse),
+                String(revision.count), String(revision.signal)]
+            .joined(separator: "|")
+    }
+
+    /// The task's id — the identity above PLUS whether we are allowed to
+    /// compute yet. Two spellings because they answer two different questions,
+    /// and collapsing them breaks one of them whichever way you collapse.
+    ///
+    /// `headIdentity` says WHAT the head would describe, so it is what the memo
+    /// is stored under: the swipe's transient bound changes nothing about the
+    /// answer, so a room re-entered mid-swipe must still hit its cached head —
+    /// which is the entire point of a cache that survives the remount.
+    ///
+    /// The task id must additionally move when the BUDGET lifts, and that half
+    /// is a bug this pass wrote and then caught by re-reading its own diff: the
+    /// task declines while `rowBudget` is set, and the revision inside the
+    /// identity counts the WHOLE room, unaffected by the query's transient
+    /// `fetchLimit`. So without this term the id is byte-identical before and
+    /// after the bound lifts, the task never re-fires, and the head is not
+    /// deferred but DROPPED — nil until some unrelated change moves the count.
+    private var headKey: String {
+        headIdentity + (rowBudget == nil ? "|full" : "|bounded")
+    }
+
+    /// The room's own narrowing, as ONE rule — the lane strip scopes everything
+    /// below it, head included (2026-08-06). Shared by `shapedSections` (which
+    /// narrows the ROWS) and the head computation (which must describe exactly
+    /// those rows), because two spellings of one scope is how a head ends up
+    /// describing a marketplace the reader just filtered away.
+    private func roomScoped(_ rows: [Thing]) -> [Thing] {
+        shape == .x402 ? x402Scoped(rows) : rows
+    }
+
+    /// Compute this room's head, off the body.
+    ///
+    /// ALL FIVE UNCONDITIONALLY, where the body short-circuits — and that costs
+    /// nothing, which is why the gates could be left where they belong. Each
+    /// registry switches on `source` and returns nil immediately for a source it
+    /// doesn't serve, and the registries deliberately don't intersect (see the
+    /// heatmap's own note in `shapedSections`), so for any given room at most
+    /// one of these does real work. Keeping the gates in ONE place — the body,
+    /// where `liveStream` and `anniversary` live because they hold `Thing`s and
+    /// can never be cached — is worth far more than a short-circuit that saves
+    /// four switch statements.
+    @MainActor
+    private func recomputeHeads() {
+        // `.live` at the read, inside the task: `visible` is re-read here rather
+        // than captured by the body, and nothing suspends between this line and
+        // the computation below, so every model is valid for the whole of it
+        // (liveness corollary 6 — the one the audit's check 6 exists for, and
+        // the reason a PERF change that moves a fetch is always also a liveness
+        // change).
+        let rows = roomScoped(visible.live)
+        let computed = RoomHeads(
+            sourceHead: sourceHead(rows),
+            topicMap: FeedInsight.topicMap(source: source, things: rows),
+            leaderboard: FeedInsight.leaderboard(source: source, things: rows),
+            distribution: FeedInsight.distribution(source: source, things: rows),
+            mosaic: FeedInsight.mosaic(source: source, things: rows))
+        Self.headMemo[headIdentity] = computed
+        heads = computed
+        SwipeClock.mark("heads", detail: "rows=\(rows.count)")
     }
 
     /// Is this room one the wallet scope may narrow (prd §356) — every seat in
@@ -1937,7 +2124,7 @@ struct FeedScreen: View {
                 .background(DS.surfaceSheet, in: Capsule(style: .continuous))
                 .contentShape(Capsule())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(PressSpring())
             Spacer(minLength: 0)
         }
         .padding(.horizontal, DS.Space.s4)
@@ -2226,6 +2413,34 @@ struct FeedScreen: View {
             allSnapshotKey = snapshotSignature(next)
             debouncedAllSnapshot = next
         }
+        // THE HEAD IS COMPUTED HERE, NOT IN THE BODY (PERF 2026-08-21).
+        //
+        // It used to be derived inline in `shapedSections`, which means once per
+        // body evaluation, over the room's whole contents. A swipe is a remount
+        // (§265's `.id(filter.source)`), so every room change paid that from
+        // zero, several times, on the main actor, in the frames the slide
+        // animation needed — the reported "lag swiping between screens".
+        //
+        // Seeded from the memo FIRST so a room you have visited paints its head
+        // immediately: the recompute below then either agrees with it or
+        // corrects it within the same frame batch, and a room you have never
+        // visited simply has no head until it lands, which is the same nothing
+        // a head that declines already draws.
+        .task(id: headKey) {
+            if heads == nil {
+                heads = Self.headMemo[headIdentity]
+                SwipeClock.mark("mount", detail: heads == nil ? "memo=miss" : "memo=hit")
+            }
+            // NEVER over a truncated room. `rowBudget` is the swipe's transient
+            // bound (see `MainSurface.swipeRowBudget`) — a head composed from
+            // the newest 150 rows and presented as the room's own reading is
+            // the §83 fake status this file's 2026-08-14 note refuses a
+            // permanent `fetchLimit` over. The budget clears within a few
+            // hundred ms and `headKey` moves with it, so the real computation
+            // follows on its own.
+            guard rowBudget == nil else { return }
+            recomputeHeads()
+        }
         // The page coat moved UP to the shell (prd §159, 2026-07-21): the crown
         // pour lives in MainSurface's background so it can run behind the chip
         // strip, and painting the opaque themed coat again HERE would slide
@@ -2237,6 +2452,9 @@ struct FeedScreen: View {
         .background {
             if ThemeStore.shared.backgroundPhoto != nil { DSPageBackground() }
         }
+        // The swipe trace's closing bracket — the room's list is on screen, so
+        // the materialisation its first content build needed has been paid.
+        .onAppear { SwipeClock.finish() }
         .environment(\.defaultMinListHeaderHeight, 0)
         .scrollIndicators(.hidden)
         .minimizesChrome(chrome, active: isActive)
@@ -2412,7 +2630,7 @@ struct FeedScreen: View {
         // the shelves structurally cannot offer — they file each seller under
         // one primary lane, so Prediction markets and Creative have no shelf at
         // all despite having real members, and were unreachable by any means.
-        let visible = shape == .x402 ? x402Scoped(allVisible) : allVisible
+        let visible = roomScoped(allVisible)
         if shape == .x402 { x402LaneStrip }
         // The new-since divider rides every chronological shape now
         // (2026-07-13) — each source's feed keeps its own last-visit stamp.
@@ -2489,7 +2707,15 @@ struct FeedScreen: View {
         let anniversary: OnThisDay.Echo? = liveStream == nil
             ? journalAnniversary(shape: shape, memoryTiles: memoryTiles, visible: visible)
             : nil
-        let sourceHead = liveStream == nil && anniversary == nil ? sourceHead(visible) : nil
+        // READ, NOT COMPUTED (PERF 2026-08-21). The five registry answers below
+        // come from `heads`, filled by this screen's own `.task(id: headKey)`;
+        // the GATES stay here, unchanged, because `liveStream` and `anniversary`
+        // hold `Thing`s and so can never be cached — and because one place for
+        // the ranking is the whole reason these were gathered into a chain of
+        // re-stated conditions rather than five independent lets (2026-08-04).
+        // A nil `heads` is a head that has not been computed yet and draws
+        // exactly what a head that DECLINED draws.
+        let sourceHead = liveStream == nil && anniversary == nil ? heads?.sourceHead : nil
         // (The All feed's cross-source "thread" head lived here for one day and
         // was DELETED, prd §333. It ranked a shared WORD as a subject, so its
         // headline read "Wallet" over a Files row, an x402 blurb containing
@@ -2504,15 +2730,15 @@ struct FeedScreen: View {
         // comments are about. When there's too little text to say anything it
         // returns nil and the next card down takes the head.
         let topicMap = liveStream == nil && sourceHead == nil && anniversary == nil && rosterAccounts.isEmpty
-            ? FeedInsight.topicMap(source: source, things: visible) : nil
+            ? heads?.topicMap : nil
         let leaderboard = liveStream == nil && sourceHead == nil && anniversary == nil && topicMap == nil && rosterAccounts.isEmpty
-            ? FeedInsight.leaderboard(source: source, things: visible) : nil
+            ? heads?.leaderboard : nil
         let distribution = liveStream == nil && sourceHead == nil && anniversary == nil && topicMap == nil
             && leaderboard == nil && rosterAccounts.isEmpty
-            ? FeedInsight.distribution(source: source, things: visible) : nil
+            ? heads?.distribution : nil
         let mosaic = liveStream == nil && sourceHead == nil && anniversary == nil && topicMap == nil
             && leaderboard == nil && distribution == nil && rosterAccounts.isEmpty
-            ? FeedInsight.mosaic(source: source, things: visible) : nil
+            ? heads?.mosaic : nil
         // The heatmap sits LAST (moved 2026-07-31), not third. It answers
         // WHEN, which is the weakest thing a room can lead with — every card
         // above it names a WHO or a WHAT — and its label comes from a static
@@ -4002,7 +4228,7 @@ struct FeedScreen: View {
                 .padding(.horizontal, DS.Space.s3).padding(.vertical, 7)
                 .background(Capsule().fill(isOn ? DS.tint : DS.fillFaint))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressSpring())
     }
 
     /// The room narrowed to the selected lane. A seller qualifies if it sells
@@ -6825,7 +7051,7 @@ struct FeedScreen: View {
                     .frame(height: 36)
                     .background(DS.tintDim, in: Capsule(style: .continuous))
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(PressSpring())
                 .padding(.top, DS.Space.s4)
                 .settleIn(delay: 0.1)
             }
@@ -6861,7 +7087,7 @@ struct FeedScreen: View {
                 .frame(height: 36)
                 .background(DS.tintDim, in: Capsule(style: .continuous))
             }
-            .buttonStyle(.plain)
+            .buttonStyle(PressSpring())
             .padding(.top, DS.Space.s4)
             .settleIn(delay: 0.1)
             // The "or paste a link, share in, snap a screenshot" line is
@@ -6917,7 +7143,7 @@ struct FeedScreen: View {
                     .frame(height: 32)
                     .background(DS.tintDim, in: Capsule(style: .continuous))
             }
-            .buttonStyle(.plain)
+            .buttonStyle(PressSpring())
             tryItChip
             // The empty room previews its own shape (2026-07-13) — the
             // all-feed empty state already does this with skeleton rows;
@@ -6985,7 +7211,7 @@ struct FeedScreen: View {
             .background(DS.tint.opacity(0.12), in: Capsule(style: .continuous))
             .contentShape(Capsule(style: .continuous))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressSpring())
         .padding(.top, DS.Space.s2)
     }
 

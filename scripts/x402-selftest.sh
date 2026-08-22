@@ -190,8 +190,23 @@ grep -q 'x402LaneStrip' "$FEED" \
 grep -q 'X402RoomSource.compose(things: visible, lane: x402Lane)' "$FEED" \
   || { echo "✗ the head no longer narrows with the strip — it would describe a"; \
        echo "  marketplace the person just filtered away."; exit 1; }
-grep -q 'shape == .x402 ? x402Scoped(allVisible) : allVisible' "$FEED" \
+# PINNED TO THE INVARIANT, NOT TO ONE CALL SITE (2026-08-21). This used to
+# demand the literal `shape == .x402 ? x402Scoped(allVisible) : allVisible`, and
+# it went red when the perf pass folded that expression into `roomScoped(_:)` so
+# the ROWS and the HEAD could not narrow two different ways — a change that
+# strengthens exactly what this guard protects. The invariant is that the
+# narrowing exists, that `shapedSections` applies it, and that the head
+# computation applies the SAME one; a literal is none of those.
+grep -Eq 'func roomScoped\(.*\{[[:space:]]*$|shape == \.x402 \? x402Scoped' "$FEED" \
   || { echo "✗ the strip no longer scopes the room"; exit 1; }
+grep -q 'let visible = roomScoped(allVisible)' "$FEED" \
+  || grep -q 'let visible = shape == .x402 ? x402Scoped(allVisible) : allVisible' "$FEED" \
+  || { echo "✗ shapedSections no longer narrows by lane"; exit 1; }
+# The head must narrow the same way the rows do. Where the head is computed is
+# this pass's business; that it sees the SAME rows is this guard's.
+grep -q 'roomScoped(visible.live)' "$FEED" \
+  || grep -q 'sourceHead(visible)' "$FEED" \
+  || { echo "✗ the head no longer sees the lane-scoped rows"; exit 1; }
 # Reused verbatim from the prediction strip; a second visual language for the
 # same job is the drift the design system exists to prevent.
 grep -q 'Capsule().fill(isOn ? DS.tint : DS.fillFaint)' "$FEED" \
