@@ -138,7 +138,9 @@ struct RoomGear: View {
                                 .offset(x: 1, y: -1)
                         }
                     }
-                    .contentShape(Circle())
+                    // After the glass and its badge, so the drawn pill stays
+                    // 42 and only the target grows to the 44pt floor.
+                    .dsTapTarget(Circle())
             }
             .buttonStyle(PressSpring())
             .dsHover()
