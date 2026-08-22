@@ -1946,5 +1946,10 @@ a:hover { color: #FF2D87; }
    what it covers. ===== */
 .w-reel { width: 100%; display: block; border-radius: 22px; margin-top: 34px;
   background: var(--bg); }
+/* The sheet is a light-ground frame on a dark page — it needs its own plate,
+   not the page's black bleeding to its edge. */
+.w-sheet { width: 100%; display: block; border-radius: 22px; margin-top: 26px;
+  background: #eef1f7; }
+@media (max-width: 640px) { .w-sheet { border-radius: 16px; } }
 .w-reel + .w-chips { margin-top: 20px; }
 @media (max-width: 640px) { .w-reel { border-radius: 16px; } }

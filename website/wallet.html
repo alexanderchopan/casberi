@@ -9,7 +9,7 @@
 <meta property="og:description" content="A wallet that draws what it reads: treemaps, flow maps, liquidation axes, connection graphs. Read-only, always.">
 <meta property="og:type" content="website">
 <link rel="icon" href="icons/casberi-octopus.png">
-<link rel="stylesheet" href="styles.css?v=202608230430">
+<link rel="stylesheet" href="styles.css?v=202608230600">
 </head>
 <body>
 
@@ -52,166 +52,27 @@
     <div class="w-net w-field w-blue"><span class="fmt">Apple Card &middot; Privacy.com<br>ether.fi &middot; Gnosis Pay</span><b>Your cards</b></div>
   </div>
 
-  <!-- the fourteen drawings, as one loop -->
+  <!-- the sheet: every read on one frame, then the drawings as one loop -->
+  <section style="margin-top:78px">
+    <p class="w-eyebrow">Everything it reads</p>
+    <img class="w-sheet" src="flow/wallet-sheet.jpg?v=202608230600"
+         srcset="flow/wallet-sheet.jpg?v=202608230600 1100w, flow/wallet-sheet@2x.jpg?v=202608230600 2200w"
+         sizes="(max-width: 1040px) 100vw, 992px"
+         alt="Everything the Wallet reads: EVM, Bitcoin and Solana feeding a read-only device, and the nine things it draws from them."
+         loading="lazy">
+  </section>
+
   <section style="margin-top:78px">
     <p class="w-eyebrow">What it draws</p>
     <h2 class="w-lede" style="max-width:640px">Most wallets give you a number and a list.</h2>
     <video class="w-reel" autoplay muted loop playsinline preload="metadata"
-           poster="flow/viz-holdings.jpg?v=202608230430">
-      <source src="videos/wallet-draws.mp4?v=202608230430" type="video/mp4">
+           poster="flow/viz-holdings.jpg?v=202608230600">
+      <source src="videos/wallet-draws.mp4?v=202608230600" type="video/mp4">
     </video>
     <div class="w-chips" style="justify-content:center">
       <span class="w-chip">treemap</span><span class="w-chip">flow map</span><span class="w-chip">connection graph</span><span class="w-chip">liquidation axis</span><span class="w-chip">melt bars</span><span class="w-chip">signature rings</span><span class="w-chip">merchant board</span><span class="w-chip">range bars</span>
     </div>
   </section>
-
-  <!-- WHAT'S AT RISK -->
-  <section class="w-risk w-field w-berry" style="padding-top:54px;padding-bottom:54px">
-    <div>
-      <p class="w-eyebrow">What&rsquo;s at risk</p>
-      <h2 class="w-lede">Revoke preview &mdash; never signs.</h2>
-      <ul class="w-rest">
-        <li>Approvals by dollars reachable</li>
-        <li>Delegation alerts</li>
-        <li>Who else can act as the account</li>
-      </ul>
-      <div class="w-chips">
-        <span class="w-chip">Permit2</span><span class="w-chip">EIP-7702</span><span class="w-chip">ERC-4337</span><span class="w-chip">ERC-7579</span>
-      </div>
-    </div>
-    <div>
-      <img class="w-shot" src="flow/viz-liquidation.jpg?v=202608230430" alt="Distance to liquidation: every borrow on one axis." loading="lazy">
-      <p class="w-cap">Liquidation distance, one axis</p>
-    </div>
-  </section>
-
-  <!-- the nine -->
-  <div class="w-panels">
-
-    <div class="w-panel w-field w-dark">
-      <p class="w-eyebrow">What you hold</p>
-      <p class="w-plede">One total across all wallets.</p>
-      <ul class="w-rest">
-        <li>Priced treemap, every token</li>
-        <li>Balance curve, and what moved it</li>
-        <li>Concentration &middot; stable share</li>
-      </ul>
-      <div class="w-chips">
-        <span class="w-chip">Tokens</span><span class="w-chip">Staked SOL</span><span class="w-chip">Validators</span><span class="w-chip">Exchanges</span>
-      </div>
-    </div>
-
-    <div class="w-panel w-field w-dark">
-      <p class="w-eyebrow">What moved</p>
-      <p class="w-plede">Airdrop spam filtered. Address poisoning caught.</p>
-      <ul class="w-rest">
-        <li>Transfers in and out, by counterparty</li>
-        <li>Which of your addresses know each other</li>
-        <li>Gas spent, per chain</li>
-      </ul>
-      <div class="w-chips">
-        <span class="w-chip">Ethereum</span><span class="w-chip">Base</span><span class="w-chip">Arbitrum</span><span class="w-chip">Optimism</span><span class="w-chip">Polygon</span><span class="w-chip">Gnosis</span>
-      </div>
-    </div>
-
-    <div class="w-panel w-field w-dark">
-      <p class="w-eyebrow">Lending &amp; liquidity</p>
-      <p class="w-plede">Locks, and how far they melted.</p>
-      <ul class="w-rest">
-        <li>Collateral, debt, health factor</li>
-        <li>Vaults and isolated markets</li>
-        <li>Concentrated liquidity V3 + V4</li>
-        <li>Perps, spot, staking</li>
-      </ul>
-      <div class="w-chips">
-        <span class="w-chip">Aave</span><span class="w-chip">Spark</span><span class="w-chip">Morpho</span><span class="w-chip">Uniswap</span><span class="w-chip">Hyperliquid</span><span class="w-chip">Aerodrome</span><span class="w-chip">ether.fi</span>
-      </div>
-    </div>
-
-    <div class="w-panel w-field w-dark">
-      <p class="w-eyebrow" style="color:#12ff80">Safe</p>
-      <p class="w-plede">Co-sign from a device key &mdash; never spend alone.</p>
-      <ul class="w-rest">
-        <li>Pending queue &mdash; &ldquo;2 of 3 signatures&rdquo;</li>
-        <li>Live confirmation counts</li>
-        <li>Safes you&rsquo;re a signer on</li>
-        <li>Owner and threshold changes</li>
-      </ul>
-      <div class="w-chips">
-        <span class="w-chip own">multisig</span><span class="w-chip">Transaction Service</span><span class="w-chip">co-signer</span>
-      </div>
-    </div>
-
-    <div class="w-panel w-field w-purple">
-      <p class="w-eyebrow">Privacy</p>
-      <p class="w-plede">The clear-to-withdraw moment.</p>
-      <ul class="w-rest">
-        <li>Shielded deposits</li>
-        <li>Ragequit exits, reclaimed</li>
-        <li>Shields and unshields</li>
-        <li>Anonymity-set cover</li>
-      </ul>
-      <div class="w-chips">
-        <span class="w-chip">Privacy Pools</span><span class="w-chip">Railgun</span>
-      </div>
-    </div>
-
-    <div class="w-panel w-field w-amber">
-      <p class="w-eyebrow">Bitcoin</p>
-      <p class="w-plede">Told when a transfer settles.</p>
-      <ul class="w-rest">
-        <li>Confirmations, or the mempool</li>
-        <li>Halving countdown, by block</li>
-        <li>Dormancy &mdash; &ldquo;not since 2021&rdquo;</li>
-        <li>UTXO consolidation, and its cost</li>
-      </ul>
-      <div class="w-chips">
-        <span class="w-chip">UTXO</span><span class="w-chip">mempool.space</span><span class="w-chip">blockstream.info</span><span class="w-chip">keyless</span>
-      </div>
-    </div>
-
-    <div class="w-panel w-field w-green">
-      <p class="w-eyebrow">Solana</p>
-      <p class="w-plede">Swap, receive, send &mdash; venue named.</p>
-      <ul class="w-rest">
-        <li>Mentions dropped, not counted</li>
-        <li>Fees and rent backed out</li>
-        <li>Native stake accounts</li>
-        <li>active &middot; activating &middot; inactive</li>
-      </ul>
-      <div class="w-chips">
-        <span class="w-chip">SVM</span><span class="w-chip">Jupiter</span><span class="w-chip">Bonfida</span><span class="w-chip">batched RPC</span>
-      </div>
-    </div>
-
-    <div class="w-panel w-field w-blue">
-      <p class="w-eyebrow">Cards &amp; onramp</p>
-      <p class="w-plede">The one source with a merchant name.</p>
-      <ul class="w-rest">
-        <li>Apple Card, Cash and Savings</li>
-        <li>Visa spends settling onchain</li>
-        <li>Privacy.com virtual-card purchases</li>
-        <li>Fiat bought onchain &mdash; &ldquo;25 USDC with Venmo&rdquo;</li>
-      </ul>
-      <div class="w-chips">
-        <span class="w-chip">Apple Wallet</span><span class="w-chip">Privacy.com</span><span class="w-chip">Gnosis Pay</span><span class="w-chip">ether.fi Cash</span><span class="w-chip">Peer</span><span class="w-chip">CardPointers</span>
-      </div>
-    </div>
-
-    <div class="w-panel w-field w-dark">
-      <p class="w-eyebrow">Your NFTs</p>
-      <p class="w-plede">You pick what shows.</p>
-      <ul class="w-rest">
-        <li>Nothing loads until you name a collection</li>
-        <li>Airdropped spam never appears</li>
-        <li>Per-chain, per-collection</li>
-      </ul>
-      <div class="w-chips">
-        <span class="w-chip">you pick</span><span class="w-chip">no airdrops</span>
-      </div>
-    </div>
-
-  </div>
 
   <section class="slab-get w-close">
     <h2>Watch it all.</h2>
