@@ -350,15 +350,71 @@ let frames: [Still] = [
 
 let frameW: CGFloat = 640, frameH: CGFloat = 360
 var frameCount = 0
+// The frame is DRAWN CONTENT, not a lone glyph on a gradient (2026-08-22).
+// The old cut centred one 34%-height symbol on the ground, which at
+// `LiveStreamHero`'s full width read as a broken image rather than a stream:
+// reported as "an empty photo placeholder at the top". A frame of a stream
+// should look like a SCREEN — so each one composes the abstract furniture of
+// what that channel actually broadcasts (an editor for the dev stream, a
+// factory grid for Factorio), in the same two-colour ground, with the glyph
+// kept as a small watermark rather than the subject. Still obviously an
+// illustration, so it claims to be nobody's real capture (the §83 reason the
+// bundled photos were rejected here in the first place).
+func fill(_ r: NSRect, _ c: NSColor, radius: CGFloat = 3) {
+    c.set(); NSBezierPath(roundedRect: r, xRadius: radius, yRadius: radius).fill()
+}
 for (i, f) in frames.enumerated() {
     let canvas = NSImage(size: NSSize(width: frameW, height: frameH))
     canvas.lockFocus()
     NSGradient(starting: f.top, ending: f.bottom)?
         .draw(in: NSRect(x: 0, y: 0, width: frameW, height: frameH), angle: -90)
-    if let glyph = symbol(f.symbols, size: frameH * 0.34, color: f.ink) {
+
+    let ink = f.ink
+    if i == 0 {
+        // Dev stream: an editor — sidebar, a title bar, ragged "code" lines
+        // in two weights, and a terminal block under it.
+        fill(NSRect(x: 40, y: 40, width: frameW - 80, height: frameH - 80),
+             ink.withAlphaComponent(0.06), radius: 10)
+        fill(NSRect(x: 40, y: 40, width: 74, height: frameH - 80),
+             ink.withAlphaComponent(0.10), radius: 10)
+        for (n, w) in [0.62, 0.44, 0.71, 0.33, 0.55, 0.48, 0.66].enumerated() {
+            let y = frameH - 92 - CGFloat(n) * 22
+            fill(NSRect(x: 132, y: y, width: (frameW - 190) * w, height: 8),
+                 ink.withAlphaComponent(n % 3 == 0 ? 0.42 : 0.22))
+        }
+        for n in 0..<5 {
+            fill(NSRect(x: 60, y: frameH - 92 - CGFloat(n) * 22, width: 34, height: 8),
+                 ink.withAlphaComponent(0.16))
+        }
+        fill(NSRect(x: 132, y: 62, width: frameW - 190, height: 54),
+             ink.withAlphaComponent(0.10), radius: 6)
+        fill(NSRect(x: 148, y: 92, width: 120, height: 7), ink.withAlphaComponent(0.34))
+        fill(NSRect(x: 148, y: 74, width: 196, height: 7), ink.withAlphaComponent(0.20))
+    } else {
+        // Factorio: belts and nodes — a grid of blocks joined by lines.
+        for c in 0..<6 {
+            for r in 0..<3 {
+                let x = 74 + CGFloat(c) * 84, y = 78 + CGFloat(r) * 74
+                if (c + r) % 3 == 0 { continue }
+                fill(NSRect(x: x, y: y, width: 44, height: 44),
+                     ink.withAlphaComponent((c + r) % 2 == 0 ? 0.30 : 0.16), radius: 8)
+            }
+        }
+        ink.withAlphaComponent(0.22).set()
+        for r in 0..<3 {
+            let y = 100 + CGFloat(r) * 74
+            let path = NSBezierPath()
+            path.lineWidth = 4
+            path.move(to: NSPoint(x: 74, y: y)); path.line(to: NSPoint(x: frameW - 74, y: y))
+            path.stroke()
+        }
+    }
+
+    // The glyph stays, small, bottom-right — a watermark that says which
+    // channel this is without pretending to be the picture.
+    if let glyph = symbol(f.symbols, size: frameH * 0.13, color: ink.withAlphaComponent(0.5)) {
         let s = glyph.size
-        glyph.draw(in: NSRect(x: (frameW - s.width) / 2, y: (frameH - s.height) / 2,
-                              width: s.width, height: s.height))
+        glyph.draw(in: NSRect(x: frameW - s.width - 34, y: 34, width: s.width, height: s.height))
     }
     canvas.unlockFocus()
     guard let tiff = canvas.tiffRepresentation,
