@@ -348,9 +348,28 @@ enum AddressSpine {
     /// and it still has to print something, so it prints its day.
     static func dayText(_ date: Date, now: Date = .now,
                         calendar: Calendar = .current) -> String {
+        // Measured against the INJECTED `now`, never `isDateInToday` (2026-08-23).
+        // Those two read the SYSTEM clock, so this function took a `now`,
+        // honoured it for the guard above and for the year comparison below,
+        // and then abandoned it for the only two branches anyone reads. In the
+        // app the two agree and nothing was ever wrong on screen — which is
+        // exactly why it went unseen: the only thing that could tell was the
+        // harness, and it passed on the one calendar day it was written and
+        // went red at the next midnight. A gate that can only be green on the
+        // day it was authored is a gate that gets switched off.
+        //
+        // **THIRD INSTANCE of one class.** `MoneyReceipt.dayPhrase` carries
+        // this fix from 2026-08-12 and `AddressBookShape.lastPhrase` from
+        // 2026-08-22 — the same day this file was written, in the same
+        // session, which is how it was missed. Any function taking a `now`
+        // must never reach for `isDateInToday`/`isDateInYesterday`: they
+        // answer from the system clock and silently ignore the argument.
         if date <= now {
-            if calendar.isDateInToday(date) { return String(localized: "Today") }
-            if calendar.isDateInYesterday(date) { return String(localized: "Yesterday") }
+            if calendar.isDate(date, inSameDayAs: now) { return String(localized: "Today") }
+            if let yesterday = calendar.date(byAdding: .day, value: -1, to: now),
+               calendar.isDate(date, inSameDayAs: yesterday) {
+                return String(localized: "Yesterday")
+            }
         }
         let sameYear = calendar.component(.year, from: date)
             == calendar.component(.year, from: now)
