@@ -78,6 +78,18 @@ grep -q 'JournalRoomSource.sources.contains(name)' "$FEED" \
 grep -q 'JournalRoomCard(room: room, source: name)' "$FEED" \
   || { echo "✗ the journal head composes but nothing draws it"; exit 1; }
 
+# ONE LEAD (§451, 2026-08-22). `headline` is the run or nil, because its other
+# branch named the fullest year and its entry count — row one verbatim, and the
+# strip's only full-height capsule. The card must promote `note` into the empty
+# slot, and must NOT then draw the note a second time underneath itself.
+# Guarded on the card rather than the model, because the model returning nil is
+# already asserted above and a card that drew nothing in that slot would be a
+# head with no lead at all — which compiles, and which nothing else here sees.
+grep -q 'JournalRoom.headline(room) ?? JournalRoom.note(room)' "$CARD" \
+  || { echo "✗ the journal head no longer promotes the note when there is no run — a room with no streak would draw a head with no lead (§451)"; exit 1; }
+grep -q 'if JournalRoom.headline(room) != nil {' "$CARD" \
+  || { echo "✗ the journal note is no longer gated — with no run the card would print the same sentence at two tiers (§451)"; exit 1; }
+
 # THE PROMOTION (§398). The anniversary sits ABOVE `sourceHead`, which is only
 # safe while it is SCOPED — widen it to a room whose head is a dispute deadline
 # and a nostalgia card covers something time-critical.
@@ -223,20 +235,31 @@ check("the streak is carried onto the room", run.streak == 4)
 check("and the year it ended in", run.streakYear == 2026)
 
 print("")
-print("The headline")
-check("a real run leads", JournalRoom.headline(run).contains("4 days straight"))
-check("…and places it", JournalRoom.headline(run).contains("2026"))
+print("The headline — the run, or nothing")
+check("a real run leads", JournalRoom.headline(run)?.contains("4 days straight") == true)
+check("…and places it", JournalRoom.headline(run)?.contains("2026") == true)
 // A year is a NAME, not a quantity. `String(localized:)` groups a bare Int, so
 // 2026 would render "2,026" — the bug XRoom actually shipped.
-check("the year is never grouped as a number", !JournalRoom.headline(run).contains("2,026"))
+check("the year is never grouped as a number",
+      JournalRoom.headline(run)?.contains("2,026") == false)
 let noRun = JournalRoom.compose(spread(20, year: 2024) + spread(6, year: 2026, from: 800))!
 check("below the floor there is no run to name", noRun.streak < JournalRoom.streakFloor)
-check("so the fullest year leads instead", JournalRoom.headline(noRun).contains("fullest year"))
-check("and that year is not grouped either", !JournalRoom.headline(noRun).contains("2,024"))
+// PRD §451. The other branch used to say "2024 was your fullest year — 20
+// entries", which is row one verbatim (`rows` sorts by entries under the same
+// tie rule `fullest` uses) and the strip's only full-height capsule. There is
+// no headline at all now, and the card promotes `note` into the empty slot.
+check("with no run there is no headline", JournalRoom.headline(noRun) == nil)
 check("two consecutive days are not a streak",
       JournalRoom.headline(JournalRoom.compose(
-        [entry(900, year: 2026), entry(901, year: 2026)] + spread(14, year: 2024))!)
-        .contains("fullest year"))
+        [entry(900, year: 2026), entry(901, year: 2026)] + spread(14, year: 2024))!) == nil)
+// The property that made the old sentence a repetition, asserted so a future
+// pass cannot reintroduce it believing it adds something.
+check("row one is the fullest year, so a lead naming it would repeat it",
+      JournalRoom.rows(noRun).first?.year == noRun.fullest.year
+      && JournalRoom.rows(noRun).first?.entries == noRun.fullest.entries)
+// …and the line that stands in must carry what the drawing cannot.
+check("the stand-in lead states entries, days and the span",
+      JournalRoom.note(noRun).contains("26") && JournalRoom.note(noRun).contains("3"))
 
 print("")
 print("The fullest year, and its tie")

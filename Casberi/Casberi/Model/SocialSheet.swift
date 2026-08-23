@@ -242,6 +242,19 @@ struct SocialReception: Equatable {
         /// vocabulary for why-it's-here, shared with the eyebrow, so the two
         /// lines on one screen can never contradict each other.
         var phrase: String?
+        /// Does the sheet's own eyebrow already say who and why (prd §451)?
+        ///
+        /// It does whenever the sheet leads with the PERSON — face, then
+        /// "@dwr · in /design · 2h ago" — which is every social shape but a
+        /// transcript, on any row carrying a handle. There the live sentence
+        /// below was "On Farcaster — in /design.": the same source, the same
+        /// phrase, one card down. Sharing a vocabulary keeps two lines from
+        /// contradicting each other; it does not earn them both a place.
+        ///
+        /// Computed by `SocialSheetSource.eyebrowLeadsWithPerson`, which the
+        /// eyebrow itself calls — one predicate, so this can never disagree
+        /// with what the screen actually drew.
+        var eyebrowNamesIt: Bool = false
         var likes: Reading?
         var reposts: Reading?
         var replies: Reading?
@@ -268,9 +281,14 @@ struct SocialReception: Equatable {
         // sentence already dates the act, and a block with no numbers has
         // nothing that could be mistaken for a live measurement.
         if i.archive, !out.readings.isEmpty {
+            // The ARCHIVE is named once, by the sentence directly above this
+            // one — which always exists here, since `archive` is what puts
+            // both lines on the card (prd §451). This says the thing that
+            // sentence cannot: the numbers are frozen at the export, not
+            // measured now.
             out.recorded = i.importedAt.map {
-                String(localized: "Counts as your \(i.source) archive recorded them, \(month($0)).")
-            } ?? String(localized: "Counts as your \(i.source) archive recorded them.")
+                String(localized: "Counts as the export recorded them, \(month($0)).")
+            } ?? String(localized: "Counts as the export recorded them.")
         }
         return out.isEmpty ? nil : out
     }
@@ -298,9 +316,19 @@ struct SocialReception: Equatable {
             return String(localized:
                 "From your \(i.source) archive — you \(act.verb) this on \(day(when)).")
         }
-        // A live source. The phrase is the same one the eyebrow wears, so the
-        // sheet says why once and means it twice; with no phrase there is
-        // nothing to add and the bare source is the whole honest sentence.
+        // A LIVE source, where the eyebrow has usually already said this
+        // (prd §451). It wears the same vocabulary by construction — the same
+        // `contextPhrase`, over a face naming the same person, a card above —
+        // so "On Farcaster — in /design." was the sheet saying why twice, and
+        // the no-phrase form, "On Farcaster.", was it saying nothing at all
+        // over a mark that already draws the source.
+        //
+        // Where the eyebrow does NOT lead with a person — a transcript, or a
+        // row with no handle — it falls back to the source's MARK plus the
+        // kind and the age, which names neither the source in words nor the
+        // reason. There the sentence is the only place either exists, so it
+        // still speaks.
+        guard !i.eyebrowNamesIt else { return nil }
         guard let phrase = i.phrase, !phrase.isEmpty else {
             return String(localized: "On \(i.source).")
         }

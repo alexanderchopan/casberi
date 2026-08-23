@@ -79,6 +79,7 @@ at all.
 
 | Ruling | What it said | Changed by |
 |---|---|---|
+| §362 | The face rail always captions its faces — it compresses rather than dropping them, on both rails alike | caption half reversed for the WALLET rail by §450 |
 | §182 | The watch cap is a SHELF of faces with dashed rings for the free slots | superseded by §448 |
 | §441 | Starring an address flies its face from the book row to the shelf slot | amended by §448 |
 | §295 | The connections card leads with a headline counting the connected addresses | amended by §448 |
@@ -30201,6 +30202,14 @@ What survives is what the picture cannot say: "Since you started watching each w
 
 "3 addresses · none watched" failed twice at once. It was **redundant** — the deck above it draws the members, and whether a group's members are watched is a fact about the Watching section at the top of the same screen, not about the group — and it **did not fit**: at 150pt in `label12` the clause clipped to "3 addresses · none wat…", the same truncation the shelf was deleted for. Both `AddressGroupCard.note` and `AddressGroupScreen.headerNote` are the count alone; they are read one tap apart, so trimming one and keeping the other would read as the screen disagreeing with the card you came from. The stars on the rows below answer "which of these am I watching" without anybody counting for you.
 
+### 5. The recency phrase asked the wrong clock (found by this pass's own harness)
+
+`AddressBookShape.lastPhrase` takes a `now` for testability, and **two of its five rungs ignored it**: `calendar.isDateInToday(date)` and `isDateInYesterday(date)` compare against the system clock, whatever clock you hand in. In production `now` defaults to `.now`, so nothing was ever wrong on a device — what was wrong is that those two rungs, the ones a row shows most often, were **untestable**, and `address-book-selftest.sh`'s own verdict therefore depended on what hour it ran at.
+
+It pinned `now` to noon UTC on the real current day, which agrees with the system clock until 17:00 Pacific and disagrees after it. Three assertions went red twelve hours after the harness was written and green, on code nobody had touched — and the first instinct, that the harness had caught a timezone bug in `lastPhrase`, was wrong in an instructive way: the timezone handling below is correct and documented, and the fault was one level up, in a method that quietly refuses the argument you give it.
+
+The fix is a deletion. The day count the next rung already computes answers all three: 0 is today, 1 is yesterday, and the same subtraction carries the week. **The fixtures moved to a year in the past**, which is the durable half — `isDateInToday` can never be true against 2021, so they now fail the old spelling at every hour of every day rather than only after teatime. Standing rule, third instance this session: *a fixture only tests the rule it names if it FAILS that rule and passes every other one.* A negative guard on a comment-stripped copy keeps both methods out, and two new mutations prove the rungs are load-bearing.
+
 ### What this does NOT change
 
 The spine drawing, its ribbons, §439's bracket, the naming affordance, the group strip and its drop targets, the omnibox, the scrubber, the sort menu, `AddressBookShape` and every ruling in it. No new `Thing` field, no request, no CloudKit deploy.
@@ -30208,3 +30217,292 @@ The spine drawing, its ribbons, §439's bracket, the naming affordance, the grou
 ### Unverified
 
 Every claim above is about what is drawn, and this pass ran no simulator (standing user preference). The build is green on iOS and Catalyst and the static audits pass; **the row moving between sections is unproven on a device** — SwiftUI animates a `Section` change by identity and this one has never been watched happening.
+
+## 449. The Worth-a-look sheet stops being a second copy of the room (user: "how would you improve the 'worth a look' sheet in the wallet, and remove redunancy", then "proposed is fine but eliminate redundancy in text where you can … in spam transfers it should say Received, not Sent", then "go ahead", 2026-08-22)
+
+The tray is a **July** surface. Two passes landed after it and each gave one of
+its four actionable kinds a better home in the same room: §292 gave approvals a
+card that ranks every live grant by **dollars at stake** and offers "review the
+oldest", and §417 wired the risk axis to the cards that state each position in
+its own protocol's units. The sheet went on listing both, ranked by nothing,
+one tap down — which is **§208's own ban** on a door onto a page that repeats
+the card beneath it, the rule already cited in this room as the reason Owed has
+no door.
+
+### 1. Two kinds collapse to a walk row; two keep their rows
+
+Liquidations and approvals each become ONE row whose title is the destination
+card's own headline (`WalletApprovalExposure.headline`, the worst warning's own
+`title`) **quoted verbatim** — this file never composes a second sentence about
+a set another file already describes, which is how the sheet and the card would
+start disagreeing. Delegations and Safe signatures keep their full enumerated
+rows: this sheet is their only home in the wallet room.
+
+**Each collapse is gated on its destination existing** and falls back to the old
+enumeration otherwise, so nothing can go missing — a pill with nowhere to land
+is §83's dead control, and a group silently dropped instead is worse. The
+approvals gate is `!exposure.priced.isEmpty`, **not `isEmpty`**: `headline`
+counts PRICED spenders and sums PRICED grants, so an all-unpriced exposure would
+quote it as *"0 spenders can move $0"* — a reassurance, over live grants, on the
+row that earned it least.
+
+### 2. A second pill grammar: `↑` stays, `↗` leaves
+
+Every pill in this sheet was `↗` until walk rows existed, so the glyph carried
+no information. It now answers the one question a reader has before tapping.
+`actionRow`'s `door` takes an act and a `leaves` flag rather than a `URL`.
+
+### 3. The counts are said once, and so is the label
+
+"Worth doing", its count, and "These are still yours to change." sat directly
+under a sheet titled **Worth a look** — the title said three more times, the
+count for a third time (the strip you tapped said it; four countable rows say it
+again). All deleted. Every row under there is actionable by definition, so the
+label discriminated nothing.
+
+### 4. The jump bar is deleted
+
+Two chips over two sections, one of which is a single collapsed row. Its own doc
+said it fires in practice only "when the spam pile is expanded and long" — i.e.
+after you yourself opened the thing you are looking at. Gone with it:
+`superSectionIDs`, `showsJumpBar`, `jumpBarHeight`, `jumpTarget`,
+`scrollPosition`, and the nested-ScrollView sizing workaround that existed only
+to seat it.
+
+### 5. The height guess is deleted, not improved
+
+A ~45-line arithmetic estimate priced every row at a flat constant, and its own
+doc recorded why it could never hold: an actionable row carries a **wrapping**
+title and no arithmetic here can know how many lines a string takes at the
+reader's type size. It was alive for one frame, wrong on every wallet with a
+delegation, and being wrong pushed the pile below the fold (user, 2026-07-26).
+What a first frame needs is not a better guess but a **floor small enough to
+grow out of** — growing reads as the sheet settling, shrinking reads as it
+snatching content away. `contentHeight` (measured) is unchanged and still owns
+every later pass.
+
+### 6. The pile lifts; it cannot recess
+
+It was boxed on `DS.surfaceWell` from 2026-07-24. That token is `#080809` and
+this sheet is INK, `#000000` — **a 1.02:1 step**, which is not a quiet recess but
+an invisible one. The token's own doc says it "dips toward the page", and on an
+ink page there is nothing darker than the page to dip toward. It lifts on
+`DS.fillFaint` instead, the same fill `WalletWarningsStrip` wears on the balance
+card — so the surface you tapped and the pile you land on are visibly one object.
+
+### 7. Mute comes out from behind the expand
+
+It is the section's only verb and it lived BELOW the expanded list, so the one
+thing you could do about the pile was reachable only after opening the pile, and
+invisible in the state the section is designed to sit in. It sits on the row now.
+"Just so you know" is deleted — the row says it.
+
+### 8. The pile says its fact once
+
+"15 spam transfers" over "Transfers you didn't make — nothing to do" is a noun
+and the same noun again in other words. The row now carries `WalletWarnings`' own
+title for this pile (`awareTitle`, still derived from what is actually IN it, per
+2026-08-13) with **"Nothing to do"** as the whole subline.
+
+### 9. The flagged rows lose their verb — and NOT to gain the other one
+
+Reported as: *"in spam transfers it should say Received, not Sent."* **Both words
+are wrong, and the report is still right.** `WalletSafety.flagFakeTransfer` is
+only ever called on a **sent** leg — a junk airdrop received is dropped at ingest
+by `WalletIngest`'s received-side filter and can never appear here — so a `spam`
+row genuinely is the chain claiming *you sent it*, which is the fiction the flag
+exists to contradict (measured on vitalik.eth, 2026-08-02: 40 landed transfers,
+**30 outbound fictions**). Labelling them "Received" puts a second false claim on
+the row, and false for a different subset, because **the pile is mixed**: a
+poisoning transfer really was received and a spoofed symbol goes either way.
+
+So the direction belongs to the pile's own line, said **once**, and the row
+carries what tells one row from another: the amount — wearing the confusable
+symbol as its own tell — and when it landed. Via a new
+`WalletValue.transferAmount(_:)` so §374's mask reaches it (the unit survives,
+which is what keeps a hidden row able to say the symbol was a lookalike); a row
+landed before that field existed falls back to the baked title whole, which is
+`WalletValue.title`'s own stated limit rather than a new one.
+
+### 10. With nothing actionable, the pile opens expanded
+
+Otherwise the sheet's entire content is the count the strip already gave you, and
+a chevron. Held as an OVERRIDE rather than seeded in an initialiser, so the
+default tracks `hasActionable` on every body pass — a live read landing the run's
+first approval while the sheet is open must not leave the pile stuck open under
+it.
+
+**Costs nothing:** no new `Thing` field, no request, no CloudKit deploy, no new
+type rung. One new anchor (`approvalsAnchor`) and one gate spelled once
+(`hasLendingCard`) so the walk door and the card it points at cannot disagree.
+
+**Unproven on a device:** both walk rows are gesture-driven and no static check
+can exercise the dismiss-and-scroll pair; the ink contrast finding in (6) was
+measured from the tokens, not photographed.
+
+## 450. The wallet rail stops naming its faces, and the crown card names the pick instead (user: "i hate how the wallets that show in the wallet screen, the avatars up top truncate the wallet name … when it's something like accountless.eth you end up seeing accountle…", then "none of those look good. i almost feel like we should remove the names there", then "D is best", 2026-08-22)
+
+**The cause was an asymmetry, not a width.** An ADDRESS is shortened in the model — `WalletStore.shortAddress` cuts it to `…4f4f` before the rail ever sees it, so it fits. A NAME is handed over whole and the LAYOUT cuts it, tail-first, which destroys a word. Measured in real SF Pro Text at `label12` against the 66pt slot: `accountless.eth` 92.0, `jesse.base.eth` 83.9, `Cold storage` 74.1 — all over; `vitalik.eth` 56.7 and `…4f4f` 34.3 — both fine. So short names were never broken, and the fix was never "one more character".
+
+Four in-slot repairs were drawn and all four were refused: shortening the name in the model like an address (grid intact, but `alexanderchopan.eth` still truncates), sizing each slot to its own caption (ragged pitch, +76pt of scroll), a two-tier caption (+14pt of height, against §362's own compress ruling), and a capsule that opens on the picked face (no truncation possible, but the rail grows 356 → 462pt and starts scrolling on a pick).
+
+**This REVERSES §362's caption ruling** ("i think we need the name captions and instead maybe make rail compress"), and the reasoning given there — a caption is what tells "Main" from "Cold", and an identicon is a hash, not a name — is not wrong. It is answered rather than overturned: the name is not deleted, it MOVES to a slot that already existed. `WalletBalanceHeadline` has carried a caption above its number since it shipped ("Across your wallets" / "Balance", `label12`, one line, a chevron where a breakdown is behind it), and that card sits directly under the rail. Scoped, the line names the wallet.
+
+**What it costs and what it buys.** The slot goes 66 → `DS.Hit.min` (44) and the rail 72 → 52pt; All + five wallets (§170's cap) + the add verb is `7 × 44 + 6 × 2 + 2 × 18` = 356pt, inside the 393pt of the phone this was measured on — so the control stops scrolling there, and a smaller phone still scrolls without anything here promising otherwise. The name gets the card's full width: `alexanderchopan.eth · …0b93` simply reads, with the address tail beside it, which the 66pt caption could never show at all. That settles a second failure §362 had patched with a Mac-only tooltip — two wallets sharing four characters were indistinguishable on iPhone.
+
+### The ring, and why it is free HERE and only here
+
+Dropping the caption takes selection's weight with it — §362 drew the lit slot as full opacity AND a semibold caption, and `restOpacity` is a deliberately gentle 0.7. So the ring steps in. §351 reserves a tint ring for "the active chip" one tier up in the source strip, and `FaceScopeRail.Item.ringed` means "they posted since you last looked" — but that flag is SOCIAL-ONLY, and the file's own doc already said wallets have nothing equivalent to say. So the mark is genuinely unclaimed on this rail, and the meaning it takes is the strip's own meaning one tier down.
+
+It is gated on the ADAPTER's flag, never per-item, so a rail is either a "posted since" rail or a "this is the pick" rail and never both at once. `namesInRoom` is likewise ONE flag rather than a `captions` knob beside a `selectionRing` knob: those are not independent settings but one ruling with two consequences, and two flags would let a caller ask for a captionless rail with no visible selection — a state nobody designed.
+
+### §357 is answered by the ring, not argued with
+
+"A filter you are standing in must show you that you are standing in it" — and the card scrolls away while the rail stays pinned. The ring is what survives the scroll; the name is the ELABORATION, not the indicator.
+
+### The social rail keeps its captions, and that is a bent §362, not a broken one
+
+§362 made this ONE control on the ruling that sameness is the simplification, and that ruling is knowingly qualified here. D does not transfer: a social room has no crown card to name a pick in, and a Farcaster roster runs to dozens rather than five, where unlabelled avatars are §362's own identicon problem at scale. What differs between the two rails is now a fact about the ROOM — whether the name is drawn here or one card down — not a style, and the rail keeps one anatomy, one size, one fold and one behaviour. Guarded in both directions: the flag must be on for wallets and must never appear on the social call site.
+
+### Two corrections the build made to the mock
+
+**An unnamed wallet gets `shortAddress` and nothing fuller**, though the card finally has room for a head-and-tail form and the mock drew one (`0x8a3f…4e11`). That spelling was retired 2026-08-12 for "naming nobody", and the harder reason is that `AddressSafety.displayForm` keys on `shortAddress` ON PURPOSE — the display form IS the address-poisoning surface, so a second, longer truncation here would be the one display in the app whose form the lookalike check cannot see, on the screen holding money. The wallet with no name is also not the one anybody complained about.
+
+**Undrawn is not unspoken.** With the caption gone a slot's only content is an identicon — an image with no text in it — and `dsTooltip` is Mac-only by its own ruling, so VoiceOver would have announced five unlabelled buttons. `accessibilityLabel` is set for BOTH rails rather than only the captionless one, so where the caption is drawn it is the same string and the two can never drift.
+
+### Scale and naming, once
+
+`WalletScopeRail.caption(for:in:)` is the single source of what a scoped wallet is called — the rail speaks it, the card draws it. Derived twice, the ringed face and the name a centimetre below it are free to disagree, and nothing would look wrong when they did. It tests `isAutoName` rather than `label.isEmpty`, because `add`/`addBulk` file a bare address under its own short form as a display fallback: without that the card reads "…4f4f · …4f4f" for every wallet nobody has named. The caption's name takes semibold at `textSecondary` while the tail stays tertiary — §157's "the caption steps back so the number can step forward" is about a LABEL, and a name is not a label; the gap that ruling protects, between the 48pt total and this line, is intact.
+
+Eight drift guards in `category-fold-selftest.sh`, each mutation-proven in an isolated mirror of the tree. Every failure they catch renders as a perfectly ordinary screen: a rail of unlabelled circles with no name anywhere, or a name that no longer follows the face you picked.
+
+**Unverified on a device.** Both platforms compile and every static audit passes; nothing here has been looked at on hardware, and the 356pt arithmetic assumes a 393pt screen.
+
+## 451. The redundancy sweep, everywhere but the wallet (user: "sweep the app everywhere besides the wallet for extra subtext that is redundant. i'm seeing it in the wallet and shouldn't be", then "do 1, 2, and 3", 2026-08-22)
+
+§447/§448/§449 cut the wallet's restatements one screen at a time. This is the
+question that follows: is the same thing happening anywhere else. Two of the
+wallet's shapes turned out to be wallet-only and were checked mechanically
+rather than by eye — every `Text` eyebrow literal in `Screens/` was matched
+against every section header and screen title in the same file, and
+`WalletScreen` was the only hit; and `walletGroupHeader` is the only
+group-header helper in the app, so the two-stacked-display-lines collision
+§447 fixed cannot occur in a room that has no group header. Three real
+instances remained.
+
+### 1. The social thing sheet said why twice
+
+`SocialReception.provenance` rendered "On Farcaster — in /design." while
+`ThingSheetView`'s eyebrow, one card above, already drew the face and
+"@dwr · in /design · 2h ago". Not an accident of two authors: the `Input`
+doc says the phrase is `SocialThread.contextPhrase`, "one vocabulary for
+why-it's-here, **shared with the eyebrow**", and the sentence's own comment
+said the sheet "says why once and means it twice". Sharing a vocabulary keeps
+two lines from contradicting each other; it does not earn them both a place.
+The bare form was worse — "On Bluesky." over a mark that already draws
+Bluesky, adding nothing at all.
+
+**The live sentence stands down where the eyebrow speaks, and only there.**
+When the eyebrow does NOT lead with a person — a transcript, or a row with no
+handle — it falls back to the source's MARK plus the kind and the age, which
+names neither the source in words nor the reason; there the sentence is the
+only place either exists, so it still speaks. The archive grammar is never
+suppressed however loudly the eyebrow speaks: the eyebrow carries a relative
+age ("3y ago") and the sentence carries the file and a real past date, which
+is the whole reason that grammar exists.
+
+**ONE predicate decides both halves.** `SocialSheetSource.eyebrowLeadsWithPerson`
+is the eyebrow's own condition, lifted out and called by the eyebrow AND by
+the reception's composer — two copies is how a card ends up either repeating
+itself or saying neither line.
+
+**The trap, and it would have reversed the whole cut:** `hasFrom` gates the
+spec table's `From` row on `reception?.provenance == nil`, which §363 wrote so
+the row stands down wherever the sentence speaks. Making the sentence nil
+therefore brings `From — saved by you` straight back on every live social
+sheet — worse than the repetition it replaced. The gate carries the same
+predicate now, guarded across the whole six-line assignment the way §363's own
+guard already is.
+
+Also deduped: `recorded` read "Counts as your X archive recorded them, April
+2019." directly beneath a sentence reading "From your X archive — you liked
+this on 16 April 2019.". The archive is named once, by the line above (which
+always exists there, since `archive` is what puts both on the card); this says
+the thing that line cannot — the numbers are frozen at the export, not
+measured now.
+
+### 2. Eleven catalog summaries opened by restating their own tagline
+
+`AppDetailScreen` draws the tagline at `subhead13` under the name, then "What
+it does" and the summary at `body17` — and the catalog row you arrived from
+had the tagline as its subline, so it was the third telling. Measured across
+all 101 offers: the summary's first clause echoed the tagline on 38.
+
+**Most of those 38 are the ordinary hook-then-expand shape and were left
+alone.** A summary opening on the PROBLEM (Aave, Morpho, Uniswap, ETH
+Validators, Kindle, Bookmarks, Day One), on what the service IS (Altana,
+1Claw, OpenRouter), or on the VERB you are about to perform (Files, Obsidian,
+Apple Notes) is not restating anything. Eleven were cut, each one where the
+opening clause was a near-verbatim echo AND the rest of the summary stood
+whole without it: Open Food Facts, Jira, YouTube, Substack, Podcasts, RSS,
+Tokens, Contacts, Readwise, Grok, Photos.
+
+Eight echoes survive deliberately, because their opening clause carries a
+LIMIT the tagline does not — Gmail's and iCloud Mail's "recent", Pinterest's
+"recent public", Spotify's "find and revisit alongside everything else".
+Dropping a limit to save a repetition trades a true sentence for a shorter
+one.
+
+Note the summary is its own `LocalizedStringKey`, so these eleven are new keys
+and their old translations are orphaned — the standing pre-ship catalog sync
+covers it.
+
+### 3. Two room heads read their own drawing out loud
+
+`XRoom.headline` said "2019 was your loudest year — 4,102 posts". `XRoom.rows`
+sorts by posts descending under the SAME tie rule `busiest` uses, so **row one
+IS `busiest`** — the same year and the same count, one line below, with its
+subject and its bar beside it — while the year strip draws that year as its
+only full-height capsule, since every share is taken `of: top`. Three tellings
+of one fact, the largest of them the one that added least. `JournalRoom` had
+it in one of two branches, with `fullest` standing where `busiest` does.
+
+**The sentence was cut, not the row**, and that is the whole judgment. The row
+carries the year's SUBJECT ("mostly crypto") and its bar; the headline carried
+only a superlative — "loudest", "fullest" — which a rank-ordered list and a
+tallest bar already state. Cutting the row would have deleted a fact; cutting
+the sentence deleted a repetition. (This is the inverse of `AppStoreConnect`'s
+and `Cursor`'s `dropFirst()`, and the difference is that their lead rows carry
+nothing their headline doesn't.)
+
+So `XRoom.headline` is gone and `note` takes its tier — the one line here that
+states what no part of the drawing can: the total, and how many of the span's
+years were written in, which is what its own doc had already claimed before
+this cut ("what the strip cannot say for itself"). `JournalRoom.headline`
+returns the RUN or nil: a streak is drawn by no column and no row, so saying
+it is the only way it exists, and below `streakFloor` the card promotes `note`
+into the empty slot rather than leading with a sentence that reads the drawing
+out loud.
+
+Two consequences handled: the year strips' `accessibilityLabel` was `note`,
+which is now the card's lead, so VoiceOver would have said one sentence twice
+— each strip names its span instead; and the X chip peek (`RoomFigure`) paired
+headline with note, so it now previews the single line the room really draws,
+which is that chain's one contract.
+
+**A false positive worth recording, because the metric that found it is the
+one a future sweep will reach for:** `InstagramRoom`'s "You saved 1,240 posts
+from 400 accounts" over one row per account looks like the same bug and is
+not. `accountCount` is distinct accounts across the whole library while the
+rows cap at six, so the headline states something six rows structurally
+cannot. Word overlap finds candidates; only reading what the number is
+computed FROM decides them.
+
+### What this sweep did NOT cut, and why it is a ruling rather than an oversight
+
+All nineteen `*RoomCard`s open with a `label12` eyebrow that is the source's
+own name, and `FeedScreen.sourceHead` switches on `source`, so a head only
+ever renders inside the room its chip already names and highlights — the same
+shape as "Connected" under "How they connect". It stays, because it is drawn
+in the source's brand hue and does double duty as the mark: identification,
+not subtext. Flagged here so the next pass knows it was considered.

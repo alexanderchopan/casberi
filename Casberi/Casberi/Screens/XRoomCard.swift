@@ -49,7 +49,13 @@ struct XRoomCard: View {
                 .dsText(.label12).fontWeight(.semibold)
                 .foregroundStyle(Self.mark)
 
-            Text(XRoom.headline(room))
+            // THE NOTE LEADS (2026-08-22, prd §451). `XRoom.headline` stood
+            // here at the same tier and named the busiest year and its count —
+            // which is row one verbatim, one line below, and the strip's only
+            // full-height capsule. What is left is the pair the drawing is
+            // structurally unable to state: how many posts in total, and how
+            // many of the span's years you actually wrote in.
+            Text(XRoom.note(room))
                 .dsText(.heading22)
                 .foregroundStyle(DS.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -61,12 +67,6 @@ struct XRoomCard: View {
                     DSHaptic.selection()
                     onOpen(room.busiest)
                 }
-
-            Text(XRoom.note(room))
-                .dsText(.subhead13)
-                .foregroundStyle(DS.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.top, DS.Space.s1)
 
             yearStrip
                 .padding(.top, DS.Space.s3)
@@ -131,7 +131,9 @@ struct XRoomCard: View {
             }
         }
         .accessibilityElement()
-        .accessibilityLabel(Text(XRoom.note(room)))
+        // The span, not `XRoom.note` — that sentence is the card's LEAD since
+        // 2026-08-22 and a strip repeating it makes VoiceOver say it twice.
+        .accessibilityLabel(Text("A column per year, \(String(room.years.first?.year ?? 0)) to \(String(room.years.last?.year ?? 0))"))
     }
 
     // MARK: - Rows

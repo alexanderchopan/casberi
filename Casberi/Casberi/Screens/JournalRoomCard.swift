@@ -55,7 +55,17 @@ struct JournalRoomCard: View {
                 .dsText(.label12).fontWeight(.semibold)
                 .foregroundStyle(mark)
 
-            Text(JournalRoom.headline(room))
+            // ONE LEAD, and which line takes it depends on whether there is a
+            // run to name (2026-08-22, prd §451). `JournalRoom.headline` is
+            // the streak or nil now — its other branch named the fullest year
+            // and its entry count, which is row one verbatim and the strip's
+            // only full-height capsule. So on a journal with no run the note
+            // is promoted into the empty slot rather than the card leading
+            // with a sentence that reads the drawing out loud.
+            //
+            // The note is NOT drawn twice: it appears once, at whichever tier
+            // it is standing in.
+            Text(JournalRoom.headline(room) ?? JournalRoom.note(room))
                 .dsText(.heading22)
                 .foregroundStyle(DS.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -68,11 +78,13 @@ struct JournalRoomCard: View {
                     onOpen(room.fullest)
                 }
 
-            Text(JournalRoom.note(room))
-                .dsText(.subhead13)
-                .foregroundStyle(DS.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.top, DS.Space.s1)
+            if JournalRoom.headline(room) != nil {
+                Text(JournalRoom.note(room))
+                    .dsText(.subhead13)
+                    .foregroundStyle(DS.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, DS.Space.s1)
+            }
 
             yearStrip
                 .padding(.top, DS.Space.s3)
@@ -137,7 +149,10 @@ struct JournalRoomCard: View {
             }
         }
         .accessibilityElement()
-        .accessibilityLabel(Text(JournalRoom.note(room)))
+        // The span, not `JournalRoom.note` — on a journal with no run that
+        // sentence is the card's LEAD (prd §451), and a strip repeating it
+        // makes VoiceOver say it twice.
+        .accessibilityLabel(Text("A column per year, \(String(room.years.first?.year ?? 0)) to \(String(room.years.last?.year ?? 0))"))
     }
 
     // MARK: - Rows

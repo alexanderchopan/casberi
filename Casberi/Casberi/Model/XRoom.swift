@@ -190,23 +190,29 @@ struct XRoom: Equatable {
 
     // MARK: - Words
 
-    /// The whole finding as one sentence.
-    ///
-    /// It names the BUSIEST year rather than the newest, because the newest is
-    /// what the rows underneath already show and a head that restates the feed
-    /// is a wasted slot. "Busiest" is stated in posts, never in reach: the
-    /// archive's counts are frozen at export time, so a year called "biggest"
-    /// on likes would be a claim about an audience we measured once.
-    ///
-    /// The year is interpolated as a STRING, and that is not a style choice:
-    /// an `Int` in a localized interpolation is formatted with the locale's
-    /// grouping separator, so `2019` renders as "2,019" — a year printed as a
-    /// quantity, in the largest type on the card. Caught by the harness on its
-    /// first run, which is exactly the class of silent wrong answer it exists
-    /// for: it renders, and it looks like a number somebody meant.
-    static func headline(_ room: XRoom) -> String {
-        String(localized: "\(String(room.busiest.year)) was your loudest year — \(room.busiest.posts.formatted()) posts")
-    }
+    // `headline` retired here 2026-08-22 (prd §451, the sweep out of the
+    // wallet). It read "2019 was your loudest year — 4,102 posts", and every
+    // word of it was the drawing beneath it read out loud: `rows` sorts by
+    // posts descending under the SAME tie rule `busiest` uses, so row one IS
+    // `busiest` — the same year, the same count, one line down, with its
+    // subject and its bar beside it — and the strip draws that year as its
+    // only full-height capsule, since every share is taken `of: top`. Three
+    // tellings of one fact, the largest of them the one that added least.
+    //
+    // The superlative went with it and is not lost: "loudest" is what a
+    // rank-ordered list and a tallest bar already say. What survives is
+    // `note`, promoted to the card's lead — and the test it passes is the one
+    // its own doc had already written down before this cut, "what the strip
+    // cannot say for itself".
+    //
+    // ITS ONE LESSON OUTLIVES IT and is cited from `InstagramRoom`, so it is
+    // kept here rather than deleted with the function: a YEAR is interpolated
+    // as a `String`, never an `Int`. An `Int` in a localized interpolation is
+    // formatted with the locale's grouping separator, so `2019` renders as
+    // "2,019" — a year printed as a quantity, in the largest type on the card.
+    // The harness caught it on its first run, which is exactly the class of
+    // silent wrong answer it exists for: it renders, and it looks like a
+    // number somebody meant.
 
     /// What the strip cannot say for itself: how long the span is, and how much
     /// of it you actually wrote in.

@@ -90,6 +90,28 @@ else:
     print("  ✗ the From spec row stands down for a composed sentence")
     sys.exit(1)
 PY
+# …and stands down again where the EYEBROW is the sentence (prd §451). The
+# live sentence is suppressed there, so `provenance == nil` on exactly those
+# sheets — and without this second conjunct the row §363 deleted returns on
+# every one of them, which is the cut running backwards. Checked across the
+# same whole assignment, for the same reason.
+python3 - "$VIEW" <<'PY' || fail=1
+import re, sys
+src = open(sys.argv[1]).read()
+m = re.search(r'let hasFrom =(.*?)\n\s*let ', src, re.S)
+ok = m and '!SocialSheetSource.eyebrowLeadsWithPerson(' in m.group(1)
+print("  ✓ the From spec row stands down where the eyebrow speaks"
+      if ok else "  ✗ the From spec row stands down where the eyebrow speaks")
+sys.exit(0 if ok else 1)
+PY
+# ONE PREDICATE (§451). The eyebrow's own condition and the sentence's
+# stand-down must be the SAME function, or the card either repeats itself or
+# says neither line. A second copy in the view is how that drifts.
+guard "the eyebrow asks SocialSheetSource whether it leads with a person" \
+  'SocialSheetSource\.eyebrowLeadsWithPerson\(thing, shape: socialShape\)' "$VIEW"
+guard "the reception is told whether the eyebrow already said it" \
+  'eyebrowNamesIt: eyebrowLeadsWithPerson\(thing, shape: shape\)' \
+  Casberi/Casberi/Model/SocialSheetSource.swift
 # The parent is a card now, not a label.
 guard "the parent renders as a card" 'ReplyingToCard\(parent: parent' "$VIEW"
 # A follower is a person.
@@ -233,9 +255,11 @@ func input(source: String = "Farcaster", shape: SocialSheet.Shape = .post,
            likes: SocialReception.Reading? = nil,
            reposts: SocialReception.Reading? = nil,
            replies: SocialReception.Reading? = nil,
-           likers: String? = nil, ceiling: String? = nil) -> SocialReception.Input {
+           likers: String? = nil, ceiling: String? = nil,
+           eyebrowNamesIt: Bool = false) -> SocialReception.Input {
     .init(source: source, shape: shape, archive: archive, when: when,
-          importedAt: importedAt, act: act, phrase: phrase, likes: likes,
+          importedAt: importedAt, act: act, phrase: phrase,
+          eyebrowNamesIt: eyebrowNamesIt, likes: likes,
           reposts: reposts, replies: replies, likers: likers, ceiling: ceiling)
 }
 
@@ -248,12 +272,29 @@ check("a reception with nothing in it is nil",
       SocialReception.compose(input(source: "X", shape: .save)) != nil)
 
 // A live post names its network and, when there is one, the same why-phrase
-// the eyebrow wears — so one screen cannot say why twice and differ.
+// the eyebrow wears — but ONLY where the eyebrow did not already say it.
+//
+// THE SUPPRESSION IS THE POINT (prd §451). Wherever the sheet leads with the
+// person it draws a face and "@dwr · in /design · 2h ago", so the sentence
+// below was the same source and the same phrase a card down. Both fixtures
+// below are asserted BOTH ways, because a suppression that fires everywhere
+// and a suppression that fires nowhere are equally wrong, and only the pair
+// tells them apart.
 check("a live post with no phrase says only where it is",
       SocialReception.compose(input(likes: like))?.provenance == "On Farcaster.")
 check("a live post carries the eyebrow's own phrase",
       SocialReception.compose(input(phrase: "you liked this", likes: like))?
         .provenance == "On Farcaster — you liked this.")
+check("…and stands down entirely when the eyebrow already said both",
+      SocialReception.compose(input(phrase: "you liked this", likes: like,
+                                    eyebrowNamesIt: true))?.provenance == nil)
+check("…including the bare form, which over a source mark says nothing at all",
+      SocialReception.compose(input(likes: like, eyebrowNamesIt: true))?
+        .provenance == nil)
+// The readings are untouched by any of it — the block still draws, it simply
+// stops repeating the line above it.
+check("suppressing the sentence does not suppress the block",
+      SocialReception.compose(input(likes: like, eyebrowNamesIt: true)) != nil)
 
 // THE ARCHIVE GRAMMAR — the one this function exists for. It names the FILE as
 // the origin and the person's own act as the event, with a real past date.
@@ -269,8 +310,15 @@ check("an archive sentence names the file, the act and the date",
       arch?.provenance == "From your X archive — you liked this on \(dayText).")
 check("the archive date is a full date, not a relative age",
       dayText.contains("2019"))
+// An ARCHIVE sentence is never suppressed, however loudly the eyebrow speaks:
+// the eyebrow carries a relative age ("3y ago") and this carries the file and
+// a real past date, which is the whole reason the archive grammar exists.
+check("an archive still names its file even under a speaking eyebrow",
+      SocialReception.compose(input(source: "X", archive: true, when: day,
+                                    act: .liked, eyebrowNamesIt: true))?
+        .provenance == "From your X archive — you liked this on \(dayText).")
 check("an archive's counts wear the date they were recorded",
-      arch?.recorded == "Counts as your X archive recorded them, Aug 2026.")
+      arch?.recorded == "Counts as the export recorded them, Aug 2026.")
 
 // A live post's counts must NEVER wear a staleness clause — they were read
 // just now, and a clause would make a true number look doubted.
@@ -285,7 +333,7 @@ check("an archive with no counts states no staleness",
 check("an archive with no import date still says the counts are recorded",
       SocialReception.compose(input(source: "X", archive: true, when: day,
                                     act: .liked, likes: like))?
-        .recorded == "Counts as your X archive recorded them.")
+        .recorded == "Counts as the export recorded them.")
 check("an archive with no act falls back to naming the file",
       SocialReception.compose(input(source: "TikTok", archive: true, when: day))?
         .provenance == "From your TikTok archive.")
@@ -441,6 +489,17 @@ mutate "the thread head is no longer proven" \
 mutate "the live sentence stops carrying the phrase" \
   'return String(localized: "On \(i.source) — \(phrase).")' \
   'return String(localized: "On \(i.source).")'
+
+# The §451 suppression, both directions. Removing it puts the eyebrow's own
+# sentence back on the card underneath the eyebrow; making it unconditional
+# takes the sentence off the transcripts and handle-less rows where it is the
+# only place the source and the reason are written at all.
+mutate "the live sentence stops standing down for the eyebrow" \
+  'guard !i.eyebrowNamesIt else { return nil }' \
+  'guard true else { return nil }'
+mutate "the live sentence stands down even when the eyebrow is silent" \
+  'guard !i.eyebrowNamesIt else { return nil }' \
+  'guard false else { return nil }'
 
 echo ""
 echo "social-sheet-selftest: OK — assertions and mutations both pass."

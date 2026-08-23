@@ -32,7 +32,11 @@ enum RoomFigure {
         // Drawn as bars rather than a pulse: the room's own rows are the top
         // years ranked, a tile fits four, and a year is a label a person reads.
         if let room = XRoomSource.compose(things: things), source == XRoomSource.source {
-            return card(XRoom.headline(room), XRoom.note(room),
+            // Title only, and no caption, because the room itself has one
+            // line now: `XRoom.headline` retired 2026-08-22 (prd §451) and the
+            // note took the lead. A peek that kept the old pair would preview
+            // a card the room no longer draws — this chain's one contract.
+            return card(XRoom.note(room), "",
                         .bars(XRoom.rows(room).prefix(4).map {
                             AgentPanel.Bar(label: String($0.year), value: $0.posts,
                                            detail: $0.posts.formatted())

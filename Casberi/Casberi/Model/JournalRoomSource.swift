@@ -122,7 +122,9 @@ enum JournalRoomSource {
             out.append("compose=nil — no card (nothing imported, or under the floors above)")
             return out
         }
-        out.append("headline=\(JournalRoom.headline(room))")
+        // nil is the common answer since prd §451 — the fullest-year
+        // sentence was row one read out loud and the note leads without it.
+        out.append("headline=\(JournalRoom.headline(room) ?? "none — the note leads")")
         out.append("note=\(JournalRoom.note(room))")
         out.append("footnote=\(JournalRoom.footnote(room) ?? "none")")
         out.append("totals| span=\(room.span) silent=\(room.silent)"

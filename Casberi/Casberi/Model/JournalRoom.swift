@@ -262,25 +262,37 @@ struct JournalRoom: Equatable {
 
     // MARK: - Words
 
-    /// The whole finding as one sentence, and it has two shapes.
+    /// The RUN, or nothing — and nil is the common answer (prd §451).
     ///
-    /// The RUN leads when there is one, because it is the fact a person who
+    /// The run leads when there is one, because it is the fact a person who
     /// keeps a journal would recognise as theirs and the only one here that no
-    /// other room in this app could produce. Below `streakFloor` there is no run
-    /// worth naming, and the fullest year leads instead — never the newest,
-    /// which is what the rows underneath already show, and a head that restates
-    /// the feed is a wasted slot.
+    /// other room in this app could produce. It is drawn nowhere: no strip
+    /// column and no row carries a streak, so saying it is the only way it
+    /// exists.
     ///
-    /// Both years are interpolated as STRINGS, and that is not a style choice:
+    /// **The fullest-year sentence that stood in the other branch is GONE**
+    /// (2026-08-22, the sweep out of the wallet). It read "2019 was your
+    /// fullest year — 412 entries", and `rows` sorts by entries descending
+    /// under the SAME tie rule `fullest` uses — so row one IS `fullest`, the
+    /// same year and the same count, one line below, with its subject and its
+    /// bar beside it, while the strip draws that year as its only full-height
+    /// capsule. Three tellings of one fact, the largest of them the one that
+    /// added least. The superlative is not lost: "fullest" is what a
+    /// rank-ordered list and a tallest bar already say.
+    ///
+    /// So a room with no run worth naming has no headline, and the card leads
+    /// with `note` instead — which is the one line here that states something
+    /// no part of the drawing can (`XRoom` took the same cut the same day, and
+    /// having only one branch, lost its `headline` outright).
+    ///
+    /// The year is interpolated as a STRING, and that is not a style choice:
     /// an `Int` in a localized interpolation is formatted with the locale's
     /// grouping separator, so `2019` renders as "2,019" — a year printed as a
     /// quantity, in the largest type on the card. `XRoom` shipped exactly that
     /// bug and its harness caught it on the first run.
-    static func headline(_ room: JournalRoom) -> String {
-        if room.streak >= streakFloor, let year = room.streakYear {
-            return String(localized: "You wrote \(room.streak.formatted()) days straight in \(String(year))")
-        }
-        return String(localized: "\(String(room.fullest.year)) was your fullest year — \(room.fullest.entries.formatted()) entries")
+    static func headline(_ room: JournalRoom) -> String? {
+        guard room.streak >= streakFloor, let year = room.streakYear else { return nil }
+        return String(localized: "You wrote \(room.streak.formatted()) days straight in \(String(year))")
     }
 
     /// What the strip cannot say for itself: how much, how often, and over how

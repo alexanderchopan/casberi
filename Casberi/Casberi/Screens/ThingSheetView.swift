@@ -1136,8 +1136,7 @@ struct ThingSheetView: View {
             // stamps the title there), so wearing it as "@Chat with Sarah"
             // would introduce a conversation as a person. A transcript keeps
             // the source line it always had.
-            if let shape = socialShape, shape != .transcript,
-               !authorShortHandle.isEmpty {
+            if SocialSheetSource.eyebrowLeadsWithPerson(thing, shape: socialShape) {
                 // The face, and whether it is a DOOR (prd §363). It leads with
                 // the person on every social source now, not just the three
                 // with a profile API — an archived tweet introducing itself as
@@ -1533,8 +1532,14 @@ struct ThingSheetView: View {
         // it is in. "From — from your session" was this table's whole
         // contribution to a chat, and it is the phrase the user called a
         // database field.
+        // …and wherever the EYEBROW is the sentence (prd §451). A live social
+        // sheet whose eyebrow leads with the person has no `provenance` any
+        // more — it would have restated that line word for word — so without
+        // this conjunct the row §363 deleted would come straight back on every
+        // one of those sheets, which is the opposite of the cut.
         let hasFrom = showsWho && !isWork && purchaseReading == nil
             && agentShape == nil
+            && !SocialSheetSource.eyebrowLeadsWithPerson(thing, shape: socialShape)
             && reception?.provenance == nil
             && noteReception?.provenance == nil
         let hasCounterparty = showsWho && thing.source == "Wallet"

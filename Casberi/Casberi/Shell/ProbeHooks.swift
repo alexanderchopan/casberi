@@ -4679,7 +4679,7 @@ enum ProbeHooks {
                 // way, so the trade is visible here rather than inferred.
                 note("xHead", source == XRoomSource.source
                      ? XRoomSource.compose(things: things).map {
-                        "\(XRoom.headline($0)) · \($0.span) years · \($0.silent) silent"
+                        "\(XRoom.note($0)) · \($0.span) years · \($0.silent) silent"
                      } : nil)
                 // The fourteenth (2026-08-18, prd §395) — the second over an
                 // import, and the second that displaces a card below it: when
@@ -4705,7 +4705,8 @@ enum ProbeHooks {
                 let journalLabel = source == "Apple Journal" ? "appleJournalHead" : "dayOneHead"
                 note(journalLabel, JournalRoomSource.sources.contains(source)
                      ? JournalRoomSource.compose(things: things).map {
-                        "\(JournalRoom.headline($0)) · \($0.span) years · \($0.silent) silent"
+                        "\(JournalRoom.headline($0) ?? JournalRoom.note($0))"
+                        + " · \($0.span) years · \($0.silent) silent"
                         + " · \($0.days) days · streak \($0.streak)"
                      } : nil)
                 // 2. the anniversary — the memories room's pictures, and (since

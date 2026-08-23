@@ -507,6 +507,16 @@ grep -q 'XRoomSource.compose(things: things), source == XRoomSource.source' Casb
 # less than what it replaced.
 grep -q 'mostly \\(subject)' Casberi/Casberi/Model/XRoom.swift \
   || { echo "✗ the year rows no longer name each year's subject — the head now draws LESS than the treemap it displaces (§349)"; exit 1; }
+# THE LEAD SAYS ONE THING ONCE (2026-08-22, prd §451). `XRoom.headline` named
+# the busiest year and its count — row one verbatim, and the strip's only
+# full-height capsule — so it is gone and the note leads at the same tier.
+# BOTH halves are guarded, because either alone passes over a broken card: the
+# function must not return under its old name, and the card must really promote
+# the note. One that dropped the headline and left the note at `subhead13`
+# would render as a head with no lead at all.
+grep -q 'static func headline(_ room: XRoom)' Casberi/Casberi/Model/XRoom.swift \
+  && { echo "✗ XRoom.headline is back — it restates row one and the strip's tallest bar (§451)"; exit 1; }
+python3 scripts/support/x-head-lead.py Casberi/Casberi/Screens/XRoomCard.swift || exit 1
 
 # --- extract the shipped functions -----------------------------------------
 python3 - "$OEMBED" "$XARCH" "$SUPPORT" "$TMP/extracted.swift" "$TOPICS" <<'PY'
@@ -1192,12 +1202,23 @@ check("a silent year is drawn, at zero",
       deep.years.first { $0.year == 2020 }?.posts == 0 && deep.silent == 1)
 check("the busiest year is the one with the most posts", deep.busiest.year == 2019)
 check("the total counts every sighting", deep.total == 47)
-check("the headline names the year and its count",
-      XRoom.headline(deep).contains("2019") && XRoom.headline(deep).contains("30"))
+// THE LEAD IS THE NOTE (2026-08-22, prd 451). `XRoom.headline` is gone — it
+// said the busiest year and its count, which `rows` puts one line below
+// verbatim (row one IS `busiest`, same sort, same tie rule) and the strip
+// draws as its only full-height capsule. The note is the card's lead now, and
+// what it must carry is what the drawing cannot: the total, and how many of
+// the span's years were written in.
 check("the note says how much of the span you wrote in",
       XRoom.note(deep).contains("3") && XRoom.note(deep).contains("4"))
+check("the lead states the total, which no bar in the strip does",
+      XRoom.note(deep).contains("47"))
+// The redundancy this cut removed, asserted as the property that made it one:
+// a lead naming the busiest year would be naming row one.
+check("row one is the busiest year, so a lead naming it would repeat it",
+      XRoom.rows(deep).first?.year == deep.busiest.year
+      && XRoom.rows(deep).first?.posts == deep.busiest.posts)
 // A TOTAL order. Two years tied on posts must resolve the same way every time
-// or the card renames its own headline between two identical opens.
+// or the card renames its own rows between two identical opens.
 let tied = XRoom.compose(sightings([(2019, 20), (2020, 20), (2021, 20)]))!
 check("a tie goes to the earlier year, deterministically",
       tied.busiest.year == 2019

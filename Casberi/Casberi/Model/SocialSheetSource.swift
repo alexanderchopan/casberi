@@ -79,6 +79,25 @@ enum SocialSheetSource {
         return hasWords(thing) && !body.isEmpty ? body : thing.title
     }
 
+    // MARK: - What the eyebrow already said
+
+    /// Does the thing sheet's eyebrow lead with the PERSON (prd §451)?
+    ///
+    /// When it does it draws a face and "@dwr · in /design · 2h ago" — who,
+    /// why and when — and the reception block's live sentence underneath was
+    /// the same source and the same `contextPhrase` said again. This is the
+    /// eyebrow's own condition, lifted here so ONE predicate decides both what
+    /// the eyebrow draws and what the sentence stands down for; two copies is
+    /// how a card ends up either repeating itself or saying neither.
+    ///
+    /// A transcript is excluded for the eyebrow's own reason: a conversation's
+    /// `authorHandle` is the thread's name, not a person, so wearing it would
+    /// introduce a chat as somebody.
+    static func eyebrowLeadsWithPerson(_ thing: Thing, shape: SocialSheet.Shape?) -> Bool {
+        guard let shape, shape != .transcript else { return false }
+        return !SocialThread.shortHandle(thing.authorHandle ?? "").isEmpty
+    }
+
     // MARK: - Reception
 
     /// The "how it landed" reading for one thing, or nil when there is nothing
@@ -105,6 +124,7 @@ enum SocialSheetSource {
             importedAt: archive ? importedAt(source: thing.source, context: context) : nil,
             act: act(for: thing),
             phrase: SocialThread.contextPhrase(for: thing),
+            eyebrowNamesIt: eyebrowLeadsWithPerson(thing, shape: shape),
             likes: shown?.likes.map {
                 .init(text: $0.text, noun: String(localized: "likes")) },
             reposts: shown?.reposts.map {

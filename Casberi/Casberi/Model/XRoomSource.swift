@@ -97,7 +97,7 @@ enum XRoomSource {
             out.append("compose=nil — no card (nothing imported, or under the floors above)")
             return out
         }
-        out.append("headline=\(XRoom.headline(room))")
+        // `headline` retired 2026-08-22 (prd §451); the note is the lead.
         out.append("note=\(XRoom.note(room))")
         out.append("footnote=\(XRoom.footnote(room) ?? "none")")
         out.append("totals| span=\(room.span) silent=\(room.silent)"
