@@ -80,6 +80,23 @@ grep -q 'AddressSpine.events(standing: standing(),' "$VIEWS" \
 grep -q 'spine(things)' "$VIEWS" \
   || { echo "✗ the card body no longer draws the spine"; exit 1; }
 
+# §8 HAS NO ALL-CAPS EYEBROW, and this spine wore one on every event until
+# 2026-08-22: `eyebrow` ran every day stamp through `localizedUppercase`, so it
+# printed TODAY — and its own doc argued an exemption ("only a date stamp,
+# three characters of month and a number") that was false for the two commonest
+# inputs `dayText` returns. It also set the house style beside it, which is how
+# `FIRST` and `STANDING · NOW` came to be written in caps.
+#
+# The six root fixtures below pin the resulting CASE, so re-adding the
+# uppercasing fails them by name. These two guard the spelling directly,
+# because a caller can shout without touching `eyebrow` at all. Read from the
+# comment-stripped copies: both files now DOCUMENT this rule by naming the API
+# and the literals it bans (the Obsidian/Cursor lesson).
+grep -q 'localizedUppercase' "$TMP/spine-bare.swift" \
+  && { echo "✗ the spine is upper-casing its eyebrows again — §8 has no ALL-CAPS eyebrow, and the carve-out that allowed this was measured wrong"; exit 1; }
+grep -qE '"(STANDING · NOW|FIRST)"' "$TMP/views-bare.swift" "$TMP/spine-bare.swift" \
+  && { echo "✗ an ALL-CAPS eyebrow literal is back beside the day stamps (§8)"; exit 1; }
+
 # THE FOUR BLOCKS THE SPINE REPLACED MUST STAY GONE (prd §446). Each was a
 # separate treatment of one shape — a dated fact about this address — and any
 # one of them returning beside the spine states the same fact twice, in two
@@ -310,44 +327,49 @@ check("no standing event when there is no exposure",
       kinds(AddressSpine.events(standing: nil, transfers: [], total: 0,
                                 root: .none, now: now, calendar: cal)), "")
 
+// §8 bans the ALL-CAPS eyebrow, and `eyebrow` used to run every stamp through
+// `localizedUppercase` — which printed TODAY, and set the house style that put
+// `FIRST` and `STANDING · NOW` in caps beside it. The six root fixtures below
+// pin the case, so re-adding the uppercasing fails them; this guards the
+// source directly as well, since a caller could re-add it one level up.
 // ── The root, and the four things it must not claim ───────────────────────
 check("named root",
       rootText(AddressSpine.events(standing: nil, transfers: [], total: 0,
                                    root: .named(at: day(2026, 3, 3), provenance: nil),
                                    now: now, calendar: cal)),
-      "MAR 3 | You named this address")
+      "Mar 3 | You named this address")
 check("named root with provenance",
       rootText(AddressSpine.events(standing: nil, transfers: [], total: 0,
                                    root: .named(at: day(2026, 3, 3),
                                                 provenance: "Farcaster · @jesse"),
                                    now: now, calendar: cal)),
-      "MAR 3 | You added this from Farcaster · @jesse and named it")
+      "Mar 3 | You added this from Farcaster · @jesse and named it")
 // An empty provenance string is an absent one, not a sentence with a hole.
 check("named root with empty provenance",
       rootText(AddressSpine.events(standing: nil, transfers: [], total: 0,
                                    root: .named(at: day(2026, 3, 3), provenance: ""),
                                    now: now, calendar: cal)),
-      "MAR 3 | You named this address")
+      "Mar 3 | You named this address")
 check("appeared root",
       rootText(AddressSpine.events(standing: nil, transfers: [t(0, day(2026, 8, 21))],
                                    total: 1,
                                    root: .appeared(at: day(2026, 8, 21), walletName: "Main"),
                                    now: now, calendar: cal)),
-      "YESTERDAY · FIRST | They appeared in a transfer to Main. You have not named them.")
+      "Yesterday · First | They appeared in a transfer to Main. You have not named them.")
 // Below the two-wallet floor there is no wallet to name, and the sentence must
 // not grow a hole where one would have gone.
 check("appeared root with no wallet named",
       rootText(AddressSpine.events(standing: nil, transfers: [], total: 0,
                                    root: .appeared(at: day(2026, 8, 21), walletName: nil),
                                    now: now, calendar: cal)),
-      "YESTERDAY · FIRST | They appeared in a transfer. You have not named them.")
+      "Yesterday · First | They appeared in a transfer. You have not named them.")
 // In the book, never named, and nothing to point at — it must NOT claim a
 // transfer happened, and must NOT claim you named it.
 check("unnamed root claims neither",
       rootText(AddressSpine.events(standing: nil, transfers: [], total: 0,
                                    root: .unnamed(at: day(2026, 8, 1)),
                                    now: now, calendar: cal)),
-      "AUG 1 | You have not named this address")
+      "Aug 1 | You have not named this address")
 // Not in the book and no history: nothing at all, rather than a root dating
 // the address to the day you opened its card.
 check("no root at all",
