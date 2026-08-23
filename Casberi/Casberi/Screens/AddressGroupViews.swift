@@ -355,7 +355,7 @@ struct AddressMoveSheet: View {
     }
 
     var body: some View {
-        DSTray(title: String(localized: "File under"), height: trayHeight) {
+        DSTray(title: String(localized: "File under"), height: trayHeight, ink: true) {
             VStack(alignment: .leading, spacing: 0) {
                 head
                 // Counted ONCE for the whole sheet: both of these walk the book,

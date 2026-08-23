@@ -262,7 +262,7 @@ struct NewGroupSheet: View {
     }
 
     var body: some View {
-        DSTray(title: "New group", height: 660) {
+        DSTray(title: "New group", height: 660, ink: true) {
             VStack(alignment: .leading, spacing: DS.Space.s3) {
                 Text("Deleting a group never deletes an address.")
                     .dsText(.callout15).foregroundStyle(DS.textSecondary)
@@ -553,9 +553,11 @@ struct CopyAddressButton: View {
 
     let address: String
     var style: Style = .compact
-    /// The pill's ink. The address card hands in `pourHue` so the pill, the
-    /// `See all` link and the verb bar all wear one identity; everything else
-    /// takes the app tint.
+    /// The pill's ink. Every caller takes the app tint now — the address card
+    /// used to hand in that address's own hue so the pill, the `See all` link
+    /// and the verb bar wore one identity, and that went with the pour
+    /// (2026-08-22). Kept as a parameter rather than hard-wired: it is a
+    /// reusable control, and the next caller may have a real reason.
     var tint: Color = DS.tint
     @State private var copied = false
 
@@ -831,12 +833,20 @@ struct AddressCard: View {
     /// under — everything answering "who is this", in one field wearing this
     /// address's own colour (prd §443).
     ///
-    /// The pour is EXACTLY the §171/§435 recipe and deliberately unchanged: it
-    /// is the app's §129 idiom (a screen whose subject IS the thing wears its
-    /// colour), shared with the app-detail page, the bridge setup header, the
-    /// token quick sheet and the money receipt card. Deepening it into a
-    /// coloured header BAND was tried and rejected — a wash belongs to the
-    /// page, a band belongs to a different app.
+    /// **There is no pour here any more (2026-08-22, user ruling).** It was the
+    /// §171/§435 recipe, and on a device it drew a hard black line across the
+    /// top of the sheet: the gradient `ignoresSafeArea()`, but a sheet's own
+    /// chrome above it does not, so the wash stopped at the grabber instead of
+    /// running to the edge. Offered the choice between making it cover the
+    /// whole sheet and dropping the colour, the ruling was to drop it — "i'd
+    /// rather just do that".
+    ///
+    /// The identity colour itself STAYS, on the face, the copy pill and the
+    /// group chips: §444's face is made OF the address, so its hue is the
+    /// address's own identity rather than decoration. What went is the wash
+    /// behind them. Note this screen is a SHEET, which is why it diverges from
+    /// the app-detail page and the token quick sheet, where the pour has the
+    /// full page to run into.
     private var identityHeader: some View {
         VStack(spacing: 0) {
             // THE FACE IS MADE OF THE ADDRESS (prd §444) — see `AddressReveal`.
@@ -858,17 +868,6 @@ struct AddressCard: View {
         .frame(maxWidth: .infinity)
         .padding(.top, DS.Space.s3)
         .padding(.bottom, DS.Space.s4)
-        .background(alignment: .top) {
-            LinearGradient(stops: [
-                .init(color: pourHue.opacity(0.40), location: 0),
-                .init(color: pourHue.opacity(0.12), location: 0.45),
-                .init(color: pourHue.opacity(0), location: 1),
-            ], startPoint: .top, endPoint: .bottom)
-                .frame(height: 340)
-                .frame(maxHeight: .infinity, alignment: .top)
-                .ignoresSafeArea()
-                .allowsHitTesting(false)
-        }
     }
 
     /// Rename, and the door out of the book — the two verbs that are not this
@@ -1065,11 +1064,16 @@ struct AddressCard: View {
         .accessibilityLabel(Text(current.address))
     }
 
-    /// Copy — the pill under the address, in this address's own hue, because
-    /// the copy pill, `See all` and the verb bar all take `pourHue` so the
-    /// whole card reads as one identity.
+    /// Copy — the pill under the address, in the app tint.
+    ///
+    /// It used to take this address's own hue, along with `See all` and the
+    /// verb bar, so the whole card read as one identity. That went with the
+    /// pour (2026-08-22, user ruling): a control in a per-address colour is a
+    /// control whose colour means nothing you can act on, and the same purple
+    /// on a CTA read as a brand nobody chose. The identity colour stays where
+    /// it IS the identity — the face and its ring.
     private var copyPill: some View {
-        CopyAddressButton(address: current.address, style: .pill, tint: pourHue)
+        CopyAddressButton(address: current.address, style: .pill, tint: DS.tint)
     }
 
     /// Which groups this address is filed under, as chips beside its name
@@ -1131,6 +1135,11 @@ struct AddressCard: View {
     /// somebody's wallet that happens to be made of code, and it keeps its
     /// identicon face for exactly that reason (see `AddressBook.Kind.glyph`).
     /// Colour has to agree with the face, or the card would say two things.
+    ///
+    /// **The name is now historical.** There is no pour on this sheet since
+    /// 2026-08-22, and no control takes this colour either — only the face and
+    /// the ring that draws it, which is the one place the colour is the
+    /// address's identity rather than decoration.
     private var pourHue: Color {
         switch current.kind {
         case .wallet, .unknown, .smartAccount: return WalletFace.tint(for: current.address)
@@ -1505,7 +1514,7 @@ struct AddressCard: View {
             } label: {
                 Text("See all \(total)")
                     .dsText(.subhead13).fontWeight(.semibold)
-                    .foregroundStyle(pourHue)
+                    .foregroundStyle(DS.tint)
                     .contentShape(Rectangle())
                     .dsTapTarget()
             }
@@ -1747,9 +1756,11 @@ struct AddressCard: View {
     /// offering it would be an invitation to spend one of five slots on
     /// nothing.
     ///
-    /// It wears the address's OWN hue, the same one the pour behind it and the
-    /// face above it carry, because at this size a tinted button IS the
-    /// person. Machinery would borrow the app tint — see `pourHue`.
+    /// It wears the APP TINT, like every other call to action in the app.
+    /// It used to wear the address's own hue on the reasoning that at this
+    /// size a tinted button IS the person; the ruling that removed the pour
+    /// took that with it (2026-08-22). A per-address colour on a control says
+    /// nothing a person can act on, and at full width it read as a brand.
     @ViewBuilder
     private var bottomBar: some View {
         if bottomBarShown {
@@ -1767,10 +1778,13 @@ struct AddressCard: View {
             .padding(.horizontal, DS.Space.s4)
             .padding(.top, DS.Space.s3)
             .padding(.bottom, DS.Space.s2)
-            // Glass, and no hairline above it — §8's no-lines law has zero
-            // exceptions, so the bar is separated from the spine by its own
-            // material and nothing else.
-            .background(.ultraThinMaterial)
+            // INK, not glass (2026-08-22, user ruling). `.ultraThinMaterial`
+            // over a dark sheet renders as a lighter grey slab, so the bar
+            // announced itself with a hard edge against the black above it —
+            // §8's no-lines law broken by a material rather than by a stroke.
+            // The page's own ink separates it from nothing, which is the
+            // point: the bar is part of the sheet, not a layer over it.
+            .background(DS.themedPage)
         }
     }
 
@@ -1803,7 +1817,7 @@ struct AddressCard: View {
                 .lineLimit(1)
                 .frame(maxWidth: .infinity)
                 .frame(height: DS.Hit.min + 6)
-                .background(filled ? AnyShapeStyle(pourHue) : AnyShapeStyle(DS.fillFaint),
+                .background(filled ? AnyShapeStyle(DS.tint) : AnyShapeStyle(DS.fillFaint),
                             in: Capsule(style: .continuous))
                 .contentShape(Capsule(style: .continuous))
         }

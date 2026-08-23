@@ -198,8 +198,16 @@ if "Divider()" in card:
 m = re.search(r'private var bottomBar:.*?\n    \}\n', card, re.S)
 if not m:
     sys.stderr.write("✗ bottomBar no longer exists — the pinned verb moved\n"); sys.exit(1)
-if ".ultraThinMaterial" not in m.group(0):
-    sys.stderr.write("✗ the verb bar no longer separates by material — the only separator §8 allows it\n"); sys.exit(1)
+# INK, not material (2026-08-22, user ruling). `.ultraThinMaterial` over a dark
+# sheet renders as a lighter grey slab, so on a device the bar announced itself
+# with a hard edge against the black above it — §8's no-lines law broken by a
+# material rather than by a stroke. The guard is inverted rather than deleted:
+# the bar must keep having NO separator, and a material coming back is exactly
+# how the line would return.
+if "DS.themedPage" not in m.group(0):
+    sys.stderr.write("\u2717 the verb bar no longer paints the page's own ink \u2014 it drew a grey edge against the sheet\n"); sys.exit(1)
+if "Material" in m.group(0):
+    sys.stderr.write("\u2717 the verb bar is back on a material \u2014 that is the grey hard line \u00a78 forbids, wearing a blur\n"); sys.exit(1)
 PY5
 
 # THE UNNAMED CARD'S VERB. Naming is the act this screen exists for and the

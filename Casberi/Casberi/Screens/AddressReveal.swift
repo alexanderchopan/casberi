@@ -33,9 +33,13 @@ import SwiftUI
 
 /// The identicon settling, with one ring drawn round it in its own hue.
 private struct AddressFaceReveal: ViewModifier {
-    /// The address's own derived colour — the same one the pour behind the
-    /// header and the watch bar at the foot both wear, so the ring is not a
-    /// decoration in an app colour but this address's colour, once more.
+    /// The address's own derived colour.
+    ///
+    /// This is now the ONLY place that colour appears on the sheet: the pour
+    /// behind the header and the tint on the watch bar both went on
+    /// 2026-08-22, and the ring stayed because it is not decoration in an app
+    /// colour — it is the claim that this face was worked out from this
+    /// address, drawn in the colour that claim produced.
     let hue: Color
     /// Whether the mark under this is a FACE. Machinery gets the settle and no
     /// ring, for two reasons that agree: `AddressMark` draws a contract and a
