@@ -54,8 +54,21 @@ struct WalletBalanceHeadline: View {
     /// Transactions that landed inside the window (prd §155) — punctuation on
     /// the line, each one a door to its own sheet.
     var marks: [TokenChartMark] = []
-    /// "Across your wallets" on the combined view, "Balance" scoped.
+    /// "Across your wallets" on the combined view; scoped, the WALLET'S OWN NAME
+    /// (prd §450) — which is why the rail above it no longer captions its faces.
     var caption: String = String(localized: "Balance")
+    /// The scoped wallet's address, when `caption` is naming one rather than
+    /// describing the reading (prd §450). Draws its face at `DS.Face.badge` —
+    /// the ramp's own "a mark beside dense inline text" tier — before the words,
+    /// which is what ties the ringed face in the rail above to the name here.
+    /// nil on the combined view, where there is no one face to draw.
+    var captionAddress: String? = nil
+    /// The address tail beside the name ("…4f4f"), in the quieter ink. Kept
+    /// apart from `caption` rather than pre-joined into it so the two can be
+    /// weighted differently — the name is the identity, the tail is the proof —
+    /// and so a wallet with no name at all can spend the whole line on its
+    /// address instead of repeating it.
+    var captionDetail: String? = nil
     /// "Mostly ETH · +$310" — WHY the line moved, from the same per-token
     /// snapshots the combined sheet's "What moved" reads. nil when the record
     /// can't attribute the move yet.
@@ -224,17 +237,48 @@ struct WalletBalanceHeadline: View {
 
     /// The reading itself — caption, total, delta, and why it moved. Rendered
     /// bare or inside a Button depending on whether there's anything behind a
+    /// The caption's words — one `Text` when it describes the reading, two
+    /// concatenated when it NAMES a wallet (prd §450).
+    ///
+    /// **Two weights, and §157's ruling survives both.** That note says the
+    /// caption "steps back so the number can step forward", and it is right
+    /// about a label: "Across your wallets" is chrome and stays tertiary. A
+    /// NAME is not chrome — it is the answer to "which wallet am I looking
+    /// at?", and at tertiary it would be the faintest thing about the wallet it
+    /// identifies. So the name takes semibold at `textSecondary`, one step up
+    /// and still a long way under a 48pt total, while the address tail beside
+    /// it stays tertiary. The gap the ruling protects is between the number and
+    /// this line, and it is intact.
+    ///
+    /// `scaledFont` rather than `dsText`, because a concatenated `Text` needs
+    /// `Text`'s own `.font(_:)` overload to stay `Text`-typed — the exact case
+    /// that property exists for, so this is still the ramp and still Dynamic
+    /// Type.
+    private var captionText: Text {
+        let name = Text(caption)
+            .font(DSTextStyle.label12.scaledFont)
+            .fontWeight(captionAddress == nil ? .medium : .semibold)
+            .foregroundStyle(captionAddress == nil ? DS.textTertiary : DS.textSecondary)
+        guard let captionDetail else { return name }
+        return name + Text(verbatim: " · \(captionDetail)")
+            .font(DSTextStyle.label12.scaledFont)
+            .foregroundStyle(DS.textTertiary)
+    }
+
     /// tap; identical either way.
     private var reading: some View {
         VStack(alignment: .leading, spacing: DS.Space.s1) {
                     HStack(spacing: 5) {
-                        // Quieter than it was (prd §157): hierarchy is the GAP
-                        // between the loud thing and the quiet one, and a
-                        // secondary-ink caption over a 48pt total left the two
-                        // arguing. The caption steps back so the number can
-                        // step forward.
-                        Text(caption)
-                            .dsText(.label12).foregroundStyle(DS.textTertiary)
+                        // The scoped wallet's own face, at the ramp's badge
+                        // tier (prd §450). The rail above rings the picked
+                        // face and says nothing else; this is what carries
+                        // that identity down to the name, so the two read as
+                        // one answer rather than as a ring and a coincidence.
+                        if let captionAddress {
+                            WalletFace(address: captionAddress,
+                                       size: DS.Face.badge, circular: true)
+                        }
+                        captionText
                             .lineLimit(1)
                         // The door — only where a breakdown exists (the multi-
                         // wallet "All" view). A chevron promises more behind
@@ -1293,11 +1337,23 @@ struct WalletWorthALookTray: View {
     /// to its sheet when expanded, instead of one dead aggregate line.
     let flagged: [Thing]
     /// The approval/Permit2-grant things whose live on-chain state is still
-    /// active (`WalletApprovals.activeApprovals`) — each becomes its own row
-    /// with a door to that wallet's Revoke.cash page.
+    /// active (`WalletApprovals.activeApprovals`). Enumerated as rows ONLY
+    /// when the Approvals card can't take the job — see `actionRows`.
     let activeApprovals: [Thing]
+    /// The room's own approvals reading (prd §292). Held so the walk row can
+    /// quote `WalletApprovalExposure.headline` VERBATIM rather than compose a
+    /// second sentence about the same grants — two files describing one set is
+    /// how the sheet and the card start disagreeing.
+    var exposure = WalletApprovalExposure()
+    /// Dismiss this sheet and scroll the room to the Approvals card. Nil when
+    /// the caller has no such card on screen, and then the approvals fall back
+    /// to being enumerated here — the honesty rule's own corollary, the same
+    /// one `WalletCompositionStrip`'s two optional doors keep: never render a
+    /// control that opens nothing.
+    var onWalkToApprovals: (() -> Void)?
+    /// The same, for the Lending card.
+    var onWalkToLending: (() -> Void)?
     @Environment(\.openURL) private var openURL
-    @State private var jumpTarget: String?
     /// Mirrors `WalletAwareness.isMuted` locally so toggling redraws THIS
     /// tray immediately; the plain UserDefaults flag underneath is what the
     /// feed card re-reads fresh the next time it's built.
@@ -1306,7 +1362,17 @@ struct WalletWorthALookTray: View {
     /// deserve the same standing scroll real estate the actionable rows
     /// get. Expands in place; the sheet's own height grows to fit since
     /// `trayHeight` reads this same state.
-    @State private var awareExpanded = false
+    ///
+    /// EXCEPT when there is nothing actionable at all (prd §449), where it
+    /// opens expanded: the strip you tapped to get here already told you the
+    /// count, so a modal whose entire content is that same count restated and
+    /// a chevron asks for a second tap to say anything new. Held as an
+    /// OVERRIDE rather than seeded in an initialiser so the default tracks
+    /// `hasActionable` on every body pass — a live read that lands the run's
+    /// first approval while the sheet is open must not leave the pile stuck
+    /// open underneath it.
+    @State private var awareExpandedOverride: Bool?
+    private var awareExpanded: Bool { awareExpandedOverride ?? !hasActionable }
     /// A flagged transfer PUSHES within this same sheet now (2026-07-23,
     /// second fix to prd §196) rather than presenting `ThingSheetView` as a
     /// second, sibling `.sheet` — the first fix already solved "can't get
@@ -1350,6 +1416,12 @@ struct WalletWorthALookTray: View {
     /// One `ForEach` over a unified enum keeps that flat regardless of how
     /// many of the four kinds are actually present.
     private enum ActionRow: Identifiable {
+        /// A kind the ROOM already states better, standing in for its whole
+        /// group: one row carrying that card's own headline and a pill that
+        /// walks to it (prd §449). `id` is the destination, so there can only
+        /// ever be one walk row per card.
+        case walk(id: String, icon: String, hot: Bool, title: String,
+                  subtitle: String?, label: String)
         case liquidation(WalletWarning)
         // The approval carries its id as a STORED value captured at
         // construction (2026-07-24 crash fix) — reading `t.id` lazily in the
@@ -1362,6 +1434,7 @@ struct WalletWorthALookTray: View {
 
         var id: String {
             switch self {
+            case .walk(let id, _, _, _, _, _): "walk:\(id)"
             case .liquidation(let w): "liquidation:\(w.id)"
             case .approval(let id, _): "approval:\(id)"
             case .delegation(let w): "delegation:\(w.id)"
@@ -1370,129 +1443,110 @@ struct WalletWorthALookTray: View {
         }
     }
 
+    /// The order is unchanged from §241 — liquidation, approvals,
+    /// delegations, Safe — and only the SHAPE of the first two moved (prd
+    /// §449). Both now have a card in this same room that ranks them by
+    /// something (dollars at stake, distance to liquidation) where this list
+    /// ranked them by nothing, so re-listing them here is prd §208's own ban
+    /// on a door onto a page that repeats the card beneath it. Each collapses
+    /// to ONE walk row; delegations and Safe signatures keep their full rows,
+    /// because this sheet is their only home in the wallet room.
+    ///
+    /// Each collapse is GATED ON ITS DESTINATION EXISTING and falls back to
+    /// the old enumeration otherwise, so nothing can go missing: a pill with
+    /// nowhere to land would be the dead control §83 bans, and a group silently
+    /// dropped instead would be worse.
     private var actionRows: [ActionRow] {
-        liquidation.map(ActionRow.liquidation)
+        var out: [ActionRow] = []
+        if let lead = liquidationLead, onWalkToLending != nil {
+            out.append(.walk(id: "lending", icon: "chart.line.downtrend.xyaxis", hot: true,
+                             title: lead.title, subtitle: lead.subtitle,
+                             label: String(localized: "Lending")))
+        } else {
+            out += liquidation.map(ActionRow.liquidation)
+        }
+        // `priced`, not `isEmpty`: `headline` counts PRICED spenders and sums
+        // PRICED grants, so an exposure that is all-unpriced would quote it as
+        // "0 spenders can move $0" — a reassurance, over live grants, on the
+        // row that earned it least. That case keeps the enumerated rows, which
+        // state each grant without claiming to price it.
+        if !exposure.priced.isEmpty, onWalkToApprovals != nil {
+            out.append(.walk(id: "approvals", icon: "key.fill", hot: false,
+                             title: WalletApprovalExposure.headline(
+                                 spenders: exposure.spenderCount, total: exposure.total),
+                             subtitle: nil,
+                             label: String(localized: "Approvals")))
+        } else {
             // `.live` at the boundary (corollary 4): `activeApprovals` is a
             // held `[Thing]`, and every read below — the id captured here, the
             // title, the granted date — is a stored-property read that traps
             // on a model a foreground heal tombstoned after this array was
             // handed over.
-            + activeApprovals.live.map { ActionRow.approval(id: $0.id.uuidString, thing: $0) }
-            + delegations.map(ActionRow.delegation)
-            + safeSignatures.map(ActionRow.safe)
+            out += activeApprovals.live.map { ActionRow.approval(id: $0.id.uuidString, thing: $0) }
+        }
+        out += delegations.map(ActionRow.delegation)
+        out += safeSignatures.map(ActionRow.safe)
+        return out
+    }
+
+    /// What the liquidation walk row says. ONE at-risk position speaks in its
+    /// own warning's words; several are counted in `WalletWarning.Kind`'s own
+    /// vocabulary — the identical construction `WalletWatch.summary` uses for
+    /// the strip that opened this sheet, so the two can't word it differently.
+    /// Plain interpolation, never `String(localized:)`, which GROUPS an Int
+    /// and would print a count as a quantity (the §375 year bug).
+    private var liquidationLead: (title: String, subtitle: String?)? {
+        guard let first = liquidation.first else { return nil }
+        guard liquidation.count > 1 else { return (first.title, first.subtitle) }
+        return ("\(liquidation.count) \(WalletWarning.Kind.liquidation.label(liquidation.count))", nil)
     }
 
     private var hasActionable: Bool { !actionRows.isEmpty }
     private var actionableRowCount: Int { actionRows.count }
 
-    /// The two jump targets — "act" and "aware" — each dropped when empty.
-    /// The jump bar (only shown once there's real ground to cover) is built
-    /// off this same list, so the two can never disagree about what's on
-    /// screen.
-    private var superSectionIDs: [String] {
-        var ids: [String] = []
-        if hasActionable { ids.append("act") }
-        if !flagged.isEmpty { ids.append("aware") }
-        return ids
-    }
-
     /// The tray's own ceiling — past this the content scrolls within the
     /// natural-height detent below. Raised from 620 (2026-07-24, user: "it
-    /// could be taller") — the tray also now offers `.large` as a second
-    /// detent (see `trayDetents`) so a long pile can be dragged open past
-    /// even this, but the natural-height detent still caps here first.
+    /// could be taller") — the tray also offers `.large` as a second detent
+    /// (see `trayDetents`) so a long pile can be dragged open past even this,
+    /// but the natural-height detent still caps here first.
     private static let maxTrayHeight: CGFloat = 720
-    /// A "Worth doing" row carries an icon, a wrapping title, a subtitle
-    /// line (2026-07-24) and, since 2026-07-31, its own card padding — so it
-    /// prices well above the bare one-line rows the aware pile still uses.
-    /// First-frame guess only; `contentHeight` measures the truth one pass
-    /// later (see `estimatedContentHeight`).
-    private static let actionRowHeight: CGFloat = 66 + 2 * DS.Space.s3
     /// The aware pile's expanded rows stay bare one-liners — spam doesn't
     /// need the same per-row weight the actionable rows earn.
     private static let rowHeight: CGFloat = 46
-    /// A section header carries a glyph, a count, and its own one-line
-    /// explainer beneath, so it's taller than a bare row.
-    private static let headerHeight: CGFloat = 58
 
-    /// The FIRST-FRAME guess only, and only for the content — what the rows
-    /// are probably worth before anything has actually been laid out, so the
-    /// sheet opens near its final size instead of animating up from nothing.
-    /// `contentHeight` (measured) replaces it on the very next pass, and
-    /// that swap is the fix (2026-07-26) for the whole class of bug this
-    /// guess kept producing: it prices every actionable row at a flat
-    /// `actionRowHeight`, but a real one carries a WRAPPING title
-    /// ("vitalik.eth delegates to 0x5a7f…6f6d on Ethereum" is two lines
-    /// beside a Revoke pill, not one), and no arithmetic here can know how
-    /// many lines a string takes at the user's type size. Understating three
-    /// delegation rows is what pushed the "Just so you know" line below the
-    /// fold (user, 2026-07-26: "spam transfers is below the fold and
-    /// shouldn't be"). The per-row and per-group `VStack` spacings the
-    /// earlier version also omitted ARE counted here now, so the opening
-    /// frame is close even before the measurement lands.
-    private var estimatedContentHeight: CGFloat {
-        var h: CGFloat = 0
-        if hasActionable {
-            h += 46 + DS.Space.s4 // the "Worth doing" group label + its explainer line
-            h += CGFloat(actionableRowCount) * Self.actionRowHeight
-            h += CGFloat(actionableRowCount - 1) * DS.Space.s2
-        }
-        if hasActionable && !flagged.isEmpty { h += DS.Space.s6 }
-        if !flagged.isEmpty {
-            // The "Just so you know" label + the boxed summary row.
-            h += 30 + Self.headerHeight
-            if awareExpanded { h += CGFloat(flagged.count) * Self.rowHeight + 40 }
-        }
-        return h + DS.Space.s2 // the content VStack's own bottom padding
-    }
+    /// The first-frame floor, and DELIBERATELY NOT AN ESTIMATE (prd §449).
+    ///
+    /// A ~45-line arithmetic guess used to live here, pricing every row at a
+    /// flat constant — and its own doc records why it could never hold: an
+    /// actionable row carries a WRAPPING title, and no arithmetic here can
+    /// know how many lines a string takes at the reader's type size. It was
+    /// alive for exactly one frame, it was wrong on every wallet with a
+    /// delegation, and being wrong pushed the pile below the fold (user,
+    /// 2026-07-26). `contentHeight` measures the truth on the next pass, so
+    /// what the first frame needs is not a better guess but a floor small
+    /// enough to grow OUT of rather than shrink back from — growing reads as
+    /// the sheet settling, shrinking reads as it snatching content away.
+    private static let openingHeight: CGFloat = 260
 
     /// Everything the sheet spends before the scrolling content gets a
     /// point: `DSTray`'s top padding, its heading, the gap beneath it, its
     /// bottom padding, and the home-indicator inset — which the detent
-    /// height INCLUDES but the content can never draw into, and which the
-    /// old estimate left out entirely. Over-allowing it on a device without
-    /// one costs a little dead space; under-allowing it hides a row, and
-    /// only one of those is a bug.
+    /// height INCLUDES but the content can never draw into. Over-allowing it
+    /// on a device without one costs a little dead space; under-allowing it
+    /// hides a row, and only one of those is a bug.
     private var chromeHeight: CGFloat {
         DS.Space.s6 + trayTitleHeight + DS.Space.s4 + DS.Space.s6 + Self.homeIndicatorAllowance
     }
     private static let homeIndicatorAllowance: CGFloat = 34
 
-    /// What the tray WOULD be with nothing clipped — the honest measure the
-    /// overflow gate reads, before the cap flattens it. Reads
-    /// `awareExpanded` (through the measured content), so the sheet visibly
-    /// grows when the spam pile is opened and settles back when it's closed,
-    /// both capped at `maxTrayHeight`.
-    private var uncappedHeight: CGFloat {
-        (contentHeight > 0 ? contentHeight : estimatedContentHeight) + chromeHeight
-    }
-
-    /// Chips exist to save a SCROLL, so the gate is overflow — not a
-    /// taxonomy count (2026-07-23, superseding the old `> 3 sections`
-    /// rule; kept unchanged by the Act/Aware split). The bar shows when the
-    /// content actually overflows the sheet AND there's more than one
-    /// group to jump between (jumping within a lone group is a no-op) —
-    /// which in practice now means "the spam pile is expanded and long",
-    /// since a short, spam-free 'Worth doing' rarely overflows on its own.
-    /// Overflow is the MEASURED overflow now, so the bar shows when there
-    /// really is more here than fits, not when the guess said so.
-    private var showsJumpBar: Bool {
-        superSectionIDs.count > 1 && uncappedHeight > Self.maxTrayHeight
-    }
-
-    /// The jump bar costs its own height plus the gap to the content below.
-    private static let jumpBarHeight: CGFloat = 44
-
+    /// Reads `awareExpanded` through the measured content, so the sheet
+    /// visibly grows when the pile is opened and settles back when it's
+    /// closed, both capped at `maxTrayHeight`.
     private var trayHeight: CGFloat {
-        min(Self.maxTrayHeight,
-            uncappedHeight + (showsJumpBar ? Self.jumpBarHeight + DS.Space.s3 : 0))
+        let content = contentHeight > 0 ? contentHeight + chromeHeight : Self.openingHeight
+        return min(Self.maxTrayHeight, content)
     }
 
-    /// Resizable now (2026-07-24, user: "it could be taller") — opens at its
-    /// natural `trayHeight` but can be dragged up to `.large` when the
-    /// content (especially the expanded "Just so you know" pile) runs long,
-    /// instead of hard-clipping at `maxTrayHeight` with no way out but the
-    /// jump bar.
     private var trayDetents: Set<PresentationDetent> {
         [.height(trayHeight), .large]
     }
@@ -1500,108 +1554,60 @@ struct WalletWorthALookTray: View {
     var body: some View {
         NavigationStack(path: $path) {
         DSTray(title: String(localized: "Worth a look"), height: trayHeight, ink: true, detents: trayDetents) {
-                VStack(alignment: .leading, spacing: DS.Space.s3) {
-                    if showsJumpBar { jumpBar }
-                    ScrollView {
-                        // Explicit maxHeight is load-bearing here, not
-                        // decoration: nesting this ScrollView one level
-                        // deeper than the tray's usual `DSTray { ScrollView
-                        // {...} }` shape (to fit the jump bar above it) meant
-                        // it no longer inherited DSTray's implicit "fill the
-                        // sheet's remaining height" sizing — without this the
-                        // whole VStack just sized to its natural (taller than
-                        // the sheet) height and silently clipped instead of
-                        // scrolling (caught on-device: rows past the fold
-                        // were simply unreachable, no visible bug in a
-                        // screenshot of the top of the tray alone).
-                        VStack(alignment: .leading, spacing: DS.Space.s6) {
-                            if hasActionable {
-                                // Rows carry their own padding now that each
-                                // wears a surface, so the gap between them
-                                // steps down from s4 to s2 — the card edges
-                                // are doing the separating the air used to.
-                                VStack(alignment: .leading, spacing: DS.Space.s2) {
-                                    VStack(alignment: .leading, spacing: 2) {
-                                        HStack(spacing: DS.Space.s2) {
-                                            // Secondary, not `DS.attention`
-                                            // (2026-07-31): this is a LABEL,
-                                            // not a warning. Orange here put
-                                            // a third tint in a sheet that
-                                            // already spends red on a live
-                                            // liquidation and blue on the
-                                            // doors, and since every row
-                                            // under it is actionable by
-                                            // definition, the color wasn't
-                                            // discriminating anything — it
-                                            // just tinted the section and
-                                            // competed with the one row that
-                                            // had earned a color.
-                                            Text("Worth doing")
-                                                .dsText(.label12).fontWeight(.semibold)
-                                                .foregroundStyle(DS.textSecondary)
-                                            Text("\(actionableRowCount)")
-                                                .dsText(.label12).foregroundStyle(DS.textSecondary)
-                                                .monospacedDigit()
-                                        }
-                                        Text("These are still yours to change.")
-                                            .dsText(.subhead13).foregroundStyle(DS.textSecondary)
-                                    }
-                                    .padding(.horizontal, 3)
-                                    // A flat list now (2026-07-24, matching
-                                    // the approved mockup) — no Position
-                                    // risk/Approvals/Delegations/Safe
-                                    // sub-headers; each row states its own
-                                    // whole fact and carries its own icon
-                                    // and, where one exists, its own
-                                    // Revoke.cash button. ONE ForEach over
-                                    // the unified `actionRows`, not four
-                                    // sibling conditionals — see that
-                                    // property's doc comment.
-                                    ForEach(actionRows) { item in
-                                        switch item {
-                                        case .liquidation(let w): liquidationRow(w)
-                                        case .approval(_, let t): approvalActionRow(t)
-                                        case .delegation(let w): delegationRow(w)
-                                        case .safe(let w): safeRow(w)
-                                        }
+                ScrollView {
+                    VStack(alignment: .leading, spacing: DS.Space.s6) {
+                        // NO SECTION LABEL and no explainer line (prd §449).
+                        // "Worth doing", its count, and "These are still
+                        // yours to change." sat directly under a sheet
+                        // titled "Worth a look" — the title said three more
+                        // times, the count for a third time (the strip you
+                        // tapped said it, and four countable rows say it
+                        // again). Every row under here is actionable by
+                        // definition, so the label discriminated nothing.
+                        //
+                        // Rows carry their own padding since each wears a
+                        // surface, so the gap between them is s2 — the card
+                        // edges do the separating the air used to.
+                        if hasActionable {
+                            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                                // A flat list (2026-07-24) — no Position
+                                // risk/Approvals/Delegations/Safe
+                                // sub-headers; each row states its own whole
+                                // fact and carries its own icon and, where
+                                // one exists, its own door. ONE ForEach over
+                                // the unified `actionRows`, not sibling
+                                // conditionals — see that property's doc.
+                                ForEach(actionRows) { item in
+                                    switch item {
+                                    case .walk(let id, let icon, let hot, let title,
+                                               let subtitle, let label):
+                                        walkRow(id: id, icon: icon, hot: hot, title: title,
+                                                subtitle: subtitle, label: label)
+                                    case .liquidation(let w): liquidationRow(w)
+                                    case .approval(_, let t): approvalActionRow(t)
+                                    case .delegation(let w): delegationRow(w)
+                                    case .safe(let w): safeRow(w)
                                     }
                                 }
-                                .id("act")
                             }
-                            if !flagged.isEmpty { awareSection }
                         }
-                        .padding(.bottom, DS.Space.s2)
-                        // The content's REAL height, which is what the tray
-                        // sizes itself to (see `uncappedHeight`). A
-                        // ScrollView never constrains its content
-                        // vertically, so this is the natural, unclipped
-                        // height AND it doesn't move when the sheet does —
-                        // dragging the tray to `.large` and back leaves it
-                        // untouched, so feeding it back into the detent
-                        // can't chase its own tail. Measuring the scroll
-                        // VIEWPORT instead would: a viewport reports
-                        // whatever height the sheet currently happens to
-                        // have, mid-drag included. Declared INSIDE
-                        // `scrollTargetLayout()` so that stays the outermost
-                        // modifier on the content, where `scrollPosition`
-                        // below expects to find it.
-                        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { h in
-                            contentHeight = h
-                        }
-                        .scrollTargetLayout()
+                        if !flagged.isEmpty { awareSection }
                     }
-                    // `scrollPosition`, not `ScrollViewReader.scrollTo`
-                    // (2026-07-23): scrollTo silently no-oped on device — the
-                    // chip lit (its own tap state) and the list never moved
-                    // (user: "nothing is happening when i click the chips").
-                    // The position binding is the API AppsScreen's category
-                    // rail already ships on, and it's honest in BOTH
-                    // directions for free: tap a chip to scroll, or scroll
-                    // and watch the right chip light up.
-                    .scrollPosition(id: $jumpTarget, anchor: .top)
-                    .scrollIndicators(.hidden)
+                    .padding(.bottom, DS.Space.s2)
+                    // The content's REAL height, which is what the tray
+                    // sizes itself to (see `trayHeight`). A ScrollView never
+                    // constrains its content vertically, so this is the
+                    // natural, unclipped height AND it doesn't move when the
+                    // sheet does — dragging the tray to `.large` and back
+                    // leaves it untouched, so feeding it back into the detent
+                    // can't chase its own tail. Measuring the scroll VIEWPORT
+                    // instead would: a viewport reports whatever height the
+                    // sheet currently happens to have, mid-drag included.
+                    .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { h in
+                        contentHeight = h
+                    }
                 }
-                .frame(maxHeight: .infinity, alignment: .top)
+                .scrollIndicators(.hidden)
         }
         // Pure ink, matching the detail sheet it pushes to (2026-07-24,
         // user: "worth a look screen is not same color as the thing sheet
@@ -1635,143 +1641,119 @@ struct WalletWorthALookTray: View {
         }
     }
 
-    // MARK: - Jump bar
-
-    /// Two chips now, not five (2026-07-24) — "Worth doing" and "Just so
-    /// you know", matching the Act/Aware split above. A tap scrolls to the
-    /// group and lights its chip — nothing hides — and because the chips
-    /// share the ScrollView's own `scrollPosition` binding, scrolling by
-    /// hand lights the right chip too. Anatomy (2026-07-23, user: "channel
-    /// Cash App"): severity dot + bold word + muted count, in a chunky
-    /// capsule. The aware chip's dot grays out once muted, echoing the
-    /// section's own state.
-    private var jumpBar: some View {
-        ScrollView(.horizontal) {
-            HStack(spacing: DS.Space.s2) {
-                ForEach(superSectionIDs, id: \.self) { id in
-                    jumpChip(id)
-                }
-            }
-        }
-        .scrollIndicators(.hidden)
-    }
-
-    private func jumpChip(_ id: String) -> some View {
-        let active = jumpTarget == id || (jumpTarget == nil && id == superSectionIDs.first)
-        let hasLiquidation = !liquidation.isEmpty
-        let dotColor: Color = id == "act"
-            ? (hasLiquidation ? DS.destructive : DS.attention)
-            : (muted ? DS.textTertiary : DS.attention)
-        return Button {
-            DSHaptic.selection()
-            withAnimation(DS.Motion.standard) { jumpTarget = id }
-        } label: {
-            HStack(spacing: 6) {
-                Circle().fill(dotColor).frame(width: 6, height: 6)
-                Text(id == "act" ? String(localized: "Worth doing") : String(localized: "Just so you know"))
-                    .dsText(.subhead13).fontWeight(.semibold)
-                Text("\(id == "act" ? actionableRowCount : flagged.count)")
-                    .dsText(.subhead13).fontWeight(.semibold)
-                    .monospacedDigit()
-                    .opacity(0.45)
-            }
-            .foregroundStyle(active ? DS.surfaceSheet : DS.textPrimary)
-            .padding(.horizontal, DS.Space.s4 - 2).padding(.vertical, 9)
-            .background(Capsule().fill(active ? DS.textPrimary : DS.surfaceWell))
-        }
-        .buttonStyle(PressSpring())
-    }
-
     // MARK: - Just so you know (the aware pile, collapsed + mutable)
 
-    /// The awareness section — one collapsed line by default, count-led
-    /// ("15 spam transfers · nothing to do"), expanding in place to list
-    /// each flagged transfer with a door to its sheet. Boxed on a well
-    /// background (2026-07-24, matching the mockup's "aware-line" treatment)
-    /// so it reads as a quiet, self-contained pile rather than another bare
-    /// list row — the visual cue that this is the one group that ISN'T a
-    /// stream of individually-worth-reading items. Never destructive red,
-    /// muted or not: this is spam you can recognize, not a live risk (that
-    /// read is reserved for "Worth doing"). Muting stops it badging the
-    /// feed card (`WalletWarningsLine`) without hiding it here — the tray
-    /// still shows you what you muted, it just stops shouting about it
-    /// elsewhere.
-    /// The one line that says WHY this pile is nothing to do — derived from
-    /// what is actually in it, never a fixed sentence (2026-08-13).
+    /// The awareness section — one line by default, expanding in place to
+    /// list each flagged transfer with a door to its sheet. Never destructive
+    /// red, muted or not: this is spam you can recognize, not a live risk
+    /// (that read is reserved for the actionable rows). Muting stops it
+    /// badging the feed card (`WalletWarningsStrip`) without hiding it here —
+    /// the tray still shows you what you muted, it just stops shouting about
+    /// it elsewhere.
     ///
-    /// It WAS fixed, and it was wrong for the commonest case: "Fake tokens
-    /// sent to you" describes a junk AIRDROP, which `WalletIngest`'s
-    /// received-side filter drops at ingest and which therefore can never
-    /// appear in this list. What is in it, most of the time, is the opposite
-    /// direction — `"spam"` is `WalletSafety.isFakeOutboundTransfer`, a spam
-    /// contract's own `Transfer(you → attacker)` fiction, so every row beneath
-    /// read "Sent 4,242 USDC" while the line above them said they were sent TO
-    /// you. Reported as a direction bug in the titles; the titles were right
-    /// (they say what the chain claims, which is the thing the flag exists to
-    /// contradict) and this line was the one lying.
+    /// ## It LIFTS; it does not recess (prd §449)
     ///
-    /// The pile is MIXED, so no single direction is safe to assert: a
-    /// poisoning transfer really was received, a spoofed symbol goes either
-    /// way, and an outbound fiction never happened at all. Each case says its
-    /// own true thing, and the mixed case says the only thing true of all
-    /// three — none of them are what they look like. The spam-only wording
-    /// mirrors `WalletWarnings`' "transfers you didn't make" verbatim so the
-    /// feed badge and this tray can never describe the same pile differently.
-    private var awareSubtitle: String {
+    /// It was boxed on `DS.surfaceWell` from 2026-07-24 to read as a quiet,
+    /// self-contained pile. `surfaceWell` is `#080809` and this sheet is INK,
+    /// `#000000` — a 1.02:1 step, which is not a quiet recess but an invisible
+    /// one. The token's own doc says it "dips toward the page", and on an ink
+    /// page there is nothing darker than the page to dip toward. So the pile
+    /// lifts on `DS.fillFaint` instead — the same fill `WalletWarningsStrip`
+    /// wears on the balance card, which makes the surface you tapped and the
+    /// pile you land on visibly the same object.
+    ///
+    /// ## The label is gone, and the sentence is said once
+    ///
+    /// "Just so you know" sat above a row reading "15 spam transfers" /
+    /// "Transfers you didn't make — nothing to do": a label, a noun, and the
+    /// same noun again in other words. The row now carries
+    /// `WalletWarnings`' OWN title for this pile verbatim, so the feed badge
+    /// and this tray can never describe it differently, with "Nothing to do"
+    /// as the whole subline.
+    ///
+    /// `awareTitle` derives from what is actually IN the pile, never a fixed
+    /// sentence (2026-08-13). It was fixed once and was wrong for the
+    /// commonest case: "Fake tokens sent to you" describes a junk AIRDROP,
+    /// which `WalletIngest`'s received-side filter drops at ingest and which
+    /// therefore can never appear here. What is here, most of the time, is the
+    /// opposite direction — `"spam"` is `WalletSafety.isFakeOutboundTransfer`,
+    /// a spam contract's own `Transfer(you → attacker)` fiction. The pile is
+    /// MIXED, so no single direction is safe to assert: a poisoning transfer
+    /// really was received, a spoofed symbol goes either way, and an outbound
+    /// fiction never happened at all.
+    private var awareTitle: String {
         let spam = flagged.contains { $0.hasSecurityFlag("spam") }
         let poisoning = flagged.contains { $0.hasSecurityFlag("poisoning") }
         let symbol = flagged.contains { $0.hasSecurityFlag("symbol") }
+        let n = flagged.count
         switch (spam, poisoning, symbol) {
         case (true, false, false):
-            return String(localized: "Transfers you didn't make — nothing to do")
+            return n == 1 ? String(localized: "1 transfer you didn't make")
+                          : String(localized: "\(n) transfers you didn't make")
         case (false, true, false):
-            return String(localized: "Lookalike addresses — nothing to do")
+            return n == 1 ? String(localized: "1 lookalike address")
+                          : String(localized: "\(n) lookalike addresses")
         case (false, false, true):
-            return String(localized: "Fake token symbols — nothing to do")
+            return n == 1 ? String(localized: "1 fake token symbol")
+                          : String(localized: "\(n) fake token symbols")
         default:
-            return String(localized: "Not what they look like — nothing to do")
+            return n == 1 ? String(localized: "1 transfer that isn't what it looks like")
+                          : String(localized: "\(n) transfers that aren't what they look like")
         }
     }
 
     private var awareSection: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
-            Text("Just so you know")
-                .dsText(.label12).fontWeight(.semibold)
-                .foregroundStyle(DS.textSecondary)
-                .padding(.horizontal, 3)
-            Button {
-                DSHaptic.selection()
-                withAnimation(DS.Motion.standard) { awareExpanded.toggle() }
-            } label: {
-                HStack(spacing: DS.Space.s3) {
-                    Image(systemName: "photo.badge.exclamationmark.fill")
-                        .dsGlyph(13)
-                        .foregroundStyle(DS.textSecondary)
-                        .frame(width: 28, height: 28)
-                        .background(Circle().fill(DS.surfaceSheet))
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text(flagged.count == 1
-                             ? String(localized: "1 spam transfer")
-                             : String(localized: "\(flagged.count) spam transfers"))
-                            .dsText(.callout15).fontWeight(.medium).foregroundStyle(DS.textPrimary)
-                        Text(muted
-                             ? String(localized: "Muted — won't badge your feed")
-                             : awareSubtitle)
-                            .dsText(.subhead13).foregroundStyle(DS.textSecondary)
-                            .lineLimit(1)
+            HStack(spacing: DS.Space.s3) {
+                Button {
+                    DSHaptic.selection()
+                    withAnimation(DS.Motion.standard) { awareExpandedOverride = !awareExpanded }
+                } label: {
+                    HStack(spacing: DS.Space.s3) {
+                        Image(systemName: "photo.badge.exclamationmark.fill")
+                            .dsGlyph(13)
+                            .foregroundStyle(DS.textSecondary)
+                            .frame(width: 28, height: 28)
+                            .background(Circle().fill(DS.fillLine))
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(awareTitle)
+                                .dsText(.callout15).fontWeight(.medium)
+                                .foregroundStyle(DS.textPrimary)
+                                .multilineTextAlignment(.leading)
+                            Text(muted ? String(localized: "Muted — won't badge your feed")
+                                       : String(localized: "Nothing to do"))
+                                .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                                .lineLimit(1)
+                        }
+                        Spacer(minLength: 0)
                     }
-                    Spacer(minLength: 0)
-                    Image(systemName: awareExpanded ? "chevron.up" : "chevron.down")
-                        .dsGlyph(11)
-                        .foregroundStyle(DS.textTertiary)
+                    .contentShape(Rectangle())
                 }
-                .padding(.horizontal, DS.Space.s3).padding(.vertical, DS.Space.s3)
-                .background(
-                    RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous)
-                        .fill(DS.surfaceWell))
-                .contentShape(Rectangle())
+                .buttonStyle(PressSpring())
+                // Mute sits ON the row it governs (prd §449). It is this
+                // section's only verb, and it used to live BELOW the expanded
+                // list — so the one thing you could do about the pile was
+                // reachable only after opening the pile, and invisible in the
+                // state (collapsed) the section is designed to sit in.
+                Button {
+                    DSHaptic.tap()
+                    muted.toggle()
+                    WalletAwareness.isMuted = muted
+                } label: {
+                    Text(muted ? String(localized: "Unmute") : String(localized: "Mute"))
+                        .dsText(.subhead13).fontWeight(.semibold)
+                        .foregroundStyle(DS.tint)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(PressSpring())
+                Image(systemName: awareExpanded ? "chevron.up" : "chevron.down")
+                    .dsGlyph(11)
+                    .foregroundStyle(DS.textTertiary)
             }
-            .buttonStyle(PressSpring())
+            .padding(.horizontal, DS.Space.s3).padding(.vertical, DS.Space.s3)
+            .background(
+                RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous)
+                    .fill(DS.fillFaint))
 
             if awareExpanded {
                 VStack(spacing: 0) {
@@ -1780,22 +1762,8 @@ struct WalletWorthALookTray: View {
                         if let thing = row.live { flaggedRow(thing) }
                     }
                 }
-                Button {
-                    DSHaptic.tap()
-                    muted.toggle()
-                    WalletAwareness.isMuted = muted
-                } label: {
-                    Text(muted ? String(localized: "Unmute")
-                               : String(localized: "Mute — stop badging my feed"))
-                        .dsText(.subhead13).fontWeight(.semibold)
-                        .foregroundStyle(DS.tint)
-                }
-                .buttonStyle(.plain)
-                .padding(.horizontal, 3)
-                .padding(.top, DS.Space.s1)
             }
         }
-        .id("aware")
     }
 
     // MARK: - "Worth doing" rows
@@ -1818,8 +1786,14 @@ struct WalletWorthALookTray: View {
     /// Safe app" doing the work of a button. The label always names the
     /// DESTINATION, never an outcome, because travel is the only thing this
     /// pill can honestly promise.
+    /// - Parameter door: the pill. `leaves` is what the arrow says — `↗` for
+    ///   a destination outside the app (Revoke.cash, the Safe app, a protocol)
+    ///   and `↑` for one inside it, which is the room's own card this sheet
+    ///   just handed the subject back to (prd §449). Every pill here was `↗`
+    ///   until walk rows existed, so the glyph carried no information; now it
+    ///   answers the one question a reader has before tapping — am I leaving?
     private func actionRow(icon: String, hot: Bool, title: String, subtitle: String?,
-                           door: (label: String, url: URL)?) -> some View {
+                           door: (label: String, leaves: Bool, act: () -> Void)?) -> some View {
         HStack(alignment: .top, spacing: DS.Space.s3) {
             Image(systemName: icon)
                 .dsGlyph(13)
@@ -1840,11 +1814,11 @@ struct WalletWorthALookTray: View {
             if let door {
                 Button {
                     DSHaptic.selection()
-                    openURL(door.url)
+                    door.act()
                 } label: {
                     HStack(spacing: 3) {
                         Text(door.label)
-                        Image(systemName: "arrow.up.right")
+                        Image(systemName: door.leaves ? "arrow.up.right" : "arrow.up")
                             .dsGlyph(9, weight: .bold)
                     }
                     .dsText(.subhead13).fontWeight(.semibold)
@@ -1874,6 +1848,22 @@ struct WalletWorthALookTray: View {
                     in: RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
     }
 
+    /// A group the ROOM states better, standing in for itself (prd §449).
+    ///
+    /// It wears the SAME anatomy as every other row here — icon, title,
+    /// subtitle, pill — and differs only in what the pill promises: the label
+    /// names a card in this room rather than a website, and the arrow points
+    /// up rather than out. Its TITLE is that card's own headline, passed in
+    /// from `actionRows` where it is quoted verbatim, so this file never
+    /// composes a second sentence about a set another file already describes.
+    private func walkRow(id: String, icon: String, hot: Bool, title: String,
+                         subtitle: String?, label: String) -> some View {
+        actionRow(icon: icon, hot: hot, title: title, subtitle: subtitle,
+                  door: (label, false, {
+                      if id == "approvals" { onWalkToApprovals?() } else { onWalkToLending?() }
+                  }))
+    }
+
     private func liquidationRow(_ w: WalletWarning) -> some View {
         actionRow(icon: "chart.line.downtrend.xyaxis", hot: true, title: w.title,
                   subtitle: Self.subline([whose(watched: w.address), w.subtitle]),
@@ -1891,7 +1881,9 @@ struct WalletWorthALookTray: View {
                   subtitle: Self.subline([whose(stored: thing.walletAddress),
                                           approvalChain(thing),
                                           Self.grantedLine(thing)]),
-                  door: URL(string: thing.content).map { (String(localized: "Revoke"), $0) })
+                  door: URL(string: thing.content).map { url in
+                      (String(localized: "Revoke"), true, { openURL(url) })
+                  })
     }
 
     /// "Granted Mar 2024" — the fact that turns a live approval from a notice
@@ -1970,9 +1962,9 @@ struct WalletWorthALookTray: View {
 
     /// A warning's own door, built where the facts are (`WalletWarning.Action`)
     /// rather than reverse-engineered from a title here.
-    private func door(_ w: WalletWarning) -> (label: String, url: URL)? {
+    private func door(_ w: WalletWarning) -> (label: String, leaves: Bool, act: () -> Void)? {
         guard let action = w.action, let url = URL(string: action.url) else { return nil }
-        return (action.label, url)
+        return (action.label, true, { openURL(url) })
     }
 
     /// Pulls the chain an approval landed on out of its `sourceRef`
@@ -1989,18 +1981,40 @@ struct WalletWorthALookTray: View {
 
     // MARK: - Aware-pile rows (bare, one line — spam doesn't earn more)
 
-    /// A flagged transfer — its title (the amount, wearing the confusable
-    /// symbol as its own tell) is the differentiator; WHY it's flagged is the
-    /// aware pile's own explainer's job, not a repeated subtitle. Taps into
-    /// its sheet, which still states the specific poisoning/spoof verdict.
+    /// A flagged transfer, WITHOUT ITS VERB (prd §449).
+    ///
+    /// It used to draw `WalletValue.title(thing)` — "Sent 4,242 USDT" — and
+    /// inside a pile headed "transfers you didn't make" that sentence is the
+    /// one doing the confusing. It is also not wrong: for a `"spam"` row the
+    /// chain really does claim you sent it, and contradicting that claim is
+    /// the flag's whole purpose. So the fix is neither to keep the verb nor
+    /// to flip it to "Received" (a second false claim, and false for a
+    /// different subset — the pile is mixed). The DIRECTION belongs to the
+    /// pile's own line, said once; the row carries what tells one row from
+    /// another: the amount, wearing the confusable symbol as its own tell,
+    /// and when it landed.
+    ///
+    /// Through `WalletValue.transferAmount`, so §374's mask reaches it — the
+    /// unit survives, which is what keeps a hidden row still able to say the
+    /// symbol was a lookalike. A row landed before that field existed has its
+    /// number only inside its title, so it falls back to the baked title
+    /// whole; that is `WalletValue.title`'s own stated limit, not a new one.
+    ///
+    /// Taps into its sheet, which still states the specific poisoning/spoof
+    /// verdict.
     private func flaggedRow(_ thing: Thing) -> some View {
         Button {
             DSHaptic.selection()
             path.append(thing)
         } label: {
-            HStack(spacing: DS.Space.s3) {
-                Text(WalletValue.title(thing)).dsText(.body17).foregroundStyle(DS.textPrimary)
+            HStack(spacing: DS.Space.s2) {
+                Text(WalletValue.transferAmount(thing) ?? WalletValue.title(thing))
+                    .dsText(.body17).foregroundStyle(DS.textPrimary)
                     .lineLimit(1).truncationMode(.tail)
+                    .layoutPriority(1)
+                Text(LiveTimeText.short(thing.capturedAt))
+                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                    .lineLimit(1)
                 Spacer(minLength: DS.Space.s2)
                 Image(systemName: "chevron.right")
                     .dsGlyph(12)

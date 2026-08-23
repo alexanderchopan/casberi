@@ -2574,10 +2574,30 @@ struct FeedScreen: View {
                     WalletAllocationTray(portfolio: portfolio)
                 }
             case .worthALook:
+                // The two walk doors (prd §449). Each is handed over ONLY
+                // when its card is really on screen — the sheet falls back to
+                // enumerating that group itself otherwise, so a pill can
+                // never point at a card this room isn't drawing (§83's dead
+                // control, and the same nil-able shape
+                // `WalletCompositionStrip` keeps for Deposited and Locked).
+                //
+                // Dismiss and scroll are set TOGETHER on purpose: `scrollTo`
+                // animates over ~0.3s and the sheet's dismissal over ~0.35s,
+                // so the card is already centred as the sheet clears — the
+                // room moving to meet you rather than a jump you arrive to.
                 WalletWorthALookTray(
                     warnings: walletLive.warnings,
                     flagged: walletLive.flagged,
-                    activeApprovals: walletLive.activeApprovals)
+                    activeApprovals: walletLive.activeApprovals,
+                    exposure: walletLive.exposure,
+                    onWalkToApprovals: walletLive.exposure.isEmpty ? nil : {
+                        feedSheet = nil
+                        cardScrollTarget = Self.approvalsAnchor
+                    },
+                    onWalkToLending: hasLendingCard ? {
+                        feedSheet = nil
+                        cardScrollTarget = Self.lendingAnchor
+                    } : nil)
             case .deposits(let composition):
                 WalletDepositsTray(composition: composition)
             case .locks(let composition):
@@ -4764,14 +4784,31 @@ struct FeedScreen: View {
                         // here would do that twice per body pass.
                         let hasBreakdown = !chips.isEmpty && selectedWallet == nil
                         let hasVenue = chips.contains { $0.venueLabel != nil }
+                        // SCOPED, THIS LINE IS THE WALLET'S NAME (prd §450).
+                        // The rail above stopped captioning its faces on the
+                        // strength of this slot existing — so when it is set,
+                        // it outranks both of the descriptive captions below,
+                        // and the chevron stays away for the reason it always
+                        // did (`hasBreakdown` is false while scoped: there is
+                        // no split behind a single wallet to open).
+                        //
+                        // A single-wallet install has no rail at all
+                        // (`WalletScopeRail.shows` wants > 1 watched) and no
+                        // scope, so it keeps "Balance" exactly as before.
+                        let scoped = selectedWallet.map {
+                            WalletScopeRail.caption(for: $0, in: wallet.addresses)
+                        }
                         WalletBalanceHeadline(
                             total: total,
                             chart: chart,
                             marks: walletMarks(dates: windowed.map(\.at), things: visible),
-                            caption: hasBreakdown
-                                ? (hasVenue ? String(localized: "Across your accounts")
-                                            : String(localized: "Across your wallets"))
-                                : String(localized: "Balance"),
+                            caption: scoped?.name
+                                ?? (hasBreakdown
+                                    ? (hasVenue ? String(localized: "Across your accounts")
+                                                : String(localized: "Across your wallets"))
+                                    : String(localized: "Balance")),
+                            captionAddress: selectedWallet,
+                            captionDetail: scoped?.detail,
                             mover: moverLine(),
                             ranges: ranges,
                             range: active,
@@ -5099,6 +5136,11 @@ struct FeedScreen: View {
     /// target can't drift apart.
     private static let lendingAnchor = "wallet.card.lending"
     private static let perpsAnchor = "wallet.card.perps"
+    /// Reached from the Worth-a-look sheet's approvals walk row (prd §449),
+    /// not from the risk axis — approvals aren't a leveraged position and have
+    /// no dot. Spelled here beside its siblings so all three anchors and their
+    /// `.id(…)` sites stay in one place.
+    private static let approvalsAnchor = "wallet.card.approvals"
 
     /// Which card states the position behind a dot, from the entry id
     /// `WalletRiskScaleSource` stamped.
@@ -5319,6 +5361,7 @@ struct FeedScreen: View {
                     else { return }
                     feedSheet = .thing(thing)
                 }
+                .id(Self.approvalsAnchor)
                 .modifier(RowEntrance(index: 2, wave: shapeWave, style: entranceStyle))
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
@@ -5334,9 +5377,16 @@ struct FeedScreen: View {
     /// says what you HOLD, this says what you OWE — which is why it earns a
     /// seat here rather than staying two taps down. Nothing renders without a
     /// position on either.
+    /// Whether `walletDeFiSection` will draw — the gate spelled once so the
+    /// Worth-a-look sheet's walk door and the card it points at can't disagree
+    /// (prd §449).
+    private var hasLendingCard: Bool {
+        !walletLive.positions.isEmpty || !walletLive.morpho.isEmpty
+    }
+
     @ViewBuilder
     private var walletDeFiSection: some View {
-        if !walletLive.positions.isEmpty || !walletLive.morpho.isEmpty {
+        if hasLendingCard {
             Section {
                 WalletLendingCard(aave: walletLive.positions, morpho: walletLive.morpho)
                     // The risk strip's Aave and Morpho dots land here (§417).

@@ -201,6 +201,24 @@ enum WalletValue {
                         : String(localized: "\(verb) \(masked) to \(who)")
     }
 
+    /// A transfer's stamped amount alone, gated — "4,242 USDT", no verb and no
+    /// counterparty (prd §449).
+    ///
+    /// For the one caller that must NOT say a direction: the wallet's flagged
+    /// pile, where the chain's own claim about who sent what is the thing
+    /// being contradicted. nil when the row carries no stamped amount (landed
+    /// before the field existed), which is the caller's cue to fall back to
+    /// `title(_:)` rather than to invent one — the same all-or-nothing limit
+    /// that method already states for its own case 3.
+    ///
+    /// Gated through `BalancePrivacy.amount`, so the unit survives §374's mask
+    /// while the figure does not: a hidden row can still say the symbol was a
+    /// lookalike, which is the whole reason it is in that pile.
+    static func transferAmount(_ thing: Thing) -> String? {
+        guard let amount = thing.transferAmount, !amount.isEmpty else { return nil }
+        return BalancePrivacy.shared.amount(amount, unit: symbol(in: amount))
+    }
+
     /// The asset symbol at the tail of a stamped `transferAmount` ("0.9962
     /// ETH" → "ETH"). Letters only and length-capped, the `MoneyReceipt.split`
     /// rule (§363): a spoofed token whose "symbol" is a phishing domain must
