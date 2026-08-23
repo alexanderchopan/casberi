@@ -370,6 +370,12 @@ struct MainSurface: View {
                 items: WalletScopeRail.items(wallet.addresses),
                 scope: chrome.walletScope,
                 compact: chrome.minimized && !showsRail,
+                // Faces only — the crown card directly below names the pick
+                // (prd §450). `compact:` is still handed over above, and still
+                // gated on `!showsRail`, because it is the shared initializer's
+                // and the social rail reads it; this rail ignores it, having
+                // already arrived 20pt shorter than the captioned one.
+                namesInRoom: true,
                 matches: WalletScopeRail.matches,
                 // Animated, as it was on the feed: the lit face's opacity and
                 // weight crossfade rather than snapping, and the room's own

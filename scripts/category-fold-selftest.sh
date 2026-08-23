@@ -68,7 +68,8 @@ CATALOG="Casberi/Casberi/Model/BridgeCatalog.swift"
 RAIL="Casberi/Casberi/Shell/FaceScopeRail.swift"
 CHROME="Casberi/Casberi/Shell/ShellChrome.swift"
 OVERLAY="Casberi/Casberi/Shell/SourcesOverlay.swift"
-for f in "$FOLD" "$ROOM" "$MAIN" "$CHIPS" "$FEED" "$SWITCHER" "$BROWSE" "$BOOK" "$CATALOG" "$ROOT" "$APP" "$RAIL" "$CHROME" "$OVERLAY"; do
+TILES="Casberi/Casberi/Screens/WalletFeedTiles.swift"
+for f in "$FOLD" "$ROOM" "$MAIN" "$CHIPS" "$FEED" "$SWITCHER" "$BROWSE" "$BOOK" "$CATALOG" "$ROOT" "$APP" "$RAIL" "$CHROME" "$OVERLAY" "$TILES"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 
@@ -101,6 +102,7 @@ strip_comments "$FEED"     > "$TMP/feed.nc"
 strip_comments "$RAIL"     > "$TMP/rail.nc"
 strip_comments "$CHROME"   > "$TMP/chrome.nc"
 strip_comments "$OVERLAY"  > "$TMP/overlay.nc"
+strip_comments "$TILES"    > "$TMP/tiles.nc"
 
 # --- drift guards -----------------------------------------------------------
 # Wiring the compiled functions cannot prove on their own. A perfect `fold` is
@@ -361,13 +363,82 @@ grep -q 'dsHover()' "$TMP/rail.nc" \
   || { echo "✗ the wallet rail has no hover state — on Mac a cursor crossing five faces and"; \
        echo "  a + gets no response from any of them, which reads as a dead app (the same"; \
        echo "  argument dsListCardRow's own note makes for the 27 rows it covers)."; exit 1; }
-# The caption is lineLimit(1) in a 66pt slot and an unnamed wallet wears
-# `short` — so two wallets sharing a prefix are indistinguishable, and the
-# tooltip is the ONLY place the full address can appear.
+# The wallet rail draws NO caption at all since §450, so on Mac the tooltip is
+# the only thing a slot says before you click it — and on the social rail, where
+# the caption survives, it is still the only place a full address or bio fits.
 grep -q 'dsTooltip' "$TMP/rail.nc" \
-  || { echo "✗ the wallet rail names nothing on hover — an unnamed wallet's caption is a"; \
-       echo "  truncated hex in a 66pt slot, so the tooltip is the only thing that can tell"; \
-       echo "  two wallets sharing a prefix apart without clicking one (dsTooltip's own reason)."; exit 1; }
+  || { echo "✗ the face rail names nothing on hover — the wallet rail captions nothing at"; \
+       echo "  all (§450) and the social caption is lineLimit(1) in a 66pt slot, so the"; \
+       echo "  tooltip is the only thing that can tell two faces apart without clicking one."; exit 1; }
+
+# --- §450: the wallet rail's names moved into the room ----------------------
+# Four halves of one ruling, in four files. Every failure below renders as a
+# perfectly ordinary screen — a rail of unlabelled circles with no name anywhere,
+# or a name that no longer follows the face you picked — which is why none of it
+# can be caught by a build, a sweep or a screenshot.
+
+# The flag is the ruling. It must be ON for wallets and OFF for people: a social
+# roster runs to dozens of faces, has no crown card under it to name a pick, and
+# unlabelled avatars there are §362's identicon problem at scale.
+# Windowed between the two properties rather than by a line count: strip_comments
+# BLANKS a comment line rather than deleting it, so an `-A<n>` window is really a
+# count of the prose above the thing being checked (this guard failed on its own
+# first run for exactly that reason).
+sed -n '/private var walletScopeRail/,/private var socialScopeRail/p' "$TMP/main.nc" \
+  | grep -q 'namesInRoom: true' \
+  || { echo "✗ the wallet rail is captioning its faces again (§450) — which is the"; \
+       echo "  truncation this was built to end: a 66pt slot at label12 fits about nine"; \
+       echo "  characters, so accountless.eth reads 'accountle…' while the crown card"; \
+       echo "  directly below it has a caption slot with room for the whole name."; exit 1; }
+sed -n '/private var socialScopeRail/,/private var socialAccounts/p' "$TMP/main.nc" \
+  | grep -q 'namesInRoom' \
+  && { echo "✗ the SOCIAL rail has taken §450's flag. It has no crown card to name a pick"; \
+       echo "  in and its roster runs to dozens, so this turns a Farcaster room into forty"; \
+       echo "  unlabelled avatars — §362's identicon problem, at scale."; exit 1; }
+
+# Undrawn is not unspoken. With no caption a slot's only content is an identicon,
+# and `dsTooltip` is Mac-only by its own ruling — so without this VoiceOver reads
+# five unlabelled buttons.
+grep -q 'accessibilityLabel(Text(item.caption))' "$TMP/rail.nc" \
+  || { echo "✗ a face-rail slot no longer speaks its caption. With §450 the wallet rail"; \
+       echo "  draws no words at all and dsTooltip is Mac-only (on touch it becomes a HINT),"; \
+       echo "  so every watched wallet becomes an unlabelled button to VoiceOver."; exit 1; }
+
+# The ring carries selection ONLY where `ringed` has nothing else to say. Gated
+# on the adapter's flag, never per-item: a rail that meant both at once would be
+# a mark with two senses and no way to tell them apart.
+grep -qE 'item\.ringed \|\| \(namesInRoom && isOn\)' "$TMP/rail.nc" \
+  || { echo "✗ FaceScopeRail's ring is no longer the §450 pair. Dropping the caption took"; \
+       echo "  selection's semibold with it, leaving restOpacity's gentle 0.7 to carry the"; \
+       echo "  pick alone — and ungated, a social 'posted since you looked' ring and a"; \
+       echo "  'this is the one you picked' ring become one mark meaning two things."; exit 1; }
+
+# The other half: the crown card must actually NAME the scope, through the rail's
+# own function. Two derivations of "what is this wallet called" is how the ringed
+# face and the name a centimetre below it end up disagreeing.
+grep -q 'WalletScopeRail.caption(for:' "$TMP/feed.nc" \
+  && grep -q 'captionAddress: selectedWallet' "$TMP/feed.nc" \
+  || { echo "✗ the wallet crown no longer names the scoped wallet (§450) — so the rail"; \
+       echo "  captions nothing, the card says 'Balance', and the app has no place at all"; \
+       echo "  that says which wallet you are looking at."; exit 1; }
+grep -q 'if let captionAddress' "$TMP/tiles.nc" \
+  || { echo "✗ WalletBalanceHeadline no longer draws the scoped wallet's face beside its"; \
+       echo "  name (§450) — the badge is what ties the ringed face in the rail above to"; \
+       echo "  the name below it, so without it the ring reads as a coincidence."; exit 1; }
+
+# An unnamed wallet gets `shortAddress` and NOTHING fuller, though the card has
+# the room. `AddressSafety.displayForm` keys on that function on purpose — the
+# display form IS the address-poisoning surface — so a second, longer truncation
+# would be the one display in the app the lookalike check cannot see.
+sed -n '/static func caption(for address/,/^}/p' "$TMP/rail.nc" | grep -qE 'prefix\(' \
+  && { echo "✗ the scoped caption has grown a head-and-tail address form (§450). That"; \
+       echo "  spelling was retired 2026-08-12 for naming nobody, and AddressSafety"; \
+       echo "  .displayForm keys on shortAddress deliberately — a second truncation here is"; \
+       echo "  one the poisoning lookalike check cannot see, on the screen holding money."; exit 1; }
+sed -n '/static func caption(for address/,/^}/p' "$TMP/rail.nc" | grep -q 'isAutoName' \
+  || { echo "✗ the scoped caption no longer tests isAutoName — add/addBulk file a bare"; \
+       echo "  address under its own short form as a display fallback, so the card would"; \
+       echo "  read '…4f4f · …4f4f' for every wallet nobody has named."; exit 1; }
 
 # THE COHESION ITSELF, made mechanical (prd §362, 2026-08-11). The wallet rail
 # and the social rail spent months as two controls that looked alike and behaved

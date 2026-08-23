@@ -45,11 +45,17 @@ struct FaceScopeRail: View {
     /// people.
     struct Item: Identifiable, Equatable {
         let id: String
-        /// The word under the face. NEVER dropped on the fold — see `faceSize`.
+        /// The word under the face — NEVER dropped on the fold (see `faceSize`),
+        /// though a rail may name its pick elsewhere entirely and draw none of
+        /// them (see `namesInRoom`). Set it either way: with the caption undrawn
+        /// this is still the SPOKEN label, so a wallet is never an unlabelled
+        /// button to VoiceOver.
         let caption: String
         let face: Face
-        /// Draws the attention ring. Social only today (someone posted since you
-        /// last opened this room); wallets have nothing equivalent to say.
+        /// Draws the attention ring. Social only (someone posted since you last
+        /// opened this room); wallets have nothing equivalent to say, which is
+        /// precisely what frees the mark to carry SELECTION on a `namesInRoom`
+        /// rail — see `ringWidth`, and never set both on one rail.
         var ringed: Bool = false
         /// Mac-only hover text, for when the caption is not the whole truth (a
         /// wallet's full address under a 12-character label).
@@ -68,6 +74,28 @@ struct FaceScopeRail: View {
     let scope: String?
     /// The shell's fold state (`ShellChrome.minimized`). See `faceSize`.
     let compact: Bool
+    /// **The room names the pick itself, so the rail draws faces only** (prd
+    /// §450, 2026-08-22, user ruling on a mock: *"i almost feel like we should
+    /// remove the names there"*, then *"D is best"*).
+    ///
+    /// ONE flag rather than a `captions` knob beside a `selectionRing` knob,
+    /// and that is the whole point: those two are not independent settings, they
+    /// are one ruling with two consequences. Dropping the caption takes the
+    /// selection weight with it (§362 drew selection as opacity AND the
+    /// caption's semibold), so the ring has to step in — and the ring is only
+    /// free where `ringed` has nothing to say, which is the same rooms whose
+    /// caption moved. Two flags would let a caller ask for a captionless rail
+    /// with no visible selection at all, a state nobody designed.
+    ///
+    /// True only for the WALLET rail, and §362's sameness ruling is knowingly
+    /// bent here rather than broken: the wallet room has a crown card directly
+    /// under the rail with a caption slot already in it
+    /// (`WalletBalanceHeadline.caption`), and a social room has neither that
+    /// card nor five faces — a Farcaster roster runs to dozens, where unlabelled
+    /// avatars are the §362 identicon problem at scale. So the rail keeps one
+    /// anatomy and one behaviour; what differs is whether the name is drawn HERE
+    /// or one card down, which is a fact about the room, not a style.
+    var namesInRoom: Bool = false
     /// Scope equality. A closure because the two adapters do NOT agree on it:
     /// hex compares case-insensitively (EIP-55 case is a checksum) while a
     /// handle is a plain string. Getting this wrong empties a room rather than
@@ -108,11 +136,37 @@ struct FaceScopeRail: View {
     /// 44pt touch minimum, on a control whose whole slot is the tap target. A
     /// folded rail that is prettier and no longer reliably tappable is a worse
     /// trade than not folding at all.
-    private var faceSize: CGFloat { compact ? DS.Face.row : DS.Face.list }
+    private var faceSize: CGFloat {
+        // A captionless rail has nothing left to give. Its slot is already at
+        // `DS.Hit.min` (see `slotHeight`), so folding could only shrink the
+        // circle inside a hole the same size — the one thing the note above
+        // says a fold must not do. The rail arrives 20pt shorter than the
+        // captioned one and stays there; `compact` is still passed, and still
+        // gated on `!showsRail` at the call site, because the SOCIAL rail reads
+        // it and the two share this initializer.
+        guard !namesInRoom else { return DS.Face.list }
+        return compact ? DS.Face.row : DS.Face.list
+    }
+
+    /// 66 is what buys a name room to read. Without a name the slot is exactly
+    /// the touch floor, which is what makes the whole rail fit: All + five
+    /// wallets (§170's cap) + the add verb is `7 × 44 + 6 × 2 + 2 × DS.Space.s4`
+    /// = 356pt, inside the 393pt of an iPhone 17 Pro. The control stops
+    /// scrolling on the phone it was measured against — a small phone still
+    /// scrolls, and nothing here promises otherwise.
+    private var slotWidth: CGFloat { namesInRoom ? DS.Hit.min : 66 }
 
     /// Slot height tracks the face, so the fold actually returns vertical space
     /// to the room rather than shrinking a circle inside a hole the same size.
-    private var slotHeight: CGFloat { faceSize + DS.Space.s1 + 16 }
+    ///
+    /// Captionless it is floored at `DS.Hit.min` instead, because the SLOT is
+    /// the tap target: `faceSize + DS.Space.s1 * 2` lands on 44 at rest and
+    /// would fall to 34 folded, under the floor, on a control whose whole slot
+    /// is the thing you aim at.
+    private var slotHeight: CGFloat {
+        namesInRoom ? max(DS.Hit.min, faceSize + DS.Space.s1 * 2)
+                    : faceSize + DS.Space.s1 + 16
+    }
 
     /// How far an out-of-scope slot recedes (user, 2026-08-13: *"the avatars on
     /// socials that aren't selected but followed are very dim. same for
@@ -194,9 +248,13 @@ struct FaceScopeRail: View {
                     .foregroundStyle(isOn ? DS.textPrimary : DS.textSecondary)
                     .frame(width: faceSize, height: faceSize)
                     .background(Circle().fill(DS.tintDim))
-                Spacer(minLength: 0)
+                // Reserves the caption's line so this circle sits level with
+                // the faces beside it. With no captions in the rail there is no
+                // line to reserve, and it centres in its slot instead.
+                if !namesInRoom { Spacer(minLength: 0) }
             }
-            .frame(width: 66, height: slotHeight, alignment: .top)
+            .frame(width: slotWidth, height: slotHeight,
+                   alignment: namesInRoom ? .center : .top)
             .opacity(isOn ? 1 : restOpacity)
             .padding(.vertical, DS.Space.s1)
             .contentShape(Rectangle())
@@ -237,19 +295,22 @@ struct FaceScopeRail: View {
             VStack(spacing: DS.Space.s1) {
                 face(item.face)
                     .overlay(
-                        Circle().strokeBorder(DS.tint, lineWidth: item.ringed ? 2 : 0)
+                        Circle().strokeBorder(DS.tint, lineWidth: ringWidth(item, isOn: isOn))
                             .padding(-3)
                     )
-                Text(item.caption)
-                    .dsText(.label12)
-                    .fontWeight(isOn ? .semibold : .regular)
-                    .foregroundStyle(isOn ? DS.textPrimary : DS.textSecondary)
-                    .lineLimit(1)
+                if !namesInRoom {
+                    Text(item.caption)
+                        .dsText(.label12)
+                        .fontWeight(isOn ? .semibold : .regular)
+                        .foregroundStyle(isOn ? DS.textPrimary : DS.textSecondary)
+                        .lineLimit(1)
+                }
             }
-            .frame(height: slotHeight, alignment: .top)
+            .frame(height: slotHeight, alignment: namesInRoom ? .center : .top)
             // A 44pt-wide slot is the touch floor; the extra width is what gives
-            // a name room to read rather than truncate at the face.
-            .frame(width: 66)
+            // a name room to read rather than truncate at the face — see
+            // `slotWidth` for why a rail that names elsewhere gives it back.
+            .frame(width: slotWidth)
             .opacity(isOn ? 1 : restOpacity)
             .padding(.vertical, DS.Space.s1)
             .contentShape(Rectangle())
@@ -266,6 +327,16 @@ struct FaceScopeRail: View {
         // 42-character hex after every wallet's name. The spoken label is left as
         // the caption — a summary a person can hear.
         .dsTooltip(item.tooltip ?? item.caption)
+        // **The spoken label, which the caption used to supply for free.**
+        // `dsTooltip` is Mac-only by its own ruling (on a touch surface `help()`
+        // becomes an accessibility HINT, and VoiceOver would read a 42-character
+        // hex after every wallet), so with the caption gone a slot's only
+        // remaining content is an identicon — an image with no text in it at
+        // all. VoiceOver would announce five unlabelled buttons. Set for BOTH
+        // rails rather than only the captionless one: where the caption is
+        // drawn this is the same string it already spoke, so the two can never
+        // drift, and there is no `if` here to get backwards later.
+        .accessibilityLabel(Text(item.caption))
         // Chips ease at the strip's edges instead of clipping flat — the source
         // strip's own grammar (SourceChips:370), one tier down (2026-08-04).
         // Under Reduce Motion only the fade survives.
@@ -309,9 +380,10 @@ struct FaceScopeRail: View {
                     .foregroundStyle(DS.tint)
                     .frame(width: faceSize, height: faceSize)
                     .background(Circle().fill(DS.tintDim))
-                Spacer(minLength: 0)
+                if !namesInRoom { Spacer(minLength: 0) }
             }
-            .frame(width: 66, height: slotHeight, alignment: .top)
+            .frame(width: slotWidth, height: slotHeight,
+                   alignment: namesInRoom ? .center : .top)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -320,6 +392,24 @@ struct FaceScopeRail: View {
         // Captionless, so on Mac the tooltip is the only thing that says what
         // this circle does before you click it.
         .dsTooltip(title)
+    }
+
+    /// **The ring means ONE thing per rail, and the two can never coexist.**
+    ///
+    /// On the social rail `ringed` says "they posted since you last looked". On
+    /// the wallet rail that flag is never set — `FaceScopeRail.Item.ringed`'s own
+    /// doc says wallets have nothing equivalent to say — which is what leaves
+    /// the mark free to carry selection there (prd §450). §351 reserves a tint
+    /// ring for "the active chip" one tier up in the strip, and this is the same
+    /// meaning one tier down, so it reads as the app being consistent rather
+    /// than as a third sense for one mark.
+    ///
+    /// Gated on `namesInRoom` — the ADAPTER's flag, not a per-item one — so a
+    /// rail is either a "posted since" rail or a "this is the pick" rail and
+    /// never both at once. Without the caption's semibold, opacity alone was
+    /// carrying selection, and `restOpacity` is a gentle 0.7 by ruling.
+    private func ringWidth(_ item: Item, isOn: Bool) -> CGFloat {
+        (item.ringed || (namesInRoom && isOn)) ? 2 : 0
     }
 
     private func isOn(_ id: String) -> Bool {
@@ -359,6 +449,38 @@ enum WalletScopeRail {
     /// scope machinery (`WalletStore.scopeMatches`) already runs on.
     static func matches(_ scope: String, _ id: String) -> Bool {
         WalletWatch.sameAddress(scope, id)
+    }
+
+    /// What the CROWN CARD calls the scoped wallet (prd §450) — its name, and
+    /// the address tail that goes beside it.
+    ///
+    /// **It lives here, next to `items`, because the rail and that card are now
+    /// two halves of one answer**: the rail rings a face and says nothing, the
+    /// card says who it is. Derived twice, the ringed face and the name a
+    /// centimetre below it are free to disagree — and nothing would look wrong
+    /// when they did.
+    ///
+    /// **A wallet with no name gets `shortAddress` and NO tail — deliberately
+    /// not a fuller head-and-tail form**, though this line finally has the room
+    /// for one. That spelling was retired on 2026-08-12 for "naming nobody",
+    /// and the harder reason is that `AddressSafety.displayForm` keys on
+    /// `shortAddress` ON PURPOSE: the display form IS the address-poisoning
+    /// surface, so a second, longer truncation here would be the one place in
+    /// the app whose display the lookalike check cannot see. The wallet with no
+    /// name is also not the one anybody complained about.
+    ///
+    /// A stored label is only a name if a person typed it — `add`/`addBulk`
+    /// file a bare address under its own short form as a display fallback, so
+    /// `isAutoName` is what keeps the card from printing "…4f4f · …4f4f".
+    static func caption(for address: String,
+                        in addresses: [WalletStore.WatchedAddress])
+    -> (name: String, detail: String?) {
+        let short = WalletStore.shortAddress(address)
+        guard let entry = addresses.first(where: { matches($0.address, address) }),
+              !entry.label.isEmpty,
+              !WalletStore.isAutoName(entry.label, for: entry.address)
+        else { return (short, nil) }
+        return (entry.label, short)
     }
 }
 
