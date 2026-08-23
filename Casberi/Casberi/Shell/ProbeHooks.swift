@@ -889,6 +889,25 @@ enum ProbeHooks {
                 }
             }
         },
+        // `-agentRoomProbe YES` — the four agent rooms' heads, month by month
+        // (2026-08-23, prd §457). ChatGPT/Claude/Gemini/Claude Code in one
+        // launch, named apart — the journal probe's shape, for its reason:
+        // four separate corpora, one composer, and the failure worth catching
+        // is one room composing while a sibling silently doesn't.
+        //
+        // NO fetch limit, matching the journal probe: a room's span is not a
+        // span computed over the newest few hundred rows of a longer history.
+        Hook(key: "agentRoomProbe") { _, context in
+            for name in AgentRoomSource.sources.sorted() {
+                let descriptor = FetchDescriptor<Thing>(
+                    predicate: #Predicate { $0.source == name })
+                let rows = (try? context.fetch(descriptor)) ?? []
+                NSLog("[Casberi] agentRoom| — %@ —", name)
+                for line in AgentRoomSource.probeLines(source: name, things: rows, context: context) {
+                    NSLog("[Casberi] %@", line)
+                }
+            }
+        },
         Hook(key: "peerRoomProbe") { _, context in
             let source = PeerRoomSource.source
             var descriptor = FetchDescriptor<Thing>(
@@ -4780,6 +4799,25 @@ enum ProbeHooks {
                         + " · \($0.span) years · \($0.silent) silent"
                         + " · \($0.days) days · streak \($0.streak)"
                      } : nil)
+                // The four AGENT rooms (2026-08-23, prd §457) — one composer
+                // serving FOUR rooms, and so the second entry here with more
+                // than one name, for `journalLabel`'s reason exactly: the
+                // coverage check is keyed by the name printed here, so one
+                // shared label would assert that ONE of the four composes
+                // while three sat broken behind it. They have four separate
+                // corpora and four separate demo seats.
+                let agentLabel = ["ChatGPT": "chatgptHead", "Claude": "claudeHead",
+                                  "Gemini": "geminiHead",
+                                  ClaudeCodeImport.source: "claudeCodeHead"][source]
+                note(agentLabel ?? "agentHead", agentLabel == nil ? nil
+                     : AgentRoomSource.compose(
+                        source: source, things: things,
+                        rivals: AgentRoomSource.rivals(besides: source, context: context)).map {
+                        "\(AgentRoom.headline($0) ?? AgentRoom.note($0))"
+                        + " · \($0.span) months · \($0.silent) silent"
+                        + " · \($0.total) conversations · \($0.turns) turns"
+                        + " · rivals \($0.rivals.count)"
+                     })
                 // 2. the anniversary — the memories room's pictures, and (since
                 // §398) the two journals' entries. It OUTRANKS every head above
                 // in `shapedSections`, so it is printed after them and the

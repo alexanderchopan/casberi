@@ -2193,7 +2193,7 @@ struct FeedScreen: View {
                 }
                 .foregroundStyle(DS.tint)
                 .padding(.horizontal, DS.Space.s3)
-                .frame(height: 30)
+                .frame(minHeight: 30)
                 .background(DS.surfaceSheet, in: Capsule(style: .continuous))
                 .contentShape(Capsule())
             }
@@ -3039,6 +3039,19 @@ struct FeedScreen: View {
                 case .journal(let room, let name):
                     JournalRoomCard(room: room, source: name) { year in
                         openJournalYear(year, source: name, in: visible)
+                    }
+                case .agent(let room, let name):
+                    AgentRoomCard(room: room, source: name) { month in
+                        openAgentMonth(month, source: name, in: visible)
+                    } onOpenLongest: { longest in
+                        // A single conversation, so it lands directly. Falls
+                        // back to its month rather than doing nothing when the
+                        // row carries no ref — a dead lead is P4.
+                        if let ref = longest.ref {
+                            openBySourceRef(ref, in: visible)
+                        } else {
+                            openAgentMonth(room.busiest, source: name, in: visible)
+                        }
                     }
                 case .instagram(let room):
                     InstagramRoomCard(room: room) { account in
@@ -4554,6 +4567,13 @@ struct FeedScreen: View {
         // that differs by a kicker and a hue. It carries its source so the card
         // can say which journal it is without storing a `Thing`.
         case journal(JournalRoom, source: String)
+        // The four AGENT rooms (2026-08-23, prd §457) — the second head to
+        // serve more than one source, and right here for the journal reason:
+        // ChatGPT, Claude, Gemini and Claude Code hold the same object under
+        // four product names, compose through one `AgentRoomSource`, and draw
+        // one card that differs only by a hue. It carries its source so the
+        // card can pick that hue without storing a `Thing`.
+        case agent(AgentRoom, source: String)
     }
 
     /// Which rooms may lead with an anniversary, and what it reaches into.
@@ -4640,6 +4660,15 @@ struct FeedScreen: View {
             return InstagramRoomSource.compose(things: visible).map { .instagram($0) }
         case let name where JournalRoomSource.sources.contains(name):
             return JournalRoomSource.compose(things: visible).map { .journal($0, source: name) }
+        case let name where AgentRoomSource.sources.contains(name):
+            // `rivals` is a SEPARATE store read (see `AgentRoomSource.compose`'s
+            // doc) — `visible` here is this room's own rows and can never hold
+            // another seat's, which is exactly the shape `things=14` on a
+            // 14-row room proved on the probe's first real run.
+            return AgentRoomSource.compose(
+                source: name, things: visible,
+                rivals: AgentRoomSource.rivals(besides: name, context: modelContext))
+                .map { .agent($0, source: name) }
         default:
             return nil
         }
@@ -4706,6 +4735,28 @@ struct FeedScreen: View {
         openNewest(source: name, in: visible) { thing in
             thing.kind == .note
                 && calendar.component(.year, from: thing.capturedAt) == year.year
+        }
+    }
+
+    /// A tapped MONTH opens that month's last conversation (2026-08-23, prd
+    /// §457) — `openJournalYear` one unit down, and for its reason: an agent
+    /// room records no popularity of any kind, so there is nothing to rank a
+    /// month's conversations by and the honest landing is simply the last one.
+    ///
+    /// The fallback re-derives the month from `capturedAt` against the SAME
+    /// packing `AgentRoomSource` used, or a tap would land in a neighbouring
+    /// month — which looks like the card pointing at the wrong bar.
+    private func openAgentMonth(_ month: AgentRoom.Month, source name: String,
+                                in visible: [Thing]) {
+        if let ref = month.newestRef {
+            openBySourceRef(ref, in: visible)
+            return
+        }
+        let calendar = Calendar.current
+        openNewest(source: name, in: visible) { thing in
+            guard thing.kind == .chat else { return false }
+            let parts = calendar.dateComponents([.year, .month], from: thing.capturedAt)
+            return (parts.year ?? 0) * 12 + ((parts.month ?? 1) - 1) == month.month
         }
     }
 
@@ -7355,7 +7406,7 @@ struct FeedScreen: View {
                     }
                     .foregroundStyle(DS.tint)
                     .padding(.horizontal, DS.Space.s4)
-                    .frame(height: 36)
+                    .frame(minHeight: 36)
                     .background(DS.tintDim, in: Capsule(style: .continuous))
                 }
                 .buttonStyle(PressSpring())
@@ -7391,7 +7442,7 @@ struct FeedScreen: View {
                 }
                 .foregroundStyle(DS.tint)
                 .padding(.horizontal, DS.Space.s4)
-                .frame(height: 36)
+                .frame(minHeight: 36)
                 .background(DS.tintDim, in: Capsule(style: .continuous))
             }
             .buttonStyle(PressSpring())
@@ -7447,7 +7498,7 @@ struct FeedScreen: View {
                     .dsText(.label12)
                     .foregroundStyle(DS.tint)
                     .padding(.horizontal, DS.Space.s4)
-                    .frame(height: 32)
+                    .frame(minHeight: 32)
                     .background(DS.tintDim, in: Capsule(style: .continuous))
             }
             .buttonStyle(PressSpring())

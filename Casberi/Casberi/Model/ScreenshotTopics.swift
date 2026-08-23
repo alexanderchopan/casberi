@@ -492,7 +492,15 @@ enum ScreenshotTopics {
         // on `enrichedText`.
         case "Day One", "Apple Journal":
                           return TopicSource(kinds: [.note], needsOCR: false, includeDomains: false)
-        case "ChatGPT", "Claude", "Gemini":
+        // "Claude Code" joined its three siblings on 2026-08-23 (prd §457).
+        // It was absent from this switch from the day the seat shipped, so
+        // `healTopics(source: "Claude Code")` answered nil and returned 0
+        // forever — the room with the most text per row in this whole corpus
+        // had no subjects at all, and `BridgeRefresh`'s chat sweep skipped it
+        // for the same reason. The §307 `topicSource` miss and the §313 dead
+        // registry, a third time: a call into a registry that answers nil is a
+        // no-op indistinguishable from having nothing to say.
+        case "ChatGPT", "Claude", "Gemini", ClaudeCodeImport.source:
             return TopicSource(kinds: [.chat], needsOCR: false, includeDomains: false,
                                text: { $0.enrichedText ?? $0.content })
         default:          return nil

@@ -30966,12 +30966,144 @@ rests on, because when a scrape's markup moves the room does not break, it goes
 QUIET, which from outside is indistinguishable from a channel that stopped
 posting.
 
-## 457. The agent rooms get a head, Claude Code gets measured, and three registries that answered nil (user: "what more can we do with claude and chatgpt", then "ok do all", 2026-08-23)
+## 457. The agent rooms get a head, Claude Code gets measured, and two registries that answered nil (user: "what more can we do with claude and chatgpt", then "ok do all", 2026-08-23)
 
-*(Entry in progress — being written in the session that claimed this number.
-§455 and §456 were taken by concurrent sessions the same day, which is the
-collision class `prd-index-audit` exists for; this heading was appended first,
-before a line of the work, precisely so the number could not be taken twice.)*
+Asked what more the ChatGPT/Claude/Gemini/Claude Code rooms could do. §418
+(three days old) had already shipped the fold, the turn count on the row, code
+drawn as code, and "Carry on with Claude" — its own standing lesson is to read
+a room's most recent ledger entry before proposing anything, so this checked
+first and found the fold, the sheet's turn rendering and the row's
+`messageCount` all already live. What was left: no room head (all four still
+led with the topic treemap, no time in it at all), Claude Code's own importer
+carrying a header marked UNMEASURED since 2026-08-08, and — found only by
+building the head — two registries that had answered nil since the day their
+rooms shipped.
+
+**Claude Code, measured against 470 real transcripts on this host — 247,085
+lines.** The header listed four field-name guesses to re-measure first. Three
+were right (the `type` kind key and its `user`/`assistant`/`system` values;
+`message.content` alternating string/typed-block array; `cwd` present on every
+ordinary line). The fourth was wrong, and it decided what every row in the
+room is CALLED: **`summary` appears ZERO times.** A session's own name lives on
+`custom-title`/`ai-title` lines instead, rewritten every few turns as a
+conversation finds out what it's about (median 23 title lines per file, up to
+1,615) — so `summaryText`'s `kind == "summary"` guard never once passed, every
+session fell back to its opening ask for a headline, and `Thing.summary` —
+documented as "Claude Code's own session summary" — was always nil.
+`ClaudeCodeSession.titleText` reads both kinds now, ranks `custom` over
+`generated` over the never-seen `legacy` shape (kept because an older history
+on disk is exactly what this importer exists to reach), and takes the LAST one
+in the file rather than the first — the opposite of every other read in that
+loop, and necessary: the last `customTitle` differed from a file's first in 75
+of the 378 files carrying more than one, so first-wins would name a long
+session after the thing it started out as, not what it became. `heal` now
+repairs a session's title on a re-import, the only way already-landed rows can
+reach a name they were never given. `Thing.summary` is left unset rather than
+carrying the invented sentence it used to — the session's own name is the
+title now, and repeating it as a summary underneath would be exactly the
+redundancy §451/§452 swept out of every other room.
+
+**Two dead registries, both the shape "a call into a registry that answers nil
+is a no-op indistinguishable from having nothing to say" (§307/§313's own
+words, this time in a fourth and fifth place).** `ScreenshotTopics.topicSource`
+had no `"Claude Code"` case — never had, since the seat shipped — so
+`healTopics(source: "Claude Code")` returned 0 forever and the room with the
+most text per row in this whole corpus had no subjects at all. And
+`BridgeRefresh`'s chat-topics sweep loop never named the seat either, so even
+adding the case would have reached nothing without a foreground pass to call
+it. Both fixed; verified live (`-topicMapProbe "Claude Code"` now reports
+`backfilled=12 · rows=12 · withTerms=12` against the widened demo corpus,
+where it previously composed nothing because nothing was ever asked).
+
+**The head — `AgentRoom`/`AgentRoomSource`/`AgentRoomCard`, the `JournalRoom`
+shape one room over, with two real departures.** MONTHS, not years: ChatGPT's
+export begins in late 2022 at the earliest and Claude Code's transcripts begin
+in 2025, so a year strip for a heavy user draws three columns — a chart with
+no shape in it. A month strip over the same span draws thirty-odd. Silent
+months are still drawn, at the floor height, in a fainter fill — the fortnight
+you stopped is the reading, same as every sibling room. The lead is DEPTH, not
+a run or a fullest period: `AgentRoom.headline` names the longest
+conversation, the one fact no part of the strip states, since the strip counts
+conversations and a 300-turn afternoon is a single tick in it. Below
+`longestFloor` (20 turns) there is no headline and the note is promoted into
+the lead slot, exactly the §451 branch every sibling card already has.
+
+**And a comparison line — the reading none of the four products can make about
+themselves.** A person with two seats connected owns a fact ChatGPT cannot
+know about Claude and Claude cannot know about ChatGPT: which one they
+actually took their work to, and since when. **Conversations only, never
+turns, and that is a correctness rule and not a style choice**: a Claude Code
+session narrates its own tool use and runs to hundreds of turns by
+construction, while a Gemini row is one prompt by Takeout's own shape — ranking
+by turns would report whichever product's transcript format is chattiest as
+the one somebody relies on most, a wrong answer that renders as insight.
+`AgentRoom.leadSince` walks CUMULATIVELY backward from the end of the span
+rather than comparing month by month, because a per-month rule would make the
+card announce a change of allegiance on any single quiet week — the earliest
+month from which the WHOLE STRETCH from there to now favours this room is the
+month the lead really began. Three honest states: leading from the span's own
+start names no month (naming it would imply something changed then, when
+nothing did), leading from partway names that month, and not leading says so
+plainly rather than going quiet — a card that only speaks when you're ahead is
+a scoreboard, not a reading.
+
+**The rivals read is a SEPARATE store fetch, and getting that wrong was the
+one real defect this feature shipped with — caught only by building it and
+running the real probe.** `AgentRoomSource.compose(source:things:)` was first
+written expecting `things` to hold the whole corpus, so `rivals` could filter
+it for other sources' rows. Every caller in the `sourceHead` chain hands a
+SCREEN's already-scoped `visible`, though — never the corpus — and the live
+probe proved it in one line: `roomInsight: source=ChatGPT things=14`, exactly
+that room's own count and nothing else, for a corpus that also held 21 Claude
+rows, 15 Gemini rows and 12 Claude Code rows. The comparison this card exists
+to make could never have fired through that path; it would have shipped as
+dead code with a passing build and a passing static harness, since nothing
+static can see that a live SwiftUI call site hands a narrower array than a
+function's doc assumes. Fixed the way this codebase already fixes a
+cross-cutting read a room-scoped `things` can't answer (the Stripe/PostHog/
+Cloudflare heads' own "bridge state, not `things`" rule): `AgentRoomSource.
+rivals(besides:context:)` is a light, separate `ModelContext` fetch — `source`
+and `capturedAt` only, never the transcript — called once per room open
+alongside the room-scoped `compose`. Verified live afterward: `agentRoomRivals|
+Claude=21 Gemini=15 Claude Code=12` for the ChatGPT room, and the comparison
+line correctly reads all three shapes across the four seats in one probe run
+(`"Claude still holds more — 21 to 14"`, `"More of your conversations are here
+than in Gemini"`, `"…since February 2026"`).
+
+**The demo corpus was rebuilt wider, and the reason is §375's own lesson,
+found again rather than remembered.** The old `chats` table was six ChatGPT
+rows, six Claude, three Gemini over 39 days — under every one of `AgentRoom`'s
+floors (12 conversations, 2 months, 45 days) — so all four heads would have
+declined CORRECTLY and `verify.sh`'s room-head coverage check would have
+reported four gaps that were not gaps, exactly the shape that cost the
+Instagram and X demo rows their own coverage-check false positives before this
+session. Rebuilt to 43 chat rows plus 12 Claude Code sessions, shaped
+deliberately and not just enlarged: ChatGPT weighted toward the older half of
+the span and Claude toward the recent half, so the comparison line has a real
+crossover to find rather than one seat leading from month one; Gemini's turn
+count is 1 on every row BY CONSTRUCTION (Takeout carries one prompt per row,
+so anything else would teach a reader something untrue about their own
+export), which is also what makes Gemini correctly decline a "longest"
+headline and draw the note instead. Claude Code's two projects (`casberi`,
+`notes-cli`) exist so the project tag has something to filter between. Turn
+counts are explicit per row now rather than derived from `6 + (i % 9)`, which
+topped out at 14 — below `longestFloor` — so no demo room could previously have
+drawn the card's own lead branch at all.
+
+**Verified end to end on this host**, the first time an agent-room import has
+ever been checked against real data rather than reasoned about: `verify.sh`'s
+iOS Simulator build succeeded clean against the whole tree (five other
+sessions' concurrent edits included); the demo corpus installed and every one
+of the four `-roomInsightProbe`/`-agentRoomProbe` runs composed and led
+correctly; `scripts/agent-room-selftest.sh` (Foundation-only, compiled WHOLE,
+40+ assertions, 13 mutations, all caught) is wired into `verify.sh`; `verify.
+sh`'s room-head coverage map gained all four names
+(`chatgptHead`/`claudeHead`/`geminiHead`/`claudeCodeHead`); `catalog-sync.sh`,
+`network-reach-audit.sh`, `swiftdata-liveness-audit.py` and
+`prd-index-audit.py` all ran clean. **UNMEASURED still**: no ChatGPT, Claude or
+Gemini export has ever been imported on this host, so the importers themselves
+remain unverified against real exports — only Claude Code's transcript FORMAT
+was measurable here, and only because this machine already holds one.
 
 ## 458. WhatsApp is passed on, and the reasons are of two grades (user: "if we are adding telegram we may as well add what's app wdyt?", then "if the export is per chat then that is not going to work, unless it i export chats to yourself", then "seems like we should pass on it for now and that even the self chats are unclear?", 2026-08-23)
 

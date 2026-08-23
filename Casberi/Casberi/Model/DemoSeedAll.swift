@@ -3603,15 +3603,69 @@ enum DemoSeedAll {
                 if journalPhotos.contains(i) { t.previewImageData = pixels(i) }
             }
         }
-        let chats: [(String, String, Double)] = [
-            ("Designing a bento panel", "ChatGPT", 1), ("SwiftData migration plan", "ChatGPT", 5),
-            ("Explain PCA simply", "ChatGPT", 12), ("Naming things", "ChatGPT", 19),
-            ("Espresso ratios", "ChatGPT", 28), ("Trip itinerary", "ChatGPT", 40),
-            ("Reviewing the panel ruling", "Claude", 2), ("Writing the seed table", "Claude", 3),
-            ("Liveness corollaries, explained", "Claude", 9), ("Copy for the connect screen", "Claude", 16),
-            ("Refactoring the composer", "Claude", 24), ("Schema versioning", "Claude", 37),
-            ("Summarise this paper", "Gemini", 6), ("Translate the release notes", "Gemini", 15),
-            ("Compare these two charts", "Gemini", 30),
+        // WIDE ENOUGH FOR THE ROOM HEAD (2026-08-23, prd §457). This table was
+        // six ChatGPT chats over 39 days, six Claude and three Gemini — under
+        // every one of `AgentRoom`'s floors (12 conversations, 2 months, 45
+        // days), so all four heads would have declined CORRECTLY and
+        // `verify.sh`'s room-head coverage would have reported four gaps that
+        // were not gaps. That is §375's lesson exactly, where the demo's X
+        // room was seven posts in one season; a demo thin enough to make a
+        // head decline is a demo that cannot tell a decline from a defect.
+        //
+        // The SHAPE is deliberate too, not just the volume. ChatGPT is spread
+        // over the older half of the span and Claude is dense in the recent
+        // one, so the cross-assistant line has a real crossover to find
+        // (`AgentRoom.leadSince`) rather than one seat leading from the first
+        // month — and Gemini trails both, which exercises the third branch,
+        // the one that says so plainly instead of going quiet.
+        //
+        // The fourth field is TURNS, explicit per row rather than derived from
+        // the index. The old `6 + (i % 9)` topped out at 14, below
+        // `AgentRoom.longestFloor`, so no demo room could ever have drawn the
+        // headline branch — the card's own lead, unreachable in the corpus
+        // built to prove the card draws.
+        let chats: [(String, String, Double, Int)] = [
+            ("Designing a bento panel", "ChatGPT", 3, 9),
+            ("SwiftData migration plan", "ChatGPT", 18, 31),
+            ("Explain PCA simply", "ChatGPT", 33, 7),
+            ("Naming things", "ChatGPT", 48, 12),
+            ("Espresso ratios", "ChatGPT", 70, 5),
+            ("Trip itinerary", "ChatGPT", 85, 18),
+            ("Rewriting the onboarding copy", "ChatGPT", 100, 24),
+            ("Why is this query slow", "ChatGPT", 115, 41),
+            ("Reading list for the quarter", "ChatGPT", 130, 6),
+            ("Explain CRDTs", "ChatGPT", 145, 15),
+            ("Budget spreadsheet formulas", "ChatGPT", 160, 8),
+            ("Draft the release notes", "ChatGPT", 175, 11),
+            ("Compare two hosting options", "ChatGPT", 190, 19),
+            ("Sourdough troubleshooting", "ChatGPT", 205, 7),
+            ("Reviewing the panel ruling", "Claude", 1, 22),
+            ("Writing the seed table", "Claude", 2, 14),
+            ("Liveness corollaries, explained", "Claude", 4, 38),
+            ("Copy for the connect screen", "Claude", 6, 9),
+            ("Refactoring the composer", "Claude", 8, 27),
+            ("Schema versioning", "Claude", 11, 16),
+            ("The room-head ranking chain", "Claude", 14, 33),
+            ("Why the harness passed wrongly", "Claude", 17, 45),
+            ("Naming the two title kinds", "Claude", 21, 12),
+            ("A month strip, not a year one", "Claude", 26, 20),
+            ("Reading the export's shape", "Claude", 31, 29),
+            ("Redundancy in the card", "Claude", 38, 8),
+            ("Migrating the store", "Claude", 95, 17),
+            ("An old question about layout", "Claude", 150, 6),
+            ("First look at the corpus", "Claude", 200, 13),
+            ("Summarise this paper", "Gemini", 6, 1),
+            ("Translate the release notes", "Gemini", 15, 1),
+            ("Compare these two charts", "Gemini", 30, 1),
+            ("What is this plant", "Gemini", 45, 1),
+            ("Convert these units", "Gemini", 60, 1),
+            ("Summarise this thread", "Gemini", 75, 1),
+            ("Rewrite this paragraph", "Gemini", 90, 1),
+            ("Explain this error", "Gemini", 105, 1),
+            ("Draft a short reply", "Gemini", 120, 1),
+            ("Name three alternatives", "Gemini", 135, 1),
+            ("Check this arithmetic", "Gemini", 150, 1),
+            ("Translate a menu", "Gemini", 165, 1),
         ]
         out += chats.enumerated().map { i, c in
             // `content` is the OPENING ASK, exactly as all four importers land
@@ -3621,7 +3675,13 @@ enum DemoSeedAll {
             // read (2026-08-12, prd §367).
             row(.chat, c.0, source: c.1, ref: "demo:chat:\(c.1.lowercased()):\(i)",
                 days: c.2, hour: 14, content: demoAsk(c.0)) { t in
-                let turns = 6 + (i % 9)
+                // Gemini's count is 1 BY CONSTRUCTION, not by coincidence:
+                // Takeout carries one prompt per row, so anything else here
+                // would be the demo teaching a reader something untrue about
+                // their own export — and it is what makes `AgentRoom` decline
+                // to name a "longest" in that room, which is the correct
+                // answer there and the note branch of the card.
+                let turns = c.3
                 t.messageCount = turns
                 // A REAL transcript in the importers' own wire format
                 // (`"<Speaker>: <text>"`, newline-joined). The old seed put one
@@ -3642,15 +3702,40 @@ enum DemoSeedAll {
         }
         // Claude Code's title shape is `ClaudeCodeSession.title(project:
         // headline:)` — "project · headline", never a join this file invents.
+        // Twelve sessions over ten weeks (2026-08-23, prd §457) — three over
+        // twelve days was under every `AgentRoom` floor, for the reason the
+        // `chats` table above now carries in full.
+        //
+        // TWO projects, not one, because the project is a TAG and the room
+        // narrows by it: a demo where every session ran in the same repo
+        // cannot show that filter doing anything.
         let claudeCode: [(String, Int, Double)] = [
             ("casberi · Fix the demo room-head coverage gaps", 42, 1),
             ("casberi · Wire the source tray packing self-test", 18, 4),
             ("casberi · Chase the embedding race on foreground", 61, 12),
+            ("casberi · Measure the transcript format", 88, 16),
+            ("casberi · The month strip and its floors", 27, 23),
+            ("casberi · Why the drift guard passed wrongly", 34, 30),
+            ("notes-cli · First pass at the parser", 12, 38),
+            ("notes-cli · Handle the empty-folder case", 9, 45),
+            ("casberi · Redundancy sweep on the cards", 21, 52),
+            ("notes-cli · Ship the release script", 15, 59),
+            ("casberi · The comparison line's honesty rule", 36, 66),
+            ("casberi · Read the ledger before proposing", 24, 71),
         ]
         out += claudeCode.enumerated().map { i, c in
             let headline = c.0.components(separatedBy: " · ").last ?? c.0
+            // The project comes off the title rather than being hardcoded, so
+            // the tag and the words can never disagree — which is what
+            // `ClaudeCodeSession` guarantees on a real import, where both come
+            // from the same `cwd`.
+            let project = c.0.components(separatedBy: " · ").first ?? "casberi"
             return row(.chat, c.0, source: "Claude Code", ref: "demo:claudecode:\(i)",
-                days: c.2, hour: 20, tags: ["Session", "casberi"]) { t in
+                days: c.2, hour: 20,
+                // The OPENING ASK, as `ClaudeCodeImport` lands it: the session
+                // name is the title, and the ask is the subtitle beneath it.
+                content: demoAsk(headline),
+                tags: ["Session", project]) { t in
                 t.messageCount = c.1
                 // Claude Code's assistant label is "Claude", NOT the seat name
                 // — the one thing about this wire format that is easy to get
@@ -3659,10 +3744,11 @@ enum DemoSeedAll {
                 t.enrichedText = demoTranscript(ask: headline, assistant: "Claude",
                                                 subject: headline.lowercased(),
                                                 turns: min(c.1, 8))
-                // The session's own summary, which is display copy here the way
-                // a Trello card's back is — `ClaudeCodeSession` stamps it from
-                // the transcript's `summary` line.
-                t.summary = "Landed the fix and left the reasoning in the file."
+                // `Thing.summary` is deliberately NOT set (2026-08-23, prd
+                // §457). It used to carry an invented sentence standing in for
+                // a `summary` line — a line the format does not have, measured
+                // across 247,085 real lines. The session's own name is the
+                // TITLE now, and repeating it here would print it twice.
             }
         }
         out += (0..<10).map { i in

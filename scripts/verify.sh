@@ -665,6 +665,16 @@ harness "Front-page self-test" "front-page self-test" "scripts/frontpage-selftes
 # rescales itself, or a year printed as the quantity "2,019".
 harness "Journal-room self-test" "journal-room self-test" "scripts/journal-room-selftest.sh" "the journal-room self-test failed — run scripts/journal-room-selftest.sh"
 
+# The four AGENT rooms (ChatGPT/Claude/Gemini/Claude Code, prd §457,
+# 2026-08-23) — the journal harness's own reason, one room over: no ChatGPT,
+# Claude or Gemini export has ever been imported on this host, so this is not
+# the best proof these numbers are right, it is the only one. Every failure it
+# catches renders as a convincing card: turns compared across seats of
+# structurally different shape, a comparison line that flips on a single quiet
+# week instead of the whole-stretch rule, silent months skipped so the axis
+# rescales itself, or a month printed with its year as the quantity "2,025".
+harness "Agent-room self-test" "agent-room self-test" "scripts/agent-room-selftest.sh" "the agent-room self-test failed — run scripts/agent-room-selftest.sh"
+
 harness "X pure-logic self-test" "X pure-logic self-test" "scripts/x-selftest.sh" "the X logic self-test failed — run scripts/x-selftest.sh"
 
 # The Instagram room's head and the §395 wiring under it. Same reason as the X
@@ -995,6 +1005,7 @@ harness "Obsidian pure-logic self-test" "obsidian self-test" "scripts/obsidian-s
 # probed and GATED, both verb dispatchers run it, and the hand-off does not
 # quietly take the pasteboard on the way out.
 harness "Files-location pure-logic self-test" "files-location self-test" "scripts/files-location-selftest.sh" "the Files-location self-test failed — run scripts/files-location-selftest.sh"
+
 # The reading rooms, past §312 (prd §455, 2026-08-23). Every failure it catches
 # renders as a perfectly ordinary room and none is visible to a build: a health
 # line that names one feed and prints ANOTHER feed's reason; a line drawn for a
@@ -1777,6 +1788,10 @@ else
     instagramHead     "Instagram"
     dayOneHead        "Day One"
     appleJournalHead  "Apple Journal"
+    chatgptHead       "ChatGPT"
+    claudeHead        "Claude"
+    geminiHead        "Gemini"
+    claudeCodeHead    "Claude Code"
     githubHead        "GitHub"
     radicleHead       "Radicle"
     cardPointersHead  "CardPointers"

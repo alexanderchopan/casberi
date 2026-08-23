@@ -614,7 +614,8 @@ enum BridgeRefresh {
         // component, unlike Instagram's captions — the transcript these terms
         // are read from already lands at import, so this is purely a
         // `content`-in-store operation like Files' and Obsidian's.
-        for (seatID, source) in [("gpt", "ChatGPT"), ("claude", "Claude"), ("gemini", "Gemini")]
+        for (seatID, source) in [("gpt", "ChatGPT"), ("claude", "Claude"), ("gemini", "Gemini"),
+                                 (ClaudeCodeImport.seatID, ClaudeCodeImport.source)]
         where connected(seatID) {
             let s = slot(); Task { @MainActor in
                 await BridgeRefresh.stagger(s)

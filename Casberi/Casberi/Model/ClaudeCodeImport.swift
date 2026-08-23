@@ -8,35 +8,43 @@ import SwiftData
 /// `scripts/claudecode-selftest.sh` can compile it out of this file and put
 /// known inputs through it.
 ///
-/// **UNMEASURED (2026-08-08).** This was authored without ever reading a real
-/// transcript: the session that wrote it was refused access to
-/// `~/.claude/projects` by its own permission classifier, so every field name
-/// below comes from a description of the format rather than from a file. It is
-/// therefore written the way this codebase writes every unverified importer —
-/// candidate key paths rather than one, both spellings and both cases where
-/// either is plausible, and a miss that SKIPS rather than lands a wrong row.
+/// **MEASURED 2026-08-23 (prd §457)** against 470 real transcripts —
+/// 247,085 lines, every file under a real `~/.claude/projects`. This header
+/// said UNMEASURED for fifteen days and listed four field-name guesses to
+/// re-measure first. Three were right. The fourth was wrong, and it was the
+/// one that decided what every row in this room is CALLED:
 ///
-/// **Re-measure these four first**, in this order, because each one silently
-/// empties or corrupts a different part of the room:
-///   1. Whether a line's kind is really `type` and whether its values are
-///      really `user` / `assistant` / `summary` / `system`. If they aren't,
-///      every session parses to zero messages and the import reads as an
-///      empty `~/.claude` (nothing crashes; the screen says "nothing in it").
-///   2. Whether `message.content` really alternates between a bare string and
-///      an array of typed blocks. If a third shape exists, those turns
-///      contribute no prose and the transcript silently thins out — the
-///      failure nothing on screen can show, because `enrichedText` is
-///      retrieval-only.
-///   3. Whether `cwd` is present on ordinary lines. It is the only
-///      unambiguous project name available (see `projectName`), and without
-///      it the name is guessed from the directory, which is lossy for any
-///      project whose own folder has a dash in it.
-///   4. The timestamp's exact spelling and precision. A missed date does not
-///      fall back to `.now` here — the session is dated from whatever line
-///      does carry one, and only a session with no parsable date anywhere
-///      falls back — but if the spelling is wrong for EVERY line, an entire
-///      history lands stamped today, which is the one failure that looks like
-///      a working import.
+///   1. `type` is the kind key ✓ — and `user` / `assistant` / `system` are
+///      real values ✓. **But `summary` is not: it appears ZERO times in
+///      247,085 lines.** A session's own name lives on its own line kinds,
+///      `custom-title` (key `customTitle`) and `ai-title` (key `aiTitle`),
+///      and 469 of the 470 files carry at least one. So `summaryText`'s
+///      `kind == "summary"` guard never once passed: every session fell back
+///      to its opening ask for a headline, and `Thing.summary` — documented
+///      below as "Claude Code's own session summary" — was **always nil**.
+///      See `titleText`.
+///   2. `message.content` really is a bare string OR an array of typed
+///      blocks ✓ (350 string, 11,188 array in the sample). Block types are
+///      `text`, `thinking`, `tool_use`, `tool_result`, `image`; a text
+///      block's only keys are `type` and `text`. `blockText`'s take-only-
+///      `text` rule is therefore right as written, and drops `thinking`
+///      correctly — reasoning is not what the person wrote or was told.
+///   3. `cwd` is present ✓ on every user/assistant line (13,227 of 13,227).
+///   4. The timestamp is `timestamp` ✓, ISO-8601 with three fractional
+///      digits and a `Z` — which `isoFractional` parses. Note it is absent
+///      from title and `queue-operation` lines, so the "first line that
+///      carries one" rule is load-bearing rather than incidental: the FIRST
+///      line of a file is a `queue-operation` in 456 of 470 files.
+///
+/// Line kinds the original parse never knew existed, all correctly ignored
+/// by `turn`: `attachment`, `last-prompt`, `queue-operation`, `mode`,
+/// `atis-latch`, `frame-link`, `pr-link`, `artifact-comment-monitor`.
+/// `isSidechain` was false on all 247,085 lines and `userType` always
+/// `external`, so no subagent transcript is inlined in this corpus today.
+///
+/// Everything else here keeps its schema tolerance — candidate key paths
+/// rather than one, and a miss that SKIPS rather than landing a wrong row —
+/// because one measurement of one version is not a contract.
 enum ClaudeCodeSession {
 
     // MARK: Shapes
@@ -46,12 +54,17 @@ enum ClaudeCodeSession {
         var sessionId: String
         /// The project this session ran in — the folder name, not the path.
         var project: String
-        /// The headline: the transcript's own `summary` line when it has one,
-        /// else the opening ask. Never empty for a `Parsed` that exists.
+        /// The headline: the session's own NAME when the transcript carries
+        /// one (see `titleText`), else the opening ask. Never empty for a
+        /// `Parsed` that exists.
         var headline: String
-        /// Claude Code's own summary, when the transcript carries one. Display
-        /// copy (`Thing.summary`), unlike the transcript.
-        var summary: String?
+        /// The session's own name, kept apart from `headline` so a caller can
+        /// tell a real name from the fallback — which is what decides whether
+        /// the opening ask is worth drawing as a subtitle underneath.
+        ///
+        /// Nil is rare but real: 1 of 470 measured transcripts carried no
+        /// title line of any kind.
+        var sessionTitle: String?
         /// The opening ask, kept separately from `headline` so the row can
         /// show both when they differ (a summarised session) and neither
         /// twice when they don't.
@@ -141,13 +154,52 @@ enum ClaudeCodeSession {
         string(line, ["cwd", "workingDirectory", "working_directory", "projectPath", "project_path"])
     }
 
-    /// A `summary` line's own text. Claude Code writes these as their own
-    /// records rather than as a field on a message, so this is read from the
-    /// line and not from `message`.
-    static func summaryText(_ line: [String: Any]) -> String? {
-        guard kind(line) == "summary" else { return nil }
-        return string(line, ["summary", "text", "title"])
-            ?? object(line, ["message"]).flatMap { string($0, ["summary", "text", "content"]) }
+    /// Which kind of name a title line carries. Ranked: a name the person set
+    /// beats one that was generated, and both beat the legacy `summary` line.
+    enum TitleKind: Int, Comparable {
+        /// A `summary` line — the shape this parser was written against and
+        /// which no measured transcript has. Kept because an older history on
+        /// disk is exactly what this importer exists to reach.
+        case legacy = 0
+        /// `ai-title`.aiTitle — generated from the conversation.
+        case generated = 1
+        /// `custom-title`.customTitle.
+        case custom = 2
+
+        static func < (a: TitleKind, b: TitleKind) -> Bool { a.rawValue < b.rawValue }
+    }
+
+    /// A title line's own text and which kind it is, or nil for any other line.
+    ///
+    /// Claude Code writes these as their own records rather than as a field on
+    /// a message, so this reads the line and not `message`.
+    ///
+    /// **MEASURED (see the type header): there are no `summary` lines.** The
+    /// name lives on `custom-title` / `ai-title`, and 469 of 470 files carry
+    /// one — so the guard this replaces meant a session was named after its
+    /// opening ask ("ok do all", "why is it 404ing") instead of after itself.
+    ///
+    /// The two kinds usually DISAGREE — the last `customTitle` differed from
+    /// the last `aiTitle` in 437 of the 460 files carrying both — so which one
+    /// wins is a real decision and not a formality. `custom` leads on the rule
+    /// this codebase already applies to a fetched handle beating an archived
+    /// one (§375): the more specific claim about what this session is wins,
+    /// and a title somebody set for themselves is the most specific there is.
+    static func titleText(_ line: [String: Any]) -> (kind: TitleKind, text: String)? {
+        switch kind(line) {
+        case "custom-title":
+            return string(line, ["customTitle", "custom_title", "title"])
+                .map { (.custom, $0) }
+        case "ai-title":
+            return string(line, ["aiTitle", "ai_title", "title"])
+                .map { (.generated, $0) }
+        case "summary":
+            let text = string(line, ["summary", "text", "title"])
+                ?? object(line, ["message"]).flatMap { string($0, ["summary", "text", "content"]) }
+            return text.map { (.legacy, $0) }
+        default:
+            return nil
+        }
     }
 
     /// The role of a message line — from `message.role` where it lives, or the
@@ -312,7 +364,7 @@ enum ClaudeCodeSession {
     /// title is a guess.
     static func parse(jsonl: String, fileName: String?, directory: String?) -> Parsed? {
         var turns: [Turn] = []
-        var summary: String?
+        var named: (kind: TitleKind, text: String)?
         var identifier: String?
         var cwd: String?
         var startedAt: Date?
@@ -325,10 +377,26 @@ enum ClaudeCodeSession {
 
             if identifier == nil { identifier = sessionID(object) }
             if cwd == nil { cwd = workingDirectory(object) }
-            if summary == nil, let text = summaryText(object) { summary = text }
-            // The FIRST date wins, and a summary line's own stamp counts as
-            // much as a message's — a session is dated by when it started,
-            // and every line carrying one agrees about that.
+            // **THE LAST NAME WINS, not the first** — the opposite of every
+            // other read in this loop, and measured: a transcript carries a
+            // title line every few turns (median 23 per file, up to 1,615),
+            // rewritten as the session finds out what it is about. The last
+            // `customTitle` differed from that file's first in 75 of the 378
+            // files carrying more than one, so first-wins names a long session
+            // after the thing it started out as.
+            //
+            // `>=` rather than `>` is what makes it last-wins WITHIN a kind
+            // while still refusing to let a later generated title overwrite a
+            // custom one.
+            if let found = titleText(object), found.kind >= (named?.kind ?? .legacy) {
+                named = found
+            }
+            // The FIRST date wins, and a title line's own stamp counts as much
+            // as a message's — a session is dated by when it started, and
+            // every line carrying one agrees about that. Note the title and
+            // `queue-operation` lines carry NO timestamp at all, and the first
+            // line of a file is a `queue-operation` in 456 of 470 measured
+            // files, so this really does have to look past the opening lines.
             if startedAt == nil, let when = parseDate(string(object, dateKeys)) {
                 startedAt = when
             }
@@ -337,7 +405,8 @@ enum ClaudeCodeSession {
 
         let body = transcript(turns)
         let first = opener(turns)
-        let headline = summary ?? first
+        let sessionTitle = named?.text
+        let headline = sessionTitle ?? first
         // Nothing to name it by AND nothing in it — not a session.
         guard !headline.isEmpty || !body.isEmpty else { return nil }
         guard let id = identifier ?? fileName.map(stem), !id.isEmpty else { return nil }
@@ -347,7 +416,7 @@ enum ClaudeCodeSession {
             sessionId: id,
             project: project,
             headline: headline.isEmpty ? String(localized: "Session") : headline,
-            summary: summary,
+            sessionTitle: sessionTitle,
             opener: first,
             transcript: body,
             messageCount: turns.count,
@@ -554,7 +623,12 @@ enum ClaudeCodeImport {
             sourceRef: ref)
         thing.enrichedText = parsed.transcript
         thing.messageCount = parsed.messageCount
-        thing.summary = parsed.summary
+        // `Thing.summary` is deliberately NOT set (2026-08-23, prd §457). It
+        // used to carry `Parsed.summary`, which the measurement showed was
+        // always nil — and now that the session's own name is the HEADLINE,
+        // putting it here too would print the title a second line below
+        // itself, which is the redundancy §451/§452 swept out of every other
+        // room. The opening ask is the subtitle, on `content` above.
         return thing
     }
 
@@ -566,21 +640,37 @@ enum ClaudeCodeImport {
     /// STARTED, and a session you added two messages to yesterday did not
     /// start yesterday; re-dating it would march every long-lived project's
     /// sessions to the top of the feed on every import.
+    /// **It also repairs a row landed by a build that read no title** (2026-08-23,
+    /// prd §457). Every session imported before that measurement is named after
+    /// its opening ask; a re-import is the only thing that can reach it, since
+    /// the transcript lives nowhere but on disk behind a scoped pick. So the
+    /// title comparison is part of the changed test rather than a write made
+    /// only when something else already changed.
     @MainActor
     private static func heal(_ thing: Thing, with parsed: ClaudeCodeSession.Parsed) -> Bool {
         guard thing.isLive else { return false }
         let grew = parsed.messageCount > (thing.messageCount ?? 0)
         let bodyChanged = thing.enrichedText != parsed.transcript
-        guard grew || bodyChanged else { return false }
-        thing.enrichedText = parsed.transcript
-        thing.messageCount = parsed.messageCount
-        if let summary = parsed.summary { thing.summary = summary }
-        thing.title = IngestSupport.titleLine(
+        let wantedTitle = IngestSupport.titleLine(
             ClaudeCodeSession.title(project: parsed.project, headline: parsed.headline))
-        // The words changed, so the vector computed from the old ones is
-        // stale — dropped so the next semantic sweep re-embeds on what the
-        // session actually says now.
-        thing.embedding = nil
+        let wantedSubtitle = parsed.opener == parsed.headline ? "" : parsed.opener
+        let renamed = thing.title != wantedTitle || thing.content != wantedSubtitle
+        guard grew || bodyChanged || renamed else { return false }
+        thing.title = wantedTitle
+        thing.content = wantedSubtitle
+        // The transcript is rewritten only when it really moved. A rename on
+        // its own must not drop the vector: re-embedding several hundred
+        // sessions because they were renamed is work with no answer at the end
+        // of it, and the words the vector was computed from have not changed.
+        if grew || bodyChanged {
+            thing.enrichedText = parsed.transcript
+            thing.messageCount = parsed.messageCount
+            // The words changed, so the vector computed from the old ones is
+            // stale — dropped so the next semantic sweep re-embeds on what the
+            // session actually says now.
+            thing.embedding = nil
+            thing.topicsAt = nil
+        }
         return true
     }
 
