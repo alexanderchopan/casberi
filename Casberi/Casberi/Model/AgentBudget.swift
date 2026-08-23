@@ -152,8 +152,22 @@ enum AgentBudget {
     /// measurable one — not because the others are cheap, but because claiming
     /// to cap a spend we cannot read would be the fake status this app's
     /// honesty rule exists to forbid.
+    ///
+    /// **A librarian pinned to a free model is never paused (2026-08-23, prd
+    /// §459).** A ceiling governs SPEND, and OpenRouter's free tier costs
+    /// nothing — so stopping that work at the cap would be a control that
+    /// switches off a feature without saving a cent, which is the same class of
+    /// wrong as a control that does nothing. It is bounded by OpenRouter's own
+    /// rate limits instead, which is the right bound for a thing that costs no
+    /// money.
+    ///
+    /// "Free" here is never a guess: it is read off the model's own listing at
+    /// the moment somebody picked it, and only while that model is still the
+    /// choice (`AgentModelFacts`). Unknown reads as PAID, so the cap keeps
+    /// governing everything it governed before.
     static func pausesLibrarian(_ provider: AgentProvider) -> Bool {
         guard provider == measurableProvider else { return false }
+        guard !AgentModelFacts.isFree(provider, task: .librarian) else { return false }
         return exhausted(spent: spentThisMonth, cap: monthlyCap)
     }
 

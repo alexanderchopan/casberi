@@ -66,6 +66,11 @@ struct OpenRouterSetupScreen: View {
                 BridgeSyncStatusRows(result: result, resultIsError: resultIsError)
                 AgentActiveStatusRow(provider: .openrouter)
                 AgentModelRow(provider: .openrouter)
+                // The two knobs only a router has (2026-08-23, prd §459). They
+                // sit under the model picker because both are about the request
+                // that model will serve, and above the receipt because one of
+                // them is what the receipt will end up costing.
+                OpenRouterRoutingRow(provider: .openrouter)
                 AgentSpendRow(provider: .openrouter)
                 // The opening sentence ("auto-picks whichever model fits") was
                 // the header's own tagline — "One key, whichever model fits" —
@@ -98,7 +103,13 @@ struct OpenRouterSetupScreen: View {
                 store.registerConnected(id: "openrouter", name: "OpenRouter",
                                         proof: String(localized: "Key in the Keychain"),
                                         can: ["Answers with your key — only when you tap.",
-                                              "Routes to whichever model fits, and remembers a chat's earlier answers."])
+                                              "Routes to whichever model fits, and remembers a chat's earlier answers.",
+                                              // The promise the toggle below
+                                              // keeps, stated where somebody
+                                              // reads what this seat does
+                                              // rather than only where they
+                                              // could change it (2026-08-23).
+                                              "Only ever to a provider that agrees not to keep your question."])
             } else {
                 // Four ways this can fail and four sentences for them (audit
                 // 2026-07-31) — a rate limit, a blocked account and a dropped

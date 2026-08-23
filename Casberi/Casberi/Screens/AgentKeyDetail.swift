@@ -78,6 +78,7 @@ struct AgentModelRow: View {
                     Menu {
                         Button {
                             AgentModelStore.set(nil, for: provider, task: task)
+                            AgentModelFacts.forget(provider, task: task)
                             tick += 1
                         } label: {
                             Text(task == .librarian
@@ -88,12 +89,31 @@ struct AgentModelRow: View {
                             Button {
                                 DSHaptic.selection()
                                 AgentModelStore.set(model.id, for: provider, task: task)
+                                // What the listing said about it, kept beside
+                                // the choice (2026-08-23, prd §459). THIS is
+                                // the only moment both are in hand — re-reading
+                                // the list later to learn it would be a settings
+                                // screen firing requests for being looked at.
+                                // A model the provider said nothing about
+                                // forgets rather than keeping the last one's
+                                // facts, or a pin swap would silently inherit
+                                // somebody else's capabilities.
+                                if let facts = model.facts {
+                                    AgentModelFacts.remember(facts, for: provider, task: task)
+                                } else {
+                                    AgentModelFacts.forget(provider, task: task)
+                                }
                                 tick += 1
                             } label: {
+                                // The price and the free mark ride the menu row
+                                // rather than a separate screen: choosing among
+                                // four hundred names is the exact moment cost
+                                // matters, and it is the one place this app can
+                                // state a price it did not compute.
                                 if model.id == provider.model(for: task) {
-                                    Label(model.label, systemImage: "checkmark")
+                                    Label(menuLabel(model), systemImage: "checkmark")
                                 } else {
-                                    Text(model.label)
+                                    Text(menuLabel(model))
                                 }
                             }
                         }
@@ -109,6 +129,26 @@ struct AgentModelRow: View {
             // same reason).
             .dsListCardRow()
         }
+    }
+
+    /// "Claude Sonnet 4.5 · $3.00/M in" — the model's own name, plus what its
+    /// listing prices it at (2026-08-23, prd §459).
+    ///
+    /// **Only the INPUT rate, and that is a legibility decision rather than a
+    /// rounding one.** Both halves would double the width of every one of four
+    /// hundred rows, and for the work this app does — a prompt carrying sixteen
+    /// candidates and up to six screenshots, answered in a few sentences —
+    /// input is the half that decides the bill. The full pair is on the
+    /// provider's own pricing page, which is where somebody comparing seriously
+    /// is going anyway.
+    ///
+    /// "Free" replaces the rate rather than printing "$0.00/M in", which reads
+    /// as a rounding artifact on a screen full of tiny numbers.
+    private func menuLabel(_ model: AgentModelInfo) -> String {
+        guard let facts = model.facts else { return model.label }
+        if facts.free { return String(localized: "\(model.label) · Free") }
+        guard let rate = facts.promptUSDPerMillion, rate > 0 else { return model.label }
+        return String(localized: "\(model.label) · \(String(format: "$%.2f", rate))/M in")
     }
 
     private func load() {
@@ -168,8 +208,20 @@ struct AgentSpendRow: View {
                         .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
+                // What THIS APP spent, above what the key has spent — the
+                // narrower and more useful of the two, so it leads (2026-08-23,
+                // prd §459). They are deliberately two lines and never one
+                // total: the app's figure covers only generations it started,
+                // the key's covers everything the key has ever done, and adding
+                // them would double-count while subtracting them would invent a
+                // number for other apps.
+                if let line = entry.appCostLine {
+                    Text(line)
+                        .dsText(.subhead13).foregroundStyle(DS.textPrimary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
                 if let usd = entry.reportedUSD {
-                    Text("\(provider.company) reports \(String(format: "$%.2f", usd)) used on this key.")
+                    Text("\(provider.company) reports \(String(format: "$%.2f", usd)) used on this key, across everything it's used for.")
                         .dsText(.subhead13).foregroundStyle(DS.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -196,6 +248,58 @@ struct AgentSpendRow: View {
                              : String(localized: "\(asks) asks")
         }
         return String(localized: "\(asks) asks · \(entry.requests) calls, \(entry.toolRounds) of them searching your things")
+    }
+}
+
+/// The two things only a ROUTER can be asked for (2026-08-23, prd §459) —
+/// drawn for OpenRouter and nowhere else, because nowhere else is there a
+/// choice of who serves a request.
+///
+/// Every other agent seat is one company answering with its own models: there
+/// is no second backend to prefer and no plugin to enable, so a control here
+/// would be the dead switch the honesty rule bans. This renders only when the
+/// provider it is handed is OpenRouter and that key exists.
+///
+/// **The two defaults deliberately disagree, and the asymmetry is the point.**
+/// Private routing is ON: it only ever narrows what happens to a question
+/// already being sent, and it is the app's own promise made enforceable by
+/// somebody else's routing table. Web search is OFF: it sends the question
+/// somewhere new AND bills per result, and a tap that quietly costs more than
+/// expected is the one surprise a receipt cannot undo.
+struct OpenRouterRoutingRow: View {
+    let provider: AgentProvider
+    @State private var privateRouting = AgentOpenRouter.privateRouting
+    @State private var webSearch = AgentOpenRouter.webSearch
+
+    var body: some View {
+        if provider == .openrouter, AgentKey.isConfigured(.openrouter) {
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                Toggle(isOn: $privateRouting) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Only providers that don't keep your question")
+                            .dsText(.callout15).foregroundStyle(DS.textPrimary)
+                        // The cost is stated on the control that causes it,
+                        // not in fine print elsewhere — this is the one setting
+                        // here that can make a question fail to answer.
+                        Text("OpenRouter routes around anyone who stores or trains on it. A model nobody will serve that way can't answer at all — you'll be told which.")
+                            .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                .onChange(of: privateRouting) { _, on in AgentOpenRouter.privateRouting = on }
+                Toggle(isOn: $webSearch) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Let it search the web")
+                            .dsText(.callout15).foregroundStyle(DS.textPrimary)
+                        Text("Only when your own things fall short, and it says so on the answer. Charged per result on top of the model.")
+                            .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                .onChange(of: webSearch) { _, on in AgentOpenRouter.webSearch = on }
+            }
+            .dsListCardRow()
+        }
     }
 }
 
@@ -353,6 +457,14 @@ struct AgentBudgetControl: View {
                 Text("Counted from what OpenRouter reports this key has used. Your own questions are never blocked.")
                     .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                     .fixedSize(horizontal: false, vertical: true)
+                // Only where it is true. A ceiling governs spend, and a free
+                // model spends nothing — so it keeps working past the cap, and
+                // saying so is what stops that reading as the cap being broken.
+                if AgentModelFacts.isFree(AgentBudget.measurableProvider, task: .librarian) {
+                    Text("The model you picked for organizing is free, so it keeps going either way.")
+                        .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
         } else if let provider = AgentKey.active {
             Text("\(provider.company) doesn't report what a key has spent, so there's no limit to set here — the counts above are what we can measure.")

@@ -589,6 +589,10 @@ struct AccountDetailSheet: View {
             // configured, so an unconfigured pick shows the field alone,
             // exactly as before.
             AgentModelRow(provider: keyProvider)
+            // Who may serve the request, and whether it may go looking
+            // (2026-08-23, prd §459) — OpenRouter alone, since it is the only
+            // seat here that routes rather than answers.
+            OpenRouterRoutingRow(provider: keyProvider)
             AgentSpendRow(provider: keyProvider, tick: keyTick)
             AgentLibrarianRow()
             #if targetEnvironment(macCatalyst)

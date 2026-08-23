@@ -169,6 +169,14 @@ enum AgentProvider: String, CaseIterable, Identifiable {
     /// auto router can land on a text-only model, so it stays honestly
     /// text-only too rather than gambling a photo on whichever model it
     /// picked. Stated on the connect screens, never assumed.
+    ///
+    /// **This is a FLOOR, not the whole answer, since 2026-08-23 (prd §459).**
+    /// `AgentModelFacts.seesImages` may raise it for a model whose own listing
+    /// states it accepts images — which is only ever OpenRouter, and only ever
+    /// for a model somebody PINNED, since the router's default lands nowhere
+    /// knowable. It can never lower it: a direct key's capability is a property
+    /// of the provider and no listing gets to contradict it. Call sites that
+    /// decide whether to send a picture read the resolver, not this.
     var seesImages: Bool {
         switch self {
         case .anthropic, .openai, .google: true
@@ -189,13 +197,17 @@ enum AgentProvider: String, CaseIterable, Identifiable {
     /// search needs a different API (the Responses API, not the chat
     /// endpoint this app calls) and isn't wired up yet; Bankr already
     /// grounds on live markets its own way and doesn't need a second path.
-    /// OpenRouter's search rides a separate paid `:online` model suffix this
-    /// app doesn't append to the pinned `openrouter/auto` — claiming it here
-    /// without appending the suffix would be the over-claim the honesty rule
-    /// forbids.
+    /// OpenRouter's search is an OPT-IN since 2026-08-23 (prd §459): this
+    /// entry's own comment used to name the gap — a paid search plugin "this
+    /// app doesn't append" — and it is now appended, but only when somebody has
+    /// asked for it, because it bills per result on top of the model's tokens.
+    /// So the flag is a reading of a real setting rather than a constant, and
+    /// the over-claim the old comment warned about is still impossible: with
+    /// the toggle off nothing is declared and nothing is claimed.
     var searchesWeb: Bool {
         switch self {
         case .anthropic, .google, .venice: true
+        case .openrouter: AgentOpenRouter.webSearch
         // Grok: no search tool is wired to the plain chat request AT ALL yet
         // (see the file-level doc comment on `AgentProvider` — the intended
         // X-search verb is unbuilt pending a confirmed live wire shape). Even
@@ -204,7 +216,7 @@ enum AgentProvider: String, CaseIterable, Identifiable {
         // about this?" verb — never silently appended to an ordinary keyed
         // answer the way Claude/Gemini/Venice's tool declarations are, since
         // it's billed per source and shouldn't fire on every routine answer.
-        case .openai, .bankr, .openrouter, .grok: false
+        case .openai, .bankr, .grok: false
         }
     }
 
@@ -255,7 +267,12 @@ enum AgentProvider: String, CaseIterable, Identifiable {
         case .bankr:
             nil
         case .openrouter:
-            "Auto-picks whichever model fits your question and remembers this chat's answers so far — screenshots and web search stay off since the model it lands on can vary."
+            // Rewritten 2026-08-23 (prd §459). The old sentence's whole second
+            // half described refusals that were only true of `openrouter/auto`
+            // — and pinning a model now lifts them — so it says what is true of
+            // BOTH shapes rather than naming a limitation that stops applying
+            // the moment somebody uses the picker one row up.
+            "Routes to whichever model fits, or one you pick — and only ever to a provider that agrees not to keep your question. Remembers this chat's answers so far."
         case .grok:
             "Remembers this chat's answers so far — screenshots and web search stay off for now."
         }
@@ -322,7 +339,16 @@ enum AgentKey {
         AgentSpend.shared.forget(provider)
         // The model choice goes too: it was picked from that key's own list,
         // and a different key on the same provider may not be entitled to it.
-        AgentModelStore.set(nil, for: provider)
+        //
+        // EVERY task's choice, not just the ask's (fixed 2026-08-23). This
+        // cleared the ask alone, and `AgentModelStore.chosen` falls back from
+        // the librarian to the ask — so a librarian pin outlived the key that
+        // chose it AND kept being sent, while the row above it reported the
+        // default. And the facts remembered about those models go with them:
+        // stale facts are what would let a text-only model be handed a
+        // screenshot, which is the one direction this must never fail in.
+        AgentTask.allCases.forEach { AgentModelStore.set(nil, for: provider, task: $0) }
+        AgentModelFacts.forgetAll(provider)
         // The credit reading goes with it (2026-08-09) — a different
         // OpenRouter key may carry a different limit entirely, and the old
         // bucket must not suppress a real crossing on the new one.
@@ -416,6 +442,20 @@ enum AgentAnswerFailure: Error, Sendable {
     case providerError(Int)
     /// A clean 200 that carried no words.
     case empty
+    /// OpenRouter could not route the request at all (2026-08-23, prd §459) —
+    /// a 404 raised while private routing is on.
+    ///
+    /// **It names BOTH of its causes and asserts neither, because from a status
+    /// code they are indistinguishable**: the pinned model may have been
+    /// retired (`AgentModels`' whole reason for existing), or no backend that
+    /// serves it will agree to the no-retention rule. Picking one to print
+    /// would be a guess stated as a fact on the one screen where somebody is
+    /// deciding whether the app is broken.
+    ///
+    /// What it must never become is a silent retry with the promise dropped:
+    /// the answer would arrive, look identical, and have been routed to exactly
+    /// the backends the setting exists to avoid.
+    case privacyUnroutable
 
     /// One plain sentence for the composer — what happened, and only where
     /// it's true, what to do about it.
@@ -435,6 +475,8 @@ enum AgentAnswerFailure: Error, Sendable {
             String(localized: "Your agent had trouble answering (error \(status)) — try again.")
         case .empty:
             String(localized: "Your agent came back with nothing. Try asking it another way.")
+        case .privacyUnroutable:
+            String(localized: "OpenRouter couldn't route that. Either the model has been retired, or nobody serving it will agree not to keep your question — pick another model, or turn off private routing in Settings.")
         }
     }
 }
@@ -716,7 +758,11 @@ enum AgentAnswer {
             ? OnDeviceModel.synthesisPrompt(query: query, candidates: candidates)
             : query
 
-        let images: [(index: Int, data: Data)] = provider.seesImages
+        // The provider's own flag, raised by what the CHOSEN model's listing
+        // says (2026-08-23, prd §459). Only OpenRouter can raise it, only for a
+        // model somebody pinned, and only while the stored facts still describe
+        // that exact id — an unknown model sends no picture, exactly as before.
+        let images: [(index: Int, data: Data)] = AgentModelFacts.seesImages(provider)
             ? Array(candidates.enumerated().compactMap { i, c in c.imageData.map { (i, $0) } }.prefix(6))
             : []
 
@@ -768,8 +814,9 @@ enum AgentAnswer {
                 // recorded with no token counts, which is the honest shape:
                 // it happened, and nobody told us what it cost.
                 AgentSpend.shared.record(provider: provider, round: rounds)
-                NSLog("[Casberi] AgentAnswer(%@): %@", provider.rawValue, String(describing: failure))
-                return .failure(failure)
+                let worded = routingFailure(failure, provider: provider)
+                NSLog("[Casberi] AgentAnswer(%@): %@", provider.rawValue, String(describing: worded))
+                return .failure(worded)
             }
             AgentSpend.shared.record(provider: provider, round: rounds,
                                      input: streamed.inputTokens,
@@ -780,6 +827,12 @@ enum AgentAnswer {
             if streamed.searchedWeb { searchedWeb = true }
             pagesRead += streamed.pagesRead
             if let model = streamed.model { answeredModel = model }
+            // What THIS round really cost, asked of OpenRouter after the fact
+            // and off the answer's critical path entirely. Every round is
+            // billed separately, so every round is asked about separately —
+            // summing them is what makes the receipt say what Casberi spent
+            // rather than what the key has spent.
+            billGeneration(provider: provider, key: key, id: streamed.generationID)
             finalText = streamed.text
 
             let calls = streamed.toolCalls
@@ -857,11 +910,67 @@ enum AgentAnswer {
                                      output: outcome.outputTokens, model: outcome.model,
                                      cacheRead: outcome.cacheReadTokens,
                                      cacheWrite: outcome.cacheWriteTokens)
+            // The librarian bills too, and its costs are the ones somebody
+            // capped — so its generations are priced by the same read the ask
+            // path uses, or the ceiling would count only half of what it governs.
+            billGeneration(provider: provider, key: key, id: outcome.generationID)
             let text = outcome.text.trimmingCharacters(in: .whitespacesAndNewlines)
             return text.isEmpty ? .failure(.empty) : .success(text)
         case .failure(let failure):
             AgentSpend.shared.record(provider: provider)
-            return .failure(failure)
+            return .failure(routingFailure(failure, provider: provider))
+        }
+    }
+
+    /// A 404 raised while OpenRouter is routing privately is its own failure
+    /// (2026-08-23, prd §459), because "your agent had trouble answering (error
+    /// 404) — try again" sends somebody to retry a request that will fail
+    /// identically forever.
+    ///
+    /// Narrow on purpose: the same status from any other provider, or from
+    /// OpenRouter with the setting off, is a retired model id and nothing else,
+    /// and keeps the sentence it always had. It is never applied to a failure
+    /// that isn't a 404.
+    private static func routingFailure(_ failure: AgentAnswerFailure,
+                                       provider: AgentProvider) -> AgentAnswerFailure {
+        guard provider == .openrouter, AgentOpenRouter.privateRouting,
+              case .providerError(404) = failure else { return failure }
+        return .privacyUnroutable
+    }
+
+    /// Asks OpenRouter what one finished generation cost, and folds it into the
+    /// receipt (2026-08-23, prd §459).
+    ///
+    /// **Detached, and never awaited.** The answer is already on screen by the
+    /// time this runs; a receipt is worth nothing if getting it makes the thing
+    /// it describes slower, and the whole call is a read that may legitimately
+    /// come back empty. A failure of any kind leaves the ledger exactly as it
+    /// was — an unknown price is not a price of zero, which is the standing
+    /// rule `AgentSpend` opens with.
+    ///
+    /// The one delay is real and documented by OpenRouter: generation stats are
+    /// written after the stream closes, so asking immediately can 404 a
+    /// generation that certainly exists. One short wait, one retry, then it
+    /// gives up rather than holding a task open against a number nobody is
+    /// waiting for.
+    private static func billGeneration(provider: AgentProvider, key: String, id: String?) {
+        guard provider == .openrouter, let id, !id.isEmpty,
+              let url = AgentOpenRouter.generationURL(id: id) else { return }
+        Task.detached(priority: .background) {
+            for attempt in 0..<2 {
+                try? await Task.sleep(for: .milliseconds(attempt == 0 ? 700 : 2_500))
+                var request = URLRequest(url: url)
+                request.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization")
+                request.timeoutInterval = 15
+                NetworkLedger.shared.record(request)
+                guard let (data, response) = try? await URLSession.shared.data(for: request),
+                      (response as? HTTPURLResponse)?.statusCode == 200,
+                      let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                      let cost = AgentOpenRouter.generationCost(json: json)
+                else { continue }
+                AgentSpend.shared.recordAppCost(provider: provider, usd: cost)
+                return
+            }
         }
     }
 
@@ -953,19 +1062,63 @@ enum AgentAnswer {
                 request.setValue("https://casberi.app", forHTTPHeaderField: "HTTP-Referer")
                 request.setValue("Casberi", forHTTPHeaderField: "X-Title")
             }
-            var messages: [[String: Any]] = [["role": "system", "content": system]]
+            let chosenModel = provider.model(for: task)
+            // OpenRouter passes an Anthropic-backed model its `cache_control`
+            // breakpoints through unchanged, so a pinned `anthropic/…` here
+            // stops re-paying for the same candidates on every tool round —
+            // §415's saving, reached through the router (2026-08-23, prd §459).
+            // Scoped to that one family by `honoursCacheControl`: the breakpoint
+            // needs content-as-PARTS rather than a plain string, and quietly
+            // restructuring every OpenAI-shaped body to buy nothing on the four
+            // providers that ignore it is the 400 risk this branch's own
+            // `stream_options` comment refuses to take.
+            let orCaching = provider == .openrouter
+                && AgentOpenRouter.honoursCacheControl(chosenModel)
+            var messages: [[String: Any]] = [
+                orCaching
+                    ? ["role": "system", "content": openAICached([["type": "text", "text": system]])]
+                    : ["role": "system", "content": system]
+            ]
             for turn in history {
                 messages.append(["role": "user", "content": turn.question])
                 messages.append(["role": "assistant", "content": turn.answer])
             }
-            messages.append(["role": "user", "content": openAIUserContent(userText, images: images)])
+            var content: Any = openAIUserContent(userText, images: images)
+            if orCaching {
+                // A bare string has no part to mark, so it is promoted to the
+                // one-part array shape both APIs already accept for this turn.
+                let parts = (content as? [[String: Any]]) ?? [["type": "text", "text": userText]]
+                content = openAICached(parts)
+            }
+            messages.append(["role": "user", "content": content])
             messages += openAISteps(steps)
             var body: [String: Any] = [
-                "model": provider.model(for: task),
+                "model": chosenModel,
                 "max_tokens": 1024,
                 "stream": true,
                 "messages": messages,
             ]
+            if provider == .openrouter {
+                // Only route to backends that will not retain or train on the
+                // prompt. On by default — the strongest privacy statement this
+                // catalog can make, because it is enforced by somebody else's
+                // routing table rather than by our own conduct.
+                if let preferences = AgentOpenRouter
+                    .providerPreferences(privateRouting: AgentOpenRouter.privateRouting) {
+                    body["provider"] = preferences
+                }
+                // A retired pin 404s, and `AgentModels` exists because that is
+                // silent until somebody asks a question. Sent BESIDE `model`,
+                // never instead of it, so the chain works where OpenRouter
+                // reads it and nothing changes where it doesn't. Honest only
+                // because the badge names whichever model actually answered.
+                if let chain = AgentOpenRouter.fallbackChain(chosenModel) {
+                    body["models"] = chain
+                }
+                if let plugins = AgentOpenRouter.webSearchPlugins(webSearch: AgentOpenRouter.webSearch) {
+                    body["plugins"] = plugins
+                }
+            }
             if declareTools { body["tools"] = AgentCorpusTools.openAIDeclarations() }
             // Usage on a STREAMED OpenAI-compatible response only arrives if
             // the request asks for it. Sent to the two providers that document
@@ -1223,6 +1376,17 @@ enum AgentAnswer {
         var cacheReadTokens: Int?
         var cacheWriteTokens: Int?
         var model: String?
+        /// The provider's own id for this generation (2026-08-23, prd §459) —
+        /// the handle OpenRouter's `/v1/generation` is keyed by, and the only
+        /// way to learn what THIS request cost rather than what the key has
+        /// spent in total.
+        ///
+        /// Captured generically off any chunk's `id` rather than in one
+        /// provider's parser: it costs nothing, it needs no new `StreamDelta`
+        /// case competing with the text the same chunk carries, and it is read
+        /// by exactly one caller. Anthropic's message id lands here too and is
+        /// never used.
+        var generationID: String?
         /// Slot number → the call being assembled, in arrival order.
         var toolBuffers: [(index: Int, id: String, name: String, arguments: String)] = []
 
@@ -1287,6 +1451,13 @@ enum AgentAnswer {
                       let data = payload.data(using: .utf8),
                       let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
                 else { continue }
+                // Read before `parse`, and only the FIRST one: an
+                // OpenAI-shaped stream repeats its id on every chunk, and a
+                // later round would otherwise overwrite the generation whose
+                // cost is being asked about.
+                if outcome.generationID == nil, let id = json["id"] as? String, !id.isEmpty {
+                    outcome.generationID = id
+                }
                 switch parse(json) {
                 case .text(let chunk):
                     outcome.text += chunk
@@ -1423,6 +1594,25 @@ enum AgentAnswer {
             return .searched
         }
         if let citations = json["citations"] as? [Any], !citations.isEmpty { return .searched }
+        // OpenRouter's web plugin reports itself as `url_citation` annotations
+        // on the delta rather than a top-level `citations` array (2026-08-23,
+        // prd §459). Read here so the badge stays OBSERVED: with the plugin
+        // declared but nothing found, no annotation arrives and the answer
+        // never claims to have searched.
+        //
+        // Claimed only on a chunk carrying no prose of its own. One delta may
+        // hold both, and this function answers with exactly one thing — so a
+        // chunk with words is read as words, always. Losing a slice of the
+        // answer to light a badge would be the worse trade in both directions,
+        // and under-claiming a capability is the safe error this file already
+        // takes everywhere else.
+        if let choices = json["choices"] as? [[String: Any]],
+           let delta = choices.first?["delta"] as? [String: Any],
+           (delta["content"] as? String ?? "").isEmpty,
+           let annotations = delta["annotations"] as? [[String: Any]],
+           annotations.contains(where: { $0["type"] as? String == "url_citation" }) {
+            return .searched
+        }
         // The usage chunk arrives last and carries an EMPTY `choices` array,
         // so it is read before the guard below rejects it.
         if let usage = json["usage"] as? [String: Any] {
@@ -1616,16 +1806,18 @@ enum AgentAnswer {
     /// block, so marking the last block of a message caches everything the
     /// request has said so far.
     ///
-    /// **Anthropic only, and the three silences are each for a reason.**
-    /// ChatGPT caches automatically with no parameter at all, so there is
-    /// nothing to send. Gemini's implicit caching is likewise automatic on the
-    /// generations this app pins. OpenRouter WOULD need explicit breakpoints
-    /// for an Anthropic-backed model — but this app pins `openrouter/auto`,
-    /// whose whole point is that the model is chosen per request and unknown to
-    /// us, and an unrecognized body key on the answer path risks a 400 on the
-    /// question itself. That is `stream_options.include_usage`'s exact
-    /// reasoning, and it lands the same way: a missing saving is far cheaper
-    /// than a question that won't answer.
+    /// **Anthropic's own wire, and the two remaining silences are each for a
+    /// reason.** ChatGPT caches automatically with no parameter at all, so there
+    /// is nothing to send. Gemini's implicit caching is likewise automatic on
+    /// the generations this app pins.
+    ///
+    /// OpenRouter was the third silence and no longer is (2026-08-23, prd
+    /// §459). The reason recorded here was that this app pinned
+    /// `openrouter/auto`, whose whole point is that the model is unknown to us
+    /// — which is still exactly true of `auto` and stopped being true the day
+    /// somebody could pin `anthropic/claude-…` in the picker. So the router gets
+    /// breakpoints for that one family and only that one, through
+    /// `openAICached`; everything else there is unchanged, including `auto`.
     ///
     /// The default 5-minute life is right and 1h is not: the reads this exists
     /// for are the next rounds of the same loop, seconds apart, and a 1h write
@@ -1636,6 +1828,29 @@ enum AgentAnswer {
         guard var last = blocks.last else { return blocks }
         last["cache_control"] = ["type": "ephemeral"]
         return blocks.dropLast() + [last]
+    }
+
+    /// The OpenAI-shaped twin of `cached` (2026-08-23, prd §459) — the same
+    /// ephemeral breakpoint, expressed in the content-parts shape OpenRouter
+    /// forwards to an Anthropic-backed model.
+    ///
+    /// **It marks the last TEXT part, not the last part, and that is the whole
+    /// difference from `cached`.** Anthropic's own message blocks are all text
+    /// here; an OpenAI-shaped user turn ends in an `image_url` part whenever a
+    /// screenshot was attached, and a breakpoint on an image is not a shape
+    /// either API documents. Marking the text part before it caches everything
+    /// up to that point, which is the prompt and the candidates — the expensive,
+    /// byte-identical prefix this exists for.
+    ///
+    /// A message with no text part at all is returned untouched: nothing to
+    /// mark is not an error, it is a turn that will simply cost what it did
+    /// before.
+    private static func openAICached(_ parts: [[String: Any]]) -> [[String: Any]] {
+        guard let position = parts.lastIndex(where: { $0["type"] as? String == "text" })
+        else { return parts }
+        var marked = parts
+        marked[position]["cache_control"] = ["type": "ephemeral"]
+        return marked
     }
 
     /// A tool call's raw argument string as a dictionary, for the two wires

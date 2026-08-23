@@ -17,6 +17,15 @@ struct KeyedAnswer {
     /// evidence it was handed, which is the common case and not a failure —
     /// the badge only mentions this when it happened.
     var toolRounds = 0
+    /// Which model the provider says actually wrote this (2026-08-23, prd
+    /// §459), when it says.
+    ///
+    /// It exists because two things now make the answering model differ from
+    /// the one somebody chose, and both are only honest if the answer says so:
+    /// `openrouter/auto` never names its destination in advance, and a
+    /// fallback chain quietly recovers a retired pin by answering somewhere
+    /// else. The badge names it only when it differs — see `provenanceBadge`.
+    var model: String?
 }
 
 /// The composer — the hero (principle 4). Full width above the tab bar, glass.
@@ -136,6 +145,10 @@ struct Composer: View {
         /// How many extra billed rounds it spent searching your own things
         /// (2026-08-06). Carried onto the settled turn like the rest.
         var toolRounds = 0
+        /// Which model wrote it (2026-08-23) — carried like the rest, so
+        /// scrolling back to a turn still says who answered rather than
+        /// whichever model happens to be pinned now.
+        var model: String?
         /// This turn is a failure notice, not an answer — so it wears NO
         /// provenance badge. Without this a keyed failure fell through to
         /// the on-device badge and claimed "Answered on this iPhone" over a
@@ -174,6 +187,10 @@ struct Composer: View {
     /// rest of the receipt on every new answer — observed per answer, never
     /// carried over.
     @State private var keyedPagesRead = 0
+    /// Which model the provider says wrote the live answer (2026-08-23, prd
+    /// §459), when it says. Reset with its siblings, so a fresh ask can never
+    /// wear the previous answer's model.
+    @State private var keyedModel: String?
     /// How many times the CURRENT keyed answer went back to the corpus with a
     /// tool (2026-08-06). Observed from the loop, never assumed — a model that
     /// answered from the evidence it was handed reports 0 and the badge stays
@@ -1776,6 +1793,7 @@ struct Composer: View {
                                                             imagesSeen: turn.imagesSeen,
                                                             pagesRead: turn.pagesRead,
                                                             toolRounds: turn.toolRounds,
+                                                            model: turn.model,
                                                             found: turn.found)
                                         }
                                     }
@@ -1899,6 +1917,7 @@ struct Composer: View {
                                                             imagesSeen: keyedImagesSeen,
                                                             pagesRead: keyedPagesRead,
                                                             toolRounds: keyedToolRounds,
+                                                            model: keyedModel,
                                                             found: foundCurrent)
                                         }
                                         if !proseStreaming, !inFlight {
@@ -2847,6 +2866,7 @@ struct Composer: View {
         keyedSearchedWeb = false
         keyedImagesSeen = 0
         keyedPagesRead = 0
+        keyedModel = nil
         keyedToolRounds = 0
         answerFailed = false
         foundCurrent = false
@@ -2964,7 +2984,7 @@ struct Composer: View {
                 turns.append(ConvoTurn(question: currentQuestion, els: answerStream.els,
                                        keyed: keyedCurrent, searchedWeb: keyedSearchedWeb,
                                        imagesSeen: keyedImagesSeen, pagesRead: keyedPagesRead,
-                                       toolRounds: keyedToolRounds,
+                                       toolRounds: keyedToolRounds, model: keyedModel,
                                        failed: answerFailed,
                                        found: foundCurrent))
             }
@@ -2976,6 +2996,7 @@ struct Composer: View {
             keyedSearchedWeb = false
             keyedImagesSeen = 0
             keyedPagesRead = 0
+            keyedModel = nil
             keyedToolRounds = 0
             answerFailed = false
             foundCurrent = true
@@ -3032,11 +3053,30 @@ struct Composer: View {
     /// and `imagesSeen` are OBSERVED — the provider's own stream reported the
     /// tool running — so this states what happened rather than what was
     /// offered: an agent that could search but didn't never claims it did.
+    ///
+    /// `model` is the newest part and the one with the sharpest reason
+    /// (2026-08-23, prd §459). Two things now make the model that ANSWERED
+    /// differ from the one somebody chose, and both are only allowed to exist
+    /// because this line reports them: `openrouter/auto` picks per request and
+    /// names its choice nowhere else in the app, and a fallback chain recovers a
+    /// retired pin by quietly answering somewhere else. A chain without this
+    /// line would be exactly the fake status the rest of this badge exists to
+    /// prevent.
     private func provenanceBadge(keyed: Bool, searchedWeb: Bool = false,
                                  imagesSeen: Int = 0, pagesRead: Int = 0,
-                                 toolRounds: Int = 0,
+                                 toolRounds: Int = 0, model: String? = nil,
                                  found: Bool = false) -> some View {
         var parts: [String] = []
+        // Named only when it is NEWS — when what answered isn't what was asked
+        // for. On a direct key with a live pin the two agree and saying so
+        // every time would be noise on a line that has to stay scannable; the
+        // moment they disagree it is the most important thing here, because it
+        // means either the router chose, or the pin is dead and something else
+        // stepped in.
+        if keyed, let model, !model.isEmpty,
+           model != (AgentKey.active?.model ?? "") {
+            parts.append(String(localized: "via \(model)"))
+        }
         // Searching your own things leads, because it is the one part of this
         // list that describes work done on the corpus rather than away from
         // it — and it is the only visible sign that the agent went looking
@@ -3152,7 +3192,7 @@ struct Composer: View {
                 turns.append(ConvoTurn(question: currentQuestion, els: answerStream.els,
                                        keyed: keyedCurrent, searchedWeb: keyedSearchedWeb,
                                        imagesSeen: keyedImagesSeen, pagesRead: keyedPagesRead,
-                                       toolRounds: keyedToolRounds,
+                                       toolRounds: keyedToolRounds, model: keyedModel,
                                        failed: answerFailed,
                                        found: foundCurrent))
             }
@@ -3164,6 +3204,7 @@ struct Composer: View {
             keyedSearchedWeb = false   // observed per answer, never carried over
             keyedImagesSeen = 0
             keyedPagesRead = 0
+            keyedModel = nil
             keyedToolRounds = 0
             answerFailed = false
             foundCurrent = false       // a keyed retry is an answer, not a find
@@ -3202,6 +3243,7 @@ struct Composer: View {
                 keyedSearchedWeb = answer.searchedWeb
                 keyedImagesSeen = answer.imagesSeen
                 keyedPagesRead = answer.pagesRead
+                keyedModel = answer.model
                 keyedToolRounds = answer.toolRounds
                 // From here a typed follow-up stays on the agent that just
                 // answered — it has the context the on-device model doesn't.
@@ -4371,7 +4413,7 @@ struct Composer: View {
                 turns.append(ConvoTurn(question: currentQuestion, els: answerStream.els,
                                        keyed: keyedCurrent, searchedWeb: keyedSearchedWeb,
                                        imagesSeen: keyedImagesSeen, pagesRead: keyedPagesRead,
-                                       toolRounds: keyedToolRounds,
+                                       toolRounds: keyedToolRounds, model: keyedModel,
                                        failed: answerFailed,
                                        found: foundCurrent))
             }
@@ -4393,6 +4435,7 @@ struct Composer: View {
                 keyedSearchedWeb = false   // observed per answer
                 keyedImagesSeen = 0
                 keyedPagesRead = 0
+                keyedModel = nil
                 keyedToolRounds = 0
                 answerFailed = false
                 foundCurrent = false       // this is an ANSWER, not a find
@@ -4478,6 +4521,7 @@ struct Composer: View {
                         keyedSearchedWeb = keyed.searchedWeb
                         keyedImagesSeen = keyed.imagesSeen
                         keyedPagesRead = keyed.pagesRead
+                        keyedModel = keyed.model
                         keyedToolRounds = keyed.toolRounds
                         finalDoc = keyed.doc
                     case .failure:

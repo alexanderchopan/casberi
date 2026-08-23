@@ -79,6 +79,7 @@ at all.
 
 | Ruling | What it said | Changed by |
 |---|---|---|
+| §57 | Telegram REMOVED from the catalog — all three doors in fail, so the seat is cut entirely | reversed by §456 (a public channel is not a chat, and the export door was rejected on a premise this app's own nine import bridges overturned) |
 | §362 | The face rail always captions its faces — it compresses rather than dropping them, on both rails alike | caption half reversed for the WALLET rail by §450 |
 | §182 | The watch cap is a SHELF of faces with dashed rings for the free slots | superseded by §448 |
 | §441 | Starring an address flies its face from the book row to the shelf slot | amended by §448 |
@@ -30838,3 +30839,278 @@ the Listen voice has never spoken — `AVSpeechSynthesizer` is not Foundation an
 no harness here has an audio device. Both fail safe (a fetch that misses leaves
 the preview card that was already there; a voice that never starts leaves a
 button that does nothing visible and stops on disappear regardless).
+
+## 456. Telegram returns, through the two doors §57 never weighed (user: "what can we do with telegram", then "lets do 1 and 2", 2026-08-23)
+
+§57's 2026-07-14 amendment REMOVED Telegram from the catalog, and it closed with
+the standing invitation this entry takes up: "if Telegram ever returns it
+re-enters this decision from scratch." It does, and two of the facts under that
+ruling have changed while two have not.
+
+**Unchanged, and still refused.** The Bot API is capture-only — a bot sees what
+is explicitly forwarded to it and can never speak as the person — so it cannot
+be a sync. TDLib reads real chats on-device and is still a client-grade
+dependency behind a platform wall; that remains its own future decision.
+
+**What §57 never weighed: a public CHANNEL is not a chat.** It is broadcast
+media with a public web page, so following one is the §312 feed-follow shape
+(Substack/Reddit/YouTube/Podcasts) and not the MTProto problem at all. No
+account, no key, no server, nothing to mint. `t.me/s/<channel>` is keyless,
+UA-insensitive (measured: even bare curl gets the full page) and served no rate
+limit across a burst.
+
+**And the export door was rejected on a premise that has since been overturned
+by this app's own history.** §57 declined it because "the user doesn't believe
+anyone wants to import their chats" — since then nine import bridges shipped,
+Snapchat's saved chats land as `.chat` rows, and §310 put DMs behind a
+deliberate `ImportOptions.includeMessages` toggle that is OFF by default. The
+strongest case is not chats at all: **Saved Messages** is a personal pile of
+links and notes somebody sends themselves, which is the most Casberi-shaped
+object Telegram has.
+
+### 1. One seat, one source, and the rule that made it possible
+
+The two halves want OPPOSITE things from the All feed. A followed channel's
+posts are a drip of a few a day and belong in All exactly as Substack's do; an
+export can land tens of thousands of rows dated across years and must not.
+`Corpus.bulkImportSources` is per-SOURCE, so the seat had to be wrong about one
+of them — either a followed channel becomes a strictly worse Substack whose
+posts only appear if you go looking for them, or one import buries every real
+capture the day it ran.
+
+**The ruling (user, on being shown the fork): split by REF PREFIX.** Telegram
+joins `bulkImportSources`, and `Corpus.liveRefPrefixes` + `Corpus.arrivedLive`
+let a row whose ref says it arrived live (`telegram:post:`) into All while the
+imported half (`telegram:chat:`, `telegram:saved:`, `telegram:channel:`) stays
+out. **The distinction is already written on every row**, so it needs no new
+stored property and no CloudKit deploy, and it cannot drift the way a flag
+stamped at landing time could. The other four bulk sources declare no live
+prefix and are byte-for-byte unaffected.
+
+Its corollary is the part that would have been missed: `ImportRemoval` is scoped
+by source, so "remove this import" would have deleted the channels you follow.
+Both its count and its walk now step over the live half — and the walk uses an
+OFFSET rather than a filter, because filtering alone breaks the loop the moment
+one page happens to be all live rows, silently leaving every imported row beyond
+it in place.
+
+### 2. The parse is scrape-grade, so it was measured before it was written
+
+There is no contract behind a web page. Eight real channels were parsed before a
+line of Swift existed, and a throwaway reference parser earned its keep
+immediately — it reported **19 of 20 posts** and a chrome string as somebody's
+words. Seven rules, each a silent wrong answer that renders perfectly:
+
+1. **`/s/<name>` answering 200 IS the definition of a followable channel.** A
+   302 means it is not one, and the LANDING page says which: "subscribers" is a
+   channel with its preview off, "members" is a group, neither is an unclaimed
+   name. Three separate answers that would otherwise be one empty room.
+2. **Posts arrive OLDEST FIRST.** The newest is the LAST element. The ingest
+   takes `prefix(15)` because every feed format on earth is newest-first, so
+   mapping in document order hands it the fifteen oldest posts on the page and
+   the room fills with everything except today.
+3. **Slice BETWEEN wrapper starts.** A lookahead that needs a following wrapper
+   drops the final message — which, given (2), is the newest one.
+4. **The text container CAN nest a `<div>`** (1 post in 19 on one channel), so
+   its end is found by depth. A naive scan truncates exactly those posts.
+5. **`telegram.org/img/emoji/…` is a decoy.** Every emoji is an `<i>` whose
+   `background-image` is a sprite, so the naive photo read files every emoji as
+   a photograph. Only `telesco.pe` counts, matched on the label boundary.
+6. **"Please open Telegram to view this post" is CHROME, not words.**
+7. **The view count is REFUSED.** The page publishes it already rounded
+   ("12.6M") and the only field that could hold it is an `Int`, so landing it
+   would turn a rounded string into a number nobody measured — §83 in the one
+   place a figure looks most like a fact. YouTube's `media:statistics` is exact
+   and IS landed; this is not, and is not.
+
+Two more were found only by running the parser against real pages: a
+`<time class="message_video_duration">` with no `datetime` sits BEFORE the real
+timestamp (it left 15 of 20 posts undated, and an undated post falls back to
+"now", filing a four-month-old broadcast as today's news), and
+`forwarded_from_name` is an `<a>` on a public source and a `<span>` on a private
+one — so the enclosing tag is INFERRED from the markup rather than passed in,
+which removes the whole class of bug.
+
+### 3. The export is frequently INVALID JSON, and nothing else would have said so
+
+Telegram's own generator escapes control bytes as `\xNN`, which RFC 8259 does
+not permit — so `JSONSerialization` fails on the whole file with no partial
+result. `TelegramExport.repairControlEscapes` is a pre-pass, not a nicety: it is
+the single most likely reason a real archive fails to import, and it is
+invisible until somebody's export happens to contain a control byte. Also
+encoded: `text` is polymorphic (a bare String or an array mixing strings and
+entity objects) while `text_entities` is monomorphic and preferred; `date` is
+local time with NO offset in a zone the file never records, so `date_unixtime`
+(a quoted STRING) is authoritative; both of those are ABSENT in pre-2021
+exports; `type` has a third value, `unsupported`, carrying no date and no text;
+a single-chat export is a BARE chat object with media paths lacking the
+`chats/chat_NN/` prefix; media placeholders can be name-PREFIXED so they are
+matched as substrings; and message ids are unique per CHAT, not globally.
+
+### 4. What it costs, and what is still unproven
+
+No new `Thing` field, so **no CloudKit deploy**. The room gets its own
+`FeedScreen.Shape` — the mixed room's fourth instance and the widest, since it
+holds a channel's wordless pictures as a grid, its captioned posts as post
+cards, your Saved Messages as reading rows and whole conversations as excerpts.
+Its own case rather than `.social`, which would hand it the Farcaster/Bluesky
+roster head (the objection that kept X out), and rather than `.chat`, because a
+room of broadcast posts drawn as chat bubbles is §313 wearing the other coat.
+
+**The live half is MEASURED against eight real channels; the import half is
+UNMEASURED against a real export** — none has ever been held by this project —
+so its schema is derived from Telegram Desktop's own generator plus real
+third-party fixtures, and every read fails safe. `scripts/telegram-selftest.sh`
+compiles the channel parser WHOLE and the nightly asserts the six markers it
+rests on, because when a scrape's markup moves the room does not break, it goes
+QUIET, which from outside is indistinguishable from a channel that stopped
+posting.
+
+## 457. The agent rooms get a head, Claude Code gets measured, and three registries that answered nil (user: "what more can we do with claude and chatgpt", then "ok do all", 2026-08-23)
+
+*(Entry in progress — being written in the session that claimed this number.
+§455 and §456 were taken by concurrent sessions the same day, which is the
+collision class `prd-index-audit` exists for; this heading was appended first,
+before a line of the work, precisely so the number could not be taken twice.)*
+
+## 458. WhatsApp is passed on, and the reasons are of two grades (user: "if we are adding telegram we may as well add what's app wdyt?", then "if the export is per chat then that is not going to work, unless it i export chats to yourself", then "seems like we should pass on it for now and that even the self chats are unclear?", 2026-08-23)
+
+Asked the same afternoon §456 landed, and it looks like it follows from it and does
+not. §456 turned on the door §57 never weighed — a public CHANNEL is broadcast media
+with a public web page, so following one is the §312 feed-follow shape and never the
+MTProto problem. **WhatsApp has no such door as far as anyone here has checked**, so
+what is on offer is the import half alone, one grade rougher than Telegram's.
+
+**The export is per-CHAT, not per-account**, shared out of one conversation via the
+share sheet, so there is no archive to import and no way to ask for "your WhatsApp"
+at all. Narrowing to the **Message yourself** chat is the only coherent version, and
+it genuinely fixes three things: no "which of your 400 chats" pick loop (one export,
+one hand-off, which is what the ShareExtension already exists for), §245's DM
+abstention does not apply because every message in that chat is the person's own, and
+one sender makes the parse far simpler — no attribution, no group-join markers, no
+"which side is me".
+
+**It fails on its own name.** Somebody seeing WhatsApp in the catalog expects their
+chats; the door delivers one scratchpad, behind a multi-step errand (open that chat,
+export, share to Casberi). That is §83 wearing a catalog tile rather than a control —
+a seat that promises more than it can hand over. And the value of the seat was only
+ever the BACKFILL: the ShareExtension already covers self-sent links going forward, so
+a thin self-chat leaves the tile buying nothing.
+
+**The Telegram parallel was overstated in the asking, and correcting it is what
+decided this.** Saved Messages is a feature Telegram power users genuinely live in;
+"Message yourself" shipped late and is, as far as anyone here believes, a scratchpad
+for most people. That belief is the load-bearing reason and **it is unmeasured**.
+
+**Stacked underneath, and these are structural rather than believed:** no live half at
+all; **no message ids anywhere in the export**, so `sourceRef` has to be a hash of
+(timestamp, sender, text) and two identical links sent inside one minute collide — the
+second silently dropped as "already here", which is the §307/§309 class in the one
+place it cannot be counted; minute-granularity timestamps in the device's own locale
+format with no timezone, differing between iOS and Android; **no schema at all**,
+which is a worse position than §456's export (whose control-byte escapes are invalid
+JSON but at least fail loudly against a schema that exists); and an export message cap
+this project cannot confirm one way or the other.
+
+**The two grades matter, because §57 is the precedent for getting this wrong.** That
+entry declined the export door on a belief ("the user doesn't believe anyone wants to
+import their chats") recorded as though it were a fact, and nine import bridges later
+§456 had to take it apart. So this entry marks its own kinds: per-chat export, absent
+ids and absent schema are FACTS and would survive any re-measurement; "self-chats are
+thin" is a BELIEF and is the first thing to re-check.
+
+**What reopens it**, deliberately narrow so a future session does not re-derive it:
+(1) a curl pass showing a WhatsApp Channel page serving message content keylessly, the
+exact §456 door, never run here; (2) any measurement showing Message-yourself chats
+are not thin; (3) a real iOS export and a real Android export held side by side, since
+the timestamp line is where a `.txt` with no schema will hurt. Absent those, the seat
+stays unbuilt and — unlike §57's Soon card — is never listed, so nothing on any
+surface promises a sync that does not exist.
+
+## 459. What more can we do with OpenRouter (user: "what more can we do with openrouter", then "ok do all", 2026-08-23)
+
+Every other agent seat here is one company answering with its own models — no second
+backend to prefer, no plugin to enable. OpenRouter is a router, so the headroom was in
+the four things only a router can be asked for, all built the same session.
+
+**Private routing, and it is ON by default.** `provider.data_collection = "deny"`
+routes only to backends that agree not to retain or train on the prompt — this app's
+own pitch, expressed as a wire constraint rather than a paragraph on a settings
+screen. It is enforced by somebody else's routing table rather than by our conduct,
+which makes it the strongest privacy statement in the BYOK catalog. It has a real
+cost, stated rather than hidden: a model with no compliant backend answers **404**,
+worded as its own `AgentAnswerFailure` case (`.privacyUnroutable`) naming both causes
+— a retired model id, or nobody willing to serve it that way — because from the status
+code alone the two are indistinguishable and asserting either would be a guess printed
+as fact. It must never silently retry with the promise dropped; a routing guard in
+`agent-keyed-selftest.sh` fails the build if a call site ever forces the setting off.
+
+**Web search is OFF by default, and the asymmetry with private routing is
+deliberate.** Private routing only narrows what happens to a question already being
+sent; search sends the question somewhere new and bills per result on top of the
+model's own tokens — a surprise a spending screen cannot undo. `AgentProvider
+.searchesWeb` for OpenRouter used to be a hardcoded `false` with a comment naming the
+gap ("this app doesn't append" the paid `:online` suffix); it now reads the setting,
+so the badge can never over-claim with the toggle off and the plugin form (`plugins:
+[{id: "web", max_results: 3}]`) was chosen over the suffix because the suffix does not
+compose — every free model is already suffixed (`…:free`), and free-tier is exactly
+where somebody is likely to want search.
+
+**Fallback recovers a retired pin, and is only honest because the badge names who
+answered.** `AgentModels` exists because a dead pin 404s silently; OpenRouter can
+recover inline by trying `openrouter/auto` next (`models: [pin, "openrouter/auto"]`,
+sent beside `model` rather than instead of it, so nothing breaks wherever either
+spelling is read). A chain that answers on a different model than the one somebody
+picked is fake status unless the answer says so — so the provenance badge now names
+the model whenever it differs from the choice ("via …"), for both the router's own
+auto-pick and a silent fallback. Fixed IN THE SAME PASS, found while wiring this: the
+composer's `keyedAnswerDocument` never passed `pagesRead` into its `KeyedAnswer`
+constructor, so "read N saved pages" — wired end-to-end since §415 — could never
+appear on any real answer, only in `-byokProbe`'s log line, which reads
+`AgentAnswerResult` directly and was the only reason the gap went unnoticed this long.
+
+**A generation's exact price, read rather than computed.** `AgentSpend`'s standing
+refusal to invent a price stands; the one exception was always OpenRouter's
+`/v1/auth/key`, which states a KEY's lifetime usage — useless for separating what
+Casberi asked from everything else the same key does, the complaint that file opens
+with. `/v1/generation?id=` states what ONE finished generation cost, keyed off the id
+already riding the stream. Asked detached and unawaited after the answer is already on
+screen, retried once for OpenRouter's own documented write delay, and folded into a
+NEW `AgentSpend.Entry.appCostUSD`/`appCostRequests` pair — accumulated, unlike the
+lifetime figure, and paired with a coverage count so a total priced for 3 of 40
+requests reads as a mostly-unanswered question rather than a cheap month.
+
+**Model-aware capabilities, gated on staleness by construction.** `seesImages` was
+false for OpenRouter because the auto router might land anywhere; `AgentModelFacts`
+(new file, `AgentOpenRouter.swift`) lets a PINNED model raise it when that model's own
+`/models` listing states `input_modalities` includes `image` — parsed once, at the
+moment somebody picks it in the menu (the only moment the listing and the choice are
+both in hand; re-reading later would be a settings screen firing requests for being
+looked at). The stored fact is trusted only while it still names the CURRENT model —
+`AgentModelFacts.matching` — so a re-pick, a launch-arg override, or a provider rename
+all read as "unknown" rather than leftover capability, and unknown always falls back
+to the conservative pre-existing behaviour. Same mechanism exempts a FREE-priced
+librarian pin from the monthly ceiling (`AgentBudget.pausesLibrarian`): a cap governs
+spend, and pausing a model that costs nothing saves no money, so it is the same class
+of wrong as a control that does nothing. Clearing a key now forgets every task's model
+choice and its facts (`AgentTask.allCases.forEach`), not only the ask's — a real bug
+found while building this: a librarian pin could silently outlive the key that chose
+it, since `AgentModelStore.chosen` falls back from librarian to ask.
+
+**Prompt caching reaches the router, narrowly.** OpenRouter passes `cache_control`
+breakpoints through unchanged to an Anthropic-backed model, so a pin of
+`anthropic/claude-…` here now gets §415's saving on repeated tool rounds — the third
+silence that comment used to name, closed the same way the first two weren't (auto is
+still excluded on purpose; nobody knows where it lands until the request is sent).
+
+Costs nothing new to ship: no new `Thing` field, no new host (`/v1/generation` shares
+`openrouter.ai`, already in `NetworkReach`), no CloudKit deploy. Guarded by
+`scripts/agent-keyed-selftest.sh`, extended with `AgentOpenRouter.swift` compiled
+WHOLE against a minimal `AgentProvider`/`AgentTask` stub (the real ones live in files
+this harness has no reason to pull in whole) — 20 new assertions, 4 new mutations, all
+caught, including the money mutation: a negative `total_cost` accepted and summed,
+which is what would let a malformed response quietly subtract from what somebody sees
+they've spent. **UNMEASURED against a live key** — no OpenRouter key is stored on this
+build host and there is no egress to `openrouter.ai` from it; every path fails safe
+(an ignored body key changes nothing, a refused route is a worded failure, an unknown
+fact reads as the conservative answer).

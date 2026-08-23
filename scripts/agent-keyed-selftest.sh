@@ -7,6 +7,10 @@
 #       unmodified; the file is Foundation-only by design)
 #   Casberi/Casberi/Model/AgentBudget.swift     — the month arithmetic behind
 #       the ceiling that pauses the librarian (extracted by name)
+#   Casberi/Casberi/Model/AgentOpenRouter.swift — routing/fallback/caching
+#       policy and model-facts staleness (2026-08-23, compiled WHOLE and
+#       unmodified against a minimal AgentProvider/AgentTask stub, since the
+#       real ones live in files this harness has no reason to pull in whole)
 #
 # WHY A HARNESS. No key for any provider is stored on this build host, and
 # there is no egress to api.anthropic.com from it, so `-byokProbe` cannot run
@@ -24,6 +28,12 @@
 #   • a month that never re-baselines makes a lifetime total read as this
 #     month's spend, so a ceiling fires immediately and organizing stops
 #     forever, with the settings row confidently reporting the wrong number.
+#   • a fallback chain applied to `openrouter/auto` doubles it in the body; a
+#     cache breakpoint sent to a non-Anthropic model is dead weight nobody
+#     would notice; and STALE MODEL FACTS are the sharpest of the three — a
+#     screenshot silently reaches a text-only model, or a paid model silently
+#     stops being paused by the ceiling, because a fact still says what an
+#     OLD pin could do and nothing checked whether the pin changed.
 #
 # Pure, local, deterministic — no network, no key, no simulator. Exit non-zero
 # on failure.
@@ -37,7 +47,8 @@ TOOLS="Casberi/Casberi/Model/AgentCorpusTools.swift"
 LIBRARIAN="Casberi/Casberi/Model/AgentLibrarian.swift"
 MODELS="Casberi/Casberi/Model/AgentModels.swift"
 SPEND="Casberi/Casberi/Model/AgentSpend.swift"
-for f in "$FETCH" "$BUDGET" "$ANSWER" "$TOOLS" "$LIBRARIAN" "$MODELS" "$SPEND"; do
+ROUTER="Casberi/Casberi/Model/AgentOpenRouter.swift"
+for f in "$FETCH" "$BUDGET" "$ANSWER" "$TOOLS" "$LIBRARIAN" "$MODELS" "$SPEND" "$ROUTER"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 
@@ -75,6 +86,7 @@ PY
 strip_comments "$ANSWER"    > "$TMP/answer.nc.swift"
 strip_comments "$TOOLS"     > "$TMP/tools.nc.swift"
 strip_comments "$LIBRARIAN" > "$TMP/librarian.nc.swift"
+strip_comments "$BUDGET"    > "$TMP/budget.nc.swift"
 
 # 1. Prompt caching actually reaches the wire, on the one message that matters.
 grep -q 'cache_control' "$TMP/answer.nc.swift" \
@@ -137,6 +149,61 @@ grep -q 'AgentBudget' "$TMP/answer.nc.swift" \
 # pin, or a model somebody deliberately picked is silently replaced.
 grep -q 'return task == .ask ? nil : chosen(provider, task: .ask)' "$MODELS" \
   || { echo "✗ the librarian model no longer falls back to the ask model"; exit 1; }
+
+# 5. OpenRouter's own routing/fallback/caching, and the facts staleness rule
+# (2026-08-23, prd §459).
+# Whitespace-collapsed so a call wrapped onto a second line (Swift's usual
+# `.method` continuation style) still matches a one-line pattern.
+ANSWER_FLAT=$(tr '\n' ' ' < "$TMP/answer.nc.swift" | tr -s ' ')
+echo "$ANSWER_FLAT" | grep -q 'AgentOpenRouter .providerPreferences(privateRouting: AgentOpenRouter.privateRouting)' \
+  || { echo "✗ private routing is no longer read from the setting at request time"; exit 1; }
+grep -q 'body\["provider"\] = preferences' "$TMP/answer.nc.swift" \
+  || { echo "✗ the provider preferences no longer reach the OpenRouter body"; exit 1; }
+grep -q 'AgentOpenRouter.fallbackChain(chosenModel)' "$TMP/answer.nc.swift" \
+  || { echo "✗ a retired pin no longer gets a fallback chain — it 404s with no recovery"; exit 1; }
+grep -q 'body\["models"\] = chain' "$TMP/answer.nc.swift" \
+  || { echo "✗ the fallback chain is computed but never reaches the body"; exit 1; }
+# A silent retry with the promise dropped is worse than the 404 it replaces —
+# the router must never fall back to a public route on a 404 while privacy is
+# on. The chain above recovers a DEAD MODEL by trying auto next, which still
+# only routes privately; nothing here may retry with `provider` omitted.
+grep -qE 'privateRouting = false|providerPreferences\(privateRouting: false\)' \
+     "$TMP/answer.nc.swift" \
+  && { echo "✗ a call site is forcing privateRouting off — a silent public retry"; exit 1; }
+grep -q 'case .privacyUnroutable' "$ANSWER" \
+  || { echo "✗ AgentAnswerFailure lost its named case for an unroutable private request"; exit 1; }
+grep -q 'routingFailure(failure, provider: provider)' "$TMP/answer.nc.swift" \
+  || { echo "✗ a failed round no longer runs through the privacy-404 reclassifier"; exit 1; }
+# Every ask must still ask for its own generation's price — dropping this
+# silently turns AgentSpend.appCostUSD back into a field nothing ever fills.
+grep -q 'billGeneration(provider: provider, key: key, id: streamed.generationID)' \
+     "$TMP/answer.nc.swift" \
+  || { echo "✗ the ask path no longer prices its own generations"; exit 1; }
+grep -q 'billGeneration(provider: provider, key: key, id: outcome.generationID)' \
+     "$TMP/answer.nc.swift" \
+  || { echo "✗ the librarian's complete() path no longer prices its own generations —"; \
+       echo "  the monthly ceiling would only ever see half of what it governs."; exit 1; }
+# The image decision must run through the resolver, not the provider's bare
+# flag — that flag is the FLOOR `AgentModelFacts.seesImages` starts from, and
+# reading it directly here would mean a pinned vision model on OpenRouter can
+# never send a screenshot, silently, forever.
+grep -q 'AgentModelFacts.seesImages(provider)' "$TMP/answer.nc.swift" \
+  || { echo "✗ the image decision no longer runs through the resolver — a pinned"; \
+       echo "  vision model on OpenRouter can never send a screenshot again."; exit 1; }
+# The budget's free-model exemption must consult FACTS, never the provider
+# alone — the whole point is that OpenRouter itself is not free, one model on
+# it can be.
+grep -q 'AgentModelFacts.isFree(provider, task: .librarian)' "$TMP/budget.nc.swift" \
+  || { echo "✗ AgentBudget.pausesLibrarian no longer checks whether the librarian's"; \
+       echo "  own model is free — a free-tier pin would be paused for no saving."; exit 1; }
+# Clearing a key must forget EVERY task's model choice and its facts, not just
+# the ask's — a librarian pin (and what was known about it) outliving the key
+# that chose it is the exact bug this line fixed.
+grep -q 'AgentTask.allCases.forEach { AgentModelStore.set(nil, for: provider, task: \$0) }' \
+     "$ANSWER" \
+  || { echo "✗ clear(_:) no longer clears every task's model choice"; exit 1; }
+grep -q 'AgentModelFacts.forgetAll(provider)' "$ANSWER" \
+  || { echo "✗ clear(_:) no longer forgets the model facts it remembered"; exit 1; }
 
 # --- extract the shipped budget arithmetic ---------------------------------
 python3 - "$BUDGET" "$TMP/extracted.swift" <<'PY'
@@ -350,6 +417,64 @@ check("no cap never pauses",           AgentBudget.exhausted(spent: 900, cap: ni
 check("a zero cap is treated as no cap, not as stop-everything",
       AgentBudget.exhausted(spent: 0.01, cap: 0) == false)
 
+// ===========================================================================
+print("AgentOpenRouter — routing, fallback, caching (2026-08-23, prd §459)")
+check("private routing asks OpenRouter to deny data collection",
+      (AgentOpenRouter.providerPreferences(privateRouting: true)?["data_collection"] as? String) == "deny")
+check("private routing off sends nothing at all — no half-hearted preference",
+      AgentOpenRouter.providerPreferences(privateRouting: false) == nil)
+check("web search off declares no plugin",
+      AgentOpenRouter.webSearchPlugins(webSearch: false) == nil)
+check("web search on declares the web plugin with the stated bound",
+      (AgentOpenRouter.webSearchPlugins(webSearch: true)?.first?["max_results"] as? Int)
+        == AgentOpenRouter.webSearchResults)
+
+print("…fallback recovers a dead pin, and never doubles auto")
+check("a pinned model falls back to auto",
+      AgentOpenRouter.fallbackChain("anthropic/claude-opus-4") == ["anthropic/claude-opus-4", "openrouter/auto"])
+check("auto itself gets no chain — it already routes",
+      AgentOpenRouter.fallbackChain("openrouter/auto") == nil)
+check("an empty id is not a choice", AgentOpenRouter.fallbackChain("") == nil)
+
+print("…cache breakpoints ride only to a model that honours them")
+check("an Anthropic-backed model on the router honours cache_control",
+      AgentOpenRouter.honoursCacheControl("anthropic/claude-sonnet-4-5"))
+check("auto does not — nobody knows where it lands when the body is built",
+      !AgentOpenRouter.honoursCacheControl("openrouter/auto"))
+check("a non-Anthropic pin does not",
+      !AgentOpenRouter.honoursCacheControl("openai/gpt-5"))
+
+print("…the generation receipt: read, never computed")
+check("the generation endpoint is built from the id the stream carried",
+      AgentOpenRouter.generationURL(id: "gen-abc123")?.absoluteString
+        == "https://openrouter.ai/api/v1/generation?id=gen-abc123")
+check("an empty id asks nothing", AgentOpenRouter.generationURL(id: "") == nil)
+check("total_cost as a JSON number is read",
+      AgentOpenRouter.generationCost(json: ["data": ["total_cost": 0.0142]]) == 0.0142)
+check("total_cost as a STRING is read too — OpenRouter's pricing fields are strings elsewhere",
+      AgentOpenRouter.generationCost(json: ["data": ["total_cost": "0.0142"]]) == 0.0142)
+check("a missing total_cost is nil, never zero",
+      AgentOpenRouter.generationCost(json: ["data": [:]]) == nil)
+check("a NEGATIVE cost is refused — a generation cannot earn money",
+      AgentOpenRouter.generationCost(json: ["data": ["total_cost": -0.01]]) == nil)
+check("a missing data envelope is nil",
+      AgentOpenRouter.generationCost(json: [:]) == nil)
+
+print("AgentModelFacts.matching — a fact only describes the model it names")
+let facts = AgentModelFacts(id: "anthropic/claude-opus-4", seesImages: true,
+                            promptUSDPerMillion: 15, completionUSDPerMillion: 75, free: false)
+check("facts for the CURRENT model are returned",
+      AgentModelFacts.matching(facts, current: "anthropic/claude-opus-4")?.id == facts.id)
+// A re-pick, a launch-arg override, a rename — any of them leaves stored
+// facts describing something else, and this is what stops that from reading
+// as leftover capability.
+check("facts for a DIFFERENT model are unknown, not stale capability",
+      AgentModelFacts.matching(facts, current: "anthropic/claude-haiku-4-5") == nil)
+check("no stored facts at all is unknown, not a crash",
+      AgentModelFacts.matching(nil, current: "anthropic/claude-opus-4") == nil)
+check("an empty current id can never match — it names nothing",
+      AgentModelFacts.matching(facts, current: "") == nil)
+
 print("")
 if failures == 0 {
     print("✓ agent keyed self-test: all assertions passed")
@@ -359,7 +484,33 @@ if failures == 0 {
 }
 SWIFT
 
-swiftc -O -o "$TMP/run" "$FETCH" "$TMP/extracted.swift" "$TMP/main.swift" 2>&1 | grep -v "^$" || true
+# The minimal AgentProvider/AgentTask that `AgentOpenRouter.honoursCacheControl`
+# and `AgentModelFacts` need. `model(for:)` is a closure over UserDefaults
+# rather than the real switch, so the fixtures below drive it directly instead
+# of depending on the app's own provider-model wiring, which this harness has
+# no reason to compile whole.
+cat > "$TMP/stub.swift" <<'SWIFT'
+import Foundation
+enum AgentTask: String, CaseIterable, Sendable {
+    case ask, librarian
+    var storeSuffix: String { self == .ask ? "" : "." + rawValue }
+}
+enum AgentProvider: String, CaseIterable {
+    case anthropic, openrouter
+    func model(for task: AgentTask) -> String {
+        UserDefaults.standard.string(forKey: "stub.model." + rawValue + task.storeSuffix)
+            ?? (self == .openrouter ? "openrouter/auto" : "pinned-model")
+    }
+    var model: String { model(for: .ask) }
+    // The real floor `AgentModelFacts.seesImages` starts from — mirrored here
+    // only so the file compiles standalone; the real switch lives in
+    // AgentAnswer.swift and is unrelated to this fixture.
+    var seesImages: Bool { self == .anthropic }
+}
+SWIFT
+
+swiftc -O -o "$TMP/run" "$FETCH" "$ROUTER" "$TMP/stub.swift" "$TMP/extracted.swift" "$TMP/main.swift" \
+  2>&1 | grep -v "^$" || true
 [[ -x "$TMP/run" ]] || { echo "✗ the keyed-agent logic did not compile"; exit 1; }
 "$TMP/run"
 
@@ -375,8 +526,10 @@ mutate() {
   rm -rf "$WORK"; mkdir -p "$WORK"
   cp "$FETCH" "$WORK/AgentWebFetch.swift"
   cp "$BUDGET" "$WORK/AgentBudget.swift"
+  cp "$ROUTER" "$WORK/AgentOpenRouter.swift"
   local target="$WORK/AgentWebFetch.swift"
   [[ "$which" == "budget" ]] && target="$WORK/AgentBudget.swift"
+  [[ "$which" == "router" ]] && target="$WORK/AgentOpenRouter.swift"
   MUT_FROM="$from" MUT_TO="$to" python3 - "$target" <<'PY'
 import os, sys
 path = sys.argv[1]
@@ -416,8 +569,8 @@ PY
   then
     echo "  ✓ $name (rejected at extraction)"; return
   fi
-  if ! swiftc -O -o "$WORK/mut" "$WORK/AgentWebFetch.swift" "$WORK/extracted.swift" \
-        "$TMP/main.swift" 2>/dev/null; then
+  if ! swiftc -O -o "$WORK/mut" "$WORK/AgentWebFetch.swift" "$WORK/AgentOpenRouter.swift" \
+        "$TMP/stub.swift" "$WORK/extracted.swift" "$TMP/main.swift" 2>/dev/null; then
     echo "  ✓ $name (rejected at compile)"; return
   fi
   if "$WORK/mut" > /dev/null 2>&1; then
@@ -506,6 +659,33 @@ mutate "an unknown spend pauses the librarian" budget \
 mutate "exhausted becomes strictly-greater at the cap" budget \
   'return spent >= cap' \
   'return spent > cap'
+
+# 14. Private routing that stops asking for `deny` — the strongest privacy
+# statement in the catalog, silently downgraded to the platform default.
+mutate "private routing no longer denies data collection" router \
+  'return ["data_collection": "deny"]' \
+  'return ["data_collection": "allow"]'
+
+# 15. Auto gets a fallback chain naming itself twice — a harmless-looking body
+# key that is nonetheless not what the endpoint documents.
+mutate "auto is no longer excluded from its own fallback chain" router \
+  'guard !model.isEmpty, !isAuto(model) else { return nil }' \
+  'guard !model.isEmpty else { return nil }'
+
+# 16. Cache breakpoints sent to every OpenRouter model, including one whose
+# backend does not honour them — dead weight in every request body, and on a
+# model that DOES parse `cache_control` as a plain unknown field, a possible
+# 400 on the question itself.
+mutate "cache_control offered to every model, not just Anthropic's" router \
+  'model.hasPrefix("anthropic/")' \
+  'true'
+
+# 17. THE MONEY MUTATION. A negative cost accepted and summed into the
+# receipt — this is what would let a malformed response quietly SUBTRACT from
+# what somebody sees they have spent.
+mutate "a negative generation cost is accepted" router \
+  'let cost = numeric(data["total_cost"]), cost >= 0 else { return nil }' \
+  'let cost = numeric(data["total_cost"]) else { return nil }'
 
 echo
 echo "✓ agent keyed self-test: assertions and mutations all pass"

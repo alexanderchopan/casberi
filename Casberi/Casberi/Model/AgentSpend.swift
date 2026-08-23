@@ -72,6 +72,25 @@ final class AgentSpend: @unchecked Sendable {
         /// Dollars, and ONLY when the provider itself reported them (today:
         /// OpenRouter). Never computed here.
         var reportedUSD: Double?
+        /// Dollars this APP's own requests cost, summed from the price the
+        /// provider stated for each finished generation (2026-08-23, prd §459).
+        ///
+        /// **A different number from `reportedUSD`, and the difference is the
+        /// complaint this whole file opens with.** That one is the key's
+        /// LIFETIME total, which cannot separate what Casberi asked from
+        /// everything else the same key is used for — the exact reason somebody
+        /// had to open a provider dashboard and guess. This one is the sum of
+        /// generations this app started, so it answers "what did Casberi spend"
+        /// for the first time.
+        ///
+        /// Optional for the reason its neighbours are: a non-Optional with a
+        /// default fails the decode of every receipt already on disk.
+        var appCostUSD: Double?
+        /// How many of this app's requests actually got a price back. Kept
+        /// beside the sum because it is what makes the sum readable: a total
+        /// covering 3 of 40 requests is not a small bill, it is a mostly
+        /// unanswered question, and the screen says which.
+        var appCostRequests: Int?
         var first: Date
         var last: Date
 
@@ -114,6 +133,7 @@ final class AgentSpend: @unchecked Sendable {
                                           inputTokens: nil, outputTokens: nil,
                                           cachedInputTokens: nil, cacheWriteTokens: nil,
                                           model: nil, reportedUSD: nil,
+                                          appCostUSD: nil, appCostRequests: nil,
                                           first: now, last: now)
         entry.requests += 1
         if round > 0 { entry.toolRounds += 1 }
@@ -143,8 +163,39 @@ final class AgentSpend: @unchecked Sendable {
                                           inputTokens: nil, outputTokens: nil,
                                           cachedInputTokens: nil, cacheWriteTokens: nil,
                                           model: nil, reportedUSD: nil,
+                                          appCostUSD: nil, appCostRequests: nil,
                                           first: now, last: now)
         entry.reportedUSD = usd
+        entries[key] = entry
+        lock.unlock()
+        flush()
+    }
+
+    /// What ONE of this app's own requests cost, as the provider priced it
+    /// (2026-08-23, prd §459, OpenRouter's `/v1/generation`).
+    ///
+    /// ACCUMULATES, where `recordReported` replaces — and the two must never be
+    /// confused. That one folds in a lifetime total from the provider's side,
+    /// so adding it to itself would compound; this is a per-generation price
+    /// that exists exactly once, so summing is the only reading that means
+    /// anything.
+    ///
+    /// The paired count is what keeps the sum honest. A generation whose price
+    /// never came back is simply absent from both, so the screen can say "for 3
+    /// of 40 requests" rather than presenting a partial total as a bill.
+    func recordAppCost(provider: AgentProvider, usd: Double) {
+        guard usd >= 0 else { return }
+        let key = provider.rawValue
+        let now = Date()
+        lock.lock()
+        var entry = entries[key] ?? Entry(provider: key, requests: 0, toolRounds: 0,
+                                          inputTokens: nil, outputTokens: nil,
+                                          cachedInputTokens: nil, cacheWriteTokens: nil,
+                                          model: nil, reportedUSD: nil,
+                                          appCostUSD: nil, appCostRequests: nil,
+                                          first: now, last: now)
+        entry.appCostUSD = (entry.appCostUSD ?? 0) + usd
+        entry.appCostRequests = (entry.appCostRequests ?? 0) + 1
         entries[key] = entry
         lock.unlock()
         flush()
@@ -237,6 +288,28 @@ extension AgentSpend.Entry {
             return "\(n)"
         }
         return String(localized: "\(short(cachedInputTokens)) of that was served from cache.")
+    }
+
+    /// "OpenRouter charged $0.0143 for what Casberi asked" (2026-08-23, prd
+    /// §459) — the first dollar figure in this app that is about THIS APP, and
+    /// still not one this app computed.
+    ///
+    /// **Four decimals, not two.** A single ask on a cheap model is fractions of
+    /// a cent, and `$0.00` on a screen whose purpose is to show a real cost
+    /// reads as "free" — the confident zero this file's own doc forbids
+    /// everywhere else.
+    ///
+    /// **It states its own COVERAGE whenever it is partial.** A generation whose
+    /// price never came back contributes to neither half, so a total spanning 3
+    /// of 40 requests would otherwise read as a very cheap month rather than a
+    /// mostly unanswered question. Silent only when it covers everything.
+    var appCostLine: String? {
+        guard let appCostUSD, let appCostRequests, appCostRequests > 0 else { return nil }
+        let money = String(format: "$%.4f", appCostUSD)
+        guard appCostRequests < requests else {
+            return String(localized: "\(money) for what Casberi asked, priced by your provider.")
+        }
+        return String(localized: "\(money) for what Casberi asked — priced for \(appCostRequests) of \(requests) requests.")
     }
 }
 

@@ -780,8 +780,16 @@ struct RootShell: View {
                         // what it was handed, or a real tool loop that went
                         // looking. They produce identical-looking documents,
                         // so a doc dump alone cannot tell them apart.
-                        NSLog("[Casberi] byokProbe(\"%@\") %dms model=%@ rounds=%d searchedWeb=%d pagesRead=%d images=%d →\n%@",
-                              q, ms, (AgentKey.active?.model ?? "none"), answer.toolRounds,
+                        // `model=` is what was ASKED FOR and `answered=` what
+                        // really wrote it (2026-08-23, prd §459). They differ
+                        // for two reasons that a single field could not tell
+                        // apart — the router chose (`openrouter/auto`), or the
+                        // pin is dead and the fallback chain stepped in — and
+                        // the second is a silent failure with a working answer
+                        // on top of it, so it has to be visible somewhere.
+                        NSLog("[Casberi] byokProbe(\"%@\") %dms model=%@ answered=%@ rounds=%d searchedWeb=%d pagesRead=%d images=%d →\n%@",
+                              q, ms, (AgentKey.active?.model ?? "none"),
+                              answer.model ?? "(not reported)", answer.toolRounds,
                               answer.searchedWeb ? 1 : 0, answer.pagesRead, answer.imagesSeen,
                               answer.doc.joined(separator: "\n"))
                     case .failure(let failure):
@@ -809,13 +817,21 @@ struct RootShell: View {
                 NSLog("[Casberi] spendProbe: providers=%d requests=%d",
                       entries.count, AgentSpend.shared.totalRequests)
                 for entry in entries {
-                    NSLog("[Casberi] agentSpend| %@ requests=%d toolRounds=%d tokens=%@ cacheRead=%@ cacheWrite=%@ model=%@ reported=%@",
+                    // `appCost` is what THIS APP's own generations cost and
+                    // `reported` what the KEY has spent on everything — the two
+                    // numbers whose confusion is the reason this ledger exists
+                    // (2026-08-23, prd §459). `appCostFor` is the coverage: a
+                    // total priced for 3 of 40 requests is not a cheap month,
+                    // and only this line separates the two readings.
+                    NSLog("[Casberi] agentSpend| %@ requests=%d toolRounds=%d tokens=%@ cacheRead=%@ cacheWrite=%@ model=%@ reported=%@ appCost=%@ appCostFor=%@",
                           entry.provider, entry.requests, entry.toolRounds,
                           entry.tokenLine ?? "(not reported)",
                           entry.cachedInputTokens.map(String.init) ?? "(not reported)",
                           entry.cacheWriteTokens.map(String.init) ?? "(not reported)",
                           entry.model ?? "-",
-                          entry.reportedUSD.map { String(format: "$%.4f", $0) } ?? "-")
+                          entry.reportedUSD.map { String(format: "$%.4f", $0) } ?? "-",
+                          entry.appCostUSD.map { String(format: "$%.4f", $0) } ?? "(not priced)",
+                          entry.appCostRequests.map(String.init) ?? "0")
                 }
                 // The month's ceiling beside the counts it governs (2026-08-20).
                 // Printed even when unset, because "no cap" and "a cap we
@@ -865,6 +881,56 @@ struct RootShell: View {
                 }
                 NSLog("[Casberi] webFetchProbe: shown=%d refused=%d",
                       shown, candidates.count - shown)
+            }
+            // Debug hooks for OpenRouter's routing policy (2026-08-23, prd
+            // §459). `-orPrivateRouting YES|NO` and `-orWebSearch YES|NO` set
+            // the two toggles headlessly; `-orRoutingProbe YES` reports what
+            // the next request's body would actually carry.
+            //
+            // The probe exists because every one of these decisions is
+            // INVISIBLE from outside. A privately-routed answer and an
+            // ordinary one are byte-identical; a fallback chain that saved a
+            // dead pin looks exactly like a pin that was never dead; a
+            // screenshot withheld because the model is text-only looks exactly
+            // like a screenshot the model ignored. This prints the decisions
+            // themselves — and it spends NOTHING: no request, no key needed,
+            // pure policy over stored state.
+            if let raw = UserDefaults.standard.string(forKey: "orPrivateRouting") {
+                AgentOpenRouter.privateRouting = (raw as NSString).boolValue
+            }
+            if let raw = UserDefaults.standard.string(forKey: "orWebSearch") {
+                AgentOpenRouter.webSearch = (raw as NSString).boolValue
+            }
+            if UserDefaults.standard.bool(forKey: "orRoutingProbe") {
+                let model = AgentProvider.openrouter.model
+                let librarianModel = AgentProvider.openrouter.model(for: .librarian)
+                NSLog("[Casberi] orRoutingProbe: configured=%d askModel=%@ librarianModel=%@",
+                      AgentKey.isConfigured(.openrouter) ? 1 : 0, model, librarianModel)
+                NSLog("[Casberi] orRouting| privateRouting=%d body=%@",
+                      AgentOpenRouter.privateRouting ? 1 : 0,
+                      AgentOpenRouter.providerPreferences(
+                        privateRouting: AgentOpenRouter.privateRouting)
+                        .map { String(describing: $0) } ?? "(none sent)")
+                NSLog("[Casberi] orRouting| webSearch=%d plugins=%@",
+                      AgentOpenRouter.webSearch ? 1 : 0,
+                      AgentOpenRouter.webSearchPlugins(webSearch: AgentOpenRouter.webSearch)
+                        .map { String(describing: $0) } ?? "(none sent)")
+                NSLog("[Casberi] orRouting| fallbackChain=%@ cacheControl=%d",
+                      AgentOpenRouter.fallbackChain(model)?.joined(separator: " → ")
+                        ?? "(none — auto already routes)",
+                      AgentOpenRouter.honoursCacheControl(model) ? 1 : 0)
+                // The facts half. `seesImages` here is the RESOLVED answer the
+                // answer path uses, so a stale-facts bug (a pin changed under
+                // remembered facts) shows as `facts=(none)` beside a pinned
+                // model rather than as a screenshot silently going missing.
+                let facts = AgentModelFacts.current(.openrouter)
+                NSLog("[Casberi] orRouting| facts=%@ seesImages=%d free=%d librarianFree=%d pausesLibrarian=%d",
+                      facts.map { "\($0.id) prompt=\($0.promptUSDPerMillion.map { String(format: "$%.2f/M", $0) } ?? "-")" }
+                        ?? "(none — auto, or the pin changed under them)",
+                      AgentModelFacts.seesImages(.openrouter) ? 1 : 0,
+                      AgentModelFacts.isFree(.openrouter) ? 1 : 0,
+                      AgentModelFacts.isFree(.openrouter, task: .librarian) ? 1 : 0,
+                      AgentBudget.pausesLibrarian(.openrouter) ? 1 : 0)
             }
             // Debug hook: `-agentCreditsProbe YES` runs OpenRouter's free
             // key-check read (`/v1/auth/key`, no tokens billed) with the
@@ -3604,9 +3670,20 @@ struct RootShell: View {
             }
             doc = modelDoc(insight: result.text, hits: merged, picks: Array(merged.indices))
         }
+        // `pagesRead` was MISSING here from the day §415 shipped (fixed
+        // 2026-08-23). `AgentAnswerResult` counted it, `KeyedAnswer` carried a
+        // field for it, the composer threaded it through four call sites and the
+        // badge had a sentence for one page and another for several — and this
+        // one constructor never passed it, so it defaulted to 0 and "read 1
+        // saved page" could not appear on any answer, ever. The whole
+        // observability half of a feature, invisible, with every other half in
+        // place. `-byokProbe` reports it off `AgentAnswerResult` directly, which
+        // is why the probe could show a page read while the app could not.
         return .success(KeyedAnswer(doc: doc, searchedWeb: result.searchedWeb,
                                     imagesSeen: result.imagesSeen,
-                                    toolRounds: result.toolRounds))
+                                    pagesRead: result.pagesRead,
+                                    toolRounds: result.toolRounds,
+                                    model: result.model))
     }
 
     /// The corpus flattened to a plain `Sendable` snapshot for the tool-calling

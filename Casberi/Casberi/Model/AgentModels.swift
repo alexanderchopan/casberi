@@ -109,6 +109,16 @@ struct AgentModelInfo: Identifiable, Equatable, Sendable {
     let id: String
     /// A human label when the provider gives one, else the id repeated.
     let label: String
+    /// What the listing says this model IS, when it says (2026-08-23, prd
+    /// §459). nil everywhere but OpenRouter today, and that is a fact about the
+    /// other providers rather than a gap here: Anthropic's list carries neither
+    /// pricing nor modalities, OpenAI's is bare ids, and Gemini's names methods
+    /// but no price. OpenRouter is a catalog of other people's models, so its
+    /// listing has to state both.
+    ///
+    /// nil means "this provider didn't say", and every consumer treats that as
+    /// the conservative answer rather than a default — see `AgentModelFacts`.
+    var facts: AgentModelFacts?
 }
 
 enum AgentModels {
@@ -181,10 +191,47 @@ enum AgentModels {
                 let label = entry["display_name"] as? String
                     ?? entry["name"] as? String
                     ?? id
-                return AgentModelInfo(id: id, label: label)
+                return AgentModelInfo(id: id, label: label,
+                                      facts: provider == .openrouter ? facts(from: entry, id: id) : nil)
             }
         }
         return dedupe(usable(models, for: provider))
+    }
+
+    /// What one OpenRouter listing says a model is (2026-08-23, prd §459) —
+    /// the metadata that lets a PINNED model raise the three refusals
+    /// `openrouter/auto` correctly forces (no pictures, no free-model exemption
+    /// from the ceiling, no price in the picker).
+    ///
+    /// **Every price on this endpoint is a STRING** — `"0.0000005"`, dollars per
+    /// TOKEN — which is why nothing here reads a `Double` directly and why the
+    /// per-million figures are computed once, here, rather than at each display
+    /// site where a missing multiplier renders a plausible number three orders
+    /// of magnitude wrong.
+    ///
+    /// **Free is all-or-nothing across every priced dimension the listing
+    /// carries, and the stated ceiling is that it can only be as complete as
+    /// the fields we know to look at.** A model that priced some future
+    /// dimension we never read would score free, so the check is written to
+    /// treat an unreadable price as NOT free (`numeric` returning nil fails the
+    /// `== 0` test) rather than skipping it — an unknown cost is a cost.
+    private static func facts(from entry: [String: Any], id: String) -> AgentModelFacts? {
+        let architecture = entry["architecture"] as? [String: Any]
+        let modalities = architecture?["input_modalities"] as? [String] ?? []
+        let pricing = entry["pricing"] as? [String: Any]
+        let prompt = AgentOpenRouter.numeric(pricing?["prompt"])
+        let completion = AgentOpenRouter.numeric(pricing?["completion"])
+        // Only the dimensions actually present are judged; an ABSENT dimension
+        // is not a charge, an unreadable one is.
+        let priced = ["prompt", "completion", "request", "image", "web_search"]
+            .compactMap { pricing?[$0] == nil ? nil : AgentOpenRouter.numeric(pricing?[$0]) ?? Double.infinity }
+        let free = pricing != nil && !priced.isEmpty && priced.allSatisfy { $0 == 0 }
+        return AgentModelFacts(
+            id: id,
+            seesImages: modalities.contains("image"),
+            promptUSDPerMillion: prompt.map { $0 * 1_000_000 },
+            completionUSDPerMillion: completion.map { $0 * 1_000_000 },
+            free: free)
     }
 
     /// Drops what can't answer a chat request. OpenAI's list is the reason
