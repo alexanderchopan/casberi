@@ -39049,34 +39049,6 @@
         }
       }
     },
-    "FIRST": {
-      "localizations": {
-        "es": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "PRIMERA VEZ"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "初回"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "최초"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "首次"
-          }
-        }
-      }
-    },
     "FOLLOW": {
       "localizations": {
         "es": {
@@ -39941,6 +39913,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "已完成"
+          }
+        }
+      }
+    },
+    "First": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Primera vez"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "初回"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "최초"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "首次"
           }
         }
       }
@@ -67903,34 +67903,6 @@
         }
       }
     },
-    "STANDING · NOW": {
-      "localizations": {
-        "es": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "VIGENTE · AHORA"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "現在 · 有効"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "현재 · 유효"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "当前 · 有效"
-          }
-        }
-      }
-    },
     "Safe": {
       "localizations": {
         "es": {
@@ -72740,6 +72712,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "将 %@ 质押到 %@"
+          }
+        }
+      }
+    },
+    "Standing · now": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Vigente · ahora"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "現在 · 有効"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "현재 · 유효"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "当前 · 有效"
           }
         }
       }

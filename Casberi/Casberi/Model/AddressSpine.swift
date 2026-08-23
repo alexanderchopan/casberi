@@ -183,7 +183,7 @@ enum AddressSpine {
                                 sentence: namedSentence(provenance: provenance)))
         case .appeared(let at, let walletName):
             let mark = eyebrow(at, now: now, calendar: calendar)
-            events.append(.root(eyebrow: mark + " · " + String(localized: "FIRST"),
+            events.append(.root(eyebrow: mark + " · " + String(localized: "First"),
                                 sentence: appearedSentence(walletName: walletName)))
         case .unnamed(let at):
             events.append(.root(eyebrow: eyebrow(at, now: now, calendar: calendar),
@@ -324,17 +324,20 @@ enum AddressSpine {
         return day + " · " + walletName
     }
 
-    /// An event's own eyebrow — the same day, upper-cased, because an eyebrow
-    /// is a `label12` marker rather than a sentence.
+    /// An event's own eyebrow — the day, in the case it was written in.
     ///
-    /// **Upper-cased, and that is not the banned ALL-CAPS eyebrow.** §8 bans
-    /// setting a WORD in caps for emphasis ("G E T T I N G  S T A R T E D");
-    /// this is a date stamp, three characters of month and a number, and it is
-    /// upper-cased by `localizedUppercase` rather than by tracking.
+    /// **It used to upper-case, and the carve-out that allowed it was wrong.**
+    /// The old doc argued §8's ban is on setting a WORD in caps and that this
+    /// was merely "a date stamp, three characters of month and a number" —
+    /// but `dayText` answers "Today" and "Yesterday" for the two commonest
+    /// cases on any live spine, so the exemption failed for exactly the
+    /// inputs it saw most, and it printed TODAY. Worse, it set the house
+    /// style for its neighbours: `FIRST` and `STANDING · NOW` were both
+    /// written in caps to match a stamp that should never have been in caps
+    /// either. §8 has no ALL-CAPS eyebrow, and there is no third form of one.
     static func eyebrow(_ date: Date, now: Date = .now,
                         calendar: Calendar = .current) -> String {
         dayText(date, now: now, calendar: calendar)
-            .localizedUppercase
     }
 
     /// "Today" / "Yesterday" / "Aug 18" / "Aug 18, 2024".

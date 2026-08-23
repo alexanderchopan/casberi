@@ -1447,7 +1447,7 @@ struct AddressCard: View {
     /// approvals card can never state the same grant two ways.
     private func standingContent(_ standing: AddressSpine.Standing) -> some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("STANDING · NOW")
+            Text("Standing · now")
                 .dsText(.label12).foregroundStyle(DS.attention)
             if let figure = standing.figure {
                 Text(figure)
