@@ -120,6 +120,16 @@ for method in 'eth_sendTransaction' 'eth_sendRawTransaction' 'eth_sign' \
     && { echo "✗ VibenetBridge.swift requests $method — this must only ever read"; exit 1; }
 done
 
+# The redeploy note ("vibenet redeployed since you last checked") is only
+# honest if a first-ever read stays silent — nothing stored yet means nothing
+# to compare against, the AddressConnectionsSeen/ChipMemory rule. Without this
+# guard the note could tell someone the network "redeployed" on their very
+# first open, which is a claim about a past this device never observed.
+grep -q 'enum VibenetSeenCommit' "$TMP/bridge.nc.swift" \
+  || { echo "✗ VibenetSeenCommit is missing — the redeploy note has nothing to compare against"; exit 1; }
+grep -q 'guard let previous else { return false }' "$TMP/bridge.nc.swift" \
+  || { echo "✗ VibenetSeenCommit no longer stays silent on a first-ever read — it would report a redeploy on someone's very first open"; exit 1; }
+
 echo "drift guards ✓"
 
 # --- compile VibenetRoom.swift WHOLE, unmodified -----------------------------
@@ -326,6 +336,23 @@ check("note falls back further with neither",
 check("note over an unreachable config says so plainly",
       VibenetRoom.note(VibenetRoom.compose(items: [], branch: nil, commit: nil, configReached: false))
         .contains("redeploy"))
+
+// A redeploy the device has already seen leads the note over the plain
+// provenance line — the single most on-theme fact this room can report.
+let redeployed = VibenetRoom.compose(items: [], branch: "main", commit: "def456789",
+                                      configReached: true, redeployedSinceLastSeen: true)
+check("a seen redeploy leads the note, not the plain provenance line",
+      VibenetRoom.note(redeployed).contains("redeployed since you last checked"))
+check("the redeploy note still carries the new commit",
+      VibenetRoom.note(redeployed).contains("def456789"))
+// A commit-less redeploy report can't happen from the real compose path (the
+// bridge only ever flags a redeploy when it has a commit to compare), but a
+// future caller getting that wrong must fall back to the plain line rather
+// than draw a broken sentence with no commit in it.
+let redeployedNoCommit = VibenetRoom.compose(items: [], branch: nil, commit: nil,
+                                              configReached: true, redeployedSinceLastSeen: true)
+check("a redeploy flag with no commit falls back to the plain note, never a broken sentence",
+      VibenetRoom.note(redeployedNoCommit) == "Read live from vibenet — addresses redeploy often")
 
 // MARK: - shortAddress
 

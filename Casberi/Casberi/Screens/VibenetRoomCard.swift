@@ -92,17 +92,26 @@ struct VibenetRoomCard: View {
                             .foregroundStyle(item.alarmed ? DS.textPrimary : DS.textSecondary)
                     }
                     Spacer(minLength: DS.Space.s2)
-                    if item.alarmed {
-                        Text(String(localized: "Locked"))
-                            .dsText(.label11).fontWeight(.bold)
-                            .foregroundStyle(Color.fixed("#ffffff"))
-                            .padding(.horizontal, 5)
-                            .padding(.vertical, 1)
-                            .background(Self.mark, in: RoundedRectangle(cornerRadius: 3, style: .continuous))
-                    } else if !item.actors.isEmpty {
-                        Image(systemName: expanded.contains(item.address) ? "chevron.up" : "chevron.down")
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundStyle(DS.textTertiary)
+                    HStack(spacing: DS.Space.s2) {
+                        // The pill states the ALARM; the chevron states
+                        // whether there's a roster to open. A locked account
+                        // still carries actors worth seeing, and the whole
+                        // row is still one Button — without the chevron here
+                        // too, that row was tappable with nothing telling you
+                        // so, and its roster only ever opened by accident.
+                        if item.alarmed {
+                            Text(item.hasInitiatedUnlock ? String(localized: "Unlocking") : String(localized: "Locked"))
+                                .dsText(.label11).fontWeight(.bold)
+                                .foregroundStyle(Color.fixed("#ffffff"))
+                                .padding(.horizontal, 5)
+                                .padding(.vertical, 1)
+                                .background(Self.mark, in: RoundedRectangle(cornerRadius: 3, style: .continuous))
+                        }
+                        if !item.actors.isEmpty {
+                            Image(systemName: expanded.contains(item.address) ? "chevron.up" : "chevron.down")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundStyle(DS.textTertiary)
+                        }
                     }
                 }
                 .contentShape(Rectangle())
@@ -130,13 +139,19 @@ struct VibenetRoomCard: View {
     }
 
     /// One actor inside an expanded account — its kind and its scope, the
-    /// two facts that answer "what can this key actually do".
+    /// two facts that answer "what can this key actually do". The kind
+    /// carries its own mark now rather than the same dot every kind wore —
+    /// a roster of four otherwise-identical rows read only through their
+    /// text; the point of this feature is exactly which KINDS of key an
+    /// account trusts, so that's the one thing worth a glance rather than
+    /// a read.
     private func actorLine(_ actor: VibenetActor) -> some View {
         HStack(alignment: .top, spacing: DS.Space.s2) {
-            Circle()
-                .fill(Self.mark.opacity(0.18))
-                .frame(width: 6, height: 6)
-                .padding(.top, 6)
+            Image(systemName: actor.kind.symbolName)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(Self.mark)
+                .frame(width: 14, alignment: .center)
+                .padding(.top, 1)
             VStack(alignment: .leading, spacing: 2) {
                 Text(actor.kind.label)
                     .dsText(.label12).fontWeight(.semibold)

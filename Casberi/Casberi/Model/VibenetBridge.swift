@@ -465,6 +465,31 @@ enum VibenetRead {
     }
 }
 
+// MARK: - Has vibenet redeployed since this device last looked?
+
+/// The last vibenet commit THIS DEVICE has seen — a fact about the screen,
+/// not the chain, so it lives here in UserDefaults rather than in
+/// `VibenetRoom` (pure, Foundation-only, no UserDefaults of its own), the
+/// same split `AddressConnectionsSeen`/`ChipMemory` already draw elsewhere.
+enum VibenetSeenCommit {
+    private static let key = "vibenet.contracts.lastSeenCommit"
+
+    /// Compares `commit` against what was stored, then advances the stored
+    /// value to `commit` regardless of the outcome — every call is also the
+    /// write. A first-ever call (nothing stored yet) is silent by design:
+    /// there is nothing yet to compare against, so it can never report a
+    /// redeploy on the very first read, the same rule that keeps
+    /// `AddressConnectionsSeen` from painting someone's whole existing book
+    /// as "new" the day the feature ships.
+    static func checkAndAdvance(_ commit: String?) -> Bool {
+        guard let commit else { return false }
+        let previous = UserDefaults.standard.string(forKey: key)
+        UserDefaults.standard.set(commit, forKey: key)
+        guard let previous else { return false }
+        return previous != commit
+    }
+}
+
 // MARK: - Composing the room
 
 enum VibenetRoomSource {
@@ -476,11 +501,18 @@ enum VibenetRoomSource {
         guard let contracts = await VibenetConfig.current() else {
             return VibenetRoom.compose(items: [], branch: nil, commit: nil, configReached: false)
         }
+        // Checked (and the stored value advanced) BEFORE the account reads,
+        // not after — a redeploy is exactly what the account reads below are
+        // being freshly checked against, so the note's claim that "every
+        // watched account was just re-read against it" has to already be true
+        // by the time it's shown.
+        let redeployed = VibenetSeenCommit.checkAndAdvance(contracts.commit)
         let addresses = VibenetWatch.shared.addresses
         let items = await IngestSupport.boundedGather(addresses, maxConcurrent: 3) { address in
             await VibenetRead.account(address, contracts: contracts)
         }
         return VibenetRoom.compose(items: items, branch: contracts.branch,
-                                   commit: contracts.commit, configReached: true)
+                                   commit: contracts.commit, configReached: true,
+                                   redeployedSinceLastSeen: redeployed)
     }
 }

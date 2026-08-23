@@ -115,6 +115,21 @@ enum VibenetAuthenticatorKind: Equatable, Hashable {
         }
     }
 
+    /// A per-kind mark so an actor roster reads at a glance — "this account
+    /// has a passkey and a key" — rather than only through four label rows
+    /// of near-identical text. `.custom` gets a question mark on purpose:
+    /// an authenticator this build can't identify earns no invented icon
+    /// any more than it earns an invented name.
+    var symbolName: String {
+        switch self {
+        case .secp256k1: "key.fill"
+        case .p256:      "key.horizontal.fill"
+        case .webAuthn:  "faceid"
+        case .delegate:  "link"
+        case .custom:    "questionmark.circle"
+        }
+    }
+
     /// A stable order for the roster to sort by — the Keystore's own
     /// declaration order (K1, then the three named contracts, unknown
     /// last), never alphabetical on the localized label.
@@ -267,14 +282,22 @@ struct VibenetRoom: Equatable {
     /// be trusted, while a good config with one address unreachable is a
     /// narrower, far more ordinary failure.
     let configReached: Bool
+    /// Whether THIS device has already seen a different commit than the one
+    /// this read carries — a fact about the screen, not the chain, so it's
+    /// handed in already computed (the `AddressConnectionsSeen`/`ChipMemory`
+    /// shape) rather than read here; this file stays Foundation-only with no
+    /// UserDefaults of its own. False on a first-ever read by construction —
+    /// there's nothing yet to compare against, never a redeploy to report.
+    let redeployedSinceLastSeen: Bool
 
     var isEmpty: Bool { items.isEmpty }
     var lockedCount: Int { items.filter(\.alarmed).count }
     var establishedCount: Int { items.filter(\.established).count }
 
     static func compose(items raw: [VibenetAccountItem], branch: String?, commit: String?,
-                         configReached: Bool) -> VibenetRoom {
-        VibenetRoom(items: ordered(raw), branch: branch, commit: commit, configReached: configReached)
+                         configReached: Bool, redeployedSinceLastSeen: Bool = false) -> VibenetRoom {
+        VibenetRoom(items: ordered(raw), branch: branch, commit: commit, configReached: configReached,
+                    redeployedSinceLastSeen: redeployedSinceLastSeen)
     }
 
     /// A locked account first (the one alarm this room can raise), then an
@@ -369,6 +392,13 @@ struct VibenetRoom: Equatable {
             return String(localized: "vibenet is an experimental devnet — its contracts redeploy often, and this read couldn't reach the current set.")
         }
         let commit = room.commit.map { String($0.prefix(9)) }
+        // The single most on-theme fact this room can report — leads over
+        // the plain provenance line whenever it's true, since it's not just
+        // "here's when this was read", it's "the ground moved since you were
+        // last here, and everything below was already re-checked against it".
+        if room.redeployedSinceLastSeen, let commit {
+            return String(localized: "vibenet redeployed since you last checked — now at commit \(commit), and every watched account was just re-read against it.")
+        }
         switch (room.branch, commit) {
         case let (branch?, commit?):
             return String(localized: "As of vibenet's \(branch) branch, commit \(commit)")
