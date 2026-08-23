@@ -144,8 +144,12 @@ check("further out counts days", StripeRoom.value(days: 5) == "5 days")
 check("only a dispute wears a chip", StripeRoom.chip(item("a", days: 3)) != nil)
 check("a retry needs nothing from you and wears none",
       StripeRoom.chip(item("a", days: 3, dispute: false)) == nil)
-check("a missed dispute says MISSED", StripeRoom.chip(item("a", days: -1)) == "MISSED")
-check("an upcoming dispute says NEEDS YOU", StripeRoom.chip(item("a", days: 2)) == "NEEDS YOU")
+// Sentence case since 2026-08-22 (prd §453) — §8 has no ALL-CAPS anything,
+// and this chip was one of 29 labels that had drifted into caps. Pinned here
+// so the shout cannot come back through the one room head that carries it;
+// `allcaps-audit.py` holds the rest of the tree.
+check("a missed dispute says Missed", StripeRoom.chip(item("a", days: -1)) == "Missed")
+check("an upcoming dispute says Needs you", StripeRoom.chip(item("a", days: 2)) == "Needs you")
 check("a retry explains itself as automatic",
       StripeRoom.kindLine(item("a", days: 2, dispute: false)).contains("retries"))
 

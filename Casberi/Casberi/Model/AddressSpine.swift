@@ -326,7 +326,8 @@ enum AddressSpine {
 
     /// An event's own eyebrow — the day, in the case it was written in.
     ///
-    /// **It used to upper-case, and the carve-out that allowed it was wrong.**
+    /// **It used to upper-case, and the carve-out that allowed it was wrong**
+    /// (prd §453).
     /// The old doc argued §8's ban is on setting a WORD in caps and that this
     /// was merely "a date stamp, three characters of month and a number" —
     /// but `dayText` answers "Today" and "Yesterday" for the two commonest

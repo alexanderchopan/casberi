@@ -30544,3 +30544,68 @@ Verified by both builds and by every harness that guards one of these cards
 (x, journal-room, wallet-rooms, instagram, l2beat, room-heads, cursor,
 applewallet, agent-panel, safe-room, github-room, altana, radicle, railgun,
 x402) — a fuller pass runs separately.
+
+## 453. Nothing in the app shouts (user: "Fix it", then "you decide", 2026-08-22)
+
+Build-brief §8 bans the ALL-CAPS eyebrow in the same sentence that bans
+letter-spacing. `.kerning()` was made a rule people remembered; the caps half
+was left to memory, and memory lost — which is this repo's oldest lesson,
+arriving in the design system for the first time.
+
+**Where it started.** `AddressSpine.eyebrow` ran EVERY day stamp through
+`localizedUppercase`, so the address spine printed TODAY on every event. Its
+own doc carried a written carve-out: §8 bans setting a WORD in caps, and this
+was "only a date stamp, three characters of month and a number". That is false
+for its own commonest inputs — `dayText` answers "Today" and "Yesterday" — so
+the exemption failed exactly where it was used most. And an exemption sets a
+house style: `FIRST` and `STANDING · NOW` were written in caps to match the
+stamp beside them, which is how a carve-out becomes a convention.
+
+**§190 is not overturned, and the distinction matters.** That pass made the
+slab verbs CONSISTENT, and its own record shows the handle screen reading "Add"
+beside a "WATCH" and a "FOLLOW" as the inconsistency it removed. It rules on
+slab SHAPE and never on case; the caps were inherited, not decided. So these
+are consistent the other way now — 29 labels across 20 files, including the
+four verbs (`ADD`/`CONNECT`/`UPDATE`/`CHECKING…`) that §190's own pass never
+reached, since leaving those would have recreated its complaint precisely.
+`HandleSetupScreen`'s comment citing §190 for caps is rewritten rather than
+left to claim a rule the code no longer follows.
+
+**Mechanical, because a shouting label renders perfectly.** It survives the
+build, every screen sweep, the design-ramp audit (which reads type SIZES, not
+the letters in them) and every `swiftc` harness. Nothing about it is wrong
+except the house style, and a house style with no check drifts one label at a
+time, each one justified by the last — which is the whole of how this happened.
+`scripts/allcaps-audit.py`, self-tested, mutation-proven three ways against the
+real tree, in `verify.sh` and so discovered by `verify-mac.sh` and CI.
+
+**Two narrowings, both MEASURED, because this is the lint most able to cry
+wolf.** Matching any all-caps WORD inside a string reports **124** literals on
+a healthy tree, ~112 of them initialisms and names the app is right to print —
+API, DNS, TLS, RSS, MCP, OPML, NFT, HTTP, IMAP, ETH, and L2BEAT, which is how
+L2BEAT spells itself. So the test is on the WHOLE literal: a sentence carrying
+an acronym has lowercase in it and is invisible. And on a label line a literal
+being COMPARED is data, not display (`symbol == "ETH" ? "Watch" : "Add"`) —
+caught by the audit's own clean fixture while it was being widened, which is
+the argument for keeping a clean fixture beside every dirty one.
+
+**The standing lesson is about the narrowing itself.** The first cut was blind
+to exactly where nine of the violations were hiding — a ternary verb
+(`checking ? "CHECKING…" : …`) and a label composed in a helper, so no call
+site carries a literal at all. The narrowing that keeps a lint honest is also
+where it goes blind, and both directions have to be measured, not reasoned.
+
+**A guard can pin the wrong thing.** Two harnesses FAILED this fix and were
+right to run: `address-spine-selftest` pinned `MAR 3`/`YESTERDAY · FIRST`/
+`AUG 1` in six root fixtures, and `room-heads-selftest` pinned Stripe's
+`MISSED`/`NEEDS YOU`. A harness holds the shipped behaviour in place whether or
+not that behaviour is correct, so a rule change means re-reading its guards
+rather than assuming a red one is a regression.
+
+**Not checked, so it cannot become the lint it warns about:** text a bridge
+received (a third party may shout in its own data — that is a quotation, not
+our typography), monograms, enum raw values, HTTP verbs, ticker symbols, and
+`.uppercased()` anywhere, which is right for `AssetMark`'s two-letter marks and
+wrong for an eyebrow with no static rule between them. The spine's own harness
+guards its `localizedUppercase` directly instead. `KNOWN_ACRONYMS` is EMPTY by
+design.

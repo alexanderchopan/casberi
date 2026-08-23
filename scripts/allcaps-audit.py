@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""No display string is set in ALL CAPS (build-brief §8).
+"""No display string is set in ALL CAPS (build-brief §8, prd §453).
 
 §8's rule is "headers are words in sentence case" — never
 "G E T T I N G  S T A R T E D" and never "GETTING STARTED" — and until
