@@ -2021,7 +2021,30 @@ struct RootShell: View {
             // fade-in since the frame match alone doesn't animate opacity.
             if composerOpen {
                 ZStack {
+                    // The settled ground. Kept as its own flat fill BENEATH
+                    // the matched shape rather than folded into it: that shape
+                    // carries a corner radius, and a rounded rectangle sized
+                    // to a square-cornered window (iPad, Mac) would show the
+                    // feed through its four corners once the rise settled. A
+                    // phone hides them behind the display's own ~55pt mask;
+                    // the two surfaces this app also ships on do not.
                     DS.page.ignoresSafeArea()
+                    // THE MORPH RIDES A SHAPE, NEVER THE CONTENT (2026-08-22,
+                    // prd §445, user: "the agent still opens in a janky way").
+                    // See `Composer`'s own note at the modifier this replaces
+                    // for the mechanism: `matchedGeometryEffect` matches SIZE,
+                    // so pairing it with the composer's content container laid
+                    // the entire risen document out at every interpolating
+                    // frame between the bar's capsule and the full screen.
+                    //
+                    // A fill has no layout children, so the same interpolation
+                    // costs nothing to run. The content above is laid out once
+                    // at full size and crossfades in with the layer, which is
+                    // what the transition below already does.
+                    RoundedRectangle(cornerRadius: DS.Radius.sheet, style: .continuous)
+                        .fill(DS.page)
+                        .ignoresSafeArea()
+                        .modifier(MorphMatch(ns: agentMorph))
                     agentSurface
                 }
                 .transition(.opacity)

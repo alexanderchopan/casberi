@@ -27,8 +27,22 @@
 #      posts — the §83 fake status the 2026-08-14 ruling refuses, reintroduced
 #      by the very change that was careful not to.
 #
-# Both failures are INVISIBLE to everything else: the build is green, every
-# static audit is green, the screen renders, and the number is simply wrong.
+#   C. THE AGENT'S RISE MORPHS A SHAPE, NEVER THE CONTENT (2026-08-22,
+#      prd §445). `matchedGeometryEffect` matches SIZE. Paired with the
+#      composer's content container it proposed the agent bar's capsule to the
+#      whole risen surface, so every frame of the rise laid the brief's entire
+#      document out at an interpolating size on the main actor — a full layout
+#      pass per frame, growing with the brief.
+#
+#      The condition: `MorphMatch` rides `RootShell`'s ground SHAPE (a fill,
+#      which has no layout children) and never returns to `Composer`'s
+#      container. Put it back and the build is green, the animation still
+#      looks like the approved morph, and the open is janky again — which is
+#      exactly how it survived four prior perf passes.
+#
+# All three failures are INVISIBLE to everything else: the build is green,
+# every static audit is green, the screen renders, and the number — or the
+# frame rate — is simply wrong.
 #
 # Static text checks over the shipped source, plus a mutation pass proving each
 # guard can actually fail — a check that cannot fail certifies nothing.
@@ -53,6 +67,8 @@ FEED="${ROOM_PERF_FEED:-Casberi/Casberi/Screens/FeedScreen.swift}"
 MAIN="${ROOM_PERF_MAIN:-Casberi/Casberi/Shell/MainSurface.swift}"
 SIGNAL="${ROOM_PERF_SIGNAL:-Casberi/Casberi/Model/CorpusSignal.swift}"
 CLOCK="${ROOM_PERF_CLOCK:-Casberi/Casberi/Shell/SwipeClock.swift}"
+COMPOSER="${ROOM_PERF_COMPOSER:-Casberi/Casberi/Shell/Composer.swift}"
+ROOT="${ROOM_PERF_ROOT:-Casberi/Casberi/Shell/RootShell.swift}"
 
 fails=0
 ok()   { print -r -- "  ✓ $1" }
@@ -87,6 +103,22 @@ check() {  # check <description> <file> <pattern> <expect: yes|no>
   local body
   body="$(strip_comments "$file")"
   if grep -Eq -- "$pattern" "$body"; then
+    [[ "$expect" == yes ]] && ok "$desc" || fail "$desc (found what must not be there)"
+  else
+    [[ "$expect" == no ]] && ok "$desc" || fail "$desc (missing)"
+  fi
+}
+
+# The same, over the WHOLE file at once. Section C's invariant is an ORDER of
+# modifiers spread across several lines — that the matched view is a fill and
+# not the surface above it — and a line-wise grep can only ever prove the words
+# appear somewhere in the file, which the broken version satisfies just as well
+# as the fixed one.
+checkm() {  # checkm <description> <file> <perl-regex> <expect: yes|no>
+  local desc="$1" file="$2" pattern="$3" expect="$4"
+  local body
+  body="$(strip_comments "$file")"
+  if perl -0777 -ne "exit(/$pattern/s ? 0 : 1)" "$body"; then
     [[ "$expect" == yes ]] && ok "$desc" || fail "$desc (found what must not be there)"
   else
     [[ "$expect" == no ]] && ok "$desc" || fail "$desc (missing)"
@@ -293,9 +325,13 @@ mutate() {  # mutate <description> <which: feed|main> <perl-expression>
   cp "$MAIN"   "$dir/MainSurface.swift"
   cp "$SIGNAL" "$dir/CorpusSignal.swift"
   cp "$CLOCK"  "$dir/SwipeClock.swift"
+  cp "$COMPOSER" "$dir/Composer.swift"
+  cp "$ROOT"     "$dir/RootShell.swift"
   case "$which" in
-    feed) perl -0777 -i -pe "$expr" "$dir/FeedScreen.swift" ;;
-    main) perl -0777 -i -pe "$expr" "$dir/MainSurface.swift" ;;
+    feed)     perl -0777 -i -pe "$expr" "$dir/FeedScreen.swift" ;;
+    main)     perl -0777 -i -pe "$expr" "$dir/MainSurface.swift" ;;
+    composer) perl -0777 -i -pe "$expr" "$dir/Composer.swift" ;;
+    root)     perl -0777 -i -pe "$expr" "$dir/RootShell.swift" ;;
     *)    print -r -- "  ✗ unknown mutation target: $which"; rm -rf "$dir"; return 1 ;;
   esac
   local survived=0
@@ -303,6 +339,8 @@ mutate() {  # mutate <description> <which: feed|main> <perl-expression>
   ROOM_PERF_MAIN="$dir/MainSurface.swift" \
   ROOM_PERF_SIGNAL="$dir/CorpusSignal.swift" \
   ROOM_PERF_CLOCK="$dir/SwipeClock.swift" \
+  ROOM_PERF_COMPOSER="$dir/Composer.swift" \
+  ROOM_PERF_ROOT="$dir/RootShell.swift" \
     "$SELF" --checks-only >/dev/null 2>&1 && survived=1
   rm -rf "$dir"
   if (( survived )); then
@@ -312,6 +350,42 @@ mutate() {  # mutate <description> <which: feed|main> <perl-expression>
   print -r -- "  ✓ caught: $desc"
   return 0
 }
+
+# ------------------------------------------------------------- C: the rise
+
+# C1. The morph is OFF the composer's content container. This is the whole
+#     removal: `matchedGeometryEffect` proposes the paired frame, so a content
+#     container wearing it is re-laid-out at every frame of the rise.
+#
+#     Negative, and therefore read from the comment-stripped copy — `Composer`
+#     documents this rule by naming the exact modifier it must no longer carry.
+check "the composer's container carries no MorphMatch" \
+      "$COMPOSER" '\.modifier\(MorphMatch' no
+
+# C2/C3. It rides the ground SHAPE instead, in `RootShell`'s agent layer. C3 is
+#     the one that matters: a fill has no layout children, so the same
+#     interpolation costs nothing to run. Checked as an ORDER, not as a set of
+#     words, or moving the modifier back onto `agentSurface` passes.
+check "RootShell's agent layer carries the morph" \
+      "$ROOT" 'MorphMatch\(ns: agentMorph\)' yes
+checkm "the matched view is a shape fill, not the risen surface" \
+       "$ROOT" 'RoundedRectangle\(.*?\)\s*\.fill\(DS\.page\)\s*\.ignoresSafeArea\(\)\s*\.modifier\(MorphMatch\(ns: agentMorph\)\)' yes
+
+# C4. The flat ground stays BENEATH it. The matched shape carries a corner
+#     radius, and a rounded rectangle sized to a square-cornered window (iPad,
+#     Mac) shows the feed through its four corners once the rise settles. A
+#     phone hides them behind the display's own mask; the other two surfaces
+#     this app ships on do not.
+checkm "a flat ground still sits under the matched shape" \
+       "$ROOT" 'DS\.page\.ignoresSafeArea\(\)\s*RoundedRectangle' yes
+
+# C5. The brief's document dissolves into the chrome instead of being cut by
+#     it. The `safeAreaInset` above it gives the last card somewhere to travel;
+#     it says nothing about the EDGE, which was a hard clip straight across
+#     whatever card happened to be crossing it — reported as "a hard black box"
+#     laid over the document.
+checkm "the document fades into the bottom chrome" \
+       "$COMPOSER" 'overlay\(alignment: \.bottom\)\s*\{\s*LinearGradient\(colors: \[DS\.page\.opacity\(0\), DS\.page\]' yes
 
 if [[ "${1:-}" == "--checks-only" ]]; then
   exit $(( fails > 0 ))
@@ -341,6 +415,21 @@ mutate "headIdentity counts through the @Query getter"  feed 's/String\(revision
 mutate "rowBudget leaves FeedScreen: Equatable"  feed 's/\n            && a\.rowBudget == b\.rowBudget//' || mfails=$((mfails + 1))
 mutate "the source room stops honouring rowBudget"  feed 's/if let rowBudget \{ d\.fetchLimit = rowBudget \}//' || mfails=$((mfails + 1))
 mutate "the budget is never released"  main 's/        swipeRowBudget = nil\n//' || mfails=$((mfails + 1))
+
+# Section C. Each of these builds green, renders correctly, and re-introduces
+# a defect a person feels rather than sees.
+mutate "the morph goes back on the composer's content"  composer \
+  's/(\.scaleEffect\(embedded \? 1 : \(isOpen \? 1 : 0\.3\), anchor: \.bottomTrailing\))/$1\n        .modifier(MorphMatch(ns: embedded ? glassNamespace : nil))/' \
+  || mfails=$((mfails + 1))
+mutate "the morph moves off the shape onto the risen surface"  root \
+  's/\.modifier\(MorphMatch\(ns: agentMorph\)\)\n                    agentSurface/\n                    agentSurface\n                        .modifier(MorphMatch(ns: agentMorph))/' \
+  || mfails=$((mfails + 1))
+mutate "the flat ground under the matched shape is dropped (corners leak on iPad and Mac)"  root \
+  's/                    DS\.page\.ignoresSafeArea\(\)\n(?=\s*\/\/ THE MORPH RIDES)//' \
+  || mfails=$((mfails + 1))
+mutate "the document is guillotined by the chrome again"  composer \
+  's/                \.overlay\(alignment: \.bottom\) \{\n                    LinearGradient.*?\n                \}\n//s' \
+  || mfails=$((mfails + 1))
 
 if (( mfails > 0 )); then
   print -r -- "room-perf-selftest: $mfails mutation(s) survived"

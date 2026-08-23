@@ -2269,6 +2269,32 @@ struct Composer: View {
                 .safeAreaInset(edge: .bottom, spacing: 0) {
                     Color.clear.frame(height: DS.Space.s4)
                 }
+                // …AND IT DISSOLVES INTO THE CHROME RATHER THAN BEING CUT BY
+                // IT (2026-08-22, prd §445, user: "the bottom of the screen
+                // has a hard black box you can see"). The inset above gives
+                // the last card somewhere to travel to; it says nothing about
+                // the EDGE, which stayed a hard horizontal clip straight
+                // across whatever card happened to be crossing it. On a black
+                // page with two chips and the field floating below it, a card
+                // guillotined mid-sentence does not read as "the document
+                // continues" — it reads as a black rectangle laid over the
+                // document, which is what was reported.
+                //
+                // An overlay, deliberately not a `.mask`: a mask composites
+                // the whole scrolling document into an offscreen layer on
+                // every frame, which is a real cost on the one surface this
+                // session is making smoother. A gradient drawn on top is one
+                // more layer and no offscreen pass — and it can be exact here
+                // because the ground behind this surface is always the flat
+                // `DS.page` colour (`RootShell`'s agent layer paints the
+                // colour, never `DSPageBackground`'s photo), so the fade lands
+                // on precisely the tone it is fading into.
+                .overlay(alignment: .bottom) {
+                    LinearGradient(colors: [DS.page.opacity(0), DS.page],
+                                   startPoint: .top, endPoint: .bottom)
+                        .frame(height: 40)
+                        .allowsHitTesting(false)
+                }
             }
 
             // Recording — the red dot, the clock, and the words arriving live.
@@ -2407,17 +2433,34 @@ struct Composer: View {
         .background(embedded ? Color.clear : DS.inkGround, in: bubbleShape)
         .clipShape(embedded ? AnyShape(Rectangle()) : AnyShape(bubbleShape))
         .scaleEffect(embedded ? 1 : (isOpen ? 1 : 0.3), anchor: .bottomTrailing)
-        // The bar→surface morph (2026-07-20, `glassNamespace`) — a PLAIN
-        // frame interpolation, deliberately NOT another glass-pipeline morph
-        // (see the lesson just above: prd 44/52 both tried tying the open
-        // animation to `glassEffect`/`glassEffectID` and broke on real
-        // devices twice, because a glitched glass morph took the content
-        // down with it). `matchedGeometryEffect` never touches glass
-        // compositing — it only interpolates this container's own frame
-        // from `AgentBar`'s last position, while the ink background above
-        // and the content within render normally throughout. Embedded only —
-        // the non-embedded bubble already has its own scale-driven open.
-        .modifier(MorphMatch(ns: embedded ? glassNamespace : nil))
+        // THE MORPH LEFT THIS CONTAINER (2026-08-22, prd §445, user: "the
+        // agent still opens in a janky way"). It was
+        // `.modifier(MorphMatch(ns: embedded ? glassNamespace : nil))` here,
+        // and the ruling it kept — a plain frame interpolation, never a
+        // glass-pipeline morph (prd 44/52 broke on real devices twice tying
+        // the open to `glassEffect`/`glassEffectID`) — is untouched and still
+        // the reason the morph is a `matchedGeometryEffect`. What changed is
+        // WHAT it is applied to.
+        //
+        // `matchedGeometryEffect` matches SIZE, not just position: it proposes
+        // the paired frame to the view it modifies. Applied here it proposed
+        // the agent bar's capsule to THIS container — so for every frame of
+        // the rise the whole risen surface (masthead, the brief's document,
+        // every section, the chip rows, the input bar) was laid out at an
+        // interpolating size, from roughly a capsule up to the full screen, on
+        // the main actor, inside the frames the animation needed. A full
+        // layout pass of the document per frame, growing with the brief. Four
+        // prior passes fixed WHEN work happens (memoised heads, the persisted
+        // doc, the rising frame) and none could reach this, which is why the
+        // report survived all four.
+        //
+        // The morph now rides a SHAPE instead — `RootShell`'s agent layer
+        // paints the surface's own ground as a matched rounded rectangle that
+        // grows out of the bar's frame, while this container is laid out ONCE
+        // at full size and crossfades in over it. Same origin, same
+        // interpolation, no per-frame relayout. It is the lesson the glass
+        // pass already wrote down one modifier above, in a second place: the
+        // content never enters the effect.
         .task(id: isOpen) {
             if isOpen {
                 riseT0 = .now

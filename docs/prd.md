@@ -29919,3 +29919,33 @@ Four, all found by reading the diff rather than by any check, and each fixed her
 ### Unproven
 
 iOS Simulator and Mac Catalyst build green, every static audit passes, both address harnesses pass, and the string catalog is level with source in all five languages. **No simulator run and no device.** Every one of the six is gesture- or render-driven and no static check can exercise one: the diff's ink at Dynamic Type sizes, the ring sweep, the ends-first mask, the filing flight's arc inside a tray, the deck's absorb, the inline field's keyboard, and the wallets strip's horizontal scroll.
+
+## 445. The rise stops re-laying out the brief on every frame, and the document dissolves into the chrome instead of being cut by it (user: "the agent still opens in a janky way, and the bottom of the screen has a hard black box you can see", 2026-08-22)
+
+Two reported symptoms, one screenshot. Both are structural — work removed, and an edge given a gradient. Nothing tuned.
+
+### 1. The morph was matching the wrong thing
+
+The bar→surface morph (§, 2026-07-20) is a `matchedGeometryEffect` pairing `AgentBar`'s capsule with the risen composer, and `Composer` applied it — `MorphMatch` — to its **content container**, the `VStack` holding the masthead, the brief's whole document, the chip rows and the input bar.
+
+**`matchedGeometryEffect` matches SIZE, not only position.** It proposes the paired frame to the view it modifies. So for every frame of the rise, the entire risen surface was laid out at an interpolating size, from roughly the bar's capsule up to the full screen, on the main actor, inside the frames the animation itself needed. A full layout pass of the brief per frame, and the cost grows with the brief.
+
+This is why the report survived four prior perf passes. Every one of them fixed *when* work happens — the memoised room heads, the persisted `lastPresentedDoc`, the rising frame, the chip-tap scoping — and none of them could reach an animation that re-lays-out the document twenty times on the way up. **A metric measuring the wrong span reads clean; so does a fix aimed at the wrong span.**
+
+The morph now rides a SHAPE. `RootShell`'s agent layer paints the surface's ground as a matched `RoundedRectangle` fill that grows out of the bar's frame, while the composer's container is laid out ONCE at full size and crossfades in over it. Same origin, same interpolation, and a fill has no layout children, so running it costs nothing. It is the lesson the glass pass already wrote down one modifier above (prd 44/52: "the field and chips never enter the glass"), in a second place — **the content never enters the effect.**
+
+**The flat `DS.page.ignoresSafeArea()` stays BENEATH the matched shape** rather than being folded into it, and that is not belt-and-braces. The shape carries a corner radius; a rounded rectangle sized to a square-cornered window shows the feed through its four corners once the rise settles. A phone hides them behind the display's own ~55pt mask. iPad and Mac Catalyst — both of which this app ships on — do not.
+
+### 2. The document was guillotined, and that is the "hard black box"
+
+The brief's scroll ends where the chip row and the input bar begin, and that edge was a hard horizontal clip straight across whatever card happened to be crossing it. §386's own fix (2026-08-15) gave the scroll a bottom `safeAreaInset` so the LAST card has somewhere to travel to; it said nothing about the edge itself, which is a different failure. On a black page, a card sliced mid-sentence with two chips and the field floating in flat black below it does not read as "the document continues" — it reads as a black rectangle laid over the document. That is what was reported, and the reading was confirmed before the fix was chosen.
+
+A gradient overlay now fades the document into the ground over its last 40pt. **An overlay, deliberately not a `.mask`**: a mask composites the whole scrolling document into an offscreen layer every frame, which is a real cost on the one surface this entry is making smoother. A gradient drawn on top is one more layer and no offscreen pass — and it can be exact here, because the ground behind this surface is always the flat `DS.page` COLOUR (`RootShell` paints the colour, never `DSPageBackground`'s photo), so the fade lands on precisely the tone it fades into.
+
+### The guard
+
+`scripts/room-perf-selftest.sh` gains a section C, five checks and four mutations. The invariant it pins is the one nothing else can see: **`MorphMatch` rides the ground shape and never returns to `Composer`'s container.** Put it back and the build is green, every static audit is green, the animation still looks like the approved morph, and the open is janky again — which is exactly how it survived four passes. The negative half reads a comment-stripped copy, because `Composer` documents the rule by naming the modifier it must no longer carry (the Obsidian/Cursor lesson, again). One check is deliberately multi-line (`checkm`): the invariant is an ORDER of modifiers, and a line-wise grep proves only that the words appear somewhere in the file, which the broken version satisfies just as well as the fixed one.
+
+### Unproven
+
+iOS Simulator and Mac Catalyst build green; every static audit and the extended guard pass. **No simulator run and no device.** The rise is animation-frame timing, which a simulator distorts and which no static check can exercise — the reading that would close it is `risePhase|` on a device, a cold first open and a same-day re-open, which is the same open item `docs/perf-swipe-and-rise-spec.md` already carries. The bottom fade is a render, unverified at any Dynamic Type size.
