@@ -83,17 +83,31 @@ struct AddressFlightOverlay: View {
     /// Which pair of anchors this flight runs between, and the two RAMP sizes
     /// its ends are drawn at (2026-08-22, prd §444).
     ///
-    /// The star flight is the default and is unchanged: a book row's
-    /// `DS.Face.list` to a shelf slot's `DS.Face.shelf`. Filing an address into
-    /// a group reuses the whole apparatus in the opposite direction — the move
-    /// sheet's own head face down into the group's deck — which is a SHRINKING
-    /// flight, so the sizes cannot be constants here.
-    ///
     /// Parameters rather than a second overlay: two copies of an arc drift, and
     /// then the same face travels two different ways depending on which screen
     /// you filed from.
-    var fromKey: String = "row:"
-    var toKey: String = "slot:"
+    ///
+    /// **The KEYS are required and the SIZES are not, since 2026-08-22
+    /// (prd §448), and the asymmetry is the point.**
+    ///
+    /// All four used to default to the STAR flight — `"row:"` → `"slot:"` at
+    /// `DS.Face.list` → `DS.Face.shelf` — and that flight retired with the
+    /// shelf it landed in: Watching is a section of the book now, so starring
+    /// MOVES the row you tapped rather than copying its face into a slot.
+    /// A default ANCHOR is the dangerous half: it names a key nothing
+    /// publishes any more, and this overlay's answer to a missing anchor is to
+    /// draw nothing at all — silently, which is the one failure the whole file
+    /// is built to avoid. So the keys must be said out loud.
+    ///
+    /// The SIZES keep ramp defaults deliberately, and not merely as a
+    /// convenience: `size` below is interpolated between them, so this file is
+    /// the only place `scripts/face-ramp-audit.py` can see that a travelling
+    /// face's ends are ramp tiers rather than raw numbers. Required
+    /// parameters would make that unresolvable — measured, the audit went red
+    /// on line 140 the moment they lost their initializers. Filing (§444) is
+    /// the one caller and passes both anyway.
+    let fromKey: String
+    let toKey: String
     var fromSize: CGFloat = DS.Face.list
     var toSize: CGFloat = DS.Face.shelf
 

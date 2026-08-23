@@ -115,7 +115,10 @@ KNOWN_EXEMPT = {
 # 44pt minimum touch target"; the rest are full-width or parent-sized.
 NAMED_SIZES = re.compile(
     r"DS\.Hit\.|DS\.Face\.shelf|DS\.Mark\.tile|DS\.Mark\.hero|faceSize|slotHeight"
-    r"|doorSide|\.infinity|maxWidth:|rosterSlotWidth|DS\.Radius\.widget"
+    # `rosterSlotWidth` retired here 2026-08-22 (prd §448) with the watched
+    # shelf it sized — Watching is a section of the book now, and its rows are
+    # ordinary `AddressBookRow`s already covered by the row tiers above.
+    r"|doorSide|\.infinity|maxWidth:|DS\.Radius\.widget"
 )
 
 # What satisfies check 2 — any of these means the tap was declared, not just felt.

@@ -32,10 +32,6 @@ import SwiftData
 struct AddressGroupCard: View {
     let group: String
     let members: [AddressBook.Entry]
-    /// How many of `members` are watched — passed in rather than computed,
-    /// since only the screen knows the watch list and this is drawn once per
-    /// group per body pass.
-    let watched: Int
     var targeted = false
     /// True for one beat after a drop landed here (prd §441) — the deck TAKES
     /// the new face rather than having it appear. A one-shot from the screen,
@@ -111,13 +107,19 @@ struct AddressGroupCard: View {
     /// §435 struck out with every other figure on this screen. A group is a
     /// set of people; how much they are worth is not a fact about the set, and
     /// the feed's crown owns the money reading.
+    /// The count, and nothing else (2026-08-22, user ruling: "don't say
+    /// n watched — it's just extra text we don't need").
+    ///
+    /// It read "3 addresses · none watched", which failed twice at once. It
+    /// was REDUNDANT — the deck above it already draws the members, and
+    /// whether a group's members are watched is a fact about the WATCHING
+    /// section at the top of the same screen, not about the group. And it
+    /// did not FIT: at 150pt in `label12` the clause clipped to
+    /// "3 addresses · none wat…", the same truncation the watched shelf was
+    /// deleted for on this pass.
     private var note: String {
-        let count = members.count
-        let head = count == 1 ? String(localized: "1 address")
-                              : String(localized: "\(count) addresses")
-        return watched == 0
-            ? head + " · " + String(localized: "none watched")
-            : head + " · " + String(localized: "\(watched) watched")
+        members.count == 1 ? String(localized: "1 address")
+                           : String(localized: "\(members.count) addresses")
     }
 }
 
@@ -284,13 +286,15 @@ struct AddressGroupScreen: View {
         }
     }
 
+    /// The count, and nothing else — `AddressGroupCard.note`'s ruling, on the
+    /// screen the card opens onto (2026-08-22, prd §448). The two are read one
+    /// tap apart, so a clause dropped from one and kept on the other reads as
+    /// the screen disagreeing with the card you came from; and the stars are
+    /// on the rows right below this line, which is where "which of these am I
+    /// watching" is answered without anybody counting for you.
     private var headerNote: String {
-        let count = members.count
-        let watched = members.filter(isWatched).count
-        let head = count == 1 ? String(localized: "1 address")
-                              : String(localized: "\(count) addresses")
-        return watched == 0 ? head
-                            : head + " · " + String(localized: "\(watched) watched")
+        members.count == 1 ? String(localized: "1 address")
+                           : String(localized: "\(members.count) addresses")
     }
 
     private func isWatched(_ entry: AddressBook.Entry) -> Bool {

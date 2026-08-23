@@ -50,7 +50,9 @@ SPINE="Casberi/Casberi/Screens/AddressSpineCard.swift"
 BAR="Casberi/Casberi/Screens/AddressIndexBar.swift"
 FLIGHT="Casberi/Casberi/Screens/AddressFlight.swift"
 SOURCE="Casberi/Casberi/Model/AddressConnectionsSource.swift"
-for f in "$SHAPE" "$BOOK" "$ACTIVITY" "$SCREEN" "$VIEWS" "$GROUPS" "$SPINE" "$BAR" "$FLIGHT" "$SOURCE"; do
+# The connections MODEL — where §448 cut `headline`/`subhead` out.
+CONN="Casberi/Casberi/Model/AddressConnections.swift"
+for f in "$SHAPE" "$BOOK" "$ACTIVITY" "$SCREEN" "$VIEWS" "$GROUPS" "$SPINE" "$BAR" "$FLIGHT" "$SOURCE" "$CONN"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 
@@ -114,7 +116,7 @@ grep -q 'if !searching { footSection }' "$TMP/screen-bare.swift" \
 # ONE SEARCH PER BODY PASS (prd §441). `book.search` was reached four times a
 # pass; the fix is a single `let` threaded down. A section builder that goes
 # back to the store for its own copy silently restores the cost.
-grep -q 'let entries = visibleEntries' "$TMP/screen-bare.swift" \
+grep -q 'let entries = visibleEntries(searching: searching)' "$TMP/screen-bare.swift" \
   || { echo "✗ the body no longer hoists the filtered book — the search would run once per reader again (§441)"; exit 1; }
 grep -q 'private func bookSection(entries: \[AddressBook.Entry\]' "$SCREEN" \
   || { echo "✗ the book list no longer takes its entries as a parameter"; exit 1; }
@@ -131,24 +133,103 @@ grep -q 'static func map(things: \[Thing\]) -> Map?' "$SOURCE" \
 grep -q 'things.sorted(by: { $0.capturedAt < $1.capturedAt })' "$SOURCE" \
   || { echo "✗ edges(from:) trusts the caller's order — the spine would be reversed, and it would look completely normal"; exit 1; }
 
-# THE FIVE MOMENTS (prd §441). Each is a real state change, per §79.
-grep -q 'launchFlight(entry)' "$SCREEN" \
-  || { echo "✗ starring an address no longer sends its face to the shelf (§212's own claimed moment)"; exit 1; }
-grep -q 'flightAnchor("slot:" + AddressBook.key(for: addr.address))' "$SCREEN" \
-  || { echo "✗ the shelf slot no longer publishes a landing anchor, or stopped keying it the BOOK's way — a watch stored as 'vitalik.eth' would never find its own row"; exit 1; }
-# The flight is shared by the star (row → shelf) and the filing move (sheet head
-# → group deck) since §444, so the two ends are RAMP tokens the caller passes.
-# The ruling is unchanged and this is the sharper form of it: the size may never
-# be read off the anchor rects, which are layout frames and stop matching the
-# face the moment a mark gains a border.
+# THE MOMENTS (prd §441). Each is a real state change, per §79.
+#
+# The STAR FLIGHT retired 2026-08-22 (§448) with the shelf it landed in: the
+# gap it crossed existed only because the shelf drew each watched wallet a
+# second time, and Watching is a section of this same list now. What survives
+# is the promotion LIFT, which is what marks the row you just starred as it
+# moves up into that section — without it the row teleports, which reads as
+# the list glitching rather than as the thing you did.
+grep -q 'connectPromote(isTarget: entry.id == promotedEntryID, token: promoteToken)' "$SCREEN" \
+  || { echo "✗ starring an address no longer lifts its row — the row would teleport into Watching (§433/§448)"; exit 1; }
+grep -q 'promoteToken &+= 1' "$SCREEN" \
+  || { echo "✗ the promotion lift is never fired"; exit 1; }
+# The flight's ends are RAMP tokens the caller passes, and since §448 they are
+# REQUIRED: the old defaults named the star flight's own anchors, and a default
+# pointing at an anchor nothing publishes draws nothing at all — silently,
+# which is the failure this file exists to avoid. The ruling behind them is
+# unchanged: the size may never be read off the anchor rects, which are layout
+# frames and stop matching the face the moment a mark gains a border.
 grep -q 'let size = fromSize + (toSize - fromSize) \* progress' "$FLIGHT" \
   || { echo "✗ the flight no longer interpolates between two ramp sizes"; exit 1; }
 grep -q 'var fromSize: CGFloat = DS.Face.list' "$FLIGHT" \
-  || { echo "✗ the star flight's start stopped being a ramp token"; exit 1; }
+  || { echo "✗ the flight's start stopped being a ramp token — and this file is the only place face-ramp-audit can see that a travelling face's ends are tiers"; exit 1; }
 grep -q 'var toSize: CGFloat = DS.Face.shelf' "$FLIGHT" \
-  || { echo "✗ the star flight's end stopped being a ramp token"; exit 1; }
+  || { echo "✗ the flight's end stopped being a ramp token — see above"; exit 1; }
+# The KEYS, unlike the sizes, may carry no default (§448). The old ones named
+# the star flight's anchors, and this overlay's answer to a key nothing
+# publishes is to draw nothing at all — silently.
+grep -qE '(var|let) (from|to)Key: String *=' "$TMP/flight-bare.swift" \
+  && { echo "✗ the flight grew a default ANCHOR again — a key nothing publishes draws nothing, silently (§448)"; exit 1; }
+grep -qE 'let (from|to)Key: String$' "$FLIGHT" \
+  || { echo "✗ the flight's anchors stopped being required (§448)"; exit 1; }
 grep -qE '\b[ab]\.(width|height|size)\b' "$TMP/flight-bare.swift" \
   && { echo "✗ the flight sizes itself off the anchor rects again — those are layout frames and stop matching the face the moment a mark gains a border"; exit 1; }
+
+# ── §448: ONE ROW ANATOMY, ONE FACE PER ADDRESS ─────────────────────────────
+#
+# The shelf drew every watched wallet twice on one screen — a 56pt face in a
+# 64pt slot with its name captioned in `label12` (about nine characters, so
+# "Cold storage" clipped), while the same wallet's own book row sat lower down
+# with the whole name, a subline and a filled star. Every guard here defends a
+# failure that renders as a perfectly ordinary list.
+
+# Watching is drawn by `bookRow` — the same row as the list below it. A second
+# spelling of the row is two books, which is the drift §440 folded together in
+# the first place.
+grep -q 'private func watchedRows(_ watched: \[AddressBook.Entry\]) -> some View' "$SCREEN" \
+  || { echo "✗ the Watching section is gone, or stopped being rows"; exit 1; }
+grep -q 'bookRow(entry, colliding: colliding.contains(entry.id), row: index)' "$TMP/screen-bare.swift" \
+  || { echo "✗ Watching draws its own row anatomy again — one screen, two spellings of the same row (§448)"; exit 1; }
+
+# …and the watched entries are LIFTED OUT of the A–Z sections, or they are
+# drawn twice again. The `searching` half is load-bearing in the other
+# direction: the Watching section folds away while you type, so a search that
+# filtered them out could never find your own watched wallets.
+grep -q 'return searching ? found : found.filter { !isWatched($0) }' "$TMP/screen-bare.swift" \
+  || { echo "✗ the book no longer lifts watched entries out while browsing (or lifts them out while SEARCHING, which hides the wallets you watch from your own search) — §448"; exit 1; }
+# The head must name what it LISTS. It read "Saved · book.count", which stopped
+# being true the moment the watched rows moved to their own section: 27 over a
+# list of 24.
+grep -q 'Everyone else · \\(count)' "$TMP/screen-bare.swift" \
+  || { echo "✗ the book's head no longer names or counts what it actually lists (§448)"; exit 1; }
+
+# NEGATIVE, comment-stripped: the shelf may not come back. `DS.Face.shelf` is
+# the ramp rung it was drawn at and this screen is the only place it was ever
+# used at this size.
+grep -q 'DS.Face.shelf' "$TMP/screen-bare.swift" \
+  && { echo "✗ the watched shelf is back — §448 deleted it because it drew every watched wallet a second time, with its name truncated (§448)"; exit 1; }
+grep -qE 'rosterSlot|emptyRosterSlot|rosterSlotWidth' "$TMP/screen-bare.swift" \
+  && { echo "✗ the roster shelf's slots are back (§448)"; exit 1; }
+
+# ── §448: THE FEWEST WORDS ──────────────────────────────────────────────────
+#
+# User ruling, 2026-08-22: "in the connected section we have redundancy … I
+# want it with the least amount of words ever there". The card said one thing
+# four times before you reached the drawing — a section header, an eyebrow
+# repeating it, a headline counting rows the drawing shows one-per, and a
+# subhead defining the word.
+grep -q 'sectionHeader(String(localized: "Connected"))' "$TMP/screen-bare.swift" \
+  || { echo "✗ the connected section's header is not the single word §448 cut it to"; exit 1; }
+grep -q 'How they connect' "$TMP/screen-bare.swift" \
+  && { echo "✗ the three-word header is back over a card whose eyebrow said the same thing (§448)"; exit 1; }
+grep -qE 'AddressConnections\.(headline|subhead)' "$TMP/spine-bare.swift" \
+  && { echo "✗ the spine card states its own count in words again — the left column IS the count (§448)"; exit 1; }
+grep -qE 'static func (headline|subhead)\(count:' "$CONN" \
+  && { echo "✗ AddressConnections.headline/subhead are back; §448 cut them"; exit 1; }
+# The ZERO case is still a real answer — §295 — it just no longer needs a card
+# wrapped around it. Spelled ONCE and read by both layouts, or one of them ends
+# up honest and the other doesn't.
+grep -q 'private var spineEmptyLine: String?' "$SCREEN" \
+  || { echo "✗ the connected section's empty states are no longer spelled once for both layouts (§448)"; exit 1; }
+grep -q 'No shared addresses yet.' "$TMP/screen-bare.swift" \
+  || { echo "✗ two watched wallets that share nothing say nothing at all now — §295's 'stating none IS an answer' was dropped rather than trimmed"; exit 1; }
+# A group says its COUNT and stops. "3 addresses · none watched" clipped to
+# "3 addresses · none wat…" at 150pt, and whether a group's members are watched
+# is a fact about the Watching section, not about the group.
+grep -qE 'watched\)? watched|none watched' "$TMP/groups-bare.swift" \
+  && { echo "✗ a group counts its watched members again — user ruling 2026-08-22, and it clipped at 150pt (§448)"; exit 1; }
 
 # THE FILING FLIGHT (§444) — the same face, the other direction. Filing was the
 # one gesture in the book whose whole feedback was a checkmark appearing.

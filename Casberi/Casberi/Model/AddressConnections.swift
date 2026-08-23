@@ -308,25 +308,14 @@ enum AddressConnections {
 
     // MARK: - The card's words
 
-    /// "3 of your addresses are connected." The whole finding, as a sentence.
-    static func headline(count: Int) -> String {
-        switch count {
-        case 0:  return String(localized: "None of your addresses are connected")
-        case 1:  return String(localized: "1 of your addresses is connected")
-        default: return String(localized: "\(count) of your addresses are connected")
-        }
-    }
-
-    /// What "connected" means, said once, underneath. Nil at zero — the
-    /// headline is already the whole answer there, and a definition beneath it
-    /// would be explaining a negative.
-    static func subhead(count: Int) -> String? {
-        switch count {
-        case 0:  return nil
-        case 1:  return String(localized: "It has transacted with more than one of your wallets.")
-        default: return String(localized: "Each has transacted with more than one of your wallets.")
-        }
-    }
+    // `headline` / `subhead` retired here 2026-08-22 (prd §448). The card
+    // draws one row per connected address, so a sentence counting them was
+    // the drawing read out loud — and `subhead` re-defined the word
+    // "connected" under a section header that already carries it. The ZERO
+    // case survives where it belongs: `WalletScreen.spineSection` draws no
+    // card at all and states it in one tertiary line, which is §295's "none
+    // IS an answer" without a card wrapped around the answer. `connectedCount`
+    // stays — the notes below and the screen's own gate read it.
 
     /// How many undrawn connections are NAMED before the sentence gives up and
     /// counts the rest. Three, because a fourth name turns a caveat into a

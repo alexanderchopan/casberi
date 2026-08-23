@@ -165,16 +165,19 @@ struct AddressBookRow: View {
     /// addresses are written down — and the row is where it has to be said,
     /// since the truncation that hides the difference is right beside it.
     let colliding: Bool
-    /// Publishes the MARK's frame as a star-flight endpoint (prd §441). nil
-    /// where there is no flight to launch — the group screen's rows.
-    var markAnchor: String?
+    // `markAnchor` retired here 2026-08-22 (prd §448) with the star flight.
+    // §441 flew a face from this mark to a shelf slot because the shelf drew
+    // the same wallet a second time; Watching is a section of this list now,
+    // so starring MOVES this row rather than copying it, and there is no gap
+    // left to cross. `OptionalFlightAnchor` below stays — §444's filing
+    // flight (a move sheet's head into a group's deck) is a real crossing
+    // between two surfaces and still uses it.
     /// nil draws no star at all — see the note above.
     var onToggleWatch: (() -> Void)?
 
     var body: some View {
         HStack(spacing: DS.Space.s3) {
             AddressMark(entry: entry, size: DS.Face.list)
-                .modifier(OptionalFlightAnchor(key: markAnchor))
             VStack(alignment: .leading, spacing: 1) {
                 HStack(spacing: DS.Space.s1) {
                     Text(entry.name)

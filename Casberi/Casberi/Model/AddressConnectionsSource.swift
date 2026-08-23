@@ -158,7 +158,15 @@ extension AddressConnections {
         }
         out.append("connected=\(map.connectedCount) drawn=\(map.nodes.count) "
                     + "hidden=\(map.hiddenCount)")
-        out.append("headline: \(headline(count: map.connectedCount))")
+        // WHAT THE SCREEN DRAWS, not a sentence it no longer has. §448 cut
+        // `headline`/`subhead` — the card counts its own rows — so the card is
+        // gated on `connectedCount > 0` and a zero states itself in one line
+        // instead. That comparison is mirrored here deliberately: the numbers
+        // above cannot say by themselves whether a card is on screen, which is
+        // the question this probe exists to answer.
+        out.append(map.connectedCount > 0
+                    ? "card: YES"
+                    : "card: NO — the screen states \"No shared addresses yet.\"")
         for node in map.nodes {
             out.append("connRow| \(node.name) | transactions=\(node.count) "
                         + "| named=\(node.named ? "YES" : "NO") "

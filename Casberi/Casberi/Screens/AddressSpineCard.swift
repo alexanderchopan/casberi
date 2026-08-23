@@ -106,26 +106,22 @@ struct AddressSpineCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("Connected")
-                .dsText(.label12).fontWeight(.semibold)
-                .foregroundStyle(DS.textTertiary)
-
-            Text(AddressConnections.headline(count: map.connectedCount))
-                .dsText(.heading22)
-                .foregroundStyle(DS.textPrimary)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.top, DS.Space.s2)
-
-            if let subhead = AddressConnections.subhead(count: map.connectedCount) {
-                Text(subhead)
-                    .dsText(.subhead13)
-                    .foregroundStyle(DS.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.top, DS.Space.s1)
-            }
-
+            // THE PICTURE LEADS (2026-08-22, prd §448). Three lines stood
+            // above it and said one thing between them: an eyebrow reading
+            // "Connected" under a section header reading "How they connect",
+            // a `heading22` headline counting rows the left column already
+            // shows one-per, and a subhead defining the word "connected"
+            // afresh on every open. The count in particular is the tally the
+            // module doctrine forbids — `AddressConnections.connectedCount`
+            // IS `map.nodes.count`, so the headline was reading the drawing
+            // out loud. `headline`/`subhead` went with them.
+            //
+            // What the card cannot say for itself still stands below: the
+            // window the counts cover, the addresses that didn't fit, the
+            // wallets nothing reached. Those are facts the picture omits
+            // rather than restatements of what it shows.
             if !map.nodes.isEmpty {
-                spine.padding(.top, DS.Space.s4)
+                spine
             }
 
             if let target = map.firstUnnamed {

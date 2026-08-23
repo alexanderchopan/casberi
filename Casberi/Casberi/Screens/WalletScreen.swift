@@ -130,6 +130,16 @@ struct WalletScreen: View {
     /// a corpus fetch plus a walk, and the corpus doesn't change between an
     /// appear and a sync without one of them firing.
     @State private var connections: AddressConnections.Map?
+    /// Whether `refreshReadings` has run even once (2026-08-22, prd §448).
+    ///
+    /// `connections` is nil for TWO different reasons — the walk hasn't
+    /// happened yet, and there is nothing to draw — and until §448 the screen
+    /// never had to tell them apart, because a nil map only ever meant "draw
+    /// no card". Now a nil map with two watched wallets prints "No shared
+    /// addresses yet.", and `onAppear` fires AFTER the first body evaluation,
+    /// so without this the screen states a finding for one frame before it has
+    /// looked at anything (§83, on a claim about somebody's own wallets).
+    @State private var hasWalked = false
     /// Which group card a dragged row is currently over (prd §440), by the
     /// book's own case-fold. Held so exactly one card can light up: a
     /// `dropDestination`'s own `isTargeted` is per-card and two adjacent cards
@@ -143,18 +153,16 @@ struct WalletScreen: View {
     /// beside `connections` and computed in the same walk, so the card can draw
     /// its arrivals on the frame it first appears.
     @State private var newConnections: Set<String> = []
-    /// THE STAR FLIGHT (prd §441) — the address whose face is in the air
-    /// between its book row and its shelf slot, and how far along it is.
-    ///
-    /// §212 retired the footer that explained the star on the grounds that
-    /// "tapping a star visibly drops the wallet into the shelf at the top of
-    /// the same screen, which teaches it better than the sentence did" — and
-    /// then the wallet simply appeared. `connectPromote` lifts the row and the
-    /// slot scales in, two animations that don't know about each other. This
-    /// is the sentence made true.
-    @State private var flying: FlightingFace?
-    @State private var flightProgress: CGFloat = 0
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    // THE STAR FLIGHT retired here 2026-08-22 (prd §448). §441 flew a face
+    // from a book row to a shelf slot because the two were separate
+    // renderings of one wallet in two places; the shelf is gone and Watching
+    // is a section of the same list, so starring MOVES the row you tapped
+    // instead of copying it somewhere else. That is §212's sentence ("tapping
+    // a star visibly drops the wallet into the shelf") kept by structure
+    // rather than by an arc drawn over the gap the copy created — and it is
+    // what `connectPromote` below was already marking. `AddressFlight` itself
+    // stays: §444's filing flight (a move sheet's head into a group's deck)
+    // is a real crossing between two surfaces and still uses it.
     /// The connected address being named, and the draft. Naming here is the
     /// same act as naming from a transfer's sheet — it rewrites every landed
     /// transfer carrying that address (`CounterpartyRetitle`).
@@ -219,18 +227,13 @@ struct WalletScreen: View {
 
     @Query(walletRecentDescriptor) private var recent: [Thing]
 
-    private let rosterFaceSize: CGFloat = DS.Face.shelf
-    /// Sized so ALL FIVE slots fit a phone's width without scrolling (prd
-    /// §442). §182's whole claim is that the cap is "structure you can see
-    /// rather than copy you hit", and at 74 the fifth slot sat off the right
-    /// edge — so a shelf reading "2 of 5" showed four, which is the one thing
-    /// a picture of a cap must not do. 5 × 64 + 4 × 8 = 352 against the 360
-    /// a 390pt screen leaves inside the page margin.
-    private let rosterSlotWidth: CGFloat = 64
-    /// The two label lines under a roster face, height-locked so a watched
-    /// slot and an empty one line up. Named rather than written twice: the
-    /// two call sites MUST agree or a half-full shelf steps.
-    private let rosterLabelHeight: CGFloat = 28
+    // `rosterFaceSize` / `rosterSlotWidth` / `rosterLabelHeight` retired here
+    // 2026-08-22 (prd §448) with the shelf they measured. §442 sized the slot
+    // so all five fit a phone — 5 × 64 + 4 × 8 = 352 against 360 — and that
+    // arithmetic was done in the MAC tokens: on iOS `DS.Space.s2` is 10 and
+    // the page margin 18, so the strip really needed 396 inside 390 and the
+    // fifth slot sat off the right edge. A shelf reading "3 of 5" that shows
+    // four is the one thing §442 says a picture of a cap must not do.
 
     var body: some View {
         // ONE search per body pass (prd §441). `book.search` was reached four
@@ -240,9 +243,9 @@ struct WalletScreen: View {
         // passes (the book is `@Observable`, so a pass only happens when
         // something really changed) but computing it ONCE within the pass and
         // threading it down.
-        let entries = visibleEntries
-        let sections = bookSections(entries)
         let searching = !draft.isEmpty
+        let entries = visibleEntries(searching: searching)
+        let sections = bookSections(entries)
         // ONE scroll, four readings (prd §440): the way in, who you watch, how
         // they connect, and the record. Each is a different question — the
         // §435 fusion failed because it treated five renderings of one graph
@@ -286,13 +289,6 @@ struct WalletScreen: View {
             // The A–Z scrubber, over the list's trailing edge (prd §440).
             // An OVERLAY rather than a row, because it has to stay put while
             // the thing it aims at scrolls underneath it.
-            // THE FLIGHT (prd §441). An `overlayPreferenceValue` over the
-            // whole List, so the face can cross between two sections of it —
-            // a per-row overlay would be clipped by the row it came from.
-            .overlayPreferenceValue(AddressFlightAnchors.self) { anchors in
-                AddressFlightOverlay(flight: flying, anchors: anchors,
-                                     progress: flightProgress)
-            }
             .overlay(alignment: .trailing) {
                 if bookSort.sections, !searching {
                     AddressIndexBar(letters: AddressBookShape.index(of: sections)) { letter in
@@ -546,24 +542,82 @@ struct WalletScreen: View {
 
     // MARK: - Who you watch (prd §440)
 
-    /// The shelf, its caption, and the honest line under it.
+    /// **WATCHING IS A SECTION OF THE BOOK** (2026-08-22, prd §448, user
+    /// ruling: "having those circles in 'watching' as faces just makes the
+    /// page messier when we already have a list … you can't see their entire
+    /// name and it just looks forced").
     ///
-    /// Unconditional now — §435 made it the sky's fallback, and the sky is
-    /// gone. Every §182 ruling survives: a face for every wallet you watch, a
-    /// dashed ring for every slot you don't, so the cap is a shape you can see
-    /// filling rather than a sentence you hit.
+    /// §182's shelf drew each watched wallet as a 56pt face in a 64pt slot
+    /// with its name captioned underneath in `label12` — which is about nine
+    /// characters, so "Cold storage" and every other real name a person gives
+    /// a wallet arrived truncated. And the same wallet was ALREADY on this
+    /// screen, lower down, as its own book row: same face, the WHOLE name, a
+    /// subline and a filled star. Two renderings of one address on one screen,
+    /// and the shelf was the worse one.
+    ///
+    /// So there is one anatomy now — `AddressBookRow`, exactly as the list
+    /// below draws it — and the watched entries are LIFTED OUT of the A–Z
+    /// sections rather than repeated in them, so no address is drawn twice.
+    ///
+    /// **What §182 loses, and what carries it instead.** The dashed rings were
+    /// "the cap as a shape you can see filling rather than copy you hit"; five
+    /// dashed ROWS would be a list of nothing, so the header's own
+    /// "3 of 5" carries it (and the cap alert still explains itself at the
+    /// moment it bites). Nothing watched renders no section at all — the field
+    /// above, with its WATCH verb and its peek chip, is the invitation, and a
+    /// header over five empty rows is not.
     @ViewBuilder
     private var watchingSection: some View {
-        Section {
-            rosterSection
-        } header: {
-            sectionHeader(String(localized: "Watching"),
-                          trailing: String(localized: "\(wallet.addresses.count) of \(WalletStore.watchLimit)"),
-                          busy: syncing)
+        let watched = watchedEntries
+        if !watched.isEmpty {
+            Section {
+                watchedRows(watched)
+            } header: {
+                sectionHeader(String(localized: "Watching"),
+                              trailing: String(localized: "\(wallet.addresses.count) of \(WalletStore.watchLimit)"),
+                              busy: syncing)
+            }
+            .listRowSeparator(.hidden)
         }
-        .listRowInsets(EdgeInsets())
-        .listRowBackground(Color.clear)
-        .listRowSeparator(.hidden)
+    }
+
+    /// The watched entries, in the order the person built the watch list —
+    /// not A–Z, because five rows don't need finding and the order you added
+    /// them is the order you think of them in.
+    ///
+    /// An address watched before it was ever named has no book entry of its
+    /// own to draw, so one is synthesised the way every other call site on
+    /// this screen synthesises it (`bookSheet = .entry(…)` does the same).
+    /// DEDUPED BY ENTRY (prd §448). Two watches can resolve to one book entry
+    /// — a name and the address it stands for — and `AddressBook.Entry.id` is
+    /// the address's own key, so both would land in this `ForEach` under the
+    /// same id. The shelf was immune by accident (it keyed on the WATCH), and
+    /// a duplicate id is the SwiftUI reuse trap this codebase already has a
+    /// crash report for. `WalletStore.outcome(ofAdding:)` should refuse the
+    /// second watch through `scopeMatches` — this is the belt, one line, on a
+    /// list of at most five.
+    private var watchedEntries: [AddressBook.Entry] {
+        var seen: Set<String> = []
+        return wallet.addresses.compactMap { addr in
+            let entry = book.entry(for: addr.address)
+                ?? AddressBook.Entry(address: addr.address,
+                                     name: wallet.displayName(for: addr),
+                                     addedAt: .now)
+            return seen.insert(entry.id).inserted ? entry : nil
+        }
+    }
+
+    /// Drawn by `bookRow`, deliberately — the star, the tap, the swipe, the
+    /// drag and the context menu are all the same verbs here as they are in
+    /// the list below, which is the whole point of the merge. The roster's own
+    /// Rename alert went with the shelf: the address card the row's tap opens
+    /// carries Rename, with the history cascade the alert never had (§433).
+    @ViewBuilder
+    private func watchedRows(_ watched: [AddressBook.Entry]) -> some View {
+        let colliding = book.collidingKeys
+        ForEach(Array(watched.enumerated()), id: \.element.id) { index, entry in
+            bookRow(entry, colliding: colliding.contains(entry.id), row: index)
+        }
     }
 
     /// True where there is room for two columns. Read once and passed down,
@@ -581,19 +635,20 @@ struct WalletScreen: View {
         Section {
             HStack(alignment: .top, spacing: DS.Space.s6) {
                 VStack(alignment: .leading, spacing: DS.Space.s3) {
-                    sectionHeader(String(localized: "Watching"),
-                                  trailing: String(localized: "\(wallet.addresses.count) of \(WalletStore.watchLimit)"),
-                                  busy: syncing, inset: false)
-                    rosterSection
-                        // The shelf carries its own horizontal padding for the
-                        // phone's edge-to-edge scroll; inside this row that
-                        // padding is already spent.
-                        .padding(.horizontal, -DS.Space.s4)
+                    if !watchedEntries.isEmpty {
+                        sectionHeader(String(localized: "Watching"),
+                                      trailing: String(localized: "\(wallet.addresses.count) of \(WalletStore.watchLimit)"),
+                                      busy: syncing, inset: false)
+                        // The rows are `bookRow`s, which carry their own
+                        // `listRowInsets` — inert here, since this column is
+                        // one List row rather than a Section of them.
+                        VStack(spacing: 0) { watchedRows(watchedEntries) }
+                    }
                 }
-                .frame(maxWidth: 300, alignment: .leading)
+                .frame(maxWidth: 340, alignment: .leading)
                 VStack(alignment: .leading, spacing: DS.Space.s3) {
-                    if connections != nil || wallet.addresses.count == 1 {
-                        sectionHeader(String(localized: "How they connect"), inset: false)
+                    if (connections?.connectedCount ?? 0) > 0 || spineEmptyLine != nil {
+                        sectionHeader(String(localized: "Connected"), inset: false)
                     }
                     wideSpine
                 }
@@ -612,7 +667,7 @@ struct WalletScreen: View {
     /// how one layout ends up honest and the other doesn't.
     @ViewBuilder
     private var wideSpine: some View {
-        if let connections {
+        if let connections, connections.connectedCount > 0 {
             AddressSpineCard(map: connections, newNodeIDs: newConnections) { node in
                 DSHaptic.tap()
                 namingAddress = node.address
@@ -624,15 +679,15 @@ struct WalletScreen: View {
                                                         addedAt: .now))
             }
             .onAppear { AddressConnectionsSeen.markSeen(newConnections) }
-        } else if wallet.addresses.count == 1 {
-            Text("Watch a second address to see how they connect.")
+        } else if let line = spineEmptyLine {
+            Text(line)
                 .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 
-    // MARK: - How they connect (prd §440)
+    // MARK: - Connected (prd §440, trimmed §448)
 
     /// The spine, or the honest sentence that stands where it would be.
     ///
@@ -642,15 +697,22 @@ struct WalletScreen: View {
     /// faces on somebody's screen three times.
     ///
     /// - **Nothing watched**: no card at all. There is nothing to connect and
-    ///   nothing to say about it; the shelf above is already the invitation.
+    ///   nothing to say about it; the field above is already the invitation.
     /// - **One wallet**: a line, not a card. A lone wallet has nothing to be
     ///   connected TO, and a card headed "Connected" over that fact reads as a
     ///   feature that is broken rather than one that isn't applicable yet.
-    /// - **Two or more, nothing shared**: the card, stating none. That IS an
-    ///   answer, and it is the one `AddressConnections.headline` exists for.
+    /// - **Two or more, nothing shared**: a LINE, not a card (2026-08-22,
+    ///   prd §448). §295 is right that stating none is a real answer — it just
+    ///   does not need a card wrapped around it, and once
+    ///   `AddressConnections.headline` was cut for saying out loud what the
+    ///   drawing shows, an empty card had nothing left inside it at all.
+    ///
+    /// The header word is **"Connected"**, one word, matching the shape of its
+    /// siblings — Watching · Connected · Groups. It used to be "How they
+    /// connect" over a card whose own eyebrow read "Connected" (§448).
     @ViewBuilder
     private var spineSection: some View {
-        if let connections {
+        if let connections, connections.connectedCount > 0 {
             Section {
                 AddressSpineCard(map: connections, newNodeIDs: newConnections) { node in
                     DSHaptic.tap()
@@ -668,15 +730,15 @@ struct WalletScreen: View {
                 // view and never let it draw itself as new at all.
                 .onAppear { AddressConnectionsSeen.markSeen(newConnections) }
             } header: {
-                sectionHeader(String(localized: "How they connect"))
+                sectionHeader(String(localized: "Connected"))
             }
             .listRowInsets(EdgeInsets(top: 0, leading: DS.Space.s4,
                                       bottom: 0, trailing: DS.Space.s4))
             .listRowBackground(Color.clear)
             .listRowSeparator(.hidden)
-        } else if wallet.addresses.count == 1 {
+        } else if let line = spineEmptyLine {
             Section {
-                Text("Watch a second address to see how they connect.")
+                Text(line)
                     .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                     .fixedSize(horizontal: false, vertical: true)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -686,6 +748,29 @@ struct WalletScreen: View {
             .listRowBackground(Color.clear)
             .listRowSeparator(.hidden)
         }
+    }
+
+    /// What stands where the card would be. Nil means draw nothing at all.
+    ///
+    /// Spelled ONCE and read by both layouts (`spineSection` and `wideSpine`),
+    /// because two copies of this judgement is how one layout ends up honest
+    /// and the other doesn't — the split §440 already had to correct.
+    private var spineEmptyLine: String? {
+        // Nothing is claimed before the corpus has been read once — see
+        // `hasWalked`. The one-wallet line below is a fact about the WATCH
+        // LIST, which is known immediately, so it is deliberately outside
+        // this guard.
+        if wallet.addresses.count < 2 {
+            // Nothing watched: no line either — the field above is the
+            // invitation, and a sentence about connections you cannot have
+            // yet is an explanation nobody asked for.
+            return wallet.addresses.count == 1
+                ? String(localized: "Watch a second address to see how they connect.")
+                : nil
+        }
+        // Two or more watched and nothing shared. A real answer, said once —
+        // but only once it is one we have actually made.
+        return hasWalked ? String(localized: "No shared addresses yet.") : nil
     }
 
     // MARK: - Groups (prd §440)
@@ -740,7 +825,6 @@ struct WalletScreen: View {
         let key = AddressBook.key(forGroup: group)
         return AddressGroupCard(group: group,
                                 members: members,
-                                watched: members.filter(isWatched).count,
                                 targeted: dropTarget == key,
                                 absorbing: absorbing == key) {
             DSHaptic.selection()
@@ -857,201 +941,20 @@ struct WalletScreen: View {
         .padding(.top, DS.Space.s2)
     }
 
-    // MARK: - The roster (prd §182)
+    // MARK: - The roster (prd §182) — RETIRED 2026-08-22 (prd §448)
 
-    /// The watched wallets as a shelf of faces, plus their REAL empty slots up
-    /// to the cap — a face for every wallet you're watching, a dashed ring for
-    /// every slot you aren't. The cap stops being a sentence you hit and
-    /// becomes a shape you can see filling: five faces means full, and no
-    /// separate "limit reached" card has to say so.
-    // The SKY retired here 2026-08-22 (prd §440). §435 replaced this shelf,
-    // the connections card and the group decks with one drawing; §436, §437,
-    // §438 and §439 each redrew it after a device showed it could not be read.
-    // The arithmetic was harness-proven every time — the fault was that a
-    // force-free layout has to answer a different geometric question for every
-    // corpus shape, and this corpus is almost always the minimum one. The
-    // reading survives in `AddressSpineCard`, which draws the same
-    // `AddressConnections` map as two columns and a ribbon each.
+    // `rosterSection` / `rosterSlot` / `emptyRosterSlot` are gone. §182's
+    // shelf drew every watched wallet a second time — a 56pt face in a 64pt
+    // slot, its name captioned in `label12`, which is about nine characters —
+    // while the same wallet's own book row sat lower down the same screen with
+    // the whole name, a subline and a filled star. `watchingSection` above is
+    // that row, pinned; see its doc for what §182's dashed rings cost and what
+    // carries the cap instead.
     //
-    // The SHELF below is unchanged and is now unconditional rather than the
-    // sky's fallback: §182's faces, its real empty slots and its cap-as-a-shape
-    // were never the thing that was wrong.
-
-    private var rosterSection: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s2) {
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: DS.Space.s2) {
-                    ForEach(Array(wallet.addresses.enumerated()), id: \.element.id) { index, addr in
-                        rosterSlot(addr)
-                            // The shelf ARRIVES (prd §433) — faces settling
-                            // one after another, the same entrance grammar the
-                            // book rows below just gained and every feed row
-                            // has always had. This screen is opened more than
-                            // any other in Wallet and, until now, snapped into
-                            // existence fully formed.
-                            .staggerIn(index: index, step: 0.05)
-                            // The face LANDS in the shelf (prd §433,
-                            // 2026-08-21). §212 already leaned on this moment
-                            // in prose — it retired the footer that explained
-                            // the star, on the grounds that "tapping a star
-                            // visibly drops the wallet into the shelf at the
-                            // top of the same screen, which teaches it better
-                            // than the sentence did" — and then the wallet
-                            // simply appeared, with no drop to see. This is
-                            // that sentence made true: a slot arrives from
-                            // slightly below and settles, so a star tapped
-                            // eight rows down has a visible consequence.
-                            .transition(.scale(scale: 0.6, anchor: .bottom)
-                                .combined(with: .opacity)
-                                .combined(with: .offset(y: 14)))
-                    }
-                    if wallet.canWatchMore {
-                        ForEach(0..<(WalletStore.watchLimit - wallet.addresses.count), id: \.self) { _ in
-                            emptyRosterSlot
-                        }
-                    }
-                }
-                .animation(DS.Motion.standard, value: wallet.addresses.count)
-                .padding(.horizontal, DS.Space.s4)
-                .padding(.vertical, DS.Space.s1)
-            }
-            // The shelf's own caption retired here 2026-08-22 (prd §440) — the
-            // section header above it states "3 of 5" and carries the syncing
-            // spinner, so this line was the same fact printed twice, eight
-            // points apart. The total §212 also put here was struck out by
-            // §435 and stays struck.
-        }
-    }
-
-    /// One watched wallet's face — tap renames (the row's own tap-again
-    /// grammar, unchanged from before the redesign), long-press offers Copy
-    /// and Remove (the gesture the roster's card shape actually teaches,
-    /// replacing the old swipe-to-remove a horizontal shelf can't perform).
-    private func rosterSlot(_ addr: WalletStore.WatchedAddress) -> some View {
-        VStack(spacing: 6) {
-            WalletFace(address: addr.address, size: rosterFaceSize, circular: true)
-                // The flight's landing point (prd §441). Keyed by the BOOK's
-                // key for this address, which is what the row publishes too —
-                // a watch may be stored under the spelling it was added with
-                // ("vitalik.eth") while the book holds the resolved address, so
-                // keying on the raw string would leave the two anchors unable
-                // to find each other on exactly the wallets people name.
-                .flightAnchor("slot:" + AddressBook.key(for: addr.address))
-                // Hidden while its own face is still in the air, so the two
-                // are never on screen at once.
-                .opacity(flying?.id == AddressBook.key(for: addr.address)
-                         && flightProgress < 0.92 ? 0 : 1)
-            VStack(spacing: 0) {
-                // Stays at `label12`, deliberately (considered and rejected
-                // 2026-08-03). This is a CAPTION under a 60pt face, not a row
-                // title: the face carries the identity and the words label it,
-                // which is why every platform face shelf captions small. It
-                // reads at the same size as the value beneath it because
-                // weight and color carry that step — the ramp's own method.
-                // Stepping it to `subhead13` to "match" the book row below
-                // compares two different jobs, and at a 74pt slot it costs
-                // about two characters of every name to truncation.
-                Text(wallet.displayName(for: addr))
-                    .dsText(.label12).fontWeight(.semibold)
-                    .foregroundStyle(DS.textPrimary)
-                    .lineLimit(1)
-                // NO FIGURE HERE (user ruling, 2026-08-21, prd §435: "we do not
-                // want balances showing with addresses, we have that
-                // elsewhere"). §212 put each wallet's USD total under its face,
-                // which made the manager a second balance sheet beside the
-                // feed's crown card — the one place that reading belongs. The
-                // slot says who it is and nothing about what it holds.
-                if wallet.displayName(for: addr) != addr.short {
-                    Text(addr.short)
-                        .dsText(.label12).foregroundStyle(DS.textTertiary)
-                        .lineLimit(1)
-                }
-            }
-            .frame(height: rosterLabelHeight, alignment: .top)
-        }
-        .frame(width: rosterSlotWidth)
-        .contentShape(Rectangle())
-        // ONE FACE, ONE MEANING (prd §433, 2026-08-21). This face tapped to
-        // RENAME while the identical face in the book row below it, in the
-        // shell's scope rail, and in the balance card's chips all did
-        // something else — so the same picture of the same wallet meant three
-        // different verbs depending on how far down the screen it was. It
-        // opens the address card now, exactly like its row: the card is where
-        // the whole address lives, and it carries Rename itself (with the
-        // history cascade this alert never had). The alert stays for the
-        // context menu below, which is where a rename belongs — a deliberate
-        // press, not the primary tap on a portrait.
-        .onTapGesture {
-            DSHaptic.selection()
-            bookSheet = .entry(book.entry(for: addr.address)
-                                ?? AddressBook.Entry(address: addr.address,
-                                                     name: wallet.displayName(for: addr),
-                                                     addedAt: .now))
-        }
-        .dsTapCard()
-        .contextMenu {
-            Button {
-                DSHaptic.tap()
-                renameDraft = addr.label
-                renamingID = addr.id
-            } label: {
-                Label("Rename", systemImage: "pencil")
-            }
-            Button {
-                DSPasteboard.copySensitive(addr.address)
-                DSHaptic.success()
-            } label: {
-                Label("Copy Address", systemImage: "doc.on.doc")
-            }
-            Button(role: .destructive) {
-                if let i = wallet.addresses.firstIndex(where: { $0.id == addr.id }) {
-                    let gone = wallet.addresses[i].address
-                    wallet.remove(at: IndexSet(integer: i))
-                    // Unwatching the last wallet drops the riding seats (§207).
-                    store.reconcileWalletSeats()
-                    // …and its rows leave with it (prd §286): every bridge
-                    // that rides the watched wallets stamps `walletAddress`,
-                    // so this reaches the transfers, approvals, Peer fills,
-                    // pool deposits and card spends alike.
-                    FollowPrune.removeWallet(
-                        address: gone,
-                        stillWatched: wallet.addresses.map(\.address),
-                        context: modelContext)
-                }
-            } label: {
-                Label("Remove Wallet", systemImage: "trash")
-            }
-        }
-    }
-
-    /// An open slot — a dashed RING, matching the roster's circular faces
-    /// (prd §182), so a row of watched faces and unwatched slots reads as ONE
-    /// shelf. Tapping one focuses the omnibox directly below it — the honest
-    /// door, since the slot itself can't watch anything without an address.
-    private var emptyRosterSlot: some View {
-        VStack(spacing: 6) {
-            Circle()
-                .strokeBorder(DS.textTertiary.opacity(0.35),
-                             style: StrokeStyle(lineWidth: 1.5, dash: [4, 4]))
-                .frame(width: rosterFaceSize, height: rosterFaceSize)
-                .overlay {
-                    Image(systemName: "plus")
-                        .dsGlyph(16)
-                        .foregroundStyle(DS.textTertiary)
-                }
-            // Sits in the NAME's slot, so it takes the name's rung — a filled
-            // face and an empty one have to read as one shelf.
-            Text("Watch").dsText(.label12).foregroundStyle(DS.textTertiary)
-                .frame(height: rosterLabelHeight, alignment: .top)
-        }
-        .frame(width: rosterSlotWidth)
-        .contentShape(Rectangle())
-        .onTapGesture {
-            DSHaptic.tap()
-            addressFieldFocused = true
-        }
-        .dsTapCard()
-    }
+    // (The SKY retired here 2026-08-22, prd §440, one pass earlier: §435 fused
+    // the roster, the connections card and the group decks into one drawing,
+    // and §436–§439 each redrew it after a device proved it unreadable. The
+    // reading survives in `AddressSpineCard`. The shelf outlived it by a day.)
 
     /// What just happened — the spinner while chains are read, then the
     /// outcome line. A status row only when something needs eyes: an error,
@@ -1083,8 +986,21 @@ struct WalletScreen: View {
     /// the ORDER and the SECTIONS and is Foundation-only, so every decision it
     /// makes is harness-proven. What stays here is only what needs the store:
     /// which entries match, and which of them are watched.
-    private var visibleEntries: [AddressBook.Entry] {
-        book.search(newAddress)
+    /// **Watched entries are LIFTED OUT while browsing** (2026-08-22,
+    /// prd §448) — they are the section pinned at the top of this same list,
+    /// and repeating them under their letter is the duplication the shelf was
+    /// deleted for, one scroll further down.
+    ///
+    /// Not while SEARCHING, and that is the whole of the rule: the Watching
+    /// section folds away with everything else the moment you type, so a
+    /// search that hid your own watched wallets would be a search that cannot
+    /// find them. One filter, one condition, applied where the sections are
+    /// built — so `AddressBookShape.sections` and `AddressIndexBar` are fed
+    /// the same set and the scrubber can never offer a letter that scrolls
+    /// nowhere.
+    private func visibleEntries(searching: Bool) -> [AddressBook.Entry] {
+        let found = book.search(newAddress)
+        return searching ? found : found.filter { !isWatched($0) }
     }
 
     /// The rows, as the shape layer sees them.
@@ -1154,6 +1070,7 @@ struct WalletScreen: View {
         // frame it first appears rather than a beat later.
         newConnections = AddressConnectionsSeen.unseen(in: map)
         connections = map
+        hasWalked = true
     }
 
     /// Names a connected address, then brings its landed transfers into line —
@@ -1277,9 +1194,15 @@ struct WalletScreen: View {
     /// The COUNT is the whole book's. The searching case states itself.
     private func bookListHeader(count: Int, searching: Bool) -> some View {
         HStack(spacing: DS.Space.s2) {
+            // NAMES WHAT IT LISTS (2026-08-22, prd §448). It read
+            // "Saved · \(book.count)" — the whole book — which stopped being
+            // true the moment the watched entries moved to their own section
+            // above: the head would have counted 27 over a list of 24. Same
+            // rung, same two words' worth of room, and now the count and the
+            // rows agree.
             Text(searching
                  ? String(localized: "\(count) matching")
-                 : String(localized: "Saved · \(book.count)"))
+                 : String(localized: "Everyone else · \(count)"))
                 .dsText(.label12).fontWeight(.semibold)
                 .foregroundStyle(DS.textSecondary)
                 .monospacedDigit()
@@ -1378,11 +1301,7 @@ struct WalletScreen: View {
             AddressBookRow(entry: entry,
                            activity: activity[entry.id],
                            watched: isWatched(entry),
-                           colliding: colliding,
-                           // The flight's takeoff point — published by the MARK
-                           // rather than the row, so the face leaves from where
-                           // the face actually is.
-                           markAnchor: "row:" + entry.id) {
+                           colliding: colliding) {
                 toggleWatch(entry, currentlyWatched: isWatched(entry))
             }
         }
@@ -1480,7 +1399,6 @@ struct WalletScreen: View {
         case .added:
             DSHaptic.success()
             promoteToken &+= 1
-            launchFlight(entry)
             sync()
         case .limitReached:
             watchCapHit = true
@@ -1502,34 +1420,6 @@ struct WalletScreen: View {
     /// for — so this row and the one a chain read lands for the same wallet
     /// are ONE row. A name that never resolves simply stays as typed: honest,
     /// and still the person's own record.
-    /// Sends the face across the gap (prd §441).
-    ///
-    /// Deferred by one runloop turn ON PURPOSE: the shelf slot does not exist
-    /// until the write above has been observed and the body re-run, so
-    /// publishing the flight in the same turn gives the overlay a `from`
-    /// anchor and no `to` — which draws nothing at all and reads as the
-    /// feature being absent rather than broken. Waiting one turn is what makes
-    /// both endpoints real.
-    ///
-    /// The progress is animated in a SECOND turn after that, because a
-    /// `withAnimation` in the same turn the view first appears has no prior
-    /// value to interpolate from and lands finished.
-    private func launchFlight(_ entry: AddressBook.Entry) {
-        guard !reduceMotion else { return }
-        flightProgress = 0
-        flying = FlightingFace(id: entry.id, address: entry.address)
-        DispatchQueue.main.async {
-            withAnimation(.spring(duration: 0.52, bounce: 0.12)) {
-                flightProgress = 1
-            } completion: {
-                // Cleared only after the animation really ends — clearing on a
-                // timer races a slow frame and leaves the face parked mid-air.
-                flying = nil
-                flightProgress = 0
-            }
-        }
-    }
-
     private func justName() {
         DSHaptic.tap()
         let addr = newAddress.trimmingCharacters(in: .whitespacesAndNewlines)
