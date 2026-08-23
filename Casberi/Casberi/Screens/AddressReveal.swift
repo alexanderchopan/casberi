@@ -109,6 +109,40 @@ private struct AddressEndsFirst: ViewModifier {
     }
 }
 
+/// One chunk of a wrapped address arriving — the ends first, the middle after.
+///
+/// `AddressEndsFirst` above does this with a mask, which is right for ONE line
+/// of text and wrong for a wrapping block: a horizontal mask uncovers the left
+/// and right of each LINE, so over two lines it reveals the middle of the
+/// address first and hides the ends — the exact inversion of the reading. Here
+/// the order is expressed as a delay per chunk instead, off
+/// `AddressSpine.revealRank`, so it holds at any width and any number of lines.
+///
+/// Rank 0 (the two ends) is ALREADY THERE when the view appears rather than
+/// fading in from nothing: starting from zero makes this a generic fade, and
+/// the whole reading is that the ends were never the secret.
+private struct AddressChunkReveal: ViewModifier {
+    let index: Int
+    let count: Int
+    @State private var open = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    private var rank: Int { AddressSpine.revealRank(index: index, count: count) }
+
+    func body(content: Content) -> some View {
+        content
+            .opacity(open || rank == 0 ? 1 : 0)
+            .onAppear {
+                guard !reduceMotion else { open = true; return }
+                // Handed off from the face's ring on the same clock
+                // `AddressEndsFirst` used, so the header still reads as one
+                // moment rather than two.
+                withAnimation(.easeOut(duration: 0.2)
+                    .delay(0.22 + Double(rank) * 0.045)) { open = true }
+            }
+    }
+}
+
 extension View {
     /// The identicon settling with one ring in the address's own hue. A
     /// non-face mark (a contract, a Safe) settles without the ring — see
@@ -119,4 +153,10 @@ extension View {
 
     /// The address filling in from its ends — see `AddressEndsFirst`.
     func addressEndsFirst() -> some View { modifier(AddressEndsFirst()) }
+
+    /// One chunk of a WRAPPED address arriving in ends-first order — see
+    /// `AddressChunkReveal`.
+    func addressChunkReveal(index: Int, count: Int) -> some View {
+        modifier(AddressChunkReveal(index: index, count: count))
+    }
 }

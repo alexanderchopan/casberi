@@ -13,10 +13,9 @@ import Foundation
 /// eye is actually scanning for) was pushed to a second line under a title
 /// that had already been clamped.
 ///
-/// So: the verb leads, the stamped amount trails with its sign, and the date
-/// rides under the amount. Direction then reads straight down the right edge
-/// of the column instead of being buried mid-sentence in six different
-/// horizontal positions.
+/// So: the verb leads and the stamped amount trails. Direction then reads
+/// straight down the left edge of the column instead of being buried
+/// mid-sentence in six different horizontal positions.
 ///
 /// ## The three rules, each load-bearing
 ///
@@ -33,12 +32,20 @@ import Foundation
 /// than inside `WalletValue`: the elision is a property of the surface, not of
 /// the row.
 ///
-/// **3. The SIGN survives §374's mask and the figure does not.** Which way the
-/// relationship ran is not a balance — the identical ruling `summaryLine`
-/// already makes for the net line one section up ("net −0.80 ETH" → "net
-/// −•••• ETH"). The symbol survives too, for `BalancePrivacy.amount`'s own
-/// stated reason: a row reading "−••••" has lost its subject, "−•••• ETH"
-/// still says which asset moved.
+/// **3. THE AMOUNT IS UNSIGNED, and any sign already stamped on it is
+/// stripped (2026-08-22, prd §446).** This reverses the sign this type shipped
+/// with, and the reason is a fact about the surface: `lead` is the verb, set at
+/// `heading17` and sitting to the LEFT of the amount on the same row, so a `−`
+/// beside it states direction a second time eight points away — and it states
+/// it in the weaker of the two voices, since a glyph is read as arithmetic
+/// where "Sent" is read as English. Stripping a stamped sign is what makes
+/// that safe: a row landed carrying "-0.25" would otherwise print a minus the
+/// verb has already contradicted or duplicated.
+///
+/// The SYMBOL still survives §374's mask and the figure does not, for
+/// `BalancePrivacy.amount`'s own stated reason: a row reading "••••" has lost
+/// its subject, "•••• ETH" still says which asset moved. Direction is not lost
+/// under the mask either — the verb never masks.
 ///
 /// ## What it deliberately does NOT decide
 ///
@@ -56,13 +63,13 @@ import Foundation
 /// see it.
 enum AddressHistoryRow {
 
-    /// What a row draws: a lead phrase, and a trailing signed amount when the
+    /// What a row draws: a lead phrase, and a trailing unsigned amount when the
     /// row was stamped as a one-directional transfer.
     struct Parts: Equatable {
         /// The left column. Either the verb alone ("Sent") or, for a row that
         /// could not be split, its whole title.
         var lead: String
-        /// The right column, signed. nil for a row with no stamped transfer —
+        /// The right column, unsigned. nil for a row with no stamped transfer —
         /// an approval, a mint, a Peer fill — which keeps its sentence in
         /// `lead` and states nothing on the right but its date.
         var amount: String?
@@ -89,13 +96,10 @@ enum AddressHistoryRow {
 
         let received = direction == "received"
         let verb = received ? String(localized: "Received") : String(localized: "Sent")
-        // A true MINUS, not a hyphen — the same glyph `summaryLine` uses for
-        // the net line directly above these rows, so the two agree.
-        let sign = received ? "+" : "\u{2212}"
         let (figure, symbol) = split(amount)
         let shown = hidden ? mask : figure
-        guard let symbol else { return Parts(lead: verb, amount: sign + shown) }
-        return Parts(lead: verb, amount: "\(sign)\(shown) \(symbol)")
+        guard let symbol else { return Parts(lead: verb, amount: shown) }
+        return Parts(lead: verb, amount: "\(shown) \(symbol)")
     }
 
     /// "0.9962 ETH" → ("0.9962", "ETH"); "1,200 USDC" → ("1,200", "USDC").
@@ -106,8 +110,9 @@ enum AddressHistoryRow {
     /// into the one slot §374's mask leaves visible, and an amount whose tail
     /// is not a symbol is returned whole rather than guessed at.
     ///
-    /// Any sign already on the stamped string is stripped: direction carries
-    /// the sign here, and a stamped "-0.25" would otherwise print "−−0.25".
+    /// Any sign already on the stamped string is stripped: the VERB carries
+    /// direction on this surface (see rule 3), so a stamped "-0.25" would
+    /// otherwise print a minus beside a word already saying "Sent".
     static func split(_ amount: String) -> (figure: String, symbol: String?) {
         let trimmed = amount.trimmingCharacters(in: .whitespaces)
         let pieces = trimmed.split(separator: " ")

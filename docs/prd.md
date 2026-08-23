@@ -29949,3 +29949,63 @@ A gradient overlay now fades the document into the ground over its last 40pt. **
 ### Unproven
 
 iOS Simulator and Mac Catalyst build green; every static audit and the extended guard pass. **No simulator run and no device.** The rise is animation-frame timing, which a simulator distorts and which no static check can exercise — the reading that would close it is `risePhase|` on a device, a cold first open and a same-day re-open, which is the same open item `docs/perf-swipe-and-rise-spec.md` already carries. The bottom fade is a render, unverified at any Dynamic Type size.
+
+## 446. The address card becomes one dated spine (design handoff, 2026-08-22)
+
+Built from a design handoff (`design_handoff_address_card/`), whose thesis is one sentence: `AddressCard` drew six blocks — `identityHeader`, `lookalikeBand`, `lede`, `reachedWallets`, `historySection`, `detailsList` — and five of them were **the same shape in five treatments**, a dated fact about one address. They collapse into one vertical spine, newest first, with the standing approval exposure as the event at the head and "you named them" at the root.
+
+Nothing about the app's look changes. Every value routes through an existing `DS` token; the type ramp, the pour, the face, the reveal, the cascade and the pinned bar are all the ones already shipped.
+
+### What it fixes
+
+**1. The lede RANKED by choosing, not by demoting.** §443 made the lede show the exposure *or* the relationship. An address that can move your tokens right now *and* has twelve transactions with you showed only the first, and the second became a bare section header far down the page. On a spine there is nothing to rank: the standing permission is simply the newest event in a list both belong to, so the card that most needed to say two things can finally say both.
+
+**2. The address chip could not do the job it was for.** `truncationMode(.middle)` at 390pt cannot show forty-two characters, so the one screen that exists to tell two look-alike addresses apart was hiding exactly the characters they differ in — the objection `lookalikeBand` already answers by printing both in full. It wraps now: ten groups of four, centred, every character present, first and last group one ramp step brighter because those are the ones `WalletStore.shortAddress` shows everywhere else. `AddressChunkFlow` is its own centred layout rather than a mode on `ThingSheetView`'s leading-aligned `FlowLayout`; the two answer different questions and a shared one grows a switch nobody reads.
+
+**3. "Which of your wallets" made you hold two lists in your head.** Which wallet dealt with this address is a PER-EVENT fact, so §444's chip strip asked you to join it to the rows yourself. It rides each event's own caption now ("Aug 18 · Main"), inheriting §444's own floor — below two watched wallets every counterparty reaches your only one by definition, so naming it states a fact true of every address in the book.
+
+**4. The naming date sat in a settings-shaped row** at the foot, drawn at the weight the security notice above it wore. It is the ROOT of the relationship and belongs at the bottom of the spine, which is where a timeline puts its oldest entry.
+
+### The unnamed card is the design's real test
+
+The most common card in the book is an address that turned up in a transfer yesterday, has no name and has nothing to report. Three consequences:
+
+- **The bar's verb is `Name this address`,** not `Watch`. Watching is capped at five, so four out of five of these will never take it; naming is free, immediate, and rewrites every row you have with them. Watching moves to the overflow menu — no verb is lost (§83), and the same setting is never a control in two places.
+- **Below the spine, the argument for naming, stated where it applies.** `rename(to:)`'s own header has said for a year that a name "rewrites every transaction you've ever had with this address, all at once, and that is the entire argument for naming anything" — and the card never once said it to the person standing on it. Drawn only while the address wears a placeholder.
+- **The root reads `They appeared in a transfer to Main. You have not named them.`** — and it must claim neither more nor less: `.unnamed` exists as a third root case precisely so an address in your book with no history is not told a transfer happened, and an address reached through a door and never added (§295's connections nodes) gets no root at all rather than one dating it to the day you opened its card.
+
+### Rulings
+
+**The amount is UNSIGNED, reversing `AddressHistoryRow`'s rule 3.** `lead` is the verb, at `heading17`, on the same row, to the left — so a `−` beside it states direction a second time eight points away, in the weaker of the two voices (a glyph reads as arithmetic, "Sent" reads as English). Any sign already stamped on the string is still stripped, which is what makes that safe. Under §374's mask direction is not lost: the verb never masks.
+
+**The rail is structural, not a divider.** It connects the dots of one sequence rather than separating two sections, so §8's no-hairlines law has no exception here; the verb bar still separates by material alone.
+
+**`DS.attention` is the spine's one colour and it is STATE, not identity.** The address's own hue belongs to the face, the copy pill, `See all` and the verb bar, which is §443's colour division unchanged.
+
+**No `Thing` reaches the view tree.** `spineEvents` reduces every row to value types at the boundary, so the whole SwiftData liveness corollary chain (1–6) is answered by construction rather than by six guards.
+
+**The money gate stays at the call site.** `AddressSpine` is Foundation-only and never names `BalancePrivacy`/`WalletValue`, so `hide-balances-audit.py` can still see `WalletValue.exactMoney` where it is applied — `AddressHistoryRow`'s `hidden`/`mask` reasoning, in a second file. The figure is withheld entirely when nothing could be priced; `$0.00` over unpriceable grants is §83's fake status where believing it is most expensive.
+
+**The exposure caption does NOT name a chain.** The handoff's sample sentence reads "Unlimited USDC on Base"; `WalletApprovalExposure.Grant` carries no chain, and inventing one is §83. It says "Unlimited USDC, granted Jul 29. 2.00 WETH, not priced." — the grant's own `stateLine`, never re-derived, so this card and the approvals card cannot state one grant two ways.
+
+**The standing event is not tappable.** The handoff proposed pushing an approvals detail for the spender and said, correctly, to leave it inert rather than invent a destination. There is none.
+
+### What was removed, and it is not free
+
+Three readings the old card had are gone, and this records them so the loss is a decision rather than an accident:
+
+- **The net-flow line** ("since Mar 3 · net −0.80 ETH", §443) and `HistorySummary` with it. A net is an aggregate, and a spine holds dated facts; there is no honest slot for it. Its span half survives in the fold ("9 more, Jul – Mar").
+- **`WalletRunwayRail`** (§417's span strip), displaced by the same fold line. It said more — every dot, the whole shape — and the fold says it in six words.
+- **The explorer row** moved into the overflow menu. It is a link into somebody else's website, which is a secondary verb, and it was drawn at the weight the poisoning warning wears.
+
+The look-alike band is UNCHANGED and still sits above the spine — the handoff called its absence an omission rather than a decision, and the harness now fails the build if it ever draws below.
+
+### Guarded
+
+`Model/AddressSpine.swift` is Foundation-only and `scripts/address-spine-selftest.sh` compiles it WHOLE — 52 assertions, 14 mutations, and drift guards no assertion can reach (the four collapsed blocks stay gone, the band stays above, the address is never truncated again, one corpus walk per body pass, the money gate at the call site). Every failure it catches renders as a perfectly ordinary card: a fold saying "9 more" over a preview that hid eight, a span read off the rows already on screen, a root claiming you named an address you did not, an unpriceable grant dropped out of a figure that then looks complete, a character lost from a chunked address, or the reveal running middle-first. `address-history-row-selftest.sh` keeps its 34 assertions and 9 mutations against the new unsigned rule, and its two view-side guards moved with the code they protect.
+
+Its zone fixture is `AddressBookShape.lastPhrase`'s bug in a second file: an instant at midnight UTC on January 1st is still December where the device is, so a formatter left on the system zone renders a month the year comparison beside it did not choose.
+
+### Unproven
+
+iOS Simulator build green; every static audit, both address harnesses and the wallet-viz harness pass. **No simulator run and no device.** Nothing here has been looked at: the wrap point of the address block at 390pt and at accessibility sizes, the chunk reveal's hand-off from the face ring, the rail's fill against a two-line caption, and whether `stat24` is a rung too small for the head of a spine — the handoff flags that last one as a judgement to make on device. Three transfers before the fold is the handoff's own guess.

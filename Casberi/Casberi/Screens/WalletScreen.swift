@@ -1916,7 +1916,7 @@ struct WalletScreen: View {
                     .dsText(.label12).foregroundStyle(DS.textTertiary)
                     .lineLimit(1).truncationMode(.middle)
                 Spacer(minLength: 0)
-                CopyAddressButton(address: uri.absoluteString, expanded: true)
+                CopyAddressButton(address: uri.absoluteString, style: .inline)
             }
             .padding(DS.Space.s3)
             .background(DS.fillFaint,

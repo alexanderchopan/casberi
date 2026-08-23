@@ -10,19 +10,20 @@
 # WHY A HARNESS. Every failure here renders as a perfectly ordinary row, on the
 # one screen in the app where you decide whether to trust somebody:
 #
-#   · a SENT transfer shown with a `+` — the relationship reading backwards,
-#     in the column whose whole job is direction, and the row is otherwise
-#     immaculate
+#   · a SENT transfer whose VERB reads "Received" — the relationship reading
+#     backwards, in the column whose whole job is direction, and the row is
+#     otherwise immaculate
 #   · a spoofed token's trailing phishing domain promoted into the symbol slot,
 #     which is the ONE slot §374's mask leaves visible (the `MoneyReceipt.split`
 #     lesson, §363, in a second file)
-#   · a stamped "-0.25" printing "−−0.25", which reads as a rendering fault on
-#     a number somebody is checking
+#   · a stamped "-0.25" printing its own minus beside a verb already saying
+#     "Sent" (prd §446 made the amount unsigned) — direction stated twice,
+#     eight points apart, in two different voices
 #   · §374 on, and the figure surviving anyway — the privacy control whose
 #     failure mode is "shows it anyway, invisibly", which is worse than one
 #     that hides too much
-#   · §374 on, and the SIGN going with the figure, so a masked row no longer
-#     says which way the money ran (a fact that is not a balance)
+#   · §374 on, and the SYMBOL going with the figure, so a masked row no longer
+#     says which asset moved
 #   · an approval — no stamped transfer — silently losing its sentence and
 #     rendering as a bare verb with no amount and no subject
 #
@@ -69,8 +70,27 @@ grep -q 'AddressHistoryRow.parts(direction: thing.transferDirection,' "$VIEWS" \
   || { echo "✗ the card no longer takes its row split from AddressHistoryRow — the split would be the view's own and nothing could test it"; exit 1; }
 grep -q 'fallbackTitle: WalletValue.title(thing)' "$VIEWS" \
   || { echo "✗ the fallback title no longer comes from WalletValue.title — an unsplittable row would print its amount straight through §374's mask"; exit 1; }
-grep -q 'hidden: BalancePrivacy.shared.hidden' "$VIEWS" \
-  || { echo "✗ the row split is no longer handed the §374 gate — every amount would render in the clear"; exit 1; }
+# THE §374 GATE STILL REACHES THE SPLIT. It is HOISTED now (prd §446) — read
+# once per pass rather than per row, since the spine reduces the whole history
+# and a two-hundred-row walk would otherwise take the same observable read two
+# hundred times — so this can no longer be a grep for `hidden:
+# BalancePrivacy.shared.hidden` at the call. Both halves are checked inside
+# `spineEvents` instead: the gate is read there, and what it read is what is
+# handed over. A grep for the two strings anywhere in the file would pass
+# against a build that read the gate in one function and passed `false` in
+# another.
+python3 - "$TMP/views-bare.swift" <<'PY2'
+import re, sys
+src = open(sys.argv[1]).read()
+m = re.search(r'private func spineEvents\(.*?\n    \}\n', src, re.S)
+if not m:
+    sys.stderr.write("✗ spineEvents no longer exists — the spine's row reduction moved\n"); sys.exit(1)
+body = m.group(0)
+if "BalancePrivacy.shared.hidden" not in body:
+    sys.stderr.write("✗ the spine no longer reads the §374 gate — every amount would render in the clear\n"); sys.exit(1)
+if not re.search(r'hidden:\s*hidden', body):
+    sys.stderr.write("✗ the gate the spine read is not what it hands the split — §374 would be read and then ignored\n"); sys.exit(1)
+PY2
 grep -q 'mask: BalancePrivacy.mask' "$VIEWS" \
   || { echo "✗ the row split no longer uses the shared mask constant — a second spelling would drift from every other masked figure in the app"; exit 1; }
 
@@ -83,13 +103,13 @@ grep -q 'mask: BalancePrivacy.mask' "$VIEWS" \
 python3 - "$TMP/views-bare.swift" <<'PY'
 import re, sys
 src = open(sys.argv[1]).read()
-m = re.search(r'private func historyRow\(.*?\n    \}\n', src, re.S)
+m = re.search(r'private func transferContent\(.*?\n    \}\n', src, re.S)
 if not m:
-    sys.stderr.write("✗ historyRow no longer exists — the record's row builder moved\n"); sys.exit(1)
+    sys.stderr.write("✗ transferContent no longer exists — the spine's transfer event builder moved\n"); sys.exit(1)
 body = m.group(0)
 for token in ("DS.confirm", "DS.destructive"):
     if token in body:
-        sys.stderr.write("✗ the history row paints %s — direction is a fact on this screen, not a verdict (§443)\n" % token); sys.exit(1)
+        sys.stderr.write("✗ the transfer event paints %s — direction is a fact on this screen, not a verdict (§443)\n" % token); sys.exit(1)
 PY
 
 # The split must never reach for a title. §363's rule, and the reason `parts`
@@ -125,13 +145,19 @@ func p(_ direction: String?, _ amount: String?,
 
 // ── The two directions, which is the whole point of the trailing column ──
 check("sent lead",   p("sent", "0.25 ETH").lead, "Sent")
-check("sent amount", p("sent", "0.25 ETH").amount ?? "nil", "\u{2212}0.25 ETH")
+check("sent amount", p("sent", "0.25 ETH").amount ?? "nil", "0.25 ETH")
 check("recv lead",   p("received", "120 USDC").lead, "Received")
-check("recv amount", p("received", "120 USDC").amount ?? "nil", "+120 USDC")
+check("recv amount", p("received", "120 USDC").amount ?? "nil", "120 USDC")
 
-// A TRUE MINUS, matching the net line one section up. A hyphen there and a
-// minus here is two glyphs for one idea, eight points apart on one screen.
-check("minus is U+2212", String(p("sent", "1 ETH").amount!.first!), "\u{2212}")
+// UNSIGNED (prd §446). The verb is on the same row, to the left, at a rung the
+// eye reaches first — a sign beside it is direction said twice. Asserted for
+// BOTH directions, since a one-sided check passes against a build that signs
+// only the other one.
+check("no minus on sent", p("sent", "1 ETH").amount ?? "nil", "1 ETH")
+check("no plus on recv",  p("received", "1 ETH").amount ?? "nil", "1 ETH")
+// And the two directions differ ONLY in the verb, which is the whole claim.
+check("directions differ in the verb alone",
+      p("sent", "1 ETH").amount ?? "a", p("received", "1 ETH").amount ?? "b")
 
 // ── Not a transfer: the sentence survives whole, and states no amount ──
 check("approval lead",  p(nil, nil).lead, "Approved Unlimited USDC")
@@ -144,11 +170,13 @@ check("blank amount", p("sent", "   ").lead, "Approved Unlimited USDC")
 // An unknown direction word is NOT silently treated as inbound.
 check("unknown direction", p("swapped", "0.25 ETH").lead, "Approved Unlimited USDC")
 
-// ── §374: the sign survives, the figure does not, the symbol does ──
-check("hidden sent",  p("sent", "0.25 ETH", hidden: true).amount ?? "nil", "\u{2212}•••• ETH")
-check("hidden recv",  p("received", "120 USDC", hidden: true).amount ?? "nil", "+•••• USDC")
-// Hidden AND unsymbolled — still signed, because direction is not a balance.
-check("hidden bare",  p("sent", "0.25", hidden: true).amount ?? "nil", "\u{2212}••••")
+// ── §374: the figure goes, the symbol stays, the VERB carries direction ──
+check("hidden sent",  p("sent", "0.25 ETH", hidden: true).amount ?? "nil", "•••• ETH")
+check("hidden recv",  p("received", "120 USDC", hidden: true).amount ?? "nil", "•••• USDC")
+// Hidden AND unsymbolled — the mask alone. Direction is still on the row: the
+// verb never masks, which is what makes an unsigned amount safe here.
+check("hidden bare",  p("sent", "0.25", hidden: true).amount ?? "nil", "••••")
+check("hidden keeps the verb", p("sent", "0.25", hidden: true).lead, "Sent")
 // The fallback title is handed in ALREADY gated, so this type must not mask it
 // a second time (that would double-mask "••••" into itself and, worse, would
 // mask a title `WalletValue` deliberately left alone).
@@ -173,10 +201,10 @@ check("digit tail refused", AddressHistoryRow.split("5 W3T").symbol ?? "nil", "n
 check("no space", AddressHistoryRow.split("500").figure, "500")
 check("no space symbol", AddressHistoryRow.split("500").symbol ?? "nil", "nil")
 
-// ── A sign already on the stamped string is stripped, never doubled ──
-check("stamped hyphen",  p("sent", "-0.25 ETH").amount ?? "nil", "\u{2212}0.25 ETH")
-check("stamped minus",   p("sent", "\u{2212}0.25 ETH").amount ?? "nil", "\u{2212}0.25 ETH")
-check("stamped plus",    p("received", "+120 USDC").amount ?? "nil", "+120 USDC")
+// ── A sign already on the stamped string is stripped, never passed through ──
+check("stamped hyphen",  p("sent", "-0.25 ETH").amount ?? "nil", "0.25 ETH")
+check("stamped minus",   p("sent", "\u{2212}0.25 ETH").amount ?? "nil", "0.25 ETH")
+check("stamped plus",    p("received", "+120 USDC").amount ?? "nil", "120 USDC")
 
 // ── Determinism: the same row twice is the same row ──
 check("stable", p("sent", "0.25 ETH").amount ?? "a", p("sent", "0.25 ETH").amount ?? "b")
@@ -185,7 +213,7 @@ if failures > 0 {
     FileHandle.standardError.write("\(failures) assertion(s) failed\n".data(using: .utf8)!)
     exit(1)
 }
-print("  \(31) assertions pass")
+print("  \(34) assertions pass")
 SWIFT
 
 echo "Compiling the shipped source WHOLE and unmodified…"
@@ -227,20 +255,21 @@ echo "Mutations — each is a row that looks completely normal:"
 mutate "direction inverts" \
   'let received = direction == "received"' \
   'let received = direction == "sent"'
-# A sent transfer wearing a plus, which on a profile is the difference between
-# somebody who pays you and somebody you pay.
-mutate "the sign stops following direction" \
-  'let sign = received ? "+" : "\u{2212}"' \
-  'let sign = "+"'
+# A sign reappearing beside a verb that already said it — direction stated
+# twice, in two voices, on a row somebody is reading as a ledger (prd §446).
+mutate "the amount grows a sign again" \
+  'guard let symbol else { return Parts(lead: verb, amount: shown) }' \
+  'guard let symbol else { return Parts(lead: verb, amount: "+" + shown) }'
 # §374 on, and the figure printed anyway — the privacy control that shows it
 # anyway, invisibly.
 mutate "the mask stops being applied" \
   'let shown = hidden ? mask : figure' \
   'let shown = figure'
-# §374 on, and a masked row that no longer says which way the money ran.
-mutate "the sign goes with the figure" \
-  'guard let symbol else { return Parts(lead: verb, amount: sign + shown) }' \
-  'guard let symbol else { return Parts(lead: verb, amount: shown) }'
+# §374 on, and a masked row that no longer says which asset moved — "••••"
+# with no subject, which is the one thing the mask is not allowed to take.
+mutate "the symbol goes with the figure" \
+  'return Parts(lead: verb, amount: "\(shown) \(symbol)")' \
+  'return Parts(lead: verb, amount: shown)'
 # A spoofed token's phishing domain promoted into the one slot the mask leaves
 # visible — the §363 lesson, in a second file.
 mutate "the symbol stops being letters-only" \
@@ -256,8 +285,8 @@ mutate "any direction word counts as a transfer" \
 mutate "a missing amount stops falling back" \
   'let amount, !amount.trimmingCharacters(in: .whitespaces).isEmpty' \
   'let amount, amount.isEmpty || !amount.isEmpty'
-# "−−0.25", on a number somebody is checking.
-mutate "an already-signed amount doubles its sign" \
+# A stamped "-0.25" printing its minus beside a verb already saying "Sent".
+mutate "an already-signed amount keeps its sign" \
   'while let first = out.first, first == "-" || first == "+" || first == "\u{2212}" {' \
   'while false {'
 # An approval losing its sentence — a bare verb with no amount and no subject.

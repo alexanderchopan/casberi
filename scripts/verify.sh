@@ -601,6 +601,23 @@ harness "Address-diff self-test" "address-diff self-test" "scripts/address-diff-
 # on this screen, a fact.
 harness "Address history row self-test" "address history row self-test" "scripts/address-history-row-selftest.sh" "the address history-row self-test failed — run scripts/address-history-row-selftest.sh"
 
+# THE ADDRESS CARD'S ONE DATED SPINE (prd §446) — which events exist, in what
+# order, and what each one says. Every failure renders as a perfectly ordinary
+# card on the screen where you decide whether to trust somebody: a fold saying
+# "9 more" over a preview that hid eight, so the door beside it opens a screen
+# with a different number; the fold's span read off the SHOWN rows, which
+# reprints two dates already on screen and says nothing about how far back you
+# two go; a root telling you that you named an address still standing under a
+# placeholder, or dating one to the day you opened its card because it was
+# never in your book at all; an unpriceable grant dropped from the caption,
+# leaving a figure that looks complete over a permission it does not cover; and
+# — on the one screen where a wrong character is a different address — a
+# chunking that loses one or pads a group that was short. It also carries the
+# negatives no assertion can reach: the four blocks the spine replaced stay
+# gone, the look-alike condition still sits ABOVE it, the address is never
+# truncated again, and the money gate stays at the call site.
+harness "Address spine self-test" "address spine self-test" "scripts/address-spine-selftest.sh" "the address spine self-test failed — run scripts/address-spine-selftest.sh"
+
 # The WalletConnect picker's arithmetic (`Model/WalletConnectPlan.swift`, prd
 # §376). The bug it replaces was unreportable, not merely unnoticed: the
 # connect door looped `WalletStore.add` over every shared account and flagged
