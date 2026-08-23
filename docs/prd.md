@@ -30506,3 +30506,41 @@ ever renders inside the room its chip already names and highlights — the same
 shape as "Connected" under "How they connect". It stays, because it is drawn
 in the source's brand hue and does double duty as the mark: identification,
 not subtext. Flagged here so the next pass knows it was considered.
+
+## 452. The room heads stop introducing themselves (user: "oh get rid of those that is totally redundant", 2026-08-22)
+
+§451 flagged this and did not cut it. Every room head card opened with a
+`label12` line carrying its own source's name — "Instagram", "Cursor",
+"L2BEAT" — and `FeedScreen.sourceHead` switches on `source`, so a head only
+ever renders inside the room its chip already names, under a strip where that
+chip is the lit one. The card introduced itself with a word on screen one row
+up. §451 left it on the argument that it is drawn in the source's brand hue
+and so does double duty as the card's mark rather than as a sentence; shown
+the two states side by side, the user ruled it out.
+
+Twenty cards: the nineteen `*RoomCard`s that carry one, plus
+`CloudflareRunwayCard`. `CardPointersRoomCard` never had one.
+
+**`XPersonCard` keeps its "X", and that is the boundary this cut has.** It is
+not a room head — it draws inside `PersonRoomScreen`, whose `navigationTitle`
+is the person's handle, so the eyebrow is the only place on that screen the
+source is named at all. The test is not "is this an eyebrow" but "is this word
+already on screen"; the answer differs, so the treatment differs.
+
+Two consequences swept with it. The element that now leads each card carried
+`.padding(.top, DS.Space.s2)`, which existed to separate it FROM the eyebrow —
+left in place it is a stray indent at the top of a card that already has its
+own padding, so it is gone from all twenty (three of them needed it found by
+hand: `JournalRoomCard` and `XRoomCard` because §451's own comment block sits
+between the two, and `SafeRoomCard` because its lead is a computed `headline`
+property in another part of the file). And seven cards had a brand-hue
+constant the eyebrow was the sole reader of — `L2beat`, `Peer`, `PostHog`,
+`Radicle`, `Railgun`, `Walletbeat`, `X402` — now deleted rather than left as
+dead code. The other thirteen keep theirs: `JournalRoomCard`'s still tints its
+year strip, `StripeRoomCard`'s and `CloudflareRunwayCard`'s are read a dozen
+times each.
+
+Verified by both builds and by every harness that guards one of these cards
+(x, journal-room, wallet-rooms, instagram, l2beat, room-heads, cursor,
+applewallet, agent-panel, safe-room, github-room, altana, radicle, railgun,
+x402) — a fuller pass runs separately.

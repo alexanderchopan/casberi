@@ -36,23 +36,20 @@ struct PostHogRoomCard: View {
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    private static let mark = DS.brandHue(for: "PostHog") ?? Color.fixed("#f54e00")
-
     private var drawn: [PostHogRoom.Metric] {
         Array(room.metrics.prefix(PostHogRoomSource.discCap))
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text(String(localized: "PostHog"))
-                .dsText(.label12).fontWeight(.semibold)
-                .foregroundStyle(Self.mark)
-
+            // The source-name eyebrow retired here 2026-08-22 (prd §452). A room
+            // head renders only inside its own source's room, under a chip strip
+            // where that source's chip is the lit one — so the card introduced
+            // itself with a word already on screen, one row up.
             Text(PostHogRoom.headline(room))
                 .dsText(.heading22)
                 .foregroundStyle(DS.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
-                .padding(.top, DS.Space.s2)
 
             Text(PostHogRoom.note(room, nextRung: PostHogMilestone.next(after:)))
                 .dsText(.subhead13)

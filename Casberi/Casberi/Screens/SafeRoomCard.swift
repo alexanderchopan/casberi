@@ -54,10 +54,10 @@ struct SafeRoomCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text(String(localized: "Safe"))
-                .dsText(.label12).fontWeight(.semibold)
-                .foregroundStyle(Self.mark)
-
+            // The source-name eyebrow retired here 2026-08-22 (prd §452). A room
+            // head renders only inside its own source's room, under a chip strip
+            // where that source's chip is the lit one — so the card introduced
+            // itself with a word already on screen, one row up.
             headline
 
             // The module warning wears attention orange — the one fact this
@@ -122,7 +122,6 @@ struct SafeRoomCard: View {
             .dsText(.heading22)
             .foregroundStyle(DS.textPrimary)
             .fixedSize(horizontal: false, vertical: true)
-            .padding(.top, DS.Space.s2)
         // The whole card is a tap target for touch and pointer and carries
         // nothing for VoiceOver; this states the same verb on the line that
         // names its destination — and says nothing when there is no

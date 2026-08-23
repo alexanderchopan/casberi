@@ -31,15 +31,14 @@ struct AppleWalletRoomCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text(String(localized: "Apple Wallet"))
-                .dsText(.label12).fontWeight(.semibold)
-                .foregroundStyle(Self.mark)
-
+            // The source-name eyebrow retired here 2026-08-22 (prd §452). A room
+            // head renders only inside its own source's room, under a chip strip
+            // where that source's chip is the lit one — so the card introduced
+            // itself with a word already on screen, one row up.
             Text(room.headline)
                 .dsText(.heading22)
                 .foregroundStyle(DS.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
-                .padding(.top, DS.Space.s2)
 
             if let subline = room.subline {
                 Text(subline)

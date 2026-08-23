@@ -54,15 +54,14 @@ struct StripeRoomCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text(String(localized: "Stripe"))
-                .dsText(.label12).fontWeight(.semibold)
-                .foregroundStyle(Self.mark)
-
+            // The source-name eyebrow retired here 2026-08-22 (prd §452). A room
+            // head renders only inside its own source's room, under a chip strip
+            // where that source's chip is the lit one — so the card introduced
+            // itself with a word already on screen, one row up.
             Text(StripeRoom.headline(room))
                 .dsText(.heading22)
                 .foregroundStyle(DS.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
-                .padding(.top, DS.Space.s2)
 
             Text(StripeRoom.note(room))
                 .dsText(.subhead13)
