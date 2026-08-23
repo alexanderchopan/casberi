@@ -315,10 +315,12 @@ enum BridgeGlyph {
         // really are one shape: "import your chats"; a BYOK key is not).
         case "grok":         return "bolt.circle"
         case "openrouter":   return "arrow.triangle.branch"
-        // An experimental devnet, so a lab glyph rather than a chain/coin
-        // mark — this seat is about testing a protocol upgrade, not about
-        // holding or moving anything.
-        case "base vibenet": return "testtube.2"
+        // Base's own real mark is bundled now (`brand-base-vibenet`), so
+        // `BridgeIcon` never reaches this fallback in practice — kept
+        // defensive, in the neutral-letterform shape (the App Store Connect
+        // precedent) rather than an invented theme icon, in case the asset
+        // ever fails to load.
+        case "base vibenet": return "character"
         default:          return "app"
         }
     }

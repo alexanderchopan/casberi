@@ -163,6 +163,36 @@ check("names() carries no reserved bit",
 check("the highest bit is still just 'unknown', never invented",
       VibenetScope(raw: 0x8000).summary == "+1 unknown")
 
+// MARK: - VibenetScope matrix (namedLabels / grantedFlags)
+
+check("namedLabels are full words, in the contract's own order — never abbreviated",
+      VibenetScope.namedLabels == ["Sender", "Policy", "Nonce", "Self-payer", "Sponsor-payer"])
+check("grantedFlags is the SAME order as namedLabels, one bool per bit",
+      VibenetScope(raw: VibenetScope.sender | VibenetScope.selfPayer).grantedFlags
+        == [true, false, false, true, false])
+check("an empty scope's matrix column is all false, never a crash on an all-empty row",
+      VibenetScope(raw: 0).grantedFlags == [false, false, false, false, false])
+check("grantedCount counts named bits AND reserved ones — a bit we can't name is still a power",
+      VibenetScope(raw: VibenetScope.sender | VibenetScope.selfPayer | 0x0020).grantedCount == 3)
+// The card says what a bit MEANS; the probe says what the contract CALLS it.
+// Both orders must stay the contract's own, so a column header and a probe
+// line can never describe different bits by the same position.
+check("plainLabels are what the bits mean, in the contract's own order",
+      VibenetScope.plainLabels
+        == ["Send any", "Send limited", "Nonce", "Pay own gas", "Pay others"])
+check("the spec's constant names survive alongside them, for the probe",
+      VibenetScope.namedLabels
+        == ["Sender", "Policy", "Nonce", "Self-payer", "Sponsor-payer"])
+check("plainSummary words a real grant in plain English",
+      VibenetScope(raw: VibenetScope.sender | VibenetScope.selfPayer).plainSummary
+        == "Send any, Pay own gas")
+check("an empty scope's plain summary is a real state, never a blank",
+      VibenetScope(raw: 0).plainSummary == "No permissions")
+check("a reserved bit is still counted, never named, in the plain wording too",
+      VibenetScope(raw: VibenetScope.sender | 0x0020).plainSummary == "Send any, +1 unknown")
+check("an empty scope reaches nothing",
+      VibenetScope(raw: 0).grantedCount == 0)
+
 // MARK: - Authenticator identity
 
 print("")
@@ -228,6 +258,26 @@ let a3 = VibenetActor(actorId: "m", authenticator: "0x3", kind: .p256,
 check("K1 leads, custom trails, regardless of actorId",
       VibenetAccountItem.orderedActors([a1, a3, a2]).map(\.actorId) == ["a", "m", "z"])
 
+// MARK: - byReach — the matrix's column order
+
+print("")
+print("VibenetAccountItem.byReach — most-privileged key first")
+// Deliberately the INVERSE of orderedActors' kind ranking, so a test that
+// passes here for the wrong reason (both orders agreeing by accident) is
+// impossible: the weakest kind carries the most power.
+let weak   = VibenetActor(actorId: "a", authenticator: "0x1", kind: .secp256k1,
+                          scope: VibenetScope(raw: VibenetScope.nonce), expiry: 0)
+let strong = VibenetActor(actorId: "z", authenticator: "0x9", kind: .custom,
+                          scope: VibenetScope(raw: VibenetScope.sender | VibenetScope.selfPayer
+                                                   | VibenetScope.sponsorPayer), expiry: 0)
+check("the key that can do the most leads, even when its KIND ranks last",
+      VibenetAccountItem.byReach([weak, strong]).first?.actorId == "z")
+check("a tie in reach falls back to the kind order, so the column set stays TOTAL",
+      VibenetAccountItem.byReach([a3, a2]).map(\.actorId) == ["a", "m"])
+check("byReach over the same set twice agrees with itself",
+      VibenetAccountItem.byReach([strong, a2, weak]).map(\.actorId)
+        == VibenetAccountItem.byReach([a2, weak, strong]).map(\.actorId))
+
 // MARK: - actorSummary
 
 print("")
@@ -255,10 +305,17 @@ func account(address: String = "0x1234567890123456789012345678901234567890",
                        locked: locked, hasInitiatedUnlock: hasInitiatedUnlock,
                        unlocksAt: nil, unlockDelay: nil)
 }
-check("locked leads over everything else",
-      VibenetRoom.rowLine(account(actors: [a2], locked: true)) == "Locked")
-check("locked + unlock initiated says so",
-      VibenetRoom.rowLine(account(locked: true, hasInitiatedUnlock: true)) == "Locked — unlock initiated")
+// rowLine NEVER restates "Locked"/"Unlocking" — the badge already carries
+// that, in bold, beside it — and it COUNTS the keys rather than naming them,
+// because the matrix underneath spells every kind out in full the moment the
+// row opens. Naming them here too printed the same five words twice, one
+// wrapped line apart.
+check("a locked account's row line is its key COUNT, not the word 'Locked' again",
+      VibenetRoom.rowLine(account(actors: [a2], locked: true)) == "1 key")
+check("several keys pluralize, and still never name a kind the matrix is about to name",
+      VibenetRoom.rowLine(account(actors: [a1, a2, a3])) == "3 keys")
+check("locked with no keys falls back to the same line an unlocked empty account gets",
+      VibenetRoom.rowLine(account(locked: true, hasInitiatedUnlock: true)) == "No keys authorized")
 check("unreached reads as unreached",
       VibenetRoom.rowLine(account(reached: false)) == "Couldn't reach the chain")
 check("not established",
@@ -267,9 +324,9 @@ check("not established",
 // live actors is a real, different state from never having been established
 // at all, and must not be reported as the latter.
 check("established but ZERO live actors reads as its own state, not 'not established'",
-      VibenetRoom.rowLine(account(established: true, actors: [])) == "No actors authorized")
-check("established with actors reads the roster",
-      VibenetRoom.rowLine(account(established: true, actors: [a2])) == "1 secp256k1 key")
+      VibenetRoom.rowLine(account(established: true, actors: [])) == "No keys authorized")
+check("established with actors counts them",
+      VibenetRoom.rowLine(account(established: true, actors: [a2])) == "1 key")
 
 // MARK: - ordered — the one alarm this room can raise
 
@@ -300,6 +357,17 @@ check("ties break on address, alphabetically",
 check("ordering is TOTAL — a second pass over the same set agrees with the first",
       VibenetRoom.ordered([quietB, locked, unreached, quietA])
         == VibenetRoom.ordered([quietA, locked, unreached, quietB]))
+
+// The matrix column headers are `shortLabel` — the ONE place a kind name
+// must fit a narrow column. It stays a real word ("secp256k1", "Passkey"),
+// never an abbreviation and never a glyph: both of those shipped once and
+// both were undecodable on the device.
+print("")
+print("VibenetAuthenticatorKind.shortLabel — matrix column headers")
+check("shortLabel is a real word, just without the key/authenticator suffix",
+      VibenetAuthenticatorKind.secp256k1.shortLabel == "secp256k1"
+        && VibenetAuthenticatorKind.custom.shortLabel == "Custom"
+        && !VibenetAuthenticatorKind.secp256k1.shortLabel.contains("key"))
 
 // MARK: - headline / note
 
@@ -377,8 +445,8 @@ check("the fixture reports its own redeploy, so the note shows it off too",
 
 print("")
 print("VibenetRoom.shortAddress")
-check("a real address is middle-elided",
-      VibenetRoom.shortAddress("0x8130931874c894ac4963e128d6273ae520dafa57") == "0x8130…fa57")
+check("a real address is tail-only elided — one truncation, not two",
+      VibenetRoom.shortAddress("0x8130931874c894ac4963e128d6273ae520dafa57") == "…fa57")
 check("a short string passes through untouched",
       VibenetRoom.shortAddress("0xabc") == "0xabc")
 
@@ -448,6 +516,13 @@ mutate "a reserved scope bit must never be folded into the known set" \
   'static let known: UInt16 = sender | policy | nonce | selfPayer | sponsorPayer | 0x0020'
 
 # The one alarm this room can raise must actually lead the card.
+# The matrix's columns are ranked by REACH so the most-privileged key is
+# read first. Inverted, the card leads with the key that can do the LEAST —
+# which renders perfectly and buries the one worth looking at.
+mutate "the matrix must lead with the key that can do the MOST" \
+  'return a.scope.grantedCount > b.scope.grantedCount' \
+  'return a.scope.grantedCount < b.scope.grantedCount'
+
 mutate "a locked account must rank first" \
   'if a.alarmed != b.alarmed { return a.alarmed }' \
   'if false { return a.alarmed }'

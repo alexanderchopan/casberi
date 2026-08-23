@@ -40,13 +40,45 @@ struct VibenetScope: Equatable {
     /// Named bits, in `Scopes.sol`'s own declared order — never alphabetical,
     /// so "Sender, Policy, Nonce" reads as the contract's own list rather
     /// than one this file happened to sort.
-    private static let named: [(bit: UInt16, label: String)] = [
-        (sender, "Sender"), (policy, "Policy"), (nonce, "Nonce"),
-        (selfPayer, "Self-payer"), (sponsorPayer, "Sponsor-payer"),
+    ///
+    /// TWO NAMES PER BIT, and the split is the point. `label` is the
+    /// contract's own constant name, which is right in a probe dump a
+    /// developer reads beside the spec. `plain` is what the bit MEANS, which
+    /// is the only thing that belongs on screen: "Sender" / "Policy" /
+    /// "Nonce" are EIP-8130 internals, and a card spelling them out in full
+    /// is still asking someone to know the spec to read their own account.
+    /// "Policy" in particular is actively misleading — it does not grant a
+    /// policy, it RESTRICTS sending to one.
+    private static let named: [(bit: UInt16, label: String, plain: String)] = [
+        (sender,       "Sender",        "Send any"),
+        (policy,       "Policy",        "Send limited"),
+        (nonce,        "Nonce",         "Nonce"),
+        (selfPayer,    "Self-payer",    "Pay own gas"),
+        (sponsorPayer, "Sponsor-payer", "Pay others"),
     ]
 
     var names: [String] {
         VibenetScope.named.filter { raw & $0.bit != 0 }.map(\.label)
+    }
+
+    /// The granted bits in PLAIN words — what the one-key case says instead
+    /// of a matrix, and the same vocabulary the matrix's column headers use,
+    /// so the two forms of this card never teach two different names for
+    /// one permission.
+    var plainNames: [String] {
+        VibenetScope.named.filter { raw & $0.bit != 0 }.map(\.plain)
+    }
+
+    /// "Send any, Pay own gas" / "Send any, +1 unknown" / "No permissions".
+    var plainSummary: String {
+        var parts = plainNames
+        if unknownCount > 0 {
+            parts.append(unknownCount == 1
+                ? String(localized: "+1 unknown")
+                : String(localized: "+\(unknownCount) unknown"))
+        }
+        guard !parts.isEmpty else { return String(localized: "No permissions") }
+        return parts.joined(separator: ", ")
     }
 
     /// Set bits past `known` — counted, never named. Inventing a name for a
@@ -70,6 +102,31 @@ struct VibenetScope: Equatable {
         guard !parts.isEmpty else { return String(localized: "No scope") }
         return parts.joined(separator: ", ")
     }
+
+    // MARK: Matrix
+
+    /// The contract's own constant names, in its own declared order — for a
+    /// probe dump read beside the spec, never for the card.
+    static var namedLabels: [String] { named.map(\.label) }
+
+    /// What each bit MEANS, same order — the matrix's COLUMN headers.
+    /// Deliberately short: they head a column, and every one is whole words
+    /// that may wrap between them but never inside one.
+    static var plainLabels: [String] { named.map(\.plain) }
+
+    /// One bool per named bit, in `namedLabels`' order — one actor's COLUMN
+    /// in the matrix (an actor is a column, a scope is a row).
+    var grantedFlags: [Bool] {
+        VibenetScope.named.map { raw & $0.bit != 0 }
+    }
+
+    /// How many powers this key holds in total — named bits PLUS reserved
+    /// ones, because a bit this build can't name is still a power the key
+    /// carries. The matrix ranks columns by it so the most-privileged key
+    /// is read first; treating every scope as equally weighted (the first
+    /// cut) meant SENDER — "may originate transactions to anyone" — got the
+    /// same visual standing as NONCE, which is a sequencing detail.
+    var grantedCount: Int { names.count + unknownCount }
 }
 
 // MARK: - Authenticator identity
@@ -96,7 +153,7 @@ struct VibenetKnownAuthenticators: Equatable {
 /// Which of the Keystore's named authenticators an actor's key is, or a
 /// custom one this build doesn't recognize. `Hashable` so `actorSummary`
 /// can group a roster by kind without a hand-rolled key.
-enum VibenetAuthenticatorKind: Equatable, Hashable {
+enum VibenetAuthenticatorKind: Equatable, Hashable, CaseIterable {
     case secp256k1
     case p256
     case webAuthn
@@ -112,6 +169,21 @@ enum VibenetAuthenticatorKind: Equatable, Hashable {
         case .webAuthn:  String(localized: "Passkey")
         case .delegate:  String(localized: "Delegate")
         case .custom:    String(localized: "Custom authenticator")
+        }
+    }
+
+    /// `label` without its "key"/"authenticator" suffix — for a legend cell
+    /// narrow enough that the full label would wrap mid-word. Never used
+    /// where there's room for the real label (the grid, the row summary);
+    /// the kind strip is the one place five of these sit shoulder to
+    /// shoulder in a fixed width.
+    var shortLabel: String {
+        switch self {
+        case .secp256k1: "secp256k1"
+        case .p256:      "P-256"
+        case .webAuthn:  String(localized: "Passkey")
+        case .delegate:  String(localized: "Delegate")
+        case .custom:    String(localized: "Custom")
         }
     }
 
@@ -265,6 +337,23 @@ struct VibenetAccountItem: Identifiable, Equatable {
             return a.actorId < b.actorId
         }
     }
+
+    /// The MATRIX's column order: most powers first, so the key that can do
+    /// the most is the first one read. Distinct from `orderedActors` above
+    /// and deliberately so — that one answers "what kinds of key are on this
+    /// account" (a roster, best in the contract's own declaration order),
+    /// this one answers "which key should I look at first" (a ranking).
+    /// Falls back to `orderedActors`' rule on a tie, so it stays TOTAL and
+    /// the columns can never reshuffle between opens.
+    static func byReach(_ actors: [VibenetActor]) -> [VibenetActor] {
+        actors.sorted { a, b in
+            if a.scope.grantedCount != b.scope.grantedCount {
+                return a.scope.grantedCount > b.scope.grantedCount
+            }
+            if a.kind.sortRank != b.kind.sortRank { return a.kind.sortRank < b.kind.sortRank }
+            return a.actorId < b.actorId
+        }
+    }
 }
 
 // MARK: - The room
@@ -335,16 +424,21 @@ struct VibenetRoom: Equatable {
         return parts.joined(separator: ", ")
     }
 
-    /// The row's own line — what a person reads under the address.
+    /// The row's own line — what a person reads under the address. Two
+    /// redundancies deliberately absent: it NEVER restates
+    /// "Locked"/"Unlocking" (the badge already says that in bold beside it),
+    /// and it counts the keys rather than NAMING them, because the matrix
+    /// below spells out every kind in full the moment the row is opened —
+    /// listing them here too printed "1 secp256k1 key, 1 P-256 key, 1
+    /// Passkey, 1 Delegate, 1 Custom authenticator" across two wrapped lines
+    /// directly above a matrix saying the same five words again.
     static func rowLine(_ item: VibenetAccountItem) -> String {
-        if item.locked {
-            return item.hasInitiatedUnlock
-                ? String(localized: "Locked — unlock initiated")
-                : String(localized: "Locked")
-        }
         guard item.reached else { return String(localized: "Couldn't reach the chain") }
         guard item.established else { return String(localized: "Not established yet") }
-        return actorSummary(item.actors)
+        guard !item.actors.isEmpty else { return String(localized: "No keys authorized") }
+        return item.actors.count == 1
+            ? String(localized: "1 key")
+            : String(localized: "\(item.actors.count) keys")
     }
 
     /// The one sentence at the top of the card.
@@ -374,14 +468,14 @@ struct VibenetRoom: Equatable {
             : String(localized: "\(room.establishedCount) of \(room.items.count) established on vibenet")
     }
 
-    /// "0x8130…40ac" — a devnet test address, shown in the middle-elided
-    /// form people recognize from an explorer, rather than
-    /// `WalletStore.shortAddress`'s tail-only form (that ruling is about a
-    /// real wallet's poisoning-lookalike risk on a personal name; a pasted
-    /// devnet address has neither).
+    /// "…0b1c" — `WalletStore.shortAddress`'s tail-only form (user ruling,
+    /// 2026-08-23, superseding this file's own earlier middle-elided
+    /// choice). A leading prefix plus a middle ellipsis is TWO truncations
+    /// doing the job of one; the tail alone is what a person actually
+    /// compares against the row beside it.
     static func shortAddress(_ address: String) -> String {
-        guard address.count > 12 else { return address }
-        return "\(address.prefix(6))…\(address.suffix(4))"
+        guard address.count > 5 else { return address }
+        return "…\(address.suffix(4))"
     }
 
     /// The line under it — the config's own provenance, since vibenet's

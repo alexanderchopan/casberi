@@ -77,12 +77,17 @@ struct VibenetScreen: View {
                     isArmed: VibenetWatch.isValidAddress(addressField.trimmingCharacters(in: .whitespacesAndNewlines)),
                     action: watchTyped)
 
+                // NO slab note here. It used to read "Read-only, no funds,
+                // no signing. vibenet redeploys its contracts periodically,
+                // so an address's own state can change day to day." — which
+                // is the intro sentence above it again, all three claims,
+                // in different words. §315's budget is one mode chip and one
+                // intro; a second paragraph restating it is not fine print,
+                // it is the same print twice.
                 BridgeSyncStatusRows(
                     syncing: loading,
                     syncingLine: String(localized: "Reading vibenet…"),
                     result: addResult, resultIsError: addResultIsError)
-
-                DSSlabNote(text: "Read-only, no funds, no signing. vibenet redeploys its contracts periodically, so an address's own state can change day to day.")
             }
         }
         .dsSlabSection()
