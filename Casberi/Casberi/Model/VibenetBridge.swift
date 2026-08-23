@@ -498,6 +498,13 @@ enum VibenetRoomSource {
     /// and an unpaced burst against a small devnet node is the surest way
     /// to make the very first thing this feature does read "unreachable").
     static func compose() async -> VibenetRoom {
+        // The demo reaches nothing, the standing rule for every bridge here —
+        // and this one has NO persistence layer to seed a snapshot into the
+        // way Cloudflare's estate or Altana's keystore do, since a real read
+        // is deliberately never cached (the whole feature's premise is that
+        // vibenet moves under you). `VibenetRoom.demoFixture()` is the
+        // snapshot instead, returned before this ever touches the network.
+        if DemoMode.isActive { return VibenetRoom.demoFixture() }
         guard let contracts = await VibenetConfig.current() else {
             return VibenetRoom.compose(items: [], branch: nil, commit: nil, configReached: false)
         }

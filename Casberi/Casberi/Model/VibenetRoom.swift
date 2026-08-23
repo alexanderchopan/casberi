@@ -408,4 +408,82 @@ struct VibenetRoom: Equatable {
             return String(localized: "Read live from vibenet — addresses redeploy often")
         }
     }
+
+    // MARK: - Demo fixture
+
+    /// The demo's fixed snapshot, and every state this card can draw shown
+    /// at once: all five nameable authenticator kinds, a rich established
+    /// roster, a plain lock and a mid-unlock (so the badge's two words both
+    /// show), and an address still waiting to be established. Nothing here
+    /// is a real read — `VibenetRoomSource.compose()` returns this directly
+    /// under `DemoMode.isActive`, BEFORE it would otherwise touch the
+    /// network, because this room keeps no persistence layer of its own for
+    /// `DemoSeedAll` to seed into (see that file's `seedVibenet` for the
+    /// other half — the matching watched addresses, so the setup screen's
+    /// own list agrees with what this card shows). Kept in `VibenetRoom.swift`
+    /// rather than `DemoSeedAll.swift` so it's covered by the same
+    /// Foundation-only harness as everything else this file composes.
+    static func demoFixture() -> VibenetRoom {
+        let rich = VibenetAccountItem(
+            address: "0x1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b",
+            reached: true, established: true,
+            actors: [
+                VibenetActor(actorId: "0x0000000000000000000000000000000000000000000000000000000000000001",
+                             authenticator: "0x0000000000000000000000000000000000000001",
+                             kind: .secp256k1, scope: VibenetScope(raw: VibenetScope.sender | VibenetScope.selfPayer),
+                             expiry: 0),
+                // The fixture sets `kind` EXPLICITLY rather than deriving it
+                // via `.identify` against a live config — so these three
+                // addresses are never compared against anything and their
+                // exact value is cosmetic. They deliberately do NOT start
+                // "0x8130…" (vibenet's own vanity prefix, see `shortAddress`'s
+                // doc below): the drift guard that forbids a hardcoded
+                // vibenet contract address anywhere outside a comment can't
+                // tell a demo fixture from a live call, and it shouldn't have
+                // to — a fake address that merely LOOKS unlike a real
+                // contract is the simpler fix.
+                VibenetActor(actorId: "0x0000000000000000000000000000000000000000000000000000000000000002",
+                             authenticator: "0xaaaa1111222233334444555566667777888899aa",
+                             kind: .p256, scope: VibenetScope(raw: VibenetScope.sender), expiry: 0),
+                VibenetActor(actorId: "0x0000000000000000000000000000000000000000000000000000000000000003",
+                             authenticator: "0xbbbb1111222233334444555566667777888899bb",
+                             kind: .webAuthn, scope: VibenetScope(raw: VibenetScope.policy | VibenetScope.nonce),
+                             expiry: 0),
+                VibenetActor(actorId: "0x0000000000000000000000000000000000000000000000000000000000000004",
+                             authenticator: "0xcccc1111222233334444555566667777888899cc",
+                             kind: .delegate, scope: VibenetScope(raw: VibenetScope.sponsorPayer), expiry: 0),
+                // A scope this build has no name for — the roster's honest
+                // "+1 unknown" fallback, never an invented label.
+                VibenetActor(actorId: "0x0000000000000000000000000000000000000000000000000000000000000005",
+                             authenticator: "0x9999999999999999999999999999999999999a",
+                             kind: .custom, scope: VibenetScope(raw: VibenetScope.sender | 0x0400), expiry: 0),
+            ],
+            locked: false, hasInitiatedUnlock: false, unlocksAt: nil, unlockDelay: nil)
+
+        let lockedPlain = VibenetAccountItem(
+            address: "0x2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c",
+            reached: true, established: true,
+            actors: [VibenetActor(actorId: "0x0000000000000000000000000000000000000000000000000000000000000006",
+                                   authenticator: "0x0000000000000000000000000000000000000001",
+                                   kind: .secp256k1, scope: VibenetScope(raw: VibenetScope.sender), expiry: 0)],
+            locked: true, hasInitiatedUnlock: false, unlocksAt: nil, unlockDelay: nil)
+
+        let unlocking = VibenetAccountItem(
+            address: "0x3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d",
+            reached: true, established: true,
+            actors: [VibenetActor(actorId: "0x0000000000000000000000000000000000000000000000000000000000000007",
+                                   authenticator: "0x0000000000000000000000000000000000000001",
+                                   kind: .secp256k1, scope: VibenetScope(raw: VibenetScope.sender | VibenetScope.selfPayer),
+                                   expiry: 0)],
+            locked: true, hasInitiatedUnlock: true, unlocksAt: 4_102_444_800, unlockDelay: 43_200)
+
+        let notEstablishedYet = VibenetAccountItem(
+            address: "0x4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e",
+            reached: true, established: false,
+            actors: [], locked: false, hasInitiatedUnlock: false, unlocksAt: nil, unlockDelay: nil)
+
+        return compose(items: [rich, lockedPlain, unlocking, notEstablishedYet],
+                        branch: "main", commit: "a9ae95e1bdemo",
+                        configReached: true, redeployedSinceLastSeen: true)
+    }
 }

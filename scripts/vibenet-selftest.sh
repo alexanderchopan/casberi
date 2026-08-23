@@ -354,6 +354,25 @@ let redeployedNoCommit = VibenetRoom.compose(items: [], branch: nil, commit: nil
 check("a redeploy flag with no commit falls back to the plain note, never a broken sentence",
       VibenetRoom.note(redeployedNoCommit) == "Read live from vibenet — addresses redeploy often")
 
+// MARK: - demoFixture — every state the card can draw, in one snapshot
+
+print("")
+print("VibenetRoom.demoFixture")
+let demo = VibenetRoom.demoFixture()
+check("four accounts, matching the four addresses DemoSeedAll seeds",
+      demo.items.count == 4)
+check("exactly two locked (one plain, one mid-unlock)",
+      demo.lockedCount == 2)
+check("all five nameable authenticator kinds appear somewhere in the roster",
+      Set(demo.items.flatMap { $0.actors.map(\.kind) }) ==
+        Set([.secp256k1, .p256, .webAuthn, .delegate, .custom]))
+check("the roster's own unknown-scope actor reports an unknown count, never an invented name",
+      demo.items.flatMap(\.actors).contains { $0.scope.unknownCount > 0 })
+check("one account is reachable but not yet established",
+      demo.items.contains { $0.reached && !$0.established })
+check("the fixture reports its own redeploy, so the note shows it off too",
+      VibenetRoom.note(demo).contains("redeployed since you last checked"))
+
 // MARK: - shortAddress
 
 print("")

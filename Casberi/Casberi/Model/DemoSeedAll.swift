@@ -330,6 +330,12 @@ enum DemoSeedAll {
         "Snapchat": 5, "YouTube": 5, "Instagram": 4, "Privacy Pools": 4,
         "Farcaster": 4, "Apple Wallet": 3, "Circle x402": 3, "TikTok": 3,
         "Gmail": 2, "Files": 2, "Pinterest": 5, "OpenSea": 3,
+        // Base Vibenet (2026-08-23) — a landless seat like Cloudflare and
+        // Apple Wallet, so its chip needs its OWN visit weight rather than
+        // riding a landed row's — `ChipMemory` ranks the source chip strip,
+        // not the corpus, and a seat with no Things would otherwise sort
+        // to the back of the strip despite reading as "connected".
+        "Base Vibenet": 3,
         // Cloudflare (2026-08-08) — the `runway` figure kind had NO room
         // above the panel's 20-card cap, and the reason wasn't affinity, it
         // was that `runway` could not draw at all: `CloudflareRunwaySource
@@ -417,6 +423,17 @@ enum DemoSeedAll {
         // keep off a lived-in install (a real Cloudflare bridge reads as
         // "Cloudflare" too, indistinguishable by name).
         CloudflareEstateStore.clear()
+
+        // Base Vibenet — the four demo-seeded addresses, by NAME, never a
+        // blanket `removeAll()`: a real vibenet watch this device already
+        // held before entering the demo (implausible, but the rule the
+        // other bridges above already keep) must survive exiting it.
+        for address in [
+            "0x1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b",
+            "0x2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c",
+            "0x3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d",
+            "0x4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e",
+        ] { VibenetWatch.shared.remove(address) }
 
         // Apple Wallet's own bespoke connected flag, and App Store Connect's
         // planted standing — same accepted risk as Cloudflare above: a real
@@ -4256,6 +4273,22 @@ enum DemoSeedAll {
         seedCloudflareEstate()
         // 5b · Altana's keystore snapshot — see `seedAltanaKeystore`.
         seedAltanaKeystore()
+        // 5c · Base Vibenet — the watch list, not the room's content.
+        // `VibenetRoomSource.compose()` returns `VibenetRoom.demoFixture()`
+        // whole under `DemoMode.isActive` and never touches these addresses
+        // for what it DRAWS (this room keeps no persistence layer of its own
+        // to seed a snapshot into, unlike Cloudflare/Altana above) — but
+        // `VibenetScreen.connected` reads `VibenetWatch.shared` directly, so
+        // without this the setup screen would show the empty "watch an
+        // address" state over a catalog that claims the seat is connected.
+        // The four addresses match the fixture's own, so a person who opens
+        // the setup screen sees the same accounts the card already named.
+        for address in [
+            "0x1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b",
+            "0x2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c",
+            "0x3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d",
+            "0x4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e",
+        ] { _ = VibenetWatch.shared.add(address) }
         // 5b · The anonymity sets behind the Privacy Pools deposits seeded in
         // `wallet()` (prd §397). Two numbers, and the pair is the point: the
         // CURRENT set, plus the set at the moment the oldest deposit in each
@@ -4412,6 +4445,11 @@ enum DemoSeedAll {
         ("Peer", "Rides your wallet", "Lands settled fills, never trades."),
         ("Privacy Pools", "Rides your wallet", "Reads your deposits' review status."),
         ("Altana", "Rides your wallet", "Reads which keys can sign for you."),
+        // NOT "Rides your wallet" like its neighbours above — vibenet has
+        // nothing to do with a watched mainnet wallet, it's its own address
+        // list (`VibenetWatch`), the Farcaster/Bluesky/Stocktwits "N watched"
+        // shape instead.
+        ("Base Vibenet", "4 accounts watched", "Reads which keys can act for a watched account."),
         ("Gnosis Pay", "Rides your wallet", "Reads what the card settled onchain."),
         ("ether.fi", "Rides your wallet", "Reads what the card settled onchain."),
         ("Apple Wallet", "Synced 6m ago", "Reads Apple Card, Cash and Savings."),
