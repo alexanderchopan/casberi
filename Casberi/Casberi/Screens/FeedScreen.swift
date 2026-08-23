@@ -400,6 +400,29 @@ struct FeedScreen: View {
     /// This strip is always there, always shows every lane, and nothing but a
     /// tap can change it.
     @State private var x402Lane: String?
+
+    /// One publisher (or one writer), when the reading room has been narrowed
+    /// to them from its own board (2026-08-23, prd §455).
+    ///
+    /// `@State`, so it dies with the room — `MainSurface` gives its single
+    /// `FeedScreen` an `.id(filter.source)`, and that is the RIGHT lifetime
+    /// here for the reason `x402Lane` has it: this is how you are looking at
+    /// one room right now, not a setting you configured. It is deliberately
+    /// NOT the shell-held shape §356 gave the wallet scope, because that scope
+    /// spans a whole category of rooms and a publisher exists in exactly one.
+    ///
+    /// Carries the FIELD as well as the label. The board decides at runtime
+    /// which of the two it ranked (see `FeedInsight.Leaderboard.Scope`), so
+    /// the tap records what was on screen when it happened rather than letting
+    /// the filter guess later.
+    struct ReadingScope: Equatable {
+        let label: String
+        let scope: FeedInsight.Leaderboard.Scope
+        /// For the head's memo key, which is a string.
+        var key: String { "\(scope.rawValue):\(label)" }
+    }
+    @State private var readingScope: ReadingScope?
+
     @State private var confirming: (Verb, Thing)?
     /// Translate verb, swipe-triggered — same system sheet as ThingSheetView's.
     @State private var showTranslate = false
@@ -1073,6 +1096,14 @@ struct FeedScreen: View {
         let leaderboard: FeedInsight.Leaderboard?
         let distribution: FeedInsight.Distribution?
         let mosaic: FeedInsight.Mosaic?
+        /// Whether the feeds behind a reading room are still answering
+        /// (2026-08-23, prd §455). Cached HERE rather than in a task of its
+        /// own because it has exactly this lifecycle — recompute when the
+        /// room, the pull or the room's contents move — and because
+        /// `FeedFreshness` is not `@Observable`, so a body read would never
+        /// refresh itself and would copy its whole record dictionary once per
+        /// followed feed per body pass.
+        var feedHealth: FeedRoomHealth.Standing? = nil
     }
 
     /// The last head computed for each room, kept ACROSS the mount.
@@ -1122,7 +1153,7 @@ struct FeedScreen: View {
             ? Corpus.revision(in: modelContext)
             : Corpus.revision(in: modelContext, source: source)
         return [source, filter.tag, selectedWallet ?? "", chrome.personScope ?? "",
-                x402Lane ?? "",
+                x402Lane ?? "", readingScope?.key ?? "",
                 // Bridge state is the one input a corpus revision cannot see —
                 // `sourceHead` reads a Stripe balance, PostHog readings, an ASC
                 // standing, none of which is a `Thing`. A pull is when somebody
@@ -1162,8 +1193,24 @@ struct FeedScreen: View {
     /// narrows the ROWS) and the head computation (which must describe exactly
     /// those rows), because two spellings of one scope is how a head ends up
     /// describing a marketplace the reader just filtered away.
-    private func roomScoped(_ rows: [Thing]) -> [Thing] {
-        shape == .x402 ? x402Scoped(rows) : rows
+    /// `narrowingToPublisher` is the one asymmetry, and it exists because the
+    /// reading board is the CONTROL as well as the reading (2026-08-23, prd
+    /// §455): the rows narrow to one publisher, and the board must keep every
+    /// publisher on it or there is no way back — the venue switcher's rule
+    /// (§357), which shows every venue while the room shows one. Passed false
+    /// by `recomputeHeads` when it computes that one card and by nothing else,
+    /// so every other head still describes exactly the rows on screen.
+    private func roomScoped(_ rows: [Thing], narrowingToPublisher: Bool = true) -> [Thing] {
+        var out = shape == .x402 ? x402Scoped(rows) : rows
+        if narrowingToPublisher, let scope = readingScope {
+            // `.live` before a stored property is read (corollary 4) —
+            // `rows` may be the debounced All snapshot.
+            out = out.live.filter {
+                scope.scope.value(of: $0)?
+                    .trimmingCharacters(in: .whitespacesAndNewlines) == scope.label
+            }
+        }
+        return out
     }
 
     /// Compute this room's head, off the body.
@@ -1186,12 +1233,25 @@ struct FeedScreen: View {
         // the reason a PERF change that moves a fetch is always also a liveness
         // change).
         let rows = roomScoped(visible.live)
+        // THE BOARD ALONE IS COMPUTED OVER THE WHOLE ROOM (2026-08-23), when
+        // the room has been narrowed FROM that board — see `roomScoped`. A
+        // board recomputed over one publisher's rows is a single bar naming
+        // the choice you already made, with nothing to switch to and no way to
+        // clear it. Identical to `rows` whenever nothing is scoped, which is
+        // every other room and most of this one's life.
+        let boardRows = readingScope == nil
+            ? rows
+            : roomScoped(visible.live, narrowingToPublisher: false)
         let computed = RoomHeads(
             sourceHead: sourceHead(rows),
             topicMap: FeedInsight.topicMap(source: source, things: rows),
-            leaderboard: FeedInsight.leaderboard(source: source, things: rows),
+            leaderboard: FeedInsight.leaderboard(source: source, things: boardRows),
             distribution: FeedInsight.distribution(source: source, things: rows),
-            mosaic: FeedInsight.mosaic(source: source, things: rows))
+            mosaic: FeedInsight.mosaic(source: source, things: rows),
+            // Reads the follow stores and `FeedFreshness`, never `rows` — the
+            // whole point is a feed that has stopped producing rows, so a
+            // verdict derived from the room's contents could not see it.
+            feedHealth: FeedRoomHealthSource.standing(for: source))
         Self.headMemo[headIdentity] = computed
         heads = computed
         SwipeClock.mark("heads", detail: "rows=\(rows.count)")
@@ -2652,6 +2712,13 @@ struct FeedScreen: View {
         // all despite having real members, and were unreachable by any means.
         let visible = roomScoped(allVisible)
         if shape == .x402 { x402LaneStrip }
+        // ABOVE THE HEAD, deliberately (2026-08-23, prd §455). This is not a
+        // reading about the room, it is a statement about whether the room is
+        // COMPLETE — and every reading below it (a board ranking publishers, a
+        // count of stories, a year grid) is computed over rows that a dead feed
+        // stopped contributing to weeks ago. A correction printed under those
+        // claims is a correction printed after the claim.
+        feedHealthNote
         // The new-since divider rides every chronological shape now
         // (2026-07-13) — each source's feed keeps its own last-visit stamp.
         // Photos (a grid), Calendar (future-first) and Reminders (state
@@ -2989,11 +3056,17 @@ struct FeedScreen: View {
                 // every other board here ranks subreddits, artists,
                 // publications and books, and a person room over an artist
                 // name would open an empty screen.
-                LeaderboardHero(board: leaderboard,
-                                onPick: source == XPersonSource.source
-                                    ? { row in feedSheet = .person(source: XPersonSource.source,
-                                                                  handle: row.label) }
-                                    : nil)
+                //
+                // A READING ROOM'S BOARD NARROWS ITS OWN ROOM instead
+                // (2026-08-23, prd §455) — see `FeedInsight.Leaderboard.Scope`
+                // for why the board carries the field it ranked and
+                // `roomScoped` for why this one card is not narrowed with the
+                // rows. Two destinations, never both: X's board opens a person
+                // and a reading board scopes, so `scope` being non-nil is the
+                // whole test and no room can accidentally get both.
+                LeaderboardHero(board: scopedBoard(leaderboard),
+                                onPick: leaderboardPick(leaderboard),
+                                selected: readingScope?.label)
             }
         } else if let distribution {
             insightSection { DistributionHero(dist: distribution) }
@@ -4218,6 +4291,48 @@ struct FeedScreen: View {
     /// status readout, not a control. A lane with nothing in it still answers
     /// honestly when tapped (the empty room says so), which is a truthful
     /// answer rather than a missing button.
+    /// A feed that has stopped answering, said in the room (2026-08-23, prd
+    /// §455). Draws nothing at all when every feed is fine, which is the
+    /// common case — see `FeedRoomHealth`.
+    ///
+    /// A DOOR, not a label. The one useful response is to look at the followed
+    /// list and re-add or remove the feed, and that list lives on the bridge's
+    /// own screen; a line stating a problem with no way to act on it is the
+    /// half-control the honesty law is about. Its destination comes from
+    /// `FeedRoomHealthSource`, so a room whose screen we cannot name draws no
+    /// note rather than a chevron that goes nowhere.
+    @ViewBuilder
+    private var feedHealthNote: some View {
+        if let standing = heads?.feedHealth,
+           let destination = FeedRoomHealthSource.destination(for: source) {
+            Section {
+                Button {
+                    DSHaptic.selection()
+                    route.pushBridge(destination)
+                } label: {
+                    HStack(spacing: DS.Space.s2) {
+                        Text(standing.line)
+                            .dsText(.subhead13)
+                            .foregroundStyle(DS.textSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        Image(systemName: "chevron.right")
+                            .dsText(.label11)
+                            .foregroundStyle(DS.textTertiary)
+                    }
+                    .padding(.horizontal, DS.Space.s4)
+                    .padding(.vertical, DS.Space.s2)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .dsHover()
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+                .listRowInsets(EdgeInsets())
+            }
+        }
+    }
+
     @ViewBuilder
     private var x402LaneStrip: some View {
         Section {
@@ -4584,6 +4699,54 @@ struct FeedScreen: View {
     /// generalised, for a head that ranks something owning MANY rows and so
     /// cannot name a single `sourceRef`. Liveness is checked inside the filter,
     /// before any stored property is read (corollary 3).
+    /// What a tapped bar does, or nil for a board with nowhere to go
+    /// (2026-08-23, prd §455).
+    ///
+    /// One place, so the two destinations can never both apply to one room:
+    /// X's board opens a person room, a scoped board narrows this one, and a
+    /// board with neither keeps the plain untappable row `LeaderboardHero`
+    /// has always drawn for it.
+    private func leaderboardPick(
+        _ board: FeedInsight.Leaderboard) -> ((FeedInsight.LeaderRow) -> Void)? {
+        if source == XPersonSource.source {
+            return { row in
+                feedSheet = .person(source: XPersonSource.source, handle: row.label)
+            }
+        }
+        guard let scope = board.scope else { return nil }
+        return { row in
+            // Tapping the row you are already scoped to CLEARS it. The board
+            // is the only control this scope has, so it has to be able to
+            // undo itself — a narrowing with no way out is the dead end §83
+            // forbids, and a separate "clear" chip for a state most readers
+            // will never enter is chrome on every other visit.
+            withAnimation(DS.Motion.standard) {
+                readingScope = readingScope?.label == row.label
+                    ? nil
+                    : ReadingScope(label: row.label, scope: scope)
+            }
+        }
+    }
+
+    /// The board as the switcher says it: unchanged, except that a narrowed
+    /// room replaces the subtitle's tally with what is actually on screen and
+    /// how to leave.
+    ///
+    /// The tally is the right subtitle for a READING and the wrong one for a
+    /// narrowed room — it counts every story while the rows below show one
+    /// publisher's, which is the two-surfaces-disagreeing failure this file
+    /// already forbids one level up. Replaced rather than appended: the count
+    /// is recoverable by tapping back to all, and a subtitle carrying both is
+    /// a sentence nobody finishes.
+    private func scopedBoard(_ board: FeedInsight.Leaderboard) -> FeedInsight.Leaderboard {
+        guard let scope = readingScope else { return board }
+        return FeedInsight.Leaderboard(
+            title: board.title,
+            subtitle: String(localized: "Showing \(scope.label) · tap again for all"),
+            rows: board.rows,
+            scope: board.scope)
+    }
+
     private func openNewest(source: String, in visible: [Thing],
                             where matches: (Thing) -> Bool) {
         let match = visible

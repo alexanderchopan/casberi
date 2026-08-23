@@ -966,6 +966,22 @@ harness "Obsidian pure-logic self-test" "obsidian self-test" "scripts/obsidian-s
 # probed and GATED, both verb dispatchers run it, and the hand-off does not
 # quietly take the pasteboard on the way out.
 harness "Files-location pure-logic self-test" "files-location self-test" "scripts/files-location-selftest.sh" "the Files-location self-test failed — run scripts/files-location-selftest.sh"
+# The reading rooms, past §312 (prd §455, 2026-08-23). Every failure it catches
+# renders as a perfectly ordinary room and none is visible to a build: a health
+# line that names one feed and prints ANOTHER feed's reason; a line drawn for a
+# follow whose feed URL was never resolved, i.e. the app reporting a failure it
+# has never once observed; a count of the feeds you FOLLOW where the count of
+# broken ones belonged; and — the expensive one — a tap fetching a podcast's
+# audio enclosure to read its first 512KB as text, which is why the sweep's
+# eligibility rule and the tap's are one extracted function whose sharing this
+# guards. Its drift half covers what the pure file cannot: that the tap does
+# not consult the background ledger and does write it, that the board carries
+# the FIELD it ranked (RSS picks between two boards at runtime, so a scope
+# assuming one narrows to nothing on the corpora that took the other), that the
+# rows narrow while the BOARD does not — a board recomputed over one publisher
+# is one bar naming the choice you already made, with no way back — and that
+# reading aloud never reaches the network.
+harness "Feed-reading pure-logic self-test" "feed-reading self-test" "scripts/feed-reading-selftest.sh" "the feed-reading self-test failed — run scripts/feed-reading-selftest.sh"
 
 # Radicle (prd §400, 2026-08-18). The ONLY proof this bridge has: nothing on
 # this host can open a patch, merge one or close an issue, so no probe and no

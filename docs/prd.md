@@ -30678,3 +30678,163 @@ or a dot inside one.
 Nothing was removed and nothing changed what it says. `scripts/accessibility-audit.py`'s
 `KNOWN_EXEMPT` key for the flow band's slab gesture moved 384 → 388, exactly
 the safe drift its own note describes.
+
+## 455. The reading rooms, past §312 — an article you can actually read, a board that narrows its own room, and a feed that says when it stopped answering (user: "how would you improve the RSS experience", then "do all", 2026-08-23)
+
+§312 answered this question fourteen days ago and answered the PLUMBING half of
+it: a YouTube resolver that had been following the wrong channel, a conditional
+GET, a health record, the article fetch, OPML export. Everything below sits on
+top of that work, and three of the four items are a surface catching up with
+data the app had already gone and got — which is the §397 shape, and the reason
+to read the previous entry before touching the code held here too.
+
+**THE ARTICLE IS FETCHED WHEN YOU OPEN IT.** `FeedArticleText` has read the
+body of RSS and Substack rows since §312 and `ThingContentView` has drawn it
+since 2026-08-21, and between those two dates the feature was half-built in a
+way that is invisible from the inside: the sweep is bounded like the background
+pass it is — `perPass` 6 rows per foreground, a thirty-day `window`, abandoned
+after `maxAttempts` — so on any corpus with several feeds MOST stories still
+had no body when you opened them. The sheet fell back to a link preview card,
+and the only way to read the piece was to leave for the browser, in the room
+whose whole promise is that what you follow is here. A reader had paid for the
+fetch on six rows and got it on whichever six the sweep happened to reach.
+
+A tap is the one moment the body is certainly wanted, and the cheapest possible
+signal to act on. `fetchOnOpen` deliberately drops THREE of the sweep's bounds
+and each omission is the point rather than an oversight: the **window** (you
+opened it, and its age is not our business — thirty days bounds what the app
+may do unasked, and this is asked), **`maxAttempts`** (the ledger exists to
+stop a robot re-asking a publisher the same dead question forever; a person
+re-opening a story is not that, and refusing them on the strength of two
+failures the app made last week is a control that does nothing for a reason
+nobody can see), and **`perPass`/`pace`** (one open is one request, and the
+bound on how many is how many stories somebody opens). **Failures still COUNT
+into the ledger** — the asymmetry worth stating: the tap does not READ it and
+does WRITE it, so a paywalled article opened twice teaches the background sweep
+to leave it alone without the person ever being told no.
+
+**One eligibility rule, extracted rather than written twice.** `readableURL` is
+now the single answer to what is readable, shared by the sweep and the tap, and
+the sharing is guarded. The two must disagree about WHEN and must never
+disagree about WHAT: a tap accepting a row the sweep refuses would download a
+podcast's entire audio enclosure to take its first 512KB as text (a podcast
+episode with no `<link>` of its own carries its audio as `content`), and a tap
+refusing one the sweep accepts leaves the reader looking at a preview card for
+an article the app is perfectly willing to read on its own schedule.
+
+**The placeholder is not a spinner over nothing.** A fetch can take eight
+seconds, and an article arriving, an article that failed and a row that was
+never eligible are indistinguishable if the view simply draws nothing. It says
+it is reading; on a miss it says nothing at all and leaves the preview card
+above to be the answer, because "we could not read this page" is a sentence
+about our own scraper that the reader can do nothing with — the door out to the
+site is already there.
+
+**LISTEN** (`ArticleSpeech`) — the one verb this corpus can offer that the
+publisher's own page cannot. The words are already here, `AVSpeechSynthesizer`
+is on-device, and nothing leaves the phone: no request, no key, no service,
+nothing to declare in `NetworkReach`, guarded as a negative. It is what makes
+the fetch worth more than a reading pane — a story you can start and then put
+the phone in your pocket. **Deliberately NOT a `Verb`**: that file caps a thing
+at three discs, and this is conditional on something no verb there consults
+(whether a body actually landed), so a disc would be present-and-dead on every
+story the fetch missed. It sits on the body, where it can only exist when there
+is something to read. ONE synthesizer for the app, because a per-view one means
+two articles reading at once the moment a second window opens, and `speakingID`
+is what lets a button know the voice is ITS voice rather than showing Stop for
+somebody else's article.
+
+**THE BOARD NARROWS ITS OWN ROOM.** "Your publishers" / "Who you read" answered
+the question and then, until this pass, tapping the answer did nothing — while
+the rows for that one publisher were the obvious next question and there was no
+way to ask it. §396 had already made X's board a door; this is the same move
+for the rooms whose rows are not people.
+
+Three decisions, and the middle one is the whole design:
+
+  1. **The board carries the FIELD it ranked**, not a flag.
+     `FeedInsight.Leaderboard.Scope` is `publisher` (`authorHandle`) or
+     `writer` (`postAuthor`), because RSS and Substack pick between two boards
+     AT RUNTIME depending on what their feeds name — `bylines` ranks writers,
+     `counted` ranks publications — so a scope assuming one field would
+     silently narrow to nothing on exactly the corpora that took the other
+     branch. The board is the only thing that knows how it was keyed.
+  2. **The rows narrow and the BOARD DOES NOT.** `roomScoped` gained one
+     asymmetry, passed by `recomputeHeads` and by nothing else, and it is the
+     venue switcher's rule (§357): a board recomputed over one publisher's rows
+     is a single bar naming the choice you already made, with nothing to switch
+     to and no way to clear it. This is deliberately UNLIKE the x402 lane
+     strip, which narrows its own head — there the control is a separate strip
+     that survives the narrowing, and here the board IS the control.
+  3. **Tapping the scoped row clears it**, because the board is this scope's
+     only control and has to be able to undo itself. A separate "clear" chip
+     would be chrome on every visit for a state most readers will never enter;
+     a narrowing with no way out is the dead end §83 forbids.
+
+The scope is `@State`, so it dies with the room — right here for `x402Lane`'s
+reason (this is how you are looking right now, not a setting you configured)
+and deliberately not §356's shell-held shape, which exists because a wallet
+scope spans a category of rooms while a publisher exists in exactly one. It is
+in `headIdentity`, or the memo serves a card describing rows that are no longer
+on screen. Selection DIMS the other bars rather than tinting itself a new
+colour: the bar's hue already means magnitude, and a second meaning on the same
+channel is how a chart starts lying.
+
+**A FEED THAT STOPPED ANSWERING SAYS SO IN THE ROOM.**
+`FeedFreshness.trouble(for:)` has been able to say "hasn't answered in 12 days"
+since §312 and said it in exactly one place: the bridge's own setup screen,
+which you visit to ADD a feed and then never open again. The room is where the
+consequence lands, and in the room a feed that has gone quiet and a feed that
+has DIED are the same thing — rows that stopped growing. §312 built the
+observation and left it somewhere nobody stands.
+
+`FeedRoomHealth` is silent by default, which is most of the time and the whole
+reason this can be a room-level line at all: a healthy room says nothing, so it
+is never chrome. **It never says a feed is gone**, inheriting `trouble`'s own
+discipline — a status code cannot support that claim, and YouTube answers a
+throttled client a plain 404 (§312's measurement). One feed is NAMED with the
+observation made about it; several are COUNTED, because their reasons differ
+and a count printing one reason would apply it to feeds it does not describe.
+The count is of TROUBLED feeds, never of feeds followed.
+
+**ABOVE THE HEAD, deliberately.** This is not a reading about the room, it is a
+statement about whether the room is COMPLETE — and every reading below it (a
+board ranking publishers, a count of stories, a year grid) is computed over
+rows a dead feed stopped contributing to weeks ago. A correction printed under
+those claims is a correction printed after the claim. It is a DOOR, not a
+label: the one useful response is to open the followed list and re-add or
+remove the feed, and a line stating a problem with no way to act on it is the
+half-control §83 is about.
+
+**STATED CEILING.** A follow whose feed URL was never resolved — a YouTube
+`@handle` that has not synced yet — is EXCLUDED rather than counted as
+troubled. `FeedFreshness` is keyed by URL, so there is no record to read and
+therefore no observation to report; inventing one would be a claim about a feed
+the app has never asked for. It reads as healthy until the first sync gives it
+an address to fail at, which is one sync of silence and the honest cost of
+never guessing.
+
+**What was declined:** read/unread state. The feed is a corpus, not an inbox,
+and per-row unread dots would fight that — the whole app is built on things
+being KEPT rather than processed, and a room that grades you on what you have
+not opened is a different product.
+
+**`scripts/feed-reading-selftest.sh`** compiles `FeedRoomHealth` WHOLE and
+unmodified (Foundation-only by design), 20 assertions, 7 mutations, plus drift
+guards for the three halves no pure function can prove. **It found real dead
+code in its own subject on the first run, which is the standing lesson again:**
+the model kept a `firstReason` accumulator beside the list, and the mutation
+turning it from first-wins into last-wins SURVIVED — a reason is only ever
+printed when exactly one feed is troubled, so first and last are the same value
+by construction and no fixture could ever have told a correct accumulator from
+a broken one. The fix was to delete the question rather than to write a
+cleverer fixture: name and reason are carried together as a pair. A second
+fixture was corrected the same way — two-troubled-of-two feeds cannot tell a
+count of failures from a count of follows, so it is three feeds now, two of
+them troubled.
+
+**UNMEASURED**: no real publisher has been fetched on a tap from this host, and
+the Listen voice has never spoken — `AVSpeechSynthesizer` is not Foundation and
+no harness here has an audio device. Both fail safe (a fetch that misses leaves
+the preview card that was already there; a voice that never starts leaves a
+button that does nothing visible and stops on disappear regardless).

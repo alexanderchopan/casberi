@@ -5361,6 +5361,28 @@ enum ProbeHooks {
                       row.noFeed ? "YES" : "NO",
                       FeedFreshness.trouble(for: row.url) ?? "-")
             }
+            // What each READING ROOM would say about its own feeds (prd §455,
+            // 2026-08-23) — the line the room draws, above its head.
+            //
+            // Reported per room rather than left to be inferred from the
+            // census above, because the two answer different questions and can
+            // legitimately disagree: the census is keyed by URL and knows
+            // nothing about who follows what, so a failing record belonging to
+            // an UNFOLLOWED feed (a record outlives a removal only until
+            // `forget` runs) shows there and must never reach a room. The
+            // other direction is the one worth watching for: a follow whose
+            // feed URL was never resolved is deliberately excluded (see
+            // `FeedRoomHealth`'s stated ceiling), so `feeds=3 quiet=0` beside a
+            // census full of failures is CORRECT and not a bug.
+            for room in ["RSS", "Substack", "Reddit", "YouTube", "Podcasts"] {
+                let feeds = FeedRoomHealthSource.feeds(for: room)
+                let standing = FeedRoomHealthSource.standing(for: room)
+                NSLog("feedRoomHealth| %@ | feeds=%d | resolved=%d | quiet=%d | says=%@",
+                      room, feeds.count,
+                      feeds.filter { !$0.url.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }.count,
+                      standing?.quiet.count ?? 0,
+                      standing?.line ?? "(nothing to say)")
+            }
         },
         // `-articleTextProbe [limit]` — what a followed article actually SAYS
         // (2026-08-06, `FeedArticleText`), one `articleText|` line per row.

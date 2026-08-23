@@ -284,9 +284,8 @@ struct ThingContentView: View {
                 // language dot and the "since you starred" line.
                 GitHubStarContent(thing: thing)
             } else if FeedArticleText.sources.contains(thing.source),
-                      let body = thing.enrichedText?
-                          .trimmingCharacters(in: .whitespacesAndNewlines),
-                      !body.isEmpty {
+                      FeedArticleText.hasBody(thing)
+                        || FeedArticleText.readableURL(for: thing) != nil {
                 // THE ARTICLE, AT LAST (2026-08-21). `FeedArticleText` has
                 // fetched the readable body of every RSS and Substack link since
                 // it shipped, and NO VIEW HAS EVER DRAWN IT: the row showed a
@@ -313,15 +312,16 @@ struct ThingContentView: View {
                     in: thing.content.isEmpty ? thing.title : thing.content) {
                     LinkPreviewCard(url: url, storedImageURL: thing.previewImageURL)
                 }
-                // Defaults, unlike the generic branch below: on an article the
-                // body IS the thing (§366's own test), so it is set at
-                // `reading20` in primary ink rather than as a footnote under a
-                // fact. `markdown: false` — this is scraped prose, and nobody
-                // wrote it as markdown.
-                NoteProse(text: body, markdown: false)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, DS.Space.s4)
-                    .padding(.bottom, DS.Space.s3)
+                // THE BODY IS FETCHED ON OPEN NOW (2026-08-23, prd §455), so
+                // this branch is entered for a row that has one OR could get
+                // one — see `ArticleBody`, which owns the fetch, the "reading
+                // the article" line and the Listen control. The gate above
+                // reuses `readableURL`, the fetcher's own eligibility rule, so
+                // a row this view offers to read is exactly a row the fetcher
+                // will read: a podcast's audio enclosure and a story whose
+                // publisher already shipped the whole piece in its summary
+                // both fall through to the generic preview below, as before.
+                ArticleBody(thing: thing)
             } else if let url = Capture.detectURL(in: thing.content.isEmpty ? thing.title : thing.content) {
                 LinkPreviewCard(url: url, storedImageURL: thing.previewImageURL)
             } else if let art = thing.previewImageURL, !art.isEmpty {
@@ -1382,7 +1382,7 @@ private struct FileChip: View {
                 if let ext {
                     Text(ext)
                         .dsText(.label12).foregroundStyle(DS.textSecondary)
-                        .padding(.horizontal, DS.Space.s2).frame(height: 22)
+                        .padding(.horizontal, DS.Space.s2).frame(minHeight: 22)
                         .background(DS.gray100, in: Capsule(style: .continuous))
                 }
                 Spacer()

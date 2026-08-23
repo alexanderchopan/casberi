@@ -23,6 +23,47 @@ enum FeedInsight {
         let title: String
         let subtitle: String
         let rows: [LeaderRow]
+        /// Which stored field a row's `label` came from, when the room it
+        /// heads can NARROW ITSELF to one of them (2026-08-23, prd §455).
+        ///
+        /// A board is a reading; this makes it a control. It exists because a
+        /// reading room's board answers "who do you read most" and then, until
+        /// this pass, tapping the answer did nothing — while the rows for that
+        /// one publisher were the obvious next question and there was no way
+        /// to ask it.
+        ///
+        /// **It carries the FIELD, not just a flag, and that is the point.**
+        /// RSS and Substack pick between two boards at runtime depending on
+        /// what their feeds name (`bylines` ranks `postAuthor`, `counted`
+        /// ranks `authorHandle` — see the `case "RSS"` arm), so a scope that
+        /// assumed one field would silently narrow to nothing on exactly the
+        /// corpora that took the other branch. The board is the only thing
+        /// that knows how it was keyed.
+        ///
+        /// Nil for every board this cannot serve — months, playtime buckets,
+        /// and X's, whose rows open a person room instead. A nil scope means
+        /// the room draws its plain, untappable board exactly as before.
+        var scope: Scope? = nil
+
+        /// The stored field a scoped board's labels match against. Deliberately
+        /// a closed set rather than a `KeyPath`: the value has to survive into
+        /// `FeedScreen`'s memo key as a string, and it names the two fields a
+        /// reading room can group by and no others.
+        enum Scope: String {
+            /// `Thing.authorHandle` — the publication, which `RSSIngest`
+            /// stamps with the feed's own title.
+            case publisher
+            /// `Thing.postAuthor` — the person who wrote the piece, when the
+            /// feed named one.
+            case writer
+
+            func value(of thing: Thing) -> String? {
+                switch self {
+                case .publisher: thing.authorHandle
+                case .writer: thing.postAuthor
+                }
+            }
+        }
     }
 
     /// The bars a source leads with, and the stored field each ranks on.
@@ -44,7 +85,8 @@ enum FeedInsight {
         // byte for byte, so a reader whose feeds name nobody loses nothing.
         case "Substack":
             return bylines(things, unit: ("post", "posts"))
-                ?? counted(things, title: "Your publications", unit: ("post", "posts"), key: handle)
+                ?? counted(things, title: "Your publications", unit: ("post", "posts"),
+                           scope: .publisher, key: handle)
         // RSS names its publisher in the same `authorHandle` slot Substack and
         // Podcasts use (RSSIngest stamps the feed's title there), so "where my
         // reading comes from" is the identical read — it was simply never
@@ -52,9 +94,11 @@ enum FeedInsight {
         // mosaic below, same as a Substack reader with one publication.
         case "RSS":
             return bylines(things, unit: ("story", "stories"))
-                ?? counted(things, title: "Your publishers", unit: ("story", "stories"), key: handle)
+                ?? counted(things, title: "Your publishers", unit: ("story", "stories"),
+                           scope: .publisher, key: handle)
         case "Podcasts":
-            return counted(things, title: "Your shows", unit: ("episode", "episodes"), key: handle)
+            return counted(things, title: "Your shows", unit: ("episode", "episodes"),
+                           scope: .publisher, key: handle)
         case "Steam":
             return steamPlaytime(things)
         case "Snapchat":
@@ -224,7 +268,8 @@ enum FeedInsight {
                                 unit: (one: String, many: String)) -> Leaderboard? {
         let named = things.filter { writer($0) != nil }
         guard named.count * 2 > things.count else { return nil }
-        guard let board = counted(named, title: "Who you read", unit: unit, key: writer)
+        guard let board = counted(named, title: "Who you read", unit: unit,
+                                  scope: .writer, key: writer)
         else { return nil }
         guard named.count < things.count else { return board }
         // WHAT THE BARS COVER, the topic map's own wording (§313): the bars
@@ -233,7 +278,11 @@ enum FeedInsight {
         return Leaderboard(
             title: board.title,
             subtitle: String(localized: "\(named.count.formatted()) of \(things.count.formatted()) \(unit.many)"),
-            rows: board.rows)
+            rows: board.rows,
+            // Carried through the re-wrap, or a bylined room's board silently
+            // loses the scope the board above it was built with — the subtitle
+            // is the only thing changing here.
+            scope: board.scope)
     }
 
     /// What a card actually spent, month by month (2026-08-05, prd §311).
@@ -290,6 +339,7 @@ enum FeedInsight {
     /// a one-bar chart claims a ranking it doesn't have.
     private static func counted(_ things: [Thing], title: String,
                                 unit: (one: String, many: String),
+                                scope: Leaderboard.Scope? = nil,
                                 key: (Thing) -> String?) -> Leaderboard? {
         var counts: [String: Int] = [:]
         var order: [String] = []
@@ -304,7 +354,8 @@ enum FeedInsight {
         guard total >= 3, counts.count >= 2 else { return nil }
         let subtitle = "\(total.formatted()) \(total == 1 ? unit.one : unit.many)"
         return Leaderboard(title: title, subtitle: subtitle,
-                           rows: ranked(order, counts) { ($0, "\($0)") })
+                           rows: ranked(order, counts) { ($0, "\($0)") },
+                           scope: scope)
     }
 
     /// The shape every board ends in: biggest first, ties broken by name so the

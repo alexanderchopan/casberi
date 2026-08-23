@@ -1479,6 +1479,14 @@ struct LeaderboardHero: View {
     /// the dead control the honesty law bans, so the row is only ever wrapped
     /// in a button when a destination was handed in.
     var onPick: ((FeedInsight.LeaderRow) -> Void)?
+    /// The row the room is currently narrowed to, when the board is acting as
+    /// a SWITCHER rather than a reading (2026-08-23, prd §455).
+    ///
+    /// The board keeps every row while the room shows one — the venue
+    /// switcher's rule (§357), and the reason this card is not narrowed along
+    /// with the rows it heads: a control that collapses to the one option you
+    /// already picked is a control you cannot leave.
+    var selected: String?
     /// The bars' grow-on (delight, 2026-08-03): each bar grows from its
     /// seed width to its real share, staggered top to bottom — the chart
     /// drawing the ranking rather than presenting it pre-drawn. The same
@@ -1536,14 +1544,20 @@ struct LeaderboardHero: View {
     private func barBody(_ row: FeedInsight.LeaderRow, index i: Int,
                          labelW: CGFloat, barW: CGFloat, valueW: CGFloat,
                          maxV: Int) -> some View {
-        HStack(spacing: DS.Space.s2) {
+        // A selection DIMS the others rather than tinting itself a new colour:
+        // the bar's hue already means magnitude, and a second meaning on the
+        // same channel is how a chart starts lying. Weight carries the label.
+        let isOn = selected == row.label
+        let dimmed = selected != nil && !isOn
+        return HStack(spacing: DS.Space.s2) {
             Text(row.label)
-                .dsText(.callout15).foregroundStyle(DS.textPrimary)
+                .dsText(.callout15).fontWeight(isOn ? .semibold : .regular)
+                .foregroundStyle(dimmed ? DS.textSecondary : DS.textPrimary)
                 .lineLimit(1).truncationMode(.tail)
                 .frame(width: labelW, alignment: .leading)
             ZStack(alignment: .leading) {
                 Capsule().fill(DS.surfaceWell).frame(height: 8)
-                Capsule().fill(DS.tint.opacity(0.85))
+                Capsule().fill(DS.tint.opacity(dimmed ? 0.28 : 0.85))
                     .frame(width: grown
                            ? max(barW * CGFloat(row.value) / CGFloat(maxV), 4)
                            : 4,
