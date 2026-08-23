@@ -259,6 +259,16 @@ enum NetworkReach {
                  reach: .whenConnected(bridge: "Radicle"),
                  purpose: "Reads the patches and issues of the repos you watch, from the seed node you name. Carries only the repo ids you asked for; there is no account and no key, so nothing identifies you — but the seed you pick does see which repos you ask about.",
                  hosts: ["rosa.radicle.network", "iris.radicle.network", "the seed you name"]),
+        // Base Vibenet (2026-08-23) — an experimental devnet whose contracts
+        // are redeployed on no fixed schedule, so unlike every other entry
+        // here the CONTRACT addresses this app calls aren't listed, only the
+        // two stable hosts: the RPC node and the config document that names
+        // the current contracts. See `VibenetConfig`'s own standing
+        // constraint against ever hardcoding one of those addresses.
+        Endpoint(service: "Base Vibenet",
+                 reach: .whenConnected(bridge: "Base Vibenet"),
+                 purpose: "Reads a watched address's account-abstraction state — is it established, which keys can act for it, is it locked — from vibenet's own public devnet node. Carries only the address you watch; there is no account and no key, and nothing is ever signed or sent.",
+                 hosts: ["rpc.vibes.base.org", "api.vibes.base.org"]),
         // Altana (prd §403). Reach is WALLET, not "Altana": the seat rides the
         // watched wallets and its sweep runs whenever a wallet is watched, so
         // gating the disclosure on the seat being "connected" would understate

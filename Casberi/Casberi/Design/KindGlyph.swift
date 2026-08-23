@@ -315,6 +315,10 @@ enum BridgeGlyph {
         // really are one shape: "import your chats"; a BYOK key is not).
         case "grok":         return "bolt.circle"
         case "openrouter":   return "arrow.triangle.branch"
+        // An experimental devnet, so a lab glyph rather than a chain/coin
+        // mark — this seat is about testing a protocol upgrade, not about
+        // holding or moving anything.
+        case "base vibenet": return "testtube.2"
         default:          return "app"
         }
     }

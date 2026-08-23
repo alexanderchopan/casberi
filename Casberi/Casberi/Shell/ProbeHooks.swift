@@ -5889,6 +5889,87 @@ enum ProbeHooks {
                     type: QuickAction.dailyBrief, localizedTitle: "Daily Brief"))
             }
         },
+        // `-vibenetWatch "<0xaddr[,0xaddr]>"` — watch vibenet devnet
+        // addresses headlessly. No resolution needed (there's no name
+        // registrar on vibenet) — a plain `0x` hex address is added
+        // directly, or reported invalid.
+        Hook(key: "vibenetWatch") { value, _ in
+            var watched: [String] = []
+            var rejected: [String] = []
+            for raw in value.split(separator: ",") {
+                let address = raw.trimmingCharacters(in: .whitespaces)
+                guard !address.isEmpty else { continue }
+                if VibenetWatch.shared.add(address) { watched.append(address) }
+                else { rejected.append(address) }
+            }
+            NSLog("[Casberi] vibenetWatch| added=%@ invalidOrDuplicate=%@ watching=%d",
+                  watched.joined(separator: ",").isEmpty ? "-" : watched.joined(separator: ","),
+                  rejected.joined(separator: ",").isEmpty ? "-" : rejected.joined(separator: ","),
+                  VibenetWatch.shared.addresses.count)
+        },
+        // `-vibenetProbe YES` — the whole read, phase by phase (config fetch
+        // → per address: established? → the actor-discovery log read → each
+        // surviving actor's live config → lock status). One NSLog per fact,
+        // the `-todayProbe` truncation lesson — an empty room here has FIVE
+        // causes that render as one silence (nothing watched, the config
+        // fetch unreachable, an account genuinely not established, an
+        // account established with no live actors, a flaky devnet RPC) and
+        // only the last is a bug this probe is meant to catch.
+        Hook(key: "vibenetProbe") { _, _ in
+            Task { @MainActor in
+                guard let contracts = await VibenetConfig.current() else {
+                    NSLog("[Casberi] vibenet| config UNREACHABLE — api.vibes.base.org didn't answer")
+                    return
+                }
+                NSLog("[Casberi] vibenet| config branch=%@ commit=%@ keystore=%@",
+                      contracts.branch ?? "?", contracts.commit ?? "?", contracts.keystore)
+                let addresses = VibenetWatch.shared.addresses
+                guard !addresses.isEmpty else {
+                    NSLog("[Casberi] vibenet| watch EMPTY — nothing to read")
+                    return
+                }
+                for address in addresses {
+                    guard let word = await VibenetChain.ethCall(
+                        to: contracts.keystore, data: VibenetABI.isEstablishedCall(address))
+                    else {
+                        NSLog("[Casberi] vibenet| %@ established=UNREACHABLE", address)
+                        continue
+                    }
+                    let established = WalletIngest.hexToDouble(word) != 0
+                    NSLog("[Casberi] vibenet| %@ established=%@", address, established ? "YES" : "no")
+
+                    guard let ids = await VibenetRead.actorIDs(account: address, keystore: contracts.keystore)
+                    else {
+                        NSLog("[Casberi] vibenet| %@ actorLog=UNREACHABLE", address)
+                        continue
+                    }
+                    NSLog("[Casberi] vibenet| %@ actorLog=%d surviving id(s)", address, ids.count)
+                    let known = contracts.knownAuthenticators
+                    for id in ids {
+                        if let actor = await VibenetRead.actor(account: address, keystore: contracts.keystore,
+                                                               actorId: id, known: known) {
+                            NSLog("[Casberi] vibenet| %@ actor %@ kind=%@ scope=%@ expiry=%llu",
+                                  address, String(id.prefix(10)), actor.kind.label,
+                                  actor.scope.summary, actor.expiry)
+                        } else {
+                            NSLog("[Casberi] vibenet| %@ actor %@ CONFIRM-FAILED (revoked, or unreachable)",
+                                  address, String(id.prefix(10)))
+                        }
+                    }
+
+                    guard let lockRaw = await VibenetChain.ethCall(
+                        to: contracts.keystore, data: VibenetABI.lockStatusCall(address))
+                    else {
+                        NSLog("[Casberi] vibenet| %@ lockStatus=UNREACHABLE", address)
+                        continue
+                    }
+                    let locked = VibenetABI.boolWord(lockRaw, at: 0)
+                    let initiated = VibenetABI.boolWord(lockRaw, at: 1)
+                    NSLog("[Casberi] vibenet| %@ lockStatus locked=%@ unlockInitiated=%@",
+                          address, locked ? "YES" : "no", initiated ? "YES" : "no")
+                }
+            }
+        },
     ]
 }
 

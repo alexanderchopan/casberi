@@ -54,6 +54,12 @@ enum BridgeRouter {
         case circleX402
         case huggingFace
         case radicle
+        /// Base's vibenet devnet — a WATCH LIST of addresses on
+        /// screen with no single credential to paste, so it needs its own
+        /// destination for the reason L2BEAT/Walletbeat do: riding `.token`
+        /// would give it `finishesOnConnect == true` and dismiss the raised
+        /// sheet the moment the first watched address registered the seat.
+        case vibenet
         case shopify
         case deals
         case openFoodFacts
@@ -290,6 +296,7 @@ enum BridgeRouter {
             case .circleX402:     "x402"
             case .huggingFace:    "huggingface"
             case .radicle:        "radicle"
+            case .vibenet:        VibenetIdentity.seatID
             case .shopify:        "shopify"
             case .deals:          "deals"
             case .openFoodFacts:  "off"
@@ -406,6 +413,7 @@ enum BridgeRouter {
         Row(offer: "Circle x402", id: "x402", destination: .circleX402),
         Row(offer: "Hugging Face", id: "huggingface", destination: .huggingFace),
         Row(offer: "Radicle",    id: "radicle",    destination: .radicle),
+        Row(offer: "Base Vibenet", id: VibenetIdentity.seatID, destination: .vibenet),
         Row(offer: "Shopify",    id: "shopify",    destination: .shopify),
         Row(offer: "Deals",      id: "deals",      destination: .deals),
         Row(offer: "Open Food Facts", id: "off",   destination: .openFoodFacts),
@@ -508,6 +516,7 @@ struct BridgeDestinationView: View {
         case .circleX402:     CircleX402Screen()
         case .huggingFace:    HuggingFaceScreen()
         case .radicle:        RadicleScreen()
+        case .vibenet:        VibenetScreen()
         case .shopify:        ShopifyScreen()
         case .deals:          DealsScreen()
         case .openFoodFacts:  OpenFoodFactsScreen()

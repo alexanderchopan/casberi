@@ -585,6 +585,21 @@ enum BridgeCatalog {
                          "You pick the seed node that answers you",
                          "Read-only — writing needs the rad CLI, which this never touches"],
               needsSetup: true, added: day(2026, 8, 18)),
+        // Base's own experimental devnet testing EIP-8130 native account
+        // abstraction (2026-08-23). Work, beside Radicle and Cursor — this is
+        // developer tooling for watching a protocol upgrade, not a market or
+        // a personal wallet holding, and the Radicle shape fits exactly: no
+        // account, no key, watch an identifier and read its state. The one
+        // thing that makes this different from every other keyless watch
+        // here is stated in the summary rather than assumed — vibenet's
+        // contracts get redeployed on no fixed schedule, so nothing about it
+        // may ever be treated as permanent.
+        Offer(name: "Base Vibenet", tagline: "Watch an account on Base's devnet", group: "Work", connectable: true,
+              summary: "An experimental Base devnet testing native account abstraction (EIP-8130) — no real funds, ever.\n\nWatch an address and see whether it's established, which keys can act for it, and whether it's locked.\n\nNo account and no key — read straight off vibenet's own public RPC. vibenet's contracts redeploy often; every read names the exact commit it saw.",
+              features: ["Which keys — secp256k1, a passkey, a delegate — can act for a watched account",
+                         "Whether the account is locked, and whether an unlock is underway",
+                         "Never signs or sends anything — genuinely read-only"],
+              needsSetup: true, added: day(2026, 8, 23)),
         Offer(name: "Linear",      tagline: "Your issues stay in reach",             group: "Work",      connectable: true,
               summary: "The issues assigned to you join your things and surface when they matter. Connects with a personal API key from Linear settings — it stays in \(DS.device)'s Keychain.",
               needsSetup: true),

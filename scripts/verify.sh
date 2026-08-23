@@ -1250,6 +1250,23 @@ harness "Room-perf invariants self-test" "room-perf self-test" "scripts/room-per
 # wiring, and a correct composer with no caller is green to this one alone.
 harness "Figure-voice pure-logic self-test" "figure-voice self-test" "scripts/figure-voice-selftest.sh" "the figure-voice self-test failed — run scripts/figure-voice-selftest.sh"
 
+# Base "vibenet" — an experimental EIP-8130 devnet whose Keystore/authenticator
+# addresses are redeployed on no fixed schedule (2026-08-23). Nothing on this
+# host can make a devnet account authorize an actor, revoke one, or lock
+# itself, so this harness is not the best proof the composition is right, it
+# is the ONLY one. What it catches: a revoked actorId reading as still live
+# (the sharpest possible failure here — it would claim a key can act for an
+# account when it can't), a revoke-then-reauthorize sequence reading as dead
+# because the union trusted array order over the log's own chronology, a
+# reserved scope bit silently folded into the five known ones, a locked
+# account failing to lead the one alarm this room can raise, and "established
+# with no live actors" collapsing into the different, wrong claim "not
+# established at all". Its drift guards also fail the build on a hardcoded
+# vibenet contract address (0x8130…) outside the two the Keystore contract
+# itself declares fixed, and on any write-shaped RPC method or signing type
+# ever reaching this feature.
+harness "Vibenet pure-logic self-test" "vibenet self-test" "scripts/vibenet-selftest.sh" "the vibenet logic self-test failed — run scripts/vibenet-selftest.sh"
+
 # The design system's first mechanical check (prd §299). Every other rule in
 # this file is enforced by a script; the design system was enforced by memory,
 # which is how fourteen data drawings shipped with no entrance and how the

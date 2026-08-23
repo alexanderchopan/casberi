@@ -183,6 +183,9 @@ nav { display: flex; align-items: center; justify-content: space-between; paddin
    Sized up like .ai-calendar's numeral: a lone letterform reads small against
    tiles whose artwork fills 52% of the square. */
 .ai-appstoreconnect { background: #0a84ff; font-size: 23px; }
+/* Base's own documented blue — no bundled mark, the App Store Connect
+   shape: a lone letterform for a seat with no logo to inline. */
+.ai-basevibenet { background: #0052ff; font-size: 23px; }
 .ai-sentry    { background: #fff; }
 .ai-vercel    { background: #000; }
 .ai-pagerduty { background: #04ac38; }
