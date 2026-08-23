@@ -129,7 +129,7 @@ struct SentryScreen: View {
                 DSSlabField(placeholder: SentryAccount.defaultHost, text: $hostField,
                             actionLabel: "", keyboard: .URL, action: { })
                 DSSlabField(placeholder: TokenBridge.sentry.placeholder,
-                            text: $tokenField, actionLabel: "SAVE", secure: true,
+                            text: $tokenField, actionLabel: "Save", secure: true,
                             action: saveToken)
                 BridgeSyncStatusRows(syncing: resolving,
                                      syncingLine: String(localized: "Checking the token…"),

@@ -106,7 +106,7 @@ struct RSSScreen: View {
         Section {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
                 DSSlabField(placeholder: String(localized: "Site or feed URL"),
-                            text: $newFeed, actionLabel: String(localized: "FOLLOW"),
+                            text: $newFeed, actionLabel: String(localized: "Follow"),
                             keyboard: .URL, focus: $fieldFocused, action: addFeed)
                 BridgeSyncStatusRows(syncing: syncing,
                                      syncingLine: String(localized: "Reading your feeds…"),

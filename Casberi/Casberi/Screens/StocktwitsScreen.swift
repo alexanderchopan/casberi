@@ -110,7 +110,7 @@ struct StocktwitsScreen: View {
         Section {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
             DSSlabField(placeholder: String(localized: "Ticker or company name"),
-                        text: $queryField, actionLabel: String(localized: "WATCH"),
+                        text: $queryField, actionLabel: String(localized: "Watch"),
                         focus: $fieldFocused, action: watch)
             ForEach(displayHits) { stock in
                 BridgeSearchResultRow(

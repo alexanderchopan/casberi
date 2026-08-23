@@ -56,7 +56,7 @@ struct VeniceSetupScreen: View {
                 BridgeStepLines(steps: ["Create a key and copy it — it's checked with Venice before it saves."],
                                 numbered: false)
                 DSSlabField(placeholder: AgentProvider.venice.placeholder, text: $keyDraft,
-                            actionLabel: checking ? "CHECKING…" : (configured ? "UPDATE" : "CONNECT"),
+                            actionLabel: checking ? "Checking…" : (configured ? "Update" : "Connect"),
                             secure: true,
                             isArmed: !checking && !keyDraft.trimmingCharacters(in: .whitespaces).isEmpty,
                             action: connect)

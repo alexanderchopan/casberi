@@ -1184,6 +1184,25 @@ python3 "$ROOT/scripts/support/harness-key.py" --self-test \
 
 run_harnesses
 
+# §8's OTHER half. `.kerning()` has been banned in writing since the type ramp
+# landed and the caps half of the same sentence was left to memory, which lost:
+# `AddressSpine.eyebrow` ran every day stamp through `localizedUppercase` (so
+# the address spine printed TODAY), and twelve more labels had accumulated
+# across the tree — nine of them on `DSSlabField`'s verb, propagated for
+# CONSISTENCY by §190, which rules on slab shape and never on case.
+#
+# Mechanical because a shouting label renders perfectly: it survives the build,
+# every screen sweep, the design-ramp audit (which reads type SIZES, not the
+# letters in them) and every `swiftc` harness. Nothing is wrong with it except
+# the house style, and a house style with no check drifts one label at a time,
+# each justified by the last.
+step "ALL-CAPS audit"
+python3 "$ROOT/scripts/allcaps-audit.py" --self-test >/dev/null \
+  || fail "the ALL-CAPS audit's own self-test failed — the check is broken, not the code"
+python3 "$ROOT/scripts/allcaps-audit.py" \
+  || fail "a display string is set in ALL CAPS (build-brief §8) — see the output above"
+print -P "%F{green}✓ allcaps audit%f"
+
 step "Design-motion audit"
 python3 "$ROOT/scripts/design-motion-audit.py" >/dev/null \
   || fail "the design-motion audit failed — run python3 scripts/design-motion-audit.py"

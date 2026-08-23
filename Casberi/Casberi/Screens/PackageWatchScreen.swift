@@ -70,7 +70,7 @@ struct PackageWatchScreen: View {
         Section {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
                 DSSlabField(placeholder: placeholder, text: $nameField,
-                            actionLabel: String(localized: "WATCH"),
+                            actionLabel: String(localized: "Watch"),
                             focus: $fieldFocused, action: watch)
                 BridgeSyncStatusRows(syncing: syncing,
                                      syncingLine: String(localized: "Reading the registry…"),

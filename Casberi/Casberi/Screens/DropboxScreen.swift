@@ -116,7 +116,7 @@ struct DropboxScreen: View {
             // pill went dead on.
             DSSlabField(placeholder: String(localized: "e.g. /Camera Uploads — blank for everything"),
                         text: $folderField,
-                        actionLabel: String(localized: "SAVE"),
+                        actionLabel: String(localized: "Save"),
                         alwaysEnabled: true,
                         action: saveFolder)
             BridgeSyncStatusRows(syncing: syncing, syncingLine: String(localized: "Reading your Dropbox…"),

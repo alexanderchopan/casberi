@@ -22346,30 +22346,30 @@
         }
       }
     },
-    "A list — ADD ALL names them. Watching stays capped at %lld.": {
+    "A list — Add all names them. Watching stays capped at %lld.": {
       "localizations": {
         "es": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Una lista — AÑADIR TODOS los nombra. El seguimiento sigue limitado a %lld."
+            "value": "Una lista — Añadir todas les pone nombre. Seguir sigue limitado a %lld."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "リスト — 「すべて追加」で名前を付けます。監視は引き続き%lld件までです。"
+            "value": "リストです — 「すべて追加」で名前が付きます。監視は %lld 件までです。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "목록 — '모두 추가'로 이름을 지정합니다. 지켜보기는 계속 %lld개로 제한됩니다."
+            "value": "목록입니다 — '모두 추가'가 이름을 지정합니다. 지켜보기는 %lld개로 제한됩니다."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "一个列表——“全部添加”会为它们命名。关注上限仍为 %lld 个。"
+            "value": "这是一个列表 — “全部添加”会为其命名。关注上限仍为 %lld 个。"
           }
         }
       }
@@ -23025,34 +23025,6 @@
         }
       }
     },
-    "ADD ALL": {
-      "localizations": {
-        "es": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "AÑADIR TODOS"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "すべて追加"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "모두 추가"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "全部添加"
-          }
-        }
-      }
-    },
     "API key": {
       "localizations": {
         "es": {
@@ -23547,6 +23519,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "添加钱包"
+          }
+        }
+      }
+    },
+    "Add all": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Añadir todas"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "すべて追加"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "모두 추가"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "全部添加"
           }
         }
       }
@@ -39021,62 +39021,6 @@
         }
       }
     },
-    "FIND": {
-      "localizations": {
-        "es": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "BUSCAR"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "検索"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "찾기"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "查找"
-          }
-        }
-      }
-    },
-    "FOLLOW": {
-      "localizations": {
-        "es": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "SEGUIR"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "フォロー"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "팔로우"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "关注"
-          }
-        }
-      }
-    },
     "Face ID didn't unlock the key.": {
       "localizations": {
         "es": {
@@ -46483,34 +46427,6 @@
         }
       }
     },
-    "LOOK UP": {
-      "localizations": {
-        "es": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "BUSCAR"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "調べる"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "조회"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "查询"
-          }
-        }
-      }
-    },
     "Landed": {
       "localizations": {
         "es": {
@@ -47907,6 +47823,34 @@
         }
       }
     },
+    "Look up": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Buscar"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "調べる"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "조회"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "查询"
+          }
+        }
+      }
+    },
     "Lookalike addresses — nothing to do": {
       "localizations": {
         "es": {
@@ -48127,34 +48071,6 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "更低"
-          }
-        }
-      }
-    },
-    "MISSED": {
-      "localizations": {
-        "es": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "PERDIDO"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "見逃し"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "놓침"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "错过"
           }
         }
       }
@@ -48979,6 +48895,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "铸造了一个 NFT"
+          }
+        }
+      }
+    },
+    "Missed": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Vencido"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "期限切れ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "기한 초과"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "已逾期"
           }
         }
       }
@@ -49865,90 +49809,6 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "不适用"
-          }
-        }
-      }
-    },
-    "NAME": {
-      "localizations": {
-        "es": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "NOMBRE"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "名前"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "이름"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "名称"
-          }
-        }
-      }
-    },
-    "NEEDS YOU": {
-      "localizations": {
-        "es": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "TE NECESITA"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "対応が必要"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "확인 필요"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "需要你处理"
-          }
-        }
-      }
-    },
-    "NEXT": {
-      "localizations": {
-        "es": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "SIGUIENTE"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "次へ"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "다음"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "下一步"
           }
         }
       }
@@ -51142,6 +51002,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "新内容会在发生时自动送达，无需你动手。"
+          }
+        }
+      }
+    },
+    "Next": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Siguiente"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "次へ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "다음"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "下一步"
           }
         }
       }
@@ -62167,34 +62055,6 @@
         }
       }
     },
-    "REPLACE": {
-      "localizations": {
-        "es": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "REEMPLAZAR"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "置き換え"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "교체"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "替换"
-          }
-        }
-      }
-    },
     "RSS can follow most sites.": {
       "localizations": {
         "es": {
@@ -66774,6 +66634,34 @@
         }
       }
     },
+    "Replace": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Reemplazar"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "置き換える"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "교체"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "替换"
+          }
+        }
+      }
+    },
     "Replaced after %@ — %@ never executed; a rival transaction went through at the same nonce instead": {
       "localizations": {
         "en": {
@@ -67871,34 +67759,6 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "剩余期限不足"
-          }
-        }
-      }
-    },
-    "SAVE": {
-      "localizations": {
-        "es": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "GUARDAR"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "保存"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "저장"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "保存"
           }
         }
       }
@@ -78325,34 +78185,6 @@
         }
       }
     },
-    "USE": {
-      "localizations": {
-        "es": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "USAR"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "使用"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "사용"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "使用"
-          }
-        }
-      }
-    },
     "Under review": {
       "localizations": {
         "es": {
@@ -78953,6 +78785,34 @@
         }
       }
     },
+    "Use": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Usar"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "使う"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "사용"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "使用"
+          }
+        }
+      }
+    },
     "Used": {
       "localizations": {
         "es": {
@@ -79319,34 +79179,6 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "漏洞"
-          }
-        }
-      }
-    },
-    "WATCH": {
-      "localizations": {
-        "es": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "SEGUIR"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "監視"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "지켜보기"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "关注"
           }
         }
       }

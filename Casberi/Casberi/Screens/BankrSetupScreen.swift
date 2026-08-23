@@ -64,7 +64,7 @@ struct BankrSetupScreen: View {
                 BridgeStepLines(steps: ["Make it read-only with agent access — checked before saving."],
                                 numbered: false)
                 DSSlabField(placeholder: AgentProvider.bankr.placeholder, text: $keyDraft,
-                            actionLabel: checking ? "CHECKING…" : (configured ? "UPDATE" : "CONNECT"),
+                            actionLabel: checking ? "Checking…" : (configured ? "Update" : "Connect"),
                             secure: true,
                             isArmed: !checking && !keyDraft.trimmingCharacters(in: .whitespaces).isEmpty,
                             action: connect)

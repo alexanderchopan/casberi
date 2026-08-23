@@ -81,10 +81,10 @@ struct RadicleScreen: View {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
                 DSSlabField(placeholder: String(localized: "Repo id, or a name to find"),
                             text: $repoField,
-                            actionLabel: String(localized: "WATCH"),
+                            actionLabel: String(localized: "Watch"),
                             focus: $fieldFocused,
                             isArmed: RadicleWire.normalizeRID(repoField) != nil,
-                            secondaryLabel: String(localized: "FIND"),
+                            secondaryLabel: String(localized: "Find"),
                             secondaryArmed: !repoField.trimmingCharacters(in: .whitespaces).isEmpty
                                 && RadicleWire.normalizeRID(repoField) == nil,
                             secondaryAction: find,
@@ -125,7 +125,7 @@ struct RadicleScreen: View {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
                 DSSlabField(placeholder: String(localized: "Seed host"),
                             text: $seedField,
-                            actionLabel: String(localized: "USE"),
+                            actionLabel: String(localized: "Use"),
                             keyboard: .URL,
                             isArmed: RadicleWire.normalizeSeed(seedField) != nil
                                 && RadicleWire.normalizeSeed(seedField) != radicle.seed,

@@ -129,7 +129,7 @@ struct ShopifyScreen: View {
         Section {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
             DSSlabField(placeholder: String(localized: "Store web address"),
-                        text: $newStore, actionLabel: String(localized: "FOLLOW"),
+                        text: $newStore, actionLabel: String(localized: "Follow"),
                         keyboard: .URL, focus: $fieldFocused, action: addStore)
             BridgeSyncStatusRows(syncing: syncing,
                                  syncingLine: String(localized: "Reading the store…"),

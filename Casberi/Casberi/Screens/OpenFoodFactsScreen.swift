@@ -97,7 +97,7 @@ struct OpenFoodFactsScreen: View {
                     }
                 }
                 DSSlabField(placeholder: String(localized: "Barcode number"),
-                            text: $code, actionLabel: String(localized: "LOOK UP"),
+                            text: $code, actionLabel: String(localized: "Look up"),
                             keyboard: .numberPad, focus: $fieldFocused,
                             action: { Task { await lookUp(code) } })
                 BridgeSyncStatusRows(syncing: looking,

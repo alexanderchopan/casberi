@@ -52,7 +52,7 @@ struct EthValidatorScreen: View {
         Section {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
                 DSSlabField(placeholder: String(localized: "Validator index"),
-                            text: $indexField, actionLabel: String(localized: "WATCH"),
+                            text: $indexField, actionLabel: String(localized: "Watch"),
                             focus: $fieldFocused, action: watch)
                 BridgeSyncStatusRows(syncing: working,
                                      syncingLine: String(localized: "Checking the validator…"),

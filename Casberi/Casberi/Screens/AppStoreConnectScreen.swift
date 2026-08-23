@@ -265,7 +265,7 @@ struct AppStoreConnectScreen: View {
                 // a form that is complete (§83's other half: a control that is
                 // inert while everything it needs is present).
                 DSSlabField(placeholder: "Issuer ID",
-                            text: $issuerField, actionLabel: "SAVE",
+                            text: $issuerField, actionLabel: "Save",
                             isArmed: hasBothRequired,
                             action: save)
                 // The one piece of fine print on this screen, and it sits on

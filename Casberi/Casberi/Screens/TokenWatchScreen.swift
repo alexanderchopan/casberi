@@ -108,7 +108,7 @@ struct TokenWatchScreen: View {
         Section {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
             DSSlabField(placeholder: String(localized: "Name, symbol, address, or link"),
-                        text: $queryField, actionLabel: String(localized: "WATCH"),
+                        text: $queryField, actionLabel: String(localized: "Watch"),
                         focus: $fieldFocused, action: watch)
             ForEach(displayHits) { token in
                 BridgeSearchResultRow(

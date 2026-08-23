@@ -102,7 +102,7 @@ struct SteamScreen: View {
                             text: $profileField, actionLabel: "", action: connect)
                 DSSlabField(placeholder: String(localized: "Web API key"),
                             text: $keyField,
-                            actionLabel: SteamBridge.connected ? "UPDATE" : "CONNECT",
+                            actionLabel: SteamBridge.connected ? "Update" : "Connect",
                             secure: true, isArmed: canConnect, action: connect)
                 BridgeSyncStatusRows(syncing: syncing, syncingLine: String(localized: "Reading your games…"),
                                      result: result, resultIsError: resultIsError)

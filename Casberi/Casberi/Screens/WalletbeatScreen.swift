@@ -94,7 +94,7 @@ struct WalletbeatScreen: View {
 				DSSlabField(
 					placeholder: String(localized: "Wallet name"),
 					text: $queryField,
-					actionLabel: String(localized: "WATCH"),
+					actionLabel: String(localized: "Watch"),
 					focus: $fieldFocused,
 					action: watchTyped)
 

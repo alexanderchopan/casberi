@@ -169,7 +169,7 @@ struct PostHogScreen: View {
                 // above is exactly the shape `DSSlabField` documents for two
                 // inputs one act needs; SAVE belongs to the last field.
                 DSSlabField(placeholder: TokenBridge.posthog.placeholder,
-                            text: $keyField, actionLabel: "SAVE", secure: true,
+                            text: $keyField, actionLabel: "Save", secure: true,
                             action: saveKey)
                 BridgeSyncStatusRows(syncing: resolving,
                                      syncingLine: String(localized: "Checking the key…"),
@@ -207,7 +207,7 @@ struct PostHogScreen: View {
         Section {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
                 DSSlabField(placeholder: String(localized: "Event or metric name"),
-                            text: $queryField, actionLabel: String(localized: "WATCH"),
+                            text: $queryField, actionLabel: String(localized: "Watch"),
                             focus: $fieldFocused, action: watchTyped)
                 ForEach(displayHits) { event in
                     BridgeSearchResultRow(

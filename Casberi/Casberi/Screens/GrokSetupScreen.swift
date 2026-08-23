@@ -67,7 +67,7 @@ struct GrokSetupScreen: View {
                                      "Paste it below — it's checked with xAI before it saves."],
                                 numbered: false)
                 DSSlabField(placeholder: AgentProvider.grok.placeholder, text: $keyDraft,
-                            actionLabel: checking ? "CHECKING…" : (configured ? "UPDATE" : "CONNECT"),
+                            actionLabel: checking ? "Checking…" : (configured ? "Update" : "Connect"),
                             secure: true,
                             isArmed: !checking && !keyDraft.trimmingCharacters(in: .whitespaces).isEmpty,
                             action: connect)

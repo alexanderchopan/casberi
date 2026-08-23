@@ -494,8 +494,8 @@ struct WalletScreen: View {
                             // Naming, never watching — a paste of forty can't
                             // watch against a cap of five, and the notice
                             // below says so.
-                            actionLabel: isBulk ? String(localized: "ADD ALL")
-                                                : String(localized: "WATCH"),
+                            actionLabel: isBulk ? String(localized: "Add all")
+                                                : String(localized: "Watch"),
                             focus: $addressFieldFocused,
                             // The verbs ARM only over a real address, so the
                             // field reads as a search box while you are
@@ -507,7 +507,7 @@ struct WalletScreen: View {
                             // neither. This is also the cap's own honest way
                             // out, since WATCH at the limit has to send you
                             // somewhere.
-                            secondaryLabel: String(localized: "NAME"),
+                            secondaryLabel: String(localized: "Name"),
                             secondaryArmed: !isBulk && book.looksLikeAddress(draft),
                             secondaryAction: justName,
                             action: { isBulk ? addAll() : watch() })
@@ -1469,7 +1469,7 @@ struct WalletScreen: View {
                        String(localized: "That address fails its own checksum — a character is wrong somewhere."))
         } else if isBulk {
             noticeLine("text.append", DS.textSecondary,
-                       String(localized: "A list — ADD ALL names them. Watching stays capped at \(WalletStore.watchLimit)."))
+                       String(localized: "A list — Add all names them. Watching stays capped at \(WalletStore.watchLimit)."))
         } else if let bulkResult {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
                 noticeLine("checkmark.circle.fill", DS.confirm, bulkResult)

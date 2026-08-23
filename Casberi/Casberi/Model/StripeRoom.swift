@@ -173,7 +173,7 @@ struct StripeRoom: Equatable {
     /// A retry needs nothing from you and so wears nothing.
     static func chip(_ item: Item) -> String? {
         guard item.dispute else { return nil }
-        return item.days < 0 ? String(localized: "MISSED") : String(localized: "NEEDS YOU")
+        return item.days < 0 ? String(localized: "Missed") : String(localized: "Needs you")
     }
 
     /// The card's one sentence.

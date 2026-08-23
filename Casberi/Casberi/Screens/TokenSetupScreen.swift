@@ -202,7 +202,7 @@ struct TokenSetupScreen: View {
                 DSSlabField(placeholder: String(localized: "API key"),
                             text: $trelloKeyField,
                             actionLabel: trelloKey == nil
-                                ? String(localized: "NEXT") : String(localized: "REPLACE"),
+                                ? String(localized: "Next") : String(localized: "Replace"),
                             action: saveTrelloKey)
                 DSSlabNote(text: "It names the Power-Up, not you. The token below is what reads your cards.")
             }
@@ -244,7 +244,7 @@ struct TokenSetupScreen: View {
                 DSSlabField(placeholder: String(localized: "you@company.com"),
                             text: $jiraEmailField,
                             actionLabel: jiraSite == nil
-                                ? String(localized: "NEXT") : String(localized: "REPLACE"),
+                                ? String(localized: "Next") : String(localized: "Replace"),
                             keyboard: .emailAddress,
                             isArmed: !jiraDomainField.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                                 && !jiraEmailField.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
@@ -321,7 +321,7 @@ struct TokenSetupScreen: View {
                                 acknowledges: true,
                                 doneThrough: tokenStepsDone)
                 DSSlabField(placeholder: bridge.placeholder, text: $tokenField,
-                            actionLabel: bridge.connected ? "UPDATE" : "CONNECT",
+                            actionLabel: bridge.connected ? "Update" : "Connect",
                             secure: true, action: connect)
                 BridgeSyncStatusRows(syncing: syncing,
                                      syncingLine: String(localized: "Fetching your \(bridge.noun)…"),
@@ -558,7 +558,7 @@ struct TokenSetupScreen: View {
         Section {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
                 DSSlabField(placeholder: String(localized: "owner/repo or a GitHub URL"),
-                            text: $watchField, actionLabel: String(localized: "WATCH"),
+                            text: $watchField, actionLabel: String(localized: "Watch"),
                             action: watchRepo)
                 BridgeSyncStatusRows(syncing: watching,
                                      syncingLine: String(localized: "Looking it up…"),

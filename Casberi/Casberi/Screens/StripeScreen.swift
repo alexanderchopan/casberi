@@ -120,7 +120,7 @@ struct StripeScreen: View {
                 // was a `BridgeFieldRow` capsule, the one control on the screen
                 // still wearing the pre-§218 shape.
                 DSSlabField(placeholder: TokenBridge.stripe.placeholder,
-                            text: $keyField, actionLabel: "SAVE", secure: true,
+                            text: $keyField, actionLabel: "Save", secure: true,
                             action: saveKey)
                 BridgeSyncStatusRows(syncing: connecting,
                                      syncingLine: String(localized: "Checking the key…"),

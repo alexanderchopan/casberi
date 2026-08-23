@@ -119,7 +119,7 @@ struct ExchangeSetupScreen: View {
                             text: $keyDraft, actionLabel: "", action: connect)
                 DSSlabField(placeholder: secretPlaceholder,
                             text: $secretDraft,
-                            actionLabel: checking ? "CHECKING…" : (connected ? "UPDATE" : "CONNECT"),
+                            actionLabel: checking ? "Checking…" : (connected ? "Update" : "Connect"),
                             secure: true, isArmed: armed, action: connect)
                 BridgeSyncStatusRows(result: result, resultIsError: resultIsError)
                 // Two sentences, not three paragraphs — but the §163

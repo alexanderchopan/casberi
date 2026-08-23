@@ -89,7 +89,7 @@ struct MailScreen: View {
                 DSSlabField(placeholder: provider.addressPlaceholder, text: $addressField,
                             actionLabel: "", keyboard: .emailAddress, action: connect)
                 DSSlabField(placeholder: provider.passwordPlaceholder, text: $passwordField,
-                            actionLabel: provider.connected ? "UPDATE" : "CONNECT",
+                            actionLabel: provider.connected ? "Update" : "Connect",
                             secure: true, isArmed: canConnect, action: connect)
                 BridgeSyncStatusRows(syncing: syncing, syncingLine: String(localized: "Reading your inbox…"),
                                      result: result, resultIsError: resultIsError)

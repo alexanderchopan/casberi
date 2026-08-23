@@ -997,15 +997,19 @@ struct HandleSetupScreen: View {
         return hits.map(OmniHit.person) + feedHits.map(OmniHit.feed)
     }
 
-    /// The slab's verb, in caps like every other field slab's (prd §190) —
-    /// caught live: this one still read "Add" beside a "WATCH" and a "FOLLOW"
-    /// on its neighbours, which is the same inconsistency the whole pass is
-    /// about.
+    /// The slab's verb, in sentence case like every other field slab's.
+    ///
+    /// §190 made these verbs CONSISTENT and this one was the odd sentence-case
+    /// label out; 2026-08-22 made them consistent the other way, because §190
+    /// rules on slab SHAPE and never on case, while build-brief §8 is the law
+    /// and has no ALL-CAPS anything. `allcaps-audit.py` holds all of them
+    /// there now — including this property, which no call site can speak for
+    /// since the verb is composed here across four branches.
     private var omniButtonLabel: String {
-        if bridge == .farcaster, query.hasPrefix("/") { return "FOLLOW" }
-        if bridge == .nostr, query.hasPrefix("#") { return "FOLLOW" }
-        if bridge.supportsMultiple { return "ADD" }
-        return bridge.currentName.isEmpty ? "CONNECT" : "UPDATE"
+        if bridge == .farcaster, query.hasPrefix("/") { return "Follow" }
+        if bridge == .nostr, query.hasPrefix("#") { return "Follow" }
+        if bridge.supportsMultiple { return "Add" }
+        return bridge.currentName.isEmpty ? "Connect" : "Update"
     }
 
     private var omniSyncingLine: String {
