@@ -1344,12 +1344,37 @@ enum WalletIngest {
         // portfolio that's real (exchange/validator balances) would otherwise
         // fall through to an empty, broken `root = Stack([])` document.
         if address == nil, groups.count + (exchange.isEmpty ? 0 : 1) > 1 || groups.isEmpty, !portfolio.isEmpty {
-            // "What you hold", not "Across your wallets" — the balance headline
-            // directly above already owns that phrase (verified on screen
-            // 2026-07-21: the two stacked read as one thing said twice). The
-            // headline answers what it's WORTH; the map answers what it's MADE
-            // OF, and its subline names the wallet count either way.
-            let doc = ["root = TagMap(\(q(String(localized: "What you hold"))), \(q(portfolio.subline)), [\(portfolio.treemapCells.joined(separator: ", "))], \(q("token")))"]
+            // NO TITLE AND NO SUBLINE (2026-08-22, prd §447) — the map draws
+            // bare, and both empties are load-bearing rather than tidying.
+            //
+            // The title was "What you hold", chosen on 2026-07-21 over
+            // "Across your wallets" because the balance headline above already
+            // owned that phrase. The §417 group headers then landed a 22pt
+            // "What you hold" directly above this card, so the fix became the
+            // bug: the room's biggest drawing introduced itself with the same
+            // three words that sat one line above it, VERBATIM. §208 again,
+            // one rung up.
+            //
+            // The subline was "$19.9K across 13 tokens in 3 wallets", and
+            // every clause of it is already on screen: the money IS the crown
+            // number two cards up (same read, same source), and the wallet
+            // count IS the row of face chips immediately under that number.
+            // Only "13 tokens" was new, and it moves to the allocation door,
+            // which is where a count belongs — on the control that opens all
+            // of them.
+            //
+            // Deleting them also squares the card up for free: `GenTagMap`
+            // pads itself `.horizontal s4` AND pads its title/subline
+            // `.leading s4`, so those two lines sat at 36pt while the cells,
+            // the tail and the door all sit at 18pt. They were the only two
+            // things in the card off the gutter.
+            //
+            // Safe as an empty string, not merely tolerated: `GenTagMap` gates
+            // BOTH on `.isEmpty` already, so nothing renders and nothing needs
+            // a renderer change. And this composer is feed-only — Home and the
+            // Today brief build their own `TagMap` documents, where the title
+            // is the only label there is and must stay.
+            let doc = ["root = TagMap(\(q("")), \(q("")), [\(portfolio.treemapCells.joined(separator: ", "))], \(q("token")))"]
             return (doc, portfolio)
         }
 

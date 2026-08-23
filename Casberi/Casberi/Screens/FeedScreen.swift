@@ -5114,18 +5114,55 @@ struct FeedScreen: View {
         return nil
     }
 
-    /// The holdings card's spoken reading, promoted above the map (prd §417).
+    /// The holdings card's tail — the book's shape on the left, the door to
+    /// the whole allocation on the right, in ONE tertiary row (2026-08-22,
+    /// prd §447).
     ///
-    /// nil is a normal, correct outcome — `concentrationLine` declines on an
-    /// unpriced or single-position book — and the map then leads on its own,
-    /// which is the same "a card with no reading shows its evidence bare" rule
-    /// `MoneyReceipt.titleFallback` keeps one surface over. Deliberately NOT
-    /// invented from the map's own cells: a sentence assembled here rather than
-    /// by `WalletPortfolio` would be a second definition of concentration, and
-    /// the two would drift.
-    private var concentrationLead: String? {
-        guard let portfolio, !portfolio.isEmpty else { return nil }
-        return portfolio.concentrationLine
+    /// **This is what a four-line block reduced to.** §417 promoted the
+    /// concentration sentence to a `heading22` lead above the map, on the
+    /// reasoning that Lending and Approvals lead with their reading; that was
+    /// right for those cards and wrong here, because the §417 group headers
+    /// landed a 22pt "What you hold" in the same pass — so the card opened
+    /// with two stacked 22pt lines, and the map under them opened with its own
+    /// eyebrow repeating the header word for word. Three voices before the
+    /// drawing. The reading is not deleted, it is demoted to where its sibling
+    /// already lived.
+    ///
+    /// **What survives is exactly the pair the treemap cannot draw**, which is
+    /// the test every cut here was made against: `UnitTreemap` is rank-ordered
+    /// rather than area-proportional, so it cannot state a share; and stables
+    /// are scattered across its cells by symbol, so it cannot group them. Both
+    /// halves are composed by `WalletPortfolio.shapeLine`, never assembled
+    /// here — a sentence built in a view would be a second definition of
+    /// concentration, and the two would drift.
+    ///
+    /// Guarded as a WHOLE rather than per-child: both halves self-gate (a
+    /// single-position book has no shape, a single wallet has no door), so an
+    /// unguarded row would take a spacing slot in the card's stack and draw
+    /// nothing in it.
+    @ViewBuilder
+    private var holdingsTail: some View {
+        if let portfolio, !portfolio.isEmpty,
+           portfolio.shapeLine != nil || portfolio.walletCount > 1 {
+            HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                if let shape = portfolio.shapeLine {
+                    Text(shape)
+                        .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.85)
+                }
+                Spacer(minLength: 0)
+                WalletAllocationDoor(
+                    portfolio: portfolio,
+                    onOpen: portfolio.walletCount > 1 && selectedWallet == nil
+                        ? { feedSheet = .allocation } : nil)
+            }
+            .padding(.horizontal, DS.Space.s4)
+            // s2 from the stack + s1 here = s3 of air under the drawing. A
+            // caption sits closer to its figure than two cards sit to each
+            // other, and at the bare s2 the row read as a seventh cell.
+            .padding(.top, DS.Space.s1)
+        }
     }
 
     /// Does the "What you hold" block have anything in it — the treemap, the
@@ -5759,21 +5796,15 @@ struct FeedScreen: View {
         if !blockStream.els.isEmpty {
             Section {
                 VStack(alignment: .leading, spacing: DS.Space.s2) {
-                    // THE READING LEADS (2026-08-20, prd §417). This card's one
-                    // sentence — "ETH is 61% of the book" — sat BELOW the map at
-                    // caption size, so the room's biggest drawing said nothing
-                    // until you had read the map and then found the footnote.
-                    // Lending and Approvals have led with their reading at
-                    // `heading22` since they shipped; this is that anatomy
-                    // finished, not a new one. `WalletConcentrationLine` keeps
-                    // its own door and drops to the tail only when it has
-                    // nothing to promote (see `concentrationLead`).
-                    if let lead = concentrationLead {
-                        Text(lead)
-                            .dsText(.heading22).foregroundStyle(DS.textPrimary)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .padding(.horizontal, DS.Space.s4)
-                    }
+                    // THE DRAWING LEADS (2026-08-22, prd §447) — nothing above
+                    // the map at all. §417 put the concentration sentence here
+                    // at `heading22` on Lending's and Approvals' anatomy, and
+                    // the same pass put a 22pt "What you hold" header directly
+                    // above this card: two display lines stacked, then the
+                    // map's own eyebrow saying the header's words again. The
+                    // reading moved down to `holdingsTail`, beside the stables
+                    // line it always belonged with; the header is the card's
+                    // title and always was.
                     GenRender(id: "root", els: blockStream.els)
                         // A tapped holdings cell opens its token's chart
                         // (2026-07-14): the thing sheet when watched, the quick
@@ -5798,29 +5829,11 @@ struct FeedScreen: View {
                                 route.pushBridge(.wallet)
                             }
                         }
-                    // The map says WHAT you hold; the LEAD above says how much
-                    // of it is one thing (prd §155, promoted §417). What is
-                    // left down here is the door to the full allocation.
-                    if let portfolio, !portfolio.isEmpty {
-                        WalletAllocationDoor(
-                            portfolio: portfolio,
-                            onOpen: portfolio.walletCount > 1 && selectedWallet == nil
-                                ? { feedSheet = .allocation } : nil)
-                            .padding(.horizontal, DS.Space.s4)
-                        // And how much of it can move (2026-08-01). Concentration
-                        // says the book is lopsided; this says how exposed the
-                        // whole of it is — the one thing the map can't show,
-                        // since stablecoins are scattered across its cells by
-                        // symbol. A line, not a card: the surviving half of the
-                        // cut "splits" pair (see `WalletPortfolio.stableLine`).
-                        if let stable = portfolio.stableLine {
-                            Text(stable)
-                                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                                .lineLimit(1)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding(.horizontal, DS.Space.s4)
-                        }
-                    }
+                    // The map says WHAT you hold; this one row says the two
+                    // things it is structurally unable to say, and opens the
+                    // rest. Three separate text objects until 2026-08-22 — see
+                    // `holdingsTail`.
+                    holdingsTail
                 }
                 // The holdings CARD (prd §160) — title, map, and the
                 // concentration line become one parcel. GenTagMap already

@@ -50,7 +50,7 @@ enum WalletStables {
     /// stating.
     ///
     /// Declines when the rounded percentage would be 0 or 100 — the same guard
-    /// `WalletPortfolio.concentrationLine` keeps, and for the same reason: $5
+    /// `WalletPortfolio.concentrationShort` keeps, and for the same reason: $5
     /// of USDC in a $48,000 book rounds to 0%, and a line reading "0% stable"
     /// beside a real stablecoin holding is a fake status, not a rounding
     /// nicety. At the other end, "100% stable" is what a book of nothing but

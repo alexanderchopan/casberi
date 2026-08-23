@@ -79,7 +79,12 @@ at all.
 
 | Ruling | What it said | Changed by |
 |---|---|---|
+| §182 | The watch cap is a SHELF of faces with dashed rings for the free slots | superseded by §448 |
+| §441 | Starring an address flies its face from the book row to the shelf slot | amended by §448 |
+| §295 | The connections card leads with a headline counting the connected addresses | amended by §448 |
 | §18 | Feed spec | amended by §64 |
+| §417 | The holdings card leads with its reading at `heading22` | amended by §447 |
+| §155 | The combined holdings map's subline names the money and the wallet count | amended by §447 |
 | §435 | The sky: twins spread on a straight perpendicular; caption "N of M connected" against the book's size | amended by §436, superseded by §440 |
 | §433 | The wallet manager: groups as folder SECTIONS of the book, list ordered recent-with-watched-first | amended by §440 |
 | §437 | The sky reads as rings inside rings | amended by §438, superseded by §440 |
@@ -30009,3 +30014,197 @@ Its zone fixture is `AddressBookShape.lastPhrase`'s bug in a second file: an ins
 ### Unproven
 
 iOS Simulator build green; every static audit, both address harnesses and the wallet-viz harness pass. **No simulator run and no device.** Nothing here has been looked at: the wrap point of the address block at 390pt and at accessibility sizes, the chunk reveal's hand-off from the face ring, the rail's fill against a two-line caption, and whether `stat24` is a rung too small for the head of a spine — the handoff flags that last one as a judgement to make on device. Three transfers before the fold is the handoff's own guess.
+
+## 447. Seven text objects over one drawing — the holdings block's redundancy cut (user: "how would you remove text redundancy on the wallet screen in the 'What you hold' section, there is tons of redundancy and i don't even think we need words besides the title above the treemap", then "i was looking at it on the 'All' wallets feed", then "i like proposed A. do it", 2026-08-22)
+
+**Amends §417** (which promoted the concentration reading to a `heading22`
+lead above the map) and **§155** (whose subline named the wallet count).
+
+### What was on screen
+
+On the **All** wallets feed, the holdings block printed seven text objects
+above one drawing, four of them prose:
+
+1. `What you hold` — the §417 group header, `heading22`
+2. `ETH is 61% of everything` — the §417 lead, `heading22`
+3. `What you hold` — the map's own eyebrow, `callout15` semibold
+4. `$19.9K across 13 tokens in 3 wallets` — the map's subline
+5. the cells
+6. `Where it's held ›`
+7. `21% is in stablecoins`
+
+Three of those are §208 violations — never say one thing twice — and each
+arrived honestly. (3) was correct when it was written: it was chosen on
+2026-07-21 over "Across your wallets" *because* the balance headline already
+owned that phrase, and it only became a verbatim duplicate when §417 landed a
+22pt "What you hold" directly above the card three weeks later. **The fix
+became the bug.** (2) is the same story one rung up: leading with the reading
+is right for Lending and Approvals, and putting it here stacked two 22pt lines
+because the same pass added the header. (4)'s money **is** the crown number two
+cards up — same read, same source — and its wallet count **is** the row of
+face chips immediately under that number.
+
+The individual-wallet feed reads lighter for a structural reason worth
+recording: scoped, the eyebrow is the wallet's *name*, so it collides with
+nothing, and the subline drops its "in N wallets" clause. Same anatomy, one
+fewer collision — which is why the report named the All feed.
+
+### The ruling
+
+**The drawing leads. What survives around it is only what the treemap is
+structurally unable to draw.** That is the test every cut was made against, and
+it is a stronger test than "is this useful" — every one of the deleted lines was
+useful in isolation.
+
+Two facts pass it, for two different reasons:
+
+- **The share.** `UnitTreemap` is RANK-ORDERED, not area-proportional (its own
+  doc says why: true squarified cells arrive as slivers too thin to label), so
+  the biggest cell is four units whether it is 61% of the book or 22% of it.
+  The map cannot state a magnitude.
+- **The stable share.** Stablecoins are scattered across the cells BY SYMBOL,
+  so no arrangement of a per-symbol treemap ever groups them. It is the only
+  reading on this card that nothing else on the screen carries.
+
+Both now sit in ONE tertiary row under the map — `ETH 61% · 21% stables` on the
+left, the allocation door on the right — composed by
+`WalletPortfolio.shapeLine` and never assembled in the view, for the reason the
+old lead's own comment already gave: a sentence built in a view would be a
+second definition of concentration, and the two would drift.
+
+Seven text objects become four. Everything else on the card was the screen
+repeating itself.
+
+### Three decisions inside the cut
+
+**The token count moves onto the door, which now reads "All 13".** It was the
+only clause of the deleted subline that said something new — the map draws six
+cells out of thirteen held — and a count belongs on the control that opens all
+of them rather than in a caption. The tray behind it keeps its full name
+("Where it's held"), so the destination is still named; the door sits beside a
+line about the book's shape, which is what makes the bare "All 13" read
+unambiguously. **The door is now gated on that count rather than on the
+concentration read**, which was a proxy for "there is a real book here" and the
+wrong proxy for a label naming a number: a two-position book where one holding
+is 99.6% rounds to 100%, silences the share, and used to hide a door that
+"All 2" opens perfectly well.
+
+**The per-wallet map keeps its label, and that is asserted so the cut cannot be
+over-applied.** There the eyebrow is a wallet's name, and with several maps
+stacked it is the only thing telling them apart. The scoped map also keeps its
+subline; whether *its* money clause should go the same way is a separate call
+and was deliberately not taken here.
+
+**Deleting (3) and (4) squares the card up for free.** `GenTagMap` pads itself
+`.horizontal s4` AND pads its title/subline `.leading s4`, so those two lines
+sat at 36pt while the cells, the tail and the door all sit at 18pt. They were
+the only two things in the card off the gutter — a misalignment nobody had
+reported and which disappears with the words.
+
+### What was rejected
+
+**Putting the share on the cells and cutting all prose** (the "no words at all"
+option the report asked about) was mocked and declined. It is attractive — it
+absorbs the share completely and fixes the rank-ordered map's inability to
+state its own magnitude — but the stable share then has nowhere to go, and that
+is the one reading on this card the screen does not otherwise carry. Losing a
+fact to save a line is not a redundancy cut. Held open: it becomes right the
+day the map states magnitude some other way.
+
+### Two defects found while doing it
+
+**`-portfolioProbe` has reported the wrong answer for a month.** It decided
+whether the crown feature actually MERGED by testing `read.doc[0].contains("Across your wallets")`
+— a title the combined branch stopped using on 2026-07-21, when it was changed
+to "What you hold" for exactly the reason this entry is about. So the one check
+that probe exists to make ("is this really combined, or the first wallet's map
+wearing a new title") has said `per-wallet` for every combined read since. Now
+keyed on the doc's SHAPE, which carries no copy: the combined branch emits one
+line, the per-wallet branch always emits a `Stack` plus a `TagMap` per group.
+**Generalisable: a probe that identifies a code path by a phrase in its output
+is a registry with one entry, and it drifts the first time the copy changes.**
+
+**`wallet-viz-selftest.sh`'s Altana conduct guards carried the SIGPIPE race**
+this repo has now paid for three times (`ondevice-selftest.sh`, 2026-08-19).
+Under `pipefail`, `print -r -- "$VAR" | grep -q PAT` is a race: `grep -q` exits
+the instant it matches and closes the pipe, the writer takes SIGPIPE and exits
+141, and pipefail makes 141 the pipeline's status. It bit this session's own new
+guard immediately (a guard that found its string reported failure), and the
+Altana guards fail in the safe-looking direction — a real write selector could
+report "not found" under load. Every grep in that file is a herestring now.
+**Standing rule, third instance: never `cmd | grep -q` under `pipefail`.**
+
+### Guarded
+
+`scripts/wallet-viz-selftest.sh` compiles `WalletPortfolio` WHOLE and unmodified
+against inert stubs (18 assertions on the tail; it is otherwise Foundation-only,
+and deleting the subline removed its last `TokenStats` dependency, which is what
+made compiling it possible at all). Four drift guards, mutation-proven five ways
+against mutated copies: the combined map's empty title AND subline, the
+per-wallet label surviving, no lead above the map, the tail reading
+`shapeLine`, and the door naming the count. The guards matter more than usual
+here because every deleted line is one a later pass re-adds in good faith —
+each looked helpful alone, and none was visibly a duplicate unless you had the
+crown card and the group header in view at the same time.
+
+### Unproven
+
+iOS Simulator build green; the four static audits and the new assertions pass.
+**No simulator run and no device.** Nothing here has been looked at: how
+`ETH 61% · 21% stables` wraps beside "All 13" at 390pt and at accessibility
+sizes (the row is `lineLimit(1)` with a 0.85 floor, so the failure mode is
+shrunk text rather than a broken layout), and whether s3 of air under the map
+is enough separation now that nothing sits above it. The full harness could not
+be run end-to-end: a concurrent session's in-flight edit to
+`AddressConnections.swift` removed `headline`/`subhead`, which that file's
+existing assertions still name.
+
+## 448. One face per address — the watched shelf folds into the book, and the connected card stops narrating its own drawing (user: "i think perhaps having those circles in 'watching' as faces just make the page messier when we already have a list … you can't see their entire name and it just looks forced", then "i like A", then "in the connected section we have redundancy … i want it with the least amount of words ever there", then "don't say n watched — it's just extra text we don't need", 2026-08-22)
+
+Three cuts on the Addresses screen, one principle: **draw a thing once, and let the drawing do the talking.** Nothing here is a new capability; every line is a deletion, and each deleted thing was saying something a neighbour already said.
+
+### 1. Watching is a section of the book, not a shelf above it
+
+§182 gave the watch cap a picture — a face per watched wallet, a dashed ring per free slot, "so the cap stops being a sentence you hit and becomes a shape you can see filling." That reasoning held while a face was all a slot had to carry. It stopped holding when the same screen grew a book: **the shelf drew every watched wallet a second time, worse.** A 56pt face in a 64pt slot captions its name in `label12`, which is about nine characters — so "Cold storage" arrived as "Cold stor…" — while the same wallet's own `AddressBookRow` sat a scroll below with the whole name, a subline, an activity count and a filled star. One address, two renderings, one screen, and the shelf was the poorer one.
+
+So `watchingSection` is now a pinned Section of the same list, drawn by `bookRow` — the same anatomy, the same star, the same tap, the same swipe, the same drag-to-file and the same context menu as every other row. The roster's own Rename alert went with it: the address card the row's tap opens carries Rename with the history cascade (§443/§446), which that alert never had.
+
+**Watched entries are LIFTED OUT of the A–Z sections**, or they would be drawn twice again one scroll apart — the exact duplication this cut is for. The condition is `searching`, and it runs the other way too: the Watching section folds away the moment you type, so a search that also filtered them out would be a search that cannot find the wallets you watch. One filter, applied where the sections are built, so `AddressBookShape.sections` and `AddressIndexBar` are fed the same set and the scrubber can never offer a letter that scrolls nowhere.
+
+The list's head names what it lists — "Everyone else · 24", not "Saved · 27". `book.count` stopped being true for that list the moment the watched rows moved out of it.
+
+**What §182 loses, said plainly.** The dashed rings are gone and the cap is a count again: the section header's "3 of 5", plus the cap alert at the moment it bites. Five dashed ROWS would be a list of nothing. Nothing watched renders no section at all — the field above it, with its WATCH verb and its peek chip, is the invitation, and a header over an empty list is not.
+
+**And the shelf never fitted anyway.** §442 sized the slot so all five would show — "5 × 64 + 4 × 8 = 352 against the 360 a 390pt screen leaves inside the page margin" — and that arithmetic was done in the MAC tokens. On iOS `DS.Space.s2` is 10 and the page margin is 18, so the strip needed **396 inside 390** and the fifth slot sat off the right edge, reachable only by scrolling. A shelf reading "3 of 5" that shows four is the one thing §442 says a picture of a cap must not do. Found by measuring the tokens while drawing the replacement, not by looking at the screen — which is the point: it renders as a slightly tight row either way.
+
+### 2. The star flight retires, because the gap it crossed was the duplication
+
+§441 flew a face from a book row to a shelf slot, and its own entry says why: §212 retired the footer explaining the star on the grounds that "tapping a star visibly drops the wallet into the shelf at the top of the same screen", and then the wallet simply appeared. **The flight existed to animate a COPY appearing somewhere else.** With Watching as a section, starring MOVES the row you tapped — which is the same teaching, structurally, with nothing drawn over it. `connectPromote` was already marking that moment and now marks the whole of it.
+
+`AddressFlight` itself stays: §444's filing flight (a move sheet's head into a group's deck) is a real crossing between two surfaces and still uses it. Its endpoint parameters split, and **the asymmetry is deliberate**: `fromKey`/`toKey` are REQUIRED, because the retired defaults named the star flight's anchors and this overlay's answer to an anchor nothing publishes is to draw nothing at all, silently — the one failure the whole file exists to avoid. `fromSize`/`toSize` keep their ramp defaults, because this file is the only place `scripts/face-ramp-audit.py` can see that a travelling face's ends are ramp tiers rather than raw numbers; measured, that audit went red the moment they lost their initializers.
+
+### 3. The connected card stops saying what it draws
+
+Asked for "the least amount of words ever there", and the section had four layers of them before you reached the picture: a section header "How they connect", a card eyebrow "Connected", a `heading22` headline "2 of your addresses are connected", and a subhead "Each has transacted with more than one of your wallets."
+
+- The **eyebrow** was a verbatim copy of the header two rows above it.
+- The **headline** counted rows the drawing already shows one-per — `connectedCount` is `nodes.count`, so the card was reading its own left column out loud. That is the tally the module doctrine forbids, arriving as a sentence.
+- The **subhead** defined the word "connected" afresh on every open, forever.
+
+All three are cut, and `AddressConnections.headline`/`subhead` with them. The header is one word — **"Connected"** — matching the shape of its siblings: Watching · Connected · Groups.
+
+What survives is what the picture cannot say: "Since you started watching each wallet." (the window the counts cover), the undrawn tail, and the wallets nothing reached. Those are facts the drawing OMITS, not restatements of what it shows.
+
+**The zero case is still a real answer** — §295 is right about that — it just no longer needs a card wrapped around it. Two or more watched with nothing shared draws no card and one tertiary line: "No shared addresses yet." One wallet keeps its own line. Nothing watched says nothing. `spineEmptyLine` spells all three ONCE and both layouts read it, because two copies of that judgement is how one layout ends up honest and the other doesn't — the split §440 already had to correct.
+
+### 4. A group says its count and stops
+
+"3 addresses · none watched" failed twice at once. It was **redundant** — the deck above it draws the members, and whether a group's members are watched is a fact about the Watching section at the top of the same screen, not about the group — and it **did not fit**: at 150pt in `label12` the clause clipped to "3 addresses · none wat…", the same truncation the shelf was deleted for. Both `AddressGroupCard.note` and `AddressGroupScreen.headerNote` are the count alone; they are read one tap apart, so trimming one and keeping the other would read as the screen disagreeing with the card you came from. The stars on the rows below answer "which of these am I watching" without anybody counting for you.
+
+### What this does NOT change
+
+The spine drawing, its ribbons, §439's bracket, the naming affordance, the group strip and its drop targets, the omnibox, the scrubber, the sort menu, `AddressBookShape` and every ruling in it. No new `Thing` field, no request, no CloudKit deploy.
+
+### Unverified
+
+Every claim above is about what is drawn, and this pass ran no simulator (standing user preference). The build is green on iOS and Catalyst and the static audits pass; **the row moving between sections is unproven on a device** — SwiftUI animates a `Section` change by identity and this one has never been watched happening.

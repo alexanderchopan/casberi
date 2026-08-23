@@ -1134,40 +1134,52 @@ struct WalletLendingCard: View {
 }
 
 
-/// The concentration read (2026-07-21, prd §155) — "ETH is 62% of everything",
-/// a quiet line under the treemap. Portfolio-level by nature: it says nothing
-/// about any one holding and everything about the shape of the whole, which is
-/// exactly the read the combined view exists to give. One computed sentence,
-/// no card, no color — risk posture at a glance, never advice.
+/// The door to the full allocation (2026-07-21, prd §155) — the treemap shows
+/// the top six positions; this opens all of them, and says which wallet holds
+/// each. **Was `WalletConcentrationLine`**, renamed 2026-08-20 (prd §417) when
+/// the reading it used to carry was promoted out of it.
 ///
-/// With more than one wallet it's also the door to the full allocation: the
-/// treemap says WHAT you hold, this says how much of it is one thing, and the
-/// tray behind it says WHERE each position actually sits.
-/// **Was `WalletConcentrationLine`, renamed 2026-08-20 (prd §417) when the
-/// reading it carried was promoted.** The concentration sentence now LEADS the
-/// holdings card at `heading22` — the anatomy Lending and Approvals have always
-/// had — so what is left here is the door alone, and a name saying "line" for a
-/// view that draws a chevron is the kind of drift this codebase renames rather
-/// than tolerates.
+/// **It says "All 13" now, not "Where it's held" (2026-08-22, prd §447), and
+/// the count is not decoration — it is the one clause rescued from the map's
+/// deleted subline.** "$19.9K across 13 tokens in 3 wallets" said three things
+/// and two of them were already on screen (the money is the crown, the wallet
+/// count is the face chips under it); the token count was the only fact it
+/// alone carried, and a count belongs on the control that opens all of them
+/// rather than in a caption. It also states the gap the map cannot: six cells
+/// drawn, thirteen held. The tray behind it is still titled "Where it's held",
+/// so the destination keeps its full name — this is a door label, and the door
+/// sits beside a line about the book's shape, which is what makes the bare
+/// "All 13" read unambiguously.
 ///
-/// Nothing renders with a single wallet: there is no "where" to open, and a
-/// chevron would promise a page that says what the lead just said.
+/// **Gated on the token COUNT, not on the concentration read it used to gate
+/// on.** That old gate was a proxy for "there's a real book here", and it is
+/// the wrong proxy for a label that names a number: `concentrationShort` also
+/// nils when the top share rounds to 100%, so a two-position book where one
+/// holding is 99.6% would hide a door that "All 2" would open perfectly well.
+/// A door naming a count is honest exactly when that count is worth opening.
+///
+/// Nothing renders with a single wallet (`onOpen` nil): there is no "where" to
+/// open when every position sits in the same place.
 struct WalletAllocationDoor: View {
     let portfolio: WalletPortfolio
     /// nil with a single wallet — see above.
     let onOpen: (() -> Void)?
 
     var body: some View {
-        if let onOpen, portfolio.concentrationLine != nil {
+        if let onOpen, portfolio.tokenCount > 1 {
             Button(action: onOpen) {
+                // No trailing `Spacer` (2026-08-22): this used to be a row of
+                // its own and now shares one with `shapeLine`, so it must HUG
+                // its content and let the caller's own spacer push it trailing.
+                // A spacer here would eat the row and shove the shape line off
+                // the leading edge.
                 HStack(spacing: 5) {
-                    Text("Where it's held")
+                    Text("All \(portfolio.tokenCount)")
                         .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                         .lineLimit(1)
                     Image(systemName: "chevron.right")
                         .dsGlyph(10)
                         .foregroundStyle(DS.textTertiary)
-                    Spacer(minLength: 0)
                 }
                 .contentShape(Rectangle())
             }

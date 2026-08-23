@@ -3818,11 +3818,31 @@ enum ProbeHooks {
                     return
                 }
                 let p = read.portfolio
-                let combined = read.doc.count == 1 && read.doc[0].contains("Across your wallets")
+                // The doc's SHAPE, never a phrase in it (fixed 2026-08-22).
+                // This asked whether line 0 contained "Across your wallets" —
+                // a title the combined branch has not used since 2026-07-21,
+                // when it was changed to "What you hold" precisely because the
+                // balance headline already owned that phrase. So the one check
+                // this probe exists to make ("did the crown feature actually
+                // MERGE, or is this the first wallet's map wearing a new
+                // title") has reported `per-wallet` for every combined read
+                // for a month, and now that the title is empty entirely it
+                // could never be right again. The shape is exact and carries
+                // no copy: the combined branch emits ONE line (`root =
+                // TagMap`), the per-wallet branch always emits a `root =
+                // Stack` plus one `TagMap` per group, so it is two lines even
+                // for a single wallet.
+                let combined = read.doc.count == 1
                 NSLog("Portfolio probe: scope=%@ total=%@ tokens=%d wallets=%d map=%@",
                       scope ?? "ALL", TokenStats.compact(p.totalUSD), p.tokenCount,
                       p.walletCount, combined ? "COMBINED" : "per-wallet")
-                NSLog("Portfolio probe: concentration=%@", p.concentrationLine ?? "—")
+                // The card's whole tail, and its halves apart — `shapeLine` is
+                // what the row DRAWS, but a nil there has two causes (an
+                // unpriced/single-position book, no stables above the floor)
+                // and only the pair separates them.
+                NSLog("Portfolio probe: shape=%@ (concentration=%@ stables=%@)",
+                      p.shapeLine ?? "—", p.concentrationShort ?? "—",
+                      p.stableShort ?? "—")
                 for position in p.positions.prefix(5) {
                     let held = position.holders
                         .map { "\($0.label) \(TokenStats.compact($0.usd))" }

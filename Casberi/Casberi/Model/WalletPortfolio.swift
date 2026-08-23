@@ -180,44 +180,75 @@ struct WalletPortfolio: Equatable {
                 positions.compactMap { p in p.route.map { (p.symbol, $0) } }))
     }
 
-    /// "$19.9K across 13 tokens in 3 wallets" — the combined map's subline.
-    /// Names the wallet count because that IS what makes this map different
-    /// from the per-wallet ones it replaced.
-    var subline: String {
-        let amount = TokenStats.compact(totalUSD)
-        let tokens = String(localized: "\(tokenCount) token")
-        guard walletCount > 1 else { return "\(amount) across \(tokens)" }
-        return String(localized: "\(amount) across \(tokens) in \(walletCount) wallets")
-    }
-
-    /// "ETH is 62% of everything" — the concentration whisper (2026-07-21).
+    /// "ETH 61%" — how lopsided the book is (2026-07-21, compacted 2026-08-22).
     /// A portfolio-level read by nature: it means nothing about one holding
     /// and everything about the shape of the whole. nil when there's no shape
     /// to report (a single position, or no value at all).
-    var concentrationLine: String? {
+    ///
+    /// **The map cannot say this, which is the whole reason it survives the
+    /// §447 cut.** `UnitTreemap` is RANK-ORDERED, not area-proportional (its
+    /// own doc says why: true squarified cells arrive as slivers too thin to
+    /// label), so the biggest cell is four units whether it is 61% of the book
+    /// or 22% of it. Every other word that sat around that map was restating
+    /// something already on the screen; this is the one fact the drawing is
+    /// structurally unable to carry.
+    ///
+    /// It reads as a FRAGMENT rather than the old sentence ("ETH is 61% of
+    /// everything") because it now sits in a tertiary tail beside its sibling
+    /// below, under a header that already said what block this is. A sentence
+    /// there would be the third voice on one card.
+    var concentrationShort: String? {
         guard let top, let share = topShare else { return nil }
         let pct = Int((share * 100).rounded())
         // A share that rounds to 0% or 100% would claim a precision the
         // rounding just destroyed — the two ends stay quiet.
         guard pct > 0, pct < 100 else { return nil }
-        return String(localized: "\(top.symbol) is \(pct)% of everything")
+        return String(localized: "\(top.symbol) \(pct)%")
     }
 
-    /// "21% is in stablecoins" — the exposure whisper (2026-08-01).
+    /// "21% stables" — the exposure whisper (2026-08-01, compacted 2026-08-22).
     ///
-    /// A sibling to `concentrationLine`, deliberately in its exact idiom
+    /// A sibling to `concentrationShort`, deliberately in its exact idiom
     /// rather than a card: this survived design review as one line while its
     /// original other half (a by-chain bar) was cut as trivia — where the book
     /// lives changes no decision, how much of it can move does.
     ///
+    /// **The other fact the map cannot draw**, and for a different reason from
+    /// its sibling: stablecoins are scattered across the cells BY SYMBOL, so
+    /// no arrangement of a per-symbol treemap ever groups them. It is the only
+    /// reading on this card that nothing else on the screen carries.
+    ///
     /// The rule about what counts, and the reason it's a set and not a prefix
     /// test, lives in `WalletStables`. Nil-ing is delegated there too, so the
     /// two lines can't disagree about when a share is too small to state.
-    var stableLine: String? {
+    var stableShort: String? {
         let held = positions.map { (symbol: $0.symbol, usd: $0.usd) }
         guard let share = WalletStables.share(positions: held, totalUSD: totalUSD)
         else { return nil }
-        return String(localized: "\(Int((share * 100).rounded()))% is in stablecoins")
+        return String(localized: "\(Int((share * 100).rounded()))% stables")
+    }
+
+    /// "ETH 61% · 21% stables" — the whole shape of the book in one tertiary
+    /// line (2026-08-22, prd §447).
+    ///
+    /// **This is the residue of a four-line block, and the deletions are the
+    /// point.** The holdings card used to print, above one drawing: a 22pt
+    /// header, a 22pt concentration sentence, the map's own eyebrow (the
+    /// header's words again, verbatim) and a subline whose money was the crown
+    /// two cards up and whose wallet count was the face chips directly under
+    /// it. §208 — never say one thing twice — with four instances on one card.
+    ///
+    /// What is left is exactly the pair the treemap cannot draw. Composed HERE
+    /// rather than at the call site for the reason the old `concentrationLead`
+    /// comment already gave: a sentence assembled in a view would be a second
+    /// definition of concentration, and the two would drift.
+    ///
+    /// nil when neither half has anything to say — a legitimate outcome (a
+    /// single-position book with no stables), and the tail then draws nothing
+    /// rather than an empty row taking a spacing slot.
+    var shapeLine: String? {
+        let parts = [concentrationShort, stableShort].compactMap { $0 }
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
 }
 

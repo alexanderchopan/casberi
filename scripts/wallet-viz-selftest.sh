@@ -32,7 +32,11 @@ PARTIES="Casberi/Casberi/Model/WalletActingParties.swift"
 CONNECTIONS="Casberi/Casberi/Model/AddressConnections.swift"
 ALTANA="Casberi/Casberi/Model/AltanaKeystore.swift"
 ALTANA_SRC="Casberi/Casberi/Model/AltanaKeystoreSource.swift"
-for f in "$FLOW" "$RISK" "$STABLE" "$EXPOSURE" "$USEROPS" "$CONNECTIONS" "$ALTANA"; do
+PORTFOLIO="Casberi/Casberi/Model/WalletPortfolio.swift"
+FEED="Casberi/Casberi/Screens/FeedScreen.swift"
+TILES="Casberi/Casberi/Screens/WalletFeedTiles.swift"
+INGEST="Casberi/Casberi/Model/WalletIngest.swift"
+for f in "$FLOW" "$RISK" "$STABLE" "$EXPOSURE" "$USEROPS" "$CONNECTIONS" "$ALTANA" "$PORTFOLIO"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 
@@ -80,9 +84,17 @@ grep -q 'var amount: Double? = nil' Casberi/Casberi/Model/WalletIngest.swift \
 # the rule by naming what it must not do. Grepping raw source fires against the
 # prose explaining the guard, which is the Obsidian/Cursor lesson this codebase
 # has now paid for five times.
+#
+# The greps are HERESTRINGS, not `print … | grep -q` (fixed 2026-08-22). Under
+# this script's `pipefail` that pipeline is a race: `grep -q` closes the pipe on
+# a match, `print` takes SIGPIPE and exits 141, and pipefail hands 141 to the
+# `if`. It fails in the SAFE-LOOKING direction here — a real write selector
+# could report "not found" under load and this promise would go unguarded on an
+# idle machine and unguarded again on a busy one, exactly the way
+# `ondevice-selftest.sh` missed a matching file in 2026-08-19.
 ALTANA_CODE=$(sed 's://.*::' "$ALTANA_SRC" | sed '/^[[:space:]]*\/\/\//d')
 for sel in 0xa5c2bd05 0x96295a64 0x3cf26a01 0xd7e54cad 0xf2fa7392 0x5ed1e59a; do
-  if print -r -- "$ALTANA_CODE" | grep -q "$sel"; then
+  if grep -q "$sel" <<< "$ALTANA_CODE"; then
     echo "✗ $ALTANA_SRC builds a WRITE selector ($sel) — the read-only promise in"
     echo "  AltanaKeystore's type doc and the connect copy is now false. Change both,"
     echo "  or don't make the call."
@@ -91,7 +103,7 @@ for sel in 0xa5c2bd05 0x96295a64 0x3cf26a01 0xd7e54cad 0xf2fa7392 0x5ed1e59a; do
 done
 # The same promise from the other direction: no signing or sending verb.
 for verb in eth_sendTransaction eth_sendRawTransaction eth_signTypedData personal_sign; do
-  if print -r -- "$ALTANA_CODE" | grep -q "$verb"; then
+  if grep -q "$verb" <<< "$ALTANA_CODE"; then
     echo "✗ $ALTANA_SRC issues $verb — prd §112 says nothing here signs"; exit 1
   fi
 done
@@ -113,6 +125,61 @@ grep -q '0xb70fda90c1d576ba8399946a0c10ecd9d9ea923b' "$ALTANA" \
 grep -q 'static let getKeysSelector = "0x34e80c34"' "$ALTANA" \
   || { echo "✗ getKeys selector changed — re-derive it from the deployed bytecode"; exit 1; }
 
+# --- the holdings card's word budget (prd §447, 2026-08-22) -----------------
+# The block printed SEVEN text objects above one drawing, four of them prose,
+# and two of those were verbatim repeats of things already on the screen. The
+# cut is only as durable as these guards, because every one of the deleted
+# lines is the kind a later pass re-adds in good faith — each looked helpful in
+# isolation, and each was invisible as a duplicate unless you had the crown
+# card and the §417 group header in view at the same time.
+#
+# (1) The FEED's combined map draws bare. Its title was the group header's own
+# three words verbatim, and its subline's money was the crown two cards up.
+# Both are gated on `.isEmpty` in `GenTagMap`, so an empty string really does
+# render nothing — and the emptiness has to be asserted HERE because nothing
+# else can see it: a map with a title and a map without one both look correct.
+# EVERY grep below is a HERESTRING, never `print … | grep -q` — the trap this
+# repo has already paid for twice (`ondevice-selftest.sh`, 2026-08-19). Under
+# `pipefail`, `grep -q` exits 0 the instant it matches and closes the pipe, the
+# writer takes SIGPIPE and exits 141, and 141 becomes the PIPELINE's status —
+# so a guard that found its string reports failure, and a negative guard that
+# should have fired reports success. A herestring has no pipe to signal.
+INGEST_CODE=$(sed 's://.*::' "$INGEST")
+grep -q 'root = TagMap(\\(q("")), \\(q(""))' <<< "$INGEST_CODE" \
+  || { echo "✗ the combined holdings map grew a title or a subline again (prd §447)."; \
+       echo "  The header above it already says 'What you hold' and the crown above THAT"; \
+       echo "  already says the money. See portfolioRead's own comment."; exit 1; }
+# …and the SCOPED map keeps its label, which is a wallet's NAME and therefore
+# not a duplicate of anything. Asserted so the cut above can't be over-applied.
+grep -q 'TagMap(\\(q(g.label))' <<< "$INGEST_CODE" \
+  || { echo "✗ the per-wallet map lost its label — that one names the WALLET, and with"; \
+       echo "  several maps stacked it is the only thing telling them apart"; exit 1; }
+#
+# (2) Nothing sits above the map inside the card. §417 promoted the
+# concentration sentence to `heading22` here, which put two 22pt lines on top
+# of each other once the group headers landed in the same pass.
+FEED_CODE=$(sed 's://.*::' "$FEED" | sed '/^[[:space:]]*\/\/\//d')
+if grep -q 'concentrationLead' <<< "$FEED_CODE"; then
+  echo "✗ the holdings card grew a lead above its map again (prd §447) — the"
+  echo "  §417 group header IS this card's title"
+  exit 1
+fi
+#
+# (3) The tail is composed by the MODEL. A join assembled in the view would be
+# a second definition of concentration, and the two would drift — the reason
+# the old `concentrationLead` comment already gave for not inventing one.
+grep -q 'portfolio.shapeLine' <<< "$FEED_CODE" \
+  || { echo "✗ the holdings tail no longer reads WalletPortfolio.shapeLine — compose it"; \
+       echo "  in the model, never in the view"; exit 1; }
+#
+# (4) The door names the token COUNT. It is the one clause rescued from the
+# deleted subline, and the only place left that says six cells are drawn out of
+# thirteen held.
+TILES_CODE=$(sed 's://.*::' "$TILES")
+grep -q 'Text("All \\(portfolio.tokenCount)")' <<< "$TILES_CODE" \
+  || { echo "✗ the allocation door stopped naming the token count (prd §447) — that count"; \
+       echo "  is the only surviving clause of the map's deleted subline"; exit 1; }
+
 TMP=$(mktemp -d /tmp/wallet-viz-selftest.XXXXXX)
 trap 'rm -rf "$TMP"' EXIT
 # MUST be named main.swift: with several files on the command line, `swift`
@@ -120,6 +187,54 @@ trap 'rm -rf "$TMP"' EXIT
 # anything else, the driver below is compiled and never executed — the run
 # exits 0 having asserted NOTHING, which is how this harness first "passed".
 DRIVER="$TMP/main.swift"
+
+# INERT stubs for the two types `WalletPortfolio` reaches outside itself. It is
+# otherwise Foundation-only, which is what makes compiling it AS SHIPPED
+# possible at all — and worth doing rather than grepping, because every failure
+# in this file is a wrong NUMBER on a card that renders perfectly either way.
+#
+# `treemapCells` returns nothing on purpose: the cells are `WalletIngest`'s
+# arithmetic and are not what is under test here. Anything that depended on
+# their content would be testing the stub.
+STUBS="$TMP/stubs.swift"
+cat > "$STUBS" <<'SWIFT'
+import Foundation
+
+enum WalletIngest {
+    struct HoldingsGroup {
+        let label: String
+        var address: String? = nil
+        let cells: [String] = []
+        let totalUSD: Double = 0
+        let tokenCount: Int = 0
+        var bySymbolAll: [String: Double] = [:]
+        var routeBySymbol: [String: String] = [:]
+    }
+    static func treemapCells(bySymbol: [String: Double],
+                             routes: [String: String]) -> [String] { [] }
+}
+
+enum ExchangeBridge {
+    // A real `RawRepresentable` enum, not a struct wrapper: `isVenue` calls
+    // `Venue(rawValue:)` and tests the result against nil, so a non-failable
+    // init makes that check vacuously true and the compiler says so.
+    enum Venue: String {
+        case kraken, coinbase
+        var display: String { rawValue.capitalized }
+    }
+}
+
+// `WalletRange` shares this file with `WalletPortfolio` and reads the value
+// history. Not under test — the window arithmetic has no part in the holdings
+// card — but the file will not compile without it.
+enum WalletStore {
+    struct ValueSample {
+        let at: Date
+        let usd: Double
+        var holdings: [String: Double]? = nil
+    }
+}
+SWIFT
 
 cat > "$DRIVER" <<'SWIFT'
 import Foundation
@@ -951,14 +1066,14 @@ check(Conn.map(edges: [edge("0xabc", "main", spelling: "0xabc"),
         + "passes over identical data reads as broken")
 
 // ── the words ─────────────────────────────────────────────────────────────
-check(Conn.headline(count: 0).contains("None"), "zero says none")
-check(Conn.headline(count: 1).contains("is connected"), "one is singular")
-check(Conn.headline(count: 3).contains("3 of your addresses are connected"),
-      "…and the headline states the count itself")
-check(Conn.subhead(count: 0) == nil,
-      "no definition under a negative — the headline is already the whole answer")
-check(Conn.subhead(count: 1) != nil && Conn.subhead(count: 2) != nil,
-      "…but it is said whenever there IS something connected")
+//
+// `headline` and `subhead` retired 2026-08-22 (prd §448, user ruling: "I want
+// it with the least amount of words ever there"). The card draws one row per
+// connected address, so a sentence counting them was the drawing read out
+// loud, and the subhead re-defined "connected" under a section header that
+// already carries the word. `connectedCount` survives and is asserted above —
+// it is what gates the card at all now, so its arithmetic matters more than
+// before, not less. The remaining notes are the facts the picture OMITS.
 check(Conn.hiddenNote(hidden: 0, names: []) == nil, "nothing hidden, nothing said")
 check(Conn.hiddenNote(hidden: 1, names: []) != nil
         && Conn.hiddenNote(hidden: 4, names: []) != nil,
@@ -1165,6 +1280,93 @@ check(akReads.allSatisfy { !AK.writeSelectors.contains($0) },
 check(Set(akReads).count == akReads.count,
       "…and no two reads share a selector, which would silently call the wrong method")
 
+// ===========================================================================
+// WalletPortfolio — the holdings card's whole remaining vocabulary (prd §447)
+// ===========================================================================
+// Four prose lines were cut from this card on 2026-08-22 because the screen
+// already said them. What is left is the pair the treemap is STRUCTURALLY
+// unable to draw, so these assertions are the proof that the pair is right —
+// and there is no other proof available: a wrong share renders as a perfectly
+// ordinary caption under a perfectly ordinary map.
+print("")
+print("WalletPortfolio — the tail")
+
+func wpGroup(_ label: String, _ bySymbol: [String: Double]) -> WalletIngest.HoldingsGroup {
+    var g = WalletIngest.HoldingsGroup(label: label, address: "0x" + label)
+    g.bySymbolAll = bySymbol
+    return g
+}
+
+// The mock's own book: $19.9K, ETH dominant, USDC the only stable on the map.
+let wpBook = WalletPortfolio.from(groups: [
+    wpGroup("main", ["ETH": 9_000, "USDC": 2_000, "wstETH": 2_100]),
+    wpGroup("cold", ["ETH": 3_100, "USDC": 1_200, "AERO": 1_300]),
+    wpGroup("degen", ["DEGEN": 780, "LINK": 420]),
+])
+check(wpBook.walletCount == 3, "three groups merge into one portfolio")
+check(wpBook.tokenCount == 6, "…and six distinct symbols across them")
+check(wpBook.concentrationShort == "ETH 61%",
+      "the share is the FRAGMENT, not the old sentence — it sits in a tertiary tail now")
+check(wpBook.stableShort == "16% stables", "…and its sibling in the same idiom")
+check(wpBook.shapeLine == "ETH 61% · 16% stables",
+      "the tail joins them with the middot, concentration first")
+
+// ── each half declines on its own, and the line survives the other ─────────
+// The two nil for different reasons, so a tail that only worked when both
+// spoke would go blank on the ordinary books either one covers alone.
+let wpNoStables = WalletPortfolio.from(groups: [
+    wpGroup("main", ["ETH": 6_000, "AERO": 4_000]),
+])
+check(wpNoStables.stableShort == nil, "a book with no stablecoin says nothing about stables")
+check(wpNoStables.shapeLine == "ETH 60%",
+      "…and the tail is the surviving half ALONE, never a dangling separator")
+
+let wpAllStables = WalletPortfolio.from(groups: [wpGroup("main", ["USDC": 5_000])])
+check(wpAllStables.concentrationShort == nil,
+      "a single position rounds to 100% and stays quiet — the rounding destroyed the precision")
+check(wpAllStables.stableShort == nil,
+      "…and 100% stable stays quiet too, which the one-cell map has already said")
+check(wpAllStables.shapeLine == nil,
+      "with neither half speaking the tail is nil, so the row can't take a spacing slot")
+
+// The empty book: the card never renders, but the model must not trap or
+// invent a share of nothing.
+let wpEmpty = WalletPortfolio.from(groups: [])
+check(wpEmpty.shapeLine == nil, "an empty portfolio has no shape to report")
+check(wpEmpty.tokenCount == 0, "…and no tokens for the door to name")
+
+// ── the door's gate ────────────────────────────────────────────────────────
+// It reads "All \(tokenCount)", so it is gated on that count and NOT on the
+// concentration read it used to gate on. This case is exactly why: the top
+// share rounds to 100% and silences `concentrationShort`, while the door has
+// two real positions to open.
+let wpLopsided = WalletPortfolio.from(groups: [
+    wpGroup("main", ["ETH": 99_600, "LINK": 400]),
+])
+check(wpLopsided.concentrationShort == nil,
+      "a 99.6% top share rounds to 100% and the line declines")
+check(wpLopsided.tokenCount == 2,
+      "…but the door still has two positions to open, which the old gate hid")
+
+// ── the count is what the door promises ────────────────────────────────────
+// The map draws at most six cells (UnitTreemap.maxCells); the door's number is
+// the WHOLE book, which is the gap the deleted subline used to state.
+let wpDeep = WalletPortfolio.from(groups: [
+    wpGroup("main", ["ETH": 100, "USDC": 90, "A": 80, "B": 70,
+                     "C": 60, "D": 50, "E": 40, "F": 30]),
+])
+check(wpDeep.tokenCount == 8,
+      "the door counts every position, not the six the map has room for")
+
+// ── merging is by SYMBOL across wallets ────────────────────────────────────
+// The share is computed over the merged book, so a token split across three
+// wallets must not be counted as three smaller positions — that would deflate
+// the concentration figure on exactly the books this card exists for.
+check(wpBook.positions.first?.symbol == "ETH", "the merged leader is ETH")
+eq(wpBook.positions.first?.usd, 12_100, "…summed across both wallets holding it")
+check(wpBook.positions.map(\.symbol).count == Set(wpBook.positions.map(\.symbol)).count,
+      "no symbol appears twice — a duplicate would split a share and understate it")
+
 print("")
 if failures == 0 {
     print("✓ wallet-viz self-test: \(checks) checks passed")
@@ -1180,5 +1382,5 @@ SWIFT
 # `swiftc` to a binary, NOT `swift file1 file2 …` — that form runs the FIRST
 # file as a script and passes the rest as command-line ARGUMENTS to it, so the
 # sources were never compiled and the run exited 0 having tested nothing.
-swiftc -O -o "$TMP/selftest" "$FLOW" "$RISK" "$STABLE" "$EXPOSURE" "$USEROPS" "$CONNECTIONS" "$ALTANA" "$DRIVER"
+swiftc -O -o "$TMP/selftest" "$FLOW" "$RISK" "$STABLE" "$EXPOSURE" "$USEROPS" "$CONNECTIONS" "$ALTANA" "$STUBS" "$PORTFOLIO" "$DRIVER"
 "$TMP/selftest"
