@@ -74,6 +74,18 @@ struct WalletFace: View {
                        ? AnyShape(Circle())
                        : AnyShape(RoundedRectangle(cornerRadius: DS.Radius.appIcon(size),
                                                    style: .continuous)))
+            // Hidden, not labelled (prd §299's split). A face carries no
+            // quantity — the datum is the ADDRESS, and every one of this
+            // view's ~15 call sites already names it in the text beside the
+            // face or in the label on the slot that holds it. Speaking here
+            // would announce the same identity twice per row.
+            //
+            // Declared on the view rather than left to the caller because a
+            // face that says nothing and claims nothing is indistinguishable
+            // from one whose caller forgot, and the next call site is the one
+            // that forgets (`ChartEntrance`'s own reasoning for making its
+            // Reduce Motion parameter non-defaulted).
+            .accessibilityHidden(true)
     }
 
     // MARK: - Identicon

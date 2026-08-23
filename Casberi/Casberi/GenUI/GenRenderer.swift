@@ -1123,6 +1123,21 @@ struct ContributionGraph: View {
         // early on the trailing edge instead of growing taller.
         .aspectRatio(CGFloat(reference) / 7.0, contentMode: .fit)
         .frame(maxWidth: .infinity, alignment: .leading)
+        // The grid says its year out loud (prd §299, 2026-08-23).
+        //
+        // This was the single largest silent figure in the app: up to 371
+        // daily counts in a `Canvas`, mounted on the Photos, journal, social,
+        // GitHub and memories rooms, with no accessibility modifier anywhere
+        // in this file. A `Canvas` is not an accessibility element, so the
+        // year was not mispronounced — it was never mentioned, and the card
+        // announced its title and stopped.
+        //
+        // A nil year is the loading/unreachable skeleton, and it says so
+        // rather than going quiet: silence there is indistinguishable from a
+        // year with nothing in it, which is the one reading this grid must
+        // never give by accident.
+        .accessibilityLabel(Text(year?.spokenFigure
+                                 ?? String(localized: "Activity not loaded yet.")))
         // The press (prd §384): a tap names the day under the finger. The
         // inverse of the Canvas's own cell arithmetic, run against the same
         // constants — a Canvas has no per-cell views to hit-test, so the
@@ -1614,6 +1629,18 @@ struct DistributionHero: View {
                 Spacer(minLength: 0)
             }
         }
+        // One sentence, with the SHARES (prd §299, 2026-08-23).
+        //
+        // The legend beneath the bar names each segment and its count, so
+        // VoiceOver was not empty-handed here — but it read them as loose
+        // fragments, and the bar's actual claim is the PROPORTION, which is
+        // the one thing neither the legend nor the counts state. A reader had
+        // the parts and never the split.
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text("\(dist.title). "
+            + FigureVoice.distribution(
+                segments: segments.map { .init(label: $0.label, detail: "") },
+                counts: segments.map(\.count))))
     }
 
     private func color(_ tone: FeedInsight.Tone) -> Color {
@@ -1738,7 +1765,7 @@ struct TopicMapHero: View {
         let maxCount = max(cells.first?.count ?? 1, 1)
         InsightCard {
             InsightHeader(title: map.title, subtitle: map.subtitle)
-            UnitTreemap(count: cells.count, height: Self.boardHeight) { i in
+            UnitTreemap(count: cells.count, height: Self.boardHeight, cell: { i in
                 let cell = cells[i]
                 VStack(alignment: .leading, spacing: 2) {
                     Text(cell.label)
@@ -1759,7 +1786,22 @@ struct TopicMapHero: View {
                     }
                     .clipShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
                 }
-            }
+            // One stop per cell, and the RANK said out loud (prd §299,
+            // 2026-08-23). The cell draws its label over its count as two
+            // `Text`s, so VoiceOver read every cell as two fragments and the
+            // ordering — which is the entire claim of a rank-ordered tiling —
+            // was carried by area alone, i.e. by nothing at all off-screen.
+            //
+            // Supplied as `readout` rather than as a label of this view's own
+            // so it goes through `UnitTreemap`'s one door: the same string
+            // becomes the Mac cursor's tooltip and the spoken label, and the
+            // two can never drift apart.
+            }, readout: { i in
+                let cell = cells[i]
+                return i == 0
+                    ? String(localized: "\(cell.label), \(cell.count). Largest.")
+                    : String(localized: "\(cell.label), \(cell.count).")
+            })
         }
     }
 
@@ -4111,6 +4153,25 @@ private struct GenRunway: View {
                         }
                     }
                     .frame(height: 30)
+                    // The rail says its spread, and how many are LATE
+                    // (prd §299, 2026-08-23).
+                    //
+                    // The per-dot `dsTooltip` above carries a comment saying
+                    // overdue "is said out loud rather than left to the hue,
+                    // since the colour is the only thing carrying it" — and
+                    // `dsTooltip` is `#if targetEnvironment(macCatalyst)`, so
+                    // on a phone it compiles to nothing and that sentence was
+                    // never delivered to anyone. Lateness was hue and hue
+                    // alone: the one place the 2026-07-16 colour law was
+                    // genuinely broken rather than merely unenforced.
+                    //
+                    // `children: .ignore` and one sentence, not one stop per
+                    // dot — `WalletRunwayRail`'s own §299 treatment, and the
+                    // rows beneath already name each item in full.
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel(Text(FigureVoice.runway(
+                        dates: dots.map(\.at), now: now,
+                        overdue: dots.filter { $0.at < now }.count)))
                     HStack {
                         Text(el.str(3).isEmpty ? "now" : el.str(3))
                             .dsText(.label12).foregroundStyle(DS.textTertiary)
@@ -4250,10 +4311,10 @@ private struct GenApprovalCard: View {
             }
             HStack(spacing: DS.Space.s2) {
                 Text("Approve").dsText(.label12).foregroundStyle(.black)
-                    .padding(.horizontal, DS.Space.s4).frame(height: 32)
+                    .padding(.horizontal, DS.Space.s4).frame(minHeight: 32)
                     .background(DS.confirm, in: Capsule(style: .continuous))
                 Text("Deny").dsText(.label12).foregroundStyle(DS.textPrimary)
-                    .padding(.horizontal, DS.Space.s4).frame(height: 32)
+                    .padding(.horizontal, DS.Space.s4).frame(minHeight: 32)
                     .background(DS.fillFaint, in: Capsule(style: .continuous))
             }
         }

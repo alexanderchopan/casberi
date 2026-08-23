@@ -119,7 +119,7 @@ struct PriceObjectCard<Evidence: View>: View {
             .foregroundStyle(ink)
             .lineLimit(1)
             .padding(.horizontal, DS.Space.s2)
-            .frame(height: 24)
+            .frame(minHeight: 24)
             .background(wash, in: Capsule(style: .continuous))
     }
 

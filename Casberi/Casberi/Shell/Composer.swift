@@ -4009,7 +4009,7 @@ struct Composer: View {
                 .foregroundStyle(hasDraft || isRecording ? .white : DS.textTertiary)
                 .padding(.horizontal, hasDraft && !isRecording ? DS.Space.s3 : 0)
                 .frame(minWidth: 32)
-                .frame(height: 32)
+                .frame(minHeight: 32)
                 .background(hasDraft || isRecording ? AnyShapeStyle(DS.tint)
                                                     : AnyShapeStyle(DS.fillFaint),
                             in: Capsule(style: .continuous))
@@ -4157,7 +4157,7 @@ struct Composer: View {
         }
         .foregroundStyle(on ? DS.tint : DS.textTertiary)
         .padding(.horizontal, DS.Space.s2 + 2)
-        .frame(height: 28)
+        .frame(minHeight: 28)
         .background(on ? DS.tintDim : DS.gray100, in: Capsule(style: .continuous))
         .dsHover()
     }
@@ -4216,7 +4216,7 @@ struct Composer: View {
                             }
                             .foregroundStyle(.white)
                             .padding(.horizontal, DS.Space.s3 + 2)
-                            .frame(height: 40)
+                            .frame(minHeight: 40)
                             .background(DS.tint, in: Capsule(style: .continuous))
                             .dsHover()
                         }
@@ -4240,7 +4240,7 @@ struct Composer: View {
                             }
                             .foregroundStyle(DS.tint)
                             .padding(.horizontal, DS.Space.s3 + 2)
-                            .frame(height: 40)
+                            .frame(minHeight: 40)
                             .background(DS.tintDim, in: Capsule(style: .continuous))
                             .dsHover()
                         }
@@ -4268,7 +4268,7 @@ struct Composer: View {
                                             .foregroundStyle(DS.textPrimary)
                                     }
                                     .padding(.horizontal, DS.Space.s3 + 2)
-                                    .frame(height: 40)
+                                    .frame(minHeight: 40)
                                     .background(DS.gray100, in: Capsule(style: .continuous))
                                     .dsHover()
                                 }
@@ -4681,7 +4681,7 @@ struct Chip: View {
         }
         .foregroundStyle(style == .tint ? DS.tint : DS.textPrimary)
         .padding(.horizontal, DS.Space.s3)
-        .frame(height: 28)
+        .frame(minHeight: 28)
         .fixedSize(horizontal: true, vertical: false)
         .background(style == .tint ? DS.tintDim : DS.gray100,
                     in: Capsule(style: .continuous))

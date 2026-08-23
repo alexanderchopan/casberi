@@ -1128,7 +1128,11 @@ struct AppsScreen: View {
                     // makes "no truncation" true at four-per-row.
                     .lineLimit(2)
                     .minimumScaleFactor(0.7)
-                    .frame(height: 28, alignment: .top)
+                    // `minHeight`, so the promise above survives Dynamic Type:
+                    // a pinned 28 makes "names NEVER truncate" false at the
+                    // first accessibility size, where two scaled lines need
+                    // roughly three times it and the tile clips instead.
+                    .frame(minHeight: 28, alignment: .top)
             }
             .frame(maxWidth: .infinity)
             .contentShape(Rectangle())

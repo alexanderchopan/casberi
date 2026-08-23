@@ -72,6 +72,11 @@ struct CasberiMark: View {
             }
         }
         .frame(width: size, height: size)
+        // The app's own logo — decoration on every one of its call sites (the
+        // agent bar, the launch chrome, the account tile), never a fact. This
+        // is the class the 2026-08-13 sweep hid forty of; the mark itself was
+        // missed because it draws in a `Canvas` rather than as an `Image`.
+        .accessibilityHidden(true)
     }
 
     // MARK: - the artwork, in unit space

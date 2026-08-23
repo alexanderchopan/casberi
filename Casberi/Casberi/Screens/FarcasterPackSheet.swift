@@ -123,7 +123,7 @@ struct FarcasterPackSheet: View {
                 .dsText(.callout15).fontWeight(.semibold)
                 .foregroundStyle(followed != nil ? DS.textTertiary : .white)
                 .frame(maxWidth: .infinity)
-                .frame(height: 48)
+                .frame(minHeight: 48)
                 .background(followed != nil ? DS.gray100 : DS.tint,
                             in: RoundedRectangle(cornerRadius: DS.Radius.control, style: .continuous))
         }

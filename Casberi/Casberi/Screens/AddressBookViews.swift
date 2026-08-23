@@ -437,7 +437,7 @@ struct NewGroupSheet: View {
                 .dsText(.callout15).fontWeight(.semibold)
                 .foregroundStyle(ready ? .white : DS.textTertiary)
                 .frame(maxWidth: .infinity)
-                .frame(height: 48)
+                .frame(minHeight: 48)
                 .background(ready ? DS.tint : DS.gray100,
                             in: RoundedRectangle(cornerRadius: DS.Radius.control,
                                                  style: .continuous))

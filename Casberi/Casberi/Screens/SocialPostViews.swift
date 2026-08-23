@@ -568,7 +568,7 @@ struct SocialProfileCard: View {
                 .dsText(.label12)
                 .foregroundStyle(watch.on ? DS.tint : DS.textTertiary)
                 .padding(.horizontal, DS.Space.s3)
-                .frame(height: 28)
+                .frame(minHeight: 28)
                 .background(watch.on ? DS.tintDim : DS.gray100, in: Capsule(style: .continuous))
         }
         .buttonStyle(PressSpring())

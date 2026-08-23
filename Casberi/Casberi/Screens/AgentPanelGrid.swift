@@ -106,6 +106,27 @@ struct AgentPanelGrid: View {
         }
     }
 
+    /// One tile as one sentence — the §299 grammar applied to a card whose
+    /// figure cannot speak for itself.
+    ///
+    /// Order is deliberate and matches the eye: whose room, what the card is
+    /// called, the one reading under the figure, then the room's own subtitle.
+    /// `reading` leads `caption` because it is the fact ("$12,480 · +1.8%") and
+    /// the caption is context; a listener who stops after four words should
+    /// have heard the number.
+    ///
+    /// Every part is the ROOM's own text, never composed here — the panel is a
+    /// window onto the room (`Card.title`'s own rule), so inventing a phrase
+    /// would be the one way this sentence could describe a card the room does
+    /// not recognise.
+    static func spokenTile(_ card: AgentPanel.Card) -> String {
+        var parts = ["\(card.source): \(card.title)"]
+        if let reading = card.reading, !reading.isEmpty { parts.append(reading) }
+        let caption = card.caption.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !caption.isEmpty, caption != card.title { parts.append(caption) }
+        return parts.joined(separator: ". ")
+    }
+
     private func tile(_ card: AgentPanel.Card, slot: AgentPanel.Slot, index: Int) -> some View {
         // HUE IS IDENTITY (§336) — the brand colour the source strip and the
         // seat chips already paint, so a figure says whose room it is before a
@@ -202,7 +223,15 @@ struct AgentPanelGrid: View {
         }
         .buttonStyle(PressSpring())
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(card.source): \(card.title)")
+        // `children: .combine` merges the tile's own words and an explicit
+        // label then REPLACES them — so naming only the source and the title
+        // dropped both of the sentences the tile actually draws. The figure
+        // beside them is a `Path`/`Circle` stack that says nothing on its own
+        // (prd §299), which left the reading it illustrates unspoken too: a
+        // dial of 24 hourly marks announced itself as "GitHub: Your day" and
+        // stopped. The room's OWN words are used rather than a sentence
+        // composed here, so the tile and the room it opens can't disagree.
+        .accessibilityLabel(Text(Self.spokenTile(card)))
         .modifier(TileEntrance(index: index, reduceMotion: reduceMotion))
     }
 }

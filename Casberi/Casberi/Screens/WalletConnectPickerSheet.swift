@@ -229,7 +229,7 @@ struct WalletConnectPickerSheet: View {
                 .dsText(.callout15).fontWeight(.semibold)
                 .foregroundStyle(n == 0 && !closing ? DS.textTertiary : .white)
                 .frame(maxWidth: .infinity)
-                .frame(height: 48)
+                .frame(minHeight: 48)
                 // A hand-rolled button paints its own background, and
                 // `.disabled` dims a label, not a fill — so the fill swaps
                 // itself or an inert button reads live (§83).

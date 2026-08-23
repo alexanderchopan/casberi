@@ -63,7 +63,7 @@ struct DemoBanner: View {
                     .dsText(.subhead13).fontWeight(.semibold)
                     .foregroundStyle(DS.textPrimary)
                     .padding(.horizontal, DS.Space.s3)
-                    .frame(height: 30)
+                    .frame(minHeight: 30)
                     .contentShape(Rectangle())
             }
             .buttonStyle(PressSpring())

@@ -102,7 +102,11 @@ struct UnitTreemap<Cell: View>: View {
                         // rows already speak. Lives here rather than at each call
                         // site so the two maps can't drift on the beat.
                         .settleIn(delay: Double(i) * 0.06)
-                        .dsTooltipIfPresent(readout?(i))
+                        // Was `dsTooltipIfPresent`, which is Catalyst-only, so
+                        // the readout named a cell on Mac and nowhere else —
+                        // on the figure whose own doc says the cells a person
+                        // needs named are the ones too small to carry a label.
+                        .dsReadout(readout?(i))
                 }
             }
         }

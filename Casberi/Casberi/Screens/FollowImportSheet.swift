@@ -199,7 +199,7 @@ struct FollowImportSheet: View {
                 .dsText(.callout15).fontWeight(.semibold)
                 .foregroundStyle(n == 0 ? DS.textTertiary : .white)
                 .frame(maxWidth: .infinity)
-                .frame(height: 48)
+                .frame(minHeight: 48)
                 // A hand-rolled button paints its own background, and
                 // `.disabled` dims a label, not a fill — so the fill swaps
                 // itself or an inert button reads live (honesty rule, §83).

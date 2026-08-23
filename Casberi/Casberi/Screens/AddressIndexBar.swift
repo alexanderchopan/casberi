@@ -108,11 +108,15 @@ struct AddressIndexBar: View {
                     }
             )
             .padding(.trailing, 2)
-            // One control, not twenty-seven — VoiceOver scrubs the list with
-            // the rotor and reads the headings themselves; a per-letter button
-            // here would put the whole alphabet in its path twice.
-            .accessibilityElement()
-            .accessibilityLabel(Text("Index"))
+            // Hidden, not labelled — VoiceOver scrubs the list with the rotor
+            // and reads the headings themselves, so a per-letter button here
+            // would put the whole alphabet in its path twice.
+            //
+            // An `.accessibilityElement()` and an `.accessibilityLabel("Index")`
+            // stood above this line and could never be heard: `hidden` removes
+            // the element the label was naming. Dead either way, but the pair
+            // read as coverage — which is worse than the silence, because it is
+            // what a reader checking this control would have found.
             .accessibilityHidden(true)
         }
     }

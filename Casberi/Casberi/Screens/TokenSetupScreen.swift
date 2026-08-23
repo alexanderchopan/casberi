@@ -389,7 +389,7 @@ struct TokenSetupScreen: View {
                             }
                             .foregroundStyle(codeCopied ? DS.confirm : DS.tint)
                             .padding(.horizontal, DS.Space.s3)
-                            .frame(height: 34)
+                            .frame(minHeight: 34)
                             .background(DS.gray100, in: Capsule(style: .continuous))
                             .contentShape(Capsule(style: .continuous))
                         }

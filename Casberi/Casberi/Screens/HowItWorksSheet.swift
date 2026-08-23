@@ -223,7 +223,7 @@ struct HowItWorksSheet: View {
                             .dsText(.body17)
                             .foregroundStyle(.white)
                             .frame(maxWidth: .infinity)
-                            .frame(height: 48)
+                            .frame(minHeight: 48)
                             // Floating chrome — glass is the floating layer's
                             // law. The glass lives INSIDE the label so the
                             // Button owns the whole hit region: interactive
@@ -251,7 +251,7 @@ struct HowItWorksSheet: View {
                             .dsText(.callout15)
                             .foregroundStyle(DS.textSecondary)
                             .frame(maxWidth: .infinity)
-                            .frame(height: 44)
+                            .frame(minHeight: 44)
                             .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)

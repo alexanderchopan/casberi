@@ -85,6 +85,36 @@ struct ContributionYear {
         weeks.reduce(0) { $0 + $1.days.filter { $0.count > 0 }.count }
     }
 
+    /// The busiest single day, and when — the peak the ramp draws as the
+    /// darkest cell. `max(by:)` keeps the FIRST of a tie, so a year with two
+    /// equal peaks names the earlier one rather than picking by array order,
+    /// which is stable across redraws and is what "the day it happened" means
+    /// when it happened twice.
+    var peak: ContributionDay? {
+        let lit = weeks.flatMap(\.days).filter { $0.count > 0 }
+        return lit.max { $0.count < $1.count }
+    }
+
+    /// What the grid says out loud (prd §299 — "a drawing either speaks or is
+    /// hidden, never silent-and-present").
+    ///
+    /// This is the single largest thing the 2026-08-23 sweep found silent: a
+    /// `Canvas` of up to 371 daily counts, drawn on the Photos, journal,
+    /// social, GitHub and memories rooms, with no accessibility modifier of any
+    /// kind anywhere in its file. A `Canvas` is not an accessibility element,
+    /// so VoiceOver did not mispronounce the year — it never mentioned it.
+    ///
+    /// It lives HERE rather than on the view because these are facts about the
+    /// data, and `ContributionYear` is Foundation-only and already the thing a
+    /// harness can compile whole. The view's job is to speak it, not derive it.
+    var spokenFigure: String {
+        FigureVoice.heatmap(total: total,
+                            activeDays: activeDays,
+                            spanDays: weeks.reduce(0) { $0 + $1.days.count },
+                            busiest: peak?.count ?? 0,
+                            busiestDate: peak?.date)
+    }
+
     /// GitHub's contributionLevel enum → the 0…4 intensity the grid draws.
     static func level(_ raw: String?) -> Int {
         switch raw {

@@ -399,7 +399,7 @@ struct BridgeFieldRow: View {
                 .dsText(.callout15).fontWeight(.semibold)
                 .foregroundStyle(text.isEmpty ? DS.textTertiary : .white)
                 .padding(.horizontal, DS.Space.s4)
-                .frame(height: 36)
+                .frame(minHeight: 36)
                 .background(text.isEmpty ? AnyShapeStyle(DS.gray200) : AnyShapeStyle(DS.tint),
                             in: Capsule(style: .continuous))
                 .animation(DS.Motion.standard, value: text.isEmpty)

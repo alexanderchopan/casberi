@@ -33,7 +33,17 @@ perfectly for whoever is testing it:
   · TWO icon-only buttons with no label, where VoiceOver falls back to reading
     the SF Symbol's own name.
 
-THREE CHECKS, all static, none needing a build.
+A FOURTH SHAPE, found 2026-08-23, is the one §299 already had a ruling for and
+no script: "a drawing either speaks or is hidden, never silent-and-present."
+Adopted as prose and applied by hand to the four figures in front of it that
+day, it had drifted exactly as every other remembered rule in this repo has —
+a `Canvas` of 371 daily counts, both runways, every `AgentPanelGrid` figure and
+the app's own logo carried no accessibility modifier of any kind. A bare
+SwiftUI `Shape` is not an accessibility element, so none of them was
+mispronounced; each was simply absent, which is invisible to a build, to a
+screen sweep and to the three checks below.
+
+FOUR CHECKS, all static, none needing a build.
 
   1. AN ICON-ONLY BUTTON IS LABELLED. A `Button` whose label draws an
      `Image(systemName:)` and no words must carry an `accessibilityLabel`.
@@ -47,13 +57,37 @@ THREE CHECKS, all static, none needing a build.
      `DS.Hit.min` — via `dsTapTarget()`, an explicit frame at or above the
      floor, or a named size token that already encodes it.
 
+  4. A WORDLESS DRAWING DECLARES A STANCE. A `struct … : View` that draws from
+     data (`Path`/`Canvas`/`Chart`, a trim, an extent multiplied by a value)
+     and contains NO words of its own must either speak
+     (`accessibilityLabel`/`Value`/`ChartDescriptor`/`dsReadout`) or be hidden.
+     Which of the two is right is the author's call and this never guesses:
+     hiding an identicon and labelling a heatmap are both correct.
+
+     WORDLESSNESS IS THE TRIGGER, and that narrowing is the whole reason the
+     check is usable. A bar beside its own printed number is a bare `Shape` —
+     already silent, exactly as §299 wants — so demanding an explicit
+     `accessibilityHidden(true)` there is bureaucracy rather than access.
+     Measured before it shipped: the unnarrowed form reports 16 findings on a
+     clean tree of which 11 are correct code. Narrowed, it reports 5, and every
+     one was a real decision nobody had made. A wordless drawing is the case
+     where silence LOSES THE FACT — there is no text anywhere in the view to
+     fall back on, so the reader never learns the figure was there.
+
+     Its ceiling, stated rather than implied: this proves a sentence is
+     ATTACHED, never that the sentence is TRUE.
+     `scripts/figure-voice-selftest.sh` compiles the composers whole and
+     mutation-tests the arithmetic. The two are a pair; neither is sufficient
+     alone, because a correct sentence with no caller and a wired-up lie are
+     both green to the other one.
+
 THE FLOOR IS READ OUT OF `DesignTokens.swift`, never hardcoded here. A lint that
 keeps its own copy of the number it is enforcing is one edit away from enforcing
 a value the app no longer uses — the same reasoning that makes
 `swiftdata-liveness-audit.py` parse `Thing`'s stored properties at run time and
 `secret-scan-selftest.py` read its regexes out of the shipped source.
 
-FOUR DELIBERATE NON-CHECKS, so this can't become a lint that cries wolf (the
+THREE DELIBERATE NON-CHECKS, so this can't become a lint that cries wolf (the
 liveness audit's stated lesson, and `design-motion-audit`'s):
 
   · It never judges a label's QUALITY. It cannot tell a true sentence from a
@@ -64,15 +98,23 @@ liveness audit's stated lesson, and `design-motion-audit`'s):
     same thing; labelling them is VoiceOver noise, not access.
   · It never flags a Button that carries WORDS. Its target is as wide as its
     text and its label is its text — both checks are satisfied by construction.
-  · It never asks a DRAWING to be labelled. The sweep checked this directly and
-    the answer was that the design law already covers it: every informative
-    drawing in the app is either labelled (`GnosisPayRoomCard.monthStrip`,
-    `SafeRoomCard.ring`) or hidden beside text stating the same fact (the
-    Uniswap range bar beside its "Idle 3d" pill, the melt bar beside "N votes
-    left", the deposit share beside its printed percent). The lead `ShareBar`s
-    are always exactly full — `top` is the lead's own count — so they are scale
-    anchors carrying no information, and hiding them is correct. Encoding "a
-    drawing must speak" here would fire on all of those and be wrong every time.
+  · It never asks a drawing to SPEAK rather than be hidden. Check 4 demands a
+    stance and accepts either, because the right one depends on what sits
+    beside the figure and no text check can see that: the Uniswap range bar
+    beside its "Idle 3d" pill, the melt bar beside "N votes left" and the
+    deposit share beside its printed percent are all correctly mute, while
+    `GnosisPayRoomCard.monthStrip` and `SafeRoomCard.ring` are correctly
+    labelled. The lead `ShareBar`s are always exactly full — `top` is the
+    lead's own count — so they are scale anchors carrying no information at
+    all, and hiding them is right.
+
+    NOTE the 2026-08-13 wording of this entry claimed the design law already
+    covered drawings and that no check was needed. That was true of the
+    figures it had looked at and false of the app: ten days later the sweep
+    found twelve informative drawings with nothing on them, including the
+    largest one in the product. The entry is kept in amended form rather than
+    deleted, because "we checked and the convention holds" is precisely the
+    reasoning every rule in this repo was written down to stop relying on.
 
 Usage:  accessibility-audit.py [--self-test]
 """
@@ -136,6 +178,27 @@ HIDDEN_SURFACE = re.compile(r"accessibilityHidden\(\s*true\s*\)")
 ESCAPE_ACTION = re.compile(r"accessibilityAction\(\s*\.escape\s*\)")
 
 WORDS = re.compile(r"\bText\(|\bLabel\(|dsText|LocalizedStringKey|String\(localized:")
+
+# --- Check 4 -----------------------------------------------------------------
+# A DRAWING SIZED FROM DATA. The first three patterns are unambiguous drawings;
+# the last two are `design-motion-audit.py`'s own `DRAWS_RE`, reused verbatim
+# rather than re-derived so the two audits can never disagree about what counts
+# as a figure — a shape whose extent is multiplied by a value, or a ring trimmed
+# to one.
+DRAWS_FROM_DATA = re.compile(
+    r"\bPath\s*\{|\bCanvas\s*\{|\bChart\("
+    r"|\.trim\(from:\s*[^,]+,\s*to:\s*(?!1\))"
+    r"|\.frame\((?:width|height):[^)]*\*"
+)
+
+# What satisfies check 4: the view has taken a POSITION on what it says. Either
+# stance is acceptable — §299's rule is a split, not a demand that every drawing
+# speak. `dsReadout` is the treemap-cell form of "speaks".
+FIGURE_STANCE = re.compile(
+    r"accessibilityLabel|accessibilityValue|accessibilityHidden"
+    r"|accessibilityElement|accessibilityChartDescriptor"
+    r"|accessibilityRepresentation|dsReadout\("
+)
 
 
 # --------------------------------------------------------------------------
@@ -332,6 +395,53 @@ def audit_text(path: str, raw: str, floor: int):
                       "contentShape + onTapGesture with no trait or action — "
                       "invisible to VoiceOver; add dsTapCard() or dsCardLead()"))
 
+    # --- CHECK 4: a wordless drawing declares a stance ----------------------
+    #
+    # §299's rule — "a drawing either speaks or is hidden, never
+    # silent-and-present" — was adopted as prose and applied by hand, and the
+    # 2026-08-23 sweep found the predictable result: a `Canvas` of 371 daily
+    # counts, both runways and every agent-panel figure with no accessibility
+    # modifier of any kind. This is that ruling as a script.
+    #
+    # THE TRIGGER IS WORDLESSNESS, and that narrowing is the whole reason this
+    # check is usable. A bare SwiftUI `Shape` is NOT an accessibility element,
+    # so a bar sitting beside its own printed number is already silent in
+    # exactly the way §299 wants it — demanding an explicit
+    # `accessibilityHidden(true)` there is bureaucracy, not access, and it
+    # fires on `LeaderboardHero`, `GenBars`, `WalletBalanceHeadline` and eight
+    # more views that are all behaving correctly. Measured before it shipped:
+    # the unnarrowed form reports 16 findings of which 11 are correct code,
+    # which is a lint that gets turned off within a week (the liveness audit's
+    # stated lesson, and `design-motion-audit`'s). Narrowed to figures with no
+    # words in them at all, it reports 5, and every one is a real decision
+    # nobody made.
+    #
+    # A wordless data drawing is the case where silence LOSES THE FACT: there
+    # is no text anywhere in the view for VoiceOver to fall back on, so the
+    # figure contributes nothing and the reader never learns it was there.
+    #
+    # It does NOT judge which stance is right. Hiding an identicon and
+    # labelling a heatmap are both correct, and a check that guessed between
+    # them would be arguing about content it cannot see.
+    for m in re.finditer(r"struct\s+(\w+)\s*:\s*[^{\n]*\bView\b[^{\n]*\{", src):
+        name = m.group(1)
+        o = src.index("{", m.start())
+        body = src[o:brace_span(src, o)]
+        if not DRAWS_FROM_DATA.search(body):
+            continue
+        if WORDS.search(body):
+            continue  # has its own words; a silent shape beside them is correct
+        if FIGURE_STANCE.search(body):
+            continue
+        line = src[:m.start()].count("\n") + 1
+        if f"{os.path.basename(path)}:{line}" in KNOWN_EXEMPT:
+            continue
+        found.append(("silent-drawing", line,
+                      f"{name} draws from data, carries no words, and declares "
+                      "no accessibility stance — VoiceOver gets nothing at all. "
+                      "Label it, or accessibilityHidden(true) if the fact is "
+                      "already stated beside it (prd §299)"))
+
     return found
 
 
@@ -527,6 +637,77 @@ struct J: View {
 """
 
 
+# --- Check 4 fixtures -------------------------------------------------------
+# A `Canvas` of counts with nothing to say — build 2026-08-23's `ContributionGraph`.
+DIRTY_SILENT_DRAWING = """
+struct YearGrid: View {
+    let year: Year?
+    var body: some View {
+        Canvas { ctx, size in
+            for c in 0..<53 { ctx.fill(Path(cell(c)), with: .color(ink(c))) }
+        }
+        .frame(maxWidth: .infinity)
+    }
+}
+"""
+
+CLEAN_DRAWING_SPEAKS = """
+struct YearGrid: View {
+    let year: Year?
+    var body: some View {
+        Canvas { ctx, size in
+            for c in 0..<53 { ctx.fill(Path(cell(c)), with: .color(ink(c))) }
+        }
+        .accessibilityLabel(Text(year?.spokenFigure ?? ""))
+    }
+}
+"""
+
+CLEAN_DRAWING_HIDDEN = """
+struct Blockie: View {
+    let address: String
+    var body: some View {
+        Canvas { ctx, size in
+            ctx.fill(Path(CGRect(origin: .zero, size: size)), with: .color(bg))
+        }
+        .accessibilityHidden(true)
+    }
+}
+"""
+
+# THE DISCRIMINATING ONE. This is the narrowing that makes check 4 usable at
+# all: a bar drawn beside its own printed number is a bare `Shape`, which is
+# not an accessibility element, so it is ALREADY silent in exactly the way
+# §299 wants. Measured before this shipped — without this exclusion the check
+# reports 16 findings on a clean tree of which 11 are correct code, and a lint
+# that fires on correct code gets turned off within a week.
+CLEAN_DRAWING_HAS_WORDS = """
+struct Bars: View {
+    let rows: [Row]
+    var body: some View {
+        ForEach(rows) { row in
+            HStack {
+                Text(row.label)
+                Capsule().frame(width: barW * CGFloat(row.value) / CGFloat(maxV))
+                Text(row.detail)
+            }
+        }
+    }
+}
+"""
+
+CLEAN_DRAWING_READOUT = """
+struct MapCell: View {
+    let readout: ((Int) -> String?)?
+    var body: some View {
+        Canvas { ctx, size in ctx.fill(Path(rect), with: .color(fill)) }
+            .frame(width: uw * CGFloat(f.2), height: uh * CGFloat(f.3))
+            .dsReadout(readout?(i))
+    }
+}
+"""
+
+
 def self_test() -> bool:
     floor = 44
     cases = [
@@ -540,6 +721,11 @@ def self_test() -> bool:
         ("clean: hidden scrim beside a modal's escape", CLEAN_HIDDEN_SCRIM, set()),
         ("dirty: hidden tap with no escape to answer for it",
          DIRTY_HIDDEN_NO_ESCAPE, {"untraited-tap-target"}),
+        ("dirty: wordless drawing with no stance", DIRTY_SILENT_DRAWING, {"silent-drawing"}),
+        ("clean: the same drawing, labelled", CLEAN_DRAWING_SPEAKS, set()),
+        ("clean: the same drawing, hidden", CLEAN_DRAWING_HIDDEN, set()),
+        ("clean: a bar beside its own number", CLEAN_DRAWING_HAS_WORDS, set()),
+        ("clean: a treemap cell wired through dsReadout", CLEAN_DRAWING_READOUT, set()),
     ]
     ok = True
     for name, text, expected in cases:

@@ -161,6 +161,19 @@ struct HeroSourceMix: View {
             }
         }
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        // One sentence for the tile, in rank order (prd §299, 2026-08-23).
+        //
+        // The cells draw a monogram and a name, so VoiceOver read three loose
+        // names in whatever order it walked them — and the ONE thing this
+        // figure claims is which is biggest, which lives in the sizes alone.
+        //
+        // No share is spoken: §213 forbids these cells a count, and the tile's
+        // claim is rank rather than magnitude. `ranking`'s detail-less form is
+        // built for exactly this.
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(FigureVoice.ranking(
+            rows: cells.prefix(3).map { .init(label: $0.name, detail: "") },
+            shown: min(cells.count, 3))))
     }
 
     private func bigCell(_ cell: WidgetSourceCell) -> some View {

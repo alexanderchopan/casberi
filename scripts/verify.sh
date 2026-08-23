@@ -1182,6 +1182,34 @@ harness "Receipts-insight pure-logic self-test" "receipts-insight self-test" "sc
 # render perfectly, and are simply wrong.
 harness "Room-perf invariants self-test" "room-perf self-test" "scripts/room-perf-selftest.sh" "the room-perf self-test failed — run scripts/room-perf-selftest.sh"
 
+# What a DRAWING says out loud (prd §299, 2026-08-23). Compiles
+# `Casberi/Shared/FigureVoice.swift` whole — the sentences a heatmap, a
+# runway, a ranked board, a split bar and a curve speak to VoiceOver.
+#
+# The reason this deserves a harness is stronger than for any visible reading
+# in the app: a wrong number on a card is checkable by whoever is looking at
+# the card, and a wrong number in an accessibility label is heard by somebody
+# who by definition cannot see the drawing it describes. There is no second
+# opinion anywhere in the loop, and every failure is invisible to the build,
+# to the screen sweep and to every audit — same pixels, same card, green pass.
+#
+# What it catches: a heatmap that says how MUCH without how many DAYS (300
+# things on four days and 300 across three hundred then read identically,
+# which is the one reading the grid exists to give); a peak count floating
+# free of any date; A RUNWAY THAT NEVER SAYS HOW MANY ARE LATE — the
+# load-bearing one, since `GenRunway` and the widget's `HeroRunway` carry
+# lateness in HUE ALONE with no tooltip on iOS, the single place the
+# 2026-07-16 colour law was genuinely broken rather than merely unenforced;
+# "next" picked from dots already gone; a ranked figure dropping its folded
+# tail (§307's silent truncation, which looks exactly like nothing to
+# truncate); a share over the wrong denominator; and a move that rounds away
+# being called "up", which reintroduces the claim `isFlat` refuses to make.
+#
+# It is HALF a guarantee and says so: it proves the sentence is right, never
+# that it is attached to anything. `accessibility-audit.py` check 4 holds the
+# wiring, and a correct composer with no caller is green to this one alone.
+harness "Figure-voice pure-logic self-test" "figure-voice self-test" "scripts/figure-voice-selftest.sh" "the figure-voice self-test failed — run scripts/figure-voice-selftest.sh"
+
 # The design system's first mechanical check (prd §299). Every other rule in
 # this file is enforced by a script; the design system was enforced by memory,
 # which is how fourteen data drawings shipped with no entrance and how the

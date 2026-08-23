@@ -496,6 +496,10 @@ private struct GhostShimmer: View {
                     phase = 1
                 }
             }
+            // A loading skeleton stands for a fact that has not arrived, so it
+            // has none to state. The chart it is standing in for announces
+            // itself when it lands.
+            .accessibilityHidden(true)
     }
 }
 

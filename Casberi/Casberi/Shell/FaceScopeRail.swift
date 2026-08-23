@@ -306,7 +306,12 @@ struct FaceScopeRail: View {
                         .lineLimit(1)
                 }
             }
-            .frame(height: slotHeight, alignment: namesInRoom ? .center : .top)
+            // `minHeight`: `slotHeight` reserves a hardcoded 16pt for the
+            // caption, which is a `label12` and so needs roughly 43 at the
+            // largest accessibility size. Pinned, the name under every face
+            // was cut off; a floor keeps the rail's rhythm at every ordinary
+            // size and lets it grow rather than clip at the extremes.
+            .frame(minHeight: slotHeight, alignment: namesInRoom ? .center : .top)
             // A 44pt-wide slot is the touch floor; the extra width is what gives
             // a name room to read rather than truncate at the face — see
             // `slotWidth` for why a rail that names elsewhere gives it back.

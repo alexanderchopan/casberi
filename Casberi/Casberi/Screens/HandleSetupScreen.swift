@@ -715,7 +715,7 @@ struct HandleSetupScreen: View {
                     .dsText(.label12).foregroundStyle(DS.textTertiary)
                     .lineLimit(1)
             }
-            .frame(height: 28, alignment: .top)
+            .frame(minHeight: 28, alignment: .top)
         }
         .frame(width: 74)
         .contentShape(Rectangle())
@@ -751,7 +751,7 @@ struct HandleSetupScreen: View {
                         .foregroundStyle(DS.textTertiary)
                 }
             Text("Watch").dsText(.label12).foregroundStyle(DS.textTertiary)
-                .frame(height: 28, alignment: .top)
+                .frame(minHeight: 28, alignment: .top)
         }
         .frame(width: 74)
     }

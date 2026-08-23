@@ -191,7 +191,7 @@ struct PurchaseStageView: View {
                         .dsText(.heading17)
                         .foregroundStyle(on ? Color.black : DS.textTertiary)
                         .frame(maxWidth: .infinity)
-                        .frame(height: 38)
+                        .frame(minHeight: 38)
                         .background(on ? nutriColor(letter) : DS.fillFaint,
                                     in: RoundedRectangle(cornerRadius: DS.Radius.card,
                                                          style: .continuous))

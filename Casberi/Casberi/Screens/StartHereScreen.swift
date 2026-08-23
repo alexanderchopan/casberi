@@ -209,7 +209,7 @@ struct StartHereScreen: View {
                     .dsText(.body17)
                     .foregroundStyle(DS.textSecondary)
                     .frame(maxWidth: .infinity)
-                    .frame(height: 44)
+                    .frame(minHeight: 44)
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)

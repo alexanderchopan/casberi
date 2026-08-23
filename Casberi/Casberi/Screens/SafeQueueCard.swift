@@ -387,7 +387,7 @@ struct SafeSignBlock: View {
                 }
                 .foregroundStyle(.white)
                 .frame(maxWidth: .infinity)
-                .frame(height: 50)
+                .frame(minHeight: 50)
                 .background(signing ? DS.gray100 : DS.tint, in: Capsule(style: .continuous))
                 .contentShape(Capsule(style: .continuous))
             }

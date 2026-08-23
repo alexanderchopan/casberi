@@ -4126,7 +4126,7 @@ struct RootShell: View {
                         .dsText(.label12).fontWeight(.semibold)
                         .foregroundStyle(.white)
                         .padding(.horizontal, DS.Space.s3)
-                        .frame(height: 28)
+                        .frame(minHeight: 28)
                 }
                 .buttonStyle(.plain)
                 .dsGlassProminent(tint: DS.tint, cornerRadius: DS.Radius.pill)

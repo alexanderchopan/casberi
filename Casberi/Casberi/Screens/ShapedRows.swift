@@ -1203,6 +1203,23 @@ struct Sparkline: View {
     let closes: [Double]
     let up: Bool
 
+    /// The move the curve draws, as a percentage — the only unit that is true
+    /// for every row this component serves (tokens, stocks, market points).
+    ///
+    /// `up` is the CALLER's verdict and stays the one that decides the stroke,
+    /// so the drawing is untouched; the sentence prefers the closes when they
+    /// can be read, because they carry the size the flag cannot. A first close
+    /// of zero yields no percentage — dividing by it would invent one — so the
+    /// figure falls back to the flag's bare direction.
+    private var spoken: String {
+        guard let first = closes.first, let last = closes.last, first != 0 else {
+            return FigureVoice.trend(direction: up ? .up : .down, move: nil)
+        }
+        let change = (last - first) / abs(first)
+        return FigureVoice.trend(direction: .of(change: change),
+                                 move: TokenChartStyle.changeText(change))
+    }
+
     var body: some View {
         Canvas { ctx, canvasSize in
             guard closes.count >= 2,
@@ -1227,7 +1244,11 @@ struct Sparkline: View {
                                           dash: up ? [] : [3, 2]))
         }
         .frame(width: 46, height: 14)
-        .accessibilityLabel(up ? Text("Price trend, up") : Text("Price trend, down"))
+        // The label carried DIRECTION and nothing else, so a curve that had
+        // crept a tenth of a percent and one that had halved were the same
+        // three words. The dash above already survives greyscale; this is the
+        // same fact for someone who never sees the stroke at all.
+        .accessibilityLabel(Text(spoken))
         // A draw-on reveal was built here and REVERTED (review 2026-07-11):
         // row @State resets on List recycling, so the wipe replayed on every
         // scroll pass — motion claiming a data arrival that didn't happen.
@@ -1820,6 +1841,11 @@ struct WalletBlockie: View {
         }
         .frame(width: size, height: size)
         .clipShape(Circle())
+        // Identity, not information (prd §299's split): the blockie is the
+        // address drawn as a pattern, and the row beside it already says the
+        // address. Speaking the pattern would be a second, worse rendition of
+        // a name VoiceOver has just read.
+        .accessibilityHidden(true)
     }
 
     /// djb2 over the lowercased address — stable per address, spread enough
@@ -2133,13 +2159,13 @@ struct ApprovalCard: View {
             HStack(spacing: DS.Space.s2) {
                 Button(action: onApprove) {
                     Text("Approve").dsText(.label12).foregroundStyle(.black)
-                        .padding(.horizontal, DS.Space.s4).frame(height: 32)
+                        .padding(.horizontal, DS.Space.s4).frame(minHeight: 32)
                         .background(DS.confirm, in: Capsule(style: .continuous))
                 }
                 .buttonStyle(PressSpring())
                 Button(action: onDeny) {
                     Text("Deny").dsText(.label12).foregroundStyle(DS.textPrimary)
-                        .padding(.horizontal, DS.Space.s4).frame(height: 32)
+                        .padding(.horizontal, DS.Space.s4).frame(minHeight: 32)
                         .background(DS.fillFaint, in: Capsule(style: .continuous))
                 }
                 .buttonStyle(PressSpring())

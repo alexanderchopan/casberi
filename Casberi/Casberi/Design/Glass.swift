@@ -357,6 +357,38 @@ extension View {
         #endif
     }
 
+    /// A figure cell's own readout, said to BOTH surfaces (2026-08-23, the
+    /// VoiceOver-on-drawings sweep; prd §299).
+    ///
+    /// **The bug this fixes is `dsTooltip`'s gate read as an answer.** A
+    /// treemap cell's `readout` was wired to `dsTooltipIfPresent`, which
+    /// compiles to `self` on anything that is not Catalyst — so the one
+    /// sentence naming a cell existed on Mac, under a cursor, and NOWHERE on a
+    /// phone: not drawn (the small cells are exactly the ones whose label is
+    /// clipped, which is why the readout was written) and not spoken. The gate
+    /// is right about the HINT and was never a ruling about the LABEL.
+    ///
+    /// `children: .combine` rather than `.ignore`, so a cell that draws its own
+    /// words keeps them when no readout was supplied, and the readout simply
+    /// overrides when one was — one stop per cell either way, which is the
+    /// §299 grammar ("one figure, one sentence") one level down.
+    ///
+    /// On Catalyst this sets the tooltip AND the label from the same string, so
+    /// the two can never disagree. That is a deliberate trade: VoiceOver on Mac
+    /// may hear the phrase once as the label and once as the element's help,
+    /// which is a small cost against a cell that is otherwise unnamed on the
+    /// platform where these maps are biggest.
+    @ViewBuilder
+    func dsReadout(_ text: String?) -> some View {
+        if let text, !text.trimmingCharacters(in: .whitespaces).isEmpty {
+            dsTooltip(text)
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel(Text(text))
+        } else {
+            self
+        }
+    }
+
     /// `dsTooltip` for a name that may not exist. An empty or nil readout must
     /// draw NO tooltip rather than an empty one — an empty `.help()` renders as
     /// a blank yellow rectangle under the cursor, which reads as a rendering

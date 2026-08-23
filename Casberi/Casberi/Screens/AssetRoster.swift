@@ -81,7 +81,7 @@ struct AssetRosterSlot<Mark: View>: View {
                     TokenDeltaPill(change: change, label: "", compact: true)
                 }
             }
-            .frame(height: 52, alignment: .top)
+            .frame(minHeight: 52, alignment: .top)
         }
         .frame(width: Self.slotWidth)
         .contentShape(Rectangle())
@@ -112,7 +112,7 @@ struct AssetRosterAddSlot: View {
                 }
             Text("Watch")
                 .dsText(.label12).foregroundStyle(DS.textTertiary)
-                .frame(height: 52, alignment: .top)
+                .frame(minHeight: 52, alignment: .top)
         }
         .frame(width: AssetRosterSlot<EmptyView>.slotWidth)
         .contentShape(Rectangle())

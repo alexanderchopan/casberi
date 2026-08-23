@@ -521,11 +521,28 @@ struct MetricDisc: View {
             .delay(ChartEntrance.lead)) { entered = true }
     }
 
+    /// The disc draws TWO facts and spoke one. The curve's direction was named
+    /// and the milestone ring — the whole reason this is a disc rather than a
+    /// line — was never mentioned at all, so a metric one percent from a rung
+    /// it has been climbing for a month announced itself as "trend, up".
+    ///
+    /// The ring is stated as a share rather than as the rung it is chasing:
+    /// `MetricDisc` is handed `progress` alone and does not know what the next
+    /// milestone IS, and naming a number it was not given is the one way this
+    /// sentence could be confidently wrong.
     private var accessibilityLine: Text {
-        guard let change, !TokenChartStyle.isFlat(change) else {
-            return Text("Metric trend, flat")
+        var parts: [String] = []
+        if let change, !TokenChartStyle.isFlat(change) {
+            parts.append(FigureVoice.trend(direction: .of(change: change),
+                                           move: TokenChartStyle.changeText(change)))
+        } else {
+            parts.append(FigureVoice.trend(direction: .flat, move: nil))
         }
-        return change < 0 ? Text("Metric trend, down") : Text("Metric trend, up")
+        if progress > 0 {
+            let pct = Int((min(max(progress, 0), 1) * 100).rounded())
+            parts.append(String(localized: "\(pct) percent to the next milestone."))
+        }
+        return Text(parts.joined(separator: " "))
     }
 
     /// The curve, inset inside the disc. The inset is applied to the POINTS,

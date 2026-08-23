@@ -242,7 +242,7 @@ struct AccountDetailSheet: View {
         }
         .foregroundStyle(fg)
         .frame(maxWidth: .infinity)
-        .frame(height: 54)
+        .frame(minHeight: 54)
         .background(bg, in: Capsule(style: .continuous))
         .contentShape(Capsule(style: .continuous))
     }
@@ -361,7 +361,7 @@ struct AccountDetailSheet: View {
                 }
                 .foregroundStyle(DS.confirm)
                 .padding(.horizontal, DS.Space.s4)
-                .frame(height: 34)
+                .frame(minHeight: 34)
                 .background(DS.confirm.opacity(0.13), in: Capsule(style: .continuous))
                 // Only with a key configured — an unkeyed install reads
                 // exactly as it did before. The sentence names the AGENT (who
@@ -604,7 +604,7 @@ struct AccountDetailSheet: View {
                     .autocorrectionDisabled()
                     .dsText(.callout15)
                     .padding(.horizontal, DS.Space.s3)
-                    .frame(height: 44)
+                    .frame(minHeight: 44)
                     .background(DS.fillFaint, in: Capsule(style: .continuous))
                 // The §83 corollary: `.disabled` dims a PLAIN-style button's
                 // label, never a background you painted yourself — so a
@@ -620,7 +620,7 @@ struct AccountDetailSheet: View {
                         .dsText(.callout15).fontWeight(.semibold)
                         .foregroundStyle(keySaveOff ? DS.textTertiary : .white)
                         .padding(.horizontal, DS.Space.s4)
-                        .frame(height: 44)
+                        .frame(minHeight: 44)
                         .background(keySaveOff ? AnyShapeStyle(DS.gray200) : AnyShapeStyle(DS.tint),
                                     in: Capsule(style: .continuous))
                         .animation(DS.Motion.standard, value: keySaveOff)

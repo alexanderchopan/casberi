@@ -59,7 +59,7 @@ struct BridgeDetailScreen: View {
                             } label: {
                                 Text("Reconnect")
                                     .dsText(.body17).foregroundStyle(.white)
-                                    .frame(maxWidth: .infinity).frame(height: 44)
+                                    .frame(maxWidth: .infinity).frame(minHeight: 44)
                                     .dsGlassProminent(tint: DS.tint, cornerRadius: DS.Radius.pill)
                             }
                             .buttonStyle(.plain)
@@ -126,13 +126,13 @@ struct BridgeDetailScreen: View {
                             DSHaptic.tap()
                         }
                         .dsText(.body17).foregroundStyle(DS.textPrimary)
-                        .frame(maxWidth: .infinity).frame(height: 44)
+                        .frame(maxWidth: .infinity).frame(minHeight: 44)
                         .background(DS.gray100, in: Capsule(style: .continuous))
                         .buttonStyle(PressSpring())
 
                         Button("Remove") { confirmRemove = true }
                             .dsText(.body17).foregroundStyle(DS.destructive)
-                            .frame(maxWidth: .infinity).frame(height: 44)
+                            .frame(maxWidth: .infinity).frame(minHeight: 44)
                             .background(DS.gray100, in: Capsule(style: .continuous))
                             .buttonStyle(PressSpring())
                     }
@@ -175,7 +175,7 @@ struct BridgeDetailScreen: View {
             } label: {
                 Text("Choose more photos")
                     .dsText(.body17).foregroundStyle(.white)
-                    .frame(maxWidth: .infinity).frame(height: 44)
+                    .frame(maxWidth: .infinity).frame(minHeight: 44)
                     .dsGlassProminent(tint: DS.tint, cornerRadius: DS.Radius.pill)
             }
             .buttonStyle(.plain)
@@ -185,7 +185,7 @@ struct BridgeDetailScreen: View {
             } label: {
                 Text("Allow all photos in Settings")
                     .dsText(.body17).foregroundStyle(DS.textPrimary)
-                    .frame(maxWidth: .infinity).frame(height: 44)
+                    .frame(maxWidth: .infinity).frame(minHeight: 44)
                     .background(DS.gray100, in: Capsule(style: .continuous))
             }
             .buttonStyle(.plain)
