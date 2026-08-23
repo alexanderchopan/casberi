@@ -1501,6 +1501,25 @@ enum WalletIngest {
 
     private static func walletGroupOutcome(_ entry: WalletStore.WatchedAddress) async -> WalletHoldingsOutcome {
         guard let address = await resolvedAddresses([entry.address]).first else { return .unreachable }
+        // THE DEMO REACHES NOTHING, on the branch the funnel gate cannot see
+        // (2026-08-22). `holdings(addresses:)` below gates the EVM path at
+        // `fetchHeldTokens`, the funnel BOTH providers pass through — and
+        // Bitcoin rides none of it, so a watched BTC address sent
+        // `BitcoinBridge.balanceUSD` straight out to `coins.llama.fi` for the
+        // price, once per feed mount, while the demo was active. Measured by
+        // `verify.sh`'s reach walk, not reasoned: it named one host, and only
+        // one, because every other read on this path was already gated.
+        //
+        // Same shape as the Zerion→Alchemy lesson that put the first gate at
+        // the funnel rather than at one provider — a gate that closes one
+        // branch just moves the request to its sibling.
+        //
+        // `.empty` (reached, holding nothing) and never `.unreachable`: the
+        // latter paints "couldn't reach the chain" over a room whose balances
+        // come from the demo's own seeded samples and are perfectly fine —
+        // the reasoning `holdings(addresses:)`' own gate states.
+        if DemoMode.isActive { return .empty }
+
         // Bitcoin rides none of the Portfolio/Zerion machinery below — its
         // own read, folded in here so the per-wallet card (and, through
         // `topHoldingsByWallet`, the combined "What you hold" merge) counts

@@ -177,6 +177,12 @@ DEMO_GATED_READS = [
     # The FUNNEL both holdings providers pass through. Gating Zerion alone
     # moved the request to the Alchemy fallback — measured, not reasoned.
     ("WalletIngest", "private static func holdings(addresses:"),
+    # The BITCOIN branch, which reaches the price host BEFORE that funnel and
+    # is therefore invisible to it — found the same way the Zerion entry above
+    # was, by the RUNTIME reach walk naming `coins.llama.fi` and nothing else
+    # (2026-08-22). A gate on the funnel closes the EVM path and leaves its
+    # sibling wide open; this is that sibling.
+    ("WalletIngest", "private static func walletGroupOutcome("),
     ("ZerionAPI", "static func transactions("),
 ]
 
