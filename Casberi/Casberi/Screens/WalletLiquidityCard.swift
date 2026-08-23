@@ -56,7 +56,7 @@ struct WalletLiquidityCard: View {
                     positionRow(position)
                 }
             }
-            .padding(DS.Space.s3)
+            .padding(WalletCardStyle.pad)
             .dsWidgetSurface(fillOpacity: WalletCardStyle.fill)
         }
     }

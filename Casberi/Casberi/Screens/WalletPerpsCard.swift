@@ -53,7 +53,7 @@ struct WalletPerpsCard: View {
                     positionRow(position)
                 }
             }
-            .padding(DS.Space.s4)
+            .padding(WalletCardStyle.pad)
             .dsWidgetSurface(fillOpacity: WalletCardStyle.fill)
         }
     }

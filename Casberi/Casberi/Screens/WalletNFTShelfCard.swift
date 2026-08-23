@@ -126,8 +126,11 @@ struct WalletNFTShelfCard: View {
                 strip
             }
         }
-        .padding(.vertical, DS.Space.s3)
-        .dsWidgetSurface()
+        .padding(.vertical, WalletCardStyle.pad)
+        // Was the room's only opaque card, which made the NFT shelf the
+        // brightest object on a screen where a liquidation axis sits two cards
+        // above it (2026-08-22). One fill for every card in the room.
+        .dsWidgetSurface(fillOpacity: WalletCardStyle.fill)
     }
 
     private var header: some View {

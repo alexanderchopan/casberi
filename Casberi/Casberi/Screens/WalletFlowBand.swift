@@ -119,9 +119,9 @@ struct WalletFlowBand: View {
                         .lineLimit(2)
                 }
             }
-            .padding(.horizontal, DS.Space.s3)
-            .padding(.top, DS.Space.s3)
-            .padding(.bottom, DS.Space.s2)
+            .padding(.horizontal, WalletCardStyle.pad)
+            .padding(.top, WalletCardStyle.pad)
+            .padding(.bottom, DS.Space.s3)
 
             // The band itself takes no horizontal padding: the bleed IS the
             // design, and the card's clip below supplies the only rounding.
@@ -142,9 +142,13 @@ struct WalletFlowBand: View {
         }
         // A plain set: each element owns its own delayed animation above.
         .onAppear { entered = true }
-        .background(DS.fillFaint,
-                    in: RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
+        // Clipped FIRST, surfaced second (2026-08-22): the band bleeds to the
+        // card's own edges, so the clip has to reach it — and `dsWidgetSurface`
+        // carries a shadow, which a clip applied after would cut away. Same
+        // recipe as every other card in the room; see `WalletRiskStrip` for why
+        // `fillFaint` was the wrong ground.
         .clipShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
+        .dsWidgetSurface(fillOpacity: WalletCardStyle.fill)
     }
 
     private var summary: String {

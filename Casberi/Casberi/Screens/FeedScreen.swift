@@ -4666,7 +4666,11 @@ struct FeedScreen: View {
     /// crown pour, and an opaque surface would punch a hole in the one
     /// atmospheric move the shell makes. One constant so the balance card and
     /// the holdings card can never drift apart.
-    private static let walletCardFill = 0.82
+    // ONE source (2026-08-22). This was its own `0.82`, a second copy of
+    // `WalletCardStyle.fill` sitting in a different file — which is how a
+    // room ends up at two opacities, the exact drift that type's own doc
+    // was written to prevent.
+    private static let walletCardFill = WalletCardStyle.fill
 
     /// The balance CARD, then Worth a look as a quiet line beneath it — the two
     /// questions a wallet screen answers at a glance ("what's it worth", "is it
@@ -4840,7 +4844,15 @@ struct FeedScreen: View {
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, DS.Space.s4)
+                // NO HORIZONTAL PADDING (2026-08-22). It carried s4, which put
+                // the hero's figure 36pt from the screen edge — the line every
+                // CARD's text sits on, because a card adds its own s4 inside
+                // the row's own s4. But this hero has no card, and the room's
+                // other chrome-less text — the group headers below — sits at
+                // 18. Two bare elements on two different margins is the kind of
+                // misalignment you see before you can name it. The number now
+                // leads on the same line as the headings that follow it, which
+                // is where a bare hero sits in Stocks and in Apple Card.
                 .padding(.vertical, DS.Space.s2)
                 // NO GROUND AT ALL (2026-08-16, the Apple redraw — retiring
                 // the `DS.tint` card this carried for a day). Apple has never
@@ -4914,7 +4926,7 @@ struct FeedScreen: View {
                 // The card (prd §160, kept). Padded and surfaced HERE, not
                 // inside the headline view, so `WalletBalanceHeadline` still
                 // renders bare wherever else it's used.
-                .padding(DS.Space.s4)
+                .padding(WalletCardStyle.pad)
                 .dsWidgetSurface(fillOpacity: Self.walletCardFill)
                 }
                 }
@@ -4928,8 +4940,7 @@ struct FeedScreen: View {
                 .modifier(RowEntrance(index: 0, wave: shapeWave, style: entranceStyle))
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
-                .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DS.Space.s4,
-                                          bottom: 0, trailing: DS.Space.s4))
+                .listRowInsets(WalletCardStyle.rowInsets)
             }
         }
     }
@@ -5096,7 +5107,14 @@ struct FeedScreen: View {
                 // thing on screen that arrives without the wave.
                 .modifier(RowEntrance(index: 0, wave: shapeWave, style: entranceStyle))
                 .padding(.leading, DS.Space.s4)
-                .padding(.top, DS.Space.s6)
+                // s8 above, s1 below (2026-08-22). At s6/s1 the header sat
+                // 24 from the card it left and 14 from the card it names —
+                // near enough to even that it read as floating between the
+                // two rather than belonging to the one below. The gap above
+                // has to beat the gap below by enough to be seen doing it;
+                // 32 against 14 is that. (Below is s1 plus the next card's
+                // own s3, which is why this is not simply doubled.)
+                .padding(.top, DS.Space.s8)
                 .padding(.bottom, DS.Space.s1)
                 .listRowInsets(EdgeInsets())
                 .listRowBackground(Color.clear)
@@ -5248,8 +5266,7 @@ struct FeedScreen: View {
                     .modifier(RowEntrance(index: 1, wave: shapeWave, style: entranceStyle))
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
-                    .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DS.Space.s4,
-                                              bottom: 0, trailing: DS.Space.s4))
+                    .listRowInsets(WalletCardStyle.rowInsets)
             }
         }
     }
@@ -5306,8 +5323,7 @@ struct FeedScreen: View {
                     .modifier(RowEntrance(index: 2, wave: shapeWave, style: entranceStyle))
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
-                    .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DS.Space.s4,
-                                              bottom: 0, trailing: DS.Space.s4))
+                    .listRowInsets(WalletCardStyle.rowInsets)
             }
         }
     }
@@ -5334,8 +5350,7 @@ struct FeedScreen: View {
                     .modifier(RowEntrance(index: 2, wave: shapeWave, style: entranceStyle))
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
-                    .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DS.Space.s4,
-                                              bottom: 0, trailing: DS.Space.s4))
+                    .listRowInsets(WalletCardStyle.rowInsets)
             }
         }
     }
@@ -5365,8 +5380,7 @@ struct FeedScreen: View {
                 .modifier(RowEntrance(index: 2, wave: shapeWave, style: entranceStyle))
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
-                .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DS.Space.s4,
-                                          bottom: 0, trailing: DS.Space.s4))
+                .listRowInsets(WalletCardStyle.rowInsets)
             }
         }
     }
@@ -5397,8 +5411,7 @@ struct FeedScreen: View {
                     .modifier(RowEntrance(index: 2, wave: shapeWave, style: entranceStyle))
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
-                    .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DS.Space.s4,
-                                              bottom: 0, trailing: DS.Space.s4))
+                    .listRowInsets(WalletCardStyle.rowInsets)
             }
         }
     }
@@ -5416,8 +5429,7 @@ struct FeedScreen: View {
                     .modifier(RowEntrance(index: 3, wave: shapeWave, style: entranceStyle))
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
-                    .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DS.Space.s4,
-                                              bottom: 0, trailing: DS.Space.s4))
+                    .listRowInsets(WalletCardStyle.rowInsets)
             }
         }
     }
@@ -5437,8 +5449,7 @@ struct FeedScreen: View {
                     .modifier(RowEntrance(index: 4, wave: shapeWave, style: entranceStyle))
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
-                    .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DS.Space.s4,
-                                              bottom: 0, trailing: DS.Space.s4))
+                    .listRowInsets(WalletCardStyle.rowInsets)
             }
         }
     }
@@ -5520,13 +5531,12 @@ struct FeedScreen: View {
                         }
                     }
                 }
-                .padding(DS.Space.s4)
+                .padding(WalletCardStyle.pad)
                 .dsWidgetSurface(fillOpacity: Self.walletCardFill)
                 .modifier(RowEntrance(index: 5, wave: shapeWave, style: entranceStyle))
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
-                .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DS.Space.s4,
-                                          bottom: 0, trailing: DS.Space.s4))
+                .listRowInsets(WalletCardStyle.rowInsets)
             }
         }
     }
@@ -5616,7 +5626,7 @@ struct FeedScreen: View {
                 }
             }
         }
-        .padding(DS.Space.s4)
+        .padding(WalletCardStyle.pad)
         .dsWidgetSurface(fillOpacity: Self.walletCardFill)
     }
 
@@ -5901,8 +5911,7 @@ struct FeedScreen: View {
                 .listRowSeparator(.hidden)
                 // The card needs the page gutter the bare map didn't (it used
                 // to bleed to the screen edge and self-pad its cells).
-                .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DS.Space.s4,
-                                          bottom: 0, trailing: DS.Space.s4))
+                .listRowInsets(WalletCardStyle.rowInsets)
             }
         }
     }

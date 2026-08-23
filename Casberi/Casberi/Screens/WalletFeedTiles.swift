@@ -21,8 +21,27 @@ import SwiftUI
 /// card, and the DeFi tiles below, because a room of cards at two different
 /// opacities reads as a bug (caught on screen the moment Aave and Morpho
 /// landed beside the two new cards).
+///
+/// **The recipe is THREE values now, not one (2026-08-22), for the reason the
+/// paragraph above already gives.** It drifted anyway: the NFT shelf shipped
+/// opaque (the brightest card in a room whose sharpest reading is a
+/// liquidation axis), the flow band and the risk strip shipped on `fillFaint`
+/// — which in light resolves to a ~3% black wash on a #f2f2f7 page, a card
+/// DARKER than the page with no lift, and on a coloured page no card at all —
+/// and the inner padding ran 14pt on three cards against 18pt on five, which
+/// reads as the text column jogging sideways as the room scrolls. A prose
+/// ruling could not stop that; a constant every card must name can.
+///
+/// `rowInsets` is the one that had TEN hand-written copies. Its top is s3
+/// rather than the feed's usual s2 on purpose: two cards stop reading as two
+/// objects once the space BETWEEN them is smaller than the space inside them,
+/// and this room's cards carry 18pt of it. Bottom stays 0 — the top inset is
+/// the whole gap, so a card's spacing can never depend on which card precedes.
 enum WalletCardStyle {
     static let fill = 0.82
+    static let pad = DS.Space.s4
+    static let rowInsets = EdgeInsets(top: DS.Space.s3, leading: DS.Space.s4,
+                                      bottom: 0, trailing: DS.Space.s4)
 }
 
 // `WalletTile` (the caption-plus-chevron tile shell) retired here 2026-07-25
@@ -1059,7 +1078,7 @@ struct WalletLendingCard: View {
                 if !sparkPositions.isEmpty { sparkRow }
                 if !morpho.isEmpty { morphoRow }
             }
-            .padding(DS.Space.s4)
+            .padding(WalletCardStyle.pad)
             .dsWidgetSurface(fillOpacity: WalletCardStyle.fill)
         }
     }

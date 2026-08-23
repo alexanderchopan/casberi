@@ -99,9 +99,13 @@ struct WalletRiskStrip: View {
                     .lineLimit(2)
             }
         }
-        .padding(DS.Space.s3)
-        .background(DS.fillFaint,
-                    in: RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
+        .padding(WalletCardStyle.pad)
+        // The room's ONE card recipe (2026-08-22). This drew `fillFaint` — in
+        // light that resolves to a ~3% black wash on a #f2f2f7 page, i.e. a
+        // card DARKER than its page with no lift at all, while every neighbour
+        // is a white lifted card; on a coloured page it disappeared outright.
+        // Two of the room's sharpest readings were the only two without a card.
+        .dsWidgetSurface(fillOpacity: WalletCardStyle.fill)
         // A plain set: each dot owns its own delayed spring below, so the
         // stagger is per-entry rather than one move for the whole set.
         .onAppear { travelled = true }

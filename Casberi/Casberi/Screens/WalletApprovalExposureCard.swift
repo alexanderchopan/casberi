@@ -108,7 +108,7 @@ struct WalletApprovalExposureCard: View {
                         .padding(.top, DS.Space.s2)
                 }
             }
-            .padding(DS.Space.s4)
+            .padding(WalletCardStyle.pad)
             .dsWidgetSurface(fillOpacity: WalletCardStyle.fill)
         }
     }

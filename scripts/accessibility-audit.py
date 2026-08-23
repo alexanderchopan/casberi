@@ -107,7 +107,10 @@ KNOWN_EXEMPT = {
     # when code (not prose) is added above it. That drifts SAFE: a stale key
     # stops exempting and the finding comes back loudly, rather than silently
     # passing something new.
-    "WalletFlowBand.swift:384",
+    # 384 → 388 (2026-08-22): the card gained its shared surface recipe
+    # above this line, which is code, so the key moved exactly as the
+    # note above says it does. The gesture and the ruling are unchanged.
+    "WalletFlowBand.swift:388",
 }
 
 # Size expressions that already encode the floor, so an explicit number is not

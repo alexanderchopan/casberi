@@ -30609,3 +30609,72 @@ our typography), monograms, enum raw values, HTTP verbs, ticker symbols, and
 wrong for an eyebrow with no static rule between them. The spine's own harness
 guards its `localizedUppercase` directly instead. `KNOWN_ACRONYMS` is EMPTY by
 design.
+
+## 454. The wallet room gets one card recipe (user: "how would you improve the wallet design? is the spacing ok", then "make all the changes you suggested", 2026-08-22)
+
+Asked whether the room's spacing was OK. It was not, and the interesting part is
+that §160's `WalletCardStyle` had already been written to prevent exactly this
+— its own doc says "a room of cards at two different opacities reads as a bug"
+— and the room drifted anyway, because the recipe was one constant and the
+things that drifted were the two values it did not hold.
+
+**Four defects, all invisible in dark, one of them severe in light.**
+
+1. **Two cards had no card.** `WalletFlowBand` and `WalletRiskStrip` drew
+   `DS.fillFaint` with no shadow. In dark that is a faint lift and reads as a
+   deliberate quieter tier. In LIGHT `fillFaint` is `#00000008` over a
+   `#f2f2f7` page — a surface DARKER than its own page, with no lift at all,
+   while every neighbour is `#ffffff` plus a shadow; on a coloured page
+   (`Purple`, `Pink`, …) it is a 3% black tint over the colour, i.e. no card
+   whatsoever. So the two cards carrying "where the money went" and "distance
+   to liquidation" were the only two in the room without a card, in the one
+   theme where it mattered most. Both now take
+   `dsWidgetSurface(fillOpacity: WalletCardStyle.fill)`. The flow band clips
+   BEFORE it surfaces, because its band bleeds to the card's own edge and a
+   clip applied after `dsWidgetSurface` would cut that modifier's shadow away.
+
+2. **The NFT shelf was the brightest object in the room.** It alone called
+   `dsWidgetSurface()` at the default `fillOpacity: 1`, so a shelf of pictures
+   out-weighted a liquidation axis two cards above it. One fill for every card.
+
+3. **The text column jogged.** Inner padding ran `s3` (14) on the risk strip,
+   the flow band and the liquidity card against `s4` (18) on the other five.
+   All eight cards share a row inset, so they are the same width — only their
+   insides disagreed, which reads as the left edge stepping 4pt in and out as
+   the room scrolls.
+
+4. **The gap between cards was smaller than the padding inside them** — `s2`
+   (10) against 14–18. Two containers stop reading as two objects at that
+   ratio, which is the "one oversized mass" this room's own comments have been
+   working around since 2026-08-15. The room's row inset is `s3` (14) now.
+
+**The recipe is three values, not one.** `WalletCardStyle` gains `pad` and
+`rowInsets`, and every card in the room names them. `rowInsets` is the one that
+had TEN hand-written copies in `FeedScreen`; its bottom stays 0 so the top inset
+is the whole gap and a card's spacing can never depend on which card precedes
+it. `FeedScreen.walletCardFill` — a SECOND `0.82` in a second file, the literal
+drift the type's doc warns about — now forwards to `WalletCardStyle.fill`.
+
+**Two alignment rulings, both about chrome-less text.** The balance hero lost
+its ground on 2026-08-16 and kept the `s4` horizontal padding it wore as a
+card, which left its figure on the 36pt line every CARD's text sits on (row s4
+plus the card's own s4) while the room's other bare text — the group headers —
+sat at 18. Two bare elements, two margins. The hero is at 18 now, which is
+where a bare hero sits in Stocks and in Apple Card. And the group headers were
+`s6` above / `s1` below, i.e. 24 from the card they left against 14 to the card
+they name — near enough to even that a header read as floating between two
+blocks rather than belonging to the one under it. `s8` above, unchanged below.
+
+**Deliberately NOT done: collapsing each header's block into one shared
+surface.** It is the stronger move — three panels and a bare hero instead of
+eight floating boxes, which is §212's "one glance, one card" applied a level up
+— and it was declined by the user on the plain ground that the cards should
+stay cards. Recorded because the reasoning survives the decline: what it would
+have cost is a card's ability to carry its own weight later (a warning tier),
+and what it would NOT have cost is any content or any tap, since no card in
+this room has a whole-card tap target — every gesture here is on a row, a slab
+or a dot inside one.
+
+Nothing was removed and nothing changed what it says. `scripts/accessibility-audit.py`'s
+`KNOWN_EXEMPT` key for the flow band's slab gesture moved 384 → 388, exactly
+the safe drift its own note describes.
