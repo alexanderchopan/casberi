@@ -77,6 +77,7 @@ strip_comments "$FLIGHT" > "$TMP/flight-bare.swift"
 strip_comments "$SPINE"  > "$TMP/spine-bare.swift"
 strip_comments "$SCREEN" > "$TMP/screen-bare.swift"
 strip_comments "$GROUPS" > "$TMP/groups-bare.swift"
+strip_comments "$SHAPE"  > "$TMP/shape-bare.swift"
 
 # --- drift guards -----------------------------------------------------------
 # Wiring the compiled file cannot prove about itself. A perfect `sections` is
@@ -290,6 +291,15 @@ done
 grep -q 'column.usd' "$TMP/spine-bare.swift" \
   && { echo "✗ the spine reads Column.usd — the model keeps it for other callers, and this screen may not draw it"; exit 1; }
 
+# NEGATIVE: `lastPhrase` may never ask the SYSTEM clock again (prd §448).
+# `isDateInToday`/`isDateInYesterday` ignore the `now` they are handed, so the
+# two rungs a row shows most often were untestable — and this harness's own
+# verdict depended on what hour it ran at: the fixtures went red at 17:00
+# Pacific, when UTC rolls over, against code nobody had touched. The file
+# documents that by naming both methods, hence the stripped copy.
+grep -qE 'isDateIn(Today|Yesterday)' "$TMP/shape-bare.swift" \
+  && { echo '✗ lastPhrase asks the system clock again — its now parameter would be a lie for the today and yesterday rungs, and this harness would pass or fail by time of day (§448)'; exit 1; }
+
 # NEGATIVE: the sky is gone and must not come back by reference.
 grep -q 'AddressSky' "$TMP/screen-bare.swift" \
   && { echo "✗ WalletScreen references AddressSky, which was deleted with §440"; exit 1; }
@@ -440,28 +450,51 @@ cal.timeZone = TimeZone(secondsFromGMT: 0)!
 // Pinned, or the month name is whatever language the host happens to run in
 // and the boundary assertions below compare against English.
 cal.locale = Locale(identifier: "en_US_POSIX")
-let now = cal.date(from: DateComponents(year: 2026, month: 8, day: 22, hour: 12))!
+// **A PAST DATE ON PURPOSE, and it is the whole point of this block**
+// (2026-08-22, prd §448). It was the real current day, and the first two
+// rungs were spelled `calendar.isDateInToday`/`isDateInYesterday` — which
+// IGNORE the `now` handed in and compare against the system clock. So while
+// the pinned day and the real day agreed, those two fixtures passed without
+// exercising anything, and the moment UTC rolled over (17:00 Pacific) three
+// assertions went red on code nobody had touched. Pinned years in the past,
+// `isDateInToday` can never be true, so these fixtures now fail the old
+// spelling at every hour of every day — the standing rule that a fixture only
+// tests the rule it names if it FAILS that rule and passes every other one.
+let now = cal.date(from: DateComponents(year: 2021, month: 8, day: 22, hour: 12))!
 func phrase(_ c: DateComponents) -> String? {
     AddressBookShape.lastPhrase(cal.date(from: c)!, now: now, calendar: cal)
 }
-check("today", phrase(.init(year: 2026, month: 8, day: 22, hour: 9)) == "today")
-check("yesterday", phrase(.init(year: 2026, month: 8, day: 21, hour: 9)) == "yesterday")
-check("inside the week counts days", phrase(.init(year: 2026, month: 8, day: 19)) == "3 days ago")
+check("today", phrase(.init(year: 2021, month: 8, day: 22, hour: 9)) == "today")
+check("yesterday", phrase(.init(year: 2021, month: 8, day: 21, hour: 9)) == "yesterday")
+// Same calendar DAY as `now` but a later hour — inside the guard, so it is a
+// real "today" rather than the future case below. Without it the today rung
+// is only ever asked about a morning, and a row stamped this afternoon is the
+// common one on a screen counting today's transfers.
+check("later today is still today", phrase(.init(year: 2021, month: 8, day: 22, hour: 11, minute: 59)) == "today")
+check("inside the week counts days", phrase(.init(year: 2021, month: 8, day: 19)) == "3 days ago")
 // The rungs get COARSER as they get older: "241 days ago" is arithmetic nobody
 // wanted, and at that distance the month is the fact.
-check("six days is still counted", phrase(.init(year: 2026, month: 8, day: 16)) == "6 days ago")
-check("seven days becomes a month name", phrase(.init(year: 2026, month: 8, day: 15))?.contains("August") == true)
-check("earlier this year names its month", phrase(.init(year: 2026, month: 5, day: 4))?.contains("May") == true)
+check("six days is still counted", phrase(.init(year: 2021, month: 8, day: 16)) == "6 days ago")
+check("seven days becomes a month name", phrase(.init(year: 2021, month: 8, day: 15))?.contains("August") == true)
+check("earlier this year names its month", phrase(.init(year: 2021, month: 5, day: 4))?.contains("May") == true)
 // THE BOUNDARY, where an off-by-one prints a month from two years ago as
 // though it were this spring.
-check("last year names the year", phrase(.init(year: 2025, month: 12, day: 31)) == "2025")
+check("last year names the year", phrase(.init(year: 2020, month: 12, day: 31)) == "2020")
 check("…and the day after is this year's month",
-      phrase(.init(year: 2026, month: 1, day: 1))?.contains("Jan") == true)
-check("an older year names its own year", phrase(.init(year: 2023, month: 5, day: 4)) == "2023")
+      phrase(.init(year: 2021, month: 1, day: 1))?.contains("Jan") == true)
+check("an older year names its own year", phrase(.init(year: 2018, month: 5, day: 4)) == "2018")
 // A landed thing stamped ahead of the clock is a bridge's bad timestamp;
 // inventing a phrase for it prints nonsense on a row.
-check("a future date says nothing", phrase(.init(year: 2027, month: 1, day: 1)) == nil)
+check("a future date says nothing", phrase(.init(year: 2022, month: 1, day: 1)) == nil)
 check("now itself is today", AddressBookShape.lastPhrase(now, now: now, calendar: cal) == "today")
+// And the injected clock is REALLY the clock: a phrase measured against a
+// `now` one day later must move a rung. This is the assertion the old
+// spelling could not survive under any circumstances, since `isDateInToday`
+// would answer the same for both.
+check("the phrase follows the `now` it is given",
+      AddressBookShape.lastPhrase(cal.date(from: .init(year: 2021, month: 8, day: 22, hour: 9))!,
+                                  now: cal.date(from: .init(year: 2021, month: 8, day: 23, hour: 9))!,
+                                  calendar: cal) == "yesterday")
 
 print("")
 if failures > 0 { print("\(failures) failure(s)"); exit(1) }
@@ -545,6 +578,15 @@ mutate "an empty query starts matching every group" \
 mutate "the day count stops handing over to the month" \
   'if days < 7 { return String(localized: "\(days) days ago") }' \
   'return String(localized: "\(days) days ago")'
+# The two rungs §448 rewrote. Each renders as an ordinary subline: a row you
+# dealt with this morning reading "0 days ago", or yesterday's reading "1 days
+# ago" — plural, and wrong twice over.
+mutate "today stops being its own rung" \
+  'if days == 0 { return String(localized: "today") }' \
+  'if days == -1 { return String(localized: "today") }'
+mutate "yesterday stops being its own rung" \
+  'if days == 1 { return String(localized: "yesterday") }' \
+  'if days == -1 { return String(localized: "yesterday") }'
 # A month from two years ago printed as though it were this spring.
 mutate "the year boundary stops being checked" \
   'if calendar.component(.year, from: date) == calendar.component(.year, from: now) {' \

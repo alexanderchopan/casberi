@@ -215,10 +215,26 @@ enum AddressBookShape {
     static func lastPhrase(_ date: Date, now: Date = .now,
                            calendar: Calendar = .current) -> String? {
         guard date <= now else { return nil }
-        if calendar.isDateInToday(date) { return String(localized: "today") }
-        if calendar.isDateInYesterday(date) { return String(localized: "yesterday") }
+        // EVERY RUNG IS MEASURED AGAINST `now` (2026-08-22, prd §448).
+        //
+        // The first two used to be `calendar.isDateInToday(date)` and
+        // `isDateInYesterday(date)`, and **those two methods ignore `now`
+        // entirely** — they compare against the real system clock. So this
+        // function's own injected clock was a lie for two of its five
+        // branches, and the harness's coverage of them was an accident of
+        // what time of day it ran: the fixtures pin `now` to noon UTC on
+        // 2026-08-22, which agrees with the real clock until 17:00 Pacific
+        // and disagrees after it, at which point three assertions fail on
+        // code nobody touched. Caught exactly that way, twelve hours after
+        // the harness was written and green.
+        //
+        // The day count below already answers all three rungs, so the fix is
+        // a deletion rather than a second clock: 0 is today, 1 is yesterday,
+        // and the same subtraction carries the week.
         let days = calendar.dateComponents([.day], from: calendar.startOfDay(for: date),
                                            to: calendar.startOfDay(for: now)).day ?? 0
+        if days == 0 { return String(localized: "today") }
+        if days == 1 { return String(localized: "yesterday") }
         if days < 7 { return String(localized: "\(days) days ago") }
         // Inside the same calendar year the month names itself; older than
         // that it would be ambiguous ("May" of which May?), so the year takes
