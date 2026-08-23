@@ -678,6 +678,35 @@ harness "X pure-logic self-test" "X pure-logic self-test" "scripts/x-selftest.sh
 # the week, which is precisely what §245 measured and refused.
 harness "Instagram pure-logic self-test" "Instagram pure-logic self-test" "scripts/instagram-selftest.sh" "the Instagram logic self-test failed — run scripts/instagram-selftest.sh"
 
+# The Telegram channel parse (prd §429) — the one read in this tree with NO
+# CONTRACT AT ALL behind it: `t.me/s/<channel>` is somebody's web page, not a
+# feed, so every rule the parser follows is a class name measured on one
+# afternoon. `live-integrations.sh` watches the PAGE nightly; only this can
+# watch the PARSE, and every failure of the parse renders as an ordinary feed —
+# nineteen of twenty posts landing with the missing one being the NEWEST (the
+# page publishes oldest-first, so the room fills and never shows today), every
+# video post dated "now" because the first `<time>` in its fragment is a clip
+# duration carrying no `datetime` (15 of 20 measured), an emoji sprite landing
+# as the post's photograph, a post truncated where its text container nested a
+# div, or a row whose words are Telegram's own "Please open Telegram to view
+# this post". It also carries the negative guard keeping the view count out:
+# the page publishes it PRE-ROUNDED ("12.6M"), so landing it in an Int would
+# fabricate precision on the one figure that looks most like a fact.
+harness "Telegram pure-logic self-test" "Telegram pure-logic self-test" "scripts/telegram-selftest.sh" "the Telegram logic self-test failed — run scripts/telegram-selftest.sh"
+
+# The export half's own harness (prd §456) — `TelegramExport.swift`, compiled
+# whole. UNMEASURED against a real Telegram archive more strongly than any
+# other harness in this file: no export has ever been held by this project, so
+# this is not the best proof its rules hold, it is the ONLY one. Every failure
+# it catches renders as a perfectly ordinary import — a message dated 21 years
+# off because `date` (local time, no offset) was trusted over the authoritative
+# `date_unixtime`; a message silently dropped because it carried a `text_link`
+# beside a bare link the fallback path can't reach; a whole archive refusing to
+# parse because Telegram's own generator writes control bytes as `\xNN`, which
+# is not valid JSON; or a group message misread as yours because the self-id
+# check fell back to comparing display names instead of ids.
+harness "Telegram export pure-logic self-test" "Telegram export pure-logic self-test" "scripts/telegram-export-selftest.sh" "the Telegram export logic self-test failed — run scripts/telegram-export-selftest.sh"
+
 # The onboarding fork's card ordering (prd §422) — the screen where a new
 # person decides whether to keep the app, so every failure here is expensive
 # and every one of them renders as a perfectly good fork: leading with the

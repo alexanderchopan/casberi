@@ -117,7 +117,36 @@ enum Corpus {
     /// ran — the same failure the address-book rule exists to prevent, one
     /// step short of hiding the source entirely. All gets ONE receipt
     /// instead (`isImportReceipt`), and the room holds everything.
-    static let bulkImportSources: Set<String> = ["Instagram", "Snapchat", "TikTok", "X"]
+    static let bulkImportSources: Set<String> = ["Instagram", "Snapchat", "TikTok", "X", "Telegram"]
+
+    /// Ref namespaces whose rows arrived LIVE, one at a time, even though
+    /// their source is a bulk-import source (2026-08-23, prd §456).
+    ///
+    /// Telegram is the first seat with BOTH shapes under one source: you
+    /// follow public channels (a drip of a few posts a day, exactly like
+    /// Substack or YouTube) and you can also import a Desktop export
+    /// (thousands of rows dated across years). The two want opposite things
+    /// from the All feed, and `bulkImportSources` is per-SOURCE, so without
+    /// this the seat has to pick one and be wrong about the other: either a
+    /// followed channel is a strictly worse Substack whose posts only appear
+    /// if you go looking for them, or one import buries every real capture the
+    /// day it ran.
+    ///
+    /// The distinction is already written on every row — a followed post is
+    /// `telegram:post:…`, an imported one is `telegram:chat:…` /
+    /// `telegram:saved:…` — so it needs no new stored property and no CloudKit
+    /// deploy, and it cannot drift from the truth the way a flag set at
+    /// landing time could.
+    ///
+    /// **The other four bulk sources declare nothing here and are unaffected**
+    /// — Instagram, Snapchat, TikTok and X have no live half to let through.
+    static let liveRefPrefixes: Set<String> = ["telegram:post:"]
+
+    /// Did this row arrive live rather than out of an imported file?
+    static func arrivedLive(_ thing: Thing) -> Bool {
+        guard let ref = thing.sourceRef else { return false }
+        return liveRefPrefixes.contains { ref.hasPrefix($0) }
+    }
 
     /// Seats whose `.transaction` rows are a CARD PURCHASE — money you spent,
     /// stamped with a real `priceValue`/`priceCurrency` rather than a formatted
@@ -164,6 +193,9 @@ enum Corpus {
     /// exception to that exception.
     static func showsInAll(_ thing: Thing) -> Bool {
         guard bulkImportSources.contains(thing.source) else { return true }
+        // A row this source received live is not part of the dump the rule
+        // above exists to keep out (prd §456).
+        if arrivedLive(thing) { return true }
         return isImportReceipt(thing)
     }
 

@@ -99,6 +99,7 @@ enum BridgeRouter {
         case reddit
         case youtube
         case podcasts
+        case telegram
         case kindle
         case dayOne
         case appleJournal
@@ -324,6 +325,7 @@ enum BridgeRouter {
             case .reddit:         "reddit"
             case .youtube:        "youtube"
             case .podcasts:       "podcasts"
+            case .telegram:       "telegram"
             case .kindle:         "kindle"
             case .dayOne:         "dayone"
             case .appleJournal:   "journal"
@@ -436,6 +438,7 @@ enum BridgeRouter {
         Row(offer: "Reddit",    id: "reddit",   destination: .reddit),
         Row(offer: "YouTube",   id: "youtube",  destination: .youtube),
         Row(offer: "Podcasts",  id: "podcasts", destination: .podcasts),
+        Row(offer: "Telegram",  id: "telegram", destination: .telegram),
         Row(offer: "Kindle",    id: "kindle",   destination: .kindle),
         Row(offer: "Day One",   id: "dayone", destination: .dayOne),
         Row(offer: "Apple Journal", id: "journal", destination: .appleJournal),
@@ -538,6 +541,7 @@ struct BridgeDestinationView: View {
         case .reddit:         HandleSetupScreen(bridge: .reddit)
         case .youtube:        HandleSetupScreen(bridge: .youtube)
         case .podcasts:       HandleSetupScreen(bridge: .podcasts)
+        case .telegram:       HandleSetupScreen(bridge: .telegram)
         case .kindle:         KindleImportScreen()
         case .dayOne:         DayOneImportScreen()
         case .appleJournal:   JournalImportScreen()

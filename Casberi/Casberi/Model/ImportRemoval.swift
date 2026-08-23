@@ -41,7 +41,28 @@ enum ImportRemoval {
     static func count(source: String, context: ModelContext) -> Int {
         guard Corpus.bulkImportSources.contains(source) else { return 0 }
         let descriptor = FetchDescriptor<Thing>(predicate: #Predicate { $0.source == source })
-        return (try? context.fetchCount(descriptor)) ?? 0
+        // The fast path, and the only one the four original bulk sources ever
+        // take: none of them has a live half, so a SQL COUNT is the answer.
+        guard hasLiveHalf(source) else {
+            return (try? context.fetchCount(descriptor)) ?? 0
+        }
+        // Telegram does have one (prd §456): its followed-channel posts share
+        // this source and are NOT part of any import, so counting them here
+        // would offer to remove rows this button must never touch.
+        // `propertiesToFetch` keeps the walk to the one column that decides.
+        var scan = descriptor
+        scan.propertiesToFetch = [\.sourceRef]
+        let rows = (try? context.fetch(scan)) ?? []
+        return rows.filter { $0.isLive && !Corpus.arrivedLive($0) }.count
+    }
+
+    /// Does this source land rows live as well as by import?
+    ///
+    /// Read off the registry rather than hardcoded, so a second such seat is
+    /// covered the day it declares a prefix — and so this file never needs to
+    /// know which seat it is.
+    static func hasLiveHalf(_ source: String) -> Bool {
+        Corpus.liveRefPrefixes.contains { $0.hasPrefix(source.lowercased() + ":") }
     }
 
     /// Removes every thing from an imported source, its receipt included, and
@@ -58,6 +79,14 @@ enum ImportRemoval {
                           progress: ((Int) -> Void)? = nil) async -> Int {
         guard Corpus.bulkImportSources.contains(source) else { return 0 }
         var removed = 0
+        // Rows this pass must LEAVE BEHIND — a source's live half (prd §456).
+        // They are stepped over with an offset rather than simply filtered
+        // out, and that is load-bearing: filtering alone would break the loop
+        // the moment one page happened to be all live rows, silently leaving
+        // every imported row beyond that page in place. The offset grows only
+        // by rows we skip, while deletions shrink the set beneath it, so the
+        // window always advances and the walk terminates.
+        var skipped = 0
         // Re-fetched each round rather than held: the array is a snapshot, and
         // deleting through a stale one is the exact liveness trap CLAUDE.md's
         // corollaries are about. A bounded fetch per round also keeps peak
@@ -66,8 +95,15 @@ enum ImportRemoval {
             var descriptor = FetchDescriptor<Thing>(
                 predicate: #Predicate { $0.source == source })
             descriptor.fetchLimit = chunk
-            let batch = ((try? context.fetch(descriptor)) ?? []).filter(\.isLive)
-            if batch.isEmpty { break }
+            descriptor.fetchOffset = skipped
+            let page = ((try? context.fetch(descriptor)) ?? []).filter(\.isLive)
+            if page.isEmpty { break }
+            let batch = page.filter { !Corpus.arrivedLive($0) }
+            if batch.isEmpty {
+                skipped += page.count
+                continue
+            }
+            skipped += page.count - batch.count
             // Ids BEFORE the delete — reading a stored property off a
             // tombstoned model traps inside SwiftData, and `remove(ids:)`
             // needs them after.

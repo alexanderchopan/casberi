@@ -710,7 +710,7 @@ struct FeedScreen: View {
 
     /// The shape a source takes when its chip is in force.
     private enum Shape {
-        case all, photos, wallet, calendar, gmail, chat, social, reminders, bookmarks, notes, you, music, media, tokens, bitrefill, oneclaw, snapchat, files, instagram, x, x402, appStoreConnect, cursor, walletbeat, l2beat, plain
+        case all, photos, wallet, calendar, gmail, chat, social, reminders, bookmarks, notes, you, music, media, tokens, bitrefill, oneclaw, snapchat, files, instagram, x, x402, appStoreConnect, cursor, walletbeat, l2beat, telegram, plain
 
         /// Rooms whose lead is a GRID of pictures, and which therefore earn the
         /// wide content cap on a regular-width window (2026-08-17).
@@ -801,6 +801,19 @@ struct FeedScreen: View {
             // rather than verified, which is the worse half of both options.
             case "Instagram":           self = .instagram
             case "X":                   self = .x
+            // Telegram, 2026-08-23 (prd §456) — the first room holding BOTH a
+            // live drip and an import under one source, so it has the widest
+            // row mix in the app: a followed channel's broadcast posts (words,
+            // usually a picture), your Saved Messages (mostly bare links), and
+            // whole conversations as `.chat` rows.
+            //
+            // Its own case rather than `.social`: that one is Farcaster and
+            // Bluesky, whose roster head reads accounts out of `BlueskyStore`
+            // for anything that isn't Farcaster — the same objection that kept
+            // X out. And rather than `.chat`: a channel post is not a message,
+            // and a room of broadcast posts drawn as chat bubbles is the §313
+            // failure wearing the other coat.
+            case "Telegram":            self = .telegram
             // Circle x402, 2026-08-06 — the same defect as the line above, one
             // day later. It had no case here, so `.plain` drew twenty-two
             // BandRows wearing one glyph and ONE TIMESTAMP (every seller lands
@@ -3106,6 +3119,17 @@ struct FeedScreen: View {
             if !memoryTiles.isEmpty { photoGridSection(memoryTiles) }
             let days = chronoGroups(rest)
             groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
+        case .telegram:
+            // The mixed room's fourth instance, and the widest: a followed
+            // channel's wordless pictures lead as a grid, while its captioned
+            // posts, your Saved Messages and whole imported conversations all
+            // read as rows beneath them.
+            let tiles = visible.live.filter(Self.isTelegramPhotoTile)
+            let rest = visible.live.filter { !Self.isTelegramPhotoTile($0) }
+            if !tiles.isEmpty { photoGridSection(tiles) }
+            let telegramDays = chronoGroups(rest)
+            groupedSections(telegramDays, nextEventID: nextEventID,
+                            boundary: boundaryThingID(in: telegramDays))
         case .x:
             // The mixed room's third instance (2026-08-13, prd §375), and the
             // one that had to wait for the importer: until a wordless picture
@@ -6184,6 +6208,28 @@ struct FeedScreen: View {
             && !isXAccountRow(thing)
     }
 
+    /// A wordless picture from a followed CHANNEL (2026-08-23, prd §456).
+    ///
+    /// Live rows only: an imported conversation or a saved message never
+    /// becomes a tile, whatever it carries. The same honesty rule the three
+    /// mixed rooms before it settled — a tile promises a picture, so a post
+    /// with a caption stays a post card, because the caption is the post.
+    private static func isTelegramPhotoTile(_ thing: Thing) -> Bool {
+        thing.isLive && thing.source == TelegramChannel.source
+            && Corpus.arrivedLive(thing)
+            && thing.previewImageData != nil
+            && (thing.postText ?? "").isEmpty
+    }
+
+    /// A row that is somebody's POST rather than a transcript or our own note
+    /// about an import.
+    private static func isTelegramPostRow(_ thing: Thing) -> Bool {
+        thing.isLive
+            && !Corpus.isImportReceipt(thing)
+            && thing.kind != .chat
+            && (thing.postText?.isEmpty == false || Corpus.arrivedLive(thing))
+    }
+
     /// A tile whose picture is one FRAME of a video, so the grid can mark it.
     ///
     /// The mark is not decoration and its absence was a small lie: a poster
@@ -7040,6 +7086,32 @@ struct FeedScreen: View {
                     // an archive of somebody's own writing and the words are
                     // the entire content of every row — see `PostCard.whole`.
                     PostCard(thing: thing, whole: true)
+                }
+            case .telegram:
+                // Three row kinds under one source (prd §456). A conversation
+                // is a transcript and reads as the excerpt every other chat
+                // room draws; our own import receipt keeps the plain band it
+                // wears in All; everything else is a post — a channel's
+                // broadcast, or a link you sent yourself.
+                if !Self.isTelegramPostRow(thing) {
+                    if thing.kind == .chat {
+                        ExcerptRow(thing: thing, lines: 2)
+                    } else {
+                        BandRow(thing: thing,
+                                emphasized: thing.id == nextEventID,
+                                live: false,
+                                imageOnly: imageOnly,
+                                wideArt: wideArt)
+                    }
+                } else if Corpus.arrivedLive(thing) {
+                    // A channel post is written to be read, and the words are
+                    // the whole row — the X room's ruling (§396a), for the
+                    // same reason.
+                    PostCard(thing: thing, whole: true)
+                } else {
+                    // A saved message is usually a bare link somebody sent
+                    // themselves, so it reads as one.
+                    ReadingRow(thing: thing)
                 }
             case .instagram:
                 // Our own note about the import keeps its plain band, and a

@@ -17,8 +17,17 @@ enum HandleBridge: String {
     case reddit    = "Reddit"
     case youtube   = "YouTube"
     case podcasts  = "Podcasts"
+    case telegram  = "Telegram"
 
-    /// The feed-follow kind behind the four feed cases, nil for the people
+    /// Does this seat ALSO import an export you exported yourself?
+    ///
+    /// Telegram is the only one, and it is why this screen carries an import
+    /// section at all (prd §456): following public channels and importing your
+    /// own archive are two doors onto one product, so they belong on one seat
+    /// rather than as two catalog tiles for the same app.
+    var importsArchive: Bool { self == .telegram }
+
+    /// The feed-follow kind behind the five feed cases, nil for the people
     /// bridges — the join that lets each switch below fall through to one place.
     var feedKind: FeedFollowKind? { FeedFollowKind(rawValue: rawValue) }
 
@@ -480,6 +489,12 @@ struct HandleSetupScreen: View {
     /// the people bridges (there is no feed to hand anyone) and until a follow
     /// resolves — see `refreshExportURL`.
     @State private var exportURL: URL?
+    // The import half (Telegram only — see `HandleBridge.importsArchive`).
+    @State private var importing = false
+    @State private var importResult: String?
+    @State private var importIsError = false
+    @State private var importHeld = 0
+    @State private var importStaleness: String?
 
     var body: some View {
         List {
@@ -514,6 +529,12 @@ struct HandleSetupScreen: View {
                     .listRowSeparator(.hidden)
                     .listRowBackground(Color.clear)
             }
+            if bridge.importsArchive {
+                archiveSection.listRowSeparator(.hidden)
+                ImportUpkeepSection(source: bridge.rawValue, held: importHeld,
+                                    staleness: importStaleness) { _ in rereadImport() }
+                    .listRowSeparator(.hidden)
+            }
             topicsSection
             if showHomeHint {
                 seeInFeedSection.listRowSeparator(.hidden)
@@ -539,9 +560,14 @@ struct HandleSetupScreen: View {
         // one, since that is when an entry's feed URL actually resolves (a
         // follow added seconds ago has a name and no address yet).
         .onChange(of: accountNames) { _, _ in refreshExportURL() }
+        .fileImporter(isPresented: $importing, allowedContentTypes: [.folder]) { result in
+            guard case .success(let url) = result else { return }
+            Task { await runImport(url) }
+        }
         .onAppear {
             accountNames = bridge.names
             refreshExportURL()
+            if bridge.importsArchive { rereadImport() }
             query = bridge.displayName
             if bridge.isConnected {
                 Task { await sync() }
@@ -921,6 +947,62 @@ struct HandleSetupScreen: View {
     /// least one follow has RESOLVED: an unresolved entry is left out of the
     /// file (see `OPMLImport.export`), so a list of only those has nothing to
     /// write and offers no link rather than an empty document.
+    // MARK: - The archive half (Telegram only, prd §456)
+
+    /// Following channels is live and ongoing; importing your export is a
+    /// one-time act on a file. Both are Telegram, so both live on this seat —
+    /// the import sits BELOW the follow field because a channel needs nothing
+    /// but a name, while the export needs you to go and generate one first.
+    @ViewBuilder private var archiveSection: some View {
+        Section {
+            ImportArchiveSection(
+                source: bridge.rawValue,
+                // Telegram Desktop exports from inside the app itself — there
+                // is no web page to send anyone to, so this screen names no
+                // door (the Snapchat/TikTok shape).
+                doorTitle: nil,
+                steps: [
+                    String(localized: "Open Telegram Desktop on a computer"),
+                    String(localized: "Settings → Advanced → Export Telegram data"),
+                    String(localized: "Choose JSON as the format, then export"),
+                    String(localized: "Bring the unzipped folder here")
+                ],
+                pickTitle: String(localized: "Choose folder"),
+                alreadyImported: importHeld > 0,
+                showsMessagesToggle: true
+            ) { importing = true }
+            BridgeSyncStatusRows(result: importResult, resultIsError: importIsError)
+        }
+        .dsSlabSection()
+    }
+
+    private func rereadImport() {
+        importHeld = ImportRemoval.count(source: bridge.rawValue, context: modelContext)
+        importStaleness = ImportRemoval.stalenessLine(source: bridge.rawValue,
+                                                      context: modelContext)
+    }
+
+    private func runImport(_ url: URL) async {
+        // The scoped grant is the SCREEN's, held across the whole read — the
+        // importer awaits inside it, which is safe for the reason
+        // `ImportCommit` records: `defer` fires on return, not on suspend.
+        let scoped = url.startAccessingSecurityScopedResource()
+        defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+
+        let summary = await TelegramImport.run(folder: url, context: modelContext)
+        if summary.failed {
+            importIsError = true
+            importResult = summary.reason ?? String(localized: "Couldn't read that folder — is it the unzipped export?")
+            return
+        }
+        importIsError = false
+        DSHaptic.success()
+        importResult = summary.landedLine
+        rereadImport()
+        store.registerConnected(id: bridge.bridgeID, name: bridge.rawValue,
+                                proof: summary.landedLine, can: [bridge.canLine])
+    }
+
     private func refreshExportURL() {
         guard let kind = bridge.feedKind else { exportURL = nil; return }
         let resolved = kind.store.entries.filter { !$0.feedURL.isEmpty }

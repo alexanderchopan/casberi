@@ -39,6 +39,7 @@ final class FeedFollowStore {
     static let reddit   = FeedFollowStore(key: "feed.reddit")
     static let youtube  = FeedFollowStore(key: "feed.youtube")
     static let podcasts = FeedFollowStore(key: "feed.podcasts")
+    static let telegram = FeedFollowStore(key: "feed.telegram")
 
     private let key: String
     var entries: [FeedFollowEntry] { didSet { persist() } }
@@ -122,6 +123,10 @@ enum FeedFollowKind: String, CaseIterable {
     case reddit   = "Reddit"
     case youtube  = "YouTube"
     case podcasts = "Podcasts"
+    /// Public CHANNELS only (prd §456) — broadcast media with a public web
+    /// page, which is why this is a feed follow and not the MTProto problem
+    /// §57 declined. A group or a DM can never arrive here.
+    case telegram = "Telegram"
 
     var source: String { rawValue }
     var bridgeID: String { rawValue.lowercased() }
@@ -133,6 +138,7 @@ enum FeedFollowKind: String, CaseIterable {
         case .reddit:   FeedFollowStore.reddit
         case .youtube:  FeedFollowStore.youtube
         case .podcasts: FeedFollowStore.podcasts
+        case .telegram: FeedFollowStore.telegram
         }
     }
 
@@ -145,6 +151,7 @@ enum FeedFollowKind: String, CaseIterable {
         case .reddit:   "subreddit or user"
         case .youtube:  "channel"
         case .podcasts: "show"
+        case .telegram: "channel"
         }
     }
 
@@ -154,6 +161,7 @@ enum FeedFollowKind: String, CaseIterable {
         case .reddit:   "r/swift or u/name"
         case .youtube:  "@handle or channel URL"
         case .podcasts: "Search a show"
+        case .telegram: "@channel or t.me link"
         }
     }
 
@@ -163,6 +171,7 @@ enum FeedFollowKind: String, CaseIterable {
         case .substack, .reddit: "posts"
         case .youtube:           "videos"
         case .podcasts:          "episodes"
+        case .telegram:          "posts"
         }
     }
 
@@ -171,6 +180,7 @@ enum FeedFollowKind: String, CaseIterable {
         case .substack, .reddit: "Posts"
         case .youtube:           "Videos"
         case .podcasts:          "Episodes"
+        case .telegram:          "Posts"
         }
     }
 
@@ -180,6 +190,7 @@ enum FeedFollowKind: String, CaseIterable {
         case .reddit:   "Follow a subreddit (r/name) or a person (u/name) — new posts land as links, through Reddit's own feed."
         case .youtube:  "Paste a channel URL or its @handle — new uploads land as links, through YouTube's own feed."
         case .podcasts: "Search for a show — new episodes land as links, through the show's own feed. No account."
+        case .telegram: "Name a public channel — its posts land as they are broadcast, read from the channel's own public page. No account."
         }
     }
 
@@ -196,6 +207,8 @@ enum FeedFollowKind: String, CaseIterable {
             String(localized: "No account and no sign-in — name a channel and its uploads arrive through YouTube's own feed. Public uploads only, and Shorts are tagged so you can filter them out.")
         case .podcasts:
             String(localized: "No account and no sign-in — name a show and its episodes arrive through the show's own public feed.")
+        case .telegram:
+            String(localized: "No account and no sign-in — name a public channel and its posts arrive from the channel's own public page. Public channels only: groups and your own chats are never readable this way.")
         }
     }
 
@@ -205,6 +218,7 @@ enum FeedFollowKind: String, CaseIterable {
         case .reddit:   "Reads the subreddits and people you follow."
         case .youtube:  "Reads the channels you follow."
         case .podcasts: "Reads the shows you follow."
+        case .telegram: "Reads the public channels you follow."
         }
     }
 
@@ -215,6 +229,7 @@ enum FeedFollowKind: String, CaseIterable {
         case .reddit:   FeedURL.redditInput(raw)
         case .youtube:  raw.trimmingCharacters(in: .whitespacesAndNewlines)
         case .podcasts: raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        case .telegram: TelegramChannel.normalizeHandle(raw)
         }
     }
 
@@ -229,6 +244,11 @@ enum FeedFollowKind: String, CaseIterable {
         // Picking a search result already carries the feed; a typed show name
         // resolves through the same search — first match wins.
         case .podcasts: await FeedFetch.searchPodcasts(input).first?.feedURL
+        // A pure string template like Substack's — the channel's own preview
+        // page. Refused for a name Telegram could not serve, so a typo never
+        // becomes a request for somebody else's page.
+        case .telegram: TelegramChannel.isValidHandle(input)
+            ? TelegramChannel.previewURL(for: input) : nil
         }
     }
 }
@@ -535,6 +555,64 @@ enum FeedFollowIngest {
         var reached = false
     }
 
+    /// A Telegram channel page as if it were a feed.
+    ///
+    /// **The posts are REVERSED here, and that is the whole reason this is a
+    /// named function rather than three inline lines.** `refresh` takes
+    /// `items.prefix(15)` because every feed format on earth is newest-first,
+    /// while `t.me/s/<channel>` publishes OLDEST-first — so mapping in
+    /// document order hands the ingest the fifteen oldest posts on the page
+    /// and silently drops the five newest. The room would fill, and never with
+    /// today's news.
+    private static func telegramParsed(_ data: Data, entry: FeedFollowEntry) -> FeedParser.Parsed? {
+        guard let html = String(data: data, encoding: .utf8) else { return nil }
+        let handle = TelegramChannel.normalizeHandle(entry.input)
+        guard let channel = TelegramChannel.parse(html, handle: handle) else { return nil }
+
+        var parsed = FeedParser.Parsed()
+        parsed.root = "feed"
+        parsed.title = channel.title
+        parsed.iconURL = channel.avatarURL ?? ""
+
+        parsed.items = channel.posts.reversed().map { post in
+            var item = FeedParser.Item()
+            // `refresh` builds the ref as "<refPrefix>:<guid>", and this arm's
+            // prefix is "telegram" — so a guid of "post:<channel>/<id>" is
+            // exactly `TelegramChannel.refPrefix` plus the post, which is what
+            // `Corpus.liveRefPrefixes` matches on to let these rows into All.
+            item.guid = "post:\(post.channel)/\(post.id)"
+            item.link = post.url
+            item.date = post.date
+            item.title = IngestSupport.titleLine(telegramTitle(post))
+            // The words themselves, so the room reads as posts rather than as
+            // a list of clamped headlines.
+            if !post.text.isEmpty { item.summary = post.text }
+            item.imageURL = post.photoURL ?? ""
+            // A forward names someone the channel itself is not, which is
+            // precisely what `FeedParser.author` is for; a post the channel
+            // wrote names nobody and stays the channel's own.
+            item.author = post.forwardedFrom ?? ""
+            var tags: [String] = []
+            if post.forwardedFrom != nil { tags.append("Forwarded") }
+            if post.photoURL != nil { tags.append("Photo") }
+            if post.hasVideo { tags.append("Video") }
+            item.categories = tags
+            return item
+        }
+        return parsed
+    }
+
+    /// What a post is CALLED. Its own first words, or — for a post that is
+    /// purely a photograph or a video — the headline of whatever it linked to,
+    /// falling back to naming the medium. Never an empty string: `refresh`
+    /// skips an item with no title, so a wordless photo post would silently
+    /// never land.
+    private static func telegramTitle(_ post: TelegramChannel.Post) -> String {
+        if !post.text.isEmpty { return post.text }
+        if let link = post.linkTitle, !link.isEmpty { return link }
+        return post.hasVideo ? String(localized: "Video") : String(localized: "Photo")
+    }
+
     /// Resolving/fetching/parsing one entry — no shared state, so every
     /// followed entry can run concurrently instead of one round trip at a
     /// time (2026-07-13).
@@ -555,8 +633,16 @@ enum FeedFollowIngest {
         // registry structurally cannot name (prd §289).
         switch await FeedFreshness.fetch(url, as: kind.source) {
         case .fresh(let data):
+            // Telegram is the one arm whose body is not XML — a channel's own
+            // web page rather than a feed document (prd §456). It forks HERE
+            // and nowhere else: `FeedFreshness` above is transport-only, and
+            // producing a `FeedParser.Parsed` rather than a type of its own
+            // leaves every stamp, heal and dedupe in `refresh` untouched.
+            let parsed = kind == .telegram
+                ? telegramParsed(data, entry: entry)
+                : FeedParser.parse(data)
             return Fetched(entry: entry, resolvedFeedURL: resolvedFeedURL,
-                           parsed: FeedParser.parse(data), reached: true)
+                           parsed: parsed, reached: true)
         case .notModified:
             return Fetched(entry: entry, resolvedFeedURL: resolvedFeedURL,
                            parsed: nil, reached: true)

@@ -101,6 +101,7 @@ extension DS {
         case "apple music":         return Color.fixed("#fc3c44")   // Apple Music's coral-red mark
         case "bluesky":             return Color.fixed("#0285ff")
         case "snapchat":            return Color.fixed("#fffc00")   // their yellow — the field IS the mark (a white ghost sits on it), so the SF fallback's white glyph reads thin until the official icon is bundled at brand-snapchat
+        case "telegram":            return Color.fixed("#229ed9")   // their blue, and the tile behind the bundled brand-telegram mark
         case "nostr":               return Color.fixed("#9543dc")   // their purple (icon-sampled from the bundled mark)
         // The five newest seats, all with marks already bundled beside this and
         // none of them named here until now — so Stripe, PostHog, Grok,

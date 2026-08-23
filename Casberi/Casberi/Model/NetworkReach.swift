@@ -447,6 +447,10 @@ enum NetworkReach {
 
         // MARK: Media
 
+        Endpoint(service: "Telegram",
+                 reach: .whenConnected(bridge: "Telegram"),
+                 purpose: "Reads the public channels you follow, from each channel's own public page. Never a group, never your chats — the export import reads a file and reaches nothing.",
+                 hosts: ["t.me", "telesco.pe"]),
         Endpoint(service: "YouTube",
                  reach: .whenConnected(bridge: "YouTube"),
                  purpose: "Reads a public channel's newest videos.",

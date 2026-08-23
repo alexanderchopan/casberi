@@ -73,6 +73,10 @@ enum FeedHeatmap {
         // this person liked, and the noun in a subtitle has to be true of
         // everything it counts.
         "X":             Label(title: "Your X year",          unit: "entry",      units: "entries"),
+        // "entry" for the same reason X uses it: this room mixes a followed
+        // channel's broadcasts with your own saved messages and chats, and the
+        // noun in a subtitle has to be true of everything it counts.
+        "Telegram":      Label(title: "Your Telegram year",  unit: "entry",      units: "entries"),
     ]
 
     static func label(for source: String) -> Label? { labels[source] }

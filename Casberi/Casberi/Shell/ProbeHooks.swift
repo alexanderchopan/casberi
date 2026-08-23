@@ -487,6 +487,77 @@ enum ProbeHooks {
                       summary.failed ? 1 : 0)
             }
         },
+        // `-telegramChannelProbe <@handle|t.me link>` resolves a public
+        // channel and reports what the parse actually got, one NSLog per fact
+        // (the `-todayProbe` truncation lesson).
+        //
+        // It exists because an empty Telegram room has FIVE causes that render
+        // as one silence and only the last is a bug: the name is not a channel
+        // at all (a group, a user, a typo — `standing` says which), the
+        // channel turned its web preview off, the host did not answer, the
+        // channel genuinely has not posted, or the page's markup moved under
+        // the parser. This is scrape-grade with no contract (prd §456), so
+        // that last one is a real and recurring risk.
+        Hook(key: "telegramChannelProbe") { raw, _ in
+            Task { @MainActor in
+                let handle = TelegramChannel.normalizeHandle(raw)
+                guard TelegramChannel.isValidHandle(handle) else {
+                    NSLog("telegramChannel: %@ → REFUSED (not a channel name Telegram could serve)", handle)
+                    return
+                }
+                guard let url = URL(string: TelegramChannel.previewURL(for: handle)),
+                      let data = await FeedFetch.data(url, as: "Telegram"),
+                      let html = String(data: data, encoding: .utf8) else {
+                    NSLog("telegramChannel: %@ → UNREACHABLE (no preview answered)", handle)
+                    return
+                }
+                guard let channel = TelegramChannel.parse(html, handle: handle) else {
+                    // The preview refused it; the LANDING page says why.
+                    var verdict = "unknown"
+                    if let landing = URL(string: "https://t.me/" + handle),
+                       let body = await FeedFetch.data(landing, as: "Telegram"),
+                       let text = String(data: body, encoding: .utf8) {
+                        verdict = "\(TelegramChannel.standing(text))"
+                    }
+                    NSLog("telegramChannel: %@ → NOT A FOLLOWABLE CHANNEL (%@)", handle, verdict)
+                    return
+                }
+                NSLog("telegramChannel: %@ | title=%@ | avatar=%@ | %d posts",
+                      channel.handle, channel.title,
+                      channel.avatarURL == nil ? "none" : "yes", channel.posts.count)
+                let dated = channel.posts.filter { $0.date != nil }.count
+                let pictures = channel.posts.filter { $0.photoURL != nil }.count
+                NSLog("telegramChannel: dated=%d/%d | pictures=%d | videos=%d | forwards=%d",
+                      dated, channel.posts.count, pictures,
+                      channel.posts.filter(\.hasVideo).count,
+                      channel.posts.filter { $0.forwardedFrom != nil }.count)
+                for post in channel.posts.suffix(5) {
+                    NSLog("telegramPost| %@ | %@ | photo=%@ | %@",
+                          post.ref,
+                          post.date.map { IngestSupport.isoString($0) } ?? "UNDATED",
+                          post.photoURL == nil ? "no" : "yes",
+                          String(post.text.prefix(80)))
+                }
+            }
+        },
+        // `-telegramImport <path>` imports an unzipped Telegram Desktop export
+        // folder (result.json at its root). Chats and groups ride
+        // `ImportOptions.includeMessages` exactly as they do in the UI, so a
+        // run without it lands Saved Messages and channels alone.
+        Hook(key: "telegramImport") { path, context in
+            Task { @MainActor in
+                let summary = await TelegramImport.run(folder: URL(fileURLWithPath: path),
+                                                       context: context)
+                NSLog("Telegram probe: saved=%d channels=%d conversations=%d",
+                      summary.saved, summary.channelPosts, summary.conversations)
+                NSLog("Telegram probe: %d imported, %d skipped, %d dropped by cap, failed=%d",
+                      summary.imported, summary.skipped, summary.dropped,
+                      summary.failed ? 1 : 0)
+                if let reason = summary.reason {
+                    NSLog("Telegram probe: reason=%@", reason)
+                }
+            }
+        },
         // `-snapchatImport <path>` imports an unzipped Snapchat data export
         // folder (chat_history.json + memories_history.json, at the root or
         // one level down). Lands metadata only — the memories' pictures are

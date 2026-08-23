@@ -736,6 +736,20 @@ enum BridgeCatalog {
         Offer(name: "Farcaster",   tagline: "Track any Farcaster account",           group: "Network",   connectable: true,
               summary: "An open social protocol — casts are public, so this connects with just a username: your own or anyone's, plus /channels by name. An account's likes and mentions can land too.\n\nNo password, nothing stored but the name.",
               needsSetup: true),
+        // Telegram RETURNS (prd §456, 2026-08-23), reversing §57's 2026-07-14
+        // removal. That ruling weighed three doors and cut the seat because
+        // all three failed; what it did not weigh is that a public CHANNEL is
+        // not a chat — it is broadcast media with a public web page, so it
+        // reads the way Substack does, with no server and no MTProto. The
+        // export import is the second door, and the reason the two share one
+        // seat rather than two tiles.
+        Offer(name: "Telegram",    tagline: "Follow public channels",                group: "Network",   connectable: true,
+              summary: "Public channels arrive as they broadcast, read from each channel's own public page.\n\nYour own chats and Saved Messages can come too, from a Telegram Desktop export.\n\nNo account, no key. Read-only.",
+              features: ["Public channels, through Telegram's own public pages",
+                         "Saved Messages — the links you send yourself",
+                         "Your chats, from an export, only if you ask for them",
+                         "Read on \(DS.device); no account, no key, nothing sent to Telegram"],
+              needsSetup: true, added: day(2026, 8, 23)),
         Offer(name: "Bluesky",     tagline: "Track any Bluesky account",             group: "Network",   connectable: true,
               summary: "Built on an open protocol — posts are public, so this connects with just a handle: your own or anyone's, and mentions of them can land too.\n\nNo password, nothing stored but the name.\n\nLikes arrive with sign-in, later.",
               needsSetup: true),

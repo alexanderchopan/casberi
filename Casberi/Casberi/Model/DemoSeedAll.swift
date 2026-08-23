@@ -113,6 +113,19 @@ enum DemoSeedAll {
                               // joining to nothing, which is the one shape
                               // that could make a real deposit read
                               // "Reclaimed" on evidence that isn't real.
+                              // Telegram (prd §456), the same reasoning a
+                              // fourth time, and here it cuts both ways: the
+                              // channel posts MUST carry the real
+                              // `telegram:post:` shape or `Corpus.arrivedLive`
+                              // never lets them into All and the demo shows
+                              // the wrong behaviour for the one rule this seat
+                              // exists to prove — while a bare real prefix in
+                              // teardown would delete a REAL followed
+                              // channel's rows off a lived-in install. Hence
+                              // a demo marker inside the real shape, so both
+                              // halves are exact.
+                              "telegram:post:demo-", "telegram:saved:demo-",
+                              "telegram:chat:demo-",
                               "peer:demo", "privacypools:dep:demo",
                               "privacypools:ragequit:demo",
                               // Radicle (prd §401), same reasoning again: the
@@ -878,6 +891,7 @@ enum DemoSeedAll {
         out += instagram()
         out += tiktok()
         out += snapchat()
+        out += telegram()
         out += youtube()
         out += files()
         out += reading()
@@ -1543,6 +1557,73 @@ enum DemoSeedAll {
                 days: Double(3 + i * 11), hour: 17, tags: ["Memory"]) { t in
                 t.previewImageURL = art(i)
                 t.previewImageData = pixels(i)
+            }
+        }
+        return out
+    }
+
+    /// Telegram is the app's only room holding a LIVE drip and an IMPORT under
+    /// one source (prd §456), so it is seeded as both — otherwise the demo
+    /// shows half a room and the mixed shape never draws.
+    ///
+    /// **The channel posts carry the REAL live ref prefix**, not a `demo:` one.
+    /// That is §349's lesson as a rule: `Corpus.arrivedLive` matches on
+    /// `telegram:post:`, and it is what lets a followed channel's posts into
+    /// the All feed while the imported half stays out — seed them under a
+    /// demo prefix and the demo silently shows the wrong behaviour for the one
+    /// thing this seat had to get right.
+    private static func telegram() -> [Thing] {
+        var out: [Thing] = [receipt("Telegram", "38 chats · 176 saved", days: 9)]
+
+        // The live half: four followed channels, captioned posts and wordless
+        // pictures, so the room draws its grid AND its post cards.
+        let posts: [(String, String, String, Double, Bool)] = [
+            ("durov", "Telegram now supports gifting a subscription to anyone in your contacts.", "Pavel Durov", 0.3, false),
+            ("telegram", "AI Text Editor. The message bar now fixes grammar and translates inline.", "Telegram News", 1.2, false),
+            ("tginfo", "", "Telegram Info", 2.1, true),
+            ("durov", "A fully native Telegram app for Apple Watch is out.", "Pavel Durov", 3.4, false),
+            ("telegram", "", "Telegram News", 5.0, true),
+            ("tginfo", "Channels can now schedule posts up to a year ahead.", "Telegram Info", 7.5, false),
+        ]
+        out += posts.enumerated().map { i, p in
+            row(.link, p.1.isEmpty ? "Photo" : p.1, source: "Telegram",
+                ref: "telegram:post:demo-\(p.0)/\(1200 + i)",
+                days: p.3, hour: 11,
+                content: "https://t.me/\(p.0)/\(1200 + i)",
+                tags: p.4 ? ["Photo"] : []) { t in
+                t.authorHandle = p.2
+                if !p.1.isEmpty { t.postText = p.1 }
+                if p.4 { t.previewImageData = pixels(i) }
+            }
+        }
+
+        // The imported half: Saved Messages — the pile of links you send
+        // yourself, which is the strongest reason this seat exists.
+        let saved: [(String, String, Double)] = [
+            ("Kettlebell complexes for cyclists", "https://example.com/complexes", 1.6),
+            ("Book: The Making of Prince of Persia", "https://example.com/prince", 4.2),
+            ("Sourdough hydration, explained", "https://example.com/hydration", 8.8),
+            ("Flight deal — Lisbon in March", "https://example.com/lisbon", 15.0),
+        ]
+        out += saved.enumerated().map { i, m in
+            row(.link, m.0, source: "Telegram", ref: "telegram:saved:demo-\(9000 + i)",
+                days: m.2, hour: 22, content: m.1, tags: ["Saved"]) { t in
+                t.authorHandle = "Saved Messages"
+            }
+        }
+
+        // And conversations, one thing each, ranked by `messageCount` exactly
+        // as Snapchat's are.
+        let chats: [(String, Int, Double)] = [
+            ("Ada", 6_310, 0.8), ("Climbing crew", 2_480, 2.6),
+            ("Mum", 1_140, 6.0), ("Flat admin", 305, 19.0),
+        ]
+        out += chats.enumerated().map { i, c in
+            row(.chat, "Chat with \(c.0)", source: "Telegram",
+                ref: "telegram:chat:demo-\(700 + i)", days: c.2, hour: 20,
+                content: "Messages with \(c.0).", tags: ["Conversation"]) { t in
+                t.authorHandle = c.0
+                t.messageCount = c.1
             }
         }
         return out
@@ -4215,6 +4296,7 @@ enum DemoSeedAll {
         ("Instagram", "Imported 336 items", "Holds the export you pointed at."),
         ("TikTok", "Imported 276 items", "Holds the export you pointed at."),
         ("Snapchat", "Imported 248 items", "Holds the export you pointed at."),
+        ("Telegram", "4 channels · imported 214 items", "Follows public channels, read-only."),
         ("YouTube", "3 channels", "Follows channels without an account."),
         ("Reddit", "3 subreddits", "Follows subreddits, read-only."),
         ("RSS", "4 feeds", "Follows any feed you add."),

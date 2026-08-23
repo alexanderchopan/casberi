@@ -332,6 +332,120 @@ else
   fi
 fi
 
+# Telegram (FeedFollowBridges + TelegramChannel, prd §456) — the SCRAPE with the
+# weakest contract of anything in this file. YouTube at least serves a real
+# feed document; `t.me/s/<channel>` is somebody's WEB PAGE, and every rule the
+# parser follows is a class name or an attribute measured on 2026-08-23 rather
+# than published anywhere. So this is the strongest block here: six assertions,
+# each naming the silent failure it catches, because when any of these move the
+# room does not break — it goes QUIET, which from outside is indistinguishable
+# from a channel that stopped posting.
+#
+# @durov is the sample for the same reason MrBeast is YouTube's: it is the
+# platform founder's own channel, so it is the last public channel on Telegram
+# that will ever go away, and it posts often enough that an empty read means the
+# read, not the channel.
+TG_CHANNEL='durov'
+TG_UA='Mozilla/5.0 (compatible; Casberi/1.0; +https://casberi.app)'
+tgcode=$(curl -s -o /dev/null -w '%{http_code}' --max-time "$TIMEOUT" -A "$TG_UA" \
+  "https://t.me/s/$TG_CHANNEL" 2>/dev/null)
+tghtml=$(curl -s --max-time "$TIMEOUT" -A "$TG_UA" "https://t.me/s/$TG_CHANNEL" 2>/dev/null)
+if [[ -z "$tghtml" || "$tgcode" == 000 ]]; then
+  fail "Telegram t.me/s/$TG_CHANNEL (unreachable)"
+elif [[ "$tgcode" != 200 ]]; then
+  # 1. A 302 on a channel that HAS a preview is the whole live half going dark:
+  #    `parse` returns nil for a redirect body, so every followed channel would
+  #    report itself as "not a channel" and no post would ever land again.
+  fail "Telegram — t.me/s/$TG_CHANNEL answered http $tgcode, not 200: the web preview is the entire live read, and without it every followed channel goes silent"
+else
+  pass "Telegram — t.me/s/$TG_CHANNEL serves its web preview (http 200, ${#tghtml} bytes)"
+
+  # 2. `data-post="<channel>/<id>"` is the ONLY stable identity on the page —
+  #    not the DOM order, not the text — and it is what every `sourceRef` is
+  #    built from. Lose it and `parsePost` drops every message: the page still
+  #    200s, the channel still parses, and the room lands nothing.
+  tgposts=$(print -r -- "$tghtml" | grep -o "data-post=\"$TG_CHANNEL/[0-9]\{1,\}\"" | wc -l | tr -d ' ')
+  if (( tgposts >= 1 )); then
+    pass "Telegram — $tgposts posts carry data-post=\"$TG_CHANNEL/<id>\" (the only per-post identity)"
+  else
+    fail "Telegram — no \`data-post=\"$TG_CHANNEL/<id>\"\` on the page: every post is dropped and the room lands nothing, with the channel still reading as reachable"
+  fi
+
+  # 3. The date. Asserted as a `datetime` ATTRIBUTE rather than as a `<time>`
+  #    tag, and that distinction is a real measured bug: a video post opens with
+  #    `<time class="message_video_duration">` carrying a clip's running time and
+  #    NO datetime, so reading the first `<time>` blindly left 15 of 20 posts
+  #    undated (@telegram, 2026-08-23) — and an undated post falls back to "now",
+  #    filing a four-month-old broadcast as today's news. A row here that finds
+  #    `<time>` but no `datetime=` is that bug arriving from their side.
+  tgtimes=$(print -r -- "$tghtml" | grep -o '<time[^>]*datetime="[0-9]\{4\}-' | wc -l | tr -d ' ')
+  if (( tgtimes >= 1 )); then
+    pass "Telegram — $tgtimes <time> elements carry a datetime attribute (the parser's only date)"
+  elif print -r -- "$tghtml" | grep -q '<time'; then
+    fail "Telegram — <time> is present but NONE carries \`datetime\`: every post falls back to now, and months-old broadcasts file as today"
+  else
+    fail "Telegram — no <time> element at all: every post lands undated"
+  fi
+
+  # 4. The words. Without this container `parsePost` sees no text, and a post
+  #    with no text, no photo and no video is DROPPED by design — so a rename
+  #    here empties the room for every text-only channel while photo channels
+  #    keep working, which reads as one channel being broken rather than a parse.
+  if print -r -- "$tghtml" | grep -q 'tgme_widget_message_text'; then
+    pass "Telegram — tgme_widget_message_text still wraps the post body"
+  else
+    fail "Telegram — no \`tgme_widget_message_text\`: posts land wordless and a text-only channel's rows are dropped entirely"
+  fi
+
+  # 5. The pictures, and the decoy. A real photograph is on `telesco.pe` and
+  #    every emoji is a sprite on `telegram.org/img/emoji` — so the naive
+  #    "first background-image" read files an emoji as the post's photograph.
+  if print -r -- "$tghtml" | grep -qF "telesco.pe"; then
+    pass "Telegram — photographs still come off telesco.pe"
+  else
+    warn "Telegram — no \`telesco.pe\` URL on the page: either this channel posted no pictures this week, or the media CDN moved and every photo post lands pictureless"
+  fi
+  # The anti-regression tell, mirroring the naive-`channelId` row above: the
+  # emoji host exclusion (rule 5) is only worth its cost while the decoy is
+  # really there. If Telegram ever stops serving sprite emoji, the exclusion is
+  # guarding nothing and the measurement behind it should be re-taken before
+  # anybody "simplifies" `isPhotograph` into a `contains`.
+  if ! print -r -- "$tghtml" | grep -qF 'telegram.org/img/emoji'; then
+    warn "Telegram — \`telegram.org/img/emoji\` has GONE from the page; the emoji-sprite exclusion in isPhotograph may now be guarding nothing (re-measure before removing it — it is what keeps an emoji from landing as a post's photograph)"
+  fi
+
+  # 6. The 302 DISCRIMINATOR — the one thing that lets an empty room explain
+  #    itself. `/s/<name>` refusing to serve has three different causes and the
+  #    landing page is the only place they are distinguishable: "subscribers" is
+  #    a real channel with its preview switched off, "members" is a GROUP (which
+  #    has no public preview and never will), and no counter at all is a name
+  #    nobody has claimed. If those two words ever read alike, `standing(_:)`
+  #    collapses to `.unknown` and the app can no longer tell somebody whether
+  #    their name was wrong. @python is a group, and has been since 2013.
+  #
+  #    Redirects are deliberately NOT followed: it is the 302 itself that says
+  #    "not a followable channel", and following it would answer 200 off the
+  #    landing page and invert the test.
+  TG_GROUP='python'
+  tggroup=$(curl -s -o /dev/null -w '%{http_code}' --max-time "$TIMEOUT" -A "$TG_UA" \
+    "https://t.me/s/$TG_GROUP" 2>/dev/null)
+  if [[ "$tggroup" != 30* ]]; then
+    warn "Telegram — t.me/s/$TG_GROUP answered http $tggroup, not a redirect: a group now serves a /s/ preview, so 'not a channel' is no longer detectable by status alone"
+  else
+    tgextra_g=$(curl -s --max-time "$TIMEOUT" -A "$TG_UA" "https://t.me/$TG_GROUP" 2>/dev/null \
+      | grep -o 'tgme_page_extra[^<]*' | head -1)
+    tgextra_c=$(curl -s --max-time "$TIMEOUT" -A "$TG_UA" "https://t.me/$TG_CHANNEL" 2>/dev/null \
+      | grep -o 'tgme_page_extra[^<]*' | head -1)
+    if [[ -z "$tgextra_g" || -z "$tgextra_c" ]]; then
+      fail "Telegram — no \`tgme_page_extra\` on a landing page: standing() reads .absent for every refused name, so a real channel with its preview off is reported as a typo"
+    elif [[ "$tgextra_g" == *member* && "$tgextra_c" == *subscriber* ]]; then
+      pass "Telegram — the 302 discriminator holds (group says \"members\", channel says \"subscribers\")"
+    else
+      fail "Telegram — the landing counters no longer separate a group from a channel (group:\"$(print -r -- "$tgextra_g" | cut -c17-48)\" channel:\"$(print -r -- "$tgextra_c" | cut -c17-48)\"); an empty room can no longer say why"
+    fi
+  fi
+fi
+
 # Morpho (MorphoDeFi) — POST GraphQL, so http_ping can't cover it. This sends
 # the SAME field/enum shape the app's position + activity queries use against a
 # neutral address, so schema drift (the class already caught once: market txs

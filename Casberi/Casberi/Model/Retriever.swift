@@ -810,6 +810,13 @@ enum Retriever {
             (["my comments", "comments", "comment"], "Comment"),
             (["conversations", "conversation", "chats", "chat"], "Conversation"),
             (["memories", "memory"], "Memory"),
+            // Telegram's three (2026-08-23, prd §456). "Saved" and "Channel"
+            // are ordinary English and "Forwarded" nearly so, which is exactly
+            // why they only ever filter alongside a named source — the gating
+            // rule every entry above already lives under.
+            (["saved messages", "saved message", "saved"], "Saved"),
+            (["channels", "channel"], "Channel"),
+            (["forwarded", "forwards", "reposts of others"], "Forwarded"),
             // The half of a YouTube room nothing could name before (2026-08-06,
             // `YouTubeShorts`). Same rule as every entry above and it matters
             // more here than most: "short" is an ordinary English word, so

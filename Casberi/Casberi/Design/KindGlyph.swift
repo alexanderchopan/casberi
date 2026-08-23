@@ -218,6 +218,7 @@ enum BridgeGlyph {
         case "readwise":  return "book"
         case "rss":       return "dot.radiowaves.up.forward"
         case "snapchat":  return "camera.fill"
+        case "telegram":  return "paperplane.fill"
         case "farcaster": return "at"
         case "pinterest": return "pin"
         case "bluesky":   return "at"

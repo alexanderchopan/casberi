@@ -214,7 +214,10 @@ struct BandRow: View {
         // files nothing) and falls through to the channel — which is the one
         // fact those rows cannot otherwise carry, since YouTube advertises no
         // feed icon and its rows lead with the video's own thumbnail.
-        case "RSS", "Substack", "Reddit", "Podcasts", "YouTube":
+        // Telegram (prd §456): a channel post's `postAuthor` is set only
+        // when the channel FORWARDED somebody, so this correctly names the
+        // original author on a forward and the channel itself otherwise.
+        case "RSS", "Substack", "Reddit", "Podcasts", "YouTube", "Telegram":
             if let author = thing.postAuthor?.trimmingCharacters(in: .whitespaces),
                !author.isEmpty { return author }
             let name = thing.authorHandle ?? ""; return name.isEmpty ? nil : name
@@ -390,6 +393,7 @@ struct BandRow: View {
     /// why the favicon fallback is refused there.
     static let publisherMarkSources: Set<String> = [
         "RSS", "Hugging Face", "Substack", "Reddit", "YouTube", "Podcasts",
+        "Telegram",
     ]
 
     private var identityAvatarURL: String? {
