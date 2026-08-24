@@ -40,8 +40,12 @@ struct VibenetRoomCard: View {
     private var drawn: [VibenetAccountItem] { Array(room.items.prefix(Self.rowCap)) }
 
     /// Watched faces only — a discovery stranger never earns a slot in the
-    /// card's own hero, only in the setup screen's own list.
-    private var heroFaces: [String] { Array(room.items.prefix(5).map(\.address)) }
+    /// card's own hero, only in the setup screen's own list. Carries
+    /// `alarmed` (R2.4) so the stack itself can flag who's in trouble —
+    /// a direct read of `item.alarmed`, no new pure logic to harness.
+    private var heroFaces: [(address: String, alarmed: Bool)] {
+        room.items.prefix(5).map { ($0.address, $0.alarmed) }
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -52,9 +56,25 @@ struct VibenetRoomCard: View {
                 // / AddressFlight) — identity is on the FACE, so overlap
                 // costs nothing legible.
                 HStack(spacing: -10) {
-                    ForEach(heroFaces, id: \.self) { address in
-                        WalletFace(address: address, size: 28, circular: true)
+                    ForEach(heroFaces, id: \.address) { face in
+                        WalletFace(address: face.address, size: 28, circular: true)
                             .overlay(Circle().strokeBorder(DS.surfaceSheet, lineWidth: 2))
+                            .overlay(alignment: .bottomTrailing) {
+                                // One badge for both locked and unlocking —
+                                // the alarm is the alarm; the row's own pill
+                                // already carries which of the two words.
+                                if face.alarmed {
+                                    Circle()
+                                        .fill(Self.mark)
+                                        .frame(width: 12, height: 12)
+                                        .overlay {
+                                            Image(systemName: "lock.fill")
+                                                .font(.system(size: 7, weight: .bold))
+                                                .foregroundStyle(Color.fixed("#ffffff"))
+                                        }
+                                        .overlay(Circle().strokeBorder(DS.surfaceSheet, lineWidth: 2))
+                                }
+                            }
                     }
                 }
                 .padding(.bottom, DS.Space.s2)
@@ -172,6 +192,18 @@ struct VibenetRoomCard: View {
                                     .frame(height: 4)
                                     .frame(maxWidth: 160)
                                 }
+                            } else if let urgent = item.urgentLine(now: .now) {
+                                // R2.2: a key's own clock outranks the plain
+                                // key count on the row that's about to be
+                                // affected by it — the time-critical fact
+                                // must be the visible one, not the one you
+                                // find by expanding. The room's one color
+                                // carries urgency here (never bold-white-
+                                // on-blue — that grammar stays the lock
+                                // pill's alone).
+                                Text(urgent)
+                                    .dsText(.label12).fontWeight(.semibold)
+                                    .foregroundStyle(Self.mark)
                             } else {
                                 Text(VibenetRoom.rowLine(item))
                                     .dsText(.label12)
@@ -245,6 +277,7 @@ struct VibenetRoomCard: View {
                     } else if !item.actors.isEmpty {
                         scopeMatrix(VibenetAccountItem.byReach(item.actors))
                     }
+                    keyHistoryStrip(item)
                     footer(item)
                 }
                 .padding(.bottom, DS.Space.s2)
@@ -376,20 +409,90 @@ struct VibenetRoomCard: View {
         }
     }
 
+    /// R2.1: the account's own story — every key added or revoked, in
+    /// EXACT chronological order. A SEQUENCE strip, deliberately not a
+    /// time-proportional axis: several events can share a block, which has
+    /// no honest layout on a real clock, so dots are evenly spaced (that
+    /// claims ORDER, never elapsed time) and only the two endpoints carry
+    /// real dates. ≤1 moment total: a single dot is not a story, so nothing
+    /// draws — the summary line alone may still show one moment's own
+    /// "1 key added".
+    private func keyHistoryStrip(_ item: VibenetAccountItem) -> some View {
+        Group {
+            if let line = VibenetKeyHistory.summaryLine(item.history) {
+                let labels = VibenetKeyHistory.endpointLabels(item.history, now: .now)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(line)
+                        .dsText(.label12).fontWeight(.semibold)
+                        .foregroundStyle(DS.textPrimary)
+                    // A single dot is not a story — the summary line alone
+                    // stands for one moment; the strip itself needs ≥2.
+                    if item.history.count > 1 {
+                        HStack(spacing: 8) {
+                            if item.history.count > VibenetKeyHistory.cap {
+                                // Unreachable today (the read itself is
+                                // already bounded to `cap`), kept as the
+                                // honest overflow marker if that bound is
+                                // ever loosened without this view changing.
+                                Text(String(localized: "+\(item.history.count - VibenetKeyHistory.cap) earlier"))
+                                    .dsText(.label11)
+                                    .foregroundStyle(DS.textTertiary)
+                            }
+                            ForEach(item.history) { moment in
+                                Circle()
+                                    .strokeBorder(Self.mark, lineWidth: moment.authorized ? 0 : 2.5)
+                                    .background(Circle().fill(moment.authorized ? Self.mark : .clear))
+                                    .frame(width: 10, height: 10)
+                            }
+                        }
+                        HStack {
+                            if let oldest = labels.oldest {
+                                Text(oldest).dsText(.label11).foregroundStyle(DS.textTertiary)
+                            }
+                            Spacer(minLength: DS.Space.s2)
+                            if let newest = labels.newest {
+                                Text(newest).dsText(.label11).foregroundStyle(DS.textTertiary)
+                            }
+                        }
+                    }
+                }
+                .padding(.top, DS.Space.s2)
+            }
+        }
+    }
+
     /// The account's own sync standing, plus a door out to the real
     /// explorer — both read and both thrown away by every screen before
     /// this one. `changeSequences` is nil only on a failed read, never on a
     /// genuinely-zero standing (`VibenetChangeSequences` carries the zero
     /// itself), so this is silent exactly when there's nothing honest to
     /// report, never when the number is merely small.
+    ///
+    /// R2.3: the sync standing as number-hero chips, Cash App grammar —
+    /// the number is the whole point, the label whispers under it. Replaces
+    /// a sentence ("Only one EIP-8130 chain to compare…") that said nothing
+    /// about THIS account. `VibenetMultichainSync` stays exactly as shipped
+    /// for the day a second live 8130 chain exists — this footer just isn't
+    /// its caller anymore.
     private func footer(_ item: VibenetAccountItem) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+        HStack(alignment: .center, spacing: DS.Space.s2) {
             if let cs = item.changeSequences {
-                Text(VibenetMultichainSync.summary(
-                    [VibenetChainStanding(chainName: VibenetChain.network, sequences: cs)]))
-                    .dsText(.label11)
-                    .foregroundStyle(DS.textTertiary)
-                    .fixedSize(horizontal: false, vertical: true)
+                HStack(spacing: 6) {
+                    ForEach(Array(cs.chips.enumerated()), id: \.offset) { _, chip in
+                        HStack(spacing: 3) {
+                            Text(chip.value)
+                                .dsText(.label12).fontWeight(.semibold)
+                                .foregroundStyle(DS.textPrimary)
+                            Text(chip.label)
+                                .dsText(.label11)
+                                .foregroundStyle(DS.textTertiary)
+                        }
+                        .fixedSize()
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(Self.mark.opacity(0.12), in: Capsule())
+                    }
+                }
             }
             Spacer(minLength: DS.Space.s2)
             Link(destination: URL(string: VibenetExplorer.address(item.address))!) {

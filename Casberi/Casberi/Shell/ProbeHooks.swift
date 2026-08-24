@@ -5967,6 +5967,32 @@ enum ProbeHooks {
                     let initiated = VibenetABI.boolWord(lockRaw, at: 1)
                     NSLog("[Casberi] vibenet| %@ lockStatus locked=%@ unlockInitiated=%@",
                           address, locked ? "YES" : "no", initiated ? "YES" : "no")
+
+                    // R2: the key-history strip and the sync chips, off the
+                    // SAME composed read `VibenetRoomSource` draws from —
+                    // reported here rather than re-derived inline, so this
+                    // probe can never quietly disagree with what the card
+                    // shows. An empty history is usually correct (most
+                    // accounts have never rotated a key); a non-empty one
+                    // with no dates means the block-time lookups failed.
+                    let item = await VibenetRead.account(address, contracts: contracts)
+                    if item.history.isEmpty {
+                        NSLog("[Casberi] vibenet| %@ history EMPTY", address)
+                    } else {
+                        for moment in item.history {
+                            NSLog("[Casberi] vibenet| %@ history block=%d logIndex=%d %@ kind=%@ date=%@",
+                                  address, moment.block, moment.logIndex,
+                                  moment.authorized ? "added" : "revoked",
+                                  moment.kind?.label ?? "unresolved",
+                                  moment.date.map { "\($0)" } ?? "UNREACHABLE")
+                        }
+                    }
+                    if let cs = item.changeSequences {
+                        NSLog("[Casberi] vibenet| %@ changeSequences multichain=%llu localEpoch=%d localSequence=%d",
+                              address, cs.multichain, cs.localEpoch, cs.localSequence)
+                    } else {
+                        NSLog("[Casberi] vibenet| %@ changeSequences UNREACHABLE", address)
+                    }
                 }
             }
         },

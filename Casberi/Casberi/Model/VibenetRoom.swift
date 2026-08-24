@@ -313,6 +313,90 @@ enum VibenetActorLog {
     }
 }
 
+// MARK: - The key history strip (R2.1)
+
+/// One moment in an account's own story — a key added or a key revoked,
+/// off the SAME `ActorAuthorized`/`ActorRevoked` events `VibenetActorLog
+/// .survivors` already reduces to a live roster. Order is EXACT (block,
+/// then logIndex); `date` is a best-effort clock label and may be nil.
+struct VibenetKeyMoment: Identifiable, Equatable {
+    var id: String { "\(block):\(logIndex):\(authorized)" }
+    let block: Int
+    let logIndex: Int
+    let authorized: Bool
+    /// nil for a revoked actor (its kind at the moment of revocation isn't
+    /// re-derivable without an archive node — never guessed) and for any
+    /// authorized actor this build's current read can no longer confirm.
+    let kind: VibenetAuthenticatorKind?
+    /// nil on a failed block-time lookup — the moment still draws (its
+    /// ORDER is exact regardless) but can never be an endpoint label.
+    let date: Date?
+}
+
+/// The strip's own arithmetic — a SEQUENCE, deliberately not a time-
+/// proportional axis. Order is exact; a degenerate span (several events in
+/// one block) has no honest layout on a real clock, so positions are drawn
+/// evenly spaced and only the two endpoint labels carry actual dates.
+enum VibenetKeyHistory {
+    /// The most recent moments a card will ever draw — bounding the block-
+    /// time lookups `account(_:contracts:)` pays for one per distinct block.
+    static let cap = 10
+
+    /// TOTAL order (block, then logIndex, then a stable authorized/revoked
+    /// tiebreak) — a second pass over the same set must agree with the
+    /// first, or the strip reshuffles between opens over an unchanged
+    /// history.
+    static func ordered(_ moments: [VibenetKeyMoment]) -> [VibenetKeyMoment] {
+        moments.sorted {
+            if $0.block != $1.block { return $0.block < $1.block }
+            if $0.logIndex != $1.logIndex { return $0.logIndex < $1.logIndex }
+            return $0.authorized && !$1.authorized
+        }
+    }
+
+    /// The newest `cap` events, chronologically ordered — applied to the
+    /// RAW event log before block-time resolution, so a bounded read never
+    /// pays for a block time it won't draw.
+    static func newest(_ events: [VibenetActorEvent], cap: Int = VibenetKeyHistory.cap) -> [VibenetActorEvent] {
+        let chronological = events.sorted { ($0.block, $0.logIndex) < ($1.block, $1.logIndex) }
+        return Array(chronological.suffix(cap))
+    }
+
+    /// "3 keys added · 1 revoked" — each half omitted at zero; both zero
+    /// yields nil, and the strip doesn't draw at all (there is nothing to
+    /// summarize).
+    static func summaryLine(_ moments: [VibenetKeyMoment]) -> String? {
+        let added = moments.filter(\.authorized).count
+        let revoked = moments.count - added
+        var parts: [String] = []
+        if added > 0 {
+            parts.append(added == 1 ? String(localized: "1 key added") : String(localized: "\(added) keys added"))
+        }
+        if revoked > 0 {
+            parts.append(revoked == 1 ? String(localized: "1 revoked") : String(localized: "\(revoked) revoked"))
+        }
+        guard !parts.isEmpty else { return nil }
+        return parts.joined(separator: " · ")
+    }
+
+    /// (oldest, newest) short date labels off `ordered` moments — nil for
+    /// an endpoint whose own `date` is nil (never guessed), and the newest
+    /// label collapses to nil when it would just repeat the oldest one.
+    static func endpointLabels(_ moments: [VibenetKeyMoment], now: Date) -> (oldest: String?, newest: String?) {
+        guard let first = moments.first, let last = moments.last else { return (nil, nil) }
+        func label(_ date: Date?) -> String? {
+            guard let date else { return nil }
+            let days = now.timeIntervalSince(date) / 86_400
+            if days >= 0, days < 30 { return date.formatted(.relative(presentation: .named)) }
+            return date.formatted(.dateTime.month(.abbreviated).day())
+        }
+        let oldest = label(first.date)
+        var newest = label(last.date)
+        if newest == oldest { newest = nil }
+        return (oldest, newest)
+    }
+}
+
 // MARK: - One actor, one account
 
 struct VibenetActor: Identifiable, Equatable {
@@ -371,6 +455,12 @@ struct VibenetAccountItem: Identifiable, Equatable {
     /// today it's the whole of "what has this account done, on the one
     /// chain 8130 actually runs on".
     let changeSequences: VibenetChangeSequences?
+    /// The account's own story — every `ActorAuthorized`/`ActorRevoked`
+    /// moment `actorEvents` already fetched to compute `actors`, bounded to
+    /// `VibenetKeyHistory.cap` and pre-ordered by `VibenetKeyHistory
+    /// .ordered`. Empty when the read failed or nothing has ever happened,
+    /// same shape as `actors` — never a signal of its own.
+    let history: [VibenetKeyMoment]
 
     /// The one alarm-worthy fact (the task's own ruling): a locked account.
     /// Deliberately NOT "not established" — an account that has never done
@@ -379,7 +469,7 @@ struct VibenetAccountItem: Identifiable, Equatable {
 
     init(address: String, reached: Bool, established: Bool, actors: [VibenetActor],
          locked: Bool, hasInitiatedUnlock: Bool, unlocksAt: UInt64?, unlockDelay: UInt16?,
-         changeSequences: VibenetChangeSequences? = nil) {
+         changeSequences: VibenetChangeSequences? = nil, history: [VibenetKeyMoment] = []) {
         self.address = address
         self.reached = reached
         self.established = established
@@ -392,6 +482,32 @@ struct VibenetAccountItem: Identifiable, Equatable {
         self.unlocksAt = unlocksAt
         self.unlockDelay = unlockDelay
         self.changeSequences = changeSequences
+        self.history = history
+    }
+
+    /// The row's own alarm clock, R2.2 — the soonest FUTURE expiry inside
+    /// `urgencyWindow`, or a count of already-expired keys when nothing is
+    /// still ticking. A ticking clock is actionable; a lapsed one is a
+    /// standing fact, so the ticking one wins when both exist. `expiry == 0`
+    /// (Keystore's own "never") never counts either way.
+    static let urgencyWindow: TimeInterval = 7 * 86_400
+
+    func urgentLine(now: Date) -> String? {
+        let dated = actors.filter { $0.expiry > 0 }
+        let soonestFuture = dated
+            .map { $0.expiry }
+            .filter { TimeInterval($0) > now.timeIntervalSince1970 }
+            .min()
+        if let soonestFuture {
+            let at = Date(timeIntervalSince1970: TimeInterval(soonestFuture))
+            guard at.timeIntervalSince(now) <= Self.urgencyWindow else { return nil }
+            return String(localized: "Key expires \(at.formatted(.relative(presentation: .named)))")
+        }
+        let expiredCount = dated.filter { TimeInterval($0.expiry) <= now.timeIntervalSince1970 }.count
+        guard expiredCount > 0 else { return nil }
+        return expiredCount == 1
+            ? String(localized: "1 key expired")
+            : String(localized: "\(expiredCount) keys expired")
     }
 
     /// "Unlocks in 3h" / "Unlock ready" — the lock badge's own clock,
@@ -607,7 +723,10 @@ struct VibenetRoom: Equatable {
     /// show), an address still waiting to be established, a future key
     /// expiry on both the matrix and single-key render paths, an unlock
     /// runway, and a non-nil `changeSequences` standing (the multichain
-    /// footer line, otherwise never exercised in the demo). Nothing here
+    /// footer line, otherwise never exercised in the demo). R2: a
+    /// multi-moment key history (the strip) and a single-moment one (its
+    /// no-strip floor), and a key expiring inside the 7-day urgency window
+    /// (the collapsed row's own alarm line). Nothing here
     /// is a real read — `VibenetRoomSource.compose()` returns this directly
     /// under `DemoMode.isActive`, BEFORE it would otherwise touch the
     /// network, because this room keeps no persistence layer of its own for
@@ -661,14 +780,32 @@ struct VibenetRoom: Equatable {
                              authenticator: "0x9999999999999999999999999999999999999a",
                              kind: .custom, scope: VibenetScope(raw: VibenetScope.sender | 0x0400), expiry: 0),
             ],
-            locked: false, hasInitiatedUnlock: false, unlocksAt: nil, unlockDelay: nil)
+            locked: false, hasInitiatedUnlock: false, unlocksAt: nil, unlockDelay: nil,
+            // R2.1: 4 moments, computed relative to now so the fixture
+            // never goes stale — two adds, a revoke, an add. `demoFixture`
+            // is the one place in this file allowed to read `Date.now`
+            // (composed live, never persisted).
+            history: VibenetKeyHistory.ordered([
+                VibenetKeyMoment(block: 100, logIndex: 0, authorized: true, kind: .secp256k1,
+                                 date: Date.now.addingTimeInterval(-40 * 86_400)),
+                VibenetKeyMoment(block: 220, logIndex: 0, authorized: true, kind: .p256,
+                                 date: Date.now.addingTimeInterval(-12 * 86_400)),
+                VibenetKeyMoment(block: 220, logIndex: 1, authorized: false, kind: nil,
+                                 date: Date.now.addingTimeInterval(-12 * 86_400)),
+                VibenetKeyMoment(block: 340, logIndex: 0, authorized: true, kind: .webAuthn,
+                                 date: Date.now.addingTimeInterval(-2 * 86_400)),
+            ]))
 
         let lockedPlain = VibenetAccountItem(
             address: "0x2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c",
             reached: true, established: true,
             actors: [VibenetActor(actorId: "0x0000000000000000000000000000000000000000000000000000000000000006",
                                    authenticator: "0x0000000000000000000000000000000000000001",
-                                   kind: .secp256k1, scope: VibenetScope(raw: VibenetScope.sender), expiry: 0)],
+                                   kind: .secp256k1, scope: VibenetScope(raw: VibenetScope.sender),
+                                   // R2.2: inside the 7-day urgency window —
+                                   // this row's own collapsed subtitle
+                                   // leads with it instead of a key count.
+                                   expiry: UInt64(Date.now.addingTimeInterval(3 * 86_400).timeIntervalSince1970))],
             locked: true, hasInitiatedUnlock: false, unlocksAt: nil, unlockDelay: nil)
 
         let unlocking = VibenetAccountItem(
@@ -685,7 +822,11 @@ struct VibenetRoom: Equatable {
             locked: true, hasInitiatedUnlock: true, unlocksAt: 4_102_444_800, unlockDelay: 43_200,
             // The multichain footer line has never rendered in the demo —
             // this is the fixture's one non-nil standing.
-            changeSequences: VibenetChangeSequences(multichain: 12, localEpoch: 2, localSequence: 5))
+            changeSequences: VibenetChangeSequences(multichain: 12, localEpoch: 2, localSequence: 5),
+            // R2.1's no-strip floor: exactly one moment, so the summary
+            // line shows and the dot strip itself does not.
+            history: [VibenetKeyMoment(block: 50, logIndex: 0, authorized: true, kind: .secp256k1,
+                                       date: Date.now.addingTimeInterval(-60 * 86_400))])
 
         let notEstablishedYet = VibenetAccountItem(
             address: "0x4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e",
@@ -711,6 +852,18 @@ struct VibenetChangeSequences: Equatable {
     let multichain: UInt64
     let localEpoch: UInt32
     let localSequence: UInt32
+
+    /// R2.3 — the footer's two number-hero chips, replacing a sentence that
+    /// said nothing about THIS account. The wording is the whole of the
+    /// EIP's own meaning for these two fields: `multichain` is changes
+    /// applied off the cross-chain channel, `localSequence` is this
+    /// chain's own count within the current epoch. Zero is a real reading
+    /// and is never hidden — an account that has changed nothing yet says
+    /// so, same as one that's changed a dozen times.
+    var chips: [(value: String, label: String)] {
+        [(String(multichain), String(localized: "cross-chain changes")),
+         (String(localSequence), String(localized: "local, epoch \(localEpoch)"))]
+    }
 }
 
 /// One chain's standing for one account — what `VibenetMultichainSync`

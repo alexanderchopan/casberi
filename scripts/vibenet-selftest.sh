@@ -462,6 +462,12 @@ check("a single-actor account ALSO carries an expiry — singleKeyLine's own cod
       demo.items.contains { $0.actors.count == 1 && ($0.actors.first?.expiry ?? 0) > 0 })
 check("at least one account carries a non-nil changeSequences — the multichain footer line, otherwise never demoed",
       demo.items.contains { $0.changeSequences != nil })
+check("R2: at least one account carries a multi-moment history — the strip's own dots, otherwise never demoed",
+      demo.items.contains { $0.history.count > 1 })
+check("R2: at least one account carries EXACTLY one history moment — the strip's no-strip floor",
+      demo.items.contains { $0.history.count == 1 })
+check("R2: at least one account has a key inside the 7-day urgency window — the collapsed row's own alarm",
+      demo.items.contains { $0.urgentLine(now: .now)?.hasPrefix("Key expires") == true })
 
 // MARK: - VibenetActor.expiryLabel / VibenetAccountItem.unlockLabel
 
@@ -522,6 +528,108 @@ check("clamped — never negative even if the delay reads slightly off",
       unlockingItem(delaySeconds: 3600, secondsIntoDelay: -600).unlockProgress(now: refNow) == 0)
 check("clamped — never past 1 even past the unlock moment",
       unlockingItem(delaySeconds: 3600, secondsIntoDelay: 9000).unlockProgress(now: refNow) == 1)
+
+// MARK: - VibenetAccountItem.urgentLine — R2.2, the collapsed row's own alarm clock
+
+print("")
+print("VibenetAccountItem.urgentLine — the time-critical fact surfaces before you open anything")
+func itemWithExpiries(_ expiries: [UInt64]) -> VibenetAccountItem {
+    let actors = expiries.enumerated().map { i, e in
+        VibenetActor(actorId: "e\(i)", authenticator: "0x1", kind: .secp256k1,
+                    scope: VibenetScope(raw: 0), expiry: e)
+    }
+    return VibenetAccountItem(address: "0x1", reached: true, established: true, actors: actors,
+                              locked: false, hasInitiatedUnlock: false, unlocksAt: nil, unlockDelay: nil)
+}
+let day = 86_400.0
+check("nothing dated at all — no urgency to report",
+      itemWithExpiries([0]).urgentLine(now: refNow) == nil)
+check("a key expiring well outside the 7-day window says nothing",
+      itemWithExpiries([UInt64(refNow.timeIntervalSince1970 + 8 * day)]).urgentLine(now: refNow) == nil)
+check("a key expiring inside the window leads the row",
+      itemWithExpiries([UInt64(refNow.timeIntervalSince1970 + 6 * day)]).urgentLine(now: refNow)?.hasPrefix("Key expires") == true)
+// `.relative(presentation:)` formats against the REAL wall clock, not the
+// `now:` PARAMETER — so two dates that are both merely "in the past
+// relative to `refNow`" (a fixed 2001 timestamp) both print "N years ago"
+// at real-world granularity and a text comparison can't tell them apart.
+// Anchored to `Date.now` here for exactly that reason (`expiryLabel`'s own
+// doc already names this; the demo fixture is the other sanctioned spot).
+let liveNow = Date.now
+let nearOnly = UInt64(liveNow.timeIntervalSince1970 + 1 * day)
+let farOnly = UInt64(liveNow.timeIntervalSince1970 + 6 * day)
+check("of two future expiries, the SOONEST wins — matches the near-only line, not the far-only one",
+      itemWithExpiries([nearOnly, farOnly]).urgentLine(now: liveNow) == itemWithExpiries([nearOnly]).urgentLine(now: liveNow)
+        && itemWithExpiries([nearOnly, farOnly]).urgentLine(now: liveNow) != itemWithExpiries([farOnly]).urgentLine(now: liveNow))
+check("a ticking clock outranks an already-expired key on the same account",
+      itemWithExpiries([UInt64(refNow.timeIntervalSince1970 - day),
+                        UInt64(refNow.timeIntervalSince1970 + 2 * day)])
+        .urgentLine(now: refNow)?.hasPrefix("Key expires") == true)
+check("nothing ticking, one already expired — counted, singular",
+      itemWithExpiries([UInt64(refNow.timeIntervalSince1970 - day)]).urgentLine(now: refNow) == "1 key expired")
+check("nothing ticking, several expired — counted, plural",
+      itemWithExpiries([UInt64(refNow.timeIntervalSince1970 - day),
+                        UInt64(refNow.timeIntervalSince1970 - 2 * day)])
+        .urgentLine(now: refNow) == "2 keys expired")
+check("expiry == 0 (Keystore's own 'never') never counts toward either half",
+      itemWithExpiries([0, UInt64(refNow.timeIntervalSince1970 - day)]).urgentLine(now: refNow) == "1 key expired")
+
+// MARK: - VibenetKeyHistory — R2.1, the account's own story as a sequence strip
+
+print("")
+print("VibenetKeyHistory — a SEQUENCE strip, never a time-proportional axis")
+func moment(_ block: Int, _ logIndex: Int, authorized: Bool, date: Date? = nil) -> VibenetKeyMoment {
+    VibenetKeyMoment(block: block, logIndex: logIndex, authorized: authorized, kind: authorized ? .secp256k1 : nil, date: date)
+}
+let unordered = [moment(5, 1, authorized: true), moment(5, 0, authorized: false), moment(3, 0, authorized: true)]
+check("ordered is TOTAL — block first, then logIndex — a second pass agrees with the first",
+      VibenetKeyHistory.ordered(unordered).map(\.id) == VibenetKeyHistory.ordered(VibenetKeyHistory.ordered(unordered)).map(\.id))
+check("ordered sorts by block then logIndex, oldest first",
+      VibenetKeyHistory.ordered(unordered).map { "\($0.block),\($0.logIndex)" } == ["3,0", "5,0", "5,1"])
+
+check("summaryLine is nil when there is nothing to summarize",
+      VibenetKeyHistory.summaryLine([]) == nil)
+check("summaryLine counts adds alone, singular",
+      VibenetKeyHistory.summaryLine([moment(1, 0, authorized: true)]) == "1 key added")
+check("summaryLine counts both halves, correct plurals, added leads",
+      VibenetKeyHistory.summaryLine([moment(1, 0, authorized: true), moment(2, 0, authorized: true),
+                                     moment(3, 0, authorized: false)]) == "2 keys added · 1 revoked")
+check("summaryLine omits a zero half rather than saying '0 revoked'",
+      !VibenetKeyHistory.summaryLine([moment(1, 0, authorized: true)])!.contains("revoked"))
+
+let refDate = Date(timeIntervalSince1970: 2_000_000_000)
+// Live-anchored (the same reason `urgentLine`'s soonest-wins test is,
+// above): `.relative` formats against the REAL wall clock, and two
+// `refDate`-relative endpoints only 8 days apart both round to the same
+// "N years ago" at that granularity — collapsing `newest` to nil for a
+// reason that has nothing to do with the function under test.
+let liveDated = [moment(1, 0, authorized: true, date: liveNow.addingTimeInterval(-10 * day)),
+                 moment(2, 0, authorized: false, date: liveNow.addingTimeInterval(-2 * day))]
+let liveLabels = VibenetKeyHistory.endpointLabels(liveDated, now: liveNow)
+check("endpointLabels resolves both real endpoints, distinctly",
+      liveLabels.oldest != nil && liveLabels.newest != nil && liveLabels.oldest != liveLabels.newest)
+check("an endpoint with no date is omitted, never guessed",
+      VibenetKeyHistory.endpointLabels([moment(1, 0, authorized: true, date: nil),
+                                        moment(2, 0, authorized: false, date: refDate)],
+                                       now: refDate).oldest == nil)
+check("a single moment's newest label collapses to nil rather than repeating the oldest",
+      VibenetKeyHistory.endpointLabels([moment(1, 0, authorized: true, date: refDate)], now: refDate).newest == nil)
+check("newest wraps the newest cap-worth of events, chronologically ordered",
+      VibenetKeyHistory.newest([VibenetActorEvent(actorId: "a", authorized: true, block: 1, logIndex: 0),
+                                VibenetActorEvent(actorId: "b", authorized: true, block: 2, logIndex: 0),
+                                VibenetActorEvent(actorId: "c", authorized: true, block: 3, logIndex: 0)],
+                               cap: 2).map(\.block) == [2, 3])
+
+// MARK: - VibenetChangeSequences.chips — R2.3
+
+print("")
+print("VibenetChangeSequences.chips — number-hero chips, replacing the single-chain sentence")
+let cs = VibenetChangeSequences(multichain: 12, localEpoch: 2, localSequence: 5)
+check("two chips, multichain first",
+      cs.chips.map(\.value) == ["12", "5"])
+check("a zero standing is a real reading, never hidden",
+      VibenetChangeSequences(multichain: 0, localEpoch: 0, localSequence: 0).chips.map(\.value) == ["0", "0"])
+check("labels carry the epoch, not just a bare 'local'",
+      cs.chips[1].label.contains("2"))
 
 // MARK: - VibenetMultichainSync
 
@@ -668,6 +776,35 @@ mutate "unlockProgress must clamp — never draw past either end of the bar" \
 mutate "an unidentified authenticator must never get an invented detail clause" \
   'case .custom:    nil' \
   'case .custom:    String(localized: "unknown")'
+
+# The row's own alarm clock must lead with the SOONEST ticking key, not the
+# LATEST — a swap here buries the key someone actually needs to act on
+# behind one that has months left.
+mutate "urgentLine must pick the SOONEST future expiry, never the latest" \
+  '.min()' \
+  '.max()'
+
+# Without the logIndex tiebreak, two events in the SAME block sort however
+# the array happened to arrive — the strip reshuffling between opens over
+# an unchanged history is exactly the fault ordering exists to prevent.
+mutate "VibenetKeyHistory.ordered must break ties by logIndex, not array order" \
+  'if $0.logIndex != $1.logIndex { return $0.logIndex < $1.logIndex }' \
+  'if false { return $0.logIndex < $1.logIndex }'
+
+# Counting a revocation as an addition would tell someone their roster grew
+# when a key was actually taken away — the sharpest possible wrong reading
+# of a security-relevant summary line.
+mutate "summaryLine must count adds and revokes separately, never conflate them" \
+  'let added = moments.filter(\.authorized).count' \
+  'let added = moments.count'
+
+# Swapping the chip order puts the local-epoch count where the cross-chain
+# count belongs — the two numbers mean structurally different things
+# (§the EIP's own split) and reading the wrong one as the other is a real
+# misreading, not a cosmetic reorder.
+mutate "VibenetChangeSequences.chips must lead with multichain, not local" \
+  '[(String(multichain), String(localized: "cross-chain changes")),' \
+  '[(String(localSequence), String(localized: "cross-chain changes")),'
 
 echo ""
 echo "✓ vibenet-selftest: drift guards, assertions and mutations all passed"

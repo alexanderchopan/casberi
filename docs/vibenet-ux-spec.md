@@ -195,3 +195,189 @@ static func recentAccounts(keystore: String, limit: Int = 5) async -> [VibenetDi
    + `scripts/catalog-sync.sh` + `python3 scripts/demo-selftest.py` +
    `scripts/setup-copy-audit.py`. Do not run full `verify.sh` unless asked.
 8. Commit style: one commit, imperative subject, body bullets per item.
+
+---
+---
+
+# Round 2 — the visualization pass ("imagine Cash App")
+
+Round 1 (items 0–6 above) SHIPPED in `5c20ce0f`. This round is the data
+visualizations. The sensibility asked for is Cash App's: one bold color
+doing all the work, numbers and moments as heroes with labels whispering
+under them, chunky rounded shapes (fat dots, capsules, pills — never thin
+ticks or hairlines), instantly legible before it is read. Playfulness lives
+in SHAPE and WEIGHT only — never in the claim; every mark stays backed by a
+real measurement (§83). The one color is `Self.mark` (Base blue) — no
+second accent, no green/red, exactly as the card already does.
+
+Same files as Round 1. Same rails (bottom of Round 1) — pure logic in
+`VibenetRoom.swift`, every new function harness-asserted AND
+mutation-proven, demo fixture exercises every new visual.
+
+## R2.1 The key history strip (the big one)
+
+The room already fetches every `ActorAuthorized`/`ActorRevoked` event to
+compute the surviving roster — then throws the history away. Draw it: the
+account's own story ("established in March, rotated keys twice, added a
+passkey last week"), which no other surface can tell.
+
+**A SEQUENCE STRIP, deliberately NOT a time-proportional axis.** Order is
+EXACT (block, then logIndex — already how `survivors` sorts); positions
+along a time axis would need every block's timestamp to be honest and a
+degenerate span (several events in one block) has no honest layout. So:
+chunky dots in chronological order, evenly spaced, oldest left — even
+spacing claims ORDER, not elapsed time, and the two endpoint date labels
+carry the actual clock.
+
+- **Data plumbing** (`VibenetBridge.swift`): `VibenetRead.account` already
+  holds the raw events; carry the newest `historyCap = 10` onto the item as
+  `history: [VibenetKeyMoment]` (new trailing init param, `= []`, backward
+  compatible). Resolve each DISTINCT block's time via the existing
+  `VibenetChain.blockTime` (≤10 lookups, devnet-cheap; dedupe by block so
+  several events in one block cost one read). A moment whose block-time
+  lookup failed keeps `date: nil` — it still DRAWS (its order is exact
+  regardless) but can never be an endpoint label.
+- **New pure type** (`VibenetRoom.swift`):
+  ```swift
+  struct VibenetKeyMoment: Identifiable, Equatable {
+      var id: String { "\(block):\(logIndex)" }
+      let block: Int
+      let logIndex: Int
+      let authorized: Bool          // added vs revoked
+      let kind: VibenetAuthenticatorKind?  // nil when unresolvable (a revoked key is not re-read)
+      let date: Date?               // nil on a failed block-time lookup — never guessed
+  }
+  ```
+  Plus `VibenetKeyHistory` (enum, pure):
+  - `ordered(_:)` — by (block, logIndex), TOTAL (the card must never
+    reshuffle between opens).
+  - `summaryLine(_:)` — "3 keys added · 1 revoked" (each half omitted at
+    zero; both zero → nil, and the strip doesn't draw at all).
+  - `endpointLabels(_:now:)` — (oldest, newest) as short relative/absolute
+    labels ("Mar 12", "2d ago" via `.relative(presentation: .named)` for
+    anything inside ~30d, month-day beyond); nil for an endpoint whose
+    date is nil. Newest label is OMITTED (not repeated) when it would
+    equal the oldest.
+- **Drawing** (`VibenetRoomCard.swift`, expanded view, between the
+  matrix/single-key block and `footer`): the summary line in `.label12`
+  semibold `textPrimary`, then the strip — 10pt dots, `Self.mark` filled
+  for added, a 2.5pt `Self.mark` ring (clear center) for revoked, 8pt
+  spacing, left-aligned with a `Spacer` (the matrix's own intrinsic-width
+  rule). Endpoint labels in `.label11` `textTertiary` under the strip's
+  first and last dots. More than `historyCap` events: a leading
+  "+N earlier" in `.label11` `textTertiary` before the first dot.
+  ≤1 moment total: don't draw the strip (one dot is not a story) — the
+  summary line alone may still show.
+- **Demo**: give `rich` a 4-moment history (two adds, a revoke, an add —
+  dates computed RELATIVE to `Date.now` inside `demoFixture()`, e.g.
+  −40d/−12d/−12d/−2d, so the labels never go stale; the fixture is
+  composed live, not persisted, so a live clock is honest here) and
+  `unlocking` a 1-moment history (exercises the no-strip floor).
+- **Harness**: `ordered` totality; `summaryLine` singular/plural/zero
+  halves; `endpointLabels` nil-date endpoint and same-label collapse;
+  demo-fixture history coverage. **Mutations**: break `ordered`'s
+  logIndex tiebreak; make `summaryLine` count revoked as added.
+
+## R2.2 Urgency surfaces on the collapsed row
+
+A key expiring in 3 hours is invisible until the row is expanded — the
+collapsed subtitle says "3 keys". The time-critical fact must be the
+visible one.
+
+- **New pure function** (`VibenetAccountItem`):
+  ```swift
+  /// The row's own alarm clock — non-nil when a key's expiry is inside
+  /// `urgencyWindow` (7 days) or already past. The soonest FUTURE expiry
+  /// wins over already-expired (a ticking clock is actionable; a lapsed
+  /// one is a standing fact): "Key expires in 3 hours" / "2 keys expired".
+  func urgentLine(now: Date) -> String?
+  ```
+  Rules: `static let urgencyWindow: TimeInterval = 7 * 86_400`. Any actor
+  with `0 < expiry` and `expiry` within the window and future → name the
+  SOONEST, singular wording, relative format. None future-urgent but ≥1
+  expired → count them ("1 key expired" / "N keys expired"). Else nil.
+  `expiry == 0` never counts (Keystore's own "never expires").
+- **Row precedence** (`VibenetRoomCard.row`): unlock countdown (existing,
+  first — the pill beside it already says why) → `urgentLine` → `rowLine`.
+  The urgent line draws `.label12` **semibold** in `Self.mark` — the one
+  place the room's color carries urgency, honest because expiry is
+  genuinely time-critical; never bold-white-on-blue (that's the pill's
+  grammar, reserved for the lock alarm).
+- **Demo**: one account's key gets `expiry = now + 3 days` (computed live
+  in the fixture, same reasoning as R2.1's dates) — `lockedPlain`'s single
+  key is the natural host; its far-future sibling on `rich` keeps the
+  existing "future expiry" checks true.
+- **Harness**: window boundary (8 days out → nil; 6 days → non-nil),
+  soonest-future-wins over expired, expired-count plural, `expiry == 0`
+  excluded. **Mutations**: flip the window comparison; make expired win
+  over ticking.
+
+## R2.3 Change-sequence chips, not a sentence
+
+The single-chain footer sentence ("Only one EIP-8130 chain to compare —
+nothing to sync yet") says nothing about THIS account. The counters are a
+real reading of its config churn — show them as numbers.
+
+- **New pure function** (`VibenetChangeSequences`):
+  ```swift
+  /// The footer chips: value + whisper label, Cash App grammar (number
+  /// is the hero). Wording is the whole of the EIP's own meaning:
+  /// `multichain` counts changes applied off the cross-chain channel,
+  /// `localSequence` counts this chain's own changes this epoch.
+  var chips: [(value: String, label: String)] {
+      [("\(multichain)", "cross-chain changes"),
+       ("\(localSequence)", "local, epoch \(localEpoch)")]
+  }
+  ```
+- **Drawing** (`footer` in `VibenetRoomCard.swift`): replace the
+  single-chain `VibenetMultichainSync.summary` text with the two chips —
+  capsules, `Self.mark.opacity(0.12)` fill, `.padding(.horizontal, 8)
+  .padding(.vertical, 3)`; inside each, the value `.label12` semibold
+  `textPrimary` then the label `.label11` `textTertiary`, one line, no
+  wrapping (`.fixedSize()`). Explorer link unchanged on the trailing edge.
+  `changeSequences == nil` → no chips, exactly as the sentence today.
+- **Ready-to-extend, NOT built**: when `VibenetChainStanding`s ≥ 2 exist
+  (a second live 8130 chain), the chips yield to per-chain aligned bars —
+  full track = the LEADING multichain count, each chain's fill
+  proportional, lagging chains named via the existing `laggingChains`.
+  `VibenetMultichainSync.summary`/`laggingChains` stay exactly as shipped
+  for that day; do not delete them, do not build dormant bar UI now.
+- **Harness**: pin both chip tuples exactly; zero values still render
+  ("0" is a real reading, never hidden). **Mutation**: swap the two
+  labels — must go red.
+
+## R2.4 The lock badge on the hero faces
+
+The face-stack says who's watched, not who's in trouble — the stack
+should carry the alarm at a glance.
+
+- `heroFaces` becomes `[(address: String, alarmed: Bool)]` off the same
+  `room.items.prefix(5)`. An alarmed face wears a badge: 12pt circle,
+  `Self.mark` fill, white `lock.fill` glyph at ~7pt, bottom-trailing
+  offset, with the same 2pt `DS.surfaceSheet` stroke the faces already
+  wear so it reads as part of the stack. One badge for both locked and
+  unlocking (the alarm is the alarm; the row's pill already separates the
+  two words). No badge for anything else — an unreached or unestablished
+  account is not in trouble.
+- No new pure logic (a direct read of `item.alarmed`), so no harness
+  addition — but the DEMO already shows it for free (two alarmed
+  fixtures) and `demo-selftest` needs nothing.
+
+## R2.5 The matrix stays exactly as it is
+
+Four iterations landed it. Its blank-denial/solid-grant design, fixed
+42pt cells, plain-word columns and `byReach` rows are all measured
+decisions — this round touches NOTHING inside `scopeMatrix` or `cell`.
+Treat any diff there as a defect of this round.
+
+## Round 2 rails (delta on Round 1's)
+
+1. `VibenetKeyMoment`/`VibenetKeyHistory`/`urgentLine`/`chips` all live in
+   `VibenetRoom.swift` (Foundation-only) — the strip/chips VIEWS read them
+   dumbly.
+2. The fixture may read `Date.now` ONLY inside `demoFixture()` (composed
+   live, never persisted); everything else keeps taking `now` as a
+   parameter.
+3. The strip claims ORDER, never elapsed time — if a reviewer asks for
+   time-proportional spacing, the answer is in R2.1's second paragraph.
+4. Same verify list as Round 1 rail 7; same one-commit style.

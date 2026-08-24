@@ -446,6 +446,18 @@ enum VibenetRead {
     /// can also stop being live by its own `expiry` passing, which this log
     /// walk alone has no way to see.
     static func actorIDs(account: String, keystore: String) async -> [String]? {
+        guard let events = await actorEvents(account: account, keystore: keystore) else { return nil }
+        // The chronological last-write-wins union is `VibenetActorLog
+        // .survivors` (`VibenetRoom.swift`, Foundation-only and mutation-
+        // tested by `scripts/vibenet-selftest.sh`) — kept out of this file
+        // so that arithmetic can be proven with no network in sight.
+        return Array(VibenetActorLog.survivors(events))
+    }
+
+    /// The RAW event log behind `actorIDs`'s survivor union — split out so
+    /// `account(_:contracts:)` can read the key-history strip (R2.1) off
+    /// the SAME `eth_getLogs` call rather than paying for it twice.
+    static func actorEvents(account: String, keystore: String) async -> [VibenetActorEvent]? {
         let ownerTopic = "0x" + VibenetABI.padAddress(account)
         guard let logs = await VibenetChain.getLogs(
             address: keystore,
@@ -466,11 +478,7 @@ enum VibenetRead {
                                             block: WalletIngest.hexToInt(blockHex),
                                             logIndex: WalletIngest.hexToInt(indexHex)))
         }
-        // The chronological last-write-wins union is `VibenetActorLog
-        // .survivors` (`VibenetRoom.swift`, Foundation-only and mutation-
-        // tested by `scripts/vibenet-selftest.sh`) — kept out of this file
-        // so that arithmetic can be proven with no network in sight.
-        return Array(VibenetActorLog.survivors(events))
+        return events
     }
 
     /// One actor's LIVE state, confirmed via `getActorConfig` rather than
@@ -521,16 +529,17 @@ enum VibenetRead {
         }
         let established = WalletIngest.hexToDouble(establishedWord) != 0
 
-        async let idsTask = actorIDs(account: address, keystore: contracts.keystore)
+        async let eventsTask = actorEvents(account: address, keystore: contracts.keystore)
         async let lockTask = VibenetChain.ethCall(
             to: contracts.keystore, data: VibenetABI.lockStatusCall(address))
         async let sequencesTask = changeSequences(account: address, keystore: contracts.keystore)
-        let ids = await idsTask
+        let events = await eventsTask
         let lockRaw = await lockTask
         let sequences = await sequencesTask
 
         var actors: [VibenetActor] = []
-        if let ids {
+        if let events {
+            let ids = VibenetActorLog.survivors(events)
             let known = contracts.knownAuthenticators
             for id in ids {
                 if let a = await actor(account: address, keystore: contracts.keystore,
@@ -538,6 +547,29 @@ enum VibenetRead {
                     actors.append(a)
                 }
             }
+        }
+
+        // R2.1: the account's own story, off the SAME events — no second
+        // `eth_getLogs`. Kind is resolved only for a currently-live
+        // authorized actor (matched against the roster just built above,
+        // zero extra `eth_call`s); a later-revoked actor's kind at that
+        // past moment isn't retrievable without an archive node, so it
+        // stays nil rather than guessed. Block times are looked up ONCE
+        // per distinct block (several events can share a block) and
+        // bounded to `VibenetKeyHistory.cap` moments — devnet-cheap.
+        var history: [VibenetKeyMoment] = []
+        if let events {
+            let liveKind = Dictionary(uniqueKeysWithValues: actors.map { ($0.actorId, $0.kind) })
+            let newest = VibenetKeyHistory.newest(events)
+            var blockDates: [Int: Date] = [:]
+            for block in Set(newest.map(\.block)) {
+                if let date = await VibenetChain.blockTime(block) { blockDates[block] = date }
+            }
+            history = VibenetKeyHistory.ordered(newest.map { e in
+                VibenetKeyMoment(block: e.block, logIndex: e.logIndex, authorized: e.authorized,
+                                 kind: e.authorized ? liveKind[e.actorId] : nil,
+                                 date: blockDates[e.block])
+            })
         }
 
         var locked = false, hasInitiatedUnlock = false
@@ -555,7 +587,7 @@ enum VibenetRead {
                                   actors: actors, locked: locked,
                                   hasInitiatedUnlock: hasInitiatedUnlock,
                                   unlocksAt: unlocksAt, unlockDelay: unlockDelay,
-                                  changeSequences: sequences)
+                                  changeSequences: sequences, history: history)
     }
 }
 
