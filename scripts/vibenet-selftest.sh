@@ -163,26 +163,10 @@ check("names() carries no reserved bit",
 check("the highest bit is still just 'unknown', never invented",
       VibenetScope(raw: 0x8000).summary == "+1 unknown")
 
-// MARK: - VibenetScope matrix (namedLabels / grantedFlags)
+// MARK: - VibenetScope.grantedCount — byReach's ranking key
 
-check("namedLabels are full words, in the contract's own order — never abbreviated",
-      VibenetScope.namedLabels == ["Sender", "Policy", "Nonce", "Self-payer", "Sponsor-payer"])
-check("grantedFlags is the SAME order as namedLabels, one bool per bit",
-      VibenetScope(raw: VibenetScope.sender | VibenetScope.selfPayer).grantedFlags
-        == [true, false, false, true, false])
-check("an empty scope's matrix column is all false, never a crash on an all-empty row",
-      VibenetScope(raw: 0).grantedFlags == [false, false, false, false, false])
 check("grantedCount counts named bits AND reserved ones — a bit we can't name is still a power",
       VibenetScope(raw: VibenetScope.sender | VibenetScope.selfPayer | 0x0020).grantedCount == 3)
-// The card says what a bit MEANS; the probe says what the contract CALLS it.
-// Both orders must stay the contract's own, so a column header and a probe
-// line can never describe different bits by the same position.
-check("plainLabels are what the bits mean, in the contract's own order",
-      VibenetScope.plainLabels
-        == ["Send any", "Send limited", "Nonce", "Pay own gas", "Pay others"])
-check("the spec's constant names survive alongside them, for the probe",
-      VibenetScope.namedLabels
-        == ["Sender", "Policy", "Nonce", "Self-payer", "Sponsor-payer"])
 check("plainSummary words a real grant in plain English",
       VibenetScope(raw: VibenetScope.sender | VibenetScope.selfPayer).plainSummary
         == "Send any, Pay own gas")
@@ -192,6 +176,22 @@ check("a reserved bit is still counted, never named, in the plain wording too",
       VibenetScope(raw: VibenetScope.sender | 0x0020).plainSummary == "Send any, +1 unknown")
 check("an empty scope reaches nothing",
       VibenetScope(raw: 0).grantedCount == 0)
+
+// MARK: - VibenetScope.grantedPlainLabels — R3.1, the matrix's replacement
+
+print("")
+print("VibenetScope.grantedPlainLabels — one chip per granted permission, replacing the matrix")
+check("a real grant yields one chip label per permission, in the contract's own order",
+      VibenetScope(raw: VibenetScope.sender | VibenetScope.selfPayer).grantedPlainLabels
+        == ["Send any", "Pay own gas"])
+check("an empty scope yields no chips at all — the caller draws its own sentence instead",
+      VibenetScope(raw: 0).grantedPlainLabels.isEmpty)
+check("a reserved bit appends ONE trailing '+N unknown' label, never an invented name",
+      VibenetScope(raw: VibenetScope.sender | 0x0020).grantedPlainLabels == ["Send any", "+1 unknown"])
+check("several reserved bits still collapse to ONE trailing chip, plural",
+      VibenetScope(raw: VibenetScope.sender | 0x0020 | 0x0040).grantedPlainLabels == ["Send any", "+2 unknown"])
+check("reserved bits alone (nothing named) still yield exactly one chip",
+      VibenetScope(raw: 0x0020).grantedPlainLabels == ["+1 unknown"])
 
 // MARK: - Authenticator identity
 
@@ -775,6 +775,14 @@ mutate "VibenetLogChunking.ranges must not skip the boundary block between chunk
 mutate "VibenetLogChunking.ranges must stop at maxChunks, never loop unbounded" \
   'while to >= 0, chunk < maxChunks {' \
   'while to >= 0 {'
+
+# A key row's whole content is its granted-permission chips — losing the
+# NAMED ones while keeping only the unknown-count tail would show a key
+# that can send transactions and pay its own gas as a row with a single
+# "+1 unknown" chip, hiding the powers that actually matter.
+mutate "grantedPlainLabels must include the NAMED permissions, not just the unknown tail" \
+  'var parts = plainNames' \
+  'var parts: [String] = []'
 
 mutate "a revoked actorId must NOT survive its own revoke" \
   'return Set(latest.filter(\.value).map(\.key))' \

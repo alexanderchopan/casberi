@@ -40,6 +40,11 @@ struct VibenetScreen: View {
     @State private var renamingAddress: String?
     @State private var renameText = ""
 
+    /// R3.2 — a row's tap opens the detail sheet, keyed by the address
+    /// itself (`String` is `Identifiable`, the `L2beatScreen`/
+    /// `WalletbeatScreen` shape).
+    @State private var opened: String?
+
     var body: some View {
         List {
             BridgeSetupHeader(
@@ -61,6 +66,8 @@ struct VibenetScreen: View {
                 VibenetRoomCard(room: room, onRemove: unwatch, onRename: { address in
                     renameText = watch.name(for: address) ?? ""
                     renamingAddress = address
+                }, onOpen: { address in
+                    opened = address
                 })
                     .listRowInsets(EdgeInsets())
                     .listRowBackground(Color.clear)
@@ -81,6 +88,9 @@ struct VibenetScreen: View {
         .dsPageBackground()
         .dsSoftScrollEdges()
         .dsScreenTitle("Base Vibenet")
+        .sheet(item: $opened) { address in
+            VibenetAccountSheet(address: address, room: room, onRemove: unwatch)
+        }
         .alert(
             String(localized: "Name this account"),
             isPresented: Binding(

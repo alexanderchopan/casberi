@@ -381,3 +381,125 @@ Treat any diff there as a defect of this round.
 3. The strip claims ORDER, never elapsed time — if a reviewer asks for
    time-proportional spacing, the answer is in R2.1's second paragraph.
 4. Same verify list as Round 1 rail 7; same one-commit style.
+
+---
+---
+
+# Round 3 — kill the matrix, give accounts a real detail sheet
+
+Rounds 1–2 shipped (`5c20ce0f`, `68344d32`, `61a9771a`). The user's verdict
+on what remains: the permission matrix and the account detail experience
+both suck. This round replaces them. **It explicitly SUPERSEDES Round 2's
+R2.5 freeze** ("the matrix stays exactly as it is") — that rail protected
+the matrix from incidental churn; this is its deliberate retirement.
+
+Why they suck, named so the fixes aim at the right thing:
+- The matrix demands AXIS LOOKUP: a solid block only means something after
+  tracing up to a 9pt two-line column header. Six columns of 9pt text is
+  spec-sheet density, the opposite of the Cash App grammar every other
+  Round 2 element now speaks (number/word as hero, label whispering).
+- The expand-in-place "detail view" crams every reading — matrix, expiry,
+  history strip, chips, Explorer — into a card's width minus padding,
+  which is exactly why the footer squeezed and the Explorer link wrapped.
+  An account has earned a real surface.
+
+## R3.1 Keys as worded chip rows (the matrix dies)
+
+One component serves 1…N keys — the `singleKeyLine` / `scopeMatrix`
+adaptive fork is DELETED, not extended.
+
+- **New pure function** (`VibenetScope`, `VibenetRoom.swift`):
+  ```swift
+  /// The granted permissions as plain words, in `named` order — the chip
+  /// row's whole content. A reserved bit this build can't name appends
+  /// "+N unnamed" (never an invented permission, §83). Empty scope → [].
+  var grantedPlainLabels: [String]
+  ```
+  Derive from the existing `named`/`plainLabels` tables — one source of
+  truth, no second vocabulary. Harness: order matches `named`, unknown
+  bits append the counted tail, empty scope yields empty. Mutation: drop
+  the unknown tail — must go red.
+- **The key row** (`VibenetRoomCard.swift`, new `keyRow(_ actor:)`):
+  - Title line: `plainTitle` (`.label12` semibold) + `plainDetail`
+    (`.label11` tertiary) beneath, exactly as `singleKeyLine` draws today.
+  - Under it: the granted permissions as CHIPS — R2.3's exact capsule
+    grammar (`Self.mark.opacity(0.12)` fill, `.label11`, `.lineLimit(1)
+    .fixedSize()` per chip), laid out in the existing `FlowLayout`
+    (`ThingSheetView.swift:2709`) so whole capsules wrap to the next line
+    and text inside a capsule never does. "No scope" (empty grant) draws
+    one plain-text line "Can't originate anything yet" in tertiary — a
+    real state, not an empty chip row. The "+N unnamed" tail chip draws
+    OUTLINED (stroke, no fill) — visibly a different claim.
+  - Expiry: keep the existing conditional `expiryLabel` sub-line.
+  - Rows in `byReach` order, unchanged.
+- Reading one row now answers "what can this key do" with zero lookups,
+  and cross-key comparison survives because every row uses the same words
+  in the same order.
+- `VibenetScope.plainLabels` and `shortLabel` stay (the harness pins
+  them); `scopeMatrix`, `cell`, and `cellWidth` are deleted with their
+  doc comments.
+
+## R3.2 The account detail sheet (expand-in-place dies)
+
+A row's tap stops toggling an inline disclosure and OPENS A SHEET — the
+one-gesture rule holds (tap → sheet), the chevron flips from up/down to
+`chevron.right`, and the card goes back to being a summary.
+
+- **Presentation**: ONE `.sheet(item:)` on `VibenetScreen` (the house
+  one-sheet rule), item = a small `Identifiable` wrapper on the address.
+  The card gains `onOpen: (String) -> Void` beside `onRemove`/`onRename`;
+  the row Button calls it. Detents `[.medium, .large]`,
+  `dsSheetSurface` / the house sheet chrome (match `L2beatSheet`'s shape
+  for a non-Thing sheet precedent).
+- **The sheet resolves its item against `room.items`** (passed in, value
+  types only — no Thing, no liveness class). Item vanished from a
+  re-compose (unwatched elsewhere): dismiss, the `isLive`-sheet
+  discipline without the SwiftData half.
+- **Anatomy, top to bottom (Cash App: hero first, whisper labels)**:
+  1. `WalletFace` at 56pt + nickname (or short address) as the hero title
+     (`.heading22`); beneath it the FULL address, monospaced `.label11`
+     tertiary, `.lineLimit(1)` middle-truncation is fine here (it's the
+     one place the whole address appears; Copy handles precision).
+  2. The state, as one sentence — reuse the row's own precedence verbatim:
+     unlock countdown + full-width runway, else `urgentLine`, else
+     `rowLine`. The Locked/Unlocking pill rides the hero row's trailing
+     edge.
+  3. "Keys" section: `keyRow` per actor (R3.1), `byReach` order.
+  4. "History": the R2.1 summary line + dot strip + endpoint labels,
+     moved here unchanged.
+  5. The R2.3 sync chips — full width now, no ScrollView squeeze needed,
+     but keep the ScrollView anyway (large Dynamic Type).
+  6. Doors: "Explorer" `Link` (existing URL builder) and "Copy address"
+     as visible buttons — a sheet earns visible verbs where a row only
+     had a context menu. "Name this account…" and destructive "Stop
+     watching" stay in an ellipsis menu on the hero row (stop-watching
+     also dismisses).
+- **The card's row after this**: face + title/subtitle + pill +
+  `chevron.right`. The expanded-content block, `expanded: Set<String>`
+  state, `keyHistoryStrip`, and `footer` all MOVE to the sheet file or
+  delete. New file: `Casberi/Casberi/Screens/VibenetAccountSheet.swift`
+  (synced folder — no pbxproj edit).
+- **Context menu on the row stays** (name/copy/stop watching) — menu and
+  sheet duplicating verbs is fine; the menu is the shortcut, the sheet is
+  the surface.
+
+## Round 3 rails
+
+1. Pure logic (`grantedPlainLabels`) in `VibenetRoom.swift`, harness
+   assertions + the mutation above. The DELETED matrix's harness lines
+   (`plainLabels` pinning etc.) stay — the vocabulary survives, only the
+   drawing dies.
+2. No new `Thing` fields, no new hosts, no `NetworkReach` change. The
+   sheet is value-types-only — none of the SwiftData liveness corollaries
+   apply, and say so in its header doc.
+3. Every text element: `.lineLimit(1)` + `.fixedSize()` for short labels,
+   FlowLayout for chip collections — nothing wraps mid-word, nothing
+   truncates silently except the hero address (deliberate, stated above).
+4. Demo parity: the existing fixture already exercises every sheet
+   section (multi-key roster incl. unknown scope, expiry, unlock runway,
+   history, chips). No fixture change expected; verify by opening the
+   sheet on each demo account in the sim.
+5. Verify: build + `scripts/vibenet-selftest.sh` +
+   `python3 scripts/demo-selftest.py` + `python3 scripts/setup-copy-audit.py`.
+   Full `verify.sh` stays off unless asked. Shipping is ON HOLD until the
+   user says go.

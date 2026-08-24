@@ -61,12 +61,27 @@ struct VibenetScope: Equatable {
         VibenetScope.named.filter { raw & $0.bit != 0 }.map(\.label)
     }
 
-    /// The granted bits in PLAIN words — what the one-key case says instead
-    /// of a matrix, and the same vocabulary the matrix's column headers use,
-    /// so the two forms of this card never teach two different names for
-    /// one permission.
+    /// The granted bits in PLAIN words — `plainSummary`'s comma-joined
+    /// sentence and `grantedPlainLabels`' separate chips (R3.1) both read
+    /// off this one list, so the two forms of this card never teach two
+    /// different names for one permission.
     var plainNames: [String] {
         VibenetScope.named.filter { raw & $0.bit != 0 }.map(\.plain)
+    }
+
+    /// R3.1 — the granted permissions as SEPARATE chip labels, replacing the
+    /// matrix: `plainNames` plus one trailing "+N unknown" element when a
+    /// reserved bit is set (never an invented name for it, §83). Empty scope
+    /// returns `[]` — the caller draws its own "can't originate anything
+    /// yet" sentence rather than a chip row with nothing in it.
+    var grantedPlainLabels: [String] {
+        var parts = plainNames
+        if unknownCount > 0 {
+            parts.append(unknownCount == 1
+                ? String(localized: "+1 unknown")
+                : String(localized: "+\(unknownCount) unknown"))
+        }
+        return parts
     }
 
     /// "Send any, Pay own gas" / "Send any, +1 unknown" / "No permissions".
@@ -103,29 +118,13 @@ struct VibenetScope: Equatable {
         return parts.joined(separator: ", ")
     }
 
-    // MARK: Matrix
-
-    /// The contract's own constant names, in its own declared order — for a
-    /// probe dump read beside the spec, never for the card.
-    static var namedLabels: [String] { named.map(\.label) }
-
-    /// What each bit MEANS, same order — the matrix's COLUMN headers.
-    /// Deliberately short: they head a column, and every one is whole words
-    /// that may wrap between them but never inside one.
-    static var plainLabels: [String] { named.map(\.plain) }
-
-    /// One bool per named bit, in `namedLabels`' order — one actor's COLUMN
-    /// in the matrix (an actor is a column, a scope is a row).
-    var grantedFlags: [Bool] {
-        VibenetScope.named.map { raw & $0.bit != 0 }
-    }
-
     /// How many powers this key holds in total — named bits PLUS reserved
     /// ones, because a bit this build can't name is still a power the key
-    /// carries. The matrix ranks columns by it so the most-privileged key
-    /// is read first; treating every scope as equally weighted (the first
-    /// cut) meant SENDER — "may originate transactions to anyone" — got the
-    /// same visual standing as NONCE, which is a sequencing detail.
+    /// carries. `byReach` (below) ranks keys by it so the most-privileged
+    /// one is read first; treating every scope as equally weighted (the
+    /// first cut, back when this was a matrix) meant SENDER — "may
+    /// originate transactions to anyone" — got the same visual standing
+    /// as NONCE, which is a sequencing detail.
     var grantedCount: Int { names.count + unknownCount }
 }
 
@@ -685,11 +684,11 @@ struct VibenetRoom: Equatable {
     /// The row's own line — what a person reads under the address. Two
     /// redundancies deliberately absent: it NEVER restates
     /// "Locked"/"Unlocking" (the badge already says that in bold beside it),
-    /// and it counts the keys rather than NAMING them, because the matrix
-    /// below spells out every kind in full the moment the row is opened —
-    /// listing them here too printed "1 secp256k1 key, 1 P-256 key, 1
-    /// Passkey, 1 Delegate, 1 Custom authenticator" across two wrapped lines
-    /// directly above a matrix saying the same five words again.
+    /// and it counts the keys rather than NAMING them, because the detail
+    /// sheet's key rows (R3.1) spell out every kind in full the moment
+    /// someone opens it — listing them here too printed "1 secp256k1 key,
+    /// 1 P-256 key, 1 Passkey, 1 Delegate, 1 Custom authenticator" across
+    /// two wrapped lines on the one screen meant to be a summary.
     static func rowLine(_ item: VibenetAccountItem) -> String {
         guard item.reached else { return String(localized: "Couldn't reach the chain") }
         guard item.established else { return String(localized: "Not established yet") }
@@ -767,8 +766,9 @@ struct VibenetRoom: Equatable {
     /// at once: all five nameable authenticator kinds, a rich established
     /// roster, a plain lock and a mid-unlock (so the badge's two words both
     /// show), an address still waiting to be established, a future key
-    /// expiry on both the matrix and single-key render paths, an unlock
-    /// runway, and a non-nil `changeSequences` standing (the multichain
+    /// expiry on both a multi-key account's key rows and a single-key
+    /// account's (R3.1), an unlock runway, and a non-nil
+    /// `changeSequences` standing (the multichain
     /// footer line, otherwise never exercised in the demo). R2: a
     /// multi-moment key history (the strip) and a single-moment one (its
     /// no-strip floor), and a key expiring inside the 7-day urgency window
@@ -792,10 +792,9 @@ struct VibenetRoom: Equatable {
             reached: true, established: true,
             actors: [
                 // A future expiry, deliberately — the demo's ONE fixture
-                // exercising the expiry sub-label on both the matrix row and
-                // (via `unlocking`'s single key below) `singleKeyLine`. Fixed
-                // far enough out that this fixture doesn't need updating for
-                // years.
+                // exercising the expiry sub-label on a multi-key account's
+                // key row (R3.1). Fixed far enough out that this fixture
+                // doesn't need updating for years.
                 VibenetActor(actorId: "0x0000000000000000000000000000000000000000000000000000000000000001",
                              authenticator: "0x0000000000000000000000000000000000000001",
                              kind: .secp256k1, scope: VibenetScope(raw: VibenetScope.sender | VibenetScope.selfPayer),
@@ -860,10 +859,11 @@ struct VibenetRoom: Equatable {
             actors: [VibenetActor(actorId: "0x0000000000000000000000000000000000000000000000000000000000000007",
                                    authenticator: "0x0000000000000000000000000000000000000001",
                                    kind: .secp256k1, scope: VibenetScope(raw: VibenetScope.sender | VibenetScope.selfPayer),
-                                   // A single-actor account with an expiry
-                                   // too — the `singleKeyLine` path's own
-                                   // expiry sub-label, distinct code from
-                                   // the matrix row above.
+                                   // A single-actor account with an
+                                   // expiry too — R3.1's key row draws the
+                                   // same way whether an account has one
+                                   // key or several, so this just doubles
+                                   // the expiry-sub-label coverage above.
                                    expiry: 4_102_444_800)],
             locked: true, hasInitiatedUnlock: true, unlocksAt: 4_102_444_800, unlockDelay: 43_200,
             // The multichain footer line has never rendered in the demo —
