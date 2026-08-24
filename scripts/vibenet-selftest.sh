@@ -222,6 +222,36 @@ check("kind labels are real words",
         && VibenetAuthenticatorKind.webAuthn.label == "Passkey"
         && VibenetAuthenticatorKind.custom.label == "Custom authenticator")
 
+// MARK: - VibenetLogChunking.ranges — the RPC's 100,000-block ceiling, walked correctly
+
+print("")
+print("VibenetLogChunking.ranges — MEASURED 2026-08-23: the RPC refuses a wider eth_getLogs window")
+check("a chain shorter than one range needs exactly one chunk, covering genesis to tip",
+      VibenetLogChunking.ranges(tip: 500, maxRange: 100_000, maxChunks: 50).map { "\($0.from)-\($0.to)" }
+        == ["0-500"])
+check("a chain exactly as tall as the range still needs only one chunk",
+      VibenetLogChunking.ranges(tip: 99_999, maxRange: 100_000, maxChunks: 50).map { "\($0.from)-\($0.to)" }
+        == ["0-99999"])
+let overByOne = VibenetLogChunking.ranges(tip: 100_000, maxRange: 100_000, maxChunks: 50)
+check("one block past the range needs a SECOND chunk, walked tip-backward",
+      overByOne.map { "\($0.from)-\($0.to)" } == ["1-100000", "0-0"])
+check("no gaps and no overlaps across chunks — every block from genesis to tip covered exactly once",
+      overByOne.reduce(0) { $0 + ($1.to - $1.from + 1) } == 100_001)
+let real = VibenetLogChunking.ranges(tip: 285_133, maxRange: 100_000, maxChunks: 50)
+check("the live chain height measured this session needs exactly 3 chunks",
+      real.count == 3)
+check("chunks are walked NEWEST first — a just-authorized key is always inside the first chunk read",
+      real.first?.to == 285_133)
+check("the LAST chunk always reaches genesis",
+      real.last?.from == 0)
+check("the chunk-count breaker is real — a chain far taller than maxChunks × maxRange truncates rather than looping forever",
+      VibenetLogChunking.ranges(tip: 10_000_000, maxRange: 100_000, maxChunks: 5).count == 5)
+check("a truncated walk still starts at the tip — the newest history is never what's dropped",
+      VibenetLogChunking.ranges(tip: 10_000_000, maxRange: 100_000, maxChunks: 5).first?.to == 10_000_000)
+check("nonsense inputs (negative tip, zero range) return no ranges rather than looping or crashing",
+      VibenetLogChunking.ranges(tip: -1, maxRange: 100_000, maxChunks: 50).isEmpty
+        && VibenetLogChunking.ranges(tip: 500, maxRange: 0, maxChunks: 50).isEmpty)
+
 // MARK: - The actor log union — the sharpest arithmetic in the file
 
 print("")
@@ -730,6 +760,22 @@ PY
 
 # A revoked actorId reading as live is the sharpest possible failure here —
 # it would tell someone a key can still act for an account when it can't.
+# An off-by-one here either re-reads one block twice (harmless but wasteful)
+# or SKIPS one block silently — and a skipped block can hide the one event
+# that would have kept a live actor in the roster. Both are real failures
+# of the "no gaps, no overlaps" contract chunking exists for.
+mutate "VibenetLogChunking.ranges must not skip the boundary block between chunks" \
+  'let from = max(0, to - maxRange + 1)' \
+  'let from = max(0, to - maxRange)'
+
+# Without the chunk-count breaker, an oversized `tip` (a devnet that
+# outgrows every bound this file assumes) spins forever against a shared
+# public RPC — exactly the unbounded crawl this whole design exists to
+# refuse.
+mutate "VibenetLogChunking.ranges must stop at maxChunks, never loop unbounded" \
+  'while to >= 0, chunk < maxChunks {' \
+  'while to >= 0 {'
+
 mutate "a revoked actorId must NOT survive its own revoke" \
   'return Set(latest.filter(\.value).map(\.key))' \
   'return Set(latest.map(\.key))'

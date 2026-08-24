@@ -313,16 +313,62 @@ enum VibenetChain {
         await call(method: "eth_call", params: [["to": to, "data": data], "latest"]) as? String
     }
 
-    /// A full-range read from block 0 — this is a brand-new, small devnet,
-    /// so unlike `WalletApprovals`'s mainnet chunking there is no history
-    /// large enough to need it. A read that fails or times out simply
-    /// returns nil, same as every other read here, and the caller reports
-    /// that address unreached rather than guessing at a partial roster.
+    static func blockNumber() async -> Int? {
+        guard let hex = await call(method: "eth_blockNumber", params: []) as? String else { return nil }
+        let n = WalletIngest.hexToInt(hex)
+        return n >= 0 ? n : nil
+    }
+
+    /// MEASURED 2026-08-23: the RPC enforces a 100,000-block ceiling on
+    /// `eth_getLogs` ("query exceeds max block range 100000") — this devnet
+    /// simply outgrew the "brand-new, small devnet, no history large enough
+    /// to need chunking" assumption this file shipped with (chain height
+    /// 285,133 the day this was measured, walkable at block 0 in a single
+    /// unbounded call for the feature's first three weeks). A from-block-0
+    /// read now fails OUTRIGHT and silently reads as "unreached" — the
+    /// reported bug this fixes: a genuinely established account read as
+    /// "not established yet", and the empty-state discovery read as
+    /// nothing found, from the SAME root cause hitting two call sites.
+    static let maxLogRange = 100_000
+
+    /// A circuit breaker, not a coverage promise — `WalletApprovals`'s own
+    /// reasoning: an unbounded crawl of a shared public RPC serves no one.
+    /// 50 chunks covers 5,000,000 blocks, many multiples of this devnet's
+    /// current height, so in practice every read here is still COMPLETE;
+    /// if vibenet ever outgrows that too, the oldest history is what's
+    /// dropped (walked TIP-BACKWARD), the same "accept a hole in the past,
+    /// keep the present accurate" tradeoff `WalletApprovals` already makes.
+    static let maxLogChunks = 50
+
+    /// Walks backward from the chain tip in `maxLogRange`-sized windows,
+    /// accumulating every log across all of them — unlike `WalletApprovals`
+    /// (which reads a WALLET's own recent activity and is fine missing an
+    /// old approval), this file needs the account's COMPLETE authorize/
+    /// revoke history: `VibenetActorLog.survivors` decides liveness by the
+    /// LATEST event per actorId, so a missed early authorization for a key
+    /// nothing has touched since would make a live key vanish from the
+    /// roster, not merely read stale. Nil only when the FIRST chunk (the
+    /// newest, and the one every caller most needs) fails to answer; a
+    /// failure on an OLDER chunk stops the walk there and returns what was
+    /// gathered — the same partial-is-better-than-nothing shape `blockTime`
+    /// and every other read in this file already uses.
     static func getLogs(address: String, topics: [Any]) async -> [[String: Any]]? {
-        let params: [String: Any] = [
-            "address": address, "fromBlock": "0x0", "toBlock": "latest", "topics": topics,
-        ]
-        return await call(method: "eth_getLogs", params: [params]) as? [[String: Any]]
+        guard let tip = await blockNumber() else { return nil }
+        let ranges = VibenetLogChunking.ranges(tip: tip, maxRange: maxLogRange, maxChunks: maxLogChunks)
+        var gathered: [[String: Any]] = []
+        for (index, range) in ranges.enumerated() {
+            let params: [String: Any] = [
+                "address": address,
+                "fromBlock": "0x" + String(range.from, radix: 16),
+                "toBlock": "0x" + String(range.to, radix: 16),
+                "topics": topics,
+            ]
+            guard let page = await call(method: "eth_getLogs", params: [params]) as? [[String: Any]] else {
+                return index == 0 ? nil : gathered
+            }
+            gathered.append(contentsOf: page)
+        }
+        return gathered
     }
 
     /// A block's own timestamp — what a landed event is dated by, never

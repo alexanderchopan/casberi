@@ -175,6 +175,7 @@ struct VibenetRoomCard: View {
                                 Text(countdown)
                                     .dsText(.label12)
                                     .foregroundStyle(DS.textPrimary)
+                                    .lineLimit(1)
                                 // Only when BOTH endpoints are known — a bar
                                 // with a guessed start is the fake status
                                 // §83 forbids, so this is silent rather than
@@ -204,10 +205,12 @@ struct VibenetRoomCard: View {
                                 Text(urgent)
                                     .dsText(.label12).fontWeight(.semibold)
                                     .foregroundStyle(Self.mark)
+                                    .lineLimit(1)
                             } else {
                                 Text(VibenetRoom.rowLine(item))
                                     .dsText(.label12)
                                     .foregroundStyle(item.alarmed ? DS.textPrimary : DS.textSecondary)
+                                    .lineLimit(1)
                             }
                         }
                     }
@@ -437,6 +440,7 @@ struct VibenetRoomCard: View {
                                 Text(String(localized: "+\(item.history.count - VibenetKeyHistory.cap) earlier"))
                                     .dsText(.label11)
                                     .foregroundStyle(DS.textTertiary)
+                                    .lineLimit(1)
                             }
                             ForEach(item.history) { moment in
                                 Circle()
@@ -448,10 +452,12 @@ struct VibenetRoomCard: View {
                         HStack {
                             if let oldest = labels.oldest {
                                 Text(oldest).dsText(.label11).foregroundStyle(DS.textTertiary)
+                                    .lineLimit(1).fixedSize()
                             }
                             Spacer(minLength: DS.Space.s2)
                             if let newest = labels.newest {
                                 Text(newest).dsText(.label11).foregroundStyle(DS.textTertiary)
+                                    .lineLimit(1).fixedSize()
                             }
                         }
                     }
@@ -477,20 +483,30 @@ struct VibenetRoomCard: View {
     private func footer(_ item: VibenetAccountItem) -> some View {
         HStack(alignment: .center, spacing: DS.Space.s2) {
             if let cs = item.changeSequences {
-                HStack(spacing: 6) {
-                    ForEach(Array(cs.chips.enumerated()), id: \.offset) { _, chip in
-                        HStack(spacing: 3) {
-                            Text(chip.value)
-                                .dsText(.label12).fontWeight(.semibold)
-                                .foregroundStyle(DS.textPrimary)
-                            Text(chip.label)
-                                .dsText(.label11)
-                                .foregroundStyle(DS.textTertiary)
+                // Scrolls rather than compresses — two chips plus the
+                // Explorer link can genuinely outgrow the card's width at
+                // larger Dynamic Type sizes, and the fix is never letting
+                // anything WRAP (design law): the Explorer link is the
+                // action someone needs to always reach whole, so it's what
+                // stays fixed on the trailing edge; the chips are the
+                // informational half and scroll instead.
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 6) {
+                        ForEach(Array(cs.chips.enumerated()), id: \.offset) { _, chip in
+                            HStack(spacing: 3) {
+                                Text(chip.value)
+                                    .dsText(.label12).fontWeight(.semibold)
+                                    .foregroundStyle(DS.textPrimary)
+                                Text(chip.label)
+                                    .dsText(.label11)
+                                    .foregroundStyle(DS.textTertiary)
+                            }
+                            .lineLimit(1)
+                            .fixedSize()
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 3)
+                            .background(Self.mark.opacity(0.12), in: Capsule())
                         }
-                        .fixedSize()
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 3)
-                        .background(Self.mark.opacity(0.12), in: Capsule())
                     }
                 }
             }
@@ -502,7 +518,10 @@ struct VibenetRoomCard: View {
                 }
                 .dsText(.label11).fontWeight(.semibold)
                 .foregroundStyle(Self.mark)
+                .lineLimit(1)
+                .fixedSize()
             }
+            .layoutPriority(1)
         }
         .padding(.top, DS.Space.s2)
     }

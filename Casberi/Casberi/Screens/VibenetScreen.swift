@@ -110,59 +110,85 @@ struct VibenetScreen: View {
     /// nothing about looking at this list is different from opening the
     /// setup screen at all; watching only happens on the explicit tap,
     /// exactly like pasting an address by hand.
+    /// A fixed, always-available account to peek at — a fallback for the
+    /// empty state's own fix, useful especially when live discovery can't
+    /// reach the chain at all (the `Couldn't reach vibenet…` branch below,
+    /// which otherwise leaves a new user with nothing to tap). Watched
+    /// exactly like any pasted or discovered address; nothing about
+    /// tapping it is different from typing it in by hand.
+    private static let peekAddress = "0x777804FDCc280c082Db9788EAE5BEca0Fc2BeD9b"
+
     private var discoverySection: some View {
         Section {
-            if discoveryLoading {
-                BridgeSyncStatusRows(
-                    syncing: true, syncingLine: String(localized: "Looking for accounts on vibenet…"),
-                    result: nil, resultIsError: false)
-            } else if discovered.isEmpty {
-                if discoveryAttempted {
-                    Text("Couldn't reach vibenet to find an account to suggest — paste an address above, or open the explorer to find one.")
-                        .dsText(.label12)
-                        .foregroundStyle(DS.textSecondary)
-                }
-            } else {
-                VStack(alignment: .leading, spacing: DS.Space.s2) {
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                if discoveryLoading {
+                    BridgeSyncStatusRows(
+                        syncing: true, syncingLine: String(localized: "Looking for accounts on vibenet…"),
+                        result: nil, resultIsError: false)
+                } else if discovered.isEmpty {
+                    if discoveryAttempted {
+                        Text("Couldn't reach vibenet to find an account to suggest — paste an address above, peek at an example, or open the explorer to find one.")
+                            .dsText(.label12)
+                            .foregroundStyle(DS.textSecondary)
+                    }
+                } else {
                     Text(String(localized: "Recently created on vibenet"))
                         .dsText(.label12).fontWeight(.semibold)
                         .foregroundStyle(DS.textSecondary)
                     ForEach(discovered) { account in
-                        Button {
-                            DSHaptic.tap()
-                            guard watch.add(account.address) else { return }
-                            VibenetBridge.registerBridge(store: store)
-                            Task { await load() }
-                        } label: {
-                            HStack(spacing: DS.Space.s2) {
-                                WalletFace(address: account.address, size: 24, circular: true)
-                                VStack(alignment: .leading, spacing: 1) {
-                                    Text(VibenetRoom.shortAddress(account.address))
-                                        .dsText(.label12).monospaced()
-                                        .foregroundStyle(DS.textPrimary)
-                                    // Omitted rather than guessed when the
-                                    // block-time lookup failed — the same
-                                    // rule `expiryLabel` follows for its own
-                                    // clock fact.
-                                    if let createdAt = account.createdAt {
-                                        Text(String(localized: "Created \(createdAt.formatted(.relative(presentation: .named)))"))
-                                            .dsText(.label11)
-                                            .foregroundStyle(DS.textTertiary)
-                                    }
-                                }
-                                Spacer(minLength: DS.Space.s2)
-                                Text(String(localized: "Watch"))
-                                    .dsText(.label12).fontWeight(.semibold)
-                                    .foregroundStyle(Self.mark)
-                            }
-                            .contentShape(Rectangle())
-                        }
-                        .buttonStyle(.plain)
+                        discoveryRow(address: account.address, subtitle: account.createdAt.map {
+                            String(localized: "Created \($0.formatted(.relative(presentation: .named)))")
+                        })
                     }
                 }
+                // Always offered, live discovery or not — a real address,
+                // always watchable, so a new user is never stuck with
+                // nothing to tap while waiting on (or after losing) a
+                // network read.
+                discoveryRow(address: Self.peekAddress, subtitle: String(localized: "Peek at an example account"))
             }
         }
         .dsSlabSection()
+    }
+
+    /// One row, shared by a discovered account and the fixed peek address —
+    /// same face, same short-address line, same trailing "Watch" verb, so
+    /// the peek option reads as one more real account rather than a
+    /// visually distinct special case.
+    private func discoveryRow(address: String, subtitle: String?) -> some View {
+        Button {
+            DSHaptic.tap()
+            guard watch.add(address) else { return }
+            VibenetBridge.registerBridge(store: store)
+            Task { await load() }
+        } label: {
+            HStack(spacing: DS.Space.s2) {
+                WalletFace(address: address, size: 24, circular: true)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(VibenetRoom.shortAddress(address))
+                        .dsText(.label12).monospaced()
+                        .foregroundStyle(DS.textPrimary)
+                        .lineLimit(1)
+                    // Omitted rather than guessed when the block-time
+                    // lookup failed — the same rule `expiryLabel` follows
+                    // for its own clock fact.
+                    if let subtitle {
+                        Text(subtitle)
+                            .dsText(.label11)
+                            .foregroundStyle(DS.textTertiary)
+                            .lineLimit(1)
+                    }
+                }
+                Spacer(minLength: DS.Space.s2)
+                Text(String(localized: "Watch"))
+                    .dsText(.label12).fontWeight(.semibold)
+                    .foregroundStyle(Self.mark)
+                    .lineLimit(1)
+                    .fixedSize()
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 
     private var watchSection: some View {
@@ -187,6 +213,20 @@ struct VibenetScreen: View {
                     syncing: loading,
                     syncingLine: String(localized: "Reading vibenet…"),
                     result: addResult, resultIsError: addResultIsError)
+
+                // A door to Base's own demo, not a paragraph about it —
+                // §315's budget is one mode chip and one intro, so this
+                // earns its place as a plain link rather than more prose.
+                Link(destination: URL(string: "https://chain.base.org/demos/account")!) {
+                    HStack(spacing: 3) {
+                        Text(String(localized: "More Base Vibenet demos"))
+                        Image(systemName: "arrow.up.right")
+                    }
+                    .dsText(.label12).fontWeight(.semibold)
+                    .foregroundStyle(Self.mark)
+                    .lineLimit(1)
+                    .fixedSize()
+                }
             }
         }
         .dsSlabSection()

@@ -313,6 +313,52 @@ enum VibenetActorLog {
     }
 }
 
+// MARK: - Chunked eth_getLogs walk (measured 2026-08-23)
+
+/// The block ranges `VibenetChain.getLogs` walks — pulled out as pure
+/// arithmetic so the boundary math (no gaps, no overlaps, the genesis
+/// stop, the chunk-count circuit breaker) is harness-tested rather than
+/// trusted to a live devnet read, the same reason every other piece of
+/// address/permission arithmetic in this file has a pure core.
+///
+/// THE BUG THIS EXISTS TO PREVENT: the RPC enforces a 100,000-block
+/// ceiling on `eth_getLogs` (measured, "query exceeds max block range
+/// 100000") and this file originally read from block 0 unbounded — fine
+/// while the devnet was young, silently broken the moment its height
+/// passed that ceiling (285,133 the day this was measured). The failure
+/// mode was invisible: the RPC's error response has no `"result"` field,
+/// so `VibenetChain.call` correctly reads it as nil, and every caller of
+/// `getLogs` already treats nil as "unreached" — so a genuinely
+/// established account read as "not established yet" and the empty-state
+/// discovery read as nothing found, both from the SAME call failing the
+/// SAME way, with no error surfaced anywhere a person could see it.
+enum VibenetLogChunking {
+    /// TIP-BACKWARD, never forward: if the chunk-count breaker below is
+    /// ever hit, the history dropped is the OLDEST, not the newest — a
+    /// just-authorized key must always be inside the walked window, even
+    /// on a devnet that outgrows every bound this file sets today.
+    static func ranges(tip: Int, maxRange: Int, maxChunks: Int) -> [(from: Int, to: Int)] {
+        guard tip >= 0, maxRange > 0, maxChunks > 0 else { return [] }
+        var out: [(from: Int, to: Int)] = []
+        var to = tip
+        var chunk = 0
+        while to >= 0, chunk < maxChunks {
+            let from = max(0, to - maxRange + 1)
+            out.append((from, to))
+            // An early exit, not a correctness guard — `to = from - 1`
+            // when `from == 0` sets `to = -1`, and the loop's own
+            // `to >= 0` catches that on the NEXT check regardless, with no
+            // further append either way. Kept only to avoid one wasted
+            // iteration; removing it changes no output, which is why no
+            // mutation here would be catchable (checked before shipping).
+            if from == 0 { break }
+            to = from - 1
+            chunk += 1
+        }
+        return out
+    }
+}
+
 // MARK: - The key history strip (R2.1)
 
 /// One moment in an account's own story — a key added or a key revoked,
