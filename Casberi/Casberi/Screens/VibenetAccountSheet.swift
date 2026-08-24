@@ -60,7 +60,10 @@ struct VibenetAccountSheet: View {
                         // watched-to-watched relationship this account
                         // takes part in, not just the ones inside
                         // whatever the rail currently narrows to.
-                        VibenetAccountDetail(item: item, links: VibenetAccountMapping.links(room.items))
+                        VibenetAccountDetail(
+                            item: item,
+                            links: VibenetAccountMapping.links(room.items),
+                            sharedKeys: VibenetKeyReuse.sharing(item, in: room.items))
                             .padding(DS.Space.s4)
                     }
                     .dsPageBackground()

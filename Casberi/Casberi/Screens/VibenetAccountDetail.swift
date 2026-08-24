@@ -27,6 +27,14 @@ struct VibenetAccountDetail: View {
     /// directions read differently and only this view knows which is
     /// which for `item`).
     var links: [VibenetDelegateLink] = []
+    /// This account's own key-reuse facts (`VibenetKeyReuse.sharing`),
+    /// computed by the caller off the FULL room for the identical reason
+    /// `links` is — a shared key can name an account currently out of the
+    /// rail's scope. Defaults to empty so every existing call site keeps
+    /// compiling; drawn inline per key in `keyRow`, not as its own
+    /// section, since it's a fact about ONE key, not about the account as
+    /// a whole.
+    var sharedKeys: [VibenetSharedKey] = []
 
     private static let mark = DS.brandHue(for: "Base Vibenet") ?? Color.fixed("#0052ff")
 
@@ -189,6 +197,19 @@ struct VibenetAccountDetail: View {
                             }
                     }
                 }
+            }
+            // A fact about THIS key, not the account — where else this
+            // exact authorized address can also act. Neutral weight on
+            // purpose: reusing a key across devnet test accounts is often
+            // deliberate, so this states the fact without dressing it as
+            // an alarm the way a real expiry countdown earns.
+            if let line = sharedKeys
+                .filter({ $0.authenticator.caseInsensitiveCompare(actor.authenticator) == .orderedSame })
+                .sharedLine()
+            {
+                Text(line)
+                    .dsText(.label11)
+                    .foregroundStyle(DS.textTertiary)
             }
             if actor.expiry > 0 {
                 Text(actor.expiryLabel(now: .now))

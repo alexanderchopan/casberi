@@ -153,20 +153,33 @@ struct VibenetRoomCard: View {
                 // isn't cached yet can only UNDER-report a link, never
                 // invent one that isn't real.
                 let fullItems = VibenetRoomSource.card()?.items ?? room.items
-                VibenetAccountDetail(item: lead, links: VibenetAccountMapping.links(fullItems))
+                VibenetAccountDetail(
+                    item: lead,
+                    links: VibenetAccountMapping.links(fullItems),
+                    sharedKeys: VibenetKeyReuse.sharing(lead, in: fullItems))
             } else if let lead = room.lead {
                 if let onOpen {
                     // `VibenetScreen`'s OWN roster (see this type's header
-                    // doc) — unchanged: every account is a full navigable
-                    // row, promoted lead included.
+                    // doc) — every account is a full navigable row,
+                    // promoted lead included, and UNCAPPED (2026-08-24,
+                    // found reading the code rather than reported): this
+                    // is the dedicated screen for MANAGING every watched
+                    // account, the Wallet-Address-Book analog, not the
+                    // "keep it short" summary `rowCap`/`drawn` exist for.
+                    // Sharing that cap with the feed card meant anything
+                    // past the 8th watched address had no row, no context
+                    // menu and no way to rename or stop watching it —
+                    // reachable only by unwatching blind from the note's
+                    // own "N more watched" count, or not at all.
+                    let roster = Array(room.items.dropFirst())
                     row(lead, isLead: true, onOpen: onOpen)
                     // Only the accounts BEYOND the lead get a row — the lead
                     // IS the headline, and repeating it directly underneath
                     // would be the card arguing with itself (ASC's own
                     // ruling, reused).
-                    if drawn.count > 1 {
+                    if !roster.isEmpty {
                         VStack(alignment: .leading, spacing: 0) {
-                            ForEach(Array(drawn.dropFirst())) { item in
+                            ForEach(roster) { item in
                                 row(item, onOpen: onOpen)
                             }
                         }
@@ -193,7 +206,12 @@ struct VibenetRoomCard: View {
             // walls"). Gated on having a lead: an empty room's headline
             // already says "Nothing watched on vibenet yet", and a
             // provenance line under that says nothing new.
-            if room.lead != nil, let note = VibenetRoom.note(room, drawn: drawn.count) {
+            //
+            // `onOpen != nil` (the management screen) draws every account
+            // now, so nothing is hidden there — `room.items.count` tells
+            // `note` so, rather than the `rowCap`-limited `drawn.count`
+            // that's still correct for the feed card's own summary.
+            if room.lead != nil, let note = VibenetRoom.note(room, drawn: onOpen != nil ? room.items.count : drawn.count) {
                 Text(note)
                     .dsText(.label12)
                     .foregroundStyle(DS.textTertiary)

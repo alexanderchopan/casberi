@@ -1089,6 +1089,78 @@ enum VibenetAccountMapping {
     }
 }
 
+// MARK: - Shared keys across accounts (2026-08-24)
+
+/// One OTHER watched account that authorizes the exact same key as the
+/// account being asked about — the literal `authenticator` address, not a
+/// delegate relationship. `VibenetAccountMapping.links` already owns "this
+/// other account can act for me"; a `.delegate` actor's `authenticator`
+/// names another ACCOUNT, not a key, so `.delegate` is excluded from
+/// `VibenetKeyReuse.sharing` on purpose — otherwise the same pair of
+/// addresses would draw twice, once under each heading, disagreeing about
+/// what actually relates them.
+struct VibenetSharedKey: Identifiable, Equatable, Hashable {
+    var id: String { "\(account):\(authenticator)" }
+    /// The other watched account this key is ALSO authorized on.
+    let account: String
+    let authenticator: String
+    let kind: VibenetAuthenticatorKind
+}
+
+/// A fact none of this room's other sections state: the same signing key
+/// authorized on more than one watched account. Delegation says "this
+/// account can act for that one"; this says something a delegate link
+/// can't — that losing (or leaking) ONE key endangers every account
+/// listed here, even when none of them has ever named another as its
+/// delegate.
+enum VibenetKeyReuse {
+    /// Every account `item` shares a literal key with, one row per shared
+    /// authenticator — compared case-insensitively (an RPC's hex casing is
+    /// not a promise, the same rule `VibenetAccountMapping.links` already
+    /// applies). `items` is the FULL watch list, not a rail-narrowed
+    /// `room.items` — a shared key can name an account currently out of
+    /// scope, same reasoning `VibenetAccountDetail`'s callers already
+    /// apply to `links`.
+    ///
+    /// TOTAL order (account, then the Keystore's own kind order) — the
+    /// same reshuffle discipline every roster in this file holds.
+    static func sharing(_ item: VibenetAccountItem, in items: [VibenetAccountItem]) -> [VibenetSharedKey] {
+        var out: Set<VibenetSharedKey> = []
+        for actor in item.actors where actor.kind != .delegate {
+            for other in items where other.address.caseInsensitiveCompare(item.address) != .orderedSame {
+                guard other.actors.contains(where: {
+                    $0.kind != .delegate &&
+                    $0.authenticator.caseInsensitiveCompare(actor.authenticator) == .orderedSame
+                }) else { continue }
+                out.insert(VibenetSharedKey(account: other.address, authenticator: actor.authenticator, kind: actor.kind))
+            }
+        }
+        return out.sorted { a, b in
+            let f = a.account.localizedCaseInsensitiveCompare(b.account)
+            if f != .orderedSame { return f == .orderedAscending }
+            return a.kind.sortRank < b.kind.sortRank
+        }
+    }
+}
+
+extension Array where Element == VibenetSharedKey {
+    /// "Also authorized on …0b1c" / "Also authorized on 3 other accounts" —
+    /// drawn beside the one key it's about (`VibenetAccountDetail.keyRow`
+    /// already filters to entries sharing THAT actor's own authenticator),
+    /// so this only ever names WHERE, never re-states which key or why.
+    /// nil when empty — most keys aren't reused, and a clause repeating
+    /// that on every ordinary key is the empty state this codebase omits
+    /// rather than prints (§83).
+    func sharedLine() -> String? {
+        guard !isEmpty else { return nil }
+        if count == 1, let only = first {
+            let name = VibenetWatch.shared.name(for: only.account) ?? VibenetRoom.shortAddress(only.account)
+            return String(localized: "Also authorized on \(name)")
+        }
+        return String(localized: "Also authorized on \(count) other accounts")
+    }
+}
+
 // MARK: - Aggregate key summary (2026-08-24)
 
 /// One kind's share of the aggregate — a named struct rather than a tuple,
