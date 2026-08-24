@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// Base "vibenet", connected — watch a devnet address and see its
-/// EIP-8130 account-abstraction state: is it established, which actors can
+/// EIP-8130 keystore state: is it established, which actors can
 /// act for it, is it locked. No account, no key — a plain `0x` address,
 /// read straight off vibenet's own keyless RPC. Nothing here lands as a
 /// `Thing`: unlike Peer or Privacy Pools, a devnet test account has no story
@@ -30,16 +30,22 @@ struct VibenetScreen: View {
     /// The empty state's own fix: nobody arrives at a devnet already
     /// holding an address for it. Fetched once per screen visit, off
     /// `Keystore`'s `AccountCreated` — real accounts, not a demo prop.
-    @State private var discovered: [String] = []
+    @State private var discovered: [VibenetDiscoveredAccount] = []
     @State private var discoveryLoading = false
     @State private var discoveryAttempted = false
+
+    /// The naming alert — a text-entry alert needs `@State`, so it lives
+    /// here rather than on the card the row belongs to. Non-nil is what
+    /// drives the alert's `isPresented` binding.
+    @State private var renamingAddress: String?
+    @State private var renameText = ""
 
     var body: some View {
         List {
             BridgeSetupHeader(
                 name: "Base Vibenet",
                 mode: .noAccount,
-                intro: "An experimental Base devnet with no real funds — this only ever reads a watched address's account-abstraction state. vibenet's contracts redeploy often, so every read names the exact commit it saw.",
+                intro: "Base's experimental devnet for testing native account abstraction (EIP-8130) — no real funds, and this only ever reads which keys can act for a watched address and whether it's locked. Its contracts redeploy often, so every read names the exact commit it saw.",
                 connected: connected)
 
             watchSection.listRowSeparator(.hidden)
@@ -52,7 +58,10 @@ struct VibenetScreen: View {
             }
 
             if connected {
-                VibenetRoomCard(room: room, onRemove: unwatch)
+                VibenetRoomCard(room: room, onRemove: unwatch, onRename: { address in
+                    renameText = watch.name(for: address) ?? ""
+                    renamingAddress = address
+                })
                     .listRowInsets(EdgeInsets())
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
@@ -72,6 +81,19 @@ struct VibenetScreen: View {
         .dsPageBackground()
         .dsSoftScrollEdges()
         .dsScreenTitle("Base Vibenet")
+        .alert(
+            String(localized: "Name this account"),
+            isPresented: Binding(
+                get: { renamingAddress != nil },
+                set: { if !$0 { renamingAddress = nil } })
+        ) {
+            TextField(String(localized: "Name"), text: $renameText)
+            Button(String(localized: "Save")) {
+                if let address = renamingAddress { watch.setName(renameText, for: address) }
+                renamingAddress = nil
+            }
+            Button(String(localized: "Cancel"), role: .cancel) { renamingAddress = nil }
+        }
         .onAppear {
             // Opening the screen doesn't connect — pasting an address does.
             // Only read when something's already watched: viewing isn't
@@ -105,17 +127,29 @@ struct VibenetScreen: View {
                     Text(String(localized: "Recently created on vibenet"))
                         .dsText(.label12).fontWeight(.semibold)
                         .foregroundStyle(DS.textSecondary)
-                    ForEach(discovered, id: \.self) { address in
+                    ForEach(discovered) { account in
                         Button {
                             DSHaptic.tap()
-                            guard watch.add(address) else { return }
+                            guard watch.add(account.address) else { return }
                             VibenetBridge.registerBridge(store: store)
                             Task { await load() }
                         } label: {
                             HStack(spacing: DS.Space.s2) {
-                                Text(VibenetRoom.shortAddress(address))
-                                    .dsText(.label12).monospaced()
-                                    .foregroundStyle(DS.textPrimary)
+                                WalletFace(address: account.address, size: 24, circular: true)
+                                VStack(alignment: .leading, spacing: 1) {
+                                    Text(VibenetRoom.shortAddress(account.address))
+                                        .dsText(.label12).monospaced()
+                                        .foregroundStyle(DS.textPrimary)
+                                    // Omitted rather than guessed when the
+                                    // block-time lookup failed — the same
+                                    // rule `expiryLabel` follows for its own
+                                    // clock fact.
+                                    if let createdAt = account.createdAt {
+                                        Text(String(localized: "Created \(createdAt.formatted(.relative(presentation: .named)))"))
+                                            .dsText(.label11)
+                                            .foregroundStyle(DS.textTertiary)
+                                    }
+                                }
                                 Spacer(minLength: DS.Space.s2)
                                 Text(String(localized: "Watch"))
                                     .dsText(.label12).fontWeight(.semibold)

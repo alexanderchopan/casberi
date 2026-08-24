@@ -171,8 +171,18 @@ enum VibenetConfig {
 final class VibenetWatch {
     static let shared = VibenetWatch()
     private static let key = "vibenet.watch.addresses.v1"
+    /// A SEPARATE key from the address list on purpose — an older install's
+    /// watch list decodes untouched whether or not this one has ever
+    /// written anything, and clearing every name can never take a watched
+    /// address down with it.
+    private static let namesKey = "vibenet.watch.names.v1"
 
     private var addressList: [String] { didSet { persist() } }
+    /// Lowercased address → the local nickname. Display-only: never read by
+    /// any network call, never lands on a `Thing`, never appears in a log
+    /// line — the address itself is what identifies the account everywhere
+    /// else in this bridge.
+    private var names: [String: String] { didSet { persistNames() } }
 
     private init() {
         if let data = UserDefaults.standard.data(forKey: Self.key),
@@ -181,10 +191,34 @@ final class VibenetWatch {
         } else {
             addressList = []
         }
+        if let data = UserDefaults.standard.data(forKey: Self.namesKey),
+           let saved = try? JSONDecoder().decode([String: String].self, from: data) {
+            names = saved
+        } else {
+            names = [:]
+        }
     }
 
     var addresses: [String] { addressList }
     var connected: Bool { !addressList.isEmpty }
+
+    /// The nickname for an address, or nil when none was set — the row
+    /// falls back to the short hex form exactly as before.
+    func name(for address: String) -> String? {
+        let key = address.lowercased()
+        guard let n = names[key], !n.isEmpty else { return nil }
+        return n
+    }
+
+    /// An empty/whitespace-only string CLEARS the name rather than storing
+    /// it — there is no separate "remove name" action, so the same text
+    /// field that sets a name is the one that unsets it.
+    func setName(_ raw: String, for address: String) {
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        let key = address.lowercased()
+        if trimmed.isEmpty { names.removeValue(forKey: key) }
+        else { names[key] = trimmed }
+    }
 
     func isWatching(_ address: String) -> Bool {
         addressList.contains { $0.caseInsensitiveCompare(address) == .orderedSame }
@@ -210,13 +244,23 @@ final class VibenetWatch {
 
     func remove(_ address: String) {
         addressList.removeAll { $0.caseInsensitiveCompare(address) == .orderedSame }
+        names.removeValue(forKey: address.lowercased())
     }
 
-    func removeAll() { addressList = [] }
+    func removeAll() {
+        addressList = []
+        names = [:]
+    }
 
     private func persist() {
         if let data = try? JSONEncoder().encode(addressList) {
             UserDefaults.standard.set(data, forKey: Self.key)
+        }
+    }
+
+    private func persistNames() {
+        if let data = try? JSONEncoder().encode(names) {
+            UserDefaults.standard.set(data, forKey: Self.namesKey)
         }
     }
 }
@@ -236,7 +280,7 @@ enum VibenetBridge {
                 ? String(localized: "1 address watched")
                 : String(localized: "\(addresses.count) addresses watched"),
             can: [
-                String(localized: "Reads a watched address's account-abstraction state on Base's experimental vibenet devnet."),
+                String(localized: "Reads which keys can act for a watched address — and whether it's locked — on Base's vibenet devnet, where native account abstraction (EIP-8130) is being tested."),
                 String(localized: "Read-only — this app never signs or sends anything against it."),
             ])
     }
@@ -711,7 +755,7 @@ enum VibenetDiscovery {
     /// newest `limit` rather than by a block range, the same "small young
     /// devnet, no chunking needed" reasoning `VibenetChain.getLogs`'s own
     /// doc already gives for the per-address reads.
-    static func recentAccounts(keystore: String, limit: Int = 5) async -> [String] {
+    static func recentAccounts(keystore: String, limit: Int = 5) async -> [VibenetDiscoveredAccount] {
         guard let logs = await VibenetChain.getLogs(
             address: keystore, topics: [VibenetTopics.accountCreated])
         else { return [] }
@@ -734,12 +778,20 @@ enum VibenetDiscovery {
         rows.sort { ($0.block, $0.logIndex) > ($1.block, $1.logIndex) }
 
         var seen = Set<String>()
-        var out: [String] = []
+        var picked: [Row] = []
         for row in rows {
             let key = row.address.lowercased()
             guard seen.insert(key).inserted else { continue }
-            out.append(row.address)
-            if out.count >= limit { break }
+            picked.append(row)
+            if picked.count >= limit { break }
+        }
+
+        // Bounded by the same cap as the walk itself — at most `limit`
+        // sequential lookups, fine on a devnet this small.
+        var out: [VibenetDiscoveredAccount] = []
+        for row in picked {
+            let createdAt = await VibenetChain.blockTime(row.block)
+            out.append(VibenetDiscoveredAccount(address: row.address, createdAt: createdAt))
         }
         return out
     }

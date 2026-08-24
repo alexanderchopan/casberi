@@ -1,6 +1,6 @@
 import Foundation
 
-/// THE VIBENET ROOM — what a watched account's account-abstraction state
+/// THE VIBENET ROOM — what a watched account's keystore state
 /// looks like, for Base's experimental EIP-8130 devnet.
 ///
 /// Everything here is LIVE STATE, never a landed `Thing`. A vibenet devnet
@@ -172,6 +172,34 @@ enum VibenetAuthenticatorKind: Equatable, Hashable, CaseIterable {
         }
     }
 
+    /// What a person calls this, not what the spec calls it — the
+    /// single-key sentence's own title. Each line is the WHOLE claim this
+    /// build is willing to make; nothing here is embellished past what the
+    /// chain itself proves.
+    var plainTitle: String {
+        switch self {
+        case .secp256k1: String(localized: "Wallet key")
+        case .p256:      String(localized: "P-256 key")
+        case .webAuthn:  String(localized: "Passkey")
+        case .delegate:  String(localized: "Another contract")
+        case .custom:    String(localized: "Custom authenticator")
+        }
+    }
+
+    /// The technical name plus one honest clause — nil where there is
+    /// nothing certain to add. `.p256` names the CURVE only, never where a
+    /// particular key happens to live (a passkey and a raw P-256 key are
+    /// both possible and this build cannot tell them apart).
+    var plainDetail: String? {
+        switch self {
+        case .secp256k1: String(localized: "secp256k1 — the standard Ethereum key")
+        case .p256:      String(localized: "the curve passkeys and secure enclaves use")
+        case .webAuthn:  String(localized: "Face ID, Touch ID, or a security key — WebAuthn")
+        case .delegate:  String(localized: "a contract signs for this account")
+        case .custom:    nil
+        }
+    }
+
     /// `label` without its "key"/"authenticator" suffix — for a legend cell
     /// narrow enough that the full label would wrap mid-word. Never used
     /// where there's room for the real label (the grid, the row summary);
@@ -238,6 +266,17 @@ enum VibenetAuthenticatorKind: Equatable, Hashable, CaseIterable {
         if a == known.delegate.lowercased() { return .delegate }
         return .custom
     }
+}
+
+/// A candidate for the empty state's "recently created on vibenet" list —
+/// a real address off `AccountCreated`, never a demo prop. `createdAt` is
+/// nil on a failed block-time lookup and is OMITTED by the view rather than
+/// guessed — the same discipline `VibenetActor.expiry` uses for its own
+/// clock fact.
+struct VibenetDiscoveredAccount: Identifiable, Equatable {
+    var id: String { address }
+    let address: String
+    let createdAt: Date?
 }
 
 // MARK: - The actor log union
@@ -365,6 +404,25 @@ struct VibenetAccountItem: Identifiable, Equatable {
         let at = Date(timeIntervalSince1970: TimeInterval(unlocksAt))
         guard at > now else { return String(localized: "Unlock ready") }
         return String(localized: "Unlocks \(at.formatted(.relative(presentation: .named)))")
+    }
+
+    /// 0…1 through the unlock timelock, or nil when EITHER endpoint is
+    /// unknown — a bar with a guessed start is exactly the fake status §83
+    /// bans, so this returns nothing rather than inventing a starting point.
+    /// `unlockDelay` (seconds) plus `unlocksAt` gives the start for free:
+    /// `start = unlocksAt - unlockDelay`. Clamped, so a delay measured
+    /// slightly wrong by the chain never draws a bar past either end.
+    func unlockProgress(now: Date) -> Double? {
+        guard hasInitiatedUnlock,
+              let unlocksAt, unlocksAt > 0,
+              let unlockDelay, unlockDelay > 0
+        else { return nil }
+        let end = TimeInterval(unlocksAt)
+        let start = end - TimeInterval(unlockDelay)
+        let elapsed = now.timeIntervalSince1970 - start
+        let total = end - start
+        guard total > 0 else { return nil }
+        return min(1, max(0, elapsed / total))
     }
 
     /// By kind, then actorId — TOTAL, so a card reshuffling its own actor
@@ -546,7 +604,10 @@ struct VibenetRoom: Equatable {
     /// The demo's fixed snapshot, and every state this card can draw shown
     /// at once: all five nameable authenticator kinds, a rich established
     /// roster, a plain lock and a mid-unlock (so the badge's two words both
-    /// show), and an address still waiting to be established. Nothing here
+    /// show), an address still waiting to be established, a future key
+    /// expiry on both the matrix and single-key render paths, an unlock
+    /// runway, and a non-nil `changeSequences` standing (the multichain
+    /// footer line, otherwise never exercised in the demo). Nothing here
     /// is a real read — `VibenetRoomSource.compose()` returns this directly
     /// under `DemoMode.isActive`, BEFORE it would otherwise touch the
     /// network, because this room keeps no persistence layer of its own for
@@ -555,15 +616,25 @@ struct VibenetRoom: Equatable {
     /// own list agrees with what this card shows). Kept in `VibenetRoom.swift`
     /// rather than `DemoSeedAll.swift` so it's covered by the same
     /// Foundation-only harness as everything else this file composes.
+    ///
+    /// NOT exercised here: a nickname. `VibenetWatch`'s names map is a live
+    /// UserDefaults store this value-type fixture can't seed — check it by
+    /// hand (context menu → "Name this account…") rather than faking a
+    /// static name into a card meant to prove the READ path.
     static func demoFixture() -> VibenetRoom {
         let rich = VibenetAccountItem(
             address: "0x1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b",
             reached: true, established: true,
             actors: [
+                // A future expiry, deliberately — the demo's ONE fixture
+                // exercising the expiry sub-label on both the matrix row and
+                // (via `unlocking`'s single key below) `singleKeyLine`. Fixed
+                // far enough out that this fixture doesn't need updating for
+                // years.
                 VibenetActor(actorId: "0x0000000000000000000000000000000000000000000000000000000000000001",
                              authenticator: "0x0000000000000000000000000000000000000001",
                              kind: .secp256k1, scope: VibenetScope(raw: VibenetScope.sender | VibenetScope.selfPayer),
-                             expiry: 0),
+                             expiry: 4_102_444_800),
                 // The fixture sets `kind` EXPLICITLY rather than deriving it
                 // via `.identify` against a live config — so these three
                 // addresses are never compared against anything and their
@@ -606,8 +677,15 @@ struct VibenetRoom: Equatable {
             actors: [VibenetActor(actorId: "0x0000000000000000000000000000000000000000000000000000000000000007",
                                    authenticator: "0x0000000000000000000000000000000000000001",
                                    kind: .secp256k1, scope: VibenetScope(raw: VibenetScope.sender | VibenetScope.selfPayer),
-                                   expiry: 0)],
-            locked: true, hasInitiatedUnlock: true, unlocksAt: 4_102_444_800, unlockDelay: 43_200)
+                                   // A single-actor account with an expiry
+                                   // too — the `singleKeyLine` path's own
+                                   // expiry sub-label, distinct code from
+                                   // the matrix row above.
+                                   expiry: 4_102_444_800)],
+            locked: true, hasInitiatedUnlock: true, unlocksAt: 4_102_444_800, unlockDelay: 43_200,
+            // The multichain footer line has never rendered in the demo —
+            // this is the fixture's one non-nil standing.
+            changeSequences: VibenetChangeSequences(multichain: 12, localEpoch: 2, localSequence: 5))
 
         let notEstablishedYet = VibenetAccountItem(
             address: "0x4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e",

@@ -21,6 +21,11 @@ import SwiftUI
 struct VibenetRoomCard: View {
     let room: VibenetRoom
     var onRemove: (String) -> Void
+    /// Raised by the context menu's "Name this account…" — the alert itself
+    /// lives on the SCREEN (a text-entry alert needs `@State` a card
+    /// re-composed from a value type shouldn't own), so this just reports
+    /// which address was asked for.
+    var onRename: (String) -> Void = { _ in }
 
     /// Which addresses are expanded to show their actor roster. Local to the
     /// card, not persisted — this is a read, not a setting.
@@ -34,8 +39,27 @@ struct VibenetRoomCard: View {
 
     private var drawn: [VibenetAccountItem] { Array(room.items.prefix(Self.rowCap)) }
 
+    /// Watched faces only — a discovery stranger never earns a slot in the
+    /// card's own hero, only in the setup screen's own list.
+    private var heroFaces: [String] { Array(room.items.prefix(5).map(\.address)) }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
+            if heroFaces.count > 1 {
+                // A stack, not a row: one glance says "several accounts",
+                // which the headline sentence beneath it then makes exact.
+                // Overlap follows the house face-stack idiom (StartFigureMark
+                // / AddressFlight) — identity is on the FACE, so overlap
+                // costs nothing legible.
+                HStack(spacing: -10) {
+                    ForEach(heroFaces, id: \.self) { address in
+                        WalletFace(address: address, size: 28, circular: true)
+                            .overlay(Circle().strokeBorder(DS.surfaceSheet, lineWidth: 2))
+                    }
+                }
+                .padding(.bottom, DS.Space.s2)
+            }
+
             Text(VibenetRoom.headline(room))
                 .dsText(.heading22)
                 .foregroundStyle(DS.textPrimary)
@@ -92,12 +116,28 @@ struct VibenetRoomCard: View {
                 else { expanded.insert(item.address) }
             } label: {
                 HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                    WalletFace(address: item.address, size: 28, circular: true)
                     VStack(alignment: .leading, spacing: 3) {
-                        Text(VibenetRoom.shortAddress(item.address))
-                            .dsText(.heading17)
-                            .foregroundStyle(DS.textPrimary)
-                            .monospaced()
-                            .lineLimit(1)
+                        // A nickname takes the title slot (not monospaced —
+                        // it's a name, not hex) and the short address drops
+                        // to a small line beneath. Unnamed rows are
+                        // unchanged: the address alone, exactly as before.
+                        if let name = VibenetWatch.shared.name(for: item.address) {
+                            Text(name)
+                                .dsText(.heading17)
+                                .foregroundStyle(DS.textPrimary)
+                                .lineLimit(1)
+                            Text(VibenetRoom.shortAddress(item.address))
+                                .dsText(.label11).monospaced()
+                                .foregroundStyle(DS.textTertiary)
+                                .lineLimit(1)
+                        } else {
+                            Text(VibenetRoom.shortAddress(item.address))
+                                .dsText(.heading17)
+                                .foregroundStyle(DS.textPrimary)
+                                .monospaced()
+                                .lineLimit(1)
+                        }
                         // Hidden once expanded WITH actors to show — the
                         // chips below say the same roster in more detail,
                         // and showing both repeats every kind name twice on
@@ -115,6 +155,23 @@ struct VibenetRoomCard: View {
                                 Text(countdown)
                                     .dsText(.label12)
                                     .foregroundStyle(DS.textPrimary)
+                                // Only when BOTH endpoints are known — a bar
+                                // with a guessed start is the fake status
+                                // §83 forbids, so this is silent rather than
+                                // wrong on a build where the delay never
+                                // read. No animation on the fill: a static
+                                // capsule needs no Reduce Motion check.
+                                if let progress = item.unlockProgress(now: .now) {
+                                    GeometryReader { geo in
+                                        ZStack(alignment: .leading) {
+                                            Capsule().fill(Self.mark.opacity(0.15))
+                                            Capsule().fill(Self.mark)
+                                                .frame(width: geo.size.width * progress)
+                                        }
+                                    }
+                                    .frame(height: 4)
+                                    .frame(maxWidth: 160)
+                                }
                             } else {
                                 Text(VibenetRoom.rowLine(item))
                                     .dsText(.label12)
@@ -154,6 +211,17 @@ struct VibenetRoomCard: View {
             .buttonStyle(.plain)
             .padding(.vertical, DS.Space.s2)
             .contextMenu {
+                Button {
+                    onRename(item.address)
+                } label: {
+                    Label(String(localized: "Name this account…"), systemImage: "pencil")
+                }
+                Button {
+                    DSHaptic.tap()
+                    UIPasteboard.general.string = item.address
+                } label: {
+                    Label(String(localized: "Copy address"), systemImage: "doc.on.doc")
+                }
                 Button(role: .destructive) {
                     onRemove(item.address)
                 } label: {
@@ -284,9 +352,16 @@ struct VibenetRoomCard: View {
     /// including "No scope" for a key that can originate nothing yet.
     private func singleKeyLine(_ actor: VibenetActor) -> some View {
         VStack(alignment: .leading, spacing: 2) {
-            Text(actor.kind.label)
+            Text(actor.kind.plainTitle)
                 .dsText(.label12).fontWeight(.semibold)
                 .foregroundStyle(DS.textPrimary)
+            // The technical name plus one honest clause — nil for
+            // `.custom`, where there is nothing certain to add.
+            if let detail = actor.kind.plainDetail {
+                Text(detail)
+                    .dsText(.label11)
+                    .foregroundStyle(DS.textTertiary)
+            }
             Text(actor.scope.plainSummary)
                 .dsText(.label12)
                 .foregroundStyle(DS.textSecondary)

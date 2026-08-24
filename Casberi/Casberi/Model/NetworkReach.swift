@@ -267,7 +267,7 @@ enum NetworkReach {
         // constraint against ever hardcoding one of those addresses.
         Endpoint(service: "Base Vibenet",
                  reach: .whenConnected(bridge: "Base Vibenet"),
-                 purpose: "Reads a watched address's account-abstraction state — is it established, which keys can act for it, is it locked — from vibenet's own public devnet node. Carries only the address you watch; there is no account and no key, and nothing is ever signed or sent.",
+                 purpose: "Reads a watched address's keystore state — is it established, which keys can act for it, is it locked — from vibenet, Base's devnet for testing native account abstraction (EIP-8130). Carries only the address you watch; there is no account and no key, and nothing is ever signed or sent.",
                  hosts: ["rpc.vibes.base.org", "api.vibes.base.org"]),
         // Altana (prd §403). Reach is WALLET, not "Altana": the seat rides the
         // watched wallets and its sweep runs whenever a wallet is watched, so

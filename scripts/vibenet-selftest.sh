@@ -369,6 +369,22 @@ check("shortLabel is a real word, just without the key/authenticator suffix",
         && VibenetAuthenticatorKind.custom.shortLabel == "Custom"
         && !VibenetAuthenticatorKind.secp256k1.shortLabel.contains("key"))
 
+// The single-key sentence's own title — plain words over spec jargon, but
+// each line is the WHOLE claim this build is willing to make.
+print("")
+print("VibenetAuthenticatorKind.plainTitle / plainDetail — meaning over jargon")
+check("secp256k1 reads as a wallet key, not the scheme name",
+      VibenetAuthenticatorKind.secp256k1.plainTitle == "Wallet key")
+check("a delegate reads as another contract signing, not spec jargon",
+      VibenetAuthenticatorKind.delegate.plainTitle == "Another contract")
+check("P-256 names the CURVE only, never where a particular key lives",
+      VibenetAuthenticatorKind.p256.plainDetail == "the curve passkeys and secure enclaves use")
+check("an unidentified authenticator gets no invented detail",
+      VibenetAuthenticatorKind.custom.plainDetail == nil)
+check("every kind but custom carries a detail clause",
+      [VibenetAuthenticatorKind.secp256k1, .p256, .webAuthn, .delegate]
+        .allSatisfy { $0.plainDetail != nil })
+
 // MARK: - headline / note
 
 print("")
@@ -440,6 +456,12 @@ check("one account is reachable but not yet established",
       demo.items.contains { $0.reached && !$0.established })
 check("the fixture reports its own redeploy, so the note shows it off too",
       VibenetRoom.note(demo).contains("redeployed since you last checked"))
+check("at least one actor carries a future expiry — the matrix's own sub-label, otherwise never demoed",
+      demo.items.flatMap(\.actors).contains { $0.expiry > UInt64(Date.now.timeIntervalSince1970) })
+check("a single-actor account ALSO carries an expiry — singleKeyLine's own code path, not just the matrix's",
+      demo.items.contains { $0.actors.count == 1 && ($0.actors.first?.expiry ?? 0) > 0 })
+check("at least one account carries a non-nil changeSequences — the multichain footer line, otherwise never demoed",
+      demo.items.contains { $0.changeSequences != nil })
 
 // MARK: - VibenetActor.expiryLabel / VibenetAccountItem.unlockLabel
 
@@ -471,6 +493,35 @@ let countingItem = VibenetAccountItem(address: "0x1", reached: true, established
                                        unlocksAt: UInt64(refNow.timeIntervalSince1970) + 3600, unlockDelay: nil)
 check("a future unlock time counts down",
       countingItem.unlockLabel(now: refNow)?.hasPrefix("Unlocks") == true)
+
+// MARK: - VibenetAccountItem.unlockProgress — nil unless BOTH endpoints are known
+
+print("")
+print("VibenetAccountItem.unlockProgress — a bar with a guessed start is fake status, §83")
+check("no unlock initiated — nothing to show a bar for",
+      account(locked: true, hasInitiatedUnlock: false).unlockProgress(now: refNow) == nil)
+check("unlocksAt known but unlockDelay missing — no start point, so no bar",
+      countingItem.unlockProgress(now: refNow) == nil)
+func unlockingItem(delaySeconds: UInt16, secondsIntoDelay: Double) -> VibenetAccountItem {
+    // start = now - secondsIntoDelay (so `elapsed` at `now` is exactly
+    // secondsIntoDelay); end = start + delay.
+    let start = refNow.timeIntervalSince1970 - secondsIntoDelay
+    let end = start + Double(delaySeconds)
+    return VibenetAccountItem(address: "0x1", reached: true, established: true, actors: [],
+                               locked: true, hasInitiatedUnlock: true,
+                               unlocksAt: UInt64(end), unlockDelay: delaySeconds)
+}
+check("right at the start of the timelock reads as 0",
+      unlockingItem(delaySeconds: 3600, secondsIntoDelay: 0).unlockProgress(now: refNow) == 0)
+check("right at the end reads as 1",
+      unlockingItem(delaySeconds: 3600, secondsIntoDelay: 3600).unlockProgress(now: refNow) == 1)
+let midway = unlockingItem(delaySeconds: 3600, secondsIntoDelay: 1800).unlockProgress(now: refNow)
+check("midway through reads as ~0.5",
+      midway != nil && abs(midway! - 0.5) < 0.001)
+check("clamped — never negative even if the delay reads slightly off",
+      unlockingItem(delaySeconds: 3600, secondsIntoDelay: -600).unlockProgress(now: refNow) == 0)
+check("clamped — never past 1 even past the unlock moment",
+      unlockingItem(delaySeconds: 3600, secondsIntoDelay: 9000).unlockProgress(now: refNow) == 1)
 
 // MARK: - VibenetMultichainSync
 
@@ -604,6 +655,19 @@ mutate "a locked account must rank first" \
 mutate "established-with-no-actors must not read as not-established" \
   'guard item.established else { return String(localized: "Not established yet") }' \
   ' '
+
+# The clamp is the whole reason unlockProgress is safe to draw as a bar —
+# without it a delay measured slightly wrong by the chain draws past either
+# end of the track.
+mutate "unlockProgress must clamp — never draw past either end of the bar" \
+  'return min(1, max(0, elapsed / total))' \
+  'return elapsed / total'
+
+# A detail clause on `.custom` would be an invented fact about an
+# authenticator this build could never actually identify.
+mutate "an unidentified authenticator must never get an invented detail clause" \
+  'case .custom:    nil' \
+  'case .custom:    String(localized: "unknown")'
 
 echo ""
 echo "✓ vibenet-selftest: drift guards, assertions and mutations all passed"
