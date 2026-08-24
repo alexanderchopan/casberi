@@ -128,7 +128,7 @@ struct VibenetRoomCard: View {
                         }
                         if !item.actors.isEmpty {
                             Image(systemName: expanded.contains(item.address) ? "chevron.up" : "chevron.down")
-                                .font(.system(size: 12, weight: .semibold))
+                                .dsGlyph(12)
                                 .foregroundStyle(DS.textTertiary)
                         }
                     }

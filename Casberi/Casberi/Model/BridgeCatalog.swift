@@ -598,9 +598,25 @@ enum BridgeCatalog {
         // here is stated in the summary rather than assumed — vibenet's
         // contracts get redeployed on no fixed schedule, so nothing about it
         // may ever be treated as permanent.
+        //
+        // 2026-08-24: the summary's middle paragraph ("Watch an address and
+        // see whether it's established, which keys can act for it, and
+        // whether it's locked") said, in one sentence, what the line under
+        // the icon and both feature rows already said — the tagline is
+        // "Watch an account on Base's devnet", and the checks below name the
+        // keys and the lock state in more detail than the paragraph could.
+        // §192's split is the point: the hook says what this IS, the checks
+        // carry the differentiated extras, and cramming them into both is
+        // the same defect `whatLands` was fixed for on 2026-07-23 (it echoed
+        // the tagline one line under itself). The paragraph's ONE unique
+        // fact — established-or-not, a real state the room reads first and
+        // no check named — became the first check rather than being trimmed
+        // away with the repetition; the checks now run in the read's own
+        // order (established, actors, lock).
         Offer(name: "Base Vibenet", tagline: "Watch an account on Base's devnet", group: "Wallet", connectable: true,
-              summary: "An experimental Base devnet testing native account abstraction (EIP-8130) — no real funds, ever.\n\nWatch an address and see whether it's established, which keys can act for it, and whether it's locked.\n\nNo account and no key — read straight off vibenet's own public RPC. vibenet's contracts redeploy often; every read names the exact commit it saw.",
-              features: ["Which keys — secp256k1, a passkey, a delegate — can act for a watched account",
+              summary: "An experimental Base devnet testing native account abstraction (EIP-8130) — no real funds, ever.\n\nNo account and no key — read straight off vibenet's own public RPC. Its contracts redeploy often, so every read names the exact commit it saw.",
+              features: ["Whether a watched address is established yet",
+                         "Which keys — secp256k1, a passkey, a delegate — can act for it",
                          "Whether the account is locked, and whether an unlock is underway",
                          "Never signs or sends anything — genuinely read-only"],
               needsSetup: true, added: day(2026, 8, 23)),
