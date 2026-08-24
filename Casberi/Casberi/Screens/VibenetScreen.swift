@@ -10,6 +10,8 @@ import SwiftUI
 /// the feed.
 struct VibenetScreen: View {
     @Environment(BridgeStore.self) private var store
+    @Environment(ShellChrome.self) private var chrome
+    @Environment(HomeRoute.self) private var route
     @State private var addressField = ""
     @FocusState private var fieldFocused: Bool
     @State private var addResult: String?
@@ -50,7 +52,15 @@ struct VibenetScreen: View {
             BridgeSetupHeader(
                 name: "Base Vibenet",
                 mode: .noAccount,
-                intro: "Base's experimental devnet for testing native account abstraction (EIP-8130) — no real funds, and this only ever reads which keys can act for a watched address and whether it's locked. Its contracts redeploy often, so every read names the exact commit it saw.",
+                // ACTION, not a re-pitch (R4.4). You reach this screen from
+                // the product page, which just said what vibenet is and
+                // what it reads — so an intro describing the same thing
+                // again is the same information twice, one tap apart. The
+                // mode chip already carries the cost ("No account"), and
+                // the card's own provenance line names the commit under
+                // every read. What is left for this sentence is the only
+                // thing the pitch could not say: what to do here.
+                intro: "Paste an account address, or watch one of the examples below.",
                 connected: connected)
 
             watchSection.listRowSeparator(.hidden)
@@ -73,7 +83,15 @@ struct VibenetScreen: View {
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
 
-                ChipLiveNote(name: "Base Vibenet", verb: "for the accounts you watch.")
+                // A DOOR, not a signpost (R4.5). Pops the pushed stack
+                // FIRST: `sourceRequest` alone would switch the room
+                // behind this very screen, which from here looks like the
+                // tap did nothing — the sources tray's own lesson, in its
+                // own comment.
+                ChipLiveNote(name: "Base Vibenet", verb: "in your feed", onOpen: {
+                    route.path = []
+                    chrome.sourceRequest = VibenetIdentity.source
+                })
                     .listRowSeparator(.hidden)
                 BridgeDisconnectSection(
                     bridgeID: VibenetIdentity.seatID, name: VibenetIdentity.source,

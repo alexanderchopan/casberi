@@ -710,7 +710,7 @@ struct FeedScreen: View {
 
     /// The shape a source takes when its chip is in force.
     private enum Shape {
-        case all, photos, wallet, calendar, gmail, chat, social, reminders, bookmarks, notes, you, music, media, tokens, bitrefill, oneclaw, snapchat, files, instagram, x, x402, appStoreConnect, cursor, walletbeat, l2beat, telegram, plain
+        case all, photos, wallet, calendar, gmail, chat, social, reminders, bookmarks, notes, you, music, media, tokens, bitrefill, oneclaw, snapchat, files, instagram, x, x402, appStoreConnect, cursor, walletbeat, l2beat, telegram, vibenet, plain
 
         /// Rooms whose lead is a GRID of pictures, and which therefore earn the
         /// wide content cap on a regular-width window (2026-08-17).
@@ -814,6 +814,22 @@ struct FeedScreen: View {
             // and a room of broadcast posts drawn as chat bubbles is the §313
             // failure wearing the other coat.
             case "Telegram":            self = .telegram
+            // R4.2 (2026-08-23) — had NO case, so it fell to `.plain` and
+            // drew one identical glyph per row with the account's address
+            // truncated at the END of an 80-char title. Two accounts'
+            // events were indistinguishable at a glance, in a room whose
+            // whole subject is which account something happened to. Its
+            // own case rather than `.wallet`: that room's rows are money
+            // and its head is a balance, and a key authorization is
+            // neither.
+            // The LITERAL, not `VibenetIdentity.source`: `demo-selftest.py`'s
+            // check F reads this switch to prove every shape has a seeded
+            // source, and it resolves exactly three indirections by name.
+            // A fourth makes this room's shape UNVERIFIABLE rather than
+            // verified — the comment above `case "Instagram"` says so, and
+            // this case failed that check on its first run for exactly
+            // that reason.
+            case "Base Vibenet":        self = .vibenet
             // Circle x402, 2026-08-06 — the same defect as the line above, one
             // day later. It had no case here, so `.plain` drew twenty-two
             // BandRows wearing one glyph and ONE TIMESTAMP (every seller lands
@@ -2970,6 +2986,14 @@ struct FeedScreen: View {
                             thing.authorHandle == rail.name
                         }
                     }
+                case .vibenet(let room):
+                    // The same card the setup screen draws. `onRemove` is
+                    // deliberately inert here: unwatching is a setup act,
+                    // and a destructive verb reached from a feed row it
+                    // would silently re-compose behind is the wrong place
+                    // for it — the row's own sheet and the setup screen
+                    // both still carry it.
+                    VibenetRoomCard(room: room, onRemove: { _ in })
                 case .altana(let card):
                     AltanaRoomCard(card: card) {
                         // The door is Altana's own explorer — the only place a
@@ -3277,6 +3301,12 @@ struct FeedScreen: View {
             // Sessions, not days (2026-07-21) — a listening sitting is music's
             // real unit; boundary rides the same capturedAt-keyed helper.
             let days = sessionGroups(visible)
+            groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
+        case .vibenet:
+            // Days, like most rooms: unlike x402 (where every row shares
+            // one sync timestamp) these are real events at real block
+            // times, so a chronological grouping is honest here.
+            let days = chronoGroups(visible)
             groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
         case .x402:
             // Lanes, not days — see `x402Lanes`. No `boundary:`, deliberately:
@@ -4539,6 +4569,10 @@ struct FeedScreen: View {
         // room whose subject is not money at all: which credentials can sign
         // in this account's name, and when each of them stops.
         case altana(AltanaRoom.Card)
+        // R4.1 (2026-08-23) — the room had NO head at all: `Base Vibenet`
+        // appeared nowhere in this file, so the one card this feature has
+        // was drawn only on the setup screen, which you visit once.
+        case vibenet(VibenetRoom)
         case privacyPools(PrivacyPoolsRoom)
         case gnosisPay(GnosisPayRoom)
         // A fourth wallet-riding seat (2026-08-11) — grouped by TOKEN rather
@@ -4644,6 +4678,12 @@ struct FeedScreen: View {
         // would spend an `eth_call` per scroll (`AltanaState`).
         case AltanaKeystore.source:
             return AltanaRoom.card().map { .altana($0) }
+        // Composed from the SNAPSHOT the sweep wrote, exactly like Altana
+        // above and for the same reason: this room's subject is chain
+        // state, and composing it live would spend an `eth_call` per
+        // scroll. See `VibenetState`.
+        case VibenetIdentity.source:
+            return VibenetRoomSource.card().map { .vibenet($0) }
         case PeerRoomSource.source:
             return PeerRoomSource.compose(things: visible).map { .peer($0) }
         case PrivacyPoolsRoomSource.source:
@@ -7212,6 +7252,11 @@ struct FeedScreen: View {
                 } else {
                     PostCard(thing: thing)
                 }
+            case .vibenet:
+                // Face-led (R4.2): the room's subject is WHICH ACCOUNT
+                // something happened to, and `.plain`'s band drew one
+                // identical glyph for every account.
+                VibenetEventRow(thing: thing)
             case .x402:
                 // The import receipt keeps its plain band — it is our own note
                 // about the sync, not a company selling anything.

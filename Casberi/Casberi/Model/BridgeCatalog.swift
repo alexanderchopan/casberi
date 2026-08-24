@@ -614,7 +614,7 @@ enum BridgeCatalog {
         // away with the repetition; the checks now run in the read's own
         // order (established, actors, lock).
         Offer(name: "Base Vibenet", tagline: "Watch an account on Base's devnet", group: "Wallet", connectable: true,
-              summary: "An experimental Base devnet testing native account abstraction (EIP-8130) — no real funds, ever.\n\nNo account and no key — read straight off vibenet's own public RPC. Its contracts redeploy often, so every read names the exact commit it saw.",
+              summary: "Base's experimental devnet for native account abstraction (EIP-8130). No real funds, no account, no key — it only ever reads.",
               features: ["Whether a watched address is established yet",
                          "Which keys — secp256k1, a passkey, a delegate — can act for it",
                          "Whether the account is locked, and whether an unlock is underway",

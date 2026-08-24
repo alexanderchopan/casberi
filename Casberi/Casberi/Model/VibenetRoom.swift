@@ -23,7 +23,7 @@ import Foundation
 /// `OptionSet`, so a bit this build has never heard of round-trips through
 /// the type unharmed instead of being silently dropped by an `OptionSet`
 /// whose `rawValue` only ever holds the cases it declares.
-struct VibenetScope: Equatable {
+struct VibenetScope: Equatable, Codable {
     let raw: UInt16
 
     static let sender: UInt16       = 0x0001
@@ -152,7 +152,7 @@ struct VibenetKnownAuthenticators: Equatable {
 /// Which of the Keystore's named authenticators an actor's key is, or a
 /// custom one this build doesn't recognize. `Hashable` so `actorSummary`
 /// can group a roster by kind without a hand-rolled key.
-enum VibenetAuthenticatorKind: Equatable, Hashable, CaseIterable {
+enum VibenetAuthenticatorKind: String, Equatable, Hashable, CaseIterable, Codable {
     case secp256k1
     case p256
     case webAuthn
@@ -364,7 +364,7 @@ enum VibenetLogChunking {
 /// off the SAME `ActorAuthorized`/`ActorRevoked` events `VibenetActorLog
 /// .survivors` already reduces to a live roster. Order is EXACT (block,
 /// then logIndex); `date` is a best-effort clock label and may be nil.
-struct VibenetKeyMoment: Identifiable, Equatable {
+struct VibenetKeyMoment: Identifiable, Equatable, Codable {
     var id: String { "\(block):\(logIndex):\(authorized)" }
     let block: Int
     let logIndex: Int
@@ -458,7 +458,7 @@ enum VibenetKeyHistory {
 
 // MARK: - One actor, one account
 
-struct VibenetActor: Identifiable, Equatable {
+struct VibenetActor: Identifiable, Equatable, Codable {
     var id: String { actorId }
     let actorId: String
     let authenticator: String
@@ -488,7 +488,7 @@ struct VibenetActor: Identifiable, Equatable {
     }
 }
 
-struct VibenetAccountItem: Identifiable, Equatable {
+struct VibenetAccountItem: Identifiable, Equatable, Codable {
     var id: String { address }
     let address: String
     /// Whether THIS read reached the chain at all. A chain that never
@@ -629,7 +629,7 @@ struct VibenetAccountItem: Identifiable, Equatable {
 
 // MARK: - The room
 
-struct VibenetRoom: Equatable {
+struct VibenetRoom: Equatable, Codable {
     let items: [VibenetAccountItem]
     /// The live config's own provenance ("as of commit a9ae95e1b") — so a
     /// screenshot of this card stays legible about WHEN it was true, on a
@@ -908,7 +908,7 @@ struct VibenetRoom: Equatable {
 /// change made there is meant to apply on every chain the account exists
 /// on); `localEpoch`/`localSequence` are this chain's own local-only
 /// history, which has no cross-chain meaning at all.
-struct VibenetChangeSequences: Equatable {
+struct VibenetChangeSequences: Equatable, Codable {
     let multichain: UInt64
     let localEpoch: UInt32
     let localSequence: UInt32
@@ -1032,6 +1032,30 @@ enum VibenetEventKind: Equatable {
             return String(localized: "Key revoked for \(shortAddress)")
         case .locked:
             return String(localized: "\(shortAddress) locked on vibenet")
+        }
+    }
+
+    /// The same event with NO address in it — what a row says when the
+    /// face and name beside it have already said who (R4.2).
+    ///
+    /// Two strings rather than one renamed, and the split is load-bearing:
+    /// `title` above is what the All feed, search, Spotlight and a
+    /// notification show, none of which carries a face, so it has to
+    /// stand alone and keep naming the account. Inside the vibenet room
+    /// the row leads with the account's own face and name, and repeating
+    /// the address in the line beneath is §366's "read its first line
+    /// twice" — the same fact, twice, one line apart.
+    func phrase(keyLabel: String?) -> String {
+        switch self {
+        case .actorAuthorized:
+            if let keyLabel {
+                return String(localized: "New \(keyLabel) authorized")
+            }
+            return String(localized: "New key authorized")
+        case .actorRevoked:
+            return String(localized: "Key revoked")
+        case .locked:
+            return String(localized: "Locked on vibenet")
         }
     }
 }

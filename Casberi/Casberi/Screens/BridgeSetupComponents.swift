@@ -672,20 +672,55 @@ struct ChipLiveNote: View {
     let name: String
     /// The rest of the sentence after "Tap its chip" — e.g. "for your fills."
     let verb: String
+    /// R4.5 — when supplied, the note stops being a SIGNPOST and becomes a
+    /// DOOR. Reported 2026-08-23: after watching an address you are left on
+    /// the setup screen with no way forward, and the only thing telling you
+    /// where to go is this sentence — so someone who has just connected
+    /// something taps the thing they connected and nothing happens. Naming
+    /// a destination and not going there is the §83 dead control wearing
+    /// prose. Optional rather than default because the caller must be the
+    /// one to guarantee `name` is a real source string that `go(to:)` can
+    /// land on; a note pointing at a room that isn't there would be the
+    /// same fault, one step later.
+    var onOpen: (() -> Void)?
 
     var body: some View {
         Section {
-            HStack(alignment: .top, spacing: DS.Space.s3) {
-                BridgeIcon(name: name, size: DS.Face.badge, circular: true)
-                    .overlay(Circle().strokeBorder(DS.gray100, lineWidth: 1.5))
-                Text("\(name) is in your feed strip. Tap its chip \(verb)")
-                    .dsText(.subhead13).foregroundStyle(DS.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
+            if let onOpen {
+                Button {
+                    DSHaptic.tap()
+                    onOpen()
+                } label: { note(door: true) }
+                    .buttonStyle(.plain)
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Color.clear)
+            } else {
+                note(door: false)
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Color.clear)
             }
-            .padding(DS.Space.s3)
-            .background(DS.surfaceWell, in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
-            .listRowInsets(EdgeInsets())
-            .listRowBackground(Color.clear)
         }
+    }
+
+    private func note(door: Bool) -> some View {
+        HStack(alignment: .top, spacing: DS.Space.s3) {
+            BridgeIcon(name: name, size: DS.Face.badge, circular: true)
+                .overlay(Circle().strokeBorder(DS.gray100, lineWidth: 1.5))
+            // A door says what it DOES; a signpost says where a thing is.
+            Text(door
+                 ? "See \(name) \(verb)"
+                 : "\(name) is in your feed strip. Tap its chip \(verb)")
+                .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+            if door {
+                Spacer(minLength: DS.Space.s2)
+                Image(systemName: "chevron.right")
+                    .dsGlyph(12)
+                    .foregroundStyle(DS.textTertiary)
+            }
+        }
+        .padding(DS.Space.s3)
+        .contentShape(Rectangle())
+        .background(DS.surfaceWell, in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
     }
 }

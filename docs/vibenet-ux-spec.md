@@ -503,3 +503,114 @@ one-gesture rule holds (tap → sheet), the chevron flips from up/down to
    `python3 scripts/demo-selftest.py` + `python3 scripts/setup-copy-audit.py`.
    Full `verify.sh` stays off unless asked. Shipping is ON HOLD until the
    user says go.
+
+---
+---
+
+# Round 4 — the room itself
+
+Rounds 1–3 shipped (409 iOS / 410 Mac). Every one of them improved the
+SETUP SCREEN. Nobody had looked at what the room does when you tap the
+chip, and the answer is: almost nothing. Alex found it in a minute of
+use. Three findings, one root cause, plus a copy pass.
+
+**The root cause: `Base Vibenet` appears NOWHERE in `FeedScreen.swift`.**
+No `Shape` case, no `sourceHead` case. So the room falls to `.plain` and
+draws generic `BandRow`s — one identical blue glyph per row, an 80-char
+clamped title, a timestamp — with no head above them. This is the exact
+defect this file's own neighbours document five times over (Files §283,
+X §313, x402 §319, Instagram §395, Telegram §456); the comments beside
+the switch literally describe it. Vibenet shipped straight into it.
+
+## R4.1 The room gets its head
+
+`VibenetRoomCard` — faces, headline, ranked accounts — exists and is
+drawn on ONE screen: the setup screen, which you visit once. The room
+you actually live in has no head at all.
+
+- `FeedScreen.sourceHead` gains `case VibenetIdentity.source`, drawing
+  the same card. It is already value-types-only and already composes
+  from `VibenetRoomSource`, so this is a wiring change, not a new view.
+- The card needs the room's composed `VibenetRoom`. Every other head
+  here resolves its own state (`CursorRoomSource.compose()` etc.) — do
+  the same: a small `@State` on the head's container, loaded in `.task`,
+  never on every body pass.
+- **`verify.sh`'s room-head coverage step is a hand-maintained map** —
+  add the `case` name and its source string there in the SAME commit, or
+  the check silently stops covering the room it was extended for.
+
+## R4.2 Rows lead with WHO, not what
+
+Alex: *"i can't see which accounts they are from… should it identify the
+address first more like the others."* Yes — and every other identity
+room in this app already does. A row today is one blue square for every
+account, and the only identifying mark is a truncated `…f21f` at the END
+of a sentence, in the same weight as the rest of it. Two accounts'
+events are indistinguishable at a glance, which is the whole job of a
+room you scan.
+
+- **New `Shape` case `.vibenet`** (its own, not `.wallet` — that room's
+  rows are money and its head is a balance; a key authorization is
+  neither).
+- The row: `WalletFace(address:)` leading, then the account's nickname
+  or short address as the row's title, then the event as the line
+  beneath. Same anatomy as every person/account row in the app.
+- **The address must land somewhere the row can read.** It is currently
+  recoverable only by parsing it back out of the title, which is the
+  thing `MoneyReceipt`'s own doc forbids. Stamp it on `authorHandle` at
+  landing (an existing deployed field — **no CloudKit deploy**), and
+  `healEvents` it onto rows that predate this, the `XArchiveImport
+  .healLinks` shape, since both facts are already on the row.
+- **Two strings, not one renamed.** `title` stays whole and
+  self-contained ("New passkey authorized for …f21f") because it is what
+  the All feed, search, Spotlight and notifications show, where no face
+  is present. The row uses a new `VibenetEventKind.phrase(keyLabel:)`
+  — "New passkey authorized", no address — because in the room the face
+  and name already said who. Printing both is §366's "read its first
+  line twice" bug.
+- Harness: `phrase` asserted for all three kinds and both keyLabel
+  cases, plus a mutation proving `phrase` never carries the address.
+
+## R4.3 The face question
+
+Alex: *"i don't have a face for a vibenet account."*
+
+- In the ROOM: fixed by R4.2 — every row gets its face.
+- In the WALLET FACE RAIL: deliberately NOT. That rail is watched
+  wallets (`WalletStore`), and a devnet test account is not one; putting
+  it there would claim it holds your money, which is the same false
+  claim the `.transaction` bug made in a different place. The chip
+  belongs in the Wallet *category* (it is an address you watch); the
+  face rail is about balances.
+
+## R4.4 Copy: the product page and setup screen are verbose
+
+Measured against their neighbours: the catalog summary is **41 words in
+two paragraphs** where Linear's is 24 and one; the setup intro is **45
+words** in a §315 budget of "one intro sentence". Both say the same
+three things twice — no funds, read-only, contracts redeploy.
+
+- Catalog summary → one paragraph, ≤25 words. The tagline already says
+  "Watch an account on Base's devnet"; the summary should add what the
+  devnet IS and stop.
+  > "Base's experimental devnet for native account abstraction
+  > (EIP-8130). No real funds, no account, no key — it only ever reads."
+- Setup intro → ≤22 words, one sentence. Drop the redeploy clause: the
+  card's own provenance line already names the exact commit under every
+  read, which is that fact shown rather than promised.
+  > "Watch any account on Base's EIP-8130 devnet — which keys can act
+  > for it, and whether it's locked."
+- `setup-copy-audit.py` must stay clean; run it, don't assume.
+
+## Round 4 rails
+
+1. Pure logic (`phrase`) in `VibenetRoom.swift`, harness-asserted and
+   mutation-proven. No new `Thing` field, no new host, no CloudKit
+   deploy.
+2. `demo-selftest.py` check F reads the `Shape` switch to prove every
+   shape has a seeded source — the demo seeds vibenet as a LANDLESS seat
+   today, so adding `.vibenet` means seeding demo event rows too, or the
+   check fails. Seed them; a room nobody can see in the demo is the gap
+   that check exists to catch.
+3. Verify: build + `vibenet-selftest.sh` + `demo-selftest.py` +
+   `setup-copy-audit.py`. Ship only when Alex says.

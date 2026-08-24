@@ -287,6 +287,9 @@ enum VibenetBridge {
 
     static func disconnect(store: BridgeStore) {
         VibenetWatch.shared.removeAll()
+        // Or the feed's head keeps drawing accounts nobody watches
+        // anymore — the snapshot outlives the watch list otherwise.
+        VibenetState.forget()
         store.remove(VibenetIdentity.seatID)
     }
 }
@@ -690,9 +693,51 @@ enum VibenetRoomSource {
         let items = await IngestSupport.boundedGather(addresses, maxConcurrent: 3) { address in
             await VibenetRead.account(address, contracts: contracts)
         }
-        return VibenetRoom.compose(items: items, branch: contracts.branch,
-                                   commit: contracts.commit, configReached: true,
-                                   redeployedSinceLastSeen: redeployed)
+        let room = VibenetRoom.compose(items: items, branch: contracts.branch,
+                                       commit: contracts.commit, configReached: true,
+                                       redeployedSinceLastSeen: redeployed)
+        VibenetState.save(room)
+        return room
+    }
+
+    /// The room's head, composed SYNCHRONOUSLY off the last saved read
+    /// (R4.1) — `AltanaKeystore`'s exact shape, and for its exact reason:
+    /// `FeedScreen.sourceHead` runs on every draw, and this room's subject
+    /// is chain state, so composing it live would spend an `eth_call` per
+    /// scroll. Nil until a read has ever completed, which is the honest
+    /// answer — a head that invented a state it had not read would be the
+    /// §83 fake status on the one card whose whole job is saying what the
+    /// chain says.
+    @MainActor
+    static func card() -> VibenetRoom? {
+        if DemoMode.isActive { return VibenetRoom.demoFixture() }
+        guard let room = VibenetState.saved, !room.items.isEmpty else { return nil }
+        return room
+    }
+}
+
+/// The last composed room, kept so the feed's head can draw without
+/// reaching the chain (R4.1). Flat `Codable` in UserDefaults — the
+/// `AltanaState`/`X402State` shape, not a `Thing`: this is a snapshot of
+/// state that changes constantly, exactly what this file's own header
+/// says must never become a corpus row.
+enum VibenetState {
+    private static let key = "vibenet.room.snapshot.v1"
+
+    static var saved: VibenetRoom? {
+        guard let data = UserDefaults.standard.data(forKey: key) else { return nil }
+        return try? JSONDecoder().decode(VibenetRoom.self, from: data)
+    }
+
+    static func save(_ room: VibenetRoom) {
+        guard let data = try? JSONEncoder().encode(room) else { return }
+        UserDefaults.standard.set(data, forKey: key)
+    }
+
+    /// Disconnecting forgets the snapshot too — otherwise the head keeps
+    /// drawing accounts that are no longer watched.
+    static func forget() {
+        UserDefaults.standard.removeObject(forKey: key)
     }
 }
 
@@ -826,6 +871,21 @@ enum VibenetEvents {
             // NO `walletAddress` — it was write-only here (nothing in this
             // feature ever read it back) and it is the field that told the
             // receipt this devnet account was yours.
+            //
+            // `authorHandle` IS stamped (R4.2): the room's rows lead with
+            // the account's face and name, and the only other way to know
+            // which account a row belongs to would be parsing the address
+            // back out of the display title — the exact thing
+            // `MoneyReceiptSource`'s own doc forbids. An existing,
+            // already-deployed field, so no CloudKit deploy.
+            thing.authorHandle = address
+            // The same event WITHOUT the address (R4.2) — what the room's
+            // row says once its face and name have said who. Stored
+            // rather than derived: recovering it would mean parsing the
+            // address back out of a localized display title, the exact
+            // thing `MoneyReceiptSource`'s own doc forbids. `summary` is
+            // display copy this bridge has never used, already deployed.
+            thing.summary = event.kind.phrase(keyLabel: keyLabel)
             context.insert(thing)
             landedCount += 1
         }

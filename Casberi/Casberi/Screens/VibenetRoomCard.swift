@@ -234,3 +234,55 @@ struct VibenetRoomCard: View {
         }
     }
 }
+
+/// One landed vibenet event, led by WHO it happened to (R4.2).
+///
+/// Reported 2026-08-23: *"i can't see which accounts they are from."* The
+/// room fell to `.plain`, so every row wore one identical brand glyph and
+/// the only identifying mark was a truncated `…f21f` at the END of an
+/// 80-char title, in the same weight as the rest of the sentence — two
+/// accounts' events were indistinguishable at a glance, in a room whose
+/// entire subject is which account something happened to. Every other
+/// identity room in this app leads with a face; this one now does too.
+///
+/// Reads `authorHandle` (the account) and `summary` (the event without
+/// the address) — both stamped at landing, so nothing here parses a
+/// display title back into data. A row that predates those falls back to
+/// its whole title, which still says everything, just less prettily.
+struct VibenetEventRow: View {
+    let thing: Thing
+
+    var body: some View {
+        if thing.isLive {
+            HStack(alignment: .center, spacing: DS.Space.s3) {
+                if let address = thing.authorHandle {
+                    WalletFace(address: address, size: 34, circular: true)
+                }
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .dsText(.heading17)
+                        .foregroundStyle(DS.textPrimary)
+                        .lineLimit(1)
+                    Text(thing.summary ?? thing.title)
+                        .dsText(.label12)
+                        .foregroundStyle(DS.textSecondary)
+                        .lineLimit(2)
+                }
+                Spacer(minLength: DS.Space.s2)
+                Text(thing.capturedAt.formatted(.relative(presentation: .named)))
+                    .dsText(.label11)
+                    .foregroundStyle(DS.textTertiary)
+                    .lineLimit(1).fixedSize()
+            }
+            .padding(.vertical, DS.Space.s2)
+        }
+    }
+
+    /// The account's nickname when it has one, else its short address —
+    /// the same identity the room card and the sheet show, so one account
+    /// never reads as two different things across three surfaces.
+    private var title: String {
+        guard let address = thing.authorHandle else { return thing.title }
+        return VibenetWatch.shared.name(for: address) ?? VibenetRoom.shortAddress(address)
+    }
+}

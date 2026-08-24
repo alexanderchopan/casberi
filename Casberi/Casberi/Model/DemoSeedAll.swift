@@ -99,6 +99,13 @@ enum DemoSeedAll {
     /// by `clear`/`teardown`.
     static let refPrefixes = ["demo:", "sample:demo-shot-", "files:demo/",
                               "import:receipt:", "cloudflare:cert:demo",
+                              // Vibenet's demo rows carry the REAL bridge's
+                              // ref shape for the same reason Peer's do
+                              // below — so its own dedupe recognises them —
+                              // which means teardown needs this entry or
+                              // they outlive the demo, indistinguishable
+                              // from a real landed key authorization.
+                              "vibenet:",
                               // Peer/Privacy Pools rows carry the REAL
                               // bridges' own ref prefixes (2026-08-10, so
                               // their room heads' ref-shape matching
@@ -647,6 +654,38 @@ enum DemoSeedAll {
         }
     }
 
+    /// Base Vibenet's landed events (R4.2, 2026-08-23). The seat used to be
+    /// LANDLESS — it drew a chip and a room head and nothing in the room —
+    /// which stopped being tenable the moment the room got a `Shape` of its
+    /// own: `demo-selftest.py`'s check F proves every shape has a seeded
+    /// source, and a room nobody can see in the demo is exactly the gap that
+    /// check exists to catch.
+    ///
+    /// Addresses match `VibenetRoom.demoFixture()`'s own, so the head above
+    /// and the rows beneath it describe the same accounts rather than two
+    /// unrelated sets. `authorHandle` is the account and `summary` the event
+    /// without the address — the two fields `VibenetEventRow` reads.
+    private static func vibenet() -> [Thing] {
+        [
+            ("0x1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b", "New passkey authorized", "auth:demo1", 1.0),
+            ("0x1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b", "New wallet key authorized", "auth:demo2", 1.0),
+            ("0x2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c", "Locked on vibenet", "locked:demo3", 2.0),
+            ("0x3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d", "Key revoked", "auth:demo4", 4.0),
+        ].map { address, phrase, ref, days in
+            let short = VibenetRoom.shortAddress(address)
+            // The TITLE keeps naming the account — it is what the All feed,
+            // search and Spotlight show, where no face is present.
+            let title = phrase == "Locked on vibenet"
+                ? "\(short) locked on vibenet"
+                : "\(phrase) for \(short)"
+            return row(.event, title, source: "Base Vibenet",
+                       ref: "vibenet:\(ref)", days: days, hour: 11) { thing in
+                thing.authorHandle = address
+                thing.summary = phrase
+            }
+        }
+    }
+
     private static func walletbeat() -> [Thing] {
         var out: [Thing] = []
 
@@ -921,6 +960,7 @@ enum DemoSeedAll {
         out += walletbeat()
         out += l2beat()
         out += cardPointers()
+        out += vibenet()
         out += appleWallet()
         out += cards()
         out += work()
