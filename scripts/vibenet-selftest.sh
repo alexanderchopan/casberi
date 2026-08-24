@@ -418,47 +418,102 @@ check("every kind but custom carries a detail clause",
 // MARK: - headline / note
 
 print("")
-print("VibenetRoom.headline / note")
+print("VibenetRoom.headline / note — the lead-based shape (2026-08-23, the ASCRoom precedent)")
+let fixedNow = Date(timeIntervalSince1970: 1_700_000_000)
 check("an unreachable config says so",
-      VibenetRoom.headline(VibenetRoom.compose(items: [], branch: nil, commit: nil, configReached: false))
+      VibenetRoom.headline(VibenetRoom.compose(items: [], branch: nil, commit: nil, configReached: false), now: fixedNow)
         == "Couldn't read vibenet's current contracts")
 check("nothing watched",
-      VibenetRoom.headline(VibenetRoom.compose(items: [], branch: nil, commit: nil, configReached: true))
+      VibenetRoom.headline(VibenetRoom.compose(items: [], branch: nil, commit: nil, configReached: true), now: fixedNow)
         == "Nothing watched on vibenet yet")
 let oneLocked = VibenetRoom.compose(items: [locked], branch: "main", commit: "abc", configReached: true)
-check("one locked account, singular",
-      VibenetRoom.headline(oneLocked) == "1 watched account is locked")
+check("the lead's own address and state, no rolled-up count",
+      VibenetRoom.headline(oneLocked, now: fixedNow) == "…zzzz · Locked")
 let twoLocked = VibenetRoom.compose(items: [locked, account(locked: true)], branch: nil, commit: nil, configReached: true)
-check("two locked accounts, plural",
-      VibenetRoom.headline(twoLocked) == "2 watched accounts are locked")
+check("two locked accounts still name only the LEAD — ordered's own address tie-break decides which",
+      VibenetRoom.headline(twoLocked, now: fixedNow) == "…7890 · Locked")
+// The reported case, now moot by construction: the card's hero used to draw
+// EVERY watched face while the sentence counted only the locked ones, which
+// read as a contradiction. There is no hero stack and no rolled-up count
+// anymore — the headline names the ONE account it's actually about.
+let twoOfFour = VibenetRoom.compose(
+    items: [locked, account(locked: true), account(address: "0xaaa"), account(address: "0xbbb")],
+    branch: nil, commit: nil, configReached: true)
+check("a bigger room still leads with the same one account — size never changes WHO leads",
+      VibenetRoom.headline(twoOfFour, now: fixedNow) == "…7890 · Locked")
+
+// MARK: - VibenetRoom.scoped — the face rail narrows the CARD, as wallet's does
+check("no pick leaves the room whole",
+      twoOfFour.scoped(to: nil).items.count == 4)
+check("a pick narrows the card to that one account",
+      twoOfFour.scoped(to: "0xaaa").items.map(\.address) == ["0xaaa"])
+check("scoping is case-insensitive — a watch list may hold any case",
+      twoOfFour.scoped(to: "0xAAA").items.count == 1)
+check("an address no longer watched scopes to NOTHING, never silently to everything",
+      twoOfFour.scoped(to: "0xdead").items.isEmpty)
+// Scoping to the alarmed account's OWN address collapses the room to just
+// its lead — the mechanism the card's "click one you see one" relies on.
+check("scoping to the locked account leaves it as its own lead",
+      twoOfFour.scoped(to: "0xzzzz000000000000000000000000000000zzzz").lead?.address
+        == "0xzzzz000000000000000000000000000000zzzz")
+
 let allUnreached = VibenetRoom.compose(items: [unreached], branch: nil, commit: "xyz", configReached: true)
-check("every account unreached",
-      VibenetRoom.headline(allUnreached) == "Couldn't reach vibenet for any watched account")
+check("an unreached lead says so, in the same slot a locked one's state would sit",
+      VibenetRoom.headline(allUnreached, now: fixedNow) == "…cccc · Couldn't reach the chain")
 let notEstablished = VibenetRoom.compose(items: [account(established: false)], branch: nil, commit: nil, configReached: true)
 check("reached, nothing established yet",
-      VibenetRoom.headline(notEstablished) == "Not established yet")
+      VibenetRoom.headline(notEstablished, now: fixedNow) == "…7890 · Not established yet")
 let established = VibenetRoom.compose(items: [account(established: true, actors: [a2])], branch: nil, commit: nil, configReached: true)
-check("one account, established",
-      VibenetRoom.headline(established) == "1 account established on vibenet")
+check("an established lead states its key count",
+      VibenetRoom.headline(established, now: fixedNow) == "…7890 · 1 key")
 
-check("note states branch and commit",
-      VibenetRoom.note(oneLocked) == "As of vibenet's main branch, commit abc")
+// The lead's own clock — appended as a THIRD clause, never invented for an
+// account with nothing ticking. `.relative(presentation:)` formats against
+// the REAL wall clock, never the `now:` PARAMETER (see `urgentLine`'s own
+// tests below for why `fixedNow`, a fixed 2023 timestamp, can't anchor
+// these two — it would print "N years ago" against today's real clock) —
+// so these anchor on `Date.now` and check a PREFIX, the same shape every
+// other relative-time assertion in this file already uses.
+let headlineLiveNow = Date.now
+let futureExpiry = UInt64(headlineLiveNow.timeIntervalSince1970) + 2 * 86_400
+let expiringActor = VibenetActor(actorId: "e", authenticator: "0x9", kind: .secp256k1,
+                                 scope: VibenetScope(raw: 0), expiry: futureExpiry)
+let expiringLead = VibenetRoom.compose(items: [account(established: true, actors: [expiringActor])],
+                                       branch: nil, commit: nil, configReached: true)
+check("an established lead with a key inside the urgency window appends its own expiry",
+      VibenetRoom.headline(expiringLead, now: headlineLiveNow).hasPrefix("…7890 · 1 key · Key expires"))
+let unlockingLead = VibenetAccountItem(
+    address: "0x1234567890123456789012345678901234567890",
+    reached: true, established: true, actors: [], locked: true, hasInitiatedUnlock: true,
+    unlocksAt: UInt64(headlineLiveNow.timeIntervalSince1970) + 3600, unlockDelay: 7200)
+let unlockingRoom = VibenetRoom.compose(items: [unlockingLead], branch: nil, commit: nil, configReached: true)
+check("an unlocking lead appends its own countdown, ahead of any key expiry",
+      VibenetRoom.headline(unlockingRoom, now: headlineLiveNow).hasPrefix("…7890 · Unlocking · Unlocks"))
+
+check("note states branch and commit — no hidden-count clause when nothing is hidden",
+      VibenetRoom.note(oneLocked, drawn: oneLocked.items.count) == "As of vibenet's main branch, commit abc")
 check("note falls back to commit alone",
-      VibenetRoom.note(allUnreached) == "As of vibenet commit xyz")
+      VibenetRoom.note(allUnreached, drawn: allUnreached.items.count) == "As of vibenet commit xyz")
 check("note falls back further with neither",
-      VibenetRoom.note(twoLocked) == "Read live from vibenet — addresses redeploy often")
-check("note over an unreachable config says so plainly",
-      VibenetRoom.note(VibenetRoom.compose(items: [], branch: nil, commit: nil, configReached: false))
-        .contains("redeploy"))
+      VibenetRoom.note(twoLocked, drawn: twoLocked.items.count) == "Read live from vibenet — addresses redeploy often")
+check("note over an unreachable config says so plainly, regardless of drawn count",
+      VibenetRoom.note(VibenetRoom.compose(items: [], branch: nil, commit: nil, configReached: false), drawn: 0)?
+        .contains("redeploy") == true)
+// The ASCRoom shape this was built from: how many more aren't drawn, joined
+// ahead of the provenance fragment.
+check("a capped room states how many more are watched, joined ahead of the provenance",
+      VibenetRoom.note(twoOfFour, drawn: 2) == "2 more watched · Read live from vibenet — addresses redeploy often")
+check("a singular hidden count doesn't pluralize",
+      VibenetRoom.note(twoOfFour, drawn: 3) == "1 more watched · Read live from vibenet — addresses redeploy often")
 
 // A redeploy the device has already seen leads the note over the plain
 // provenance line — the single most on-theme fact this room can report.
 let redeployed = VibenetRoom.compose(items: [], branch: "main", commit: "def456789",
                                       configReached: true, redeployedSinceLastSeen: true)
 check("a seen redeploy leads the note, not the plain provenance line",
-      VibenetRoom.note(redeployed).contains("redeployed since you last checked"))
+      VibenetRoom.note(redeployed, drawn: 0)?.contains("vibenet redeployed") == true)
 check("the redeploy note still carries the new commit",
-      VibenetRoom.note(redeployed).contains("def456789"))
+      VibenetRoom.note(redeployed, drawn: 0)?.contains("def456789") == true)
 // A commit-less redeploy report can't happen from the real compose path (the
 // bridge only ever flags a redeploy when it has a commit to compare), but a
 // future caller getting that wrong must fall back to the plain line rather
@@ -466,7 +521,7 @@ check("the redeploy note still carries the new commit",
 let redeployedNoCommit = VibenetRoom.compose(items: [], branch: nil, commit: nil,
                                               configReached: true, redeployedSinceLastSeen: true)
 check("a redeploy flag with no commit falls back to the plain note, never a broken sentence",
-      VibenetRoom.note(redeployedNoCommit) == "Read live from vibenet — addresses redeploy often")
+      VibenetRoom.note(redeployedNoCommit, drawn: 0) == "Read live from vibenet — addresses redeploy often")
 
 // MARK: - demoFixture — every state the card can draw, in one snapshot
 
@@ -485,7 +540,7 @@ check("the roster's own unknown-scope actor reports an unknown count, never an i
 check("one account is reachable but not yet established",
       demo.items.contains { $0.reached && !$0.established })
 check("the fixture reports its own redeploy, so the note shows it off too",
-      VibenetRoom.note(demo).contains("redeployed since you last checked"))
+      VibenetRoom.note(demo, drawn: demo.items.count)?.contains("vibenet redeployed") == true)
 check("at least one actor carries a future expiry — the matrix's own sub-label, otherwise never demoed",
       demo.items.flatMap(\.actors).contains { $0.expiry > UInt64(Date.now.timeIntervalSince1970) })
 check("a single-actor account ALSO carries an expiry — singleKeyLine's own code path, not just the matrix's",
@@ -855,6 +910,23 @@ mutate "a reserved scope bit must never be folded into the known set" \
 mutate "the matrix must lead with the key that can do the MOST" \
   'return a.scope.grantedCount > b.scope.grantedCount' \
   'return a.scope.grantedCount < b.scope.grantedCount'
+
+mutate "the headline must say Locked/Unlocking itself — the row's own badge doesn't draw beside it" \
+  'return item.hasInitiatedUnlock ? String(localized: "Unlocking") : String(localized: "Locked")' \
+  'return String(localized: "")'
+
+# The `hidden` count is what makes the note say "N more watched" — losing it
+# collapses back to a bare provenance line with no signal that the card
+# capped its own row count.
+mutate "the note must count what the card didn't draw" \
+  'let hidden = room.items.count - drawn' \
+  'let hidden = 0'
+
+# A stale pick falling back to the whole room is indistinguishable from no
+# pick at all, while the rail sits lit on a face it is not describing.
+mutate "scoped() must not fall back to the whole room on an unwatched address" \
+  'items: items.filter { $0.address.caseInsensitiveCompare(address) == .orderedSame },' \
+  'items: items,'
 
 mutate "a locked account must rank first" \
   'if a.alarmed != b.alarmed { return a.alarmed }' \

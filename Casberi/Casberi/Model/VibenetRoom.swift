@@ -654,6 +654,36 @@ struct VibenetRoom: Equatable, Codable {
     var lockedCount: Int { items.filter(\.alarmed).count }
     var establishedCount: Int { items.filter(\.established).count }
 
+    /// The single most urgent account — `items.first` once `ordered` has
+    /// run (locked-first, then unreached, then established, then
+    /// address), the `ASCRoom.lead` shape (2026-08-23). Several accounts
+    /// are NOT mergeable the way a wallet balance is — one being locked
+    /// says nothing about another's key count — so unlike the wallet
+    /// crown this room has no single combined number to lead with. What
+    /// it has instead is the one account that most needs a look, promoted
+    /// to the headline; everyone else is a row underneath.
+    var lead: VibenetAccountItem? { items.first }
+
+    /// The room narrowed to ONE account, or whole when nothing is picked
+    /// (2026-08-23). The face rail scopes the CARD, not just the rows
+    /// beneath it — that is how the wallet rail behaves one venue over
+    /// ("click all you see all, click one you see one"), and a rail that
+    /// filtered only the events while the card kept listing every account
+    /// is the same control meaning two different things in two rooms of
+    /// the same fold.
+    ///
+    /// An address that is no longer watched scopes to NOTHING rather than
+    /// silently falling back to everything: a stale pick showing the whole
+    /// room looks identical to no pick at all, and the rail would be lit
+    /// on a face whose room it was not describing.
+    func scoped(to address: String?) -> VibenetRoom {
+        guard let address else { return self }
+        return VibenetRoom(
+            items: items.filter { $0.address.caseInsensitiveCompare(address) == .orderedSame },
+            branch: branch, commit: commit, configReached: configReached,
+            redeployedSinceLastSeen: redeployedSinceLastSeen)
+    }
+
     static func compose(items raw: [VibenetAccountItem], branch: String?, commit: String?,
                          configReached: Bool, redeployedSinceLastSeen: Bool = false) -> VibenetRoom {
         VibenetRoom(items: ordered(raw), branch: branch, commit: commit, configReached: configReached,
@@ -712,31 +742,45 @@ struct VibenetRoom: Equatable, Codable {
             : String(localized: "\(item.actors.count) keys")
     }
 
-    /// The one sentence at the top of the card.
-    static func headline(_ room: VibenetRoom) -> String {
+    /// The lead account's own state, as one sentence — `ASCRoom.headline`'s
+    /// exact shape (2026-08-23), superseding a rolled-up "N of M" count.
+    /// That count read as a contradiction the moment the card's hero drew
+    /// every watched face while the sentence counted only the locked
+    /// ones ("2 watched accounts are locked" above four faces), and it
+    /// answered a question nobody asked — "how many are locked" is not
+    /// "what should I look at first". This says the second thing: the
+    /// single most urgent account's short address, its state, and its own
+    /// clock if it has one — never a nickname (a per-device UI fact this
+    /// Foundation-only file has no business depending on; the CARD
+    /// substitutes one when drawing the lead as a row).
+    static func headline(_ room: VibenetRoom, now: Date) -> String {
         guard room.configReached else {
             return String(localized: "Couldn't read vibenet's current contracts")
         }
-        guard !room.items.isEmpty else {
+        guard let lead = room.lead else {
             return String(localized: "Nothing watched on vibenet yet")
         }
-        if room.lockedCount > 0 {
-            return room.lockedCount == 1
-                ? String(localized: "1 watched account is locked")
-                : String(localized: "\(room.lockedCount) watched accounts are locked")
-        }
-        let unreached = room.items.filter { !$0.reached }.count
-        if unreached == room.items.count {
-            return String(localized: "Couldn't reach vibenet for any watched account")
-        }
-        if room.establishedCount == 0 {
-            return room.items.count == 1
-                ? String(localized: "Not established yet")
-                : String(localized: "None of these are established yet")
-        }
-        return room.items.count == 1
-            ? String(localized: "1 account established on vibenet")
-            : String(localized: "\(room.establishedCount) of \(room.items.count) established on vibenet")
+        var line = "\(shortAddress(lead.address)) · \(stateWord(lead))"
+        if let wait = leadWait(lead, now: now) { line += " · \(wait)" }
+        return line
+    }
+
+    /// "Locked" / "Unlocking" / whatever `rowLine` already says for an
+    /// unalarmed account — reusing its exact vocabulary so the headline
+    /// and the row underneath it can never disagree about what one
+    /// account's state is called. `rowLine` itself never says
+    /// Locked/Unlocking (a row draws a separate badge for that); the
+    /// headline has no badge beside it, so it has to say the word itself.
+    private static func stateWord(_ item: VibenetAccountItem) -> String {
+        guard item.alarmed else { return rowLine(item) }
+        return item.hasInitiatedUnlock ? String(localized: "Unlocking") : String(localized: "Locked")
+    }
+
+    /// The lead's own clock — an unlock countdown first (closer to
+    /// actionable than a key merely expiring), else the key-expiry
+    /// urgency line.
+    private static func leadWait(_ item: VibenetAccountItem, now: Date) -> String? {
+        item.unlockLabel(now: now) ?? item.urgentLine(now: now)
     }
 
     /// "…0b1c" — `WalletStore.shortAddress`'s tail-only form (user ruling,
@@ -749,20 +793,41 @@ struct VibenetRoom: Equatable, Codable {
         return "…\(address.suffix(4))"
     }
 
-    /// The line under it — the config's own provenance, since vibenet's
-    /// contracts rotate and a stale screenshot is exactly the failure mode
-    /// this whole feature is built to avoid.
-    static func note(_ room: VibenetRoom) -> String {
+    /// The quiet line at the BOTTOM of the card (2026-08-23, the
+    /// `ASCRoom.note(_:drawn:)` shape) — how many more accounts aren't
+    /// drawn, and the config's own provenance, joined, either, or
+    /// neither. Moved off the top: it used to be the first thing in the
+    /// room's scrollable content, which put it directly under the room's
+    /// own floating settings gear with no surface behind it to separate
+    /// the two — reported as "look at it touching the walls". Now it
+    /// lives INSIDE the one card, at the bottom, the same position every
+    /// other room's provenance line already keeps.
+    static func note(_ room: VibenetRoom, drawn: Int) -> String? {
         guard room.configReached else {
             return String(localized: "vibenet is an experimental devnet — its contracts redeploy often, and this read couldn't reach the current set.")
         }
+        var parts: [String] = []
+        let hidden = room.items.count - drawn
+        if hidden > 0 {
+            parts.append(hidden == 1 ? String(localized: "1 more watched")
+                                     : String(localized: "\(hidden) more watched"))
+        }
+        parts.append(provenanceLine(room))
+        return parts.joined(separator: " · ")
+    }
+
+    /// The config's own provenance alone, since vibenet's contracts
+    /// rotate and a stale screenshot is exactly the failure mode this
+    /// whole feature is built to avoid. Trimmed to a fragment (2026-08-23)
+    /// to match the terse, joined-by-" · " register every other room's
+    /// bottom-of-card note already uses — "and every watched account was
+    /// just re-read against it" was true but is implied by a fresh read
+    /// existing at all, and a caption this small has no room for a clause
+    /// that isn't carrying new information.
+    private static func provenanceLine(_ room: VibenetRoom) -> String {
         let commit = room.commit.map { String($0.prefix(9)) }
-        // The single most on-theme fact this room can report — leads over
-        // the plain provenance line whenever it's true, since it's not just
-        // "here's when this was read", it's "the ground moved since you were
-        // last here, and everything below was already re-checked against it".
         if room.redeployedSinceLastSeen, let commit {
-            return String(localized: "vibenet redeployed since you last checked — now at commit \(commit), and every watched account was just re-read against it.")
+            return String(localized: "vibenet redeployed — now at commit \(commit)")
         }
         switch (room.branch, commit) {
         case let (branch?, commit?):

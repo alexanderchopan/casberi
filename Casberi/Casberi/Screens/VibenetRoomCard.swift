@@ -1,19 +1,38 @@
 import SwiftUI
 
-/// THE VIBENET ROOM'S HEAD — the anatomy `StripeRoomCard`/
-/// `AppStoreConnectRoomCard` established: a heavy headline stating the whole
-/// finding as a sentence, a quiet provenance line under it, ranked rows, no
-/// coloured rail and no green/red — this room can raise exactly one alarm
-/// (a locked account) and it says so in words, the same way a Stripe dispute
-/// does.
+/// THE VIBENET ROOM'S HEAD — the `AppStoreConnectRoomCard` shape exactly
+/// (2026-08-23), and the reasoning is the same one: several watched
+/// accounts are NOT mergeable the way a wallet balance is (one being
+/// locked says nothing about another's key count), the same way several
+/// App Store Connect apps aren't (one being rejected says nothing about
+/// another's build). ASC's answer, reused whole: ONE surfaced card, a
+/// LEAD promoted to the headline (`VibenetRoom.lead`, the most urgent
+/// account — `ordered` already ranks locked-first), everyone else as a
+/// compact row beneath it, a quiet provenance note at the bottom.
 ///
-/// R3.2 (2026-08-23): a row's tap no longer expands in place — it OPENS
-/// `VibenetAccountSheet`. The card went back to being a summary; every
-/// reading that used to cram into the card's own width (the matrix, the
-/// history strip, the sync chips, the Explorer door) now lives on a real
-/// surface with room to breathe. That squeeze is what made the Explorer
-/// link wrap mid-word in the first place — the fix wasn't a layout tweak,
-/// it was giving the content a bigger home.
+/// **This is what makes "All" and "one account scoped" the same code
+/// path, not two.** When the rail (`VibenetScopeRail`) narrows
+/// `room.items` to a single address, `drawn.count` becomes 1, so the
+/// "rows beyond the lead" block has nothing left to draw — the card
+/// collapses to just that account's own headline, automatically. Wallet's
+/// own crown does the same thing (a merged reading when unscoped, that
+/// one wallet's own reading when scoped) for the same "click all you see
+/// all, click one you see one" reason.
+///
+/// Superseded, in order: the R3.2 anatomy (a headline sentence + hero face
+/// stack + flat row list, all rolled up into one paragraph — the shape
+/// that read as a contradiction the moment the hero drew every face while
+/// the sentence counted only the locked ones), and R4.6's own first draft
+/// (N independently-`.dsWidgetSurface()`-boxed cards, one per account,
+/// always all present regardless of scope — which fought the room's own
+/// floating settings gear for want of a shared surface for it to sit on,
+/// and touched the screen edge because nothing gave it the cards' own
+/// margin). Both are gone; this is the third and, per the ASC precedent
+/// this was measured against, the last shape this card should need.
+///
+/// A row's tap OPENS `VibenetAccountSheet` (R3.2) — the card stays a
+/// summary; the matrix, the history strip, the sync line and the
+/// Explorer door all live on the real surface that has room for them.
 ///
 /// Stores no `Thing` — only value types out of `VibenetRoom`. Corollary 5
 /// has nothing to guard here.
@@ -28,107 +47,133 @@ struct VibenetRoomCard: View {
     /// re-composed from a value type shouldn't own), so this just reports
     /// which address was asked for.
     var onRename: (String) -> Void = { _ in }
-    /// A row's whole gesture now — the sheet's item is the address itself
-    /// (the `L2beatScreen`/`WalletbeatScreen` shape: `String` is
-    /// `Identifiable`, so no wrapper type is needed).
+    /// A row's whole gesture — the sheet's item is the address itself (the
+    /// `L2beatScreen`/`WalletbeatScreen` shape: `String` is `Identifiable`,
+    /// so no wrapper type is needed).
     var onOpen: (String) -> Void = { _ in }
 
     private static let mark = DS.brandHue(for: "Base Vibenet") ?? Color.fixed("#0052ff")
-    /// The most rows drawn before the footnote takes over — the `StripeRoom`/
-    /// `ASCRoom` cap shape, so a long watch list doesn't turn this into an
-    /// unbounded list on a card meant to be a summary.
+    /// The most rows drawn before the footnote takes over, INCLUDING the
+    /// lead — the `StripeRoom`/`ASCRoom` cap shape, so a long watch list
+    /// doesn't turn this into an unbounded list on a card meant to be a
+    /// summary.
     private static let rowCap = 8
 
     private var drawn: [VibenetAccountItem] { Array(room.items.prefix(Self.rowCap)) }
 
-    /// Watched faces only — a discovery stranger never earns a slot in the
-    /// card's own hero, only in the setup screen's own list. Carries
-    /// `alarmed` (R2.4) so the stack itself can flag who's in trouble —
-    /// a direct read of `item.alarmed`, no new pure logic to harness.
-    private var heroFaces: [(address: String, alarmed: Bool)] {
-        room.items.prefix(5).map { ($0.address, $0.alarmed) }
-    }
-
+    /// R4.7 (2026-08-23), reported: *"the details about the account (eg
+    /// the keys) should be on a card. everything a user needs to see
+    /// about this account should be present on this screen, not on some
+    /// other screen… think like how we do wallet today — we have many
+    /// cards and then transaction history."*
+    ///
+    /// So: the moment the room narrows to EXACTLY ONE account — either
+    /// because the rail scoped it there, or because that's simply the
+    /// only account watched — the card draws its FULL detail
+    /// (`VibenetAccountDetail`: face, name, state, the real key roster,
+    /// history, sync, the Explorer/Copy doors) instead of a one-line
+    /// teaser you would otherwise have had to tap through to a second
+    /// screen to read. That teaser survives only for the roster case
+    /// (several accounts on screen at once, where one line each is the
+    /// most any of them can have) — the shape "All" already had, just
+    /// with the lead promoted instead of stacked into a single sentence.
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            if heroFaces.count > 1 {
-                // A stack, not a row: one glance says "several accounts",
-                // which the headline sentence beneath it then makes exact.
-                // Overlap follows the house face-stack idiom (StartFigureMark
-                // / AddressFlight) — identity is on the FACE, so overlap
-                // costs nothing legible.
-                HStack(spacing: -10) {
-                    ForEach(heroFaces, id: \.address) { face in
-                        WalletFace(address: face.address, size: 28, circular: true)
-                            .overlay(Circle().strokeBorder(DS.surfaceSheet, lineWidth: 2))
-                            .overlay(alignment: .bottomTrailing) {
-                                // One badge for both locked and unlocking —
-                                // the alarm is the alarm; the row's own pill
-                                // already carries which of the two words.
-                                if face.alarmed {
-                                    Circle()
-                                        .fill(Self.mark)
-                                        .frame(width: 12, height: 12)
-                                        .overlay {
-                                            Image(systemName: "lock.fill")
-                                                .font(.system(size: 7, weight: .bold))
-                                                .foregroundStyle(Color.fixed("#ffffff"))
-                                        }
-                                        .overlay(Circle().strokeBorder(DS.surfaceSheet, lineWidth: 2))
-                                }
-                            }
+            if let lead = room.lead, room.items.count == 1 {
+                VibenetAccountDetail(item: lead)
+            } else if let lead = room.lead {
+                row(lead, isLead: true)
+                // Only the accounts BEYOND the lead get a row — the lead
+                // IS the headline, and repeating it directly underneath
+                // would be the card arguing with itself (ASC's own
+                // ruling, reused).
+                if drawn.count > 1 {
+                    VStack(alignment: .leading, spacing: 0) {
+                        ForEach(Array(drawn.dropFirst())) { item in
+                            row(item)
+                        }
                     }
+                    .padding(.top, DS.Space.s3)
                 }
-                .padding(.bottom, DS.Space.s2)
+            } else {
+                Text(VibenetRoom.headline(room, now: .now))
+                    .dsText(.heading17)
+                    .foregroundStyle(DS.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
 
-            Text(VibenetRoom.headline(room))
-                .dsText(.heading22)
-                .foregroundStyle(DS.textPrimary)
-                .fixedSize(horizontal: false, vertical: true)
-
-            Text(VibenetRoom.note(room))
-                .dsText(.subhead13)
-                .foregroundStyle(DS.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.top, DS.Space.s1)
-
-            if !room.items.isEmpty {
-                VStack(alignment: .leading, spacing: 0) {
-                    ForEach(drawn) { item in
-                        row(item)
-                    }
-                }
-                .padding(.top, DS.Space.s3)
-            }
-
-            if room.items.count > drawn.count {
-                Text(String(localized: "\(room.items.count - drawn.count) more watched"))
+            // The bottom-of-card provenance note (2026-08-23, moved off
+            // the top of the room's scrollable content — it used to sit
+            // directly under the room's own floating settings gear with
+            // no surface behind it, reported as "look at it touching the
+            // walls"). Gated on having a lead: an empty room's headline
+            // already says "Nothing watched on vibenet yet", and a
+            // provenance line under that says nothing new.
+            if room.lead != nil, let note = VibenetRoom.note(room, drawn: drawn.count) {
+                Text(note)
                     .dsText(.label12)
                     .foregroundStyle(DS.textTertiary)
-                    .padding(.top, DS.Space.s1)
+                    .padding(.top, DS.Space.s4)
             }
         }
         .padding(DS.Space.s4)
         .frame(maxWidth: .infinity, alignment: .leading)
         .dsWidgetSurface()
+        // The one-account detail carries its own doors and history — its
+        // remaining verbs (rename, stop watching) live on a long-press,
+        // matching the roster row's own contextMenu below rather than
+        // adding a second visible control competing with `RoomGear` for
+        // the same corner.
+        .modifier(VibenetDetailContextMenu(
+            address: room.items.count == 1 ? room.lead?.address : nil,
+            onRename: onRename, onRemove: onRemove))
+    }
+
+    /// Applies a context menu only when the card is showing ONE account's
+    /// full detail — the roster rows already carry their own menu each,
+    /// and a menu on the whole card in THAT shape would be ambiguous
+    /// about which account it names.
+    private struct VibenetDetailContextMenu: ViewModifier {
+        let address: String?
+        let onRename: (String) -> Void
+        let onRemove: (String) -> Void
+        func body(content: Content) -> some View {
+            if let address {
+                content.contextMenu {
+                    Button {
+                        onRename(address)
+                    } label: {
+                        Label(String(localized: "Name this account…"), systemImage: "pencil")
+                    }
+                    Button(role: .destructive) {
+                        onRemove(address)
+                    } label: {
+                        Label(String(localized: "Stop watching"), systemImage: "trash")
+                    }
+                }
+            } else {
+                content
+            }
+        }
     }
 
     // MARK: - Rows
 
-    /// One watched account, summary only — a row is a read with ONE
-    /// gesture; unwatching lives on the trailing menu, never a second tap
-    /// target inside the row. The subtitle keeps R2.2's precedence (unlock
-    /// countdown + runway, else the urgency line, else the plain key
-    /// count) because that ranking is the whole point of surfacing it here
-    /// — before anyone opens anything.
-    private func row(_ item: VibenetAccountItem) -> some View {
+    /// One watched account. The LEAD (`isLead: true`) is this exact same
+    /// row, just promoted — a bigger face, bigger name, no vertical
+    /// padding of its own (the card's outer `DS.Space.s4` already frames
+    /// it) — never a separately-composed sentence, so the two can't drift
+    /// apart on what one account's state is called. The subtitle keeps
+    /// R2.2's precedence (unlock countdown + runway, else the urgency
+    /// line, else the plain key count) because that ranking is the whole
+    /// point of surfacing it here — before anyone opens anything.
+    private func row(_ item: VibenetAccountItem, isLead: Bool = false) -> some View {
         Button {
             DSHaptic.selection()
             onOpen(item.address)
         } label: {
             HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                WalletFace(address: item.address, size: 28, circular: true)
+                WalletFace(address: item.address, size: isLead ? 40 : 28, circular: true)
                 VStack(alignment: .leading, spacing: 3) {
                     // A nickname takes the title slot (not monospaced —
                     // it's a name, not hex) and the short address drops
@@ -136,7 +181,7 @@ struct VibenetRoomCard: View {
                     // unchanged: the address alone, exactly as before.
                     if let name = VibenetWatch.shared.name(for: item.address) {
                         Text(name)
-                            .dsText(.heading17)
+                            .dsText(isLead ? .heading22 : .heading17)
                             .foregroundStyle(DS.textPrimary)
                             .lineLimit(1)
                         Text(VibenetRoom.shortAddress(item.address))
@@ -145,7 +190,7 @@ struct VibenetRoomCard: View {
                             .lineLimit(1)
                     } else {
                         Text(VibenetRoom.shortAddress(item.address))
-                            .dsText(.heading17)
+                            .dsText(isLead ? .heading22 : .heading17)
                             .foregroundStyle(DS.textPrimary)
                             .monospaced()
                             .lineLimit(1)
@@ -213,7 +258,7 @@ struct VibenetRoomCard: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .padding(.vertical, DS.Space.s2)
+        .padding(.vertical, isLead ? 0 : DS.Space.s2)
         .contextMenu {
             Button {
                 onRename(item.address)

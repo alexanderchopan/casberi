@@ -84,9 +84,19 @@ enum VerbDerivation {
                     out.append(Verb(label: "Open in Calendar", icon: "calendar",
                                     action: .openURL(URL(string: "calshow://")!)))
                 }
-            } else {
+            } else if thing.source != VibenetIdentity.source {
                 // Not a hand-off — EventKit writes into the local store, which
-                // works with no Calendar app present. Ungated on purpose.
+                // works with no Calendar app present. Ungated on purpose for
+                // every OTHER `.event` source (a workout, a HomeKit-scheduled
+                // moment) — those are real-world moments a calendar entry
+                // legitimately describes. A key authorized or revoked on a
+                // devnet address is not: "Send to Calendar" would write a
+                // blockchain state change into the person's real calendar as
+                // though it were an appointment (2026-08-23, reported
+                // alongside the "on your calendar" copy bug above — same
+                // root cause, this file's `.event` default written for a
+                // real calendar and never re-checked against a source that
+                // borrowed the kind for its clock alone).
                 out.append(Verb(label: "Send to Calendar", icon: "calendar.badge.plus",
                                 action: .addToCalendar))
             }
@@ -884,6 +894,15 @@ enum PlaceWords {
         // wallet the row is about.
         if thing.kind == .transaction, thing.source == "Privacy" {
             return "on your card"
+        }
+        // A key authorized or revoked on a watched devnet address is a
+        // `.event` (2026-08-23) — "a moment with a clock" — but the kind's
+        // default was written for a real EventKit calendar, and this
+        // account has never been anywhere near one. Shipped as exactly
+        // that: "From — on your calendar" under a key-authorization
+        // sheet, reported as "it's fucked up".
+        if thing.kind == .event, thing.source == VibenetIdentity.source {
+            return "on vibenet"
         }
         switch thing.kind {
         case .mail, .file: return "in your inbox"

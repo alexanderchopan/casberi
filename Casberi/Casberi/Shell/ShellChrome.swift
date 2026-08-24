@@ -86,6 +86,13 @@ final class ShellChrome {
     /// wallets in every Wallet room; @dwr is not on Bluesky.
     var personScope: String?
 
+    /// The vibenet room's scoped account, or nil for all of them
+    /// (2026-08-23) — its own property rather than reusing `walletScope`,
+    /// because these are two different address SETS and sharing one
+    /// would mean a wallet pick silently scoping the vibenet room to an
+    /// address it has never heard of.
+    var vibenetScope: String?
+
     /// Who has posted in the room you're looking at since you last opened it —
     /// the face rail's attention ring (prd §362).
     ///

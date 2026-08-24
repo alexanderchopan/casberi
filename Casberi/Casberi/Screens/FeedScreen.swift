@@ -374,6 +374,15 @@ struct FeedScreen: View {
         /// Carries a handle and a source, so no `Thing` and no liveness
         /// question.
         case person(source: String, handle: String)
+        /// A vibenet account's own detail — the same sheet the setup
+        /// screen opens, reached from the room's own card (2026-08-23,
+        /// reported: "someow be able to click into the account"). Routed
+        /// here for the standing reason every case above it is: the card
+        /// lives inside this List's rows and a `.sheet` on a row resolves
+        /// to the same presenting controller as this one (ruling
+        /// 2026-07-28). Carries the address alone, no `Thing`, no
+        /// liveness question.
+        case vibenetAccount(String)
 
         var id: String {
             switch self {
@@ -386,6 +395,7 @@ struct FeedScreen: View {
             case .market(let p): "market:\(p.id)"
             case .nftPicks(let address, _): "nftPicks:\(address)"
             case .person(let source, let handle): "person:\(source):\(handle)"
+            case .vibenetAccount(let address): "vibenetAccount:\(address)"
             }
         }
     }
@@ -964,6 +974,7 @@ struct FeedScreen: View {
                 && (source != "All" || Corpus.showsInAll(thing))
                 && (filter.tag == "All" || thing.tags.contains(filter.tag))
                 && walletScopeAllows(thing)
+                && vibenetScopeAllows(thing)
                 && personScopeAllows(thing)
         }
     }
@@ -1182,6 +1193,13 @@ struct FeedScreen: View {
             ? Corpus.revision(in: modelContext)
             : Corpus.revision(in: modelContext, source: source)
         return [source, filter.tag, selectedWallet ?? "", chrome.personScope ?? "",
+                // The vibenet rail scopes the CARD (2026-08-23), so it
+                // belongs in the memo key for the reason this property's
+                // own doc gives: a head that survived a scope change is a
+                // card describing rows that are no longer on screen.
+                // Omitted at first, and the symptom was exactly that —
+                // the face lit and the card kept listing every account.
+                chrome.vibenetScope ?? "",
                 x402Lane ?? "", readingScope?.key ?? "",
                 // Bridge state is the one input a corpus revision cannot see —
                 // `sourceHead` reads a Stripe balance, PostHog readings, an ASC
@@ -1321,6 +1339,19 @@ struct FeedScreen: View {
     private func personScopeAllows(_ thing: Thing) -> Bool {
         guard shape == .social, let scope = chrome.personScope else { return true }
         return thing.authorHandle == scope
+    }
+
+    /// The vibenet room's account scope (2026-08-23) — the same shape as
+    /// the two above, gated on the ROOM rather than the scope's nil-ness
+    /// for the same reason: every vibenet event stamps its account on
+    /// `authorHandle`, and an ungated compare would empty every other
+    /// room where that field means something else entirely. Case-
+    /// insensitive because a watched address may be stored in any case
+    /// while the landed row carries the lowercased form the log gave.
+    private func vibenetScopeAllows(_ thing: Thing) -> Bool {
+        guard shape == .vibenet, let scope = chrome.vibenetScope else { return true }
+        guard let handle = thing.authorHandle else { return false }
+        return handle.caseInsensitiveCompare(scope) == .orderedSame
     }
     private var filterLabel: String {
         let tagLabel = filter.tag == "All" ? nil
@@ -2701,6 +2732,17 @@ struct FeedScreen: View {
                         source: source, handle: handle,
                         displayName: nil, bio: nil, avatarURL: nil))
                 }
+            case .vibenetAccount(let address):
+                // Composed fresh from the live watch list rather than
+                // threading `sourceHead`'s already-scoped room through —
+                // the account you tap may not be the one the rail has
+                // narrowed to (the "All" room draws every card), and the
+                // sheet's own detail is address-keyed regardless.
+                VibenetAccountSheet(
+                    address: address,
+                    room: VibenetRoomSource.card() ?? VibenetRoom.compose(
+                        items: [], branch: nil, commit: nil, configReached: false),
+                    onRemove: { _ in })
             }
         }
         #if !targetEnvironment(macCatalyst)
@@ -2987,13 +3029,18 @@ struct FeedScreen: View {
                         }
                     }
                 case .vibenet(let room):
-                    // The same card the setup screen draws. `onRemove` is
-                    // deliberately inert here: unwatching is a setup act,
-                    // and a destructive verb reached from a feed row it
-                    // would silently re-compose behind is the wrong place
-                    // for it — the row's own sheet and the setup screen
-                    // both still carry it.
-                    VibenetRoomCard(room: room, onRemove: { _ in })
+                    // The same card the setup screen draws. `onRemove` AND
+                    // `onRename` are deliberately inert here (their default
+                    // no-op): unwatching and naming are both setup acts,
+                    // and a destructive or state-changing verb reached from
+                    // a feed row it would silently re-compose behind is the
+                    // wrong place for either — the row's own sheet and the
+                    // setup screen both still carry them. `onOpen` DOES
+                    // work here (2026-08-23) — the one door this card was
+                    // missing.
+                    VibenetRoomCard(room: room, onRemove: { _ in }, onOpen: { address in
+                        feedSheet = .vibenetAccount(address)
+                    })
                 case .altana(let card):
                     AltanaRoomCard(card: card) {
                         // The door is Altana's own explorer — the only place a
@@ -4683,7 +4730,12 @@ struct FeedScreen: View {
         // state, and composing it live would spend an `eth_call` per
         // scroll. See `VibenetState`.
         case VibenetIdentity.source:
-            return VibenetRoomSource.card().map { .vibenet($0) }
+            // Scoped by the face rail, exactly as the wallet crown is
+            // (2026-08-23): pick one and the card describes that account
+            // alone; pick All and it describes them all.
+            return VibenetRoomSource.card()
+                .map { $0.scoped(to: chrome.vibenetScope) }
+                .map { .vibenet($0) }
         case PeerRoomSource.source:
             return PeerRoomSource.compose(things: visible).map { .peer($0) }
         case PrivacyPoolsRoomSource.source:

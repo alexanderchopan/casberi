@@ -425,6 +425,40 @@ struct FaceScopeRail: View {
 
 /// The wallet adapter (prd §128, widened to the whole Wallet category by §356,
 /// hoisted to the shell by §357, folded into `FaceScopeRail` by §362).
+/// The vibenet room's own face rail (2026-08-23) — the third flavour of
+/// `FaceScopeRail`, beside `WalletScopeRail` and `SocialScopeRail`.
+///
+/// Reported: the Wallet category's rail was drawing your WALLET faces
+/// above the vibenet room, so the one control that says "which of my
+/// addresses am I looking at" was offering the wrong set of addresses
+/// entirely. The rail is right for this room; its contents were not.
+/// These three can never draw together — a source is in the Wallet
+/// category, or a social room, or vibenet.
+enum VibenetScopeRail {
+    static func shows(source: String, watched: Int) -> Bool {
+        source == VibenetIdentity.source && watched > 1
+    }
+
+    /// A watched devnet account per face, in the watch list's own order.
+    /// `WalletFace` draws a deterministic identicon for any hex address,
+    /// so these are the SAME faces the room card and the detail sheet
+    /// show — one account never reads as two different marks.
+    static func items(_ addresses: [String]) -> [FaceScopeRail.Item] {
+        addresses.map { address in
+            FaceScopeRail.Item(
+                id: address,
+                caption: VibenetWatch.shared.name(for: address)
+                    ?? VibenetRoom.shortAddress(address),
+                face: .wallet(address: address))
+        }
+    }
+
+    static func matches(_ scope: String?, _ id: String) -> Bool {
+        guard let scope else { return false }
+        return scope.caseInsensitiveCompare(id) == .orderedSame
+    }
+}
+
 enum WalletScopeRail {
     /// Whether the rail draws at all — which is ALSO the test for whether it,
     /// rather than a room's own header, carries the add-a-wallet verb
@@ -435,6 +469,14 @@ enum WalletScopeRail {
     /// is describing.
     static func shows(source: String, watched: Int) -> Bool {
         BridgeCatalog.category(forSource: source) == CategoryFold.walletCategory
+            // Base Vibenet is in the Wallet CATEGORY but its room is not
+            // about your wallets (2026-08-23). Without this it drew your
+            // wallet faces above a room of devnet accounts — a scope
+            // control whose faces have nothing to do with what is beneath
+            // it, and tapping one scoped to a wallet the room cannot
+            // describe. `VibenetScopeRail` below carries the addresses
+            // this room IS about.
+            && source != VibenetIdentity.source
             && watched > 1
     }
 

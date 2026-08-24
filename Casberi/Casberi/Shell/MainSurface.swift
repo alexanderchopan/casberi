@@ -224,6 +224,35 @@ struct MainSurface: View {
                                            value: proxy.size.height)
                 }
             }
+            // THE SCRIM (2026-08-23). This band had NO background of its
+            // own: each chip carries its own glass, and the gaps BETWEEN
+            // the strips were fully transparent — so scrolling content
+            // passed through the chrome and collided with it. Reported on
+            // the Wallet room, where three strips stack (source chips,
+            // venue switcher, face rail) and a card headline was legible
+            // in the gaps between all three at once.
+            //
+            // A GRADIENT, not a plate: this band is up to three rows tall,
+            // and a flat opaque block that deep reads as a second header
+            // rather than as chrome the page slides under. Solid where the
+            // chips sit, clearing at the bottom edge, so the page still
+            // visibly continues underneath — the thing that makes this
+            // surface feel airy, kept, minus the collision.
+            //
+            // `DS.page`, never a material: design law puts Liquid Glass on
+            // the FLOATING layer alone, and this is chrome that content
+            // scrolls beneath, not a floating panel.
+            .background(alignment: .top) {
+                LinearGradient(
+                    stops: [
+                        .init(color: DS.page, location: 0),
+                        .init(color: DS.page, location: 0.75),
+                        .init(color: DS.page.opacity(0), location: 1),
+                    ],
+                    startPoint: .top, endPoint: .bottom)
+                    .ignoresSafeArea(edges: .top)
+                    .allowsHitTesting(false)
+            }
             .frame(maxWidth: showsRail ? PadLayout.readingMaxWidth : .infinity,
                    alignment: .leading)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -310,6 +339,7 @@ struct MainSurface: View {
         categorySwitcher
         walletScopeRail
         socialScopeRail
+        vibenetScopeRail
     }
 
     /// Whichever folded category room is showing, its venue switcher (prd §351,
@@ -406,6 +436,49 @@ struct MainSurface: View {
     /// of the people you already follow, and the room's own header already
     /// carries the door to its account manager. The wallet rail has one because
     /// the wallet manager is the ONLY door to watching another address.
+    /// The vibenet room's own accounts (2026-08-23) — see
+    /// `VibenetScopeRail`. Scoping is display-only here: picking a face
+    /// narrows the room to that account's events, which is what the rail
+    /// means everywhere else it appears.
+    @ViewBuilder
+    private var vibenetScopeRail: some View {
+        // Derived from the ROOM, never from the watch list directly — the
+        // two can legitimately disagree (in the demo the card is a fixed
+        // fixture while the watch list holds whatever this device really
+        // watches), and a rail offering faces the card beneath it has
+        // never heard of is a control that cannot scope anything. One
+        // source of truth, so a pick always names a row the card has.
+        let addresses = VibenetRoomSource.card()?.items.map(\.address) ?? []
+        if VibenetScopeRail.shows(source: filter.source, watched: addresses.count) {
+            FaceScopeRail(
+                items: VibenetScopeRail.items(addresses),
+                scope: chrome.vibenetScope,
+                compact: chrome.minimized && !showsRail,
+                // MATCHES THE WALLET RAIL (2026-08-23). These are adjacent
+                // venues inside the same folded category, so switching
+                // between them must not restructure the control that sits
+                // above both — captioned here and captionless there meant
+                // the rail changed height, slot width and fold behaviour
+                // on a venue tap, which reads as the chrome jumping. The
+                // room card directly below names every account, exactly as
+                // the crown card does for wallets (§450), so the caption
+                // is redundant here for the same reason it is there.
+                namesInRoom: true,
+                matches: VibenetScopeRail.matches,
+                onPick: { picked in
+                    withAnimation(DS.Motion.standard) { chrome.vibenetScope = picked }
+                },
+                onReTap: nil,
+                // The same add slot the wallet rail carries, for the same
+                // reason: the setup screen is the ONLY door to watching
+                // another account, and a rail of the accounts you watch is
+                // exactly where you reach for one more.
+                addTitle: String(localized: "Watch an account"),
+                onAdd: { route.pushBridge(BridgeRouter.destination(forID: VibenetIdentity.seatID)) })
+            .padding(.top, showsRail && !demoActive ? DS.Space.s2 : 0)
+        }
+    }
+
     @ViewBuilder
     private var socialScopeRail: some View {
         let accounts = socialAccounts
@@ -1417,6 +1490,12 @@ struct MainSurface: View {
             // too, and a scope that survives one of the three doors is worse than
             // one that survives none.
             chrome.personScope = nil
+            // Dies with the room like the person scope above, NOT spanning
+            // its category the way the wallet scope deliberately does: a
+            // vibenet devnet address matches no row in Peer, Safe or any
+            // other Wallet-category venue, so carried across it would paint
+            // an empty room with nothing able to explain why.
+            chrome.vibenetScope = nil
             chrome.freshHandles = []
         }
         // A room asking to move to another room — the Markets switcher. See
