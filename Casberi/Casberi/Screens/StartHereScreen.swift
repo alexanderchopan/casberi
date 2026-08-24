@@ -201,16 +201,31 @@ struct StartHereScreen: View {
             // than a destination to go to. This says where the tap lands, in the
             // app's own noun for that surface (the 2026-07-16 naming ruling: it
             // is "the catalog", never a store).
+            //
+            // Glass now (2026-08-23, user-reported bug, with a screenshot): bare
+            // secondary text scrolling right up to the screen edge went
+            // illegible the moment a card passed beneath it — the soft scroll
+            // edge fades content but doesn't lift the label above it, so the
+            // link and the demo card's own "Nothing to connect" line rendered
+            // on top of each other, unreadable either way. This is FLOATING
+            // chrome (`safeAreaInset`, never content), which is exactly the
+            // design law's floating layer — the same treatment HowItWorksSheet's
+            // "Try the demo" wears one screen earlier in this same fork. The
+            // superseded reasoning against a second equal-weight button
+            // (`HowItWorksSheet`'s "two buttons is a decision" ruling) doesn't
+            // apply here: this screen's decision is the three cards above, and
+            // a link nobody can read isn't lower-weight, it's broken.
             Button {
                 DSHaptic.tap()
                 onStart(.apps)
             } label: {
                 Text("Browse the catalog")
                     .dsText(.body17)
-                    .foregroundStyle(DS.textSecondary)
+                    .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
-                    .frame(minHeight: 44)
-                    .contentShape(Rectangle())
+                    .frame(minHeight: 48)
+                    .dsGlassProminent(tint: DS.textSecondary, cornerRadius: DS.Radius.pill)
+                    .contentShape(Capsule())
             }
             .buttonStyle(.plain)
             .padding(.horizontal, DS.Space.s4)
