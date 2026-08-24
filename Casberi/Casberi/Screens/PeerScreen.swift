@@ -30,11 +30,11 @@ struct PeerScreen: View {
                 mode: .watchedWallets,
                 intro: "Peer has no account here — it reads the wallets you already watch, so buying crypto with Venmo or Cash App lands on its own. Your Venmo side never touches the chain, so it's never seen.",
                 connected: hasWallets)
-            connectSection.listRowSeparator(.hidden)
             if hasWallets {
-                ChipLiveNote(name: "Peer", verb: "for your fills.")
+                ChipLiveNote(name: "Peer", verb: "for your fills.", source: "Peer")
                     .listRowSeparator(.hidden)
             }
+            connectSection.listRowSeparator(.hidden)
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)

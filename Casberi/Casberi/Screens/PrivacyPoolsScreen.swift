@@ -33,15 +33,21 @@ struct PrivacyPoolsScreen: View {
                 mode: .watchedWallets,
                 intro: "No account here — it reads the wallets you already watch, so every deposit lands and you're told the moment one is cleared to withdraw. Withdrawals are unlinkable by design, so that side never appears.",
                 connected: hasWallets)
-            connectSection.listRowSeparator(.hidden)
             if hasWallets {
                 // "…and their screening status" left the verb (duplication
-                // audit, 2026-07-31): the slab note directly above already
-                // promises the screening flip, and the header's tagline says
-                // it a third time. The chip note's job is WHERE, not what.
-                ChipLiveNote(name: "0xBow Privacy Pools", verb: "for your deposits.")
+                // audit, 2026-07-31): the slab note below already promises the
+                // screening flip, and the header's tagline says it a third
+                // time. This note's job is WHERE, not what.
+                //
+                // `source:` is "Privacy Pools", NOT the offer name beside it —
+                // the catalog brands this seat more fully than the bridge
+                // stamps it, and the offer name lands on a room that does not
+                // exist. See `ChipLiveNote`.
+                ChipLiveNote(name: "0xBow Privacy Pools", verb: "for your deposits.",
+                             source: "Privacy Pools")
                     .listRowSeparator(.hidden)
             }
+            connectSection.listRowSeparator(.hidden)
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)

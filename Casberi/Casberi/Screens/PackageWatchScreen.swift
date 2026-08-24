@@ -38,13 +38,18 @@ struct PackageWatchScreen: View {
                 intro: registryIntro,
                 connected: connected,
                 flipTrigger: flipTrigger)
+            if connected {
+                // `registry.displayName` is what `PackageWatchBridge` stamps as
+                // `source:`, so the door and the rows can never disagree.
+                ChipLiveNote(name: registry.displayName, verb: "for what just shipped.",
+                             source: registry.displayName)
+                    .listRowSeparator(.hidden)
+            }
             addSection.listRowSeparator(.hidden)
             if !watched.isEmpty {
                 watchlistSection
             }
             if connected {
-                ChipLiveNote(name: registry.displayName, verb: "for what just shipped.")
-                    .listRowSeparator(.hidden)
                 BridgeDisconnectSection(
                     bridgeID: registry.bridgeID, name: registry.displayName,
                     teardown: { PackageStore.shared.disconnect(registry) }

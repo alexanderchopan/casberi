@@ -17,10 +17,12 @@ struct DealsScreen: View {
                 name: "Deals",
                 mode: .noAccount,
                 intro: "No account and no key — today's discounts arrive from each aggregator's own public feed, in no order but theirs. Nothing here buys anything.")
+            if deals.connected {
+                ChipLiveNote(name: "Deals", verb: "for the latest.", source: "Deals")
+                    .listRowSeparator(.hidden)
+            }
             sourcesSection.listRowSeparator(.hidden)
             if deals.connected {
-                ChipLiveNote(name: "Deals", verb: "for the latest.")
-                    .listRowSeparator(.hidden)
                 BridgeDisconnectSection(
                     bridgeID: "deals", name: "Deals",
                     teardown: {

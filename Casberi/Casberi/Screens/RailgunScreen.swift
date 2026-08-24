@@ -33,11 +33,12 @@ struct RailgunScreen: View {
                 mode: .watchedWallets,
                 intro: "No account here — it reads the wallets you already watch, so shields and unshields land in your feed. What happens inside the pool is never read: your private balance stays private, which is the point of using Railgun.",
                 connected: hasWallets)
-            connectSection.listRowSeparator(.hidden)
             if hasWallets {
-                ChipLiveNote(name: "Railgun", verb: "for what you shield.")
+                ChipLiveNote(name: "Railgun", verb: "for what you shield.",
+                             source: "Railgun")
                     .listRowSeparator(.hidden)
             }
+            connectSection.listRowSeparator(.hidden)
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)

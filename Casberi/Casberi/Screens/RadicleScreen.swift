@@ -38,13 +38,16 @@ struct RadicleScreen: View {
                 mode: .noAccount,
                 intro: "No account and no key — name a repo and its patches and issues arrive as they happen. Radicle has no central host, so the seed you pick is the only thing that can answer you, and it sees what you ask for.",
                 connected: radicle.connected)
+            if radicle.connected {
+                ChipLiveNote(name: "Radicle", verb: "for what just landed.",
+                             source: "Radicle")
+                    .listRowSeparator(.hidden)
+            }
             addSection.listRowSeparator(.hidden)
             if !found.isEmpty { resultsSection }
             seedSection.listRowSeparator(.hidden)
             if !radicle.repos.isEmpty { watchlistSection }
             if radicle.connected {
-                ChipLiveNote(name: "Radicle", verb: "for what just landed.")
-                    .listRowSeparator(.hidden)
                 BridgeDisconnectSection(
                     bridgeID: "radicle", name: "Radicle",
                     teardown: { RadicleStore.shared.disconnect() }

@@ -34,6 +34,10 @@ FIVE CHECKS, all static — no build, no simulator:
   6. DOOR IS A VERB — a door's big words say what you will GET, never the route
      you will take. The address rides `detail:` under the verb, and a tab trail
      belongs in the step that follows. See the DOOR section below.
+  7. THE ROOM DOOR OPENS A REAL ROOM — every `source:` a `ChipLiveNote` names
+     must be a string some bridge really stamps as `Thing.source`, and every
+     `TokenBridge` rawValue must be one too (that enum's `source` forwards it
+     for the whole paste-a-token family). See the ROOM DOOR section below.
 
 Run standalone, or via `scripts/verify.sh`'s static head. `--self-test` proves
 each check catches its own shape before it certifies the tree — a check that
@@ -60,6 +64,7 @@ import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SCREENS = os.path.join(ROOT, "Casberi", "Casberi", "Screens")
+MODEL = os.path.join(ROOT, "Casberi", "Casberi", "Model")
 
 # Budgets. Each is a MEASURED ceiling, not a round number picked from
 # intuition — see the header for what the screens actually looked like when
@@ -295,6 +300,77 @@ def audit_door_table(name: str, body: str):
     return findings
 
 
+# ── the room door (check 7, 2026-08-24) ────────────────────────────────────
+#
+# `ChipLiveNote`'s door pops the pushed stack and asks `MainSurface.go(to:)`
+# for a source. Hand it a string no bridge stamps and NOTHING ERRORS: the pop
+# happens, the filter is written, and you land in a room that will never hold
+# a row — a tap that looks like it worked and didn't, on the one control whose
+# whole job is "your things are through here". That is §83 exactly, and it is
+# invisible to the build, to the screen sweep and to every other check here.
+#
+# The trap is specific and already present in the tree: the CATALOG name and
+# the SOURCE differ where a seat is branded more fully than it is stamped
+# ("0xBow Privacy Pools" vs `source: "Privacy Pools"`), and the note's `name:`
+# is the catalog one. Passing `name` for `source` is the natural mistake.
+#
+# THE CEILING, stated rather than implied: only a LITERAL can be resolved from
+# text. A `source:` forwarding a constant (`SafeBridge.sourceName`,
+# `VibenetIdentity.source`, `registry.displayName`) is skipped — and that is
+# the RIGHT answer, not a gap, because one constant used by both the stamp and
+# the door is the pattern that cannot drift at all (§311's own lesson: the
+# desync happened because a second file hardcoded the literal instead).
+SOURCE_LITERAL_RE = re.compile(r'source:\s*"([^"]+)"')
+SOURCE_CONST_RE = re.compile(r'static let source(?:Name)?\s*=\s*"([^"]+)"')
+CHIP_SOURCE_RE = re.compile(r'ChipLiveNote\((?:[^()]|\([^()]*\))*?source:\s*"([^"]+)"',
+                            re.S)
+
+
+def stamped_sources(model_dir: str) -> set:
+    """Every string the bridges really stamp as `Thing.source`.
+
+    Both spellings, because roughly half the bridges land through a literal
+    and half through a `sourceName` constant — reading only one form reports
+    perfectly correct doors (Railgun, Safe, L2BEAT) as broken, and a lint that
+    cries wolf gets turned off within a week.
+    """
+    found = set()
+    for fn in sorted(os.listdir(model_dir)):
+        if not fn.endswith(".swift"):
+            continue
+        body = strip_comments(open(os.path.join(model_dir, fn)).read())
+        found |= set(SOURCE_LITERAL_RE.findall(body))
+        found |= set(SOURCE_CONST_RE.findall(body))
+    return found
+
+
+def audit_room_doors(name: str, body: str, stamped: set):
+    findings = []
+    for src in CHIP_SOURCE_RE.findall(body):
+        if src not in stamped:
+            findings.append(f"{name}: room door opens “{src}”, which no bridge "
+                            f"stamps as Thing.source — the room will always be "
+                            f"empty (did you pass the catalog name?)")
+    return findings
+
+
+def audit_token_sources(tokens_src: str, stamped: set):
+    """`TokenBridge.source` is `rawValue` for all of them — prove it.
+
+    This is the whole paste-a-token family behind one property, so a new case
+    whose bridge stamps something else would give ~18 screens' worth of door a
+    silent hole with nothing else to catch it.
+    """
+    findings = []
+    head = tokens_src.split("var id: String", 1)[0]
+    for raw in re.findall(r'case\s+\w+\s*=\s*"([^"]+)"', head):
+        if raw not in stamped:
+            findings.append(f"TokenBridges.swift: TokenBridge “{raw}” is not "
+                            f"stamped as Thing.source anywhere — `TokenBridge.source` "
+                            f"returns rawValue, so its room door opens nothing")
+    return findings
+
+
 def audit_catalog(src: str):
     findings = []
     offers = 0
@@ -315,7 +391,7 @@ def audit_catalog(src: str):
 
 # ── the checks ─────────────────────────────────────────────────────────────
 
-def audit_source(name: str, src: str):
+def audit_source(name: str, src: str, stamped: set = None):
     """Returns a list of finding strings for one screen's source text."""
     findings = []
     body = strip_comments(src)
@@ -382,6 +458,10 @@ def audit_source(name: str, src: str):
 
     # 6: the door is a verb, not a route.
     findings += audit_doors(name, body)
+
+    # 7: the room door opens a room that exists.
+    if stamped is not None:
+        findings += audit_room_doors(name, body, stamped)
 
     return findings
 
@@ -552,6 +632,52 @@ def self_test() -> bool:
         print("  ✓ passes ordinary doors (a .json filename is not a hostname, "
               "an interpolation is not its source width)")
 
+    # The room door's fixtures. The dirty one is the exact mistake the tree
+    # invites — `name:` is the CATALOG name and `source:` is not, so passing
+    # the one you already typed is the natural slip; and it renders perfectly,
+    # so nothing but this can catch it.
+    stamped = {"Privacy Pools", "Peer", "Deals"}
+    dirty_room = ('ChipLiveNote(name: "0xBow Privacy Pools", verb: "for your deposits.",\n'
+                  '             source: "0xBow Privacy Pools")')
+    f = audit_room_doors("fixture.swift", dirty_room, stamped)
+    if not any("no bridge" in x for x in f):
+        print(f"  SELF-TEST FAIL: a room door onto a non-existent room was "
+              f"not caught — {f}")
+        ok = False
+    else:
+        print("  ✓ catches a room door that names the catalog name, not the source")
+
+    # Both shapes that must NOT fire: a correct literal, and a source handed
+    # over as a constant (which is the drift-proof form and unresolvable from
+    # text — flagging it would punish the better pattern).
+    clean_room = ('ChipLiveNote(name: "0xBow Privacy Pools", verb: "for your deposits.",\n'
+                  '             source: "Privacy Pools")\n'
+                  'ChipLiveNote(name: "Peer", verb: "for your fills.", source: "Peer")\n'
+                  'ChipLiveNote(name: "Safe", verb: "for the queue.", source: SafeBridge.sourceName)\n'
+                  'ChipLiveNote(name: "Deals", verb: "for the latest.")\n')
+    f = audit_room_doors("fixture.swift", clean_room, stamped)
+    if f:
+        print(f"  SELF-TEST FAIL: an ordinary room door was flagged — {f}")
+        ok = False
+    else:
+        print("  ✓ passes ordinary room doors (a constant is not a literal, "
+              "a signpost has no source)")
+
+    # And the token family behind one property.
+    f = audit_token_sources('case ghost = "Ghost"\nvar id: String { rawValue }', {"Peer"})
+    if not any("not stamped" in x for x in f):
+        print(f"  SELF-TEST FAIL: a TokenBridge case with no matching source "
+              f"was not caught — {f}")
+        ok = False
+    else:
+        print("  ✓ catches a TokenBridge case whose room does not exist")
+    f = audit_token_sources('case peer = "Peer"\nvar id: String { rawValue }', {"Peer"})
+    if f:
+        print(f"  SELF-TEST FAIL: a real TokenBridge case was flagged — {f}")
+        ok = False
+    else:
+        print("  ✓ passes a TokenBridge case that is really stamped")
+
     # And the table form, which serves many screens from one entry.
     f = audit_door_table("fixture.swift",
                          'var doorTitle: String { switch self {\n'
@@ -579,6 +705,7 @@ def main() -> int:
         print("  refusing to certify: the audit's own self-test failed")
         return 1
 
+    stamped = stamped_sources(MODEL)
     findings, screens = [], 0
     for fn in sorted(os.listdir(SCREENS)):
         if not fn.endswith(".swift") or fn in SKIP:
@@ -587,7 +714,10 @@ def main() -> int:
         if "BridgeSetupHeader(" not in src and "BridgeStepLines(" not in src:
             continue
         screens += 1
-        findings += audit_source(fn, src)
+        findings += audit_source(fn, src, stamped)
+
+    findings += audit_token_sources(
+        strip_comments(open(os.path.join(MODEL, "TokenBridges.swift")).read()), stamped)
 
     catalog_findings, offers = audit_catalog(strip_comments(open(CATALOG).read()))
     findings += catalog_findings

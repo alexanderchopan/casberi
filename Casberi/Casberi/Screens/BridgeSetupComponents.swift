@@ -668,28 +668,50 @@ struct RecentThingsSection: View {
 /// anything has landed yet — same as `PredictionVenueConnect`'s teach well:
 /// the chip is genuinely tappable the moment the seat is live, and the room
 /// or feed it opens onto already has its own honest empty state.
+///
+/// **It is `RoomGear`'s inverse, and the pair is the point (2026-08-24).** That
+/// control gave a room a door to its seat's settings; this gives a seat's
+/// settings a door back to the room. Until this pass only ONE screen of the
+/// sixteen carrying this note had the door (Vibenet, R4.5) — every other one
+/// stated a destination and left you to walk back out and hunt for the chip,
+/// which is the §83 dead control wearing prose, fifteen times.
+///
+/// **The door mechanics live HERE, not at the call site**, because the ordering
+/// is the part that is easy to get wrong and was already commented as such in
+/// Vibenet's copy of it: `sourceRequest` alone switches the room BEHIND this
+/// pushed screen, which from the front looks exactly like a tap that did
+/// nothing. Pop first, then ask. One implementation, sixteen callers.
 struct ChipLiveNote: View {
     let name: String
-    /// The rest of the sentence after "Tap its chip" — e.g. "for your fills."
+    /// The rest of the sentence — e.g. "for your fills."
     let verb: String
-    /// R4.5 — when supplied, the note stops being a SIGNPOST and becomes a
-    /// DOOR. Reported 2026-08-23: after watching an address you are left on
-    /// the setup screen with no way forward, and the only thing telling you
-    /// where to go is this sentence — so someone who has just connected
-    /// something taps the thing they connected and nothing happens. Naming
-    /// a destination and not going there is the §83 dead control wearing
-    /// prose. Optional rather than default because the caller must be the
-    /// one to guarantee `name` is a real source string that `go(to:)` can
-    /// land on; a note pointing at a room that isn't there would be the
-    /// same fault, one step later.
-    var onOpen: (() -> Void)?
+    /// The room to open: a real `Thing.source` string, NOT the catalog's offer
+    /// name. The two differ where the catalog brands a seat more fully than the
+    /// bridge stamps it (`"0xBow Privacy Pools"` vs `source: "Privacy Pools"`),
+    /// and the offer name would land on a room that does not exist — the same
+    /// §83 fault this door exists to fix, one step later.
+    ///
+    /// Optional, so a page with no room behind it keeps the signpost rather
+    /// than growing a door to nowhere. Verified per call site against the
+    /// bridge's own `source:` literal, and guarded mechanically by
+    /// `setup-copy-audit.py` check 6 so a new seat cannot drift.
+    var source: String?
+
+    @Environment(ShellChrome.self) private var chrome
+    // Per-window, never `.shared` — see `RoomGear`'s note on the same
+    // environment read.
+    @Environment(HomeRoute.self) private var route
 
     var body: some View {
         Section {
-            if let onOpen {
+            if let source {
                 Button {
                     DSHaptic.tap()
-                    onOpen()
+                    // POP FIRST. `sourceRequest` is read by `MainSurface`,
+                    // which sits behind this pushed stack — asking before
+                    // popping changes the room nobody is looking at.
+                    route.path = []
+                    chrome.sourceRequest = source
                 } label: { note(door: true) }
                     .buttonStyle(.plain)
                     .listRowInsets(EdgeInsets())

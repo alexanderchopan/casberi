@@ -48,11 +48,12 @@ struct OpenFoodFactsScreen: View {
                 name: "Open Food Facts",
                 mode: .noAccount,
                 intro: "No account and no key — scan a barcode and what's in it lands in your feed. Nothing about you leaves this \(DS.device) but the barcode itself.")
-            scanSection.listRowSeparator(.hidden)
             if !recent.isEmpty {
-                ChipLiveNote(name: "Open Food Facts", verb: "for what you've scanned.")
+                ChipLiveNote(name: "Open Food Facts", verb: "for what you've scanned.",
+                             source: "Open Food Facts")
                     .listRowSeparator(.hidden)
             }
+            scanSection.listRowSeparator(.hidden)
             // Gated on the SEAT, not on what landed (audit, 2026-07-31).
             // Someone who connected and whose every lookup then failed had a
             // registered bridge and no way to remove it from its own screen.

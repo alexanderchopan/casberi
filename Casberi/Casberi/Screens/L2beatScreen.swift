@@ -37,16 +37,20 @@ struct L2beatScreen: View {
 				connected: connected,
 				flipTrigger: flipTrigger)
 
-			watchSection.listRowSeparator(.hidden)
-
 			if connected {
-				rosterSection
 				ChipLiveNote(
 					name: "L2BEAT",
 					verb: watched.isEmpty
 						? "for incidents across every chain."
-						: "for incidents and your chains' assessments.")
+						: "for incidents and your chains' assessments.",
+					source: L2beatWatch.source)
 					.listRowSeparator(.hidden)
+			}
+
+			watchSection.listRowSeparator(.hidden)
+
+			if connected {
+				rosterSection
 				BridgeDisconnectSection(
 					bridgeID: L2beatWatch.seatID,
 					name: L2beatWatch.source,

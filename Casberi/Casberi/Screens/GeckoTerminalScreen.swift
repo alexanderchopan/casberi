@@ -29,10 +29,13 @@ struct GeckoTerminalScreen: View {
                 mode: .noAccount,
                 intro: "No account and no key — pick your chains and whatever is trending on them arrives. The ranking is GeckoTerminal's own, by 24-hour volume and price move, never ours.",
                 connected: gecko.connected)
+            if gecko.connected {
+                ChipLiveNote(name: "GeckoTerminal", verb: "for what's trending.",
+                             source: "GeckoTerminal")
+                    .listRowSeparator(.hidden)
+            }
             chainsSection.listRowSeparator(.hidden)
             if gecko.connected {
-                ChipLiveNote(name: "GeckoTerminal", verb: "for what's trending.")
-                    .listRowSeparator(.hidden)
                 BridgeDisconnectSection(
                     bridgeID: "geckoterminal", name: "GeckoTerminal",
                     teardown: {

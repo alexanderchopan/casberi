@@ -84,6 +84,15 @@ struct TokenSetupScreen: View {
         List {
             if bridge.connected {
                 connectedState
+                // The room, one tap away (2026-08-24). This screen serves the
+                // LARGEST family of seats in the catalog and was the only one
+                // with no door back at all — connect Todoist and the way to
+                // what just landed was: back, back, find the chip. See
+                // `ChipLiveNote`; it sits directly under the connected state
+                // so it is never something you have to scroll to.
+                ChipLiveNote(name: bridge.rawValue, verb: bridge.roomVerb,
+                             source: bridge.source)
+                    .listRowSeparator(.hidden)
             } else {
                 connectForm
             }

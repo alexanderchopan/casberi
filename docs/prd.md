@@ -31246,3 +31246,57 @@ they've spent. **UNMEASURED against a live key** — no OpenRouter key is stored
 build host and there is no egress to `openrouter.ai` from it; every path fails safe
 (an ignored body key changes nothing, a refused route is a worded failure, an unknown
 fact reads as the conservative answer).
+
+## 460. Every connect page gets a door back to its room (user: "in the same way we now have a settings icon in source rooms, each set up page should have a view feed cta or button so users don't have to come back through many steps wdyt", then "it needs to not be at the bottom of the screen either", 2026-08-24)
+
+**`RoomGear`'s inverse, and the pair is the point.** §CLAUDE's `RoomGear` (2026-08-21)
+gave a source room a door to its seat's settings; nothing gave a seat's settings a
+door back to the room. R4.5 had already ruled that gap a §83 dead control wearing
+prose — "Base Vibenet is in your feed strip. Tap its chip in your feed" names a
+destination and does not go there — and fixed it on **one screen of the sixteen**
+carrying that note. The other fifteen kept the signpost, and the ~18 seats served by
+`TokenSetupScreen`, the largest family in the catalog, had no note of either kind: you
+connected Todoist and the way to what had just landed was back, back, hunt for the chip.
+
+**The door mechanics moved INTO `ChipLiveNote`.** `source:` (a real `Thing.source`,
+optional) replaces R4.5's `onOpen:` closure, and the view does the navigation itself.
+The ordering is the part that is easy to get wrong and was already commented as such
+in Vibenet's hand-rolled copy: `chrome.sourceRequest` alone switches the room BEHIND
+this pushed screen, which from the front is indistinguishable from a tap that did
+nothing. Pop first, then ask. One implementation, seventeen callers.
+
+**It leads the connected page rather than trailing it** (the user's second ruling).
+Every site sat below the sections it was about — a watchlist that grows with every
+author you add, Safe's two signer sections, L2BEAT's roster — so the one control
+saying "your things are through here" was the one you had to scroll to find. It now
+sits directly under `BridgeSetupHeader`, gated on the seat's own connected/watching
+state exactly as before (never on whether anything has landed: the room has its own
+honest empty state). Reading order: identity → the way onward → the details → the exit.
+
+**The trap, and why it is mechanical.** The note's `name:` is the CATALOG name and the
+door needs the SOURCE, and the two differ where a seat is branded more fully than it
+is stamped — `"0xBow Privacy Pools"` vs `source: "Privacy Pools"`. Passing the name
+you already typed is the natural slip, and it fails INVISIBLY: the pop happens, the
+filter is written, and you land in a room that can never hold a row. `BridgeCatalog.
+offer(forSource:)` matches an offer whose name merely ENDS with the source, so it has
+no inverse to derive this from. So `setup-copy-audit.py` gained **check 7**: every
+literal `source:` a `ChipLiveNote` names must be a string some bridge really stamps,
+and every `TokenBridge` rawValue must be one too (that enum's new `source` forwards
+rawValue for the whole paste-a-token family — verified case by case against each
+bridge's own literal, not assumed from the names matching today). Mutation-proven
+three ways against the real tree: the catalog name pasted into `source:`, a near-miss
+spelling, and a new `TokenBridge` case whose bridge stamps nothing. **Stated ceiling:**
+only a LITERAL is resolvable from text. A `source:` forwarding a constant
+(`SafeBridge.sourceName`, `VibenetIdentity.source`, `registry.displayName`) is skipped,
+and that is the RIGHT answer rather than a gap — one constant used by both the stamp
+and the door is the pattern that cannot drift at all, which is §311's own lesson
+(the desync there happened because a second file hardcoded the literal instead).
+
+`TokenBridge.roomVerb` derives from the existing `noun` rather than spelling the rows
+a second time, so a bridge cannot call the same things two different names one screen
+apart; GitHub is the single override, because its noun is deliberately "items" (four
+feeds with no shared word) and "for your items" says nothing.
+
+Costs nothing: no new `Thing` field, no request, no CloudKit deploy. **UNMEASURED on a
+device** — the door is gesture-driven and no static check can exercise the pop-then-ask
+landing; iOS Simulator and Mac Catalyst both compile clean and all static audits pass.

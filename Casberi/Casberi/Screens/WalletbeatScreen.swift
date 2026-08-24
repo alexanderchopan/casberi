@@ -41,16 +41,20 @@ struct WalletbeatScreen: View {
 				connected: connected,
 				flipTrigger: flipTrigger)
 
-			watchSection.listRowSeparator(.hidden)
-
 			if connected {
-				rosterSection
 				ChipLiveNote(
 					name: "Walletbeat",
 					verb: watched.isEmpty
 						? "for wallet security news."
-						: "for security news and your wallets' reviews.")
+						: "for security news and your wallets' reviews.",
+					source: WalletbeatWatch.source)
 					.listRowSeparator(.hidden)
+			}
+
+			watchSection.listRowSeparator(.hidden)
+
+			if connected {
+				rosterSection
 				BridgeDisconnectSection(
 					bridgeID: WalletbeatWatch.seatID,
 					name: WalletbeatWatch.source,

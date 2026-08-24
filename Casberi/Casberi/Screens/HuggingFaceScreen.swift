@@ -29,14 +29,21 @@ struct HuggingFaceScreen: View {
                 mode: .noAccount,
                 intro: "No account and no key — name the people and orgs you follow and their new models, datasets and Spaces arrive. Only a repo that did not exist before lands: downloads and likes are counts, not news.",
                 connected: hf.connected)
+            // The door leads the connected page, never trails it — see
+            // `ChipLiveNote`. Below a watchlist that grows with every author
+            // you add, the one control saying "your things are through here"
+            // is the one you have to scroll to find.
+            if hf.connected {
+                ChipLiveNote(name: "Hugging Face", verb: "for what just shipped.",
+                             source: "Hugging Face")
+                    .listRowSeparator(.hidden)
+            }
             addSection.listRowSeparator(.hidden)
             papersSection.listRowSeparator(.hidden)
             if !hf.authors.isEmpty {
                 watchlistSection
             }
             if hf.connected {
-                ChipLiveNote(name: "Hugging Face", verb: "for what just shipped.")
-                    .listRowSeparator(.hidden)
                 BridgeDisconnectSection(
                     bridgeID: "huggingface", name: "Hugging Face",
                     teardown: { HuggingFaceStore.shared.disconnect() }

@@ -60,9 +60,15 @@ struct SentryScreen: View {
                     orgSection.listRowSeparator(.hidden)
                 }
             } else {
-                connectedSection.listRowSeparator(.hidden)
-                ChipLiveNote(name: "Sentry", verb: "for what just broke.")
+                // The door leads the connected state, ahead of the details it
+                // is about — see `ChipLiveNote`. At the bottom it sat below a
+                // section that can run the height of the screen, so the one
+                // control saying "your things are through here" was the one
+                // you had to scroll to find.
+                ChipLiveNote(name: "Sentry", verb: "for what just broke.",
+                             source: "Sentry")
                     .listRowSeparator(.hidden)
+                connectedSection.listRowSeparator(.hidden)
             }
             if hasToken {
                 BridgeDisconnectSection(

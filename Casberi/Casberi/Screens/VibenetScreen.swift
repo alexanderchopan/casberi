@@ -10,8 +10,6 @@ import SwiftUI
 /// the feed.
 struct VibenetScreen: View {
     @Environment(BridgeStore.self) private var store
-    @Environment(ShellChrome.self) private var chrome
-    @Environment(HomeRoute.self) private var route
     @State private var addressField = ""
     @FocusState private var fieldFocused: Bool
     @State private var addResult: String?
@@ -63,6 +61,17 @@ struct VibenetScreen: View {
                 intro: "Paste an account address, or watch one of the examples below.",
                 connected: connected)
 
+            // A DOOR, not a signpost (R4.5) — and it leads the connected page
+            // rather than trailing the room card, which on a busy watch list
+            // put it below the fold (2026-08-24). The pop-then-ask ordering
+            // this used to spell out by hand now lives in `ChipLiveNote`,
+            // shared with the fifteen screens that were still signposts.
+            if connected {
+                ChipLiveNote(name: "Base Vibenet", verb: "in your feed",
+                             source: VibenetIdentity.source)
+                    .listRowSeparator(.hidden)
+            }
+
             watchSection.listRowSeparator(.hidden)
 
             // Only while the watch list is empty — the moment there's a
@@ -83,16 +92,6 @@ struct VibenetScreen: View {
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
 
-                // A DOOR, not a signpost (R4.5). Pops the pushed stack
-                // FIRST: `sourceRequest` alone would switch the room
-                // behind this very screen, which from here looks like the
-                // tap did nothing — the sources tray's own lesson, in its
-                // own comment.
-                ChipLiveNote(name: "Base Vibenet", verb: "in your feed", onOpen: {
-                    route.path = []
-                    chrome.sourceRequest = VibenetIdentity.source
-                })
-                    .listRowSeparator(.hidden)
                 BridgeDisconnectSection(
                     bridgeID: VibenetIdentity.seatID, name: VibenetIdentity.source,
                     teardown: { VibenetBridge.disconnect(store: store) }
