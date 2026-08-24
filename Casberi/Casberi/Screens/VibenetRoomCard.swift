@@ -105,9 +105,21 @@ struct VibenetRoomCard: View {
                         // actors) always keeps its line — there is no chip
                         // view underneath it to hand the sentence off to.
                         if !(expanded.contains(item.address) && !item.actors.isEmpty) {
-                            Text(VibenetRoom.rowLine(item))
-                                .dsText(.label12)
-                                .foregroundStyle(item.alarmed ? DS.textPrimary : DS.textSecondary)
+                            // An account mid-unlock leads with its OWN
+                            // countdown rather than its key count — "1 key"
+                            // sits right beside a badge already saying
+                            // "Unlocking"; the number worth a glance here is
+                            // WHEN, which was read at launch and thrown away
+                            // until now.
+                            if item.hasInitiatedUnlock, let countdown = item.unlockLabel(now: .now) {
+                                Text(countdown)
+                                    .dsText(.label12)
+                                    .foregroundStyle(DS.textPrimary)
+                            } else {
+                                Text(VibenetRoom.rowLine(item))
+                                    .dsText(.label12)
+                                    .foregroundStyle(item.alarmed ? DS.textPrimary : DS.textSecondary)
+                            }
                         }
                     }
                     Spacer(minLength: DS.Space.s2)
@@ -126,11 +138,15 @@ struct VibenetRoomCard: View {
                                 .padding(.vertical, 1)
                                 .background(Self.mark, in: RoundedRectangle(cornerRadius: 3, style: .continuous))
                         }
-                        if !item.actors.isEmpty {
-                            Image(systemName: expanded.contains(item.address) ? "chevron.up" : "chevron.down")
-                                .dsGlyph(12)
-                                .foregroundStyle(DS.textTertiary)
-                        }
+                        // Every row expands now, actors or not — the
+                        // explorer door and the sync line in `footer` are
+                        // worth reaching from a "Not established yet" row
+                        // too, which is exactly the row someone opens to
+                        // check whether they watched the address they meant
+                        // to.
+                        Image(systemName: expanded.contains(item.address) ? "chevron.up" : "chevron.down")
+                            .dsGlyph(12)
+                            .foregroundStyle(DS.textTertiary)
                     }
                 }
                 .contentShape(Rectangle())
@@ -145,20 +161,23 @@ struct VibenetRoomCard: View {
                 }
             }
 
-            if expanded.contains(item.address), !item.actors.isEmpty {
-                // ADAPTIVE BY SHAPE, not one form for everything. A matrix
-                // exists to COMPARE, and with a single key there is nothing
-                // to compare against — it drew one column of six blocks,
-                // five of them gray, to say what a three-word sentence says
-                // plainly. Most accounts have one key, so the grid was
-                // optimised for the rare case and wasteful in the common
-                // one.
-                Group {
+            if expanded.contains(item.address) {
+                VStack(alignment: .leading, spacing: 0) {
+                    // ADAPTIVE BY SHAPE, not one form for everything. A
+                    // matrix exists to COMPARE, and with a single key there
+                    // is nothing to compare against — it drew one column of
+                    // six blocks, five of them gray, to say what a
+                    // three-word sentence says plainly. Most accounts have
+                    // one key, so the grid was optimised for the rare case
+                    // and wasteful in the common one. Zero keys draws
+                    // neither — the row's own subtitle ("Not established
+                    // yet") already said the whole thing.
                     if item.actors.count == 1, let only = item.actors.first {
                         singleKeyLine(only)
-                    } else {
+                    } else if !item.actors.isEmpty {
                         scopeMatrix(VibenetAccountItem.byReach(item.actors))
                     }
+                    footer(item)
                 }
                 .padding(.bottom, DS.Space.s2)
                 .padding(.leading, DS.Space.s1)
@@ -221,12 +240,26 @@ struct VibenetRoomCard: View {
 
                 ForEach(actors) { actor in
                     GridRow {
-                        Text(actor.kind.shortLabel)
-                            .dsText(.label12)
-                            .foregroundStyle(DS.textPrimary)
-                            .lineLimit(1)
-                            .fixedSize()
-                            .gridColumnAlignment(.leading)
+                        // The expiry line only shows for a key that actually
+                        // HAS one — "Never expires" repeated under every row
+                        // of an account where nothing does is the noisy
+                        // default this app's own honesty rule argues
+                        // against elsewhere; a key that DOES expire is worth
+                        // the extra line every time.
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(actor.kind.shortLabel)
+                                .dsText(.label12)
+                                .foregroundStyle(DS.textPrimary)
+                                .lineLimit(1)
+                            if actor.expiry > 0 {
+                                Text(actor.expiryLabel(now: .now))
+                                    .font(.system(size: 9))
+                                    .foregroundStyle(DS.textTertiary)
+                                    .lineLimit(1)
+                            }
+                        }
+                        .fixedSize()
+                        .gridColumnAlignment(.leading)
                         ForEach(Array(actor.scope.grantedFlags.enumerated()), id: \.offset) { _, granted in
                             cell(granted)
                         }
@@ -258,7 +291,42 @@ struct VibenetRoomCard: View {
                 .dsText(.label12)
                 .foregroundStyle(DS.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
+            // Same rule as the matrix's rows: silent when there's nothing
+            // time-bound to say.
+            if actor.expiry > 0 {
+                Text(actor.expiryLabel(now: .now))
+                    .dsText(.label11)
+                    .foregroundStyle(DS.textTertiary)
+            }
         }
+    }
+
+    /// The account's own sync standing, plus a door out to the real
+    /// explorer — both read and both thrown away by every screen before
+    /// this one. `changeSequences` is nil only on a failed read, never on a
+    /// genuinely-zero standing (`VibenetChangeSequences` carries the zero
+    /// itself), so this is silent exactly when there's nothing honest to
+    /// report, never when the number is merely small.
+    private func footer(_ item: VibenetAccountItem) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+            if let cs = item.changeSequences {
+                Text(VibenetMultichainSync.summary(
+                    [VibenetChainStanding(chainName: VibenetChain.network, sequences: cs)]))
+                    .dsText(.label11)
+                    .foregroundStyle(DS.textTertiary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: DS.Space.s2)
+            Link(destination: URL(string: VibenetExplorer.address(item.address))!) {
+                HStack(spacing: 3) {
+                    Text(String(localized: "Explorer"))
+                    Image(systemName: "arrow.up.right")
+                }
+                .dsText(.label11).fontWeight(.semibold)
+                .foregroundStyle(Self.mark)
+            }
+        }
+        .padding(.top, DS.Space.s2)
     }
 
     /// A cell states a YES/NO, so it is a FIXED-SIZE block — never one

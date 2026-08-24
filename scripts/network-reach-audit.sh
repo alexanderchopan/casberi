@@ -29,6 +29,10 @@ KNOWN_NON_REACH=(
   etherscan.io basescan.org arbiscan.io optimistic.etherscan.io
   polygonscan.com solscan.io revoke.cash robinhoodchain.blockscout.com
   gnosisscan.io njump.me
+  # vibenet's own explorer (VibenetExplorer) — a landed event's permalink
+  # and the room's "Explorer" door, both `Link(destination:)` the person's
+  # own browser opens; this app never fetches chain.base.org itself.
+  chain.base.org
   app.0xbow.io app.cal.com app.todoist.com kalshi.com opensea.io
   dexscreener.com twitch.tv reddit.com stocktwits.com farcaster.xyz
   privacy.com polymarket.com app.safe.global app.uniswap.org

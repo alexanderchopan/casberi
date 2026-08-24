@@ -519,6 +519,12 @@ enum BridgeRefresh {
                 _ = await TwitchIngest.refresh(context: context)
             }
         }
+        if VibenetWatch.shared.connected {
+            let s = slot(); Task { @MainActor in
+                await BridgeRefresh.stagger(s)
+                _ = await VibenetEvents.land(context: context)
+            }
+        }
         if OpenSeaStore.shared.connected {
             let s = slot(); Task { @MainActor in
                 await BridgeRefresh.stagger(s)

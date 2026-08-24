@@ -441,6 +441,78 @@ check("one account is reachable but not yet established",
 check("the fixture reports its own redeploy, so the note shows it off too",
       VibenetRoom.note(demo).contains("redeployed since you last checked"))
 
+// MARK: - VibenetActor.expiryLabel / VibenetAccountItem.unlockLabel
+
+print("")
+print("VibenetActor.expiryLabel / unlockLabel — the two clocks that were read and thrown away")
+let refNow = Date(timeIntervalSince1970: 1_000_000_000)
+func actorWithExpiry(_ expiry: UInt64) -> VibenetActor {
+    VibenetActor(actorId: "e", authenticator: "0x1", kind: .secp256k1,
+                 scope: VibenetScope(raw: 0), expiry: expiry)
+}
+check("expiry == 0 is Keystore.sol's own convention for 'never', not a date",
+      actorWithExpiry(0).expiryLabel(now: refNow) == "Never expires")
+check("a future expiry counts down",
+      actorWithExpiry(UInt64(refNow.timeIntervalSince1970) + 3600).expiryLabel(now: refNow)
+        .hasPrefix("Expires"))
+check("a past expiry reads as expired, not as a countdown that went negative",
+      actorWithExpiry(UInt64(refNow.timeIntervalSince1970) - 3600).expiryLabel(now: refNow)
+        .hasPrefix("Expired"))
+
+check("no unlock initiated yet — the badge has nothing to count down to",
+      account(locked: true, hasInitiatedUnlock: false).unlockLabel(now: refNow) == nil)
+let readyItem = VibenetAccountItem(address: "0x1", reached: true, established: true, actors: [],
+                                    locked: true, hasInitiatedUnlock: true,
+                                    unlocksAt: UInt64(refNow.timeIntervalSince1970) - 60, unlockDelay: nil)
+check("an unlock time already in the past reads as ready, not a negative countdown",
+      readyItem.unlockLabel(now: refNow) == "Unlock ready")
+let countingItem = VibenetAccountItem(address: "0x1", reached: true, established: true, actors: [],
+                                       locked: true, hasInitiatedUnlock: true,
+                                       unlocksAt: UInt64(refNow.timeIntervalSince1970) + 3600, unlockDelay: nil)
+check("a future unlock time counts down",
+      countingItem.unlockLabel(now: refNow)?.hasPrefix("Unlocks") == true)
+
+// MARK: - VibenetMultichainSync
+
+print("")
+print("VibenetMultichainSync — honestly a one-chain reading until 8130 has a second live chain")
+let oneChain = [VibenetChainStanding(chainName: "vibenet",
+                                     sequences: VibenetChangeSequences(multichain: 3, localEpoch: 0, localSequence: 3))]
+check("with one chain there is nothing to compare — never guesses at a sync gap",
+      VibenetMultichainSync.summary(oneChain) == "Only one EIP-8130 chain to compare — nothing to sync yet")
+check("laggingChains is empty below two chains, the same honesty rule",
+      VibenetMultichainSync.laggingChains(oneChain).isEmpty)
+
+let leader = VibenetChainStanding(chainName: "vibenet",
+                                  sequences: VibenetChangeSequences(multichain: 5, localEpoch: 0, localSequence: 5))
+let laggard = VibenetChainStanding(chainName: "sepolia-8130",
+                                   sequences: VibenetChangeSequences(multichain: 3, localEpoch: 0, localSequence: 3))
+check("a chain behind the leading multichain count is named as lagging",
+      VibenetMultichainSync.laggingChains([leader, laggard]).map(\.chainName) == ["sepolia-8130"])
+check("summary counts the lagging chains, singular wording",
+      VibenetMultichainSync.summary([leader, laggard])
+        == "1 chain hasn't applied the latest multichain change yet")
+let caughtUp = VibenetChainStanding(chainName: "sepolia-8130",
+                                    sequences: VibenetChangeSequences(multichain: 5, localEpoch: 0, localSequence: 1))
+check("two chains at the same multichain count read as fully caught up",
+      VibenetMultichainSync.summary([leader, caughtUp]).hasPrefix("Every chain has applied"))
+
+// MARK: - VibenetEventKind — the feed-landing titles
+
+print("")
+print("VibenetEventKind.title — the feed's own door into this room")
+check("a new key lands with its resolved kind when one was confirmed",
+      VibenetEventKind.actorAuthorized.title(shortAddress: "…0b1c", keyLabel: "secp256k1 key")
+        == "New secp256k1 key authorized for …0b1c")
+check("a new key still lands honestly with no invented kind when the re-read couldn't confirm one",
+      VibenetEventKind.actorAuthorized.title(shortAddress: "…0b1c", keyLabel: nil)
+        == "New key authorized for …0b1c")
+check("a revocation names no kind at all — the key that's gone isn't re-read to find one",
+      VibenetEventKind.actorRevoked.title(shortAddress: "…0b1c", keyLabel: "secp256k1 key")
+        == "Key revoked for …0b1c")
+check("a lock event",
+      VibenetEventKind.locked.title(shortAddress: "…0b1c", keyLabel: nil) == "…0b1c locked on vibenet")
+
 // MARK: - shortAddress
 
 print("")

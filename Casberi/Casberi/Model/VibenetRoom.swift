@@ -287,6 +287,23 @@ struct VibenetActor: Identifiable, Equatable {
     /// arithmetic on it — the caller decides whether to compare it to "now",
     /// so nothing here can quietly disagree with what time the view drew at.
     let expiry: UInt64
+
+    /// "Never expires" / "Expired Mar 3" / "Expires in 3h" — this key's own
+    /// clock, read and then thrown away by every screen this feature has
+    /// shipped so far even though `expiry` was fetched from the very first
+    /// commit. Takes `now` as a PARAMETER rather than reading `Date.now`
+    /// itself, the same discipline `BriefLedger`/`AppVisit` use for anything
+    /// clock-dependent — a harness fixture can then assert an exact
+    /// three-way boundary (never / expired / counting down) without being
+    /// at the mercy of when the test happens to run.
+    func expiryLabel(now: Date) -> String {
+        guard expiry > 0 else { return String(localized: "Never expires") }
+        let expiresAt = Date(timeIntervalSince1970: TimeInterval(expiry))
+        guard expiresAt > now else {
+            return String(localized: "Expired \(expiresAt.formatted(.dateTime.month(.abbreviated).day()))")
+        }
+        return String(localized: "Expires \(expiresAt.formatted(.relative(presentation: .named)))")
+    }
 }
 
 struct VibenetAccountItem: Identifiable, Equatable {
@@ -308,6 +325,13 @@ struct VibenetAccountItem: Identifiable, Equatable {
     let hasInitiatedUnlock: Bool
     let unlocksAt: UInt64?
     let unlockDelay: UInt16?
+    /// This ONE chain's change-sequence standing (`getChangeSequences`) —
+    /// `nil` when the read wasn't attempted or failed, never a zeroed
+    /// struct standing in for "unknown". See `VibenetMultichainSync` for
+    /// what this becomes once more than one chain can hold this account;
+    /// today it's the whole of "what has this account done, on the one
+    /// chain 8130 actually runs on".
+    let changeSequences: VibenetChangeSequences?
 
     /// The one alarm-worthy fact (the task's own ruling): a locked account.
     /// Deliberately NOT "not established" — an account that has never done
@@ -315,7 +339,8 @@ struct VibenetAccountItem: Identifiable, Equatable {
     var alarmed: Bool { locked }
 
     init(address: String, reached: Bool, established: Bool, actors: [VibenetActor],
-         locked: Bool, hasInitiatedUnlock: Bool, unlocksAt: UInt64?, unlockDelay: UInt16?) {
+         locked: Bool, hasInitiatedUnlock: Bool, unlocksAt: UInt64?, unlockDelay: UInt16?,
+         changeSequences: VibenetChangeSequences? = nil) {
         self.address = address
         self.reached = reached
         self.established = established
@@ -327,6 +352,19 @@ struct VibenetAccountItem: Identifiable, Equatable {
         self.hasInitiatedUnlock = hasInitiatedUnlock
         self.unlocksAt = unlocksAt
         self.unlockDelay = unlockDelay
+        self.changeSequences = changeSequences
+    }
+
+    /// "Unlocks in 3h" / "Unlock ready" — the lock badge's own clock,
+    /// alongside the key expiry it was already sitting next to. `unlocksAt`
+    /// is `Keystore.sol`'s own convention: nil/0 until an unlock has been
+    /// INITIATED, so this returns nil rather than a sentence for the plain
+    /// "Locked" state, which has no countdown to show yet.
+    func unlockLabel(now: Date) -> String? {
+        guard let unlocksAt, unlocksAt > 0 else { return nil }
+        let at = Date(timeIntervalSince1970: TimeInterval(unlocksAt))
+        guard at > now else { return String(localized: "Unlock ready") }
+        return String(localized: "Unlocks \(at.formatted(.relative(presentation: .named)))")
     }
 
     /// By kind, then actorId — TOTAL, so a card reshuffling its own actor
@@ -579,5 +617,101 @@ struct VibenetRoom: Equatable {
         return compose(items: [rich, lockedPlain, unlocking, notEstablishedYet],
                         branch: "main", commit: "a9ae95e1bdemo",
                         configReached: true, redeployedSinceLastSeen: true)
+    }
+}
+
+// MARK: - Multichain sync standing
+
+/// `Keystore.getChangeSequences(address)`'s own three fields, in its own
+/// declared order — how far THIS chain's copy of an account's config has
+/// progressed. `multichain` is the count of changes applied off the
+/// multichain channel (`chain_id = 0`, per the EIP's own spec — a config
+/// change made there is meant to apply on every chain the account exists
+/// on); `localEpoch`/`localSequence` are this chain's own local-only
+/// history, which has no cross-chain meaning at all.
+struct VibenetChangeSequences: Equatable {
+    let multichain: UInt64
+    let localEpoch: UInt32
+    let localSequence: UInt32
+}
+
+/// One chain's standing for one account — what `VibenetMultichainSync`
+/// compares across.
+struct VibenetChainStanding: Equatable {
+    let chainName: String
+    let sequences: VibenetChangeSequences
+}
+
+/// "Which chains haven't applied the account's latest multichain change
+/// yet" — the team's own ask, and specified rather than guessed: EIP-8130
+/// accounts can exist on several chains, a config change on the multichain
+/// channel is meant to reach all of them, and `multichain` is exactly the
+/// counter that says whether one has.
+///
+/// TODAY THIS IS HONESTLY A ONE-CHAIN READING. EIP-8130 runs on vibenet
+/// (plus its own Sepolia testbed, which this app doesn't watch) — there is
+/// no second LIVE chain a real account can be compared against yet. This
+/// exists now, ready and correct, so that the day Cobalt puts the protocol
+/// on a second chain, lighting it up is "read one more chain's standing and
+/// append it to the array" — not a redesign. Never claims a sync gap it
+/// cannot see: with fewer than two standings there is nothing to be behind,
+/// so it says that in as many words rather than defaulting to a silent "all
+/// caught up", which would be a claim about chains this build never read.
+enum VibenetMultichainSync {
+    static func summary(_ standings: [VibenetChainStanding]) -> String {
+        guard standings.count > 1 else {
+            return String(localized: "Only one EIP-8130 chain to compare — nothing to sync yet")
+        }
+        let leading = standings.map(\.sequences.multichain).max() ?? 0
+        let behind = laggingChains(standings)
+        guard !behind.isEmpty else {
+            return String(localized: "Every chain has applied the latest multichain change (#\(leading))")
+        }
+        return behind.count == 1
+            ? String(localized: "1 chain hasn't applied the latest multichain change yet")
+            : String(localized: "\(behind.count) chains haven't applied the latest multichain change yet")
+    }
+
+    /// Chains strictly behind the leading `multichain` count — empty (never
+    /// guessed at) below two standings, the same honesty rule as `summary`.
+    static func laggingChains(_ standings: [VibenetChainStanding]) -> [VibenetChainStanding] {
+        guard standings.count > 1 else { return [] }
+        let leading = standings.map(\.sequences.multichain).max() ?? 0
+        return standings.filter { $0.sequences.multichain < leading }
+    }
+}
+
+// MARK: - Landed events (the feed's own door into this room)
+
+/// The three `Keystore` events worth landing as a `Thing` — the
+/// `WalletApprovals` shape, applied here for the first time. Everything
+/// else this room reads is pure live state and is never landed (see the
+/// model file's own header doc for why); these three are different in kind,
+/// not degree: a NEW key gaining the power to act for a watched account, a
+/// key losing it, or the account locking outright, are each a security-
+/// relevant CHANGE worth surfacing even to someone who never reopens this
+/// screen — exactly the argument that already justifies landing a token
+/// approval.
+enum VibenetEventKind: Equatable {
+    case actorAuthorized
+    case actorRevoked
+    case locked
+
+    /// `keyLabel` is the resolved kind ("secp256k1 key") when the live
+    /// re-read at landing time could confirm it, nil when the actor was
+    /// already gone by the time this ran (revoked-then-landed in the same
+    /// pass) — the title still lands, just without a kind it can't prove.
+    func title(shortAddress: String, keyLabel: String?) -> String {
+        switch self {
+        case .actorAuthorized:
+            if let keyLabel {
+                return String(localized: "New \(keyLabel) authorized for \(shortAddress)")
+            }
+            return String(localized: "New key authorized for \(shortAddress)")
+        case .actorRevoked:
+            return String(localized: "Key revoked for \(shortAddress)")
+        case .locked:
+            return String(localized: "\(shortAddress) locked on vibenet")
+        }
     }
 }

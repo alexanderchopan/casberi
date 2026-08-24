@@ -25,6 +25,15 @@ struct VibenetScreen: View {
     @Bindable private var watch = VibenetWatch.shared
     private var connected: Bool { watch.connected }
 
+    private static let mark = DS.brandHue(for: "Base Vibenet") ?? Color.fixed("#0052ff")
+
+    /// The empty state's own fix: nobody arrives at a devnet already
+    /// holding an address for it. Fetched once per screen visit, off
+    /// `Keystore`'s `AccountCreated` — real accounts, not a demo prop.
+    @State private var discovered: [String] = []
+    @State private var discoveryLoading = false
+    @State private var discoveryAttempted = false
+
     var body: some View {
         List {
             BridgeSetupHeader(
@@ -34,6 +43,13 @@ struct VibenetScreen: View {
                 connected: connected)
 
             watchSection.listRowSeparator(.hidden)
+
+            // Only while the watch list is empty — the moment there's a
+            // real card on screen, a list of strangers' addresses is
+            // clutter, not help.
+            if !connected {
+                discoverySection.listRowSeparator(.hidden)
+            }
 
             if connected {
                 VibenetRoomCard(room: room, onRemove: unwatch)
@@ -61,10 +77,59 @@ struct VibenetScreen: View {
             // Only read when something's already watched: viewing isn't
             // consent to reach the chain.
             if connected { Task { await load() } }
+            else if !discoveryAttempted { Task { await loadDiscovery() } }
         }
     }
 
     // MARK: - Sections
+
+    /// Real, recently-created vibenet accounts, one tap to watch. This is
+    /// STILL a read, not a connection — `AccountCreated` names no owner, so
+    /// nothing about looking at this list is different from opening the
+    /// setup screen at all; watching only happens on the explicit tap,
+    /// exactly like pasting an address by hand.
+    private var discoverySection: some View {
+        Section {
+            if discoveryLoading {
+                BridgeSyncStatusRows(
+                    syncing: true, syncingLine: String(localized: "Looking for accounts on vibenet…"),
+                    result: nil, resultIsError: false)
+            } else if discovered.isEmpty {
+                if discoveryAttempted {
+                    Text("Couldn't reach vibenet to find an account to suggest — paste an address above, or open the explorer to find one.")
+                        .dsText(.label12)
+                        .foregroundStyle(DS.textSecondary)
+                }
+            } else {
+                VStack(alignment: .leading, spacing: DS.Space.s2) {
+                    Text(String(localized: "Recently created on vibenet"))
+                        .dsText(.label12).fontWeight(.semibold)
+                        .foregroundStyle(DS.textSecondary)
+                    ForEach(discovered, id: \.self) { address in
+                        Button {
+                            DSHaptic.tap()
+                            guard watch.add(address) else { return }
+                            VibenetBridge.registerBridge(store: store)
+                            Task { await load() }
+                        } label: {
+                            HStack(spacing: DS.Space.s2) {
+                                Text(VibenetRoom.shortAddress(address))
+                                    .dsText(.label12).monospaced()
+                                    .foregroundStyle(DS.textPrimary)
+                                Spacer(minLength: DS.Space.s2)
+                                Text(String(localized: "Watch"))
+                                    .dsText(.label12).fontWeight(.semibold)
+                                    .foregroundStyle(Self.mark)
+                            }
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+        }
+        .dsSlabSection()
+    }
 
     private var watchSection: some View {
         Section {
@@ -125,6 +190,18 @@ struct VibenetScreen: View {
             VibenetBridge.disconnect(store: store)
             room = VibenetRoom.compose(items: [], branch: nil, commit: nil, configReached: false)
         }
+    }
+
+    /// The empty state's own read — once per screen visit, never re-run by
+    /// `load()` (which is about watched addresses, a different question).
+    /// Silent on failure: `discovered` simply stays empty and the section
+    /// says so, the same honest-nothing shape every other empty state here
+    /// already uses.
+    private func loadDiscovery() async {
+        discoveryLoading = true
+        defer { discoveryLoading = false; discoveryAttempted = true }
+        guard let contracts = await VibenetConfig.current() else { return }
+        discovered = await VibenetDiscovery.recentAccounts(keystore: contracts.keystore)
     }
 
     /// Reads every watched address and composes the card; the seat's proof

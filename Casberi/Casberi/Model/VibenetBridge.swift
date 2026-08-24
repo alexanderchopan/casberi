@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import SwiftData
 
 /// Base "vibenet" (2026-08-23) — an experimental, EPHEMERAL devnet testing
 /// EIP-8130 native account abstraction. Chain id 84538453, keyless RPC at
@@ -279,6 +280,23 @@ enum VibenetChain {
         ]
         return await call(method: "eth_getLogs", params: [params]) as? [[String: Any]]
     }
+
+    /// A block's own timestamp — what a landed event is dated by, never
+    /// `.now`. `WalletApprovals`' own doc states the reason: a fallback
+    /// rendered as a sentence dates a years-old event to today, and on a
+    /// devnet whose whole story is "this changed while you weren't
+    /// looking", a wrong date is the one thing this feature can't afford to
+    /// get wrong.
+    static func blockTime(_ blockNumber: Int) async -> Date? {
+        guard blockNumber >= 0,
+              let raw = await call(method: "eth_getBlockByNumber",
+                                   params: ["0x" + String(blockNumber, radix: 16), false]) as? [String: Any],
+              let tsHex = raw["timestamp"] as? String
+        else { return nil }
+        let seconds = WalletIngest.hexToDouble(tsHex)
+        guard seconds.isFinite, seconds > 0 else { return nil }
+        return Date(timeIntervalSince1970: seconds)
+    }
 }
 
 /// `Keystore.sol`'s event topics — verified by keccak256 against
@@ -289,6 +307,14 @@ enum VibenetTopics {
     static let actorAuthorized = "0x7427678b205ea26cd22254b5ebdc924c4bf6f9bb78e436872e49599e97963559"
     /// `ActorRevoked(address indexed account, bytes32 indexed actorId)`
     static let actorRevoked = "0xeb5bd9b1e97c446e28bffcb6963893ca5ad94dc662962fd732ffc03ca279b3e5"
+    /// `AccountLocked(address indexed account, uint16 unlockDelay)`
+    static let accountLocked = "0x4a8801779ef27ce1723fcf0d4ff8167d3d1710a93ca5e61bbbf0f5b753f02d8b"
+    /// `AccountCreated(address indexed account, bytes32 userSalt, bytes32 codeHash)` —
+    /// the ONLY door onto "which accounts exist at all" (`Keystore.sol`
+    /// exposes no enumeration call), so it's what the empty-state discovery
+    /// read filters on rather than an owner topic — there is no owner to
+    /// filter by until an address has been named.
+    static let accountCreated = "0x934abbffb6906db60a85b076f1e41da9667dfa53c7724f4fe2333298d7b1db8c"
 }
 
 // MARK: - ABI (hand-rolled, no dynamic types — every return here is fixed-width)
@@ -318,6 +344,11 @@ enum VibenetABI {
     /// `getLockStatus(address)` — 0x0f36f691
     static func lockStatusCall(_ address: String) -> String {
         "0x0f36f691" + padAddress(address)
+    }
+
+    /// `getChangeSequences(address)` — 0x82e5f7c6
+    static func changeSequencesCall(_ address: String) -> String {
+        "0x82e5f7c6" + padAddress(address)
     }
 
     /// One 32-byte WORD at `index` (0-based) out of an ABI-encoded return.
@@ -416,10 +447,26 @@ enum VibenetRead {
                             scope: VibenetScope(raw: scopeRaw), expiry: expiry)
     }
 
+    /// One account's change-sequence standing on THIS chain — see
+    /// `VibenetChangeSequences`'s own doc for what the three fields mean.
+    /// `nil` on any read failure, never a zeroed struct: a genuine "no
+    /// changes yet" account and a call this build couldn't complete must
+    /// not render the same way.
+    static func changeSequences(account: String, keystore: String) async -> VibenetChangeSequences? {
+        guard let raw = await VibenetChain.ethCall(
+            to: keystore, data: VibenetABI.changeSequencesCall(account))
+        else { return nil }
+        return VibenetChangeSequences(
+            multichain: VibenetABI.uintWord(raw, at: 0),
+            localEpoch: UInt32(truncatingIfNeeded: VibenetABI.uintWord(raw, at: 1)),
+            localSequence: UInt32(truncatingIfNeeded: VibenetABI.uintWord(raw, at: 2)))
+    }
+
     /// One address's whole live read: established?, actor roster, lock
-    /// status. `reached == false` only when the FIRST call
-    /// (`isContractEstablished`) failed outright — every other field then
-    /// carries its neutral default rather than a half-finished guess.
+    /// status, change-sequence standing. `reached == false` only when the
+    /// FIRST call (`isContractEstablished`) failed outright — every other
+    /// field then carries its neutral default rather than a half-finished
+    /// guess.
     static func account(_ address: String, contracts: VibenetContracts) async -> VibenetAccountItem {
         guard let establishedWord = await VibenetChain.ethCall(
             to: contracts.keystore, data: VibenetABI.isEstablishedCall(address))
@@ -433,8 +480,10 @@ enum VibenetRead {
         async let idsTask = actorIDs(account: address, keystore: contracts.keystore)
         async let lockTask = VibenetChain.ethCall(
             to: contracts.keystore, data: VibenetABI.lockStatusCall(address))
+        async let sequencesTask = changeSequences(account: address, keystore: contracts.keystore)
         let ids = await idsTask
         let lockRaw = await lockTask
+        let sequences = await sequencesTask
 
         var actors: [VibenetActor] = []
         if let ids {
@@ -461,7 +510,8 @@ enum VibenetRead {
         return VibenetAccountItem(address: address, reached: true, established: established,
                                   actors: actors, locked: locked,
                                   hasInitiatedUnlock: hasInitiatedUnlock,
-                                  unlocksAt: unlocksAt, unlockDelay: unlockDelay)
+                                  unlocksAt: unlocksAt, unlockDelay: unlockDelay,
+                                  changeSequences: sequences)
     }
 }
 
@@ -521,5 +571,176 @@ enum VibenetRoomSource {
         return VibenetRoom.compose(items: items, branch: contracts.branch,
                                    commit: contracts.commit, configReached: true,
                                    redeployedSinceLastSeen: redeployed)
+    }
+}
+
+// MARK: - The explorer door
+
+/// Base's own vibenet block explorer — MEASURED, not guessed (2026-08-23):
+/// `chain.base.org/vibenet/explorer/address/<addr>` answers 200 with a real
+/// account page (confirmed against `K1_AUTHENTICATOR`'s own fixed address).
+/// The transaction form follows the same explorer's own address/tx
+/// convention but has not itself been fetched against a real tx hash — UN-
+/// MEASURED, and it fails safe: a wrong tx path is a page that 404s in the
+/// person's own browser, never a crash or a wrong claim inside the app.
+enum VibenetExplorer {
+    private static let base = "https://chain.base.org/vibenet/explorer"
+    static func address(_ address: String) -> String { "\(base)/address/\(address)" }
+    static func tx(_ hash: String) -> String { "\(base)/tx/\(hash)" }
+}
+
+// MARK: - Landed events (ActorAuthorized / ActorRevoked / AccountLocked)
+
+enum VibenetEvents {
+    /// Lands every NEW key-authorized/revoked and account-locked event for
+    /// every WATCHED address, as `Thing`s — see `VibenetEventKind`'s own doc
+    /// for why these three (and only these three) are news rather than live
+    /// state. Read-only like everything else in this file: it reads the
+    /// events `VibenetRead.actorIDs` already reads for the live roster, and
+    /// nothing here signs or sends. Called from `BridgeRefresh`, the same
+    /// door every other watch-list bridge lands through.
+    @MainActor
+    static func land(context: ModelContext) async -> Int {
+        guard let contracts = await VibenetConfig.current() else { return 0 }
+        let addresses = VibenetWatch.shared.addresses
+        guard !addresses.isEmpty else { return 0 }
+        let existing = IngestSupport.existingSourceRefs(context, source: VibenetIdentity.source)
+
+        var landed = 0
+        for address in addresses {
+            landed += await landAccount(address, contracts: contracts, context: context, existing: existing)
+        }
+        return landed
+    }
+
+    private struct RawEvent {
+        let kind: VibenetEventKind
+        let actorId: String?
+        let txHash: String
+        let logIndex: Int
+        let block: Int
+    }
+
+    private static func parse(_ log: [String: Any], kind: VibenetEventKind) -> RawEvent? {
+        guard (log["removed"] as? Bool) != true,
+              let topics = log["topics"] as? [String],
+              let txHash = log["transactionHash"] as? String,
+              let indexHex = log["logIndex"] as? String,
+              let blockHex = log["blockNumber"] as? String
+        else { return nil }
+        // ActorAuthorized/ActorRevoked carry the actorId as topics[2]; a
+        // lock event has no third topic to read (unlockDelay isn't
+        // indexed), so `actorId` stays nil for that kind.
+        let actorId = (kind == .locked) ? nil : (topics.count >= 3 ? topics[2].lowercased() : nil)
+        if kind != .locked && actorId == nil { return nil }
+        return RawEvent(kind: kind, actorId: actorId, txHash: txHash,
+                        logIndex: WalletIngest.hexToInt(indexHex), block: WalletIngest.hexToInt(blockHex))
+    }
+
+    private static func ref(_ e: RawEvent) -> String {
+        "vibenet:\(e.kind == .locked ? "locked" : "actor"):\(e.txHash):\(e.logIndex)"
+    }
+
+    @MainActor
+    private static func landAccount(_ address: String, contracts: VibenetContracts,
+                                    context: ModelContext, existing: Set<String>) async -> Int {
+        let ownerTopic = "0x" + VibenetABI.padAddress(address)
+        async let actorLogsTask = VibenetChain.getLogs(
+            address: contracts.keystore,
+            topics: [[VibenetTopics.actorAuthorized, VibenetTopics.actorRevoked], ownerTopic])
+        async let lockLogsTask = VibenetChain.getLogs(
+            address: contracts.keystore, topics: [VibenetTopics.accountLocked, ownerTopic])
+        let actorLogs = await actorLogsTask ?? []
+        let lockLogs = await lockLogsTask ?? []
+
+        var events: [RawEvent] = []
+        for log in actorLogs {
+            guard let topics = log["topics"] as? [String], let topic0 = topics.first?.lowercased() else { continue }
+            let kind: VibenetEventKind = topic0 == VibenetTopics.actorAuthorized ? .actorAuthorized : .actorRevoked
+            if let e = parse(log, kind: kind) { events.append(e) }
+        }
+        for log in lockLogs {
+            if let e = parse(log, kind: .locked) { events.append(e) }
+        }
+        let fresh = events.filter { !existing.contains(ref($0)) }
+        guard !fresh.isEmpty else { return 0 }
+
+        // Block times, ONE call per distinct block among the new events —
+        // never `.now` unless the read genuinely fails, the WalletApprovals
+        // rule: a fallback rendered as a sentence dates real news to today.
+        var times: [Int: Date] = [:]
+        for block in Set(fresh.map(\.block)) {
+            times[block] = await VibenetChain.blockTime(block)
+        }
+
+        let known = contracts.knownAuthenticators
+        let shortAddress = VibenetRoom.shortAddress(address)
+        var landedCount = 0
+        for event in fresh {
+            var keyLabel: String?
+            if event.kind == .actorAuthorized, let actorId = event.actorId,
+               let actor = await VibenetRead.actor(account: address, keystore: contracts.keystore,
+                                                    actorId: actorId, known: known) {
+                keyLabel = actor.kind.label
+            }
+            let thing = Thing(
+                kind: .transaction,
+                title: event.kind.title(shortAddress: shortAddress, keyLabel: keyLabel),
+                content: VibenetExplorer.tx(event.txHash),
+                source: VibenetIdentity.source,
+                capturedAt: times[event.block] ?? .now,
+                sourceRef: ref(event))
+            thing.walletAddress = address
+            context.insert(thing)
+            landedCount += 1
+        }
+        return landedCount
+    }
+}
+
+// MARK: - Discovery (the empty-state door)
+
+enum VibenetDiscovery {
+    /// The most recently created vibenet accounts, straight off
+    /// `AccountCreated` — the setup screen's fix for the empty state a
+    /// paste-only address field left someone in on a devnet where nothing
+    /// they own has ever touched it. `Keystore.sol` names no owner in this
+    /// event (an account can be created by anyone, for any address), so
+    /// unlike every other read in this file there is no address to filter
+    /// by — this is the one GLOBAL read here, bounded by taking only the
+    /// newest `limit` rather than by a block range, the same "small young
+    /// devnet, no chunking needed" reasoning `VibenetChain.getLogs`'s own
+    /// doc already gives for the per-address reads.
+    static func recentAccounts(keystore: String, limit: Int = 5) async -> [String] {
+        guard let logs = await VibenetChain.getLogs(
+            address: keystore, topics: [VibenetTopics.accountCreated])
+        else { return [] }
+
+        struct Row { let address: String; let block: Int; let logIndex: Int }
+        var rows: [Row] = []
+        for log in logs {
+            guard (log["removed"] as? Bool) != true,
+                  let topics = log["topics"] as? [String], topics.count >= 2,
+                  let blockHex = log["blockNumber"] as? String,
+                  let indexHex = log["logIndex"] as? String
+            else { continue }
+            let address = "0x" + topics[1].suffix(40)
+            rows.append(Row(address: address, block: WalletIngest.hexToInt(blockHex),
+                            logIndex: WalletIngest.hexToInt(indexHex)))
+        }
+        // Newest first (by block, then log index within a block) — someone
+        // exploring the devnet wants what's fresh, not the oldest account
+        // ever created on it.
+        rows.sort { ($0.block, $0.logIndex) > ($1.block, $1.logIndex) }
+
+        var seen = Set<String>()
+        var out: [String] = []
+        for row in rows {
+            let key = row.address.lowercased()
+            guard seen.insert(key).inserted else { continue }
+            out.append(row.address)
+            if out.count >= limit { break }
+        }
+        return out
     }
 }
