@@ -38,9 +38,8 @@ struct VibenetAccountSheet: View {
             Group {
                 if let item {
                     ScrollView {
-                        VStack(alignment: .leading, spacing: DS.Space.s4) {
+                        VStack(alignment: .leading, spacing: DS.Space.s6) {
                             hero(item)
-                            stateSentence(item)
                             if !item.actors.isEmpty {
                                 keysSection(item)
                             }
@@ -101,49 +100,49 @@ struct VibenetAccountSheet: View {
 
     // MARK: - Hero
 
+    /// Face, name, address — and the state, but ONLY when the state has
+    /// something to say. A sheet whose first line reads "2 keys" directly
+    /// above a Keys section listing those same two keys spends its
+    /// biggest type restating its own next section; the alarm, the
+    /// countdown, the expiring key and "not established yet" are the
+    /// facts that earn that slot, and when none of them applies the
+    /// section below simply begins.
     private func hero(_ item: VibenetAccountItem) -> some View {
-        HStack(alignment: .top, spacing: DS.Space.s3) {
-            WalletFace(address: item.address, size: 56, circular: true)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(VibenetWatch.shared.name(for: item.address) ?? VibenetRoom.shortAddress(item.address))
-                    .dsText(.heading22)
-                    .foregroundStyle(DS.textPrimary)
-                    .lineLimit(1)
-                // The FULL address, always — this is the one place it
-                // appears whole. Middle truncation (never tail) so both
-                // the identifying head and the distinguishing tail
-                // survive if it doesn't fit; Copy in the doors below
-                // hands over the exact string regardless.
-                Text(item.address)
-                    .dsText(.label11).monospaced()
-                    .foregroundStyle(DS.textTertiary)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
+        VStack(alignment: .leading, spacing: DS.Space.s3) {
+            HStack(alignment: .center, spacing: DS.Space.s3) {
+                WalletFace(address: item.address, size: 64, circular: true)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(VibenetWatch.shared.name(for: item.address) ?? VibenetRoom.shortAddress(item.address))
+                        .dsText(.heading22)
+                        .foregroundStyle(DS.textPrimary)
+                        .lineLimit(1)
+                    // The FULL address, always — this is the one place it
+                    // appears whole. Middle truncation (never tail) so both
+                    // the identifying head and the distinguishing tail
+                    // survive if it doesn't fit; Copy in the doors below
+                    // hands over the exact string regardless.
+                    Text(item.address)
+                        .dsText(.label11).monospaced()
+                        .foregroundStyle(DS.textTertiary)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                }
+                Spacer(minLength: DS.Space.s2)
             }
-            Spacer(minLength: DS.Space.s2)
-            if item.alarmed {
-                Text(item.hasInitiatedUnlock ? String(localized: "Unlocking") : String(localized: "Locked"))
-                    .dsText(.label11).fontWeight(.bold)
-                    .foregroundStyle(Color.fixed("#ffffff"))
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(Self.mark, in: RoundedRectangle(cornerRadius: 4, style: .continuous))
-            }
+            state(item)
         }
     }
 
-    // MARK: - State sentence
-
-    /// The row's own precedence, verbatim — unlock countdown + runway,
-    /// else the urgency line, else the plain key-count sentence. Full
-    /// width here (no `maxWidth: 160` cap): the row compressed the
-    /// runway for a summary tile, the sheet has the whole page.
-    private func stateSentence(_ item: VibenetAccountItem) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            if item.hasInitiatedUnlock, let countdown = item.unlockLabel(now: .now) {
+    /// The one line that outranks everything, or nothing at all. Order
+    /// matches the card row's, for the reason that ranking exists: a
+    /// countdown beats an expiry beats a plain state.
+    @ViewBuilder
+    private func state(_ item: VibenetAccountItem) -> some View {
+        if item.hasInitiatedUnlock, let countdown = item.unlockLabel(now: .now) {
+            VStack(alignment: .leading, spacing: 6) {
                 Text(countdown)
-                    .dsText(.callout15)
-                    .foregroundStyle(DS.textPrimary)
+                    .dsText(.heading17)
+                    .foregroundStyle(Self.mark)
                 if let progress = item.unlockProgress(now: .now) {
                     GeometryReader { geo in
                         ZStack(alignment: .leading) {
@@ -154,15 +153,23 @@ struct VibenetAccountSheet: View {
                     }
                     .frame(height: 6)
                 }
-            } else if let urgent = item.urgentLine(now: .now) {
-                Text(urgent)
-                    .dsText(.callout15).fontWeight(.semibold)
-                    .foregroundStyle(Self.mark)
-            } else {
-                Text(VibenetRoom.rowLine(item))
-                    .dsText(.callout15)
-                    .foregroundStyle(item.alarmed ? DS.textPrimary : DS.textSecondary)
             }
+        } else if item.locked {
+            Text(String(localized: "Locked"))
+                .dsText(.heading17)
+                .foregroundStyle(Self.mark)
+        } else if let urgent = item.urgentLine(now: .now) {
+            Text(urgent)
+                .dsText(.heading17)
+                .foregroundStyle(Self.mark)
+        } else if !item.reached || !item.established || item.actors.isEmpty {
+            // The real states a person needs told: the chain didn't
+            // answer, the account isn't established, or it is and holds
+            // no key this build can see. An established account WITH
+            // keys says nothing here — the Keys section is the answer.
+            Text(VibenetRoom.rowLine(item))
+                .dsText(.heading17)
+                .foregroundStyle(DS.textSecondary)
         }
     }
 
@@ -170,9 +177,21 @@ struct VibenetAccountSheet: View {
 
     private func keysSection(_ item: VibenetAccountItem) -> some View {
         VStack(alignment: .leading, spacing: DS.Space.s3) {
-            Text(String(localized: "Keys"))
-                .dsText(.label12).fontWeight(.semibold)
-                .foregroundStyle(DS.textSecondary)
+            // The count lives in the HEADING, so the hero above never has
+            // to spend its biggest line saying "2 keys" — one statement of
+            // the number, at the place the keys actually are.
+            // "AUTHORIZED", never "can act" — a key can be authorized on
+            // the account and still hold no scope, which is exactly what
+            // a fresh account looks like (both of a real devnet
+            // account's keys read "Can't act on its own yet"). A heading
+            // claiming they CAN act directly above two cards saying they
+            // can't is a contradiction the reader has to resolve.
+            Text(item.actors.count == 1
+                 ? String(localized: "1 key authorized")
+                 : String(localized: "\(item.actors.count) keys authorized"))
+                .dsText(.heading17)
+                .foregroundStyle(DS.textPrimary)
+                .fixedSize(horizontal: false, vertical: true)
             ForEach(VibenetAccountItem.byReach(item.actors)) { actor in
                 keyRow(actor)
             }
@@ -185,20 +204,22 @@ struct VibenetAccountSheet: View {
     /// but the text INSIDE one never does. Replaces the matrix's column
     /// lookup with "read the row" — the whole point of R3.1.
     private func keyRow(_ actor: VibenetActor) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 6) {
             Text(actor.kind.plainTitle)
-                .dsText(.label12).fontWeight(.semibold)
+                .dsText(.heading17)
                 .foregroundStyle(DS.textPrimary)
+                .lineLimit(1)
             if let detail = actor.kind.plainDetail {
                 Text(detail)
                     .dsText(.label11)
                     .foregroundStyle(DS.textTertiary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
             let labels = actor.scope.grantedPlainLabels
             if labels.isEmpty {
                 // A real state, not an empty chip row — an authorized
                 // actor that can originate nothing yet.
-                Text(String(localized: "Can't originate anything yet"))
+                Text(String(localized: "Can't act on its own yet"))
                     .dsText(.label12)
                     .foregroundStyle(DS.textSecondary)
             } else {
@@ -232,22 +253,45 @@ struct VibenetAccountSheet: View {
                     .foregroundStyle(DS.textTertiary)
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(DS.Space.s3)
+        // A key is an OBJECT — something that can act for this account —
+        // so it gets an object's surface rather than sitting in a run of
+        // undifferentiated text. Two keys in a row read as two things,
+        // which is the fact the whole sheet is about.
+        .dsWidgetSurface(cornerRadius: DS.Radius.widget, fillOpacity: 0.5)
     }
 
     // MARK: - History (R2.1, moved unchanged)
 
+    /// The account's story, and NOTHING MORE THAN IT HAS. The dot strip
+    /// draws only for a real sequence (`isSequence` — more than one block):
+    /// two keys authorized in the SAME transaction are one moment, and two
+    /// dots side by side would invite the reader to see an order that
+    /// never happened. When it isn't a sequence, the sentence and its one
+    /// date are the whole truth, so that is all that draws.
     private func historySection(_ item: VibenetAccountItem) -> some View {
         Group {
             if let line = VibenetKeyHistory.summaryLine(item.history) {
                 let labels = VibenetKeyHistory.endpointLabels(item.history, now: .now)
-                VStack(alignment: .leading, spacing: DS.Space.s3) {
-                    Text(String(localized: "History"))
-                        .dsText(.label12).fontWeight(.semibold)
-                        .foregroundStyle(DS.textSecondary)
-                    Text(line)
-                        .dsText(.label12).fontWeight(.semibold)
-                        .foregroundStyle(DS.textPrimary)
-                    if item.history.count > 1 {
+                let sequence = VibenetKeyHistory.isSequence(item.history)
+                VStack(alignment: .leading, spacing: DS.Space.s2) {
+                    HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                        Text(line)
+                            .dsText(.heading17)
+                            .foregroundStyle(DS.textPrimary)
+                            .fixedSize(horizontal: false, vertical: true)
+                        // One moment, one date, said right beside it —
+                        // no axis, no dots, nothing to decode.
+                        if !sequence, let when = labels.oldest {
+                            Spacer(minLength: DS.Space.s2)
+                            Text(when)
+                                .dsText(.label12)
+                                .foregroundStyle(DS.textTertiary)
+                                .lineLimit(1).fixedSize()
+                        }
+                    }
+                    if sequence {
                         HStack(spacing: 8) {
                             if item.history.count > VibenetKeyHistory.cap {
                                 Text(String(localized: "+\(item.history.count - VibenetKeyHistory.cap) earlier"))
@@ -262,6 +306,7 @@ struct VibenetAccountSheet: View {
                                     .frame(width: 10, height: 10)
                             }
                         }
+                        .padding(.top, 2)
                         HStack {
                             if let oldest = labels.oldest {
                                 Text(oldest).dsText(.label11).foregroundStyle(DS.textTertiary)
@@ -281,30 +326,17 @@ struct VibenetAccountSheet: View {
 
     // MARK: - Sync chips (R2.3)
 
+    /// One sentence, or nothing — see `plainLine`. The chips this
+    /// replaced were honest and unreadable ("0 cross-chain changes",
+    /// "1 local, epoch 0"): the EIP's own vocabulary, one of them almost
+    /// always a zero that means "this never happened".
     private func syncSection(_ item: VibenetAccountItem) -> some View {
         Group {
-            if let cs = item.changeSequences {
-                // Kept as a horizontal scroll even at full sheet width —
-                // large Dynamic Type can still outgrow two chips.
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 6) {
-                        ForEach(Array(cs.chips.enumerated()), id: \.offset) { _, chip in
-                            HStack(spacing: 3) {
-                                Text(chip.value)
-                                    .dsText(.label12).fontWeight(.semibold)
-                                    .foregroundStyle(DS.textPrimary)
-                                Text(chip.label)
-                                    .dsText(.label11)
-                                    .foregroundStyle(DS.textTertiary)
-                            }
-                            .lineLimit(1)
-                            .fixedSize()
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 3)
-                            .background(Self.mark.opacity(0.12), in: Capsule())
-                        }
-                    }
-                }
+            if let line = item.changeSequences?.plainLine {
+                Text(line)
+                    .dsText(.label12)
+                    .foregroundStyle(DS.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
     }

@@ -661,6 +661,40 @@ check("a zero standing is a real reading, never hidden",
 check("labels carry the epoch, not just a bare 'local'",
       cs.chips[1].label.contains("2"))
 
+// MARK: - VibenetChangeSequences.plainLine — the sentence that replaced the chips
+
+print("")
+print("VibenetChangeSequences.plainLine — English, or silence")
+check("nothing changed at all says NOTHING — a stat of two zeros has no reading",
+      VibenetChangeSequences(multichain: 0, localEpoch: 0, localSequence: 0).plainLine == nil)
+check("this chain only, once — singular",
+      VibenetChangeSequences(multichain: 0, localEpoch: 0, localSequence: 1).plainLine
+        == "Changed once, on this chain only")
+check("this chain only, several — plural",
+      VibenetChangeSequences(multichain: 0, localEpoch: 1, localSequence: 4).plainLine
+        == "Changed 4 times, on this chain only")
+check("shared across chains, once — singular",
+      VibenetChangeSequences(multichain: 1, localEpoch: 0, localSequence: 0).plainLine
+        == "Changed once, shared across chains")
+check("both kinds names both, never silently drops one",
+      VibenetChangeSequences(multichain: 3, localEpoch: 0, localSequence: 2).plainLine
+        == "Changed 2 times here, 3 shared across chains")
+
+// MARK: - VibenetKeyHistory.isSequence — dots only when there IS an order
+
+print("")
+print("VibenetKeyHistory.isSequence — two keys in ONE transaction are one moment, not two")
+check("two moments sharing a block are NOT a sequence — no order to draw",
+      !VibenetKeyHistory.isSequence([moment(204532, 0, authorized: true),
+                                     moment(204532, 1, authorized: true)]))
+check("two moments in different blocks ARE a sequence",
+      VibenetKeyHistory.isSequence([moment(204532, 0, authorized: true),
+                                    moment(204999, 0, authorized: false)]))
+check("a lone moment is never a sequence",
+      !VibenetKeyHistory.isSequence([moment(1, 0, authorized: true)]))
+check("no moments at all is never a sequence",
+      !VibenetKeyHistory.isSequence([]))
+
 // MARK: - VibenetMultichainSync
 
 print("")
@@ -783,6 +817,20 @@ mutate "VibenetLogChunking.ranges must stop at maxChunks, never loop unbounded" 
 mutate "grantedPlainLabels must include the NAMED permissions, not just the unknown tail" \
   'var parts = plainNames' \
   'var parts: [String] = []'
+
+# Two keys authorized in one transaction share a block. Counting MOMENTS
+# instead of BLOCKS makes that read as a sequence, and the sheet draws two
+# dots side by side claiming an order that never happened.
+mutate "isSequence must count distinct BLOCKS, not moments" \
+  'Set(moments.map(\.block)).count > 1' \
+  'moments.count > 1'
+
+# A zero/zero standing means nothing has changed. Rendering it as a
+# sentence instead of silence puts a line on the sheet that says nothing
+# and reads as though it does.
+mutate "plainLine must stay SILENT when nothing has changed" \
+  'case (0, 0):' \
+  'case (99, 99):'
 
 mutate "a revoked actorId must NOT survive its own revoke" \
   'return Set(latest.filter(\.value).map(\.key))' \

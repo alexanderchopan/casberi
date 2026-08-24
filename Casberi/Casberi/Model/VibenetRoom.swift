@@ -407,6 +407,20 @@ enum VibenetKeyHistory {
         return Array(chronological.suffix(cap))
     }
 
+    /// Whether these moments are a real SEQUENCE — i.e. they happened at
+    /// more than one moment in time. Two keys authorized in the SAME
+    /// transaction share a block and a timestamp, so drawing them as two
+    /// dots side by side claims an order that does not exist: nothing
+    /// happened before anything else, and the reader is invited to infer
+    /// a story from a picture of one. (Measured on the live devnet: an
+    /// account created with a wallet key and a passkey lands both in
+    /// block 204532, log index 0 and 1.) The dots draw only when this is
+    /// true; otherwise the summary sentence and its one date say the
+    /// whole of it, which is all there is to say.
+    static func isSequence(_ moments: [VibenetKeyMoment]) -> Bool {
+        Set(moments.map(\.block)).count > 1
+    }
+
     /// "3 keys added · 1 revoked" — each half omitted at zero; both zero
     /// yields nil, and the strip doesn't draw at all (there is nothing to
     /// summarize).
@@ -909,6 +923,35 @@ struct VibenetChangeSequences: Equatable {
     var chips: [(value: String, label: String)] {
         [(String(multichain), String(localized: "cross-chain changes")),
          (String(localSequence), String(localized: "local, epoch \(localEpoch)"))]
+    }
+
+    /// The same two numbers as ONE English sentence, or nothing.
+    ///
+    /// The chips above are honest and unreadable: "0 cross-chain changes"
+    /// and "1 local, epoch 0" are the EIP's vocabulary, not a person's,
+    /// and one of them is usually a zero that means "this never happened"
+    /// — a stat with no reading. What a person can actually use is
+    /// whether this account's SETUP has been changed since it was made,
+    /// and whether those changes were meant for every chain or only this
+    /// one. Nil when both counts are zero: nothing has changed, and the
+    /// history above already says when the keys arrived.
+    var plainLine: String? {
+        let local = Int(localSequence)
+        let shared = Int(multichain)
+        switch (shared, local) {
+        case (0, 0):
+            return nil
+        case (0, let l):
+            return l == 1
+                ? String(localized: "Changed once, on this chain only")
+                : String(localized: "Changed \(l) times, on this chain only")
+        case (let s, 0):
+            return s == 1
+                ? String(localized: "Changed once, shared across chains")
+                : String(localized: "Changed \(s) times, shared across chains")
+        case (let s, let l):
+            return String(localized: "Changed \(l) times here, \(s) shared across chains")
+        }
     }
 }
 

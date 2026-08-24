@@ -806,13 +806,26 @@ enum VibenetEvents {
                 keyLabel = actor.kind.label
             }
             let thing = Thing(
-                kind: .transaction,
+                // `.event`, NOT `.transaction`, and the difference is a
+                // false claim this shipped with: every `.transaction`
+                // thing is routed through `MoneyReceiptSource` (whose
+                // whole gate is `kind == .transaction`), which for a row
+                // carrying no stamped amount falls through to
+                // `MoneyReceipt.generic` and draws a money receipt reading
+                // "In your wallet". Both halves were untrue — a key
+                // authorization moves no money, and a watched devnet
+                // address is not the person's wallet. A key added or
+                // revoked at a known block time is exactly what `.event`
+                // means: a moment with a clock.
+                kind: .event,
                 title: event.kind.title(shortAddress: shortAddress, keyLabel: keyLabel),
                 content: VibenetExplorer.tx(event.txHash),
                 source: VibenetIdentity.source,
                 capturedAt: times[event.block] ?? .now,
                 sourceRef: ref(event))
-            thing.walletAddress = address
+            // NO `walletAddress` — it was write-only here (nothing in this
+            // feature ever read it back) and it is the field that told the
+            // receipt this devnet account was yours.
             context.insert(thing)
             landedCount += 1
         }
