@@ -43,7 +43,12 @@ cd "$(dirname "$0")/.."
 SHAPE="Casberi/Casberi/Model/AddressBookShape.swift"
 BOOK="Casberi/Casberi/Model/AddressBook.swift"
 ACTIVITY="Casberi/Casberi/Model/AddressActivity.swift"
+# The ROSTER — your own five addresses, and nothing else (prd §461).
 SCREEN="Casberi/Casberi/Screens/WalletScreen.swift"
+# The BOOK — everyone else, as a room. §461 split these; before it, both of
+# these were one screen, which is why most of the guards below moved file
+# rather than changing.
+BOOKSCREEN="Casberi/Casberi/Screens/AddressBookScreen.swift"
 VIEWS="Casberi/Casberi/Screens/AddressBookViews.swift"
 GROUPS="Casberi/Casberi/Screens/AddressGroupViews.swift"
 SPINE="Casberi/Casberi/Screens/AddressSpineCard.swift"
@@ -52,7 +57,10 @@ FLIGHT="Casberi/Casberi/Screens/AddressFlight.swift"
 SOURCE="Casberi/Casberi/Model/AddressConnectionsSource.swift"
 # The connections MODEL — where §448 cut `headline`/`subhead` out.
 CONN="Casberi/Casberi/Model/AddressConnections.swift"
-for f in "$SHAPE" "$BOOK" "$ACTIVITY" "$SCREEN" "$VIEWS" "$GROUPS" "$SPINE" "$BAR" "$FLIGHT" "$SOURCE" "$CONN"; do
+# The shell — where the rail is built and the route node resolved (§461).
+SHELL_MAIN="Casberi/Casberi/Shell/MainSurface.swift"
+ROUTE="Casberi/Casberi/Shell/HomeRoute.swift"
+for f in "$SHAPE" "$BOOK" "$ACTIVITY" "$SCREEN" "$BOOKSCREEN" "$VIEWS" "$GROUPS" "$SPINE" "$BAR" "$FLIGHT" "$SOURCE" "$CONN" "$SHELL_MAIN" "$ROUTE"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 
@@ -76,7 +84,9 @@ PY
 strip_comments "$FLIGHT" > "$TMP/flight-bare.swift"
 strip_comments "$SPINE"  > "$TMP/spine-bare.swift"
 strip_comments "$SCREEN" > "$TMP/screen-bare.swift"
+strip_comments "$BOOKSCREEN" > "$TMP/book-bare.swift"
 strip_comments "$GROUPS" > "$TMP/groups-bare.swift"
+strip_comments "$VIEWS"  > "$TMP/views-bare.swift"
 strip_comments "$SHAPE"  > "$TMP/shape-bare.swift"
 
 # --- drift guards -----------------------------------------------------------
@@ -84,10 +94,10 @@ strip_comments "$SHAPE"  > "$TMP/shape-bare.swift"
 # worthless if the list draws its own order, if the scrubber invents its own
 # letters, or if the search field and the book disagree about what a group is.
 
-grep -q 'AddressBookShape.sections(shapeRows(entries), order: bookSort)' "$SCREEN" \
-  || grep -q 'AddressBookShape.sections(rows, order: bookSort)' "$SCREEN" \
+grep -q 'AddressBookShape.sections(shapeRows(entries), order: bookSort)' "$BOOKSCREEN" \
+  || grep -q 'AddressBookShape.sections(rows, order: bookSort)' "$BOOKSCREEN" \
   || { echo "✗ the manager no longer takes its sections from AddressBookShape — the order would be the screen's own and nothing could test it"; exit 1; }
-grep -q 'AddressBookShape.index(of: sections)' "$SCREEN" \
+grep -q 'AddressBookShape.index(of: sections)' "$BOOKSCREEN" \
   || { echo "✗ the scrubber no longer derives its letters from the rendered sections — it would offer letters that scroll nowhere (§83)"; exit 1; }
 grep -q 'AddressBookShape.groupMatches($0, query: q)' "$BOOK" \
   || { echo "✗ AddressBook.search no longer uses the shared group rule — the field's group RESULTS and its row filter would be two spellings of one test"; exit 1; }
@@ -101,7 +111,7 @@ grep -q 'static func summaries(in context: ModelContext)' "$ACTIVITY" \
 # THE SORT DEFAULT (§440). A-Z is the whole reason the sectioning and the
 # scrubber exist; flip it back to `.recent` and both are dead code on first
 # open.
-grep -q 'private var bookSort: AddressBookShape.Order = .name' "$SCREEN" \
+grep -q 'private var bookSort: AddressBookShape.Order = .name' "$BOOKSCREEN" \
   || { echo "✗ the book no longer opens A–Z — the letter headings and the scrubber would only appear if somebody changed the sort"; exit 1; }
 
 # THE SEARCH FOLD. Everything above the book collapses while you type, or the
@@ -109,22 +119,20 @@ grep -q 'private var bookSort: AddressBookShape.Order = .name' "$SCREEN" \
 # to the two branches that actually fold — the top half and the foot — rather
 # than to the flag's declaration, which would pass against a `searching` that
 # nothing reads.
-grep -q 'if !searching {' "$TMP/screen-bare.swift" \
-  || { echo "✗ the manager no longer folds its top sections while searching"; exit 1; }
-grep -q 'if !searching { footSection }' "$TMP/screen-bare.swift" \
-  || { echo "✗ the foot no longer folds while searching — the Connection door and the read-only promise would sit under a list of search results"; exit 1; }
+grep -q 'if !searching {' "$TMP/book-bare.swift" \
+  || { echo "✗ the book room no longer folds the spine and the groups while searching"; exit 1; }
 
 # ONE SEARCH PER BODY PASS (prd §441). `book.search` was reached four times a
 # pass; the fix is a single `let` threaded down. A section builder that goes
 # back to the store for its own copy silently restores the cost.
-grep -q 'let entries = visibleEntries(searching: searching)' "$TMP/screen-bare.swift" \
+grep -q 'let entries = visibleEntries()' "$TMP/book-bare.swift" \
   || { echo "✗ the body no longer hoists the filtered book — the search would run once per reader again (§441)"; exit 1; }
-grep -q 'private func bookSection(entries: \[AddressBook.Entry\]' "$SCREEN" \
+grep -q 'private func bookSection(entries: \[AddressBook.Entry\]' "$BOOKSCREEN" \
   || { echo "✗ the book list no longer takes its entries as a parameter"; exit 1; }
 
 # ONE CORPUS WALK, TWO READINGS (prd §441).
-grep -q 'let things = AddressActivity.relevant(in: modelContext)' "$SCREEN" \
-  || { echo "✗ the manager fetches the corpus twice again — the activity summary and the connections map both walked their own fetch (§441)"; exit 1; }
+grep -q 'let things = AddressActivity.relevant(in: modelContext)' "$BOOKSCREEN" \
+  || { echo "✗ the book room fetches the corpus twice again — the activity summary and the connections map both walked their own fetch (§441)"; exit 1; }
 grep -q 'static func map(things: \[Thing\]) -> Map?' "$SOURCE" \
   || { echo "✗ AddressConnections can no longer be built from an already-fetched array"; exit 1; }
 # The re-sort inside `edges(from:)` is load-bearing: AddressActivity hands back
@@ -134,18 +142,32 @@ grep -q 'static func map(things: \[Thing\]) -> Map?' "$SOURCE" \
 grep -q 'things.sorted(by: { $0.capturedAt < $1.capturedAt })' "$SOURCE" \
   || { echo "✗ edges(from:) trusts the caller's order — the spine would be reversed, and it would look completely normal"; exit 1; }
 
-# THE MOMENTS (prd §441). Each is a real state change, per §79.
+# ── §461: NOTHING ON A READING SURFACE CHANGES WHAT THE APP READS ───────────
 #
-# The STAR FLIGHT retired 2026-08-22 (§448) with the shelf it landed in: the
-# gap it crossed existed only because the shelf drew each watched wallet a
-# second time, and Watching is a section of this same list now. What survives
-# is the promotion LIFT, which is what marks the row you just starred as it
-# moves up into that section — without it the row teleports, which reads as
-# the list glitching rather than as the thing you did.
-grep -q 'connectPromote(isTarget: entry.id == promotedEntryID, token: promoteToken)' "$SCREEN" \
-  || { echo "✗ starring an address no longer lifts its row — the row would teleport into Watching (§433/§448)"; exit 1; }
-grep -q 'promoteToken &+= 1' "$SCREEN" \
-  || { echo "✗ the promotion lift is never fired"; exit 1; }
+# The star retired here 2026-08-24 with `connectPromote`'s lift, `§441`'s star
+# flight having already gone in §448. The three guards below are the whole
+# ruling, and each failure they catch renders as a perfectly ordinary screen:
+# a book row that quietly starts a chain sync, an address card that spends one
+# of five slots, or a roster that has grown a second address book inside it.
+#
+# The strongest is the NEGATIVE: `outcome(ofAdding:)` is the one call that
+# enrols an address, and it may appear in the roster and nowhere else.
+grep -q 'outcome(ofAdding:' "$SCREEN" \
+  || { echo "✗ the roster no longer watches anything — WalletScreen is the only screen that may (§461)"; exit 1; }
+grep -q 'outcome(ofAdding:' "$TMP/book-bare.swift" \
+  && { echo "✗ the address book watches an address — a reading surface may not change what the app fetches (§461)"; exit 1; }
+grep -q 'outcome(ofAdding:' "$TMP/views-bare.swift" \
+  && { echo "✗ the address card watches an address again — §461 deleted the star and the pinned watch bar together"; exit 1; }
+grep -qE 'star\.fill|"star"' "$TMP/book-bare.swift" \
+  && { echo "✗ a star is back on a book row (§461)"; exit 1; }
+# …and the row's own star is drawn only when a caller passes the closure, so
+# neither screen may pass one. The book row keeps the parameter: `AddressGroupScreen`
+# and any future caller still get one anatomy, and a parameter nobody passes is
+# what makes that safe.
+grep -q 'onToggleWatch' "$TMP/book-bare.swift" \
+  && { echo "✗ the book passes a watch toggle to its rows (§461)"; exit 1; }
+grep -q 'onToggleWatch' "$TMP/screen-bare.swift" \
+  && { echo "✗ the roster passes a watch toggle to its rows — membership is the row's existence there, not a star on it (§461)"; exit 1; }
 # The flight's ends are RAMP tokens the caller passes, and since §448 they are
 # REQUIRED: the old defaults named the star flight's own anchors, and a default
 # pointing at an anchor nothing publishes draws nothing at all — silently,
@@ -176,32 +198,37 @@ grep -qE '\b[ab]\.(width|height|size)\b' "$TMP/flight-bare.swift" \
 # with the whole name, a subline and a filled star. Every guard here defends a
 # failure that renders as a perfectly ordinary list.
 
-# Watching is drawn by `bookRow` — the same row as the list below it. A second
-# spelling of the row is two books, which is the drift §440 folded together in
-# the first place.
-grep -q 'private func watchedRows(_ watched: \[AddressBook.Entry\]) -> some View' "$SCREEN" \
-  || { echo "✗ the Watching section is gone, or stopped being rows"; exit 1; }
-grep -q 'bookRow(entry, colliding: colliding.contains(entry.id), row: index)' "$TMP/screen-bare.swift" \
-  || { echo "✗ Watching draws its own row anatomy again — one screen, two spellings of the same row (§448)"; exit 1; }
+# THE ROSTER DRAWS NO READINGS (§461). It is the same row anatomy as the book —
+# one spelling, §448's ruling, unchanged — with `activity` nil, which is what
+# drops "12 together · 4 days ago". A recency phrase is a reading, and the
+# roster is a list of what the app is permitted to read.
+grep -q 'private var watchedEntries: \[AddressBook.Entry\]' "$SCREEN" \
+  || { echo "✗ the roster is gone, or stopped being entries"; exit 1; }
+grep -q 'activity: nil' "$TMP/screen-bare.swift" \
+  || { echo "✗ the roster draws activity again — history belongs to the book room (§461)"; exit 1; }
 
-# …and the watched entries are LIFTED OUT of the A–Z sections, or they are
-# drawn twice again. The `searching` half is load-bearing in the other
-# direction: the Watching section folds away while you type, so a search that
-# filtered them out could never find your own watched wallets.
-grep -q 'return searching ? found : found.filter { !isWatched($0) }' "$TMP/screen-bare.swift" \
-  || { echo "✗ the book no longer lifts watched entries out while browsing (or lifts them out while SEARCHING, which hides the wallets you watch from your own search) — §448"; exit 1; }
+# THE BOOK IS EVERYONE ELSE, SEARCHING INCLUDED (§461) — reversing §448's one
+# exception. That exception existed because both lived on one screen and a
+# search had to be able to find your own wallets; with the roster on its own
+# screen a watched entry appearing here is the duplication §448 deleted the
+# shelf for, one screen apart instead of one scroll. The search says where it
+# went rather than answering nothing, which is the second half of the rule.
+grep -q 'book.search(query).filter { !isWatched($0) }' "$TMP/book-bare.swift" \
+  || { echo "✗ the book no longer excludes your own watched wallets — they are the roster's subject and would be drawn twice (§461)"; exit 1; }
+grep -q 'is one of your own wallets' "$TMP/book-bare.swift" \
+  || { echo "✗ searching the book for a wallet you watch answers 'nothing matches' about an address you plainly have (§83/§461)"; exit 1; }
 # The head must name what it LISTS. It read "Saved · book.count", which stopped
 # being true the moment the watched rows moved to their own section: 27 over a
 # list of 24.
-grep -q 'Everyone else · \\(count)' "$TMP/screen-bare.swift" \
+grep -q 'Everyone else · \\(count)' "$TMP/book-bare.swift" \
   || { echo "✗ the book's head no longer names or counts what it actually lists (§448)"; exit 1; }
 
 # NEGATIVE, comment-stripped: the shelf may not come back. `DS.Face.shelf` is
 # the ramp rung it was drawn at and this screen is the only place it was ever
 # used at this size.
-grep -q 'DS.Face.shelf' "$TMP/screen-bare.swift" \
+grep -qE 'DS.Face.shelf' "$TMP/screen-bare.swift" "$TMP/book-bare.swift" \
   && { echo "✗ the watched shelf is back — §448 deleted it because it drew every watched wallet a second time, with its name truncated (§448)"; exit 1; }
-grep -qE 'rosterSlot|emptyRosterSlot|rosterSlotWidth' "$TMP/screen-bare.swift" \
+grep -qE 'rosterSlot|emptyRosterSlot|rosterSlotWidth' "$TMP/screen-bare.swift" "$TMP/book-bare.swift" \
   && { echo "✗ the roster shelf's slots are back (§448)"; exit 1; }
 
 # ── §448: THE FEWEST WORDS ──────────────────────────────────────────────────
@@ -211,9 +238,9 @@ grep -qE 'rosterSlot|emptyRosterSlot|rosterSlotWidth' "$TMP/screen-bare.swift" \
 # four times before you reached the drawing — a section header, an eyebrow
 # repeating it, a headline counting rows the drawing shows one-per, and a
 # subhead defining the word.
-grep -q 'sectionHeader(String(localized: "Connected"))' "$TMP/screen-bare.swift" \
+grep -q 'sectionHeader(String(localized: "Connected"))' "$TMP/book-bare.swift" \
   || { echo "✗ the connected section's header is not the single word §448 cut it to"; exit 1; }
-grep -q 'How they connect' "$TMP/screen-bare.swift" \
+grep -q 'How they connect' "$TMP/book-bare.swift" \
   && { echo "✗ the three-word header is back over a card whose eyebrow said the same thing (§448)"; exit 1; }
 grep -qE 'AddressConnections\.(headline|subhead)' "$TMP/spine-bare.swift" \
   && { echo "✗ the spine card states its own count in words again — the left column IS the count (§448)"; exit 1; }
@@ -222,9 +249,9 @@ grep -qE 'static func (headline|subhead)\(count:' "$CONN" \
 # The ZERO case is still a real answer — §295 — it just no longer needs a card
 # wrapped around it. Spelled ONCE and read by both layouts, or one of them ends
 # up honest and the other doesn't.
-grep -q 'private var spineEmptyLine: String?' "$SCREEN" \
+grep -q 'private var spineEmptyLine: String?' "$BOOKSCREEN" \
   || { echo "✗ the connected section's empty states are no longer spelled once for both layouts (§448)"; exit 1; }
-grep -q 'No shared addresses yet.' "$TMP/screen-bare.swift" \
+grep -q 'No shared addresses yet.' "$TMP/book-bare.swift" \
   || { echo "✗ two watched wallets that share nothing say nothing at all now — §295's 'stating none IS an answer' was dropped rather than trimmed"; exit 1; }
 # A group says its COUNT and stops. "3 addresses · none watched" clipped to
 # "3 addresses · none wat…" at 150pt, and whether a group's members are watched
@@ -246,13 +273,13 @@ grep -q 'absorbing == AddressBook.key(forGroup: name)' "$GROUPS" \
 # people, and a checkmark, a word and a tally names none of them.
 grep -q 'AddressMark(entry: member' "$GROUPS" \
   || { echo "✗ a group row lost its members' faces"; exit 1; }
-grep -q 'absorbing == key' "$SCREEN" \
+grep -q 'absorbing == key' "$BOOKSCREEN" \
   || { echo "✗ a dropped face is no longer absorbed by the deck"; exit 1; }
 grep -q 'litNode' "$SPINE" \
   || { echo "✗ tapping a spine node no longer lights its ribbons before the sheet covers them"; exit 1; }
 grep -q 'newNodeIDs.contains($0.id)' "$SPINE" \
   || { echo "✗ a newly-seen connection no longer draws dashed"; exit 1; }
-grep -q 'AddressConnectionsSeen.markSeen' "$SCREEN" \
+grep -q 'AddressConnectionsSeen.markSeen' "$BOOKSCREEN" \
   || { echo "✗ nothing marks a drawn connection as seen — every connection would read as new forever"; exit 1; }
 grep -q 'defaults.set(true, forKey: seededKey)' "$SOURCE" \
   || { echo "✗ the seen-set no longer seeds silently on first sight — a year of history would announce itself as today's news (the Hyperliquid 2026-07-30 bug)"; exit 1; }
@@ -261,29 +288,31 @@ grep -q 'defaults.set(true, forKey: seededKey)' "$SOURCE" \
 grep -q 'struct AddressBookRow: View' "$VIEWS" \
   || { echo "✗ the shared row is gone; the manager and the group screen would each draw their own"; exit 1; }
 grep -q 'AddressBookRow(entry: entry' "$SCREEN" \
-  || { echo "✗ the manager no longer draws the shared row"; exit 1; }
+  || { echo "✗ the roster no longer draws the shared row"; exit 1; }
+grep -q 'AddressBookRow(entry: entry' "$BOOKSCREEN" \
+  || { echo "✗ the book room no longer draws the shared row"; exit 1; }
 grep -q 'AddressBookRow(entry: entry' "$GROUPS" \
   || { echo "✗ the group screen no longer draws the shared row"; exit 1; }
 
 # THE THREE MOVE DOORS (§440). Each is named, because two of them exist
 # precisely so the feature survives the third misbehaving on a device.
-grep -q '.draggable(entry.address)' "$SCREEN" \
+grep -q '.draggable(entry.address)' "$BOOKSCREEN" \
   || { echo "✗ a book row is no longer draggable — dragging onto a group card is the primary filing gesture"; exit 1; }
-grep -q 'dropDestination(for: String.self)' "$SCREEN" \
+grep -q 'dropDestination(for: String.self)' "$BOOKSCREEN" \
   || { echo "✗ a group card is no longer a drop target"; exit 1; }
-grep -q 'bookSheet = .move(entry)' "$SCREEN" \
+grep -q 'bookSheet = .move(entry)' "$BOOKSCREEN" \
   || { echo "✗ swipe no longer opens the filing sheet"; exit 1; }
 grep -q 'struct AddressMoveSheet: View' "$GROUPS" \
   || { echo "✗ the filing sheet is gone"; exit 1; }
 # The swipe must stay a DOOR and never a write — the design law's own "swipe
 # verbs are reads; a write belongs behind a deliberate press" (§212). It opens
 # a sheet, and the sheet takes the consent.
-grep -q 'swipeActions(edge: .trailing, allowsFullSwipe: false)' "$SCREEN" \
+grep -q 'swipeActions(edge: .trailing, allowsFullSwipe: false)' "$BOOKSCREEN" \
   || { echo "✗ the book's swipe gained a full swipe — a full swipe commits without a second beat, which for a write is exactly what §212 forbids"; exit 1; }
 
 # NEGATIVE, on comment-stripped copies: §435's money ruling. The manager is a
 # PEOPLE screen and the feed's crown owns the money reading, once.
-for f in "$TMP/spine-bare.swift" "$TMP/screen-bare.swift" "$TMP/groups-bare.swift"; do
+for f in "$TMP/spine-bare.swift" "$TMP/screen-bare.swift" "$TMP/book-bare.swift" "$TMP/groups-bare.swift"; do
   grep -q 'WalletValue.money' "$f" \
     && { echo "✗ a money figure returned to the address book — §435 struck every one of them off this screen"; exit 1; }
 done
@@ -301,10 +330,38 @@ grep -qE 'isDateIn(Today|Yesterday)' "$TMP/shape-bare.swift" \
   && { echo '✗ lastPhrase asks the system clock again — its now parameter would be a lie for the today and yesterday rungs, and this harness would pass or fail by time of day (§448)'; exit 1; }
 
 # NEGATIVE: the sky is gone and must not come back by reference.
-grep -q 'AddressSky' "$TMP/screen-bare.swift" \
-  && { echo "✗ WalletScreen references AddressSky, which was deleted with §440"; exit 1; }
+grep -qE 'AddressSky' "$TMP/screen-bare.swift" "$TMP/book-bare.swift" \
+  && { echo "✗ a wallet screen references AddressSky, which was deleted with §440"; exit 1; }
 [[ -f "Casberi/Casberi/Model/AddressSky.swift" ]] \
   && { echo "✗ AddressSky.swift is back; §440 replaced it with the spine"; exit 1; }
+
+# ── §461: THE DOORS ─────────────────────────────────────────────────────────
+#
+# A room nobody can reach is worse than no room. There are TWO doors and each
+# covers the other's blind spot: the rail's slot is gated on the rail drawing at
+# all (`WalletScopeRail.shows` wants more than one wallet watched), so with
+# nothing watched — the state a new person is in — it does not exist; the
+# roster's row is always there. The minimum corpus is the common one here, which
+# is the correction §436–§438 kept paying for.
+grep -q 'route.push(.addressBook)' "$SHELL_MAIN" \
+  || { echo "✗ the wallet rail's address-book slot is gone — the room would be reachable only from the roster (§461)"; exit 1; }
+grep -q 'bookTitle: String(localized: "Address Book")' "$SHELL_MAIN" \
+  || { echo "✗ the rail's book door lost its name — the slot is captionless, so the label IS its only naming (VoiceOver and the Mac tooltip)"; exit 1; }
+grep -q 'route.push(.addressBook)' "$SCREEN" \
+  || { echo "✗ the roster lost its door to the book — with nothing watched the rail does not draw, so this is the only way in (§461)"; exit 1; }
+grep -q 'case addressBook' "$ROUTE" \
+  || { echo "✗ the address book has no route node"; exit 1; }
+grep -q 'AddressBookScreen()' "$SHELL_MAIN" \
+  || { echo "✗ nothing resolves the addressBook node to a screen"; exit 1; }
+# THE ADD VERB STEPS ASIDE AT THE CAP, and the arithmetic is why (§461): two
+# trailing doors plus five faces plus All is 402pt against a 393pt phone, on the
+# control §450 shrank precisely so it would not scroll.
+grep -q 'addTitle: wallet.canWatchMore ? String(localized: "Add a wallet") : nil' "$SHELL_MAIN" \
+  || { echo "✗ the rail keeps its add verb at the watch cap — eight slots overflow a 393pt phone, and an add that cannot add is a dead control (§461/§83)"; exit 1; }
+# THE WAY ONWARD (§460). The roster is a connect page and was the one screen in
+# the catalog's largest family without the door every other one carries.
+grep -q 'RoomDoor(name: "Wallet", source: "Wallet")' "$SCREEN" \
+  || { echo "✗ the roster lost its View feed door (§460)"; exit 1; }
 
 # §439's reading survived the retirement — it is the one relationship the
 # person asked for by name, and it lives in the model, the bracket and a

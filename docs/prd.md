@@ -82,6 +82,10 @@ at all.
 | §57 | Telegram REMOVED from the catalog — all three doors in fail, so the seat is cut entirely | reversed by §456 (a public channel is not a chat, and the export door was rejected on a premise this app's own nine import bridges overturned) |
 | §362 | The face rail always captions its faces — it compresses rather than dropping them, on both rails alike | caption half reversed for the WALLET rail by §450 |
 | §182 | The watch cap is a SHELF of faces with dashed rings for the free slots | superseded by §448 |
+| §448 | Watching is a SECTION of the book, lifted out of A–Z while browsing and restored while searching | superseded by §461 (watching is membership of a roster on its own screen; the book excludes it always) |
+| §443 | The address card's verb pins: a watch bar at thumb height, three states | reversed by §461 (the card carries no watch decision at all) |
+| §446 | The pinned bar's second verb — an unnamed address names, and watching moves to the ••• menu | amended by §461 (the bar is the naming verb alone; the menu row is gone with it) |
+| §440 | The wallet manager: four sections — the way in, who you watch, how they connect, the record | superseded by §461 (the last two are a room of their own) |
 | §441 | Starring an address flies its face from the book row to the shelf slot | amended by §448 |
 | §295 | The connections card leads with a headline counting the connected addresses | amended by §448 |
 | §18 | Feed spec | amended by §64 |
@@ -31375,3 +31379,135 @@ day the rule moves) and refuses them with their own message.
 
 Forty-five doors across the catalog. Both platforms compile clean and every static
 audit passes; the tap itself remains UNMEASURED on a device for §460's reason.
+
+## 461. The setup screen is your five wallets; the address book is everyone else (user: "i think we should make the wallet address book only be for watching, no interaction… we are having this problem where an app setup screen is basically doubling as a room… it's almost like address book should be its own room in the wallet area", then "when you say a People Room you are basically saying an Address Book and that's what we should call it", then "since a user can only follow five wallets, perhaps we put the address book as a thing next to the account avatars inside the wallet room", then "i'm not sure of the solution but we are still not fully separating them", then "this means then that the setup screen only allows five wallets and there is no concept of starring", 2026-08-24)
+
+Reviewed as five artboards before any code (`design/address-book/room-split/`). This
+entry **supersedes §440** on the manager's shape and **§448** on where watching is
+drawn, **reverses §443**'s pinned watch bar and **amends §446**.
+
+### 1. The diagnosis, which took five passes to state
+
+§460 gave every connect page a door back to its room, and the complaint that
+followed was the general form of the thing that door fixes: **"an app setup screen
+is basically doubling as a room."** The wallet manager was the worst case — the
+spine card, a recency phrase on every row and a tap that opened a full history
+card were all READINGS, drawn on the screen whose job is deciding what the app may
+read.
+
+The first four attempts at a split all failed the same way and it is worth
+recording why, because each looked correct while it was being drawn. §433 gave
+groups folder sections; §440 gave the screen four sections; §448 folded the
+watched shelf into the book; and this session's own first proposal moved the
+readings to a "People" room and left naming, groups and the star on the setup
+screen. Every one of them **relocated the crossing instead of removing it**, and
+the reason is one sentence:
+
+> **"Watched" was modelled as an ATTRIBUTE of a person** — so any screen that
+> showed it showed people, and a screen showing people is a second address book.
+
+The user's own ruling is what dissolves it: *"the setup screen only allows five
+wallets and there is no concept of starring."* Watching becomes MEMBERSHIP of a
+five-slot roster rather than a property you toggle on somebody. The boundary is
+then **ownership, not attribute** — your wallets on one screen, everyone else on
+the other — and it is testable in one question: **does this screen draw a face?**
+The roster draws five of them and they are yours; the book draws everybody else's.
+
+### 2. What each screen is now
+
+**`WalletScreen` — the roster.** The five addresses the app reads, the two ways to
+add one (paste/ENS, or connect a wallet app), the chains, the read-only promise,
+and — new — §460's `RoomDoor`, which this screen had never had because it is not a
+`BridgeSetupHeader` page and that sweep only reached those. It draws no reading at
+all: the row's `activity` is nil, which is what drops "12 together · 4 days ago".
+Tap renames; swipe removes. **Remove, not unwatch** — the verb that changes
+membership is destructive-shaped because that is what it is, and the name stays in
+the book, which the cap alert says.
+
+**`AddressBookScreen` — the room.** Everyone else: the omnibox, the spine card and
+all three of §448's empty states, the groups strip with its drop targets and its
+screens, the A–Z list with its scrubber, sort menu and recency sublines, and every
+gesture a row carried. `AddressBookShape` is untouched. It is reached two ways, and
+the pair is deliberate: the wallet rail's own slot, and a row at the foot of the
+roster — because `WalletScopeRail.shows` wants more than one wallet watched, so
+with nothing watched the rail does not exist and the room would be unreachable in
+exactly the corpus a new person has. The minimum corpus is the common one here;
+treating it as an edge case is the correction §436–§438 kept paying for.
+
+**The book's field cannot watch.** Its verbs are Save and Add all — naming, which
+is free and uncapped. That is the property that makes the split hold rather than
+merely look tidy: **nothing on a reading surface changes what the app fetches**,
+guarded as a negative grep that `outcome(ofAdding:)` appears in the roster and
+nowhere else.
+
+### 3. The star is deleted, in all three of its homes
+
+The book row's star (`onToggleWatch`, which `AddressBookRow` has always drawn only
+when a caller passes the closure — so the parameter stays and neither screen passes
+one), §443's pinned watch bar, and §446's watch row in the `•••` menu. With them go
+`connectPromote`'s promotion lift and `toggleWatch` in two files.
+
+**What that costs, stated rather than discovered later:** promoting a book contact
+to a watched wallet is no longer one tap from its row — you paste or connect it on
+the roster. That is the ruling, and there is an argument for it beyond consistency:
+the five feed the crown balance card, which says "Across your wallets", and a
+one-tap star on a stranger's row is how somebody else's money ends up inside your
+own total.
+
+**The search says where it went.** The book excludes watched entries ALWAYS,
+searching included, which reverses §448's one exception ("a search that filtered
+them out could never find the wallets you watch"). That reasoning was right while
+both lived on one screen. Answering "nothing matches" about a wallet the person
+plainly has would be §83's lie, so a search that matches only a watched entry names
+the screen holding it instead.
+
+### 4. The rail slot, and the arithmetic that forced one ruling
+
+The door is a slot on the wallet face rail — the user's own placement, and the best
+of the four weighed (a venue in the category switcher, its own strip chip, and a
+row in the sources tray were all drawn and refused; the tray one is the leak the
+`chipOrder`/`sourceOrder` split exists to prevent, and a strip chip is what §423
+folds a single seat AWAY from).
+
+**A glyph, not a deck of faces** (user: *"i would use an address book icon not
+those little faces"*). A deck was drawn first and is wrong twice: it would be the
+fourth pile of identicons in that room, and it changes as you deal — a door that
+never looks the same twice is one you have to find again every time. The rail's
+other two non-face slots are already a word ("All") and a symbol ("+"), so a symbol
+makes three discs of one kind and leaves a face meaning only "a wallet you watch".
+`person.text.rectangle`, the system's own address-book reading, rather than
+`book.closed`, which is a book about anything. **It never takes the selection
+ring**: it is a door, not a scope, and a door that can look selected claims to be
+filtering the room behind it.
+
+**The add verb steps aside at the cap**, and this is arithmetic rather than taste.
+§450 sized this rail so it would not scroll: All + five faces + one trailing door
+is `7 × 44 + 6 × 2 + 2 × DS.Space.s4` = 356pt inside a 393pt phone. A second
+trailing door at five watched wants 402pt. Dropping the ADD one is also what §83
+wants — at five of five it cannot add — and the roster still states the cap where
+somebody can act on it.
+
+### 5. Guarded
+
+`address-book-selftest.sh` keeps every §440/§441/§448 guard and moves the
+book-shaped ones to the new file; its new §461 half is **mutation-proven eight
+ways against copies of the real tree** (the book watching an address, the card
+watching again, the book failing to exclude watched entries, the roster drawing
+activity, the rail keeping its add verb at the cap, either door disappearing, and
+a star returning to a book row), with the clean tree firing none of them. Every
+failure it catches renders as a perfectly ordinary screen.
+
+**A probe-rig lesson worth keeping, since it cost a full cycle:** the first
+mutation run reported **8 of 8 surviving**, which is the shape of a broken rig
+rather than eight broken guards — the polarity was inverted, because for a NEGATIVE
+guard a matching grep means the mutation was CAUGHT. When every mutation survives,
+suspect the harness before the code.
+
+Costs nothing to ship: no new `Thing` field, no request, no CloudKit deploy.
+
+### Unverified
+
+iOS Simulator and Mac Catalyst both compile and every static audit passes. **No
+simulator run and no device** (standing user preference): the rail's eighth slot,
+the roster's swipe-to-remove, and the book room's push are all rendering and
+gesture behaviour no static check can exercise.

@@ -83,6 +83,17 @@ final class HomeRoute {
         /// handles by popping itself rather than by this node holding a
         /// stabler key it has no way to get.
         case addressGroup(String)
+        /// The address book — everyone you have dealt with (prd §461).
+        ///
+        /// Its own node rather than a `.bridge` destination, and that is the
+        /// whole point of the split: a bridge destination is a SETUP screen for
+        /// a catalog seat, and this is a room. `.bridge(.wallet)` still opens
+        /// the roster — the five addresses the app reads — which is the only
+        /// thing on that side of the line now.
+        ///
+        /// Valueless, unlike `addressGroup`: there is exactly one book, and the
+        /// group it opens onto pushes its own node on top.
+        case addressBook
     }
     var path: [Node] = []
 

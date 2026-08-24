@@ -434,8 +434,19 @@ struct MainSurface: View {
                 // No re-tap verb: there is no "deeper" a watched address goes
                 // that the room you are already in does not already show.
                 onReTap: nil,
-                addTitle: String(localized: "Add a wallet"),
-                onAdd: { route.pushBridge(BridgeRouter.destination(forID: "wallet")) })
+                // THE ADD VERB STEPS ASIDE AT THE CAP (prd §461). Two trailing
+                // doors plus five faces plus All is 402pt against a 393pt phone,
+                // and this rail was shrunk in §450 exactly so it would not
+                // scroll. Dropping the ADD one is also what §83 wants: at five
+                // of five it cannot add, and the roster screen it opens still
+                // states the cap where somebody can act on it.
+                addTitle: wallet.canWatchMore ? String(localized: "Add a wallet") : nil,
+                onAdd: wallet.canWatchMore
+                    ? { route.pushBridge(BridgeRouter.destination(forID: "wallet")) }
+                    : nil,
+                // The door to everyone who is NOT on this rail (prd §461).
+                bookTitle: String(localized: "Address Book"),
+                onOpenBook: { route.push(.addressBook) })
             .padding(.top, showsRail && !demoActive ? DS.Space.s2 : 0)
         }
     }
@@ -572,6 +583,8 @@ struct MainSurface: View {
             L2beatDirectoryScreen()
         case .addressGroup(let name):
             AddressGroupScreen(group: name)
+        case .addressBook:
+            AddressBookScreen()
         case .startHere:
             // Reached after leaving the demo, so "finishing" is a pop
             // rather than the end of onboarding — a non-nil node still

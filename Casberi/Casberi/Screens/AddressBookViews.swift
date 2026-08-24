@@ -33,15 +33,20 @@ extension AddressBook.Entry {
     /// the person chose and keep printing both.
     ///
     /// When dropping it leaves NOTHING — an unnamed address with no history,
-    /// no resolved kind and no provenance — the short form comes back rather
-    /// than the line going empty. That case really has nothing else to say,
-    /// and it is the one shape this fix does not improve: it is the behaviour
-    /// that shipped, not a regression, and it resolves itself the moment the
-    /// address gains a transaction or `AddressKind` answers. Absent would be
-    /// better (`AddressCard.summaryLine`'s "stays absent rather than printing
-    /// an empty line") and needs the caller to handle a nil, which is a change
-    /// in a file another pass is currently rewriting — worth doing, not worth
-    /// entangling this with.
+    /// no resolved kind and no provenance — the line is ABSENT (prd §461, seen
+    /// on a device). It used to bring the short form back, which on a row whose
+    /// NAME is already that short form printed the same string twice, one line
+    /// under the other. That shape was masked while every such row also carried
+    /// an activity clause; the roster passes `activity: nil` by §461's ruling
+    /// that a setup screen draws no readings, so it became the common case on
+    /// exactly the rows a new person sees first. So it returns nil now —
+    /// `AddressCard.summaryLine`'s own "stays absent rather than printing an
+    /// empty line", which this doc has named as the better answer since it was
+    /// written and deferred as "worth doing, not worth entangling this with".
+    ///
+    /// Only that one shape goes absent: a row keeps its short form whenever the
+    /// name is a real name, because there the address is the second fact rather
+    /// than the same fact again.
     /// `activity` gained its DATE on 2026-08-22 (prd §440). "12 together"
     /// reads identically whether the last of those twelve was on Tuesday or
     /// in 2023, so the count alone could not separate a correspondent from a
@@ -49,9 +54,10 @@ extension AddressBook.Entry {
     /// phrase is `AddressBookShape.lastPhrase`'s, stated only when there is a
     /// count to attach it to: a date with no dealings behind it would be
     /// describing something the count says didn't happen.
-    func subline(activity: AddressActivity.Summary?) -> String {
+    func subline(activity: AddressActivity.Summary?) -> String? {
         var parts: [String] = []
-        if !WalletStore.isAutoName(name, for: address) { parts.append(short) }
+        let autoNamed = WalletStore.isAutoName(name, for: address)
+        if !autoNamed { parts.append(short) }
         if let activity, activity.count > 0 {
             parts.append(String(localized: "\(activity.count) together"))
             if let when = AddressBookShape.lastPhrase(activity.lastAt) {
@@ -66,7 +72,11 @@ extension AddressBook.Entry {
         if let label = kind.label { parts.append(label) }
         else if let script = BitcoinAddress.scriptKind(address) { parts.append(script) }
         if let provenance { parts.append(provenance) }
-        return parts.isEmpty ? short : parts.joined(separator: " · ")
+        guard parts.isEmpty else { return parts.joined(separator: " · ") }
+        // Nothing else to say. An auto-named row's own NAME is this string, so
+        // returning it prints one fact twice; a real name makes it the second
+        // fact and it stands.
+        return autoNamed ? nil : short
     }
 }
 
@@ -197,10 +207,13 @@ struct AddressBookRow: View {
                             .foregroundStyle(DS.destructive)
                     }
                 }
-                // RELATIONSHIP facts, never money (§435).
-                Text(entry.subline(activity: activity))
-                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                    .lineLimit(1)
+                // RELATIONSHIP facts, never money (§435). Absent rather than
+                // empty when there is nothing to say — see `subline`.
+                if let line = entry.subline(activity: activity) {
+                    Text(line)
+                        .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                        .lineLimit(1)
+                }
             }
             Spacer(minLength: DS.Space.s2)
             if let onToggleWatch {
@@ -703,7 +716,10 @@ struct AddressCard: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
     @Environment(\.openURL) private var openURL
-    @Environment(BridgeStore.self) private var bridges
+    // `bridges` retired here 2026-08-24 (prd §461) — it existed for one line,
+    // `reconcileWalletSeats()` inside `toggleWatch`, and this card no longer
+    // watches anything. An unread `@Environment` is harmless but it is also a
+    // standing claim that this sheet needs the catalog store, which it does not.
     private var book = AddressBook.shared
     /// Naming happens IN PLACE now (prd §444) — see `nameField`.
     @State private var editingName = false
@@ -880,13 +896,10 @@ struct AddressCard: View {
     private var overflowMenu: some View {
         Menu {
             Button { beginRename() } label: { Label("Rename", systemImage: "pencil") }
-            // WATCH LIVES HERE WHILE THE ADDRESS IS UNNAMED (prd §446). The
-            // pinned bar carries one verb and on an unnamed address that verb
-            // is naming — so watching does not vanish, it moves to where a
-            // profile's secondary verbs already live. Once the address has a
-            // name the bar is the watch decision again and this row is not
-            // drawn, or the same setting would be a control in two places.
-            if unnamed, watchPillShown { watchMenuItem }
+            // §446's watch row is GONE (prd §461) — see the retirement note at
+            // `isWatching`. It was here because the pinned bar could only carry
+            // one verb; the reason it is not here now is that this card carries
+            // no watch decision at all.
             // THE DOOR OUT (prd §446). It was a settings-shaped row in a card
             // at the foot of the sheet, drawn at the weight the security
             // notice above it wore; a link into somebody else's website is a
@@ -1704,25 +1717,22 @@ struct AddressCard: View {
 
     // MARK: - The verb
 
-    /// Whether this address has a watch decision at all — a CONTRACT does not
-    /// (see `bottomBar`), so the watch verb is not offered for one.
-    private var watchPillShown: Bool {
-        switch current.kind {
-        case .contract, .safe:                 return false
-        case .wallet, .unknown, .smartAccount: return true
-        }
-    }
+    // `watchPillShown` retired here 2026-08-24 (prd §461) with the watch verb
+    // itself. It answered "does this address have a watch decision at all",
+    // which is a question this card no longer asks: watching is membership of
+    // the roster on `WalletScreen`, not a property of a person, and a card in
+    // the book is a reading surface — the one thing it must not do is change
+    // what the app fetches.
 
-    /// Whether the pinned bar is drawn at all — either verb counts, since the
-    /// scroll's bottom spacer has to leave room for whichever one appears.
+    /// Whether the pinned bar is drawn at all.
     ///
     /// Naming is available for EVERY kind, including machinery: a contract you
     /// deal with is worth calling "Uniswap router", and `rename` rewrites its
-    /// landed titles exactly the same way. Watching is not — see
-    /// `watchPillShown`.
+    /// landed titles exactly the same way. So the bar is now exactly the naming
+    /// verb, and it is drawn precisely when there is a name missing.
     private var bottomBarShown: Bool {
         if editingName { return false }
-        return unnamed || watchPillShown
+        return unnamed
     }
 
     /// THE VERB THIS SCREEN NEVER HAD (prd §435), PINNED (prd §443), and
@@ -1764,16 +1774,10 @@ struct AddressCard: View {
     @ViewBuilder
     private var bottomBar: some View {
         if bottomBarShown {
-            Group {
-                if unnamed {
-                    barButton(String(localized: "Name this address"), filled: true,
-                              enabled: true,
-                              accessibility: String(localized: "Name this address")) {
-                        beginRename()
-                    }
-                } else {
-                    watchBarButton
-                }
+            barButton(String(localized: "Name this address"), filled: true,
+                      enabled: true,
+                      accessibility: String(localized: "Name this address")) {
+                beginRename()
             }
             .padding(.horizontal, DS.Space.s4)
             .padding(.top, DS.Space.s3)
@@ -1788,25 +1792,15 @@ struct AddressCard: View {
         }
     }
 
-    @ViewBuilder
-    private var watchBarButton: some View {
-        let store = WalletStore.shared
-        let watching = isWatching
-        let full = !watching && !store.canWatchMore
-        barButton(watching ? String(localized: "Watching")
-                  : full ? String(localized: "Watching \(WalletStore.watchLimit) already")
-                  : String(localized: "Watch \(current.name)"),
-                  filled: !(watching || full),
-                  enabled: !full,
-                  accessibility: watching
-                    ? String(localized: "Watching \(current.name), tap to stop")
-                    : String(localized: "Watch \(current.name)")) {
-            toggleWatch(watching: watching)
-        }
-    }
-
-    /// The bar's one shape, so the two verbs can never drift apart in height,
-    /// radius or press behaviour.
+    // `watchBarButton` retired here 2026-08-24 (prd §461). §443 pinned the
+    // watch verb at thumb height so the history could make its case for it, and
+    // §446 gave the bar a second verb because most cards are ones where naming
+    // is the thing to do. Both readings survive; the verb does not. Watching is
+    // the roster's membership now, so this card's bar is the naming verb alone
+    // — which is why `barButton`'s `filled`/`enabled` parameters have one caller
+    // and are kept anyway: they are the shape's own contract, not a switch this
+    // file happens to use twice.
+    /// The bar's one shape.
     private func barButton(_ label: String, filled: Bool, enabled: Bool,
                            accessibility: String,
                            action: @escaping () -> Void) -> some View {
@@ -1826,61 +1820,12 @@ struct AddressCard: View {
         .accessibilityLabel(Text(accessibility))
     }
 
-    /// Whether this address is on the watch list — asked in three places now
-    /// (the bar, the menu row, the toggle), so it is spelled once.
-    private var isWatching: Bool {
-        let store = WalletStore.shared
-        return store.addresses.contains {
-            store.scopeMatches(current.address, scope: $0.address)
-        }
-    }
-
-    /// Watching, as a menu row — the unnamed card's home for the verb the bar
-    /// gave up. Same three states as the bar, so the cap still says so rather
-    /// than failing silently.
-    @ViewBuilder
-    private var watchMenuItem: some View {
-        let watching = isWatching
-        let full = !watching && !WalletStore.shared.canWatchMore
-        Button {
-            toggleWatch(watching: watching)
-        } label: {
-            Label(watching ? String(localized: "Stop watching")
-                  : full ? String(localized: "Watching \(WalletStore.watchLimit) already")
-                  : String(localized: "Watch this address"),
-                  systemImage: watching ? "star.fill" : "star")
-        }
-        .disabled(full)
-    }
-
-    /// Start or stop watching, with the same consequences the book row's star
-    /// has always carried — the wallet-riding seats reconciled on the way in
-    /// (§207) and this address's landed rows pruned on the way out (§286).
-    /// Written once here rather than shared with `WalletScreen.toggleWatch`
-    /// because that one also drives the row's promote animation and its cap
-    /// alert, neither of which exists on a sheet.
-    private func toggleWatch(watching: Bool) {
-        DSHaptic.tap()
-        let store = WalletStore.shared
-        if watching {
-            guard let i = store.addresses.firstIndex(where: {
-                store.scopeMatches(current.address, scope: $0.address)
-            }) else { return }
-            let gone = store.addresses[i].address
-            withAnimation(DS.Motion.standard) { store.remove(at: IndexSet(integer: i)) }
-            FollowPrune.removeWallet(address: gone,
-                                     stillWatched: store.addresses.map(\.address),
-                                     context: modelContext)
-            return
-        }
-        if case .added = store.outcome(ofAdding: current.address, label: current.name) {
-            DSHaptic.success()
-            // Watching is consent (§207) — the wallet-riding seats are on the
-            // moment a wallet is. `BridgeStore` is an environment object rather
-            // than a singleton, so this sheet asks for it by name.
-            bridges.reconcileWalletSeats()
-        }
-    }
+    // `isWatching` / `watchMenuItem` / `toggleWatch` retired here 2026-08-24
+    // (prd §461). The whole watch decision left this card with the star: a book
+    // entry is somebody you have dealt with, and what the app READS is the
+    // five-slot roster on `WalletScreen`. Nothing on a reading surface changes
+    // what gets fetched any more, which is the property that finally separated
+    // these two screens rather than relocating the crossing.
 
     /// Naming, and the history catching up (2026-08-01).
     ///

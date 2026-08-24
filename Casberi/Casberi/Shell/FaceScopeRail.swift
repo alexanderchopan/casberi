@@ -108,6 +108,23 @@ struct FaceScopeRail: View {
     /// The trailing verb, when the rail has one. nil = no slot.
     var addTitle: String?
     var onAdd: (() -> Void)?
+    /// The SECOND trailing door — the address book (prd §461, user: "since a
+    /// user can only follow five wallets, perhaps we put the address book as a
+    /// thing next to the account avatars inside the wallet room").
+    ///
+    /// A separate pair rather than a list of trailing verbs, for the reason
+    /// `namesInRoom` is one flag: these are two different rulings, not two
+    /// entries of one kind. The add verb is about THIS rail's own subject (one
+    /// more face here); this is a door out to the room holding everyone who is
+    /// not on it. Kept out of the social rail entirely — there is no book of
+    /// handles, and a trailing door with nowhere to go is §83's dead control.
+    ///
+    /// **It never takes the selection ring**, because it is not a scope: the
+    /// ring belongs to the picked wallet whatever is open, and a door that can
+    /// look "selected" would claim to be filtering the room behind it. Drawn
+    /// after the add slot, so the rail reads: you · add · everyone else.
+    var bookTitle: String?
+    var onOpenBook: (() -> Void)?
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -150,10 +167,18 @@ struct FaceScopeRail: View {
 
     /// 66 is what buys a name room to read. Without a name the slot is exactly
     /// the touch floor, which is what makes the whole rail fit: All + five
-    /// wallets (§170's cap) + the add verb is `7 × 44 + 6 × 2 + 2 × DS.Space.s4`
-    /// = 356pt, inside the 393pt of an iPhone 17 Pro. The control stops
-    /// scrolling on the phone it was measured against — a small phone still
-    /// scrolls, and nothing here promises otherwise.
+    /// wallets (§170's cap) + one trailing door is `7 × 44 + 6 × 2 + 2 ×
+    /// DS.Space.s4` = 356pt, inside the 393pt of an iPhone 17 Pro. The control
+    /// stops scrolling on the phone it was measured against — a small phone
+    /// still scrolls, and nothing here promises otherwise.
+    ///
+    /// **ONE trailing door at the cap, and that arithmetic is why** (prd §461).
+    /// The book slot is a second one, so at five watched the rail would want
+    /// `8 × 44 + 7 × 2 + 36` = 402pt and start scrolling — on the control §450
+    /// shrank precisely so it would not. The caller drops the ADD verb at the
+    /// cap, which §83 wants anyway: an "Add a wallet" that cannot add is a
+    /// control that does nothing, and the roster screen still states the cap
+    /// where it can be acted on.
     private var slotWidth: CGFloat { namesInRoom ? DS.Hit.min : 66 }
 
     /// Slot height tracks the face, so the fold actually returns vertical space
@@ -206,6 +231,9 @@ struct FaceScopeRail: View {
                 }
                 if let addTitle, onAdd != nil {
                     addSlot(title: addTitle)
+                }
+                if let bookTitle, onOpenBook != nil {
+                    bookSlot(title: bookTitle)
                 }
             }
             .padding(.horizontal, DS.Space.s4)
@@ -385,6 +413,55 @@ struct FaceScopeRail: View {
                     .foregroundStyle(DS.tint)
                     .frame(width: faceSize, height: faceSize)
                     .background(Circle().fill(DS.tintDim))
+                if !namesInRoom { Spacer(minLength: 0) }
+            }
+            .frame(width: slotWidth, height: slotHeight,
+                   alignment: namesInRoom ? .center : .top)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .dsHover()
+        .accessibilityLabel(Text(title))
+        // Captionless, so on Mac the tooltip is the only thing that says what
+        // this circle does before you click it.
+        .dsTooltip(title)
+    }
+
+    /// The address-book door (prd §461) — the add slot's anatomy, in the quieter
+    /// ink.
+    ///
+    /// Same circle, same ramp, same fold, so the two trailing slots read as one
+    /// object with two jobs. The ONE thing that differs is the fill: `+` is a
+    /// verb on this rail's own subject and wears `DS.tintDim` like every other
+    /// call to action; this is a door out, and a second tinted disc beside it
+    /// would read as a second primary action rather than as a way through.
+    ///
+    /// **A GLYPH, not a deck of the book's faces** (user ruling, 2026-08-24: "i
+    /// would use an address book icon not those little faces"). A deck was drawn
+    /// first and is wrong twice: it would be the fourth pile of identicons in
+    /// this room, and it changes as you deal — a door that never looks the same
+    /// twice is one you have to find again every time. The rail's other two
+    /// non-face slots are already a word ("All") and a symbol ("+"), so a symbol
+    /// here makes three discs of one kind and leaves the faces meaning only
+    /// "a wallet you watch".
+    ///
+    /// `person.text.rectangle` is the system's own address-book reading — a card
+    /// with a person and their lines on it — rather than `book.closed`, which is
+    /// a book about anything.
+    private func bookSlot(title: String) -> some View {
+        Button {
+            DSHaptic.selection()
+            onOpenBook?()
+        } label: {
+            VStack(spacing: DS.Space.s1) {
+                // `dsGlyph` for `addSlot`'s stated reason: a frozen glyph size
+                // beside Dynamic-Type text is what `design-ramp-audit.py` exists
+                // to catch, and a ternary slips past its literal match.
+                Image(systemName: "person.text.rectangle")
+                    .dsGlyph(compact ? 12 : 14)
+                    .foregroundStyle(DS.textSecondary)
+                    .frame(width: faceSize, height: faceSize)
+                    .background(Circle().fill(DS.fillFaint))
                 if !namesInRoom { Spacer(minLength: 0) }
             }
             .frame(width: slotWidth, height: slotHeight,
