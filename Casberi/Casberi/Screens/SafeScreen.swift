@@ -49,12 +49,11 @@ struct SafeScreen: View {
                 intro: "No account here — it reads the wallets you already watch, so you're told when a transaction is waiting on your signature. This phone can also be one of the Safe's owners, so your computer can't spend without your phone's yes.",
                 connected: safeCount > 0)
             // Ahead of the signer sections, which are the longest on any
-            // wallet-riding page — see `ChipLiveNote`. Safe earned its own
+            // wallet-riding page — see `RoomDoor`. Safe earned its own
             // source in §349's amendment (it used to land under "Wallet"), so
             // there is a real room to open.
             if hasWallets {
-                ChipLiveNote(name: "Safe", verb: "for your Safe's signature queue.",
-                             source: SafeBridge.sourceName)
+                RoomDoor(name: "Safe", source: SafeBridge.sourceName)
                     .listRowSeparator(.hidden)
             }
             connectSection.listRowSeparator(.hidden)

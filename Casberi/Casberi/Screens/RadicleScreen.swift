@@ -39,8 +39,7 @@ struct RadicleScreen: View {
                 intro: "No account and no key — name a repo and its patches and issues arrive as they happen. Radicle has no central host, so the seed you pick is the only thing that can answer you, and it sees what you ask for.",
                 connected: radicle.connected)
             if radicle.connected {
-                ChipLiveNote(name: "Radicle", verb: "for what just landed.",
-                             source: "Radicle")
+                RoomDoor(name: "Radicle", source: "Radicle")
                     .listRowSeparator(.hidden)
             }
             addSection.listRowSeparator(.hidden)

@@ -61,12 +61,11 @@ struct SentryScreen: View {
                 }
             } else {
                 // The door leads the connected state, ahead of the details it
-                // is about — see `ChipLiveNote`. At the bottom it sat below a
+                // is about — see `RoomDoor`. At the bottom it sat below a
                 // section that can run the height of the screen, so the one
                 // control saying "your things are through here" was the one
                 // you had to scroll to find.
-                ChipLiveNote(name: "Sentry", verb: "for what just broke.",
-                             source: "Sentry")
+                RoomDoor(name: "Sentry", source: "Sentry")
                     .listRowSeparator(.hidden)
                 connectedSection.listRowSeparator(.hidden)
             }

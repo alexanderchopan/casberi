@@ -36,8 +36,7 @@ struct CircleX402Screen: View {
                 intro: "No account and no key — pick the lanes you care about and the companies selling APIs to agents land in your feed. Read-only: nothing here pays for a call.",
                 connected: x402.connected)
             if x402.connected {
-                ChipLiveNote(name: "Circle x402", verb: "for who's listing.",
-                             source: X402Ingest.source)
+                RoomDoor(name: "Circle x402", source: X402Ingest.source)
                     .listRowSeparator(.hidden)
             }
             lanesSection.listRowSeparator(.hidden)

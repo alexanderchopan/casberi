@@ -42,9 +42,8 @@ struct PrivacyPoolsScreen: View {
                 // `source:` is "Privacy Pools", NOT the offer name beside it —
                 // the catalog brands this seat more fully than the bridge
                 // stamps it, and the offer name lands on a room that does not
-                // exist. See `ChipLiveNote`.
-                ChipLiveNote(name: "0xBow Privacy Pools", verb: "for your deposits.",
-                             source: "Privacy Pools")
+                // exist. See `RoomDoor`.
+                RoomDoor(name: "0xBow Privacy Pools", source: "Privacy Pools")
                     .listRowSeparator(.hidden)
             }
             connectSection.listRowSeparator(.hidden)

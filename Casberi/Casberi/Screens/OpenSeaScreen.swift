@@ -28,7 +28,7 @@ struct OpenSeaScreen: View {
                 intro: "No account and no key — pick your chains and new collections arrive as they drop, straight from OpenSea's public API. No ranking of ours.",
                 connected: opensea.connected)
             if opensea.connected {
-                ChipLiveNote(name: "OpenSea", verb: "for new drops.", source: "OpenSea")
+                RoomDoor(name: "OpenSea", source: "OpenSea")
                     .listRowSeparator(.hidden)
             }
             chainsSection.listRowSeparator(.hidden)

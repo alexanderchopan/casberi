@@ -49,8 +49,7 @@ struct OpenFoodFactsScreen: View {
                 mode: .noAccount,
                 intro: "No account and no key — scan a barcode and what's in it lands in your feed. Nothing about you leaves this \(DS.device) but the barcode itself.")
             if !recent.isEmpty {
-                ChipLiveNote(name: "Open Food Facts", verb: "for what you've scanned.",
-                             source: "Open Food Facts")
+                RoomDoor(name: "Open Food Facts", source: "Open Food Facts")
                     .listRowSeparator(.hidden)
             }
             scanSection.listRowSeparator(.hidden)

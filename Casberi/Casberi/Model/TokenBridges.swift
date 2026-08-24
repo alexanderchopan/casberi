@@ -417,7 +417,7 @@ enum TokenBridge: String, CaseIterable, Identifiable {
     }
 
     /// The `Thing.source` this bridge stamps on every row it lands — i.e. the
-    /// room `ChipLiveNote`'s door opens (2026-08-24).
+    /// room `RoomDoor` opens (prd §460).
     ///
     /// It is `rawValue` for all twenty-two, VERIFIED case by case against each
     /// bridge's own `source:` literal rather than assumed from the fact that
@@ -433,18 +433,6 @@ enum TokenBridge: String, CaseIterable, Identifiable {
     /// ("0xBow Privacy Pools" for "Privacy Pools"), which has no inverse.
     var source: String { rawValue }
 
-    /// The rest of the door's sentence — "See Todoist **for your tasks.**"
-    ///
-    /// Derived from `noun` rather than spelled out a second time, so a bridge
-    /// cannot end up calling the same rows two different things one screen
-    /// apart. GitHub is the one override: its noun is deliberately "items"
-    /// (four feeds with no shared word), and "for your items" says nothing.
-    var roomVerb: String {
-        switch self {
-        case .github: String(localized: "for what's landed.")
-        default:      String(localized: "for your \(noun).")
-        }
-    }
 
     /// The connect screen's ONE sentence (prd §315) — what pasting a token
     /// gets you, and the strongest true promise about what it can't do.

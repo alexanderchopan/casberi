@@ -42,12 +42,7 @@ struct WalletbeatScreen: View {
 				flipTrigger: flipTrigger)
 
 			if connected {
-				ChipLiveNote(
-					name: "Walletbeat",
-					verb: watched.isEmpty
-						? "for wallet security news."
-						: "for security news and your wallets' reviews.",
-					source: WalletbeatWatch.source)
+				RoomDoor(name: "Walletbeat", source: WalletbeatWatch.source)
 					.listRowSeparator(.hidden)
 			}
 

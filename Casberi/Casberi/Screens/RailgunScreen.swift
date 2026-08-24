@@ -34,8 +34,7 @@ struct RailgunScreen: View {
                 intro: "No account here — it reads the wallets you already watch, so shields and unshields land in your feed. What happens inside the pool is never read: your private balance stays private, which is the point of using Railgun.",
                 connected: hasWallets)
             if hasWallets {
-                ChipLiveNote(name: "Railgun", verb: "for what you shield.",
-                             source: "Railgun")
+                RoomDoor(name: "Railgun", source: "Railgun")
                     .listRowSeparator(.hidden)
             }
             connectSection.listRowSeparator(.hidden)

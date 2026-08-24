@@ -657,45 +657,52 @@ struct RecentThingsSection: View {
     }
 }
 
-/// The chip is the only pointer a connect page gives to "where did my stuff
-/// go" once it's live — never a destination word that exists nowhere else a
-/// person can read (prd §236: "Open the Kalshi room" named a room the rest
-/// of the app never mentions, and drifted right back in as a real
-/// `RecentThingsSection` on six other screens — the same defect, caught in
-/// the §236 follow-up audit, 2026-07-29).
+/// The way back to your things, from the page that connected them (prd §460).
 ///
-/// Gated on the bridge's own connected/watching state, never on whether
-/// anything has landed yet — same as `PredictionVenueConnect`'s teach well:
-/// the chip is genuinely tappable the moment the seat is live, and the room
-/// or feed it opens onto already has its own honest empty state.
+/// **`RoomGear`'s inverse, and the pair is the point.** That control gave a
+/// source room a door to its seat's settings; this gives a seat's settings a
+/// door back to the room. Before §460 only ONE screen of the sixteen carrying
+/// this row had a door (Vibenet, R4.5) — every other one stated a destination
+/// and left you to walk back out and hunt for the chip, which is the §83 dead
+/// control wearing prose, fifteen times over.
 ///
-/// **It is `RoomGear`'s inverse, and the pair is the point (2026-08-24).** That
-/// control gave a room a door to its seat's settings; this gives a seat's
-/// settings a door back to the room. Until this pass only ONE screen of the
-/// sixteen carrying this note had the door (Vibenet, R4.5) — every other one
-/// stated a destination and left you to walk back out and hunt for the chip,
-/// which is the §83 dead control wearing prose, fifteen times.
+/// **It says "View feed", and that is a ruling** (user, 2026-08-24 — "why not
+/// just make it say 'view feed' instead of 'see X for Y'"). The first cut wrote
+/// a sentence per seat ("See Peer for your fills."), which is prose in a
+/// control: you parse it before you can act on it, it re-states the app whose
+/// page you are already looking at, and it read differently on every screen so
+/// there was nothing to learn once. §236's ban is narrower than it looks — it
+/// forbids a destination word that exists NOWHERE ELSE a person can read ("the
+/// Kalshi room"), and "feed" is the app's own word, used throughout the
+/// catalog's own copy. The mark carries which feed; the words carry the verb.
 ///
 /// **The door mechanics live HERE, not at the call site**, because the ordering
 /// is the part that is easy to get wrong and was already commented as such in
-/// Vibenet's copy of it: `sourceRequest` alone switches the room BEHIND this
-/// pushed screen, which from the front looks exactly like a tap that did
-/// nothing. Pop first, then ask. One implementation, sixteen callers.
-struct ChipLiveNote: View {
+/// Vibenet's hand-rolled copy: `sourceRequest` alone switches the room BEHIND
+/// this pushed screen, which from the front looks exactly like a tap that did
+/// nothing. Pop first, then ask. One implementation, seventeen callers.
+///
+/// Gated by the CALLER on the bridge's own connected/watching state, never on
+/// whether anything has landed yet — `PredictionVenueConnect`'s teach-well
+/// rule: the door is genuinely live the moment the seat is, and the room it
+/// opens onto already has its own honest empty state.
+struct RoomDoor: View {
+    /// The seat, for its mark. The CATALOG name — this is the only thing on
+    /// the row that should be branded, and `BridgeIcon` keys on it.
     let name: String
-    /// The rest of the sentence — e.g. "for your fills."
-    let verb: String
-    /// The room to open: a real `Thing.source` string, NOT the catalog's offer
-    /// name. The two differ where the catalog brands a seat more fully than the
-    /// bridge stamps it (`"0xBow Privacy Pools"` vs `source: "Privacy Pools"`),
-    /// and the offer name would land on a room that does not exist — the same
-    /// §83 fault this door exists to fix, one step later.
+    /// The room to open: a real `Thing.source` string, NOT the catalog name
+    /// above. The two differ where the catalog brands a seat more fully than
+    /// the bridge stamps it (`"0xBow Privacy Pools"` vs `source: "Privacy
+    /// Pools"`), so passing `name` here — the natural slip, since you have
+    /// just typed it — lands on a room that can never hold a row. That fails
+    /// INVISIBLY: the pop happens, the filter is written, and the empty state
+    /// looks like an honest empty state. Guarded by `setup-copy-audit.py`
+    /// check 7.
     ///
-    /// Optional, so a page with no room behind it keeps the signpost rather
-    /// than growing a door to nowhere. Verified per call site against the
-    /// bridge's own `source:` literal, and guarded mechanically by
-    /// `setup-copy-audit.py` check 6 so a new seat cannot drift.
-    var source: String?
+    /// REQUIRED. It was optional while a signpost fallback existed; with every
+    /// caller a door, an optional would only let a future screen ship the dead
+    /// control this type was built to delete.
+    let source: String
 
     @Environment(ShellChrome.self) private var chrome
     // Per-window, never `.shared` — see `RoomGear`'s note on the same
@@ -704,45 +711,32 @@ struct ChipLiveNote: View {
 
     var body: some View {
         Section {
-            if let source {
-                Button {
-                    DSHaptic.tap()
-                    // POP FIRST. `sourceRequest` is read by `MainSurface`,
-                    // which sits behind this pushed stack — asking before
-                    // popping changes the room nobody is looking at.
-                    route.path = []
-                    chrome.sourceRequest = source
-                } label: { note(door: true) }
-                    .buttonStyle(.plain)
-                    .listRowInsets(EdgeInsets())
-                    .listRowBackground(Color.clear)
-            } else {
-                note(door: false)
-                    .listRowInsets(EdgeInsets())
-                    .listRowBackground(Color.clear)
+            Button {
+                DSHaptic.tap()
+                // POP FIRST. `sourceRequest` is read by `MainSurface`, which
+                // sits behind this pushed stack — asking before popping
+                // changes the room nobody is looking at.
+                route.path = []
+                chrome.sourceRequest = source
+            } label: {
+                HStack(spacing: DS.Space.s3) {
+                    BridgeIcon(name: name, size: DS.Face.badge, circular: true)
+                        .overlay(Circle().strokeBorder(DS.gray100, lineWidth: 1.5))
+                    Text("View feed")
+                        .dsText(.body17).foregroundStyle(DS.textPrimary)
+                    Spacer(minLength: DS.Space.s2)
+                    Image(systemName: "chevron.right")
+                        .dsGlyph(12)
+                        .foregroundStyle(DS.textTertiary)
+                }
+                .padding(DS.Space.s3)
+                .contentShape(Rectangle())
+                .background(DS.surfaceWell,
+                            in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
             }
+            .buttonStyle(.plain)
+            .listRowInsets(EdgeInsets())
+            .listRowBackground(Color.clear)
         }
-    }
-
-    private func note(door: Bool) -> some View {
-        HStack(alignment: .top, spacing: DS.Space.s3) {
-            BridgeIcon(name: name, size: DS.Face.badge, circular: true)
-                .overlay(Circle().strokeBorder(DS.gray100, lineWidth: 1.5))
-            // A door says what it DOES; a signpost says where a thing is.
-            Text(door
-                 ? "See \(name) \(verb)"
-                 : "\(name) is in your feed strip. Tap its chip \(verb)")
-                .dsText(.subhead13).foregroundStyle(DS.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-            if door {
-                Spacer(minLength: DS.Space.s2)
-                Image(systemName: "chevron.right")
-                    .dsGlyph(12)
-                    .foregroundStyle(DS.textTertiary)
-            }
-        }
-        .padding(DS.Space.s3)
-        .contentShape(Rectangle())
-        .background(DS.surfaceWell, in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
     }
 }

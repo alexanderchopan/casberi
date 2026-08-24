@@ -38,12 +38,7 @@ struct L2beatScreen: View {
 				flipTrigger: flipTrigger)
 
 			if connected {
-				ChipLiveNote(
-					name: "L2BEAT",
-					verb: watched.isEmpty
-						? "for incidents across every chain."
-						: "for incidents and your chains' assessments.",
-					source: L2beatWatch.source)
+				RoomDoor(name: "L2BEAT", source: L2beatWatch.source)
 					.listRowSeparator(.hidden)
 			}
 

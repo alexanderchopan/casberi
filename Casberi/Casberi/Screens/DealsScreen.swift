@@ -18,7 +18,7 @@ struct DealsScreen: View {
                 mode: .noAccount,
                 intro: "No account and no key — today's discounts arrive from each aggregator's own public feed, in no order but theirs. Nothing here buys anything.")
             if deals.connected {
-                ChipLiveNote(name: "Deals", verb: "for the latest.", source: "Deals")
+                RoomDoor(name: "Deals", source: "Deals")
                     .listRowSeparator(.hidden)
             }
             sourcesSection.listRowSeparator(.hidden)

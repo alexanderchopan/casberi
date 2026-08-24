@@ -14,7 +14,7 @@ that lives in memory loses. Every other load-bearing rule in CLAUDE.md is a
 script. The design system got its first mechanical check in §299 for exactly
 this reason. This is the copy equivalent.
 
-FIVE CHECKS, all static — no build, no simulator:
+SEVEN CHECKS, all static — no build, no simulator:
 
   1. DECLARED MODE — every connect screen's `BridgeSetupHeader` names a `mode:`.
      The mode is the fact the whole pass exists to surface (does anything arrive
@@ -34,7 +34,7 @@ FIVE CHECKS, all static — no build, no simulator:
   6. DOOR IS A VERB — a door's big words say what you will GET, never the route
      you will take. The address rides `detail:` under the verb, and a tab trail
      belongs in the step that follows. See the DOOR section below.
-  7. THE ROOM DOOR OPENS A REAL ROOM — every `source:` a `ChipLiveNote` names
+  7. THE ROOM DOOR OPENS A REAL ROOM — every `source:` a `RoomDoor` names
      must be a string some bridge really stamps as `Thing.source`, and every
      `TokenBridge` rawValue must be one too (that enum's `source` forwards it
      for the whole paste-a-token family). See the ROOM DOOR section below.
@@ -302,7 +302,7 @@ def audit_door_table(name: str, body: str):
 
 # ── the room door (check 7, 2026-08-24) ────────────────────────────────────
 #
-# `ChipLiveNote`'s door pops the pushed stack and asks `MainSurface.go(to:)`
+# `RoomDoor` pops the pushed stack and asks `MainSurface.go(to:)`
 # for a source. Hand it a string no bridge stamps and NOTHING ERRORS: the pop
 # happens, the filter is written, and you land in a room that will never hold
 # a row — a tap that looks like it worked and didn't, on the one control whose
@@ -322,7 +322,7 @@ def audit_door_table(name: str, body: str):
 # desync happened because a second file hardcoded the literal instead).
 SOURCE_LITERAL_RE = re.compile(r'source:\s*"([^"]+)"')
 SOURCE_CONST_RE = re.compile(r'static let source(?:Name)?\s*=\s*"([^"]+)"')
-CHIP_SOURCE_RE = re.compile(r'ChipLiveNote\((?:[^()]|\([^()]*\))*?source:\s*"([^"]+)"',
+CHIP_SOURCE_RE = re.compile(r'RoomDoor\((?:[^()]|\([^()]*\))*?source:\s*"([^"]+)"',
                             re.S)
 
 
@@ -637,8 +637,8 @@ def self_test() -> bool:
     # the one you already typed is the natural slip; and it renders perfectly,
     # so nothing but this can catch it.
     stamped = {"Privacy Pools", "Peer", "Deals"}
-    dirty_room = ('ChipLiveNote(name: "0xBow Privacy Pools", verb: "for your deposits.",\n'
-                  '             source: "0xBow Privacy Pools")')
+    dirty_room = ('RoomDoor(name: "0xBow Privacy Pools",\n'
+                  '         source: "0xBow Privacy Pools")')
     f = audit_room_doors("fixture.swift", dirty_room, stamped)
     if not any("no bridge" in x for x in f):
         print(f"  SELF-TEST FAIL: a room door onto a non-existent room was "
@@ -650,18 +650,16 @@ def self_test() -> bool:
     # Both shapes that must NOT fire: a correct literal, and a source handed
     # over as a constant (which is the drift-proof form and unresolvable from
     # text — flagging it would punish the better pattern).
-    clean_room = ('ChipLiveNote(name: "0xBow Privacy Pools", verb: "for your deposits.",\n'
-                  '             source: "Privacy Pools")\n'
-                  'ChipLiveNote(name: "Peer", verb: "for your fills.", source: "Peer")\n'
-                  'ChipLiveNote(name: "Safe", verb: "for the queue.", source: SafeBridge.sourceName)\n'
-                  'ChipLiveNote(name: "Deals", verb: "for the latest.")\n')
+    clean_room = ('RoomDoor(name: "0xBow Privacy Pools",\n'
+                  '         source: "Privacy Pools")\n'
+                  'RoomDoor(name: "Peer", source: "Peer")\n'
+                  'RoomDoor(name: "Safe", source: SafeBridge.sourceName)\n')
     f = audit_room_doors("fixture.swift", clean_room, stamped)
     if f:
         print(f"  SELF-TEST FAIL: an ordinary room door was flagged — {f}")
         ok = False
     else:
-        print("  ✓ passes ordinary room doors (a constant is not a literal, "
-              "a signpost has no source)")
+        print("  ✓ passes ordinary room doors (a constant is not a literal)")
 
     # And the token family behind one property.
     f = audit_token_sources('case ghost = "Ghost"\nvar id: String { rawValue }', {"Peer"})

@@ -31300,3 +31300,35 @@ feeds with no shared word) and "for your items" says nothing.
 Costs nothing: no new `Thing` field, no request, no CloudKit deploy. **UNMEASURED on a
 device** — the door is gesture-driven and no static check can exercise the pop-then-ask
 landing; iOS Simulator and Mac Catalyst both compile clean and all static audits pass.
+
+### 460a. Amendment — the door says "View feed", and `ChipLiveNote` becomes `RoomDoor` (user: "why not just make it say 'view feed'?", "instead of 'see X for Y'", 2026-08-24)
+
+§460's first cut kept R4.5's sentence-per-seat wording ("See Peer for your fills.",
+"See Sentry for what just broke."). Wrong, and the user ruled it out the same day.
+Three reasons, in order of weight: **it is prose in a control** — you parse a sentence
+before you can act on it, where a label you have seen once is read at a glance; **it
+re-states the app whose page you are already standing on**, which the row's own mark
+already carries; and **it read differently on all seventeen screens**, so there was
+nothing to learn once and apply everywhere.
+
+**§236 does not block this, which is worth writing down because it looks like it
+does.** That ruling bans a destination word existing NOWHERE ELSE a person can read —
+"Open the Kalshi room", where "room" is our internal noun. "Feed" is not that: it is
+the app's own word, in the catalog's own copy ("Screenshots, straight to your feed",
+"lands in your feed like anything else"), and a source chip is a feed filter, so a
+scoped room genuinely IS the feed showing one source. Checked before changing, not
+asserted.
+
+**Three deletions follow from it, and they are the real content of this amendment.**
+With the words fixed, `verb` is dead; with every caller a door, the signpost branch is
+dead too, so `source` becomes REQUIRED — an optional would only let a future screen
+ship the dead control this type exists to delete. `TokenBridge.roomVerb` (added hours
+earlier in §460) goes with them. And the type is renamed **`ChipLiveNote` → `RoomDoor`**:
+the old name is from the signpost era ("tap its chip") and the type no longer mentions
+a chip, does not describe a location, and is not a note. A name that survives the thing
+it named is how the next reader is misled.
+
+`setup-copy-audit.py` check 7 follows the rename; its fixtures drop the `verb` they
+carried and the "a signpost has no source" case, which can no longer happen. Both
+platforms compile clean, the audit is clean, and the tap remains UNMEASURED on a
+device for §460's reason.

@@ -31,7 +31,7 @@ struct PeerScreen: View {
                 intro: "Peer has no account here — it reads the wallets you already watch, so buying crypto with Venmo or Cash App lands on its own. Your Venmo side never touches the chain, so it's never seen.",
                 connected: hasWallets)
             if hasWallets {
-                ChipLiveNote(name: "Peer", verb: "for your fills.", source: "Peer")
+                RoomDoor(name: "Peer", source: "Peer")
                     .listRowSeparator(.hidden)
             }
             connectSection.listRowSeparator(.hidden)

@@ -63,12 +63,11 @@ struct VibenetScreen: View {
 
             // A DOOR, not a signpost (R4.5) — and it leads the connected page
             // rather than trailing the room card, which on a busy watch list
-            // put it below the fold (2026-08-24). The pop-then-ask ordering
-            // this used to spell out by hand now lives in `ChipLiveNote`,
-            // shared with the fifteen screens that were still signposts.
+            // put it below the fold (§460). The pop-then-ask ordering this
+            // screen used to spell out by hand now lives in `RoomDoor`, shared
+            // with the sixteen screens that were still signposts.
             if connected {
-                ChipLiveNote(name: "Base Vibenet", verb: "in your feed",
-                             source: VibenetIdentity.source)
+                RoomDoor(name: "Base Vibenet", source: VibenetIdentity.source)
                     .listRowSeparator(.hidden)
             }
 
