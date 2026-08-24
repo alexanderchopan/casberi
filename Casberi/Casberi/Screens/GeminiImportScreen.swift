@@ -35,6 +35,14 @@ struct GeminiImportScreen: View {
                 name: "Gemini",
                 mode: .oneTimeImport,
                 intro: "Gemini has no live connection — take your activity out of Google Takeout, bring it here, and every prompt becomes searchable. Re-import any time for what's new.")
+            // The way back to what just landed (§460). Gated on the corpus,
+            // not a connection flag: an import has no live connection, so
+            // "has anything arrived" is the only honest test of whether
+            // there is a room worth opening.
+            if !recent.isEmpty {
+                RoomDoor(name: "Gemini", source: "Gemini")
+                    .listRowSeparator(.hidden)
+            }
             setupSection
             if !recent.isEmpty {
                 RecentThingsSection(header: "Imported", things: recent.live)

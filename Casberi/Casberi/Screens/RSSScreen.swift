@@ -54,6 +54,11 @@ struct RSSScreen: View {
                 mode: .noAccount,
                 intro: "No account and no server — paste a feed's address and its posts arrive, fetched by this \(DS.device) itself. No ranking, nothing skipped.",
                 connected: !rss.feeds.isEmpty)
+            // The way back to what arrived (§460).
+            if !rss.feeds.isEmpty {
+                RoomDoor(name: "RSS", source: "RSS")
+                    .listRowSeparator(.hidden)
+            }
             omniSection.listRowSeparator(.hidden)
             if !rss.feeds.isEmpty {
                 ledgerSection.listRowSeparator(.hidden)

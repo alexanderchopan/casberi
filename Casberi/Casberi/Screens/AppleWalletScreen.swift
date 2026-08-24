@@ -45,6 +45,11 @@ struct AppleWalletScreen: View {
                 intro: "Apple Card, Apple Cash and Savings, with the merchant's real name. United States only, iOS 17.4 or later.",
                 connected: isConnected,
                 flipTrigger: flipTrigger)
+            // The way back to your things (§460).
+            if isConnected {
+                RoomDoor(name: "Apple Wallet", source: AppleWalletBridge.sourceName)
+                    .listRowSeparator(.hidden)
+            }
 
             if !AppleWalletBridge.isSupported && !isConnected {
                 unavailableSection

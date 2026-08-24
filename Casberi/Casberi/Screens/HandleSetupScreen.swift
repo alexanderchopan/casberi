@@ -501,6 +501,11 @@ struct HandleSetupScreen: View {
             BridgeSetupHeader(name: bridge.rawValue,
                               mode: .noAccount, intro: bridge.setupIntro,
                               connected: bridge.isConnected, flipTrigger: connectFlip)
+            // The way back to your things (§460).
+            if bridge.isConnected {
+                RoomDoor(name: bridge.rawValue, source: bridge.rawValue)
+                    .listRowSeparator(.hidden)
+            }
             omniSection.listRowSeparator(.hidden)
             if bridge.isRichSocial {
                 rosterSection

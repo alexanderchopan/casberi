@@ -69,6 +69,12 @@ struct DayOneImportScreen: View {
                 name: "Day One",
                 mode: .oneTimeImport,
                 intro: "Day One has no live connection — export your journal, bring it here, and every entry becomes searchable on the day you wrote it. Re-import any time for what's new.")
+            // The way back to what just landed (§460). Gated on the corpus:
+            // an import has no live connection to gate on.
+            if !recent.isEmpty {
+                RoomDoor(name: "Day One", source: "Day One")
+                    .listRowSeparator(.hidden)
+            }
             // The third step was "Pick the .json inside below", above a button
             // titled "Choose your Day One .json" (§220, 2026-07-31).
             ImportStepsCard("Get your export", [
@@ -170,6 +176,12 @@ struct JournalImportScreen: View {
                 name: "Apple Journal",
                 mode: .oneTimeImport,
                 intro: "Journal has no live connection — export it from Settings, bring it here, and every entry becomes searchable on the day you wrote it. Re-import any time for what's new.")
+            // The way back to what just landed (§460). Gated on the corpus:
+            // an import has no live connection to gate on.
+            if !recent.isEmpty {
+                RoomDoor(name: "Apple Journal", source: "Apple Journal")
+                    .listRowSeparator(.hidden)
+            }
             // The third step was "Pick the unzipped folder below", above a
             // button titled "Choose the export folder" (§220, 2026-07-31).
             ImportStepsCard("Get your export", [
@@ -326,6 +338,12 @@ struct BookmarksImportScreen: View {
                 name: "Bookmarks",
                 mode: .oneTimeImport,
                 intro: "Export your bookmarks from any browser, bring the file here, and they become findable links — folders become tags. Re-import any time for what's new.")
+            // The way back to what just landed (§460). Gated on the corpus:
+            // an import has no live connection to gate on.
+            if !recent.isEmpty {
+                RoomDoor(name: "Bookmarks", source: "Bookmarks")
+                    .listRowSeparator(.hidden)
+            }
             ImportStepsCard("Get your export", [
                 "Chrome: chrome://bookmarks → ⋮ → Export bookmarks.",
                 "Safari (Mac): File → Export Bookmarks…",

@@ -60,6 +60,11 @@ struct PostHogScreen: View {
                 intro: "Paste a read-only key, watch the metrics you care about, and only what's actually news arrives: a milestone crossed, a metric falling silent, a deploy you annotated. Aggregates only — nothing here reads an individual person's profile.",
                 connected: configured && !watched.isEmpty,
                 flipTrigger: flipTrigger)
+            // The way back to your things (§460).
+            if configured {
+                RoomDoor(name: "PostHog", source: PostHogWatch.source)
+                    .listRowSeparator(.hidden)
+            }
             if !hasKey {
                 keySection.listRowSeparator(.hidden)
             } else if projectID.isEmpty {

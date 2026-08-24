@@ -31332,3 +31332,46 @@ it named is how the next reader is misled.
 carried and the "a signpost has no source" case, which can no longer happen. Both
 platforms compile clean, the audit is clean, and the tap remains UNMEASURED on a
 device for §460's reason.
+
+### 460b. Amendment — seventeen was call sites, not coverage (user: "you only did 17? but we have like 90 apps don't we?", then "every source HAS a room in some way", 2026-08-24)
+
+§460 shipped the door to seventeen call sites and read that as done. It was not:
+**thirty-four connect screens still had no door at all.** The gap is instructive
+because it is a whole CLASS a per-item check cannot see — check 7 verified that each
+door that EXISTS opens a real room, and an absent door is invisible to it. This is the
+same shape as the §205 reach-audit failure (two audits run by hand, both green, the
+third never invoked) and the answer is the same one: make it mechanical.
+
+**Check 7 gained a second half (7b).** A screen with a `BridgeSetupHeader` must have a
+`RoomDoor` or be named in `KNOWN_NO_ROOM_DOOR` with its reason. It reported exactly 34
+on its first run, matching the hand count, and the tree stayed red until every one was
+closed. **Stated ceiling:** it is per FILE, so a file holding several screens is
+satisfied by one door — `NotesImportScreens.swift` is that case in the tree, and
+splitting it per struct means parsing Swift. Said rather than implied.
+
+**SEVEN screens are exempt, and the reasons are of two grades.** The four BYOK screens
+(Bankr, Grok, Venice, OpenRouter) configure the AGENT, not a source: they store a key
+and land no `Thing` at all, so there is no room to open — OpenRouter is the near-miss
+that justifies reasons over names, since `AgentSpend.drainPending` really does land one
+`.reminder` under source "OpenRouter" (the credits-low alert), which check 7a would
+happily pass while the room sat empty for the life of the install. `ExchangeSetupScreen`
+(all four venues) and `EthValidatorScreen` are the second grade: their money is real and
+their ROWS do not exist — both fold holdings into `WalletPortfolio`, i.e. the Wallet
+room's balance card, and between them contain zero `Thing(` constructions. A door there
+would have to point at Wallet, where not one row is theirs. `NotesShareScreen` is the
+seventh and is caught by a different rule: a note shared out of Apple Notes lands under
+source **`"You"`**, which `Corpus.earnsRoom` refuses by the user's own 2026-08-02 ruling.
+
+**"Every source has a room" is true, and it is why these seven are not sources.** The
+premise held everywhere it applied: every screen that stamps a `Thing.source` got a
+door. The exemptions are screens that stamp nothing.
+
+**A second blind spot, found by reading `Corpus.earnsRoom` rather than by a failure.**
+A source can be REAL and still have no room — `searchOnlySources` (Contacts, HomeKit)
+and `chiplessSources` ("You") are stamped on rows and deliberately earn neither chip
+nor room. Check 7a tested "is it stamped" and would have passed a door onto any of
+them. It now reads both sets OUT of `Thing.swift` (never a copy, or it goes stale the
+day the rule moves) and refuses them with their own message.
+
+Forty-five doors across the catalog. Both platforms compile clean and every static
+audit passes; the tap itself remains UNMEASURED on a device for §460's reason.

@@ -50,6 +50,11 @@ struct StripeScreen: View {
                 intro: "Paste a read-only key and the money that needs you keeps arriving: a dispute and its deadline, a payout, a cancelled subscription, a failed payment. Individual charges never land, and nothing here reads a customer's name or card.",
                 connected: hasKey,
                 flipTrigger: flipTrigger)
+            // The way back to your things (§460).
+            if hasKey {
+                RoomDoor(name: "Stripe", source: StripeWatch.source)
+                    .listRowSeparator(.hidden)
+            }
             if hasKey {
                 balanceSection.listRowSeparator(.hidden)
                 if !recent.isEmpty {

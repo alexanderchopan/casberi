@@ -46,6 +46,11 @@ struct CardPointersScreen: View {
                     mode: .signIn,
                     intro: "Sign in on CardPointers' own page and the offers sitting unused on your cards keep arriving, each with the date it expires.",
                     flipTrigger: flipTrigger)
+                // The way back to your things (§460).
+                if connected {
+                    RoomDoor(name: "CardPointers", source: CardPointersIngest.source)
+                        .listRowSeparator(.hidden)
+                }
                 connectSection.listRowSeparator(.hidden)
             }
         }

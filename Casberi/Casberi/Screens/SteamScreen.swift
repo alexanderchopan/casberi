@@ -35,6 +35,9 @@ struct SteamScreen: View {
                 )
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
+                // The way back to your things (§460).
+                RoomDoor(name: "Steam", source: "Steam")
+                    .listRowSeparator(.hidden)
             } else {
                 connectForm
             }

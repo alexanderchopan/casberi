@@ -47,6 +47,9 @@ struct DropboxScreen: View {
                 )
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
+                // The way back to your things (§460).
+                RoomDoor(name: "Dropbox", source: "Dropbox")
+                    .listRowSeparator(.hidden)
             } else {
                 BridgeSetupHeader(
                     name: "Dropbox",

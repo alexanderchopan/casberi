@@ -45,6 +45,14 @@ struct SnapchatImportScreen: View {
                 name: "Snapchat",
                 mode: .oneTimeImport,
                 intro: "Snapchat has no live connection — request your export, bring it here, and keep your saved chats and memories for good. Only saved chats exist: Snapchat deletes the rest when it's viewed.")
+            // The way back to what just landed (§460). Gated on the corpus,
+            // not a connection flag: an import has no live connection, so
+            // "has anything arrived" is the only honest test of whether
+            // there is a room worth opening.
+            if !recent.isEmpty {
+                RoomDoor(name: "Snapchat", source: "Snapchat")
+                    .listRowSeparator(.hidden)
+            }
             pickSection
             if pending > 0 { picturesSection }
             if !recent.isEmpty {

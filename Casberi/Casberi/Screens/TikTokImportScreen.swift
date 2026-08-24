@@ -49,6 +49,14 @@ struct TikTokImportScreen: View {
                 name: "TikTok",
                 mode: .oneTimeImport,
                 intro: "TikTok has no live connection — request your export in their app, bring it here, and search your captions, comments, saves and likes.")
+            // The way back to what just landed (§460). Gated on the corpus,
+            // not a connection flag: an import has no live connection, so
+            // "has anything arrived" is the only honest test of whether
+            // there is a room worth opening.
+            if !recent.isEmpty {
+                RoomDoor(name: "TikTok", source: "TikTok")
+                    .listRowSeparator(.hidden)
+            }
             pickSection
             if pending > 0 { facesSection }
             if !recent.isEmpty {

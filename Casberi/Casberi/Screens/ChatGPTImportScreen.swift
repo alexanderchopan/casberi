@@ -33,6 +33,14 @@ struct ChatGPTImportScreen: View {
                 name: "ChatGPT",
                 mode: .oneTimeImport,
                 intro: "ChatGPT has no live connection — export your conversations, bring them here, and every chat becomes searchable. Re-import any time for what's new.")
+            // The way back to what just landed (§460). Gated on the corpus,
+            // not a connection flag: an import has no live connection, so
+            // "has anything arrived" is the only honest test of whether
+            // there is a room worth opening.
+            if !recent.isEmpty {
+                RoomDoor(name: "ChatGPT", source: "ChatGPT")
+                    .listRowSeparator(.hidden)
+            }
             setupSection
             if !recent.isEmpty {
                 RecentThingsSection(header: "Imported", things: recent.live)

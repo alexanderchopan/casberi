@@ -37,6 +37,9 @@ struct SlackScreen: View {
                 )
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
+                // The way back to your things (§460).
+                RoomDoor(name: "Slack", source: "Slack")
+                    .listRowSeparator(.hidden)
             } else {
                 BridgeSetupHeader(
                     name: "Slack",

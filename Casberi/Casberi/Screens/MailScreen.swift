@@ -34,6 +34,9 @@ struct MailScreen: View {
                 )
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
+                // The way back to your things (§460).
+                RoomDoor(name: provider.source, source: provider.source)
+                    .listRowSeparator(.hidden)
             } else {
                 connectForm
             }

@@ -39,6 +39,14 @@ struct ShopifyScreen: View {
                 mode: .noAccount,
                 intro: "No account and no key — paste a store's address and its new products arrive from the store's own public catalog. Nothing here checks out or pays.",
                 connected: shopify.connected)
+            // The way back to what just landed (§460). Gated on the corpus,
+            // not a connection flag: an import has no live connection, so
+            // "has anything arrived" is the only honest test of whether
+            // there is a room worth opening.
+            if !recent.isEmpty {
+                RoomDoor(name: "Shopify", source: "Shopify")
+                    .listRowSeparator(.hidden)
+            }
             addSection.listRowSeparator(.hidden)
             if !shopify.shops.isEmpty { followingSection.listRowSeparator(.hidden) }
             // What landed, newest first. The `@Query` above was declared with a

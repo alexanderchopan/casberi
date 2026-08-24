@@ -38,6 +38,9 @@ struct ObsidianScreen: View {
                 )
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
+                // The way back to your things (§460).
+                RoomDoor(name: "Obsidian", source: "Obsidian")
+                    .listRowSeparator(.hidden)
             } else {
                 BridgeSetupHeader(
                     name: "Obsidian",

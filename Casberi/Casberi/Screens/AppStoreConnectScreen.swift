@@ -97,6 +97,11 @@ struct AppStoreConnectScreen: View {
                 intro: "Add a key and Apple's verdicts, your customer reviews and expiring builds keep arriving. Apple has no read-only role, so this only reads.",
                 connected: hasKey,
                 flipTrigger: flipTrigger)
+            // The way back to your things (§460).
+            if hasKey {
+                RoomDoor(name: "App Store Connect", source: ASCShape.source)
+                    .listRowSeparator(.hidden)
+            }
             if hasKey {
                 appsSection.listRowSeparator(.hidden)
                 if !recent.isEmpty {

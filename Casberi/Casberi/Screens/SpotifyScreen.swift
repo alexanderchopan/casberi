@@ -39,6 +39,9 @@ struct SpotifyScreen: View {
                 )
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
+                // The way back to your things (§460).
+                RoomDoor(name: "Spotify", source: "Spotify")
+                    .listRowSeparator(.hidden)
             } else {
                 BridgeSetupHeader(
                     name: "Spotify",

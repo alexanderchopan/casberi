@@ -34,7 +34,7 @@ SEVEN CHECKS, all static — no build, no simulator:
   6. DOOR IS A VERB — a door's big words say what you will GET, never the route
      you will take. The address rides `detail:` under the verb, and a tab trail
      belongs in the step that follows. See the DOOR section below.
-  7. THE ROOM DOOR OPENS A REAL ROOM — every `source:` a `RoomDoor` names
+  7. EVERY CONNECT SCREEN HAS A ROOM DOOR, and it opens a real room — every `source:` a `RoomDoor` names
      must be a string some bridge really stamps as `Thing.source`, and every
      `TokenBridge` rawValue must be one too (that enum's `source` forwards it
      for the whole paste-a-token family). See the ROOM DOOR section below.
@@ -302,6 +302,14 @@ def audit_door_table(name: str, body: str):
 
 # ── the room door (check 7, 2026-08-24) ────────────────────────────────────
 #
+# TWO HALVES, and the SECOND one is the one that was missing. §460 shipped the
+# door to seventeen call sites and called it done; the user asked "you only did
+# 17? but we have like 90 apps" and the honest answer was that seventeen was a
+# count of CALL SITES, not of coverage — thirty-four connect screens still had
+# no door at all. A per-door correctness check cannot see an ABSENT door, which
+# is exactly the class that shipped. So completeness is checked too, and a
+# screen that should not have one says so by name with a reason.
+#
 # `RoomDoor` pops the pushed stack and asks `MainSurface.go(to:)`
 # for a source. Hand it a string no bridge stamps and NOTHING ERRORS: the pop
 # happens, the filter is written, and you land in a room that will never hold
@@ -320,6 +328,14 @@ def audit_door_table(name: str, body: str):
 # the RIGHT answer, not a gap, because one constant used by both the stamp and
 # the door is the pattern that cannot drift at all (§311's own lesson: the
 # desync happened because a second file hardcoded the literal instead).
+# A source can be REAL and still have no room: `Corpus.searchOnlySources`
+# (Contacts, HomeKit) and `chiplessSources` ("You") are stamped on rows and
+# deliberately earn no chip and no room — `Corpus.earnsRoom` is the one place
+# that answer is declared. A door onto one of those passes the "is it stamped"
+# test and still lands nowhere, so it is checked separately and read OUT of
+# Thing.swift rather than copied here, or this goes stale the day the rule moves.
+NO_ROOM_SET_RE = re.compile(
+    r'static let (?:chiplessSources|searchOnlySources): Set<String> = \[([^\]]*)\]')
 SOURCE_LITERAL_RE = re.compile(r'source:\s*"([^"]+)"')
 SOURCE_CONST_RE = re.compile(r'static let source(?:Name)?\s*=\s*"([^"]+)"')
 CHIP_SOURCE_RE = re.compile(r'RoomDoor\((?:[^()]|\([^()]*\))*?source:\s*"([^"]+)"',
@@ -344,10 +360,70 @@ def stamped_sources(model_dir: str) -> set:
     return found
 
 
-def audit_room_doors(name: str, body: str, stamped: set):
+# Screens with a `BridgeSetupHeader` and deliberately NO room door. Each entry
+# is a conscious ruling, never a snooze — the door is missing because there is
+# no room to open, not because nobody got to it.
+KNOWN_NO_ROOM_DOOR = {
+    # The four BYOK agent-key screens. These configure the AGENT, not a source:
+    # they store a key and register a seat, and land no `Thing` at all — there
+    # is no source string, so there is nothing for a door to open. Verified: no
+    # `source: "Bankr"/"Grok"/"Venice"` literal exists anywhere in Model/.
+    "BankrSetupScreen.swift": "agent key — lands no rows, so there is no room",
+    "GrokSetupScreen.swift": "agent key — lands no rows, so there is no room",
+    "VeniceSetupScreen.swift": "agent key — lands no rows, so there is no room",
+    # OpenRouter is the near-miss and the reason this list carries reasons
+    # rather than names: `AgentSpend.drainPending` DOES land one `.reminder`
+    # under source "OpenRouter" — the credits-running-low alert — so check 7a
+    # would happily pass a door here. But that is the only producer, so the
+    # room is empty for the life of the install and then holds exactly one
+    # row. A door onto that is the §83 dead control with a long fuse.
+    "OpenRouterSetupScreen.swift": "agent key — its only row is a credits alert",
+    # Two seats whose money is REAL and whose rows do not exist: both fold
+    # holdings into `WalletPortfolio` (the Wallet room's balance card) without
+    # ever constructing a `Thing`. `Model/ExchangeBridge.swift` and
+    # `Model/EthValidatorWatch.swift` contain zero `Thing(` between them. A
+    # door would have to point at Wallet, where not one row is theirs.
+    "ExchangeSetupScreen.swift": "holdings fold into the Wallet balance; lands no rows",
+    "EthValidatorScreen.swift": "balances fold into the Wallet balance; lands no rows",
+}
+
+# STATED CEILING: this is per FILE, so a file holding several screens is
+# satisfied by ONE door. `NotesImportScreens.swift` is the case in the tree —
+# three of its four screens have a door and `NotesShareScreen` correctly has
+# none (a note shared out of Apple Notes lands under source "You", which
+# `Corpus.earnsRoom` refuses). Splitting this per struct means parsing Swift;
+# the honest move is to say so rather than imply a guarantee it cannot make.
+
+
+def audit_door_presence(name: str, body: str):
+    """Check 7b — a connect screen offers the way back to its things."""
+    if "BridgeSetupHeader(" not in body:
+        return []                      # §185 screens; check 1 already rules here
+    if "RoomDoor(" in body:
+        return []
+    if name in KNOWN_NO_ROOM_DOOR:
+        return []
+    return [f"{name}: no RoomDoor — a connect screen states where your things "
+            f"went and gives no way there (§460). Add one, or name the screen "
+            f"in KNOWN_NO_ROOM_DOOR with the reason it has no room."]
+
+
+def roomless_sources(thing_swift: str) -> set:
+    """The sources `Corpus.earnsRoom` answers NO for."""
+    out = set()
+    for block in NO_ROOM_SET_RE.findall(thing_swift):
+        out |= set(re.findall(r'"([^"]+)"', block))
+    return out
+
+
+def audit_room_doors(name: str, body: str, stamped: set, roomless: set = frozenset()):
     findings = []
     for src in CHIP_SOURCE_RE.findall(body):
-        if src not in stamped:
+        if src in roomless:
+            findings.append(f"{name}: room door opens “{src}”, which Corpus."
+                            f"earnsRoom refuses — that source is stamped but has "
+                            f"no chip and no room, so the door lands nowhere")
+        elif src not in stamped:
             findings.append(f"{name}: room door opens “{src}”, which no bridge "
                             f"stamps as Thing.source — the room will always be "
                             f"empty (did you pass the catalog name?)")
@@ -391,7 +467,8 @@ def audit_catalog(src: str):
 
 # ── the checks ─────────────────────────────────────────────────────────────
 
-def audit_source(name: str, src: str, stamped: set = None):
+def audit_source(name: str, src: str, stamped: set = None,
+                 roomless: set = frozenset()):
     """Returns a list of finding strings for one screen's source text."""
     findings = []
     body = strip_comments(src)
@@ -461,7 +538,8 @@ def audit_source(name: str, src: str, stamped: set = None):
 
     # 7: the room door opens a room that exists.
     if stamped is not None:
-        findings += audit_room_doors(name, body, stamped)
+        findings += audit_room_doors(name, body, stamped, roomless)
+        findings += audit_door_presence(name, body)
 
     return findings
 
@@ -661,6 +739,43 @@ def self_test() -> bool:
     else:
         print("  ✓ passes ordinary room doors (a constant is not a literal)")
 
+    # The absent door — the half that was missing on check 7's first day, and
+    # the reason §460 shipped believing seventeen call sites was coverage.
+    f = audit_door_presence("Ghost.swift",
+                            'BridgeSetupHeader(name: "Ghost", mode: .noAccount, intro: "Short.")')
+    if not any("no RoomDoor" in x for x in f):
+        print(f"  SELF-TEST FAIL: a connect screen with no door was not caught — {f}")
+        ok = False
+    else:
+        print("  ✓ catches a connect screen with no room door at all")
+    if audit_door_presence("Ghost.swift",
+                           'BridgeSetupHeader(name: "Ghost", mode: .noAccount, intro: "S.")\n'
+                           'RoomDoor(name: "Ghost", source: "Ghost")'):
+        print("  SELF-TEST FAIL: a screen WITH a door was flagged")
+        ok = False
+    else:
+        print("  ✓ passes a connect screen that has one")
+
+    # A source that IS stamped and still has no room — the half check 7 was
+    # blind to on its first day, found by reading `Corpus.earnsRoom` rather
+    # than by a failure.
+    f = audit_room_doors("fixture.swift",
+                         'RoomDoor(name: "Contacts", source: "Contacts")',
+                         {"Contacts", "Peer"}, {"Contacts", "You"})
+    if not any("earnsRoom refuses" in x for x in f):
+        print(f"  SELF-TEST FAIL: a door onto a roomless source was not caught — {f}")
+        ok = False
+    else:
+        print("  ✓ catches a room door onto a stamped-but-roomless source")
+
+    rl = roomless_sources('static let searchOnlySources: Set<String> = ["Contacts", "HomeKit"]\n'
+                          'static let chiplessSources: Set<String> = ["You"]\n')
+    if rl != {"Contacts", "HomeKit", "You"}:
+        print(f"  SELF-TEST FAIL: roomless set parsed as {rl}")
+        ok = False
+    else:
+        print("  ✓ reads the roomless sources out of Thing.swift")
+
     # And the token family behind one property.
     f = audit_token_sources('case ghost = "Ghost"\nvar id: String { rawValue }', {"Peer"})
     if not any("not stamped" in x for x in f):
@@ -704,6 +819,8 @@ def main() -> int:
         return 1
 
     stamped = stamped_sources(MODEL)
+    roomless = roomless_sources(
+        open(os.path.join(ROOT, "Casberi", "Shared", "Thing.swift")).read())
     findings, screens = [], 0
     for fn in sorted(os.listdir(SCREENS)):
         if not fn.endswith(".swift") or fn in SKIP:
@@ -712,7 +829,7 @@ def main() -> int:
         if "BridgeSetupHeader(" not in src and "BridgeStepLines(" not in src:
             continue
         screens += 1
-        findings += audit_source(fn, src, stamped)
+        findings += audit_source(fn, src, stamped, roomless)
 
     findings += audit_token_sources(
         strip_comments(open(os.path.join(MODEL, "TokenBridges.swift")).read()), stamped)

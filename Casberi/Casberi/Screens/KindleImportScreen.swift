@@ -20,6 +20,14 @@ struct KindleImportScreen: View {
                 name: "Kindle",
                 mode: .oneTimeImport,
                 intro: "Kindle has no live connection — export your notes and highlights, bring them here, and every passage you marked becomes searchable. Re-import any time for what's new.")
+            // The way back to what just landed (§460). Gated on the corpus,
+            // not a connection flag: an import has no live connection, so
+            // "has anything arrived" is the only honest test of whether
+            // there is a room worth opening.
+            if !recent.isEmpty {
+                RoomDoor(name: "Kindle", source: "Kindle")
+                    .listRowSeparator(.hidden)
+            }
             // The third step was "Pick that file below", above a button titled
             // "Choose My Clippings.txt" (§220, 2026-07-31).
             ImportStepsCard("Get your highlights", [
