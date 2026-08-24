@@ -580,11 +580,21 @@ enum DS {
     /// its own paper — `MainSurface.crownPour`'s idiom scoped to a card, so ten
     /// money sheets read as ten places instead of ten rows.
     ///
-    /// **It encodes identity and nothing else.** Never gain, loss, size or
-    /// urgency — those stay on the amount's tone and the stamp, which is the
-    /// same division `pourHue` already keeps on a scoped wallet room. And it is
-    /// deliberately below the tint's weight: the pour is a wash the eye reads as
-    /// place, not a fill the eye reads as a control.
+    /// **It encodes identity, with ONE named exception.** Every case but
+    /// `.risk` is a place, never gain, loss, size or plain urgency — those
+    /// stay on the amount's tone and the stamp, the same division `pourHue`
+    /// already keeps on a scoped wallet room. And it is deliberately below
+    /// the tint's weight: the pour is a wash the eye reads as place, not a
+    /// fill the eye reads as a control.
+    ///
+    /// `.risk` breaks that on purpose (`MoneyReceipt.generic`'s `hue: risk ?
+    /// .risk : hue`): an open position already near liquidation OVERRIDES
+    /// its source's identity with `DS.attention`, because a receipt for money
+    /// that might disappear needs to say so louder than it says whose it is —
+    /// the one place this card agrees urgency outranks place. Audited
+    /// 2026-08-24 rather than silently generalized to more cases: it is a
+    /// single hand-picked exception, not a second axis the enum quietly
+    /// grew.
     ///
     /// `neutral` is a real answer, not a fallback for laziness. Apple Card has
     /// no brand colour to borrow, and inventing one is exactly the lie
@@ -611,6 +621,13 @@ enum DS {
     /// and a wash that competes with the amount above it has stopped being one.
     /// Lighter in light theme, where a hue over white reads far hotter than the
     /// same hue over black.
+    ///
+    /// Also the intensity `PriceObjectCard` washes ITS OWN colour at — that
+    /// card is not a `MoneyReceipt` and never calls `receiptPour(_:)` above,
+    /// it computes direction from `TokenChartStyle.accent(up:scheme:)`
+    /// instead (audited 2026-08-24: the two share only this one dial, "how
+    /// loud does a card's top wash get", never the identity-vs-direction
+    /// decision — that split is intentional, see `PriceObjectCard.pour`).
     static func receiptPourOpacity(_ scheme: ColorScheme) -> Double {
         scheme == .dark ? 0.20 : 0.13
     }

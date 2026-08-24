@@ -242,16 +242,34 @@ struct MainSurface: View {
             // `DS.page`, never a material: design law puts Liquid Glass on
             // the FLOATING layer alone, and this is chrome that content
             // scrolls beneath, not a floating panel.
+            //
+            // **Composited with the crown pour, not a flat reset (fixed
+            // 2026-08-24, auditing the pour rules).** The first cut painted
+            // opaque `DS.page` alone across the top 75% of the band — which
+            // is exactly `crownPour`'s densest stop, so on All and inside a
+            // wallet the one field §159 promises "everywhere, always" went
+            // dark the moment the chip strip mounted. `.mask` fades the WHOLE
+            // composite (page + pour) the same way the old flat scrim faded,
+            // so the block-content job is unchanged and the pour reads as
+            // continuous with the page above and below it.
             .background(alignment: .top) {
-                LinearGradient(
-                    stops: [
-                        .init(color: DS.page, location: 0),
-                        .init(color: DS.page, location: 0.75),
-                        .init(color: DS.page.opacity(0), location: 1),
-                    ],
-                    startPoint: .top, endPoint: .bottom)
-                    .ignoresSafeArea(edges: .top)
-                    .allowsHitTesting(false)
+                ZStack(alignment: .top) {
+                    DS.page
+                    LinearGradient(stops: crownPourRecipe.stops,
+                                   startPoint: .top, endPoint: .bottom)
+                        .opacity(crownPourRecipe.dose)
+                }
+                .mask(alignment: .top) {
+                    LinearGradient(
+                        stops: [
+                            .init(color: .black, location: 0),
+                            .init(color: .black, location: 0.75),
+                            .init(color: .black.opacity(0), location: 1),
+                        ],
+                        startPoint: .top, endPoint: .bottom)
+                }
+                .ignoresSafeArea(edges: .top)
+                .allowsHitTesting(false)
             }
             .frame(maxWidth: showsRail ? PadLayout.readingMaxWidth : .infinity,
                    alignment: .leading)
@@ -1136,25 +1154,37 @@ struct MainSurface: View {
     // — is untouched: the bottom chrome keeps saying which wallet you are in,
     // where there is no card beside it to argue with. Killing the field at its
     // source would have silently un-tinted that bar too.
-    private var crownPour: some View {
+    /// The pour's stops and dose, shared by the full-page field below and the
+    /// chip band's own scrim (`topInset`) — so the two can never paint two
+    /// different answers for the same room. Split out 2026-08-24 auditing the
+    /// pour rules: the band's scrim used to reset to a flat `DS.page` for its
+    /// own height, which quietly painted over this field's densest stop for
+    /// the whole time the chips are on screen — the crown was only ever
+    /// visible in the gaps BETWEEN rows, never behind the chrome itself.
+    private var crownPourRecipe: (stops: [Gradient.Stop], dose: Double) {
         let hue = DS.bleed
         // Photo themes force the dark treatment (DS.themedPage's own rule);
         // only a true light page halves the dose — the same field that reads
         // as atmosphere on ink reads as a stain on white.
         let light = ThemeStore.shared.isLight && ThemeStore.shared.backgroundPhoto == nil
-        // Folded into the dose rather than gating the view, so picking Ink
-        // fades the field out on the same beat a colour swap re-tints it —
-        // and so `crownPour` keeps ONE view identity through the pager's own
-        // `.transition(.opacity)`.
         // The scoped-wallet exemption goes with the carve-out above: a wallet
         // room no longer forces a pour through an Ink theme, so "Ink does not
         // pour" is now true everywhere without exception.
         let dose = ThemeStore.shared.bleed.pours ? chrome.pourDose : 0
-        return LinearGradient(stops: [
+        return ([
             .init(color: hue.opacity(light ? 0.16 : 0.30), location: 0),
             .init(color: hue.opacity(light ? 0.05 : 0.10), location: 0.5),
             .init(color: hue.opacity(0), location: 1),
-        ], startPoint: .top, endPoint: .bottom)
+        ], dose)
+    }
+
+    private var crownPour: some View {
+        let recipe = crownPourRecipe
+        // Folded into the dose rather than gating the view, so picking Ink
+        // fades the field out on the same beat a colour swap re-tints it —
+        // and so `crownPour` keeps ONE view identity through the pager's own
+        // `.transition(.opacity)`.
+        return LinearGradient(stops: recipe.stops, startPoint: .top, endPoint: .bottom)
             .frame(height: 500)
             .frame(maxHeight: .infinity, alignment: .top)
             // How much of it this room gets (§297) — full on All and inside a
@@ -1167,12 +1197,14 @@ struct MainSurface: View {
             // full-width 500pt gradient every frame on the main thread — during
             // a page transition that is already remounting a room. A layer
             // opacity is one property the render server drives out of process.
-            .opacity(dose)
-            // A scope switch re-tints the crown as one move with the switcher
-            // capsule's slide — not a hard swap. The dose rides the same
-            // motion, so leaving home drains the field rather than cutting it.
-            .animation(DS.Motion.standard, value: chrome.pourHue)
-            .animation(DS.Motion.standard, value: dose)
+            .opacity(recipe.dose)
+            // A room switch drains or refills the dose as one move with the
+            // switcher capsule's slide — not a hard cut. The COLOUR itself no
+            // longer moves (the wallet-face carve-out this once described was
+            // reversed 2026-08-15 — `chrome.pourHue` is read by `AgentBar`'s
+            // bottom chrome now, not by this field), so only `dose` needs a
+            // tracked animation here.
+            .animation(DS.Motion.standard, value: recipe.dose)
     }
 
     /// The chip strip in whichever orientation this device wears it. One

@@ -215,9 +215,18 @@ struct BridgeDetailScreen: View {
         }
     }
 
+    /// This screen's head deliberately carries no brand wash (audited against
+    /// the product/setup pages' `bridgeSetupWash`/`AppDetailScreen.brandWash`
+    /// 2026-08-24): this is the MANAGE screen, whose job is "what it can do,
+    /// a one-line proof it's delivering, its controls" — a health status, not
+    /// a re-sell of identity — so the ring around the mark carries the fact
+    /// that actually belongs here (`bridge.status.color`) instead. The mark
+    /// SIZE still matches `DS.Mark.hero` (was `Face.shelf`, 56 vs 60) per the
+    /// ramp's own rule that a product page and every header introducing the
+    /// same app agree on scale.
     private func header(_ bridge: BridgeApp) -> some View {
         HStack(spacing: DS.Space.s3) {
-            BridgeIcon(name: bridge.name, size: DS.Face.shelf, circular: true)
+            BridgeIcon(name: bridge.name, size: DS.Mark.hero, circular: true)
                 .padding(3)
                 .overlay(Circle().strokeBorder(bridge.status.color, lineWidth: 2))
             VStack(alignment: .leading, spacing: 2) {

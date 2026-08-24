@@ -726,15 +726,19 @@ struct AccountDetailSheet: View {
         }
     }
 
-    /// What the pour is doing right now, in words. Ink gets its own sentence
-    /// — "Ink washes the top of every screen" would be false, and it also
-    /// names the one pour Ink does NOT silence, so a wallet room re-tinting
-    /// the crown can't read as the setting failing to hold.
+    /// What the pour is doing right now, in words. Scoped to WHERE it
+    /// actually pours (`ShellChrome.pourDose` — All and Wallet only, drained
+    /// on a source room by §297) rather than "every screen", which stopped
+    /// being true the day that dose split off. Ink gets its own sentence
+    /// too: the wallet-face carve-out this used to describe was reversed
+    /// 2026-08-15 (`MainSurface.crownPour` no longer reads `chrome.pourHue`
+    /// at all), so Ink now means no pour anywhere, with no exception left to
+    /// name.
     private var bleedSubline: String {
         let bleed = ThemeStore.shared.bleed
         return bleed.pours
-            ? String(localized: "\(bleed.name) washes the top of every screen")
-            : String(localized: "No wash — a wallet you open still wears its own color")
+            ? String(localized: "\(bleed.name) washes the top of All and your Wallet")
+            : String(localized: "No wash — the crown stays flat everywhere")
     }
 
     /// Saves the key only after its provider accepts it — no dead key sitting

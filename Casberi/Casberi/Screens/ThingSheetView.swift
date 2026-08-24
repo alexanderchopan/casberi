@@ -3,9 +3,14 @@ import SwiftData
 import Translation
 
 /// The thing sheet (M4, redesigned 2026-07-07 — "Ink with Gallery grafted
-/// in", user's pick): ink-black ground, no cards. The source's hue washes
-/// down from the top (2026-07-10 ruling — wash + icon, the dot died), an
-/// eyebrow (source icon · kind · age), the title large, the thing's media,
+/// in", user's pick): ink-black ground, no cards. The source's hue washed
+/// down from the top from 2026-07-10 (wash + icon, the dot died) until
+/// 2026-07-18, when it was pulled for reading as borrowed identity over
+/// content (see the ruling further down, where `.dsInk()` is applied) — the
+/// one exception since 2026-08-12 is a MONEY thing, whose own receipt pours
+/// its source's hue at the card's own scale (`MoneyReceiptCard`, prd §369),
+/// never the sheet itself. An eyebrow (source icon · kind · age), the
+/// title large, the thing's media,
 /// then a quiet spec table (WHEN/SITE/BY/FROM/TAGS — labels change per
 /// kind). Verbs are the disc dial everywhere now (standardized 2026-07-23 —
 /// was B1-only; derived, capped, writes confirm), Share always its last

@@ -57,8 +57,6 @@ struct TokenQuickSheet: View {
     /// Resolved identity, live from the same search that powers watching.
     @State private var resolved: TokenWatch.Resolved?
     @State private var watchedTitle: String?
-    @State private var washPoured = false
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         ScrollView {
@@ -103,28 +101,17 @@ struct TokenQuickSheet: View {
             .padding(.bottom, DS.Space.s6)
         }
         .scrollIndicators(.hidden)
-        .background(alignment: .top) {
-            // The thing sheet's own wash, in Tokens' hue — same recipe.
-            if let hue = DS.washHue(for: "Tokens") {
-                LinearGradient(stops: [
-                    .init(color: hue, location: 0),
-                    .init(color: hue, location: 0.3),
-                    .init(color: hue.opacity(0), location: 1),
-                ], startPoint: .top, endPoint: .bottom)
-                    .frame(height: 300)
-                    .opacity(washPoured ? 1 : 0)
-                    .offset(y: washPoured ? 0 : -140)
-                    .frame(maxHeight: .infinity, alignment: .top)
-                    .ignoresSafeArea(edges: .top)
-                    .onAppear {
-                        if reduceMotion { washPoured = true } else {
-                            withAnimation(.easeOut(duration: 0.35).delay(0.05)) {
-                                washPoured = true
-                            }
-                        }
-                    }
-            }
-        }
+        // No wash: Tokens' mark is a near-black chart-on-black tile by
+        // deliberate ruling (`AppIconTile.brandHue`'s own comment — "a
+        // gold/green wash fought the chart's own red"), which is permanent
+        // rather than a placeholder, unlike a hueless keyed bridge that might
+        // rebrand. `DS.washHue(for: "Tokens")` has therefore always nil'd, so
+        // the pour-in animation this sheet carried (`washPoured`, an
+        // `onAppear` delay+offset) never once ran — removed rather than kept
+        // as permanently-dead code (found auditing the pour rules, 2026-08-24;
+        // the same wordless-ink treatment `GrokSetupScreen` describes for its
+        // own pure-black mark applies here too, this sheet just has no
+        // variable `name` to call `bridgeSetupWash(name:)` with).
         .dsInk()
         .presentationDetents([.medium, .large])
         .dsPageSheet()

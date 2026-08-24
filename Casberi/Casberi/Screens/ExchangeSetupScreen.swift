@@ -64,6 +64,10 @@ struct ExchangeSetupScreen: View {
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
+        // `venue.display`, not `venue.rawValue` — `.geminiExchange`'s raw
+        // value has no space, so it would miss `washHue`'s "gemini exchange"
+        // key; `display` is what every other venue already matches on too.
+        .bridgeSetupWash(name: venue.display)
         .dsAdaptiveContentWidth()
         .dsPageBackground()
         .dsSoftScrollEdges()

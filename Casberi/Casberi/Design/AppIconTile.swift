@@ -44,6 +44,12 @@ extension DS {
         case "icloud mail":         return Color.fixed("#3693f3")
         case "chatgpt":             return Color.fixed("#ffffff")
         case "claude":              return Color.fixed("#d97757")
+        // Anthropic's one brand rust — Claude Code is the same company's mark
+        // in a terminal, not a separate identity (found missing auditing the
+        // pour rules, 2026-08-24: its setup screen called `bridgeSetupWash`
+        // and got nothing, the exact "eight seats furnish nothing" shape of
+        // bug this file's own registry checks exist to catch elsewhere).
+        case "claude code":         return Color.fixed("#d97757")
         case "gemini":              return Color.fixed("#4285f4")   // the sparkle's blue end
         case "reminders":           return Color.fixed("#ff9500")
         case "photos":              return Color.fixed("#5e9ee6")
@@ -61,6 +67,14 @@ extension DS {
         case "safe":                return Color.fixed("#12ff80")   // Safe{Wallet}'s green (icon-sampled from the bundled mark)
         case "privacy pools", "0xbow privacy pools":
                                     return Color.fixed("#ffffff")   // 0xBow's mark is black on white (bundled) — the white field is the identity, like ChatGPT's; zero saturation means washHue nils, so the page stays pure ink on purpose
+        // Railgun's bundled mark sits on a near-black field with the barest
+        // blue tint (measured 2026-08-24: max saturation ~0.23 at very low
+        // brightness) — near-zero saturation, so `washHue` nils it the same
+        // way Hyperliquid's dark ground does; the true field still beats a
+        // fallback gray for `brandHue`'s other consumers (icon tile, card
+        // fill). Fittingly near-neutral for the one bridge whose whole point
+        // is hiding an identity (§268).
+        case "railgun":             return Color.fixed("#1a1a24")
         // The five DeFi protocols the wallet already reads, seated in the
         // catalog 2026-07-30. Every one is icon-sampled from the mark bundled
         // beside it in the asset catalog, so tile and hue can't drift.
@@ -169,6 +183,20 @@ extension DS {
         // than a shared "package" colour — the two seats sit together in the
         // Work group, and a shared field plus a near-shared glyph would read
         // as one app listed twice.
+        // GitLab's own documented orange — their bundled fox mark's tail runs
+        // orange into red, and this is the primary end of it (icon-sampled).
+        // Missing until now, found auditing the pour rules 2026-08-24: its
+        // catalog offer sits right beside GitHub in the Work group and had no
+        // wash where GitHub's correctly nils (below) — the two read as one
+        // rule until you actually connect one.
+        case "gitlab":              return Color.fixed("#fc6d26")
+        // GitHub's mark is the Octocat on a near-BLACK field — measured
+        // (2026-08-24): zero saturated pixels, dominant sample near-black —
+        // the Vercel/Grok/Cursor case exactly (a real ground colour, not a
+        // logo-on-white lockup). `washHue` nils this on purpose; `brandHue`
+        // still wants the true field so a fallback-gray tile isn't invented
+        // for an app that has a real one.
+        case "github":              return Color.fixed("#000000")
         case "npm":                 return Color.fixed("#cb3837")
         case "pypi":                return Color.fixed("#3775a9")   // the python.org blue PyPI's own header uses
         // Grok's mark is pure black with ZERO saturated pixels — the X case
@@ -180,6 +208,12 @@ extension DS {
         // carries the signal from `glyphTint`.
         case "openrouter":          return Color.fixed("#000010")
         case "linear":              return Color.fixed("#5e6ad2")   // their documented indigo; the bundled mark samples #5060d0
+        // Notion's mark is a black "N" block on a near-WHITE field — measured
+        // (2026-08-24): dominant sample near-white, the ChatGPT/0xBow case
+        // (the white field IS the identity, not a logo-on-white lockup).
+        // `washHue` nils this on purpose; `brandHue` still wants the true
+        // field so a fallback-gray tile isn't invented for an app with one.
+        case "notion":              return Color.fixed("#ffffff")
         // Hugging Face is the PostHog shape, not the ChatGPT one: a mark on a
         // white field where the brand is the mark's own colour, not the field.
         // Their documented yellow, which is also the single most common
@@ -235,6 +269,10 @@ extension DS {
         case "binance":             return Color.fixed("#0b0e11")   // their near-black app-icon field
         case "gemini exchange":     return Color.fixed("#ff6511")   // their orange (sampled from the official app icon)
         case "eth validators":      return Color.fixed("#627eea")   // Ethereum's own brand blue-purple
+        // CardPointers' own violet, icon-sampled from the bundled mark
+        // (found missing auditing the pour rules, 2026-08-24 — its product
+        // and setup pages both called for a wash and got the gray default).
+        case "cardpointers":        return Color.fixed("#9d4eec")
         case "1claw":               return Color.fixed("#990029")   // their crimson (docs-sampled)
         case "homekit":             return Color.fixed("#8e8e93")   // the accessory kind's own gray (KindGlyph.swift)
         default:                    return nil

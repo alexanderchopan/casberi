@@ -77,6 +77,11 @@ struct AppleWalletScreen: View {
         }
         .dsPageBackground()
         .scrollContentBackground(.hidden)
+        // Apple Card's mark is near-black graphite, so `DS.washHue` returns
+        // nil and this paints nothing — called anyway so the family has no
+        // exception to remember (the `GrokSetupScreen`/`OpenRouterSetupScreen`
+        // pattern; found missing here auditing the pour rules, 2026-08-24).
+        .bridgeSetupWash(name: "Apple Wallet")
         .navigationTitle("Apple Wallet")
         .navigationBarTitleDisplayMode(.inline)
         .task { load() }

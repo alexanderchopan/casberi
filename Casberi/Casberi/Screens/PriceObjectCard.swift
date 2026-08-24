@@ -147,6 +147,12 @@ struct PriceObjectCard<Evidence: View>: View {
                 in: Capsule(style: .continuous))
     }
 
+    /// Deliberately NOT `DS.receiptPour(_:)` — this card has no
+    /// `MoneyReceipt.Hue`, and a price's identity already lives in
+    /// `subjectMark`/the name beside it. This wash answers a different
+    /// question (which way did it move), which is exactly why it borrows
+    /// only `receiptPourOpacity`'s intensity dial and not the identity
+    /// function beside it (see that token's own doc).
     private var pour: Color {
         guard object.freshness.isLive, let move = object.move, !move.isFlat else {
             return DS.textPrimary.opacity(0.06)

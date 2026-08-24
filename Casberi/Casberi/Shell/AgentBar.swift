@@ -108,13 +108,15 @@ struct AgentBar: View {
     /// The room's own hue, when standing in a room that HAS one (2026-08-06) —
     /// `ShellChrome.pourHue`, which is non-nil only inside a scoped wallet.
     ///
-    /// The crown has said which room you're in since §159; the bottom chrome
-    /// never did, and this is the same fact reaching the other end of the
-    /// screen. It is deliberately tied to `pourHue` rather than to a hue of its
-    /// own so the two can never disagree — and it inherits that field's whole
-    /// argument for free: §297 drains the pour on a source room precisely
-    /// because a permanent colour that says nothing is decoration, and a
-    /// nil here is that same silence.
+    /// The crown said which room you're in this way through §159/§204; since
+    /// the 2026-08-15 amendment (`MainSurface.crownPour`'s own doc) the crown
+    /// stopped reading `pourHue` at all — the wallet room's balance card
+    /// became the loud identity element there, and a per-wallet hue pouring
+    /// above a fixed-blue card was two identities disagreeing on one screen.
+    /// This bar is the field's ONE remaining reader now, which is exactly why
+    /// killing `pourHue` at its source would have silently un-tinted it too —
+    /// the bottom chrome is where "which wallet you're in" still lives. A nil
+    /// here still means the same silence §297 argues for on a source room.
     var roomTint: Color? = nil
     /// Raise the agent — the bar's HOLD since §390 (its tap before that).
     var onAsk: () -> Void
