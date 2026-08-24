@@ -219,6 +219,61 @@ struct VibenetScreen: View {
         .buttonStyle(.plain)
     }
 
+    /// The typed address, trimmed once — kept separate from
+    /// `watchTyped()`'s own trim so the preview below reads cleanly, not
+    /// because the two must ever disagree.
+    private var draft: String {
+        addressField.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    /// The address the preview is about, or nil while the field holds
+    /// nothing that's already a valid one. Unlike `WalletScreen`'s own
+    /// version, there is no name to resolve here — vibenet has no ENS/SNS
+    /// registrar of its own (`VibenetWatch.isValidAddress`'s own doc: a
+    /// pasted name that isn't already hex simply is not a vibenet
+    /// address) — so this is a plain validity check, not a debounced
+    /// network round-trip.
+    private var previewAddress: String? {
+        VibenetWatch.isValidAddress(draft) ? draft : nil
+    }
+
+    /// What the typed address resolves to, RIGHT NOW — `WalletScreen
+    /// .addressPreview`'s own reasoning, mirrored: the setup screen's
+    /// whole job is the moment between pasting an address and committing
+    /// it, and until this it said nothing in that moment. The face costs
+    /// NOTHING (`WalletFace`'s identicon is deterministic from the
+    /// address, so this is the exact same face the row will wear, drawn
+    /// a second early) and `watch.isWatching` is a plain array scan — no
+    /// balance, no live chain read, and no name resolution (see
+    /// `previewAddress`'s own doc for why vibenet has none to attempt):
+    /// any of those would be a metered call fired on every keystroke, and
+    /// a live fact about an account nobody has agreed to watch is a claim
+    /// this screen hasn't earned yet.
+    @ViewBuilder
+    private var addressPreview: some View {
+        if let address = previewAddress {
+            HStack(spacing: DS.Space.s3) {
+                WalletFace(address: address, size: 40, circular: true)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(watch.name(for: address) ?? VibenetRoom.shortAddress(address))
+                        .dsText(.callout15).fontWeight(.semibold)
+                        .foregroundStyle(DS.textPrimary)
+                        .lineLimit(1)
+                    Text(watch.isWatching(address) ? String(localized: "Already watching")
+                                                    : String(localized: "New address"))
+                        .dsText(.subhead13)
+                        .foregroundStyle(DS.textTertiary)
+                        .lineLimit(1)
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(.vertical, DS.Space.s2)
+            .padding(.horizontal, DS.Space.s3)
+            .background(DS.fillFaint, in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+            .transition(.opacity.combined(with: .scale(scale: 0.97, anchor: .top)))
+        }
+    }
+
     private var watchSection: some View {
         Section {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
@@ -229,6 +284,15 @@ struct VibenetScreen: View {
                     focus: $fieldFocused,
                     isArmed: VibenetWatch.isValidAddress(addressField.trimmingCharacters(in: .whitespacesAndNewlines)),
                     action: watchTyped)
+
+                // What you're about to watch, before you watch it — the
+                // `WalletScreen.addressPreview` shape, so both setup
+                // screens answer the same question the same way while
+                // you're mid-paste. Keyed on `previewAddress` so the
+                // spring runs when the FACE arrives, not on every
+                // keystroke that doesn't yet resolve to one.
+                addressPreview
+                    .animation(DS.Motion.standard, value: previewAddress)
 
                 // NO slab note here. It used to read "Read-only, no funds,
                 // no signing. vibenet redeploys its contracts periodically,

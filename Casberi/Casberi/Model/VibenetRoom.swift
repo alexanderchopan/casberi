@@ -488,6 +488,38 @@ struct VibenetActor: Identifiable, Equatable, Codable {
     }
 }
 
+/// One ERC-20-shaped balance a vibenet account holds — USDV or NFV today,
+/// whichever the live config named a contract for. A named struct rather
+/// than a tuple so `VibenetAccountItem` stays `Codable` (Codable doesn't
+/// synthesize for tuples, the same reason `VibenetKeyKindCount` exists
+/// above). `symbol` is the config's OWN field name, uppercased — never a
+/// live `symbol()` read, because the field naming ("usdv"/"nfv") already
+/// states the identity for free, and a second `eth_call` per account per
+/// pass to confirm what the config already told us would be spent for
+/// nothing.
+struct VibenetTokenBalance: Equatable, Codable {
+    let symbol: String
+    let amount: Double
+}
+
+/// A raw chain balance, rounded to a readable number of decimals — NEVER
+/// currency-formatted (§83): these are devnet tokens with no real market
+/// price, so a `$` sign or a thousands-grouped figure here would be
+/// exactly the fake status this codebase's honesty rule exists to ban.
+/// Four decimal places, trailing zeros trimmed — enough precision to
+/// separate "some" from "dust" on a devnet without printing eighteen
+/// digits nobody reads.
+enum VibenetBalanceFormat {
+    static func line(_ amount: Double) -> String {
+        guard amount.isFinite else { return "0" }
+        let rounded = (amount * 10_000).rounded() / 10_000
+        var s = String(format: "%.4f", rounded)
+        while s.hasSuffix("0") { s.removeLast() }
+        if s.hasSuffix(".") { s.removeLast() }
+        return s
+    }
+}
+
 struct VibenetAccountItem: Identifiable, Equatable, Codable {
     var id: String { address }
     let address: String
@@ -520,6 +552,23 @@ struct VibenetAccountItem: Identifiable, Equatable, Codable {
     /// .ordered`. Empty when the read failed or nothing has ever happened,
     /// same shape as `actors` — never a signal of its own.
     let history: [VibenetKeyMoment]
+    /// This account's native (vibenet ETH-equivalent) balance — nil when
+    /// the `eth_getBalance` read failed, NEVER a guessed zero (§83): a
+    /// genuine zero balance and an unreached read must not look the same
+    /// to a caller deciding whether to trust this number. Always 18
+    /// decimals (an EVM-wide constant for the native asset, the one
+    /// balance in this feature safe to scale without a live `decimals()`
+    /// read first — see `VibenetRead.account`'s own doc).
+    let nativeBalance: Double?
+    /// USDV/NFV balances — one entry per token the live config named a
+    /// contract for AND whose `decimals()` this build could confirm.
+    /// A token whose decimals read failed is simply ABSENT from this
+    /// array rather than present with an invented scale (the standing
+    /// lesson this codebase has paid for twice already: Solana SPL,
+    /// Gnosis Pay's USDCe being 6 not 18). Never summed across symbols —
+    /// they're different assets with no shared unit, the `PrivacyPoolsRoom`
+    /// rule.
+    let tokenBalances: [VibenetTokenBalance]
 
     /// The one alarm-worthy fact (the task's own ruling): a locked account.
     /// Deliberately NOT "not established" — an account that has never done
@@ -528,7 +577,8 @@ struct VibenetAccountItem: Identifiable, Equatable, Codable {
 
     init(address: String, reached: Bool, established: Bool, actors: [VibenetActor],
          locked: Bool, hasInitiatedUnlock: Bool, unlocksAt: UInt64?, unlockDelay: UInt16?,
-         changeSequences: VibenetChangeSequences? = nil, history: [VibenetKeyMoment] = []) {
+         changeSequences: VibenetChangeSequences? = nil, history: [VibenetKeyMoment] = [],
+         nativeBalance: Double? = nil, tokenBalances: [VibenetTokenBalance] = []) {
         self.address = address
         self.reached = reached
         self.established = established
@@ -542,6 +592,8 @@ struct VibenetAccountItem: Identifiable, Equatable, Codable {
         self.unlockDelay = unlockDelay
         self.changeSequences = changeSequences
         self.history = history
+        self.nativeBalance = nativeBalance
+        self.tokenBalances = tokenBalances
     }
 
     /// The row's own alarm clock, R2.2 — the soonest FUTURE expiry inside
@@ -879,15 +931,15 @@ struct VibenetRoom: Equatable, Codable {
                              kind: .secp256k1, scope: VibenetScope(raw: VibenetScope.sender | VibenetScope.selfPayer),
                              expiry: 4_102_444_800),
                 // The fixture sets `kind` EXPLICITLY rather than deriving it
-                // via `.identify` against a live config — so these three
-                // addresses are never compared against anything and their
-                // exact value is cosmetic. They deliberately do NOT start
-                // "0x8130…" (vibenet's own vanity prefix, see `shortAddress`'s
-                // doc below): the drift guard that forbids a hardcoded
-                // vibenet contract address anywhere outside a comment can't
-                // tell a demo fixture from a live call, and it shouldn't have
-                // to — a fake address that merely LOOKS unlike a real
-                // contract is the simpler fix.
+                // via `.identify` against a live config, so the p256 and
+                // webAuthn addresses below are never compared against
+                // anything and their exact value is cosmetic. They
+                // deliberately do NOT start "0x8130…" (vibenet's own vanity
+                // prefix, see `shortAddress`'s doc below): the drift guard
+                // that forbids a hardcoded vibenet contract address anywhere
+                // outside a comment can't tell a demo fixture from a live
+                // call, and it shouldn't have to — a fake address that
+                // merely LOOKS unlike a real contract is the simpler fix.
                 VibenetActor(actorId: "0x0000000000000000000000000000000000000000000000000000000000000002",
                              authenticator: "0xaaaa1111222233334444555566667777888899aa",
                              kind: .p256, scope: VibenetScope(raw: VibenetScope.sender), expiry: 0),
@@ -895,8 +947,17 @@ struct VibenetRoom: Equatable, Codable {
                              authenticator: "0xbbbb1111222233334444555566667777888899bb",
                              kind: .webAuthn, scope: VibenetScope(raw: VibenetScope.policy | VibenetScope.nonce),
                              expiry: 0),
+                // THE ONE demo address that IS compared against something:
+                // this actor's authenticator is `lockedPlain`'s own address
+                // below, a real watched-to-watched delegate relationship —
+                // "rich" authorized "lockedPlain" as its delegate. It's the
+                // only reason the demo has a non-empty mapping section for
+                // `VibenetAccountMapping.links` to find at all; every other
+                // authenticator in this fixture is cosmetic (see the comment
+                // above). Still deliberately non-vanity, same reason as its
+                // siblings.
                 VibenetActor(actorId: "0x0000000000000000000000000000000000000000000000000000000000000004",
-                             authenticator: "0xcccc1111222233334444555566667777888899cc",
+                             authenticator: "0x2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c",
                              kind: .delegate, scope: VibenetScope(raw: VibenetScope.sponsorPayer), expiry: 0),
                 // A scope this build has no name for — the roster's honest
                 // "+1 unknown" fallback, never an invented label.
@@ -918,7 +979,14 @@ struct VibenetRoom: Equatable, Codable {
                                  date: Date.now.addingTimeInterval(-12 * 86_400)),
                 VibenetKeyMoment(block: 340, logIndex: 0, authorized: true, kind: .webAuthn,
                                  date: Date.now.addingTimeInterval(-2 * 86_400)),
-            ]))
+            ]),
+            // Balances (2026-08-24): a native reading AND both token
+            // balances, so the demo exercises every branch the chip strip
+            // and the hero can draw — a lone account with neither would
+            // leave the "does this fold correctly" question untested.
+            nativeBalance: 2.5,
+            tokenBalances: [VibenetTokenBalance(symbol: "USDV", amount: 500.25),
+                            VibenetTokenBalance(symbol: "NFV", amount: 12)])
 
         let lockedPlain = VibenetAccountItem(
             address: "0x2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c",
@@ -930,7 +998,10 @@ struct VibenetRoom: Equatable, Codable {
                                    // this row's own collapsed subtitle
                                    // leads with it instead of a key count.
                                    expiry: UInt64(Date.now.addingTimeInterval(3 * 86_400).timeIntervalSince1970))],
-            locked: true, hasInitiatedUnlock: false, unlocksAt: nil, unlockDelay: nil)
+            locked: true, hasInitiatedUnlock: false, unlocksAt: nil, unlockDelay: nil,
+            // A native reading with NO token balances — the demo's other
+            // real branch: some accounts hold vibenet ETH and nothing else.
+            nativeBalance: 0.014)
 
         let unlocking = VibenetAccountItem(
             address: "0x3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d",
@@ -961,6 +1032,239 @@ struct VibenetRoom: Equatable, Codable {
         return compose(items: [rich, lockedPlain, unlocking, notEstablishedYet],
                         branch: "main", commit: "a9ae95e1bdemo",
                         configReached: true, redeployedSinceLastSeen: true)
+    }
+}
+
+// MARK: - Delegate mapping (2026-08-24)
+
+/// There is no concept of accounts relating to each other anywhere in this
+/// file — every watched address composes into a flat, independent
+/// `VibenetAccountItem`. But EIP-8130 gives us exactly ONE real signal that
+/// says otherwise: a `.delegate` actor's `authenticator` field IS another
+/// account's address, meaning that account can act for this one. That is
+/// the whole of it — there is no sub-account hierarchy in the spec to draw
+/// beyond this, and this file will never invent one past what a single
+/// `.delegate` actor actually states.
+struct VibenetDelegateLink: Identifiable, Equatable {
+    var id: String { "\(from):\(to)" }
+    /// The account that authorized the delegate.
+    let from: String
+    /// The watched address acting as `from`'s delegate.
+    let to: String
+}
+
+enum VibenetAccountMapping {
+    /// Every WATCHED-to-WATCHED delegate relationship in the room —
+    /// derived STRICTLY from `.delegate` actors whose `authenticator`
+    /// matches another item's `address`, case-insensitively (the same rule
+    /// `VibenetAuthenticatorKind.identify` already uses to compare a
+    /// live-fetched address against itself: an RPC's hex casing is not a
+    /// promise).
+    ///
+    /// A `.delegate` actor whose authenticator points at an address nobody
+    /// watches is real — this build simply has no second account to say
+    /// anything about — and is deliberately EXCLUDED here rather than
+    /// turned into a link to nowhere. The honesty rule cuts both ways:
+    /// never invent a relationship this build can't confirm, and never
+    /// silently drop the half of the picture it CAN.
+    ///
+    /// TOTAL order (`from`, then `to`, both case-insensitive) — a mapping
+    /// section that reshuffles between opens over an unchanged room reads
+    /// as broken, the same standard every other roster in this file holds.
+    static func links(_ items: [VibenetAccountItem]) -> [VibenetDelegateLink] {
+        var out: [VibenetDelegateLink] = []
+        for item in items {
+            for actor in item.actors where actor.kind == .delegate {
+                guard let target = items.first(where: {
+                    $0.address.caseInsensitiveCompare(actor.authenticator) == .orderedSame
+                }) else { continue }
+                out.append(VibenetDelegateLink(from: item.address, to: target.address))
+            }
+        }
+        return out.sorted { a, b in
+            let f = a.from.localizedCaseInsensitiveCompare(b.from)
+            if f != .orderedSame { return f == .orderedAscending }
+            return a.to.localizedCaseInsensitiveCompare(b.to) == .orderedAscending
+        }
+    }
+}
+
+// MARK: - Aggregate key summary (2026-08-24)
+
+/// One kind's share of the aggregate — a named struct rather than a tuple,
+/// so `VibenetKeyAggregate` stays plainly `Equatable`: a tuple has no
+/// automatic `Equatable` conformance for `Array` to key off, however
+/// Equatable its own elements are.
+struct VibenetKeyKindCount: Equatable {
+    let kind: VibenetAuthenticatorKind
+    let count: Int
+}
+
+/// The one key across every watched account whose clock ticks soonest —
+/// the address it belongs to, alongside the actor itself so a caller can
+/// still reach every other fact about it (`expiryLabel`, `kind`, `scope`)
+/// without this file re-deriving a second, narrower view of the same actor.
+struct VibenetKeySoonestExpiry: Equatable {
+    let address: String
+    let actor: VibenetActor
+
+    /// "…0b1c's key expires in 3 days" — reuses `VibenetActor
+    /// .expiryLabel`'s own clock arithmetic rather than re-deriving it, so
+    /// the callout and the key's own row (wherever it happens to be drawn)
+    /// can never disagree about when this key actually expires. Takes
+    /// `now` as a parameter, same discipline as every other clock fact in
+    /// this file — this reading is captured once by `VibenetKeyAggregation
+    /// .compose`, but the LABEL is recomputed fresh each time a caller
+    /// draws it, exactly like `unlockLabel(now:)` and `expiryLabel(now:)`
+    /// already are.
+    func line(now: Date) -> String {
+        String(localized: "\(VibenetRoom.shortAddress(address))'s key \(actor.expiryLabel(now: now).lowercased())")
+    }
+}
+
+/// Every key across every watched account, at once — the one fact nowhere
+/// in this room states today. `VibenetRoom.actorSummary` already answers
+/// "how many keys does THIS account have"; nothing answers "how many keys
+/// am I responsible for in total, and is any one of them about to lapse".
+struct VibenetKeyAggregate: Equatable {
+    let total: Int
+    /// By kind, in the Keystore's OWN declared order (`sortRank`) — never
+    /// alphabetical, and never "whichever kind this build happened to see
+    /// first while walking the accounts", which depends on which account
+    /// was iterated first and would make the identical room report a
+    /// different-looking order across two composes.
+    let byKind: [VibenetKeyKindCount]
+    /// How many of the watched accounts contribute at least one key — an
+    /// account holding none isn't counted, so "9 keys across 4 accounts"
+    /// never claims a key for an account that authorized nothing.
+    let accountCount: Int
+    /// The soonest FUTURE expiry across the whole room, or nil when
+    /// nothing is still ticking — `VibenetAccountItem.urgentLine`'s exact
+    /// rule (`expiry == 0` never counts, an already-expired key never
+    /// counts either), read once here rather than re-derived per caller.
+    let soonestExpiry: VibenetKeySoonestExpiry?
+
+    /// "9 keys authorized across 4 accounts" / "9 keys authorized" (one
+    /// account) / "1 key authorized" — the room-wide count nowhere else on
+    /// this card says.
+    var plainLine: String {
+        guard accountCount > 1 else {
+            return total == 1 ? String(localized: "1 key authorized")
+                              : String(localized: "\(total) keys authorized")
+        }
+        return String(localized: "\(total) keys authorized across \(accountCount) accounts")
+    }
+}
+
+enum VibenetKeyAggregation {
+    /// nil when the room draws no keys at all — an aggregate block with
+    /// nothing to aggregate is exactly the kind of empty state this
+    /// codebase omits rather than shows (§83), the same silence
+    /// `VibenetRoom.note` already keeps for a room with no lead.
+    static func compose(_ items: [VibenetAccountItem], now: Date) -> VibenetKeyAggregate? {
+        let pairs = items.flatMap { item in item.actors.map { (item.address, $0) } }
+        guard !pairs.isEmpty else { return nil }
+
+        var counts: [VibenetAuthenticatorKind: Int] = [:]
+        for (_, actor) in pairs { counts[actor.kind, default: 0] += 1 }
+        let byKind = VibenetAuthenticatorKind.allCases
+            .sorted { $0.sortRank < $1.sortRank }
+            .compactMap { kind -> VibenetKeyKindCount? in
+                guard let n = counts[kind], n > 0 else { return nil }
+                return VibenetKeyKindCount(kind: kind, count: n)
+            }
+
+        let accountCount = items.filter { !$0.actors.isEmpty }.count
+
+        let soonest = pairs
+            .filter { $0.1.expiry > 0 && TimeInterval($0.1.expiry) > now.timeIntervalSince1970 }
+            .min { a, b in
+                if a.1.expiry != b.1.expiry { return a.1.expiry < b.1.expiry }
+                let addr = a.0.localizedCaseInsensitiveCompare(b.0)
+                if addr != .orderedSame { return addr == .orderedAscending }
+                return a.1.actorId < b.1.actorId
+            }
+            .map { VibenetKeySoonestExpiry(address: $0.0, actor: $0.1) }
+
+        return VibenetKeyAggregate(total: pairs.count, byKind: byKind,
+                                    accountCount: accountCount, soonestExpiry: soonest)
+    }
+}
+
+// MARK: - Balance aggregate (2026-08-24) — the feed room's own stat block
+
+/// One symbol's TOTAL across every account that holds it — a named struct
+/// for the same reason `VibenetTokenBalance` is: `Array` needs its element
+/// Equatable, and a tuple never conforms.
+struct VibenetTokenTotal: Equatable {
+    let symbol: String
+    let amount: Double
+}
+
+/// The unscoped feed room's own reading — "N accounts and balance", the
+/// user's own words for the whole of what belongs there (mapping and
+/// per-account detail moved OFF this room entirely, see `VibenetRoomCard`'s
+/// own header doc). Distinct from `VibenetKeyAggregate` on purpose: this is
+/// MONEY, that is KEYS, and the two are drawn in that order on the card
+/// because that's the order the user asked for them in.
+struct VibenetBalanceAggregate: Equatable {
+    let accountCount: Int
+    /// A real state, never printed at zero — see `plainLine`.
+    let lockedCount: Int
+    /// Sum of every item's OWN `nativeBalance` that landed a reading — nil
+    /// when NOT ONE watched account has one, never a guessed 0 (§83): a
+    /// room where every native read failed and a room genuinely holding
+    /// zero must not look the same.
+    let nativeTotal: Double?
+    /// Per-symbol totals — summed WITHIN a symbol only (USDV with USDV,
+    /// NFV with NFV), never across symbols and never combined with
+    /// `nativeTotal`: different assets, no shared unit, the
+    /// `PrivacyPoolsRoom`/`VibenetAccountItem.tokenBalances` rule reused
+    /// at the room level. Sorted by symbol — TOTAL order, so the chip row
+    /// can't reshuffle between opens depending on which account the walk
+    /// reached first.
+    let tokenTotals: [VibenetTokenTotal]
+
+    /// "4 accounts" / "4 accounts · 1 locked" — `lockedCount == 0` is
+    /// omitted entirely rather than printed as "· 0 locked": a real state
+    /// (nothing is locked) is not the same as nothing to report, but zero
+    /// is also not alarming enough to earn a clause on the room's own
+    /// summary line (the row-level alarm badge already says so per row).
+    var plainLine: String {
+        var line = accountCount == 1
+            ? String(localized: "1 account")
+            : String(localized: "\(accountCount) accounts")
+        if lockedCount > 0 {
+            line += lockedCount == 1
+                ? String(localized: " · 1 locked")
+                : String(localized: " · \(lockedCount) locked")
+        }
+        return line
+    }
+}
+
+enum VibenetBalanceAggregation {
+    /// nil only when there are no accounts at all — every OTHER field is
+    /// independently omittable by the view (no native reading anywhere,
+    /// no token balance anywhere), which is why this returns a value even
+    /// when both totals are empty: "N accounts" is still real information
+    /// with nothing else to say yet.
+    static func compose(_ items: [VibenetAccountItem]) -> VibenetBalanceAggregate? {
+        guard !items.isEmpty else { return nil }
+        let natives = items.compactMap(\.nativeBalance)
+        let nativeTotal = natives.isEmpty ? nil : natives.reduce(0, +)
+        var sums: [String: Double] = [:]
+        for item in items {
+            for balance in item.tokenBalances {
+                sums[balance.symbol, default: 0] += balance.amount
+            }
+        }
+        let tokenTotals = sums
+            .map { VibenetTokenTotal(symbol: $0.key, amount: $0.value) }
+            .sorted { $0.symbol < $1.symbol }
+        return VibenetBalanceAggregate(
+            accountCount: items.count, lockedCount: items.filter(\.alarmed).count,
+            nativeTotal: nativeTotal, tokenTotals: tokenTotals)
     }
 }
 

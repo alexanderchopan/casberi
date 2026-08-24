@@ -14,6 +14,19 @@ import SwiftUI
 /// can never drift apart on what one account's detail actually says.
 struct VibenetAccountDetail: View {
     let item: VibenetAccountItem
+    /// This account's OUTGOING and INCOMING delegate relationships — both
+    /// directions, unfiltered, computed by the caller off the FULL room
+    /// (`VibenetAccountMapping.links(room.items)`), since this view has
+    /// only ever seen `item`, one account, and deriving a room-wide
+    /// mapping needs every other watched account too. Defaults to empty
+    /// so every existing call site keeps compiling unchanged; the two
+    /// real call sites (`VibenetRoomCard`'s inline single-account branch,
+    /// `VibenetAccountSheet`) both HAVE the full room in scope and pass
+    /// it through — see `linkedAccountsSection` for why the filtering by
+    /// direction happens here rather than at either call site (both
+    /// directions read differently and only this view knows which is
+    /// which for `item`).
+    var links: [VibenetDelegateLink] = []
 
     private static let mark = DS.brandHue(for: "Base Vibenet") ?? Color.fixed("#0052ff")
 
@@ -23,6 +36,7 @@ struct VibenetAccountDetail: View {
             if !item.actors.isEmpty {
                 keysSection
             }
+            linkedAccountsSection
             historySection
             syncSection
             doorsSection
@@ -188,6 +202,105 @@ struct VibenetAccountDetail: View {
         // so it gets an object's surface rather than sitting in a run of
         // undifferentiated text. Several keys in a row read as several
         // things, which is the fact this section is about.
+        .dsWidgetSurface(cornerRadius: DS.Radius.widget, fillOpacity: 0.5)
+    }
+
+    // MARK: - Linked accounts (2026-08-24)
+
+    /// A small struct rather than a bare tuple so `ForEach`/`spokeRow`
+    /// read cleanly — `address` is the linked account, `label` is the
+    /// ALREADY direction-correct plain-English clause (see
+    /// `linkedAccountsSection`'s own comment for the ground-truth
+    /// derivation of which direction gets which words — KEPT verbatim
+    /// across two failed presentation attempts, because it was never
+    /// the part that was wrong).
+    ///
+    /// `Identifiable` on `address + label` rather than `address` alone:
+    /// a MUTUAL relationship (this account and another each authorized
+    /// the other as their own delegate) produces two real rows sharing
+    /// one address, and `address` alone would collide in `ForEach`.
+    private struct Spoke: Identifiable {
+        var id: String { "\(address):\(label)" }
+        let address: String
+        let label: String
+    }
+
+    /// This account's own share of `VibenetAccountMapping.links`, as a
+    /// plain row list — the THIRD presentation this section has worn.
+    /// Two spatial layouts (a two-chip flow, then a centered hub with
+    /// spokes) both read as implying a hierarchy that isn't there; user,
+    /// on the hub: *"for the linked accounts on the one account screen
+    /// that doesn't work either, perhaps we need a different way."*
+    /// Settled: no diagram at all — a row per linked account, the exact
+    /// same visual weight as every other section on this screen (the
+    /// Keys rows immediately above already do this, so there's nothing
+    /// new to invent). Silent when there are none (§83) — most accounts
+    /// have no delegate relationship at all, and a section that draws
+    /// itself empty on every ordinary account is worse than one that
+    /// simply isn't there.
+    @ViewBuilder
+    private var linkedAccountsSection: some View {
+        let outgoing = links.filter { $0.from.caseInsensitiveCompare(item.address) == .orderedSame }
+        let incoming = links.filter { $0.to.caseInsensitiveCompare(item.address) == .orderedSame }
+        // GROUND TRUTH, re-derived here rather than trusted from memory,
+        // because getting a delegate direction backward misstates a real
+        // permission: `VibenetAccountMapping.links` builds
+        // `VibenetDelegateLink(from: A, to: B)` when A's OWN actor list
+        // names B as a `.delegate` — i.e. A authorized B, so B is the one
+        // who ACTS, on A's behalf. Concretely: Alice authorizes Bob as her
+        // delegate → link(from: Alice, to: Bob) → Bob can act for Alice.
+        //
+        // OUTGOING here (`link.from == item`) means `item` is Alice: the
+        // other account (`link.to`) is Bob, who can act for `item`.
+        // Label: "Can act for you". INCOMING (`link.to == item`) means
+        // `item` IS the delegate — the other account (`link.from`)
+        // authorized `item`, so `item` acts for it. Label: "You can act
+        // for".
+        let spokes: [Spoke] =
+            outgoing.map { Spoke(address: $0.to, label: String(localized: "Can act for you")) } +
+            incoming.map { Spoke(address: $0.from, label: String(localized: "You can act for")) }
+        if !spokes.isEmpty {
+            VStack(alignment: .leading, spacing: DS.Space.s3) {
+                Text(String(localized: "Linked accounts"))
+                    .dsText(.heading17)
+                    .foregroundStyle(DS.textPrimary)
+                    .fixedSize(horizontal: false, vertical: true)
+                VStack(alignment: .leading, spacing: DS.Space.s2) {
+                    ForEach(spokes) { spoke in
+                        spokeRow(spoke)
+                    }
+                }
+            }
+        }
+    }
+
+    /// One linked account, one row — `keyRow`'s own object treatment
+    /// (padding, `.dsWidgetSurface(cornerRadius: DS.Radius.widget,
+    /// fillOpacity: 0.5)`), reused rather than inventing a fourth
+    /// surface style on one screen: a linked account is an OBJECT the
+    /// same way a key is, and the section right above this one already
+    /// makes that argument. Face, its own identity (name if watched has
+    /// one, else the short address — the same identity every other
+    /// surface in this room shows, so a row never introduces an account
+    /// under a different name than its own roster row does), and the
+    /// one clause saying which direction the relationship runs.
+    private func spokeRow(_ spoke: Spoke) -> some View {
+        HStack(spacing: DS.Space.s3) {
+            WalletFace(address: spoke.address, size: 30, circular: true)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(VibenetWatch.shared.name(for: spoke.address) ?? VibenetRoom.shortAddress(spoke.address))
+                    .dsText(.heading17)
+                    .foregroundStyle(DS.textPrimary)
+                    .lineLimit(1)
+                Text(spoke.label)
+                    .dsText(.label11)
+                    .foregroundStyle(DS.textTertiary)
+                    .lineLimit(1)
+            }
+            Spacer(minLength: 0)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(DS.Space.s3)
         .dsWidgetSurface(cornerRadius: DS.Radius.widget, fillOpacity: 0.5)
     }
 

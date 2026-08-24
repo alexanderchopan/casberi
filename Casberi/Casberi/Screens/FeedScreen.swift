@@ -374,15 +374,6 @@ struct FeedScreen: View {
         /// Carries a handle and a source, so no `Thing` and no liveness
         /// question.
         case person(source: String, handle: String)
-        /// A vibenet account's own detail — the same sheet the setup
-        /// screen opens, reached from the room's own card (2026-08-23,
-        /// reported: "someow be able to click into the account"). Routed
-        /// here for the standing reason every case above it is: the card
-        /// lives inside this List's rows and a `.sheet` on a row resolves
-        /// to the same presenting controller as this one (ruling
-        /// 2026-07-28). Carries the address alone, no `Thing`, no
-        /// liveness question.
-        case vibenetAccount(String)
 
         var id: String {
             switch self {
@@ -395,7 +386,6 @@ struct FeedScreen: View {
             case .market(let p): "market:\(p.id)"
             case .nftPicks(let address, _): "nftPicks:\(address)"
             case .person(let source, let handle): "person:\(source):\(handle)"
-            case .vibenetAccount(let address): "vibenetAccount:\(address)"
             }
         }
     }
@@ -2732,17 +2722,6 @@ struct FeedScreen: View {
                         source: source, handle: handle,
                         displayName: nil, bio: nil, avatarURL: nil))
                 }
-            case .vibenetAccount(let address):
-                // Composed fresh from the live watch list rather than
-                // threading `sourceHead`'s already-scoped room through —
-                // the account you tap may not be the one the rail has
-                // narrowed to (the "All" room draws every card), and the
-                // sheet's own detail is address-keyed regardless.
-                VibenetAccountSheet(
-                    address: address,
-                    room: VibenetRoomSource.card() ?? VibenetRoom.compose(
-                        items: [], branch: nil, commit: nil, configReached: false),
-                    onRemove: { _ in })
             }
         }
         #if !targetEnvironment(macCatalyst)
@@ -3034,12 +3013,20 @@ struct FeedScreen: View {
                     // no-op): unwatching and naming are both setup acts,
                     // and a destructive or state-changing verb reached from
                     // a feed row it would silently re-compose behind is the
-                    // wrong place for either — the row's own sheet and the
-                    // setup screen both still carry them. `onOpen` DOES
-                    // work here (2026-08-23) — the one door this card was
-                    // missing.
-                    VibenetRoomCard(room: room, onRemove: { _ in }, onOpen: { address in
-                        feedSheet = .vibenetAccount(address)
+                    // wrong place for either — the setup screen still
+                    // carries them. `onOpen` is left NIL here (2026-08-24,
+                    // corrected — see `VibenetRoomCard`'s own header doc):
+                    // Wallet's own unscoped room has no per-wallet door
+                    // anywhere, only scoping, so a feed-room roster tap
+                    // must only scope too, never open a sheet. `onScope`
+                    // is `chrome.vibenetScope`'s own toggle rule — tapping
+                    // the account already scoped to returns to "All",
+                    // matching `VibenetScopeRail`'s own tap.
+                    VibenetRoomCard(room: room, onRemove: { _ in }, onScope: { address in
+                        withAnimation(DS.Motion.standard) {
+                            chrome.vibenetScope = (chrome.vibenetScope?.caseInsensitiveCompare(address) == .orderedSame)
+                                ? nil : address
+                        }
                     })
                 case .altana(let card):
                     AltanaRoomCard(card: card) {

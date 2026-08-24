@@ -53,7 +53,14 @@ struct VibenetAccountSheet: View {
                         // sheet still exists (2026-08-23): it's still the
                         // way in from "All", where several accounts are on
                         // screen and only one line each fits.
-                        VibenetAccountDetail(item: item)
+                        // `room` here is ALWAYS the full, unscoped watch
+                        // list (see this file's own doc — the sheet
+                        // deliberately bypasses the rail's scope), so
+                        // `VibenetAccountMapping.links` can see every
+                        // watched-to-watched relationship this account
+                        // takes part in, not just the ones inside
+                        // whatever the rail currently narrows to.
+                        VibenetAccountDetail(item: item, links: VibenetAccountMapping.links(room.items))
                             .padding(DS.Space.s4)
                     }
                     .dsPageBackground()

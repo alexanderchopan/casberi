@@ -8,6 +8,10 @@
 #     — VibenetActorLog.survivors        (the authorize/revoke log UNION)
 #     — VibenetAccountItem.orderedActors (a roster's stable order)
 #     — VibenetRoom.ordered/headline/note/rowLine/actorSummary/shortAddress
+#     — VibenetAccountMapping.links       (the delegate-mapping, 2026-08-24)
+#     — VibenetKeyAggregation.compose     (the room-wide key summary, 2026-08-24)
+#     — VibenetBalanceFormat.line         (balance display, never USD, 2026-08-24)
+#     — VibenetBalanceAggregation.compose (the feed room's own stat block, 2026-08-24)
 #
 # WHY A HARNESS. `-vibenetProbe` needs a real devnet address with a real actor
 # roster to exercise anything interesting, and nothing on this host can make
@@ -129,6 +133,30 @@ grep -q 'enum VibenetSeenCommit' "$TMP/bridge.nc.swift" \
   || { echo "✗ VibenetSeenCommit is missing — the redeploy note has nothing to compare against"; exit 1; }
 grep -q 'guard let previous else { return false }' "$TMP/bridge.nc.swift" \
   || { echo "✗ VibenetSeenCommit no longer stays silent on a first-ever read — it would report a redeploy on someone's very first open"; exit 1; }
+
+# Balances (2026-08-24): decimals must be READ LIVE off the chain, never
+# assumed — this codebase has been burned by hardcoding ERC-20 decimals
+# twice already (Solana SPL, Gnosis Pay's USDCe being 6 not 18).
+grep -q 'VibenetABI.decimalsCall' "$TMP/bridge.nc.swift" \
+  || { echo "✗ VibenetBridge.swift no longer reads decimals() for USDV/NFV — a hardcoded scale would repeat the SOL-decimals bug"; exit 1; }
+grep -q 'guard (0...36).contains(value) else { return nil }' "$TMP/bridge.nc.swift" \
+  || { echo "✗ VibenetTokenDecimals no longer refuses an implausible decimals() answer — a reverted call could silently scale a balance by 10^0"; exit 1; }
+# The native balance is the ONE reading safe to hardcode at 18 decimals —
+# an EVM-wide constant, not a per-token guess — so its own scale must
+# still be present and distinct from the live-read USDV/NFV path above.
+grep -q '/ 1e18' "$TMP/bridge.nc.swift" \
+  || { echo "✗ VibenetBridge.swift no longer scales the native balance by 18 decimals"; exit 1; }
+# `nativeBalance` must stay OPTIONAL, nil-defaulted — a failed read and a
+# genuine zero balance must never look the same (§83).
+grep -q 'nativeBalance: Double? = nil' "$TMP/room.nc.swift" \
+  || { echo "✗ VibenetAccountItem.nativeBalance is no longer optional/nil-defaulted — a failed read could no longer be told apart from a real zero"; exit 1; }
+# Never invent a dollar figure for a devnet token with no real market
+# price (§83) — reads COMMENT-STRIPPED copies, since this rule is
+# documented by name in the source (the Obsidian/Cursor lesson).
+if grep -q 'WalletValue.money\|priceUSD\|usdValue' "$TMP/bridge.nc.swift" "$TMP/room.nc.swift"; then
+  echo "✗ a vibenet file appears to price a balance in USD — these are devnet tokens with no real market price (§83)"
+  exit 1
+fi
 
 echo "drift guards ✓"
 
@@ -553,6 +581,10 @@ check("R2: at least one account carries EXACTLY one history moment — the strip
       demo.items.contains { $0.history.count == 1 })
 check("R2: at least one account has a key inside the 7-day urgency window — the collapsed row's own alarm",
       demo.items.contains { $0.urgentLine(now: .now)?.hasPrefix("Key expires") == true })
+check("the demo carries one real watched-to-watched delegate link — otherwise the mapping section never demos",
+      VibenetAccountMapping.links(demo.items).count == 1)
+check("the demo's aggregate key summary is non-nil — otherwise that section never demos either",
+      VibenetKeyAggregation.compose(demo.items, now: .now) != nil)
 
 // MARK: - VibenetActor.expiryLabel / VibenetAccountItem.unlockLabel
 
@@ -800,6 +832,200 @@ check("a real address is tail-only elided — one truncation, not two",
 check("a short string passes through untouched",
       VibenetRoom.shortAddress("0xabc") == "0xabc")
 
+// MARK: - VibenetAccountMapping.links — the ONE real account-to-account signal
+
+print("")
+print("VibenetAccountMapping.links")
+func delegateActor(to authenticator: String, actorId: String = "d") -> VibenetActor {
+    VibenetActor(actorId: actorId, authenticator: authenticator, kind: .delegate,
+                 scope: VibenetScope(raw: 0), expiry: 0)
+}
+let alice = "0xa1"
+let bob = "0xb2"
+let carol = "0xc3"
+let stranger = "0xdead"
+
+check("no items at all — nothing to derive a mapping from",
+      VibenetAccountMapping.links([]).isEmpty)
+
+let aliceDelegatesToBob = account(address: alice, actors: [delegateActor(to: bob)])
+let bobPlain = account(address: bob)
+check("a delegate authenticator matching a WATCHED account produces a link",
+      VibenetAccountMapping.links([aliceDelegatesToBob, bobPlain])
+        == [VibenetDelegateLink(from: alice, to: bob)])
+
+let aliceDelegatesToStranger = account(address: alice, actors: [delegateActor(to: stranger)])
+check("a delegate authenticator matching NO watched account produces no link — never fabricated",
+      VibenetAccountMapping.links([aliceDelegatesToStranger, bobPlain]).isEmpty)
+
+let aliceHoldsAPlainKeyPointingAtBob = account(address: alice, actors: [
+    VibenetActor(actorId: "k", authenticator: bob, kind: .secp256k1,
+                 scope: VibenetScope(raw: 0), expiry: 0)])
+check("a non-delegate actor never produces a link, however its authenticator reads",
+      VibenetAccountMapping.links([aliceHoldsAPlainKeyPointingAtBob, bobPlain]).isEmpty)
+
+let aliceDelegatesToUppercasedBob = account(address: alice, actors: [delegateActor(to: bob.uppercased())])
+check("the compare is case-insensitive — an RPC's hex casing is not a promise",
+      VibenetAccountMapping.links([aliceDelegatesToUppercasedBob, bobPlain])
+        == [VibenetDelegateLink(from: alice, to: bob)])
+
+// Order must be TOTAL — a mapping section that reshuffles between opens
+// over an unchanged room reads as broken, the standard every roster here
+// already holds.
+let bobDelegatesToAlice = account(address: bob, actors: [delegateActor(to: alice, actorId: "e")])
+let carolDelegatesToAlice = account(address: carol, actors: [delegateActor(to: alice, actorId: "f")])
+let alicePlain = account(address: alice)
+check("links sort by `from`, then `to`, regardless of input order",
+      VibenetAccountMapping.links([carolDelegatesToAlice, bobDelegatesToAlice, alicePlain])
+        == [VibenetDelegateLink(from: bob, to: alice), VibenetDelegateLink(from: carol, to: alice)])
+
+// MARK: - VibenetKeyAggregation.compose — the room-wide key summary
+
+print("")
+print("VibenetKeyAggregation.compose")
+let refNowAgg = Date(timeIntervalSince1970: 1_000_000_000)
+check("an empty room has nothing to aggregate — the empty state this codebase omits rather than shows",
+      VibenetKeyAggregation.compose([], now: refNowAgg) == nil)
+check("an account with no actors contributes nothing — still nil",
+      VibenetKeyAggregation.compose([account(actors: [])], now: refNowAgg) == nil)
+
+let ak1 = VibenetActor(actorId: "1", authenticator: "0x1", kind: .secp256k1, scope: VibenetScope(raw: 0), expiry: 0)
+let ak2 = VibenetActor(actorId: "2", authenticator: "0x2", kind: .p256, scope: VibenetScope(raw: 0), expiry: 0)
+let ak3 = VibenetActor(actorId: "3", authenticator: "0x3", kind: .secp256k1, scope: VibenetScope(raw: 0), expiry: 0)
+let roomA = account(address: "0xa", actors: [ak1, ak2])
+let roomB = account(address: "0xb", actors: [ak3])
+let agg = VibenetKeyAggregation.compose([roomA, roomB], now: refNowAgg)
+check("total counts every actor across every account",
+      agg?.total == 3)
+check("accountCount only counts accounts that contribute at least one key",
+      agg?.accountCount == 2)
+check("byKind counts within each kind",
+      agg?.byKind.first(where: { $0.kind == .secp256k1 })?.count == 2)
+check("an account holding NO keys is excluded from accountCount",
+      VibenetKeyAggregation.compose([roomA, account(address: "0xc", actors: [])], now: refNowAgg)?.accountCount == 1)
+check("plainLine spans several accounts",
+      agg?.plainLine == "3 keys authorized across 2 accounts")
+check("a single-account aggregate has no 'across' clause",
+      VibenetKeyAggregation.compose([roomA], now: refNowAgg)?.plainLine == "2 keys authorized")
+
+let webAuthnOnlyAccount = account(address: "0xw1", actors: [
+    VibenetActor(actorId: "w", authenticator: "0x5", kind: .webAuthn, scope: VibenetScope(raw: 0), expiry: 0)])
+let secpOnlyAccount = account(address: "0xw2", actors: [
+    VibenetActor(actorId: "s", authenticator: "0x6", kind: .secp256k1, scope: VibenetScope(raw: 0), expiry: 0)])
+check("byKind orders by the contract's own sortRank, never by which ACCOUNT was iterated first",
+      VibenetKeyAggregation.compose([webAuthnOnlyAccount, secpOnlyAccount], now: refNowAgg)?.byKind.map(\.kind)
+        == [.secp256k1, .webAuthn])
+
+func expiringActor(_ expiry: UInt64, id: String = "e") -> VibenetActor {
+    VibenetActor(actorId: id, authenticator: "0x9", kind: .secp256k1, scope: VibenetScope(raw: 0), expiry: expiry)
+}
+check("expiry == 0 (never) never counts toward the soonest reading",
+      VibenetKeyAggregation.compose([account(address: "0xa", actors: [expiringActor(0)])], now: refNowAgg)?.soonestExpiry == nil)
+// `expiry == 0` must be excluded by its OWN explicit check, not merely by
+// falling out of the ">now" comparison — the two coincide for any ordinary
+// clock (0 is always before a real "now"), so this needs a `now` that
+// ISN'T ordinary to actually separate the two: before the epoch, where
+// TimeInterval(0) > now.timeIntervalSince1970 alone would wrongly read
+// "never expires" as the soonest-ticking key in the room.
+let beforeEpoch = Date(timeIntervalSince1970: -100)
+check("expiry == 0 stays excluded even against a 'now' before the epoch, where 0 would otherwise read as future",
+      VibenetKeyAggregation.compose([account(address: "0xa", actors: [expiringActor(0)])], now: beforeEpoch)?.soonestExpiry == nil)
+
+let pastExpiry = UInt64(refNowAgg.timeIntervalSince1970) - 60
+check("an already-expired key never counts as the soonest — it's a standing fact, not a countdown",
+      VibenetKeyAggregation.compose([account(address: "0xa", actors: [expiringActor(pastExpiry)])], now: refNowAgg)?.soonestExpiry == nil)
+
+let soonExpiry = UInt64(refNowAgg.timeIntervalSince1970) + 3600
+let laterExpiry = UInt64(refNowAgg.timeIntervalSince1970) + 7200
+let soonestAgg = VibenetKeyAggregation.compose([
+    account(address: "0xa", actors: [expiringActor(laterExpiry, id: "late")]),
+    account(address: "0xb", actors: [expiringActor(soonExpiry, id: "soon")]),
+], now: refNowAgg)
+check("the soonest FUTURE expiry wins across accounts, regardless of input order",
+      soonestAgg?.soonestExpiry?.actor.actorId == "soon")
+check("the soonest expiry's line names the account it belongs to",
+      soonestAgg?.soonestExpiry?.line(now: refNowAgg).hasPrefix("0xb's key") == true)
+
+let tieAgg = VibenetKeyAggregation.compose([
+    account(address: "0xb", actors: [expiringActor(soonExpiry, id: "tie-b")]),
+    account(address: "0xa", actors: [expiringActor(soonExpiry, id: "tie-a")]),
+], now: refNowAgg)
+check("a tied soonest expiry breaks deterministically by address, not input order",
+      tieAgg?.soonestExpiry?.address == "0xa")
+
+// MARK: - VibenetBalanceFormat.line — never currency-formatted (§83)
+
+print("")
+print("VibenetBalanceFormat.line")
+check("a whole number prints bare, no trailing zeros or decimal point",
+      VibenetBalanceFormat.line(100.0) == "100")
+check("zero prints as a bare zero",
+      VibenetBalanceFormat.line(0.0) == "0")
+check("a clean fraction keeps exactly its own digits",
+      VibenetBalanceFormat.line(2.5) == "2.5")
+check("rounds to at most 4 decimal places",
+      VibenetBalanceFormat.line(1.23456789) == "1.2346")
+check("a non-finite amount never prints garbage — falls back to a bare zero",
+      VibenetBalanceFormat.line(.infinity) == "0")
+check("a NaN amount falls back the same way",
+      VibenetBalanceFormat.line(.nan) == "0")
+check("no currency symbol or thousands grouping ever appears — devnet tokens have no real price",
+      !VibenetBalanceFormat.line(1234.5).contains("$") && !VibenetBalanceFormat.line(1234.5).contains(","))
+
+// MARK: - VibenetBalanceAggregation.compose — the feed room's own stat block
+
+print("")
+print("VibenetBalanceAggregation.compose")
+check("no accounts at all — nothing to aggregate",
+      VibenetBalanceAggregation.compose([]) == nil)
+
+let balAgg = VibenetBalanceAggregation.compose([
+    VibenetAccountItem(address: "0xa", reached: true, established: true, actors: [],
+                        locked: false, hasInitiatedUnlock: false, unlocksAt: nil, unlockDelay: nil,
+                        nativeBalance: 1.0,
+                        tokenBalances: [VibenetTokenBalance(symbol: "USDV", amount: 10)]),
+    VibenetAccountItem(address: "0xb", reached: true, established: true, actors: [],
+                        locked: true, hasInitiatedUnlock: false, unlocksAt: nil, unlockDelay: nil,
+                        nativeBalance: 2.5,
+                        tokenBalances: [VibenetTokenBalance(symbol: "USDV", amount: 5),
+                                        VibenetTokenBalance(symbol: "NFV", amount: 3)]),
+    VibenetAccountItem(address: "0xc", reached: true, established: true, actors: [],
+                        locked: false, hasInitiatedUnlock: false, unlocksAt: nil, unlockDelay: nil),
+])
+check("accountCount counts every item, including one with no balance reading at all",
+      balAgg?.accountCount == 3)
+check("lockedCount counts the alarmed accounts",
+      balAgg?.lockedCount == 1)
+check("nativeTotal SUMS every landed reading — never treats a missing one as zero",
+      balAgg?.nativeTotal == 3.5)
+check("tokenTotals sum WITHIN a symbol, never across symbols",
+      balAgg?.tokenTotals.first(where: { $0.symbol == "USDV" })?.amount == 15)
+check("a symbol only one account holds is still totalled correctly",
+      balAgg?.tokenTotals.first(where: { $0.symbol == "NFV" })?.amount == 3)
+check("tokenTotals are sorted by symbol — a TOTAL order, not input/iteration order",
+      balAgg?.tokenTotals.map(\.symbol) == ["NFV", "USDV"])
+
+check("nativeTotal is nil when NOT ONE account has a reading — never a guessed 0",
+      VibenetBalanceAggregation.compose([
+        VibenetAccountItem(address: "0xa", reached: true, established: true, actors: [],
+                            locked: false, hasInitiatedUnlock: false, unlocksAt: nil, unlockDelay: nil)
+      ])?.nativeTotal == nil)
+check("tokenTotals is empty when no account holds any token balance",
+      VibenetBalanceAggregation.compose([
+        VibenetAccountItem(address: "0xa", reached: true, established: true, actors: [],
+                            locked: false, hasInitiatedUnlock: false, unlocksAt: nil, unlockDelay: nil)
+      ])?.tokenTotals.isEmpty == true)
+
+check("plainLine: several accounts, none locked, never prints '0 locked'",
+      VibenetBalanceAggregate(accountCount: 3, lockedCount: 0, nativeTotal: nil, tokenTotals: [])
+        .plainLine == "3 accounts")
+check("plainLine: a real locked count IS printed",
+      VibenetBalanceAggregate(accountCount: 3, lockedCount: 1, nativeTotal: nil, tokenTotals: [])
+        .plainLine == "3 accounts · 1 locked")
+check("plainLine: singular account, singular locked",
+      VibenetBalanceAggregate(accountCount: 1, lockedCount: 1, nativeTotal: nil, tokenTotals: [])
+        .plainLine == "1 account · 1 locked")
+
 print("")
 if failures == 0 {
     print("✓ vibenet self-test: all assertions passed")
@@ -979,6 +1205,103 @@ mutate "summaryLine must count adds and revokes separately, never conflate them"
 mutate "VibenetChangeSequences.chips must lead with multichain, not local" \
   '[(String(multichain), String(localized: "cross-chain changes")),' \
   '[(String(localSequence), String(localized: "cross-chain changes")),'
+
+# A case-sensitive compare would tell someone their account has NO
+# delegate relationship the moment a live RPC happens to hand back the
+# other address's hex in a different casing than this build stored it —
+# the exact "an RPC's hex casing is not a promise" failure this file's own
+# doc calls out.
+mutate "VibenetAccountMapping.links must compare authenticator addresses case-INSENSITIVELY" \
+  '$0.address.caseInsensitiveCompare(actor.authenticator) == .orderedSame' \
+  '$0.address == actor.authenticator'
+
+# Dropping the `.delegate` filter would read EVERY actor's authenticator as
+# a potential relationship — including a plain secp256k1 key's
+# authenticator, which is `Keystore.sol`'s own fixed K1 constant and would
+# collide with itself across every account in the room, inventing a web of
+# relationships that was never there.
+mutate "VibenetAccountMapping.links must only ever consider .delegate actors" \
+  'for actor in item.actors where actor.kind == .delegate {' \
+  'for actor in item.actors {'
+
+# The mapping section must never reshuffle between opens — flipping the
+# primary sort to descending is exactly the kind of drift a card comparison
+# across two composes of an unchanged room would catch as "broken".
+mutate "VibenetAccountMapping.links must sort by from ascending, not descending" \
+  'if f != .orderedSame { return f == .orderedAscending }' \
+  'if f != .orderedSame { return f == .orderedDescending }'
+
+# `expiry == 0` is Keystore.sol's own convention for "never expires" —
+# folding it into the soonest reading would report a key that can never
+# lapse as the most urgent one in the entire room.
+mutate "VibenetKeyAggregation.compose must never count expiry == 0 toward the soonest reading" \
+  '$0.1.expiry > 0 && TimeInterval($0.1.expiry) > now.timeIntervalSince1970' \
+  'TimeInterval($0.1.expiry) > now.timeIntervalSince1970'
+
+# The whole point of a "soonest expiry" callout is to point at what needs
+# attention FIRST — swapping the comparator points at whatever lapses
+# LAST instead, burying the one key someone actually needs to act on.
+mutate "VibenetKeyAggregation.compose must pick the SOONEST future expiry, never the latest" \
+  'if a.1.expiry != b.1.expiry { return a.1.expiry < b.1.expiry }' \
+  'if a.1.expiry != b.1.expiry { return a.1.expiry > b.1.expiry }'
+
+# Without this filter, an account that authorized nothing would still be
+# counted in "N keys across M accounts" — inflating M and understating how
+# concentrated the room's keys actually are.
+mutate "VibenetKeyAggregation.compose's accountCount must exclude accounts with no actors" \
+  'let accountCount = items.filter { !$0.actors.isEmpty }.count' \
+  'let accountCount = items.count'
+
+# byKind must read the Keystore's own declared order (ascending sortRank).
+# Reversing it silently swaps which kind leads the summary — a cosmetic
+# change on a two-kind room, but a real misreading on one with several,
+# where the least-capable kind would lead instead of the most standard one.
+mutate "VibenetKeyAggregation.compose's byKind must sort sortRank ASCENDING, not descending" \
+  '.sorted { $0.sortRank < $1.sortRank }' \
+  '.sorted { $0.sortRank > $1.sortRank }'
+
+# A coarser round loses real precision — the whole reason 4 decimal places
+# was chosen (enough to separate "some" from "dust" on a devnet) rather
+# than the 2 places a currency figure would use, which this format is
+# explicitly NOT.
+mutate "VibenetBalanceFormat.line must round to 4 decimal places, not fewer" \
+  'let rounded = (amount * 10_000).rounded() / 10_000' \
+  'let rounded = (amount * 1).rounded() / 1'
+
+# Without the finite guard, a non-finite amount reaches `String(format:)`
+# directly and prints whatever Foundation happens to render for infinity/
+# NaN — an unreadable balance on the one card this feature exists to make
+# trustworthy, instead of the honest "0" this file promises on failure.
+mutate "VibenetBalanceFormat.line must guard non-finite input before formatting" \
+  'guard amount.isFinite else { return "0" }' \
+  ' '
+
+# A nil-guard dropped here turns "nobody's native balance ever landed"
+# into a confidently-wrong "0 ETH" — the guessed-zero failure §83 exists
+# to prevent, on the one card this feature is building trust around.
+mutate "VibenetBalanceAggregation.compose must never guess 0 when no account has a native reading" \
+  'let nativeTotal = natives.isEmpty ? nil : natives.reduce(0, +)' \
+  'let nativeTotal: Double? = natives.reduce(0, +)'
+
+# Summing every symbol into one bucket would add USDV to NFV — two
+# different assets with no shared unit, exactly the "never combined"
+# rule this room's own model already enforces per account.
+mutate "VibenetBalanceAggregation.compose must sum tokenTotals WITHIN a symbol, never merge symbols" \
+  'sums[balance.symbol, default: 0] += balance.amount' \
+  'sums["all", default: 0] += balance.amount'
+
+# Without a TOTAL order, the token chips would reorder between opens
+# depending on which watched account the walk happened to reach first —
+# the same standing rule every other roster/chip list in this file holds.
+mutate "VibenetBalanceAggregation.compose's tokenTotals must sort by symbol ascending, not descending" \
+  '.sorted { $0.symbol < $1.symbol }' \
+  '.sorted { $0.symbol > $1.symbol }'
+
+# A locked count of zero is a real, unalarming state — printing "· 0
+# locked" on every quiet room is noise pretending to be a finding.
+mutate "VibenetBalanceAggregate.plainLine must never print a zero locked count" \
+  'if lockedCount > 0 {' \
+  'if true {'
 
 echo ""
 echo "✓ vibenet-selftest: drift guards, assertions and mutations all passed"

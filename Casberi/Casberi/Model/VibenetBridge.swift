@@ -45,10 +45,11 @@ enum VibenetIdentity {
 
 // MARK: - The live contracts config
 
-/// The shape of `api.vibes.base.org/api/vibenet/contracts`'s response —
-/// every field but the four this file actually reads is carried through
-/// unread rather than dropped, so a future read (the faucet, USDV/NFV/
-/// vibecheck) doesn't need to re-touch the parse.
+/// The shape of `api.vibes.base.org/api/vibenet/contracts`'s response.
+/// `usdv`/`nfv` are read now (2026-08-24, `VibenetRead.tokenBalance`) —
+/// `faucetAddress`/`vibecheck` are still carried through unread rather
+/// than dropped, so a future read of either doesn't need to re-touch the
+/// parse.
 struct VibenetContracts: Equatable, Codable {
     let branch: String?
     let commit: String?
@@ -322,6 +323,16 @@ enum VibenetChain {
         return n >= 0 ? n : nil
     }
 
+    /// Native (vibenet ETH-equivalent) balance — `eth_getBalance`, standard
+    /// JSON-RPC rather than an `eth_call`: there's no contract to call, the
+    /// node tracks an account's native balance itself. Always 18 decimals
+    /// (an EVM-wide constant for the native asset, not a per-token guess —
+    /// the one balance in this feature safe to scale without a live
+    /// `decimals()` read first; see `VibenetRead.account`'s own doc).
+    static func getBalance(address: String) async -> String? {
+        await call(method: "eth_getBalance", params: [address, "latest"]) as? String
+    }
+
     /// MEASURED 2026-08-23: the RPC enforces a 100,000-block ceiling on
     /// `eth_getLogs` ("query exceeds max block range 100000") — this devnet
     /// simply outgrew the "brand-new, small devnet, no history large enough
@@ -444,6 +455,17 @@ enum VibenetABI {
         "0x82e5f7c6" + padAddress(address)
     }
 
+    /// `balanceOf(address)` — 0x70a08231, the standard ERC-20 selector,
+    /// used against USDV/NFV (2026-08-24).
+    static func balanceOfCall(_ address: String) -> String {
+        "0x70a08231" + padAddress(address)
+    }
+
+    /// `decimals()` — 0x313ce567, standard ERC-20, no arguments. Read LIVE
+    /// per contract (`VibenetTokenDecimals`) rather than assumed — see that
+    /// type's own doc for why 18 is never a safe default here.
+    static let decimalsCall = "0x313ce567"
+
     /// One 32-byte WORD at `index` (0-based) out of an ABI-encoded return.
     /// Every return this file reads is fixed-width — no dynamic `bytes`, no
     /// offset table — so this is the whole decoder.
@@ -476,6 +498,48 @@ enum VibenetABI {
     static func boolWord(_ hex: String, at index: Int) -> Bool {
         guard let w = word(hex, at: index) else { return false }
         return WalletIngest.hexToDouble("0x" + w) != 0
+    }
+
+    /// The raw, UNSCALED value of a `uint256` word — deliberately NOT
+    /// routed through `uintWord`'s 1e15 ceiling, which exists for a
+    /// duration/timestamp field and would silently zero out any real token
+    /// balance (one token at 18 decimals is already 1e18 raw, well past
+    /// that ceiling). `WalletIngest.hexToDouble` already refuses a
+    /// non-finite result; the CALLER divides by the token's own live-read
+    /// `decimals()` before this is ever displayed, and only after that
+    /// division does "too large to be real" become a meaningful question.
+    static func rawAmountWord(_ hex: String, at index: Int = 0) -> Double? {
+        guard let w = word(hex, at: index) else { return nil }
+        let d = WalletIngest.hexToDouble("0x" + w)
+        return d.isFinite ? d : nil
+    }
+}
+
+/// USDV/NFV's `decimals()`, cached forever per contract —
+/// `WalletApprovals.tokenFacts`'s exact reasoning, mirrored: neither value
+/// can change for a deployed ERC-20, so a contract is asked once per
+/// install and never again. A read that answers with nothing is NOT
+/// cached — a flaky public host must not pin "unreadable" for the life of
+/// the install, since a missing `decimals` is exactly what makes a balance
+/// unscaleable (never assumed at 18, the standing lesson: Solana SPL,
+/// Gnosis Pay's USDCe being 6 not 18).
+enum VibenetTokenDecimals {
+    static func read(contract: String) async -> Int? {
+        let key = "vibenet.decimals.\(contract.lowercased())"
+        let defaults = UserDefaults.standard
+        if defaults.object(forKey: key) != nil { return defaults.integer(forKey: key) }
+        guard let hex = await VibenetChain.ethCall(to: contract, data: VibenetABI.decimalsCall),
+              let word = VibenetABI.word(hex, at: 0)
+        else { return nil }
+        let value = WalletIngest.hexToInt("0x" + word)
+        // A garbage/reverted `eth_call` can decode to an implausible value
+        // (`RailgunBridge.decodeDecimals`'s own lesson: several public
+        // gateways answer a REVERTING call with `{"result":"0x"}` rather
+        // than an error, and an empty word must not be read as zero
+        // decimals) — bounded the same way that file bounds it.
+        guard (0...36).contains(value) else { return nil }
+        defaults.set(value, forKey: key)
+        return value
     }
 }
 
@@ -582,9 +646,24 @@ enum VibenetRead {
         async let lockTask = VibenetChain.ethCall(
             to: contracts.keystore, data: VibenetABI.lockStatusCall(address))
         async let sequencesTask = changeSequences(account: address, keystore: contracts.keystore)
+        // Balances (2026-08-24), read alongside everything above rather
+        // than as a second pass over the watch list — one more `async let`
+        // apiece, paced by the same `IngestSupport.boundedGather(maxConcurrent: 3)`
+        // that already governs how many addresses run at once.
+        async let nativeTask = VibenetChain.getBalance(address: address)
+        async let usdvTask = tokenBalance(account: address, contract: contracts.usdv, symbol: "USDV")
+        async let nfvTask = tokenBalance(account: address, contract: contracts.nfv, symbol: "NFV")
         let events = await eventsTask
         let lockRaw = await lockTask
         let sequences = await sequencesTask
+        // nil on ANY failure (no hex back, or the value doesn't parse) —
+        // never a guessed zero (§83): a genuinely empty vibenet account and
+        // one this read never reached must not render the same.
+        let nativeBalance = (await nativeTask).flatMap { hex -> Double? in
+            let d = WalletIngest.hexToDouble(hex)
+            return d.isFinite ? d / 1e18 : nil
+        }
+        let tokenBalances = [await usdvTask, await nfvTask].compactMap { $0 }
 
         var actors: [VibenetActor] = []
         if let events {
@@ -636,7 +715,26 @@ enum VibenetRead {
                                   actors: actors, locked: locked,
                                   hasInitiatedUnlock: hasInitiatedUnlock,
                                   unlocksAt: unlocksAt, unlockDelay: unlockDelay,
-                                  changeSequences: sequences, history: history)
+                                  changeSequences: sequences, history: history,
+                                  nativeBalance: nativeBalance, tokenBalances: tokenBalances)
+    }
+
+    /// One ERC-20-shaped balance for `account` on `contract` — nil for any
+    /// of three reasons this file deliberately does NOT distinguish
+    /// further (no contract named by the live config, the balance read
+    /// failed, or `decimals()` couldn't be confirmed): every one of them
+    /// means "no honest number to show", never "assume zero" or "assume
+    /// 18 decimals" (§83, and the standing decimals lesson — see
+    /// `VibenetTokenDecimals`'s own doc).
+    private static func tokenBalance(account: String, contract: String?, symbol: String)
+        async -> VibenetTokenBalance? {
+        guard let contract else { return nil }
+        async let balanceTask = VibenetChain.ethCall(to: contract, data: VibenetABI.balanceOfCall(account))
+        async let decimalsTask = VibenetTokenDecimals.read(contract: contract)
+        guard let balanceHex = await balanceTask, let raw = VibenetABI.rawAmountWord(balanceHex),
+              let decimals = await decimalsTask
+        else { return nil }
+        return VibenetTokenBalance(symbol: symbol, amount: raw / pow(10, Double(decimals)))
     }
 }
 
