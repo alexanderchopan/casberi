@@ -531,6 +531,26 @@ struct ThingSheetView: View {
                         .padding(.top, DS.Space.s3)
                         .settleIn(delay: 0.06)
                 }
+                // A vibenet key event's own anatomy (prd §464) — see
+                // `VibenetEventCard`. BELOW the title, never above it: the
+                // title is the event ("New passkey authorized for …9a0b") and
+                // this card is what follows FROM it — which account, how many
+                // keys it carries now, when this one dies. Composed in `body`
+                // rather than in a `.task` like the money receipt because
+                // every input is already in hand: the event's own stored
+                // fields plus the cached room, no store read and no await.
+                //
+                // No `lead`: `summary` is the title minus the address, so
+                // printing it here sets the same sentence twice, the second
+                // time smaller.
+                if let facts = vibenetEventFacts {
+                    VibenetEventCard(facts: facts,
+                                     lead: nil,
+                                     onAccount: openAddressCard)
+                        .padding(.horizontal, DS.Space.s4)
+                        .padding(.top, DS.Space.s3)
+                        .settleIn(delay: 0.08)
+                }
                 // Events speak through WHEN below; and when the content is
                 // just the title again (a short note with no body beyond its
                 // own headline), showing it twice reads as a stutter.
@@ -1547,6 +1567,13 @@ struct ThingSheetView: View {
             && !SocialSheetSource.eyebrowLeadsWithPerson(thing, shape: socialShape)
             && reception?.provenance == nil
             && noteReception?.provenance == nil
+            // …and never on a vibenet event, which has its own card above
+            // (prd §464). "From — on vibenet" is the title's own last two
+            // words wearing a field label — the "one-row table saying
+            // nothing" this block's own §363 note already stood down for
+            // elsewhere. The card states the account, its live key count and
+            // the expiry, which is what the row was standing in for.
+            && vibenetEventFacts == nil
         let hasCounterparty = showsWho && thing.source == "Wallet"
             && !(thing.counterpartyAddress ?? "").isEmpty
         let anyRow = hasSite || hasEcho || hasAgent || hasFrom
@@ -2150,6 +2177,36 @@ struct ThingSheetView: View {
             .frame(maxWidth: .infinity)
             .onAppear { tracking = MoneyActivityDriver.isTracking(id) }
         }
+    }
+
+    /// A vibenet key event's facts, or nil for everything else (prd §464).
+    ///
+    /// Cheap enough to sit on the body path: two string compares reject every
+    /// other row in the corpus before anything is read, and the room itself is
+    /// a cached value (`VibenetRoomSource.card()`), not a fetch.
+    ///
+    /// The account comes from `authorHandle`, which every landed vibenet event
+    /// stamps for exactly this reason — recovering it by parsing the address
+    /// back out of a localized title is the thing `MoneyReceiptSource`'s own
+    /// doc forbids, for the same reason here.
+    private var vibenetEventFacts: VibenetEventFacts? {
+        guard thing.kind == .event, thing.source == VibenetIdentity.source,
+              let account = thing.authorHandle, !account.isEmpty else { return nil }
+        let item = VibenetRoomSource.card()?.items.first {
+            $0.address.caseInsensitiveCompare(account) == .orderedSame
+        }
+        // A key event is the one that can carry permissions; a lock or an
+        // unlock is about the ACCOUNT, so it never claims a key it isn't
+        // about. `sourceRef`'s own segment is the authority — the title is
+        // localized and must never be parsed.
+        let concernsKey = thing.sourceRef?.hasPrefix("vibenet:actor") ?? false
+        return VibenetEventFacts.compose(
+            account: account,
+            accountName: VibenetWatch.shared.name(for: account)
+                ?? VibenetRoom.shortAddress(account),
+            actors: item?.actors ?? [],
+            dueAt: thing.dueAt,
+            concernsKey: concernsKey)
     }
 
     /// Opening the address behind the receipt's subject face (prd §369

@@ -674,10 +674,19 @@ enum DemoSeedAll {
     /// without the address — the two fields `VibenetEventRow` reads.
     private static func vibenet() -> [Thing] {
         [
-            ("0x1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b", "New passkey authorized", "auth:demo1", 1.0),
-            ("0x1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b", "New wallet key authorized", "auth:demo2", 1.0),
+            // **`actor:`, NOT `auth:` — the REAL bridge's own ref segment**
+            // (`VibenetEventKind.refSegment`), corrected 2026-08-25. The demo
+            // invented its own spelling, and the moment anything downstream
+            // matched on the real one — the event sheet asks `vibenet:actor`
+            // to decide whether an event is about a KEY (§464) — every demo
+            // authorization silently failed the test and drew no permissions
+            // and no expiry. Same class as §349's Peer/Privacy Pools demo
+            // refs: the rows land, the room renders, and the one reading that
+            // needed the ref is quietly absent.
+            ("0x1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b", "New passkey authorized", "actor:demo1", 1.0),
+            ("0x1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b", "New wallet key authorized", "actor:demo2", 1.0),
             ("0x2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c", "Locked on vibenet", "locked:demo3", 2.0),
-            ("0x3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d", "Key revoked", "auth:demo4", 4.0),
+            ("0x3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d", "Key revoked", "actor:demo4", 4.0),
         ].map { address, phrase, ref, days in
             let short = VibenetRoom.shortAddress(address)
             // The TITLE keeps naming the account — it is what the All feed,
@@ -689,6 +698,19 @@ enum DemoSeedAll {
                        ref: "vibenet:\(ref)", days: days, hour: 11) { thing in
                 thing.authorHandle = address
                 thing.summary = phrase
+                // ONE authorization carries the expiry of a real key in the
+                // fixture, so the event sheet's permission chips and its
+                // "Expires" row are exercised by the demo (§464). The value is
+                // `demoFixture`'s own actor-1 expiry on this account, and that
+                // is the whole requirement: `VibenetEventFacts` names a key's
+                // permissions only when EXACTLY ONE key on the account matches
+                // the event's expiry, so a number invented here would silently
+                // match nothing and the chips would never draw. The account's
+                // other two actors carry expiry 0 ("never"), which is what
+                // makes this match unique.
+                if ref == "actor:demo2" {
+                    thing.dueAt = Date(timeIntervalSince1970: 4_102_444_800)
+                }
             }
         }
     }

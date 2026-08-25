@@ -45,6 +45,10 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 ROOM="Casberi/Casberi/Model/VibenetRoom.swift"
+# `VibenetEventFacts.swift` is Foundation-only for the same reason and is
+# compiled WHOLE beside it — the expiry join it owns is the one place this
+# feature can state a permission it cannot prove (prd §464).
+FACTS="Casberi/Casberi/Model/VibenetEventFacts.swift"
 BRIDGE="Casberi/Casberi/Model/VibenetBridge.swift"
 CATALOG="Casberi/Casberi/Model/BridgeCatalog.swift"
 REACH="Casberi/Casberi/Model/NetworkReach.swift"
@@ -1535,6 +1539,58 @@ check("plainLine: singular account, singular locked",
         .plainLine == "1 account · 1 locked")
 
 print("")
+
+// MARK: - VibenetEventFacts — the expiry join (prd §464)
+
+print("")
+print("VibenetEventFacts — what a key event may claim")
+let keyExpiry: UInt64 = 4_102_444_800
+let expiringKey = VibenetActor(
+    actorId: "0x01", authenticator: "0xa", kind: .secp256k1,
+    scope: VibenetScope(raw: VibenetScope.sender | VibenetScope.selfPayer),
+    expiry: keyExpiry)
+let neverKey = VibenetActor(
+    actorId: "0x02", authenticator: "0xb", kind: .p256,
+    scope: VibenetScope(raw: VibenetScope.sender), expiry: 0)
+let due = Date(timeIntervalSince1970: TimeInterval(keyExpiry))
+
+check("a UNIQUE expiry match names that key's permissions",
+      VibenetEventFacts.matchedPermissions(actors: [expiringKey, neverKey], dueAt: due)
+      == ["Send anywhere", "Pay own gas"])
+// THE WHOLE POINT OF THE TYPE. Two keys minted in one block with one lifetime
+// is a real shape (a session and its sponsor), and there is no id to tell them
+// apart — so the card must say NOTHING rather than pick one. A wrong chip is a
+// claim about what somebody can do with money, made where nobody can check it.
+let twin = VibenetActor(
+    actorId: "0x03", authenticator: "0xc", kind: .webAuthn,
+    scope: VibenetScope(raw: VibenetScope.policy), expiry: keyExpiry)
+check("an AMBIGUOUS match names nothing — never a guess between two keys",
+      VibenetEventFacts.matchedPermissions(actors: [expiringKey, twin], dueAt: due).isEmpty)
+check("no expiry on the event names nothing",
+      VibenetEventFacts.matchedPermissions(actors: [expiringKey], dueAt: nil).isEmpty)
+check("a never-expiring key is never matched by a zero",
+      VibenetEventFacts.matchedPermissions(actors: [neverKey],
+                                           dueAt: Date(timeIntervalSince1970: 0)).isEmpty)
+check("an expiry that matches no key names nothing",
+      VibenetEventFacts.matchedPermissions(actors: [expiringKey, neverKey],
+                                           dueAt: Date(timeIntervalSince1970: 12345)).isEmpty)
+
+let facts = VibenetEventFacts.compose(
+    account: "0xabc", accountName: "Treasury",
+    actors: [expiringKey, neverKey], dueAt: due, concernsKey: true)
+check("compose counts the account's LIVE keys", facts.keysNow == 2)
+check("compose carries the expiry through", facts.expires == due)
+// A lock or an unlock is about the ACCOUNT. It must never borrow a key's
+// permissions just because the expiry happens to line up.
+let lockFacts = VibenetEventFacts.compose(
+    account: "0xabc", accountName: "Treasury",
+    actors: [expiringKey, neverKey], dueAt: due, concernsKey: false)
+check("an event that is NOT about a key claims no permissions",
+      lockFacts.permissions.isEmpty)
+check("an account with no actors reports no key count",
+      VibenetEventFacts.compose(account: "0xabc", accountName: "T",
+                                actors: [], dueAt: nil, concernsKey: true).keysNow == nil)
+
 if failures == 0 {
     print("✓ vibenet self-test: all assertions passed")
 } else {
@@ -1544,7 +1600,7 @@ if failures == 0 {
 SWIFT
 
 echo "Assertions"
-if ! swiftc -O -o "$TMP/run" "$ROOM" "$TMP/main.swift" 2>"$TMP/build.log"; then
+if ! swiftc -O -o "$TMP/run" "$ROOM" "$FACTS" "$TMP/main.swift" 2>"$TMP/build.log"; then
   echo "✗ VibenetRoom.swift did not compile with the harness"
   tail -25 "$TMP/build.log"
   exit 1

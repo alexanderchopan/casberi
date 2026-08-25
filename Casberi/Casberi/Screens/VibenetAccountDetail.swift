@@ -444,7 +444,11 @@ struct VibenetAccountDetail: View {
         // for".
         let spokes: [Spoke] =
             outgoing.map { Spoke(address: $0.to, label: String(localized: "Can act for you")) } +
-            incoming.map { Spoke(address: $0.from, label: String(localized: "You can act for")) }
+            // "…them", not a clause that stops dead. The name sits on the line
+            // ABOVE the label, so "You can act for" alone renders as a
+            // sentence cut off mid-word — its sibling above ("Can act for
+            // you") is complete and the pair read as one broken and one fine.
+            incoming.map { Spoke(address: $0.from, label: String(localized: "You can act for them")) }
         if !spokes.isEmpty {
             VStack(alignment: .leading, spacing: DS.Space.s3) {
                 Text(String(localized: "Linked accounts"))
