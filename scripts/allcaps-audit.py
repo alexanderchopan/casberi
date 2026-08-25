@@ -31,9 +31,10 @@ sentence carrying an acronym has lowercase in it and is invisible here, while a
 label that is nothing but capitals is exactly the thing §8 bans.
 
 The 3-letter floor is what lets a genuine short acronym stand alone — `P2SH`,
-an `ID` field label — without an exemption. `KNOWN_ACRONYMS` is for the longer
-ones, and is EMPTY by design: an entry is a conscious "this literal is an
-initialism, not emphasis", and on the tree this landed with there were none.
+an `ID` field label — without an exemption. `KNOWN_ACRONYMS` is for the rest:
+an entry is a conscious "this WORD is an initialism, not emphasis", judged per
+word so a ticker exempted once stays exempt in every phrase it appears in
+while everything else in that phrase is still read.
 
 A label position is read WHOLE — see `LABEL_ARG`. That second pass was added
 after the first one shipped blind to ternaries and helper-composed verbs, which
@@ -105,24 +106,36 @@ WORD = re.compile(r"[A-Za-z][A-Za-z']*")
 INTERPOLATION = re.compile(r'\\\(.*?\)')
 
 # A conscious ruling per entry: "this literal is an initialism, not emphasis."
-# Empty by design — see the module docstring.
-KNOWN_ACRONYMS: set[str] = set()
+#
+# "ETH" — a CURRENCY TICKER, the same class of thing as USDV or NFV beside it
+# on the very same card. Those two are never flagged only because they arrive
+# as `VibenetTokenBalance.symbol`, i.e. as data, while the native symbol is the
+# one written in the source; the difference is where the string comes from, not
+# what it is. Re-casing it to "Eth" would invent a spelling no exchange, wallet
+# or explorer uses, which is a worse §8 outcome than the shout it fixes. The
+# entry is the ticker itself rather than the whole label, so any other ALL-CAPS
+# phrase on that card is still a finding.
+KNOWN_ACRONYMS: set[str] = {"ETH"}
 
 MIN_WORD = 3
 
 
 def shouts(literal: str) -> bool:
     """Is this literal set in ALL CAPS, in the sense §8 bans?"""
-    if literal in KNOWN_ACRONYMS:
-        return False
     # An interpolation carries an IDENTIFIER, not display text — `DS.device`
     # renders as "iPhone". Reading it as content reports every sentence that
     # names a type as shouting, which was 40 of the first run's findings.
     bare = INTERPOLATION.sub("", literal)
-    words = WORD.findall(bare)
-    if not words:
-        return False
     if any(c.islower() for c in bare):
+        return False
+    # Exempt PER WORD, not per literal. A ticker rarely stands alone — it sits
+    # beside a figure, as "\(total) ETH" — so a whole-literal match would need
+    # an entry per phrase the ticker ever appears in, and each new phrasing
+    # would reopen a ruling already made about the word. Dropping the exempt
+    # words and re-judging what remains keeps every OTHER shout in the same
+    # label a finding, which a literal-level pass would have swallowed.
+    words = [w for w in WORD.findall(bare) if w not in KNOWN_ACRONYMS]
+    if not words:
         return False
     return max(len(w) for w in words) >= MIN_WORD
 
@@ -194,6 +207,11 @@ def self_test() -> int:
         ("Your Cloudflare API token has expired", False,
          "a sentence carrying an acronym has lowercase in it"),
         ("Export as OPML", False, "same, with the acronym trailing"),
+        # The word-level exemption, proven in BOTH directions — an exemption
+        # that cannot fail is a snooze wearing a registry's clothes.
+        (r"\(total) ETH", False, "a ticker beside its figure — the exempted word"),
+        ("ETH BALANCE", True, "the ticker is exempt; the word shouting beside it is not"),
+        ("BTC", True, "a ticker nobody has ruled on is still a finding"),
         # Interpolations carry identifiers, not display text.
         ("Signed in on \\(DS.device)", False,
          "DS is a type name, not a word on screen"),
