@@ -2021,6 +2021,26 @@ enum VibenetValueHistory {
         let change = (last - first) / first
         return abs(change) < 0.0005 ? nil : change
     }
+
+    /// The move in ETH — last minus first over the very series the line draws
+    /// (2026-08-25, prd §475).
+    ///
+    /// Wallet states its move as "▲ $224.51 (1.8%) today", figure first, and
+    /// its own note gives the reason this exists: the dollars "come from the
+    /// plotted series (last − first), never from a second source: the line is
+    /// what the reader is looking at, so any other derivation could contradict
+    /// it on screen." Same rule here, in ETH.
+    ///
+    /// **Gated on `delta` rather than computed independently**, so the amount
+    /// and the percentage can never disagree about whether a move happened at
+    /// all: a change under `delta`'s own floor has no direction to report, and
+    /// an amount printed beside no percentage would be exactly that claim.
+    static func move(_ samples: [VibenetValueSample]) -> Double? {
+        guard delta(samples) != nil,
+              let first = samples.first?.native, let last = samples.last?.native
+        else { return nil }
+        return last - first
+    }
 }
 
 /// The demo's balance curve, as PURE logic so the harness can hold it.
@@ -2488,11 +2508,20 @@ struct VibenetKeyAggregate: Equatable {
         return String(localized: "Across \(accountCount) accounts")
     }
 
-    /// "9 keys authorized" / "1 key authorized" — the count ALONE, for the
-    /// headline that sits under `scopeEyebrow`.
+    /// "9 keys" / "1 key" — the COUNT ALONE (2026-08-25, prd §475).
+    ///
+    /// It said "9 keys authorized" until this pass, which was right while the
+    /// card introduced itself: there was no header above it and the sentence
+    /// had to carry its own subject. §475 gave the card Wallet's own section
+    /// header ("What's authorized"), and the word became the second half of a
+    /// title the reader has just read — user: *"underneath it just say 8 keys
+    /// instead of '8 keys authorized', we don't need to repeat that word."*
+    ///
+    /// `plainLine` below keeps the verb, and must: it is the one-line form for
+    /// the probe and the harness, where nothing states the subject first.
     var countHeadline: String {
-        total == 1 ? String(localized: "1 key authorized")
-                   : String(localized: "\(total) keys authorized")
+        total == 1 ? String(localized: "1 key")
+                   : String(localized: "\(total) keys")
     }
 
     /// "9 keys authorized across 4 accounts" / "9 keys authorized" (one
@@ -2500,12 +2529,19 @@ struct VibenetKeyAggregate: Equatable {
     /// this card says.
     ///
     /// The ONE-LINE form, kept for `-vibenetRoomProbe` and the harness, which
-    /// want a single sentence rather than the card's two slots. Composed FROM
-    /// the two above rather than restating them, so the probe and the screen
-    /// can never report a different count or a different account scope — the
-    /// §418 duplicate-parser lesson applied to a sentence.
+    /// want a single sentence rather than the card's two slots.
+    ///
+    /// It carries the verb `countHeadline` dropped in §475, because this form
+    /// stands alone with no section header in front of it — a probe line
+    /// reading "8 keys across 3 accounts" says nothing about what the keys
+    /// ARE. Both still read the same `total` and the same `scopeEyebrow`, so
+    /// the count and the scope can never drift between the two; only the word
+    /// the header already supplies differs.
     var plainLine: String {
-        guard let scope = scopeEyebrow else { return countHeadline }
+        guard let scope = scopeEyebrow else {
+            return total == 1 ? String(localized: "1 key authorized")
+                              : String(localized: "\(total) keys authorized")
+        }
         return String(localized: "\(total) keys authorized \(scope.lowercased())")
     }
 

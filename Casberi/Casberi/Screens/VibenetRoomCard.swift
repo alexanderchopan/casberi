@@ -260,25 +260,62 @@ struct VibenetRoomCard: View {
         // is wide enough to be seen as a gap; the contents of all four cards
         // are untouched.
         VStack(alignment: .leading, spacing: DS.Space.s6) {
-            balanceCard
+            // **THE HERO IS BARE (2026-08-25, prd §475).** Reported: "the
+            // sparkline and balance are in one card in the vibenet room, but
+            // in the wallet room neither are in a card."
+            //
+            // Wallet's own hero carries the ruling in its source
+            // (`walletTilesSection`, 2026-08-16): "NO GROUND AT ALL — Apple
+            // has never shipped a balance inside a coloured card… a container
+            // around them was the app claiming emphasis the content already
+            // had." A figure, its move and its curve ARE the hero; the card
+            // was this room claiming an emphasis they already carry, and it
+            // made the one reading both rooms share the one element that
+            // looked different in each.
+            balanceHero
             holdingsCard
+            // SECTION HEADERS, Wallet's own (`walletGroupHeader`): "What you
+            // hold" / "What it's doing" are `heading22` in PRIMARY ink,
+            // OUTSIDE the card they introduce, at the same margin as the bare
+            // hero above. This room said the same kind of thing in `label12`
+            // tertiary INSIDE each card — a caption, which is a different
+            // object from a section title, and the reason the two rooms read
+            // as different products at a glance.
+            sectionHeader(String(localized: "What's authorized"))
             keysCard
+            sectionHeader(String(localized: "Linked accounts"))
             linkedCard
             // OUTSIDE the cards, and quieter for it. Provenance is a fact
             // about the whole room rather than about any one reading, so a
             // card of its own would make a section out of a footnote.
             //
-            // s4 AND NOT s2: every card sets its text at its own `s4` padding,
-            // so at `s2` this last line hung 8pt short of everything above it
-            // — two left edges on one screen, which is what a reader sees as
-            // "the indentation is wrong" without being able to name it.
+            // NO horizontal padding of its own — the outer margin below now
+            // does that job for the footnote and every card alike, uniformly.
+            // Giving it a SECOND s4 here (on top of the outer one) is the
+            // over-correction that would put it back out of alignment with
+            // the cards' own text, the opposite direction from the bug this
+            // whole modifier exists to fix.
             if let note = VibenetRoom.note(room, drawn: drawn.count) {
                 Text(note)
                     .dsText(.label12)
                     .foregroundStyle(DS.textTertiary)
-                    .padding(.horizontal, DS.Space.s4)
             }
         }
+        // **THE MARGIN FROM THE SCREEN EDGE (2026-08-25, prd §474).** Reported:
+        // "the margins aren't the same consistency as on the wallet, so it
+        // looks like they are touching the screen." Correct, and measurable:
+        // this room is presented through `insightSection`, which is
+        // DELIBERATELY edge-to-edge ("the card owns its own padding" — every
+        // sibling room-head card, `GnosisPayRoomCard`/`StripeRoomCard`/
+        // `SafeRoomCard` among them, applies `.padding(.horizontal, DS.Space
+        // .s4)` after its own `dsWidgetSurface()` for exactly that reason —
+        // the same rung `WalletCardStyle.rowInsets` gives every Wallet card via
+        // `listRowInsets`. This card never did, on either of its two shapes
+        // (this one and `oneSurface` below), so its `surfaceSheet` background
+        // ran flush to both edges of the phone while every neighbouring room's
+        // card sat 18pt in from them — the exact inconsistency reported, and
+        // the fix is the one line every sibling already carries.
+        .padding(.horizontal, DS.Space.s4)
     }
 
     /// The surface every stacked card wears — one definition, so four cards
@@ -420,24 +457,39 @@ struct VibenetRoomCard: View {
         .padding(DS.Space.s4)
         .frame(maxWidth: .infinity, alignment: .leading)
         .dsWidgetSurface()
+        // Same fix, same reason as `stackedRoom` — this is the room's OTHER
+        // shape (a single account, or the roster on `VibenetScreen`/the
+        // address book), and it had the identical gap: no outer margin, so
+        // its surface ran to both screen edges while every sibling room-head
+        // card sits 18pt in from them.
+        .padding(.horizontal, DS.Space.s4)
     }
 
     // MARK: - The four stacked cards (prd §467, direction B)
 
-    /// THE CROWN, and the chart it sits over. Holdings moved out to their
-    /// own card — the crown answers "how much", the holdings block answers
-    /// "in what", and stacking two answers inside one box is the jumble
-    /// this direction exists to undo.
+    /// THE CROWN, BARE — Wallet's own hero recipe (prd §475, 2026-08-25).
     ///
-    /// The chart BLEEDS to the card's edges (negative insets cancelling the
-    /// card's own padding), so it reads as the card's floor rather than as
-    /// a picture sitting inside a margin — the one place a full-bleed is
-    /// right here, because a balance chart's whole job is the shape of the
-    /// line and every pixel of width is more of it.
+    /// Reported: *"the sparkline and balance are in one card in the vibenet
+    /// room, but in the wallet room neither are in a card."* Wallet's own
+    /// source carries the ruling (`walletTilesSection`, 2026-08-16): "NO
+    /// GROUND AT ALL… a container around them was the app claiming emphasis
+    /// the content already had."
+    ///
+    /// **ONE margin, not two.** `stackedRoom`'s own `.padding(.horizontal,
+    /// DS.Space.s4)` (§474) is the whole inset now, which is exactly what
+    /// `WalletCardStyle.rowInsets` gives Wallet's bare hero. A card here would
+    /// add a SECOND `s4` and put this room's figure 36pt from the edge while
+    /// the section headers below it sat at 18 — the two-margin mismatch §474
+    /// just fixed, reintroduced by the container rather than by the padding.
+    ///
+    /// The chart no longer bleeds: a full-bleed was the right answer INSIDE a
+    /// card (the line's whole job is its shape, and a card's own padding was
+    /// stealing width from it), and with the card gone there is nothing left
+    /// to cancel — negative insets would now push the curve off the screen.
     @ViewBuilder
-    private var balanceCard: some View {
+    private var balanceHero: some View {
         if let aggregate = VibenetBalanceAggregation.compose(room.items) {
-            card {
+            VStack(alignment: .leading, spacing: 0) {
                 // The MODEL's heading, never a literal: "Across your
                 // accounts" is only true when the total below really covers
                 // all of them, and `compose` silently drops every account
@@ -446,19 +498,28 @@ struct VibenetRoomCard: View {
                     .dsText(.label12)
                     .foregroundStyle(DS.textTertiary)
                 if let nativeTotal = aggregate.nativeTotal {
+                    // `price48`, Wallet's crown rung — not `price40`. The two
+                    // rooms state the same kind of reading and were stating it
+                    // two sizes apart.
                     Text("\(VibenetBalanceFormat.line(nativeTotal)) ETH")
-                        .dsText(.price40)
+                        .dsText(.price48)
                         .foregroundStyle(DS.textPrimary)
                         .monospacedDigit()
                         .lineLimit(1)
                         .minimumScaleFactor(0.6)
                         .padding(.top, 2)
                 }
-                if let change = VibenetValueHistory.delta(history) {
+                // THE MOVE, WITH ITS AMOUNT (§475). Wallet states the move as
+                // "▲ $224.51 (1.8%) today" — the figure FIRST, the percent in
+                // parentheses — and its own note says why: the percent alone
+                // cannot say how much, and the amount is what the reader is
+                // actually looking at on the line above.
+                if let change = VibenetValueHistory.delta(history),
+                   let move = VibenetValueHistory.move(history) {
                     HStack(spacing: 5) {
                         Image(systemName: change >= 0 ? "arrowtriangle.up.fill" : "arrowtriangle.down.fill")
                             .dsGlyph(9)
-                        Text(VibenetBalanceFormat.percent(change))
+                        Text("\(VibenetBalanceFormat.line(abs(move))) ETH (\(VibenetBalanceFormat.percent(change)))")
                             .dsText(.callout15).fontWeight(.semibold)
                             .monospacedDigit()
                         Text(String(localized: "since watching"))
@@ -489,14 +550,91 @@ struct VibenetRoomCard: View {
                                                      change: VibenetValueHistory.delta(history) ?? 0),
                                    accent: TokenChartStyle.accent(
                                        change: VibenetValueHistory.delta(history) ?? 0, scheme: scheme),
-                                   height: 96, pulses: false,
+                                   // 120, Wallet's own height for this figure.
+                                   height: 120, pulses: false,
                                    lineWidth: 2.6, fillOpacity: 0.24, endpointDot: true)
                         .padding(.top, DS.Space.s3)
-                        .padding(.horizontal, -DS.Space.s4)
-                        .padding(.bottom, -DS.Space.s4)
                 }
+                accountChips
             }
         }
+    }
+
+    /// WHOSE THE NUMBER IS — `WalletFaceChips`' shape, and the reading this
+    /// room had the data for and never drew (prd §475).
+    ///
+    /// Reported: *"it shows the account icons and what their performance is
+    /// below the sparkline."* `VibenetValueStore.samples(for:)` has kept a
+    /// REAL per-account history since §467 — recorded on every sweep, on every
+    /// device — and nothing on any screen read it back except the scoped
+    /// account's own chart. So the aggregate stated one total and could not
+    /// say which account it came from.
+    ///
+    /// **Gated exactly as Wallet gates its own**: more than one account, and
+    /// only unscoped. Scoped, the rail above has ringed one face and this card
+    /// describes that account alone — a strip of three would be the one
+    /// element still talking about all of them.
+    ///
+    /// A change is drawn ONLY where a real one exists: an account watched
+    /// since this morning has one sample, and `VibenetValueHistory.delta`
+    /// returns nil rather than a zero — a flat 0.0% beside a face claims a
+    /// reading nobody took.
+    @ViewBuilder
+    private var accountChips: some View {
+        if room.items.count > 1 {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: DS.Space.s2) {
+                    ForEach(room.items) { item in
+                        if let native = item.nativeBalance {
+                            accountChip(item, native: native)
+                        }
+                    }
+                }
+            }
+            .scrollIndicators(.hidden)
+            .padding(.top, DS.Space.s3)
+        }
+    }
+
+    private func accountChip(_ item: VibenetAccountItem, native: Double) -> some View {
+        let samples = VibenetValueStore.samples(for: item.address)
+        let change = VibenetValueHistory.delta(samples)
+        return HStack(spacing: 6) {
+            WalletFace(address: item.address, size: DS.Face.badge, circular: true)
+            Text("\(VibenetBalanceFormat.line(native)) ETH")
+                .dsText(.label12).fontWeight(.semibold)
+                .foregroundStyle(DS.textPrimary)
+                .monospacedDigit()
+            if let change {
+                Text(VibenetBalanceFormat.percent(change))
+                    .dsText(.label12)
+                    .foregroundStyle(TokenChartStyle.accent(change: change, scheme: scheme))
+                    .monospacedDigit()
+            }
+        }
+        // A face sits tight to the leading edge — `WalletFaceChips`' own
+        // measurement, so the two strips are the same object in two rooms.
+        .padding(.leading, 4)
+        .padding(.trailing, DS.Space.s3).padding(.vertical, 4)
+        .background(Capsule(style: .continuous).fill(DS.fillFaint))
+    }
+
+    /// A room-level section title — `walletGroupHeader`'s recipe (prd §475):
+    /// `heading22` in PRIMARY ink, outside the card it introduces, on the
+    /// same margin as the bare hero.
+    ///
+    /// `s8` above and `s1` below is Wallet's own measured spacing, and its
+    /// note says why: at an even gap the header "read as floating between the
+    /// two" rather than belonging to the card beneath it. The stack's own
+    /// `s6` spacing is cancelled above to make room for it.
+    private func sectionHeader(_ title: String) -> some View {
+        Text(title)
+            .dsText(.heading22)
+            .foregroundStyle(DS.textPrimary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .accessibilityAddTraits(.isHeader)
+            .padding(.top, DS.Space.s2)
+            .padding(.bottom, -DS.Space.s3)
     }
 
     /// WHAT THE ACCOUNTS HOLD. Silent for a single asset — the crown above

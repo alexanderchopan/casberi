@@ -499,6 +499,108 @@ grep -q 'names = \[:\]' "$TMP/bridge.nc.swift" \
   || { echo "✗ removeAll no longer clears the names — prd §472: 'forget everything' must stay"
        echo "  reachable as one deliberate act"; exit 1; }
 
+# --- prd §475: cohesion with the Wallet room ---------------------------------
+#
+# Reported: the balance+sparkline sat in a card where Wallet's hero is bare,
+# the per-account readings were never drawn, the section titles were tertiary
+# eyebrows inside their cards rather than Wallet's `heading22` outside them,
+# and the account sheet drew the same crown two sizes smaller.
+#
+# THE HERO IS BARE. A card here would add a SECOND s4 on top of §474's outer
+# margin and put the figure 36pt from the edge while the section headers sat
+# at 18 — the two-margin mismatch §474 just fixed, reintroduced by a container.
+grep -q 'private var balanceHero: some View' "$TMP/card.nc.swift" \
+  || { echo "✗ the vibenet balance is not the bare hero any more — prd §475: Wallet's own"
+       echo "  ruling is that a balance takes no container ('NO GROUND AT ALL')"; exit 1; }
+heroFn=$(sed -n '/private var balanceHero: some View {/,/^    }$/p' "$TMP/card.nc.swift")
+[[ -n "$heroFn" ]] || { echo "✗ prd §475's guard could not find balanceHero by its signature"; exit 1; }
+if [[ "$heroFn" == *'card {'* ]]; then
+  echo "✗ balanceHero wraps itself in card() again — prd §475: that is the container Wallet"
+  echo "  deliberately does not draw, and it doubles §474's margin."
+  exit 1
+fi
+# BOTH crowns are the same rung and the same chart height, or the same reading
+# changes size between the room and the account one tap into it.
+[[ "$heroFn" == *'.dsText(.price48)'* ]] \
+  || { echo "✗ the aggregate crown is no longer price48 — prd §475: Wallet's crown rung"; exit 1; }
+[[ "$heroFn" == *'height: 120'* ]] \
+  || { echo "✗ the aggregate sparkline is no longer 120pt — prd §475: Wallet's own height"; exit 1; }
+grep -q '.dsText(.price48)' "$TMP/detail.nc.swift" \
+  || { echo "✗ the account sheet's crown is not price48 — prd §475: it drew the same reading"
+       echo "  two rungs smaller than the room one tap above it"; exit 1; }
+grep -q 'height: 120' "$TMP/detail.nc.swift" \
+  || { echo "✗ the account sheet's sparkline is not 120pt — prd §475"; exit 1; }
+
+# THE MOVE STATES ITS AMOUNT, not a bare percent — Wallet's "▲ $224.51 (1.8%)".
+# Guarded on BOTH surfaces, since the account sheet is where the percent-only
+# form actually shipped.
+for f in "$TMP/card.nc.swift" "$TMP/detail.nc.swift"; do
+  grep -q 'VibenetValueHistory.move(history)' "$f" \
+    || { echo "✗ a vibenet crown states its move as a bare percent again (${f:t}) — prd §475:"
+         echo "  the percent alone cannot say how much, and the amount is what the line shows"; exit 1; }
+done
+
+# WHOSE THE NUMBER IS. The per-account history has been recorded since §467 and
+# was read back by nothing but the scoped chart.
+grep -q 'VibenetValueStore.samples(for: item.address)' "$TMP/card.nc.swift" \
+  || { echo "✗ the account chips no longer read each account's own history — prd §475:"
+       echo "  a room-wide series under a per-account face is §83's fake status"; exit 1; }
+chipsFn=$(sed -n '/private var accountChips: some View {/,/^    }$/p' "$TMP/card.nc.swift")
+[[ "$chipsFn" == *'room.items.count > 1'* ]] \
+  || { echo "✗ the account chips are no longer gated on more than one account — prd §475:"
+       echo "  scoped, they would be the one element still describing all of them"; exit 1; }
+
+# SECTION HEADERS ARE WALLET'S, outside the card and in primary ink.
+grep -q 'private func sectionHeader' "$TMP/card.nc.swift" \
+  || { echo "✗ the room lost its section headers — prd §475: walletGroupHeader's recipe"; exit 1; }
+grep -q "What's authorized" "$TMP/card.nc.swift" \
+  || { echo "✗ the keys section header is gone — prd §475"; exit 1; }
+# …and the count beneath does NOT repeat the header's own verb (user, §475).
+if grep -qE 'countHeadline.*authorized|"1 key authorized"|keys authorized"\)' "$TMP/room.nc.swift"; then
+  countFn=$(sed -n '/var countHeadline: String {/,/^    }$/p' "$TMP/room.nc.swift")
+  if [[ "$countFn" == *'authorized'* ]]; then
+    echo "✗ countHeadline says 'authorized' again — prd §475: it sits under a section header"
+    echo "  that already says the word. plainLine keeps the verb; this one does not."
+    exit 1
+  fi
+fi
+
+# --- prd §474: the room's own margin from the screen edge --------------------
+#
+# Reported: "the margins aren't the same consistency as on the wallet, so it
+# looks like they are touching the screen." Real, and measurable: this room
+# renders through `insightSection`, which is DELIBERATELY edge-to-edge — every
+# sibling room-head card supplies its own outer horizontal margin, and this
+# one supplied none on EITHER of its two shapes, so its surface ran flush to
+# both edges of the phone while every neighbouring room sat 18pt in from them.
+#
+# EXTRACTED PER FUNCTION (`sed` range to the closing brace at 4-space indent —
+# a computed property's own close, never a nested one), because the two shapes
+# place the margin differently on purpose: `oneSurface` puts it right after
+# ITS OWN `dsWidgetSurface()`, while the four-card stack puts it once around
+# the WHOLE `stackedRoom` VStack rather than inside `card()` (the shared helper
+# all four cards call) — doing it per-card would double the footnote's own
+# indent under it, the §471 edge-mismatch defect recreated the other way. So
+# `card()` must NOT carry the margin, and `stackedRoom`'s OWN close must.
+stackedFn=$(sed -n '/private var stackedRoom: some View {/,/^    }$/p' "$TMP/card.nc.swift")
+oneFn=$(sed -n '/private var oneSurface: some View {/,/^    }$/p' "$TMP/card.nc.swift")
+cardFn=$(sed -n '/private func card<Content: View>/,/^    }$/p' "$TMP/card.nc.swift")
+[[ -n "$stackedFn" && -n "$oneFn" && -n "$cardFn" ]] \
+  || { echo "✗ prd §474's guard could not find stackedRoom/oneSurface/card() by their signatures —"
+       echo "  update the sed anchors if these were renamed"; exit 1; }
+[[ "$stackedFn" == *'.padding(.horizontal, DS.Space.s4)'* ]] \
+  || { echo "✗ the stacked room's outer margin is gone — prd §474: its cards would run flush"
+       echo "  to both screen edges again"; exit 1; }
+[[ "$oneFn" == *'.padding(.horizontal, DS.Space.s4)'* ]] \
+  || { echo "✗ the one-account/roster shape's outer margin is gone — prd §474"; exit 1; }
+if [[ "$cardFn" == *'.padding(.horizontal, DS.Space.s4)'* ]]; then
+  echo "✗ card() itself carries the outer margin — prd §474: that doubles it under the"
+  echo "  footnote (which sits outside card(), inside stackedRoom's own VStack) and puts"
+  echo "  the footnote's text out of alignment with the cards' — the exact defect §471"
+  echo "  already fixed once, recreated in the other direction."
+  exit 1
+fi
+
 # The tray mirrors the card, and the chevron only exists where the tray does.
 grep -q 'VibenetKeyTray.sections' "$TRAY" \
   || { echo "✗ VibenetKeyTraySheet no longer reads VibenetKeyTray.sections — prd §468"; exit 1; }

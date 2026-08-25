@@ -32930,3 +32930,187 @@ countdown nor this pass's Live Activity has ever been seen running** — the
 activity in particular has never been rendered at all, since no simulator
 shows a lock screen or a Dynamic Island. The harness proves the arithmetic and
 the wiring; the moving picture is a device check.
+
+## 474. The room's margin from the screen edge (user: "the vibenet room - the margins. they aren't the same consistency as on the wallet, so it looks like they are touching the screen", 2026-08-25)
+
+Real and measurable, not a matter of taste. This room is presented through
+`insightSection` (`FeedScreen.swift`), which is DELIBERATELY edge-to-edge —
+its own comment says so: "the card owns its own padding". Every sibling
+room-head card this room shares that presenter with — `GnosisPayRoomCard`,
+`StripeRoomCard`, `SafeRoomCard`, `XRoomCard`, `JournalRoomCard` — supplies its
+own `.padding(.horizontal, DS.Space.s4)` AFTER `dsWidgetSurface()`, which is
+the same rung `WalletCardStyle.rowInsets` gives every Wallet card via
+`listRowInsets`. `VibenetRoomCard` never did, on EITHER of its two shapes: the
+four-card stack (§471, §467) and the single-account/roster surface
+(`oneSurface`, used on `VibenetScreen`'s and the address book's own rosters).
+Both ran their `surfaceSheet` background flush to both edges of the phone
+while every neighbouring room's card sat 18pt in from them — exactly the
+inconsistency reported.
+
+**The fix is one line per shape, in the place every sibling already carries
+it** — `.padding(.horizontal, DS.Space.s4)` trailing each shape's own
+`dsWidgetSurface()`. For the four-card stack it wraps the WHOLE `stackedRoom`
+VStack once rather than each of the four `card()` calls individually: the
+footnote beneath the cards had its own `.padding(.horizontal, DS.Space.s4)`
+from §471's fix (aligning its text with the cards' own internal padding, back
+when neither had an outer margin), and adding the new margin per-card rather
+than once around the whole stack would have doubled it under the footnote and
+put the footnote's text out of alignment with the cards' text again — the
+identical §471 defect, recreated in the other direction. Wrapping once means
+the footnote and every card's text move together and stay aligned; only the
+cards' BACKGROUNDS gain the missing inset.
+
+**Deliberately narrow**: siblings also carry a top `.padding(.top, DS.Space.s2)`
+after their horizontal margin, and this pass does not add one — the report
+named margins (the sides), not the gap above the card, and CLAUDE.md's own
+rule against expanding a targeted fix applies here as much as anywhere.
+
+### Cost, and what remains unmeasured
+
+**Nothing to ship**: pure layout, no new `Thing` property, no request, no
+CloudKit deploy.
+
+`vibenet-selftest.sh` gained a drift guard anchored on the two `dsWidgetSurface
+()` call sites in `VibenetRoomCard.swift`, asserting the outer horizontal
+padding follows each one — so a future edit that drops the margin on either
+shape (or moves it back inside `card()`, re-opening the footnote-alignment
+defect) fails the build rather than shipping unrefined again.
+
+**UNMEASURED on a device**: a spacing change like this is exactly the kind of
+thing a screenshot settles in seconds and no static check can — the guard
+proves the modifier is present, not that the resulting margin reads as
+consistent with Wallet's own.
+
+## 475. Vibenet borrows Wallet's own hero, chips, headers and crown (user: "how do we make it more cohesive with the Wallet experience? … the sparkline and balance are in one card in the vibenet room, but in the wallet room neither are in a card … it shows the account icons and what their performance is below the sparkline … the wallet uses Green for money and blue for helper text but the vibenet only uses gray … we also have section headers in the wallet like what you hold, and what it's doing … additionally on the individual account sheets in vibenet, they lost their sparkline and also have a totally different format", then "yes, but we don't use blue for the treemaps on wallet i don't think. and for 'what's authorized' underneath it just say 8 keys instead of '8 keys authorized', we don't need to repeat that word", 2026-08-25)
+
+Five observations, four of them real defects, one of them mine to correct in
+the mockup rather than the app. Every value below was traced out of
+`WalletFeedTiles.swift` and `FeedScreen.swift` rather than eyeballed — the
+standing rule for this room, and the reason the corrections were cheap.
+
+### 1. THE HERO WAS THE ONE READING BOTH ROOMS SHARE, DRAWN TWO DIFFERENT WAYS
+
+Wallet's own source carries the ruling, dated 2026-08-16 in
+`walletTilesSection`: **"NO GROUND AT ALL … Apple has never shipped a balance
+inside a coloured card … a container around them was the app claiming emphasis
+the content already had."** Its hero sits at the row's own
+`WalletCardStyle.rowInsets` margin with ZERO further padding — one inset, not
+the two a card gives it — and the figure, the move and the curve are the hero.
+
+Vibenet's balance was the one card in that room with no counterpart in Wallet
+at all. `balanceCard` became `balanceHero`: no `card()`, `price48` (Wallet's
+crown rung, up from `price40`), a 120pt chart (up from 96).
+
+**The chart stops bleeding, and that is not a regression.** Negative insets
+were the RIGHT answer inside a card — a card's own padding was stealing width
+from a figure whose whole job is its shape — and with the container gone there
+is nothing left to cancel: the same negative insets would now push the curve
+off the screen. **One margin, not two**, is also what keeps §474 fixed: a card
+here would re-add an `s4` on top of the outer one and put the figure 36pt from
+the edge while the section headers below sat at 18 — the exact two-margin
+mismatch §474 had just repaired, reintroduced by the container rather than by
+the padding.
+
+### 2. THE PER-ACCOUNT READINGS EXISTED AND NOTHING DREW THEM
+
+`VibenetValueStore.samples(for:)` has kept a REAL per-account history since
+§467 — recorded on every sweep, on every device, keyed by lowercased address —
+and the only thing that ever read it back was the scoped account's own chart.
+So the aggregate stated one total and could not say which account it came
+from, while the data to say so was already on disk.
+
+`accountChips` is `WalletFaceChips`' shape: face, native balance, its own
+delta, in a `fillFaint` capsule with the face tight to the leading edge (4pt,
+Wallet's own measurement). **Gated exactly as Wallet gates its own** — more
+than one account, and only unscoped: scoped, the rail above has ringed one
+face and the card describes that account alone, so a strip of three would be
+the one element still talking about all of them.
+
+**A change is drawn only where a real one exists.** An account watched since
+this morning has one sample and `VibenetValueHistory.delta` returns nil rather
+than zero; a flat "0.0%" beside a face claims a reading nobody took.
+
+### 3. GREEN ALREADY MATCHED. BLUE WAS THE GAP — AND SO WAS THE MOVE'S AMOUNT
+
+Half the colour observation was already satisfied: vibenet's delta has always
+run through `TokenChartStyle.accent`, the same green/red Wallet uses, with the
+same `isFlat` refusal to colour a move that rounds away.
+
+What was missing is the FIGURE. Wallet states its move as "▲ $224.51 (1.8%)
+today" — amount first, percent in parentheses — and its own note says why: the
+dollars "come from the plotted series (last − first), never from a second
+source: the line is what the reader is looking at, so any other derivation
+could contradict it on screen." Vibenet printed a bare percent, which cannot
+say how much. `VibenetValueHistory.move` is that amount, in ETH, **gated on
+`delta` rather than computed independently** — a change under `delta`'s own
+floor has no direction to report, and an amount printed beside no percentage
+would be exactly that claim.
+
+### 4. THE SECTION TITLES WERE CAPTIONS, NOT HEADERS
+
+`walletGroupHeader` is `heading22` in PRIMARY ink, sitting OUTSIDE the card it
+introduces, on the same margin as the bare hero, with `s8` above and `s1`
+below — spacing its own note explains, since at an even gap the header "read
+as floating between the two" rather than belonging to the card beneath it.
+
+Vibenet said the same kind of thing in `label12` tertiary INSIDE each card.
+That is a caption, which is a different object from a section title, and it is
+most of why the two rooms read as different products at a glance. "What's
+authorized" and "Linked accounts" are real headers now.
+
+**And the count beneath them drops the verb** (user, mid-pass): `countHeadline`
+said "8 keys authorized", which was right while the card introduced itself and
+became a repetition the moment a header above it said the word.
+`plainLine` KEEPS the verb and must — it is the one-line form for
+`-vibenetRoomProbe` and the harness, where nothing states the subject first,
+and "8 keys across 3 accounts" says nothing about what the keys are. Both read
+the same `total` and the same `scopeEyebrow`, so only the word the header
+supplies differs.
+
+### 5. THE ACCOUNT SHEET HAD THE CHART ALL ALONG — IT WAS SMALLER
+
+Reported as having "lost their sparkline". Reading the source first (this
+room's own §418 lesson, fifth instance) showed it had not:
+`VibenetAccountSheet` renders `VibenetAccountDetail`, which draws a chart from
+`VibenetValueStore.samples(for: item.address)` and has since §467. The real
+defect was FORMAT: `price40` at 90pt with a percent-only delta, against the
+room's `price48` at 120pt with the amount — the same reading in two formats,
+one tap apart. Both are the crown recipe now, and the same "What's authorized"
+header lands above its keys.
+
+**A caveat worth keeping**, because it will look like this fix failed: a
+freshly-watched account has one sample and draws NO line at all, by design
+(`delta` and `series` both need two, and a single point is a flat line, which
+on a balance chart reads as "went to zero"). An account connected today
+showing no curve is the history still accumulating at its 4-hour throttle, not
+a formatting bug.
+
+### The correction that was mine, not the app's
+
+The first mockup drew the holdings treemap in blue. **It was wrong, and the
+user caught it**: `VibenetHoldingsBlock` already uses `DS.ink(magnitude:)` —
+the neutral ramp, documented in its own header as "NO HUE, and no price … the
+tone carries RANK and nothing else" — and Wallet's `GenTagMap` calls the same
+function. Nothing in the app needed changing; the mockup did. Recorded because
+the failure mode is worth naming: a mockup that invents a colour the app does
+not use is a proposal to CHANGE something, made by accident, on a screen the
+reader assumes is a faithful recreation.
+
+### Cost, and what remains unmeasured
+
+**Nothing to ship**: pure layout and one derived value, no new `Thing`
+property, no request, no CloudKit deploy. `VibenetValueHistory.move` reads the
+same samples `delta` already reads.
+
+`vibenet-selftest.sh` gained guards that `balanceHero` never wraps itself in
+`card()` again (the §474 margin, re-broken by a container), that BOTH crowns
+stay `price48`/120 (extracted per function, so the room and the sheet cannot
+drift apart), that both call `move` (the bare-percent regression, on either
+surface), that the chips read each account's OWN history and stay gated on
+`count > 1`, and that `countHeadline` never says "authorized" while
+`plainLine` still does.
+
+**UNMEASURED on a device.** Every item here is spacing, type scale and colour
+— exactly what a screenshot settles in seconds and no static check can. The
+guards prove the modifiers are present, never that the result reads as
+cohesive with Wallet beside it.

@@ -110,19 +110,27 @@ struct VibenetAccountDetail: View {
                     Text(String(localized: "This account holds"))
                         .dsText(.label12)
                         .foregroundStyle(DS.textTertiary)
+                    // `price48` and the amount-first move — the SAME crown as
+                    // the aggregate and as Wallet's own (prd §475). Reported:
+                    // *"on the individual account sheets in vibenet… they have
+                    // a totally different format. We should be using the same
+                    // type of format."* This was `price40` with a percent-only
+                    // delta while the room above it drew `price48` with the
+                    // amount — the same reading, two formats, one tap apart.
                     Text("\(VibenetBalanceFormat.line(native)) ETH")
-                        .dsText(.price40)
+                        .dsText(.price48)
                         .foregroundStyle(DS.textPrimary)
                         .monospacedDigit()
                         .lineLimit(1)
                         .minimumScaleFactor(0.6)
                         .padding(.top, 2)
-                    if let change = VibenetValueHistory.delta(history) {
+                    if let change = VibenetValueHistory.delta(history),
+                       let move = VibenetValueHistory.move(history) {
                         HStack(spacing: 5) {
                             Image(systemName: change >= 0
                                   ? "arrowtriangle.up.fill" : "arrowtriangle.down.fill")
                                 .dsGlyph(9)
-                            Text(VibenetBalanceFormat.percent(change))
+                            Text("\(VibenetBalanceFormat.line(abs(move))) ETH (\(VibenetBalanceFormat.percent(change)))")
                                 .dsText(.callout15).fontWeight(.semibold)
                                 .monospacedDigit()
                             Text(String(localized: "since watching"))
@@ -138,9 +146,12 @@ struct VibenetAccountDetail: View {
                                                          change: VibenetValueHistory.delta(history) ?? 0),
                                        accent: TokenChartStyle.accent(
                                            change: VibenetValueHistory.delta(history) ?? 0, scheme: scheme),
-                                       height: 90, pulses: false,
+                                       // 120, the aggregate's and Wallet's own
+                                       // (prd §475) — it was 90 here, so the
+                                       // same curve changed size on the way in.
+                                       height: 120, pulses: false,
                                        lineWidth: 2.6, fillOpacity: 0.24, endpointDot: true)
-                            .padding(.top, DS.Space.s2)
+                            .padding(.top, DS.Space.s3)
                     }
                 }
                 if let scoped = VibenetBalanceAggregation.compose([item]) {
@@ -326,9 +337,20 @@ struct VibenetAccountDetail: View {
         // "Session keys" read as one continuous column of cards rather than
         // as two groups.
         VStack(alignment: .leading, spacing: DS.Space.s6) {
+            // THE SECTION HEADER, the room's own (prd §475) — `heading22` in
+            // primary ink, the same title the aggregate draws above its keys
+            // card, so narrowing the room to one account keeps the same
+            // landmarks rather than renaming them.
+            Text(String(localized: "What's authorized"))
+                .dsText(.heading22)
+                .foregroundStyle(DS.textPrimary)
+                .accessibilityAddTraits(.isHeader)
+                .fixedSize(horizontal: false, vertical: true)
+            // …and the count drops the verb the header now carries, exactly
+            // as `VibenetKeyAggregate.countHeadline` does one screen up.
             Text(item.actors.count == 1
-                 ? String(localized: "1 key authorized")
-                 : String(localized: "\(item.actors.count) keys authorized"))
+                 ? String(localized: "1 key")
+                 : String(localized: "\(item.actors.count) keys"))
                 .dsText(.heading17)
                 .foregroundStyle(DS.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
