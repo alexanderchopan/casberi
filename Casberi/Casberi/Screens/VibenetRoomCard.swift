@@ -88,7 +88,11 @@ import SwiftUI
 /// page"). Scoping still does the "same cards, just narrowed" job Wallet's
 /// own scoped room does (see the doc a few lines up: room.items.count == 1
 /// collapses this very card to `VibenetAccountDetail` automatically,
-/// mapping and all) — a chip's tap only ever calls `onScope`.
+/// mapping and all) — a face in `VibenetScopeRail`, pinned above this
+/// card, is the one door to that (2026-08-25, prd §469: this file's own
+/// `onScope` closure was found unreached and deleted rather than restored,
+/// since the rail already puts every account one tap away — a second door
+/// to a destination the rail already reaches is not a door worth adding).
 struct VibenetRoomCard: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.colorScheme) private var scheme
@@ -112,13 +116,17 @@ struct VibenetRoomCard: View {
     /// address itself (the `L2beatScreen`/`WalletbeatScreen` shape:
     /// `String` is `Identifiable`, so no wrapper type is needed).
     var onOpen: ((String) -> Void)? = nil
-    /// The feed room's own scope door — used today only by the Keys
-    /// section's soonest-expiry callout (`keysAggregateSection`, since the
-    /// stat block itself has nothing left to tap: no rows, no chips, no
-    /// face). Scopes the card to one account, never opens anything. The
-    /// caller owns the toggle rule (tap the already-scoped account again
-    /// to return to "All", `VibenetScopeRail`'s own tap rule).
-    var onScope: (String) -> Void = { _ in }
+    /// `onScope` IS GONE (2026-08-25, prd §469, user ruling). It once fired
+    /// from a tappable soonest-expiry callout, silently unwired by `afda3c10`
+    /// when the card's anatomy was rebuilt; `FeedScreen` went on passing a
+    /// real closure into a prop nothing called — dead API that reads as
+    /// wired end-to-end. Deleted rather than restored, on the user's own
+    /// reasoning: `VibenetScopeRail` is pinned directly above this card in
+    /// the only context that closure served, and its faces already scope to
+    /// any account with the same toggle-back-to-All rule — "the user is
+    /// moving through doors to different accounts instead of using the
+    /// source avatars for the accounts above it? that seems like not
+    /// needed." A second door to a destination the rail already reaches.
     /// Opens the key tray — which keys are in which permission category
     /// (prd §468, `VibenetKeyTraySheet`). nil where there is nowhere to
     /// present it, and the chevron is gated on the same nil rather than drawn
@@ -340,7 +348,24 @@ struct VibenetRoomCard: View {
                 // the block itself is gone rather than left as a second
                 // definition of the same reading for someone to find and
                 // wire back up.
-                keysAggregateSection
+                //
+                // THE KEYS CARD IS GONE FROM THIS BRANCH (user, 2026-08-25:
+                // "the address book shows a card for keys that duplicates
+                // what is on the all aggregate screen. we don't need it in
+                // address book"). It was real duplication, not a lookalike —
+                // this branch is reached ONLY when `onOpen != nil` now (the
+                // feed room's own `count > 1` shape routes through
+                // `stacksIntoCards` above and never reaches here), so the
+                // roster screen was drawing `keysAggregateSection` right
+                // underneath its own per-account rows, composing the exact
+                // same `keysBody(aggregate)` the feed's `keysCard` already
+                // shows on "All". `keysAggregateSection` had no other caller
+                // and is deleted rather than left as a second definition for
+                // someone to find and wire back up (this file's own standing
+                // rule, one paragraph up). `linkedAccountsSection` stays —
+                // not asked for removal, and the roster is exactly where
+                // "who can act for whom" belongs when you're managing who's
+                // watched, rather than reading a summary of it.
                 linkedAccountsSection
                     .padding(.top, DS.Space.s4)
             } else {
@@ -507,13 +532,20 @@ struct VibenetRoomCard: View {
     /// THE KEYS BLOCK, ONE DEFINITION.
     ///
     /// It was written twice — once inside `keysCard` (the stacked feed room)
-    /// and once inside `keysAggregateSection` (every other shape) — with
-    /// identical headline, policy rows and expiry sentence, differing only in
-    /// the box around them. Two copies of one reading drift, and then the same
-    /// room says two different things depending on how many accounts happen to
-    /// be watched; the §418 duplicate-parser lesson, one card over. The
-    /// SURFACE stays each caller's own, because that is the part that really
-    /// differs.
+    /// and once inside a now-deleted `keysAggregateSection` (every other
+    /// shape) — with identical headline, policy rows and expiry sentence,
+    /// differing only in the box around them. Two copies of one reading
+    /// drift, and then the same room says two different things depending on
+    /// how many accounts happen to be watched; the §418 duplicate-parser
+    /// lesson, one card over. The SURFACE stays each caller's own, because
+    /// that is the part that really differs.
+    ///
+    /// `keysAggregateSection` itself is gone (2026-08-25, prd §469, user:
+    /// "the address book shows a card for keys that duplicates what is on
+    /// the all aggregate screen. we don't need it in address book") — it was
+    /// this exact function, drawn a second time on `VibenetScreen`'s roster,
+    /// which is real duplication rather than a lookalike. `keysCard` is the
+    /// only caller left.
     @ViewBuilder
     private func keysBody(_ aggregate: VibenetKeyAggregate) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
@@ -614,44 +646,6 @@ struct VibenetRoomCard: View {
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.top, DS.Space.s2)
             }
-        }
-    }
-
-    /// KEYS, BY WHAT THEY CAN DO (prd §463). This shipped as taxonomy — "4
-    /// secp256k1, 1 P-256, 1 Passkey" — which answers what KIND of key each
-    /// one is and says nothing about who can spend. The room is opened with
-    /// the other question, so the count leads and the permissions are the
-    /// rows: Admin first, then the contract's own bits in its own order.
-    ///
-    /// The kind capsules are GONE rather than kept alongside. Two lists of
-    /// counts over the same ten keys, differing only in what they group by,
-    /// is a card arguing with itself — and the kinds are still one tap away
-    /// on every key row in the detail.
-    @ViewBuilder
-    private var keysAggregateSection: some View {
-        if let aggregate = VibenetKeyAggregation.compose(room.items, now: .now) {
-            VStack(alignment: .leading, spacing: 0) {
-                keysTappable(aggregate)
-            }
-            // **ITS OWN SURFACE (2026-08-24).** The design gives the keys a
-            // card and the balance above it none, and that asymmetry is the
-            // point rather than decoration: the crown is the room speaking in
-            // its own voice — a figure on the page — while this is a bounded
-            // INVENTORY of a fixed set of things, the one block on the card a
-            // reader scans rather than reads. Drawn flat it was six unrelated
-            // label/number pairs floating between a chart and a spine, which
-            // is most of what "hodge podge" was describing.
-            //
-            // NO CHEVRON, deliberately, though the design draws one: it points
-            // at a key tray that does not exist in this build, and a chevron
-            // that opens nothing is the dead control §83 bans. The surface is
-            // the part that carries the meaning; the affordance can arrive
-            // with the screen it would open.
-            .padding(DS.Space.s3)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(DS.fillFaint,
-                        in: RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
-            .padding(.top, DS.Space.s4)
         }
     }
 

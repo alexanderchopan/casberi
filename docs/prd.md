@@ -32342,3 +32342,151 @@ this host can make a vibenet account authorize an admin key, lose a key, or
 fail one balance read out of three, so the harness is again not the best
 proof these numbers are right but the only one. The key tray, the chevron and
 the stood-down face are all rendering no static check can exercise.
+
+## 469. The address book's keys card was the All room's, drawn twice — and `onScope` had been dead since afda3c10 (user: "the address book shows a card for keys that duplicates what is on the all aggregate screen. we don't need it in address book", then "its the same thing isn't it?", then "so if we restore it then the user is moving through doors to different accounts insstead of using the source avatars for the accounts above it? that seems like not needed", 2026-08-25)
+
+### 1. The duplicate, and why it was real rather than a lookalike
+
+`VibenetScreen`'s roster drew `keysAggregateSection` directly beneath its own
+per-account rows. That section composed **the same `keysBody(aggregate)`** the
+feed room's `keysCard` already draws on "All" — §468 had just made them one
+definition — so the book showed the room's key summary a second time, in a
+different box, over the same data. Confirmed rather than assumed: after §468
+the `oneSurface` branch is reached ONLY when `onOpen != nil` (the feed room's
+own `count > 1` shape routes through `stacksIntoCards`), so that section had
+exactly one caller and it was the book.
+
+`keysAggregateSection` is **deleted**, not left unreferenced — a second
+definition of one reading is what someone finds later and wires back up, this
+file's own standing rule. `linkedAccountsSection` STAYS: it was not what was
+flagged, and the roster is where "who can act for whom" belongs when you are
+managing who is watched rather than reading a summary of it.
+
+### 2. `onScope`, found dead while checking the above
+
+The keys card's soonest-expiry line was once a `Button` calling
+`onOpen ?? onScope`. **`afda3c10` ("the room card becomes the room we
+designed") rebuilt the card's anatomy and replaced it with a plain `Text`** —
+well before the four-card split (§467) or the tray (§468) — and nobody deleted
+the closure. `FeedScreen` went on passing a real implementation into a prop
+nothing called: the inverse of the usual §83 dead control, since there was no
+visible affordance left to notice failing. Rot visible only by reading.
+
+**Deleted rather than restored, on the user's own reasoning.**
+`VibenetScopeRail` is pinned directly above the card in the only context that
+closure ever served, and its faces already scope to any account with the same
+toggle-back-to-All rule — *"the user is moving through doors to different
+accounts instead of using the source avatars for the accounts above it? that
+seems like not needed."* A second door to a destination the rail already
+reaches is not a door worth having, and the alternative (restoring it under
+§468's now-tappable keys card) would have stacked two gestures on one card.
+
+The harness guard that pinned the old call-site shape moved with it: it
+anchored on `onScope:` and now pins the surviving shape — an inert `onRemove`
+and, as the negative half carrying §463's ruling, **no `onOpen:`**, which is
+the managing roster returning to the feed room.
+
+## 470. A key gets an identity, the tray stops dead-ending, and the raw read gets a clipboard (user: "how else would you improve the vibenet experience? imagine there is a power user dev trying to often find accounts, keys, and permissions", then "do all", 2026-08-25)
+
+Three items, all clustered on one gap: **`actorId` is the primary key of this
+entire system and no screen showed it.**
+
+### 1. Which key is this
+
+`Keystore` stores actors as `_actorConfig[actorId][account]`; `VibenetKeyReuse`
+joins on it; a delegate's target is decoded from it; it is what a developer
+greps a console log for. Every surface drew a key as its KIND plus its
+permission chips, so **two passkeys on one account were two indistinguishable
+rows** — same title, same detail clause, often the same chips — and nothing in
+the app could tell them apart or hand you the value to look one up.
+
+`VibenetKeyIdentity.short` puts a four-character tail on every key row, in the
+detail and in the tray. **Deliberately noun-less**: a secp256k1 actorId IS an
+address right-aligned into a word while a passkey's is a HASH of a public key,
+so any label naming it would be true of some rows and a fabrication on others
+— §83, on the screen a person reads to find out who can spend their account.
+Same truncation grammar as `shortAddress`, because a room that elides two kinds
+of hex two different ways makes a reader parse before they can compare.
+
+A context menu carries the values: **Copy key id** always, **Copy signer
+address** only where `VibenetKeyIdentity.signerAddress` really answers (gated
+on `VibenetActorId`'s high-bytes-are-zero test — an item present on every row
+and correct on some is worse than one that appears only where it means
+something), **Copy authenticator**. `copySensitive` throughout: each is
+literally `DSPasteboard`'s own named "an address, a sign-in code" case.
+
+**§463 is not in tension with this and it is worth saying why.** That ruling
+banned spec INTERNALS from the screen, because they ask a reader to know the
+spec to read their own account. An identifier is the opposite — it asks
+nothing and answers the one question a repeated row cannot.
+
+### 2. The tray stopped dead-ending on its own answer
+
+You opened the tray asking "who can send anywhere", found the key, read that it
+sits on `…0b1c` — and then had to dismiss the tray, find that face in the rail
+and tap it. Three gestures to follow up the one you came for. A tapped row now
+scopes the room to its account.
+
+**The caller dismisses and scopes, in that order.** `vibenetScope` re-composes
+the room BEHIND the sheet, so asking for it while the sheet is still up lands
+the change under a covered screen; `RoomDoor`'s own pop-then-ask move, and the
+reason the closure lives on `FeedScreen` rather than in the tray (which does
+not own its presentation — `FeedSheetRoute` does). No animation on the scope
+write: the room is behind a dismissing sheet.
+
+### 3. The raw read, for the clipboard only
+
+`VibenetAccountDebug.text` — actorIds, scope as the hex word `Scopes.sol`
+stores, expiry as the unix integer `Keystore` holds. **A clipboard payload is
+where §463 allows this to go**: asked for explicitly, competing with nothing on
+screen, costing a reader who does not want it precisely nothing — the same
+split `AgentContext` already draws (a screen for reading, a paste for working).
+The screen keeps saying "Send anywhere"; the paste says `0x0001`, and says both
+together so a reader can map one to the other.
+
+Three rules: **every unknown is said as unknown** (`native: unread`,
+`changeSequences: unread`, and `reached: no` leading with "not a census", since
+a paste reads as a complete record and an omitted line reads as "this account
+has none of that"); **`expiry 0` is spelled "never"** (a bare `0` reads as an
+epoch date — a key that never expires documenting itself as having expired in
+1970, in the artifact trusted precisely because it is raw); and the keys are in
+`alphabetical` order, since ranking them would be the app making a judgement in
+the one artifact whose whole point is being raw.
+
+`copy`, not `copySensitive` — this is a DOCUMENT whose purpose is to travel to
+wherever the debugging is happening, which `DSPasteboard`'s doc names as the
+case for the cross-device verb. The per-key copies stay `copySensitive`.
+
+### 4. Two corrections the pass turned up
+
+The doors row is a **`FlowLayout`**, not an `HStack`: every door is
+`.fixedSize()`, so a fifth pushed the trailing one off a phone's width — and
+the row was already four wide on an undeployed account, which is exactly when
+the faucet door matters most. And **"Copy address" was writing
+`UIPasteboard.general.string` raw** — no expiry, riding Universal Clipboard to
+every device on the account, the default §277 introduced `DSPasteboard` to
+stop. Every other address copy in the app already went through it; this call
+site was the straggler.
+
+### Cost, and what remains unmeasured
+
+**Nothing to ship**: no new `Thing` property, no request, no CloudKit deploy.
+Every value was already on the actor.
+
+`vibenet-selftest.sh` gained ~30 assertions, 9 mutations and 10 drift guards.
+**A fixture of the harness's own was wrong and the harness caught it**: it
+asserted "Wallet key" sorts before "Passkey", which is backwards — the fixture
+was fixed, not the code, and it now asserts its own premise (that the two
+titles really do sort that way) first, so a future rename cannot leave it
+passing while testing nothing. Two mutations written in the same pass were
+**removed rather than kept**, both the same shape: `$0 > 0` in
+`futureExpiries`' filter and `!isAdmin` in the tray's bit filter are each
+mathematically redundant with the clause beside them, so no fixture built from
+a real clock or a real scope can make the two disagree — the standing rule that
+a fixture only tests the rule it names if it fails that rule and passes every
+other one. Both clauses stay in the shipped source as documentation of the
+conventions they encode.
+
+**UNMEASURED on a device.** The context menus, the tray's tap-to-scope and the
+wrapped doors row are gesture and layout behaviour no static check can
+exercise; iOS Simulator and Mac Catalyst both compile clean.

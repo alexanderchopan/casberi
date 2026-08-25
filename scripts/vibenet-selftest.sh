@@ -117,6 +117,7 @@ for f in "$CARD" "$DETAIL" "$TRAY" "$NOTIFY"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 strip_comments "$CARD"   > "$TMP/card.nc.swift"
+strip_comments "$TRAY"   > "$TMP/tray.nc.swift"
 strip_comments "$DETAIL" > "$TMP/detail.nc.swift"
 strip_comments "$NOTIFY" > "$TMP/notify.nc.swift"
 strip_comments "$ROOM"   > "$TMP/room.nc.swift"
@@ -194,8 +195,20 @@ grep -q 'onOpenBook: { route.push(.vibenetAddressBook) }' "$SHELL_SURFACE" \
 # there is what keeps the stat block the user ruled for ("N accounts and
 # balance, then the keys, then the events", §463's session). A managing roster
 # in the feed room re-adds the rows that ruling removed.
-grep -q 'VibenetRoomCard(room: room, onRemove: { _ in }, onScope:' "$FEED" \
-  || { echo "✗ the FEED room's VibenetRoomCard no longer passes onScope-without-onOpen —"; echo "  prd §465 leaves the feed room's stat block exactly as §463 ruled it"; exit 1; }
+#
+# The anchor changed 2026-08-25 (prd §469): `onScope` was deleted entirely —
+# it had been unreached since `afda3c10`, and the rail's faces already scope —
+# so the guard now pins the surviving shape: the feed call site passes an
+# inert `onRemove` and NO `onOpen:` label. The negative half is what carries
+# the §463 ruling — an `onOpen:` appearing at this call site is the managing
+# roster returning to the feed room.
+grep -q 'VibenetRoomCard(room: room, onRemove: { _ in },' "$FEED" \
+  || { echo "✗ the FEED room's VibenetRoomCard call site moved — prd §465/§469: it must pass an"; echo "  inert onRemove and never onOpen (the stat-block shape §463 ruled for)"; exit 1; }
+if grep -A 1 'VibenetRoomCard(room: room, onRemove: { _ in },' "$FEED" | grep -q 'onOpen:'; then
+  echo "✗ the FEED room's VibenetRoomCard passes onOpen — prd §465 leaves the feed room's"
+  echo "  stat block exactly as §463 ruled it; the managing roster lives in the book"
+  exit 1
+fi
 
 
 if grep -qi '0x8130' "$TMP/room.nc.swift" "$TMP/bridge.nc.swift"; then
@@ -358,6 +371,59 @@ grep -q 'if showsFace {' "$TMP/detail.nc.swift" \
 grep -q 'VibenetScopeRail.shows(source: VibenetIdentity.source, watched: fullItems.count)' "$TMP/card.nc.swift" \
   || { echo "✗ the hero face is no longer gated on the RAIL being present — prd §468: dropping it"; \
        echo "  unconditionally leaves a one-account room with nothing identifying it"; exit 1; }
+
+# --- prd §470: a key's identity, and the developer's paste -------------------
+# Each of these fails INVISIBLY: the rows still draw, the tray still opens, the
+# doors still work — a key just goes back to being unidentifiable, or a copy
+# hands over the wrong thing. Negative greps read COMMENT-STRIPPED copies,
+# since both files document these rules by naming what they must not do.
+
+# WHICH KEY THIS IS. Without the id, two same-kind keys on one account are two
+# byte-identical rows and nothing in the app can tell them apart.
+grep -q 'VibenetKeyIdentity.short(actor.actorId)' "$TMP/detail.nc.swift" \
+  || { echo "✗ the detail's key rows lost their id — prd §470: two same-kind keys become one row twice"; exit 1; }
+grep -q 'VibenetKeyIdentity.short(key.actor.actorId)' "$TMP/tray.nc.swift" \
+  || { echo "✗ the key tray's rows lost their id — prd §470, and it matters MORE there: the tray"; echo "  groups by permission, so same-kind keys on one account land adjacent"; exit 1; }
+
+# THE VALUES, ON DEMAND. The row shows four characters; the whole word has to
+# be reachable or the id is decoration.
+grep -q 'DSPasteboard.copySensitive(actor.actorId)' "$TMP/detail.nc.swift" \
+  || { echo "✗ a key's id is no longer copyable from the detail — prd §470"; exit 1; }
+grep -q 'DSPasteboard.copySensitive(key.actor.actorId)' "$TMP/tray.nc.swift" \
+  || { echo "✗ a key's id is no longer copyable from the tray — prd §470"; exit 1; }
+
+# GATED, in BOTH places. An unconditional "Copy signer address" is present on
+# every row and correct on only the secp256k1 ones — §83 on the screen a
+# person reads to find out who can spend their account.
+for f in "$TMP/detail.nc.swift" "$TMP/tray.nc.swift"; do
+  grep -q 'if let signer = VibenetKeyIdentity.signerAddress(' "$f" \
+    || { echo "✗ ${f:t} offers a signer address ungated — prd §470: only an address-shaped"; echo "  actorId has a signer, and a passkey's hash would name nobody"; exit 1; }
+done
+
+# NEVER the raw pasteboard: it has no expiry and rides Universal Clipboard to
+# every device on the account, which is the default §277 exists to stop.
+if grep -q 'UIPasteboard.general.string' "$TMP/detail.nc.swift"; then
+  echo "✗ VibenetAccountDetail writes the pasteboard raw again — prd §277/§470: every copy"
+  echo "  here goes through DSPasteboard, which sets an expiry and keeps an address local"
+  exit 1
+fi
+
+# The developer's paste, and the door that produces it.
+grep -q 'DSPasteboard.copy(VibenetAccountDebug.text(' "$TMP/detail.nc.swift" \
+  || { echo "✗ the 'Copy account state' door is gone — prd §470: the one place spec internals"; echo "  are allowed to go is a paste that is asked for explicitly"; exit 1; }
+
+# THE DOORS MUST WRAP. Every door is .fixedSize(), so a fifth one in an HStack
+# pushes the trailing door off a phone's width — and the row is already four
+# wide on an undeployed account, which is when the faucet door matters most.
+grep -A 2 'private var doorsSection: some View {' "$TMP/detail.nc.swift" | grep -q 'FlowLayout' \
+  || { echo "✗ the doors row is not flowing — prd §470: five fixed-size doors in an HStack"; echo "  clip off the trailing one rather than wrapping"; exit 1; }
+
+# A tapped key must reach its account. The tray dead-ended on its own answer
+# before this, and the caller owns dismiss-then-scope for RoomDoor's reason.
+grep -q 'VibenetKeyTraySheet(items: items, onPick:' "$FEED" \
+  || { echo "✗ the key tray's rows no longer scope to their account — prd §470"; exit 1; }
+grep -B 2 'chrome.vibenetScope = address' "$FEED" | grep -q 'feedSheet = nil' \
+  || { echo "✗ the tray scopes WITHOUT dismissing first — prd §470: vibenetScope re-composes"; echo "  the room behind the sheet, so the change lands under a covered screen"; exit 1; }
 
 # --- compile VibenetRoom.swift WHOLE, unmodified -----------------------------
 
@@ -1934,6 +2000,141 @@ check("alsoLine names the OTHER permissions, never the section's own",
 check("a key with nothing else to say says nothing",
       VibenetKeyTray.alsoLine(VibenetTrayKey(address: "0xa", actor: sender), besides: "Send anywhere") == nil)
 
+// MARK: - prd §470: a key's own identity, and the developer's paste
+
+print("")
+print("VibenetKeyIdentity — which key is this")
+// A secp256k1 actorId IS an address right-aligned into a 32-byte word, so it
+// has a real signer to name. A passkey's is a HASH of a public key, and the
+// high-bytes-are-zero test is the only thing standing between that and a
+// plausible address belonging to nobody being offered as "the signer".
+let signerAddr = "0x1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b"
+let k1 = VibenetActor(
+    actorId: VibenetActorId.actorId(forAddress: signerAddr)!,
+    authenticator: "0x0000000000000000000000000000000000000001",
+    kind: .secp256k1, scope: VibenetScope(raw: VibenetScope.sender), expiry: 0)
+let passkey = VibenetActor(
+    actorId: "0xfeedfacedeadbeef0123456789abcdeffedcba98765432100112233445566778",
+    authenticator: "0x00000000000000000000000000000000000000aa",
+    kind: .webAuthn, scope: VibenetScope(raw: VibenetScope.policy), expiry: 0)
+check("an address-shaped actorId names its signer",
+      VibenetKeyIdentity.signerAddress(k1) == signerAddr)
+check("A HASHED actorId names NOBODY — never a plausible address that is not one",
+      VibenetKeyIdentity.signerAddress(passkey) == nil)
+// The row draws this and nothing else, so it must be the SAME truncation
+// grammar addresses use — a room that elides two kinds of hex two ways makes
+// a reader parse before they can compare, and comparing is the whole job.
+check("the short form is the tail, matching shortAddress exactly",
+      VibenetKeyIdentity.short(passkey.actorId) == VibenetRoom.shortAddress(passkey.actorId))
+check("and it really is the last four",
+      VibenetKeyIdentity.short(passkey.actorId) == "…6778")
+// THE FAILURE THIS EXISTS FOR: two keys of one kind on one account are
+// otherwise byte-identical rows — same title, same clause, same chips.
+let twinA = VibenetActor(actorId: "0x" + String(repeating: "a", count: 60) + "1111",
+                          authenticator: "0x00", kind: .webAuthn,
+                          scope: VibenetScope(raw: VibenetScope.sender), expiry: 0)
+let twinB = VibenetActor(actorId: "0x" + String(repeating: "a", count: 60) + "2222",
+                          authenticator: "0x00", kind: .webAuthn,
+                          scope: VibenetScope(raw: VibenetScope.sender), expiry: 0)
+check("two same-kind keys on one account are TELLABLE APART by their short ids",
+      VibenetKeyIdentity.short(twinA.actorId) != VibenetKeyIdentity.short(twinB.actorId))
+
+print("")
+print("VibenetAccountDebug — the raw read, for the clipboard only")
+// Padded to the full 16-bit word: these are compared by eye against
+// `Scopes.sol`'s constants and against each other, and a ragged column is one
+// the reader has to right-align in their head.
+check("scope is the zero-padded hex word, never 0x13",
+      VibenetAccountDebug.scopeWord(VibenetScope(raw: 0x0013)) == "0x0013")
+check("admin's scope word is zero, and says so as a word",
+      VibenetAccountDebug.scopeWord(VibenetScope(raw: 0)) == "0x0000")
+check("a reserved bit survives into the word — the paste is RAW",
+      VibenetAccountDebug.scopeWord(VibenetScope(raw: 0x0400)) == "0x0400")
+
+let dbgExpiry: UInt64 = 4_102_444_800
+let dbgKey = VibenetActor(
+    actorId: VibenetActorId.actorId(forAddress: signerAddr)!,
+    authenticator: "0x0000000000000000000000000000000000000001",
+    kind: .secp256k1,
+    scope: VibenetScope(raw: VibenetScope.sender | VibenetScope.selfPayer),
+    expiry: dbgExpiry)
+let keyLine = VibenetAccountDebug.keyLine(dbgKey)
+// BOTH SPELLINGS OF EACH FACT. The hex/unix is for working against the
+// contract; the words are for checking the paste describes the card you were
+// just looking at. Either alone makes the reader do a conversion.
+check("the key line carries the FULL actorId, never the short form",
+      keyLine.contains(dbgKey.actorId))
+check("...the raw scope word",
+      keyLine.contains("scope 0x0009"))
+check("...AND the plain wording beside it",
+      keyLine.contains("Send anywhere, Pay own gas"))
+check("...the unix expiry, for the contract",
+      keyLine.contains("(\(dbgExpiry))"))
+check("...and an ISO stamp beside it, for a human",
+      keyLine.contains("2100-01-01T00:00:00Z"))
+check("a signer is named when there is one",
+      keyLine.contains("signer \(signerAddr)"))
+check("the authenticator is always named — it is the validating CONTRACT",
+      keyLine.contains("authenticator 0x0000000000000000000000000000000000000001"))
+// A bare `0` in a paste reads as an epoch DATE, not as Keystore's "never".
+let neverLine = VibenetAccountDebug.keyLine(VibenetActor(
+    actorId: passkey.actorId, authenticator: "0x00", kind: .webAuthn,
+    scope: VibenetScope(raw: 0), expiry: 0))
+check("expiry 0 is spelled 'never', never rendered as an epoch date",
+      neverLine.contains("expires never (0)"))
+check("...and a hashed actorId names no signer in the paste either",
+      !neverLine.contains("signer "))
+
+let dbgItem = VibenetAccountItem(
+    address: signerAddr, reached: true, established: true, actors: [dbgKey, passkey],
+    locked: false, hasInitiatedUnlock: false, unlocksAt: nil, unlockDelay: nil,
+    changeSequences: VibenetChangeSequences(multichain: 12, localEpoch: 2, localSequence: 5),
+    nativeBalance: 2.5)
+let dump = VibenetAccountDebug.text(for: dbgItem, name: "Treasury", now: readNow)
+check("the dump leads with the account it is about",
+      dump.hasPrefix("vibenet account \(signerAddr)"))
+check("a name is carried when the account has one",
+      dump.contains("name: Treasury"))
+check("every key gets a line",
+      dump.contains(dbgKey.actorId) && dump.contains(passkey.actorId))
+check("the key count is stated so a truncated paste is detectable",
+      dump.contains("keys: 2"))
+check("changeSequences carries all three of the contract's own fields",
+      dump.contains("changeSequences: multichain 12, localEpoch 2, localSequence 5"))
+// EVERY UNKNOWN SAID AS UNKNOWN. A paste reads as a complete record, so an
+// omitted line reads as "this account has none of that" when the truth is
+// "the read failed" — the same distinction `nativeBalance`'s own nil carries.
+let unreadItem = VibenetAccountItem(
+    address: signerAddr, reached: false, established: false, actors: [],
+    locked: false, hasInitiatedUnlock: false, unlocksAt: nil, unlockDelay: nil)
+let unreadDump = VibenetAccountDebug.text(for: unreadItem, name: nil, now: readNow)
+check("an unreached account SAYS the read failed, high up",
+      unreadDump.contains("reached: no"))
+check("...and warns that everything under it is a floor, not a census",
+      unreadDump.contains("not a census"))
+check("an unread balance is 'unread', never a zero",
+      unreadDump.contains("native: unread"))
+check("unread change sequences say so rather than vanishing",
+      unreadDump.contains("changeSequences: unread"))
+check("a nameless account carries no empty name line",
+      !unreadDump.contains("name:"))
+// The paste must not rank keys — that would be the app making a judgement in
+// the one artifact whose whole point is being raw (§463's own user ruling).
+let ordered = VibenetAccountDebug.text(
+    for: VibenetAccountItem(address: signerAddr, reached: true, established: true,
+                             actors: [passkey, dbgKey], locked: false,
+                             hasInitiatedUnlock: false, unlocksAt: nil, unlockDelay: nil),
+    name: nil, now: readNow)
+// ALPHABETICAL BY THE KEY'S OWN DISPLAYED TITLE — "Passkey" before "Wallet
+// key" — which is `VibenetAccountItem.alphabetical`'s rule, not this
+// harness's guess at one. The fixture is deliberately handed the keys in the
+// OPPOSITE order so the sort is what decides, and both titles are asserted
+// first so a future rename cannot leave this passing while testing nothing.
+check("the fixture's own premise: Passkey really does sort before Wallet key",
+      VibenetAuthenticatorKind.webAuthn.plainTitle < VibenetAuthenticatorKind.secp256k1.plainTitle)
+check("keys are in the same judgement-free order the screen uses, whatever order they arrived in",
+      ordered.range(of: passkey.actorId)!.lowerBound < ordered.range(of: dbgKey.actorId)!.lowerBound)
+
 // MARK: - prd §468: the facets
 
 print("")
@@ -2329,9 +2530,20 @@ mutate "the key card must say when an account could not be read" \
 
 # The rail and the sentence beside it must obey ONE rule: expiry 0 is
 # Keystore-for-never and is not a date, and a lapsed key is not ahead.
-mutate "futureExpiries must exclude the never-expires convention" \
-  'filter { $0 > 0 && TimeInterval($0) > now.timeIntervalSince1970 }' \
-  'filter { TimeInterval($0) > now.timeIntervalSince1970 }'
+# NOT A MUTATION HERE, on purpose — found running this harness against the
+# real tree (2026-08-25): `$0 > 0` in `futureExpiries`'s filter is REDUNDANT
+# with the `> now` clause beside it, because Keystore's "never" is epoch 0 and
+# epoch 0 is never after any real `now` — so no fixture built from a real
+# clock can ever tell the two clauses apart, and a mutation dropping `$0 > 0`
+# passed every assertion for the right reason rather than the wrong one. The
+# standing rule this codebase states repeatedly (`safetx-selftest.sh`,
+# `x-selftest.sh`): a fixture only tests the rule it names if it fails that
+# rule and passes every other one — this one could not, by construction, ever
+# fail differently with the guard removed. `$0 > 0` stays in the shipped
+# source as documentation of the Keystore convention (removing it changes
+# nothing observable), and the assertion above
+# ("futureExpiries excludes Keystore's own 'never' (expiry 0)") is the
+# correctness proof; this is not.
 
 mutate "futureExpiries must exclude an already-lapsed key" \
   'filter { $0 > 0 && TimeInterval($0) > now.timeIntervalSince1970 }' \
@@ -2370,9 +2582,21 @@ mutate "the ledger key must be account-qualified" \
   '"\(actorId.lowercased())"'
 
 # The tray mirrors the card grouping or a card that says 4 opens a list of 3.
-mutate "the tray must exclude an admin from every bit section, exactly as the card counts do" \
-  'let members = pairs.filter { !$0.actor.scope.isAdmin && $0.actor.scope.raw & bit != 0 }' \
-  'let members = pairs.filter { $0.actor.scope.raw & bit != 0 }'
+# NOT A MUTATION HERE EITHER, same shape as the futureExpiries note above
+# (found running this harness, 2026-08-25): `!$0.actor.scope.isAdmin` is
+# REDUNDANT with `.raw & bit != 0` beside it, because an admin's `raw` is 0
+# (isAdmin's own definition) and 0 ANDed with any nonzero bit is always 0 — so
+# an admin key can never satisfy `raw & bit != 0` for ANY of the five named
+# bits regardless of the isAdmin clause, and no fixture can make the two
+# clauses disagree. Same standing rule: a fixture only tests the rule it
+# names if it fails that rule and passes every other one. The clause stays in
+# the shipped source as documentation of intent (and because
+# `VibenetPolicyAggregation.compose`'"'"'s own count is written the identical,
+# equally-redundant way — the two must keep matching TEXT, not just behavior,
+# or a future reader "simplifying" one first breaks the mirror this tray
+# depends on). The assertion above ("an ADMIN is excluded from every bit
+# section — it is not five permissions, it is one word") is the correctness
+# proof; this is not.
 
 # A key in no section at all is either said or lost. Losing it is the silent
 # half of §83 — the tray looks complete and is not.
@@ -2396,6 +2620,66 @@ mutate "a revoke must keep its Key facet, not only its Revoked one" \
 mutate "a lock must carry no key facet" \
   'case .locked: return ["Locked"]' \
   'case .locked: return ["Locked", "Key"]'
+
+# --- prd §470 mutations -----------------------------------------------------
+
+# A passkey actorId is a HASH. Without the high-bytes-are-zero test it decodes
+# to a plausible 20-byte address belonging to nobody — and this build would
+# then offer "Copy signer address" on that row, handing a developer an address
+# that signs for no one, on the screen they read to find out who can spend
+# their account.
+mutate "a hashed actorId must name NO signer — never a plausible address that is not one" \
+  'guard s.prefix(24).allSatisfy({ $0 == "0" }) else { return nil }' \
+  'guard s.count == 64 else { return nil }'
+
+# Ragged-width hex is a column the reader right-aligns in their head, and
+# `0x13` vs `0x0013` is exactly the comparison this word exists for.
+mutate "the scope word must be zero-padded to the full 16 bits" \
+  'String(format: "0x%04x", scope.raw)' \
+  'String(format: "0x%x", scope.raw)'
+
+# THE SHARPEST ONE HERE. A bare `0` in a paste reads as an epoch DATE — a key
+# that never expires would document itself as having expired in 1970, in the
+# artifact a developer trusts precisely because it is raw.
+mutate "expiry 0 must be spelled 'never', never rendered as a date" \
+  'parts.append("expires never (0)")' \
+  'parts.append("expires \(iso(Date(timeIntervalSince1970: TimeInterval(actor.expiry)))) (0)")'
+
+# The whole word or nothing: the row already shows the tail, and a paste that
+# repeated the tail would hand back exactly what the reader already had.
+mutate "the key line must carry the FULL actorId, not the short form" \
+  'var parts: [String] = [actor.actorId, actor.kind.label]' \
+  'var parts: [String] = [VibenetKeyIdentity.short(actor.actorId), actor.kind.label]'
+
+# An omitted line reads as "this account has none of that". The truth may be
+# "the read failed", and only saying so keeps the two apart.
+mutate "an unread balance must say so, never be silently omitted" \
+  'lines.append("native: unread")' \
+  '()'
+
+mutate "unread change sequences must say so rather than vanishing" \
+  'lines.append("changeSequences: unread")' \
+  '()'
+
+# `reached: no` leads so a reader knows everything under it is a floor. Losing
+# the clause turns a partial record into one that reads as complete.
+mutate "an unreached account must warn that its record is not a census" \
+  'no — everything below is what we last saw, not a census' \
+  'no'
+
+# Ranking keys in the paste is the app making a judgement in the one artifact
+# whose entire point is being raw (§463's own user ruling, carried through).
+mutate "the paste must use the judgement-free order, never arrival order" \
+  'for actor in VibenetAccountItem.alphabetical(item.actors) {' \
+  'for actor in item.actors {'
+
+# The short form is the tail of the id. Taking the head instead makes every
+# secp256k1 key render as "…0000" — the zero padding — so every wallet key on
+# every account would draw an identical id, which is the exact failure the id
+# was added to fix.
+mutate "the short id must be the TAIL, never the head" \
+  'VibenetRoom.shortAddress(actorId)' \
+  'String(actorId.prefix(6))'
 
 echo ""
 echo "✓ vibenet-selftest: drift guards, assertions and mutations all passed"

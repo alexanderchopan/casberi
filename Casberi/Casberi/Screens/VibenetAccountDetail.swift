@@ -300,10 +300,26 @@ struct VibenetAccountDetail: View {
     /// the text INSIDE one never does.
     private func keyRow(_ actor: VibenetActor) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(actor.kind.plainTitle)
-                .dsText(.heading17)
-                .foregroundStyle(DS.textPrimary)
-                .lineLimit(1)
+            HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                Text(actor.kind.plainTitle)
+                    .dsText(.heading17)
+                    .foregroundStyle(DS.textPrimary)
+                    .lineLimit(1)
+                Spacer(minLength: DS.Space.s2)
+                // WHICH KEY THIS IS (prd §470). Without it two passkeys on
+                // one account are two identical rows — same title, same
+                // detail clause, often the same chips — and nothing on the
+                // screen or in the app could tell them apart or hand you the
+                // value to look one up. Monospaced and NOUN-LESS: a
+                // secp256k1 actorId is an address and a passkey's is a hash,
+                // so any label naming it would be a fabrication on half the
+                // rows (see `VibenetKeyIdentity.short`).
+                Text(VibenetKeyIdentity.short(actor.actorId))
+                    .dsText(.label11).monospaced()
+                    .foregroundStyle(DS.textTertiary)
+                    .lineLimit(1)
+                    .fixedSize()
+            }
             if let detail = actor.kind.plainDetail {
                 Text(detail)
                     .dsText(.label11)
@@ -415,6 +431,45 @@ struct VibenetAccountDetail: View {
         // undifferentiated text. Several keys in a row read as several
         // things, which is the fact this section is about.
         .dsWidgetSurface(cornerRadius: DS.Radius.widget, fillOpacity: 0.5)
+        // THE VALUES, ON DEMAND (prd §470). The row shows a four-character
+        // tail, which answers "which of these two" and nothing else; a
+        // developer comparing against a console log or a raw
+        // `getActorConfig` read needs the whole word, and there was no way to
+        // get it out of this app at all.
+        //
+        // A CONTEXT MENU, not visible buttons: this is the third tier of a
+        // row that already carries a title, a clause, chips and a clock, and
+        // three more controls on it would bury the reading it exists for.
+        // `copySensitive` for every item — each is literally the "an address,
+        // a sign-in code" case `DSPasteboard`'s own doc names, so each takes
+        // the short expiry and never leaves this device.
+        .contextMenu {
+            Button {
+                DSHaptic.tap()
+                DSPasteboard.copySensitive(actor.actorId)
+            } label: {
+                Label(String(localized: "Copy key id"), systemImage: "doc.on.doc")
+            }
+            // GATED, never unconditional. Only a secp256k1 actorId decodes to
+            // a real signer; a passkey's is a hash that would yield a
+            // plausible address belonging to nobody, so this item is absent
+            // rather than wrong on those rows (§83, and
+            // `VibenetKeyIdentity.signerAddress`'s own doc).
+            if let signer = VibenetKeyIdentity.signerAddress(actor) {
+                Button {
+                    DSHaptic.tap()
+                    DSPasteboard.copySensitive(signer)
+                } label: {
+                    Label(String(localized: "Copy signer address"), systemImage: "person.crop.circle")
+                }
+            }
+            Button {
+                DSHaptic.tap()
+                DSPasteboard.copySensitive(actor.authenticator)
+            } label: {
+                Label(String(localized: "Copy authenticator"), systemImage: "checkmark.shield")
+            }
+        }
     }
 
     // MARK: - Linked accounts (2026-08-24)
@@ -676,10 +731,18 @@ struct VibenetAccountDetail: View {
 
     // MARK: - Doors
 
-    /// Real buttons, not menu items — the two verbs worth a tap without a
+    /// Real buttons, not menu items — the verbs worth a tap without a
     /// long-press.
+    ///
+    /// **`FlowLayout`, not an `HStack` (prd §470).** Every door here is
+    /// `.fixedSize()`, so a fifth one ("Copy account state") pushed the run
+    /// past a phone's width and the trailing door simply left the screen —
+    /// and the row was already four wide on an undeployed account, which is
+    /// exactly when the faucet door matters most. Flowing wraps instead of
+    /// clipping, and it is the same layout the key rows' own chips use one
+    /// section up, so nothing new is introduced to read.
     private var doorsSection: some View {
-        HStack(spacing: DS.Space.s3) {
+        FlowLayout(spacing: DS.Space.s3) {
             // Shown ONLY while the account is undeployed, and only when the
             // live config actually named a faucet. `faucetAddress` has been
             // parsed since this seat shipped and read by nothing — the one
@@ -730,11 +793,50 @@ struct VibenetAccountDetail: View {
             }
             Button {
                 DSHaptic.tap()
-                UIPasteboard.general.string = item.address
+                // `DSPasteboard`, not a bare `UIPasteboard.general.string`
+                // (corrected 2026-08-25, prd §470): the raw write has no
+                // expiry and rides Universal Clipboard to every other device
+                // on the account, which is the default §277 introduced this
+                // type to stop. An address is that doc's own named
+                // `copySensitive` case, and every other address copy in the
+                // app already goes through it — this one call site was the
+                // straggler.
+                DSPasteboard.copySensitive(item.address)
             } label: {
                 HStack(spacing: 4) {
                     Text(String(localized: "Copy address"))
                     Image(systemName: "doc.on.doc")
+                }
+                .dsText(.label12).fontWeight(.semibold)
+                .foregroundStyle(DS.textSecondary)
+                .lineLimit(1)
+                .fixedSize()
+            }
+            // THE RAW READ, FOR SOMEBODY DEBUGGING (prd §470). Everything
+            // this app knows about the account — actorIds, scope as the hex
+            // word the contract stores, expiry as the unix integer — in the
+            // one place §463 allows spec internals to go: a paste that is
+            // asked for explicitly and competes with nothing on screen. See
+            // `VibenetAccountDebug`.
+            //
+            // `copy`, not `copySensitive`: this is a DOCUMENT whose whole
+            // purpose is to travel to wherever the debugging is happening,
+            // which `DSPasteboard`'s own doc names as the case for the
+            // cross-device verb ("copying a note on the phone and pasting it
+            // on the Mac is a real thing people do, and this app runs on
+            // both"). The single-value copies on each key row stay
+            // `copySensitive` — those are the "an address, a sign-in code"
+            // case, this is the note.
+            Button {
+                DSHaptic.tap()
+                DSPasteboard.copy(VibenetAccountDebug.text(
+                    for: item,
+                    name: VibenetWatch.shared.name(for: item.address),
+                    now: .now))
+            } label: {
+                HStack(spacing: 4) {
+                    Text(String(localized: "Copy account state"))
+                    Image(systemName: "curlybraces")
                 }
                 .dsText(.label12).fontWeight(.semibold)
                 .foregroundStyle(DS.textSecondary)

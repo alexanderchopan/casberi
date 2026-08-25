@@ -2737,7 +2737,24 @@ struct FeedScreen: View {
                         displayName: nil, bio: nil, avatarURL: nil))
                 }
             case .vibenetKeys(let items):
-                VibenetKeyTraySheet(items: items)
+                // A tapped key SCOPES THE ROOM to its account (prd §470),
+                // which is the follow-up the tray previously dead-ended on.
+                //
+                // DISMISS FIRST, THEN SCOPE — the order matters and is the
+                // same one `RoomDoor` spells out for its own pop-then-ask
+                // move: `vibenetScope` re-composes the room BEHIND this
+                // sheet, and asking for that while the sheet is still up
+                // means the change lands under a covered screen. Setting
+                // `feedSheet = nil` here is the whole dismissal, since this
+                // screen owns the presentation.
+                //
+                // No animation on the scope write, deliberately: the room is
+                // behind a dismissing sheet, so an animation animates
+                // something nobody can see and lands mid-transition.
+                VibenetKeyTraySheet(items: items, onPick: { address in
+                    feedSheet = nil
+                    chrome.vibenetScope = address
+                })
             }
         }
         #if !targetEnvironment(macCatalyst)
@@ -3034,10 +3051,13 @@ struct FeedScreen: View {
                     // corrected — see `VibenetRoomCard`'s own header doc):
                     // Wallet's own unscoped room has no per-wallet door
                     // anywhere, only scoping, so a feed-room roster tap
-                    // must only scope too, never open a sheet. `onScope`
-                    // is `chrome.vibenetScope`'s own toggle rule — tapping
-                    // the account already scoped to returns to "All",
-                    // matching `VibenetScopeRail`'s own tap.
+                    // must only scope too, never open a sheet. Scoping
+                    // itself is `VibenetScopeRail`'s alone (prd §469): the
+                    // card's `onScope` closure was deleted after being found
+                    // unreached — this call site passed a real closure into
+                    // a prop nothing called — and the rail above the card
+                    // already scopes every account with the toggle rule
+                    // (tap the scoped account again to return to "All").
                     //
                     // `onOpenKeys` routes through THIS screen's single
                     // `.sheet` (prd §468) rather than being presented by the
@@ -3049,12 +3069,8 @@ struct FeedScreen: View {
                     // account's keys and a tray opened from All lists
                     // everyone's — the same "click all you see all" rule the
                     // cards above it follow.
-                    VibenetRoomCard(room: room, onRemove: { _ in }, onScope: { address in
-                        withAnimation(DS.Motion.standard) {
-                            chrome.vibenetScope = (chrome.vibenetScope?.caseInsensitiveCompare(address) == .orderedSame)
-                                ? nil : address
-                        }
-                    }, onOpenKeys: { feedSheet = .vibenetKeys(room.items) })
+                    VibenetRoomCard(room: room, onRemove: { _ in },
+                                    onOpenKeys: { feedSheet = .vibenetKeys(room.items) })
                 case .altana(let card):
                     AltanaRoomCard(card: card) {
                         // The door is Altana's own explorer — the only place a

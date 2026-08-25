@@ -2063,6 +2063,179 @@ enum VibenetPolicyAggregation {
     }
 }
 
+// MARK: - A key's own identity (2026-08-25, prd §470)
+
+/// WHAT IDENTIFIES A KEY ON SCREEN, and why nothing did until now.
+///
+/// `actorId` is the primary key of this entire system — `Keystore` stores
+/// actors as `_actorConfig[actorId][account]`, `VibenetKeyReuse` joins on it,
+/// a delegate's target is decoded from it, and it is what a developer greps a
+/// console log for or compares against a raw `getActorConfig` read. Every
+/// screen in this room drew a key as its KIND plus its permission chips and
+/// showed the id nowhere, so **two passkeys on one account were two
+/// indistinguishable rows** — same title, same detail clause, often the same
+/// chips — and nothing in the app could tell you which was which or hand you
+/// the value to look one up.
+///
+/// The room's own §463 ruling stands and is not in tension with this: spec
+/// INTERNALS (bit names, "Nonce", raw scope words) do not belong on screen,
+/// because they ask a reader to know the spec to read their own account. An
+/// identifier is the opposite — it asks nothing and answers the one question
+/// a repeated row cannot ("which of these two?"). The raw *values* still stay
+/// off the screen and live on the clipboard instead (`VibenetAccountDebug`).
+enum VibenetKeyIdentity {
+    /// "…0b1c" — the tail form, deliberately the SAME truncation grammar
+    /// `VibenetRoom.shortAddress` uses rather than a second one.
+    ///
+    /// A room that elides two kinds of hex two different ways teaches a
+    /// reader to parse before they can compare, and comparing a tail against
+    /// another tail is the whole job here. Tail-only for §CLAUDE's own reason
+    /// (a leading prefix plus a middle ellipsis is two truncations doing the
+    /// work of one).
+    ///
+    /// NO NOUN IS ATTACHED, and that is load-bearing. A secp256k1 actorId IS
+    /// an address right-aligned into a word, while a passkey's is a HASH of a
+    /// public key with no address inside it — so a label reading "address"
+    /// would be true of some rows and a fabrication on others (§83, on the
+    /// screen a person reads to find out who can spend their account). The
+    /// row shows bare monospaced hex; `signerAddress` below is the gated way
+    /// to say the stronger thing when it is actually true.
+    static func short(_ actorId: String) -> String {
+        VibenetRoom.shortAddress(actorId)
+    }
+
+    /// The signing EOA behind an address-shaped actorId, or nil.
+    ///
+    /// Non-nil for a secp256k1 key (whose actorId is `ActorId.fromAddress`)
+    /// and nil for every P-256/WebAuthn/passkey one, whose id is a hash that
+    /// would decode to a plausible address belonging to nobody — see
+    /// `VibenetActorId.address(fromActorId:)`, whose high-bytes-are-zero test
+    /// is what keeps that from happening. A caller MUST gate a "copy signer
+    /// address" affordance on this rather than offering it unconditionally:
+    /// an item that is present on every row and correct on some is worse than
+    /// one that appears only where it means something.
+    static func signerAddress(_ actor: VibenetActor) -> String? {
+        VibenetActorId.address(fromActorId: actor.actorId)
+    }
+}
+
+// MARK: - The account, as a developer would paste it (2026-08-25, prd §470)
+
+/// THE RAW READ, FOR THE CLIPBOARD ONLY — never for the screen.
+///
+/// §463 ruled that this room must not put spec internals in front of a person
+/// ("a card spelling them out in full is still asking someone to know the
+/// spec to read their own account"), and that ruling is right and untouched.
+/// But a developer debugging their own keystore against the contract wants
+/// exactly those internals: the actorIds, the scope as the hex word `Scopes.
+/// sol` actually stores, the expiry as the unix integer `Keystore` holds
+/// rather than a rendered "in 3 days".
+///
+/// A CLIPBOARD PAYLOAD IS WHERE THAT BELONGS. It is asked for explicitly, it
+/// never competes for space with the plain-language card, and it costs a
+/// reader who does not want it precisely nothing — the same split
+/// `AgentContext` already draws (a screen for reading, a paste for working).
+/// So the screen keeps saying "Send anywhere"; the paste says `0x0001`, and
+/// says both together so a reader can map one to the other.
+///
+/// Foundation-only by design, like everything else in this file, so
+/// `vibenet-selftest.sh` compiles it whole and can pin the format.
+enum VibenetAccountDebug {
+
+    /// Scope as the raw 16-bit word, zero-padded — `0x0013`, never `0x13`.
+    ///
+    /// Padded because these are compared by eye against `Scopes.sol`'s own
+    /// constants and against each other, and a ragged-width column is one a
+    /// reader has to right-align in their head. Lowercase hex to match every
+    /// other hex string this room emits.
+    static func scopeWord(_ scope: VibenetScope) -> String {
+        String(format: "0x%04x", scope.raw)
+    }
+
+    /// The whole account, as plain text.
+    ///
+    /// EVERY UNKNOWN IS SAID AS UNKNOWN rather than omitted or zeroed — a
+    /// paste is read as a complete record of what we saw, so a missing line
+    /// reads as "this account has none of that" when the truth may be "the
+    /// read failed". `reached: no` leads for exactly that reason: it tells a
+    /// reader that everything under it is a floor rather than a census.
+    static func text(for item: VibenetAccountItem, name: String?, now: Date) -> String {
+        var lines: [String] = []
+        lines.append("vibenet account \(item.address)")
+        if let name, !name.isEmpty { lines.append("name: \(name)") }
+        lines.append("copied: \(iso(now))")
+        lines.append("reached: \(item.reached ? "yes" : "no — everything below is what we last saw, not a census")")
+        lines.append("established: \(item.established ? "yes" : "no")")
+        lines.append("locked: \(item.locked ? "yes" : "no")")
+        if item.hasInitiatedUnlock {
+            let at = item.unlocksAt.map { "\(iso(Date(timeIntervalSince1970: TimeInterval($0)))) (\($0))" } ?? "unknown"
+            lines.append("unlockInitiated: yes, unlocksAt \(at)")
+        }
+        if let native = item.nativeBalance {
+            lines.append("native: \(VibenetBalanceFormat.line(native))")
+        } else {
+            lines.append("native: unread")
+        }
+        for token in item.tokenBalances {
+            lines.append("token \(token.symbol): \(VibenetBalanceFormat.line(token.amount))")
+        }
+
+        lines.append("keys: \(item.actors.count)")
+        // ALPHABETICAL, the same judgement-free order the screen uses (§463's
+        // own user ruling) — a paste that ranked keys would be this app making
+        // a claim in the one artifact meant to be raw.
+        for actor in VibenetAccountItem.alphabetical(item.actors) {
+            lines.append("  " + keyLine(actor))
+        }
+
+        if let cs = item.changeSequences {
+            lines.append("changeSequences: multichain \(cs.multichain), localEpoch \(cs.localEpoch), localSequence \(cs.localSequence)")
+        } else {
+            lines.append("changeSequences: unread")
+        }
+        return lines.joined(separator: "\n")
+    }
+
+    /// One key: id, kind, scope both ways, expiry both ways.
+    ///
+    /// BOTH SPELLINGS OF EACH, always — the hex/unix for working against the
+    /// contract, the words for checking that this paste describes the card you
+    /// were just looking at. Either alone makes the reader do a conversion the
+    /// other half already did.
+    static func keyLine(_ actor: VibenetActor) -> String {
+        var parts: [String] = [actor.actorId, actor.kind.label]
+        parts.append("scope \(scopeWord(actor.scope)) (\(actor.scope.plainSummary))")
+        if actor.expiry > 0 {
+            let at = Date(timeIntervalSince1970: TimeInterval(actor.expiry))
+            parts.append("expires \(iso(at)) (\(actor.expiry))")
+        } else {
+            // Keystore's own convention, spelled out — a bare `0` in a paste
+            // reads as an epoch date rather than as "never".
+            parts.append("expires never (0)")
+        }
+        if let signer = VibenetKeyIdentity.signerAddress(actor) {
+            parts.append("signer \(signer)")
+        }
+        parts.append("authenticator \(actor.authenticator)")
+        if let manager = actor.policyManager {
+            parts.append("policyManager \(manager)")
+        }
+        if let commitment = actor.policyCommitment {
+            parts.append("policyCommitment \(commitment)")
+        }
+        return parts.joined(separator: "  ")
+    }
+
+    /// UTC, seconds precision, no fractional part — a timestamp somebody may
+    /// paste beside a block explorer's own.
+    private static func iso(_ date: Date) -> String {
+        let f = ISO8601DateFormatter()
+        f.timeZone = TimeZone(secondsFromGMT: 0)
+        f.formatOptions = [.withInternetDateTime]
+        return f.string(from: date)
+    }
+}
+
 // MARK: - The key tray (2026-08-25, prd §468) — which keys are in which category
 
 /// One key in the tray, carrying the account it belongs to.
@@ -2095,9 +2268,11 @@ struct VibenetTraySection: Equatable, Identifiable {
 /// The card states six numbers — "Send anywhere 4", "Pay own gas 2" — and a
 /// number is the one thing you cannot act on: knowing four keys can send
 /// anywhere does not tell you WHICH four, or on which account, or when any of
-/// them lapses. `keysAggregateSection`'s own comment has said since 2026-08-24
-/// that it withholds its chevron because "it points at a key tray that does
-/// not exist in this build, and a chevron that opens nothing is the dead
+/// them lapses. `VibenetRoomCard.keysAggregateSection` (deleted 2026-08-25,
+/// prd §469 — the same summary is now `keysCard`/`keysBody` alone) carried a
+/// comment since 2026-08-24 saying it withholds its chevron because "it
+/// points at a key tray that does not exist in this build, and a chevron
+/// that opens nothing is the dead
 /// control §83 bans". This is that screen; the chevron becomes honest with it.
 ///
 /// **IT MIRRORS `VibenetPolicyAggregation.compose` EXACTLY** — same Admin-first

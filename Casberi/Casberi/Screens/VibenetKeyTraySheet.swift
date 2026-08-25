@@ -5,12 +5,13 @@ import SwiftUI
 /// and permissions that show which keys are in which category"*, prd §468).
 ///
 /// **The chevron this makes honest.** `VibenetRoomCard.keysAggregateSection`
-/// has carried a comment since 2026-08-24 saying it withholds the chevron the
-/// design draws because "it points at a key tray that does not exist in this
-/// build, and a chevron that opens nothing is the dead control §83 bans. The
-/// surface is the part that carries the meaning; the affordance can arrive
-/// with the screen it would open." This is that screen, and the chevron
-/// arrives with it.
+/// (deleted 2026-08-25, prd §469 — its content is `keysCard`/`keysBody`, the
+/// only surface left that draws the room's key summary) carried a comment
+/// since 2026-08-24 saying it withholds the chevron the design draws because
+/// "it points at a key tray that does not exist in this build, and a chevron
+/// that opens nothing is the dead control §83 bans. The surface is the part
+/// that carries the meaning; the affordance can arrive with the screen it
+/// would open." This is that screen, and the chevron arrives with it.
 ///
 /// **Why a card of counts needed one.** "Send anywhere 4" is the one shape of
 /// fact you cannot act on: it does not say WHICH four, on which account, or
@@ -32,6 +33,20 @@ import SwiftUI
 /// `Thing`, no liveness question, and no renumbering under an open tray.
 struct VibenetKeyTraySheet: View {
     let items: [VibenetAccountItem]
+    /// Tapping a key SCOPES THE ROOM to the account it belongs to (prd §470).
+    ///
+    /// The tray answers "which keys can send anywhere" and, before this,
+    /// dead-ended on the answer: you found the key, read that it sits on
+    /// `…0b1c`, and then had to dismiss the tray, find that face in the rail
+    /// and tap it — three gestures to follow up the one you came for.
+    ///
+    /// The CALLER dismisses and scopes, in that order, because the tray does
+    /// not own its own presentation (`FeedSheetRoute` does) and a sheet that
+    /// dismissed itself while the room re-composed behind it is the
+    /// half-open-then-close class this room has already paid for. nil where
+    /// there is nothing to scope, so the rows stay plain rather than
+    /// pretending at a door.
+    var onPick: ((String) -> Void)? = nil
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -101,7 +116,56 @@ struct VibenetKeyTraySheet: View {
     /// room-wide: a key title alone ("Passkey") is the same words on four
     /// different accounts, and which account a key can act for is the fact
     /// that makes the row worth reading.
+    @ViewBuilder
     private func row(_ key: VibenetTrayKey, in section: VibenetTraySection) -> some View {
+        if let onPick {
+            Button {
+                DSHaptic.selection()
+                onPick(key.address)
+            } label: {
+                rowBody(key, in: section)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .dsHover()
+            .contextMenu { copyItems(key) }
+        } else {
+            rowBody(key, in: section)
+                .contextMenu { copyItems(key) }
+        }
+    }
+
+    /// The same copy actions the account detail's own key rows carry
+    /// (prd §470), so a key hands over its id from wherever you found it —
+    /// and one definition, since two would drift into two different sets of
+    /// verbs for one object.
+    @ViewBuilder
+    private func copyItems(_ key: VibenetTrayKey) -> some View {
+        Button {
+            DSHaptic.tap()
+            DSPasteboard.copySensitive(key.actor.actorId)
+        } label: {
+            Label(String(localized: "Copy key id"), systemImage: "doc.on.doc")
+        }
+        // Gated for `VibenetKeyIdentity.signerAddress`'s own reason: only an
+        // address-shaped actorId has a signer to name.
+        if let signer = VibenetKeyIdentity.signerAddress(key.actor) {
+            Button {
+                DSHaptic.tap()
+                DSPasteboard.copySensitive(signer)
+            } label: {
+                Label(String(localized: "Copy signer address"), systemImage: "person.crop.circle")
+            }
+        }
+        Button {
+            DSHaptic.tap()
+            DSPasteboard.copySensitive(key.address)
+        } label: {
+            Label(String(localized: "Copy account address"), systemImage: "wallet.pass")
+        }
+    }
+
+    private func rowBody(_ key: VibenetTrayKey, in section: VibenetTraySection) -> some View {
         HStack(alignment: .top, spacing: DS.Space.s3) {
             WalletFace(address: key.address, size: DS.Face.row, circular: true)
             VStack(alignment: .leading, spacing: 2) {
@@ -109,10 +173,22 @@ struct VibenetKeyTraySheet: View {
                     .dsText(.body17)
                     .foregroundStyle(DS.textPrimary)
                     .lineLimit(1)
-                Text(Self.accountName(key.address))
-                    .dsText(.label12)
-                    .foregroundStyle(DS.textSecondary)
-                    .lineLimit(1)
+                HStack(spacing: DS.Space.s2) {
+                    Text(Self.accountName(key.address))
+                        .dsText(.label12)
+                        .foregroundStyle(DS.textSecondary)
+                        .lineLimit(1)
+                    // WHICH KEY (prd §470) — the same noun-less monospaced
+                    // tail the detail's rows carry. It matters more here than
+                    // anywhere: this list groups BY PERMISSION, so two keys of
+                    // one kind on one account land as adjacent rows reading
+                    // identically end to end.
+                    Text(VibenetKeyIdentity.short(key.actor.actorId))
+                        .dsText(.label11).monospaced()
+                        .foregroundStyle(DS.textTertiary)
+                        .lineLimit(1)
+                        .fixedSize()
+                }
                 if let also = VibenetKeyTray.alsoLine(key, besides: section.label) {
                     Text(also)
                         .dsText(.label11)
