@@ -47,12 +47,19 @@ cd "$(dirname "$0")/.."
 
 PLAN="Casberi/Casberi/Model/WalletConnectPlan.swift"
 SCREEN="Casberi/Casberi/Screens/WalletScreen.swift"
+# §466 moved the field ConnectWalletRow lives inside — and with it,
+# showConnectPicker — off WalletScreen and into WalletWatchField, shared with
+# the roster section the book now hosts. The picker's own single-sheet
+# discipline still holds on BOTH hosts; see the guards below.
+FIELD="Casberi/Casberi/Screens/WalletWatchField.swift"
+ROSTER="Casberi/Casberi/Screens/WalletRosterSection.swift"
+BOOKSCREEN="Casberi/Casberi/Screens/AddressBookScreen.swift"
 SHEET="Casberi/Casberi/Screens/WalletConnectPickerSheet.swift"
 STORE="Casberi/Casberi/Model/WalletStore.swift"
 ENSF="Casberi/Casberi/Model/ENS.swift"
 BRIDGE="Casberi/Casberi/Model/WalletConnectBridge.swift"
 SAFE="Casberi/Casberi/Model/SafeBridge.swift"
-for f in "$PLAN" "$SCREEN" "$SHEET" "$STORE" "$ENSF" "$BRIDGE" "$SAFE"; do
+for f in "$PLAN" "$SCREEN" "$FIELD" "$ROSTER" "$BOOKSCREEN" "$SHEET" "$STORE" "$ENSF" "$BRIDGE" "$SAFE"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 
@@ -67,18 +74,36 @@ done
 # source fires on the prose explaining the bug it guards against (the
 # Obsidian/Cursor lesson, earned again here on this guard's first run).
 CODE=$(mktemp /tmp/wcplan-code.XXXXXX)
-trap 'rm -f "$CODE"' EXIT
+FIELDCODE=$(mktemp /tmp/wcplan-field.XXXXXX)
+trap 'rm -f "$CODE" "$FIELDCODE"' EXIT
 grep -vE '^[[:space:]]*(//|\*|/\*)' "$SCREEN" > "$CODE"
-grep -qE 'wallet\.(add|outcome\(ofAdding:)[^)]*account\.address' "$CODE" \
-  && { echo "✗ WalletScreen watches a connected account directly again — the watch"; \
-       echo "  cap will drop the overflow with no word to anyone (prd §376)"; exit 1; }
-grep -qE 'func watchConnected' "$CODE" \
-  && { echo "✗ watchConnected is back — it is the silent bulk-add itself"; exit 1; }
-grep -q 'showConnectPicker(found)' "$CODE" \
-  || { echo "✗ a settled session no longer routes to the picker"; exit 1; }
+grep -vE '^[[:space:]]*(//|\*|/\*)' "$FIELD" > "$FIELDCODE"
+# The negative check now covers every host that could reach a connected
+# account — the field itself (where ConnectWalletRow lives since §466) and
+# the roster section that embeds it, not just WalletScreen.
+for f in "$CODE" "$FIELDCODE" "$ROSTER"; do
+  grep -qE 'wallet\.(add|outcome\(ofAdding:)[^)]*account\.address' "$f" \
+    && { echo "✗ $f watches a connected account directly — the watch cap"; \
+         echo "  will drop the overflow with no word to anyone (prd §376)"; exit 1; }
+  grep -qE 'func watchConnected' "$f" \
+    && { echo "✗ watchConnected is back in $f — it is the silent bulk-add itself"; exit 1; }
+done
+grep -q 'onConnectFound(found)' "$FIELDCODE" \
+  || { echo "✗ a settled session no longer routes to the picker (WalletWatchField, §466)"; exit 1; }
+# The picker route is bubbled to WHICHEVER host's own single sheet owns it —
+# WalletScreen's own `sheetRoute` for the first address, the book's `bookSheet`
+# for the roster's second through fifth (§466's `AddressBookSheetRoute`
+# reuse). Both must still resolve `.connectPicker`, or a fourth sibling
+# `.sheet` self-dismisses the first tap (FeedScreen's lesson).
 grep -q 'case .connectPicker' "$CODE" \
-  || { echo "✗ the picker is no longer on WalletScreen's single sheet route —"; \
-       echo "  a fourth sibling .sheet self-dismisses the first tap (FeedScreen's lesson)"; exit 1; }
+  || { echo "✗ WalletScreen's own sheet route no longer resolves .connectPicker (§466)"; exit 1; }
+grep -q 'case .connectPicker' "$BOOKSCREEN" \
+  || { echo "✗ the book's sheet route no longer resolves .connectPicker — the roster's"; \
+       echo "  own connect flow would have nowhere to land (§466)"; exit 1; }
+grep -q 'onConnectFound: { sheetRoute = .connectPicker(\$0) }' "$SCREEN" \
+  || { echo "✗ WalletScreen no longer wires the field's found accounts to its own sheet (§466)"; exit 1; }
+grep -q 'onConnectFound: { bookSheet = .connectPicker(\$0) }' "$BOOKSCREEN" \
+  || { echo "✗ the book no longer wires the roster's found accounts to its own sheet (§466)"; exit 1; }
 
 # The sheet must open on the PLAN's preselection, never its own. A sheet that
 # ticks its own boxes can tick more than the Add button will take.

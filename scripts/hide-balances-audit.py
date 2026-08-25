@@ -46,7 +46,8 @@ RAW = [
 # reading imports, for `infoplist-strings-audit`'s reason: a filename is a fact
 # and an inferred "is this a wallet screen" is a judgement that drifts.
 WALLET_VIEWS = (
-    "WalletFeedTiles.swift", "WalletScreen.swift", "WalletHistoryScreen.swift",
+    "WalletFeedTiles.swift", "WalletScreen.swift", "WalletWatchField.swift",
+    "WalletRosterSection.swift", "WalletHistoryScreen.swift",
     "WalletFlowBand.swift", "WalletLiquidityCard.swift", "WalletPerpsCard.swift",
     "WalletRiskStrip.swift", "WalletApprovalExposureCard.swift",
     "AddressBookViews.swift", "AddressConnectionsCard.swift",

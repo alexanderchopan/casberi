@@ -101,6 +101,14 @@ struct AddressBookScreen: View {
         let sections = bookSections(entries)
         return ScrollViewReader { proxy in
             List {
+                // THE ROSTER (prd §466) — your own five wallets, moved WHOLE
+                // off `WalletScreen`. Ahead of the naming field: this is the
+                // repeatedly-visited half of the book, and the book's own
+                // §461 doc already put "your own wallets" first in its list
+                // of what belongs here.
+                if !searching {
+                    WalletRosterSection(onConnectFound: { bookSheet = .connectPicker($0) })
+                }
                 inputSection
                 if !searching {
                     spineSection

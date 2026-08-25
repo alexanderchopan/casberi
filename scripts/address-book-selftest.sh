@@ -45,6 +45,16 @@ BOOK="Casberi/Casberi/Model/AddressBook.swift"
 ACTIVITY="Casberi/Casberi/Model/AddressActivity.swift"
 # The ROSTER — your own five addresses, and nothing else (prd §461).
 SCREEN="Casberi/Casberi/Screens/WalletScreen.swift"
+# §466 split WalletScreen further: the field that WATCHES (shared with the
+# roster section below it now lives in the book) and the roster ITSELF —
+# rows, rename, remove, sync status — moved into the book as its own section.
+# `$SCREEN` is what remains: the first address, the room door, the book door,
+# the chains door. Most of the checks that used to name `$SCREEN` for a
+# roster-shaped fact now name `$FIELD` or `$ROSTER` instead — moved file
+# rather than deleted, the same rule this harness's own header states for
+# `address-sky-selftest.sh`'s retirement.
+FIELD="Casberi/Casberi/Screens/WalletWatchField.swift"
+ROSTER="Casberi/Casberi/Screens/WalletRosterSection.swift"
 # The BOOK — everyone else, as a room. §461 split these; before it, both of
 # these were one screen, which is why most of the guards below moved file
 # rather than changing.
@@ -60,7 +70,7 @@ CONN="Casberi/Casberi/Model/AddressConnections.swift"
 # The shell — where the rail is built and the route node resolved (§461).
 SHELL_MAIN="Casberi/Casberi/Shell/MainSurface.swift"
 ROUTE="Casberi/Casberi/Shell/HomeRoute.swift"
-for f in "$SHAPE" "$BOOK" "$ACTIVITY" "$SCREEN" "$BOOKSCREEN" "$VIEWS" "$GROUPS" "$SPINE" "$BAR" "$FLIGHT" "$SOURCE" "$CONN" "$SHELL_MAIN" "$ROUTE"; do
+for f in "$SHAPE" "$BOOK" "$ACTIVITY" "$SCREEN" "$FIELD" "$ROSTER" "$BOOKSCREEN" "$VIEWS" "$GROUPS" "$SPINE" "$BAR" "$FLIGHT" "$SOURCE" "$CONN" "$SHELL_MAIN" "$ROUTE"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 
@@ -84,6 +94,8 @@ PY
 strip_comments "$FLIGHT" > "$TMP/flight-bare.swift"
 strip_comments "$SPINE"  > "$TMP/spine-bare.swift"
 strip_comments "$SCREEN" > "$TMP/screen-bare.swift"
+strip_comments "$FIELD"  > "$TMP/field-bare.swift"
+strip_comments "$ROSTER" > "$TMP/roster-bare.swift"
 strip_comments "$BOOKSCREEN" > "$TMP/book-bare.swift"
 strip_comments "$GROUPS" > "$TMP/groups-bare.swift"
 strip_comments "$VIEWS"  > "$TMP/views-bare.swift"
@@ -152,8 +164,12 @@ grep -q 'things.sorted(by: { $0.capturedAt < $1.capturedAt })' "$SOURCE" \
 #
 # The strongest is the NEGATIVE: `outcome(ofAdding:)` is the one call that
 # enrols an address, and it may appear in the roster and nowhere else.
-grep -q 'outcome(ofAdding:' "$SCREEN" \
-  || { echo "✗ the roster no longer watches anything — WalletScreen is the only screen that may (§461)"; exit 1; }
+grep -q 'outcome(ofAdding:' "$TMP/field-bare.swift" \
+  || { echo "✗ nothing watches anything — WalletWatchField is the only place that may (§461/§466)"; exit 1; }
+grep -q 'outcome(ofAdding:' "$TMP/screen-bare.swift" \
+  && { echo "✗ WalletScreen calls outcome(ofAdding:) directly again — that call belongs to WalletWatchField alone, or the setup screen and the book answer a paste two different ways (§466)"; exit 1; }
+grep -q 'outcome(ofAdding:' "$TMP/roster-bare.swift" \
+  && { echo "✗ WalletRosterSection calls outcome(ofAdding:) directly again — see above (§466)"; exit 1; }
 grep -q 'outcome(ofAdding:' "$TMP/book-bare.swift" \
   && { echo "✗ the address book watches an address — a reading surface may not change what the app fetches (§461)"; exit 1; }
 grep -q 'outcome(ofAdding:' "$TMP/views-bare.swift" \
@@ -166,7 +182,7 @@ grep -qE 'star\.fill|"star"' "$TMP/book-bare.swift" \
 # what makes that safe.
 grep -q 'onToggleWatch' "$TMP/book-bare.swift" \
   && { echo "✗ the book passes a watch toggle to its rows (§461)"; exit 1; }
-grep -q 'onToggleWatch' "$TMP/screen-bare.swift" \
+grep -q 'onToggleWatch' "$TMP/screen-bare.swift" "$TMP/roster-bare.swift" \
   && { echo "✗ the roster passes a watch toggle to its rows — membership is the row's existence there, not a star on it (§461)"; exit 1; }
 # The flight's ends are RAMP tokens the caller passes, and since §448 they are
 # REQUIRED: the old defaults named the star flight's own anchors, and a default
@@ -202,9 +218,9 @@ grep -qE '\b[ab]\.(width|height|size)\b' "$TMP/flight-bare.swift" \
 # one spelling, §448's ruling, unchanged — with `activity` nil, which is what
 # drops "12 together · 4 days ago". A recency phrase is a reading, and the
 # roster is a list of what the app is permitted to read.
-grep -q 'private var watchedEntries: \[AddressBook.Entry\]' "$SCREEN" \
-  || { echo "✗ the roster is gone, or stopped being entries"; exit 1; }
-grep -q 'activity: nil' "$TMP/screen-bare.swift" \
+grep -q 'private var watchedEntries: \[AddressBook.Entry\]' "$ROSTER" \
+  || { echo "✗ the roster is gone, or stopped being entries (moved to WalletRosterSection, §466)"; exit 1; }
+grep -q 'activity: nil' "$TMP/roster-bare.swift" \
   || { echo "✗ the roster draws activity again — history belongs to the book room (§461)"; exit 1; }
 
 # THE BOOK IS EVERYONE ELSE, SEARCHING INCLUDED (§461) — reversing §448's one
@@ -226,9 +242,9 @@ grep -q 'Everyone else · \\(count)' "$TMP/book-bare.swift" \
 # NEGATIVE, comment-stripped: the shelf may not come back. `DS.Face.shelf` is
 # the ramp rung it was drawn at and this screen is the only place it was ever
 # used at this size.
-grep -qE 'DS.Face.shelf' "$TMP/screen-bare.swift" "$TMP/book-bare.swift" \
+grep -qE 'DS.Face.shelf' "$TMP/screen-bare.swift" "$TMP/roster-bare.swift" "$TMP/book-bare.swift" \
   && { echo "✗ the watched shelf is back — §448 deleted it because it drew every watched wallet a second time, with its name truncated (§448)"; exit 1; }
-grep -qE 'rosterSlot|emptyRosterSlot|rosterSlotWidth' "$TMP/screen-bare.swift" "$TMP/book-bare.swift" \
+grep -qE 'rosterSlot|emptyRosterSlot|rosterSlotWidth' "$TMP/screen-bare.swift" "$TMP/roster-bare.swift" "$TMP/book-bare.swift" \
   && { echo "✗ the roster shelf's slots are back (§448)"; exit 1; }
 
 # ── §448: THE FEWEST WORDS ──────────────────────────────────────────────────
@@ -287,8 +303,8 @@ grep -q 'defaults.set(true, forKey: seededKey)' "$SOURCE" \
 # ONE ROW ANATOMY. Two spellings of the book row is two books.
 grep -q 'struct AddressBookRow: View' "$VIEWS" \
   || { echo "✗ the shared row is gone; the manager and the group screen would each draw their own"; exit 1; }
-grep -q 'AddressBookRow(entry: entry' "$SCREEN" \
-  || { echo "✗ the roster no longer draws the shared row"; exit 1; }
+grep -q 'AddressBookRow(entry: entry' "$ROSTER" \
+  || { echo "✗ the roster no longer draws the shared row (moved to WalletRosterSection, §466)"; exit 1; }
 grep -q 'AddressBookRow(entry: entry' "$BOOKSCREEN" \
   || { echo "✗ the book room no longer draws the shared row"; exit 1; }
 grep -q 'AddressBookRow(entry: entry' "$GROUPS" \
@@ -378,16 +394,22 @@ grep -q 'route.push(.addressBook)' "$SHELL_MAIN" \
 grep -q 'bookTitle: String(localized: "Address Book")' "$SHELL_MAIN" \
   || { echo "✗ the rail's book door lost its name — the slot is captionless, so the label IS its only naming (VoiceOver and the Mac tooltip)"; exit 1; }
 grep -q 'route.push(.addressBook)' "$SCREEN" \
-  || { echo "✗ the roster lost its door to the book — with nothing watched the rail does not draw, so this is the only way in (§461)"; exit 1; }
+  || { echo "✗ the setup screen lost its door to the book — with nothing watched the rail does not draw, so this is the only way in (§461/§466)"; exit 1; }
 grep -q 'case addressBook' "$ROUTE" \
   || { echo "✗ the address book has no route node"; exit 1; }
 grep -q 'AddressBookScreen()' "$SHELL_MAIN" \
   || { echo "✗ nothing resolves the addressBook node to a screen"; exit 1; }
-# THE ADD VERB STEPS ASIDE AT THE CAP, and the arithmetic is why (§461): two
-# trailing doors plus five faces plus All is 402pt against a 393pt phone, on the
-# control §450 shrank precisely so it would not scroll.
+# THE ADD VERB IS GONE, not merely stepping aside at the cap (§466, reversing
+# §461's own "steps aside at the cap" — watching a new wallet and seeing the
+# whole roster are the same screen now that the roster moved into the book,
+# so a second slot pointing at the identical destination was chrome, not a
+# choice; the same move Vibenet's rail made the same day). The arithmetic
+# that motivated the original cap-only rule still applies at fewer slots: two
+# trailing doors plus five faces plus All is 402pt against a 393pt phone.
+grep -q 'addTitle: nil,' "$SHELL_MAIN" \
+  || { echo "✗ the wallet rail's add slot is back — watching a new wallet and seeing the roster are the same screen now (§466)"; exit 1; }
 grep -q 'addTitle: wallet.canWatchMore ? String(localized: "Add a wallet") : nil' "$SHELL_MAIN" \
-  || { echo "✗ the rail keeps its add verb at the watch cap — eight slots overflow a 393pt phone, and an add that cannot add is a dead control (§461/§83)"; exit 1; }
+  && { echo "✗ the wallet rail's add slot came back cap-gated — §466 removed it outright, not just at five of five"; exit 1; }
 # THE WAY ONWARD (§460). The roster is a connect page and was the one screen in
 # the catalog's largest family without the door every other one carries.
 grep -q 'RoomDoor(name: "Wallet", source: "Wallet")' "$SCREEN" \

@@ -434,17 +434,16 @@ struct MainSurface: View {
                 // No re-tap verb: there is no "deeper" a watched address goes
                 // that the room you are already in does not already show.
                 onReTap: nil,
-                // THE ADD VERB STEPS ASIDE AT THE CAP (prd §461). Two trailing
-                // doors plus five faces plus All is 402pt against a 393pt phone,
-                // and this rail was shrunk in §450 exactly so it would not
-                // scroll. Dropping the ADD one is also what §83 wants: at five
-                // of five it cannot add, and the roster screen it opens still
-                // states the cap where somebody can act on it.
-                addTitle: wallet.canWatchMore ? String(localized: "Add a wallet") : nil,
-                onAdd: wallet.canWatchMore
-                    ? { route.pushBridge(BridgeRouter.destination(forID: "wallet")) }
-                    : nil,
-                // The door to everyone who is NOT on this rail (prd §461).
+                // ONE slot, not two (prd §466, dropped 2026-08-24, matching
+                // Vibenet's own rail the same day). Watching another wallet
+                // and seeing the whole roster are the same screen now — the
+                // roster moved into the book — so a separate ADD slot would
+                // point at the identical destination as the book door.
+                addTitle: nil,
+                onAdd: nil,
+                // The door to everyone who is NOT on this rail, AND — since
+                // §466 — the door to the roster itself when there's more to
+                // add (prd §461/§466).
                 bookTitle: String(localized: "Address Book"),
                 onOpenBook: { route.push(.addressBook) })
             .padding(.top, showsRail && !demoActive ? DS.Space.s2 : 0)

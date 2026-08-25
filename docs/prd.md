@@ -31931,3 +31931,86 @@ has no cap to relocate.
 **UNMEASURED on a device.** The build is green and every static audit passes;
 no simulator run has walked the new book, and the first-watch routing has never
 been seen to happen.
+
+## 466. Wallet finishes the move — the roster leaves the setup screen too, and the rail loses its second slot (user: "drop the plus", then "wallet should only have book in the rail not a plus", then "i think we should make wallet setup screen not have the roster either", 2026-08-24)
+
+§465 moved Vibenet's roster into its book and left Wallet's exactly where §461
+put it — a deliberate scoping, named as not-done in that entry. Asked to
+finish the pair, the answer was the same rule applied to the seat it was
+written about first: **`WalletScreen` keeps only the first address; the
+roster — rows, rename, remove, watch a second through fifth, the sync
+status — moves into `AddressBookScreen`.**
+
+**What moved, and where.** `WalletScreen` was 763 lines wearing three jobs:
+the connect act, the everyday roster, and the ongoing "how's it reading"
+status. Split into three files along exactly those seams:
+
+- **`WalletWatchField.swift`** (new) — the ONE way to watch a wallet: paste,
+  resolve an ENS/SNS name, connect a wallet app, or peek at an example.
+  Shared between `WalletScreen` (the first address) and the book's new
+  roster section (the second through fifth), for the reason `VibenetWatchField`
+  was shared a few commits earlier — copied, the two would answer the same
+  paste with two different sentences within a release.
+- **`WalletRosterSection.swift`** (new) — "Your wallets · N of 5" as a
+  section inside the book: the rows, the rename alert, remove-via-swipe and
+  context menu, and the sync status (`BridgeSyncStatusRows`). Moved WHOLE
+  from `WalletScreen`, unchanged in every rule it carried — no star, `activity: nil`
+  on every row (a recency phrase is a reading, and the roster is a list of
+  what the app is PERMITTED to read, per §461's own doc).
+- **`WalletScreen.swift`** — 763 → 154 lines. What's left: the room door
+  (once connected), the first-address field (only while disconnected), the
+  book door, and the foot (Connection/chains, the read-only promise). No
+  status section of its own — `WalletWatchField`'s own inline result line
+  covers it, and the first watch routes straight into the room rather than
+  waiting for a status line to settle (matching `RoomDoor`'s own move).
+
+**Why the roster lives in the BOOK, not the feed room.** Unlike Vibenet's
+`VibenetRoomCard`, Wallet's feed room has no `onOpen`-forking card to grow a
+managing mode — it draws a balance card, DeFi tiles, a treemap, none of which
+have anywhere a roster row would fit. The book is where a name is filed,
+so it is also where the roster FEEDING those names belongs; the book door
+already existed on the rail and on the screen's own foot, so nothing new
+needed a route.
+
+**The door's count went from "everyone else" back to the whole ledger.**
+§461 introduced `otherNames` (book count minus watched) specifically because
+"the count is what the room will list" and the room used to list only
+everyone else. Now that the room lists the roster too, `book.count` is
+correct again — the same rule, pointed at a room whose contents changed.
+
+**The rail lost its second slot, matching Vibenet's the same session.**
+`WalletScopeRail`'s "+" opened `WalletScreen`, which since this change has no
+field once connected — exactly the state the rail exists in. Watching another
+wallet and seeing the whole roster are the same screen now, so a slot
+pointing at the identical destination as the book door was chrome, not a
+choice. `addTitle`/`onAdd` are both nil, unconditionally — a stronger
+statement than §461's own "steps aside at the cap": the slot doesn't wait for
+five of five, it's gone at any count.
+
+**Six drift guards updated across three scripts, not written fresh** —
+`address-book-selftest.sh`, `wallet-connect-plan-selftest.sh` and
+`hide-balances-audit.py` all named `WalletScreen.swift` for facts that moved
+file. Each was re-pointed to `WalletWatchField.swift` or
+`WalletRosterSection.swift` rather than deleted, the same "a guarded thing
+that moves files takes its guard with it" rule §465 stated for Vibenet's own
+harness. Two are worth naming: the negative guard proving `outcome(ofAdding:)`
+appears nowhere but the one call site now checks THREE files instead of one
+(`WalletScreen`, `WalletRosterSection`, plus the pre-existing book checks),
+since two new hosts could each reintroduce a second silent-add path; and the
+rail's add-slot guard flipped from "may be nil at the cap" to "must always be
+nil", which is a stronger claim than the one it replaced and was proven able
+to fail both ways (removing the call from the field, and reintroducing it in
+the screen) before landing.
+
+**What did NOT change.** Membership is still five, still no star — §461's
+central ruling stands untouched. The book's own field (search/save/bulk-add,
+its own `ConnectWalletRow` in NAME-only mode) is untouched; it answers a
+different question than the roster's watch field and the two sit in the same
+list without merging.
+
+**UNMEASURED on a device.** Build succeeds; `address-book-selftest`,
+`wallet-connect-plan-selftest`, `hide-balances-audit`, `catalog-sync`,
+`setup-copy-audit`, `design-motion-audit`, `allcaps-audit`, `face-ramp-audit`
+and `swiftdata-liveness-audit` all pass. No simulator run has watched a first
+wallet, watched a second from the book, or renamed/removed a roster row
+through its new home.

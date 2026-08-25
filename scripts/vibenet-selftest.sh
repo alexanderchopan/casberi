@@ -166,7 +166,12 @@ fi
 # was red on the commit that introduced it — the code took the one-slot ruling
 # and the guard kept the two-slot one. Caught by running the harness, which
 # that commit had not.
-grep -q 'onAdd: nil,' "$SHELL_SURFACE" \
+# ANCHORED to the vibenet rail, never a bare grep of the file. §466 gives the
+# WALLET rail the same treatment, so `onAdd: nil,` now appears twice in this
+# file and a loose match would be satisfied by the wrong one — passing green
+# with vibenet's add slot restored. A guard must prove the condition is the
+# whole condition, not that the words appear somewhere.
+grep -B 4 'onOpenBook: { route.push(.vibenetAddressBook) }' "$SHELL_SURFACE" | grep -q 'onAdd: nil,' \
   || { echo "✗ the vibenet rail grew a second door (prd §465) — the add slot must stay nil,"; echo "  since the paste field lives in the book and both slots would land there"; exit 1; }
 grep -q 'onOpenBook: { route.push(.vibenetAddressBook) }' "$SHELL_SURFACE" \
   || { echo "✗ the vibenet rail lost its Address Book slot (prd §465)"; exit 1; }
