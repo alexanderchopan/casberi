@@ -243,9 +243,20 @@ final class VibenetWatch {
         return true
     }
 
+    /// Stop watching one account — and KEEP THE NAME (2026-08-25, prd §472).
+    ///
+    /// It used to forget the name in the same breath, so a mis-tapped "Stop
+    /// watching" destroyed something the person had typed, with no undo and
+    /// (until §472) no confirmation, and re-watching the address a second
+    /// later brought back a bare `0x…44b1`. Watching and naming are two tiers
+    /// over one ledger — §461's ruling for Wallet's book, and the reason this
+    /// screen has no cap at all: a name costs nothing to keep.
+    ///
+    /// `removeAll` still clears both, which is what `VibenetBridge.disconnect`
+    /// calls — so "forget everything" remains reachable and remains one
+    /// deliberate act rather than a side effect of tidying a list.
     func remove(_ address: String) {
         addressList.removeAll { $0.caseInsensitiveCompare(address) == .orderedSame }
-        names.removeValue(forKey: address.lowercased())
     }
 
     func removeAll() {
@@ -900,7 +911,12 @@ enum VibenetRead {
             history = VibenetKeyHistory.ordered(newest.map { e in
                 VibenetKeyMoment(block: e.block, logIndex: e.logIndex, authorized: e.authorized,
                                  kind: e.authorized ? liveKind[e.actorId] : nil,
-                                 date: blockDates[e.block])
+                                 date: blockDates[e.block],
+                                 // prd §473 — what lets one key ask the
+                                 // account's history about itself. Free: the
+                                 // id is already in hand and the block dates
+                                 // are already resolved for the strip.
+                                 actorId: e.actorId)
             })
         }
 
@@ -1305,7 +1321,13 @@ enum VibenetEvents {
         async let lockLogsTask = VibenetChain.getLogs(
             address: contracts.keystore,
             topics: [[VibenetTopics.accountLocked, VibenetTopics.accountUnlockInitiated], ownerTopic])
-        let actorLogs = await actorLogsTask ?? []
+        // THE OPTIONAL IS KEPT rather than collapsed with `?? []` at the
+        // await: `VibenetChain.getLogs` answers nil when its NEWEST chunk
+        // fails, and the deadline sweep below must be able to tell "this
+        // account revoked nothing" from "we could not read this account".
+        // See `VibenetDeadlineSweep.maySweep`.
+        let actorLogsRead = await actorLogsTask
+        let actorLogs = actorLogsRead ?? []
         let lockLogs = await lockLogsTask ?? []
 
         var events: [RawEvent] = []
@@ -1330,6 +1352,35 @@ enum VibenetEvents {
             let wanted = event.kind.facetTags
             let missing = wanted.filter { !thing.tags.contains($0) }
             if !missing.isEmpty { thing.tags.append(contentsOf: missing) }
+        }
+
+        // A REVOKED KEY LOSES ITS DEADLINE (2026-08-25, prd §473).
+        //
+        // Runs BEFORE the `fresh` early-return, and that placement is the
+        // whole of whether this works: on almost every pass there is no new
+        // event to land, and a revocation that arrived weeks ago is precisely
+        // the case this exists for — behind the return it would only ever fire
+        // on a pass that happened to be landing something else.
+        //
+        // Clears the field and nothing else. The authorization row STAYS: it
+        // is a true record of a real moment, and a key having been authorized
+        // is not made untrue by its later revocation — what stops being true
+        // is that something is coming up.
+        let actorEvents = events.compactMap { e -> VibenetActorEvent? in
+            guard let actorId = e.actorId,
+                  e.kind == .actorAuthorized || e.kind == .actorRevoked else { return nil }
+            return VibenetActorEvent(actorId: actorId, authorized: e.kind == .actorAuthorized,
+                                     block: e.block, logIndex: e.logIndex)
+        }
+        if VibenetDeadlineSweep.maySweep(logsAnswered: actorLogsRead != nil, events: actorEvents) {
+            let dead = VibenetDeadlineSweep.revoked(actorEvents)
+            for event in events where event.kind == .actorAuthorized {
+                guard let actorId = event.actorId, dead.contains(actorId),
+                      let thing = existing[ref(event)], thing.isLive,
+                      thing.dueAt != nil
+                else { continue }
+                thing.dueAt = nil
+            }
         }
 
         let fresh = events.filter { existing[ref($0)] == nil }

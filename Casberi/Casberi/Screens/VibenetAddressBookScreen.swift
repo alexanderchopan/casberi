@@ -30,7 +30,22 @@ struct VibenetAddressBookScreen: View {
     @Environment(BridgeStore.self) private var store
     @Bindable private var watch = VibenetWatch.shared
 
-    @State private var room = VibenetRoom.compose(items: [], branch: nil, commit: nil, configReached: false)
+    /// **SEEDED FROM THE LAST SAVED READ, not from an empty room (prd §472).**
+    ///
+    /// It began as `VibenetRoom.compose(items: [], … configReached: false)`,
+    /// and `VibenetRoom.headline` tests `configReached` FIRST — so the first
+    /// frame of the screen built to be your roster read **"Couldn't read
+    /// vibenet's current contracts"**, every open, before a single request
+    /// had been made. §83's fake status, on frame one, on the one screen that
+    /// exists to list what you watch.
+    ///
+    /// `VibenetRoomSource.card()` is the synchronous snapshot the feed's own
+    /// head has drawn from since §467 (`VibenetState`, UserDefaults) — this
+    /// screen simply never asked for it. A snapshot is only ever saved after a
+    /// read that reached the chain, so a seeded card is honest by
+    /// construction, and the provenance note under it already says how old it
+    /// is ("read 3h ago", §468).
+    @State private var room: VibenetRoom
     @State private var loading = false
     /// An address watched (or unwatched) while a read is mid-flight
     /// requeues it — the `GeckoTerminal`/`Stocktwits` lesson, so the new
@@ -43,12 +58,31 @@ struct VibenetAddressBookScreen: View {
     @State private var renamingAddress: String?
     @State private var renameText = ""
 
+    /// Whether the discovery list is open. `@State`, so it shuts again when
+    /// you leave — it is a lookup, not a preference, and a list of strangers'
+    /// addresses left open forever is the clutter the old rule was protecting
+    /// against.
+    @State private var showDiscovery = false
+
+    /// The address whose removal would take the whole seat with it — non-nil
+    /// is what raises the confirm. See `unwatch`.
+    @State private var removingLast: String?
+
     /// A row's tap opens the detail sheet, keyed by the address itself
     /// (`String` is `Identifiable`, the `L2beatScreen`/`WalletbeatScreen`
     /// shape).
     @State private var opened: String?
 
     private static let mark = DS.brandHue(for: "Base Vibenet") ?? Color.fixed("#0052ff")
+
+    /// `@MainActor` because `VibenetRoomSource.card()` is — it consults
+    /// `DemoMode`. Every construction of this screen is from a `View` body,
+    /// which is already main-actor, so the annotation costs nothing.
+    @MainActor
+    init() {
+        _room = State(initialValue: VibenetRoomSource.card()
+            ?? VibenetRoom.compose(items: [], branch: nil, commit: nil, configReached: false))
+    }
 
     private var connected: Bool { watch.connected }
 
@@ -75,18 +109,49 @@ struct VibenetAddressBookScreen: View {
             .dsSlabSection()
             .listRowSeparator(.hidden)
 
-            // Only while nothing is watched — the moment there's a real
-            // card on screen, a list of strangers' addresses is clutter,
-            // not help.
-            if !connected {
+            // **OPEN BY DEFAULT WHILE NOTHING IS WATCHED; A DOOR AFTERWARDS
+            // (prd §472).** The old rule was "only while nothing is watched",
+            // on the reasoning that once a real card is on screen a list of
+            // strangers' addresses is clutter rather than help. That is right
+            // for the SETUP page, which `VibenetScreen` still keeps it on —
+            // and wrong here: §465 gave this screen the acts you do
+            // REPEATEDLY, and finding another account to watch is the most
+            // repeatable one there is. Vanishing forever after the first watch
+            // left the only way to a second account being to type forty hex
+            // characters by hand.
+            //
+            // Collapsed rather than merely moved down, because the original
+            // reasoning still holds about the SPACE: shut, it is one row.
+            // `VibenetDiscoverySection` loads on appear, so nothing is fetched
+            // until somebody opens it.
+            if !connected || showDiscovery {
                 Section {
                     VibenetDiscoverySection(onWatched: { Task { await load() } })
                 }
                 .dsSlabSection()
                 .listRowSeparator(.hidden)
+            } else {
+                Section {
+                    DSSlabDoor(title: String(localized: "Find another account"),
+                               detail: String(localized: "Recently created on vibenet")) {
+                        DSHaptic.selection()
+                        withAnimation(DS.Motion.standard) { showDiscovery = true }
+                    }
+                }
+                .listRowInsets(EdgeInsets(top: 0, leading: DS.Space.s4,
+                                          bottom: 0, trailing: DS.Space.s4))
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
             }
 
-            if connected {
+            // …and on the FIRST-EVER open, where there is no snapshot to seed
+            // from, the card is withheld entirely while the read is in flight
+            // rather than drawn over an empty room — the same false failure by
+            // another route. `VibenetWatchField` above is already saying
+            // "Reading vibenet…", so the screen is not silent, and the moment
+            // the read lands this becomes the real roster or the card's own
+            // honest failure headline.
+            if connected, !room.items.isEmpty || !loading {
                 // THE MANAGING MODE. `onOpen` non-nil is what makes
                 // `VibenetRoomCard` draw every watched account as a full
                 // navigable row, uncapped, each with the context menu that
@@ -112,6 +177,13 @@ struct VibenetAddressBookScreen: View {
         }
         .listStyle(.insetGrouped)
         .listSectionSpacing(.compact)
+        // A PULL RE-READS (prd §472). This screen is nothing but a live read
+        // of a devnet, and its only read was `onAppear` — so a lock that
+        // opened, a key that was revoked or a balance that moved while you sat
+        // here needed you to leave the screen and come back. The room behind
+        // it has had a pull since it shipped; the screen that lists the same
+        // accounts did not.
+        .refreshable { await load() }
         .scrollContentBackground(.hidden)
         .dsAdaptiveContentWidth()
         .dsPageBackground()
@@ -119,6 +191,23 @@ struct VibenetAddressBookScreen: View {
         .dsScreenTitle("Address Book")
         .sheet(item: $opened) { address in
             VibenetAccountSheet(address: address, room: room, onRemove: unwatch)
+        }
+        .confirmationDialog(
+            String(localized: "Stop watching your last account?"),
+            isPresented: Binding(get: { removingLast != nil },
+                                 set: { if !$0 { removingLast = nil } }),
+            titleVisibility: .visible
+        ) {
+            Button(String(localized: "Stop watching"), role: .destructive) {
+                if let address = removingLast { commitUnwatch(address) }
+                removingLast = nil
+            }
+            Button(String(localized: "Cancel"), role: .cancel) { removingLast = nil }
+        } message: {
+            // What actually happens, in the words of the things it happens to
+            // — never "this cannot be undone", which is true of most taps and
+            // tells you nothing about this one.
+            Text(String(localized: "It's the only account you watch, so vibenet disconnects: the chip leaves the source strip, and the names you gave your accounts are forgotten."))
         }
         .alert(
             String(localized: "Name this account"),
@@ -144,7 +233,25 @@ struct VibenetAddressBookScreen: View {
     /// goes with it — a connected seat holding no addresses is a room that
     /// can never say anything. `VibenetScreen` relies on this too: it is
     /// the only teardown besides the explicit Disconnect.
+    ///
+    /// **AND THAT IS WHY THE LAST ONE ASKS (prd §472).** Every other unwatch
+    /// removes a row; this one tears down the seat, drops the chip out of the
+    /// source strip, forgets the room snapshot and the seen-keys ledger, and
+    /// leaves the person on a screen whose subject has just ceased to exist —
+    /// all from one tap of a context-menu item sitting where "remove this row"
+    /// sat a moment ago. Two different acts should not share one gesture with
+    /// no warning between them. The ordinary case is untouched and stays
+    /// immediate: a confirm on every removal would be the dialog nobody reads.
     private func unwatch(_ address: String) {
+        guard watch.addresses.count > 1 else {
+            removingLast = address
+            return
+        }
+        commitUnwatch(address)
+    }
+
+    /// The removal itself, past whatever asking was owed.
+    private func commitUnwatch(_ address: String) {
         DSHaptic.tap()
         watch.remove(address)
         if watch.connected {

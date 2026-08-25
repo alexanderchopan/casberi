@@ -404,6 +404,36 @@ struct FeedScreen: View {
         }
     }
     @State private var feedSheet: FeedSheetRoute?
+    /// Which permission the key tray opens scrolled to, or nil for the top
+    /// (prd §471). A census row's chevron promises those keys, not the whole
+    /// roster; the tray still SHOWS every section (see `VibenetKeyTraySheet
+    /// .focus` for why it scrolls rather than filters).
+    ///
+    /// **Held BESIDE `feedSheet` rather than as a second associated value on
+    /// `FeedSheetRoute.vibenetKeys`.** Sound as one variable because the tray
+    /// is MODAL: it covers the card that sets it, so there is no way to pick
+    /// a second permission while the first is still presenting, and
+    /// `.sheet(item:)` never has to tell two focuses apart. It is written on
+    /// every open, the headline's nil included, so a focus can never be left
+    /// over from a previous tap.
+    ///
+    /// It began as an associated value and was moved here while chasing a
+    /// type-checker budget failure that turned out to have nothing to do with
+    /// it — see `roomHead` for what the cause actually was. Left as state
+    /// because the modal argument above stands on its own; the enum would
+    /// work equally well now.
+    @State private var vibenetKeyFocus: String?
+
+    /// Hands `VibenetRoomCard` its key-tray door, already bound to this
+    /// room's accounts (prd §471).
+    private func vibenetKeysOpener(_ items: [VibenetAccountItem]) -> (String?) -> Void {
+        { focus in
+            vibenetKeyFocus = focus
+            feedSheet = .vibenetKeys(items)
+        }
+    }
+
+
     /// The x402 room's selected lane, or nil for all of it (2026-08-06).
     ///
     /// `@State`, so it resets when you leave the room — the same lifetime
@@ -2280,6 +2310,275 @@ struct FeedScreen: View {
     /// and Polymarket have no sync, so without this the room of a freshly
     /// connected exchange is empty and there is nowhere to find a market to
     /// follow. Browsing here never writes — a market becomes a Thing (and so
+
+    /// What each `FeedSheetRoute` presents.
+    ///
+    /// Extracted from the `.sheet(item:)` closure for `roomHead`'s reason
+    /// (below): the switch is one expression over a dozen cases, and adding a
+    /// single argument to one of its calls put it over the type-checker's
+    /// budget. Behaviour is unchanged — this is still the ONE presentation
+    /// this screen makes (see `FeedSheetRoute`'s doc for why five separate
+    /// `.sheet` modifiers made the first tap self-dismiss).
+    @ViewBuilder
+    private func sheetContent(_ route: FeedSheetRoute) -> some View {
+        switch route {
+        case .thing(let thing):
+            // Zoom transition DROPPED for thing opens (2026-07-30, prd
+            // ruling 232): a beta tester on build 225 hit a deterministic crash
+            // opening any photo ("every photo, instantly, every time")
+            // that never reproduced for the dev or on the simulator —
+            // headless open, the real tile-tap zoom, and the sheet content
+            // path were all verified clean. That profile — universal for
+            // one device, invisible everywhere else — is an OS/device-
+            // specific `.navigationTransition(.zoom)` fault, the one
+            // fragile system API in an otherwise clean path. The zoom is
+            // decorative; the standard sheet present is the safe fallback.
+            // The matching `matchedTransitionSource` sources were removed
+            // with it. Restore only once a symbolicated stack proves a
+            // different cause.
+            ThingSheetView(thing: thing)
+        case .token(let route):
+            TokenQuickSheet(route: route)
+        case .allocation:
+            if let portfolio {
+                WalletAllocationTray(portfolio: portfolio)
+            }
+        case .worthALook:
+            // The two walk doors (prd §449). Each is handed over ONLY
+            // when its card is really on screen — the sheet falls back to
+            // enumerating that group itself otherwise, so a pill can
+            // never point at a card this room isn't drawing (§83's dead
+            // control, and the same nil-able shape
+            // `WalletCompositionStrip` keeps for Deposited and Locked).
+            //
+            // Dismiss and scroll are set TOGETHER on purpose: `scrollTo`
+            // animates over ~0.3s and the sheet's dismissal over ~0.35s,
+            // so the card is already centred as the sheet clears — the
+            // room moving to meet you rather than a jump you arrive to.
+            WalletWorthALookTray(
+                warnings: walletLive.warnings,
+                flagged: walletLive.flagged,
+                activeApprovals: walletLive.activeApprovals,
+                exposure: walletLive.exposure,
+                onWalkToApprovals: walletLive.exposure.isEmpty ? nil : {
+                    feedSheet = nil
+                    cardScrollTarget = Self.approvalsAnchor
+                },
+                onWalkToLending: hasLendingCard ? {
+                    feedSheet = nil
+                    cardScrollTarget = Self.lendingAnchor
+                } : nil)
+        case .deposits(let composition):
+            WalletDepositsTray(composition: composition)
+        case .locks(let composition):
+            WalletLocksTray(composition: composition)
+        case .market(let preview):
+            PredictionPreviewSheet(preview: preview)
+        case .nftPicks(let address, let label):
+            WalletNFTPickerSheet(wallet: address, label: label)
+        case .person(let source, let handle):
+            NavigationStack {
+                PersonRoomScreen(profile: SocialProfile(
+                    source: source, handle: handle,
+                    displayName: nil, bio: nil, avatarURL: nil))
+            }
+        case .vibenetKeys(let items):
+            // A tapped key SCOPES THE ROOM to its account (prd §470),
+            // which is the follow-up the tray previously dead-ended on.
+            //
+            // DISMISS FIRST, THEN SCOPE — the order matters and is the
+            // same one `RoomDoor` spells out for its own pop-then-ask
+            // move: `vibenetScope` re-composes the room BEHIND this
+            // sheet, and asking for that while the sheet is still up
+            // means the change lands under a covered screen. Setting
+            // `feedSheet = nil` here is the whole dismissal, since this
+            // screen owns the presentation.
+            //
+            // No animation on the scope write, deliberately: the room is
+            // behind a dismissing sheet, so an animation animates
+            // something nobody can see and lands mid-transition.
+            VibenetKeyTraySheet(items: items, onPick: { address in
+                feedSheet = nil
+                chrome.vibenetScope = address
+            }, focus: vibenetKeyFocus)
+        }
+    }
+
+    /// Everything the room draws ABOVE its rows — the source chrome, the
+    /// per-source heroes and heads, the ledes.
+    ///
+    /// Extracted for `populatedRoom`'s reason (see below), and it took three
+    /// passes to find the real boundary: pulling out the day sections did not
+    /// help, pulling out the whole content chain did not help, because the
+    /// cost was never in one branch — `listBody`'s List is ONE expression and
+    /// the solver closes it whole. Splitting it at its two natural halves,
+    /// head and body, is what brought it back under budget.
+    @ViewBuilder
+    private var roomHead: some View {
+        Group {
+            // The source chips moved to the shell's fixed header
+            // (MainSurface / SourceChips) — the app is one surface now.
+            // The kind-clear "× Links" chip that used to sit here is GONE
+            // (user, 2026-08-01: "i do not want to see the x chips those
+            // are supposed to be internal only"). A kind filter still
+            // exists — the agent sets it when an ask names a kind ("show
+            // my links") — it just never asks the person to manage it: the
+            // day-section header already names it (`filterLabel`), and any
+            // source chip tap clears it, INCLUDING a re-tap of the source
+            // already showing, which is the one-gesture way out that the
+            // chip used to be (see `MainSurface.go(to:)`).
+            // The source header CAPSULE is gone (user ruling 2026-08-11,
+            // §359) — managing a source happens in the app catalogue.
+            // What survives is COMPOSE, and only because it is a different
+            // verb: "New event" / "New task" leaves for another app, which
+            // the catalogue is not a door to. See `sourceComposeRow`.
+            if let bridge = activeSourceBridge,
+               let action = SourceActions.action(forSource: bridge.name),
+               case .openURL = action.run {
+                sourceComposeRow(action)
+            }
+            // GitHub's source feed leads with its contribution graph (moved
+            // off Home, 2026-07-18). Gated on the source STRING, not the
+            // BridgeStore seat — the graph belongs to GitHub's token
+            // (`GitHubGraphStore` self-fetches with it), so it rides the
+            // GitHub feed whenever it's the filter; the hero self-checks for
+            // a landed year and takes no room otherwise.
+            // …and stands DOWN whenever the "needs you" head has something
+            // to say (prd §401). Two leads is not a richer room, it is a
+            // room with no lead: the heatmap answers "how much did I write
+            // this year" and the head answers "what is waiting on you",
+            // and only one of those is why you opened it. The heatmap
+            // remains the lead on the quiet days, which is most of them,
+            // and is why it was not simply deleted.
+            if source == "GitHub", sourceHeadIsAbsent { githubGraphHero }
+            predictionBook
+        }
+        .listRowBackground(Color.clear)
+        .listRowSeparator(.hidden)
+        .listRowInsets(EdgeInsets())
+
+        // A live-room source paints its book above, so the corpus being
+        // empty is NOT an empty room — "Let's fill this feed" over a
+        // full market book would be nonsense (prd §234).
+        // `hasSurfaced` short-circuits — no full `Corpus.surfaced` alloc
+        // just to test emptiness (PERF 2026-07-29), and it was allocated
+        // twice here per body eval.
+        // A NON-EMPTY debounced snapshot already proves the room has
+        // content, so the query is never touched in the case that matters
+        // (PERF 2026-08-11): `things` materialises its whole bounded fetch
+        // in the getter, and this line ran on every body evaluation.
+        //
+        // Deliberately one-directional — a non-empty snapshot short-
+        // circuits, an empty or absent one still asks `hasSurfaced`. The
+        // snapshot is narrowed by the tag and wallet/person scopes and
+        // `things` is not, so treating an EMPTY snapshot as an empty room
+        // would put "Let's fill this feed" over a room that is merely
+        // filtered. Same answer as before, in every case; the expensive
+        // read just stops happening whenever there is anything to draw.
+    }
+
+    /// The room's own content: the empty state, the filtered-empty state, or
+    /// the day sections. Extracted from `feedList` for `populatedRoom`'s
+    /// reason (see just below) — pulling one branch out was not enough, since
+    /// the cost is the whole chain rather than any one arm of it.
+    @ViewBuilder
+    private var roomBody: some View {
+        let roomHasContent = (debouncedAllSnapshot.map { !$0.isEmpty } ?? false)
+            || Corpus.hasSurfaced(things)
+        if !roomHasContent && !LiveRoomSources.has(source) {
+            Group { emptyState }
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+                .listRowInsets(EdgeInsets())
+        } else if roomHasContent {
+            // Derived ONCE per render and threaded into everything below
+            // — the day groups, ledes, and per-row hint/next-event ids
+            // all share this one filter pass instead of each re-deriving
+            // it from `feedThings` (the Feed-freeze rule, perf pass
+            // 2026-07-13, extended to `visible` itself).
+            let visible = self.visible
+            if visible.isEmpty {
+                Group { filteredEmptyState }
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets())
+            } else {
+                populatedRoom(visible)
+            }
+        }
+    }
+
+    /// The day sections of a room that has rows, plus its closing line.
+    ///
+    /// **EXTRACTED FROM `feedList` BECAUSE THE COMPILER ASKED (2026-08-25).**
+    /// `feedList`'s `if/else` chain had been sitting at the edge of what the
+    /// type-checker will solve, and it went over on a change that touched
+    /// none of it: adding ONE stored property to `FeedScreen` produced
+    /// "unable to type-check this expression in reasonable time" pointed six
+    /// hundred lines away, deterministically, on three separate members
+    /// tried. Measured against this tree — reverting the unrelated member
+    /// builds, keeping it does not, whatever the member is. So the budget,
+    /// not the member, was the defect, and this is the fix the error message
+    /// names: pull a branch out into its own function so the solver has a
+    /// smaller expression to close. Nothing about what is drawn changes.
+    ///
+    /// Takes `visible` rather than re-deriving it — that array is the
+    /// Feed-freeze rule's one filter pass per render, and a second call here
+    /// would be a second walk of the corpus on every body evaluation.
+    @ViewBuilder
+    private func populatedRoom(_ visible: [Thing]) -> some View {
+                let nextID = nextEventID(visible)
+                // The Themes treemap, ABOVE THE FOLD of the unfiltered All
+                // room (prd §385) — called HERE, before `shapedSections`,
+                // and not inside its `.all` branch where it lived from
+                // 2026-07-18 to 2026-08-14: the shape chain draws its
+                // heroes (a live stream above all) before the branch
+                // runs, and the fold-settle scroll hides EVERYTHING above
+                // `themesFoldAnchor` — a live hero must stay below the
+                // anchor or going live would hide it. The condition is
+                // the `.all` branch's own gate restated (kind-filtered
+                // All and the pinned room take other branches, and
+                // neither draws the map).
+                // The themes lede LEFT the All feed (user ruling
+                // 2026-08-14, prd §386a: "we could put the treemap of
+                // themes here [the overview] and get rid of it on the all
+                // page, i don't think it really works there") — hours
+                // after §385 moved it above the fold, which is the
+                // fastest a ruling here has ever been reversed by its own
+                // author watching it. The treemap's one home is now the
+                // Today overview's "What you're into" module, where it
+                // sits beside the other aggregates instead of ahead of
+                // the chronology it was interrupting.
+                // `themesLedeSection` and the §385 fold machinery stay
+                // compiled but unreached (dormant-not-deleted).
+                // A pin is a HOME pin only (ruling 2026-07-10): the Feed's
+                // own Pinned section doubled what Home already shows and
+                // cluttered the record — pinned things now ride the feed in
+                // their natural chronological place. The holdings module
+                // lives on Home too (same-day amendment) — in Feed it shows
+                // only in the Wallet chip's own shape, never leading All.
+                shapedSections(visible, nextEventID: nextID)
+                // No closing line in the Reminders shape: its state groups
+                // deliberately render a subset (Done shows same-day only), so
+                // a `visible`-count claim would disagree with the rows above.
+                // Wallet joined it (2026-07-20) for the same reason — it
+                // previews five and hands off to the history page, so
+                // "that's everything · 131 transactions" under five rows was
+                // a flat lie. Its own "See all transactions · 131" row is
+                // the honest close. Calendar joined them conditionally
+                // (2026-07-27): with past events collapsed the room shows
+                // a subset too, and its disclosure row ("Show 12 past
+                // events") is that subset's honest close — expanded, the
+                // room is whole again and the line comes back.
+                // "That's everything" is a CLAIM, so it waits until the
+                // room really is whole (prd §264). While a window is open
+                // the `olderRow` is what sits at the bottom instead.
+                if shape != .reminders && shape != .wallet
+                    && !hidesPastEvents(visible) && !memo.windowHasMore {
+                    caughtUpFooter(visible)
+                }
+    }
+
     /// reaches the All feed) only on an explicit Follow.
     @ViewBuilder private var predictionBook: some View {
         if LiveRoomSources.has(source) {
@@ -2333,138 +2632,8 @@ struct FeedScreen: View {
 
     private func listBody(_ proxy: ScrollViewProxy) -> some View {
         List {
-            Group {
-                // The source chips moved to the shell's fixed header
-                // (MainSurface / SourceChips) — the app is one surface now.
-                // The kind-clear "× Links" chip that used to sit here is GONE
-                // (user, 2026-08-01: "i do not want to see the x chips those
-                // are supposed to be internal only"). A kind filter still
-                // exists — the agent sets it when an ask names a kind ("show
-                // my links") — it just never asks the person to manage it: the
-                // day-section header already names it (`filterLabel`), and any
-                // source chip tap clears it, INCLUDING a re-tap of the source
-                // already showing, which is the one-gesture way out that the
-                // chip used to be (see `MainSurface.go(to:)`).
-                // The source header CAPSULE is gone (user ruling 2026-08-11,
-                // §359) — managing a source happens in the app catalogue.
-                // What survives is COMPOSE, and only because it is a different
-                // verb: "New event" / "New task" leaves for another app, which
-                // the catalogue is not a door to. See `sourceComposeRow`.
-                if let bridge = activeSourceBridge,
-                   let action = SourceActions.action(forSource: bridge.name),
-                   case .openURL = action.run {
-                    sourceComposeRow(action)
-                }
-                // GitHub's source feed leads with its contribution graph (moved
-                // off Home, 2026-07-18). Gated on the source STRING, not the
-                // BridgeStore seat — the graph belongs to GitHub's token
-                // (`GitHubGraphStore` self-fetches with it), so it rides the
-                // GitHub feed whenever it's the filter; the hero self-checks for
-                // a landed year and takes no room otherwise.
-                // …and stands DOWN whenever the "needs you" head has something
-                // to say (prd §401). Two leads is not a richer room, it is a
-                // room with no lead: the heatmap answers "how much did I write
-                // this year" and the head answers "what is waiting on you",
-                // and only one of those is why you opened it. The heatmap
-                // remains the lead on the quiet days, which is most of them,
-                // and is why it was not simply deleted.
-                if source == "GitHub", sourceHeadIsAbsent { githubGraphHero }
-                predictionBook
-            }
-            .listRowBackground(Color.clear)
-            .listRowSeparator(.hidden)
-            .listRowInsets(EdgeInsets())
-
-            // A live-room source paints its book above, so the corpus being
-            // empty is NOT an empty room — "Let's fill this feed" over a
-            // full market book would be nonsense (prd §234).
-            // `hasSurfaced` short-circuits — no full `Corpus.surfaced` alloc
-            // just to test emptiness (PERF 2026-07-29), and it was allocated
-            // twice here per body eval.
-            // A NON-EMPTY debounced snapshot already proves the room has
-            // content, so the query is never touched in the case that matters
-            // (PERF 2026-08-11): `things` materialises its whole bounded fetch
-            // in the getter, and this line ran on every body evaluation.
-            //
-            // Deliberately one-directional — a non-empty snapshot short-
-            // circuits, an empty or absent one still asks `hasSurfaced`. The
-            // snapshot is narrowed by the tag and wallet/person scopes and
-            // `things` is not, so treating an EMPTY snapshot as an empty room
-            // would put "Let's fill this feed" over a room that is merely
-            // filtered. Same answer as before, in every case; the expensive
-            // read just stops happening whenever there is anything to draw.
-            let roomHasContent = (debouncedAllSnapshot.map { !$0.isEmpty } ?? false)
-                || Corpus.hasSurfaced(things)
-            if !roomHasContent && !LiveRoomSources.has(source) {
-                Group { emptyState }
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-                    .listRowInsets(EdgeInsets())
-            } else if roomHasContent {
-                // Derived ONCE per render and threaded into everything below
-                // — the day groups, ledes, and per-row hint/next-event ids
-                // all share this one filter pass instead of each re-deriving
-                // it from `feedThings` (the Feed-freeze rule, perf pass
-                // 2026-07-13, extended to `visible` itself).
-                let visible = self.visible
-                if visible.isEmpty {
-                    Group { filteredEmptyState }
-                        .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
-                        .listRowInsets(EdgeInsets())
-                } else {
-                    let nextID = nextEventID(visible)
-                    // The Themes treemap, ABOVE THE FOLD of the unfiltered All
-                    // room (prd §385) — called HERE, before `shapedSections`,
-                    // and not inside its `.all` branch where it lived from
-                    // 2026-07-18 to 2026-08-14: the shape chain draws its
-                    // heroes (a live stream above all) before the branch
-                    // runs, and the fold-settle scroll hides EVERYTHING above
-                    // `themesFoldAnchor` — a live hero must stay below the
-                    // anchor or going live would hide it. The condition is
-                    // the `.all` branch's own gate restated (kind-filtered
-                    // All and the pinned room take other branches, and
-                    // neither draws the map).
-                    // The themes lede LEFT the All feed (user ruling
-                    // 2026-08-14, prd §386a: "we could put the treemap of
-                    // themes here [the overview] and get rid of it on the all
-                    // page, i don't think it really works there") — hours
-                    // after §385 moved it above the fold, which is the
-                    // fastest a ruling here has ever been reversed by its own
-                    // author watching it. The treemap's one home is now the
-                    // Today overview's "What you're into" module, where it
-                    // sits beside the other aggregates instead of ahead of
-                    // the chronology it was interrupting.
-                    // `themesLedeSection` and the §385 fold machinery stay
-                    // compiled but unreached (dormant-not-deleted).
-                    // A pin is a HOME pin only (ruling 2026-07-10): the Feed's
-                    // own Pinned section doubled what Home already shows and
-                    // cluttered the record — pinned things now ride the feed in
-                    // their natural chronological place. The holdings module
-                    // lives on Home too (same-day amendment) — in Feed it shows
-                    // only in the Wallet chip's own shape, never leading All.
-                    shapedSections(visible, nextEventID: nextID)
-                    // No closing line in the Reminders shape: its state groups
-                    // deliberately render a subset (Done shows same-day only), so
-                    // a `visible`-count claim would disagree with the rows above.
-                    // Wallet joined it (2026-07-20) for the same reason — it
-                    // previews five and hands off to the history page, so
-                    // "that's everything · 131 transactions" under five rows was
-                    // a flat lie. Its own "See all transactions · 131" row is
-                    // the honest close. Calendar joined them conditionally
-                    // (2026-07-27): with past events collapsed the room shows
-                    // a subset too, and its disclosure row ("Show 12 past
-                    // events") is that subset's honest close — expanded, the
-                    // room is whole again and the line comes back.
-                    // "That's everything" is a CLAIM, so it waits until the
-                    // room really is whole (prd §264). While a window is open
-                    // the `olderRow` is what sits at the bottom instead.
-                    if shape != .reminders && shape != .wallet
-                        && !hidesPastEvents(visible) && !memo.windowHasMore {
-                        caughtUpFooter(visible)
-                    }
-                }
-            }
+            roomHead
+            roomBody
 
             // Room for the floating bar.
             Color.clear.frame(height: ShellMetrics.bottomInset - 40)
@@ -2675,87 +2844,7 @@ struct FeedScreen: View {
         // `FeedSheetRoute`'s doc comment for why five separate `.sheet`
         // modifiers here caused the first tap to silently self-dismiss.
         .sheet(item: $feedSheet) { route in
-            switch route {
-            case .thing(let thing):
-                // Zoom transition DROPPED for thing opens (2026-07-30, prd
-                // ruling 232): a beta tester on build 225 hit a deterministic crash
-                // opening any photo ("every photo, instantly, every time")
-                // that never reproduced for the dev or on the simulator —
-                // headless open, the real tile-tap zoom, and the sheet content
-                // path were all verified clean. That profile — universal for
-                // one device, invisible everywhere else — is an OS/device-
-                // specific `.navigationTransition(.zoom)` fault, the one
-                // fragile system API in an otherwise clean path. The zoom is
-                // decorative; the standard sheet present is the safe fallback.
-                // The matching `matchedTransitionSource` sources were removed
-                // with it. Restore only once a symbolicated stack proves a
-                // different cause.
-                ThingSheetView(thing: thing)
-            case .token(let route):
-                TokenQuickSheet(route: route)
-            case .allocation:
-                if let portfolio {
-                    WalletAllocationTray(portfolio: portfolio)
-                }
-            case .worthALook:
-                // The two walk doors (prd §449). Each is handed over ONLY
-                // when its card is really on screen — the sheet falls back to
-                // enumerating that group itself otherwise, so a pill can
-                // never point at a card this room isn't drawing (§83's dead
-                // control, and the same nil-able shape
-                // `WalletCompositionStrip` keeps for Deposited and Locked).
-                //
-                // Dismiss and scroll are set TOGETHER on purpose: `scrollTo`
-                // animates over ~0.3s and the sheet's dismissal over ~0.35s,
-                // so the card is already centred as the sheet clears — the
-                // room moving to meet you rather than a jump you arrive to.
-                WalletWorthALookTray(
-                    warnings: walletLive.warnings,
-                    flagged: walletLive.flagged,
-                    activeApprovals: walletLive.activeApprovals,
-                    exposure: walletLive.exposure,
-                    onWalkToApprovals: walletLive.exposure.isEmpty ? nil : {
-                        feedSheet = nil
-                        cardScrollTarget = Self.approvalsAnchor
-                    },
-                    onWalkToLending: hasLendingCard ? {
-                        feedSheet = nil
-                        cardScrollTarget = Self.lendingAnchor
-                    } : nil)
-            case .deposits(let composition):
-                WalletDepositsTray(composition: composition)
-            case .locks(let composition):
-                WalletLocksTray(composition: composition)
-            case .market(let preview):
-                PredictionPreviewSheet(preview: preview)
-            case .nftPicks(let address, let label):
-                WalletNFTPickerSheet(wallet: address, label: label)
-            case .person(let source, let handle):
-                NavigationStack {
-                    PersonRoomScreen(profile: SocialProfile(
-                        source: source, handle: handle,
-                        displayName: nil, bio: nil, avatarURL: nil))
-                }
-            case .vibenetKeys(let items):
-                // A tapped key SCOPES THE ROOM to its account (prd §470),
-                // which is the follow-up the tray previously dead-ended on.
-                //
-                // DISMISS FIRST, THEN SCOPE — the order matters and is the
-                // same one `RoomDoor` spells out for its own pop-then-ask
-                // move: `vibenetScope` re-composes the room BEHIND this
-                // sheet, and asking for that while the sheet is still up
-                // means the change lands under a covered screen. Setting
-                // `feedSheet = nil` here is the whole dismissal, since this
-                // screen owns the presentation.
-                //
-                // No animation on the scope write, deliberately: the room is
-                // behind a dismissing sheet, so an animation animates
-                // something nobody can see and lands mid-transition.
-                VibenetKeyTraySheet(items: items, onPick: { address in
-                    feedSheet = nil
-                    chrome.vibenetScope = address
-                })
-            }
+            sheetContent(route)
         }
         #if !targetEnvironment(macCatalyst)
         .translationPresentation(isPresented: $showTranslate, text: translateText)
@@ -3070,7 +3159,7 @@ struct FeedScreen: View {
                     // everyone's — the same "click all you see all" rule the
                     // cards above it follow.
                     VibenetRoomCard(room: room, onRemove: { _ in },
-                                    onOpenKeys: { feedSheet = .vibenetKeys(room.items) })
+                                    onOpenKeys: vibenetKeysOpener(room.items))
                 case .altana(let card):
                     AltanaRoomCard(card: card) {
                         // The door is Altana's own explorer — the only place a

@@ -138,7 +138,16 @@ struct VibenetRoomCard: View {
     /// `FeedScreen`'s List rows, and a `.sheet` on a row resolves to the same
     /// presenting controller as the screen's own — the half-open-then-close
     /// bug (ruling 2026-07-28, paid three times).
-    var onOpenKeys: (() -> Void)? = nil
+    ///
+    /// TAKES A PERMISSION LABEL (2026-08-25, prd §471). nil opens the whole
+    /// tray, which is the headline's own door and what this closure has
+    /// always done; a label opens it focused on that permission's section,
+    /// which is what a census row's chevron promises. The label is
+    /// `VibenetPolicyCount.label`, i.e. `VibenetTraySection.id` — the tray
+    /// mirrors `VibenetPolicyAggregation.compose` exactly (its own stated
+    /// invariant), so a label from the card always resolves to a section in
+    /// the tray and neither side needs a second vocabulary.
+    var onOpenKeys: ((String?) -> Void)? = nil
 
     /// What moved since this device last looked at these keys — captured
     /// ONCE when the roster appears and then immediately spent (`advance`),
@@ -241,7 +250,16 @@ struct VibenetRoomCard: View {
 
     @ViewBuilder
     private var stackedRoom: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s3) {
+        // **s6, NOT s3 (2026-08-25, prd §471).** §467 answered "some hodge
+        // podge put together view" by giving each reading its own surface,
+        // and the surfaces were the right call — but they were stacked 14pt
+        // apart, and at that distance two 20pt-radius `surfaceSheet` cards on
+        // the page do not read as two objects with air between them, they
+        // read as one slab with seams in it. Reported again as "a bit messy
+        // and looks unrefined". Separation by surface only works once the gap
+        // is wide enough to be seen as a gap; the contents of all four cards
+        // are untouched.
+        VStack(alignment: .leading, spacing: DS.Space.s6) {
             balanceCard
             holdingsCard
             keysCard
@@ -249,11 +267,16 @@ struct VibenetRoomCard: View {
             // OUTSIDE the cards, and quieter for it. Provenance is a fact
             // about the whole room rather than about any one reading, so a
             // card of its own would make a section out of a footnote.
+            //
+            // s4 AND NOT s2: every card sets its text at its own `s4` padding,
+            // so at `s2` this last line hung 8pt short of everything above it
+            // — two left edges on one screen, which is what a reader sees as
+            // "the indentation is wrong" without being able to name it.
             if let note = VibenetRoom.note(room, drawn: drawn.count) {
                 Text(note)
                     .dsText(.label12)
                     .foregroundStyle(DS.textTertiary)
-                    .padding(.horizontal, DS.Space.s2)
+                    .padding(.horizontal, DS.Space.s4)
             }
         }
     }
@@ -495,37 +518,17 @@ struct VibenetRoomCard: View {
         }
     }
 
-    /// THE KEYS. `plainLine` is the header rather than a "Keys" label above
-    /// it: it is a composed sentence that already names both counts, and
-    /// putting "Keys" over "8 keys authorized across 3 accounts" says the
-    /// word twice. The card boundary is what provides the separation in
-    /// this direction — a label would be a second one.
+    /// THE KEYS. Header grammar matched to its three neighbours (prd §471):
+    /// an eyebrow carrying the SCOPE, then the count alone as the headline.
+    /// The old objection — "Keys" over "8 keys authorized across 3 accounts"
+    /// says the word twice — was right, and putting the scope in the eyebrow
+    /// instead of the noun answers it while leaving this card the only one of
+    /// the four that opened with a `heading17` where the others open with a
+    /// `label12` (see `VibenetKeyAggregate.scopeEyebrow`).
     @ViewBuilder
     private var keysCard: some View {
         if let aggregate = VibenetKeyAggregation.compose(room.items, now: .now) {
-            card { keysTappable(aggregate) }
-        }
-    }
-
-    /// The keys block, as a door when there is somewhere to go and as plain
-    /// content when there isn't. ONE definition for both hosts, so the tray
-    /// cannot become reachable from the stacked room and not from the other
-    /// shape — which is exactly the kind of difference nobody would notice.
-    @ViewBuilder
-    private func keysTappable(_ aggregate: VibenetKeyAggregate) -> some View {
-        if let onOpenKeys {
-            Button {
-                DSHaptic.selection()
-                onOpenKeys()
-            } label: {
-                VStack(alignment: .leading, spacing: 0) { keysBody(aggregate) }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .dsHover()
-        } else {
-            keysBody(aggregate)
+            card { keysBody(aggregate) }
         }
     }
 
@@ -537,30 +540,41 @@ struct VibenetRoomCard: View {
     /// differing only in the box around them. Two copies of one reading
     /// drift, and then the same room says two different things depending on
     /// how many accounts happen to be watched; the §418 duplicate-parser
-    /// lesson, one card over. The SURFACE stays each caller's own, because
-    /// that is the part that really differs.
+    /// lesson, one card over.
     ///
     /// `keysAggregateSection` itself is gone (2026-08-25, prd §469, user:
     /// "the address book shows a card for keys that duplicates what is on
-    /// the all aggregate screen. we don't need it in address book") — it was
-    /// this exact function, drawn a second time on `VibenetScreen`'s roster,
-    /// which is real duplication rather than a lookalike. `keysCard` is the
-    /// only caller left.
+    /// the all aggregate screen. we don't need it in address book"), and
+    /// `keysTappable` went with it (prd §471): it wrapped this ENTIRE block
+    /// in one Button, which cannot survive the census rows becoming doors of
+    /// their own — a Button inside a Button does not resolve in SwiftUI. The
+    /// headline keeps the whole-tray door; each row now opens the tray at its
+    /// own permission.
     @ViewBuilder
     private func keysBody(_ aggregate: VibenetKeyAggregate) -> some View {
+        if let scope = aggregate.scopeEyebrow {
+            Text(scope)
+                .dsText(.label12)
+                .foregroundStyle(DS.textTertiary)
+        }
         HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-            Text(aggregate.plainLine)
-                .dsText(.heading17)
-                .foregroundStyle(DS.textPrimary)
-                .fixedSize(horizontal: false, vertical: true)
-            if onOpenKeys != nil {
-                Spacer(minLength: DS.Space.s2)
-                Image(systemName: "chevron.right")
-                    .accessibilityHidden(true)
-                    .dsGlyph(12, weight: .semibold)
-                    .foregroundStyle(DS.textTertiary)
+            headline(aggregate)
+            Spacer(minLength: DS.Space.s2)
+            // WHAT MOVED, as a mark-coloured pill rather than a third caption
+            // stacked under the headline. Drawn in the room's own mark and
+            // never a state colour: a key added and a key revoked are both
+            // merely news here and neither is graded (§295's same-weight
+            // ruling, and `VibenetKeyChanges.line`'s own note).
+            if let moved = keyChanges?.pillLine {
+                Text(moved)
+                    .dsText(.label11).fontWeight(.semibold)
+                    .foregroundStyle(DS.page)
+                    .padding(.horizontal, 8).padding(.vertical, 3)
+                    .background(Capsule().fill(Self.mark))
+                    .fixedSize()
             }
         }
+        .padding(.top, aggregate.scopeEyebrow == nil ? 0 : 2)
         // Directly under the headline, because it is an apology FOR the
         // headline: the count above is a floor whenever this draws.
         if let missing = aggregate.unreachedLine {
@@ -570,60 +584,210 @@ struct VibenetRoomCard: View {
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.top, 2)
         }
-        // WHAT MOVED. The one question this room is opened with that a
-        // snapshot structurally cannot answer — drawn in the room's own mark
-        // rather than a state colour, because a key added and a key revoked
-        // are both merely news here and neither is graded (§295's
-        // same-weight ruling, and `VibenetKeyChanges.line`'s own note).
-        if let moved = keyChanges?.line {
-            Text(moved)
-                .dsText(.label12).fontWeight(.semibold)
-                .foregroundStyle(Self.mark)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.top, 2)
-        }
+        // THE CENSUS, AS ITS OWN GROUP AND AS DOORS (prd §471).
+        //
+        // Six permission rows loose in the card, at `.padding(.vertical, 5)`
+        // — 36pt tall, under the 44pt hit floor — were the densest thing on
+        // this screen and the reason it read as "tightly packed". They sit on
+        // one `fillFaint` group now, so a census reads as a container rather
+        // than as a run of sentences, and each row is its own 46pt door into
+        // the tray AT THAT PERMISSION: "Send anywhere · 4" is the one shape
+        // of fact you cannot act on, and the follow-up it wants is those four
+        // keys, not the whole roster.
         let policies = VibenetPolicyAggregation.compose(room.items)
         if !policies.isEmpty {
             VStack(alignment: .leading, spacing: 0) {
                 ForEach(Array(policies.enumerated()), id: \.offset) { index, entry in
-                    HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                        Text(entry.label)
-                            .dsText(.body17)
-                            .foregroundStyle(DS.textPrimary)
-                            .lineLimit(1)
-                        Spacer(minLength: DS.Space.s2)
-                        Text("\(entry.count)")
-                            .dsText(.subhead13)
-                            .foregroundStyle(DS.textSecondary)
-                            .monospacedDigit()
-                    }
-                    .padding(.vertical, 5)
-                    .chartArrival(index: index, reduceMotion: reduceMotion)
+                    policyRow(entry, isLast: index == policies.count - 1)
+                        .chartArrival(index: index, reduceMotion: reduceMotion)
                 }
             }
-            .padding(.top, DS.Space.s2)
+            .padding(.horizontal, DS.Space.s3)
+            .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(DS.fillFaint))
+            .padding(.top, DS.Space.s3)
         }
-        // THE SHAPE OF WHAT'S AHEAD — §417's rail, reused whole rather than
-        // restated, so the room and the "Needs you" tile can never disagree
-        // about the same dates. The sentence below names ONE key; three keys
-        // lapsing inside a fortnight and three spread over a quarter produce
-        // the identical sentence and completely different pictures.
-        //
-        // TWO OR MORE, deliberately: a single future expiry has no spread to
-        // draw and the sentence beneath already says it exactly.
-        if aggregate.futureExpiries.count >= 2 {
-            WalletRunwayRail(dates: aggregate.futureExpiries)
+        // WHAT THE CENSUS COULD NOT COUNT. A footnote and never a row — see
+        // `VibenetKeyAggregate.unnamedLine`. Without it the rows silently add
+        // up to less than the headline and nothing says why.
+        if let unnamed = aggregate.unnamedLine {
+            Text(unnamed)
+                .dsText(.label11)
+                .foregroundStyle(DS.textTertiary)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.top, DS.Space.s2)
+        }
+        expiryFooter(aggregate)
+    }
+
+    /// The headline, as a door to the whole tray when there is one to open.
+    /// The chevron is gated on the SAME nil the door is, never drawn
+    /// unconditionally: a chevron pointing at a tray this caller cannot
+    /// present is the dead control §83 bans.
+    @ViewBuilder
+    private func headline(_ aggregate: VibenetKeyAggregate) -> some View {
+        if let onOpenKeys {
+            Button {
+                DSHaptic.selection()
+                onOpenKeys(nil)
+            } label: {
+                HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                    Text(aggregate.countHeadline)
+                        .dsText(.heading17)
+                        .foregroundStyle(DS.textPrimary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Image(systemName: "chevron.right")
+                        .accessibilityHidden(true)
+                        .dsGlyph(12, weight: .semibold)
+                        .foregroundStyle(DS.textTertiary)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .dsHover()
+        } else {
+            Text(aggregate.countHeadline)
+                .dsText(.heading17)
+                .foregroundStyle(DS.textPrimary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    /// One permission and how many keys hold it — a door into the tray
+    /// FOCUSED on that permission, or plain content where there is nowhere to
+    /// present one.
+    ///
+    /// `s2` vertical (46pt with a `body17` line) rather than the old 5, which
+    /// put every row of the densest block on the screen under the 44pt hit
+    /// floor while it was not even tappable.
+    @ViewBuilder
+    private func policyRow(_ entry: VibenetPolicyCount, isLast: Bool) -> some View {
+        if let onOpenKeys {
+            Button {
+                DSHaptic.selection()
+                onOpenKeys(entry.label)
+            } label: { policyRowBody(entry, isLast: isLast, door: true) }
+                .buttonStyle(.plain)
+                .dsHover()
+        } else {
+            policyRowBody(entry, isLast: isLast, door: false)
+        }
+    }
+
+    private func policyRowBody(_ entry: VibenetPolicyCount, isLast: Bool, door: Bool) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+            Text(entry.label)
+                .dsText(.body17)
+                .foregroundStyle(DS.textPrimary)
+                .lineLimit(1)
+            Spacer(minLength: DS.Space.s2)
+            Text("\(entry.count)")
+                .dsText(.subhead13)
+                .foregroundStyle(DS.textSecondary)
+                .monospacedDigit()
+            if door {
+                Image(systemName: "chevron.right")
+                    .accessibilityHidden(true)
+                    .dsGlyph(11, weight: .semibold)
+                    .foregroundStyle(DS.textTertiary)
+            }
+        }
+        .padding(.vertical, DS.Space.s2)
+        // A separator between rows and never under the last one — a FILL at
+        // the faintest rung, which is what this design system draws instead
+        // of a hairline (§8: nothing strokes a line).
+        .overlay(alignment: .bottom) {
+            if !isLast {
+                Rectangle().fill(DS.fillFaint).frame(height: 1)
+            }
+        }
+        .contentShape(Rectangle())
+    }
+
+    /// WHEN KEYS LAPSE — one bar per key, on one fixed 90-day scale
+    /// (`VibenetKeyShelf`, prd §471, user pick of three candidates).
+    ///
+    /// This replaced `WalletRunwayRail(dates: aggregate.futureExpiries)`,
+    /// which had a defect on this card that no restyling could fix: every key
+    /// expiry is in the FUTURE, so `WidgetRunway.positions` — which windows
+    /// on `min(dates, now) … max(dates, now)` — put `now` at the minimum on
+    /// every render, pinning the marker at 5% forever. See `VibenetKeyShelf`
+    /// for the full argument and for the cost of no longer sharing a drawing
+    /// with the "Needs you" widget.
+    ///
+    /// SHELF **XOR** SENTENCE, never both: the shelf's first bar IS the
+    /// soonest expiry, named and counted down, so drawing the sentence under
+    /// it is the card arguing with itself. The sentence survives exactly
+    /// where the shelf declines — one lone expiry, or nothing inside the
+    /// window — which is the behaviour this card had before any figure
+    /// existed.
+    @ViewBuilder
+    private func expiryFooter(_ aggregate: VibenetKeyAggregate) -> some View {
+        if let shelf = VibenetKeyShelf.compose(room.items, now: .now) {
+            VStack(alignment: .leading, spacing: 0) {
+                Text(String(localized: "Keys that lapse"))
+                    .dsText(.label12)
+                    .foregroundStyle(DS.textTertiary)
+                VStack(alignment: .leading, spacing: 9) {
+                    ForEach(Array(shelf.rows.enumerated()), id: \.element.id) { index, row in
+                        shelfRow(row)
+                            .chartArrival(index: index, reduceMotion: reduceMotion)
+                    }
+                }
                 .padding(.top, DS.Space.s3)
-        }
-        // The one clock, and only the soonest — the card ends on a single
-        // blue sentence rather than a stack of competing attention lines.
-        if let soonest = aggregate.soonestExpiry {
+                if let tail = shelf.tailLine {
+                    Text(tail)
+                        .dsText(.label11)
+                        .foregroundStyle(DS.textTertiary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.top, DS.Space.s2)
+                }
+            }
+            .padding(.top, DS.Space.s4)
+        } else if let soonest = aggregate.soonestExpiry {
             Text(soonest.line(now: .now))
                 .dsText(.label12).fontWeight(.semibold)
                 .foregroundStyle(Self.mark)
                 .fixedSize(horizontal: false, vertical: true)
-                .padding(.top, DS.Space.s2)
+                .padding(.top, DS.Space.s4)
         }
+    }
+
+    /// One key's remaining shelf life. The NAME is composed here rather than
+    /// in the model for `displayName`'s own reason — resolving a nickname
+    /// needs `VibenetWatch`, and `VibenetRoom.swift` is Foundation-only.
+    ///
+    /// Blue is spent on urgency and only on urgency: a bar inside the
+    /// fortnight wears the room's mark, everything else wears `fillStrong`,
+    /// so the one key you might have to act on is the one coloured thing in
+    /// the block.
+    private func shelfRow(_ row: VibenetKeyShelfRow) -> some View {
+        let urgent = row.isUrgent(now: .now)
+        return HStack(spacing: DS.Space.s3) {
+            Text("\(row.actor.kind.plainTitle) · \(Self.displayName(row.address))")
+                .dsText(.label11)
+                .foregroundStyle(DS.textSecondary)
+                .lineLimit(1)
+                .frame(width: 104, alignment: .leading)
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(DS.fillFaint)
+                    Capsule()
+                        .fill(urgent ? Self.mark : DS.fillStrong)
+                        .frame(width: max(3, geo.size.width * row.fraction(now: .now)))
+                }
+            }
+            .frame(height: 7)
+            Text(row.countdown(now: .now))
+                .dsText(.label11)
+                .fontWeight(urgent ? .semibold : .regular)
+                .foregroundStyle(urgent ? Self.mark : DS.textTertiary)
+                .monospacedDigit()
+                .frame(width: 42, alignment: .trailing)
+        }
+        // Bars are a picture and read as nothing to VoiceOver (§299, the risk
+        // strip's lesson) — the row says its whole fact in words instead.
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text("\(row.actor.kind.plainTitle) on \(Self.displayName(row.address)), \(row.actor.expiryLabel(now: .now))"))
     }
 
     /// WHO CAN ACT FOR WHOM. Silent when there are no links, so a room
@@ -776,27 +940,41 @@ struct VibenetRoomCard: View {
                     // rather than its key count — "1 key" sits right
                     // beside a badge already saying "Unlocking"; the
                     // number worth a glance here is WHEN.
-                    if item.hasInitiatedUnlock, let countdown = item.unlockLabel(now: .now) {
-                        Text(countdown)
-                            .dsText(.label12)
-                            .foregroundStyle(DS.textPrimary)
-                            .lineLimit(1)
-                        // Only when BOTH endpoints are known — a bar with
-                        // a guessed start is the fake status §83 forbids,
-                        // so this is silent rather than wrong on a build
-                        // where the delay never read. No animation on
-                        // the fill: a static capsule needs no Reduce
-                        // Motion check.
-                        if let progress = item.unlockProgress(now: .now) {
-                            GeometryReader { geo in
-                                ZStack(alignment: .leading) {
-                                    Capsule().fill(Self.mark.opacity(0.15))
-                                    Capsule().fill(Self.mark)
-                                        .frame(width: geo.size.width * progress)
+                    if item.hasInitiatedUnlock {
+                        // TICKS (prd §472) — `VibenetAccountDetail.state`
+                        // carries the full argument; this is the same clock at
+                        // roster scale, so it must not be the one that freezes
+                        // while the detail behind it counts down.
+                        TimelineView(.periodic(from: .now, by: 1)) { tick in
+                            if let countdown = item.unlockLabel(now: tick.date) {
+                                Text(countdown)
+                                    .dsText(.label12)
+                                    .foregroundStyle(DS.textPrimary)
+                                    .lineLimit(1)
+                                    .contentTransition(.numericText())
+                                    .animation(reduceMotion ? nil : DS.Motion.standard, value: countdown)
+                                // Only when BOTH endpoints are known — a bar
+                                // with a guessed start is the fake status §83
+                                // forbids, so this is silent rather than wrong
+                                // on a build where the delay never read.
+                                if let progress = item.unlockProgress(now: tick.date) {
+                                    GeometryReader { geo in
+                                        ZStack(alignment: .leading) {
+                                            Capsule().fill(Self.mark.opacity(0.15))
+                                            Capsule().fill(Self.mark)
+                                                .frame(width: geo.size.width * progress)
+                                        }
+                                    }
+                                    .frame(height: 4)
+                                    .frame(maxWidth: 160)
+                                    .animation(reduceMotion ? nil : .linear(duration: 1), value: progress)
                                 }
+                            } else {
+                                Text(String(localized: "Ready to unlock"))
+                                    .dsText(.label12)
+                                    .foregroundStyle(DS.textPrimary)
+                                    .lineLimit(1)
                             }
-                            .frame(height: 4)
-                            .frame(maxWidth: 160)
                         }
                     } else if let urgent = item.urgentLine(now: .now) {
                         // R2.2: a key's own clock outranks the plain key

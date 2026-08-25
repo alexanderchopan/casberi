@@ -300,9 +300,35 @@ fi
 grep -q 'unreachedLine' "$TMP/card.nc.swift" \
   || { echo "✗ the room card no longer draws unreachedLine — prd §468: an unread account is never said"; exit 1; }
 
-# The runway. Without it the room's only clock is one sentence again.
-grep -q 'WalletRunwayRail(dates: aggregate.futureExpiries)' "$TMP/card.nc.swift" \
-  || { echo "✗ the keys card no longer draws the expiry runway — prd §468"; exit 1; }
+# THE EXPIRY FIGURE. Without it the room's only clock is one sentence again.
+#
+# `WalletRunwayRail(dates: aggregate.futureExpiries)` until 2026-08-25 (prd
+# §471). The rail had a defect ON THIS CARD that no restyling could fix and
+# that this guard could never have caught: `WidgetRunway.positions` windows on
+# `min(dates, now) … max(dates, now)`, and every key expiry is in the FUTURE,
+# so `now` was always the minimum and the marker sat pinned at 5% on every
+# render this feature ever drew. `VibenetKeyShelf` replaces it — one bar per
+# key on a fixed 90-day scale, which reads the same spread off bar lengths and
+# also says WHICH key. Guarded BOTH ways, because both halves can rot: the
+# shelf must be composed, and the sentence must still be the fallback where
+# the shelf declines.
+grep -q 'VibenetKeyShelf.compose(room.items, now: .now)' "$TMP/card.nc.swift" \
+  || { echo "✗ the keys card no longer draws the expiry shelf — prd §471"; exit 1; }
+grep -q 'aggregate.soonestExpiry' "$TMP/card.nc.swift" \
+  || { echo "✗ the keys card lost its soonest-expiry fallback — prd §471: the shelf declines on"
+       echo "  a lone expiry and on a room with nothing inside 90 days, and the sentence is what"
+       echo "  the card says instead. Without it those rooms have no clock at all."; exit 1; }
+# SHELF **XOR** SENTENCE. The shelf's first bar IS the soonest expiry, named
+# and counted down, so a card drawing both says the same thing twice — which
+# is exactly what the old rail-plus-sentence pairing did.
+grep -q 'if let shelf = VibenetKeyShelf.compose' "$TMP/card.nc.swift" \
+  || { echo "✗ the shelf is no longer the leading branch — prd §471: shelf XOR sentence"; exit 1; }
+# The rail is GONE from this card, not merely unreferenced in one place.
+if grep -q 'WalletRunwayRail' "$TMP/card.nc.swift"; then
+  echo "✗ VibenetRoomCard draws WalletRunwayRail again — prd §471: on a future-only date set"
+  echo "  its now-marker is a constant at 5% and its axis is elastic, so it says nothing."
+  exit 1
+fi
 
 # ONE definition of the keys block. Two copies drift, and then the same room
 # says two different things depending on how many accounts are watched.
@@ -356,12 +382,138 @@ fi
 grep -q 'case vibenetKeys(\[VibenetAccountItem\])' "Casberi/Casberi/Screens/FeedScreen.swift" \
   || { echo "✗ FeedSheetRoute no longer carries the key tray — prd §468"; exit 1; }
 
+# --- prd §473: the revoked key's deadline, the key's beginning, the activity --
+#
+# THE SWEEP RUNS BEFORE THE EARLY RETURN. `landAccount` returns as soon as
+# there is nothing fresh to land, and a revocation that arrived weeks ago is
+# exactly the case this exists for — behind that return it would only ever fire
+# on a pass that happened to be landing something else, which is most of the
+# time never.
+sweepAt=$(grep -n 'VibenetDeadlineSweep.maySweep' "$TMP/bridge.nc.swift" | head -1 | cut -d: -f1)
+freshAt=$(grep -n 'let fresh = events.filter' "$TMP/bridge.nc.swift" | head -1 | cut -d: -f1)
+if [[ -z "$sweepAt" || -z "$freshAt" || "$sweepAt" -gt "$freshAt" ]]; then
+  echo "✗ the deadline sweep no longer runs before landAccount's fresh-events early return —"
+  echo "  prd §473: behind it, a revocation that arrived weeks ago never clears its deadline."
+  exit 1
+fi
+# It clears the FIELD and never the row. The authorization row is a true record
+# of a real moment; a key having been authorized is not made untrue by its
+# later revocation.
+grep -q 'thing.dueAt = nil' "$TMP/bridge.nc.swift" \
+  || { echo "✗ nothing clears a revoked key's deadline — prd §473"; exit 1; }
+if grep -q 'context.delete' "$TMP/bridge.nc.swift"; then
+  echo "✗ the vibenet bridge deletes a row — prd §473: the sweep clears dueAt and nothing else,"
+  echo "  and this bridge has never deleted anything."
+  exit 1
+fi
+# THE OPTIONAL IS KEPT at the log read, or `maySweep` can never tell a failed
+# read from an account that revoked nothing.
+grep -q 'let actorLogsRead = await actorLogsTask' "$TMP/bridge.nc.swift" \
+  || { echo "✗ the actor log read collapses its nil — prd §473: an unreachable host would then"
+       echo "  be indistinguishable from a mass revocation (ScreenshotIngest.pruneDeleted's rule)"; exit 1; }
+
+# THE MOMENT CARRIES ITS KEY, or a key can never find its own beginning.
+grep -q 'actorId: e.actorId' "$TMP/bridge.nc.swift" \
+  || { echo "✗ landed key moments no longer carry their actorId — prd §473"; exit 1; }
+grep -q 'VibenetKeyOrigin.authorized(actor, in: item.history)' "$TMP/detail.nc.swift" \
+  || { echo "✗ the expanded key row no longer reads its own beginning — prd §473"; exit 1; }
+# …and the expanded content is GATED, or the row is not a disclosure at all and
+# the density §471 fixed comes straight back.
+grep -q 'if isOpen(actor)' "$TMP/detail.nc.swift" \
+  || { echo "✗ the key row's detail is no longer gated on being open — prd §473"; exit 1; }
+
+# THE LIVE ACTIVITY IS A CONTROL, NEVER AUTOMATIC (prd §473). An unlock happens
+# on the chain, possibly to an account somebody merely watches; starting one
+# because we noticed spends the most personal surface the OS has on something
+# nobody asked to be interrupted about.
+if grep -rn 'VibenetUnlockActivityDriver.start' Casberi/Casberi/Model/ >/dev/null 2>&1; then
+  echo "✗ something in Model/ starts the unlock Live Activity — prd §473: it is offered by the"
+  echo "  account detail and started by a tap, the MoneyActivityDriver precedent."
+  exit 1
+fi
+grep -q 'VibenetUnlockActivityDriver.available' "$TMP/detail.nc.swift" \
+  || { echo "✗ the lock-screen control is no longer gated on Live Activities being available —"
+       echo "  prd §473: present-and-inert is the dead control §83 bans"; exit 1; }
+# The countdown is the SYSTEM's, or the lock screen and the app drift apart and
+# the activity needs updates nothing sends.
+grep -q 'Text(timerInterval:' "Casberi/CasberiWidgets/VibenetUnlockActivity.swift" \
+  || { echo "✗ the unlock activity computes its own countdown — prd §473: it must hand the END"
+       echo "  to the system, or it is wrong within a minute of being written"; exit 1; }
+
+# --- prd §472: the book's cold start, the ticking clock, the last removal ----
+#
+# THE ADDRESS BOOK MUST SEED FROM THE SAVED SNAPSHOT. Without it `room` starts
+# `configReached: false`, and `VibenetRoom.headline` tests that FIRST — so the
+# first frame of the roster screen read "Couldn't read vibenet's current
+# contracts" on every open, before a single request had been made. A guard and
+# not an assertion, because the defect is a first FRAME and no harness here can
+# render one.
+grep -q 'VibenetRoomSource.card()' "$BOOK" \
+  || { echo "✗ the address book no longer seeds from the saved snapshot — prd §472: its first"
+       echo "  frame then claims the read failed before it has been attempted (§83)"; exit 1; }
+# …and it must not draw the card over an empty room while a read is in flight,
+# which is the same false failure by the other route (no snapshot yet).
+grep -q 'if connected, !room.items.isEmpty || !loading' "$BOOK" \
+  || { echo "✗ the address book draws its card while the first read is still in flight —"
+       echo "  prd §472: with no snapshot to seed from that is the failure headline again"; exit 1; }
+
+# THE UNLOCK COUNTDOWN TICKS, in both places that draw it. A timelock is the one
+# reading in this room that changes while you look at it, and both were computed
+# from `Date.now` at draw time — correct once, then frozen.
+for f in "$TMP/detail.nc.swift" "$TMP/card.nc.swift"; do
+  grep -q 'TimelineView(.periodic(from: .now, by: 1))' "$f" \
+    || { echo "✗ an unlock countdown no longer ticks (${f:t}) — prd §472: a countdown that does"
+         echo "  not count is §83's fake status wearing a progress bar"; exit 1; }
+done
+# A SECOND, never a minute: `unlockLabel` speaks in seconds at the end of a
+# delay, which is exactly the stretch somebody stands there watching.
+if grep -qE 'TimelineView\(\.periodic\(from: \.now, by: (60|30|[0-9]{2,})\)\)' "$TMP/detail.nc.swift"; then
+  echo "✗ the unlock countdown ticks slower than a second — prd §472: it would freeze over"
+  echo "  the final minute, the one moment it must not."
+  exit 1
+fi
+
+# THE LAST REMOVAL ASKS. Every other unwatch removes a row; this one tears down
+# the seat, drops the chip and forgets the ledgers, from a menu item sitting
+# where "remove this row" sat a moment ago.
+grep -q 'guard watch.addresses.count > 1 else' "$BOOK" \
+  || { echo "✗ unwatching the LAST vibenet account no longer asks — prd §472: it disconnects"
+       echo "  the seat, which is a different act from removing a row"; exit 1; }
+# …and only the last one asks, or it becomes the dialog nobody reads.
+grep -q 'private func commitUnwatch' "$BOOK" \
+  || { echo "✗ the ordinary unwatch no longer goes straight through — prd §472"; exit 1; }
+
+# AN UNWATCH KEEPS THE NAME. Watching and naming are two tiers over one ledger
+# (§461), and a mis-tap must not destroy something the person typed.
+# NO PIPE INTO `grep -q` — under `pipefail` that is the documented SIGPIPE race
+# (CLAUDE.md, `ondevice-selftest.sh`'s own lesson): `grep -q` exits the instant
+# it matches, the writer takes SIGPIPE, and 141 becomes the pipeline's status.
+# Read it into a variable and test that instead.
+removeBody=$(grep -A 3 'func remove(_ address: String) {' "$TMP/bridge.nc.swift")
+if [[ "$removeBody" == *"names.removeValue"* ]]; then
+  echo "✗ unwatching a vibenet account forgets its name again — prd §472: naming is free here"
+  echo "  and re-watching must not hand back a bare 0x…. removeAll still clears both."
+  exit 1
+fi
+grep -q 'names = \[:\]' "$TMP/bridge.nc.swift" \
+  || { echo "✗ removeAll no longer clears the names — prd §472: 'forget everything' must stay"
+       echo "  reachable as one deliberate act"; exit 1; }
+
 # The tray mirrors the card, and the chevron only exists where the tray does.
 grep -q 'VibenetKeyTray.sections' "$TRAY" \
   || { echo "✗ VibenetKeyTraySheet no longer reads VibenetKeyTray.sections — prd §468"; exit 1; }
-grep -q 'if onOpenKeys != nil' "$TMP/card.nc.swift" \
-  || { echo "✗ the keys chevron is no longer gated on the tray being reachable — prd §468: a"
-       echo "  chevron that opens nothing is the dead control §83 bans"; exit 1; }
+# BOTH doors are gated on the tray being reachable — the headline's chevron
+# and every census row's (prd §471, which made each permission its own door).
+# A chevron that opens nothing is the dead control §83 bans, and there are two
+# kinds of it here now.
+[[ $(grep -c 'if let onOpenKeys' "$TMP/card.nc.swift") -eq 2 ]] \
+  || { echo "✗ the keys doors are no longer both gated on the tray being reachable — prd §471:"
+       echo "  the headline and each census row each open the tray, and each must be a plain"
+       echo "  reading where no caller can present one"; exit 1; }
+# A census row hands its PERMISSION over, or the chevron promises those keys
+# and delivers the whole roster.
+grep -q 'onOpenKeys(entry.label)' "$TMP/card.nc.swift" \
+  || { echo "✗ a census row no longer opens the tray at its own permission — prd §471"; exit 1; }
 
 # The hero's face stands down only where the rail draws it. Ungated, a
 # single-account room and the address book's own sheet both lose their only
@@ -1897,6 +2049,201 @@ check("an already-lapsed key is not 'ahead' and never reaches the rail",
       VibenetKeyAggregation.compose([keyedItem("0xa", reached: true, actors: [keyActor("0x1", past)])],
                                      now: readNow)?.futureExpiries.isEmpty == true)
 
+// MARK: - VibenetKeyShelf — when the room's keys lapse (prd §471)
+//
+// It replaced `WalletRunwayRail` on the keys card, and the rail's defect there
+// is why: `WidgetRunway.positions` windows on `min(dates, now) … max(dates,
+// now)`, every key expiry is in the FUTURE, so `now` was always the minimum
+// and the marker sat pinned at 5% on every render — a constant, on the one
+// element that gives the rail meaning. Nothing here can be checked by looking
+// at a screenshot, so these are the only proof the bars are right.
+
+print("")
+print("VibenetKeyShelf.compose")
+let shelfNow = Date(timeIntervalSince1970: 1_000_000_000)
+func shelfActor(_ id: String, days: Double) -> VibenetActor {
+    VibenetActor(actorId: id, authenticator: "0x0", kind: .secp256k1,
+                  scope: VibenetScope(raw: VibenetScope.sender),
+                  expiry: UInt64(shelfNow.timeIntervalSince1970 + days * 86_400))
+}
+func shelfNever(_ id: String) -> VibenetActor {
+    VibenetActor(actorId: id, authenticator: "0x0", kind: .secp256k1,
+                  scope: VibenetScope(raw: VibenetScope.sender), expiry: 0)
+}
+
+// THE THREE DECLINES, each for its own reason. A shelfR that draws where it
+// should not is worse than none: one full-length bar claims a spread that
+// does not exist, and a lone bar has nothing to be compared against.
+check("no keys at all — nothing to draw",
+      VibenetKeyShelf.compose([], now: shelfNow) == nil)
+check("ONE ticking key declines — a single bar says nothing a sentence does not say better",
+      VibenetKeyShelf.compose([keyedItem("0xa", reached: true,
+                                          actors: [shelfActor("1", days: 6)])], now: shelfNow) == nil)
+// The premise first, or this fixture could pass for the wrong reason: it must
+// really hold two TICKING keys and decline on the WINDOW, not on the count.
+let shelfAllFar = [keyedItem("0xa", reached: true,
+                             actors: [shelfActor("1", days: 200), shelfActor("2", days: 300)])]
+check("(premise) both of those keys really are ticking",
+      VibenetKeyAggregation.compose(shelfAllFar, now: shelfNow)?.futureExpiries.count == 2)
+check("two keys, both past the 90-day window — declines rather than drawing two full bars",
+      VibenetKeyShelf.compose(shelfAllFar, now: shelfNow) == nil)
+check("a key that NEVER expires is not a bar — expiry 0 is Keystore-for-never, not a date",
+      VibenetKeyShelf.compose([keyedItem("0xa", reached: true,
+                                          actors: [shelfActor("1", days: 6), shelfNever("2")])],
+                               now: shelfNow) == nil)
+
+let shelfR = VibenetKeyShelf.compose([
+    keyedItem("0xa", reached: true, actors: [shelfActor("1", days: 41), shelfActor("2", days: 6)]),
+    keyedItem("0xb", reached: true, actors: [shelfActor("3", days: 47), shelfActor("4", days: 400)]),
+], now: shelfNow)
+check("rows are SOONEST FIRST — the one you might have to act on leads",
+      shelfR?.rows.map(\.actor.actorId) == ["2", "1", "3"])
+check("a key past the window is never a bar — a full-length bar would say 'a quarter away' about 2027",
+      shelfR?.beyondWindow == 1)
+check("...and nothing inside the window was dropped, so nothing is hidden",
+      shelfR?.hiddenInWindow == 0)
+check("the tail names both counts APART — the card's own bound is not the room's",
+      shelfR?.tailLine == "1 lapses later")
+
+// The cap, and that the two tail counts stay separate. Summing them would make
+// "3 more" mean two different things at once.
+let shelfCapped = VibenetKeyShelf.compose([
+    keyedItem("0xa", reached: true, actors: [
+        shelfActor("1", days: 2), shelfActor("2", days: 4), shelfActor("3", days: 6),
+        shelfActor("4", days: 8), shelfActor("5", days: 300),
+    ]),
+], now: shelfNow)
+check("at most rowCap bars — this is a card footer, not the tray it opens",
+      shelfCapped?.rows.count == VibenetKeyShelf.rowCap)
+check("the ones that did not fit are counted, never silently dropped",
+      shelfCapped?.hiddenInWindow == 1)
+check("and counted APART from the ones past the window",
+      shelfCapped?.beyondWindow == 1)
+check("the tail says both, in that order",
+      shelfCapped?.tailLine == "1 more within 90 days · 1 lapses later")
+check("a full shelfR with nothing left over says nothing rather than an empty tail",
+      VibenetKeyShelf.compose([keyedItem("0xa", reached: true,
+                                          actors: [shelfActor("1", days: 2), shelfActor("2", days: 4)])],
+                               now: shelfNow)?.tailLine == nil)
+
+// TOTAL ORDER. Two keys authorized in one transaction share an expiry to the
+// second; without the tie-breaks the card reshuffles between composes over
+// identical data, which reads as broken.
+let shelfTied = VibenetKeyShelf.compose([
+    keyedItem("0xb", reached: true, actors: [shelfActor("z", days: 10)]),
+    keyedItem("0xa", reached: true, actors: [shelfActor("y", days: 10)]),
+], now: shelfNow)
+check("keys sharing an expiry break the tie on ACCOUNT, so the order is total",
+      shelfTied?.rows.map(\.address) == ["0xa", "0xb"])
+
+// THE BAR ITSELF. Every fraction is against ONE fixed window, which is the
+// whole comparability claim — an elastic axis is what this replaced.
+let shelfLead = shelfR!.rows[0]
+check("fraction is remaining-over-90-days, so two accounts' cards are comparable",
+      abs(shelfLead.fraction(now: shelfNow) - (6.0 / 90.0)) < 0.001)
+check("a key most of a quarter out fills most of its bar",
+      abs(shelfR!.rows[2].fraction(now: shelfNow) - (47.0 / 90.0)) < 0.001)
+check("the bar is FLOORED so a key lapsing within the hour still draws as a bar, not a hole",
+      VibenetKeyShelfRow(address: "0xa", actor: shelfActor("1", days: 0.01))
+          .fraction(now: shelfNow) == VibenetKeyShelf.minimumFraction)
+check("...and never past full, whatever the clock says",
+      VibenetKeyShelfRow(address: "0xa", actor: shelfActor("1", days: 400))
+          .fraction(now: shelfNow) == 1)
+
+// THE COUNTDOWN. Rounded UP: a key with 30 hours left reading "1d" understates
+// it on the one figure whose whole job is how much time is left.
+check("days round UP — 30 hours left is 2d, never 1d",
+      VibenetKeyShelfRow(address: "0xa", actor: shelfActor("1", days: 1.25))
+          .countdown(now: shelfNow) == "2d")
+check("under a day says so rather than printing 0d, which reads as already gone",
+      VibenetKeyShelfRow(address: "0xa", actor: shelfActor("1", days: 0.4))
+          .countdown(now: shelfNow) == "<1d")
+check("an ordinary countdown is bare days",
+      shelfLead.countdown(now: shelfNow) == "6d")
+
+// URGENCY IS THE ONLY COLOUR IN THE BLOCK, and it reads the SAME threshold the
+// key's own row reads, or a key drawn blue here is drawn plain there.
+check("a key inside the urgency window is urgent",
+      shelfLead.isUrgent(now: shelfNow) == (shelfLead.actor.expiryStanding(now: shelfNow) == .soon))
+check("a key 47 days out is not",
+      shelfR!.rows[2].isUrgent(now: shelfNow) == false)
+
+// The row's identity is ACCOUNT-QUALIFIED. An actorId is unique within an
+// account and nothing says it is across them; a ForEach over a colliding id
+// renders as rows disappearing.
+check("two accounts sharing one actorId are two rows, not one",
+      Set(VibenetKeyShelf.compose([
+          keyedItem("0xa", reached: true, actors: [shelfActor("same", days: 3)]),
+          keyedItem("0xb", reached: true, actors: [shelfActor("same", days: 4)]),
+      ], now: shelfNow)!.rows.map(\.id)).count == 2)
+
+// MARK: - VibenetDeadlineSweep / VibenetKeyOrigin (prd §473)
+//
+// The sweep's failure is INVISIBLE: a revoked key's authorization row keeps a
+// future `dueAt`, and the only symptom is a lock-screen notification weeks
+// later about a key that no longer exists. Nothing in a build, a screen sweep
+// or a probe can see it.
+
+print("")
+print("VibenetDeadlineSweep.revoked")
+func ev(_ id: String, _ authorized: Bool, _ block: Int, _ logIndex: Int = 0) -> VibenetActorEvent {
+    VibenetActorEvent(actorId: id, authorized: authorized, block: block, logIndex: logIndex)
+}
+check("an authorized key that was never revoked keeps its deadline",
+      VibenetDeadlineSweep.revoked([ev("a", true, 10)]).isEmpty)
+check("an authorized-then-revoked key loses it",
+      VibenetDeadlineSweep.revoked([ev("a", true, 10), ev("a", false, 20)]) == ["a"])
+// The case that makes last-write-wins load-bearing rather than decoration.
+check("a revoked-then-REAUTHORIZED key keeps it — it is live again",
+      VibenetDeadlineSweep.revoked([ev("a", true, 10), ev("a", false, 20), ev("a", true, 30)]).isEmpty)
+check("order in the input does not matter — the chain's order does",
+      VibenetDeadlineSweep.revoked([ev("a", true, 30), ev("a", false, 20), ev("a", true, 10)]).isEmpty)
+check("two events in ONE block break the tie on logIndex, not array order",
+      VibenetDeadlineSweep.revoked([ev("a", false, 20, 1), ev("a", true, 20, 0)]) == ["a"])
+check("one account's revoked key does not take another key's deadline with it",
+      VibenetDeadlineSweep.revoked([ev("a", true, 10), ev("a", false, 20), ev("b", true, 15)]) == ["a"])
+
+print("")
+print("VibenetDeadlineSweep.maySweep")
+check("a failed log read sweeps NOTHING — an unreachable host is not a mass revocation",
+      VibenetDeadlineSweep.maySweep(logsAnswered: false, events: [ev("a", true, 10)]) == false)
+check("an empty event list sweeps nothing either",
+      VibenetDeadlineSweep.maySweep(logsAnswered: true, events: []) == false)
+check("a real read with real events may sweep",
+      VibenetDeadlineSweep.maySweep(logsAnswered: true, events: [ev("a", true, 10)]))
+
+print("")
+print("VibenetKeyOrigin.authorized")
+let originActor = VibenetActor(actorId: "0xAAA", authenticator: "0x1", kind: .secp256k1,
+                                scope: VibenetScope(raw: VibenetScope.sender), expiry: 0)
+func mom(_ id: String?, _ authorized: Bool, _ block: Int, _ logIndex: Int = 0,
+         dated: Bool = true) -> VibenetKeyMoment {
+    VibenetKeyMoment(block: block, logIndex: logIndex, authorized: authorized, kind: nil,
+                     date: dated ? Date(timeIntervalSince1970: TimeInterval(1_000_000 + block)) : nil,
+                     actorId: id)
+}
+check("a key with no moment in the history has no beginning to name",
+      VibenetKeyOrigin.authorized(originActor, in: []) == nil)
+check("moments landed before the id was stamped name nothing — never a wrong key",
+      VibenetKeyOrigin.authorized(originActor, in: [mom(nil, true, 10)]) == nil)
+check("another key's moment is not this key's beginning",
+      VibenetKeyOrigin.authorized(originActor, in: [mom("0xBBB", true, 10)]) == nil)
+check("hex casing is not a promise — the id matches case-insensitively",
+      VibenetKeyOrigin.authorized(originActor, in: [mom("0xaaa", true, 10)])?.block == 10)
+check("a REVOCATION is not a beginning",
+      VibenetKeyOrigin.authorized(originActor, in: [mom("0xAAA", false, 10)]) == nil)
+// The rule that makes it the LATEST authorization: a key revoked and
+// re-authorized began again, and dating it from the superseded authorization
+// would put its beginning before a revocation that really happened.
+check("a re-authorized key is dated from the LATEST authorization, not the first",
+      VibenetKeyOrigin.authorized(originActor, in: [
+          mom("0xAAA", true, 10), mom("0xAAA", false, 20), mom("0xAAA", true, 30),
+      ])?.block == 30)
+check("two authorizations in one block break the tie on logIndex",
+      VibenetKeyOrigin.authorized(originActor, in: [
+          mom("0xAAA", true, 30, 0), mom("0xAAA", true, 30, 1),
+      ])?.logIndex == 1)
+
 // MARK: - prd §468: what changed since you last looked
 
 print("")
@@ -2395,14 +2742,23 @@ mutate "VibenetAccountMapping.links must sort by from ascending, not descending"
 # `expiry == 0` is Keystore.sol's own convention for "never expires" —
 # folding it into the soonest reading would report a key that can never
 # lapse as the most urgent one in the entire room.
-mutate "VibenetKeyAggregation.compose must never count expiry == 0 toward the soonest reading" \
-  '$0.1.expiry > 0 && TimeInterval($0.1.expiry) > now.timeIntervalSince1970' \
-  'TimeInterval($0.1.expiry) > now.timeIntervalSince1970'
+# NOTE (prd §471): the mutation that used to sit here — dropping `expiry > 0`
+# from what is now `VibenetActor.isTicking` — was DELETED rather than
+# re-anchored. It reported ✓ on its first run and that ✓ could not be trusted:
+# Keystore's "never" is epoch 0 and epoch 0 is never after any real `now`, so
+# no fixture built from a real clock can tell the two clauses apart. The long
+# note beside "isTicking must exclude an already-lapsed key" further down
+# records the same finding about the same predicate. A check that cannot fail
+# proves nothing.
 
 # The whole point of a "soonest expiry" callout is to point at what needs
 # attention FIRST — swapping the comparator points at whatever lapses
 # LAST instead, burying the one key someone actually needs to act on.
-mutate "VibenetKeyAggregation.compose must pick the SOONEST future expiry, never the latest" \
+# ANCHORED ON `VibenetKeyOrder.soonestFirst`, the one comparator every
+# clock-ranked reading shares — for `isTicking`'s reason exactly, and found the
+# same way (a second longhand copy in `VibenetKeyShelf` absorbed this mutation
+# and left the assertion watching an unmutated aggregate).
+mutate "VibenetKeyOrder.soonestFirst must rank the SOONEST expiry first, never the latest" \
   'if a.1.expiry != b.1.expiry { return a.1.expiry < b.1.expiry }' \
   'if a.1.expiry != b.1.expiry { return a.1.expiry > b.1.expiry }'
 
@@ -2545,9 +2901,60 @@ mutate "the key card must say when an account could not be read" \
 # ("futureExpiries excludes Keystore's own 'never' (expiry 0)") is the
 # correctness proof; this is not.
 
-mutate "futureExpiries must exclude an already-lapsed key" \
-  'filter { $0 > 0 && TimeInterval($0) > now.timeIntervalSince1970 }' \
-  'filter { $0 > 0 }'
+# --- prd §471: the expiry shelf ---------------------------------------------
+#
+# Every one of these renders as a perfectly ordinary block of bars. That is the
+# whole reason they are here: a wrong window, a dropped floor or a lost tail
+# count draws just as convincingly as a right one.
+
+mutate "VibenetKeyShelf must decline on a LONE ticking key — one bar has nothing to compare against" \
+  'guard pairs.count >= 2 else { return nil }' \
+  'guard pairs.count >= 1 else { return nil }'
+
+mutate "VibenetKeyShelf must bound its window — an unbounded one is the elastic axis it replaced" \
+  'let horizon = now.timeIntervalSince1970 + window' \
+  'let horizon = now.timeIntervalSince1970 + window * 100'
+
+mutate "VibenetKeyShelf must cap its bars — a card footer is not the tray it opens" \
+  'let rows = inside.prefix(rowCap)' \
+  'let rows = inside.prefix(rowCap + 5)'
+
+mutate "hiddenInWindow must count what did not fit, never report zero over dropped keys" \
+  'hiddenInWindow: max(0, inside.count - rows.count)' \
+  'hiddenInWindow: 0'
+
+mutate "beyondWindow must count keys past the window, or the card silently understates the room" \
+  'beyondWindow: pairs.count - inside.count' \
+  'beyondWindow: 0'
+
+mutate "the bar must be floored, or a key lapsing within the hour draws as no bar at all" \
+  'return min(1, max(VibenetKeyShelf.minimumFraction, remaining / VibenetKeyShelf.window))' \
+  'return min(1, remaining / VibenetKeyShelf.window)'
+
+mutate "the bar must be clamped at full, or a key years out draws past the end of its track" \
+  'return min(1, max(VibenetKeyShelf.minimumFraction, remaining / VibenetKeyShelf.window))' \
+  'return max(VibenetKeyShelf.minimumFraction, remaining / VibenetKeyShelf.window)'
+
+mutate "the countdown must round UP — 30 hours left is 2d, and 1d understates the one figure that matters" \
+  'let days = Int((remaining / 86_400).rounded(.up))' \
+  'let days = Int((remaining / 86_400).rounded(.down))'
+
+mutate "under a day must say so, never print 0d — which reads as already gone" \
+  'return days <= 1 ? String(localized: "<1d") : String(localized: "\(days)d")' \
+  'return String(localized: "\(days)d")'
+
+mutate "the two tail counts must stay APART — summed, 'N more' means two things at once" \
+  'return parts.isEmpty ? nil : parts.joined(separator: " · ")' \
+  'return parts.isEmpty ? nil : parts.first'
+
+# ANCHORED ON `isTicking` since prd §471 folded `futureExpiries`' own longhand
+# copy of this filter into that one predicate. The half dropped here is the
+# DISCRIMINATING one — a lapsed key has a real, positive expiry that simply
+# sits in the past, so a fixture can tell the two apart, which is exactly what
+# the note above says the `> 0` half can never do.
+mutate "isTicking must exclude an already-lapsed key" \
+  'expiry > 0 && TimeInterval(expiry) > now.timeIntervalSince1970' \
+  'expiry > 0'
 
 # THE SHARPEST ONE HERE. An unreached account has an empty roster because the
 # read failed — reading that as revocation announces a security event that did

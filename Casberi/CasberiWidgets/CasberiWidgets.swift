@@ -29,6 +29,7 @@ struct CasberiWidgets: WidgetBundle {
         VoiceRecordingActivity()
         ImportActivity()
         MoneyActivity()
+        VibenetUnlockActivity()
         #endif
     }
 }

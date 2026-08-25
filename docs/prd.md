@@ -32490,3 +32490,443 @@ conventions they encode.
 **UNMEASURED on a device.** The context menus, the tray's tap-to-scope and the
 wrapped doors row are gesture and layout behaviour no static check can
 exercise; iOS Simulator and Mac Catalyst both compile clean.
+
+## 471. The room reads as unrefined because its air, not its drawings, was wrong — plus the expiry rail that was never legible here (user: "how would you improve the UI of the vibenet all screen, it's a bit messy and looks unrefined. same w/ the key screen when it shows all keys… it looks like a giant slab of gray card that could be broken up, the font looks like padding on the edges or indentation maybe is wrong i'm not sure, and its also tightly packed together", then "yes i like all of your choices except this part / for expires what is a better diagram for it?", then "lets go and do B and all the other changes you suggested", 2026-08-25)
+
+Six measured causes, none of them in any one drawing. §467 answered "some
+hodge podge put together view" by giving each reading its own surface, and the
+surfaces were right — what was missing was the AIR between them and a
+consistent header grammar across them. This is that pass, plus the expiry
+figure, which turned out to be a real defect rather than a matter of taste.
+
+### 1. SEPARATION BY SURFACE, WITHOUT SEPARATION BY AIR
+
+The four stacked cards sat `s3` (14pt) apart, each padded 18, each
+`surfaceSheet` #111113 over a #000000 page at `DS.Radius.widget` = 20. **Two
+near-black rounded boxes 14pt apart do not read as two objects with a gap;
+they read as one slab with a seam in it.** `s3 → s6`. The contents of all four
+cards are untouched — the whole change is the gap.
+
+### 2. TWO LEFT EDGES ON ONE SCREEN
+
+The reported "padding on the edges or indentation maybe is wrong". The
+provenance footnote took `.padding(.horizontal, DS.Space.s2)` = 10 while every
+card sets its text at its own `s4` = 18, so the last line of the room hung 8pt
+short of everything above it. In the key tray the same fault ran the other
+way: section headings started at x=0 and every row's text at 40 (a 26pt face
+plus its gap), so a heading and its own rows shared no edge anywhere. Footnote
+to `s4`; the tray's rows onto ONE `fillFaint` group, which gives the heading a
+container to sit above rather than a phantom edge to miss.
+
+### 3. 14pt OF PADDING INSIDE A 20pt CORNER
+
+Every key row in the account detail was `.padding(DS.Space.s3)` inside a 20pt
+radius. At that ratio the first glyph of each line sits optically INSIDE the
+curve and the card reads as text pressed against its own wall. `s3` is a gap
+rung; `s4` is the card-padding rung the rest of the app uses.
+
+### 4. A CARD SURFACE YOU CANNOT SEE
+
+Key rows used `dsWidgetSurface(fillOpacity: 0.5)`. On the default black page
+that resolves to about #08080a — **a 3% lift, a stain rather than a surface**
+— so eight of them in a column read as one gray slab and the comment above
+them ("a key is an OBJECT… so it gets an object's surface") went unhonoured.
+The shadow that modifier already carries is what lifts the card; halving the
+fill only removed the edge that made it one. Full opacity.
+
+### 5. THE SAME PARAGRAPH, ONCE PER KEY
+
+By a distance the largest single source of the density, and it is CONTENT
+rather than layout. `VibenetPolicyReadability.note` — three lines explaining
+that a session key's cap and period are committed as a hash — was drawn inside
+EVERY gated key row, in the same tertiary ink as the five other lines around
+it. Four session keys meant that paragraph four times. It is a fact about
+session keys AS A CLASS, so it moved to that group's caption, said once. §463's
+honesty is untouched: it is still said, in full, on the screen. The remaining
+per-key facts became a label/value block, reached through two new
+preposition-free accessors (`policyTarget`, `sharedTarget`) that the existing
+sentences now compose FROM — never a value cut back out of a localized
+sentence, which is `MoneyReceipt`'s standing rule.
+
+### 6. SIX READINGS IN ONE CARD, ONE OF THEM A FAKE ROW
+
+The keys card carried a headline, a news line, six permission rows at
+`.padding(.vertical, 5)` (36pt — under the 44pt hit floor, while not even
+being tappable), a rail and a blue clock, all loose in one box. It was also
+the only one of the four cards with no eyebrow, so it alone broke the header
+grammar its neighbours keep.
+
+**The eyebrow carries the SCOPE, not the noun**, which is what answers the old
+objection to fixing this ("Keys" over "8 keys authorized across 3 accounts"
+says the word twice): `scopeEyebrow` says "Across 3 accounts" and
+`countHeadline` says "8 keys authorized". `plainLine` — which the probe and
+the harness read — is now composed FROM those two, so the one-line form and
+the two-slot form can never disagree. The census moved onto its own
+`fillFaint` group with rows at `s2` (46pt), **each its own door into the tray
+at that permission**: a count is the one shape of fact you cannot act on, and
+the follow-up "Send anywhere · 4" wants is those four keys.
+
+`VibenetKeyAggregate.unnamedCount` is new and closes a real hole:
+`VibenetPolicyAggregation.compose` walks `orderedPlainBits` and drops what it
+cannot name, so a key holding only reserved bits contributed to `total` and to
+no row — **the census silently added up to less than the headline and nothing
+said why.** A FOOTNOTE and never a row: a row reading "1 permission not named"
+with a count beside it is an invented category, which `VibenetKeyTray
+.unnamedKeyCount` already refuses to draw.
+
+### 7. THE EXPIRY RAIL WAS NEVER LEGIBLE ON THIS CARD (user picked B of three)
+
+Asked for a better diagram, and the honest first answer was that the rail had
+a DEFECT here, not a style problem. `WidgetRunway.positions` windows on
+`min(dates, now) … max(dates, now)`. **Every key expiry is in the future, so
+`now` is always the minimum — the marker was pinned at 5% on every render this
+feature has ever drawn**, a constant, on the one element that gives the rail
+its meaning everywhere else. The axis is elastic besides, so a single key
+lapsing in 2027 crushed the other three into the first third. Four identical
+dots on an unlabelled rubber axis say "four things, sometime, in some order".
+
+Three replacements were drawn at true card width and the user picked **B**:
+`VibenetKeyShelf`, one bar per key on a FIXED 90-day scale, soonest first.
+§417's argument for a figure at all is honoured — three keys inside a
+fortnight and three over a quarter are different pictures — but the spread is
+read off bar LENGTHS against a constant window rather than off dot positions
+on a rubber one, which needs no axis furniture, no now-marker and no labels.
+And because the bars are rows, the figure also answers WHICH KEY, which the
+rail could not say at any size. Blue is spent on urgency and only on urgency.
+
+**SHELF XOR SENTENCE**: the shelf's first bar IS the soonest expiry, named and
+counted down, so a card drawing both says the same thing twice — which is
+exactly what the old rail-plus-sentence pairing did. The sentence survives
+where the shelf declines, and the three declines are each their own reason: a
+lone expiry (one bar has nothing to be compared against), nothing inside the
+window (three full-length bars claim an urgency nobody has), and no keys.
+
+**THE COST, STATED**: this is local to vibenet, so the room and the "Needs
+you" widget no longer share one drawing of the same dates. That sharing was
+the rail's stated reason to be reused whole and it is given up knowingly — the
+widget's subject is mixed deadlines INCLUDING overdue ones, where a now-marker
+is real and names are unavailable; this card's subject is future key expiries
+that all have names. Different questions, different figures.
+
+### 8. Two duplicate predicates the harness caught, and one check that could never fail
+
+Writing `VibenetKeyShelf` created a second longhand copy of "this key still has
+a clock running" and a second copy of the soonest-first comparator. **`mutate`
+replaces the FIRST occurrence, and the shelf sits earlier in the file — so two
+existing mutations silently began breaking the shelf while their assertions
+watched an unmutated aggregate.** Two real checks, green over real defects,
+introduced by an unrelated feature. Folded to `VibenetActor.isTicking` and
+`VibenetKeyOrder.soonestFirst`, one definition each, with both mutations
+re-anchored on the shared function so breaking it now breaks every reader at
+once. The §418 duplicate-parser lesson at the scale of a predicate.
+
+A third mutation was DELETED rather than re-anchored: dropping `expiry > 0`
+from `isTicking` reported ✓ and that ✓ could not be trusted — Keystore's
+"never" is epoch 0 and epoch 0 is never after any real `now`, so no fixture
+built from a real clock can tell the two clauses apart. §470 removed two
+mutations for exactly this reason; this is the third instance, and the standing
+rule holds: a fixture only tests the rule it names if it FAILS that rule and
+passes every other one.
+
+### 9. `FeedScreen` was over the type-checker's budget, and any member tipped it
+
+Not this feature's defect, but this feature's problem. Adding one stored
+property to `FeedScreen` produced "unable to type-check this expression in
+reasonable time" pointed **six hundred lines away**, deterministically, on
+three different members tried — and reverting the unrelated member built
+cleanly every time. So the budget was the defect, not the member. The fix is
+the one the error names: `listBody`'s List is ONE expression and the solver
+closes it whole, so it split at its natural seams — `roomHead`, `roomBody`,
+`populatedRoom`, and the `.sheet` switch into `sheetContent`. **Nothing about
+what is drawn changed.** Pulling out one branch did not help and pulling out
+the whole content chain did not help; splitting head from body did.
+
+### Cost, and what remains unmeasured
+
+**Nothing to ship**: no new `Thing` property, no request, no CloudKit deploy.
+No token VALUES changed either — every number here is an existing rung used
+where it belongs.
+
+`vibenet-selftest.sh` gained 24 assertions and 10 mutations over
+`VibenetKeyShelf`, plus drift guards for both key doors, the shelf-xor-sentence
+pairing, and a negative that `WalletRunwayRail` never returns to this card.
+**UNMEASURED on a device**: nothing on this host can make a vibenet key
+approach its expiry, so the harness is again not the best proof these bars are
+right but the only one. Every spacing change is rendering no static check can
+exercise.
+
+## 472. The Address Book said the read had failed before it had tried, and the one clock that ticks did not (user: "how else would you improve the vibenet experience", then "we want it really really polished", then "do all", 2026-08-25)
+
+Asked a third time (§468, §470), so the first act was reading those two
+entries rather than grepping for absences — this room's own §418 lesson, that
+its gaps are usually deliberate. Most obvious answers were already built: the
+rows are face-led, the event sheet has its anatomy, the tray scopes on tap,
+the head says when it was read. Five things were genuinely left, and four are
+defects.
+
+### 1. THE FIRST FRAME SAID THE READ HAD FAILED
+
+`VibenetAddressBookScreen` seeded `room` with `VibenetRoom.compose(items: [],
+… configReached: false)` and only filled it after an async read. **`VibenetRoom
+.headline` tests `configReached` FIRST** — so the first frame of the screen
+§465 built to be your roster read "Couldn't read vibenet's current contracts",
+on every open, before a single request had been made. §83's fake status, on
+frame one, on the screen whose whole subject is the list underneath it.
+
+`VibenetRoomSource.card()` is the synchronous snapshot the feed's own head has
+drawn from since §467 — **this screen simply never asked for it.** Seeded from
+it now via an explicit `@MainActor init`. A snapshot is only saved after a read
+that reached the chain, so a seeded card is honest by construction and the
+provenance note under it already says how old it is (§468).
+
+And on the first-EVER open, where there is no snapshot to seed from, the card
+is WITHHELD while the read is in flight rather than drawn over an empty room —
+the same false failure by another route. `VibenetWatchField` is already saying
+"Reading vibenet…", so the screen is not silent.
+
+### 2. THE ONE CLOCK THAT REALLY TICKS DID NOT
+
+A timelock is the only reading in this room that changes on its own while you
+look at it. Both the countdown sentence and its progress bar were computed
+from `Date.now` at DRAW time, so they were correct when the view was built and
+then **froze**: an account twenty minutes from unlocking sat at "Unlocks in 20
+minutes" with a motionless bar for as long as you watched it. On the one
+surface whose subject is a countdown, a countdown that does not count is §83's
+fake status wearing a progress bar.
+
+`TimelineView(.periodic)` and not a `Timer` — SwiftUI owns the schedule, so it
+stands down off screen and in the background. SCOPED to that block alone, or a
+tick re-runs the whole key roster's body every second for nothing. **A SECOND
+is the interval and it is not arbitrary**: `unlockLabel` speaks in seconds at
+the end of a delay, which is exactly the stretch somebody stands there
+watching, and a minute-long tick would freeze the display over the final sixty
+seconds — the one moment it must not. `unlockLabel` going nil mid-tick is the
+event this block exists for, so it says "Ready to unlock" rather than holding
+the last countdown it managed to compute.
+
+### 3. "STOP WATCHING" WAS ONE TAP, IRREVERSIBLE, AND CASCADED
+
+`VibenetWatch.remove` also deleted the NAME you typed, and removing the last
+account calls `VibenetBridge.disconnect` — tearing down the seat, dropping the
+chip out of the source strip, forgetting the room snapshot and the seen-keys
+ledger. All from one context-menu item sitting where "remove this row" sat a
+moment ago.
+
+Two changes, deliberately different. The name now SURVIVES an unwatch:
+watching and naming are two tiers over one ledger (§461's ruling for Wallet's
+book, and the reason this screen has no cap at all — a name costs nothing to
+keep), and re-watching an address a second later should not hand you back a
+bare `0x…44b1`. `removeAll` still clears both, so "forget everything" stays
+reachable and stays one deliberate act. And the LAST removal now ASKS, while
+every other stays immediate — a confirm on every removal is the dialog nobody
+reads. Its message says what actually happens in the words of the things it
+happens to, never "this cannot be undone", which is true of most taps and
+tells you nothing about this one.
+
+### 4. NO PULL-TO-REFRESH ON A SCREEN THAT IS NOTHING BUT A LIVE READ
+
+Its only read was `onAppear`, so a lock that opened or a key that was revoked
+while you sat there needed you to leave the screen and come back. The room
+behind it has had a pull since it shipped; the screen listing the same accounts
+did not.
+
+### 5. THE DISCOVERY LIST VANISHED FOREVER AFTER THE FIRST WATCH
+
+Gated on `!connected`, on the reasoning that once a real card is on screen a
+list of strangers' addresses is clutter rather than help. **That is right for
+the setup page and wrong here**: §465 gave this screen the acts you do
+REPEATEDLY, and finding another account to watch is the most repeatable one
+there is — so the only route to a second account was typing forty hex
+characters by hand. It collapses to a one-row door now rather than
+disappearing, which keeps the original reasoning about the SPACE; the list
+loads on appear, so nothing is fetched until somebody opens it. `@State`, so
+it shuts again when you leave: it is a lookup, not a preference.
+
+### What was proposed and turned out to be already handled
+
+A sixth item — "nothing says a read is in flight" — was raised and then
+withdrawn on reading the source: `VibenetWatchField` already takes `syncing:`
+and draws "Reading vibenet…". Recorded because the correction is the same
+§412/§418 shape this entry opens with, three instances deep in one room now:
+in a system this finished, check before claiming an absence.
+
+### Cost, and what remains unmeasured
+
+**Nothing to ship**: no new `Thing` property, no request, no CloudKit deploy.
+
+**UNMEASURED on a device.** Nothing on this host can put a vibenet account
+into an unlock delay, so the ticking countdown — the item most worth seeing —
+has never been watched running. The confirm, the pull and the discovery door
+are gesture behaviour no static check can exercise.
+
+## 473. A revoked key kept its deadline, a key could not say when it began, and the timelock reaches the lock screen (user: "what else would you do to improve the vibenet experience? in terms of design and utility", then "where would the key page live?", then "mock up the different approaches", then "yes lets do B. lets also solve the thing you said about a revoked key deadline never cleared. and we can make unlock delay a live activity", 2026-08-25)
+
+The fourth pass on this room, and the fourth time the first act was reading
+the previous entries rather than grepping for absences (§468, §470, §472).
+Three things proposed of six examined; three of the other candidates turned
+out to be already built and are recorded below so nobody proposes them a fifth
+time.
+
+### 1. A REVOKED KEY KEPT ITS DEADLINE, AND THE LOCK SCREEN SAID SO
+
+§468 landed `thing.dueAt` on an ActorAuthorized row so an expiring session key
+would reach the lock screen through the generic `NotifySweep.deadlineNear` —
+no `NotifyKind` of this bridge's own, no new notification code. That was
+right, and it had a half nobody built: **nothing ever cleared it.** A revoke
+lands as its own row and the authorization row is never deleted (this bridge
+issues no `context.delete` at all), so:
+
+> authorize a key expiring in 30 days → revoke it on day 3 → on day 28 the
+> lock screen announces a deadline for a key that has not existed for
+> twenty-five days.
+
+One field reaches three surfaces — `NotifySweep`, the "Needs you" widget
+(`#Predicate { $0.dueAt != nil }`) and the Today brief. **It is worse than an
+ordinary stale number because it is ASYMMETRIC**: the room's card reads live
+actors off the chain, so the card correctly showed the key gone while the lock
+screen counted down to its expiry. The app contradicted itself and the half
+that was wrong was the half that interrupts you. §397's Privacy Pools reclaim
+— a returned deposit reading `Declined` for life — is the same shape in a
+second place, and the same ruling settles both: **evidence beats the record.**
+
+**The join is the `actorId`, not the expiry.** An expiry-within-account match
+was designed first, because that is what `VibenetEventFacts` already does for
+this exact pair of objects — and then dropped for something exact: every
+ActorAuthorized and ActorRevoked log carries its `actorId` in `topics[2]`, the
+landing pass is already reading those logs, and the authorization row's ref is
+derivable from the same event. No tie-break, no ambiguity guard, **not one
+extra request.** The expiry match would have been a heuristic standing in for
+a fact already on the wire.
+
+Three rules hold it up. `VibenetDeadlineSweep.revoked` is derived FROM
+`VibenetActorLog.survivors` rather than restating last-write-wins, so a key
+revoked and re-authorized keeps its deadline and that rule stays defined once.
+The sweep runs **BEFORE `landAccount`'s fresh-events early return**, which is
+the whole of whether it works: on almost every pass there is nothing new to
+land, and a revocation from three weeks ago is exactly the case this exists
+for. And the log read's **optional is kept rather than collapsed with `?? []`**
+— `VibenetChain.getLogs` answers nil when its newest chunk fails, and a caller
+that flattens that gets an empty event list, which a future refactor deriving
+liveness some other way would read as "everything was revoked", stripping
+deadlines off a CloudKit-mirrored corpus on every device before anyone could
+quit the app (`ScreenshotIngest.pruneDeleted`'s standing rule, applied to a
+field rather than a row).
+
+It clears the FIELD and nothing else. The authorization row stays: it is a
+true record of a real moment, and a key having been authorized is not made
+untrue by its later revocation — what stops being true is that something is
+coming up.
+
+### 2. THE KEY ROW EXPANDS (direction B of three, mocked at true width)
+
+Asked where a key page would live, three placements were drawn: a pushed route
+(`HomeRoute.Node.vibenetKey`), the row expanding in place, and a page inside
+the tray's own `NavigationStack`. **The mockups made the argument faster than
+prose could**: laid out side by side, the only content on any of them that
+does not already exist somewhere else is four lines.
+
+Everything a key page would show — kind, scope chips, expiry, contract, run
+count, also-on accounts — was already on the account detail's collapsed key
+row. The one genuinely new fact is **when the key began**, and the reason
+nothing could state it is that `VibenetKeyMoment` threw the `actorId` away: the
+account's history knew, and nothing could ask it about ONE key.
+
+So the row expands and no page is built. **B is the only option that changes
+no ruling and adds no route** — A would have taken the tray row's tap, which
+§470 deliberately gave to scoping the room, and superseding a settled ruling to
+house four lines is the wrong trade. C was drawn to show its own failure rather
+than assert it: the sheet's grabber, a back chevron and a page title arguing
+over 60pt, with a downward drag meaning two different things depending on where
+your thumb lands.
+
+`VibenetKeyMoment.actorId` is **Optional and that is load-bearing** — the type
+is `Codable` and persisted inside `VibenetAccountItem`, so a non-Optional
+addition would fail the decode of the whole room on every device holding a
+snapshot (the `RSSStore.Feed` trap, third time in this file). nil reads as a
+key whose beginning we cannot name, which is also what an out-of-cap history
+and a failed block-time lookup mean; all three draw nothing, because all three
+say the same thing to a reader.
+
+`VibenetKeyOrigin.authorized` takes the **LATEST** authorization, not the
+first: a key revoked and re-authorized began again, and dating it from a
+superseded authorization would put its beginning before a revocation that
+really happened. **Costs nothing** — the history is already walked, already
+ordered and already block-dated for the strip on the same screen.
+
+The full `actorId` finally appears ON a screen rather than only on the
+clipboard. §470 put it there and said the row shows a four-character tail
+because that answers "which of these two" and nothing else — true, and it left
+a developer comparing against a console log able to paste the value but never
+to read it. An open row has the width; a closed one does not.
+
+**No transaction door, and the reason is stated rather than left as a gap**:
+`VibenetActorEvent` carries no `txHash` (it never needed one), so a moment
+knows its block and not its transaction. A block height is a fact this read
+really has; a "view transaction" link built from one would open the wrong page.
+The door arrives the day the moment carries a hash.
+
+### 3. THE TIMELOCK BECOMES A LIVE ACTIVITY
+
+§472 made the in-app countdown tick; this puts it where you would actually
+look. A security timelock is the textbook case — the one reading in this room
+that changes on its own, bounded, with an end nameable in advance — and the
+infrastructure was entirely built already (three drivers, `ActivityKit`
+imported, `INFOPLIST_KEY_NSSupportsLiveActivities` declared), so this is a
+fourth driver and a view, not new plumbing.
+
+**THE STATE CARRIES THE END, NOT THE REMAINDER, and that is the whole design.**
+`MoneyActivityAttributes` must carry `checkedAt` and be refreshed, because "has
+this settled" is a question only the app can re-answer. A countdown to a fixed
+instant is not: hand the system `unlocksAt` and `Text(timerInterval:)` counts
+down by itself with **zero updates from us** — no background task, no push,
+nothing to keep alive, and no way for the lock screen and §472's in-app
+`TimelineView` to drift, since both read the same instant rather than two
+independently-computed remainders. An activity carrying "18 minutes left" would
+be wrong within a minute of being written.
+
+**A CONTROL, NEVER AUTOMATIC.** `ImportActivityDriver` starts itself because an
+import IS something the person just did; an unlock happened on the chain,
+possibly to an account they merely watch and do not own. Starting one because
+we noticed would spend the most personal surface the OS has on something nobody
+asked to be interrupted about — so the account detail offers it and the driver
+refuses otherwise, `MoneyActivityDriver`'s own precedent. The control is
+**absent rather than disabled** where it cannot work (Live Activities off,
+Catalyst, no readable end): present-and-inert is the dead control §83 bans, for
+a reason the person cannot see from that screen.
+
+`staleDate` IS the unlock instant rather than an interval past it — at that
+moment the activity has said everything it can say, and iOS greying it out
+itself is more honest than a countdown sitting at zero. `finish` ends a
+**re-locked** account's activity rather than letting it expire, and `reconcile`
+never acts on an account the room failed to read: absent from `stillUnlocking`
+because the network hiccuped is not the same as absent because the lock opened.
+
+### What was examined and found already built
+
+Recorded so it is not proposed a fifth time. **Key expiries already reach
+notifications and the widget** — `dueAt` was stamped all along; the bug was the
+clearing, not the wiring. **The room head is `switch source`-gated**, so
+scrolling past the All feed does not spend §468's "2 keys new" marker. And
+**`VibenetWatchField` already draws "Reading vibenet…"**, which was raised as a
+gap in this same conversation and withdrawn on reading the source — the third
+such correction in this room, and the reason every one of these passes now
+opens with the previous entry rather than a grep.
+
+### Cost, and what remains unmeasured
+
+**Nothing to ship**: no new `Thing` property, no request, no CloudKit deploy.
+`VibenetKeyMoment.actorId` lives inside a UserDefaults snapshot, not the store.
+
+`vibenet-selftest.sh` gained 20 assertions over `VibenetDeadlineSweep` and
+`VibenetKeyOrigin`, plus guards that the sweep runs before the early return,
+that the log read keeps its optional, that the bridge still deletes nothing,
+that the expanded content stays gated, and that nothing in `Model/` starts the
+Live Activity.
+
+**UNMEASURED on a device, and the gap is wider than usual.** Nothing on this
+host can revoke a vibenet key, so the sweep has never cleared a real deadline;
+nothing can put an account into an unlock delay, so **neither §472's ticking
+countdown nor this pass's Live Activity has ever been seen running** — the
+activity in particular has never been rendered at all, since no simulator
+shows a lock screen or a Dynamic Island. The harness proves the arithmetic and
+the wiring; the moving picture is a device check.

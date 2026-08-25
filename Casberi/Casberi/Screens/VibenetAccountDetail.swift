@@ -14,6 +14,16 @@ import SwiftUI
 /// can never drift apart on what one account's detail actually says.
 struct VibenetAccountDetail: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    /// The key whose row is open, by `actorId` (prd §473, direction B of
+    /// three drawn). ONE AT A TIME rather than a set: two open rows push the
+    /// third off the screen and the block is a comparison you make against
+    /// the collapsed rows around it, not against another open one.
+    ///
+    /// `@State`, so it shuts when you leave — it is a lookup, not a
+    /// preference, and a row left open forever is the density this room has
+    /// twice been reported for.
+    @State private var openKey: String?
     @Environment(\.colorScheme) private var scheme
     let item: VibenetAccountItem
     /// This account's OUTGOING and INCOMING delegate relationships — both
@@ -200,22 +210,69 @@ struct VibenetAccountDetail: View {
     /// countdown beats an expiry beats a plain state.
     @ViewBuilder
     private var state: some View {
-        if item.hasInitiatedUnlock, let countdown = item.unlockLabel(now: .now) {
-            VStack(alignment: .leading, spacing: 6) {
-                Text(countdown)
-                    .dsText(.heading17)
-                    .foregroundStyle(Self.mark)
-                if let progress = item.unlockProgress(now: .now) {
-                    GeometryReader { geo in
-                        ZStack(alignment: .leading) {
-                            Capsule().fill(Self.mark.opacity(0.15))
-                            Capsule().fill(Self.mark)
-                                .frame(width: geo.size.width * progress)
+        if item.hasInitiatedUnlock {
+            // **THE ONE CLOCK IN THIS ROOM THAT REALLY TICKS (prd §472).**
+            //
+            // A timelock is the only reading here that changes on its own
+            // while you look at it — every other number moves when the chain
+            // moves and we re-read. Both this bar and its sentence were
+            // computed from `Date.now` at DRAW time, so they were correct at
+            // the instant the view was built and then FROZE: an account
+            // twenty minutes from unlocking sat at "Unlocks in 20 minutes"
+            // with a motionless bar for as long as you watched it, and only
+            // a scroll or a re-compose moved either. On the one surface whose
+            // subject is a countdown, a countdown that does not count is
+            // §83's fake status wearing a progress bar.
+            //
+            // `TimelineView(.periodic)` and NOT a `Timer` — the schedule is
+            // owned by SwiftUI, so it stands down when the view is off screen
+            // and when the app backgrounds, which a timer of our own would
+            // have to be taught. SCOPED to this block alone rather than to
+            // the screen: everything else here is chain state that a tick
+            // cannot change, and re-evaluating it every second would re-run
+            // the key roster's whole body for nothing.
+            //
+            // A SECOND is the interval and it is not arbitrary: `unlockLabel`
+            // speaks in minutes for most of a delay and in SECONDS at the
+            // end, which is exactly the stretch somebody stands there
+            // watching, and a minute-long tick would freeze the display over
+            // the final sixty seconds — the one moment it must not.
+            TimelineView(.periodic(from: .now, by: 1)) { tick in
+                if let countdown = item.unlockLabel(now: tick.date) {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(countdown)
+                            .dsText(.heading17)
+                            .foregroundStyle(Self.mark)
+                            // The label is a whole new string each tick, so
+                            // without this it hard-cuts between values; the
+                            // bar beside it moves continuously and the two
+                            // read as one clock only if both do.
+                            .contentTransition(.numericText())
+                            .animation(reduceMotion ? nil : DS.Motion.standard, value: countdown)
+                        if let progress = item.unlockProgress(now: tick.date) {
+                            GeometryReader { geo in
+                                ZStack(alignment: .leading) {
+                                    Capsule().fill(Self.mark.opacity(0.15))
+                                    Capsule().fill(Self.mark)
+                                        .frame(width: geo.size.width * progress)
+                                }
+                            }
+                            .frame(height: 6)
+                            .animation(reduceMotion ? nil : .linear(duration: 1), value: progress)
                         }
                     }
-                    .frame(height: 6)
+                } else {
+                    // The delay ELAPSED while you were looking at it — the
+                    // moment this whole block exists for. `unlockLabel` going
+                    // nil is that event, and the account is now unlocked
+                    // pending the next read, so the row says so rather than
+                    // holding the last countdown it managed to compute.
+                    Text(String(localized: "Ready to unlock"))
+                        .dsText(.heading17)
+                        .foregroundStyle(Self.mark)
                 }
             }
+            trackOnLockScreen
         } else if item.locked {
             Text(String(localized: "Locked"))
                 .dsText(.heading17)
@@ -264,7 +321,11 @@ struct VibenetAccountDetail: View {
     /// keys matters more than another — it names a distinction the scope
     /// bits already draw. A group with no keys is omitted entirely.
     private var keysSection: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s4) {
+        // s6 BETWEEN GROUPS (prd §471), where it was s4 — the same rung that
+        // separated a group's caption from its first key, so "Owners" and
+        // "Session keys" read as one continuous column of cards rather than
+        // as two groups.
+        VStack(alignment: .leading, spacing: DS.Space.s6) {
             Text(item.actors.count == 1
                  ? String(localized: "1 key authorized")
                  : String(localized: "\(item.actors.count) keys authorized"))
@@ -283,10 +344,41 @@ struct VibenetAccountDetail: View {
                             .dsText(.label11)
                             .foregroundStyle(DS.textTertiary)
                             .fixedSize(horizontal: false, vertical: true)
+                        // WHAT WE CANNOT SAY, ONCE PER GROUP AND NOT ONCE PER
+                        // KEY (prd §471). `VibenetPolicyReadability.note` was
+                        // drawn inside every gated key row, so an account with
+                        // four session keys printed the same three-line
+                        // paragraph four times, in the same tertiary ink as
+                        // the five other lines around it — by a distance the
+                        // largest single source of the "giant slab of gray"
+                        // this section was reported as. It is a fact about
+                        // session keys AS A CLASS, which is exactly what a
+                        // group caption is for. The honesty §463 wanted is
+                        // unchanged: it is still said, in full, on the screen.
+                        if section.group == .session {
+                            Text(VibenetPolicyReadability.note)
+                                .dsText(.label11)
+                                .foregroundStyle(DS.textTertiary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
                     }
                     ForEach(Array(section.actors.enumerated()), id: \.element.id) { index, actor in
-                        keyRow(actor)
-                            .chartArrival(index: index, reduceMotion: reduceMotion)
+                        // THE WHOLE CARD IS THE TOGGLE (prd §473, direction B).
+                        // A key is one object and its card is one target — a
+                        // chevron small enough to be a separate hit area would
+                        // be the 44pt-floor problem this room just fixed on the
+                        // census rows, reintroduced.
+                        Button {
+                            DSHaptic.selection()
+                            withAnimation(reduceMotion ? nil : DS.Motion.standard) {
+                                openKey = isOpen(actor) ? nil : actor.actorId
+                            }
+                        } label: {
+                            keyRow(actor).contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .dsHover()
+                        .chartArrival(index: index, reduceMotion: reduceMotion)
                     }
                 }
             }
@@ -298,13 +390,208 @@ struct VibenetAccountDetail: View {
     /// granted permissions as chips (R2.3's exact capsule grammar) laid
     /// out with `FlowLayout` so a whole capsule wraps to the next line but
     /// the text INSIDE one never does.
+    /// One label/value pair in a key's terms block.
+    private struct KeyTerm {
+        let label: String
+        let value: String
+        /// "Has this ever run" is the reading someone opens a subscription key
+        /// to find, so it carries weight where the contract line does not.
+        var weighted = false
+    }
+
+    /// A KEY'S TERMS, as label/value pairs (prd §471).
+    ///
+    /// Every value here is the model's own composed string or one of its new
+    /// preposition-free accessors (`policyTarget`, `sharedTarget`) — never a
+    /// substring cut back out of a localized sentence, which is this
+    /// codebase's standing rule wherever a figure and a sentence describe one
+    /// fact (`MoneyReceipt`'s own guard).
+    ///
+    /// `VibenetPolicyReadability.note` is deliberately NOT here: it is a fact
+    /// about session keys as a class and now sits once in that group's
+    /// caption, rather than once per key. See `keysSection`.
+    private func termRows(_ actor: VibenetActor) -> [KeyTerm] {
+        var out: [KeyTerm] = []
+        if let target = actor.policyTarget(known: Self.knownManagers) {
+            out.append(KeyTerm(label: String(localized: "Limited to"), value: target))
+            // The one LIVE fact about a session key vibenet publishes, and the
+            // difference between a sentence every gated key on the chain
+            // shares and a fact about this one. Gated with the contract for
+            // the reason it always was: a key with no policy has no runs.
+            let use = item.policyUses.use(for: actor)
+            out.append(KeyTerm(label: String(localized: "Activity"),
+                               value: use?.line(now: .now) ?? String(localized: "Never used"),
+                               weighted: true))
+        }
+        // A fact about THIS key, not the account — where else this exact
+        // authorized address can also act. Neutral weight on purpose: reusing
+        // a key across devnet test accounts is often deliberate, so this
+        // states the fact without dressing it as an alarm the way a real
+        // expiry countdown earns.
+        //
+        // MATCHED ON actorId, never on authenticator — the authenticator is
+        // the CONTRACT that validates the key and is shared by every key of a
+        // kind, so the old filter lit this line on every ordinary wallet key
+        // across every pair of watched accounts.
+        if let shared = sharedKeys
+            .filter({ $0.actorId.caseInsensitiveCompare(actor.actorId) == .orderedSame })
+            .sharedTarget(name: { VibenetWatch.shared.name(for: $0) ?? VibenetRoom.shortAddress($0) })
+        {
+            out.append(KeyTerm(label: String(localized: "Also on"), value: shared))
+        }
+        return out
+    }
+
+    /// TRACK THIS DELAY ON THE LOCK SCREEN (prd §473).
+    ///
+    /// A CONTROL, never automatic — `VibenetUnlockActivityDriver`'s own doc
+    /// carries the argument: an unlock happened on the chain, possibly to an
+    /// account somebody merely watches, and putting that on their lock screen
+    /// because we noticed would be spending the most personal surface the OS
+    /// has on something nobody asked to be interrupted about.
+    ///
+    /// **ABSENT, not disabled, where it cannot work** (Live Activities off in
+    /// Settings, Mac Catalyst, or a delay with no readable end): a control
+    /// that is present and inert is the dead control §83 bans, and this one
+    /// would be inert for a reason the person cannot see from here.
+    @ViewBuilder
+    private var trackOnLockScreen: some View {
+        // `unlocksAt` is Keystore's own epoch SECONDS (`UInt64`), not a
+        // `Date` — converted here at the one place that needs a date, the way
+        // `expiryLabel` and `unlockLabel` already do, rather than widening the
+        // model to carry a second representation of one instant.
+        if VibenetUnlockActivityDriver.available,
+           let seconds = item.unlocksAt,
+           case let opensAt = Date(timeIntervalSince1970: TimeInterval(seconds)),
+           opensAt > .now {
+            let tracking = VibenetUnlockActivityDriver.isTracking(item.address)
+            Button {
+                DSHaptic.selection()
+                if tracking {
+                    VibenetUnlockActivityDriver.finish(address: item.address)
+                } else {
+                    VibenetUnlockActivityDriver.start(
+                        address: item.address,
+                        name: VibenetWatch.shared.name(for: item.address)
+                            ?? VibenetRoom.shortAddress(item.address),
+                        unlocksAt: opensAt)
+                }
+                // The driver's dictionary is not observable, so the label is
+                // nudged by hand rather than by a publish — one flag, flipped
+                // where the act happened, which is cheaper and more honest
+                // than making a lock-screen registry into app state.
+                lockScreenTick &+= 1
+            } label: {
+                Label(tracking
+                      ? String(localized: "Stop tracking on the lock screen")
+                      : String(localized: "Track on the lock screen"),
+                      systemImage: tracking ? "bell.slash" : "bell")
+                    .dsText(.label12).fontWeight(.semibold)
+                    .foregroundStyle(Self.mark)
+            }
+            .buttonStyle(.plain)
+            .dsHover()
+            .padding(.top, DS.Space.s3)
+            .id(lockScreenTick)
+        }
+    }
+
+    /// Bumped whenever the control acts, purely so the label re-reads
+    /// `isTracking`. See `trackOnLockScreen`.
+    @State private var lockScreenTick: UInt8 = 0
+
+    /// Case-insensitively, for the reason every hex compare in this feature
+    /// is: an RPC's casing is not a promise, and a row that will not close
+    /// because the id came back differently cased is a control that has
+    /// stopped working for a reason nobody could see.
+    private func isOpen(_ actor: VibenetActor) -> Bool {
+        openKey?.caseInsensitiveCompare(actor.actorId) == .orderedSame
+    }
+
+    /// WHEN THIS KEY BEGAN, and nothing else — the only content on the
+    /// expanded row that is not already on the collapsed one (prd §473).
+    ///
+    /// Silent when its beginning cannot be named: outside
+    /// `VibenetKeyHistory.cap`, landed by a build before the id was stamped,
+    /// or a block-time lookup that failed. All three mean the same thing to a
+    /// reader and none of them is worth a sentence.
+    @ViewBuilder
+    private func keyOrigin(_ actor: VibenetActor) -> some View {
+        if let origin = VibenetKeyOrigin.authorized(actor, in: item.history), let began = origin.date {
+            VStack(alignment: .leading, spacing: 0) {
+                Text(String(localized: "Its life"))
+                    .dsText(.label12)
+                    .foregroundStyle(DS.textTertiary)
+                HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                    Text(String(localized: "Authorized"))
+                        .dsText(.label11)
+                        .foregroundStyle(DS.textSecondary)
+                    Text(began.formatted(.dateTime.day().month(.abbreviated).year()))
+                        .dsText(.label11)
+                        .foregroundStyle(DS.textPrimary)
+                    Spacer(minLength: DS.Space.s2)
+                    // The BLOCK, not a transaction door. The moment carries no
+                    // txHash — `VibenetActorEvent` never needed one — and a
+                    // "view transaction" link built from a block number would
+                    // open the wrong page. A block height is a fact this read
+                    // really has; the door can arrive the day the moment
+                    // carries a hash.
+                    Text(String(localized: "block \(origin.block.formatted(.number.grouping(.automatic)))"))
+                        .dsText(.label11)
+                        .foregroundStyle(DS.textTertiary)
+                        .monospacedDigit()
+                }
+                .padding(.top, 4)
+            }
+            .padding(.top, DS.Space.s3)
+        }
+    }
+
     private func keyRow(_ actor: VibenetActor) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
+        // TWO TIERS, not eight equal lines (prd §471). The row used to be a
+        // flat `VStack(spacing: 6)` of up to eight `label11` tertiary lines —
+        // detail clause, chips, shared-key line, policy contract, use count,
+        // readability paragraph, expiry — every one in the same ink at the
+        // same rung, so finding the clock meant reading all of them. Now the
+        // top tier is the OBJECT (what it is, when it lapses, what it can do)
+        // and the terms sit below it in their own block.
+        VStack(alignment: .leading, spacing: 0) {
+            // THE CLOCK JOINS THE TITLE ROW. It was the last of the eight
+            // lines, in the quietest ink; it is the single fact a person
+            // scans a key list for.
             HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
                 Text(actor.kind.plainTitle)
                     .dsText(.heading17)
                     .foregroundStyle(DS.textPrimary)
                     .lineLimit(1)
+                Spacer(minLength: DS.Space.s2)
+                let standing = actor.expiryStanding(now: .now)
+                Text(actor.expiryLabel(now: .now))
+                    .dsText(.label11)
+                    .fontWeight(standing == .soon ? .semibold : .regular)
+                    .foregroundStyle(standing == .soon ? DS.tint : DS.textTertiary)
+                    .lineLimit(1)
+                    .fixedSize()
+                // The disclosure, ROTATED rather than swapped for a second
+                // glyph — the same mark turning is what says "this is the
+                // thing you just opened"; two glyphs are two states blinking
+                // (the source chips' 2026-07-14 ruling).
+                Image(systemName: "chevron.right")
+                    .accessibilityHidden(true)
+                    .dsGlyph(11, weight: .semibold)
+                    .foregroundStyle(DS.textTertiary)
+                    .rotationEffect(.degrees(isOpen(actor) ? 90 : 0))
+            }
+            // The detail clause and the id share ONE line — the id was
+            // occupying the title row's trailing slot, which is where the
+            // clock belongs, and neither is a headline fact.
+            HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                if let detail = actor.kind.plainDetail {
+                    Text(detail)
+                        .dsText(.label11)
+                        .foregroundStyle(DS.textTertiary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
                 Spacer(minLength: DS.Space.s2)
                 // WHICH KEY THIS IS (prd §470). Without it two passkeys on
                 // one account are two identical rows — same title, same
@@ -320,15 +607,13 @@ struct VibenetAccountDetail: View {
                     .lineLimit(1)
                     .fixedSize()
             }
-            if let detail = actor.kind.plainDetail {
-                Text(detail)
-                    .dsText(.label11)
-                    .foregroundStyle(DS.textTertiary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
+            .padding(.top, 2)
             // The scope, as chips. `grantedPlainLabels` is never empty (see
             // its doc), so there is no blank-row branch to draw — an admin
             // arrives here as one inverted chip rather than as nothing.
+            //
+            // `s2` above rather than the old 6, so the chips read as a band
+            // of objects rather than as one more text line in the stack.
             let labels = actor.scope.grantedPlainLabels
             let isAdmin = actor.scope.isAdmin
             FlowLayout(spacing: 6) {
@@ -361,76 +646,76 @@ struct VibenetAccountDetail: View {
                         }
                 }
             }
-            // A fact about THIS key, not the account — where else this
-            // exact authorized address can also act. Neutral weight on
-            // purpose: reusing a key across devnet test accounts is often
-            // deliberate, so this states the fact without dressing it as
-            // an alarm the way a real expiry countdown earns.
-            // MATCHED ON actorId, never on authenticator — the authenticator
-            // is the CONTRACT that validates the key and is shared by every
-            // key of a kind, so the old filter lit this line on every
-            // ordinary wallet key across every pair of watched accounts.
-            if let line = sharedKeys
-                .filter({ $0.actorId.caseInsensitiveCompare(actor.actorId) == .orderedSame })
-                .sharedLine(name: { VibenetWatch.shared.name(for: $0) ?? VibenetRoom.shortAddress($0) })
-            {
-                Text(line)
-                    .dsText(.label11)
-                    .foregroundStyle(DS.textTertiary)
-            }
-            // WHICH contract a gated key may call. Sits above the expiry
-            // because it qualifies the chip directly above IT — "Send to one
-            // contract" and then the contract — while expiry is about the key
-            // as a whole.
-            if let policy = actor.policyLine(known: Self.knownManagers) {
-                Text(policy)
-                    .dsText(.label11)
-                    .foregroundStyle(DS.textTertiary)
-                // HAS IT ACTUALLY RUN — the one live fact about a session key
-                // vibenet publishes, and the difference between a sentence
-                // every gated key on the chain shares and a fact about this
-                // one. Weighted above the lines around it because "never
-                // used" and "used 40 times" are the two readings someone
-                // opens a subscription key to find.
-                if let use = item.policyUses.use(for: actor) {
-                    Text(use.line(now: .now))
-                        .dsText(.label11).fontWeight(.semibold)
-                        .foregroundStyle(DS.textSecondary)
-                } else {
-                    Text(String(localized: "Never used"))
-                        .dsText(.label11).fontWeight(.semibold)
-                        .foregroundStyle(DS.textSecondary)
+            .padding(.top, DS.Space.s2)
+            // THE TERMS — the second tier. A label/value block on its own
+            // faint ground rather than three or four more sentences in the
+            // same gray as everything above: the labels are scannable, so a
+            // reader looking for "has this ever run" finds it without reading
+            // the contract line first.
+            //
+            // `VibenetPolicyReadability.note` is DELIBERATELY ABSENT here —
+            // it moved to the "Session keys" group caption, said once instead
+            // of once per key (see `keysSection`).
+            let terms = termRows(actor)
+            if isOpen(actor), !terms.isEmpty {
+                VStack(alignment: .leading, spacing: 0) {
+                    ForEach(Array(terms.enumerated()), id: \.offset) { _, term in
+                        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                            Text(term.label)
+                                .dsText(.label11)
+                                .foregroundStyle(DS.textTertiary)
+                                .frame(width: 74, alignment: .leading)
+                            Text(term.value)
+                                .dsText(.label11)
+                                .fontWeight(term.weighted ? .semibold : .regular)
+                                .foregroundStyle(DS.textSecondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        .padding(.vertical, 3)
+                    }
                 }
-                // AND WHAT WE CANNOT SAY. A session key's cap, period and
-                // allowed recipients are committed as a hash and never
-                // stored, so there is nothing on chain to read them from
-                // (see `VibenetPolicyReadability`). Saying so is the honest
-                // alternative to the two worse options: silence, which reads
-                // as an app that didn't bother, and a number, which would be
-                // invented on the screen where believing it costs most.
-                Text(VibenetPolicyReadability.note)
-                    .dsText(.label11)
-                    .foregroundStyle(DS.textTertiary)
-                    .fixedSize(horizontal: false, vertical: true)
+                .padding(.horizontal, DS.Space.s3)
+                .padding(.vertical, DS.Space.s2)
+                .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(DS.fillFaint))
+                .padding(.top, DS.Space.s3)
             }
-            // ALWAYS drawn, and weighted by what it says. A key three days
-            // from lapsing and one that never expires used to share both the
-            // sentence shape and the quietest ink, so the clock read as
-            // unremarkable; and a never-expiring key printed nothing at all,
-            // which reads as unknown rather than as never.
-            let standing = actor.expiryStanding(now: .now)
-            Text(actor.expiryLabel(now: .now))
-                .dsText(.label11)
-                .fontWeight(standing == .soon ? .semibold : .regular)
-                .foregroundStyle(standing == .soon ? DS.tint : DS.textTertiary)
+            if isOpen(actor) {
+                keyOrigin(actor)
+                // THE FULL ID, on a screen at last (prd §473). §470 put it on
+                // the clipboard and said the row shows a four-character tail
+                // because that answers "which of these two" and nothing else —
+                // true, and it left a developer comparing against a console
+                // log with no way to READ the value, only to paste it
+                // somewhere else first. It fits here because an open row has
+                // the width for it and a closed one does not.
+                Text(actor.actorId)
+                    .dsText(.label11).monospaced()
+                    .foregroundStyle(DS.textTertiary)
+                    .textSelection(.enabled)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, DS.Space.s3)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(DS.Space.s3)
+        // s4 AND NOT s3 (prd §471). `DS.Radius.widget` is 20, and at 14pt of
+        // padding the first glyph of every line sits optically inside the
+        // corner's curve — the card reads as text pressed against its own
+        // wall, which is the "padding on the edges looks wrong" report. s4 is
+        // the card-padding rung the rest of the app uses; s3 is a gap rung.
+        .padding(DS.Space.s4)
         // A key is an OBJECT — something that can act for this account —
         // so it gets an object's surface rather than sitting in a run of
         // undifferentiated text. Several keys in a row read as several
         // things, which is the fact this section is about.
-        .dsWidgetSurface(cornerRadius: DS.Radius.widget, fillOpacity: 0.5)
+        //
+        // FULL OPACITY (prd §471). At 0.5 over the default black page this
+        // resolved to about #08080a — a 3% lift, a stain rather than a
+        // surface, so eight of them in a column read as one gray slab and the
+        // reasoning above went unhonoured. The shadow this modifier already
+        // carries is what lifts the card; halving the fill only removed the
+        // edge that made it one.
+        .dsWidgetSurface(cornerRadius: DS.Radius.widget)
         // THE VALUES, ON DEMAND (prd §470). The row shows a four-character
         // tail, which answers "which of these two" and nothing else; a
         // developer comparing against a console log or a raw

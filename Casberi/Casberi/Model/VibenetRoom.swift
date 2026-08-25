@@ -517,6 +517,23 @@ struct VibenetKeyMoment: Identifiable, Equatable, Codable {
     /// nil on a failed block-time lookup — the moment still draws (its
     /// ORDER is exact regardless) but can never be an endpoint label.
     let date: Date?
+    /// WHICH KEY this moment is about (2026-08-25, prd §473).
+    ///
+    /// The strip above this only ever needed the SHAPE of an account's
+    /// history — how many moments, in what order, which way — so it threw the
+    /// id away. That is also why a key could say everything about itself
+    /// except when it began: the account's history knew, and nothing could ask
+    /// it about one key.
+    ///
+    /// **Optional, and that is load-bearing**: this type is `Codable` and
+    /// persisted inside `VibenetAccountItem` in `VibenetState`, Swift
+    /// synthesises `decodeIfPresent`, and a non-Optional addition would fail
+    /// the decode of the WHOLE room on every device that already has a
+    /// snapshot — the `RSSStore.Feed` trap, which this file has now paid for
+    /// three times. nil means "landed by an earlier build", which reads as a
+    /// key whose beginning we cannot name; the row says nothing rather than
+    /// guessing.
+    var actorId: String? = nil
 }
 
 /// The strip's own arithmetic — a SEQUENCE, deliberately not a time-
@@ -672,11 +689,18 @@ struct VibenetActor: Identifiable, Equatable, Codable {
     /// manager did not read: a gated key that cannot name its target still
     /// says it is gated, via its chip, rather than being handed a guess.
     func policyLine(known: VibenetKnownPolicyManagers) -> String? {
+        guard let target = policyTarget(known: known) else { return nil }
+        return String(localized: "Limited to \(target)")
+    }
+
+    /// The contract's name, or its short address — the same reading WITHOUT
+    /// its preposition, for a label/value row whose label already carries one
+    /// (prd §471). `policyLine` composes from this, so the two forms can never
+    /// name different contracts and no caller ever parses a target back out of
+    /// a localized sentence.
+    func policyTarget(known: VibenetKnownPolicyManagers) -> String? {
         guard scope.raw & VibenetScope.policy != 0, let manager = policyManager else { return nil }
-        if let name = known.name(for: manager) {
-            return String(localized: "Limited to \(name)")
-        }
-        return String(localized: "Limited to \(VibenetRoom.shortAddress(manager))")
+        return known.name(for: manager) ?? VibenetRoom.shortAddress(manager)
     }
 
     /// What weight a key's expiry has earned on screen. The label alone
@@ -696,6 +720,26 @@ struct VibenetActor: Identifiable, Equatable, Codable {
         case soon
         /// Dated, but far enough out to be ordinary.
         case later
+    }
+
+    /// Does this key still have a clock running — a REAL expiry, still ahead?
+    ///
+    /// ONE DEFINITION (2026-08-25, prd §471), read by `VibenetKeyAggregation`'s
+    /// soonest-expiry reading and by `VibenetKeyShelf`'s bars alike. It was
+    /// written out longhand in both, and two copies of one rule is how a card
+    /// and the figure beneath it come to disagree about which keys are ticking
+    /// — the §418 duplicate-parser lesson at the scale of a predicate. The
+    /// harness caught it the moment the second copy landed: `mutate` replaces
+    /// the FIRST occurrence, so breaking the rule silently mutated the shelf
+    /// while the assertion watched the aggregate, and a real check went green
+    /// over a real defect.
+    ///
+    /// Both halves are load-bearing. `expiry == 0` is Keystore's own "never"
+    /// and is not a date at all, so folding it in reports a key that can never
+    /// lapse as the most urgent thing in the room; and an ALREADY-LAPSED key
+    /// is not something ahead — each account's `urgentLine` counts those.
+    func isTicking(now: Date) -> Bool {
+        expiry > 0 && TimeInterval(expiry) > now.timeIntervalSince1970
     }
 
     func expiryStanding(now: Date) -> ExpiryStanding {
@@ -1330,14 +1374,21 @@ struct VibenetRoom: Equatable, Codable {
             // is the one place in this file allowed to read `Date.now`
             // (composed live, never persisted).
             history: VibenetKeyHistory.ordered([
+                // The ids are the fixture's OWN actors (prd §473), so the
+                // expanded key row can find its beginning in demo mode — a
+                // block that only ever draws over real chain history is one
+                // `verify.sh`'s demo coverage can never see.
                 VibenetKeyMoment(block: 100, logIndex: 0, authorized: true, kind: .secp256k1,
-                                 date: Date.now.addingTimeInterval(-40 * 86_400)),
+                                 date: Date.now.addingTimeInterval(-40 * 86_400),
+                                 actorId: "0x0000000000000000000000002b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c"),
                 VibenetKeyMoment(block: 220, logIndex: 0, authorized: true, kind: .p256,
-                                 date: Date.now.addingTimeInterval(-12 * 86_400)),
+                                 date: Date.now.addingTimeInterval(-12 * 86_400),
+                                 actorId: "0x0000000000000000000000000000000000000000000000000000000000000008"),
                 VibenetKeyMoment(block: 220, logIndex: 1, authorized: false, kind: nil,
                                  date: Date.now.addingTimeInterval(-12 * 86_400)),
                 VibenetKeyMoment(block: 340, logIndex: 0, authorized: true, kind: .webAuthn,
-                                 date: Date.now.addingTimeInterval(-2 * 86_400)),
+                                 date: Date.now.addingTimeInterval(-2 * 86_400),
+                                 actorId: "0x0000000000000000000000000000000000000000000000000000000000000005"),
             ]),
             // Balances (2026-08-24): a native reading AND both token
             // balances, so the demo exercises every branch the chip strip
@@ -1565,11 +1616,21 @@ extension Array where Element == VibenetSharedKey {
     /// coverage at all: it could not have had any. The closure keeps the
     /// nickname lookup at the call site, where the store already lives.
     func sharedLine(name: (String) -> String) -> String? {
+        guard let target = sharedTarget(name: name) else { return nil }
+        return String(localized: "Also authorized on \(target)")
+    }
+
+    /// "Ops" / "2 other accounts" — the same reading WITHOUT its preposition,
+    /// for a label/value row whose label already carries one (prd §471,
+    /// `VibenetAccountDetail.termRows`). `sharedLine` composes from this
+    /// rather than restating it, so the sentence form and the table form can
+    /// never name different accounts — and a caller wanting the value never
+    /// has to parse it back out of a localized sentence, which is
+    /// `MoneyReceipt`'s standing rule in this codebase.
+    func sharedTarget(name: (String) -> String) -> String? {
         guard !isEmpty else { return nil }
-        if count == 1, let only = first {
-            return String(localized: "Also authorized on \(name(only.account))")
-        }
-        return String(localized: "Also authorized on \(count) other accounts")
+        if count == 1, let only = first { return name(only.account) }
+        return String(localized: "\(count) other accounts")
     }
 }
 
@@ -2385,6 +2446,12 @@ struct VibenetKeyAggregate: Equatable {
     /// aggregate's own `unreachedCount` for the identical reason; this is one
     /// defect in two places.
     let unreachedCount: Int
+    /// Keys that hold ONLY reserved bits this build cannot name — the gap
+    /// between `total` and what the census rows add up to. Stored rather than
+    /// re-derived by the card, because `VibenetKeyTray.unnamedKeyCount` takes
+    /// the ITEMS and this aggregate is what the card holds; two walks of one
+    /// rule is how a footnote and a tray come to disagree about the same keys.
+    let unnamedCount: Int
     /// The soonest FUTURE expiry across the whole room, or nil when
     /// nothing is still ticking — `VibenetAccountItem.urgentLine`'s exact
     /// rule (`expiry == 0` never counts, an already-expired key never
@@ -2404,15 +2471,60 @@ struct VibenetKeyAggregate: Equatable {
     /// `urgentLine` already counts the lapsed ones.
     let futureExpiries: [Date]
 
+    /// THE CARD'S EYEBROW — the scope the count covers, or nil on a room
+    /// where there is no scope to state (2026-08-25, prd §471).
+    ///
+    /// The keys card was the only one of the four stacked cards with no
+    /// eyebrow: its three neighbours open with a `label12` tertiary line and
+    /// it opened with a `heading17` sentence, so one card in four broke the
+    /// header grammar. The old objection to fixing that was real — putting
+    /// "Keys" over "8 keys authorized across 3 accounts" says the word twice
+    /// — and the way past it is to put the SCOPE in the eyebrow rather than
+    /// the noun, which leaves the headline saying the count alone. Same two
+    /// facts, same one derivation, one of them promoted to the slot its
+    /// neighbours already use.
+    var scopeEyebrow: String? {
+        guard accountCount > 1 else { return nil }
+        return String(localized: "Across \(accountCount) accounts")
+    }
+
+    /// "9 keys authorized" / "1 key authorized" — the count ALONE, for the
+    /// headline that sits under `scopeEyebrow`.
+    var countHeadline: String {
+        total == 1 ? String(localized: "1 key authorized")
+                   : String(localized: "\(total) keys authorized")
+    }
+
     /// "9 keys authorized across 4 accounts" / "9 keys authorized" (one
     /// account) / "1 key authorized" — the room-wide count nowhere else on
     /// this card says.
+    ///
+    /// The ONE-LINE form, kept for `-vibenetRoomProbe` and the harness, which
+    /// want a single sentence rather than the card's two slots. Composed FROM
+    /// the two above rather than restating them, so the probe and the screen
+    /// can never report a different count or a different account scope — the
+    /// §418 duplicate-parser lesson applied to a sentence.
     var plainLine: String {
-        guard accountCount > 1 else {
-            return total == 1 ? String(localized: "1 key authorized")
-                              : String(localized: "\(total) keys authorized")
-        }
-        return String(localized: "\(total) keys authorized across \(accountCount) accounts")
+        guard let scope = scopeEyebrow else { return countHeadline }
+        return String(localized: "\(total) keys authorized \(scope.lowercased())")
+    }
+
+    /// "1 key holds a permission this build can't name" — said on the CARD
+    /// now, not only inside the tray it opens (2026-08-25, prd §471).
+    ///
+    /// `VibenetPolicyAggregation.compose` walks `orderedPlainBits` and drops
+    /// what it cannot name, so a key holding only reserved bits (`Scopes.sol`
+    /// reserves 0x0020…0x8000) contributes to `total` and to NO row — the
+    /// census silently adds up to less than the headline, and nothing on the
+    /// card said why. A FOOTNOTE and never a row: a row called "1 permission
+    /// not named" with a count beside it reads as a permission you could go
+    /// and look up, which is the invented category `VibenetKeyTray
+    /// .unnamedKeyCount` already refuses to draw.
+    var unnamedLine: String? {
+        guard unnamedCount > 0 else { return nil }
+        return unnamedCount == 1
+            ? String(localized: "1 key holds a permission this build can't name")
+            : String(localized: "\(unnamedCount) keys hold a permission this build can't name")
     }
 
     /// "1 account couldn't be read" — the count above is a FLOOR whenever
@@ -2425,6 +2537,296 @@ struct VibenetKeyAggregate: Equatable {
         return unreachedCount == 1
             ? String(localized: "1 account couldn't be read")
             : String(localized: "\(unreachedCount) accounts couldn't be read")
+    }
+}
+
+// MARK: - One key's own beginning (2026-08-25, prd §473)
+
+/// WHEN THIS KEY BEGAN — the one fact a key could not state about itself.
+///
+/// Everything else the expanded row shows (kind, scope, expiry, contract, run
+/// count, also-on accounts) was already on the collapsed row. This is the only
+/// genuinely new content, and it is why the row expands at all: the account's
+/// history knew when each key was authorized and nothing could ask it about
+/// ONE key, because `VibenetKeyMoment` threw the id away.
+///
+/// **Costs nothing.** The history is already walked, already ordered and
+/// already block-dated for the strip on the same screen; this reads it back.
+enum VibenetKeyOrigin {
+    /// The moment this key was last AUTHORIZED, or nil.
+    ///
+    /// The LATEST authorization and not the first, because that is what
+    /// `VibenetActorLog.survivors` means by live: an id revoked and
+    /// re-authorized is a key that began again, and dating it from a
+    /// superseded authorization would put its beginning before a revocation
+    /// that really happened.
+    ///
+    /// Three ways to answer nil, all of them honest and none distinguishable
+    /// on screen (the row simply says nothing): the key predates
+    /// `VibenetKeyHistory.cap`, the moments were landed by a build before
+    /// §473 and carry no id, or the block-time lookup failed so the moment has
+    /// no date. Every one of them means "we cannot name when this began",
+    /// which is exactly what drawing nothing says.
+    static func authorized(_ actor: VibenetActor, in history: [VibenetKeyMoment]) -> VibenetKeyMoment? {
+        history
+            .filter { $0.authorized && $0.actorId?.caseInsensitiveCompare(actor.actorId) == .orderedSame }
+            // Case-insensitively for the reason every hex compare in this file
+            // is: an RPC's casing is not a promise.
+            .max { ($0.block, $0.logIndex) < ($1.block, $1.logIndex) }
+    }
+}
+
+// MARK: - A revoked key's deadline (2026-08-25, prd §473)
+
+/// **A KEY THAT NO LONGER EXISTS MUST NOT KEEP A DEADLINE.**
+///
+/// `VibenetEvents.landEvents` stamps `thing.dueAt` on an ActorAuthorized row
+/// so an expiring session key reaches the lock screen through the generic
+/// `NotifySweep.deadlineNear` — no `NotifyKind` of this bridge's own, no new
+/// notification code. That was right, and it had a half nobody built:
+/// **nothing ever cleared it.** A revoke lands as its own row and the
+/// authorization row is never deleted (this bridge issues no `context.delete`
+/// at all), so:
+///
+///   authorize a key expiring in 30 days → revoke it on day 3 →
+///   on day 28 the lock screen announces a deadline for a key that has not
+///   existed for twenty-five days.
+///
+/// One field reaches three surfaces — `NotifySweep`, the "Needs you" widget
+/// (`#Predicate { $0.dueAt != nil }`) and the Today brief — and **it is worse
+/// than an ordinary stale number because it is ASYMMETRIC**: the room's own
+/// card reads live actors off the chain, so the card correctly shows the key
+/// gone while the lock screen counts down to its expiry. The app contradicts
+/// itself, and the half that is wrong is the half that interrupts you. §397's
+/// Privacy Pools reclaim (a returned deposit reading `Declined` for life) is
+/// the same shape in a second place: evidence beats the record.
+///
+/// **THE JOIN IS THE `actorId`, NOT THE EXPIRY.** An expiry-within-account
+/// match was drawn first (it is what `VibenetEventFacts` does for this same
+/// pair of objects) and then dropped for something exact: every
+/// ActorAuthorized and ActorRevoked log carries its `actorId` in `topics[2]`,
+/// the landing pass is already reading those logs, and the authorization row's
+/// ref is derivable from the same event. So the answer needs no tie-break, no
+/// ambiguity guard and **not one extra request** — the expiry match would have
+/// been a heuristic standing in for a fact already on the wire.
+enum VibenetDeadlineSweep {
+    /// Which of an account's actorIds are no longer live — every id the log
+    /// has ever seen, minus the survivors.
+    ///
+    /// Derived FROM `VibenetActorLog.survivors` rather than restating its
+    /// rule, so last-write-wins is defined once: an id revoked and then
+    /// re-authorized is live and keeps its deadline, and this file's own
+    /// mutation coverage of that rule protects both readers at once.
+    static func revoked(_ events: [VibenetActorEvent]) -> Set<String> {
+        Set(events.map(\.actorId)).subtracting(VibenetActorLog.survivors(events))
+    }
+
+    /// **NEVER SWEEP ON A FAILED READ.** `VibenetChain.getLogs` answers nil
+    /// when its newest chunk fails, and a caller collapsing that to `[]` gets
+    /// an empty event list — from which `revoked` correctly returns nothing,
+    /// so an outage is harmless BY CONSTRUCTION here rather than by luck.
+    /// This states the rule anyway, because the harmless version depends on a
+    /// caller that keeps the optional: read the logs as `[] `and a future
+    /// refactor that derives liveness some other way inherits the
+    /// `ScreenshotIngest.pruneDeleted` failure — an unreachable host reading
+    /// as "everything was revoked", stripping deadlines off a CloudKit-
+    /// mirrored corpus on every device before anyone can quit the app.
+    static func maySweep(logsAnswered: Bool, events: [VibenetActorEvent]) -> Bool {
+        logsAnswered && !events.isEmpty
+    }
+}
+
+// MARK: - Ordering keys by their clock (2026-08-25, prd §471)
+
+/// SOONEST FIRST, and TOTAL — one definition for every reading that ranks the
+/// room's keys by when they lapse.
+///
+/// Written out twice at first (the soonest-expiry reading and the shelf's
+/// bars), and the harness caught it the same way it caught `isTicking`'s
+/// duplicate: `mutate` replaces the FIRST occurrence, so inverting the
+/// comparator broke the shelf while the assertion watched the aggregate, and a
+/// real check went green over a real defect. Two copies of one ordering is the
+/// §418 duplicate-parser lesson at the scale of a comparator.
+///
+/// The TIE-BREAKS are the point, not decoration: two keys authorized in the
+/// same transaction share an expiry to the second, and a comparator that stops
+/// at the timestamp is not a total order — SwiftUI then reshuffles the card
+/// between composes over identical data, which reads as broken (`ASCRoom`'s
+/// own ruling). Address before actorId, case-insensitively, because an RPC's
+/// hex casing is not a promise.
+enum VibenetKeyOrder {
+    static func soonestFirst(_ a: (String, VibenetActor), _ b: (String, VibenetActor)) -> Bool {
+        if a.1.expiry != b.1.expiry { return a.1.expiry < b.1.expiry }
+        let addr = a.0.localizedCaseInsensitiveCompare(b.0)
+        if addr != .orderedSame { return addr == .orderedAscending }
+        return a.1.actorId < b.1.actorId
+    }
+}
+
+// MARK: - When keys lapse (2026-08-25, prd §471)
+
+/// One key that lapses inside the shelf's window, ready to draw as a bar.
+///
+/// Carries the ACTOR rather than a pre-rendered countdown, so the label is
+/// recomputed fresh at draw time exactly as `expiryLabel(now:)` and
+/// `unlockLabel(now:)` already are — a card left open past midnight otherwise
+/// counts down to a number captured when the room composed. It carries no
+/// NAME either: resolving one needs `VibenetWatch`, and this file is
+/// Foundation-only by design, so the view composes "Session · Trading" the
+/// same way `VibenetRoomCard.displayName` already does for every other row.
+struct VibenetKeyShelfRow: Equatable, Identifiable {
+    let address: String
+    let actor: VibenetActor
+    /// Account-qualified for `VibenetKeySeenDiff.keyID`'s own reason: an
+    /// actorId is unique WITHIN an account and nothing says it is unique
+    /// across them, and a `ForEach` over a colliding id renders as rows
+    /// disappearing.
+    var id: String { VibenetKeySeenDiff.keyID(address: address, actorId: actor.actorId) }
+
+    /// How far along this key is toward lapsing, 0…1 against the shelf's
+    /// window — so every bar on the card shares one scale and their lengths
+    /// are directly comparable, which is the whole spread reading.
+    ///
+    /// FLOORED, and the floor is a drawing decision stated here rather than
+    /// hidden in the view (`VibenetBalanceTreemap`'s own `max(0.14, …)`
+    /// precedent): a key lapsing within the hour is 0.0005 of a quarter and
+    /// draws as no bar at all, which reads as missing data on the one row
+    /// that matters most. The number beside the bar is exact; the bar is the
+    /// picture.
+    func fraction(now: Date) -> Double {
+        let remaining = TimeInterval(actor.expiry) - now.timeIntervalSince1970
+        guard remaining > 0 else { return VibenetKeyShelf.minimumFraction }
+        return min(1, max(VibenetKeyShelf.minimumFraction, remaining / VibenetKeyShelf.window))
+    }
+
+    /// "6d" / "41d" / "<1d" — the countdown at bar scale, where
+    /// `expiryLabel`'s full sentence ("Expires in 6 days") does not fit and
+    /// would repeat the heading above it anyway.
+    ///
+    /// Days are rounded UP, never down: a key with 30 hours left reading "1d"
+    /// understates it on a screen whose whole job is to say how much time is
+    /// left. Under a day says so rather than printing "0d", which reads as
+    /// already gone.
+    func countdown(now: Date) -> String {
+        let remaining = TimeInterval(actor.expiry) - now.timeIntervalSince1970
+        guard remaining > 0 else { return String(localized: "<1d") }
+        let days = Int((remaining / 86_400).rounded(.up))
+        return days <= 1 ? String(localized: "<1d") : String(localized: "\(days)d")
+    }
+
+    /// Inside `VibenetAccountItem.urgencyWindow` — the ONE row on this card
+    /// that earns the room's mark. Same threshold `expiryStanding` uses, read
+    /// from it rather than restated, so a key drawn blue here is a key drawn
+    /// blue on its own row in the account detail.
+    func isUrgent(now: Date) -> Bool { actor.expiryStanding(now: now) == .soon }
+}
+
+/// WHEN THE ROOM'S KEYS LAPSE — one bar per key, all on one scale
+/// (2026-08-25, prd §471, user pick of three).
+///
+/// **It replaces `WalletRunwayRail` on this card, and the rail had a defect
+/// here that no amount of restyling fixes.** `WidgetRunway.positions` scales
+/// its axis to `min(dates, now) … max(dates, now)`; every key expiry is in
+/// the FUTURE, so `now` is always the minimum and the marker was pinned at
+/// 5% on every render this feature has ever drawn — a constant, carrying no
+/// information, on the one element that gives the rail its meaning elsewhere.
+/// The axis was elastic besides, so a single key lapsing in 2027 crushed
+/// everything else into the first third. Four identical dots on an unlabelled
+/// elastic axis say "four things, sometime, in some order".
+///
+/// §417's argument for a figure at all still stands and is honoured: three
+/// keys lapsing inside a fortnight and three spread over a quarter produce
+/// the identical sentence and completely different pictures. The spread is
+/// still drawn — it is just read off BAR LENGTHS against a fixed window
+/// rather than off dot positions on a rubber one, which needs no axis
+/// furniture, no now-marker and no labels to be legible. And because the bars
+/// are rows, the figure also answers WHICH KEY, which the rail could not say
+/// at any size and which is precisely what the tray beneath it exists for.
+///
+/// **The cost, stated rather than discovered later:** this is local to
+/// vibenet, so the room and the "Needs you" widget no longer share one
+/// drawing of the same dates. That sharing was the rail's stated reason to be
+/// reused whole, and it is given up knowingly — the widget's subject is mixed
+/// deadlines INCLUDING overdue ones, where a now-marker is real and names are
+/// unavailable; this card's subject is future key expiries that all have
+/// names. Different questions, different figures.
+///
+/// Foundation-only like the rest of this file.
+enum VibenetKeyShelf {
+    /// A quarter, fixed. NOT the furthest expiry (that is the elastic axis
+    /// this replaces) and not a rounder number for its own sake: 90 days is
+    /// the horizon over which a lapsing key is something you can still act
+    /// on, and holding it constant is what makes two accounts' cards
+    /// comparable at a glance.
+    static let window: TimeInterval = 90 * 86_400
+    /// The smallest bar that still reads as a bar rather than as a hole.
+    static let minimumFraction = 0.02
+    /// Rows drawn before the tail takes over. Three, the same summary
+    /// discipline `rowCap` keeps for the roster — this is a footer on a
+    /// card, not the tray it opens.
+    static let rowCap = 3
+
+    /// nil when there is no shelf to draw, and the three declines are
+    /// deliberate and different:
+    ///
+    /// 1. **Fewer than two future expiries.** One bar has nothing to be
+    ///    compared against, so its length says nothing a sentence does not
+    ///    say better — the caller falls back to `soonestExpiry.line`, which
+    ///    is exactly what it did before this figure existed.
+    /// 2. **Nothing inside the window.** Every key lapses more than a quarter
+    ///    out; drawing three full-length bars claims urgency nobody has.
+    /// 3. **No keys at all.** The card itself is already silent.
+    static func compose(_ items: [VibenetAccountItem], now: Date) -> VibenetKeyShelf.Reading? {
+        let pairs = items.flatMap { item in item.actors.map { (item.address, $0) } }
+            .filter { $0.1.isTicking(now: now) }
+        guard pairs.count >= 2 else { return nil }
+
+        let horizon = now.timeIntervalSince1970 + window
+        // TOTAL ORDER, never `sorted(by: expiry)` alone — two keys authorized
+        // in the same transaction share an expiry to the second, and a
+        // non-total comparator lets the card reshuffle between composes over
+        // identical data, which reads as broken (`ASCRoom`'s own ruling).
+        let inside = pairs
+            .filter { TimeInterval($0.1.expiry) <= horizon }
+            .sorted(by: VibenetKeyOrder.soonestFirst)
+        guard !inside.isEmpty else { return nil }
+
+        let rows = inside.prefix(rowCap)
+            .map { VibenetKeyShelfRow(address: $0.0, actor: $0.1) }
+        return Reading(rows: Array(rows),
+                       hiddenInWindow: max(0, inside.count - rows.count),
+                       beyondWindow: pairs.count - inside.count)
+    }
+
+    struct Reading: Equatable {
+        let rows: [VibenetKeyShelfRow]
+        /// Inside the window but past `rowCap`.
+        let hiddenInWindow: Int
+        /// Future, but further out than the window — never drawn as a bar,
+        /// because a bar pinned at full length says "a quarter away" about a
+        /// key lapsing in 2027.
+        let beyondWindow: Int
+
+        /// "2 more within 90 days · 1 lapses later", or nothing.
+        ///
+        /// The two counts are said APART and never summed: one names keys you
+        /// could not fit on the card and the other names keys the card
+        /// deliberately does not chart, and folding them into one number
+        /// would make the card's own bound look like the room's.
+        var tailLine: String? {
+            var parts: [String] = []
+            if hiddenInWindow > 0 {
+                parts.append(hiddenInWindow == 1
+                    ? String(localized: "1 more within 90 days")
+                    : String(localized: "\(hiddenInWindow) more within 90 days"))
+            }
+            if beyondWindow > 0 {
+                parts.append(beyondWindow == 1
+                    ? String(localized: "1 lapses later")
+                    : String(localized: "\(beyondWindow) lapse later"))
+            }
+            return parts.isEmpty ? nil : parts.joined(separator: " · ")
+        }
     }
 }
 
@@ -2449,24 +2851,21 @@ enum VibenetKeyAggregation {
         let accountCount = items.filter { !$0.actors.isEmpty }.count
 
         let soonest = pairs
-            .filter { $0.1.expiry > 0 && TimeInterval($0.1.expiry) > now.timeIntervalSince1970 }
-            .min { a, b in
-                if a.1.expiry != b.1.expiry { return a.1.expiry < b.1.expiry }
-                let addr = a.0.localizedCaseInsensitiveCompare(b.0)
-                if addr != .orderedSame { return addr == .orderedAscending }
-                return a.1.actorId < b.1.actorId
-            }
+            .filter { $0.1.isTicking(now: now) }
+            .min(by: VibenetKeyOrder.soonestFirst)
             .map { VibenetKeySoonestExpiry(address: $0.0, actor: $0.1) }
 
+        // Same rule, same one definition — filtered as ACTORS and only then
+        // reduced to dates, rather than re-testing raw seconds a second way.
         let futureExpiries = pairs
-            .map(\.1.expiry)
-            .filter { $0 > 0 && TimeInterval($0) > now.timeIntervalSince1970 }
+            .filter { $0.1.isTicking(now: now) }
+            .map { Date(timeIntervalSince1970: TimeInterval($0.1.expiry)) }
             .sorted()
-            .map { Date(timeIntervalSince1970: TimeInterval($0)) }
 
         return VibenetKeyAggregate(total: pairs.count, byKind: byKind,
                                     accountCount: accountCount,
                                     unreachedCount: items.filter { !$0.reached }.count,
+                                    unnamedCount: VibenetKeyTray.unnamedKeyCount(items),
                                     soonestExpiry: soonest, futureExpiries: futureExpiries)
     }
 }
@@ -2500,6 +2899,27 @@ struct VibenetKeyChanges: Equatable, Codable {
     let revokedCount: Int
 
     var isEmpty: Bool { added.isEmpty && revokedCount == 0 }
+
+    /// "2 new" / "2 new · 1 gone" — the PILL form (2026-08-25, prd §471).
+    ///
+    /// `line` below is a sentence and was drawn as a third caption stacked
+    /// under the headline, on a card already carrying an eyebrow, a headline,
+    /// an unreached apology and a census. This is the same two facts at pill
+    /// length so the news can sit ON the headline row instead of pushing
+    /// everything down.
+    ///
+    /// ONE COLOUR FOR BOTH CLAUSES, inherited from `line`: a revocation you
+    /// performed and a revocation somebody else performed read identically
+    /// from the chain, so neither clause may be graded against the other.
+    /// "Gone" rather than "revoked" only because the pill has no room for the
+    /// longer word; the sentence form keeps the precise one.
+    var pillLine: String? {
+        guard !isEmpty else { return nil }
+        var parts: [String] = []
+        if !added.isEmpty { parts.append(String(localized: "\(added.count) new")) }
+        if revokedCount > 0 { parts.append(String(localized: "\(revokedCount) gone")) }
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
+    }
 
     /// "2 keys new since you last looked · 1 revoked", or nothing.
     ///

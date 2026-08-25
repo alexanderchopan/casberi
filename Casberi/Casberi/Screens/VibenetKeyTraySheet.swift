@@ -47,6 +47,12 @@ struct VibenetKeyTraySheet: View {
     /// there is nothing to scope, so the rows stay plain rather than
     /// pretending at a door.
     var onPick: ((String) -> Void)? = nil
+    /// The permission this tray opens scrolled to, or nil for the top
+    /// (prd §471). SCROLLED, never filtered: the tray's whole claim is that
+    /// its grouping mirrors the card's census exactly, and a reader can only
+    /// check that against a list showing every section. Unknown labels are
+    /// harmless — `scrollTo` on an id nothing carries is a no-op.
+    var focus: String? = nil
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -60,55 +66,91 @@ struct VibenetKeyTraySheet: View {
                // key holds, which has no ceiling worth guessing at — the
                // `detents` escape hatch this type documents for exactly this.
                detents: [.height(660), .large]) {
-            ScrollView {
-                VStack(alignment: .leading, spacing: DS.Space.s4) {
-                    if sections.isEmpty {
-                        // Never an empty tray: the card that opens this is
-                        // itself silent with no keys, so this is only
-                        // reachable if every key holds nothing nameable.
-                        Text(String(localized: "No key on a watched account holds a permission this build can name."))
-                            .dsText(.body17)
-                            .foregroundStyle(DS.textSecondary)
-                            .fixedSize(horizontal: false, vertical: true)
+            ScrollViewReader { proxy in
+                ScrollView {
+                    // s6 BETWEEN SECTIONS (prd §471), where it was s4. A
+                    // permission and its keys are one object; at s4 the gap
+                    // between two sections was barely wider than the gap
+                    // inside one, so eight rows over three permissions read
+                    // as one undifferentiated run.
+                    VStack(alignment: .leading, spacing: DS.Space.s6) {
+                        if sections.isEmpty {
+                            // Never an empty tray: the card that opens this is
+                            // itself silent with no keys, so this is only
+                            // reachable if every key holds nothing nameable.
+                            Text(String(localized: "No key on a watched account holds a permission this build can name."))
+                                .dsText(.body17)
+                                .foregroundStyle(DS.textSecondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        // THE FOOTNOTE LEADS NOW. It explains why the row
+                        // count exceeds the key count, which is a thing a
+                        // reader wonders on the FIRST section rather than
+                        // after scrolling past the last one.
+                        if let note = VibenetKeyTray.footnote(items) {
+                            Text(note)
+                                .dsText(.label11)
+                                .foregroundStyle(DS.textTertiary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        ForEach(sections) { section in
+                            sectionView(section).id(section.id)
+                        }
                     }
-                    ForEach(sections) { section in
-                        sectionView(section)
-                    }
-                    if let note = VibenetKeyTray.footnote(items) {
-                        Text(note)
-                            .dsText(.label12)
-                            .foregroundStyle(DS.textTertiary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.bottom, DS.Space.s4)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.bottom, DS.Space.s4)
+                .scrollIndicators(.hidden)
+                // NO ANIMATION: this is where the tray OPENS, not a move it
+                // makes while somebody watches. Animating it would slide the
+                // list under a sheet that is itself still presenting.
+                .onAppear {
+                    guard let focus else { return }
+                    proxy.scrollTo(focus, anchor: .top)
+                }
             }
-            .scrollIndicators(.hidden)
         }
     }
 
+    /// One permission and its members. The rows sit on a single `fillFaint`
+    /// group (prd §471) rather than loose under the heading, which fixes two
+    /// things at once: a permission now reads as a container holding keys,
+    /// and the heading finally has an edge to sit against — before this the
+    /// heading started at x=0 while every row's text started at 40pt (a 26pt
+    /// face plus its gap), so a section and its own rows shared no left edge
+    /// anywhere on the screen.
     @ViewBuilder
     private func sectionView(_ section: VibenetTraySection) -> some View {
-        VStack(alignment: .leading, spacing: DS.Space.s3) {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
             HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
                 Text(section.label)
                     .dsText(.heading17)
                     .foregroundStyle(DS.textPrimary)
                     .fixedSize(horizontal: false, vertical: true)
-                Spacer(minLength: DS.Space.s2)
                 // The same number the card states, from the same derivation —
                 // so a reader can check the card against this list and find
                 // them agreeing, which is most of what a tray is FOR.
+                //
+                // A PILL BESIDE ITS NAME, not a right-aligned figure: pushed
+                // to the trailing edge it shared a column with every row's
+                // expiry text below it, so a count of keys and a date read as
+                // the same kind of value stacked down one side.
                 Text("\(section.count)")
-                    .dsText(.subhead13)
+                    .dsText(.label11).fontWeight(.semibold)
                     .foregroundStyle(DS.textSecondary)
                     .monospacedDigit()
+                    .padding(.horizontal, 8).padding(.vertical, 2)
+                    .background(Capsule().fill(DS.fillFaint))
+                Spacer(minLength: DS.Space.s2)
             }
-            ForEach(Array(section.keys.enumerated()), id: \.element.id) { index, key in
-                row(key, in: section)
-                    .chartArrival(index: index, reduceMotion: reduceMotion)
+            VStack(alignment: .leading, spacing: 0) {
+                ForEach(Array(section.keys.enumerated()), id: \.element.id) { index, key in
+                    row(key, in: section, isLast: index == section.keys.count - 1)
+                        .chartArrival(index: index, reduceMotion: reduceMotion)
+                }
             }
+            .padding(.horizontal, DS.Space.s3)
+            .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(DS.fillFaint))
         }
     }
 
@@ -117,20 +159,21 @@ struct VibenetKeyTraySheet: View {
     /// different accounts, and which account a key can act for is the fact
     /// that makes the row worth reading.
     @ViewBuilder
-    private func row(_ key: VibenetTrayKey, in section: VibenetTraySection) -> some View {
+    private func row(_ key: VibenetTrayKey, in section: VibenetTraySection,
+                     isLast: Bool) -> some View {
         if let onPick {
             Button {
                 DSHaptic.selection()
                 onPick(key.address)
             } label: {
-                rowBody(key, in: section)
+                rowBody(key, in: section, door: true, isLast: isLast)
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .dsHover()
             .contextMenu { copyItems(key) }
         } else {
-            rowBody(key, in: section)
+            rowBody(key, in: section, door: false, isLast: isLast)
                 .contextMenu { copyItems(key) }
         }
     }
@@ -165,9 +208,15 @@ struct VibenetKeyTraySheet: View {
         }
     }
 
-    private func rowBody(_ key: VibenetTrayKey, in section: VibenetTraySection) -> some View {
-        HStack(alignment: .top, spacing: DS.Space.s3) {
-            WalletFace(address: key.address, size: DS.Face.row, circular: true)
+    private func rowBody(_ key: VibenetTrayKey, in section: VibenetTraySection,
+                         door: Bool, isLast: Bool) -> some View {
+        // CENTRE-ALIGNED and vertically padded (prd §471). The rows carried no
+        // padding of their own at all, so a section was three blocks of text
+        // 14pt apart with a top-aligned face beside each — the "tightly packed
+        // together" reading. `s2` gives every row real height, and a face at
+        // `rowCircle` has something to sit against.
+        HStack(alignment: .center, spacing: DS.Space.s3) {
+            WalletFace(address: key.address, size: DS.Face.rowCircle, circular: true)
             VStack(alignment: .leading, spacing: 2) {
                 Text(key.actor.kind.plainTitle)
                     .dsText(.body17)
@@ -175,7 +224,7 @@ struct VibenetKeyTraySheet: View {
                     .lineLimit(1)
                 HStack(spacing: DS.Space.s2) {
                     Text(Self.accountName(key.address))
-                        .dsText(.label12)
+                        .dsText(.label11)
                         .foregroundStyle(DS.textSecondary)
                         .lineLimit(1)
                     // WHICH KEY (prd §470) — the same noun-less monospaced
@@ -188,25 +237,50 @@ struct VibenetKeyTraySheet: View {
                         .foregroundStyle(DS.textTertiary)
                         .lineLimit(1)
                         .fixedSize()
-                }
-                if let also = VibenetKeyTray.alsoLine(key, besides: section.label) {
-                    Text(also)
-                        .dsText(.label11)
-                        .foregroundStyle(DS.textTertiary)
-                        .fixedSize(horizontal: false, vertical: true)
+                    if let also = VibenetKeyTray.alsoLine(key, besides: section.label) {
+                        Text(also)
+                            .dsText(.label11)
+                            .foregroundStyle(DS.textTertiary)
+                            .lineLimit(1)
+                    }
                 }
             }
             Spacer(minLength: DS.Space.s2)
             // The clock, in the row's own words rather than a shared one:
             // "Never expires" is a real answer here and drawing nothing in its
             // place would leave a reader unable to tell it from unknown.
+            //
+            // `label11` TERTIARY, down from `label12`: it was the same rung as
+            // the account name and heavier than the id beside it, so the least
+            // specific fact in the row read as its loudest. Urgency still gets
+            // the mark, which is now the only colour in the block.
+            let urgent = key.actor.expiryStanding(now: .now) == .soon
             Text(key.actor.expiryLabel(now: .now))
-                .dsText(.label12)
-                .foregroundStyle(DS.textTertiary)
+                .dsText(.label11)
+                .fontWeight(urgent ? .semibold : .regular)
+                .foregroundStyle(urgent ? Self.mark : DS.textTertiary)
                 .multilineTextAlignment(.trailing)
                 .fixedSize(horizontal: false, vertical: true)
+            if door {
+                Image(systemName: "chevron.right")
+                    .accessibilityHidden(true)
+                    .dsGlyph(11, weight: .semibold)
+                    .foregroundStyle(DS.textTertiary)
+            }
+        }
+        .padding(.vertical, DS.Space.s2)
+        // A separator between rows and never under the last one — a FILL at
+        // the faintest rung, which is what this design system draws instead of
+        // a hairline (§8: nothing strokes a line).
+        .overlay(alignment: .bottom) {
+            if !isLast {
+                Rectangle().fill(DS.fillFaint).frame(height: 1)
+            }
         }
     }
+
+    /// The room's own mark, for the one fact in this tray that earns a colour.
+    private static let mark = DS.brandHue(for: "Base Vibenet") ?? Color.fixed("#0052ff")
 
     /// The account's own name if it has one, else its short address — the
     /// same fallback `VibenetRoomCard.displayName` makes, so this tray can
