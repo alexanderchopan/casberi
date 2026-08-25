@@ -1824,15 +1824,46 @@ struct VibenetValueSample: Equatable, Codable {
 /// purpose: two histories of the same shape in one app that disagree about how
 /// often a point lands would make two charts that cannot be compared.
 enum VibenetValueHistory {
+    /// The SETTLED interval, mirroring `WalletStore.recordSample`'s own — once
+    /// a curve exists, four hours is the right resolution for a balance and
+    /// anything finer is just more points saying the same thing.
     static let throttle: TimeInterval = 4 * 3600
+    /// **The OPENING interval, and the reason it exists (2026-08-24, reported:
+    /// "the app still does not have sparkline").** `series` needs two readings
+    /// and the settled throttle only lets a second one land four hours after
+    /// the first — so on the day this bridge ships, and for every person who
+    /// watches their first account, the curve is structurally unreachable. It
+    /// was not that the chart was broken; it was that the chart could not yet
+    /// have anything to draw, and the room simply said nothing about it.
+    ///
+    /// Wallet never hit this because its history has been accumulating for
+    /// months; a NEW store has to earn its first curve, and at four hours a
+    /// person watching an account and looking at the room twice in an evening
+    /// sees an empty space both times.
+    ///
+    /// Every point is still a REAL reading of a real balance — this shortens
+    /// how often we look, never invents a value between two looks. The curve
+    /// is honest from the first frame; it just fills in over minutes instead
+    /// of over a day, and hands back to `throttle` the moment it can draw.
+    static let openingThrottle: TimeInterval = 120
+    /// How many readings a curve wants before the interval settles down.
+    static let minimumForCurve = 6
     static let cap = 180
 
-    /// A sample is kept only when the last one is older than `throttle` — the
-    /// caller may call this every sweep and usually writes nothing.
+    /// How long to wait before the NEXT reading, given how many are already
+    /// held. See `openingThrottle` for why this is not one constant.
+    static func interval(forExisting count: Int) -> TimeInterval {
+        count < minimumForCurve ? openingThrottle : throttle
+    }
+
+    /// A sample is kept only when the last one is older than the interval that
+    /// applies at this stage — the caller may call this every sweep and, once
+    /// the curve is established, usually writes nothing.
     static func appending(_ samples: [VibenetValueSample],
                           native: Double,
                           now: Date) -> [VibenetValueSample]? {
-        if let last = samples.last, now.timeIntervalSince(last.at) < throttle { return nil }
+        if let last = samples.last,
+           now.timeIntervalSince(last.at) < interval(forExisting: samples.count) { return nil }
         var out = samples
         out.append(VibenetValueSample(at: now, native: native))
         if out.count > cap { out.removeFirst(out.count - cap) }
@@ -1876,12 +1907,20 @@ enum VibenetDemoHistoryShape {
     /// a real watcher's readings would have after a fortnight. The dips are
     /// what keep it reading as a balance rather than a ramp.
     static func samples(now: Date) -> [VibenetValueSample] {
+        samples(endingOn: endsOn, now: now)
+    }
+
+    /// The same curve scaled to end on a given balance — what a single
+    /// account's own history looks like in the demo. Scaled rather than
+    /// re-shaped so every account's line is recognisably the same family of
+    /// object, and so each one still ends on the figure its own crown states.
+    static func samples(endingOn end: Double, now: Date) -> [VibenetValueSample] {
         let shape: [Double] = [0.72, 0.78, 0.74, 0.95, 1.10, 1.04, 1.32,
                                1.55, 1.49, 1.78, 2.05, 1.98, 2.31, 1.0]
         return shape.enumerated().map { index, factor in
             VibenetValueSample(
                 at: now.addingTimeInterval(-Double(shape.count - 1 - index) * VibenetValueHistory.throttle),
-                native: endsOn * factor)
+                native: end * factor)
         }
     }
 }
@@ -1916,10 +1955,16 @@ enum VibenetBalanceTreemap {
                                           amount: VibenetBalanceFormat.line(native),
                                           share: 1.0))
         }
-        for total in aggregate.tokenTotals {
+        // The tokens RAMP rather than sharing one tone. They are ranked by the
+        // aggregate's own order and the ink follows that rank, which is what
+        // makes the block read as a treemap (a field of related areas, biggest
+        // and brightest first) rather than as two identical boxes beside a
+        // large one. Floored so the last cell is still a surface and not a
+        // hole in the card.
+        for (index, total) in aggregate.tokenTotals.enumerated() {
             out.append(VibenetTreemapCell(symbol: total.symbol,
                                           amount: VibenetBalanceFormat.line(total.amount),
-                                          share: 0.45))
+                                          share: max(0.14, 0.46 - Double(index) * 0.16)))
         }
         // A lone cell is not a treemap, it is a rectangle repeating the crown
         // directly above it — the caller draws nothing rather than that.

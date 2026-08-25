@@ -1068,11 +1068,12 @@ enum VibenetValueStore {
     /// hours. A room with no native reading at all records NOTHING rather
     /// than a zero — a zero here would draw a real cliff on the chart.
     static func record(_ room: VibenetRoom, now: Date = .now) {
-        guard let native = VibenetBalanceAggregation.compose(room.items)?.nativeTotal else { return }
-        guard let out = VibenetValueHistory.appending(samples(), native: native, now: now) else { return }
-        if let data = try? JSONEncoder().encode(out) {
+        if let native = VibenetBalanceAggregation.compose(room.items)?.nativeTotal,
+           let out = VibenetValueHistory.appending(samples(), native: native, now: now),
+           let data = try? JSONEncoder().encode(out) {
             UserDefaults.standard.set(data, forKey: key)
         }
+        recordAccounts(room, now: now)
     }
 
     static func replace(_ samples: [VibenetValueSample]) {
@@ -1081,7 +1082,60 @@ enum VibenetValueStore {
         }
     }
 
-    static func forget() { UserDefaults.standard.removeObject(forKey: key) }
+    // MARK: - Per-account history (2026-08-24)
+
+    /// **A SCOPED ROOM NEEDS ITS OWN CURVE, and must never borrow the
+    /// aggregate's.** Picking one account narrows every other reading on the
+    /// card to that account, so a line drawn from the room-wide series would
+    /// be the one element still describing all five — a chart claiming this
+    /// account rose 38% because the total did. That is §83 on the screen where
+    /// it is least visible, since a plausible curve under a correct balance
+    /// looks exactly like a correct curve.
+    ///
+    /// Keyed by LOWERCASED address, for the reason every comparison in this
+    /// bridge is case-insensitive: an RPC's hex casing is not a promise, and a
+    /// re-cased address would silently start a second history for one account.
+    private static let accountsKey = "vibenet.value.history.accounts.v1"
+
+    static func accountSamples() -> [String: [VibenetValueSample]] {
+        guard let data = UserDefaults.standard.data(forKey: accountsKey),
+              let out = try? JSONDecoder().decode([String: [VibenetValueSample]].self, from: data)
+        else { return [:] }
+        return out
+    }
+
+    static func samples(for address: String) -> [VibenetValueSample] {
+        accountSamples()[address.lowercased()] ?? []
+    }
+
+    /// One reading per account per pass, each throttled on its OWN history —
+    /// an account watched today starts building its curve today rather than
+    /// inheriting the interval of one watched last week.
+    static func recordAccounts(_ room: VibenetRoom, now: Date = .now) {
+        var book = accountSamples()
+        var changed = false
+        for item in room.items {
+            guard let native = item.nativeBalance else { continue }
+            let key = item.address.lowercased()
+            guard let out = VibenetValueHistory.appending(book[key] ?? [], native: native, now: now)
+            else { continue }
+            book[key] = out
+            changed = true
+        }
+        guard changed, let data = try? JSONEncoder().encode(book) else { return }
+        UserDefaults.standard.set(data, forKey: accountsKey)
+    }
+
+    static func replaceAccounts(_ book: [String: [VibenetValueSample]]) {
+        if let data = try? JSONEncoder().encode(book) {
+            UserDefaults.standard.set(data, forKey: accountsKey)
+        }
+    }
+
+    static func forget() {
+        UserDefaults.standard.removeObject(forKey: key)
+        UserDefaults.standard.removeObject(forKey: accountsKey)
+    }
 }
 
 // MARK: - The explorer door

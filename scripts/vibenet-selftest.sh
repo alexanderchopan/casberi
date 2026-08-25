@@ -445,11 +445,39 @@ let t0 = Date(timeIntervalSince1970: 1_700_000_000)
 check("the first reading is always kept",
       VibenetValueHistory.appending([], native: 1.0, now: t0)?.count == 1)
 let one = [VibenetValueSample(at: t0, native: 1.0)]
-check("a second reading inside the throttle is REFUSED — nil, not a duplicate point",
-      VibenetValueHistory.appending(one, native: 2.0, now: t0.addingTimeInterval(3599)) == nil)
+check("a second reading inside the OPENING throttle is REFUSED — nil, not a duplicate point",
+      VibenetValueHistory.appending(one, native: 2.0,
+                                    now: t0.addingTimeInterval(VibenetValueHistory.openingThrottle - 1)) == nil)
 check("a reading past the throttle lands",
       VibenetValueHistory.appending(one, native: 2.0,
                                     now: t0.addingTimeInterval(VibenetValueHistory.throttle + 1))?.count == 2)
+// THE CURVE MUST BE REACHABLE ON THE DAY THE BRIDGE SHIPS (2026-08-24,
+// reported as "the app still does not have sparkline"). `series` needs two
+// readings, so if the settled four-hour throttle governed from the first
+// reading, a person who watches their first account cannot see a curve today
+// however often they open the room — the chart was never broken, it could not
+// yet have anything to draw. The opening interval is what makes it reachable,
+// and every point in it is still a real reading of a real balance.
+check("a SECOND reading lands minutes after the first, not hours — the curve is reachable",
+      VibenetValueHistory.appending(one, native: 2.0,
+                                    now: t0.addingTimeInterval(VibenetValueHistory.openingThrottle + 1))?.count == 2)
+check("the opening interval is genuinely shorter than the settled one",
+      VibenetValueHistory.openingThrottle < VibenetValueHistory.throttle)
+check("a room with an established curve is back on the SETTLED interval",
+      VibenetValueHistory.interval(forExisting: VibenetValueHistory.minimumForCurve)
+          == VibenetValueHistory.throttle)
+check("…and one still building is on the opening one",
+      VibenetValueHistory.interval(forExisting: VibenetValueHistory.minimumForCurve - 1)
+          == VibenetValueHistory.openingThrottle)
+// The settled interval still REFUSES a close-together reading once the curve
+// exists — the shortcut is for establishing a chart, never a permanent
+// change of resolution.
+let settledCurve = (0..<VibenetValueHistory.minimumForCurve).map {
+    VibenetValueSample(at: t0.addingTimeInterval(Double($0) * 200), native: 1.0)
+}
+check("an established curve refuses a reading minutes later",
+      VibenetValueHistory.appending(settledCurve, native: 2.0,
+                                    now: (settledCurve.last?.at ?? t0).addingTimeInterval(600)) == nil)
 // ONE point is a flat line, and a flat line on a balance chart reads as "went
 // to zero" — the whole reason this returns nil rather than a single-element
 // series. Mutation-proven below.

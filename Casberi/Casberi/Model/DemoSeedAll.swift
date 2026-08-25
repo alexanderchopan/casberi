@@ -3163,6 +3163,18 @@ enum DemoSeedAll {
     /// writes it into the store the shipped app records into.
     private static func seedVibenetHistory() {
         VibenetValueStore.replace(VibenetDemoHistoryShape.samples(now: .now))
+        // Per account too, or picking a face on the rail drops the curve the
+        // aggregate just showed — the scoped room reads its OWN series (see
+        // `VibenetValueStore.recordAccounts` for why it must not borrow the
+        // room's). Each is scaled to end on that account's own balance, so
+        // every line ends on the figure its own crown states.
+        var book: [String: [VibenetValueSample]] = [:]
+        for item in VibenetRoom.demoFixture().items {
+            guard let native = item.nativeBalance else { continue }
+            book[item.address.lowercased()] =
+                VibenetDemoHistoryShape.samples(endingOn: native, now: .now)
+        }
+        VibenetValueStore.replaceAccounts(book)
     }
 
     private static func seedCloudflareEstate() {

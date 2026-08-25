@@ -14,6 +14,7 @@ import SwiftUI
 /// can never drift apart on what one account's detail actually says.
 struct VibenetAccountDetail: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.colorScheme) private var scheme
     let item: VibenetAccountItem
     /// This account's OUTGOING and INCOMING delegate relationships — both
     /// directions, unfiltered, computed by the caller off the FULL room
@@ -50,6 +51,15 @@ struct VibenetAccountDetail: View {
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Space.s6) {
             hero
+            // **WHAT THIS ACCOUNT HOLDS (2026-08-24, reported alongside the
+            // missing sparkline).** This screen listed an account's keys, its
+            // links, its history and its doors, and never once said what was
+            // IN it — so narrowing the room to one account lost the only
+            // reading the room had led with, and the balance was reachable
+            // only by going back out to the aggregate. The design gives the
+            // scoped view the same anatomy as the aggregate for exactly this
+            // reason; it is the same crown, scoped, on its own history.
+            balanceSection
             if !item.actors.isEmpty {
                 keysSection
             }
@@ -58,6 +68,70 @@ struct VibenetAccountDetail: View {
             historySection
             syncSection
             doorsSection
+        }
+    }
+
+    // MARK: - Balance (2026-08-24)
+
+    /// The scoped crown — this account's own native holding, its own curve,
+    /// its own holdings block. The aggregate room's anatomy at one account's
+    /// scope, which is what the design asks for and what makes narrowing the
+    /// room feel like the same screen rather than a different one.
+    ///
+    /// **The series is THIS ACCOUNT'S** (`VibenetValueStore.samples(for:)`),
+    /// never the room's — see that store's own note. Silent piece by piece,
+    /// the aggregate's rule reused: no native reading draws no crown, one
+    /// reading draws no line (a single point is a flat line, and a flat line
+    /// on a balance chart reads as "went to zero"), one asset draws no
+    /// holdings block because the crown above already states it.
+    @ViewBuilder
+    private var balanceSection: some View {
+        let history = VibenetValueStore.samples(for: item.address)
+        if item.nativeBalance != nil || !item.tokenBalances.isEmpty {
+            VStack(alignment: .leading, spacing: 0) {
+                if let native = item.nativeBalance {
+                    Text(String(localized: "This account holds"))
+                        .dsText(.label12)
+                        .foregroundStyle(DS.textTertiary)
+                    Text("\(VibenetBalanceFormat.line(native)) ETH")
+                        .dsText(.price40)
+                        .foregroundStyle(DS.textPrimary)
+                        .monospacedDigit()
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.6)
+                        .padding(.top, 2)
+                    if let change = VibenetValueHistory.delta(history) {
+                        HStack(spacing: 5) {
+                            Image(systemName: change >= 0
+                                  ? "arrowtriangle.up.fill" : "arrowtriangle.down.fill")
+                                .dsGlyph(9)
+                            Text(VibenetBalanceFormat.percent(change))
+                                .dsText(.callout15).fontWeight(.semibold)
+                                .monospacedDigit()
+                            Text(String(localized: "since watching"))
+                                .dsText(.callout15)
+                                .foregroundStyle(DS.textTertiary)
+                        }
+                        .foregroundStyle(TokenChartStyle.accent(change: change, scheme: scheme))
+                        .padding(.top, 2)
+                    }
+                    if let series = VibenetValueHistory.series(history) {
+                        TokenChartPlot(chart: TokenChart(closes: series,
+                                                         price: series.last ?? 0,
+                                                         change: VibenetValueHistory.delta(history) ?? 0),
+                                       accent: TokenChartStyle.accent(
+                                           change: VibenetValueHistory.delta(history) ?? 0, scheme: scheme),
+                                       height: 90, pulses: false,
+                                       lineWidth: 2.6, fillOpacity: 0.24, endpointDot: true)
+                            .padding(.top, DS.Space.s2)
+                    }
+                }
+                if let scoped = VibenetBalanceAggregation.compose([item]) {
+                    VibenetHoldingsBlock(cells: VibenetBalanceTreemap.cells(scoped),
+                                         reduceMotion: reduceMotion)
+                        .padding(.top, DS.Space.s3)
+                }
+            }
         }
     }
 

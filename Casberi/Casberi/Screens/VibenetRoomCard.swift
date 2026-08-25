@@ -339,35 +339,13 @@ struct VibenetRoomCard: View {
     /// Native ETH is the lead cell and the tokens stack beside it. They are
     /// NEVER summed — no price feed here, so the areas state each asset's
     /// own share of its own total rather than implying one converted figure.
+    /// The holdings block — see `VibenetHoldingsBlock`, which owns the whole
+    /// of its geometry and is shared with the scoped account detail so
+    /// narrowing the room cannot change how holdings are drawn.
     @ViewBuilder
     private func tokenTreemap(_ aggregate: VibenetBalanceAggregate) -> some View {
-        let cells = VibenetBalanceTreemap.cells(aggregate)
-        if !cells.isEmpty {
-            HStack(spacing: DS.Space.s2) {
-                ForEach(Array(cells.enumerated()), id: \.offset) { index, cell in
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(cell.symbol)
-                            .dsText(index == 0 ? .body17 : .callout15)
-                            .foregroundStyle(DS.textPrimary)
-                            .lineLimit(1)
-                        Spacer(minLength: 0)
-                        Text(cell.amount)
-                            .dsText(.subhead13)
-                            .foregroundStyle(index == 0 ? DS.textPrimary : DS.textSecondary)
-                            .monospacedDigit()
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.7)
-                    }
-                    .padding(DS.Space.s2)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .frame(height: index == 0 ? 92 : 92)
-                    .background(DS.ink(magnitude: cell.share),
-                                in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
-                    .layoutPriority(index == 0 ? 2 : 1)
-                    .chartArrival(index: index, reduceMotion: reduceMotion)
-                }
-            }
-        }
+        VibenetHoldingsBlock(cells: VibenetBalanceTreemap.cells(aggregate),
+                             reduceMotion: reduceMotion)
     }
 
     /// KEYS, BY WHAT THEY CAN DO (prd §463). This shipped as taxonomy — "4
@@ -420,6 +398,25 @@ struct VibenetRoomCard: View {
                         .padding(.top, DS.Space.s2)
                 }
             }
+            // **ITS OWN SURFACE (2026-08-24).** The design gives the keys a
+            // card and the balance above it none, and that asymmetry is the
+            // point rather than decoration: the crown is the room speaking in
+            // its own voice — a figure on the page — while this is a bounded
+            // INVENTORY of a fixed set of things, the one block on the card a
+            // reader scans rather than reads. Drawn flat it was six unrelated
+            // label/number pairs floating between a chart and a spine, which
+            // is most of what "hodge podge" was describing.
+            //
+            // NO CHEVRON, deliberately, though the design draws one: it points
+            // at a key tray that does not exist in this build, and a chevron
+            // that opens nothing is the dead control §83 bans. The surface is
+            // the part that carries the meaning; the affordance can arrive
+            // with the screen it would open.
+            .padding(DS.Space.s3)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(DS.fillFaint,
+                        in: RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
+            .padding(.top, DS.Space.s4)
         }
     }
 
@@ -446,24 +443,30 @@ struct VibenetRoomCard: View {
                 Text(String(localized: "Linked accounts"))
                     .dsText(.label12)
                     .foregroundStyle(DS.textTertiary)
-                ForEach(Array(links.enumerated()), id: \.element.id) { index, link in
-                    HStack(spacing: DS.Space.s3) {
-                        WalletFace(address: link.to, size: DS.Face.row, circular: true)
-                        VStack(alignment: .leading, spacing: 1) {
-                            Text(Self.displayName(link.to))
-                                .dsText(.heading17)
-                                .foregroundStyle(DS.textPrimary)
-                                .lineLimit(1)
-                            Text(String(localized: "Can act for \(Self.displayName(link.from))"))
-                                .dsText(.subhead13)
-                                .foregroundStyle(DS.textSecondary)
-                                .lineLimit(1)
-                        }
-                        Spacer(minLength: 0)
-                    }
+                // **A SPINE, not a list of sentences (2026-08-24).** Each row
+                // used to read "<name> · Can act for <name>" — the same two
+                // names in prose, once per link, so a reader had to parse a
+                // sentence per row and hold the graph in their head. The whole
+                // reason the design draws this as a figure is that a delegate
+                // relationship has a SHAPE — an actor on one side, the account
+                // it can act for on the other, a line between them — and the
+                // shape is legible before any of the names are read.
+                //
+                // §295's ruling is reused wholesale and is why every ribbon is
+                // the same weight and no node carries a hue: this card makes no
+                // claim that one relationship matters more than another, so
+                // nothing here may be sized or coloured to suggest it. The
+                // caption states the direction once, in words, rather than
+                // repeating it per row.
+                VibenetLinkSpine(links: links,
+                                 name: { Self.displayName($0) },
+                                 reduceMotion: reduceMotion)
                     .padding(.top, DS.Space.s2)
-                    .chartArrival(index: index, reduceMotion: reduceMotion)
-                }
+                Text(String(localized: "Who can act for whom, read from the keystore."))
+                    .dsText(.subhead13)
+                    .foregroundStyle(DS.textTertiary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, DS.Space.s2)
             }
         }
     }
