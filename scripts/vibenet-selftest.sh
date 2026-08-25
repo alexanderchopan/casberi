@@ -155,10 +155,19 @@ if grep -q 'watchLimit\|canWatchMore' "$TMP/book.nc.swift" "$TMP/setup.nc.swift"
   exit 1
 fi
 
-# The room's rail reaches the book. Both trailing slots, because the setup page
-# has no field once connected — which is exactly when the rail exists.
-grep -q 'onAdd: { route.push(.vibenetAddressBook) }' "$SHELL_SURFACE" \
-  || { echo "✗ the vibenet rail's add slot no longer opens the book (prd §465) — it would open"; echo "  a setup page that has no field while connected"; exit 1; }
+# The room's rail reaches the book through ONE slot, not two. §461's Wallet
+# rail carries both "+" and the book because they lead to two different places
+# — the roster's own field, and everyone else. Vibenet's paste field MOVED into
+# the book, so both slots would land in the same place, and two doors onto one
+# destination is redundant chrome. The add slot is nil here and the book slot
+# is the door.
+#
+# This guard shipped asserting the opposite (`onAdd: { route.push(...) }`) and
+# was red on the commit that introduced it — the code took the one-slot ruling
+# and the guard kept the two-slot one. Caught by running the harness, which
+# that commit had not.
+grep -q 'onAdd: nil,' "$SHELL_SURFACE" \
+  || { echo "✗ the vibenet rail grew a second door (prd §465) — the add slot must stay nil,"; echo "  since the paste field lives in the book and both slots would land there"; exit 1; }
 grep -q 'onOpenBook: { route.push(.vibenetAddressBook) }' "$SHELL_SURFACE" \
   || { echo "✗ the vibenet rail lost its Address Book slot (prd §465)"; exit 1; }
 
@@ -422,6 +431,49 @@ let a3 = VibenetActor(actorId: "m", authenticator: "0x3", kind: .p256,
                       scope: VibenetScope(raw: 0), expiry: 0)
 check("K1 leads, custom trails, regardless of actorId",
       VibenetAccountItem.orderedActors([a1, a3, a2]).map(\.actorId) == ["a", "m", "z"])
+
+// MARK: - policyLine — WHICH contract a gated key may call
+//
+// "Send to one contract" states the restriction; this is the half that makes
+// it meaningful. Every failure renders as an ordinary key row: a gated key
+// silently saying nothing, or — the one that matters — a key naming a manager
+// it is not actually gated to.
+
+print("")
+print("VibenetActor.policyLine — the contract a gated key is limited to")
+let mgrAddr = "0x813077055d1110f92191cce13018f51820b40ac1"
+let sessAddr = "0x813070914c530d030f4efd8fa99c18e836435e55"
+let knownMgrs = VibenetKnownPolicyManagers(policyManager: mgrAddr, sessionPolicy: sessAddr)
+func gated(_ scope: UInt16, _ manager: String?) -> VibenetActor {
+    VibenetActor(actorId: "a", authenticator: "0x1", kind: .p256,
+                 scope: VibenetScope(raw: scope), expiry: 0, policyManager: manager)
+}
+check("a gated key names a manager the config recognises",
+      gated(VibenetScope.policy, mgrAddr).policyLine(known: knownMgrs)
+        == "Limited to the policy manager")
+check("the session policy is named too — the config's other candidate",
+      gated(VibenetScope.policy, sessAddr).policyLine(known: knownMgrs)
+        == "Limited to the session policy")
+check("a manager this build cannot name falls back to its short address, never a label",
+      gated(VibenetScope.policy, "0xdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef").policyLine(known: knownMgrs)
+        == "Limited to …beef")
+// The gate is the SCOPE BIT, not the presence of a manager. A key that is not
+// policy-gated must never claim to be limited, however a manager got onto it —
+// that would invert the fact, telling someone a key that can send ANYWHERE is
+// restricted to one contract (§83, in the direction that reassures wrongly).
+check("a key WITHOUT the policy bit never claims to be limited",
+      gated(VibenetScope.sender, mgrAddr).policyLine(known: knownMgrs) == nil)
+check("an ADMIN never claims to be limited either",
+      gated(0, mgrAddr).policyLine(known: knownMgrs) == nil)
+check("a gated key whose manager did not read says nothing rather than guessing",
+      gated(VibenetScope.policy, nil).policyLine(known: knownMgrs) == nil)
+check("naming is case-insensitive — an RPC's hex casing is not a promise",
+      gated(VibenetScope.policy, mgrAddr.uppercased()).policyLine(known: knownMgrs)
+        == "Limited to the policy manager")
+check("a config that named no manager still resolves, by short address",
+      gated(VibenetScope.policy, mgrAddr)
+        .policyLine(known: VibenetKnownPolicyManagers(policyManager: nil, sessionPolicy: nil))
+        == "Limited to …0ac1")
 
 // MARK: - undeployedExplainer — the mechanism, on the one state that has one
 
@@ -1323,6 +1375,10 @@ mutate "a reserved scope bit must never be folded into the known set" \
 # The matrix's columns are ranked by REACH so the most-privileged key is
 # read first. Inverted, the card leads with the key that can do the LEAST —
 # which renders perfectly and buries the one worth looking at.
+mutate "a key without the POLICY bit must never claim to be limited" \
+  'guard scope.raw & VibenetScope.policy != 0, let manager = policyManager else { return nil }' \
+  'guard let manager = policyManager else { return nil }'
+
 mutate "an unreached account must never be told why it is undeployed" \
   'guard item.reached, !item.established else { return nil }' \
   'guard !item.established else { return nil }'
