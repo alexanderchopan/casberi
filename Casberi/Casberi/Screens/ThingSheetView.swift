@@ -106,20 +106,24 @@ struct ThingSheetView: View {
     /// tapped face has one destination whichever kind of face it is, so the
     /// two share the slot that already existed for the question.
     @State private var faceTarget: FaceTarget?
-    /// The vibenet account whose detail is open, by address (prd §476).
-    /// `String` is `Identifiable`, the `L2beatScreen`/`WalletbeatScreen`
-    /// shape — no wrapper type needed.
-    @State private var vibenetAccount: String?
 
     /// Where a tapped face leads.
     enum FaceTarget: Identifiable {
         case person(SocialProfile)
         case address(AddressBook.Entry)
+        /// A vibenet account, by address (prd §476). A CASE on the existing
+        /// face route rather than a `.sheet` of its own: this view already
+        /// carries three sibling `.sheet` modifiers and a fourth is the
+        /// half-open-then-close failure the file's own `fullScreenCover`
+        /// comment goes out of its way to avoid — caught by
+        /// `money-receipt-selftest`'s own guard when the first cut added one.
+        case vibenet(String)
 
         var id: String {
             switch self {
             case .person(let profile): return "person:\(profile.id)"
             case .address(let entry):  return "address:\(entry.id)"
+            case .vibenet(let address): return "vibenet:\(address)"
             }
         }
     }
@@ -995,14 +999,13 @@ struct ThingSheetView: View {
             switch target {
             case .person(let profile): SocialProfileCard(profile: profile)
             case .address(let entry):  AddressCard(entry: entry)
-            }
-        }
-        // A vibenet account's own detail (prd §476) — the honest destination
-        // for a key event's "Account" row, which until now opened the mainnet
-        // wallet's `AddressCard` for a devnet keystore address.
-        .sheet(item: $vibenetAccount) { address in
-            if let room = VibenetRoomSource.card() {
-                VibenetAccountSheet(address: address, room: room)
+            case .vibenet(let address):
+                // Composed from the cached room, the same synchronous door the
+                // feed head uses — `openVibenetAccount` has already proved the
+                // account is in it, so this cannot present an empty sheet.
+                if let room = VibenetRoomSource.card() {
+                    VibenetAccountSheet(address: address, room: room)
+                }
             }
         }
         // Walking a vault's own wikilink graph (2026-07-28) — a plain
@@ -2252,7 +2255,7 @@ struct ThingSheetView: View {
               let room = VibenetRoomSource.card(),
               room.items.contains(where: { $0.address.caseInsensitiveCompare(address) == .orderedSame })
         else { return }
-        vibenetAccount = address
+        faceTarget = .vibenet(address)
     }
 
     private func openAddressCard(_ address: String) {
