@@ -411,6 +411,24 @@ struct SourceChips: View {
                         head
                     }
                 }
+                // **PINNED SECTION HEADERS UNDID THE STRIP'S OWN HEIGHT
+                // (found 2026-08-24, hours after `LazyHStack`+`pinnedViews`
+                // landed above).** `MainSurface.topInset` measures this
+                // strip's NATURAL height through a sibling `GeometryReader`
+                // (`BandHeightKey`) so the feed's `.safeAreaInset` can reserve
+                // exactly that much air and no more. A `LazyHStack` carrying a
+                // pinned `Section` header reports back something close to the
+                // full PROPOSED height rather than its own rendered height —
+                // measured live at up to 778pt on an ~874pt device, i.e. the
+                // reservation ate the whole screen and the real feed rendered
+                // one row peeking in at the very bottom edge, unscrollable
+                // (the reservation, not the content, is what was frozen).
+                // `.fixedSize(vertical: true)` forces this subtree back to its
+                // own IDEAL height before `GeometryReader` ever sees it — the
+                // standard fix for a Lazy stack lying to an outer measurement,
+                // and cheap here since the strip's ideal height is a single
+                // row regardless of how many chips it holds.
+                .fixedSize(horizontal: false, vertical: true)
             }
             .onAppear {
                 if active != "All" { proxy.scrollTo(active, anchor: .center) }
