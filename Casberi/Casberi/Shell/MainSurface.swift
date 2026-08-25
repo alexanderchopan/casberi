@@ -498,21 +498,15 @@ struct MainSurface: View {
                     withAnimation(DS.Motion.standard) { chrome.vibenetScope = picked }
                 },
                 onReTap: nil,
-                // The same add slot the wallet rail carries, for the same
-                // reason: the setup screen is the ONLY door to watching
-                // another account, and a rail of the accounts you watch is
-                // exactly where you reach for one more.
-                addTitle: String(localized: "Watch an account"),
-                // The ADD slot no longer opens the setup page (prd §465):
-                // that page is the FIRST address and the disconnect now, so
-                // it has no field once the seat is connected — which is
-                // exactly when this rail exists. Both trailing slots lead to
-                // the book, which is where watching another account lives.
-                onAdd: { route.push(.vibenetAddressBook) },
-                // The door to the list this rail is showing you the faces of
-                // — the same slot the wallet rail carries, for the same
-                // reason. Here it opens the roster ITSELF rather than
-                // "everyone else": vibenet has one tier, not two.
+                // ONE slot, not two (prd §465, dropped 2026-08-24). Wallet's
+                // rail carries a "+" AND a book door because they lead to two
+                // DIFFERENT places — the roster's own field, and everyone
+                // else. Vibenet has one tier: watching another account and
+                // seeing the whole list are the same screen now, so a second
+                // slot pointing at the identical destination is chrome, not a
+                // choice. `addTitle`/`onAdd` deliberately left nil.
+                addTitle: nil,
+                onAdd: nil,
                 bookTitle: String(localized: "Address Book"),
                 onOpenBook: { route.push(.vibenetAddressBook) })
             .padding(.top, showsRail && !demoActive ? DS.Space.s2 : 0)
