@@ -860,6 +860,26 @@ struct VibenetRoom: Equatable, Codable {
     /// someone opens it — listing them here too printed "1 secp256k1 key,
     /// 1 P-256 key, 1 Passkey, 1 Delegate, 1 Custom authenticator" across
     /// two wrapped lines on the one screen meant to be a summary.
+    /// WHY an account is not established, and what ends it (prd §463, user:
+    /// *"for the not established rooms, need to say that they need to
+    /// complete their first transaction to deploy the account"*).
+    ///
+    /// `rowLine` says the STATE in three words because it is a row's
+    /// subtitle; a card has room for the mechanism, and without it "Not
+    /// established yet" reads as something the person is expected to fix
+    /// and given no way to. An EIP-8130 account is counterfactual until its
+    /// first transaction deploys it — the address is real and can already
+    /// hold funds before that happens, which is the part that surprises
+    /// people and is why the balance still draws above this line.
+    ///
+    /// nil for every other state: a reached, established account has
+    /// nothing to explain, and an UNREACHED one must not be told why it is
+    /// undeployed when the truth is that we could not look (§83).
+    static func undeployedExplainer(_ item: VibenetAccountItem) -> String? {
+        guard item.reached, !item.established else { return nil }
+        return String(localized: "The account deploys with its first transaction — until then there's nothing to read. We check on every refresh.")
+    }
+
     static func rowLine(_ item: VibenetAccountItem) -> String {
         guard item.reached else { return String(localized: "Couldn't reach the chain") }
         guard item.established else { return String(localized: "Not established yet") }

@@ -354,6 +354,26 @@ let a3 = VibenetActor(actorId: "m", authenticator: "0x3", kind: .p256,
 check("K1 leads, custom trails, regardless of actorId",
       VibenetAccountItem.orderedActors([a1, a3, a2]).map(\.actorId) == ["a", "m", "z"])
 
+// MARK: - undeployedExplainer — the mechanism, on the one state that has one
+
+print("")
+print("VibenetRoom.undeployedExplainer — why an account is not established")
+func acctState(reached: Bool, established: Bool) -> VibenetAccountItem {
+    VibenetAccountItem(address: "0xaa", reached: reached, established: established,
+                       actors: [], locked: false, hasInitiatedUnlock: false,
+                       unlocksAt: nil, unlockDelay: nil)
+}
+check("an undeployed account is told what deploys it",
+      (VibenetRoom.undeployedExplainer(acctState(reached: true, established: false)) ?? "")
+        .contains("first transaction"))
+check("an established account has nothing to explain",
+      VibenetRoom.undeployedExplainer(acctState(reached: true, established: true)) == nil)
+// The §83 half: an UNREACHED account must never be told why it is undeployed,
+// because the truth is that we could not look. Conflating the two is exactly
+// what `rowLine` keeps apart, and this must not undo it one line below.
+check("an UNREACHED account is never told it is undeployed — we could not look",
+      VibenetRoom.undeployedExplainer(acctState(reached: false, established: false)) == nil)
+
 // MARK: - alphabetical — the roster's order, and deliberately not a ranking
 
 print("")
@@ -1234,6 +1254,10 @@ mutate "a reserved scope bit must never be folded into the known set" \
 # The matrix's columns are ranked by REACH so the most-privileged key is
 # read first. Inverted, the card leads with the key that can do the LEAST —
 # which renders perfectly and buries the one worth looking at.
+mutate "an unreached account must never be told why it is undeployed" \
+  'guard item.reached, !item.established else { return nil }' \
+  'guard !item.established else { return nil }'
+
 mutate "scope 0 must name itself, never expand into the named bits" \
   'guard !isAdmin else { return [String(localized: "Admin")] }
         return VibenetScope.named.filter { raw & $0.bit != 0 }.map(\.plain)' \

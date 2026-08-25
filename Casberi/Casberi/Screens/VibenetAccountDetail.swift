@@ -120,9 +120,22 @@ struct VibenetAccountDetail: View {
             // answer, the account isn't established, or it is and holds
             // no key this build can see. An established account WITH
             // keys says nothing here — the Keys section is the answer.
-            Text(VibenetRoom.rowLine(item))
-                .dsText(.heading17)
-                .foregroundStyle(DS.textSecondary)
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                Text(VibenetRoom.rowLine(item))
+                    .dsText(.heading17)
+                    .foregroundStyle(DS.textSecondary)
+                // The MECHANISM, on the one state that has one. Without it
+                // "Not established yet" reads as something the person is
+                // expected to fix and handed no way to — and the balance
+                // above it, which an undeployed address really can hold, has
+                // no explanation for how it got there.
+                if let why = VibenetRoom.undeployedExplainer(item) {
+                    Text(why)
+                        .dsText(.callout15)
+                        .foregroundStyle(DS.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
         }
     }
 
@@ -427,6 +440,26 @@ struct VibenetAccountDetail: View {
     /// long-press.
     private var doorsSection: some View {
         HStack(spacing: DS.Space.s3) {
+            // Shown ONLY while the account is undeployed, and only when the
+            // live config actually named a faucet. `faucetAddress` has been
+            // parsed since this seat shipped and read by nothing — the one
+            // door the state above can offer, since an account deploys on its
+            // first transaction and a devnet address needs funds to make one.
+            // A hand-off to the explorer, never a write.
+            if VibenetRoom.undeployedExplainer(item) != nil,
+               let faucet = VibenetConfig.cached()?.faucetAddress,
+               let url = URL(string: VibenetExplorer.address(faucet)) {
+                Link(destination: url) {
+                    HStack(spacing: 4) {
+                        Text(String(localized: "Devnet faucet"))
+                        Image(systemName: "arrow.up.right")
+                    }
+                    .dsText(.label12).fontWeight(.semibold)
+                    .foregroundStyle(Self.mark)
+                    .lineLimit(1)
+                    .fixedSize()
+                }
+            }
             Link(destination: URL(string: VibenetExplorer.address(item.address))!) {
                 HStack(spacing: 4) {
                     Text(String(localized: "Explorer"))
