@@ -77,8 +77,9 @@ import SwiftUI
 /// literally be in the row above… i think what we want to say on the all
 /// page is perhaps N accounts and balance, then the keys, then the
 /// events."* So the feed room draws NO face at all: a plain stat block
-/// (`balanceAggregateSection` — account/lock count, a native-balance total,
-/// per-symbol token totals) stands in for the chip strip, and the mapping
+/// (a native-balance crown over its own chart, plus per-symbol token
+/// totals — `balanceCard`/`holdingsCard` since §464 split them onto
+/// separate surfaces) stands in for the chip strip, and the mapping
 /// section that briefly lived on this card moved OFF it entirely, onto
 /// `VibenetAccountDetail`'s own hub diagram — the user settled on "N
 /// accounts and balance, then keys, then events" as the COMPLETE list for
@@ -104,7 +105,7 @@ struct VibenetRoomCard: View {
     var onRename: (String) -> Void = { _ in }
     /// nil in the FEED room — a roster row must never navigate there (see
     /// this type's own header doc), so the whole roster draws as a plain
-    /// stat block instead (`balanceAggregateSection`, no faces, no
+    /// stat block instead (`stackedRoom`'s cards, no faces, no
     /// per-account rows). Non-nil in `VibenetScreen`'s OWN roster, the
     /// correct analog of Wallet's Address Book, where a tap opens
     /// `VibenetAccountSheet` exactly as before — the sheet's item is the
@@ -145,6 +146,86 @@ struct VibenetRoomCard: View {
     /// most any of them can have) — the shape "All" already had, just
     /// with the lead promoted instead of stacked into a single sentence.
     var body: some View {
+        Group {
+            if stacksIntoCards {
+                stackedRoom
+            } else {
+                oneSurface
+            }
+        }
+        // The one-account detail carries its own doors and history — its
+        // remaining verbs (rename, stop watching) live on a long-press,
+        // matching the roster row's own contextMenu below rather than
+        // adding a second visible control competing with `RoomGear` for
+        // the same corner.
+        .modifier(VibenetDetailContextMenu(
+            address: room.items.count == 1 ? room.lead?.address : nil,
+            onRename: onRename, onRemove: onRemove))
+    }
+
+    /// **THE FEED ROOM IS SEVERAL CARDS, NOT ONE (prd §464, 2026-08-25 —
+    /// direction B of three the user picked from).**
+    ///
+    /// It was one `dsWidgetSurface` wrapping a crown, a chart, a holdings
+    /// block, six permission rows, a delegate spine and a provenance note.
+    /// Reported as "some hodge podge put together view… we need more
+    /// separation between things, needs to look less jumbled", and the
+    /// diagnosis is in the container rather than in any of its contents:
+    /// six unrelated readings inside one box read as one object that will
+    /// not parse, however well each is drawn.
+    ///
+    /// So the box is what changes. Each reading gets its OWN surface with
+    /// real air between them — separation by surface, which is the
+    /// direction chosen over separation by space (no cards at all) and by
+    /// tap (three summary rows that open their own screens). One card, one
+    /// job, one header.
+    ///
+    /// Scoped to the feed room's aggregate shape ONLY: `VibenetScreen`'s
+    /// roster (`onOpen != nil`) is a management list where one surface is
+    /// right, and the single-account branch hands off to
+    /// `VibenetAccountDetail`, which owns its own anatomy.
+    private var stacksIntoCards: Bool {
+        onOpen == nil && room.lead != nil && room.items.count > 1
+    }
+
+    @ViewBuilder
+    private var stackedRoom: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s3) {
+            balanceCard
+            holdingsCard
+            keysCard
+            linkedCard
+            // OUTSIDE the cards, and quieter for it. Provenance is a fact
+            // about the whole room rather than about any one reading, so a
+            // card of its own would make a section out of a footnote.
+            if let note = VibenetRoom.note(room, drawn: drawn.count) {
+                Text(note)
+                    .dsText(.label12)
+                    .foregroundStyle(DS.textTertiary)
+                    .padding(.horizontal, DS.Space.s2)
+            }
+        }
+    }
+
+    /// The surface every stacked card wears — one definition, so four cards
+    /// cannot drift into four slightly different boxes.
+    @ViewBuilder
+    private func card<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 0) { content() }
+            .padding(DS.Space.s4)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .dsWidgetSurface()
+            // CLIPPED TO ITS OWN SHAPE, because one card deliberately bleeds
+            // its chart past the padding (`balanceCard`). `dsWidgetSurface`
+            // paints a rounded background but does not clip what is drawn on
+            // top of it, so without this the sparkline ran out through the
+            // card's rounded corners to the screen edge — the fill squaring
+            // off exactly where the card curves.
+            .clipShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
+    }
+
+    /// Everything that is NOT the stacked feed room, exactly as it was.
+    private var oneSurface: some View {
         VStack(alignment: .leading, spacing: 0) {
             if let lead = room.lead, room.items.count == 1 {
                 // `room` reaching this branch may be SCOPED to just this
@@ -196,12 +277,14 @@ struct VibenetRoomCard: View {
                         }
                         .padding(.top, DS.Space.s3)
                     }
-                } else {
-                    // The feed room (2026-08-24, corrected twice the same
-                    // day — see this type's own header doc): "N accounts
-                    // and balance", no face anywhere in this branch.
-                    balanceAggregateSection
                 }
+                // NO `else`. The feed room's aggregate shape is the STACKED
+                // one now (§464) — `stacksIntoCards` catches exactly
+                // `onOpen == nil && count > 1`, so the branch that used to
+                // draw a single combined stat block here is unreachable, and
+                // the block itself is gone rather than left as a second
+                // definition of the same reading for someone to find and
+                // wire back up.
                 keysAggregateSection
                 linkedAccountsSection
                     .padding(.top, DS.Space.s4)
@@ -234,49 +317,28 @@ struct VibenetRoomCard: View {
         .padding(DS.Space.s4)
         .frame(maxWidth: .infinity, alignment: .leading)
         .dsWidgetSurface()
-        // The one-account detail carries its own doors and history — its
-        // remaining verbs (rename, stop watching) live on a long-press,
-        // matching the roster row's own contextMenu below rather than
-        // adding a second visible control competing with `RoomGear` for
-        // the same corner.
-        .modifier(VibenetDetailContextMenu(
-            address: room.items.count == 1 ? room.lead?.address : nil,
-            onRename: onRename, onRemove: onRemove))
     }
 
-    // MARK: - Balance stat block (the feed room's own roster, 2026-08-24)
+    // MARK: - The four stacked cards (prd §464, direction B)
 
-    /// "N accounts and balance" — the user's own words. No face anywhere
-    /// (see this type's header doc for why: `VibenetScopeRail` pinned
-    /// above already shows every one), and silent piece by piece: no
-    /// native reading anywhere draws no native line, no token balance
-    /// anywhere draws no chips, a `lockedCount` of zero is a real state
-    /// and simply never printed (`VibenetBalanceAggregate.plainLine`'s own
-    /// rule) — never an invented "0 locked"/"0 ETH" (§83).
-    /// The crown, in Wallet's own order (prd §463): caption, then the big
-    /// number, then the standing beneath it. It shipped inverted — a
-    /// `heading17` account count ABOVE a `stat24` figure whose caption came
-    /// after it — so the room led with an inventory line and the reader met
-    /// the money as an afterthought. Wallet's crown has answered this exact
-    /// question for a year: the caption says WHOSE, the number is the biggest
-    /// thing on the card, the standing is quiet underneath.
+    /// THE CROWN, and the chart it sits over. Holdings moved out to their
+    /// own card — the crown answers "how much", the holdings block answers
+    /// "in what", and stacking two answers inside one box is the jumble
+    /// this direction exists to undo.
     ///
-    /// NO SPARKLINE AND NO DELTA, deliberately. The design calls for both and
-    /// this bridge records no per-account value history — `WalletStore`'s
-    /// `ValueSample` has no vibenet counterpart — so a line here would be
-    /// drawn from a single reading, which is a flat line, which reads as
-    /// "went to zero". Absent until the history exists.
+    /// The chart BLEEDS to the card's edges (negative insets cancelling the
+    /// card's own padding), so it reads as the card's floor rather than as
+    /// a picture sitting inside a margin — the one place a full-bleed is
+    /// right here, because a balance chart's whole job is the shape of the
+    /// line and every pixel of width is more of it.
     @ViewBuilder
-    private var balanceAggregateSection: some View {
+    private var balanceCard: some View {
         if let aggregate = VibenetBalanceAggregation.compose(room.items) {
-            VStack(alignment: .leading, spacing: 0) {
+            card {
                 Text(String(localized: "Across your accounts"))
                     .dsText(.label12)
                     .foregroundStyle(DS.textTertiary)
                 if let nativeTotal = aggregate.nativeTotal {
-                    // `price40`, the crown rung — this is the room's one
-                    // biggest thing, and `stat24` left it the same size as
-                    // an ordinary card statistic.
                     Text("\(VibenetBalanceFormat.line(nativeTotal)) ETH")
                         .dsText(.price40)
                         .foregroundStyle(DS.textPrimary)
@@ -285,9 +347,6 @@ struct VibenetRoomCard: View {
                         .minimumScaleFactor(0.6)
                         .padding(.top, 2)
                 }
-                // The move, in words and one accent — Wallet's own move line,
-                // and its own flat rule: a change that rounds to nothing gets
-                // no arrow and no colour, because it has no direction.
                 if let change = VibenetValueHistory.delta(history) {
                     HStack(spacing: 5) {
                         Image(systemName: change >= 0 ? "arrowtriangle.up.fill" : "arrowtriangle.down.fill")
@@ -307,45 +366,107 @@ struct VibenetRoomCard: View {
                     .foregroundStyle(DS.textTertiary)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.top, 2)
-                // The line the crown sits over. Drawn only from two or more
-                // real readings — one point is a flat line, and a flat line
-                // on a balance chart reads as "went to zero".
                 if let series = VibenetValueHistory.series(history) {
                     TokenChartPlot(chart: TokenChart(closes: series,
                                                      price: series.last ?? 0,
                                                      change: VibenetValueHistory.delta(history) ?? 0),
                                    accent: TokenChartStyle.accent(
                                        change: VibenetValueHistory.delta(history) ?? 0, scheme: scheme),
-                                   height: 90, pulses: false,
+                                   height: 96, pulses: false,
                                    lineWidth: 2.6, fillOpacity: 0.24, endpointDot: true)
-                        .padding(.top, DS.Space.s2)
+                        .padding(.top, DS.Space.s3)
+                        .padding(.horizontal, -DS.Space.s4)
+                        .padding(.bottom, -DS.Space.s4)
                 }
-                if !aggregate.tokenTotals.isEmpty {
-                    tokenTreemap(aggregate)
+            }
+        }
+    }
+
+    /// WHAT THE ACCOUNTS HOLD. Silent for a single asset — the crown above
+    /// already states it, and `VibenetBalanceTreemap` returns nothing there
+    /// for exactly that reason, so this card never draws an empty box.
+    @ViewBuilder
+    private var holdingsCard: some View {
+        if let aggregate = VibenetBalanceAggregation.compose(room.items) {
+            let cells = VibenetBalanceTreemap.cells(aggregate)
+            if !cells.isEmpty {
+                card {
+                    Text(String(localized: "Holdings"))
+                        .dsText(.label12)
+                        .foregroundStyle(DS.textTertiary)
+                    VibenetHoldingsBlock(cells: cells, reduceMotion: reduceMotion)
                         .padding(.top, DS.Space.s3)
                 }
             }
         }
     }
 
-    /// What the accounts hold, as areas rather than a capsule row — the
-    /// design's treemap, and the app's own `DS.ink(magnitude:)` ramp, so this
-    /// reads as the same family of object as every other treemap here. NO
-    /// HUE: magnitude is the only thing area or tone may carry (the TokenHue
-    /// deletion ruling), and these are three different assets with no shared
-    /// unit to rank across, so the native holding simply leads at the size
-    /// its own share earns.
-    ///
-    /// Native ETH is the lead cell and the tokens stack beside it. They are
-    /// NEVER summed — no price feed here, so the areas state each asset's
-    /// own share of its own total rather than implying one converted figure.
-    /// The holdings block — see `VibenetHoldingsBlock`, which owns the whole
-    /// of its geometry and is shared with the scoped account detail so
-    /// narrowing the room cannot change how holdings are drawn.
+    /// THE KEYS. `plainLine` is the header rather than a "Keys" label above
+    /// it: it is a composed sentence that already names both counts, and
+    /// putting "Keys" over "8 keys authorized across 3 accounts" says the
+    /// word twice. The card boundary is what provides the separation in
+    /// this direction — a label would be a second one.
     @ViewBuilder
-    private func tokenTreemap(_ aggregate: VibenetBalanceAggregate) -> some View {
-        VibenetHoldingsBlock(cells: VibenetBalanceTreemap.cells(aggregate),
-                             reduceMotion: reduceMotion)
+    private var keysCard: some View {
+        if let aggregate = VibenetKeyAggregation.compose(room.items, now: .now) {
+            card {
+                Text(aggregate.plainLine)
+                    .dsText(.heading17)
+                    .foregroundStyle(DS.textPrimary)
+                    .fixedSize(horizontal: false, vertical: true)
+                let policies = VibenetPolicyAggregation.compose(room.items)
+                if !policies.isEmpty {
+                    VStack(alignment: .leading, spacing: 0) {
+                        ForEach(Array(policies.enumerated()), id: \.offset) { index, entry in
+                            HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                                Text(entry.label)
+                                    .dsText(.body17)
+                                    .foregroundStyle(DS.textPrimary)
+                                    .lineLimit(1)
+                                Spacer(minLength: DS.Space.s2)
+                                Text("\(entry.count)")
+                                    .dsText(.subhead13)
+                                    .foregroundStyle(DS.textSecondary)
+                                    .monospacedDigit()
+                            }
+                            .padding(.vertical, 5)
+                            .chartArrival(index: index, reduceMotion: reduceMotion)
+                        }
+                    }
+                    .padding(.top, DS.Space.s2)
+                }
+                if let soonest = aggregate.soonestExpiry {
+                    Text(soonest.line(now: .now))
+                        .dsText(.label12).fontWeight(.semibold)
+                        .foregroundStyle(Self.mark)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.top, DS.Space.s2)
+                }
+            }
+        }
+    }
+
+    /// WHO CAN ACT FOR WHOM. Silent when there are no links, so a room
+    /// where nobody delegates never grows an empty fourth card.
+    @ViewBuilder
+    private var linkedCard: some View {
+        let links = VibenetAccountMapping.links(room.items)
+        if !links.isEmpty {
+            card {
+                Text(String(localized: "Linked accounts"))
+                    .dsText(.label12)
+                    .foregroundStyle(DS.textTertiary)
+                VibenetLinkSpine(links: links,
+                                 name: { Self.displayName($0) },
+                                 reduceMotion: reduceMotion)
+                    .padding(.top, DS.Space.s2)
+                Text(String(localized: "Who can act for whom, read from the keystore."))
+                    .dsText(.subhead13)
+                    .foregroundStyle(DS.textTertiary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, DS.Space.s2)
+            }
+        }
     }
 
     /// KEYS, BY WHAT THEY CAN DO (prd §463). This shipped as taxonomy — "4

@@ -36,7 +36,11 @@ struct VibenetLinkSpine: View {
     /// Row pitch. Tall enough that two adjacent faces read as separate nodes
     /// and tight enough that four links stay inside a card.
     private static let pitch: CGFloat = 34
-    private static let faceSize: CGFloat = 18
+    /// `badge` — the ramp's smallest rung, and the right one: these sit
+    /// beside dense inline text as MARKS identifying a node, never as
+    /// portraits. Caught by `face-ramp-audit`, which is what the ramp is
+    /// for: the first cut invented an 18pt face, off the ramp entirely.
+    private static let faceSize: CGFloat = DS.Face.badge
     /// How far the two columns sit apart, as a share of the width. The ribbon
     /// needs a real run to read as a connection rather than a hyphen.
     private static let leftColumn: CGFloat = 0.42
