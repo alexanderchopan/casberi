@@ -448,6 +448,11 @@ enum DemoSeedAll {
         // ends on the fixture's total, which is not their balance. Dropped
         // whole, and it refills from their own next sweep.
         VibenetValueStore.forget()
+        // …and the contracts the demo cached (prd §476), or a real install
+        // that has never connected vibenet keeps a demo's faucet address
+        // behind its own undeployed accounts. A live install re-fetches on its
+        // next sweep, so this can only ever cost a cache miss.
+        VibenetConfig.forgetCache()
         // And the seen-keys ledger, for the same reason and one step
         // stronger: the demo fixture's four addresses are not theirs, so a
         // ledger left behind would diff a real roster against a demo's.
@@ -3203,6 +3208,13 @@ enum DemoSeedAll {
     /// SHAPE is `VibenetDemoHistoryShape`, pure and harness-held; this only
     /// writes it into the store the shipped app records into.
     private static func seedVibenetHistory() {
+        // THE CONTRACTS FIRST (prd §476). The fixture's undeployed account
+        // states its explainer from `VibenetRoom.undeployedExplainer`, which
+        // needs nothing — but the faucet door beside it is gated on the cached
+        // config naming a faucet, and a demo install has never fetched one. So
+        // the demo drew the problem and withheld the button that answers it.
+        // See `VibenetConfig.seedDemo`.
+        VibenetConfig.seedDemo()
         VibenetValueStore.replace(VibenetDemoHistoryShape.samples(now: .now))
         // Per account too, or picking a face on the rail drops the curve the
         // aggregate just showed — the scoped room reads its OWN series (see

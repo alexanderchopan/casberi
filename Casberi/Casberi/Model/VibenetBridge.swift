@@ -101,6 +101,48 @@ enum VibenetConfig {
         return try? JSONDecoder().decode(VibenetContracts.self, from: data)
     }
 
+    /// THE DEMO'S CONTRACTS (2026-08-25, prd §476).
+    ///
+    /// The demo fixture carries an account that is reached but NOT established
+    /// — the undeployed case — and §476 put its explainer and its faucet door
+    /// on the accounts card, where somebody would actually meet it. The
+    /// explainer drew; **the faucet could not**, because that door is gated on
+    /// `cached()?.faucetAddress` and nothing had ever written a config in demo
+    /// mode: `cached()` reads what a LIVE fetch last stored, and a demo
+    /// install has never made one. So the demo showed the problem and withheld
+    /// the one button that answers it — exactly the "demo has less than the
+    /// app" gap `verify.sh`'s own demo-parity step exists to catch.
+    ///
+    /// Written through the same `store` the live fetch uses rather than a
+    /// demo-only key, so the demo exercises the REAL read path; `forget()`
+    /// takes it away again on teardown, and a real config simply overwrites
+    /// it on the next fetch (the cache is a cache).
+    ///
+    /// Addresses are the fixture's own shape — deliberately NOT starting
+    /// `0x8130`, vibenet's vanity prefix, for `demoFixture`'s stated reason:
+    /// the drift guard forbidding a hardcoded vibenet contract address cannot
+    /// tell a demo fixture from a live call, and should not have to.
+    static func seedDemo() {
+        store(VibenetContracts(
+            branch: "main", commit: "a9ae95e1b",
+            faucetAddress: "0xfafa1111222233334444555566667777888899fa",
+            keystore: "0x9999111122223333444455556666777788889999",
+            defaultAccount: nil, canonicalHighRatePayerAccount: nil,
+            p256Authenticator: "0xaaaa1111222233334444555566667777888899aa",
+            webAuthnAuthenticator: "0xbbbb1111222233334444555566667777888899bb",
+            delegateAuthenticator: "0xcccc1111222233334444555566667777888899cc",
+            policyManager: "0xdddd1111222233334444555566667777888899dd",
+            sessionPolicy: "0xeeee1111222233334444555566667777888899ee",
+            usdv: nil, nfv: nil, vibecheck: nil))
+    }
+
+    /// Drops the cached config — demo teardown's own call. A live install
+    /// re-fetches on its next sweep, so this is only ever a cache miss.
+    static func forgetCache() {
+        UserDefaults.standard.removeObject(forKey: cacheKey)
+        UserDefaults.standard.removeObject(forKey: fetchedAtKey)
+    }
+
     private static func store(_ contracts: VibenetContracts) {
         guard let data = try? JSONEncoder().encode(contracts) else { return }
         UserDefaults.standard.set(data, forKey: cacheKey)

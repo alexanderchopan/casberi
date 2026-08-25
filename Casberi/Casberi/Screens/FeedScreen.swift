@@ -404,32 +404,18 @@ struct FeedScreen: View {
         }
     }
     @State private var feedSheet: FeedSheetRoute?
-    /// Which permission the key tray opens scrolled to, or nil for the top
-    /// (prd §471). A census row's chevron promises those keys, not the whole
-    /// roster; the tray still SHOWS every section (see `VibenetKeyTraySheet
-    /// .focus` for why it scrolls rather than filters).
-    ///
-    /// **Held BESIDE `feedSheet` rather than as a second associated value on
-    /// `FeedSheetRoute.vibenetKeys`.** Sound as one variable because the tray
-    /// is MODAL: it covers the card that sets it, so there is no way to pick
-    /// a second permission while the first is still presenting, and
-    /// `.sheet(item:)` never has to tell two focuses apart. It is written on
-    /// every open, the headline's nil included, so a focus can never be left
-    /// over from a previous tap.
-    ///
-    /// It began as an associated value and was moved here while chasing a
-    /// type-checker budget failure that turned out to have nothing to do with
-    /// it — see `roomHead` for what the cause actually was. Left as state
-    /// because the modal argument above stands on its own; the enum would
-    /// work equally well now.
-    @State private var vibenetKeyFocus: String?
 
-    /// Hands `VibenetRoomCard` its key-tray door, already bound to this
-    /// room's accounts (prd §471).
-    private func vibenetKeysOpener(_ items: [VibenetAccountItem]) -> (String?) -> Void {
-        { focus in
-            vibenetKeyFocus = focus
-            feedSheet = .vibenetKeys(items)
+    /// Scope the vibenet room to one account — the Accounts card's row tap
+    /// and the linked spine's node tap (prd §476), the same write
+    /// `VibenetScopeRail` makes.
+    ///
+    /// A stored closure rather than an inline one at the call site, for the
+    /// reason `roomHead`'s own note records: `listBody`'s List is one
+    /// expression and closure literals in it have already tipped the
+    /// type-checker's budget once.
+    private var vibenetScoper: (String) -> Void {
+        { address in
+            withAnimation(DS.Motion.standard) { chrome.vibenetScope = address }
         }
     }
 
@@ -2400,7 +2386,7 @@ struct FeedScreen: View {
             VibenetKeyTraySheet(items: items, onPick: { address in
                 feedSheet = nil
                 chrome.vibenetScope = address
-            }, focus: vibenetKeyFocus)
+            })
         }
     }
 
@@ -3159,7 +3145,8 @@ struct FeedScreen: View {
                     // everyone's — the same "click all you see all" rule the
                     // cards above it follow.
                     VibenetRoomCard(room: room, onRemove: { _ in },
-                                    onOpenKeys: vibenetKeysOpener(room.items))
+                                    onOpenKeys: { feedSheet = .vibenetKeys(room.items) },
+                                    onScope: vibenetScoper)
                 case .altana(let card):
                     AltanaRoomCard(card: card) {
                         // The door is Altana's own explorer — the only place a

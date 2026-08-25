@@ -106,6 +106,10 @@ struct ThingSheetView: View {
     /// tapped face has one destination whichever kind of face it is, so the
     /// two share the slot that already existed for the question.
     @State private var faceTarget: FaceTarget?
+    /// The vibenet account whose detail is open, by address (prd §476).
+    /// `String` is `Identifiable`, the `L2beatScreen`/`WalletbeatScreen`
+    /// shape — no wrapper type needed.
+    @State private var vibenetAccount: String?
 
     /// Where a tapped face leads.
     enum FaceTarget: Identifiable {
@@ -546,7 +550,16 @@ struct ThingSheetView: View {
                 if let facts = vibenetEventFacts {
                     VibenetEventCard(facts: facts,
                                      lead: nil,
-                                     onAccount: openAddressCard)
+                                     // THE VIBENET ACCOUNT, not the wallet
+                                     // address card (2026-08-25, prd §476).
+                                     // `openAddressCard` opens `AddressCard`,
+                                     // which is the MAINNET address book's own
+                                     // detail — balances, connections, watch
+                                     // state — none of which describes a devnet
+                                     // keystore account, and none of which this
+                                     // bridge feeds. The account's real detail
+                                     // is `VibenetAccountSheet`, one door over.
+                                     onAccount: openVibenetAccount)
                         .padding(.horizontal, DS.Space.s4)
                         .padding(.top, DS.Space.s3)
                         .settleIn(delay: 0.08)
@@ -982,6 +995,14 @@ struct ThingSheetView: View {
             switch target {
             case .person(let profile): SocialProfileCard(profile: profile)
             case .address(let entry):  AddressCard(entry: entry)
+            }
+        }
+        // A vibenet account's own detail (prd §476) — the honest destination
+        // for a key event's "Account" row, which until now opened the mainnet
+        // wallet's `AddressCard` for a devnet keystore address.
+        .sheet(item: $vibenetAccount) { address in
+            if let room = VibenetRoomSource.card() {
+                VibenetAccountSheet(address: address, room: room)
             }
         }
         // Walking a vault's own wikilink graph (2026-07-28) — a plain
@@ -2219,6 +2240,21 @@ struct ThingSheetView: View {
     /// a face must not quietly file a stranger's address in your book. The card
     /// reads `book.entry(for:) ?? entry`, so it upgrades itself the moment the
     /// address really is named from inside it.
+    /// A vibenet event's account door (prd §476).
+    ///
+    /// Nil-safe by construction: `VibenetRoomSource.card()` is the cached
+    /// snapshot the feed head already draws from, so this costs no read — and
+    /// where the account is not in it (unwatched, or no read has landed on
+    /// this device yet) the sheet simply does not rise, rather than opening a
+    /// detail about an account nothing knows anything about.
+    private func openVibenetAccount(_ address: String) {
+        guard !address.isEmpty,
+              let room = VibenetRoomSource.card(),
+              room.items.contains(where: { $0.address.caseInsensitiveCompare(address) == .orderedSame })
+        else { return }
+        vibenetAccount = address
+    }
+
     private func openAddressCard(_ address: String) {
         guard !address.isEmpty else { return }
         faceTarget = .address(

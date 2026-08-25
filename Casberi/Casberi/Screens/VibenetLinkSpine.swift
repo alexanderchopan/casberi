@@ -31,6 +31,10 @@ struct VibenetLinkSpine: View {
     /// How an address is named. Handed in rather than resolved here, so this
     /// figure can never name an account differently from the roster above it.
     let name: (String) -> String
+    /// Scope the room to a tapped node, or nil where there is nowhere to go
+    /// (prd §476). nil keeps every node a plain read rather than pretending
+    /// at a door — the same rule the key tray's own rows follow.
+    var onPick: ((String) -> Void)? = nil
     let reduceMotion: Bool
 
     /// Row pitch. Tall enough that two adjacent faces read as separate nodes
@@ -104,21 +108,53 @@ struct VibenetLinkSpine: View {
                         alignment: HorizontalAlignment, emphasised: Bool) -> some View {
         VStack(alignment: alignment, spacing: 0) {
             ForEach(Array(addresses.enumerated()), id: \.offset) { index, address in
-                HStack(spacing: 7) {
-                    WalletFace(address: address, size: Self.faceSize, circular: true)
-                    Text(name(address))
-                        .dsText(.callout15)
-                        .fontWeight(emphasised ? .semibold : .regular)
-                        .foregroundStyle(emphasised ? DS.textPrimary : DS.textSecondary)
-                        .lineLimit(1)
-                        .truncationMode(.tail)
-                }
-                .frame(height: Self.pitch, alignment: .leading)
-                .chartArrival(index: index, reduceMotion: reduceMotion)
+                node(address, emphasised: emphasised)
+                    .frame(height: Self.pitch, alignment: .leading)
+                    .chartArrival(index: index, reduceMotion: reduceMotion)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .offset(x: x)
+    }
+
+    /// One node — a door when the caller gave us somewhere to go, a plain
+    /// read otherwise. §295's same-weight ruling survives either way: a
+    /// tappable node is not a ranked one, and nothing here is sized or
+    /// coloured differently for carrying a handler.
+    @ViewBuilder
+    private func node(_ address: String, emphasised: Bool) -> some View {
+        Group {
+            if let onPick {
+                Button {
+                    DSHaptic.selection()
+                    onPick(address)
+                } label: {
+                    nodeBody(address, emphasised: emphasised).contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .dsHover()
+            } else {
+                nodeBody(address, emphasised: emphasised)
+            }
+        }
+    }
+
+    /// The two columns keep their DIFFERENT weights, which is not a ranking
+    /// and so not §295's business: the left column is who ACTS and the right
+    /// is the account acted for, and the weight is what tells a reader which
+    /// side of the sentence a node is on before any name is read. Making both
+    /// primary (a slip while wiring the tap) turned the figure into two
+    /// identical columns joined by lines.
+    private func nodeBody(_ address: String, emphasised: Bool) -> some View {
+        HStack(spacing: 7) {
+            WalletFace(address: address, size: Self.faceSize, circular: true)
+            Text(name(address))
+                .dsText(.callout15)
+                .fontWeight(emphasised ? .semibold : .regular)
+                .foregroundStyle(emphasised ? DS.textPrimary : DS.textSecondary)
+                .lineLimit(1)
+                .truncationMode(.tail)
+        }
     }
 
     private func rowCentre(_ row: Int) -> CGFloat {

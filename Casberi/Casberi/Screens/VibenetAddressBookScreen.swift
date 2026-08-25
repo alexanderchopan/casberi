@@ -131,12 +131,36 @@ struct VibenetAddressBookScreen: View {
                 .dsSlabSection()
                 .listRowSeparator(.hidden)
             } else {
+                // **A TEXT BUTTON, NOT A SLAB (2026-08-25, prd §476).**
+                // Reported: *"in address book the 'find another account' is
+                // designed poorly."* It was a `DSSlabDoor` on a clear row —
+                // a full-width slab floating between the watch field's own
+                // slab section and the roster card, belonging to neither and
+                // matching nothing else on the screen.
+                //
+                // This screen already has the right pattern for a quiet
+                // secondary verb, three rows up: the "More Base Vibenet
+                // demos ↗" link under the watch field. Same rung, same
+                // weight, same tint — so the screen has ONE way of saying
+                // "here is something else you can do" instead of two.
                 Section {
-                    DSSlabDoor(title: String(localized: "Find another account"),
-                               detail: String(localized: "Recently created on vibenet")) {
+                    Button {
                         DSHaptic.selection()
                         withAnimation(DS.Motion.standard) { showDiscovery = true }
+                    } label: {
+                        HStack(spacing: 3) {
+                            Text(String(localized: "Find another account"))
+                            Image(systemName: "chevron.down")
+                                .dsGlyph(9, weight: .semibold)
+                        }
+                        .dsText(.label12).fontWeight(.semibold)
+                        .foregroundStyle(Self.mark)
+                        .lineLimit(1)
+                        .fixedSize()
+                        .contentShape(Rectangle())
                     }
+                    .buttonStyle(.plain)
+                    .dsHover()
                 }
                 .listRowInsets(EdgeInsets(top: 0, leading: DS.Space.s4,
                                           bottom: 0, trailing: DS.Space.s4))

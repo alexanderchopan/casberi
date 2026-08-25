@@ -33114,3 +33114,150 @@ surface), that the chips read each account's OWN history and stay gated on
 — exactly what a screenshot settles in seconds and no static check can. The
 guards prove the modifiers are present, never that the result reads as
 cohesive with Wallet beside it.
+
+## 476. Seven things between a person and "the accounts and their keys" (user: "now lets say a user's goal is to quickly see the accounts and keys are we doing the best design we can for them?", then "do all of these, but i like having the linked accounts as a card to see", 2026-08-25)
+
+Seven reports against one goal. Two of them were not what they looked like,
+and the difference changed the fix — the standing reason this room's passes
+open by reading rather than grepping (§412/§418, sixth instance).
+
+### 1. THE LINKED FIGURE'S TAPS: INERT, BESIDE A DOOR THAT LEFT THE APP
+
+Reported as "if you tap on the keys in linked accounts it jumps out to the
+explorer, but there is an explorer link, so it shouldn't." The jump could not
+be found: `VibenetLinkSpine`'s nodes, `spokeRow` and `subAccountRow` had **no
+handlers at all**. What they DID have was `keyRow`'s object treatment —
+padding, a `dsWidgetSurface` — so they were dead controls dressed as tappable
+objects, and the nearest live tap on the surrounding screens is the event
+sheet's "Open in the explorer", which leaves.
+
+So the fix is not to remove a link but to give the figure the tap it was
+already promising: **a node scopes the room**, the same write
+`VibenetScopeRail` makes and the same destination the tray's key rows reach
+(§470). The rule this settles: *nothing inside a linked-accounts figure ever
+leaves the app;* the explorer stays behind the one labelled `Explorer ↗` door
+on the account detail, and a negative grep keeps it that way.
+
+**A slip caught while wiring it**: the two spine columns carry DIFFERENT
+weights on purpose — left is who ACTS, right is the account acted for, and the
+weight is what tells a reader which side of the sentence a node is on before
+any name is read. The first cut made both primary and turned the figure into
+two identical columns joined by lines. §295's same-weight ruling governs the
+RIBBONS, not the columns.
+
+### 2. THE JITTER WAS A JSON DECODE, NOT AN ANIMATION
+
+`history` was a computed property — `VibenetValueStore.samples()` — so every
+evaluation of the card's body did a `UserDefaults` read and a full
+`JSONDecoder` pass over the whole history; §475's `accountChips` then did the
+same again PER CHIP, decoding the entire per-account book once for every face
+on screen. Four decodes on a three-account room, on every pass, while a List
+asks for a body on every scroll frame.
+
+Both books are read once per roster in a `.task(id:)` now — the same shape the
+key-changes ledger beside it already used. **Keyed on the ADDRESSES rather
+than §468's key fingerprint**: a balance landing does not change which curves
+exist, and re-decoding on every reading would put the cost straight back.
+
+**Stated rather than quietly left**: entrances in this app are `onAppear`-based
+(`chartArrival` here, `RowEntrance` app-wide), so a row scrolled off and back
+replays its stagger — inherent to that shape, true of every room, and NOT
+addressed here. The decode was the reported cost; the replay is a separate
+pass if it is ever worth one.
+
+### 3. UNDEPLOYED ACCOUNTS WERE EMPTY BECAUSE THEY CONTRIBUTE TO NOTHING
+
+The dialogue already existed — `undeployedExplainer` ("The account deploys with
+its first transaction…") and the faucet door, gated on the live config naming
+one — and lived only on the account detail. An undeployed account has no
+balance, no keys and no links, so on "All" it contributed to no card and
+appeared nowhere but as a face in the rail: **invisible on the screen you
+would look at first, explained on one you had no reason to open.**
+
+Both now surface in the Accounts card, on the row itself. Gating is unchanged
+and load-bearing: `undeployedExplainer` is nil for an UNREACHED account, which
+must never be told why it is undeployed when the truth is that we could not
+look (§83).
+
+### 4. "FIND ANOTHER ACCOUNT" WAS A SLAB BELONGING TO NOTHING
+
+A `DSSlabDoor` on a clear row, floating between the watch field's own slab
+section and the roster card, matching neither. The screen already had the
+right pattern three rows up — the "More Base Vibenet demos ↗" link — so it
+becomes that: same rung, same weight, same tint. One way of saying "here is
+something else you can do" per screen, not two.
+
+### 5. LINKED ACCOUNTS LEFT THE ADDRESS BOOK
+
+§469 kept it there reasoning that "the roster is exactly where 'who can act
+for whom' belongs when you're managing who's watched." The user's answer is
+that it does not: the address book decides WHICH accounts you watch, and the
+delegate graph is a reading ABOUT them, which already has two homes that are
+about reading. This was the third, on the one screen whose job is management.
+`linkedAccountsSection` had no other caller in that file and is DELETED rather
+than left for someone to wire back up — §469's own standing rule, applied to
+§469's own survivor.
+
+### 6. SIX CHEVRONS, ONE DESTINATION — §471 REVERSED
+
+§471 made every census row its own door into the tray "focused" on that
+permission, reasoning that a count is the one fact you cannot act on and the
+follow-up wanted is those four keys. **The follow-up was right and the
+affordance was not**: the tray SHOWS EVERY SECTION whatever it is handed —
+its own invariant, since its grouping mirrors the census exactly and a reader
+can only check that against a list showing all of it — so the focus was a
+scroll position and nothing more. Reported exactly: *"each policy has a
+chevron which is dumb bc they all go to the same place."*
+
+One door now: the card's headline. The census rows are what the door is
+ABOUT. The tray's `focus` parameter, its `ScrollViewReader` and `FeedScreen`'s
+`vibenetKeyFocus` are all gone rather than left dormant.
+
+### 7. THE ROOM HAD NO ACCOUNTS SECTION AT ALL
+
+The real gap the goal exposes. An account existed as a rail face and a §475
+hero chip — and **neither says what state it is in**, so "is anything locked,
+unlocking, undeployed or unreadable" could only be answered by scoping to each
+in turn. §475 had named the sections after what §467 happened to have built
+("What's authorized" over a census, the accounts nowhere).
+
+Three sections, by the room's own nouns: **Accounts** (a row each — face,
+name, `VibenetRoom.rowLine`'s own state sentence so no account reads as two
+different things across two surfaces, a tap that scopes), **Keys** (the census
+and the expiry shelf), **Linked accounts**. The user kept the third as its own
+card rather than folding it into Accounts: the delegate graph is a figure
+worth its own frame, and burying it under a roster demotes the one drawing
+this room has.
+
+**`onScope` returns, and §469 was still right to delete it.** That one fired
+from a soonest-expiry callout, where the rail above already reached the same
+destination. What changed is that there is now a LIST of accounts carrying
+state the rail cannot show; a row stating "2 keys" that does nothing when
+tapped is the dead control §83 bans. The rail is the shortcut, this is the
+list.
+
+### One more, found while wiring
+
+A vibenet key event's "Account" row opened `AddressCard` — the MAINNET address
+book's own detail, with balances, connections and watch state, none of which
+describes a devnet keystore account and none of which this bridge feeds. It
+opens `VibenetAccountSheet` now, guarded on the account actually being in the
+cached room so an unwatched address opens nothing rather than a detail about
+an account nothing knows anything about.
+
+### Cost, and what remains unmeasured
+
+**Nothing to ship**: no new `Thing` property, no request, no CloudKit deploy.
+The one perf change removes work rather than adding it.
+
+`vibenet-selftest.sh` gained guards for the three section nouns, the accounts
+card and its state sentence, the undeployed explainer and faucet ON the card,
+the spine's nodes being wired and never opening a URL, the event sheet's
+account door, and the curves being read once per roster rather than per body
+pass. §471's two-doors guard is INVERTED to assert exactly one, and the tray
+is guarded against regrowing a `focus`.
+
+**UNMEASURED on a device.** The jitter fix is the one item with a measurable
+before and after and it has not been measured — the decode was found by
+reading, and whether the scroll is smooth now is a device check. Every other
+item is layout, wiring and taps that no static check can exercise.

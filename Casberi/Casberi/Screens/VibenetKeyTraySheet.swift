@@ -47,12 +47,6 @@ struct VibenetKeyTraySheet: View {
     /// there is nothing to scope, so the rows stay plain rather than
     /// pretending at a door.
     var onPick: ((String) -> Void)? = nil
-    /// The permission this tray opens scrolled to, or nil for the top
-    /// (prd §471). SCROLLED, never filtered: the tray's whole claim is that
-    /// its grouping mirrors the card's census exactly, and a reader can only
-    /// check that against a list showing every section. Unknown labels are
-    /// harmless — `scrollTo` on an id nothing carries is a no-op.
-    var focus: String? = nil
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -66,8 +60,7 @@ struct VibenetKeyTraySheet: View {
                // key holds, which has no ceiling worth guessing at — the
                // `detents` escape hatch this type documents for exactly this.
                detents: [.height(660), .large]) {
-            ScrollViewReader { proxy in
-                ScrollView {
+            ScrollView {
                     // s6 BETWEEN SECTIONS (prd §471), where it was s4. A
                     // permission and its keys are one object; at s4 the gap
                     // between two sections was barely wider than the gap
@@ -94,21 +87,13 @@ struct VibenetKeyTraySheet: View {
                                 .fixedSize(horizontal: false, vertical: true)
                         }
                         ForEach(sections) { section in
-                            sectionView(section).id(section.id)
+                            sectionView(section)
                         }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.bottom, DS.Space.s4)
                 }
-                .scrollIndicators(.hidden)
-                // NO ANIMATION: this is where the tray OPENS, not a move it
-                // makes while somebody watches. Animating it would slide the
-                // list under a sheet that is itself still presenting.
-                .onAppear {
-                    guard let focus else { return }
-                    proxy.scrollTo(focus, anchor: .top)
-                }
-            }
+            .scrollIndicators(.hidden)
         }
     }
 

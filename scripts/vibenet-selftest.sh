@@ -112,6 +112,7 @@ PY
 CARD="Casberi/Casberi/Screens/VibenetRoomCard.swift"
 DETAIL="Casberi/Casberi/Screens/VibenetAccountDetail.swift"
 TRAY="Casberi/Casberi/Screens/VibenetKeyTraySheet.swift"
+SPINE="Casberi/Casberi/Screens/VibenetLinkSpine.swift"
 NOTIFY="Casberi/Casberi/Model/NotifySweep.swift"
 for f in "$CARD" "$DETAIL" "$TRAY" "$NOTIFY"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
@@ -124,6 +125,7 @@ strip_comments "$ROOM"   > "$TMP/room.nc.swift"
 strip_comments "$BRIDGE" > "$TMP/bridge.nc.swift"
 strip_comments "$SETUP" > "$TMP/setup.nc.swift"
 strip_comments "$BOOK"  > "$TMP/book.nc.swift"
+strip_comments "$SPINE" > "$TMP/spine.nc.swift"
 
 # --- prd §465: setup is what you do ONCE, the room what you do REPEATEDLY ----
 # Every check here fails INVISIBLY if it is not made: the screens still build,
@@ -542,8 +544,13 @@ done
 
 # WHOSE THE NUMBER IS. The per-account history has been recorded since §467 and
 # was read back by nothing but the scoped chart.
-grep -q 'VibenetValueStore.samples(for: item.address)' "$TMP/card.nc.swift" \
-  || { echo "✗ the account chips no longer read each account's own history — prd §475:"
+# Each chip reads its OWN account's curve, never the room-wide series — a
+# room-wide delta under a per-account face is §83's fake status. §476 moved the
+# READ off the body (one decode per roster, not one per chip per pass), so the
+# guard follows the book rather than the call: `accountHistories` is keyed by
+# lowercased address and a chip may only index it by its own.
+grep -q 'accountHistories = VibenetValueStore.accountSamples()' "$TMP/card.nc.swift" \
+  || { echo "✗ the account chips no longer read each account's own history — prd §475/§476:"
        echo "  a room-wide series under a per-account face is §83's fake status"; exit 1; }
 chipsFn=$(sed -n '/private var accountChips: some View {/,/^    }$/p' "$TMP/card.nc.swift")
 [[ "$chipsFn" == *'room.items.count > 1'* ]] \
@@ -553,8 +560,61 @@ chipsFn=$(sed -n '/private var accountChips: some View {/,/^    }$/p' "$TMP/card
 # SECTION HEADERS ARE WALLET'S, outside the card and in primary ink.
 grep -q 'private func sectionHeader' "$TMP/card.nc.swift" \
   || { echo "✗ the room lost its section headers — prd §475: walletGroupHeader's recipe"; exit 1; }
-grep -q "What's authorized" "$TMP/card.nc.swift" \
-  || { echo "✗ the keys section header is gone — prd §475"; exit 1; }
+# The room's three sections, by their §476 nouns.
+for header in "Accounts" "Keys" "Linked accounts"; do
+  grep -q "sectionHeader(String(localized: \"$header\"))" "$TMP/card.nc.swift" \
+    || { echo "✗ the '$header' section header is gone — prd §476: the room is accounts, the"
+         echo "  keys that can act for them, and the links between them"; exit 1; }
+done
+
+# --- prd §476: the accounts card, the scoping taps, the undeployed dialogue --
+#
+# THE ACCOUNTS CARD EXISTS. Before §476 an account was a rail face and a hero
+# chip and nothing else — neither says what STATE it is in, so "is anything
+# locked, unlocking or undeployed" could only be answered by scoping to each
+# in turn.
+grep -q 'private var accountsCard: some View' "$TMP/card.nc.swift" \
+  || { echo "✗ the room has no accounts card — prd §476"; exit 1; }
+# It says each account's state in the ROOM's own words, never a second wording.
+grep -q 'VibenetRoom.rowLine(item)' "$TMP/card.nc.swift" \
+  || { echo "✗ an account row states its own state sentence — prd §476: rowLine is the one"
+       echo "  wording, or an account reads as two different things on two surfaces"; exit 1; }
+# AN UNDEPLOYED ACCOUNT SAYS SO, AND OFFERS THE FAUCET, on the card as well as
+# on its detail. Reported: "for addresses followed but not yet deployed they
+# are just empty" — true by construction, since such an account has no
+# balance, no keys and no links to contribute anywhere.
+grep -q 'VibenetRoom.undeployedExplainer(item)' "$TMP/card.nc.swift" \
+  || { echo "✗ an undeployed account is silent on the accounts card again — prd §476"; exit 1; }
+grep -q 'faucetAddress' "$TMP/card.nc.swift" \
+  || { echo "✗ the accounts card no longer offers the faucet — prd §476: an account deploys on"
+       echo "  its first transaction and a devnet address needs funds to make one"; exit 1; }
+
+# NOTHING IN THE LINKED FIGURE LEAVES THE APP. The spine's nodes wore an
+# object's treatment with no handler at all, beside a card whose nearest live
+# tap opened the explorer.
+grep -q 'onPick: onScope' "$TMP/card.nc.swift" \
+  || { echo "✗ the link spine's nodes are inert again — prd §476: a figure styled like"
+       echo "  something you tap must go somewhere, and never out of the app"; exit 1; }
+if grep -qE 'VibenetExplorer|Link\(destination' "$TMP/spine.nc.swift"; then
+  echo "✗ the link spine opens a URL — prd §476: the explorer lives behind the labelled"
+  echo "  Explorer door on the account detail, never behind a node in a figure."
+  exit 1
+fi
+
+# THE EVENT SHEET OPENS THE VIBENET ACCOUNT, not the mainnet address card.
+grep -q 'onAccount: openVibenetAccount' "Casberi/Casberi/Screens/ThingSheetView.swift" \
+  || { echo "✗ a vibenet key event's Account row opens AddressCard again — prd §476: that is"
+       echo "  the MAINNET address book's detail, describing none of a devnet account"; exit 1; }
+
+# THE CURVES ARE READ ONCE PER ROSTER, never per body pass — the jitter.
+if grep -qE 'private var history: \[VibenetValueSample\] \{' "$TMP/card.nc.swift"; then
+  echo "✗ the room's history is a computed property again — prd §476: that is a UserDefaults"
+  echo "  read and a full JSON decode on every body pass, and another per chip, which is the"
+  echo "  jitter reported when scrolling."
+  exit 1
+fi
+grep -q 'accountHistories\[item.address.lowercased()\]' "$TMP/card.nc.swift" \
+  || { echo "✗ an account chip decodes the whole history book again — prd §476"; exit 1; }
 # …and the count beneath does NOT repeat the header's own verb (user, §475).
 if grep -qE 'countHeadline.*authorized|"1 key authorized"|keys authorized"\)' "$TMP/room.nc.swift"; then
   countFn=$(sed -n '/var countHeadline: String {/,/^    }$/p' "$TMP/room.nc.swift")
@@ -564,6 +624,25 @@ if grep -qE 'countHeadline.*authorized|"1 key authorized"|keys authorized"\)' "$
     exit 1
   fi
 fi
+
+# DEMO PARITY for the undeployed door (prd §476). The fixture carries a
+# reached-but-not-established account, so the demo SHOWS the undeployed
+# problem — and the faucet beside it is gated on the cached config naming a
+# faucet, which a demo install has never fetched. Without a seeded config the
+# demo draws the problem and withholds the button that answers it, which is
+# exactly the "demo has less than the app" gap the standing demo-parity step
+# exists to catch.
+grep -q 'VibenetConfig.seedDemo()' "Casberi/Casberi/Model/DemoSeedAll.swift" \
+  || { echo "✗ the demo seeds no vibenet config — prd §476: its undeployed account then"
+       echo "  explains itself and offers no faucet, which the app does offer"; exit 1; }
+grep -q 'VibenetConfig.forgetCache()' "Casberi/Casberi/Model/DemoSeedAll.swift" \
+  || { echo "✗ demo teardown leaves the seeded contracts behind — prd §476: a real install"
+       echo "  that never connected vibenet would keep a demo's faucet address"; exit 1; }
+# …and the fixture really does carry that account, or the seed above guards
+# a case the demo cannot reach.
+grep -q 'reached: true, established: false' "$TMP/room.nc.swift" \
+  || { echo "✗ the demo fixture has no undeployed account — prd §476: the explainer and the"
+       echo "  faucet door are then unreachable in the demo"; exit 1; }
 
 # --- prd §474: the room's own margin from the screen edge --------------------
 #
@@ -604,18 +683,23 @@ fi
 # The tray mirrors the card, and the chevron only exists where the tray does.
 grep -q 'VibenetKeyTray.sections' "$TRAY" \
   || { echo "✗ VibenetKeyTraySheet no longer reads VibenetKeyTray.sections — prd §468"; exit 1; }
-# BOTH doors are gated on the tray being reachable — the headline's chevron
-# and every census row's (prd §471, which made each permission its own door).
-# A chevron that opens nothing is the dead control §83 bans, and there are two
-# kinds of it here now.
-[[ $(grep -c 'if let onOpenKeys' "$TMP/card.nc.swift") -eq 2 ]] \
-  || { echo "✗ the keys doors are no longer both gated on the tray being reachable — prd §471:"
-       echo "  the headline and each census row each open the tray, and each must be a plain"
-       echo "  reading where no caller can present one"; exit 1; }
-# A census row hands its PERMISSION over, or the chevron promises those keys
-# and delivers the whole roster.
-grep -q 'onOpenKeys(entry.label)' "$TMP/card.nc.swift" \
-  || { echo "✗ a census row no longer opens the tray at its own permission — prd §471"; exit 1; }
+# ONE DOOR, NOT SEVEN (prd §476, superseding §471's per-row doors). The tray
+# shows every section whatever it is handed, so a per-permission "focus" was a
+# scroll position — six chevrons promising six destinations that were one.
+[[ $(grep -c 'if let onOpenKeys' "$TMP/card.nc.swift") -eq 1 ]] \
+  || { echo "✗ the keys card has more than one door again — prd §476: the headline is the"
+       echo "  one door, and the census rows are what it is about"; exit 1; }
+if grep -q 'onOpenKeys(entry.label)' "$TMP/card.nc.swift"; then
+  echo "✗ a census row opens the tray at its own permission again — prd §476: the tray shows"
+  echo "  every section regardless, so that chevron promised a destination it did not have."
+  exit 1
+fi
+# …and the tray's focus plumbing is GONE, not merely unused.
+if grep -q 'var focus' "$TRAY"; then
+  echo "✗ VibenetKeyTraySheet still takes a focus — prd §476: it was a scroll position for a"
+  echo "  list that shows every section anyway, and the doors that set it are gone."
+  exit 1
+fi
 
 # The hero's face stands down only where the rail draws it. Ungated, a
 # single-account room and the address book's own sheet both lose their only

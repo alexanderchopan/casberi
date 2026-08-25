@@ -99,7 +99,23 @@ struct VibenetRoomCard: View {
 
     /// The room's balance readings — the sparkline's only source, and REAL:
     /// recorded by every composed read, never a demo-only curve.
-    private var history: [VibenetValueSample] { VibenetValueStore.samples() }
+    /// **READ ONCE PER COMPOSE, NEVER PER BODY PASS (2026-08-25, prd §476).**
+    ///
+    /// It was a computed property — `VibenetValueStore.samples()` — so every
+    /// evaluation of this card's body did a `UserDefaults` data read and a
+    /// full `JSONDecoder` pass over the whole history. `accountChips` then did
+    /// the same again PER CHIP, decoding the entire per-account book once for
+    /// each face on screen: four decodes on a three-account room, on every
+    /// pass, while a List is asking for a body on every scroll frame.
+    ///
+    /// That is the jitter reported as "it is jittery when scrolling to the
+    /// bottom" — not an animation at all. `.task(id:)` reads both books once
+    /// when the roster's fingerprint changes and holds the result, which is
+    /// the same shape the key-changes ledger beside it already uses.
+    @State private var history: [VibenetValueSample] = []
+    /// Every watched account's own curve, keyed by lowercased address — one
+    /// decode for the whole strip rather than one per chip.
+    @State private var accountHistories: [String: [VibenetValueSample]] = [:]
     let room: VibenetRoom
     var onRemove: (String) -> Void
     /// Raised by the context menu's "Name this account…" — the alert itself
@@ -147,7 +163,22 @@ struct VibenetRoomCard: View {
     /// mirrors `VibenetPolicyAggregation.compose` exactly (its own stated
     /// invariant), so a label from the card always resolves to a section in
     /// the tray and neither side needs a second vocabulary.
-    var onOpenKeys: ((String?) -> Void)? = nil
+    var onOpenKeys: (() -> Void)? = nil
+    /// Scope the room to one account (2026-08-25, prd §476).
+    ///
+    /// **§469 deleted an `onScope` and it was right to.** That one fired from
+    /// a soonest-expiry callout, and its reasoning was that
+    /// `VibenetScopeRail` — pinned directly above this card — already reaches
+    /// every account with the same toggle-back-to-All rule, so a second door
+    /// to the same destination was not worth adding.
+    ///
+    /// What changed is that there is now an ACCOUNTS card: a row per account
+    /// carrying its state, which the rail cannot show (it is faces alone). A
+    /// row that states "2 keys" or "Deploys with its first transaction" and
+    /// does nothing when tapped is the dead control §83 bans, and the
+    /// destination it wants is the one the rail happens to share. The rail is
+    /// the shortcut; this is the list.
+    var onScope: ((String) -> Void)? = nil
 
     /// What moved since this device last looked at these keys — captured
     /// ONCE when the roster appears and then immediately spent (`advance`),
@@ -206,6 +237,15 @@ struct VibenetRoomCard: View {
         .task(id: Self.rosterFingerprint(room.items)) {
             keyChanges = VibenetKeysSeen.changes(in: room.items)
             VibenetKeysSeen.advance(room.items)
+        }
+        // The curves, read ONCE per roster rather than per body pass — see
+        // `history`'s own note for the jitter this fixes (prd §476). Keyed on
+        // the ADDRESSES rather than the key fingerprint above: a balance
+        // landing does not change which curves exist, and re-decoding both
+        // books every time a reading ticks would put the cost straight back.
+        .task(id: room.items.map(\.address).joined(separator: ",")) {
+            history = VibenetValueStore.samples()
+            accountHistories = VibenetValueStore.accountSamples()
         }
     }
 
@@ -281,7 +321,21 @@ struct VibenetRoomCard: View {
             // tertiary INSIDE each card — a caption, which is a different
             // object from a section title, and the reason the two rooms read
             // as different products at a glance.
-            sectionHeader(String(localized: "What's authorized"))
+            //
+            // **THREE NOUNS, and they are the room's own (2026-08-25, prd
+            // §476).** §475 named these sections after what §467 happened to
+            // have built — "What's authorized" over a keys census, with the
+            // accounts themselves nowhere. Reported: *"perhaps the sections
+            // should be Keys and the other be Accounts… it's not yet fully
+            // intuitive."* They are: this room is about ACCOUNTS and the KEYS
+            // that can act for them, and those are the two things somebody
+            // opens it to see. Linked accounts stays a card of its own (user)
+            // rather than folding into Accounts — the delegate graph is a
+            // figure worth its own frame, and burying it under a roster
+            // demotes the one drawing this room has.
+            sectionHeader(String(localized: "Accounts"))
+            accountsCard
+            sectionHeader(String(localized: "Keys"))
             keysCard
             sectionHeader(String(localized: "Linked accounts"))
             linkedCard
@@ -422,12 +476,23 @@ struct VibenetRoomCard: View {
                 // shows on "All". `keysAggregateSection` had no other caller
                 // and is deleted rather than left as a second definition for
                 // someone to find and wire back up (this file's own standing
-                // rule, one paragraph up). `linkedAccountsSection` stays —
-                // not asked for removal, and the roster is exactly where
-                // "who can act for whom" belongs when you're managing who's
-                // watched, rather than reading a summary of it.
-                linkedAccountsSection
-                    .padding(.top, DS.Space.s4)
+                // rule, one paragraph up).
+                //
+                // **AND `linkedAccountsSection` FOLLOWED IT (2026-08-25, prd
+                // §476).** §469 kept it here on the reasoning that "the roster
+                // is exactly where 'who can act for whom' belongs when you're
+                // managing who's watched" — and the user's answer is that it
+                // does not: *"the 'linked accounts' section in address book
+                // doesn't belong there."* The address book is the screen for
+                // deciding WHICH accounts you watch; the delegate graph is a
+                // reading ABOUT them, and it already has two homes that are
+                // about reading — the room's own Linked accounts card and each
+                // account's own detail. This was the third, on the one screen
+                // whose job is management.
+                //
+                // The function survives with one caller (the account detail's
+                // own section, which is scoped to that account and is a
+                // different reading from this room-wide one).
             } else {
                 Text(VibenetRoom.headline(room, now: .now))
                     .dsText(.heading17)
@@ -597,7 +662,8 @@ struct VibenetRoomCard: View {
     }
 
     private func accountChip(_ item: VibenetAccountItem, native: Double) -> some View {
-        let samples = VibenetValueStore.samples(for: item.address)
+        // From the ONE book read in `.task`, never a fresh decode per chip.
+        let samples = accountHistories[item.address.lowercased()] ?? []
         let change = VibenetValueHistory.delta(samples)
         return HStack(spacing: 6) {
             WalletFace(address: item.address, size: DS.Face.badge, circular: true)
@@ -635,6 +701,115 @@ struct VibenetRoomCard: View {
             .accessibilityAddTraits(.isHeader)
             .padding(.top, DS.Space.s2)
             .padding(.bottom, -DS.Space.s3)
+    }
+
+    /// THE ACCOUNTS, each with its own state (2026-08-25, prd §476).
+    ///
+    /// **The room had no accounts section at all**, which is the gap the goal
+    /// "quickly see the accounts and keys" exposes: an account existed only as
+    /// a face in the rail and a figure in a hero chip, and neither says what
+    /// STATE it is in. So the one question this room is opened with — is
+    /// anything locked, unlocking, undeployed, or unreadable — could only be
+    /// answered by scoping to each account in turn.
+    ///
+    /// One row each: face, name, its state in the room's own words
+    /// (`VibenetRoom.rowLine`, the same sentence the roster screen has always
+    /// used, so an account never reads as two different things across two
+    /// surfaces), and a tap that scopes.
+    ///
+    /// **An UNDEPLOYED account gets the explainer and the faucet here**, not
+    /// only on its detail. Reported: *"for addresses followed but not yet
+    /// deployed they are just empty."* True on this card by construction — an
+    /// undeployed account has no balance, no keys and no links, so it
+    /// contributed to nothing and appeared nowhere. It has one thing to say
+    /// and one thing to do, and both were a tap away on a screen you had no
+    /// reason to open.
+    @ViewBuilder
+    private var accountsCard: some View {
+        card {
+            VStack(alignment: .leading, spacing: 0) {
+                ForEach(Array(drawn.enumerated()), id: \.element.id) { index, item in
+                    accountRow(item, isLast: index == drawn.count - 1)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func accountRow(_ item: VibenetAccountItem, isLast: Bool) -> some View {
+        if let onScope {
+            Button {
+                DSHaptic.selection()
+                onScope(item.address)
+            } label: { accountRowBody(item, isLast: isLast, door: true) }
+                .buttonStyle(.plain)
+                .dsHover()
+        } else {
+            accountRowBody(item, isLast: isLast, door: false)
+        }
+    }
+
+    private func accountRowBody(_ item: VibenetAccountItem, isLast: Bool, door: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: DS.Space.s3) {
+                WalletFace(address: item.address, size: DS.Face.rowCircle, circular: true)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(Self.displayName(item.address))
+                        .dsText(.body17)
+                        .foregroundStyle(DS.textPrimary)
+                        .lineLimit(1)
+                    // The room's OWN state sentence, never a second wording.
+                    Text(VibenetRoom.rowLine(item))
+                        .dsText(.label11)
+                        .foregroundStyle(DS.textTertiary)
+                        .lineLimit(1)
+                }
+                Spacer(minLength: DS.Space.s2)
+                if door {
+                    Image(systemName: "chevron.right")
+                        .accessibilityHidden(true)
+                        .dsGlyph(11, weight: .semibold)
+                        .foregroundStyle(DS.textTertiary)
+                }
+            }
+            // WHAT AN UNDEPLOYED ACCOUNT HAS TO SAY, and the one thing it can
+            // do about it. `undeployedExplainer` is nil for every other state
+            // — an unreached account is never told why it is undeployed when
+            // the truth is that we could not look (§83) — so this block is
+            // silent on a healthy row rather than gated by hand.
+            if let why = VibenetRoom.undeployedExplainer(item) {
+                Text(why)
+                    .dsText(.label11)
+                    .foregroundStyle(DS.textTertiary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, DS.Space.s2)
+                // The faucet, only where the live config actually named one —
+                // an account deploys on its first transaction and a devnet
+                // address needs funds to make one. A hand-off to the
+                // explorer, never a write.
+                if let faucet = VibenetConfig.cached()?.faucetAddress,
+                   let url = URL(string: VibenetExplorer.address(faucet)) {
+                    Link(destination: url) {
+                        HStack(spacing: 4) {
+                            Text(String(localized: "Devnet faucet"))
+                            Image(systemName: "arrow.up.right")
+                        }
+                        .dsText(.label12).fontWeight(.semibold)
+                        .foregroundStyle(Self.mark)
+                        .lineLimit(1)
+                        .fixedSize()
+                    }
+                    .padding(.top, DS.Space.s2)
+                }
+            }
+        }
+        .padding(.vertical, DS.Space.s2)
+        .overlay(alignment: .bottom) {
+            if !isLast {
+                Rectangle().fill(DS.fillFaint).frame(height: 1)
+            }
+        }
+        .contentShape(Rectangle())
     }
 
     /// WHAT THE ACCOUNTS HOLD. Silent for a single asset — the crown above
@@ -766,7 +941,7 @@ struct VibenetRoomCard: View {
         if let onOpenKeys {
             Button {
                 DSHaptic.selection()
-                onOpenKeys(nil)
+                onOpenKeys()
             } label: {
                 HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
                     Text(aggregate.countHeadline)
@@ -790,28 +965,30 @@ struct VibenetRoomCard: View {
         }
     }
 
-    /// One permission and how many keys hold it — a door into the tray
-    /// FOCUSED on that permission, or plain content where there is nowhere to
-    /// present one.
+    /// One permission and how many keys hold it — a PLAIN READ (2026-08-25,
+    /// prd §476), superseding §471's per-row door.
     ///
-    /// `s2` vertical (46pt with a `body17` line) rather than the old 5, which
-    /// put every row of the densest block on the screen under the 44pt hit
-    /// floor while it was not even tappable.
-    @ViewBuilder
+    /// §471 made every census row its own door into the tray, focused on that
+    /// permission, on the reasoning that "a count is the one shape of fact you
+    /// cannot act on" and the follow-up "Send anywhere · 4" wants is those
+    /// four keys. The follow-up was right; the affordance was not. Reported:
+    /// *"if you tap the card you go to a list of keys, yet each policy has a
+    /// chevron which is dumb bc they all go to the same place."*
+    ///
+    /// And that is literally true — the tray SHOWS EVERY SECTION whatever it
+    /// is handed (its own invariant: its grouping mirrors this census exactly,
+    /// and a reader can only check that against a list showing all of it), so
+    /// the focus was a scroll position and nothing more. Six chevrons promised
+    /// six destinations that were one, which is the §83 shape wearing a
+    /// disclosure glyph rather than a fake status.
+    ///
+    /// ONE DOOR NOW: the card's headline. These rows are what the door is
+    /// ABOUT, and a census reads as a census rather than a menu.
     private func policyRow(_ entry: VibenetPolicyCount, isLast: Bool) -> some View {
-        if let onOpenKeys {
-            Button {
-                DSHaptic.selection()
-                onOpenKeys(entry.label)
-            } label: { policyRowBody(entry, isLast: isLast, door: true) }
-                .buttonStyle(.plain)
-                .dsHover()
-        } else {
-            policyRowBody(entry, isLast: isLast, door: false)
-        }
+        policyRowBody(entry, isLast: isLast)
     }
 
-    private func policyRowBody(_ entry: VibenetPolicyCount, isLast: Bool, door: Bool) -> some View {
+    private func policyRowBody(_ entry: VibenetPolicyCount, isLast: Bool) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
             Text(entry.label)
                 .dsText(.body17)
@@ -822,12 +999,6 @@ struct VibenetRoomCard: View {
                 .dsText(.subhead13)
                 .foregroundStyle(DS.textSecondary)
                 .monospacedDigit()
-            if door {
-                Image(systemName: "chevron.right")
-                    .accessibilityHidden(true)
-                    .dsGlyph(11, weight: .semibold)
-                    .foregroundStyle(DS.textTertiary)
-            }
         }
         .padding(.vertical, DS.Space.s2)
         // A separator between rows and never under the last one — a FILL at
@@ -935,11 +1106,23 @@ struct VibenetRoomCard: View {
         let links = VibenetAccountMapping.links(room.items)
         if !links.isEmpty {
             card {
-                Text(String(localized: "Linked accounts"))
-                    .dsText(.label12)
-                    .foregroundStyle(DS.textTertiary)
+                // NO eyebrow — the section header above says "Linked
+                // accounts" already, and repeating it inside the card is the
+                // duplication §475 removed from the keys headline in the same
+                // pass ("we don't need to repeat that word").
                 VibenetLinkSpine(links: links,
                                  name: { Self.displayName($0) },
+                                 // A NODE SCOPES THE ROOM (prd §476). The
+                                 // spine's faces wore `keyRow`'s object
+                                 // treatment and had no handler at all — an
+                                 // inert figure styled like something you tap,
+                                 // beside a card whose nearest live tap LEAVES
+                                 // THE APP for the explorer. Reported as the
+                                 // explorer jump; the honest fix is that
+                                 // nothing in this figure ever leaves, and a
+                                 // node goes where every other account tap in
+                                 // this room goes.
+                                 onPick: onScope,
                                  reduceMotion: reduceMotion)
                     .padding(.top, DS.Space.s2)
                 Text(String(localized: "Who can act for whom, read from the keystore."))
@@ -951,55 +1134,11 @@ struct VibenetRoomCard: View {
         }
     }
 
-    /// WHO CAN ACT FOR WHOM — the room's delegate links, as the app's own
-    /// connections shape: one face-led row per link, direction stated in
-    /// words. Same-weight throughout (§295's ruling, reused): this card makes
-    /// no claim that one relationship matters more than another, so nothing
-    /// here is sized or coloured to suggest it.
-    ///
-    /// Silent when there are none. Note these are WATCHED-to-WATCHED only,
-    /// which is `VibenetAccountMapping.links`' own deliberate bound.
     /// A watched account's own name, or its short address — the same
     /// fallback every row on this card already makes, so the spine can never
     /// name an account differently from the roster above it.
     private static func displayName(_ address: String) -> String {
         VibenetWatch.shared.name(for: address) ?? VibenetRoom.shortAddress(address)
-    }
-
-    @ViewBuilder
-    private var linkedAccountsSection: some View {
-        let links = VibenetAccountMapping.links(room.items)
-        if !links.isEmpty {
-            VStack(alignment: .leading, spacing: 0) {
-                Text(String(localized: "Linked accounts"))
-                    .dsText(.label12)
-                    .foregroundStyle(DS.textTertiary)
-                // **A SPINE, not a list of sentences (2026-08-24).** Each row
-                // used to read "<name> · Can act for <name>" — the same two
-                // names in prose, once per link, so a reader had to parse a
-                // sentence per row and hold the graph in their head. The whole
-                // reason the design draws this as a figure is that a delegate
-                // relationship has a SHAPE — an actor on one side, the account
-                // it can act for on the other, a line between them — and the
-                // shape is legible before any of the names are read.
-                //
-                // §295's ruling is reused wholesale and is why every ribbon is
-                // the same weight and no node carries a hue: this card makes no
-                // claim that one relationship matters more than another, so
-                // nothing here may be sized or coloured to suggest it. The
-                // caption states the direction once, in words, rather than
-                // repeating it per row.
-                VibenetLinkSpine(links: links,
-                                 name: { Self.displayName($0) },
-                                 reduceMotion: reduceMotion)
-                    .padding(.top, DS.Space.s2)
-                Text(String(localized: "Who can act for whom, read from the keystore."))
-                    .dsText(.subhead13)
-                    .foregroundStyle(DS.textTertiary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.top, DS.Space.s2)
-            }
-        }
     }
 
     /// Applies a context menu only when the card is showing ONE account's

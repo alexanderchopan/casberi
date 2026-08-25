@@ -6058,6 +6058,33 @@ enum ProbeHooks {
                 NSLog("[Casberi] vibenetCard| linked %@ links=%d",
                       links.isEmpty ? "SILENT (nobody delegates)" : "DRAWS", links.count)
 
+                // THE ACCOUNTS CARD, row by row (prd §476) — the section the
+                // room had no equivalent of until §476, and the one a person
+                // opens this room to read. One NSLog per account (the
+                // `-todayProbe` truncation lesson).
+                //
+                // `faucet=` is the half worth watching: an undeployed account
+                // states its explainer from a pure function and needs nothing,
+                // while the DOOR beside it is gated on the cached config
+                // naming a faucet — which a demo install had never fetched, so
+                // the demo drew the problem and withheld the button that
+                // answers it (§476). "explains but no faucet" is that gap, and
+                // it reads as an ordinary row from outside.
+                let faucet = VibenetConfig.cached()?.faucetAddress
+                NSLog("[Casberi] vibenetCard| accounts DRAWS rows=%d faucetKnown=%@",
+                      room.items.count, faucet == nil ? "NO" : "yes")
+                for item in room.items {
+                    let undeployed = VibenetRoom.undeployedExplainer(item) != nil
+                    NSLog("[Casberi] vibenetAccount| %@ state=%@ balance=%@ %@",
+                          VibenetRoom.shortAddress(item.address),
+                          VibenetRoom.rowLine(item),
+                          item.nativeBalance.map { VibenetBalanceFormat.line($0) } ?? "UNREAD",
+                          undeployed
+                              ? (faucet == nil ? "UNDEPLOYED explains but NO FAUCET DOOR"
+                                               : "UNDEPLOYED explains + faucet")
+                              : "")
+                }
+
                 // The since-you-last-looked ledger, WITHOUT spending it — a
                 // probe that marked the room as read would erase the very
                 // thing the next launch is meant to show.
