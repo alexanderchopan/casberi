@@ -210,8 +210,14 @@ struct SafeSignatureDisc: View {
     let have: Int
     let required: Int
     var size: CGFloat = 44
+    /// Whether the fraction is drawn INSIDE the ring (2026-08-24). False at an
+    /// accessibility text size, where the caller states it in the sentence
+    /// beside the disc instead — see `scaled`.
+    var showsCount = true
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    // Reading the size category invalidates the disc when the setting changes.
+    @Environment(\.sizeCategory) private var sizeCategory
     /// **The signatures land one at a time** (2026-08-04, prd §298), in the
     /// order they were collected. The disc's whole claim is that this is a
     /// COUNT toward a threshold, so counting them in is the claim drawn; a
@@ -221,6 +227,31 @@ struct SafeSignatureDisc: View {
     @State private var landed = false
 
     private var met: Bool { required > 0 && have >= required }
+
+    /// **The frame scales with the label it contains** (2026-08-24).
+    ///
+    /// It was a frozen `44` holding a `label12`, which goes through `dsText`
+    /// and therefore grows with the person's text setting — so at an
+    /// accessibility size "10/12" outgrew the 38pt inner circle and collided
+    /// with its own stroke. Same defect `dsGlyph` was written for, one shape
+    /// over: a fixed dimension beside scaling text.
+    ///
+    /// Anchored to `.caption1` because that is `label12`'s own anchor, so the
+    /// circle and the fraction ride one curve. CAPPED, unlike `dsGlyph`: a
+    /// mark that tracked the full accessibility range unbounded would be a
+    /// 100pt disc leading a row, which is a tile.
+    private var scaled: CGFloat {
+        min(UIFontMetrics(forTextStyle: .caption1).scaledValue(for: size), size * 1.35)
+    }
+
+    /// The count steps OUT of the ring above `.accessibilityMedium` — the
+    /// actual fix for the collision above, since a label that scales inside a
+    /// frame that also scales still meets it at the top of the range. The
+    /// ring is then a pure meter, which is all it can honestly be at that
+    /// size, and the caller carries the fraction in words.
+    private var drawsCount: Bool {
+        showsCount && !sizeCategory.isAccessibilityCategory
+    }
 
     var body: some View {
         ZStack {
@@ -236,7 +267,10 @@ struct SafeSignatureDisc: View {
                         .trim(from: Double(i) * span + gap / 2,
                               to: Double(i + 1) * span - gap / 2)
                         .stroke(i < have ? (met ? DS.confirm : DS.tint) : DS.textTertiary.opacity(0.28),
-                                style: StrokeStyle(lineWidth: 3, lineCap: .round))
+                                // Proportional, so a scaled ring keeps its
+                                // weight instead of thinning into a hairline.
+                                style: StrokeStyle(lineWidth: 3 * scaled / size,
+                                                   lineCap: .round))
                         .rotationEffect(.degrees(-90))
                         // A collected signature counts itself in; an empty
                         // segment is the track and is simply there.
@@ -245,12 +279,14 @@ struct SafeSignatureDisc: View {
                                    : ChartEntrance.arrive(index: i), value: landed)
                 }
             }
-            Text(verbatim: required > 0 ? "\(have)/\(required)" : "\(have)")
-                .dsText(.label12)
-                .monospacedDigit()
-                .foregroundStyle(met ? DS.confirm : DS.textPrimary)
+            if drawsCount {
+                Text(verbatim: required > 0 ? "\(have)/\(required)" : "\(have)")
+                    .dsText(.label12)
+                    .monospacedDigit()
+                    .foregroundStyle(met ? DS.confirm : DS.textPrimary)
+            }
         }
-        .frame(width: size, height: size)
+        .frame(width: scaled, height: scaled)
         // Still animates when a signature actually LANDS later — what this
         // modifier was here for.
         .animation(DS.Motion.standard, value: have)

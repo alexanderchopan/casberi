@@ -31734,3 +31734,200 @@ The flight's mid-air frame, the lift, and the picker's name mode against a
 REAL wallet handshake (no wallet app exists on the simulator — `wc-handshake.sh`
 exercises the wire, not this sheet). Everything else above was walked on the
 simulator this session.
+
+## 464. The Safe room's rings become rows (user: "how would you improve the design of the visualizations in the safe room? they cllip some words and i think we could do better", then "do A", 2026-08-24)
+
+The clipping was real and had three separate causes, and all three came out of
+one decision: `SafeRoomCard` drew its entries as a horizontal `ScrollView` of
+60pt cells. **`SafeRoomSource.rowCap` is 3**, so that rail could never scroll —
+it spent about 150pt of a ~330pt card on emptiness to the right of the last
+ring while squeezing each caption into 60pt with `lineLimit(1)` and no
+ellipsis. The affordance bought nothing and cost the width that would have
+prevented every failure below.
+
+### 1. The three clips
+
+- **The caption box.** `SafeRoom.waitLabel` in a `.frame(width: 60)` with
+  `lineLimit(1)`. "12 days" already fills it at the default size; `label12`
+  scales with `.caption1`, so every accessibility size truncates, and so does
+  most non-English. Nothing on a row carries a hardcoded width now, and the
+  drift guard is a negative grep for `frame(width: <n>)` in that file.
+- **The fraction inside the ring.** `SafeSignatureDisc`'s frame was a frozen
+  `44` holding a `label12`, which goes through `dsText` and therefore grows
+  with the text setting — so "10/12" outgrew the 38pt inner circle and met its
+  own stroke. This is `dsGlyph`'s own defect one shape over: a fixed dimension
+  beside scaling text. **Two halves to the fix, and the second is the real
+  one**: the frame now scales through `UIFontMetrics(forTextStyle: .caption1)`
+  (`label12`'s own anchor, so circle and label ride one curve), capped at 1.35×
+  because a mark tracking the full accessibility range unbounded is a 100pt
+  disc leading a row, i.e. a tile — and **above `.accessibilityMedium` the
+  count steps OUT of the ring entirely**, because a label that scales inside a
+  frame that also scales still collides at the top of the range. The ring is
+  then a pure meter, which is all it can honestly be at that size, and the
+  CARD carries the fraction in words. Those two halves are guarded together:
+  the disc must stop drawing the count *and* the card must start saying it, or
+  the count is simply lost. The stroke weight scales proportionally too, or a
+  scaled ring thins into a hairline.
+- **The rival badge.** A 9pt glyph offset off a ring's corner, unlabelled —
+  the smallest mark on the card carrying the highest-stakes fact on it.
+
+### 2. Two findings past the clipping, and they are why the shape changed
+
+Widening the caption box would have fixed the truncation and left both of
+these standing.
+
+**A VoiceOver user heard more than a sighted one saw.** `Thing`-free
+`SafeRoom.Entry.descriptionText` — "a transfer of 1,500 USDC to alice.eth" —
+is cached by `SafeBridge` at tracking time, costs nothing to draw, and was
+drawn ONLY inside the card's `voiceLabel`. On screen the ring said "2/3" and
+"3 days": the two facts that mean least when you do not know what the
+transaction is. It is the row title now, at `callout15`, two lines, wrapping
+rather than clipping. Both readers go through one `SafeRoom.subject`, so the
+spoken card and the drawn one can no longer drift, and the empty-description
+fallback is spelled once ("Pending transaction" — capitalized and
+article-less, because it heads a row as a subject and still reads correctly
+mid-sentence in the VoiceOver list, where every clause is a fragment).
+
+**State was carried by colour alone.** Your turn, ready, and waiting were the
+same caption in three tints painted onto `waitLabel`. Three rings reading
+"3 days" in three colours are one ring in a greyscale screenshot, in a PDF
+export, and to a red-green viewer — and the state is the more important of the
+two facts. `SafeRoom.stateLabel` says it, and the tint then reinforces a word
+rather than carrying the fact: §83's honesty rule applied to an ENCODING
+rather than to a control. **The waiting form counts signatures, never people**
+— this card holds no owner roster (that is `SafeQueueCard`'s, one screen
+deeper), so "waiting on 2 others" would be a claim about WHO built from a
+number that only says how many more. An unread 0/0 threshold gets the bare
+word "Waiting", `isReady`'s own `required > 0` guard one rung down.
+
+### 3. What did NOT change, and why the ring survived
+
+Ranking, headline, module note, state note, footnote, the tap contract and
+`rowCap` are untouched, and all five of the harness's existing `CARD_SAFE`
+drift guards still hold. **The mark stays a RING** rather than becoming the
+horizontal track the alternative direction proposed: every sibling room draws
+a `ShareBar` because its subject is a PROPORTION (which token, which rail),
+and a Safe's is a COUNT toward a threshold — the distinction this card's own
+header draws, and the reason the disc is shared with the sheet one screen
+deeper. A track in that slot would blur both. The alternative was drawn and is
+recorded rather than discarded: it is unclippable at any size and genuinely
+better at a 7-of-7 Safe, where seven trims inside a 34pt circle are a
+hairline mush. **Revisit it the day a watched Safe routinely has five or more
+owners — and then the ring should retire in the sheet too, not only here**,
+or the room and its sheet stop looking like the same subject.
+
+### 4. The rival pair, said
+
+`ordered` already pulls a contested sibling up beside its partner, so what was
+missing was the sentence, not the arrangement. `SafeRoom.positionLabel` prints
+the shared slot on both rows. **The nonce is never grouped**:
+`String(localized: "position \(n)")` over an `Int` renders 1042 as
+"position 1,042" — a queue slot printed as a quantity, which is §375's own
+year-as-quantity defect in a second place, and it renders perfectly. The
+already-formatted string is interpolated instead, and a mutation pins it.
+
+### 5. Cost, and what remains unmeasured
+
+**Nothing.** No request, no new `Thing` property, no CloudKit deploy — every
+field the row draws was already on the entry. `SafeRoom` gained three word
+functions (`subject`, `stateLabel`, `positionLabel`) covered by 14 assertions
+and 5 mutations in `scripts/wallet-rooms-selftest.sh`, plus 9 new drift guards
+tying the card and the disc together; the card half reads a comment-stripped
+copy, since the source documents the old rail by naming it.
+
+**Unmeasured, and stated because the harness cannot reach it**: nothing on
+this host can make a Safe transaction pend, so no row here has been drawn over
+real bridge data, and the accessibility-size branch has not been walked on a
+device. One open question worth answering before this is trusted at scale:
+whether `SafeBridge.describe` can hand back an empty string on a real Safe —
+the fallback exists and is tested, but if it is the COMMON case then the room
+leads three rows with one noun and the subject was never the fix it looks like.
+
+## 465. Setup is what you do once; the room is what you do repeatedly — vibenet's roster becomes an address book (user: "is that clear to a user? in setup screen you follow up to five wallets, but in address book you track addresses? … i'm just not happy or seeing an elegant solution to how we are doing this. the set up screens need to feel like they are only for set up", then "maybe then the solution is in the app catlogue wallet setup and vibenet setup just create the room and you do all the things there", then "vibenet needs to be treated differntly b/c it's not a live network just fyi. same like altana", then "agree connect lands you in the room / but room can have address book", 2026-08-24)
+
+§461 split Wallet's addresses into a capped roster on the setup screen and an
+unlimited book of names beside it. It answered the question it was asked and
+left a bigger one standing: **the setup screen was still the place you went to
+do things repeatedly.** Four nouns across two screens — a title "Addresses", a
+section "Your wallets", a door "Address Book", a head "Everyone else" — and
+none of them said the thing that actually separates the two tiers, which is
+that one costs a metered read on every foreground and the other costs nothing.
+
+**The rule this settles, and it is a rule about every seat, not about vibenet:
+setup holds what you do ONCE; the room holds what you do REPEATEDLY.** A key
+paste is a once. A roster is a repeatedly. That is why ~60 seats are fine with
+their connect page doubling as their settings page — they have nothing to
+manage — and why exactly two are not.
+
+**Exactly two seats own an address list.** This was checked rather than
+assumed, and the answer is the reassuring one: Altana, Peer, Privacy Pools,
+Railgun, Gnosis Pay, Safe, Aave, Morpho, Hyperliquid, Aerodrome and Uniswap are
+all `BridgeStore.walletSeats` — they own NO addresses, read the wallets you
+already watch, and have no setup screen at all. Eleven seats, zero rosters,
+nothing to split. So the whole app has two address lists: Wallet's (five,
+because each watch is a metered Zerion read) and vibenet's.
+
+**Vibenet is treated differently because it is not a live network.** Its
+accounts are not your wallets and its RPC is keyless and free, so:
+
+1. **No cap.** Wallet's five is an economics fact, not a policy — a limit with
+   no cost behind it is a control that protects nothing (§83's shape). Vibenet
+   is uncapped and always will be.
+2. **One tier, so one list.** Wallet's book exists because naming is free while
+   watching is not, which is what makes "everyone else" a real population.
+   Where both cost nothing there is no second tier to separate: vibenet's book
+   IS its watch list — no cap counter, no "Everyone else" section.
+3. **Never "connect your wallet."** The verb is watch a test account.
+
+**What moved.** `VibenetScreen` drops from 385 lines to 126: the mode chip, one
+intro, the first address (field + discovery), a `RoomDoor`, a door to the book,
+and Disconnect. The roster, the renames, the removes, the account sheet and the
+add field are now `VibenetAddressBookScreen`. `VibenetRoomCard` needed no
+change at all — it has forked on `onOpen` since 2026-08-24 (non-nil draws every
+account as a full navigable row with its context menu; nil draws
+`balanceAggregateSection`), so the book simply takes the managing mode the
+setup screen used to hold.
+
+**The feed room body is deliberately untouched.** It was tempting to read
+"the room takes the roster" as "put the rows in the room", and that would have
+re-added exactly what §463's session removed on the user's own ruling — *"what
+we want to say on the all page is perhaps N accounts and balance, then the
+keys, then the events"*, having floated a room-wide list and talked themselves
+back out of it. The roster is one tap FROM the room, never in it. **Generalised
+lesson, and the second time this session: before proposing a UI change to a
+mature room, read that room's most recent ledger entry — the code cannot tell
+you which of its gaps were deliberate.**
+
+**Watching the first address lands you in the room**, because that paste is the
+connection and there is nothing left to configure. `RoomDoor`'s own move
+(`route.path = []` then `chrome.sourceRequest`), spelled out because it fires
+from a watch rather than a tap — POP FIRST, since `sourceRequest` is read by
+`MainSurface` behind the pushed stack. **Only the first one routes**: a second
+watch tapped from the discovery list a moment later must not yank the list out
+from under the thumb still using it, which is why the field only exists on the
+setup page while the seat is DISCONNECTED.
+
+**One field, not two.** `VibenetWatchField` and `VibenetDiscoverySection` are
+shared views rather than copies. `AddressBookScreen`'s "copy the structure, not
+the type" rule governs a screen's LAYOUT; this is one control appearing on two
+screens, and copied it would answer the same paste with two different sentences
+inside a release. The SCREENS stay separate types for §461's reason.
+
+**The rail's add slot changed destination and had to.** It opened the setup
+page, which since this ruling has no field once the seat is connected — which
+is precisely when the rail exists. Both trailing slots now open the book. Note
+`VibenetScopeRail.shows` requires `watched > 1`, so a single-account room has no
+rail and reaches the book through the gear → setup → door; that chain is
+correct rather than a gap, since a one-account roster is a screen with one row.
+
+**Not done, and named rather than left to be discovered:** Wallet's own half of
+this ruling. Its setup screen still holds the five-row roster, and moving it
+means relocating the cap counter and the book door and re-anchoring §461's
+harness greps — a guarded thing that moves files takes its guard with it.
+Vibenet went first because it is the smaller proof: its card already forked,
+its `unwatch` already tears the seat down when the last address goes, and it
+has no cap to relocate.
+
+**UNMEASURED on a device.** The build is green and every static audit passes;
+no simulator run has walked the new book, and the first-watch routing has never
+been seen to happen.

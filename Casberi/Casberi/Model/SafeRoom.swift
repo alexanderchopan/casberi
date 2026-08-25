@@ -321,6 +321,60 @@ struct SafeRoom: Equatable {
             : String(localized: "\(room.readyCount) others are fully signed — ready to execute")
     }
 
+    /// What the row is ABOUT — `SafeBridge.describe`'s own rendering, cached
+    /// at tracking time, else a plain noun.
+    ///
+    /// It exists as a function rather than a read of `descriptionText` at the
+    /// call site because there are now TWO readers — the row title and
+    /// `voiceLabel` — and a fallback spelled twice is a fallback that drifts.
+    /// The noun is capitalized and article-less on purpose: it heads a row as
+    /// a subject, and it still reads correctly mid-sentence in the VoiceOver
+    /// list, where every other clause is a fragment too.
+    static func subject(_ entry: Entry) -> String {
+        entry.descriptionText.isEmpty
+            ? String(localized: "Pending transaction") : entry.descriptionText
+    }
+
+    /// The entry's state, IN WORDS (2026-08-24).
+    ///
+    /// The card used to carry this in colour alone — `DS.tint` for your turn,
+    /// `DS.confirm` for ready, tertiary for everything else, painted onto the
+    /// wait caption. Three rings reading "3 days" in three tints are one ring
+    /// in a greyscale screenshot, a PDF export, or to a red-green viewer, and
+    /// the state is the more important of the two facts. So it is said, and
+    /// then reinforced by the tint — §83's honesty rule applied to an
+    /// encoding rather than to a control.
+    ///
+    /// The waiting form counts SIGNATURES, never people: this card holds no
+    /// owner roster (that is `SafeQueueCard`'s, one screen deeper), so "2
+    /// others" would be a claim about who, made from a number that only says
+    /// how many more. A transaction whose `confirmationsRequired` never
+    /// parsed arrives as 0/0 and gets the bare word — the `isReady` guard's
+    /// own reasoning, one rung down.
+    static func stateLabel(_ entry: Entry) -> String {
+        if entry.awaitsYou { return String(localized: "Your turn") }
+        if entry.isReady { return String(localized: "Ready to execute") }
+        let short = entry.required - entry.have
+        guard entry.required > 0, short > 0 else { return String(localized: "Waiting") }
+        return short == 1
+            ? String(localized: "1 more signature needed")
+            : String(localized: "\(short) more signatures needed")
+    }
+
+    /// The queue POSITION, for a row that contests one — the pairing the card
+    /// used to make with a 9pt glyph in a ring's corner, said instead.
+    ///
+    /// **The nonce is never grouped.** `String(localized: "position \(n)")`
+    /// over an `Int` renders 1042 as "position 1,042" — a queue slot printed
+    /// as a quantity, which is §375's own defect (a year set as "2,019") in a
+    /// second place. Interpolating the already-formatted string is what keeps
+    /// the separator out.
+    static func positionLabel(_ entry: Entry) -> String? {
+        guard let nonce = entry.nonce else { return nil }
+        let plain = String(nonce)
+        return String(localized: "position \(plain)")
+    }
+
     /// "today" / "1 day" / "N days" — how long a pending entry has waited,
     /// off Safe's own `submissionDate`. "waiting" when the wire carried none
     /// — never a fabricated duration.

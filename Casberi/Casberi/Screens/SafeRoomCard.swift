@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// THE SAFE ROOM'S HEAD (2026-08-11) — the signature queue as rings, ranked
-/// "your turn" first, then fully-signed, then longest-waiting.
+/// THE SAFE ROOM'S HEAD (2026-08-11) — the signature queue, ranked "your
+/// turn" first, then fully-signed, then longest-waiting.
 ///
 /// The anatomy is `RailgunRoomCard`'s, which is `PeerRoomCard`'s: a kicker in
 /// the card's own hue, a heavy headline stating the finding as a sentence,
@@ -10,6 +10,15 @@ import SwiftUI
 /// (which token, which rail); a Safe's subject is a COUNT toward a
 /// threshold, so each row wears its own `SafeSignatureDisc` instead —
 /// `SafeQueueCard`'s own ring, reused rather than redrawn.
+///
+/// ## Rows, not a rail (2026-08-24, prd §464)
+///
+/// The rings were a horizontal `ScrollView` of 60pt cells, and `rowCap` is 3 —
+/// so it could never scroll, spent about 150pt of a 330pt card on emptiness,
+/// and clipped in three separate places for want of the width it was throwing
+/// away. `row(_:)` carries the whole reasoning; the short version is that the
+/// card now says WHAT each transaction is and WHAT STATE it is in, both of
+/// which the corpus already held and neither of which fitted in 60pt.
 ///
 /// ## The tap always has a destination, or there is no tap (2026-08-17)
 ///
@@ -41,6 +50,9 @@ struct SafeRoomCard: View {
     var onOpen: (String) -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    // Reading it invalidates the card when the text setting changes, and it is
+    // what moves the fraction out of the ring and into `metadata`.
+    @Environment(\.sizeCategory) private var sizeCategory
 
     private static let mark = DS.legibleCardFill(for: "Safe")
 
@@ -88,14 +100,11 @@ struct SafeRoomCard: View {
             }
 
             if !drawn.isEmpty {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(alignment: .top, spacing: DS.Space.s4) {
-                        ForEach(Array(drawn.enumerated()), id: \.element.id) { index, entry in
-                            ring(entry, index: index)
-                                .chartArrival(index: index, reduceMotion: reduceMotion)
-                        }
+                VStack(alignment: .leading, spacing: DS.Space.s3) {
+                    ForEach(Array(drawn.enumerated()), id: \.element.id) { index, entry in
+                        row(entry)
+                            .chartArrival(index: index, reduceMotion: reduceMotion)
                     }
-                    .padding(.horizontal, 1)   // clears the ring's own focus ring
                 }
                 .padding(.top, DS.Space.s3)
             }
@@ -154,48 +163,110 @@ struct SafeRoomCard: View {
         }
     }
 
-    // MARK: - Rings
+    // MARK: - Rows
 
-    private func ring(_ entry: SafeRoom.Entry, index: Int) -> some View {
+    /// ONE PENDING TRANSACTION, FULL WIDTH (2026-08-24, prd §464).
+    ///
+    /// This was a 60pt cell in a horizontal `ScrollView`, and every one of the
+    /// card's three clipping failures came out of that box. `rowCap` is 3, so
+    /// the rail could never scroll: it spent ~150pt of a ~330pt card on empty
+    /// space to the right of the last ring while squeezing each caption into
+    /// 60pt with `lineLimit(1)` and no ellipsis. Giving that width back fixes
+    /// the clipping without shrinking one rung of type, and buys the two
+    /// things the cell had no room for:
+    ///
+    ///   - **The subject.** `descriptionText` is cached on every entry by
+    ///     `SafeBridge` and cost nothing to draw, and it was drawn ONLY inside
+    ///     `voiceLabel` — so a VoiceOver user heard what the transaction was
+    ///     and a sighted one read "2/3" and "3 days", the two facts that mean
+    ///     least when you don't know what it is.
+    ///   - **The state, in words.** See `SafeRoom.stateLabel`.
+    ///
+    /// The disc is unchanged in kind and only smaller: it is `SafeQueueCard`'s
+    /// own ring, and it stays a RING because a Safe's subject is a count
+    /// toward a threshold where every sibling room's is a proportion — the
+    /// distinction this file's own header draws against their `ShareBar`s. At
+    /// 34 it leads a row rather than standing as a tile.
+    private func row(_ entry: SafeRoom.Entry) -> some View {
         let contested = room.isContested(entry)
         return Button {
             DSHaptic.selection()
             onOpen(entry.ref)
         } label: {
-            VStack(spacing: DS.Space.s1) {
-                SafeSignatureDisc(have: entry.have, required: entry.required, size: 44)
-                    // A rival pair is marked on the RING rather than only in
-                    // the sentence above: the sentence says two of these
-                    // collide, and without this you cannot tell which two.
-                    .overlay(alignment: .topTrailing) {
-                        if contested {
-                            Image(systemName: "arrow.triangle.branch")
-                                .dsGlyph(9, weight: .semibold)
-                                .foregroundStyle(DS.textSecondary)
-                                .padding(2)
-                                .background(Circle().fill(DS.surfaceSheet))
-                                .offset(x: 3, y: -3)
-                        }
-                    }
-                Text(SafeRoom.waitLabel(entry))
-                    .dsText(.label12)
-                    .foregroundStyle(entry.awaitsYou ? DS.tint
-                                     : entry.isReady ? DS.confirm : DS.textTertiary)
-                    .lineLimit(1)
+            HStack(alignment: .top, spacing: DS.Space.s3) {
+                SafeSignatureDisc(have: entry.have, required: entry.required,
+                                  size: 34)
+                    .padding(.top, 1)
+                VStack(alignment: .leading, spacing: 1) {
+                    // Two lines and then it wraps — never a fixed width, which
+                    // is what the caption box was and what clipped.
+                    Text(verbatim: SafeRoom.subject(entry))
+                        .dsText(.callout15)
+                        .foregroundStyle(DS.textPrimary)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                    metadata(entry, contested: contested)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer(minLength: 0)
             }
-            .frame(width: 60)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .accessibilityLabel(Text(voiceLabel(entry, contested: contested)))
     }
 
-    /// Spelled out rather than read off the ring: "2 of 3" alone doesn't say
-    /// whether that is enough, and the disc carries the met/unmet distinction
-    /// in colour, which VoiceOver cannot reach.
+    /// State · wait · position, as ONE concatenated `Text` so the whole clause
+    /// wraps as a paragraph rather than as three views that can break apart.
+    ///
+    /// `scaledFont` rather than `dsText`, because a concatenated `Text` needs
+    /// `Text`'s own `.font(_:)` overload to stay `Text`-typed — the exact case
+    /// that property exists for, so this is still the ramp and still Dynamic
+    /// Type. The state word is semibold in its own tint and everything after it
+    /// is secondary: the tint now REINFORCES a word rather than carrying the
+    /// fact alone.
+    ///
+    /// Above `.accessibilityMedium` the fraction joins this line, because the
+    /// disc has stopped drawing it (`SafeSignatureDisc.drawsCount`) — the two
+    /// halves of one rule, and the reason the count can never be lost.
+    private func metadata(_ entry: SafeRoom.Entry, contested: Bool) -> Text {
+        var line = Text(verbatim: SafeRoom.stateLabel(entry))
+            .font(DSTextStyle.subhead13.scaledFont)
+            .fontWeight(.semibold)
+            .foregroundStyle(stateTint(entry))
+        if sizeCategory.isAccessibilityCategory, entry.required > 0 {
+            line = line + trailing(String(localized: "\(entry.have) of \(entry.required)"))
+        }
+        line = line + trailing(SafeRoom.waitLabel(entry))
+        // The rival pair, said. It was a 9pt glyph offset off a ring's corner
+        // — the smallest mark on the card carrying the highest-stakes fact on
+        // it, and unlabelled. `ordered` already draws a contested pair
+        // adjacent, so printing the shared position on both is what makes the
+        // pairing readable rather than merely present.
+        if contested, let position = SafeRoom.positionLabel(entry) {
+            line = line + trailing(position)
+        }
+        return line
+    }
+
+    private func trailing(_ text: String) -> Text {
+        Text(verbatim: " · " + text)
+            .font(DSTextStyle.subhead13.scaledFont)
+            .foregroundStyle(DS.textSecondary)
+    }
+
+    /// The state's colour, matching the ring's own fill so the mark and the
+    /// word can never disagree.
+    private func stateTint(_ entry: SafeRoom.Entry) -> Color {
+        entry.awaitsYou ? DS.tint : entry.isReady ? DS.confirm : DS.textSecondary
+    }
+
+    /// Spelled out rather than read off the row: the disc carries the met/unmet
+    /// distinction in colour, which VoiceOver cannot reach, and the subject and
+    /// the state now come from the same two functions the row draws — so the
+    /// spoken card and the drawn one can no longer drift.
     private func voiceLabel(_ entry: SafeRoom.Entry, contested: Bool) -> String {
-        var parts = [entry.descriptionText.isEmpty
-                     ? String(localized: "a pending transaction") : entry.descriptionText]
+        var parts = [SafeRoom.subject(entry)]
         parts.append(entry.isReady
                      ? String(localized: "fully signed, ready to execute")
                      : String(localized: "\(entry.have) of \(entry.required) signatures"))

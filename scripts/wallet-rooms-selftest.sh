@@ -338,6 +338,54 @@ grep -q 'SafeRoom.stateNote(room)' "$CARD_SAFE" \
 grep -q 'room.isContested(entry)' "$CARD_SAFE" \
   || { echo "✗ the Safe card no longer marks WHICH rings collide — the sentence says two of these contest and nothing says which"; exit 1; }
 
+# --- 2026-08-24: rows, not a rail (prd §464) --------------------------------
+# THE CLIP. The rings were a horizontal ScrollView of 60pt cells, and `rowCap`
+# is 3 — so it could never scroll, spent ~150pt of a ~330pt card on emptiness,
+# and clipped in three places for want of the width it was throwing away. A
+# card that goes back to a fixed-width cell goes straight back to truncating
+# `waitLabel` with no ellipsis, invisibly at the default size and for every
+# accessibility size and most non-English.
+strip_comments "$CARD_SAFE" > "$TMP/safecard.swift"
+if grep -q 'ScrollView(.horizontal' "$TMP/safecard.swift"; then
+  echo "✗ the Safe card's entries are back in a horizontal rail — three items cannot scroll, and the cell is what clipped"; exit 1
+fi
+if grep -qE 'frame\(width: [0-9]+\)' "$TMP/safecard.swift"; then
+  echo "✗ the Safe card has a fixed-width text box again — nothing on a row may carry a hardcoded width"; exit 1
+fi
+# The subject was cached on every entry and drawn ONLY in the VoiceOver label,
+# so a sighted reader got strictly less than a VoiceOver one. Both readers go
+# through the same function now, and this is what keeps them from drifting
+# apart again.
+grep -q 'Text(verbatim: SafeRoom.subject(entry))' "$TMP/safecard.swift" \
+  || { echo "✗ the Safe card no longer draws the transaction's subject — the row would say 2/3 and a wait and never what it is about"; exit 1; }
+grep -q 'var parts = \[SafeRoom.subject(entry)\]' "$TMP/safecard.swift" \
+  || { echo "✗ the Safe card's VoiceOver label no longer shares the row's own subject — the spoken card and the drawn one can drift"; exit 1; }
+# STATE IS A WORD BEFORE IT IS A COLOUR. Without this the row's three states are
+# one row in greyscale, in a PDF export, and to a red-green viewer.
+grep -q 'SafeRoom.stateLabel(entry)' "$TMP/safecard.swift" \
+  || { echo "✗ the Safe card no longer says the state — it would be carried by tint alone, which §83 forbids"; exit 1; }
+# The rival pair, said. It was a 9pt glyph offset off a ring's corner: the
+# smallest mark on the card carrying its highest-stakes fact, unlabelled.
+grep -q 'SafeRoom.positionLabel(entry)' "$TMP/safecard.swift" \
+  || { echo "✗ the Safe card no longer names the contested queue position — the pairing is drawn adjacent and never explained"; exit 1; }
+# THE DISC'S OWN CLIP, and its two halves. The frame was a frozen 44 holding a
+# `label12`, which goes through `dsText` and grows with the text setting — so
+# "10/12" outgrew the inner circle and met its own stroke. Scaling the frame is
+# half the fix; the count STEPPING OUT above accessibilityMedium is the other,
+# because a label that scales inside a frame that also scales still collides at
+# the top of the range. The card must then carry the fraction in words, or it
+# is simply lost.
+QUEUE="Casberi/Casberi/Screens/SafeQueueCard.swift"
+strip_comments "$QUEUE" > "$TMP/safequeue.swift"
+grep -q 'UIFontMetrics(forTextStyle: .caption1).scaledValue(for: size)' "$TMP/safequeue.swift" \
+  || { echo "✗ SafeSignatureDisc's frame is frozen again — its own scaling label will outgrow it at an accessibility size"; exit 1; }
+grep -q 'frame(width: scaled, height: scaled)' "$TMP/safequeue.swift" \
+  || { echo "✗ SafeSignatureDisc computes a scaled size and no longer uses it"; exit 1; }
+grep -q 'showsCount && !sizeCategory.isAccessibilityCategory' "$TMP/safequeue.swift" \
+  || { echo "✗ SafeSignatureDisc no longer steps its count out of the ring at an accessibility size"; exit 1; }
+grep -q 'sizeCategory.isAccessibilityCategory, entry.required > 0' "$TMP/safecard.swift" \
+  || { echo "✗ the Safe card no longer carries the fraction when the ring stops drawing it — the count would be lost at an accessibility size"; exit 1; }
+
 # The chip's long-press peek must preview the room it opens. Safe's head is a
 # FIGURE (rings), not a text hero, so it belongs in this chain for X's exact
 # reason — without it the peek drew a blank.
@@ -1213,6 +1261,56 @@ check("entries beyond the row cap are counted in the footnote, never silently dr
       safeFoot == "1 more pending")
 
 print("")
+print("Safe — the row's own words (2026-08-24, prd §464)")
+// The card drew a 60pt ring per entry and said the state in COLOUR alone —
+// tint for your turn, green for ready, tertiary for everything else, painted
+// onto the wait caption. Three rings reading "3 days" in three tints are one
+// ring in greyscale, in a PDF export, and to a red-green viewer. Every failure
+// here renders as a perfectly ordinary row.
+check("your turn is a WORD, not a tint",
+      SafeRoom.stateLabel(safeEntry("a", have: 1, required: 3, yourTurn: true)) == "Your turn")
+check("a met threshold says the act, not the wait",
+      SafeRoom.stateLabel(safeEntry("a", have: 3, required: 3)) == "Ready to execute")
+// Your turn OUTRANKS ready in the sentence exactly as it does in `ordered`:
+// anybody can execute a signed transaction and only you can add your signature.
+check("a transaction that is BOTH yours and short still leads with your turn",
+      SafeRoom.stateLabel(safeEntry("a", have: 2, required: 3, yourTurn: true)) == "Your turn")
+check("a fully-signed transaction you never signed is ready, never your turn",
+      SafeRoom.stateLabel(safeEntry("a", have: 2, required: 2, yourTurn: true)) == "Ready to execute")
+// It counts SIGNATURES and never people: this card holds no owner roster (that
+// is SafeQueueCard's, one screen deeper), so "2 others" would be a claim about
+// WHO built from a number that only says how many more.
+check("the waiting form counts signatures still needed",
+      SafeRoom.stateLabel(safeEntry("a", have: 1, required: 3)) == "2 more signatures needed")
+check("one short is singular",
+      SafeRoom.stateLabel(safeEntry("a", have: 2, required: 3)) == "1 more signature needed")
+// A transaction whose `confirmationsRequired` never parsed arrives as 0/0 —
+// `isReady`'s own guard, one rung down. "0 more signatures needed" would be a
+// claim about a threshold we could not read.
+check("an unread threshold gets the bare word, never a fabricated shortfall",
+      SafeRoom.stateLabel(safeEntry("a", have: 0, required: 0)) == "Waiting")
+
+// The subject. It was cached on every entry and drawn ONLY inside the card's
+// VoiceOver label, so a sighted reader got strictly less than a VoiceOver one.
+check("the row is about what the transaction IS",
+      SafeRoom.subject(safeEntry("a", description: "a transfer of 1,500 USDC to alice.eth"))
+        == "a transfer of 1,500 USDC to alice.eth")
+check("a description the bridge never cached falls back to a noun, not to nothing",
+      SafeRoom.subject(safeEntry("a", description: "")) == "Pending transaction")
+
+// The queue position, for the pair the card used to mark with a 9pt glyph in a
+// ring's corner. THE NONCE IS AN IDENTIFIER, NOT A QUANTITY: interpolating an
+// Int into String(localized:) groups it, so position 1042 renders as
+// "position 1,042" — §375's own defect (a year set as "2,019") in a second
+// place, and one that renders perfectly.
+check("a queue position is printed as a slot, never grouped as a quantity",
+      SafeRoom.positionLabel(safeEntry("a", nonce: 1042)) == "position 1042")
+check("a small nonce is unaffected either way",
+      SafeRoom.positionLabel(safeEntry("a", nonce: 7)) == "position 7")
+check("a nonce the wire never carried names no position rather than inventing one",
+      SafeRoom.positionLabel(safeEntry("a", nonce: nil)) == nil)
+
+print("")
 print("Safe — the stuck-signature line the brief and the widget read")
 // A your-turn signature notifies ONCE at landing and §306's 36-hour news
 // window forbids a second buzz forever after, so this is the only surface that
@@ -1585,6 +1683,37 @@ mutate "the ready count outranks a nonce collision in the one note slot" safe \
   'if false {'
 # The module warning stops naming its Safe once several are watched, so a
 # person told their funds can move without a signature is not told where.
+# --- 2026-08-24: the row's own words (prd §464) -----------------------------
+# Your turn stops outranking ready IN THE SENTENCE, so a transaction that needs
+# your signature and has most of them announces itself as ready to execute —
+# the state word is the loudest thing on the row and it names the wrong act.
+mutate "the state word stops leading with your turn" safe \
+  'if entry.awaitsYou { return String(localized: "Your turn") }' \
+  'if false { return String(localized: "Your turn") }'
+# The shortfall is computed the wrong way round: a 1-of-3 reports that it needs
+# minus-two more, which the guard below then swallows into the bare "Waiting" —
+# so the one row genuinely furthest from executing looks the least urgent.
+mutate "the signatures still needed are counted backwards" safe \
+  'let short = entry.required - entry.have' \
+  'let short = entry.have - entry.required'
+# An unread 0/0 threshold claims a shortfall it has no evidence for. Same
+# reasoning as `isReady`'s own `required > 0`, one rung down.
+mutate "an unread threshold states a shortfall anyway" safe \
+  'guard entry.required > 0, short > 0 else { return String(localized: "Waiting") }' \
+  'guard true else { return String(localized: "Waiting") }'
+# A row whose description never reached the tracking store leads with an empty
+# line — a row with a ring, a state and no subject, which reads as a rendering
+# bug rather than as a missing field.
+mutate "a missing description leaves the row with no subject at all" safe \
+  'entry.descriptionText.isEmpty' \
+  'false'
+# THE GROUPING BUG. `String(localized: "position \(n)")` over an Int renders
+# 1042 as "position 1,042" — a queue slot printed as a quantity, on the one row
+# where the number IS the identity of the collision. §375's year-as-quantity
+# defect in a second place, and it renders perfectly.
+mutate "the queue position is grouped like a quantity" safe \
+  'let plain = String(nonce)' \
+  'let plain = nonce.formatted(.number.grouping(.automatic))'
 mutate "the module warning stops naming which Safe it means" safe \
   'guard room.safeCount > 1, let only = carriers.first else {' \
   'guard false, let only = carriers.first else {'
