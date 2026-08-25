@@ -503,7 +503,18 @@ struct MainSurface: View {
                 // another account, and a rail of the accounts you watch is
                 // exactly where you reach for one more.
                 addTitle: String(localized: "Watch an account"),
-                onAdd: { route.pushBridge(BridgeRouter.destination(forID: VibenetIdentity.seatID)) })
+                // The ADD slot no longer opens the setup page (prd §465):
+                // that page is the FIRST address and the disconnect now, so
+                // it has no field once the seat is connected — which is
+                // exactly when this rail exists. Both trailing slots lead to
+                // the book, which is where watching another account lives.
+                onAdd: { route.push(.vibenetAddressBook) },
+                // The door to the list this rail is showing you the faces of
+                // — the same slot the wallet rail carries, for the same
+                // reason. Here it opens the roster ITSELF rather than
+                // "everyone else": vibenet has one tier, not two.
+                bookTitle: String(localized: "Address Book"),
+                onOpenBook: { route.push(.vibenetAddressBook) })
             .padding(.top, showsRail && !demoActive ? DS.Space.s2 : 0)
         }
     }
@@ -585,6 +596,8 @@ struct MainSurface: View {
             AddressGroupScreen(group: name)
         case .addressBook:
             AddressBookScreen()
+        case .vibenetAddressBook:
+            VibenetAddressBookScreen()
         case .startHere:
             // Reached after leaving the demo, so "finishing" is a pop
             // rather than the end of onboarding — a non-nil node still

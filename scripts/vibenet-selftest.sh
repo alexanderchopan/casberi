@@ -49,7 +49,14 @@ BRIDGE="Casberi/Casberi/Model/VibenetBridge.swift"
 CATALOG="Casberi/Casberi/Model/BridgeCatalog.swift"
 REACH="Casberi/Casberi/Model/NetworkReach.swift"
 ROUTER="Casberi/Casberi/Model/BridgeRouting.swift"
-for f in "$ROOM" "$BRIDGE" "$CATALOG" "$REACH" "$ROUTER"; do
+# prd §465 — the setup/room split. The setup page and the book are two files
+# now, and the invariant that keeps them apart is textual, so it is greppable.
+SETUP="Casberi/Casberi/Screens/VibenetScreen.swift"
+BOOK="Casberi/Casberi/Screens/VibenetAddressBookScreen.swift"
+FIELD="Casberi/Casberi/Screens/VibenetWatchViews.swift"
+SHELL_SURFACE="Casberi/Casberi/Shell/MainSurface.swift"
+FEED="Casberi/Casberi/Screens/FeedScreen.swift"
+for f in "$ROOM" "$BRIDGE" "$CATALOG" "$REACH" "$ROUTER" "$SETUP" "$BOOK" "$FIELD" "$SHELL_SURFACE" "$FEED"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 
@@ -100,6 +107,68 @@ PY
 }
 strip_comments "$ROOM"   > "$TMP/room.nc.swift"
 strip_comments "$BRIDGE" > "$TMP/bridge.nc.swift"
+strip_comments "$SETUP" > "$TMP/setup.nc.swift"
+strip_comments "$BOOK"  > "$TMP/book.nc.swift"
+
+# --- prd §465: setup is what you do ONCE, the room what you do REPEATEDLY ----
+# Every check here fails INVISIBLY if it is not made: the screens still build,
+# still render and still look finished — they just quietly grow back into the
+# one screen this ruling split, which is exactly how they got there the first
+# time. Negative greps read the COMMENT-STRIPPED copies, because all three
+# files document the rule by naming the very thing they must not do (the
+# Obsidian/Cursor lesson).
+
+# The book holds the MANAGING roster. `VibenetRoomCard` draws every watched
+# account as a navigable, renameable, removable row only when `onOpen` is
+# non-nil; without this the book is a screen with a field and no list.
+grep -q 'onOpen:' "$TMP/book.nc.swift" \
+  || { echo "✗ VibenetAddressBookScreen no longer passes onOpen — the roster is not in managing mode"; exit 1; }
+
+# The setup page holds NO roster. This is the whole ruling: a VibenetRoomCard
+# back on the setup screen is the 385-line screen returning.
+if grep -q 'VibenetRoomCard' "$TMP/setup.nc.swift"; then
+  echo "✗ VibenetScreen draws VibenetRoomCard again — prd §465: the roster lives in the book,"
+  echo "  never on the setup page. Setup is what you do once."
+  exit 1
+fi
+
+# The setup page offers the first address ONLY while disconnected. Two fields
+# writing one list, one tap apart, is the duplication the split exists to end —
+# and it renders perfectly, so nothing else can see it.
+grep -q 'if !connected' "$TMP/setup.nc.swift" \
+  || { echo "✗ VibenetScreen no longer gates its paste field on being disconnected (prd §465)"; exit 1; }
+
+# ONE field, shared. Copied, the two screens answer the same paste with two
+# different sentences within a release.
+for f in "$TMP/setup.nc.swift" "$TMP/book.nc.swift"; do
+  grep -q 'VibenetWatchField' "$f" \
+    || { echo "✗ $f no longer uses the shared VibenetWatchField (prd §465)"; exit 1; }
+  grep -q 'DSSlabField' "$f" \
+    && { echo "✗ $f hand-rolls its own paste field — VibenetWatchField is the one control (prd §465)"; exit 1; }
+done
+
+# NO CAP, ever. Wallet's five is a metered-read fact; vibenet's RPC is keyless
+# and free, so a limit here would be a control protecting nothing (§83).
+if grep -q 'watchLimit\|canWatchMore' "$TMP/book.nc.swift" "$TMP/setup.nc.swift"; then
+  echo "✗ a watch cap reached the vibenet screens — prd §465: reads here are free,"
+  echo "  so there is no expensive tier to ration and no cap to state"
+  exit 1
+fi
+
+# The room's rail reaches the book. Both trailing slots, because the setup page
+# has no field once connected — which is exactly when the rail exists.
+grep -q 'onAdd: { route.push(.vibenetAddressBook) }' "$SHELL_SURFACE" \
+  || { echo "✗ the vibenet rail's add slot no longer opens the book (prd §465) — it would open"; echo "  a setup page that has no field while connected"; exit 1; }
+grep -q 'onOpenBook: { route.push(.vibenetAddressBook) }' "$SHELL_SURFACE" \
+  || { echo "✗ the vibenet rail lost its Address Book slot (prd §465)"; exit 1; }
+
+# The feed room is UNTOUCHED by this ruling and must stay so: `onOpen` nil
+# there is what keeps the stat block the user ruled for ("N accounts and
+# balance, then the keys, then the events", §463's session). A managing roster
+# in the feed room re-adds the rows that ruling removed.
+grep -q 'VibenetRoomCard(room: room, onRemove: { _ in }, onScope:' "$FEED" \
+  || { echo "✗ the FEED room's VibenetRoomCard no longer passes onScope-without-onOpen —"; echo "  prd §465 leaves the feed room's stat block exactly as §463 ruled it"; exit 1; }
+
 
 if grep -qi '0x8130' "$TMP/room.nc.swift" "$TMP/bridge.nc.swift"; then
   echo "✗ a literal vibenet contract address (0x8130…) is hardcoded outside a comment —"

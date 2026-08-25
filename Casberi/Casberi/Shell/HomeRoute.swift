@@ -94,6 +94,22 @@ final class HomeRoute {
         /// Valueless, unlike `addressGroup`: there is exactly one book, and the
         /// group it opens onto pushes its own node on top.
         case addressBook
+        /// Vibenet's own address book — the devnet accounts you watch, and
+        /// every verb that manages them (prd §465).
+        ///
+        /// Its OWN node, and never `.bridge(.vibenet)`, for exactly the
+        /// reason `addressBook` gives one line up: a bridge destination is
+        /// the SETUP screen for a catalog seat, and this is a room. Since
+        /// §465 that distinction is load-bearing rather than tidy —
+        /// `.bridge(.vibenet)` now opens a page holding the first address
+        /// and the disconnect and nothing else, so routing the roster
+        /// through it would land on a screen that no longer has a roster.
+        ///
+        /// Separate from `addressBook` rather than parameterised by source:
+        /// Wallet's book is an unlimited ledger of NAMES beside a capped
+        /// watch list, and this is the watch list itself, uncapped. Same
+        /// word, different contents.
+        case vibenetAddressBook
     }
     var path: [Node] = []
 
