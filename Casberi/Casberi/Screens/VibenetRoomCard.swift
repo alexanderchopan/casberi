@@ -89,6 +89,7 @@ import SwiftUI
 /// collapses this very card to `VibenetAccountDetail` automatically,
 /// mapping and all) — a chip's tap only ever calls `onScope`.
 struct VibenetRoomCard: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let room: VibenetRoom
     var onRemove: (String) -> Void
     /// Raised by the context menu's "Name this account…" — the alert itself
@@ -179,8 +180,13 @@ struct VibenetRoomCard: View {
                     // ruling, reused).
                     if !roster.isEmpty {
                         VStack(alignment: .leading, spacing: 0) {
-                            ForEach(roster) { item in
+                            // The roster is what this card draws from data —
+                            // one row per watched account beyond the lead —
+                            // so it wears the same staged arrival every other
+                            // room's ranked rows do, Reduce Motion included.
+                            ForEach(Array(roster.enumerated()), id: \.element.id) { index, item in
                                 row(item, onOpen: onOpen)
+                                    .chartArrival(index: index, reduceMotion: reduceMotion)
                             }
                         }
                         .padding(.top, DS.Space.s3)

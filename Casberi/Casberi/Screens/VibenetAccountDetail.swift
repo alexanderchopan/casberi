@@ -13,6 +13,7 @@ import SwiftUI
 /// was the bug; this is the fix — ONE definition, so the room and the sheet
 /// can never drift apart on what one account's detail actually says.
 struct VibenetAccountDetail: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let item: VibenetAccountItem
     /// This account's OUTGOING and INCOMING delegate relationships — both
     /// directions, unfiltered, computed by the caller off the FULL room
@@ -144,8 +145,15 @@ struct VibenetAccountDetail: View {
                 .dsText(.heading17)
                 .foregroundStyle(DS.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
-            ForEach(VibenetAccountItem.byReach(item.actors)) { actor in
+            // The keys are what this card DRAWS FROM DATA — one row per
+            // authorized key, in reach order — so they take the house
+            // entrance every other room's ranked rows wear, and honour
+            // Reduce Motion through the same modifier rather than a
+            // second animation this file would have to keep in step.
+            ForEach(Array(VibenetAccountItem.alphabetical(item.actors).enumerated()),
+                    id: \.element.id) { index, actor in
                 keyRow(actor)
+                    .chartArrival(index: index, reduceMotion: reduceMotion)
             }
         }
     }

@@ -78,8 +78,10 @@ struct VibenetScope: Equatable, Codable {
     /// authority as one holding none — the §83 fake status in the direction
     /// that matters most, on the one screen someone reads to find out who can
     /// spend their account. `grantedCount` made it worse by ranking such a key
-    /// LAST, so `byReach` — whose whole job is to surface the most-privileged
-    /// key first — surfaced it last instead.
+    /// LAST, so `byReach` — whose whole job was to surface the most-privileged
+    /// key first — surfaced it last instead. That ordering is gone now (see
+    /// `alphabetical`); what survives is this flag and the inverted chip it
+    /// drives, which says "total authority" without reordering anything.
     ///
     /// An admin is deliberately NOT rendered as all five bits set: it holds
     /// every capability INCLUDING the reserved ones this build cannot name,
@@ -167,12 +169,6 @@ struct VibenetScope: Equatable, Codable {
         return VibenetScope.named.filter { raw & $0.bit != 0 }.count + unknownCount
     }
 
-    /// The ranking value `byReach` sorts on, so the most-privileged key is
-    /// read first. An admin outranks every possible bit combination by
-    /// construction rather than by a tuned number — the earlier
-    /// `grantedCount`-only ranking put it LAST, since scope 0 counts zero
-    /// bits, which inverted the one ordering this room has.
-    var reach: Int { isAdmin ? Int.max : grantedCount }
 }
 
 // MARK: - Authenticator identity
@@ -734,19 +730,25 @@ struct VibenetAccountItem: Identifiable, Equatable, Codable {
         }
     }
 
-    /// The MATRIX's column order: most powers first, so the key that can do
-    /// the most is the first one read. Distinct from `orderedActors` above
-    /// and deliberately so — that one answers "what kinds of key are on this
-    /// account" (a roster, best in the contract's own declaration order),
-    /// this one answers "which key should I look at first" (a ranking).
-    /// Falls back to `orderedActors`' rule on a tie, so it stays TOTAL and
-    /// the columns can never reshuffle between opens.
-    static func byReach(_ actors: [VibenetActor]) -> [VibenetActor] {
+    /// ALPHABETICAL by the key's own displayed title, then actorId — a
+    /// TOTAL order, and deliberately not a ranking (user, 2026-08-24: *"for
+    /// ease the keys could just be listed in alphabetical order then we
+    /// aren't making some judgement call"*).
+    ///
+    /// This REPLACES `byReach`, which sorted most-powerful-first. Ranking by
+    /// power is the app deciding which of your keys matters, and it was the
+    /// last survivor of the matrix this tray spent four passes refusing. The
+    /// work that ordering was doing is done visually instead: an admin's chip
+    /// INVERTS, so total authority is loud wherever it happens to sort, and
+    /// nothing has to be reordered to say so.
+    ///
+    /// Sorts on `plainTitle` rather than `kind.sortRank` because the reader
+    /// sees the title — an order they cannot reproduce by looking is not the
+    /// judgement-free order they asked for.
+    static func alphabetical(_ actors: [VibenetActor]) -> [VibenetActor] {
         actors.sorted { a, b in
-            if a.scope.reach != b.scope.reach {
-                return a.scope.reach > b.scope.reach
-            }
-            if a.kind.sortRank != b.kind.sortRank { return a.kind.sortRank < b.kind.sortRank }
+            let f = a.kind.plainTitle.localizedCaseInsensitiveCompare(b.kind.plainTitle)
+            if f != .orderedSame { return f == .orderedAscending }
             return a.actorId < b.actorId
         }
     }
@@ -1032,6 +1034,16 @@ struct VibenetRoom: Equatable, Codable {
                 VibenetActor(actorId: "0x0000000000000000000000000000000000000000000000000000000000000004",
                              authenticator: "0x2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c",
                              kind: .delegate, scope: VibenetScope(raw: VibenetScope.sponsorPayer), expiry: 0),
+                // SCOPE 0 — the admin, and the one state the demo could not
+                // show before (prd §463). It renders as a single inverted
+                // "Admin" chip rather than as five permissions, so the demo
+                // exercises both the reading and the treatment that says
+                // "this key has no limits at all" without reordering the
+                // roster to make the point. Realistic on an AA account: an
+                // original owner key alongside a scoped session key.
+                VibenetActor(actorId: "0x0000000000000000000000000000000000000000000000000000000000000008",
+                             authenticator: "0xcccc1111222233334444555566667777888899cc",
+                             kind: .secp256k1, scope: VibenetScope(raw: 0), expiry: 0),
                 // A scope this build has no name for — the roster's honest
                 // "+1 unknown" fallback, never an invented label.
                 VibenetActor(actorId: "0x0000000000000000000000000000000000000000000000000000000000000005",

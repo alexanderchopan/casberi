@@ -228,10 +228,6 @@ check("no scope yields an empty chip row, so no caller needs a blank branch",
       !VibenetScope(raw: 0).grantedPlainLabels.isEmpty
         && !VibenetScope(raw: VibenetScope.sender).grantedPlainLabels.isEmpty
         && !VibenetScope(raw: 0x0020).grantedPlainLabels.isEmpty)
-check("the admin outreaches every possible bit combination, so byReach reads it FIRST",
-      VibenetScope(raw: 0).reach > VibenetScope(raw: 0xFFFF).reach)
-check("reach falls back to the plain bit tally for a restricted scope",
-      VibenetScope(raw: VibenetScope.sender | VibenetScope.selfPayer).reach == 2)
 check("grantedCount stays a BIT tally — an admin's powers are not a number",
       VibenetScope(raw: 0).grantedCount == 0)
 
@@ -358,32 +354,35 @@ let a3 = VibenetActor(actorId: "m", authenticator: "0x3", kind: .p256,
 check("K1 leads, custom trails, regardless of actorId",
       VibenetAccountItem.orderedActors([a1, a3, a2]).map(\.actorId) == ["a", "m", "z"])
 
-// MARK: - byReach — the matrix's column order
+// MARK: - alphabetical — the roster's order, and deliberately not a ranking
 
 print("")
-print("VibenetAccountItem.byReach — most-privileged key first")
-// Deliberately the INVERSE of orderedActors' kind ranking, so a test that
-// passes here for the wrong reason (both orders agreeing by accident) is
-// impossible: the weakest kind carries the most power.
-let weak   = VibenetActor(actorId: "a", authenticator: "0x1", kind: .secp256k1,
-                          scope: VibenetScope(raw: VibenetScope.nonce), expiry: 0)
-let strong = VibenetActor(actorId: "z", authenticator: "0x9", kind: .custom,
-                          scope: VibenetScope(raw: VibenetScope.sender | VibenetScope.selfPayer
-                                                   | VibenetScope.sponsorPayer), expiry: 0)
-check("the key that can do the most leads, even when its KIND ranks last",
-      VibenetAccountItem.byReach([weak, strong]).first?.actorId == "z")
-check("a tie in reach falls back to the kind order, so the column set stays TOTAL",
-      VibenetAccountItem.byReach([a3, a2]).map(\.actorId) == ["a", "m"])
-check("byReach over the same set twice agrees with itself",
-      VibenetAccountItem.byReach([strong, a2, weak]).map(\.actorId)
-        == VibenetAccountItem.byReach([a2, weak, strong]).map(\.actorId))
-// The inversion this ordering shipped with: an admin counts ZERO bits, so a
-// grantedCount-only ranking put the one key that can do everything dead last
-// — on the ordering whose entire job is to surface it first.
-let admin = VibenetActor(actorId: "zz", authenticator: "0xa", kind: .secp256k1,
-                         scope: VibenetScope(raw: 0), expiry: 0)
-check("the ADMIN leads, even against a key holding every named bit",
-      VibenetAccountItem.byReach([strong, admin, weak]).first?.actorId == "zz")
+print("VibenetAccountItem.alphabetical — a reproducible order, never a judgement")
+// Titles: "Another contract" (delegate) < "P-256 key" < "Passkey" <
+// "Wallet key" (secp256k1). The kind sortRank order is DIFFERENT, so a test
+// passing here by accident because both orders agree is impossible.
+let aDeleg = VibenetActor(actorId: "d", authenticator: "0x1", kind: .delegate,
+                          scope: VibenetScope(raw: VibenetScope.sender), expiry: 0)
+let aPass  = VibenetActor(actorId: "p", authenticator: "0x2", kind: .webAuthn,
+                          scope: VibenetScope(raw: VibenetScope.sender), expiry: 0)
+let aSecp  = VibenetActor(actorId: "s", authenticator: "0x3", kind: .secp256k1,
+                          scope: VibenetScope(raw: VibenetScope.sender), expiry: 0)
+check("sorted by the title the reader actually sees",
+      VibenetAccountItem.alphabetical([aSecp, aPass, aDeleg]).map(\.actorId) == ["d", "p", "s"])
+check("the order is TOTAL, so a roster cannot reshuffle between opens",
+      VibenetAccountItem.alphabetical([aPass, aDeleg, aSecp]).map(\.actorId)
+        == VibenetAccountItem.alphabetical([aSecp, aDeleg, aPass]).map(\.actorId))
+// The point of the change: an ADMIN is not floated to the top. Its chip
+// inverts instead, so total authority is loud where it sorts rather than
+// reordered into prominence by the app.
+let aAdminSecp = VibenetActor(actorId: "s", authenticator: "0x3", kind: .secp256k1,
+                              scope: VibenetScope(raw: 0), expiry: 0)
+check("an ADMIN key is NOT promoted — power does not decide the order",
+      VibenetAccountItem.alphabetical([aAdminSecp, aDeleg]).map(\.actorId) == ["d", "s"])
+check("a tie in title falls back to actorId, never to input order",
+      VibenetAccountItem.alphabetical(
+        [VibenetActor(actorId: "z", authenticator: "0x4", kind: .webAuthn,
+                      scope: VibenetScope(raw: 0x1), expiry: 0), aPass]).map(\.actorId) == ["p", "z"])
 
 // MARK: - VibenetKeyReuse — shipped 2026-08-24 with NO coverage at all
 //
@@ -1235,20 +1234,6 @@ mutate "a reserved scope bit must never be folded into the known set" \
 # The matrix's columns are ranked by REACH so the most-privileged key is
 # read first. Inverted, the card leads with the key that can do the LEAST —
 # which renders perfectly and buries the one worth looking at.
-mutate "the roster must lead with the key that can do the MOST" \
-  'return a.scope.reach > b.scope.reach' \
-  'return a.scope.reach < b.scope.reach'
-
-# Ranking on the BIT TALLY instead of reach is the inversion this shipped
-# with: an admin sets no bits, so it counts zero and sorts dead last — the
-# one key that can do everything, drawn below the ones that can barely act.
-mutate "ranking must use reach, so scope 0 cannot count as zero powers" \
-  'var reach: Int { isAdmin ? Int.max : grantedCount }' \
-  'var reach: Int { grantedCount }'
-
-# The admin must never be rendered as the five named bits: it holds the
-# reserved ones too, so listing five understates it — and an "Admin" chip
-# that quietly became five ordinary chips is exactly the §83 miss.
 mutate "scope 0 must name itself, never expand into the named bits" \
   'guard !isAdmin else { return [String(localized: "Admin")] }
         return VibenetScope.named.filter { raw & $0.bit != 0 }.map(\.plain)' \
