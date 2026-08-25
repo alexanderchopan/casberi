@@ -49,16 +49,46 @@ struct VibenetScope: Equatable, Codable {
     /// is still asking someone to know the spec to read their own account.
     /// "Policy" in particular is actively misleading — it does not grant a
     /// policy, it RESTRICTS sending to one.
+    ///
+    /// FOUR OF THE FIVE PLAIN NAMES ARE THE SPEC'S OWN WORDS, and the fifth
+    /// is ours — worth knowing before anyone "improves" one. EIP-8130 defines
+    /// SENDER as "may originate transactions to any `call.to`" (hence "Send
+    /// anywhere", which names the DESTINATION axis so it can never be read as
+    /// "unrestricted" — see `isAdmin`), POLICY as "may call exactly one
+    /// target: its configured `manager`", SELF_PAYER as "paying the account's
+    /// own gas when `payer == sender`", and SPONSOR_PAYER as acting "as
+    /// `payer_auth` for a different sender". NONCE is the invented one: the
+    /// spec defines only the mechanism — a restricted actor may use sequenced
+    /// `nonce_key`s rather than being confined to nonce-free mode — and
+    /// offers no plain phrasing, so "Send in order" is this app's reading of
+    /// it and is the one label here open to a better ruling.
     private static let named: [(bit: UInt16, label: String, plain: String)] = [
-        (sender,       "Sender",        "Send any"),
-        (policy,       "Policy",        "Send limited"),
-        (nonce,        "Nonce",         "Nonce"),
+        (sender,       "Sender",        "Send anywhere"),
+        (policy,       "Policy",        "Send to one contract"),
+        (nonce,        "Nonce",         "Send in order"),
         (selfPayer,    "Self-payer",    "Pay own gas"),
-        (sponsorPayer, "Sponsor-payer", "Pay others"),
+        (sponsorPayer, "Sponsor-payer", "Pay others' gas"),
     ]
 
+    /// SCOPE ZERO IS UNRESTRICTED, NOT EMPTY (prd §463) — the spec is explicit: "A value
+    /// of `0x00` means unrestricted (admin), while non-zero values grant only
+    /// specific contexts." This file shipped believing the opposite, calling
+    /// zero "No scope" / "No permissions" and describing it as "an actor that
+    /// can originate nothing yet", which displayed a key holding TOTAL
+    /// authority as one holding none — the §83 fake status in the direction
+    /// that matters most, on the one screen someone reads to find out who can
+    /// spend their account. `grantedCount` made it worse by ranking such a key
+    /// LAST, so `byReach` — whose whole job is to surface the most-privileged
+    /// key first — surfaced it last instead.
+    ///
+    /// An admin is deliberately NOT rendered as all five bits set: it holds
+    /// every capability INCLUDING the reserved ones this build cannot name,
+    /// so listing five would understate it. It gets one word of its own.
+    var isAdmin: Bool { raw == 0 }
+
     var names: [String] {
-        VibenetScope.named.filter { raw & $0.bit != 0 }.map(\.label)
+        guard !isAdmin else { return [String(localized: "Admin")] }
+        return VibenetScope.named.filter { raw & $0.bit != 0 }.map(\.label)
     }
 
     /// The granted bits in PLAIN words — `plainSummary`'s comma-joined
@@ -66,14 +96,20 @@ struct VibenetScope: Equatable, Codable {
     /// off this one list, so the two forms of this card never teach two
     /// different names for one permission.
     var plainNames: [String] {
-        VibenetScope.named.filter { raw & $0.bit != 0 }.map(\.plain)
+        guard !isAdmin else { return [String(localized: "Admin")] }
+        return VibenetScope.named.filter { raw & $0.bit != 0 }.map(\.plain)
     }
 
-    /// R3.1 — the granted permissions as SEPARATE chip labels, replacing the
-    /// matrix: `plainNames` plus one trailing "+N unknown" element when a
-    /// reserved bit is set (never an invented name for it, §83). Empty scope
-    /// returns `[]` — the caller draws its own "can't originate anything
-    /// yet" sentence rather than a chip row with nothing in it.
+    /// R3.1 — the granted permissions as SEPARATE chip labels: `plainNames`
+    /// plus one trailing "+N unknown" element when a reserved bit is set
+    /// (never an invented name for it, §83).
+    ///
+    /// NEVER EMPTY, and that is a consequence of `isAdmin` rather than a
+    /// coincidence worth relying on loosely: a scope with no bits set is an
+    /// admin and yields `["Admin"]`, and any non-zero scope sets at least one
+    /// bit, which is either named or counted. The caller therefore needs no
+    /// empty-chip-row branch — the one it used to carry said "Can't act on
+    /// its own yet", which was the inverted reading of scope 0.
     var grantedPlainLabels: [String] {
         var parts = plainNames
         if unknownCount > 0 {
@@ -84,15 +120,18 @@ struct VibenetScope: Equatable, Codable {
         return parts
     }
 
-    /// "Send any, Pay own gas" / "Send any, +1 unknown" / "No permissions".
+    /// "Send anywhere, Pay own gas" / "Send anywhere, +1 unknown" /
+    /// "Admin — no restrictions". There is no empty case: a scope with no
+    /// bits set is an admin, and every non-zero scope names at least one bit
+    /// or counts an unknown one.
     var plainSummary: String {
+        guard !isAdmin else { return String(localized: "Admin — no restrictions") }
         var parts = plainNames
         if unknownCount > 0 {
             parts.append(unknownCount == 1
                 ? String(localized: "+1 unknown")
                 : String(localized: "+\(unknownCount) unknown"))
         }
-        guard !parts.isEmpty else { return String(localized: "No permissions") }
         return parts.joined(separator: ", ")
     }
 
@@ -104,28 +143,36 @@ struct VibenetScope: Equatable, Codable {
     }
 
     /// "Sender, Self-payer" / "Sender, Self-payer +1 more" / "+2 unknown" /
-    /// "No scope". Zero is a real, valid state — an authorized actor that
-    /// can originate nothing yet — so it gets its own honest word rather
-    /// than reading as a blank line that looks like a read that failed.
+    /// "Admin (unrestricted)" — the developer-facing form, in the contract's
+    /// own constant names, which is what a probe dump should print beside the
+    /// spec.
     var summary: String {
+        guard !isAdmin else { return String(localized: "Admin (unrestricted)") }
         var parts = names
         if unknownCount > 0 {
             parts.append(unknownCount == 1
                 ? String(localized: "+1 unknown")
                 : String(localized: "+\(unknownCount) unknown"))
         }
-        guard !parts.isEmpty else { return String(localized: "No scope") }
         return parts.joined(separator: ", ")
     }
 
     /// How many powers this key holds in total — named bits PLUS reserved
     /// ones, because a bit this build can't name is still a power the key
-    /// carries. `byReach` (below) ranks keys by it so the most-privileged
-    /// one is read first; treating every scope as equally weighted (the
-    /// first cut, back when this was a matrix) meant SENDER — "may
-    /// originate transactions to anyone" — got the same visual standing
-    /// as NONCE, which is a sequencing detail.
-    var grantedCount: Int { names.count + unknownCount }
+    /// carries. Deliberately counts the BITS ONLY: an admin holds every
+    /// capability there is, which is not a number this can express, so
+    /// ranking asks `reach` instead and this stays the plain bit tally.
+    var grantedCount: Int {
+        guard !isAdmin else { return 0 }
+        return VibenetScope.named.filter { raw & $0.bit != 0 }.count + unknownCount
+    }
+
+    /// The ranking value `byReach` sorts on, so the most-privileged key is
+    /// read first. An admin outranks every possible bit combination by
+    /// construction rather than by a tuned number — the earlier
+    /// `grantedCount`-only ranking put it LAST, since scope 0 counts zero
+    /// bits, which inverted the one ordering this room has.
+    var reach: Int { isAdmin ? Int.max : grantedCount }
 }
 
 // MARK: - Authenticator identity
@@ -486,6 +533,32 @@ struct VibenetActor: Identifiable, Equatable, Codable {
         }
         return String(localized: "Expires \(expiresAt.formatted(.relative(presentation: .named)))")
     }
+
+    /// What weight a key's expiry has earned on screen. The label alone
+    /// could not say this: "Expires in 3 days" and "Never expires" are the
+    /// same sentence shape, so drawn in one ink they read as equally
+    /// unremarkable, which is how a key three days from lapsing sat in
+    /// `textTertiary` at the bottom of its own row. The row asks this and
+    /// draws accordingly — and a key that never expires still SAYS so, since
+    /// nothing printed under a heading about expiry reads as unknown rather
+    /// than as never.
+    enum ExpiryStanding {
+        /// Keystore's own "never" — `expiry == 0`, a fact, drawn quietly.
+        case never
+        /// Already lapsed: a standing fact, not a clock.
+        case expired
+        /// Ticking inside `VibenetAccountItem.urgencyWindow`.
+        case soon
+        /// Dated, but far enough out to be ordinary.
+        case later
+    }
+
+    func expiryStanding(now: Date) -> ExpiryStanding {
+        guard expiry > 0 else { return .never }
+        let at = TimeInterval(expiry)
+        guard at > now.timeIntervalSince1970 else { return .expired }
+        return at - now.timeIntervalSince1970 <= VibenetAccountItem.urgencyWindow ? .soon : .later
+    }
 }
 
 /// One ERC-20-shaped balance a vibenet account holds — USDV or NFV today,
@@ -670,8 +743,8 @@ struct VibenetAccountItem: Identifiable, Equatable, Codable {
     /// the columns can never reshuffle between opens.
     static func byReach(_ actors: [VibenetActor]) -> [VibenetActor] {
         actors.sorted { a, b in
-            if a.scope.grantedCount != b.scope.grantedCount {
-                return a.scope.grantedCount > b.scope.grantedCount
+            if a.scope.reach != b.scope.reach {
+                return a.scope.reach > b.scope.reach
             }
             if a.kind.sortRank != b.kind.sortRank { return a.kind.sortRank < b.kind.sortRank }
             return a.actorId < b.actorId
@@ -1151,11 +1224,21 @@ extension Array where Element == VibenetSharedKey {
     /// nil when empty — most keys aren't reused, and a clause repeating
     /// that on every ordinary key is the empty state this codebase omits
     /// rather than prints (§83).
-    func sharedLine() -> String? {
+    ///
+    /// TAKES ITS NAME RESOLVER rather than reaching `VibenetWatch.shared`
+    /// (prd §463),
+    /// and that is not a style preference: this file is Foundation-only so
+    /// the harness can compile it WHOLE, and the nickname store is a
+    /// UserDefaults singleton from `VibenetBridge`. Reaching it from here
+    /// broke that invariant the day this function shipped, which took
+    /// `scripts/vibenet-selftest.sh` — 150 assertions over the whole room —
+    /// down with it, and is why the reuse logic it was added to flag had no
+    /// coverage at all: it could not have had any. The closure keeps the
+    /// nickname lookup at the call site, where the store already lives.
+    func sharedLine(name: (String) -> String) -> String? {
         guard !isEmpty else { return nil }
         if count == 1, let only = first {
-            let name = VibenetWatch.shared.name(for: only.account) ?? VibenetRoom.shortAddress(only.account)
-            return String(localized: "Also authorized on \(name)")
+            return String(localized: "Also authorized on \(name(only.account))")
         }
         return String(localized: "Also authorized on \(count) other accounts")
     }
@@ -1457,6 +1540,12 @@ enum VibenetEventKind: Equatable {
     case actorAuthorized
     case actorRevoked
     case locked
+    /// An unlock has BEGUN — the timelock is running and the account
+    /// becomes spendable when it elapses. `getLockStatus` already reports
+    /// this as state, but state is only seen by someone standing in the
+    /// room; the event is what reaches a feed somebody scrolls, and of
+    /// everything a locked account can do this is the one worth arriving.
+    case unlockInitiated
 
     /// `keyLabel` is the resolved kind ("secp256k1 key") when the live
     /// re-read at landing time could confirm it, nil when the actor was
@@ -1473,6 +1562,21 @@ enum VibenetEventKind: Equatable {
             return String(localized: "Key revoked for \(shortAddress)")
         case .locked:
             return String(localized: "\(shortAddress) locked on vibenet")
+        case .unlockInitiated:
+            return String(localized: "\(shortAddress) started unlocking on vibenet")
+        }
+    }
+
+    /// The `sourceRef` namespace this event lands under. ONE constant per
+    /// kind, read by both the stamp and anything matching rows back — the
+    /// §311 lesson, where a room head matched `privacypools:deposit:` while
+    /// deposits landed `privacypools:dep:`, so every row read Pending for
+    /// life and the room simply went quiet.
+    var refSegment: String {
+        switch self {
+        case .actorAuthorized, .actorRevoked: return "actor"
+        case .locked: return "locked"
+        case .unlockInitiated: return "unlocking"
         }
     }
 
@@ -1497,6 +1601,8 @@ enum VibenetEventKind: Equatable {
             return String(localized: "Key revoked")
         case .locked:
             return String(localized: "Locked on vibenet")
+        case .unlockInitiated:
+            return String(localized: "Unlock started")
         }
     }
 }

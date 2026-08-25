@@ -173,8 +173,8 @@ func check(_ label: String, _ ok: Bool) {
 // MARK: - Scope
 
 print("VibenetScope — naming and the unknown-bit ceiling")
-check("empty scope reads as a real state, not a blank",
-      VibenetScope(raw: 0).summary == "No scope")
+check("scope 0 reads as the ADMIN it is — see the isAdmin block below",
+      VibenetScope(raw: 0).summary == "Admin (unrestricted)")
 check("a single known bit",
       VibenetScope(raw: VibenetScope.sender).summary == "Sender")
 check("every known bit, in the contract's own order",
@@ -197,12 +197,42 @@ check("grantedCount counts named bits AND reserved ones — a bit we can't name 
       VibenetScope(raw: VibenetScope.sender | VibenetScope.selfPayer | 0x0020).grantedCount == 3)
 check("plainSummary words a real grant in plain English",
       VibenetScope(raw: VibenetScope.sender | VibenetScope.selfPayer).plainSummary
-        == "Send any, Pay own gas")
-check("an empty scope's plain summary is a real state, never a blank",
-      VibenetScope(raw: 0).plainSummary == "No permissions")
+        == "Send anywhere, Pay own gas")
 check("a reserved bit is still counted, never named, in the plain wording too",
-      VibenetScope(raw: VibenetScope.sender | 0x0020).plainSummary == "Send any, +1 unknown")
-check("an empty scope reaches nothing",
+      VibenetScope(raw: VibenetScope.sender | 0x0020).plainSummary == "Send anywhere, +1 unknown")
+
+// MARK: - Scope ZERO is the ADMIN, not the empty set (EIP-8130)
+//
+// The spec: "A value of 0x00 means unrestricted (admin), while non-zero
+// values grant only specific contexts." This file shipped the inverse —
+// "No permissions" / "No scope", ranked LAST by byReach — so a key with
+// total authority over the account displayed as one with none. Every check
+// below fails against that shipped reading, which is the point of having
+// them: this is the §83 fake status in the direction that costs the most.
+
+print("")
+print("VibenetScope.isAdmin — scope 0 is unrestricted, never empty")
+check("scope 0 is the admin",
+      VibenetScope(raw: 0).isAdmin)
+check("any single bit is a RESTRICTED scope, never the admin",
+      !VibenetScope(raw: VibenetScope.sender).isAdmin)
+check("even every known bit at once is still restricted — it cannot reach the reserved ones",
+      !VibenetScope(raw: VibenetScope.known).isAdmin)
+check("the admin's plain summary says so in words",
+      VibenetScope(raw: 0).plainSummary == "Admin — no restrictions")
+check("the admin's developer summary names the contract's own reading",
+      VibenetScope(raw: 0).summary == "Admin (unrestricted)")
+check("the admin is ONE chip, never a list of five — it holds bits we cannot name",
+      VibenetScope(raw: 0).grantedPlainLabels == ["Admin"])
+check("no scope yields an empty chip row, so no caller needs a blank branch",
+      !VibenetScope(raw: 0).grantedPlainLabels.isEmpty
+        && !VibenetScope(raw: VibenetScope.sender).grantedPlainLabels.isEmpty
+        && !VibenetScope(raw: 0x0020).grantedPlainLabels.isEmpty)
+check("the admin outreaches every possible bit combination, so byReach reads it FIRST",
+      VibenetScope(raw: 0).reach > VibenetScope(raw: 0xFFFF).reach)
+check("reach falls back to the plain bit tally for a restricted scope",
+      VibenetScope(raw: VibenetScope.sender | VibenetScope.selfPayer).reach == 2)
+check("grantedCount stays a BIT tally — an admin's powers are not a number",
       VibenetScope(raw: 0).grantedCount == 0)
 
 // MARK: - VibenetScope.grantedPlainLabels — R3.1, the matrix's replacement
@@ -211,13 +241,25 @@ print("")
 print("VibenetScope.grantedPlainLabels — one chip per granted permission, replacing the matrix")
 check("a real grant yields one chip label per permission, in the contract's own order",
       VibenetScope(raw: VibenetScope.sender | VibenetScope.selfPayer).grantedPlainLabels
-        == ["Send any", "Pay own gas"])
-check("an empty scope yields no chips at all — the caller draws its own sentence instead",
-      VibenetScope(raw: 0).grantedPlainLabels.isEmpty)
+        == ["Send anywhere", "Pay own gas"])
 check("a reserved bit appends ONE trailing '+N unknown' label, never an invented name",
-      VibenetScope(raw: VibenetScope.sender | 0x0020).grantedPlainLabels == ["Send any", "+1 unknown"])
+      VibenetScope(raw: VibenetScope.sender | 0x0020).grantedPlainLabels == ["Send anywhere", "+1 unknown"])
 check("several reserved bits still collapse to ONE trailing chip, plural",
-      VibenetScope(raw: VibenetScope.sender | 0x0020 | 0x0040).grantedPlainLabels == ["Send any", "+2 unknown"])
+      VibenetScope(raw: VibenetScope.sender | 0x0020 | 0x0040).grantedPlainLabels == ["Send anywhere", "+2 unknown"])
+
+// The plain names are the SPEC's own words for four of the five bits, and
+// the room, the account card and the key tray all read this one table — so
+// a rename here is a rename everywhere, which is the property that keeps
+// those three surfaces from teaching three vocabularies for one permission.
+check("SENDER is named for its DESTINATION, so it can never be read as 'unrestricted'",
+      VibenetScope(raw: VibenetScope.sender).plainSummary == "Send anywhere")
+check("POLICY says it RESTRICTS sending, the spec's 'exactly one target'",
+      VibenetScope(raw: VibenetScope.policy).plainSummary == "Send to one contract")
+check("SELF_PAYER and SPONSOR_PAYER are told apart by WHOSE gas, not by a bare direction",
+      VibenetScope(raw: VibenetScope.selfPayer).plainSummary == "Pay own gas"
+        && VibenetScope(raw: VibenetScope.sponsorPayer).plainSummary == "Pay others' gas")
+check("NONCE no longer prints the spec's internal word at the reader",
+      VibenetScope(raw: VibenetScope.nonce).plainSummary == "Send in order")
 check("reserved bits alone (nothing named) still yield exactly one chip",
       VibenetScope(raw: 0x0020).grantedPlainLabels == ["+1 unknown"])
 
@@ -335,6 +377,66 @@ check("a tie in reach falls back to the kind order, so the column set stays TOTA
 check("byReach over the same set twice agrees with itself",
       VibenetAccountItem.byReach([strong, a2, weak]).map(\.actorId)
         == VibenetAccountItem.byReach([a2, weak, strong]).map(\.actorId))
+// The inversion this ordering shipped with: an admin counts ZERO bits, so a
+// grantedCount-only ranking put the one key that can do everything dead last
+// — on the ordering whose entire job is to surface it first.
+let admin = VibenetActor(actorId: "zz", authenticator: "0xa", kind: .secp256k1,
+                         scope: VibenetScope(raw: 0), expiry: 0)
+check("the ADMIN leads, even against a key holding every named bit",
+      VibenetAccountItem.byReach([strong, admin, weak]).first?.actorId == "zz")
+
+// MARK: - VibenetKeyReuse — shipped 2026-08-24 with NO coverage at all
+//
+// It could not have had any: `sharedLine` reached `VibenetWatch.shared`, a
+// UserDefaults singleton, which broke this file's Foundation-only invariant
+// and took the WHOLE harness down from the commit that added it. The name
+// resolver is a closure now, so both halves are testable. The risk this
+// states is the one delegation cannot: losing or leaking ONE key endangers
+// every account listed, and every failure below renders as an ordinary row.
+
+print("")
+print("VibenetKeyReuse.sharing — the same authenticator on several watched accounts")
+func reuseAcct(_ address: String, _ auth: String,
+               kind: VibenetAuthenticatorKind = .p256) -> VibenetAccountItem {
+    VibenetAccountItem(address: address, reached: true, established: true,
+                       actors: [VibenetActor(actorId: "k", authenticator: auth,
+                                             kind: kind, scope: VibenetScope(raw: 0x1), expiry: 0)],
+                       locked: false, hasInitiatedUnlock: false,
+                       unlocksAt: nil, unlockDelay: nil)
+}
+let shared = "0xKEY"
+let rOne   = reuseAcct("0xaa", shared)
+let rTwo   = reuseAcct("0xbb", shared)
+let rThree = reuseAcct("0xcc", shared)
+let rAlone = reuseAcct("0xdd", "0xOTHER")
+check("a key on ONE account is not reuse",
+      VibenetKeyReuse.sharing(rAlone, in: [rOne, rAlone]).isEmpty)
+check("reuse names the OTHER accounts, never the one you are looking at",
+      VibenetKeyReuse.sharing(rOne, in: [rOne, rTwo, rThree]).map(\.account) == ["0xbb", "0xcc"])
+check("the match is case-insensitive — an RPC's hex casing is not a promise",
+      !VibenetKeyReuse.sharing(rOne, in: [rOne, reuseAcct("0xbb", shared.lowercased())]).isEmpty)
+check("sharing is TOTAL, so a reuse line cannot reshuffle between opens",
+      VibenetKeyReuse.sharing(rOne, in: [rThree, rTwo, rOne]).map(\.account)
+        == VibenetKeyReuse.sharing(rOne, in: [rTwo, rOne, rThree]).map(\.account))
+// A delegate's authenticator names an ACCOUNT, not a key, so counting it as
+// reuse would draw the same pair twice under two headings that disagree
+// about what relates them — linked accounts already states that one.
+let rDeleg = reuseAcct("0xee", shared, kind: .delegate)
+check("a DELEGATE is excluded from reuse on both sides",
+      VibenetKeyReuse.sharing(rDeleg, in: [rDeleg, rOne]).isEmpty
+        && VibenetKeyReuse.sharing(rOne, in: [rOne, rDeleg]).isEmpty)
+
+print("")
+print("Array<VibenetSharedKey>.sharedLine — WHERE else the key can act")
+let nameFor: (String) -> String = { $0 == "0xbb" ? "Session bot" : VibenetRoom.shortAddress($0) }
+check("one other account is named outright, through the caller's resolver",
+      VibenetKeyReuse.sharing(rOne, in: [rOne, rTwo]).sharedLine(name: nameFor)
+        == "Also authorized on Session bot")
+check("several are COUNTED rather than listed — the row has one line to spend",
+      VibenetKeyReuse.sharing(rOne, in: [rOne, rTwo, rThree]).sharedLine(name: nameFor)
+        == "Also authorized on 2 other accounts")
+check("no reuse yields no line at all, never an empty sentence",
+      VibenetKeyReuse.sharing(rAlone, in: [rAlone]).sharedLine(name: nameFor) == nil)
 
 // MARK: - actorSummary
 
@@ -1133,9 +1235,24 @@ mutate "a reserved scope bit must never be folded into the known set" \
 # The matrix's columns are ranked by REACH so the most-privileged key is
 # read first. Inverted, the card leads with the key that can do the LEAST —
 # which renders perfectly and buries the one worth looking at.
-mutate "the matrix must lead with the key that can do the MOST" \
-  'return a.scope.grantedCount > b.scope.grantedCount' \
-  'return a.scope.grantedCount < b.scope.grantedCount'
+mutate "the roster must lead with the key that can do the MOST" \
+  'return a.scope.reach > b.scope.reach' \
+  'return a.scope.reach < b.scope.reach'
+
+# Ranking on the BIT TALLY instead of reach is the inversion this shipped
+# with: an admin sets no bits, so it counts zero and sorts dead last — the
+# one key that can do everything, drawn below the ones that can barely act.
+mutate "ranking must use reach, so scope 0 cannot count as zero powers" \
+  'var reach: Int { isAdmin ? Int.max : grantedCount }' \
+  'var reach: Int { grantedCount }'
+
+# The admin must never be rendered as the five named bits: it holds the
+# reserved ones too, so listing five understates it — and an "Admin" chip
+# that quietly became five ordinary chips is exactly the §83 miss.
+mutate "scope 0 must name itself, never expand into the named bits" \
+  'guard !isAdmin else { return [String(localized: "Admin")] }
+        return VibenetScope.named.filter { raw & $0.bit != 0 }.map(\.plain)' \
+  'return VibenetScope.named.filter { raw & $0.bit != 0 }.map(\.plain)'
 
 mutate "the headline must say Locked/Unlocking itself — the row's own badge doesn't draw beside it" \
   'return item.hasInitiatedUnlock ? String(localized: "Unlocking") : String(localized: "Locked")' \

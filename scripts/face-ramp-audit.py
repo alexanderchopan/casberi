@@ -125,6 +125,19 @@ def audit(root: pathlib.Path):
             if size.startswith("DS.Face."):
                 counts[size] += 1
                 continue
+            # A BRAND MARK heading a screen, drawn round. This file's own
+            # header states the two ramps "diverge above [the first three
+            # rungs], where a brand mark heads a card or a screen and a face
+            # never does" — and `DS.Mark.hero` is that rung. `circular:` was
+            # taken as proof of face-ness, which is true of a mark standing in
+            # a person's slot in a ROW and false of one introducing an app at
+            # the top of its own page, so this check called a correct call
+            # site wrong. Scoped to `BridgeIcon`: a `WalletFace` or a
+            # `RemoteThumb` is never a brand mark, so `DS.Mark.hero` on either
+            # of those is still a finding.
+            if kind == "BridgeIcon" and size == "DS.Mark.hero":
+                counts[size] += 1
+                continue
             if size in CHIP_METRICS:
                 continue
             if size.isdigit():
@@ -171,6 +184,15 @@ CLEAN_DOCUMENTED = ('// `WalletFace(size: someFunction())` is how a raw number\n
                     'WalletFace(address: a, size: DS.Face.list, circular: true)')
 
 
+# A ROUND brand mark heading a screen — the product-page header. Legal on the
+# Mark ramp, which is where a mark that heads a screen belongs.
+CLEAN_MARK_HERO = 'BridgeIcon(name: n, size: DS.Mark.hero, circular: true)'
+# The same rung on a WALLET FACE, which is never a brand mark. Without this the
+# carve-out above would be a hole any face could climb through — the exact
+# "an exemption that defends nothing is a snooze" shape.
+DIRTY_MARK_HERO = 'WalletFace(address: a, size: DS.Mark.hero, circular: true)'
+
+
 def self_test(tmp: pathlib.Path) -> None:
     """A check that cannot fail proves nothing — prove each shape."""
     cases = [
@@ -184,6 +206,8 @@ def self_test(tmp: pathlib.Path) -> None:
         ("a face interpolated between two tiers", CLEAN_INTERP, False),
         ("…the same interpolation between two raw numbers", DIRTY_INTERP, True),
         ("a comment that NAMES a dirty call", CLEAN_DOCUMENTED, False),
+        ("a round brand mark heading a screen", CLEAN_MARK_HERO, False),
+        ("…the same rung on a face, which is never a brand mark", DIRTY_MARK_HERO, True),
     ]
     for label, body, should_flag in cases:
         d = tmp / "selftest"

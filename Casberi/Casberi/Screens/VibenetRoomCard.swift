@@ -395,7 +395,12 @@ struct VibenetRoomCard: View {
             onOpen(item.address)
         } label: {
             HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                WalletFace(address: item.address, size: isLead ? 40 : 28, circular: true)
+                // Hoisted out of the call: `face-ramp-audit` reads the first
+                // token after `size:`, so a ternary of two legal tiers reads to
+                // it as a bare identifier. Naming it keeps both the tier check
+                // and the promoted-lead sizing.
+                let faceSize = isLead ? DS.Face.list : DS.Face.rowCircle
+                WalletFace(address: item.address, size: faceSize, circular: true)
                 VStack(alignment: .leading, spacing: 3) {
                     // A nickname takes the title slot (not monospaced —
                     // it's a name, not hex) and the short address drops
@@ -523,7 +528,7 @@ struct VibenetEventRow: View {
         if thing.isLive {
             HStack(alignment: .center, spacing: DS.Space.s3) {
                 if let address = thing.authorHandle {
-                    WalletFace(address: address, size: 34, circular: true)
+                    WalletFace(address: address, size: DS.Face.list, circular: true)
                 }
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title)

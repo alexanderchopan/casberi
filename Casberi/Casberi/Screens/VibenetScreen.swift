@@ -189,7 +189,7 @@ struct VibenetScreen: View {
             Task { await load() }
         } label: {
             HStack(spacing: DS.Space.s2) {
-                WalletFace(address: address, size: 24, circular: true)
+                WalletFace(address: address, size: DS.Face.row, circular: true)
                 VStack(alignment: .leading, spacing: 1) {
                     Text(VibenetRoom.shortAddress(address))
                         .dsText(.label12).monospaced()
@@ -251,7 +251,7 @@ struct VibenetScreen: View {
     private var addressPreview: some View {
         if let address = previewAddress {
             HStack(spacing: DS.Space.s3) {
-                WalletFace(address: address, size: 40, circular: true)
+                WalletFace(address: address, size: DS.Face.list, circular: true)
                 VStack(alignment: .leading, spacing: 1) {
                     Text(watch.name(for: address) ?? VibenetRoom.shortAddress(address))
                         .dsText(.callout15).fontWeight(.semibold)

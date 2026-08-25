@@ -63,7 +63,7 @@ struct VibenetAccountDetail: View {
     private var hero: some View {
         VStack(alignment: .leading, spacing: DS.Space.s3) {
             HStack(alignment: .center, spacing: DS.Space.s3) {
-                WalletFace(address: item.address, size: 64, circular: true)
+                WalletFace(address: item.address, size: DS.Face.shelf, circular: true)
                 VStack(alignment: .leading, spacing: 3) {
                     Text(VibenetWatch.shared.name(for: item.address) ?? VibenetRoom.shortAddress(item.address))
                         .dsText(.heading22)
@@ -166,36 +166,39 @@ struct VibenetAccountDetail: View {
                     .foregroundStyle(DS.textTertiary)
                     .fixedSize(horizontal: false, vertical: true)
             }
+            // The scope, as chips. `grantedPlainLabels` is never empty (see
+            // its doc), so there is no blank-row branch to draw — an admin
+            // arrives here as one inverted chip rather than as nothing.
             let labels = actor.scope.grantedPlainLabels
-            if labels.isEmpty {
-                // A real state, not an empty chip row — an authorized
-                // actor that can originate nothing yet.
-                Text(String(localized: "Can't act on its own yet"))
-                    .dsText(.label12)
-                    .foregroundStyle(DS.textSecondary)
-            } else {
-                FlowLayout(spacing: 6) {
-                    ForEach(Array(labels.enumerated()), id: \.offset) { index, label in
-                        let isUnknownTail = index == labels.count - 1 && actor.scope.unknownCount > 0
-                        Text(label)
-                            .dsText(.label11)
-                            .foregroundStyle(isUnknownTail ? DS.textTertiary : DS.textPrimary)
-                            .lineLimit(1)
-                            .fixedSize()
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 3)
-                            .background {
-                                // The unknown-count tail draws OUTLINED — a
-                                // visibly different claim from a named
-                                // permission, never an invented name
-                                // wearing the same fill (§83).
-                                if isUnknownTail {
-                                    Capsule().strokeBorder(DS.textTertiary, lineWidth: 1)
-                                } else {
-                                    Capsule().fill(Self.mark.opacity(0.12))
-                                }
+            let isAdmin = actor.scope.isAdmin
+            FlowLayout(spacing: 6) {
+                ForEach(Array(labels.enumerated()), id: \.offset) { index, label in
+                    let isUnknownTail = index == labels.count - 1 && actor.scope.unknownCount > 0
+                    Text(label)
+                        .dsText(.label11)
+                        .fontWeight(isAdmin ? .semibold : .regular)
+                        .foregroundStyle(isAdmin ? DS.page
+                                         : (isUnknownTail ? DS.textTertiary : DS.textPrimary))
+                        .lineLimit(1)
+                        .fixedSize()
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background {
+                            // Three claims, three treatments. ADMIN inverts:
+                            // scope 0 is every capability there is, including
+                            // reserved ones this build cannot name, so it must
+                            // not read as one more permission among five. The
+                            // unknown-count tail draws OUTLINED — a visibly
+                            // different claim from a named permission, never an
+                            // invented name wearing the same fill (§83).
+                            if isAdmin {
+                                Capsule().fill(DS.textPrimary)
+                            } else if isUnknownTail {
+                                Capsule().strokeBorder(DS.textTertiary, lineWidth: 1)
+                            } else {
+                                Capsule().fill(Self.mark.opacity(0.12))
                             }
-                    }
+                        }
                 }
             }
             // A fact about THIS key, not the account — where else this
@@ -205,17 +208,22 @@ struct VibenetAccountDetail: View {
             // an alarm the way a real expiry countdown earns.
             if let line = sharedKeys
                 .filter({ $0.authenticator.caseInsensitiveCompare(actor.authenticator) == .orderedSame })
-                .sharedLine()
+                .sharedLine(name: { VibenetWatch.shared.name(for: $0) ?? VibenetRoom.shortAddress($0) })
             {
                 Text(line)
                     .dsText(.label11)
                     .foregroundStyle(DS.textTertiary)
             }
-            if actor.expiry > 0 {
-                Text(actor.expiryLabel(now: .now))
-                    .dsText(.label11)
-                    .foregroundStyle(DS.textTertiary)
-            }
+            // ALWAYS drawn, and weighted by what it says. A key three days
+            // from lapsing and one that never expires used to share both the
+            // sentence shape and the quietest ink, so the clock read as
+            // unremarkable; and a never-expiring key printed nothing at all,
+            // which reads as unknown rather than as never.
+            let standing = actor.expiryStanding(now: .now)
+            Text(actor.expiryLabel(now: .now))
+                .dsText(.label11)
+                .fontWeight(standing == .soon ? .semibold : .regular)
+                .foregroundStyle(standing == .soon ? DS.tint : DS.textTertiary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(DS.Space.s3)
@@ -307,7 +315,7 @@ struct VibenetAccountDetail: View {
     /// one clause saying which direction the relationship runs.
     private func spokeRow(_ spoke: Spoke) -> some View {
         HStack(spacing: DS.Space.s3) {
-            WalletFace(address: spoke.address, size: 30, circular: true)
+            WalletFace(address: spoke.address, size: DS.Face.rowCircle, circular: true)
             VStack(alignment: .leading, spacing: 2) {
                 Text(VibenetWatch.shared.name(for: spoke.address) ?? VibenetRoom.shortAddress(spoke.address))
                     .dsText(.heading17)

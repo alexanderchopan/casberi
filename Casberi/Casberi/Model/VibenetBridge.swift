@@ -413,6 +413,13 @@ enum VibenetTopics {
     static let actorRevoked = "0xeb5bd9b1e97c446e28bffcb6963893ca5ad94dc662962fd732ffc03ca279b3e5"
     /// `AccountLocked(address indexed account, uint16 unlockDelay)`
     static let accountLocked = "0x4a8801779ef27ce1723fcf0d4ff8167d3d1710a93ca5e61bbbf0f5b753f02d8b"
+    /// `AccountUnlockInitiated(address indexed account, uint48 unlocksAt)`,
+    /// prd §463 —
+    /// keccak-derived and checked the way the four above were: the same
+    /// derivation reproduces `accountLocked` and `actorRevoked` byte for
+    /// byte, which is what makes this one trustworthy without a live log
+    /// to match it against.
+    static let accountUnlockInitiated = "0x3aa02eb34bef59a5898ff00768e28faaa44610222c4be33b4ff1549abf3ac5a7"
     /// `AccountCreated(address indexed account, bytes32 userSalt, bytes32 codeHash)` —
     /// the ONLY door onto "which accounts exist at all" (`Keystore.sol`
     /// exposes no enumeration call), so it's what the empty-state discovery
@@ -896,14 +903,15 @@ enum VibenetEvents {
         // ActorAuthorized/ActorRevoked carry the actorId as topics[2]; a
         // lock event has no third topic to read (unlockDelay isn't
         // indexed), so `actorId` stays nil for that kind.
-        let actorId = (kind == .locked) ? nil : (topics.count >= 3 ? topics[2].lowercased() : nil)
-        if kind != .locked && actorId == nil { return nil }
+        let carriesActor = (kind != .locked && kind != .unlockInitiated)
+        let actorId = carriesActor ? (topics.count >= 3 ? topics[2].lowercased() : nil) : nil
+        if carriesActor && actorId == nil { return nil }
         return RawEvent(kind: kind, actorId: actorId, txHash: txHash,
                         logIndex: WalletIngest.hexToInt(indexHex), block: WalletIngest.hexToInt(blockHex))
     }
 
     private static func ref(_ e: RawEvent) -> String {
-        "vibenet:\(e.kind == .locked ? "locked" : "actor"):\(e.txHash):\(e.logIndex)"
+        "vibenet:\(e.kind.refSegment):\(e.txHash):\(e.logIndex)"
     }
 
     @MainActor
@@ -913,8 +921,13 @@ enum VibenetEvents {
         async let actorLogsTask = VibenetChain.getLogs(
             address: contracts.keystore,
             topics: [[VibenetTopics.actorAuthorized, VibenetTopics.actorRevoked], ownerTopic])
+        // Both lock-family topics in ONE filtered read, the OR-topic0 shape
+        // the actor read above already uses — a second `getLogs` per account
+        // per pass would double this bridge's request count to land an event
+        // that arrives on the same contract with the same owner topic.
         async let lockLogsTask = VibenetChain.getLogs(
-            address: contracts.keystore, topics: [VibenetTopics.accountLocked, ownerTopic])
+            address: contracts.keystore,
+            topics: [[VibenetTopics.accountLocked, VibenetTopics.accountUnlockInitiated], ownerTopic])
         let actorLogs = await actorLogsTask ?? []
         let lockLogs = await lockLogsTask ?? []
 
@@ -925,7 +938,10 @@ enum VibenetEvents {
             if let e = parse(log, kind: kind) { events.append(e) }
         }
         for log in lockLogs {
-            if let e = parse(log, kind: .locked) { events.append(e) }
+            guard let topics = log["topics"] as? [String], let topic0 = topics.first?.lowercased() else { continue }
+            let kind: VibenetEventKind = topic0 == VibenetTopics.accountUnlockInitiated
+                ? .unlockInitiated : .locked
+            if let e = parse(log, kind: kind) { events.append(e) }
         }
         let fresh = events.filter { !existing.contains(ref($0)) }
         guard !fresh.isEmpty else { return 0 }

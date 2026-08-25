@@ -100,6 +100,24 @@ enum VerbDerivation {
                 out.append(Verb(label: "Send to Calendar", icon: "calendar.badge.plus",
                                 action: .addToCalendar))
             }
+            if thing.source == VibenetIdentity.source,
+               // `content` is non-optional on `Thing` — one bare `URL(string:)`
+               // (fixed in passing by the §462 session; the optional bind was a
+               // compile error).
+               let url = URL(string: thing.content),
+               url.scheme == "https" {
+                // The one door this row has always deserved. Every vibenet
+                // event stamps its explorer permalink on `content` at landing
+                // time, and NOTHING could reach it: `ThingContentView`'s bare
+                // link body is scoped to `.transaction`, the `hasSite` spec
+                // row wants a `.link` kind, and `walletVerbs` requires a money
+                // receipt — so the app stored a URL for every key change on
+                // chain and offered no way to open it. A read, so it needs no
+                // consent; the same hand-off an approval already makes to
+                // Revoke.cash.
+                out.append(Verb(label: "Open in the explorer", icon: "arrow.up.forward.app",
+                                action: .openURL(url)))
+            }
         case .reminder:
             // A real reminder (Reminders source) is READ-ONLY (ruling
             // 2026-07-25): its done-state mirrors the real list, so we never
