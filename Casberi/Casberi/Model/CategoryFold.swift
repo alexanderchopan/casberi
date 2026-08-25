@@ -126,40 +126,41 @@ enum CategoryFold {
     /// aliased member to expose it (fixed in `category-fold-selftest.sh`
     /// alongside this). `members` stays as a cheap SKIP for a category with
     /// nothing to ever match, not as the membership test itself.
-    /// Sources that keep their OWN chip and never fold into their category.
+    /// **NO SOURCE KEEPS ITS OWN CHIP — every catalog category folds, unconditionally,
+    /// and this file has twice tried an exception to that and torn it back out.**
     ///
     /// A venue switcher says "different views of the same subject" — Aave, Morpho and
     /// Peer are lenses on YOUR ADDRESSES, so folding them behind one Wallet chip loses
     /// nothing.
     ///
-    /// **WALLETBEAT WAS HERE FOR A DAY AND IS NOT (user ruling 2026-08-20, prd §423).**
-    /// It was exempted the same morning on the argument that reviewing the SOFTWARE your
-    /// money sits in is a change of subject rather than a change of view. The ruling is
-    /// that it is a SOURCE ROOM in the Wallet band like any other, and belongs behind
-    /// that chip: a top-level chip is what the strip gives a whole category, and spending
-    /// one on a single seat is what the fold exists to stop. The report the exemption was
-    /// written for — "I don't see Walletbeat" — was really about a room that had just
-    /// moved bands, and the venue switcher is the answer to it.
+    /// **WALLETBEAT WAS EXEMPTED FOR A DAY (user ruling 2026-08-20, prd §423), THEN NOT.**
+    /// The argument was that reviewing the SOFTWARE your money sits in is a change of
+    /// subject rather than a change of view. The reversal: it is a SOURCE ROOM in the
+    /// Wallet band like any other, and belongs behind that chip — a top-level chip is
+    /// what the strip gives a whole category, and spending one on a single seat is what
+    /// the fold exists to stop. The report the exemption was written for — "I don't see
+    /// Walletbeat" — was really about a room that had just moved bands, and the venue
+    /// switcher is the answer to it.
     ///
-    /// CardPointers stays, and the difference is its SUBJECT: every other Wallet member
-    /// reads addresses or the software holding them, while CardPointers reads offers on
-    /// cards from banks — nothing it shows is about a wallet at all, so a switcher
-    /// promising "another view of this" would not be telling the truth.
-    ///
-    /// Deliberately a SOURCE list, not a category one: the rest of Wallet folds exactly
-    /// as before, and this stays the narrow exception it is rather than turning the fold
-    /// off for a whole band.
-    static let neverFold: Set<String> = ["CardPointers"]
-
+    /// **CARDPOINTERS WAS EXEMPTED FOR FOUR DAYS (2026-08-20), THEN NOT (user ruling
+    /// 2026-08-24, "there is no way for it to have its own chip").** The argument was
+    /// that its SUBJECT — bank-card offers — isn't a view of a wallet, so a switcher
+    /// claiming "another view of this" would be dishonest. Overturned on the same
+    /// reasoning as Walletbeat: the catalog already puts it in the Wallet GROUP ("it is
+    /// cards people follow"), and the strip's fixed head has no room to spare on a
+    /// phone-width screen for a standing exception (see `SourceChips.swift`'s head-
+    /// spacing note for the scroll room the tighter head gaps buy back). Two exemptions,
+    /// two reversals, both inside two weeks — the mechanism itself (a `neverFold` set
+    /// checked in `fold`/`chipLabel`/`scopes`) is DELETED rather than left empty, because
+    /// dead scaffolding with nothing exercising it is exactly the class of thing this
+    /// codebase's own audits exist to catch elsewhere. A THIRD exemption needs a reason
+    /// stronger than "this seat's subject differs" — both of the above were that reason,
+    /// and both lost to "the strip has no room for it."
     static func fold(_ ordered: [String], category: String, members: Set<String>) -> [String] {
         guard !members.isEmpty else { return ordered }
         var folded: [String] = []
         var placed = false
         for label in ordered {
-            // An exception keeps its own chip and does NOT count as a member for the
-            // cluster's placement — otherwise a category whose only present member is
-            // exempt would still plant an empty cluster chip.
-            guard !neverFold.contains(label) else { folded.append(label); continue }
             guard BridgeCatalog.category(forSource: label) == category
             else { folded.append(label); continue }
             if !placed { folded.append(category); placed = true }
@@ -187,7 +188,6 @@ enum CategoryFold {
     /// rather than taking one as a parameter, so a single call answers
     /// correctly no matter which category (if any) `source` belongs to.
     static func chipLabel(for source: String, folded: [String]) -> String {
-        guard !neverFold.contains(source) else { return source }
         guard let category = BridgeCatalog.category(forSource: source), folded.contains(category)
         else { return source }
         return category
@@ -298,11 +298,8 @@ enum CategoryFold {
         // Alias-aware membership FIRST (a present source belonging to some
         // OTHER category must never leak into this switcher), then rank the
         // survivors by their own catalog offer's position.
-        // A `neverFold` source keeps its own chip, so it must NOT also appear as a venue
-        // in its category's switcher — it would be reachable twice, once as itself and
-        // once inside a cluster it deliberately sits outside of.
         let filtered = present.filter {
-            !neverFold.contains($0) && BridgeCatalog.category(forSource: $0) == category
+            BridgeCatalog.category(forSource: $0) == category
         }
         func rank(_ source: String) -> Int {
             let name = BridgeCatalog.offer(forSource: source)?.name ?? source

@@ -83,9 +83,9 @@ struct HowItWorksSheet: View {
 
     // Three numbered steps (user, 2026-07-20, prd §134 — down from four when
     // the app changed under them): a new person must leave knowing exactly
-    // (1) that connecting apps — in the catalog, top left — fills the feed
-    // by itself, (2) that it is ONE feed the source chips narrow, (3) that
-    // the agent's ask bar answers questions about anything they've saved.
+    // (1) that connecting apps — in the catalog — fills the feed by itself,
+    // (2) that it is ONE feed the source chips narrow, (3) that the agent's
+    // ask bar answers questions about anything they've saved.
     // The old separate "Open the catalog" step folded into step 1: the
     // catalog is WHERE you connect, not its own act. Step 1 wears the REAL
     // Apps-door glyph (TopDoors' square.grid.2x2) so they recognize it in
@@ -93,11 +93,22 @@ struct HowItWorksSheet: View {
     // (History: step 3 was "Pin your favorites" until prd §131 retired
     // pinning on 2026-07-20; the "+ button" wording died when the FAB became
     // the agent's "Ask your things" bar in the same redesign.)
+    //
+    // **"top left" DELETED from step 1 (2026-08-24)** — the catalogue door
+    // moved out of the chip strip's head and into the sources tray, so that
+    // sentence sent a brand-new person to an empty corner. Directions in copy
+    // are the most perishable thing an onboarding screen can hold: they go
+    // stale silently, they go stale on the ONE screen whose whole job is to be
+    // believed, and nothing in a build or a screen sweep can see it. So the
+    // step names the DOOR (its glyph is right there beside the words, and it
+    // is the same mark the shell draws) and never the corner. Steps 2 and 3
+    // already worked this way — "the chips up top", "the bar at the bottom" —
+    // and both survive because a strip and a bar are regions, not coordinates.
     // The titles carry no "1." prefix — the giant numeral IS the number.
     private let points: [Point] = [
         Point(glyph: "square.grid.2x2.fill", hue: .blue,
               title: "Connect your apps",
-              line: "Everything you connect lands here on its own — the catalog is top left."),
+              line: "Everything you connect lands here on its own — pick your apps from the catalog."),
         Point(glyph: "line.3.horizontal.decrease.circle.fill", hue: .pink,
               title: "One feed, or one app",
               line: "Narrow it to one app with the chips up top."),

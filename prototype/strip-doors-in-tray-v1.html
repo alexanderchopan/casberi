@@ -1,0 +1,259 @@
+<meta charset="utf-8">
+<title>Strip doors → tray</title>
+<style>
+  :root{
+    --ink:#000; --sheet:#111113; --g100:#2c2c2e; --line:#ffffff1a; --faint:#ffffff0a;
+    --tint:#1673e6; --tintDim:rgba(22,115,230,.22); --tintRest:rgba(22,115,230,.16);
+    --t1:#fff; --t2:#ebebf599; --t3:#ebebf57e;
+    --font:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:#0a0a0b;color:var(--t1);font-family:var(--font);
+       -webkit-font-smoothing:antialiased;padding:40px 28px 72px}
+  h1{font-size:26px;font-weight:640;letter-spacing:-.02em;margin:0 0 8px}
+  .sub{color:var(--t2);font-size:15px;line-height:1.55;max-width:780px;margin:0 0 34px}
+  .sub b{color:var(--t1);font-weight:600}
+  .row{display:flex;gap:28px;flex-wrap:wrap;align-items:flex-start}
+  .col{flex:0 0 auto}
+  .cap{font-size:12px;font-weight:680;letter-spacing:.01em;color:var(--t3);
+       text-transform:none;margin:0 0 10px;display:flex;align-items:center;gap:7px}
+  .dot{width:7px;height:7px;border-radius:50%;flex:0 0 auto}
+  .dot.bad{background:#ff453a}.dot.good{background:#30d158}.dot.neu{background:var(--t3)}
+  .note{font-size:12.5px;color:var(--t2);line-height:1.5;max-width:300px;margin:11px 0 0}
+  .note b{color:var(--t1);font-weight:600}
+
+  /* phone */
+  .phone{width:300px;border-radius:34px;background:var(--ink);
+         border:1px solid #232326;overflow:hidden;position:relative;height:560px}
+  .statusbar{height:26px}
+
+  /* strip */
+  .strip{display:flex;align-items:center;gap:8px;padding:6px 0 6px 12px;position:relative;
+         overflow:hidden}
+  .doors{display:flex;gap:8px;background:#1c1c1e;border-radius:26px;padding:3px;flex:0 0 auto}
+  .door{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;flex:0 0 auto}
+  .avatar{background:#2c2c2e}
+  .avatar svg{width:22px;height:22px;fill:#c9c9ce}
+  .grid4{display:grid;grid-template-columns:1fr 1fr;gap:3px}
+  .grid4 i{width:7px;height:7px;background:#e8a33d;border-radius:2px;display:block}
+  .chip{height:40px;border-radius:22px;display:flex;align-items:center;justify-content:center;
+        padding:0 16px;font-size:13px;font-weight:620;white-space:nowrap;flex:0 0 auto;
+        background:var(--tintRest);color:#dfe9f8}
+  .chip.on{background:var(--tint);color:#fff}
+  .chip.circ{width:40px;padding:0}
+  .fade{position:absolute;inset:0;pointer-events:none}
+
+  /* dead-zone overlay */
+  .dead{position:absolute;top:0;bottom:0;left:0;
+        background:repeating-linear-gradient(135deg,rgba(255,69,58,.20) 0 7px,rgba(255,69,58,.06) 7px 14px);
+        border-right:1px dashed rgba(255,69,58,.75)}
+  .zlabel{font-size:10px;font-weight:700;letter-spacing:.02em;padding:5px 12px 0;
+          height:20px;white-space:nowrap;overflow:hidden}
+  .zlabel.bad{color:#ff6b60}
+  .zlabel.good{color:#4ad866}
+
+  /* feed filler */
+  .feed{padding:14px 12px 0;display:flex;flex-direction:column;gap:9px}
+  .card{background:#131316;border-radius:15px;height:60px;display:flex;align-items:center;
+        gap:10px;padding:0 12px}
+  .thumb{width:38px;height:38px;border-radius:10px;background:#232327;flex:0 0 auto}
+  .lines{flex:1;display:flex;flex-direction:column;gap:6px}
+  .l{height:8px;border-radius:4px;background:#232327}
+  .l.s{width:52%}.l.m{width:78%}
+
+  /* fab */
+  .fab{position:absolute;right:14px;bottom:16px;height:44px;border-radius:24px;
+       background:rgba(38,38,42,.92);display:flex;align-items:center;gap:9px;padding:0 14px;
+       border:1px solid var(--line)}
+  .berry{width:20px;height:20px;border-radius:50%;
+         background:radial-gradient(circle at 34% 32%,#ff5fa2,#c9256d)}
+  .fabtxt{font-size:14px;color:var(--t3)}
+
+  /* tray */
+  .tray{position:absolute;left:0;right:0;bottom:0;height:400px;
+        background:rgba(28,28,32,.90);backdrop-filter:blur(30px);
+        border-radius:26px 26px 0 0;border-top:1px solid var(--line);padding:0 14px 16px}
+  .grab{height:24px;display:grid;place-items:center}
+  .grab i{width:34px;height:4px;border-radius:2px;background:#ffffff36;display:block}
+  .trayhead{display:flex;align-items:center;gap:8px;height:44px;margin:8px 0 12px}
+  .trayhead h2{font-size:21px;font-weight:660;letter-spacing:-.02em;margin:0;flex:1}
+  .allcap{height:32px;border-radius:18px;padding:0 15px;background:var(--tint);color:#fff;
+          font-size:13px;font-weight:640;display:grid;place-items:center}
+  .eyebrow{font-size:13px;font-weight:700;color:var(--t1);margin:14px 0 9px}
+  .marks{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+  .mark{aspect-ratio:1;border-radius:50%;background:#2a2a2f;display:grid;place-items:center;
+        font-size:11px;font-weight:700;color:#cfcfd6}
+  .mark.sel{box-shadow:0 0 0 2px var(--tint)}
+
+  /* tray footer variants */
+  .footer{margin-top:16px;padding-top:12px;border-top:1px solid var(--faint);
+          display:flex;flex-direction:column;gap:2px}
+  .frow{display:flex;align-items:center;gap:11px;height:42px;padding:0 2px}
+  .frow .ic{width:30px;height:30px;border-radius:50%;background:#2c2c2e;display:grid;
+            place-items:center;flex:0 0 auto}
+  .frow .ic svg{width:17px;height:17px;fill:#c9c9ce}
+  .frow span{font-size:14.5px;color:var(--t1)}
+  .frow em{margin-left:auto;font-style:normal;color:var(--t3);font-size:17px}
+
+  .headdoors{display:flex;gap:7px}
+  .hd{width:34px;height:34px;border-radius:50%;background:#2c2c2e;display:grid;place-items:center}
+  .hd svg{width:18px;height:18px;fill:#c9c9ce}
+
+  .legend{margin:40px 0 0;padding:22px 24px;background:#111113;border-radius:18px;max-width:980px}
+  .legend h3{margin:0 0 12px;font-size:15px;font-weight:660}
+  .legend ul{margin:0;padding-left:19px;color:var(--t2);font-size:13.5px;line-height:1.75}
+  .legend li b{color:var(--t1);font-weight:600}
+  .tag{display:inline-block;font-size:10.5px;font-weight:700;padding:2px 7px;border-radius:6px;
+       background:var(--tintDim);color:#9dc4f5;margin-left:6px;vertical-align:1px}
+</style>
+
+<h1>Where the doors live</h1>
+<p class="sub">The strip mixes two verbs: avatar and apps <b>open a screen</b>, All and the categories <b>filter the one you're on</b>. Moving the two doors into the FAB tray leaves the strip as one class of thing — and hands back the width they were holding. Colours and metrics are the real tokens (<code>#1673e6</code>, 40pt chips, 8pt gaps).</p>
+
+<div class="row">
+
+  <!-- ============ TODAY ============ -->
+  <div class="col">
+    <p class="cap"><span class="dot bad"></span>Today — doors pinned in the strip</p>
+    <div class="phone">
+      <div class="statusbar"></div>
+      <div class="strip">
+        <div class="doors">
+          <div class="door avatar"><svg viewBox="0 0 24 24"><path d="M12 12a5 5 0 100-10 5 5 0 000 10zm0 2c-5 0-9 2.5-9 5.5V22h18v-2.5c0-3-4-5.5-9-5.5z"/></svg></div>
+          <div class="door"><div class="grid4"><i></i><i></i><i></i><i></i></div></div>
+        </div>
+        <div class="chip">All</div>
+        <div class="chip on">Wallet</div>
+        <div class="chip">Markets</div>
+        <div class="chip">Agent…</div>
+        <div class="dead" style="width:150px"></div>
+      </div>
+      <div class="zlabel bad">◤ 150pt fixed — swipe here, nothing moves</div>
+      <div class="feed">
+        <div class="card"><div class="thumb"></div><div class="lines"><div class="l m"></div><div class="l s"></div></div></div>
+        <div class="card"><div class="thumb"></div><div class="lines"><div class="l s"></div><div class="l m"></div></div></div>
+        <div class="card"><div class="thumb"></div><div class="lines"><div class="l m"></div><div class="l s"></div></div></div>
+        <div class="card"><div class="thumb"></div><div class="lines"><div class="l s"></div><div class="l m"></div></div></div>
+      </div>
+      <div class="fab"><span class="fabtxt">Your feeds</span><div class="berry"></div></div>
+    </div>
+    <p class="note"><b>3½ chips visible.</b> 150pt of the row is fixed buttons, and it sits at the leading edge — exactly where a thumb starts a swipe back toward the earlier categories.</p>
+  </div>
+
+  <!-- ============ PROPOSED STRIP ============ -->
+  <div class="col">
+    <p class="cap"><span class="dot good"></span>Proposed — the strip is only filters</p>
+    <div class="phone">
+      <div class="statusbar"></div>
+      <div class="strip">
+        <div class="chip">All</div>
+        <div class="chip on">Wallet</div>
+        <div class="chip">Markets</div>
+        <div class="chip">Agents</div>
+        <div class="chip">Work</div>
+        <div class="chip">Li…</div>
+      </div>
+      <div class="zlabel good">◤ the whole row drags</div>
+      <div class="feed">
+        <div class="card"><div class="thumb"></div><div class="lines"><div class="l m"></div><div class="l s"></div></div></div>
+        <div class="card"><div class="thumb"></div><div class="lines"><div class="l s"></div><div class="l m"></div></div></div>
+        <div class="card"><div class="thumb"></div><div class="lines"><div class="l m"></div><div class="l s"></div></div></div>
+        <div class="card"><div class="thumb"></div><div class="lines"><div class="l s"></div><div class="l m"></div></div></div>
+      </div>
+      <div class="fab"><span class="fabtxt">Your feeds</span><div class="berry"></div></div>
+    </div>
+    <p class="note"><b>5½ chips visible</b> — 57% more, and the whole row drags. No fade mask, no gap-width apologetics, one rule: everything here filters.</p>
+  </div>
+
+  <!-- ============ TRAY A ============ -->
+  <div class="col">
+    <p class="cap"><span class="dot neu"></span>Tray, variant A — doors in the header</p>
+    <div class="phone">
+      <div class="statusbar"></div>
+      <div class="strip">
+        <div class="chip">All</div>
+        <div class="chip on">Wallet</div>
+        <div class="chip">Markets</div>
+        <div class="chip">Agents</div>
+      </div>
+      <div class="zlabel">&nbsp;</div>
+      <div class="feed"><div class="card"><div class="thumb"></div><div class="lines"><div class="l m"></div><div class="l s"></div></div></div></div>
+      <div class="tray">
+        <div class="grab"><i></i></div>
+        <div class="trayhead">
+          <h2>Your feeds</h2>
+          <div class="headdoors">
+            <div class="hd"><svg viewBox="0 0 24 24"><path d="M12 12a5 5 0 100-10 5 5 0 000 10zm0 2c-5 0-9 2.5-9 5.5V22h18v-2.5c0-3-4-5.5-9-5.5z"/></svg></div>
+            <div class="hd"><svg viewBox="0 0 24 24"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z"/></svg></div>
+          </div>
+          <div class="allcap">All</div>
+        </div>
+        <div class="eyebrow">Wallet</div>
+        <div class="marks">
+          <div class="mark sel">W</div><div class="mark">P</div><div class="mark">0x</div>
+          <div class="mark">Wb</div><div class="mark">CP</div>
+        </div>
+        <div class="eyebrow">Markets</div>
+        <div class="marks">
+          <div class="mark">T</div><div class="mark">K</div><div class="mark">Pm</div><div class="mark">OS</div>
+        </div>
+      </div>
+    </div>
+    <p class="note"><b>Cheapest to build.</b> But three controls on one trailing edge, and the two doors sit inside a panel titled "Your feeds" — the same category error, moved.</p>
+  </div>
+
+  <!-- ============ TRAY B ============ -->
+  <div class="col">
+    <p class="cap"><span class="dot good"></span>Tray, variant B — doors as a footer <span class="tag">recommended</span></p>
+    <div class="phone">
+      <div class="statusbar"></div>
+      <div class="strip">
+        <div class="chip">All</div>
+        <div class="chip on">Wallet</div>
+        <div class="chip">Markets</div>
+        <div class="chip">Agents</div>
+      </div>
+      <div class="zlabel">&nbsp;</div>
+      <div class="feed"><div class="card"><div class="thumb"></div><div class="lines"><div class="l m"></div><div class="l s"></div></div></div></div>
+      <div class="tray">
+        <div class="grab"><i></i></div>
+        <div class="trayhead">
+          <h2>Your feeds</h2>
+          <div class="allcap">All</div>
+        </div>
+        <div class="eyebrow">Wallet</div>
+        <div class="marks">
+          <div class="mark sel">W</div><div class="mark">P</div><div class="mark">0x</div>
+          <div class="mark">Wb</div><div class="mark">CP</div>
+        </div>
+        <div class="eyebrow">Markets</div>
+        <div class="marks">
+          <div class="mark">T</div><div class="mark">K</div><div class="mark">Pm</div><div class="mark">OS</div>
+        </div>
+        <div class="footer">
+          <div class="frow">
+            <div class="ic"><svg viewBox="0 0 24 24"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z"/></svg></div>
+            <span>Browse the catalog</span><em>›</em>
+          </div>
+          <div class="frow">
+            <div class="ic"><svg viewBox="0 0 24 24"><path d="M12 12a5 5 0 100-10 5 5 0 000 10zm0 2c-5 0-9 2.5-9 5.5V22h18v-2.5c0-3-4-5.5-9-5.5z"/></svg></div>
+            <span>You &amp; settings</span><em>›</em>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="note"><b>Named, not guessed at.</b> Rare destinations sit at the end, below the grid, in their own zone — so the panel reads "here are your feeds… and here's how to get more, and you." Also absorbs the empty-state's existing "Open the catalog" button.</p>
+  </div>
+
+</div>
+
+<div class="legend">
+  <h3>What this changes</h3>
+  <ul>
+    <li><b>The strip becomes one class of thing.</b> Everything in it filters the feed. The extra gap that currently exists only to stop people reading the All circle as a door stops being necessary.</li>
+    <li><b>The whole row drags.</b> Combined with the sticky-header fix already built, there is no fixed layer left to swallow a swipe.</li>
+    <li><b>The melt machinery can go.</b> No fixed head means no fade mask and no per-chip opacity ramp — <code>fadeClear</code>, <code>fadeRamp</code>, <code>stripInset</code>, <code>contentLead</code>, <code>headTrailingEdge</code> all retire.</li>
+    <li><b>The cost, stated:</b> Settings goes from always-visible to two taps (FAB → footer). That is the trade you named — rare destinations shouldn't hold permanent space. The avatar is currently the least reachable control in the app anyway, at the top of a phone.</li>
+    <li><b>Still to decide:</b> whether All stays pinned in the tray header only, or also leads the strip. Shown here leading the strip <em>and</em> in the tray header — it is the way home from both places.</li>
+  </ul>
+</div>

@@ -159,14 +159,16 @@ struct SettingsScreen: View {
                         if ProfileStore.shared.avatar == nil { avatarPickerOpen = true }
                         else { avatarDialogOpen = true }
                     }),
-            // "Privacy", not "Data" (user, 2026-07-24) — the ONE privacy home:
-            // where your things live (on device / iCloud + ADP), what leaves
-            // this iPhone ("What this app reaches"), previews, and the two
-            // deletes. A privacy-curious person has one obvious place to tap,
-            // and there's no second privacy-ish row to compete with it. The
-            // badge still previews sync STATE — a green on-device lock or the
-            // blue cloud — which is itself the privacy fact at a glance.
-            RowSpec(title: "Privacy", value: String(localized: "\(thingCount) things · on device"),
+            // "Data" (user ruling 2026-08-24, reversing the 2026-07-24 ruling
+            // that made it "Privacy") — still the ONE home for all of it: where
+            // your things live (on device / iCloud + ADP), what leaves this
+            // iPhone ("What this app reaches"), previews, and the two deletes.
+            // Nothing about the row's CONTENT changed; only its name. The
+            // internal case has been `.data` throughout, so the label now
+            // matches what the code has always called it. The badge still
+            // previews sync STATE — a green on-device lock or the blue cloud —
+            // which is itself the privacy fact at a glance.
+            RowSpec(title: "Data", value: String(localized: "\(thingCount) things · on device"),
                     badge: icloudSync ? ("icloud.fill", DS.tint) : ("lock.iphone", DS.confirm),
                     countsUp: true,
                     bounce: rungBounce,

@@ -166,7 +166,12 @@ struct AccountDetailSheet: View {
 
     private var title: String {
         switch detail {
-        case .data: "Privacy"   // the ONE privacy home (user, 2026-07-24)
+        // "Data" since 2026-08-24 (user), reversing the 2026-07-24 "Privacy"
+        // ruling. Still the ONE home for sync, reach, previews and both
+        // deletes — the name changed, the screen did not. Kept in step with
+        // `AccountScreen`'s row title by hand: the row is what you tap and
+        // this is the sheet it opens, so the two must never disagree.
+        case .data: "Data"
         case .key: "Your key"
         case .color: "Color"
         case .notifications: "Notifications"

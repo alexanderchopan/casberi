@@ -71,10 +71,13 @@ struct AgentBar: View {
     /// width: since 2026-08-07 the pill hugs its contents in the corner in
     /// BOTH states, so this adds a line of text and nothing else.
     ///
-    /// It names the TAP (§390) — "Your sources", not "Ask your things…". A
-    /// label on a button is a promise about what pressing it does, and after
-    /// the swap that sentence would have been the honesty rule's dead control
-    /// wearing the wrong verb.
+    /// It names the TAP (§390) — "Your feeds" (was "Your sources" until
+    /// 2026-08-24, user: "this should say your feeds not your sources" — the
+    /// tray shows what you actually READ, and "feed" is this app's own word
+    /// for that everywhere else CLAUDE.md's core-loop note names it), not
+    /// "Ask your things…". A label on a button is a promise about what
+    /// pressing it does, and after the swap that sentence would have been the
+    /// honesty rule's dead control wearing the wrong verb.
     var expanded: Bool = false
     var morphNS: Namespace.ID?
     /// THE MAGNIFIER IS GONE (2026-08-15, prd §386o, user: "search and the
@@ -137,7 +140,7 @@ struct AgentBar: View {
             } label: {
                 HStack(spacing: DS.Space.s3) {
                     if expanded {
-                        Text("Your sources")
+                        Text("Your feeds")
                             .dsText(.body17)
                             .foregroundStyle(DS.textTertiary)
                             .lineLimit(1)
@@ -185,7 +188,7 @@ struct AgentBar: View {
             }
             .buttonStyle(.plain)
             // The words carried the button's name; compact, it needs its own.
-            .accessibilityLabel(Text("Your sources"))
+            .accessibilityLabel(Text("Your feeds"))
             // The hold, reachable without holding. It rides THIS button rather
             // than the container: a custom action on a plain layout view has no
             // accessibility element of its own to be found on, and VoiceOver

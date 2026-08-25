@@ -808,25 +808,21 @@ check("a category name is recognized", CategoryFold.isCategory("Markets"))
 check("a category name is recognized (Wallet)", CategoryFold.isCategory("Wallet"))
 check("a plain source is not a category", !CategoryFold.isCategory("Kalshi"))
 
-// The fold exception, now ONE source (user ruling 2026-08-20, prd §423). CardPointers
-// sits in the Wallet GROUP and reads offers on cards from banks — nothing it shows is
-// about a wallet, so it keeps its own chip and never appears as a venue inside the
-// Wallet switcher. Both halves are asserted: a source exempted from the fold but left
-// in the switcher would be reachable twice.
-check("CardPointers keeps its own chip",
-      CategoryFold.fold(["CardPointers", "Peer"], category: "Wallet",
-                        members: CategoryFold.memberSet(of: "Wallet")).contains("CardPointers"))
-check("a non-exempt Wallet member still folds",
+// CARDPOINTERS FOLDS (user ruling 2026-08-24, overturning the 2026-08-20/prd §423
+// exemption after four days). It sits in the Wallet GROUP in the catalog — "it is cards
+// people follow" — and the strip's fixed head has no room to spare for a standing
+// exception, so it folds exactly like every other Wallet member now. Both halves are
+// asserted for the same reason Walletbeat's are: it must vanish from the strip behind
+// the Wallet chip AND appear inside that chip's switcher, or it is reachable never
+// rather than twice.
+check("CardPointers folds into Wallet",
       !CategoryFold.fold(["CardPointers", "Peer"], category: "Wallet",
-                         members: CategoryFold.memberSet(of: "Wallet")).contains("Peer"))
-check("an exempt source alone plants no empty cluster chip",
-      CategoryFold.fold(["CardPointers"], category: "Wallet",
-                        members: CategoryFold.memberSet(of: "Wallet")) == ["CardPointers"])
-check("the exempt chip lights itself, not its category",
-      CategoryFold.chipLabel(for: "CardPointers", folded: ["Wallet", "CardPointers"]) == "CardPointers")
-check("CardPointers is not a Wallet switcher venue",
-      !CategoryFold.scopes(category: "Wallet", present: ["CardPointers", "Peer"]).contains("CardPointers"))
-check("a non-exempt member is still a venue",
+                         members: CategoryFold.memberSet(of: "Wallet")).contains("CardPointers"))
+check("CardPointers's chip reads as its category",
+      CategoryFold.chipLabel(for: "CardPointers", folded: ["Wallet"]) == "Wallet")
+check("CardPointers IS a Wallet switcher venue",
+      CategoryFold.scopes(category: "Wallet", present: ["CardPointers", "Peer"]).contains("CardPointers"))
+check("a fellow Wallet member is still a venue",
       CategoryFold.scopes(category: "Wallet", present: ["CardPointers", "Peer"]).contains("Peer"))
 
 // WALLETBEAT FOLDS, and both halves are asserted for the same reason the exemption's
@@ -1056,11 +1052,7 @@ mutate "scopes follows the caller's order instead of catalog order" \
             return ra != rb ? ra < rb : $0 < $1
         }|||return Array(filtered)' || mfail=1
 mutate "scopes tests the raw member set instead of resolving each present source's own category (THE SHIPPED BUG, a third place)" \
-  '!neverFold.contains($0) && BridgeCatalog.category(forSource: $0) == category|||order.contains($0)' || mfail=1
-# Without the chip-side exception both seats vanish into the Wallet cluster again — the
-# exact thing that made them look absent from the demo.
-mutate "the chip-side fold exception is load-bearing" \
-  'guard !neverFold.contains(label) else { folded.append(label); continue }|||guard true || neverFold.contains(label) else { folded.append(label); continue }' || mfail=1
+  'BridgeCatalog.category(forSource: $0) == category|||order.contains($0)' || mfail=1
 mutate "landing ignores whether the remembered venue is still present" \
   'present.contains(last) { return last }|||!last.isEmpty { return last }' || mfail=1
 mutate "the Wallet anchor is gone — the chip reopens on whichever rider you last visited (prd §354)" \

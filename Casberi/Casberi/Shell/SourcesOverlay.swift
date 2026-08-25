@@ -54,9 +54,16 @@ struct SourcesOverlay: View {
     let labels: [String]
     let active: String
     let onDismiss: () -> Void
-    /// The catalog door the EMPTY tray offers — threaded straight through to
-    /// `SourcesTray`, which is the only thing that draws it.
+    /// The catalog door — threaded through to `SourcesTray` for its EMPTY
+    /// state, and drawn in this panel's own header since 2026-08-24, where it
+    /// is the permanent way into the catalog now that the chip strip no longer
+    /// carries one. One closure, so the two can never send you to two places.
     let onOpenCatalog: () -> Void
+    /// The Settings door, moved here from the chip strip's head the same day
+    /// (see `header`). Like `onOpenCatalog` it must close the panel before it
+    /// pushes: a screen that arrives behind a raised panel reads as a control
+    /// that did nothing.
+    let onSettings: () -> Void
     /// Last so the call site reads as a trailing closure, matching the shape
     /// the `.sheet` call it replaced already had.
     let onPick: (String) -> Void
@@ -247,8 +254,42 @@ struct SourcesOverlay: View {
                                       style: .continuous)
     }
 
-    /// Grabber + title + the All capsule: the panel's chrome, and its drag
-    /// region.
+    /// Grabber + title + the two doors + the All capsule: the panel's chrome,
+    /// and its drag region.
+    ///
+    /// **THE DOORS ARRIVED HERE 2026-08-24** (user ruling; mocked in
+    /// `prototype/strip-doors-in-tray-v1.html`). The avatar and the catalogue
+    /// anchored the chip strip's head from 2026-07-20 and 2026-07-17
+    /// respectively, and they left because they were the wrong class of thing
+    /// to be in it: they OPEN A SCREEN, while every other member of that strip
+    /// FILTERS the screen you are on. `SourceChips.head` carries the full
+    /// argument.
+    ///
+    /// **Why this panel is the right home and not a bottom nav bar** (the
+    /// alternative, refused by the same ruling — "user rarely goes to app
+    /// catalogue or avatar so it's wasted space to take up"): this surface is
+    /// already reached by one tap on a bar that already exists in the thumb
+    /// zone, so nothing new is added to permanent chrome. It is the same
+    /// reachability argument that put the sources tray on the agent bar in the
+    /// first place (2026-07-31) rather than behind the strip's catalogue door —
+    /// the top of a phone is the hardest place to reach, so the two controls
+    /// nobody opens daily are exactly the wrong ones to park there.
+    ///
+    /// **Why the HEADER and not a footer under the grid.** A footer was drawn
+    /// and refused, and the reason is the one that matters: the grid routinely
+    /// runs past twenty sources, so a row beneath it is below the fold for
+    /// precisely the people who have the most connected — a door that is
+    /// hardest to reach for whoever needs it most. The header is the one region
+    /// of this panel that never scrolls.
+    ///
+    /// **Three controls on one trailing edge, and the shapes are what keep them
+    /// apart.** The strip's own grammar (a mark gets a circle, a word gets a
+    /// capsule) does the work here with no seam-width tricks: the doors are
+    /// circles fused into one glass object, All is a word capsule outside it.
+    /// That is the same "these two are one thing, that is a second thing"
+    /// reading the strip used to buy with an oversized gap — carried by form
+    /// instead of by whitespace, which is what `SourceChips.head` says went
+    /// wrong the first time.
     private var header: some View {
         VStack(alignment: .leading, spacing: 0) {
             grabber
@@ -259,6 +300,7 @@ struct SourcesOverlay: View {
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
                 Spacer(minLength: DS.Space.s2)
+                headDoors
                 allChip
             }
             .frame(height: Self.titleBandHeight)
@@ -353,6 +395,57 @@ struct SourcesOverlay: View {
         .accessibilityLabel(Text("All"))
         .accessibilityHint(Text("Show every source"))
         .accessibilityAddTraits(isOn ? .isSelected : [])
+    }
+
+    /// The two doors, as one pair of circles in the header's trailing run.
+    ///
+    /// **They wear `fillStrong`, NOT `dsGlassDoor` — and that is this panel's
+    /// own rule, not an oversight.** In the chip strip both doors are glass,
+    /// because the strip is pinned chrome floating over a scrolling feed. Here
+    /// they sit ON the panel's glass, and `allChip` beside them already
+    /// records why a second material is refused in that position: stacking
+    /// glass inside glass is the one thing the material cannot do. So they take
+    /// the same rest fill the All capsule takes when it is not selected, which
+    /// makes the three read as one row of controls on one surface.
+    ///
+    /// **The glyphs are reused, the chrome is not.** `AvatarDoor` and
+    /// `AppsDoor` are the same marks the strip draws — including `AppsDoor`'s
+    /// attention state, so a broken connection still announces itself here —
+    /// but `AvatarChip`/`catalogueChip`, their strip-side wrappers, are not:
+    /// those carry glass, the pull-to-refresh spin, and the zoom-transition
+    /// anchors, none of which belong to a panel that is about to dismiss.
+    ///
+    /// **`contentShape(Circle())` is load-bearing, not tidy** — the catalogue
+    /// door's own three bug reports (2026-07-26) are that a `.frame()` does not
+    /// make its empty space hit-testable, so a 21pt glyph in a 44pt circle
+    /// takes presses in a small box in the middle and reads as a flaky button.
+    private var headDoors: some View {
+        HStack(spacing: DS.Space.s2) {
+            door(label: String(localized: "Settings"), action: onSettings) {
+                AvatarDoor()
+            }
+            door(label: String(localized: "Apps"), action: onOpenCatalog) {
+                AppsDoor()
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func door<Glyph: View>(label: String,
+                                   action: @escaping () -> Void,
+                                   @ViewBuilder glyph: () -> Glyph) -> some View {
+        Button {
+            DSHaptic.selection()
+            action()
+        } label: {
+            glyph()
+                .frame(width: DS.Hit.min, height: DS.Hit.min)
+                .background { Circle().fill(DS.fillStrong) }
+                .contentShape(Circle())
+        }
+        .buttonStyle(PressSpring())
+        .dsHover()
+        .accessibilityLabel(Text(label))
     }
 
     private var grabber: some View {

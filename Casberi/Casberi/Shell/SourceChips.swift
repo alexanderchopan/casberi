@@ -185,33 +185,54 @@ struct SourceChips: View {
         DSGlassUnion(id: "stripDoors", namespace: doorGlassNS)
     }
 
-    // Leading-dissolve geometry (user, 2026-07-19; widened 2026-07-20 when
-    // the avatar joined as a SECOND fixed leading icon ahead of the
-    // catalogue door, and 2026-08-16 when "All" became a THIRD): avatar sits
-    // at `s4`, 46 wide; the catalogue door sits `iconGap` past it, also 46
-    // wide; the "All" chip sits `iconGap` past THAT, `chipSize` wide. The
-    // strip runs UNDER all three and is masked — fully clear where a fixed
-    // element covers a chip, a short ramp back to solid just past the last
-    // one, then solid the rest of the way. `stripInset` sets the first
-    // scrolling chip to rest right where the ramp ends, so nothing is dimmed
-    // at rest. Tune `fadeRamp` for a softer/tighter melt.
+    // Leading-dissolve geometry (user, 2026-07-19). On the PHONE the head is
+    // now one chip — "All" at `s4`, `chipSize` wide — and the scrolling chips
+    // pass beneath it, each melting out over `fadeRamp` as it arrives (see
+    // `horizontalStrip`). `stripInset` sets the first chip to rest right where
+    // the ramp ends, so nothing is dimmed at rest. Tune `fadeRamp` for a
+    // softer/tighter melt.
+    //
+    // This comment used to describe THREE fixed marks — avatar, catalogue,
+    // "All" — because that is what the head was from 2026-08-16 until the two
+    // doors moved to the sources tray on 2026-08-24 (see `head`). The widths
+    // below survive for the iPad RAIL, which still draws both doors.
+    //
+    // `iconGap` NARROWED s3→s2 the same day (user: "i think we could move the
+    // avatar, apps, and all closer to each other"), and it is now the rail's
+    // gap alone. Kept rather than reverted: the rail stacks the same marks
+    // vertically and the tighter pitch reads better there too.
+    //
+    // `headTrailingEdge` and everything derived from it are computed from
+    // these constants, so the melt's ramp follows any change for free —
+    // nothing hardcodes a width.
     private static let avatarWidth: CGFloat = 46
     private static let catalogueWidth: CGFloat = 46
-    private static let iconGap: CGFloat = DS.Space.s3
-    private static let catalogueTrailingEdge: CGFloat =
-        DS.Space.s4 + avatarWidth + iconGap + catalogueWidth
-    /// Where the fixed head ENDS — the doors plus the pinned "All" chip.
+    private static let iconGap: CGFloat = DS.Space.s2
+    /// Where the pinned head ENDS — on the phone that is the leading margin
+    /// plus the "All" chip, and nothing else since the two doors moved to the
+    /// sources tray (2026-08-24; see `head`). `avatarWidth`/`catalogueWidth`
+    /// survive because the iPad RAIL still draws both — it has vertical room to
+    /// spare, which is the same reason its own doc gives for having no fade
+    /// mask — and `headDoors` sizes itself from them.
     ///
     /// Instance rather than `static` because `chipSize` folds with the strip
     /// (56→48): a static edge measured at the resting size would leave an 8pt
-    /// dead band under the minimized chip where scrolling chips are masked out
+    /// dead band under the minimized chip where scrolling chips are melted out
     /// for no reason.
     private var headTrailingEdge: CGFloat {
-        Self.catalogueTrailingEdge + Self.iconGap + chipSize
+        DS.Space.s4 + chipSize
     }
     private var fadeClear: CGFloat { headTrailingEdge - 8 }
     private static let fadeRamp: CGFloat = 24
     private var stripInset: CGFloat { fadeClear + Self.fadeRamp }
+    /// The air between the pinned head's TRAILING edge and the first chip at
+    /// rest. `stripInset` is the same resting position measured from the
+    /// viewport's leading edge, which is what the strip needed while it began
+    /// at x=0 and ran beneath an overlay; the head occupies real layout space
+    /// now, so the padding that buys that position is the difference. Derived
+    /// rather than spelled as a literal 16, so it stays correct if `fadeRamp`
+    /// or the head's own metrics move.
+    private var contentLead: CGFloat { stripInset - headTrailingEdge }
 
     var body: some View {
         switch axis {
@@ -287,99 +308,183 @@ struct SourceChips: View {
     /// where it belongs — as a record of what was tried, not a claim about what
     /// runs.
     private var horizontalStrip: some View {
-        // The scroll strip runs the full width, UNDER the fixed app icon; the
-        // leading fade mask dissolves each chip as it reaches the icon, so chips
-        // melt INTO the catalogue button instead of being sheared off at a hard
-        // clip line (user, 2026-07-19 — "disappear into it, not into a hard
-        // line on the source chips").
-        ZStack(alignment: .leading) {
-            // ScrollViewReader keeps the ACTIVE chip visible — a deep link
-            // (casberi://feed/source/Zerion) can select a chip past the fold,
-            // and a filter you can't see reads as no filter at all.
-            ScrollViewReader { proxy in
-                ScrollView(.horizontal, showsIndicators: false) {
-                    // The active chip's fill is a real glass element that MORPHS
-                    // from the old chip to the new (prd §359, user: "if the
-                    // category chips and the source chips are controls why not
-                    // use liquid glass for the transitions and active states").
-                    // That morph is a property of the CONTAINER — a
-                    // `glassEffectID` outside one is inert — so the row it
-                    // travels along is the container, and it is the row rather
-                    // than the whole strip because the fixed doors are a
-                    // separate glass object that must never blend into a chip
-                    // sliding under them.
-                    DSGlassContainer(spacing: Self.chipGap) {
-                        HStack(spacing: Self.chipGap) {
-                            ForEach(scrollingLabels, id: \.self) { label in
-                                chip(label)
+        // Captured as plain values for the per-chip melt below: `visualEffect`
+        // takes an escaping closure, and handing it two `CGFloat`s keeps `self`
+        // (and the whole View graph behind it) out of the capture.
+        let clear = fadeClear
+        let ramp = Self.fadeRamp
+        // ScrollViewReader keeps the ACTIVE chip visible — a deep link
+        // (casberi://feed/source/Zerion) can select a chip past the fold,
+        // and a filter you can't see reads as no filter at all.
+        return ScrollViewReader { proxy in
+            ScrollView(.horizontal, showsIndicators: false) {
+                // **THE HEAD IS INSIDE THE SCROLL (2026-08-24, user: "with the
+                // all chip pinned, it's really hard to scroll through the other
+                // categories").**
+                //
+                // It used to be a `ZStack` layer sitting ON TOP of this scroll,
+                // and that is what made the strip hard to move: a `ScrollView`
+                // only pans when the touch that starts the drag lands on the
+                // scroll view itself, so every swipe beginning on the avatar,
+                // the catalogue door or "All" — ~148pt of button at the LEADING
+                // edge, which is exactly where a finger starts a swipe back
+                // toward the earlier chips — hit a fixed layer and did nothing.
+                // Scrolling FORWARD worked (you start on the right, over real
+                // chips) and scrolling BACK did not, which is precisely the
+                // asymmetry the report describes.
+                //
+                // A pinned section header is the same picture with the touch
+                // problem gone: the head still never moves and never leaves the
+                // screen — that was 2026-08-16's whole point and the two doors'
+                // point since 2026-07-17, and nothing here weakens it — but it
+                // now belongs to the scroll view, so a drag starting on it pans
+                // like a drag starting anywhere else. A tap still taps: SwiftUI
+                // cancels a button press that turns into a drag, which is the
+                // ordinary button-inside-a-list behaviour and NOT the custom
+                // recognizer arbitration this codebase has been burned by
+                // (`BoardDragDriver`, the catalogue door's own three reports).
+                //
+                // `pinnedViews` requires a LAZY stack. Laziness buys nothing at
+                // this scale — the fold caps the strip at eleven categories —
+                // but it costs nothing either, and `scrollTo` below still
+                // resolves because `ForEach`'s ids are known whether or not the
+                // chip is realized.
+                LazyHStack(spacing: 0, pinnedViews: [.sectionHeaders]) {
+                    Section {
+                        // The active chip's fill is a real glass element that MORPHS
+                        // from the old chip to the new (prd §359, user: "if the
+                        // category chips and the source chips are controls why not
+                        // use liquid glass for the transitions and active states").
+                        // That morph is a property of the CONTAINER — a
+                        // `glassEffectID` outside one is inert — so the row it
+                        // travels along is the container, and it is the row rather
+                        // than the whole strip because the fixed doors are a
+                        // separate glass object that must never blend into a chip
+                        // sliding under them.
+                        DSGlassContainer(spacing: Self.chipGap) {
+                            HStack(spacing: Self.chipGap) {
+                                ForEach(scrollingLabels, id: \.self) { label in
+                                    chip(label)
+                                        // THE MELT, PER CHIP. The old
+                                        // `.mask(leadingFade)` hung on the whole
+                                        // ScrollView, which worked only while the
+                                        // head was a separate layer above it —
+                                        // with the head inside, that mask would
+                                        // dissolve the head itself, i.e. erase the
+                                        // very thing it exists to protect.
+                                        //
+                                        // Same geometry, read per chip instead of
+                                        // painted once across the row: a chip is
+                                        // solid until its leading edge reaches
+                                        // `stripInset`, then ramps to nothing over
+                                        // `fadeRamp`, and is fully gone 8pt before
+                                        // it would show through the head's glass.
+                                        // `.scrollView` is the VIEWPORT's space,
+                                        // so `minX` is distance from the strip's
+                                        // left edge and the head's own width is
+                                        // what `clear` is measured from.
+                                        //
+                                        // The one honest difference: the mask
+                                        // wiped a gradient ACROSS each chip, this
+                                        // fades each chip whole. The 2026-07-19
+                                        // ruling it answers to is "disappear into
+                                        // it, not into a hard line on the source
+                                        // chips" — no hard line either way, and
+                                        // the dissolve still happens over the same
+                                        // 24pt. Worth a look on a device.
+                                        .visualEffect { content, proxy in
+                                            let x = proxy.frame(in: .scrollView).minX
+                                            return content.opacity(
+                                                Double(min(max((x - clear) / ramp, 0), 1)))
+                                        }
+                                }
                             }
                         }
-
+                        // The air between the head and the first chip at rest —
+                        // what `stripInset` bought when the strip started at the
+                        // viewport's edge and ran underneath an overlay. The head
+                        // occupies real layout space now, so the same resting
+                        // position is expressed relative to it.
+                        .padding(.leading, contentLead)
+                        .padding(.trailing, DS.Space.s4)
+                    } header: {
+                        head
                     }
-                    // Clears the fixed head at rest; the strip slides left
-                    // beneath it — and through the fade — as you scroll.
-                    .padding(.leading, stripInset)
-                    .padding(.trailing, DS.Space.s4)
-                }
-                .onAppear {
-                    if active != "All" { proxy.scrollTo(active, anchor: .center) }
-                }
-                // **A chip you TAPPED is not re-centred (prd §359, 2026-08-11).**
-                // This used to re-centre on every change, which quietly defeated
-                // the travelling selection above it: the active chip was pulled
-                // to the middle, so the fill never moved in SCREEN space and the
-                // chips slid under it instead — measured at 6px of centroid
-                // travel across a whole switch, which is why the glass morph
-                // "doesn't look like a blob" no matter what material it is made
-                // of. Skipping the scroll for a direct tap gives the morph the
-                // whole distance between two chips to happen in.
-                //
-                // Every OTHER route still re-centres, and that is the rule this
-                // preserves rather than an exception to it: a deep link
-                // (casberi://feed/source/Zerion), a swipe step, or a restored
-                // filter can name a chip past the fold, and a selection you
-                // cannot see reads as no selection at all. A tap is the one case
-                // where the chip is provably already on screen — your finger was
-                // just on it.
-                .onChange(of: active) { _, now in
-                    if tapped == now { tapped = nil; return }
-                    // See the rail's twin: "All" is pinned outside this scroll,
-                    // so there is no id here to scroll to and never needs to be.
-                    guard now != "All" else { return }
-                    withAnimation(DS.Motion.standard) { proxy.scrollTo(now, anchor: .center) }
                 }
             }
-            .mask(alignment: .leading) { leadingFade }
-
-            // Avatar, then the catalogue, then "All" — ALL THREE anchor the
-            // HEAD of the strip, FIXED outside the scroll (avatar joined
-            // 2026-07-20; the catalogue's own fixed placement dates to user
-            // 2026-07-17; "All" joined 2026-08-16, user: "can we make it fixed
-            // so it's always showing?"). They ride ON TOP so chips vanish into
-            // them.
-            //
-            // **Why "All" belongs up here even though it IS a filter, unlike
-            // the two doors.** The strip's founding ruling (2026-07-13, the tab
-            // bar's replacement) is that navigation is always in reach and never
-            // scrolls away with content — and "All" is the way back to the whole
-            // feed, the one destination every other chip is a departure from.
-            // It was nonetheless the FIRST thing to leave the screen: the strip
-            // re-centres the active chip (see `onChange` above), so standing in
-            // any room past the second chip pushed "All" off the leading edge,
-            // and the way home was a scroll you had to know was there.
-            //
-            // The seam between the door pair and this chip is a full `iconGap`
-            // ON TOP OF the chip's own slot air, wider than the gap inside the
-            // pair — deliberate. The doors are one fused glass object
-            // (`doorsUnion`) and this is not; an equal gap would read as three
-            // members of one group, and a tap on the third would then be
-            // expected to open something rather than filter.
-            HStack(spacing: Self.iconGap) {
-                headDoors(.horizontal)
-                chip("All", pinned: true)
+            .onAppear {
+                if active != "All" { proxy.scrollTo(active, anchor: .center) }
             }
-            .padding(.leading, DS.Space.s4)
+            // **A chip you TAPPED is not re-centred (prd §359, 2026-08-11).**
+            // This used to re-centre on every change, which quietly defeated
+            // the travelling selection above it: the active chip was pulled
+            // to the middle, so the fill never moved in SCREEN space and the
+            // chips slid under it instead — measured at 6px of centroid
+            // travel across a whole switch, which is why the glass morph
+            // "doesn't look like a blob" no matter what material it is made
+            // of. Skipping the scroll for a direct tap gives the morph the
+            // whole distance between two chips to happen in.
+            //
+            // Every OTHER route still re-centres, and that is the rule this
+            // preserves rather than an exception to it: a deep link
+            // (casberi://feed/source/Zerion), a swipe step, or a restored
+            // filter can name a chip past the fold, and a selection you
+            // cannot see reads as no selection at all. A tap is the one case
+            // where the chip is provably already on screen — your finger was
+            // just on it.
+            .onChange(of: active) { _, now in
+                if tapped == now { tapped = nil; return }
+                // "All" lives in the pinned HEADER, not in the scrolled run,
+                // so there is no id here to scroll to and never needs to be.
+                guard now != "All" else { return }
+                withAnimation(DS.Motion.standard) { proxy.scrollTo(now, anchor: .center) }
+            }
         }
+    }
+
+    /// The phone strip's pinned head: **"All", and nothing else** (2026-08-24).
+    ///
+    /// **THE TWO DOORS MOVED TO THE SOURCES TRAY** (user ruling, mocked in
+    /// `prototype/strip-doors-in-tray-v1.html`). The avatar has anchored this
+    /// head since 2026-07-20 and the catalogue since 2026-07-17, and the reason
+    /// they left is that they were the wrong CLASS of thing to be here: they
+    /// OPEN A SCREEN, while every other member of this strip FILTERS the screen
+    /// you are on. The row was two verbs wearing one grammar, and this file was
+    /// paying for it in prose — the note that used to live here spent a
+    /// paragraph justifying a wider seam between the door pair and "All" purely
+    /// so nobody would read the third circle as a third door. **A spacing
+    /// constant whose job is to prevent a misreading is the grouping telling
+    /// you it is wrong.** They are in `SourcesOverlay`'s header now, one tap
+    /// away on the bar that is already in the thumb zone, which is where the
+    /// sources tray itself was put in 2026-07-31 for the same reachability
+    /// reason: the top of a phone is the hardest place to reach, so the two
+    /// controls nobody opens daily should not be the ones parked there.
+    ///
+    /// **The cost, stated rather than hidden:** Settings goes from
+    /// always-visible to two taps. That is the trade the ruling names — a rare
+    /// destination should not hold permanent chrome — and it buys ~92pt back
+    /// for the chips, which is most of a whole extra category on a phone.
+    ///
+    /// **Why "All" STAYS pinned even though it IS a filter.** The strip's
+    /// founding ruling (2026-07-13, the tab bar's replacement) is that
+    /// navigation is always in reach and never scrolls away with content — and
+    /// "All" is the way back to the whole feed, the one destination every other
+    /// chip is a departure from. It was nonetheless the FIRST thing to leave
+    /// the screen before 2026-08-16: the strip re-centres the active chip (see
+    /// `horizontalStrip`'s `onChange`), so standing in any room past the second
+    /// chip pushed it off the leading edge, and the way home was a scroll you
+    /// had to know was there. Pinning it costs nothing in scrollability now
+    /// that the head is a sticky header INSIDE the scroll rather than a layer
+    /// above it — the whole row drags either way — so the only thing pinning
+    /// still spends is width, and one chip's worth is what the way home is
+    /// worth.
+    ///
+    /// It is also NOT the only way back: `SourcesOverlay`'s header carries an
+    /// All capsule too (§407). Two doors onto one room is right here — the
+    /// panel is the map, this is the road.
+    private var head: some View {
+        chip("All", pinned: true)
+            .padding(.leading, DS.Space.s4)
     }
 
     /// The two fixed doors as ONE glass capsule (2026-08-06) — see
@@ -391,12 +496,17 @@ struct SourceChips: View {
     /// is a merge decided by a layout constant instead of by intent. The union
     /// says which pair fuses; the spacing says none fuse by accident.
     ///
-    /// Layout is byte-for-byte what it was — same stacks, same `iconGap` — which
-    /// matters more here than it looks: the horizontal strip's leading-dissolve
-    /// mask is measured off these two doors' exact widths and gap
-    /// (`catalogueTrailingEdge`, and `headTrailingEdge` past it once the pinned
-    /// "All" chip is added), so a container that changed the head's metrics
-    /// would put the fade ramp somewhere other than where the chips melt.
+    /// **RAIL-ONLY since 2026-08-24** — the phone strip no longer draws these
+    /// (see `head`; they live in `SourcesOverlay`'s header now). The `.horizontal`
+    /// arm is kept rather than deleted because the rail and the strip are ONE view
+    /// with an `axis`, and a function that answers for only one axis is the shape
+    /// that drifted when Home and Feed were two screens; it costs a switch case.
+    ///
+    /// The iPad keeps them for a spatial reason, not a nostalgic one: the rail has
+    /// vertical room to spare — the same reason its own doc gives for having no
+    /// fade mask — so the doors cost it nothing, and the tray is a phone surface
+    /// (`SourcesOverlay` is explicit that a panel pinned to the bottom edge is a
+    /// statement about a phone). Removing them there would strand Settings.
     @ViewBuilder
     private func headDoors(_ axis: Axis) -> some View {
         DSGlassContainer(spacing: 0) {
@@ -425,17 +535,13 @@ struct SourceChips: View {
                    doorUnion: doorsUnion)
     }
 
-    /// The leading dissolve: transparent where the fixed head sits, a soft ramp
-    /// back to opaque just past it, opaque across the rest of the strip.
-    private var leadingFade: some View {
-        HStack(spacing: 0) {
-            Color.clear.frame(width: fadeClear)
-            LinearGradient(colors: [.clear, .black],
-                           startPoint: .leading, endPoint: .trailing)
-                .frame(width: Self.fadeRamp)
-            Rectangle().fill(.black)
-        }
-    }
+    // `leadingFade` lived here and is DELETED (2026-08-24). It was the strip's
+    // row-wide dissolve — transparent where the fixed head sat, a soft ramp back
+    // to opaque just past it — hung on the ScrollView as a `.mask`. That worked
+    // only while the head was a layer ABOVE the scroll; once the head moved
+    // inside as a pinned header (see `horizontalStrip`), masking the ScrollView
+    // would dissolve the head along with the chips. The same geometry is read
+    // per chip now, off `fadeClear`/`fadeRamp`, which both halves still share.
 
     /// The app-catalogue door — the same `AppsDoor` grid glyph (and its
     /// attention state) it wore in the top-right, now the strip's first chip in

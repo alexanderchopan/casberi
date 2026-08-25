@@ -1854,6 +1854,17 @@ struct RootShell: View {
                         withAnimation(DS.Motion.standard) {
                             sceneState.route.present(.apps)
                         }
+                    },
+                    // The Settings door, which lives in this panel's header
+                    // since 2026-08-24 (the chip strip no longer carries one).
+                    // Same shape as the catalog door above it, for the same
+                    // reason: close first, then push, or the screen arrives
+                    // behind a raised panel and the tap reads as a no-op.
+                    onSettings: {
+                        closeSources()
+                        withAnimation(DS.Motion.standard) {
+                            sceneState.route.present(.settings)
+                        }
                     }) { label in
                     closeSources()
                 // Land ON the feed that was named. A pick made from a pushed
