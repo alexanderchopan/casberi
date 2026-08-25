@@ -198,6 +198,8 @@ struct VibenetRoomCard: View {
                     balanceAggregateSection
                 }
                 keysAggregateSection
+                linkedAccountsSection
+                    .padding(.top, DS.Space.s4)
             } else {
                 Text(VibenetRoom.headline(room, now: .now))
                     .dsText(.heading17)
@@ -246,113 +248,188 @@ struct VibenetRoomCard: View {
     /// anywhere draws no chips, a `lockedCount` of zero is a real state
     /// and simply never printed (`VibenetBalanceAggregate.plainLine`'s own
     /// rule) — never an invented "0 locked"/"0 ETH" (§83).
+    /// The crown, in Wallet's own order (prd §463): caption, then the big
+    /// number, then the standing beneath it. It shipped inverted — a
+    /// `heading17` account count ABOVE a `stat24` figure whose caption came
+    /// after it — so the room led with an inventory line and the reader met
+    /// the money as an afterthought. Wallet's crown has answered this exact
+    /// question for a year: the caption says WHOSE, the number is the biggest
+    /// thing on the card, the standing is quiet underneath.
+    ///
+    /// NO SPARKLINE AND NO DELTA, deliberately. The design calls for both and
+    /// this bridge records no per-account value history — `WalletStore`'s
+    /// `ValueSample` has no vibenet counterpart — so a line here would be
+    /// drawn from a single reading, which is a flat line, which reads as
+    /// "went to zero". Absent until the history exists.
     @ViewBuilder
     private var balanceAggregateSection: some View {
         if let aggregate = VibenetBalanceAggregation.compose(room.items) {
-            VStack(alignment: .leading, spacing: DS.Space.s2) {
-                Text(aggregate.plainLine)
-                    .dsText(.heading17)
-                    .foregroundStyle(DS.textPrimary)
-                    .fixedSize(horizontal: false, vertical: true)
-                // The card's own big-number rung (`stat24` — the MONEY
-                // tier, Typography's own naming) — one native total, in
-                // native units, never priced. ONE caller of this size on
-                // this card, the same "one rung, one job" discipline
-                // `heading28` documents for itself.
+            VStack(alignment: .leading, spacing: 0) {
+                Text(String(localized: "Across your accounts"))
+                    .dsText(.label12)
+                    .foregroundStyle(DS.textTertiary)
                 if let nativeTotal = aggregate.nativeTotal {
+                    // `price40`, the crown rung — this is the room's one
+                    // biggest thing, and `stat24` left it the same size as
+                    // an ordinary card statistic.
                     Text("\(VibenetBalanceFormat.line(nativeTotal)) ETH")
-                        .dsText(.stat24)
+                        .dsText(.price40)
                         .foregroundStyle(DS.textPrimary)
-                    // The disambiguating caption — reported live, one
-                    // account's own big balance and this room's SUMMED
-                    // one look identical in size, so a person can read
-                    // one account's number as if it were the whole
-                    // room's (the same "looks like a parent" confusion
-                    // the roster's promoted-lead face already caused
-                    // once). Wallet's own crown resolves the identical
-                    // ambiguity with a caption, not a size difference —
-                    // "Across your wallets" when unscoped, the wallet's
-                    // own name when scoped. This is that caption's exact
-                    // wording, one venue over.
-                    Text(String(localized: "Across your accounts"))
-                        .dsText(.label12)
-                        .foregroundStyle(DS.textTertiary)
+                        .monospacedDigit()
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.6)
+                        .padding(.top, 2)
                 }
+                Text(aggregate.plainLine)
+                    .dsText(.subhead13)
+                    .foregroundStyle(DS.textTertiary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, 2)
                 if !aggregate.tokenTotals.isEmpty {
-                    // The Keys section's own capsule grammar, reused
-                    // rather than a third pill style invented for one
-                    // more room (the same rule `keysAggregateSection`
-                    // already states for itself).
-                    FlowLayout(spacing: 6) {
-                        ForEach(aggregate.tokenTotals, id: \.symbol) { total in
-                            Text("\(VibenetBalanceFormat.line(total.amount)) \(total.symbol)")
-                                .dsText(.label11)
-                                .foregroundStyle(DS.textSecondary)
-                                .lineLimit(1)
-                                .fixedSize()
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 3)
-                                .background(Self.mark.opacity(0.12), in: Capsule())
-                        }
-                    }
+                    tokenTreemap(aggregate)
+                        .padding(.top, DS.Space.s3)
                 }
             }
         }
     }
 
-    // MARK: - Keys (the room-wide aggregate)
+    /// What the accounts hold, as areas rather than a capsule row — the
+    /// design's treemap, and the app's own `DS.ink(magnitude:)` ramp, so this
+    /// reads as the same family of object as every other treemap here. NO
+    /// HUE: magnitude is the only thing area or tone may carry (the TokenHue
+    /// deletion ruling), and these are three different assets with no shared
+    /// unit to rank across, so the native holding simply leads at the size
+    /// its own share earns.
+    ///
+    /// Native ETH is the lead cell and the tokens stack beside it. They are
+    /// NEVER summed — no price feed here, so the areas state each asset's
+    /// own share of its own total rather than implying one converted figure.
+    @ViewBuilder
+    private func tokenTreemap(_ aggregate: VibenetBalanceAggregate) -> some View {
+        let cells = VibenetBalanceTreemap.cells(aggregate)
+        if !cells.isEmpty {
+            HStack(spacing: DS.Space.s2) {
+                ForEach(Array(cells.enumerated()), id: \.offset) { index, cell in
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(cell.symbol)
+                            .dsText(index == 0 ? .body17 : .callout15)
+                            .foregroundStyle(DS.textPrimary)
+                            .lineLimit(1)
+                        Spacer(minLength: 0)
+                        Text(cell.amount)
+                            .dsText(.subhead13)
+                            .foregroundStyle(index == 0 ? DS.textPrimary : DS.textSecondary)
+                            .monospacedDigit()
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
+                    }
+                    .padding(DS.Space.s2)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .frame(height: index == 0 ? 92 : 92)
+                    .background(DS.ink(magnitude: cell.share),
+                                in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+                    .layoutPriority(index == 0 ? 2 : 1)
+                    .chartArrival(index: index, reduceMotion: reduceMotion)
+                }
+            }
+        }
+    }
 
-    /// The count nowhere else on this card states: not "this account has
-    /// 2 keys" (each row already says that) but the total across every
-    /// watched account, broken down by kind, plus whichever key across
-    /// the whole room is closest to lapsing. Silent when
-    /// `VibenetKeyAggregation.compose` has nothing to aggregate (§83).
+    /// KEYS, BY WHAT THEY CAN DO (prd §463). This shipped as taxonomy — "4
+    /// secp256k1, 1 P-256, 1 Passkey" — which answers what KIND of key each
+    /// one is and says nothing about who can spend. The room is opened with
+    /// the other question, so the count leads and the permissions are the
+    /// rows: Admin first, then the contract's own bits in its own order.
+    ///
+    /// The kind capsules are GONE rather than kept alongside. Two lists of
+    /// counts over the same ten keys, differing only in what they group by,
+    /// is a card arguing with itself — and the kinds are still one tap away
+    /// on every key row in the detail.
     @ViewBuilder
     private var keysAggregateSection: some View {
         if let aggregate = VibenetKeyAggregation.compose(room.items, now: .now) {
-            VStack(alignment: .leading, spacing: DS.Space.s2) {
+            VStack(alignment: .leading, spacing: 0) {
                 Text(aggregate.plainLine)
-                    .dsText(.label12).fontWeight(.semibold)
+                    .dsText(.heading17)
                     .foregroundStyle(DS.textPrimary)
                     .fixedSize(horizontal: false, vertical: true)
-                // R3.1's exact capsule grammar, reused rather than
-                // reinvented — a THIRD pill style on one card would be
-                // the roster row's own alarm badge and the key row's own
-                // permission chips joined by a stranger.
-                FlowLayout(spacing: 6) {
-                    ForEach(aggregate.byKind, id: \.kind) { entry in
-                        Text("\(entry.count) \(entry.kind.shortLabel)")
-                            .dsText(.label11)
-                            .foregroundStyle(DS.textSecondary)
-                            .lineLimit(1)
-                            .fixedSize()
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 3)
-                            .background(Self.mark.opacity(0.12), in: Capsule())
+                let policies = VibenetPolicyAggregation.compose(room.items)
+                if !policies.isEmpty {
+                    VStack(alignment: .leading, spacing: 0) {
+                        ForEach(Array(policies.enumerated()), id: \.offset) { index, entry in
+                            HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                                Text(entry.label)
+                                    .dsText(.body17)
+                                    .foregroundStyle(DS.textPrimary)
+                                    .lineLimit(1)
+                                Spacer(minLength: DS.Space.s2)
+                                Text("\(entry.count)")
+                                    .dsText(.subhead13)
+                                    .foregroundStyle(DS.textSecondary)
+                                    .monospacedDigit()
+                            }
+                            .padding(.vertical, 5)
+                            .chartArrival(index: index, reduceMotion: reduceMotion)
+                        }
                     }
+                    .padding(.top, DS.Space.s2)
                 }
-                // Tappable — a callout naming the account closest to a
-                // key lapsing is only useful if it DOES something, not a
-                // dead-end fact (§83's "no dead controls"). Opens when
-                // `onOpen` is real (the setup screen's own roster); scopes
-                // when it's nil (the feed room, where a roster tap only
-                // ever narrows — see this type's header doc) — either way
-                // the same account's own expiring key is one tap away.
+                // The one clock, and only the soonest — the card ends on a
+                // single blue sentence rather than a stack of competing
+                // attention lines.
                 if let soonest = aggregate.soonestExpiry {
-                    Button {
-                        DSHaptic.selection()
-                        if let onOpen { onOpen(soonest.address) } else { onScope(soonest.address) }
-                    } label: {
-                        Text(soonest.line(now: .now))
-                            .dsText(.label12)
-                            .foregroundStyle(Self.mark)
-                            .lineLimit(1)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                    .buttonStyle(.plain)
+                    Text(soonest.line(now: .now))
+                        .dsText(.label12).fontWeight(.semibold)
+                        .foregroundStyle(Self.mark)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.top, DS.Space.s2)
                 }
             }
-            .padding(.top, DS.Space.s3)
+        }
+    }
+
+    /// WHO CAN ACT FOR WHOM — the room's delegate links, as the app's own
+    /// connections shape: one face-led row per link, direction stated in
+    /// words. Same-weight throughout (§295's ruling, reused): this card makes
+    /// no claim that one relationship matters more than another, so nothing
+    /// here is sized or coloured to suggest it.
+    ///
+    /// Silent when there are none. Note these are WATCHED-to-WATCHED only,
+    /// which is `VibenetAccountMapping.links`' own deliberate bound.
+    /// A watched account's own name, or its short address — the same
+    /// fallback every row on this card already makes, so the spine can never
+    /// name an account differently from the roster above it.
+    private static func displayName(_ address: String) -> String {
+        VibenetWatch.shared.name(for: address) ?? VibenetRoom.shortAddress(address)
+    }
+
+    @ViewBuilder
+    private var linkedAccountsSection: some View {
+        let links = VibenetAccountMapping.links(room.items)
+        if !links.isEmpty {
+            VStack(alignment: .leading, spacing: 0) {
+                Text(String(localized: "Linked accounts"))
+                    .dsText(.label12)
+                    .foregroundStyle(DS.textTertiary)
+                ForEach(Array(links.enumerated()), id: \.element.id) { index, link in
+                    HStack(spacing: DS.Space.s3) {
+                        WalletFace(address: link.to, size: DS.Face.row, circular: true)
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(Self.displayName(link.to))
+                                .dsText(.heading17)
+                                .foregroundStyle(DS.textPrimary)
+                                .lineLimit(1)
+                            Text(String(localized: "Can act for \(Self.displayName(link.from))"))
+                                .dsText(.subhead13)
+                                .foregroundStyle(DS.textSecondary)
+                                .lineLimit(1)
+                        }
+                        Spacer(minLength: 0)
+                    }
+                    .padding(.top, DS.Space.s2)
+                    .chartArrival(index: index, reduceMotion: reduceMotion)
+                }
+            }
         }
     }
 

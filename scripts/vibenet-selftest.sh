@@ -437,6 +437,40 @@ let a3 = VibenetActor(actorId: "m", authenticator: "0x3", kind: .p256,
 check("K1 leads, custom trails, regardless of actorId",
       VibenetAccountItem.orderedActors([a1, a3, a2]).map(\.actorId) == ["a", "m", "z"])
 
+// MARK: - DEMO PARITY — every section the room card draws must have data
+//
+// The room's own version of `demo-selftest.py`'s check F, and the reason it
+// exists is that this feature shipped a room whose demo showed a fraction of
+// what the room can say. A section with no seeded data renders as nothing,
+// which from outside is indistinguishable from a section that does not exist —
+// so each of the card's readings is asserted to be non-empty over the SAME
+// fixture the demo actually renders.
+
+print("")
+print("demoFixture — every room-card section has something to draw")
+let demoRoom = VibenetRoom.demoFixture()
+let demoPolicies = VibenetPolicyAggregation.compose(demoRoom.items)
+check("the keys card's policy rows have data",
+      !demoPolicies.isEmpty)
+check("ADMIN is among them — the state §463 fixed is visible in the demo",
+      demoPolicies.contains { $0.label == "Admin" })
+check("more than one permission is represented, so the rows read as a list",
+      demoPolicies.count >= 3)
+check("no row is ever seeded at zero — a permission nobody holds is dropped",
+      demoPolicies.allSatisfy { $0.count > 0 })
+if let demoBalance = VibenetBalanceAggregation.compose(demoRoom.items) {
+    check("the crown has a native figure to lead with",
+          demoBalance.nativeTotal != nil)
+    check("the treemap has more than one cell, so it is a drawing not a rectangle",
+          VibenetBalanceTreemap.cells(demoBalance).count > 1)
+} else {
+    check("the demo seeds balances at all", false)
+}
+check("the linked-accounts spine has a watched-to-watched link to draw",
+      !VibenetAccountMapping.links(demoRoom.items).isEmpty)
+check("a key is expiring, so the card's one clock line appears",
+      VibenetKeyAggregation.compose(demoRoom.items, now: .now)?.soonestExpiry != nil)
+
 // MARK: - policyLine — WHICH contract a gated key may call
 //
 // "Send to one contract" states the restriction; this is the half that makes

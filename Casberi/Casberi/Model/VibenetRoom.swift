@@ -88,6 +88,14 @@ struct VibenetScope: Equatable, Codable {
     /// so listing five would understate it. It gets one word of its own.
     var isAdmin: Bool { raw == 0 }
 
+    /// The named bits paired with their plain wording, in the contract's own
+    /// declared order — the one list anything counting BY PERMISSION walks,
+    /// so a room card and a key row can never disagree about either the
+    /// wording or the order.
+    static var orderedPlainBits: [(UInt16, String)] {
+        named.map { ($0.bit, $0.plain) }
+    }
+
     var names: [String] {
         guard !isAdmin else { return [String(localized: "Admin")] }
         return VibenetScope.named.filter { raw & $0.bit != 0 }.map(\.label)
@@ -1763,6 +1771,86 @@ struct VibenetKeySoonestExpiry: Equatable {
 /// in this room states today. `VibenetRoom.actorSummary` already answers
 /// "how many keys does THIS account have"; nothing answers "how many keys
 /// am I responsible for in total, and is any one of them about to lapse".
+/// One permission, and how many keys in the room hold it.
+struct VibenetPolicyCount: Equatable {
+    let label: String
+    let count: Int
+}
+
+/// The room's keys counted BY WHAT THEY CAN DO, not by what kind of key they
+/// are (prd §463). `VibenetKeyAggregation` answers "4 secp256k1, 1 passkey",
+/// which is taxonomy — it says nothing about who can spend. This answers the
+/// question the room is actually opened with.
+///
+/// ADMIN LEADS AND IS COUNTED APART, never folded into the five bits: scope 0
+/// holds every capability including the reserved ones this build cannot name,
+/// so adding it to "Send anywhere" would both understate it and inflate a
+/// count that is supposed to mean "these specific keys carry this specific
+/// bit".
+///
+/// Rows in `Scopes.sol`'s own declared order, and a permission NOBODY holds is
+/// dropped rather than printed as a zero — an empty row on this card is not
+/// the reading a silent year is on a journal strip, it is a permission that
+/// simply does not appear in this room.
+/// One cell of the room's holdings drawing.
+struct VibenetTreemapCell: Equatable {
+    let symbol: String
+    let amount: String
+    /// What tone this cell draws at, 0…1 — see `VibenetBalanceTreemap`.
+    let share: Double
+}
+
+/// The room's holdings as areas, for `DS.ink(magnitude:)`.
+///
+/// THE HONEST PART, and the reason this is a named type rather than three
+/// lines in the view: there is NO PRICE FEED here. Wallet's treemap sizes its
+/// cells by true USD share because it knows what a token is worth; this room
+/// knows only that an account holds 2.5 ETH and 500 USDV, and those do not
+/// convert. So the tone carries RANK — native first, then tokens in their own
+/// sorted order — never a cross-asset ratio, which would be a made-up number
+/// presented as an area and read as one.
+///
+/// Native leads because it is the one holding every vibenet account has in the
+/// same unit, which is also why the crown above states it and nothing else.
+enum VibenetBalanceTreemap {
+    static let maxCells = 3
+
+    static func cells(_ aggregate: VibenetBalanceAggregate) -> [VibenetTreemapCell] {
+        var out: [VibenetTreemapCell] = []
+        if let native = aggregate.nativeTotal {
+            out.append(VibenetTreemapCell(symbol: "ETH",
+                                          amount: VibenetBalanceFormat.line(native),
+                                          share: 1.0))
+        }
+        for total in aggregate.tokenTotals {
+            out.append(VibenetTreemapCell(symbol: total.symbol,
+                                          amount: VibenetBalanceFormat.line(total.amount),
+                                          share: 0.45))
+        }
+        // A lone cell is not a treemap, it is a rectangle repeating the crown
+        // directly above it — the caller draws nothing rather than that.
+        guard out.count > 1 else { return [] }
+        return Array(out.prefix(maxCells))
+    }
+}
+
+enum VibenetPolicyAggregation {
+    static func compose(_ items: [VibenetAccountItem]) -> [VibenetPolicyCount] {
+        let actors = items.flatMap(\.actors)
+        guard !actors.isEmpty else { return [] }
+        var out: [VibenetPolicyCount] = []
+        let admins = actors.filter { $0.scope.isAdmin }.count
+        if admins > 0 {
+            out.append(VibenetPolicyCount(label: String(localized: "Admin"), count: admins))
+        }
+        for (bit, plain) in VibenetScope.orderedPlainBits {
+            let n = actors.filter { !$0.scope.isAdmin && $0.scope.raw & bit != 0 }.count
+            if n > 0 { out.append(VibenetPolicyCount(label: plain, count: n)) }
+        }
+        return out
+    }
+}
+
 struct VibenetKeyAggregate: Equatable {
     let total: Int
     /// By kind, in the Keystore's OWN declared order (`sortRank`) — never
