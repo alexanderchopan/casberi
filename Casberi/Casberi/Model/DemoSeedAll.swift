@@ -441,6 +441,13 @@ enum DemoSeedAll {
             "0x3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d",
             "0x4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e",
         ] { VibenetWatch.shared.remove(address) }
+        // The balance curve goes with them. Unlike the watch list above there
+        // is no "kept it themselves" case to protect: the store holds ONE
+        // series for the room, so a real watcher's readings and the demo's
+        // seeded ones cannot be told apart once mixed — and the seeded shape
+        // ends on the fixture's total, which is not their balance. Dropped
+        // whole, and it refills from their own next sweep.
+        VibenetValueStore.forget()
 
         // Apple Wallet's own bespoke connected flag, and App Store Connect's
         // planted standing — same accepted risk as Cloudflare above: a real
@@ -3151,6 +3158,13 @@ enum DemoSeedAll {
         AltanaKeystore.evidence.remember(demoWallet)
     }
 
+    /// The vibenet room's balance curve — see `seedBridgeState`'s 5c-i. The
+    /// SHAPE is `VibenetDemoHistoryShape`, pure and harness-held; this only
+    /// writes it into the store the shipped app records into.
+    private static func seedVibenetHistory() {
+        VibenetValueStore.replace(VibenetDemoHistoryShape.samples(now: .now))
+    }
+
     private static func seedCloudflareEstate() {
         CloudflareEstateStore.save(CloudflareEstate(
             zoneNames: ["demo0": "casberi.app", "demo1": "api.casberi.app"],
@@ -4313,6 +4327,22 @@ enum DemoSeedAll {
         seedCloudflareEstate()
         // 5b · Altana's keystore snapshot — see `seedAltanaKeystore`.
         seedAltanaKeystore()
+        // 5c-i · Base Vibenet's balance history — the crown's sparkline.
+        //
+        // This seeds the REAL store the shipped app records into
+        // (`VibenetValueStore`), never a demo-only curve. The distinction is
+        // the whole reason the history exists: a demo drawing a chart the app
+        // cannot draw is a promise about the product made on the screen people
+        // judge it by. Live, this store fills from the sweep at one point
+        // every four hours; here it is handed the same shape it would have
+        // reached after a fortnight of watching, so the line the demo draws is
+        // the line a real watcher gets.
+        //
+        // The walk is deterministic — no randomness, so two demo entries draw
+        // the identical curve — and ends on `demoFixture`'s own native total
+        // (2.514), because the crown states that number directly above the
+        // line and a chart ending anywhere else would contradict it.
+        seedVibenetHistory()
         // 5c · Base Vibenet — the watch list, not the room's content.
         // `VibenetRoomSource.compose()` returns `VibenetRoom.demoFixture()`
         // whole under `DemoMode.isActive` and never touches these addresses

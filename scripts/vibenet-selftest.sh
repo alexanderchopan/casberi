@@ -437,6 +437,49 @@ let a3 = VibenetActor(actorId: "m", authenticator: "0x3", kind: .p256,
 check("K1 leads, custom trails, regardless of actorId",
       VibenetAccountItem.orderedActors([a1, a3, a2]).map(\.actorId) == ["a", "m", "z"])
 
+// MARK: - VibenetValueHistory — the sparkline's only source
+
+print("")
+print("VibenetValueHistory — throttle, series and delta")
+let t0 = Date(timeIntervalSince1970: 1_700_000_000)
+check("the first reading is always kept",
+      VibenetValueHistory.appending([], native: 1.0, now: t0)?.count == 1)
+let one = [VibenetValueSample(at: t0, native: 1.0)]
+check("a second reading inside the throttle is REFUSED — nil, not a duplicate point",
+      VibenetValueHistory.appending(one, native: 2.0, now: t0.addingTimeInterval(3599)) == nil)
+check("a reading past the throttle lands",
+      VibenetValueHistory.appending(one, native: 2.0,
+                                    now: t0.addingTimeInterval(VibenetValueHistory.throttle + 1))?.count == 2)
+// ONE point is a flat line, and a flat line on a balance chart reads as "went
+// to zero" — the whole reason this returns nil rather than a single-element
+// series. Mutation-proven below.
+check("a single reading draws NOTHING rather than a flat line",
+      VibenetValueHistory.series(one) == nil)
+check("two readings are a series",
+      VibenetValueHistory.series(one + [VibenetValueSample(at: t0.addingTimeInterval(20_000), native: 2)])?.count == 2)
+let rising = [VibenetValueSample(at: t0, native: 1.0),
+              VibenetValueSample(at: t0.addingTimeInterval(20_000), native: 1.5)]
+check("a real move reports its fraction",
+      (VibenetValueHistory.delta(rising) ?? 0) > 0.49)
+check("a move that rounds to nothing has no direction, so no delta at all",
+      VibenetValueHistory.delta([VibenetValueSample(at: t0, native: 1.0),
+                                 VibenetValueSample(at: t0.addingTimeInterval(20_000),
+                                                    native: 1.0001)]) == nil)
+check("a single reading has no delta either",
+      VibenetValueHistory.delta(one) == nil)
+// Written as statements, never an inline closure inside `check(...)` — an
+// immediately-invoked closure with inference in an argument position is the
+// Swift type-checker blowup that took this harness from ~2 minutes to over 10.
+var capped: [VibenetValueSample] = []
+for i in 0..<VibenetValueHistory.cap {
+    let at = t0.addingTimeInterval(Double(i) * 20_000)
+    capped.append(VibenetValueSample(at: at, native: Double(i)))
+}
+let overflowed = VibenetValueHistory.appending(capped, native: 999,
+                                               now: t0.addingTimeInterval(1_000_000_000)) ?? capped
+check("the cap is enforced, oldest dropped first",
+      overflowed.count == VibenetValueHistory.cap && overflowed.last?.native == 999)
+
 // MARK: - DEMO PARITY — every section the room card draws must have data
 //
 // The room's own version of `demo-selftest.py`'s check F, and the reason it
@@ -468,6 +511,10 @@ if let demoBalance = VibenetBalanceAggregation.compose(demoRoom.items) {
 }
 check("the linked-accounts spine has a watched-to-watched link to draw",
       !VibenetAccountMapping.links(demoRoom.items).isEmpty)
+check("the demo seeds the REAL history store, so the sparkline is not demo-only",
+      VibenetValueHistory.series(VibenetDemoHistoryShape.samples(now: .now))?.count ?? 0 >= 2)
+check("the seeded curve ends on the fixture's own total, so crown and line agree",
+      abs((VibenetDemoHistoryShape.samples(now: .now).last?.native ?? 0) - 2.514) < 0.001)
 check("a key is expiring, so the card's one clock line appears",
       VibenetKeyAggregation.compose(demoRoom.items, now: .now)?.soonestExpiry != nil)
 

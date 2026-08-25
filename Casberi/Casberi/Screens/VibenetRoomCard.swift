@@ -90,6 +90,11 @@ import SwiftUI
 /// mapping and all) — a chip's tap only ever calls `onScope`.
 struct VibenetRoomCard: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.colorScheme) private var scheme
+
+    /// The room's balance readings — the sparkline's only source, and REAL:
+    /// recorded by every composed read, never a demo-only curve.
+    private var history: [VibenetValueSample] { VibenetValueStore.samples() }
     let room: VibenetRoom
     var onRemove: (String) -> Void
     /// Raised by the context menu's "Name this account…" — the alert itself
@@ -280,11 +285,41 @@ struct VibenetRoomCard: View {
                         .minimumScaleFactor(0.6)
                         .padding(.top, 2)
                 }
+                // The move, in words and one accent — Wallet's own move line,
+                // and its own flat rule: a change that rounds to nothing gets
+                // no arrow and no colour, because it has no direction.
+                if let change = VibenetValueHistory.delta(history) {
+                    HStack(spacing: 5) {
+                        Image(systemName: change >= 0 ? "arrowtriangle.up.fill" : "arrowtriangle.down.fill")
+                            .dsGlyph(9)
+                        Text(VibenetBalanceFormat.percent(change))
+                            .dsText(.callout15).fontWeight(.semibold)
+                            .monospacedDigit()
+                        Text(String(localized: "since watching"))
+                            .dsText(.callout15)
+                            .foregroundStyle(DS.textTertiary)
+                    }
+                    .foregroundStyle(TokenChartStyle.accent(change: change, scheme: scheme))
+                    .padding(.top, 2)
+                }
                 Text(aggregate.plainLine)
                     .dsText(.subhead13)
                     .foregroundStyle(DS.textTertiary)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.top, 2)
+                // The line the crown sits over. Drawn only from two or more
+                // real readings — one point is a flat line, and a flat line
+                // on a balance chart reads as "went to zero".
+                if let series = VibenetValueHistory.series(history) {
+                    TokenChartPlot(chart: TokenChart(closes: series,
+                                                     price: series.last ?? 0,
+                                                     change: VibenetValueHistory.delta(history) ?? 0),
+                                   accent: TokenChartStyle.accent(
+                                       change: VibenetValueHistory.delta(history) ?? 0, scheme: scheme),
+                                   height: 90, pulses: false,
+                                   lineWidth: 2.6, fillOpacity: 0.24, endpointDot: true)
+                        .padding(.top, DS.Space.s2)
+                }
                 if !aggregate.tokenTotals.isEmpty {
                     tokenTreemap(aggregate)
                         .padding(.top, DS.Space.s3)

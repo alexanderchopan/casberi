@@ -728,6 +728,12 @@ struct VibenetTokenBalance: Equatable, Codable {
 /// separate "some" from "dust" on a devnet without printing eighteen
 /// digits nobody reads.
 enum VibenetBalanceFormat {
+    /// A fraction as a percentage — "6.0%" — never signed, because the arrow
+    /// beside it carries the direction and printing both says it twice.
+    static func percent(_ change: Double) -> String {
+        String(format: "%.1f%%", abs(change) * 100)
+    }
+
     static func line(_ amount: Double) -> String {
         guard amount.isFinite else { return "0" }
         let rounded = (amount * 10_000).rounded() / 10_000
@@ -1792,6 +1798,94 @@ struct VibenetPolicyCount: Equatable {
 /// dropped rather than printed as a zero — an empty row on this card is not
 /// the reading a silent year is on a journal strip, it is a permission that
 /// simply does not appear in this room.
+/// One reading of the room's native total, at a moment.
+///
+/// `usd` is deliberately NOT the field name Wallet uses, because this is not
+/// dollars — vibenet has no price feed and this is native ETH. Naming it
+/// `native` is the difference between a chart of what the accounts HOLD and a
+/// chart of what they are WORTH, and only one of those is a claim this app can
+/// make here.
+struct VibenetValueSample: Equatable, Codable {
+    let at: Date
+    let native: Double
+}
+
+/// The room's balance history — what makes a sparkline possible at all.
+///
+/// The card had no line because nothing recorded one, and the first instinct
+/// was to seed a curve into the demo alone. That would have been worse than no
+/// line: a demo drawing a chart the shipped app cannot draw is a promise about
+/// the product, made on the one screen someone judges it by. So the history is
+/// REAL — recorded from the same sweep that already reads the balances, on
+/// every device, and the demo seeds this same store rather than a private
+/// fixture.
+///
+/// The 4-hour throttle and the thinning are `WalletStore.recordSample`'s, on
+/// purpose: two histories of the same shape in one app that disagree about how
+/// often a point lands would make two charts that cannot be compared.
+enum VibenetValueHistory {
+    static let throttle: TimeInterval = 4 * 3600
+    static let cap = 180
+
+    /// A sample is kept only when the last one is older than `throttle` — the
+    /// caller may call this every sweep and usually writes nothing.
+    static func appending(_ samples: [VibenetValueSample],
+                          native: Double,
+                          now: Date) -> [VibenetValueSample]? {
+        if let last = samples.last, now.timeIntervalSince(last.at) < throttle { return nil }
+        var out = samples
+        out.append(VibenetValueSample(at: now, native: native))
+        if out.count > cap { out.removeFirst(out.count - cap) }
+        return out
+    }
+
+    /// The plotted series, oldest first. Fewer than two readings draws
+    /// NOTHING: one point is a flat line, and a flat line on a balance chart
+    /// reads as "went to zero" — the failure this codebase already names.
+    static func series(_ samples: [VibenetValueSample]) -> [Double]? {
+        guard samples.count >= 2 else { return nil }
+        return samples.map(\.native)
+    }
+
+    /// The change across the plotted window, or nil when there is no window
+    /// or the move rounds to nothing — a change that rounds to zero has no
+    /// direction, so it gets no arrow and no colour (§83's own corollary).
+    static func delta(_ samples: [VibenetValueSample]) -> Double? {
+        guard let first = samples.first?.native, let last = samples.last?.native,
+              samples.count >= 2, first > 0 else { return nil }
+        let change = (last - first) / first
+        return abs(change) < 0.0005 ? nil : change
+    }
+}
+
+/// The demo's balance curve, as PURE logic so the harness can hold it.
+///
+/// It lives here rather than in `DemoSeedAll` for the reason every other
+/// checkable rule in this feature does: that file is not Foundation-only and
+/// the harness cannot compile it, so a curve written there would be the one
+/// part of the demo nothing could assert. `DemoSeedAll` calls this and writes
+/// the result into the REAL store.
+enum VibenetDemoHistoryShape {
+    /// Ends on `VibenetRoom.demoFixture()`'s own native total, because the
+    /// crown states that number directly above the line and a curve ending
+    /// anywhere else would contradict the figure it sits under.
+    static let endsOn = 2.514
+
+    /// Deterministic — no randomness, so two demo entries draw the identical
+    /// line. Spaced at the store's own throttle, so this is exactly the shape
+    /// a real watcher's readings would have after a fortnight. The dips are
+    /// what keep it reading as a balance rather than a ramp.
+    static func samples(now: Date) -> [VibenetValueSample] {
+        let shape: [Double] = [0.72, 0.78, 0.74, 0.95, 1.10, 1.04, 1.32,
+                               1.55, 1.49, 1.78, 2.05, 1.98, 2.31, 1.0]
+        return shape.enumerated().map { index, factor in
+            VibenetValueSample(
+                at: now.addingTimeInterval(-Double(shape.count - 1 - index) * VibenetValueHistory.throttle),
+                native: endsOn * factor)
+        }
+    }
+}
+
 /// One cell of the room's holdings drawing.
 struct VibenetTreemapCell: Equatable {
     let symbol: String

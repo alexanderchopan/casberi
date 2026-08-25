@@ -997,6 +997,10 @@ enum VibenetRoomSource {
                                        commit: contracts.commit, configReached: true,
                                        redeployedSinceLastSeen: redeployed)
         VibenetState.save(room)
+        // The line the crown draws under. Recorded here, from the read that
+        // already fetched the balances, so the chart is REAL on every device
+        // rather than a curve the demo alone knows how to draw.
+        VibenetValueStore.record(room)
         return room
     }
 
@@ -1039,6 +1043,45 @@ enum VibenetState {
     static func forget() {
         UserDefaults.standard.removeObject(forKey: key)
     }
+}
+
+/// Where the room's balance history lives — one series for the ROOM, not one
+/// per account, because the crown it draws under is the room's own total.
+///
+/// UserDefaults, like every other small vibenet store here. The samples are
+/// tiny (a date and a double, capped at `VibenetValueHistory.cap`) and they
+/// are a reading of a devnet that redeploys, so nothing here is worth a
+/// CloudKit-mirrored `Thing` field — the same reasoning that keeps the room
+/// itself out of the corpus.
+enum VibenetValueStore {
+    private static let key = "vibenet.value.history.v1"
+
+    static func samples() -> [VibenetValueSample] {
+        guard let data = UserDefaults.standard.data(forKey: key),
+              let out = try? JSONDecoder().decode([VibenetValueSample].self, from: data)
+        else { return [] }
+        return out
+    }
+
+    /// Called on every composed read; usually writes nothing, because
+    /// `VibenetValueHistory.appending` throttles to one point every four
+    /// hours. A room with no native reading at all records NOTHING rather
+    /// than a zero — a zero here would draw a real cliff on the chart.
+    static func record(_ room: VibenetRoom, now: Date = .now) {
+        guard let native = VibenetBalanceAggregation.compose(room.items)?.nativeTotal else { return }
+        guard let out = VibenetValueHistory.appending(samples(), native: native, now: now) else { return }
+        if let data = try? JSONEncoder().encode(out) {
+            UserDefaults.standard.set(data, forKey: key)
+        }
+    }
+
+    static func replace(_ samples: [VibenetValueSample]) {
+        if let data = try? JSONEncoder().encode(samples) {
+            UserDefaults.standard.set(data, forKey: key)
+        }
+    }
+
+    static func forget() { UserDefaults.standard.removeObject(forKey: key) }
 }
 
 // MARK: - The explorer door
