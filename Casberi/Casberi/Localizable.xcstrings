@@ -253,6 +253,34 @@
         }
       }
     },
+    " · %lld hold only permissions this build can't name" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : " · %lld solo tienen permisos que esta versión no puede nombrar"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : " · %lld 件はこのビルドが名前を示せない権限のみを持ちます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : " · %lld개는 이 빌드가 이름을 알 수 없는 권한만 가집니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : " · %lld 个仅拥有此版本无法命名的权限"
+          }
+        }
+      }
+    },
     " · %lld locked" : {
       "localizations" : {
         "es" : {
@@ -421,6 +449,34 @@
         }
       }
     },
+    " · 1 holds only permissions this build can't name" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : " · 1 solo tiene permisos que esta versión no puede nombrar"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : " · 1 件はこのビルドが名前を示せない権限のみを持ちます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : " · 1개는 이 빌드가 이름을 알 수 없는 권한만 가집니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : " · 1 个仅拥有此版本无法命名的权限"
+          }
+        }
+      }
+    },
     " · 1 locked" : {
       "localizations" : {
         "es" : {
@@ -473,6 +529,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : " · 1 个未关注"
+          }
+        }
+      }
+    },
+    " · a key with several permissions appears under each" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : " · una clave con varios permisos aparece en cada uno"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : " · 複数の権限を持つ鍵はそれぞれの下に表示されます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : " · 여러 권한을 가진 키는 각 항목에 표시됩니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : " · 拥有多个权限的密钥会出现在每一项下"
           }
         }
       }
@@ -9551,6 +9635,34 @@
         }
       }
     },
+    "%lld accounts couldn't be read" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No se pudieron leer %lld cuentas"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld 件のアカウントを読み取れませんでした"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld개 계정을 읽지 못했습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "有 %lld 个账户无法读取"
+          }
+        }
+      }
+    },
     "%lld across %lld days of %lld." : {
       "localizations" : {
         "en" : {
@@ -12229,6 +12341,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "%lld 个密钥已过期"
+          }
+        }
+      }
+    },
+    "%lld keys new since you last looked" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld claves nuevas desde la última vez"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "前回から新しい鍵が %lld 件"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "마지막으로 본 이후 새 키 %lld개"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "自上次查看以来新增 %lld 个密钥"
+          }
+        }
+      }
+    },
+    "%lld keys revoked since you last looked" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld claves revocadas desde la última vez"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "前回から取り消された鍵が %lld 件"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "마지막으로 본 이후 취소된 키 %lld개"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "自上次查看以来已撤销 %lld 个密钥"
           }
         }
       }
@@ -20166,6 +20334,34 @@
         }
       }
     },
+    "1 account couldn't be read" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No se pudo leer 1 cuenta"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1 件のアカウントを読み取れませんでした"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "계정 1개를 읽지 못했습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "有 1 个账户无法读取"
+          }
+        }
+      }
+    },
     "1 active approval" : {
       "localizations" : {
         "es" : {
@@ -21030,6 +21226,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "1 个密钥已过期"
+          }
+        }
+      }
+    },
+    "1 key new since you last looked" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1 clave nueva desde la última vez"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "前回から新しい鍵が 1 件"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "마지막으로 본 이후 새 키 1개"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "自上次查看以来新增 1 个密钥"
+          }
+        }
+      }
+    },
+    "1 key revoked since you last looked" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1 clave revocada desde la última vez"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "前回から取り消された鍵が 1 件"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "마지막으로 본 이후 취소된 키 1개"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "自上次查看以来已撤销 1 个密钥"
           }
         }
       }
@@ -25143,6 +25395,68 @@
         }
       }
     },
+    "Account" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cuenta"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "アカウント"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "계정"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "账户"
+          }
+        }
+      }
+    },
+    "Across %lld of %lld accounts" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Across %1$lld of %2$lld accounts"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "En %lld de %lld cuentas"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld / %lld アカウント分"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld개 계정 중 %lld개 기준"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld / %lld 个账户"
+          }
+        }
+      }
+    },
     "Across your accounts" : {
       "localizations" : {
         "es" : {
@@ -27165,6 +27479,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "还可为以下账户签名"
+          }
+        }
+      }
+    },
+    "Also: %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "También: %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "その他: %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "또한: %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "还包括：%@"
           }
         }
       }
@@ -35159,6 +35501,62 @@
         }
       }
     },
+    "Copy account address" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Copiar dirección de la cuenta"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "アカウントのアドレスをコピー"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "계정 주소 복사"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "复制账户地址"
+          }
+        }
+      }
+    },
+    "Copy account state" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Copiar estado de la cuenta"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "アカウントの状態をコピー"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "계정 상태 복사"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "复制账户状态"
+          }
+        }
+      }
+    },
     "Copy address" : {
       "localizations" : {
         "es" : {
@@ -35215,6 +35613,34 @@
         }
       }
     },
+    "Copy authenticator" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Copiar autenticador"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "認証コントラクトをコピー"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "인증자 복사"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "复制验证合约"
+          }
+        }
+      }
+    },
     "Copy it and paste it below." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -35244,6 +35670,34 @@
         }
       }
     },
+    "Copy key id" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Copiar ID de la clave"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "鍵 ID をコピー"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "키 ID 복사"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "复制密钥 ID"
+          }
+        }
+      }
+    },
     "Copy revoke transaction" : {
       "localizations" : {
         "es" : {
@@ -35268,6 +35722,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "复制撤销交易"
+          }
+        }
+      }
+    },
+    "Copy signer address" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Copiar dirección del firmante"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "署名者のアドレスをコピー"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "서명자 주소 복사"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "复制签名者地址"
           }
         }
       }
@@ -47026,6 +47508,34 @@
         }
       }
     },
+    "In %lld days" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "En %lld días"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld 日後"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld일 후"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld 天后"
+          }
+        }
+      }
+    },
     "In ChatGPT, open Settings → Data controls → Export data." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -49073,6 +49583,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "已撤销 %@ 的密钥"
+          }
+        }
+      }
+    },
+    "Keys and permissions" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Claves y permisos"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "鍵と権限"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "키와 권한"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "密钥与权限"
+          }
+        }
+      }
+    },
+    "Keys now" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Claves ahora"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "現在の鍵"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "현재 키"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "当前密钥"
           }
         }
       }
@@ -56320,6 +56886,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "目前没有密钥可为此账户签名"
+          }
+        }
+      }
+    },
+    "No key on a watched account holds a permission this build can name." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ninguna clave de las cuentas que sigues tiene un permiso que esta versión pueda nombrar."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "追跡中のアカウントには、このビルドが名前を示せる権限を持つ鍵がありません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "관찰 중인 계정의 어떤 키도 이 빌드가 이름을 알 수 있는 권한을 갖고 있지 않습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "所关注账户中没有任何密钥拥有此版本能够命名的权限。"
           }
         }
       }
@@ -82495,6 +83089,34 @@
         }
       }
     },
+    "This account holds" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Esta cuenta tiene"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "このアカウントが持つもの"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 계정이 보유한 항목"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "该账户持有"
+          }
+        }
+      }
+    },
     "This address hasn't moved since %@" : {
       "localizations" : {
         "es" : {
@@ -90597,6 +91219,34 @@
         }
       }
     },
+    "Who can act for whom, read from the keystore." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Quién puede actuar por quién, leído del keystore."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "誰が誰の代理として動けるか。キーストアから読み取っています。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "누가 누구를 대신할 수 있는지, 키스토어에서 읽었습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "谁可以代表谁行事，读取自密钥库。"
+          }
+        }
+      }
+    },
     "Who can reach it" : {
       "localizations" : {
         "es" : {
@@ -91503,6 +92153,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你可以代表其操作"
+          }
+        }
+      }
+    },
+    "You can act for them" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Puedes actuar por ellos"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "あなたが相手の代理として動けます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "내가 상대를 대신할 수 있음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你可以代表对方行事"
           }
         }
       }
@@ -102208,6 +102886,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "已读取 %lld 张屏幕截图"
+          }
+        }
+      }
+    },
+    "read %lldh ago" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "leído hace %lld h"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld 時間前に読み取り"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld시간 전에 읽음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld 小时前读取"
           }
         }
       }
