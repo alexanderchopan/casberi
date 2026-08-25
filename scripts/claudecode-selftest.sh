@@ -85,8 +85,20 @@ grep -qF 'thing.enrichedText = parsed.transcript' "$SRC" \
   || { echo "✗ the transcript no longer reaches the retrieval body — the whole session becomes unsearchable, invisibly"; exit 1; }
 grep -qF 'thing.messageCount = parsed.messageCount' "$SRC" \
   || { echo "✗ the real turn count is no longer stamped"; exit 1; }
-grep -qF 'thing.summary = parsed.summary' "$SRC" \
-  || { echo "✗ Claude Code's own session summary is no longer DISPLAY copy — on enrichedText it would be invisible on every screen"; exit 1; }
+# INVERTED (2026-08-24, prd §457, same day as the assertion it replaces). It
+# used to demand `thing.summary = parsed.summary`; the field was measured
+# always nil, and the session's own NAME became the headline, so stamping it
+# too would print the title a second line below itself — the exact
+# redundancy §451/§452 swept out of every other room. The source states this
+# by name ("`Thing.summary` is deliberately NOT set"), so the negative check
+# strips `//` comment lines first — a raw grep would fire on the very
+# sentence explaining the retirement, not on a real regression (the
+# Obsidian/Cursor lesson).
+if grep -v '^\s*//' "$SRC" | grep -qF 'thing.summary = parsed.summary'; then
+  echo "✗ Claude Code's session summary is back on Thing.summary — it would print the"
+  echo "  headline a second line below itself (§457)"
+  exit 1
+fi
 grep -qF 'capturedAt: parsed.startedAt ?? .now' "$SRC" \
   || { echo "✗ a session no longer carries its REAL start — a first import would fake a day of urgency"; exit 1; }
 # The composition, at its call site. The Swift checks below prove that a
@@ -356,7 +368,6 @@ let parsed = S.parse(jsonl: full, fileName: "99999999-0000-0000-0000-00000000000
 check("a transcript parses", parsed != nil)
 if let p = parsed {
     check("the summary line is the headline", p.headline == "Fixing the SwiftData liveness crash")
-    check("…and lands as display copy too", p.summary == "Fixing the SwiftData liveness crash")
     check("the opener is kept apart from the headline",
           p.opener == "why does the feed crash on refresh?")
     check("the session id comes from the file's own field",
@@ -384,8 +395,6 @@ let unsummarised = jsonl([
 let plain = S.parse(jsonl: unsummarised, fileName: "abc.jsonl", directory: "-Users-x-Developer-casberi")
 check("with no summary line the opening ask is the headline",
       plain?.headline == "add a probe hook for the sweep")
-check("…and Thing.summary stays nil rather than repeating the title",
-      plain?.summary == nil)
 check("…so the subtitle would repeat nothing", plain?.opener == plain?.headline)
 check("the directory names the project when there is no cwd", plain?.project == "casberi")
 

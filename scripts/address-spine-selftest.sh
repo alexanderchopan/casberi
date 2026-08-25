@@ -210,13 +210,29 @@ if "Material" in m.group(0):
     sys.stderr.write("\u2717 the verb bar is back on a material \u2014 that is the grey hard line \u00a78 forbids, wearing a blur\n"); sys.exit(1)
 PY5
 
-# THE UNNAMED CARD'S VERB. Naming is the act this screen exists for and the
-# watch list is capped at five, so an unnamed address's bar names it — and
-# watching moves to the menu rather than disappearing (§83: no verb is lost).
+# THE UNNAMED CARD'S VERB. Naming is the act this screen exists for.
+#
+# §446's "watching moves to the overflow menu rather than disappearing" was
+# superseded the SAME DAY by §461: watching left the book screen entirely and
+# became the roster's own membership on WalletScreen, because a reading
+# surface must never be able to change what the app fetches (the "no starring
+# anywhere" ruling). This guard tested the retired §446 shape and went stale
+# the moment the code correctly moved to §461 — caught by running the harness,
+# not by reading the diff, which is exactly the case for running it.
+#
+# The current rule, asserted both ways: the naming verb exists, and the watch
+# verb — pill, menu item, toggle — is GONE from this file, not merely moved.
+# A negative grep over a comment-stripped copy, since the source documents
+# this retirement by quoting the very identifiers it removed (the Obsidian/
+# Cursor lesson): a guard grepping raw source would fire on the prose
+# explaining the retirement rather than on a real regression.
 grep -q 'Name this address' "$VIEWS" \
   || { echo "✗ the unnamed card no longer offers to name the address (§446)"; exit 1; }
-grep -q 'if unnamed, watchPillShown { watchMenuItem }' "$VIEWS" \
-  || { echo "✗ watching did not move to the overflow menu on the unnamed card — the verb the bar gave up would simply be gone (§83)"; exit 1; }
+if grep -qE 'watchMenuItem|watchPillShown|toggleWatch|isWatching' "$TMP/views-bare.swift"; then
+  echo "✗ a watch verb is back on the address card (§461) — watching must stay the"
+  echo "  roster's own membership on WalletScreen, never a decision a reading surface makes"
+  exit 1
+fi
 
 # --- fixtures ---------------------------------------------------------------
 cat > "$TMP/main.swift" <<'SWIFT'

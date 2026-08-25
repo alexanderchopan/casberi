@@ -99,7 +99,13 @@ done
 #    source, and a call into a registry that answers nil is a no-op
 #    indistinguishable from having nothing to say — the exact class that
 #    shipped twice already (X, then TikTok).
-grep -q 'case "ChatGPT", "Claude", "Gemini":' "$TOPICS" \
+#
+#    Matched on the three literals appearing TOGETHER in one case line rather
+#    than an exact-line match — 8d310d0c legitimately grew this case to a
+#    fourth value (ClaudeCodeImport.source) the same day, and a bare exact
+#    match goes stale on every future addition to the same case, which is
+#    exactly the false failure this run just hit.
+grep -qE 'case "ChatGPT", "Claude", "Gemini"' "$TOPICS" \
   || { echo "✗ the chat rooms have no topic source — healTopics is a no-op for them again"; exit 1; }
 grep -q 'text: { $0.enrichedText ?? $0.content }' "$TOPICS" \
   || { echo "✗ a writing room reads the wrong field — the vault/chat rooms keep their words on enrichedText"; exit 1; }
@@ -113,8 +119,9 @@ grep -q 'case "Gemini":' "$INSIGHT" \
 python3 - "$TOPICS" <<'PY' || exit 1
 import re, sys
 src = open(sys.argv[1]).read()
-i = src.find('case "ChatGPT", "Claude", "Gemini":')
-if i < 0: sys.exit("✗ the chat TopicSource case is gone")
+m = re.search(r'case "ChatGPT", "Claude", "Gemini"[^\n]*:', src)
+if not m: sys.exit("✗ the chat TopicSource case is gone")
+i = m.start()
 block = src[i:i+400]
 if "includeDomains: false" not in block:
     sys.exit("✗ the chat rooms count domains as topics — a hostname is not a subject (§313)")
