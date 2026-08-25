@@ -51,21 +51,9 @@ struct WalletScreen: View {
     /// True when a non-error result still needs the person's eyes (the
     /// typo'd-address nudge). Everything else whispers — fine is silent.
     @State private var resultProminent = false
-    /// The in-flight WalletConnect handshake — proposed, wallet opened, waiting
-    /// on a human to approve over there (2026-07-16). Held as the Task rather
-    /// than a Bool so a second tap can CANCEL it: the wait runs to the
-    /// proposal's 5-minute expiry, and a person who opened their wallet, chose
-    /// not to approve, and came back must not find a stuck button and no way
-    /// out.
-    @State private var connectTask: Task<Void, Never>?
-    /// Bumped on every start and every cancel, so an in-flight handshake can
-    /// tell whether it's still the CURRENT one.
-    @State private var connectGeneration = 0
-    /// The pairing URI, shown when nothing claimed `wc:` (2026-07-23) so it
-    /// can be pasted into a wallet by hand. Non-nil means the handshake is
-    /// still listening for that paste to be approved.
-    @State private var pairingURI: URL?
-    private var connecting: Bool { connectTask != nil }
+    // The connect handshake's state moved into `ConnectWalletRow` (prd §462)
+    // — one implementation for the roster and the book, each landing its own
+    // verb through `WalletConnectPickerSheet.Mode`.
     /// Which wallet the rename alert is editing.
     @State private var renamingID: WalletStore.WatchedAddress.ID?
     @State private var renameDraft = ""
@@ -83,7 +71,6 @@ struct WalletScreen: View {
     /// Keyed rather than bare so a slow answer for "vitalik.eth" can never
     /// paint itself under a draft that has since become something else.
     @State private var resolvedDraft: ResolvedDraft?
-    @Environment(\.openURL) private var openURL
 
     var body: some View {
         List {
@@ -204,7 +191,14 @@ struct WalletScreen: View {
                 // it under the preview would stack two ways to add one address
                 // on top of each other.
                 if WalletConnectBridge.isAvailable, draft.isEmpty, wallet.canWatchMore {
-                    connectRow
+                    // ONE implementation for both screens since §462 — see
+                    // `ConnectWalletRow`. Here the picker WATCHES (the default
+                    // mode); the book's copy of this row names instead.
+                    ConnectWalletRow(onFound: { showConnectPicker($0) },
+                                     onNote: { message, isError in
+                                         result = message
+                                         resultIsError = isError
+                                     })
                         .transition(.opacity.combined(with: .move(edge: .top)))
                 }
                 // Nothing watched, nothing typed — one tap watches a famous
@@ -741,172 +735,11 @@ struct WalletScreen: View {
                                   bottom: 0, trailing: DS.Space.s4))
     }
 
-    /// The automatic way in — a ROW, not a call to action (prd §442, seen on a
-    /// device).
-    ///
-    /// It was a full-width filled `DSSlabButton`, which is right for a screen
-    /// whose one job is to connect something and wrong here: §440 put this beside
-    /// a field that is the primary way in, and the blue slab outshouted it — the
-    /// loudest thing on the screen was the SECOND choice. It is the same weight
-    /// as the Connection door at the foot now: a mark, a sentence, a chevron.
-    ///
-    /// The BUSY state keeps the spinner and the "tap to cancel" wording, because
-    /// the wait is real and the person needs the way out (§83 — the proposal runs
-    /// to a five-minute expiry, and somebody who chose not to approve must not
-    /// find a stuck control).
-    private var connectRow: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s2) {
-            Button {
-                DSHaptic.tap()
-                if connecting { cancelConnect() } else { connectWallet() }
-            } label: {
-                HStack(spacing: DS.Space.s3) {
-                    Image(systemName: "wallet.pass.fill")
-                        .dsGlyph(15, weight: .medium)
-                        .foregroundStyle(DS.tint)
-                        .frame(width: 34, height: 34)
-                        .background(DS.tintDim, in: RoundedRectangle(
-                            cornerRadius: DS.Radius.appIcon(34), style: .continuous))
-                    Text(connecting ? "Waiting — tap to cancel" : "Connect a wallet app")
-                        .dsText(.heading17).foregroundStyle(DS.textPrimary)
-                        .lineLimit(1)
-                    Spacer(minLength: 0)
-                    if connecting {
-                        ProgressView().controlSize(.small)
-                    } else {
-                        Image(systemName: "chevron.right")
-                            .dsGlyph(12, weight: .semibold)
-                            .foregroundStyle(DS.textTertiary)
-                    }
-                }
-                .padding(.horizontal, DS.Space.s3)
-                .padding(.vertical, 11)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(DS.surfaceRaised, in: RoundedRectangle(
-                    cornerRadius: DS.Radius.card, style: .continuous))
-                .contentShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
-            }
-            .buttonStyle(PressSpring())
-            .accessibilityLabel(Text(connecting ? "Waiting for your wallet, tap to cancel"
-                                                : "Connect a wallet app"))
-            // No app claimed `wc:` — the URI, to paste into the wallet directly.
-            // The handshake is still listening while this shows.
-            if let uri = pairingURI {
-                manualPairingCard(uri)
-            }
-        }
-    }
-
-    /// The paste-it-yourself route (2026-07-23). A wallet that registers only a
-    /// universal link never claims `wc:`, so `canOpenURL` reads false on a device
-    /// that HAS a wallet — this is the way through, not an error, and the
-    /// approval it leads to is the same one the direct open would get.
-    private func manualPairingCard(_ uri: URL) -> some View {
-        VStack(alignment: .leading, spacing: DS.Space.s2) {
-            Text("Not listed? Copy the link into your wallet's scan screen — it's still waiting.")
-                .dsText(.subhead13).foregroundStyle(DS.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-            HStack(spacing: DS.Space.s2) {
-                Text(uri.absoluteString)
-                    .dsText(.label12).foregroundStyle(DS.textTertiary)
-                    .lineLimit(1).truncationMode(.middle)
-                Spacer(minLength: 0)
-                CopyAddressButton(address: uri.absoluteString, style: .inline)
-            }
-            .padding(DS.Space.s3)
-            .background(DS.fillFaint,
-                        in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
-        }
-        .padding(.top, DS.Space.s1)
-    }
-
-    private func cancelConnect() {
-        connectGeneration &+= 1   // orphans the in-flight task before it unwinds
-        connectTask?.cancel()
-        connectTask = nil
-        result = nil
-        pairingURI = nil
-    }
-
-    private func connectWallet() {
-        result = nil
-        pairingURI = nil
-        connectGeneration &+= 1
-        let generation = connectGeneration
-        connectTask = Task { @MainActor in
-            defer { if connectGeneration == generation { connectTask = nil } }
-
-            let outcome: Result<WalletConnectBridge.ConnectOutcome, Error>
-            do {
-                // WalletConnect's own modal (2026-08-01) — the full wallet
-                // directory with real icons and correct deep links.
-                //
-                // Mac Catalyst can't link the SDK (see the import in
-                // `WalletConnectBridge`), so it keeps the open-then-paste route.
-                // That is not a lesser fallback there: the directory is 496
-                // PHONE apps opened by deep link, none of which a Mac has, and
-                // pasting the URI into a phone's wallet is what a desktop dapp
-                // asks for too.
-                #if targetEnvironment(macCatalyst)
-                outcome = .success(try await WalletConnectBridge.connect(
-                    open: openWalletApp,
-                    offerManualPairing: { url in
-                        // Still the current handshake? A cancelled one must not
-                        // paint its URI over a fresh attempt.
-                        guard connectGeneration == generation else { return }
-                        pairingURI = url
-                    }))
-                #else
-                outcome = .success(try await WalletConnectBridge.connectViaModal())
-                #endif
-            } catch {
-                outcome = .failure(error)
-            }
-
-            guard connectGeneration == generation, !Task.isCancelled else { return }
-
-            switch outcome {
-            case .success(.connected(let found)):
-                pairingURI = nil
-                showConnectPicker(found)
-            case .success(.noWalletApp):
-                // Only reachable now if no manual-pairing handler ran — the
-                // screen always passes one, so this is the belt to that braces.
-                resultIsError = true
-                result = String(localized: "No wallet app on \(DS.device) — paste the address instead.")
-            case .success(.timedOut):
-                resultIsError = true
-                // Which wait actually expired decides the words: if the URI was
-                // on screen, the person was pasting, and telling them "approve it
-                // in your wallet" describes a tap they never had.
-                result = pairingURI == nil
-                    ? String(localized: "Nothing came back from your wallet — approve the request there, or paste the address instead.")
-                    : String(localized: "The connection link expired — tap Connect for a fresh one.")
-                pairingURI = nil
-            case .failure(WalletConnectBridge.ConnectError.tearDownFailed):
-                resultIsError = true
-                result = String(localized: "Connected, but the session wouldn't close — open your wallet and disconnect Casberi. Nothing was watched.")
-            case .failure(WalletConnectBridge.ConnectError.keychainUnavailable(let status)):
-                resultIsError = true
-                result = String(localized: "This device's keychain refused the handshake (code \(status)) — paste the address instead.")
-            case .failure:
-                resultIsError = true
-                result = String(localized: "Couldn't reach your wallet — paste the address instead.")
-            }
-        }
-    }
-
-    /// Hand the `wc:` URI to whichever wallet claims the scheme, and report
-    /// whether one actually did.
-    @MainActor
-    private func openWalletApp(_ url: URL) async -> Bool {
-        guard UIApplication.shared.canOpenURL(url) else { return false }
-        return await withCheckedContinuation { continuation in
-            UIApplication.shared.open(url, options: [:]) { opened in
-                continuation.resume(returning: opened)
-            }
-        }
-    }
+    // `connectRow` / `manualPairingCard` / `cancelConnect` / `connectWallet` /
+    // `openWalletApp` moved WHOLE into `ConnectWalletRow` (prd §462). Every
+    // ruling they carried — the row-not-CTA weight (§442), the busy state's
+    // way out (§83), the manual-pairing fallback (2026-07-23), the Catalyst
+    // fork, the cancel generation — travelled with them.
 
     /// Hand what the settled session shared to the picker (2026-08-13, prd §376)
     /// — it does NOT watch anything itself.

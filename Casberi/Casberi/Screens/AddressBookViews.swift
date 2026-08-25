@@ -60,9 +60,11 @@ extension AddressBook.Entry {
         if !autoNamed { parts.append(short) }
         if let activity, activity.count > 0 {
             parts.append(String(localized: "\(activity.count) together"))
-            if let when = AddressBookShape.lastPhrase(activity.lastAt) {
-                parts.append(when)
-            }
+            // WHEN left the subline for the trailing edge (prd §462) — §443's
+            // column ruling, applied to the book: identity reads down the left,
+            // recency down the right, so a stale contact is found by scanning
+            // one edge instead of parsing every line. `AddressBookRow` draws it;
+            // the phrase is still `AddressBookShape.lastPhrase`'s, spelled once.
         }
         // A Bitcoin address's "kind" is its script type (Legacy/P2SH/Native
         // SegWit/Taproot) — a different axis than `kind.label`'s who-vs-
@@ -228,6 +230,15 @@ struct AddressBookRow: View {
                 .buttonStyle(.plain)
                 .accessibilityLabel(Text(watched ? "Watching \(entry.name), tap to stop"
                                                  : "Watch \(entry.name)"))
+            } else if let activity, activity.count > 0,
+                      let when = AddressBookShape.lastPhrase(activity.lastAt) {
+                // WHEN, down the trailing edge (prd §462) — the slot the star
+                // vacated in §461, genuinely free on every row now. A row with
+                // no history keeps an empty edge rather than a dash: an em-dash
+                // there is a reading of nothing (§83).
+                Text(when)
+                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                    .lineLimit(1)
             }
         }
         .padding(.vertical, DS.Space.s2)
@@ -876,10 +887,16 @@ struct AddressCard: View {
             bitcoinVintageLine
             addressBlock
                 .padding(.top, DS.Space.s2)
-            copyPill
-                .padding(.top, DS.Space.s3)
-            groupChips
-                .padding(.top, DS.Space.s2)
+            // ONE VERB ROW, not a stack (prd §462, seen on a device). Copy and
+            // the group control were two centred pills of different widths, one
+            // under the other — an accidental column on the card's only verbs.
+            // Twin capsules, one row; the group chips ride the same line, so a
+            // filed card reads Copy · Family · +.
+            HStack(spacing: DS.Space.s2) {
+                copyPill
+                groupChips
+            }
+            .padding(.top, DS.Space.s3)
         }
         .frame(maxWidth: .infinity)
         .padding(.top, DS.Space.s3)
@@ -1119,10 +1136,14 @@ struct AddressCard: View {
                         .background(DS.fillFaint, in: Capsule(style: .continuous))
                 }
                 if groups.isEmpty {
+                    // The Copy pill's own anatomy (subhead13 semibold, 7pt) —
+                    // the two share a row now (prd §462), and a lighter twin
+                    // reads as a disabled one.
                     Text("Add to a group")
-                        .dsText(.label12).foregroundStyle(DS.textSecondary)
+                        .dsText(.subhead13).fontWeight(.semibold)
+                        .foregroundStyle(DS.textSecondary)
                         .padding(.horizontal, DS.Space.s3)
-                        .padding(.vertical, 6)
+                        .padding(.vertical, 7)
                         .background(DS.fillFaint, in: Capsule(style: .continuous))
                 } else {
                     Image(systemName: "plus")
@@ -1198,6 +1219,20 @@ struct AddressCard: View {
     /// person. An address reached through a door rather than through the book
     /// still says so here, because that one changes what the screen can claim.
     private var kindLine: String {
+        // §461'S MISSING FACT, RESTORED AS A FACT (prd §462). The watch bar
+        // left this card with the star, and with it the only place the sheet
+        // said whether this is one of your own five — opened from the spine or
+        // a transfer, a wallet you watch read as any stranger. A reading
+        // surface may STATE; it may not fetch — so this is one clause on the
+        // kind line and there is deliberately no control anywhere near it
+        // (§461's negative guard stands: `outcome(ofAdding:)` lives in the
+        // roster and nowhere else). It REPLACES the kind word rather than
+        // joining it: "Wallet · One of your wallets" says wallet twice.
+        if isWatched {
+            var parts: [String] = [String(localized: "One of your wallets")]
+            if let provenance = current.provenance { parts.append(provenance) }
+            return parts.joined(separator: " · ")
+        }
         let kindWord = current.kind.label
             ?? BitcoinAddress.scriptKind(current.address)
             ?? String(localized: "Wallet")
@@ -1205,6 +1240,17 @@ struct AddressCard: View {
         if let provenance = current.provenance { parts.append(provenance) }
         if !isInBook { parts.append(String(localized: "not in your book")) }
         return parts.joined(separator: " · ")
+    }
+
+    /// A fact about the ROSTER, read to be stated and never to be changed —
+    /// matched through the resolution cache like every other watch test
+    /// (2026-07-25: a book entry holds the RESOLVED address while a watch may
+    /// hold the spelling it was added under).
+    private var isWatched: Bool {
+        let store = WalletStore.shared
+        return store.addresses.contains {
+            store.scopeMatches(current.address, scope: $0.address)
+        }
     }
 
     // MARK: - Trouble
@@ -1382,6 +1428,23 @@ struct AddressCard: View {
             }
             .padding(.horizontal, DS.Space.s4)
             .padding(.top, DS.Space.s4 + 4)
+        }
+        // THE VOID SAYS WHAT ARRIVES (prd §462, seen on a device). The common
+        // card is a young one — just named, nothing landed — and it rendered as
+        // a hero, one dot, and sixty percent black: §443 ranked a rich card and
+        // nobody designed the empty one. One tertiary sentence turns the void
+        // from broken-looking into waiting; it states what WILL fill the space,
+        // never a count of nothing (§83). Gated on the corpus, not the events —
+        // the named/filed dots above are exactly when this card is looked at.
+        if things.isEmpty {
+            Text(unnamed
+                 ? String(localized: "Transfers with this address land here as they arrive.")
+                 : String(localized: "Transfers with \(current.name) land here as they arrive."))
+                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: events.isEmpty ? .center : .leading)
+                .padding(.horizontal, DS.Space.s4)
+                .padding(.top, events.isEmpty ? DS.Space.s4 + 4 : DS.Space.s4)
         }
     }
 

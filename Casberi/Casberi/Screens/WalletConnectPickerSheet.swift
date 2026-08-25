@@ -18,14 +18,26 @@ import SwiftUI
 /// making them do the same work twice. What we went and FOUND (Safes) is never
 /// pre-ticked, which is what keeps the two sections meaningfully different.
 struct WalletConnectPickerSheet: View {
+    /// What the picker DOES with what it found (prd §462) — the §461 boundary,
+    /// on one sheet. `.watch` is the roster's: capped at five, starts syncing,
+    /// changes what the app fetches. `.name` is the book's: uncapped, writes a
+    /// NAME per address and nothing else — the same free tier the field's
+    /// "Add all" is, reached through the richer door. The plan machinery is
+    /// shared: in name mode "watched" means "already in your book" and the
+    /// limit is unbounded, so the cap copy and the No-room state are
+    /// unreachable rather than specially cased.
+    enum Mode { case watch, name }
+
     /// Everything the settled session handed over, in the order
     /// `WalletConnectBridge.accounts(from:)` produced it.
     let shared: [WalletConnectBridge.ConnectedAccount]
-    /// Fired after the watch lands, with how many were added, so the screen
-    /// behind can resync.
+    var mode: Mode = .watch
+    /// Fired after the watch (or the naming) lands, with how many were added,
+    /// so the screen behind can resync.
     var onWatch: (Int) -> Void
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
     @Environment(ShellChrome.self) private var chrome
     @Environment(BridgeStore.self) private var store
     @Bindable private var wallet = WalletStore.shared
@@ -43,7 +55,8 @@ struct WalletConnectPickerSheet: View {
     @State private var picked: Set<String> = []
 
     var body: some View {
-        DSTray(title: "Choose what to watch", height: 660) {
+        DSTray(title: mode == .watch ? String(localized: "Choose what to watch")
+                                     : String(localized: "Choose what to save"), height: 660) {
             VStack(alignment: .leading, spacing: DS.Space.s3) {
                 Text(blurb).dsText(.callout15).foregroundStyle(DS.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -69,12 +82,20 @@ struct WalletConnectPickerSheet: View {
         WalletConnectPlan.make(
             shared: shared.map { (address: $0.address, namespace: $0.namespace) },
             safes: lookup?.safes ?? [],
-            watched: wallet.addresses.map(\.address),
-            limit: WalletStore.watchLimit)
+            watched: mode == .watch ? wallet.addresses.map(\.address)
+                                    : book.all.map(\.address),
+            limit: mode == .watch ? WalletStore.watchLimit : Int.max)
     }
+
+    private var book: AddressBook { AddressBook.shared }
 
     private var blurb: String {
         let n = shared.count
+        if mode == .name {
+            return n == 1
+                ? String(localized: "Your wallet shared 1 address. Saving names it in your book — nothing is watched or read.")
+                : String(localized: "Your wallet shared \(n) addresses. Saving names them in your book — nothing is watched or read.")
+        }
         return n == 1
             ? String(localized: "Your wallet shared 1 address. Watching is read-only — it can never trade or move funds.")
             : String(localized: "Your wallet shared \(n) addresses. Watching is read-only — it can never trade or move funds.")
@@ -167,7 +188,9 @@ struct WalletConnectPickerSheet: View {
                 }
                 Spacer(minLength: 0)
                 if row.alreadyWatching {
-                    Text("Watching").dsText(.label12).foregroundStyle(DS.textTertiary)
+                    Text(mode == .watch ? String(localized: "Watching")
+                                        : String(localized: "In your book"))
+                        .dsText(.label12).foregroundStyle(DS.textTertiary)
                 } else if blocked {
                     Text("No room").dsText(.label12).foregroundStyle(DS.textTertiary)
                 } else {
@@ -221,11 +244,13 @@ struct WalletConnectPickerSheet: View {
         // pretending to be one rather than sitting there permanently inert.
         let closing = plan.selectionCeiling == 0
         return Button {
-            if closing { dismiss() } else { watchPicked() }
+            if closing { dismiss() } else if mode == .watch { watchPicked() } else { namePicked() }
         } label: {
             Text(closing ? String(localized: "Done")
-                         : (n == 0 ? String(localized: "Pick what to watch")
-                                   : String(localized: "Watch \(n)")))
+                         : (n == 0 ? (mode == .watch ? String(localized: "Pick what to watch")
+                                                     : String(localized: "Pick what to save"))
+                                   : (mode == .watch ? String(localized: "Watch \(n)")
+                                                     : String(localized: "Save \(n)"))))
                 .dsText(.callout15).fontWeight(.semibold)
                 .foregroundStyle(n == 0 && !closing ? DS.textTertiary : .white)
                 .frame(maxWidth: .infinity)
@@ -240,6 +265,34 @@ struct WalletConnectPickerSheet: View {
         .buttonStyle(PressSpring())
         .armedPop(n > 0 || closing)
         .disabled(n == 0 && !closing)
+    }
+
+    /// The book's landing (prd §462): a NAME per pick, nothing else. The name
+    /// is the reverse-ENS answer where one arrived, the short form otherwise —
+    /// exactly what a bare paste into the book's field lands, reached through
+    /// the richer door. Deliberately absent: `ensureEnabled` (that changes
+    /// which chains the app READS — the one thing this mode must not touch),
+    /// `reconcileWalletSeats`, and the cap.
+    private func namePicked() {
+        let chosen = plan.rows.filter { picked.contains($0.key) }
+        var added = 0
+        for row in chosen where book.entry(for: row.address) == nil {
+            book.setName(names[row.key] ?? WalletStore.shortAddress(row.address),
+                         for: row.address)
+            added += 1
+        }
+        if added > 0 {
+            // Every landed transfer brought in line with the whole book at
+            // once — per-address would re-fetch the corpus once per row.
+            CounterpartyRetitle.applyBook(in: modelContext)
+            DSHaptic.success()
+        }
+        chrome.flash(added == 0 ? String(localized: "Nothing was added.")
+                     : added == 1 ? String(localized: "1 named.")
+                     : String(localized: "\(added) named."),
+                     tone: added > 0 ? .success : .failure)
+        onWatch(added)
+        dismiss()
     }
 
     private func watchPicked() {

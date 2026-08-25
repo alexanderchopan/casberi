@@ -335,6 +335,36 @@ grep -qE 'AddressSky' "$TMP/screen-bare.swift" "$TMP/book-bare.swift" \
 [[ -f "Casberi/Casberi/Model/AddressSky.swift" ]] \
   && { echo "✗ AddressSky.swift is back; §440 replaced it with the spine"; exit 1; }
 
+# ── §462: THE SAVE ANSWERS, AND THE QUIET TOP ───────────────────────────────
+#
+# The save's three answers are one flow, and each fails silently alone: a
+# whisper that stopped counting reads as a save that rewrote nothing, a scroll
+# that stopped firing files the row off-screen, and a flight with no Reduce
+# Motion guard is the §79 violation the motion audit cannot see (it is
+# gesture-driven, so the audit's appear-trigger check never fires).
+grep -q 'CounterpartyRetitle.applyCurrentName(for: target, in: modelContext)' "$BOOKSCREEN" \
+  || { echo "✗ the save no longer captures what the name rewrote — the whisper would count nothing forever (§462)"; exit 1; }
+grep -q 'rewrote > 0' "$TMP/book-bare.swift" \
+  || { echo "✗ the whisper lost its zero gate — 'Saved — 0 transfers' is a count of nothing (§83/§462)"; exit 1; }
+grep -q 'isReduceMotionEnabled == false else { return }' "$BOOKSCREEN" \
+  || { echo "✗ the save flight ignores Reduce Motion (§462)"; exit 1; }
+grep -q 'onChange(of: pendingReveal)' "$BOOKSCREEN" \
+  || { echo "✗ the save no longer scrolls to the row it filed — the row lands off-screen under its letter (§462)"; exit 1; }
+# THE QUIET TOP (§462). The strip waits for a REAL group; the zeroes are one
+# sentence at the foot. The foot line is also §267's discoverability answer,
+# so it may not lose the filing hint.
+grep -q 'private func quietFootSection' "$BOOKSCREEN" \
+  || { echo "✗ the quiet foot is gone — the empty spine line and the filing hint have no home (§462)"; exit 1; }
+grep -q 'Groups arrive with your first filing' "$TMP/book-bare.swift" \
+  || { echo "✗ the foot lost the filing hint — with the dashed card gone, nothing on the screen says groups exist (§267/§462)"; exit 1; }
+grep -q 'if !groups.isEmpty {' "$TMP/book-bare.swift" \
+  || { echo "✗ the groups strip no longer waits for a real group (§462)"; exit 1; }
+# WHEN, down the trailing edge (§462) — recency left the subline for the slot
+# the star vacated. Both halves guarded, or the fact is drawn twice or not at
+# all.
+grep -q 'AddressBookShape.lastPhrase(activity.lastAt)' "$TMP/views-bare.swift" \
+  || { echo "✗ the row no longer states WHEN you last dealt (§440/§462)"; exit 1; }
+
 # ── §461: THE DOORS ─────────────────────────────────────────────────────────
 #
 # A room nobody can reach is worse than no room. There are TWO doors and each

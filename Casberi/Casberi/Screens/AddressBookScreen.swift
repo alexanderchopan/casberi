@@ -1,6 +1,15 @@
 import SwiftUI
 import SwiftData
 
+/// A resolved ENS/SNS name, tied to the draft that asked for it (prd §433's
+/// preview, arriving in the room with §462) — keyed so a slow answer for
+/// "vitalik.eth" can never paint itself under a draft that has since become
+/// something else.
+private struct ResolvedBookDraft: Equatable {
+    let input: String
+    let address: String
+}
+
 /// The address book — everyone you have dealt with, as a room (prd §461).
 ///
 /// **The boundary is OWNERSHIP, and that is what finally separated these two
@@ -59,6 +68,30 @@ struct AddressBookScreen: View {
     @State private var bulkResult: String?
     @State private var bulkLanded: Set<String> = []
     @State private var filingBulkGroup = false
+    /// What the typed draft resolves to, for the preview (prd §462).
+    @State private var resolvedDraft: ResolvedBookDraft?
+    /// THE SAVE ANSWERS (prd §462) — the whisper under the field, saying what
+    /// the name just rewrote. Cleared the way `bulkResult` is: typing again
+    /// retires it, because a result line that outlives what produced it starts
+    /// describing the wrong thing.
+    @State private var saveWhisper: String?
+    /// The face the whisper carries — the flight's SOURCE, held apart from the
+    /// whisper text so the overlay can aim without parsing a sentence.
+    @State private var savedEntryID: String?
+    @State private var savedAddress: String?
+    /// The row the save should reveal: scrolled to, then lifted once.
+    @State private var pendingReveal: String?
+    /// `connectPromote`'s pair — the grammar the star's retirement orphaned
+    /// (§461); the row it lifts now is the one you just saved.
+    @State private var promotedEntryID: String?
+    @State private var promoteToken = 0
+    /// The face in the air (§441's overlay, §444's filing grammar) — from the
+    /// whisper's own face down into the filed row.
+    @State private var flying: FlightingFace?
+    @State private var flightProgress: CGFloat = 0
+    /// The connect row's worded outcome (prd §462) — cleared the way the
+    /// whisper is: typing again retires it.
+    @State private var connectNote: String?
 
     var body: some View {
         // ONE search per body pass (prd §441) — threaded down rather than
@@ -74,6 +107,7 @@ struct AddressBookScreen: View {
                     groupsSection
                 }
                 bookSection(entries: entries, sections: sections, searching: searching)
+                if !searching { quietFootSection(entries: entries) }
                 Color.clear.frame(height: ShellMetrics.bottomInset - 40)
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
@@ -94,8 +128,37 @@ struct AddressBookScreen: View {
                     }
                 }
             }
+            // THE SAVE ANSWERS (prd §462): scroll to the row the save filed,
+            // then lift it and send the whisper's face down into it. The scroll
+            // goes first — a flight to an off-screen anchor draws nothing, and
+            // the lift on a row nobody can see marks nothing.
+            .onChange(of: pendingReveal) { _, id in
+                guard let id else { return }
+                withAnimation(DS.Motion.standard) {
+                    proxy.scrollTo("row:" + id, anchor: .center)
+                }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                    promotedEntryID = id
+                    promoteToken &+= 1
+                    launchFlight(to: id)
+                    pendingReveal = nil
+                }
+            }
+            // One overlay over the whole List, so the face can cross from the
+            // whisper into any letter section (§444's shape).
+            .overlayPreferenceValue(AddressFlightAnchors.self) { anchors in
+                AddressFlightOverlay(flight: flying, anchors: anchors,
+                                     progress: flightProgress,
+                                     fromKey: "save:", toKey: "row:",
+                                     fromSize: DS.Face.row,
+                                     toSize: DS.Face.list)
+            }
         }
         .task { await AddressKind.detectPending() }
+        // Re-keyed on every draft, so SwiftUI cancels the last lookup before
+        // starting the next — which is what makes the debounce inside actually
+        // debounce rather than queue.
+        .task(id: draft) { await resolvePreview() }
         // Naming a connected address (prd §295) — the spine card's one action.
         // The name rides every landed transfer with this address, past and
         // future.
@@ -142,14 +205,20 @@ struct AddressBookScreen: View {
             case .newGroup:
                 NewGroupSheet { _ in }
             case .connectPicker(let accounts):
-                // Unreachable from this room — connecting is the roster's verb
-                // — but the route is shared, so the case is answered rather
-                // than left to a runtime surprise.
-                WalletConnectPickerSheet(shared: accounts) { _ in }
+                // NAME mode (prd §462): the picker saves names, never watches
+                // — the §461 boundary, kept on the richer door too.
+                WalletConnectPickerSheet(shared: accounts, mode: .name) { added in
+                    if added > 0 { refreshReadings() }
+                }
             }
         }
         .onChange(of: query) { _, new in
-            if !new.isEmpty { bulkResult = nil; bulkLanded = [] }
+            if !new.isEmpty {
+                bulkResult = nil; bulkLanded = []
+                // Typing again retires the whisper too — same rule, same reason.
+                saveWhisper = nil; savedAddress = nil; savedEntryID = nil
+                connectNote = nil
+            }
         }
         .onAppear { refreshReadings() }
     }
@@ -173,10 +242,40 @@ struct AddressBookScreen: View {
                             actionLabel: isBulk ? String(localized: "Add all")
                                                 : String(localized: "Save"),
                             focus: $fieldFocused,
-                            isArmed: isBulk || book.looksLikeAddress(draft),
+                            isArmed: isBulk || book.looksLikeAddress(draft)
+                                     || previewAddress != nil,
                             action: { isBulk ? addAll() : justName() })
                 fieldNotice(isBulk: isBulk)
+                // What you're about to save, before you save it (§433's
+                // preview, in the room since §462): the face is the proof the
+                // app understood the paste, and it is literally the same face
+                // the row will wear — WalletFace is deterministic from the
+                // address, so this costs nothing. Keyed on the ADDRESS so the
+                // spring plays when the face arrives, not on every keystroke.
+                addressPreview(isBulk: isBulk)
+                    .animation(DS.Motion.standard, value: previewAddress)
+                saveWhisperLine
+                // The richer way in (prd §462): a wallet app shares its
+                // accounts and §376's picker goes and finds the Safes they
+                // sign on — which is DISCOVERY, and discovery is this room's
+                // business. Same row as the roster's, different verb behind
+                // it: the picker opens in `.name` mode, so nothing here can
+                // change what the app fetches (§461). Steps aside while you
+                // type, like the roster's own (§440's reasoning).
+                if WalletConnectBridge.isAvailable, draft.isEmpty {
+                    ConnectWalletRow(onFound: { bookSheet = .connectPicker($0) },
+                                     onNote: { message, _ in
+                                         withAnimation(DS.Motion.standard) {
+                                             connectNote = message
+                                         }
+                                     })
+                        .transition(.opacity.combined(with: .move(edge: .top)))
+                }
+                if let connectNote {
+                    noticeLine("exclamationmark.circle", DS.textSecondary, connectNote)
+                }
             }
+            .animation(DS.Motion.standard, value: draft.isEmpty)
         }
         .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DS.Space.s4,
                                   bottom: 0, trailing: DS.Space.s4))
@@ -227,6 +326,100 @@ struct AddressBookScreen: View {
                     }
                 }
             }
+        }
+    }
+
+    // MARK: - The preview and the whisper (prd §462)
+
+    /// The address the preview is about — what was typed when it's already an
+    /// address, otherwise whatever the resolver answered FOR THIS DRAFT.
+    private var previewAddress: String? {
+        if book.looksLikeAddress(draft) { return draft }
+        if let resolvedDraft, resolvedDraft.input == draft { return resolvedDraft.address }
+        return nil
+    }
+
+    /// A destructive notice is on screen — the preview stands down for it: the
+    /// notice is telling you to stop, and a portrait underneath it is an
+    /// invitation.
+    private var draftIsUnsafe: Bool {
+        !book.lookalikes(of: draft).isEmpty || AddressSafety.checksum(draft) == .failed
+    }
+
+    @ViewBuilder
+    private func addressPreview(isBulk: Bool) -> some View {
+        if !isBulk, !draft.isEmpty, !draftIsUnsafe, let address = previewAddress {
+            let known = book.entry(for: address)
+            HStack(spacing: DS.Space.s3) {
+                WalletFace(address: address, size: DS.Face.list, circular: true)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(known?.name ?? draft)
+                        .dsText(.callout15).fontWeight(.semibold)
+                        .foregroundStyle(DS.textPrimary)
+                        .lineLimit(1)
+                    Text(previewFact(address: address, known: known))
+                        .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                        .lineLimit(1)
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(.vertical, DS.Space.s2)
+            .padding(.horizontal, DS.Space.s3)
+            .background(DS.fillFaint,
+                        in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+            .transition(.opacity.combined(with: .scale(scale: 0.97, anchor: .top)))
+        }
+    }
+
+    /// The one line under the preview's name — what the book already knows.
+    /// No watch facts here, deliberately: this room cannot watch (§461), so a
+    /// "already watching" clause would describe a verb the field doesn't have.
+    private func previewFact(address: String, known: AddressBook.Entry?) -> String {
+        var parts: [String] = []
+        if address != draft { parts.append(WalletStore.shortAddress(address)) }
+        if known != nil { parts.append(String(localized: "already in your book")) }
+        if let label = known?.kind.label { parts.append(label) }
+        else if let script = BitcoinAddress.scriptKind(address) { parts.append(script) }
+        return parts.isEmpty
+            ? String(localized: "New address")
+            : parts.joined(separator: " · ")
+    }
+
+    /// Resolves a typed ENS/SNS name for the preview, debounced — nine
+    /// prefixes of "vitalik.eth" each look like a name, and the pause is what
+    /// makes them one request. Nothing is saved, nothing is written.
+    private func resolvePreview() async {
+        let asked = draft
+        guard SNS.looksLikeName(asked) || ENS.looksLikeName(asked) else { return }
+        try? await Task.sleep(for: .milliseconds(450))
+        guard !Task.isCancelled else { return }
+        // `.sol` first — `ENS.looksLikeName` takes ANY dotted string and would
+        // send a `.sol` name to the ENS resolver, which answers with a null
+        // address rather than an error.
+        let hit = SNS.looksLikeName(asked)
+            ? await SNS.resolve(asked) : await ENS.resolve(asked)
+        guard !Task.isCancelled, let hit else { return }
+        withAnimation(DS.Motion.standard) {
+            resolvedDraft = ResolvedBookDraft(input: asked, address: hit)
+        }
+    }
+
+    /// THE WHISPER (prd §462) — what the save just did, said once. Its face is
+    /// the flight's source: the same identity travels from "saved" down into
+    /// the row it filed under, so the two ends of the arc are one object.
+    @ViewBuilder
+    private var saveWhisperLine: some View {
+        if let saveWhisper, let savedAddress, let savedEntryID {
+            HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                WalletFace(address: savedAddress, size: DS.Face.row, circular: true)
+                    .flightAnchor("save:" + savedEntryID)
+                Text(saveWhisper)
+                    .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, DS.Space.s1)
+            .transition(.opacity)
         }
     }
 
@@ -281,18 +474,12 @@ struct AddressBookScreen: View {
                                       bottom: 0, trailing: DS.Space.s4))
             .listRowBackground(Color.clear)
             .listRowSeparator(.hidden)
-        } else if let line = spineEmptyLine {
-            Section {
-                Text(line)
-                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
-            .listRowInsets(EdgeInsets(top: DS.Space.s3, leading: DS.Space.s4,
-                                      bottom: 0, trailing: DS.Space.s4))
-            .listRowBackground(Color.clear)
-            .listRowSeparator(.hidden)
         }
+        // The empty line moved to the FOOT (prd §462) — see `quietFootSection`.
+        // §448's ruling that stating none IS an answer stands; what changed is
+        // WHERE it is said: a sentence about a drawing that doesn't exist yet
+        // was one of two almost-empty blocks pushing the record halfway down
+        // the screen.
     }
 
     /// What stands where the card would be. Nil means draw nothing at all.
@@ -308,10 +495,19 @@ struct AddressBookScreen: View {
     // MARK: - Groups (prd §440)
 
     /// The strip — one card per group, plus the door that makes one.
+    ///
+    /// **Only once a group EXISTS (prd §462).** It rendered from
+    /// `groupsOfferFloor` up, which on a book with no groups was a header over
+    /// one lonely dashed card — §440's own words for that shape are "a control
+    /// for a problem nobody has yet". The doors that CREATE the first group
+    /// survive it everywhere they already were (the sort menu's "New group…",
+    /// every row's long-press, the card's chips), and the quiet foot names the
+    /// nearest one. §267's discoverability ruling is why the foot says it out
+    /// loud rather than trusting the menu alone.
     @ViewBuilder
     private var groupsSection: some View {
         let groups = book.groupNames
-        if !groups.isEmpty || book.count >= Self.groupsOfferFloor {
+        if !groups.isEmpty {
             Section {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: DS.Space.s3) {
@@ -333,8 +529,41 @@ struct AddressBookScreen: View {
         }
     }
 
-    /// A book smaller than this has nothing to organize.
+    /// A book smaller than this has nothing to organize — the quiet foot's
+    /// filing hint waits for it (the strip itself now waits for a real group,
+    /// prd §462).
     private static let groupsOfferFloor = 6
+
+    /// THE QUIET FOOT (prd §462) — the zeroes, said once, after the record.
+    ///
+    /// Two almost-empty blocks used to lead this screen: the spine's honest
+    /// "No shared addresses yet." floating alone, and a Groups header over one
+    /// dashed New-group card. Neither has content, and together they pushed
+    /// the record halfway down. Both facts survive — §448's "stating none IS
+    /// an answer" and §267's "creation must be findable" — as ONE tertiary
+    /// sentence below the book, where an empty state reads as standing room
+    /// rather than as the screen's subject.
+    @ViewBuilder
+    private func quietFootSection(entries: [AddressBook.Entry]) -> some View {
+        let parts: [String] = [
+            spineEmptyLine,
+            book.groupNames.isEmpty && entries.count >= Self.groupsOfferFloor
+                ? String(localized: "Groups arrive with your first filing — long-press any row.")
+                : nil,
+        ].compactMap { $0 }
+        if !parts.isEmpty {
+            Section {
+                Text(parts.joined(separator: " "))
+                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .listRowInsets(EdgeInsets(top: DS.Space.s6, leading: DS.Space.s4,
+                                      bottom: 0, trailing: DS.Space.s4))
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+        }
+    }
 
     private func groupCard(_ group: String) -> some View {
         let members = book.entries(inGroup: group)
@@ -647,6 +876,23 @@ struct AddressBookScreen: View {
                            colliding: colliding)
         }
         .buttonStyle(.plain)
+        // The save's landing (prd §462): a STABLE id (deliberately not the
+        // §444-banned `.id(name)` churn — this one never changes for a row),
+        // the flight's destination anchor, and the lift that marks the row the
+        // save just filed. `connectPromote` reads `isTarget` at fire time, so
+        // saving one row never lifts another.
+        .id("row:" + entry.id)
+        // The anchor is a face-sized rect over the row's leading edge — where
+        // `AddressBookRow` draws its mark — so the flight lands ON the face
+        // rather than at the row's geometric middle. A clear overlay rather
+        // than a modifier inside the row: the row is the shared anatomy and
+        // only this list flies into it.
+        .overlay(alignment: .leading) {
+            Color.clear
+                .frame(width: DS.Face.list, height: DS.Face.list)
+                .flightAnchor("row:" + entry.id)
+        }
+        .connectPromote(isTarget: entry.id == promotedEntryID, token: promoteToken)
         .settleIn(delay: Double(min(row, 8)) * 0.02)
         .listRowBackground(Color.clear)
         .listRowInsets(EdgeInsets(top: 0, leading: DS.Space.s4,
@@ -696,13 +942,37 @@ struct AddressBookScreen: View {
     private func justName() {
         DSHaptic.tap()
         let addr = draft
+        // The preview already resolved a typed name? Save the ADDRESS it
+        // stands for, so the row's face and the flight's are the same identity
+        // from the first frame.
+        let target = previewAddress ?? addr
         query = ""
         fieldFocused = false
+        resolvedDraft = nil
         guard !addr.isEmpty else { return }
         let isName = SNS.looksLikeName(addr) || ENS.looksLikeName(addr)
-        book.setName(isName ? addr : WalletStore.shortAddress(addr), for: addr)
-        CounterpartyRetitle.applyCurrentName(for: addr, in: modelContext)
-        guard isName else { return }
+        let name = isName ? addr : WalletStore.shortAddress(target)
+        book.setName(name, for: target)
+        // THE SAVE ANSWERS (prd §462). `applyCurrentName` has always returned
+        // how many landed transfers it rewrote, and every caller discarded it —
+        // the one fact that shows what naming IS, thrown away at the moment it
+        // happens. Zero rewrites says just "Saved." — a count of nothing is
+        // not stated (§83).
+        let rewrote = CounterpartyRetitle.applyCurrentName(for: target, in: modelContext)
+        DSHaptic.success()
+        if let entry = book.entry(for: target) {
+            withAnimation(DS.Motion.standard) {
+                saveWhisper = rewrote > 0
+                    ? String(localized: "Saved — \(rewrote) transfers now read \(entry.name).")
+                    : String(localized: "Saved.")
+                savedAddress = entry.address
+                savedEntryID = entry.id
+            }
+            // One turn later, so the re-sorted list has been observed and the
+            // new row exists to be scrolled to (§441's deferred-launch lesson).
+            DispatchQueue.main.async { pendingReveal = entry.id }
+        }
+        guard isName, previewAddress == nil else { return }
         Task {
             // `.sol` first: `ENS.looksLikeName` takes ANY dotted string and
             // would send a `.sol` name to the ENS resolver, which answers with
@@ -711,6 +981,27 @@ struct AddressBookScreen: View {
                 ? await SNS.resolve(addr) : await ENS.resolve(addr)
             guard let resolved else { return }
             await MainActor.run { wallet.noteResolution(addr, resolved: resolved) }
+        }
+    }
+
+    /// The whisper's face, down into the filed row (prd §462) — §444's filing
+    /// grammar, run from the field. Deferred one turn by the caller; a missing
+    /// anchor draws nothing, silently, which is the safe failure here (the
+    /// scroll and the lift have already answered).
+    private func launchFlight(to id: String) {
+        guard let savedAddress, UIAccessibility.isReduceMotionEnabled == false else { return }
+        flightProgress = 0
+        flying = FlightingFace(id: id, address: savedAddress,
+                               glyph: book.entry(for: savedAddress)?.kind.glyph)
+        DispatchQueue.main.async {
+            withAnimation(.spring(duration: 0.48, bounce: 0.14)) {
+                flightProgress = 1
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.55) {
+                guard flying?.id == id else { return }
+                flying = nil
+                flightProgress = 0
+            }
         }
     }
 

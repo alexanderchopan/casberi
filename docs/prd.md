@@ -31511,3 +31511,226 @@ iOS Simulator and Mac Catalyst both compile and every static audit passes. **No
 simulator run and no device** (standing user preference): the rail's eighth slot,
 the roster's swipe-to-remove, and the book room's push are all rendering and
 gesture behaviour no static check can exercise.
+
+## 463. Vibenet's scope 0 is the ADMIN, and the key tray is chips per key (user: "for the key tray i think we can use chips for the policies?", then "i really wish it was in some sort of matrix a user could see", then "the grid is just really bad", then "maybe totally rethink it from first principles", then "who would understand what those dashes mean. and is 'delegate' same as 'Admin key'? … i'm worried we are taking too many liberties. also for ease the keys could just be listed in alphabetical order then we aren't making some judgement call. i think we are stuck doing chips per key", 2026-08-24)
+
+**THE BUG THIS PASS EXISTS FOR: `VibenetScope` had scope 0 exactly backwards.**
+EIP-8130 is explicit — *"A value of `0x00` means unrestricted (admin), while
+non-zero values grant only specific contexts."* This file shipped calling it
+"No permissions" / "No scope", with a doc comment describing it as *"an
+authorized actor that can originate nothing yet"*, so a key holding TOTAL
+authority over the account displayed as one holding none. `grantedCount` made
+it worse: an admin sets no bits, so it counted zero and `byReach` — the
+ordering whose entire stated job is to surface the most-privileged key first —
+sorted it dead LAST. That is §83's fake status in the direction that costs the
+most, on the one screen a person reads to find out who can spend their account.
+`isAdmin` and `reach` fix both halves; two mutations pin them, because the
+shipped reading passes every other check in the harness.
+
+**The plain names are now the SPEC's, and which one isn't is written down.**
+Four of five are EIP-8130's own words — SENDER *"may originate transactions to
+any `call.to`"* → **Send anywhere** (named for the DESTINATION axis, so it can
+never be misread as "unrestricted" — the collision the user caught: *"is
+'delegate' same as 'Admin key'?"*), POLICY *"may call exactly one target: its
+configured `manager`"* → **Send to one contract** (it RESTRICTS sending; the
+shipped "Send limited" and this session's earlier "Sets policy" were both
+wrong), SELF_PAYER → **Pay own gas**, SPONSOR_PAYER *"act as `payer_auth` for a
+different sender"* → **Pay others' gas**. NONCE is the invented one and is
+labelled as such in the source: the spec defines only the mechanism (sequenced
+`nonce_key`s rather than nonce-free mode) and offers no phrasing, so **Send in
+order** is ours and is the one label open to a better ruling. Shipped, `nonce`'s
+"plain" name was the word "Nonce" — the one bit of five never de-jargoned,
+despite that table's own comment saying spec internals do not belong on screen.
+
+**DELEGATE AND ADMIN ARE TWO DIFFERENT FACTS and the tray keeps them apart.**
+Delegate is the KIND (this key is another account); Admin is the SCOPE (0x00).
+A delegate is not necessarily admin — one can hold ordinary bits. So the row
+title carries the kind and one chip carries the scope, and the Admin chip
+INVERTS rather than joining the row: scope 0 is every capability including the
+reserved ones this build cannot name, so rendering it as the five named bits
+would understate it. It is one chip, never five, asserted both ways.
+
+**The tray is chips per key, grouped by account, keys A–Z within it — after
+four rejected passes.** A matrix was tried three times (dots × policies, then
+transposed, then power tiers) and each was refused; the settled reasoning is
+the user's own: *a figure that needs a legend has already failed*, and any
+ordering by "power" is a judgement call the app should not be making on your
+behalf. Alphabetical is an order anyone can reproduce. Comparison lives in the
+keys card's aggregate counts, not in the tray. **Corollary worth keeping: the
+first-principles reframe that killed the matrix is that a matrix is a DATA
+STRUCTURE, not a question** — nobody opens this asking to compare one key's five
+bits against another's; they ask who can spend, what is about to lapse, and
+what is over-privileged.
+
+**Expiry always draws, and is weighted by what it says.** It was `if expiry > 0`
+in `textTertiary` at the bottom of the row, so a key three days from lapsing and
+one that never expires shared both the sentence shape and the quietest ink — and
+a never-expiring key printed nothing at all, which reads as unknown rather than
+as never. `VibenetActor.expiryStanding` classifies never/expired/soon/later
+against the existing 7-day `urgencyWindow`, and `.soon` takes the tint.
+
+**`sharedLine` broke the harness the day it shipped, which is why the reuse
+logic it introduced had no coverage — it could not have had any.** It reached
+`VibenetWatch.shared`, a UserDefaults singleton, from `VibenetRoom.swift`, whose
+Foundation-only invariant is the whole reason `scripts/vibenet-selftest.sh` can
+compile that file WHOLE. So `d9c0d9b7` took ~150 assertions down with it and
+`verify.sh` stayed red until now. The name lookup is a closure passed by the call
+site; `VibenetKeyReuse.sharing` and `sharedLine` now carry 9 assertions,
+including the delegate exclusion on both sides.
+
+**Two more reads the room was owed.** `AccountUnlockInitiated(address,uint48)`
+was in the spec and not in `VibenetTopics`, so an unlock STARTING — the most
+newsworthy thing a locked account does — was visible only as state to somebody
+already standing in the room; it lands as an event now, on the same filtered
+read as `AccountLocked` via the OR-topic0 shape, costing no extra request. Its
+topic is keccak-derived and trusted because the same derivation reproduces
+`accountLocked` and `actorRevoked` byte for byte. And every vibenet event has
+stamped an explorer permalink on `content` since the seat shipped with NO way to
+open it (`ThingContentView`'s bare-link body is scoped to `.transaction`, the
+`hasSite` row wants `.link`, `walletVerbs` wants a money receipt) — `.event` now
+offers "Open in the explorer" for this source.
+
+**Checked and NOT a bug, recorded so nobody re-opens it:** the actor decode. The
+spec documents `actor_config` as ONE packed word (`authenticator(20) ‖
+expiry(6) ‖ scope(2) ‖ reserved(4)`) while `VibenetChain.actor` reads THREE, so
+this looked like every scope and authenticator being garbage. `Keystore.sol`
+settles it — `getActorConfig` returns a decoded `ActorConfig` struct, not the
+packed slot. The three-word read is correct.
+
+**Still open, deliberately:** `getPolicy(account, actorId)` is never called, so
+"Send to one contract" cannot say WHICH contract though the manager address is
+one call away; and none of this has run against a live devnet account, so the
+harness remains the only proof — which is exactly the standing said in §440's
+terms: a harness proves the arithmetic, never that the arithmetic answered the
+right question.
+
+## 462. The book answers back — the save's three answers, the quiet top, WHEN down the edge, the card's void filled, and the connect row's second verb (user: "how would you improve the ui, add surprise and delight, and if necessary some of the ux for the address book?", then "and specifically the sheets too", then "ok, i'm in sync. yes lets do it", then "address book also needs a way to connect wallet… remember we had a way for the user to be able to detect and add many", 2026-08-24)
+
+Reviewed as six artboards grounded in SIMULATOR SCREENSHOTS of the shipped §461
+screens (`design/…/address-book-delight`) — the "Today" boards are what actually
+rendered, which is how two of the five items were found at all. This entry
+**amends §448** on where the spine's zero is said, **amends §440** on the groups
+strip's gate, and extends §444's sheet pass to the young card it never covered.
+
+### 1. The save answers (the delight centerpiece)
+
+Save gave a haptic and nothing else: the row filed off-screen under its letter,
+and the rename cascade rewrote landed transfers invisibly — §443's own complaint
+("the one moment the card was built around could not be watched"), true again one
+screen up. Three answers now, one flow, §79 kept — nothing here animates an
+arrival, only the thing you just did:
+
+- **The whisper**: "Saved — 12 transfers now read Mom." The count is
+  `CounterpartyRetitle.applyCurrentName`'s own return, which every caller
+  discarded. Zero rewrites says just "Saved." — a count of nothing is not stated
+  (§83). Cleared the way `bulkResult` is: typing again retires it.
+- **The scroll + lift**: the book scrolls to the new row (`.id("row:" + id)`,
+  a stable id — deliberately not §444's banned churn) and lifts it once —
+  `connectPromote`, the grammar the star's retirement orphaned.
+- **The flight**: the whisper's own face travels down into the filed row —
+  §441's overlay on §444's filing grammar, `save:` → `row:`, ramp ends
+  `.row` → `.list`. The whisper carries the face precisely so the flight has an
+  honest, PERSISTENT source (the preview unmounts when the field clears — the
+  first design flew from it and would have drawn nothing). Reduce Motion skips
+  the travel; scroll, lift and whisper all still answer. The launch is deferred
+  past the scroll — a flight to an off-screen anchor draws nothing, silently.
+
+The field also gained §433's PREVIEW (face + what the book already knows) — the
+proof the paste was understood, and the same face the row will wear, drawn a
+second early. Its facts deliberately exclude watching: this room cannot watch
+(§461), so "already watching" would describe a verb the field doesn't have.
+**Walked on the simulator end-to-end**: checksum refusal (the preview stands
+down for a destructive notice), preview on the real Uniswap router, Save →
+whisper + scroll to a new `#` section + the scrubber gaining `#`.
+
+### 2. The quiet top
+
+On a young book two almost-empty blocks led the screen: "No shared addresses
+yet." floating alone, and a Groups header over one dashed New-group card —
+§440's own words for that card are "a control for a problem nobody has yet".
+The record leads now. The strip renders only once a group EXISTS; the spine's
+honest zero (§448: stating none IS an answer — the ruling stands, the PLACE
+moves) joins the filing hint as ONE tertiary sentence at the foot: "No shared
+addresses yet. Groups arrive with your first filing — long-press any row." The
+hint is §267's discoverability answer said out loud — with the dashed card gone,
+the sort menu alone would make group creation findable only by opening a menu.
+
+### 3. WHEN reads down the edge
+
+"…7A92 · 12 together · 4 days ago" buried the one fact a book of forty is
+scanned for. §443's column ruling, applied: the subline keeps IDENTITY (short
+form · count · kind), recency moves to the trailing edge — the slot the star
+vacated in §461, genuinely free on every row. A row with no history keeps an
+empty edge rather than a dash. No amounts, no direction, no colour (§435/§295).
+`AddressBookRow` is the one anatomy, so the group screen inherits it free.
+
+### 4. The card fills its quiet (the sheets)
+
+The simulator exposed the COMMON card — just named, nothing landed — as a hero,
+one dot, and sixty percent black: §443 ranked a rich card, §444 animated one,
+and nobody designed the empty one. Four moves:
+
+- **The void says what arrives**: one tertiary sentence under the spine —
+  "Transfers with Mom land here as they arrive." Gated on the corpus
+  (`things.isEmpty`), never a count of nothing.
+- **One verb row**: Copy and the group control were two centred pills of
+  different widths, an accidental column; they share a row as twin capsules
+  now, the group chips riding the same line on a filed card.
+- **§461's missing fact, restored as a FACT**: the watch bar's retirement left
+  the card unable to say whether this is one of your own five. The kind line
+  says "One of your wallets" when it is — REPLACING the kind word ("Wallet ·
+  One of your wallets" says wallet twice). A statement, never a control:
+  §461's negative guard stands, `outcome(ofAdding:)` lives in the roster and
+  nowhere else.
+- **The `subline` double-print, fixed at its root**: an auto-named row printed
+  its own name twice the moment `activity: nil` stopped masking the short-form
+  fallback (§461's roster). It returns nil now — the "absent rather than
+  empty" answer its own doc had deferred since it was written.
+
+NOT built: the spine draw-on (it has staggered in since §171 — proposed before
+checking, existed already) and the naming event's cascade count on the spine
+(the whisper delivers that fact at the moment it happens; §444's cascade sweep
+already shows it on the card).
+
+### 5. The connect row's second verb (user's own addition)
+
+§461 left the WalletConnect flow on the roster alone, which made connecting
+read as watching's private door. It never was: a wallet app is how you DISCOVER
+addresses — it shares accounts, and §376's picker goes and finds the Safes they
+sign on. So the row lives on BOTH screens, and what differs is the verb behind
+it:
+
+- **`ConnectWalletRow`** — the handshake's UI extracted WHOLE from
+  `WalletScreen` (the cancel generation, the manual-pairing fallback, the
+  Catalyst fork, every §83 state), one implementation, two callers. The roster
+  swapped onto it the same day, so there is no twin to drift.
+- **`WalletConnectPickerSheet.Mode`** — `.watch` is the roster's (capped,
+  starts syncing); `.name` is the book's: uncapped, writes a NAME per pick
+  (reverse-ENS where it answered, the short form otherwise — exactly what a
+  bare paste lands, reached through the richer door) and nothing else.
+  Deliberately absent from name mode: `ensureEnabled` (chain fetching),
+  `reconcileWalletSeats`, and the cap. The plan machinery is shared by
+  substitution, not special case: "watched" means "already in your book" and
+  the limit is `Int.max`, so the cap copy and No-room are unreachable.
+
+**Fixed in passing**: a concurrent session's uncommitted `Verbs.swift` edit
+(`if let raw = thing.content` on a non-optional) broke the tree's build;
+minimal fix applied in place, intent preserved, that session told.
+
+### Guarded
+
+`address-book-selftest.sh` gained the §462 block: the whisper's captured count
+and its zero gate, the Reduce Motion guard on the flight, the scroll wiring,
+the quiet foot and its filing hint, the strip's real-group gate, and the
+trailing recency call. All green with every prior mutation still caught.
+
+Costs nothing new: no `Thing` field, no request (the preview's ENS resolution
+is the field's existing debounced read, and name-mode fires none of the
+roster's), no CloudKit deploy.
+
+### Unverified
+
+The flight's mid-air frame, the lift, and the picker's name mode against a
+REAL wallet handshake (no wallet app exists on the simulator — `wc-handshake.sh`
+exercises the wire, not this sheet). Everything else above was walked on the
+simulator this session.
