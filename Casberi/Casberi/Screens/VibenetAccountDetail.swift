@@ -54,6 +54,7 @@ struct VibenetAccountDetail: View {
                 keysSection
             }
             linkedAccountsSection
+            subAccountsSection
             historySection
             syncSection
             doorsSection
@@ -149,35 +150,49 @@ struct VibenetAccountDetail: View {
 
     // MARK: - Keys (R3.1)
 
+    /// Keys, SPLIT BY WHAT THEY CAN DO — owners, session keys, limited keys
+    /// (`VibenetKeyGrouping`). Base's own account console draws exactly this
+    /// division (its Owners and Session keys tabs), and it is not a
+    /// presentation choice: the POLICY bit is the difference between a key
+    /// that can spend the account and one that may only call a single
+    /// contract under terms the account agreed to. Drawn as one flat list,
+    /// an admin key and a capped subscription key sat side by side with only
+    /// chip colour between them.
+    ///
+    /// Grouping is NOT the ranking this tray keeps refusing: within a group
+    /// the order is still `alphabetical`, and no group claims one of your
+    /// keys matters more than another — it names a distinction the scope
+    /// bits already draw. A group with no keys is omitted entirely.
     private var keysSection: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s3) {
-            // The count lives in the HEADING, so the hero above never has
-            // to spend its biggest line saying "2 keys" — one statement of
-            // the number, at the place the keys actually are.
-            // "AUTHORIZED", never "can act" — a key can be authorized on
-            // the account and still hold no scope, which is exactly what
-            // a fresh account looks like (both of a real devnet account's
-            // keys read "Can't act on its own yet"). A heading claiming
-            // they CAN act directly above cards saying they can't is a
-            // contradiction the reader has to resolve.
+        VStack(alignment: .leading, spacing: DS.Space.s4) {
             Text(item.actors.count == 1
                  ? String(localized: "1 key authorized")
                  : String(localized: "\(item.actors.count) keys authorized"))
                 .dsText(.heading17)
                 .foregroundStyle(DS.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
-            // The keys are what this card DRAWS FROM DATA — one row per
-            // authorized key, in reach order — so they take the house
-            // entrance every other room's ranked rows wear, and honour
-            // Reduce Motion through the same modifier rather than a
-            // second animation this file would have to keep in step.
-            ForEach(Array(VibenetAccountItem.alphabetical(item.actors).enumerated()),
-                    id: \.element.id) { index, actor in
-                keyRow(actor)
-                    .chartArrival(index: index, reduceMotion: reduceMotion)
+            ForEach(VibenetKeyGrouping.sections(item.actors)) { section in
+                VStack(alignment: .leading, spacing: DS.Space.s3) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(section.group.title)
+                            .dsText(.label12).fontWeight(.semibold)
+                            .foregroundStyle(DS.textSecondary)
+                        // What membership MEANS, so the group name is never
+                        // something to infer from the keys inside it.
+                        Text(section.group.caption)
+                            .dsText(.label11)
+                            .foregroundStyle(DS.textTertiary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    ForEach(Array(section.actors.enumerated()), id: \.element.id) { index, actor in
+                        keyRow(actor)
+                            .chartArrival(index: index, reduceMotion: reduceMotion)
+                    }
+                }
             }
         }
     }
+
 
     /// One key, one row — plain title, one honest detail clause, then its
     /// granted permissions as chips (R2.3's exact capsule grammar) laid
@@ -235,8 +250,12 @@ struct VibenetAccountDetail: View {
             // purpose: reusing a key across devnet test accounts is often
             // deliberate, so this states the fact without dressing it as
             // an alarm the way a real expiry countdown earns.
+            // MATCHED ON actorId, never on authenticator — the authenticator
+            // is the CONTRACT that validates the key and is shared by every
+            // key of a kind, so the old filter lit this line on every
+            // ordinary wallet key across every pair of watched accounts.
             if let line = sharedKeys
-                .filter({ $0.authenticator.caseInsensitiveCompare(actor.authenticator) == .orderedSame })
+                .filter({ $0.actorId.caseInsensitiveCompare(actor.actorId) == .orderedSame })
                 .sharedLine(name: { VibenetWatch.shared.name(for: $0) ?? VibenetRoom.shortAddress($0) })
             {
                 Text(line)
@@ -251,6 +270,32 @@ struct VibenetAccountDetail: View {
                 Text(policy)
                     .dsText(.label11)
                     .foregroundStyle(DS.textTertiary)
+                // HAS IT ACTUALLY RUN — the one live fact about a session key
+                // vibenet publishes, and the difference between a sentence
+                // every gated key on the chain shares and a fact about this
+                // one. Weighted above the lines around it because "never
+                // used" and "used 40 times" are the two readings someone
+                // opens a subscription key to find.
+                if let use = item.policyUses.use(for: actor) {
+                    Text(use.line(now: .now))
+                        .dsText(.label11).fontWeight(.semibold)
+                        .foregroundStyle(DS.textSecondary)
+                } else {
+                    Text(String(localized: "Never used"))
+                        .dsText(.label11).fontWeight(.semibold)
+                        .foregroundStyle(DS.textSecondary)
+                }
+                // AND WHAT WE CANNOT SAY. A session key's cap, period and
+                // allowed recipients are committed as a hash and never
+                // stored, so there is nothing on chain to read them from
+                // (see `VibenetPolicyReadability`). Saying so is the honest
+                // alternative to the two worse options: silence, which reads
+                // as an app that didn't bother, and a number, which would be
+                // invented on the screen where believing it costs most.
+                Text(VibenetPolicyReadability.note)
+                    .dsText(.label11)
+                    .foregroundStyle(DS.textTertiary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
             // ALWAYS drawn, and weighted by what it says. A key three days
             // from lapsing and one that never expires used to share both the
@@ -371,6 +416,80 @@ struct VibenetAccountDetail: View {
         .dsWidgetSurface(cornerRadius: DS.Radius.widget, fillOpacity: 0.5)
     }
 
+    // MARK: - Sub-accounts (2026-08-24)
+
+    /// Accounts that authorized THIS address as their delegate — Base's own
+    /// "Spending Account" shape, which its console gives a tab of its own.
+    ///
+    /// This is the OTHER direction from Linked accounts above, and the
+    /// difference is what makes it worth a section rather than more rows up
+    /// there: that one relates two addresses the person already watches,
+    /// which needs no discovery. This one asks the chain "who named you",
+    /// so it can surface an account you can spend and had never heard of.
+    /// An already-watched sub-account still lists — it is a real
+    /// relationship — but the unwatched ones sort first and say so, since
+    /// they are the only reason to read the section twice.
+    ///
+    /// NO WATCH BUTTON HERE, deliberately: watching is how this app decides
+    /// what to read on every refresh, and adding an account from a row on a
+    /// detail screen buries a standing commitment inside a glance. The
+    /// address is copyable and the address book takes a paste.
+    @ViewBuilder
+    private var subAccountsSection: some View {
+        if let line = VibenetSubAccounts.line(item.subAccounts) {
+            VStack(alignment: .leading, spacing: DS.Space.s3) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(String(localized: "Sub-accounts"))
+                        .dsText(.heading17)
+                        .foregroundStyle(DS.textPrimary)
+                    Text(line)
+                        .dsText(.label11)
+                        .foregroundStyle(DS.textTertiary)
+                }
+                VStack(alignment: .leading, spacing: DS.Space.s2) {
+                    ForEach(item.subAccounts) { sub in
+                        subAccountRow(sub)
+                    }
+                }
+            }
+        }
+    }
+
+    /// `spokeRow`'s object treatment, reused rather than inventing a fifth
+    /// surface on one screen — a sub-account is an object the same way a key
+    /// and a linked account are.
+    private func subAccountRow(_ sub: VibenetSubAccount) -> some View {
+        HStack(spacing: DS.Space.s3) {
+            WalletFace(address: sub.address, size: DS.Face.rowCircle, circular: true)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(VibenetWatch.shared.name(for: sub.address) ?? VibenetRoom.shortAddress(sub.address))
+                    .dsText(.heading17)
+                    .foregroundStyle(DS.textPrimary)
+                    .lineLimit(1)
+                // The DATE, never a claim about what the account holds — this
+                // read knows one thing about it and says only that.
+                if let at = sub.authorizedAt {
+                    Text(String(localized: "Authorized you \(at.formatted(.relative(presentation: .named)))"))
+                        .dsText(.label11)
+                        .foregroundStyle(DS.textTertiary)
+                        .lineLimit(1)
+                }
+            }
+            Spacer(minLength: 0)
+            if !sub.watched {
+                Text(String(localized: "Not watched"))
+                    .dsText(.label11)
+                    .foregroundStyle(DS.textTertiary)
+                    .lineLimit(1).fixedSize()
+                    .padding(.horizontal, 8).padding(.vertical, 3)
+                    .background { Capsule().strokeBorder(DS.textTertiary, lineWidth: 1) }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(DS.Space.s3)
+        .dsWidgetSurface(cornerRadius: DS.Radius.widget, fillOpacity: 0.5)
+    }
+
     // MARK: - History (R2.1)
 
     /// The account's story, and NOTHING MORE THAN IT HAS. The dot strip
@@ -484,6 +603,24 @@ struct VibenetAccountDetail: View {
                 }
                 .dsText(.label12).fontWeight(.semibold)
                 .foregroundStyle(Self.mark)
+                .lineLimit(1)
+                .fixedSize()
+            }
+            // The one door onto WRITING, and it is deliberately somebody
+            // else's. Base's own console creates accounts, mints keys,
+            // composes transactions and subscribes a session key; this app
+            // reads, and holds no signing key that could do any of it (the
+            // Safe co-signer, prd §425/§426, has no counterpart here and
+            // building one for a devnet would mean a second, more powerful
+            // key on an app whose whole posture is that it has none). A
+            // hand-off costs nothing and never goes stale.
+            Link(destination: URL(string: VibenetExplorer.console)!) {
+                HStack(spacing: 4) {
+                    Text(String(localized: "Manage on Base"))
+                    Image(systemName: "arrow.up.right")
+                }
+                .dsText(.label12).fontWeight(.semibold)
+                .foregroundStyle(DS.textSecondary)
                 .lineLimit(1)
                 .fixedSize()
             }

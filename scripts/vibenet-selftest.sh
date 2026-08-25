@@ -540,11 +540,21 @@ check("a tie in title falls back to actorId, never to input order",
 // every account listed, and every failure below renders as an ordinary row.
 
 print("")
-print("VibenetKeyReuse.sharing — the same authenticator on several watched accounts")
-func reuseAcct(_ address: String, _ auth: String,
-               kind: VibenetAuthenticatorKind = .p256) -> VibenetAccountItem {
+print("VibenetKeyReuse.sharing — the same KEY (actorId) on several watched accounts")
+// THE FIXTURE THAT WAS WRONG UNTIL 2026-08-24, and the reason the bug it
+// hid was invisible: it varied the AUTHENTICATOR per account and held the
+// actorId fixed at "k", which is the exact inverse of what the chain does.
+// Live, 199 authorizations sampled: 127 secp256k1 actors across 112
+// DISTINCT accounts ALL carry authenticator 0x…01, and only 118 of them are
+// distinct keys. So the shipped comparison reported every ordinary wallet
+// key on every pair of watched accounts as reused. The authenticator is now
+// held FIXED (as the chain holds it) and the actorId varies, so a fixture
+// that passes proves the rule it names.
+func reuseAcct(_ address: String, _ keyId: String,
+               kind: VibenetAuthenticatorKind = .p256,
+               authenticator: String = "0xAUTHCONTRACT") -> VibenetAccountItem {
     VibenetAccountItem(address: address, reached: true, established: true,
-                       actors: [VibenetActor(actorId: "k", authenticator: auth,
+                       actors: [VibenetActor(actorId: keyId, authenticator: authenticator,
                                              kind: kind, scope: VibenetScope(raw: 0x1), expiry: 0)],
                        locked: false, hasInitiatedUnlock: false,
                        unlocksAt: nil, unlockDelay: nil)
@@ -554,6 +564,12 @@ let rOne   = reuseAcct("0xaa", shared)
 let rTwo   = reuseAcct("0xbb", shared)
 let rThree = reuseAcct("0xcc", shared)
 let rAlone = reuseAcct("0xdd", "0xOTHER")
+// THE CASE THE OLD FIXTURE COULD NOT EXPRESS, and the one that matters
+// most: two accounts each holding their OWN key, both validated by the same
+// authenticator contract — the single most ordinary configuration on the
+// chain. Nothing is shared, and the shipped code said everything was.
+check("two DIFFERENT keys sharing one authenticator CONTRACT are not reuse",
+      VibenetKeyReuse.sharing(rOne, in: [rOne, rAlone]).isEmpty)
 check("a key on ONE account is not reuse",
       VibenetKeyReuse.sharing(rAlone, in: [rOne, rAlone]).isEmpty)
 check("reuse names the OTHER accounts, never the one you are looking at",
@@ -566,7 +582,7 @@ check("sharing is TOTAL, so a reuse line cannot reshuffle between opens",
 // A delegate's authenticator names an ACCOUNT, not a key, so counting it as
 // reuse would draw the same pair twice under two headings that disagree
 // about what relates them — linked accounts already states that one.
-let rDeleg = reuseAcct("0xee", shared, kind: .delegate)
+let rDeleg = reuseAcct("0xee", shared, kind: .delegate, authenticator: "0xDELEGATECONTRACT")
 check("a DELEGATE is excluded from reuse on both sides",
       VibenetKeyReuse.sharing(rDeleg, in: [rDeleg, rOne]).isEmpty
         && VibenetKeyReuse.sharing(rOne, in: [rOne, rDeleg]).isEmpty)
@@ -1083,48 +1099,184 @@ check("a short string passes through untouched",
 
 print("")
 print("VibenetAccountMapping.links")
-func delegateActor(to authenticator: String, actorId: String = "d") -> VibenetActor {
-    VibenetActor(actorId: actorId, authenticator: authenticator, kind: .delegate,
-                 scope: VibenetScope(raw: 0), expiry: 0)
+// THE FIXTURE THAT COULD NEVER HAVE FAILED, fixed 2026-08-24. It used to
+// put the delegate's address in the AUTHENTICATOR field. The chain puts it
+// in the actorId — `DelegateAuthenticator.authenticate` returns
+// `actorId = ActorId.fromAddress(delegate)` and the authenticator is the
+// DelegateAuthenticator CONTRACT, the same address for all 5 live delegates
+// on vibenet. So `links` matched a field the chain never varies, could not
+// have produced one link on a real read, and this suite proved it worked.
+//
+// Addresses here are FULL 40-hex now, not "0xa1": `delegateAddress` decodes
+// a real 32-byte word, so a fixture using a short pretend address would
+// take the nil branch and every check below would pass vacuously.
+func padActorId(_ address: String) -> String {
+    "0x" + String(repeating: "0", count: 24) + String(address.dropFirst(2))
 }
-let alice = "0xa1"
-let bob = "0xb2"
-let carol = "0xc3"
-let stranger = "0xdead"
+func delegateActor(to address: String) -> VibenetActor {
+    VibenetActor(actorId: padActorId(address), authenticator: "0xDELEGATEAUTHENTICATORCONTRACT",
+                 kind: .delegate, scope: VibenetScope(raw: 0), expiry: 0)
+}
+let alice = "0xa100000000000000000000000000000000000001"
+let bob = "0xb200000000000000000000000000000000000002"
+let carol = "0xc300000000000000000000000000000000000003"
+let stranger = "0xdead000000000000000000000000000000000004"
 
 check("no items at all — nothing to derive a mapping from",
       VibenetAccountMapping.links([]).isEmpty)
 
 let aliceDelegatesToBob = account(address: alice, actors: [delegateActor(to: bob)])
 let bobPlain = account(address: bob)
-check("a delegate authenticator matching a WATCHED account produces a link",
+check("a delegate actorId naming a WATCHED account produces a link",
       VibenetAccountMapping.links([aliceDelegatesToBob, bobPlain])
         == [VibenetDelegateLink(from: alice, to: bob)])
 
 let aliceDelegatesToStranger = account(address: alice, actors: [delegateActor(to: stranger)])
-check("a delegate authenticator matching NO watched account produces no link — never fabricated",
+check("a delegate actorId naming NO watched account produces no link — never fabricated",
       VibenetAccountMapping.links([aliceDelegatesToStranger, bobPlain]).isEmpty)
 
+// A plain key whose actorId is address-derived and happens to name bob —
+// which is NORMAL, not exotic: a secp256k1 key's actorId IS its signer
+// address, so most k1 actorIds decode to a real address. Only `.delegate`
+// may ever produce a link.
 let aliceHoldsAPlainKeyPointingAtBob = account(address: alice, actors: [
-    VibenetActor(actorId: "k", authenticator: bob, kind: .secp256k1,
-                 scope: VibenetScope(raw: 0), expiry: 0)])
-check("a non-delegate actor never produces a link, however its authenticator reads",
+    VibenetActor(actorId: padActorId(bob), authenticator: "0x0000000000000000000000000000000000000001",
+                 kind: .secp256k1, scope: VibenetScope(raw: 0), expiry: 0)])
+check("a non-delegate actor never produces a link, however its actorId reads",
       VibenetAccountMapping.links([aliceHoldsAPlainKeyPointingAtBob, bobPlain]).isEmpty)
 
-let aliceDelegatesToUppercasedBob = account(address: alice, actors: [delegateActor(to: bob.uppercased())])
-check("the compare is case-insensitive — an RPC's hex casing is not a promise",
-      VibenetAccountMapping.links([aliceDelegatesToUppercasedBob, bobPlain])
-        == [VibenetDelegateLink(from: alice, to: bob)])
+// THE UPPERCASE MUST BE ON THE WATCHED ITEM'S OWN ADDRESS, not on the
+// delegate id. `VibenetActorId.address` lowercases what it decodes, so an
+// uppercased actorId comes back already normalized and a case-SENSITIVE
+// compare would pass it — the mutation survived exactly that way on this
+// check's first run. It is the stored address, which arrives from a watch
+// list a person pasted into, that can carry checksummed casing.
+let bobPlainChecksummed = account(address: bob.uppercased())
+check("the compare is case-insensitive — an RPC's (or a paste's) hex casing is not a promise",
+      VibenetAccountMapping.links([aliceDelegatesToBob, bobPlainChecksummed])
+        == [VibenetDelegateLink(from: alice, to: bob.uppercased())])
 
 // Order must be TOTAL — a mapping section that reshuffles between opens
 // over an unchanged room reads as broken, the standard every roster here
 // already holds.
-let bobDelegatesToAlice = account(address: bob, actors: [delegateActor(to: alice, actorId: "e")])
-let carolDelegatesToAlice = account(address: carol, actors: [delegateActor(to: alice, actorId: "f")])
+let bobDelegatesToAlice = account(address: bob, actors: [delegateActor(to: alice)])
+let carolDelegatesToAlice = account(address: carol, actors: [delegateActor(to: alice)])
 let alicePlain = account(address: alice)
 check("links sort by `from`, then `to`, regardless of input order",
       VibenetAccountMapping.links([carolDelegatesToAlice, bobDelegatesToAlice, alicePlain])
         == [VibenetDelegateLink(from: bob, to: alice), VibenetDelegateLink(from: carol, to: alice)])
+
+// MARK: - VibenetActorId — the decode both bugs above turned on
+//
+// `ActorId.fromAddress(addr)` is `bytes32(uint256(uint160(addr)))`. The
+// high-12-zero test is the WHOLE guard: without it every 32-byte hash
+// yields a plausible 20-byte "address" belonging to nobody, and that value
+// is then compared against real watched addresses.
+
+print("")
+print("VibenetActorId")
+let addrA = "0x2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c"
+check("an address-derived actorId decodes back to its address",
+      VibenetActorId.address(fromActorId: padActorId(addrA)) == addrA)
+check("the round trip closes both ways",
+      VibenetActorId.actorId(forAddress: addrA) == padActorId(addrA))
+check("a HASH-shaped actorId names no address — a P-256 key's id is not an address",
+      VibenetActorId.address(
+        fromActorId: "0xbecca764da7d7c3bc31d77c515cd3d5d3ac31a33becca764da7d7c3bc31d77c5") == nil)
+check("an all-zero actorId is the zero address, never a real account",
+      VibenetActorId.address(fromActorId: "0x" + String(repeating: "0", count: 64)) == nil)
+check("a short/garbage id decodes to nothing rather than to a truncated guess",
+      VibenetActorId.address(fromActorId: "0xdeadbeef") == nil
+        && VibenetActorId.actorId(forAddress: "0xnothex") == nil)
+check("casing is not a promise — an uppercased id still decodes",
+      VibenetActorId.address(fromActorId: padActorId(addrA).uppercased()) == addrA.lowercased())
+check("a delegate actor names its target; a non-delegate never does",
+      delegateActor(to: bob).delegateAddress == bob
+        && VibenetActor(actorId: padActorId(bob), authenticator: "0x1", kind: .secp256k1,
+                        scope: VibenetScope(raw: 0), expiry: 0).delegateAddress == nil)
+
+// MARK: - VibenetPolicyUse — the one live fact a session key publishes
+//
+// The CAP is not on chain (`VibenetPolicyReadability`): `SessionPolicy`
+// stores mutable spend usage only, and the config carrying the limit,
+// period and recipients is committed as a hash. What IS readable is
+// whether the key ever ran, so these lines are the whole of the claim —
+// a count and a date, never a rate, an average or a projection.
+
+print("")
+print("VibenetPolicyUse")
+let useNow = Date(timeIntervalSince1970: 1_000_000_000)
+let usedFour = VibenetPolicyUse(commitment: "0xC0", count: 4,
+                                lastUsed: useNow.addingTimeInterval(-2 * 86_400))
+check("a used key states the count AND when it last ran",
+      usedFour.line(now: useNow).hasPrefix("Used 4 times · last "))
+check("once is singular",
+      VibenetPolicyUse(commitment: "0xC0", count: 1, lastUsed: nil).line(now: useNow) == "Used once")
+check("a zero count is SPOKEN — on a subscription key, never having charged is the reading",
+      VibenetPolicyUse(commitment: "0xC0", count: 0, lastUsed: nil).line(now: useNow) == "Never used")
+check("a failed block-time lookup drops the clause, never dates it to now",
+      VibenetPolicyUse(commitment: "0xC0", count: 4, lastUsed: nil).line(now: useNow) == "Used 4 times")
+let gatedActor = VibenetActor(actorId: "g", authenticator: "0x1", kind: .secp256k1,
+                              scope: VibenetScope(raw: VibenetScope.policy), expiry: 0,
+                              policyManager: "0xMGR", policyCommitment: "0xc0")
+check("usage joins to a key by its COMMITMENT, case-insensitively",
+      [usedFour].use(for: gatedActor)?.count == 4)
+check("an UNGATED key can never pick up someone else's usage",
+      [usedFour].use(for: VibenetActor(actorId: "u", authenticator: "0x1", kind: .secp256k1,
+                                       scope: VibenetScope(raw: VibenetScope.sender), expiry: 0)) == nil)
+
+// MARK: - VibenetSubAccounts — Base's "Spending Account", read in reverse
+
+print("")
+print("VibenetSubAccounts")
+let subWatched = VibenetSubAccount(address: "0xaa1", watched: true,
+                                   authorizedAt: useNow.addingTimeInterval(-9 * 86_400))
+let subNew = VibenetSubAccount(address: "0xbb2", watched: false,
+                               authorizedAt: useNow.addingTimeInterval(-3 * 86_400))
+let subOld = VibenetSubAccount(address: "0xcc3", watched: false,
+                               authorizedAt: useNow.addingTimeInterval(-30 * 86_400))
+check("no sub-accounts earns no line at all",
+      VibenetSubAccounts.line([]) == nil)
+check("all watched — the count alone, with no 'not watched' clause to add",
+      VibenetSubAccounts.line([subWatched]) == "Can act for 1 account")
+check("an unwatched one is CALLED OUT — it is the whole reason for the read",
+      VibenetSubAccounts.line([subWatched, subNew]) == "Can act for 2 accounts · 1 not watched")
+check("unwatched sort FIRST, then newest — the discovery leads",
+      VibenetSubAccounts.ordered([subWatched, subOld, subNew]).map(\.address) == ["0xbb2", "0xcc3", "0xaa1"])
+check("ordering is TOTAL, so the list cannot reshuffle between opens",
+      VibenetSubAccounts.ordered([subOld, subNew, subWatched]).map(\.address)
+        == VibenetSubAccounts.ordered([subWatched, subNew, subOld]).map(\.address))
+check("an undated sub-account sorts after a dated one, never ahead of it",
+      VibenetSubAccounts.ordered([VibenetSubAccount(address: "0xdd4", watched: false, authorizedAt: nil), subNew])
+        .map(\.address) == ["0xbb2", "0xdd4"])
+
+// MARK: - VibenetKeyGrouping — owners vs session keys (Base's own split)
+
+print("")
+print("VibenetKeyGrouping")
+func groupActor(_ id: String, _ raw: UInt16, _ kind: VibenetAuthenticatorKind = .secp256k1) -> VibenetActor {
+    VibenetActor(actorId: id, authenticator: "0x1", kind: kind, scope: VibenetScope(raw: raw), expiry: 0)
+}
+let ownerKey = groupActor("o", 0)
+let sessionKey = groupActor("s", VibenetScope.policy | VibenetScope.nonce)
+let scopedKey = groupActor("c", VibenetScope.sender)
+check("scope 0 is an OWNER — the spec's own unrestricted admin",
+      VibenetKeyGroup.of(ownerKey) == .owner)
+check("the POLICY bit makes a SESSION key, whatever else is set",
+      VibenetKeyGroup.of(sessionKey) == .session)
+check("scoped-but-ungated is its own third case, never folded into either",
+      VibenetKeyGroup.of(scopedKey) == .scoped)
+check("groups draw owners first, then session, then limited",
+      VibenetKeyGrouping.sections([scopedKey, sessionKey, ownerKey]).map(\.group)
+        == [.owner, .session, .scoped])
+check("an EMPTY group is omitted, never a heading with nothing under it",
+      VibenetKeyGrouping.sections([ownerKey]).map(\.group) == [.owner])
+check("no key is lost or duplicated by grouping",
+      VibenetKeyGrouping.sections([scopedKey, sessionKey, ownerKey])
+        .flatMap(\.actors).map(\.actorId).sorted() == ["c", "o", "s"])
+check("WITHIN a group the judgement-free alphabetical order survives",
+      VibenetKeyGrouping.sections([groupActor("z", 0, .webAuthn), groupActor("a", 0, .delegate)])
+        .flatMap(\.actors).map(\.actorId) == ["a", "z"])
 
 // MARK: - VibenetKeyAggregation.compose — the room-wide key summary
 
@@ -1467,25 +1619,44 @@ mutate "VibenetChangeSequences.chips must lead with multichain, not local" \
 # other address's hex in a different casing than this build stored it —
 # the exact "an RPC's hex casing is not a promise" failure this file's own
 # doc calls out.
-mutate "VibenetAccountMapping.links must compare authenticator addresses case-INSENSITIVELY" \
-  '$0.address.caseInsensitiveCompare(actor.authenticator) == .orderedSame' \
-  '$0.address == actor.authenticator'
+mutate "VibenetAccountMapping.links must compare delegate addresses case-INSENSITIVELY" \
+  '$0.address.caseInsensitiveCompare(delegate) == .orderedSame' \
+  '$0.address == delegate'
 
-# Dropping the `.delegate` filter would read EVERY actor's authenticator as
-# a potential relationship — including a plain secp256k1 key's
-# authenticator, which is `Keystore.sol`'s own fixed K1 constant and would
-# collide with itself across every account in the room, inventing a web of
-# relationships that was never there.
-mutate "VibenetAccountMapping.links must only ever consider .delegate actors" \
-  'for actor in item.actors where actor.kind == .delegate {' \
-  'for actor in item.actors {'
+# THE BUG THIS SUITE PROVED ABSENT FOR A DAY. A delegate's authenticator is
+# the DelegateAuthenticator CONTRACT — identical for all 5 live delegates on
+# vibenet — so reading the target from there matches no watched account
+# ever, and "Linked accounts" is silently dead on every real read while the
+# demo fixture keeps it looking healthy.
+mutate "VibenetAccountMapping.links must take the delegate from the actorId, never the authenticator" \
+  'guard let delegate = actor.delegateAddress,' \
+  'guard let delegate = Optional(actor.authenticator),'
+
+# Dropping the `.delegate` filter invents relationships out of ordinary
+# keys, and it is WORSE now than when links read authenticators: a
+# secp256k1 key's actorId IS its signer address, so most plain keys decode
+# to a real address and every one of them naming a watched account would
+# draw as a delegation nobody granted.
+#
+# AIMED AT `delegateAddress`, NOT at the loop's `where` clause, and the
+# difference is the whole point: the `where` is an early-out that saves a
+# string decode per actor, but it is REDUNDANT — `delegateAddress` returns
+# nil for every non-delegate kind, so removing the `where` alone changes no
+# output and no fixture could ever catch it. This mutation removes the guard
+# that actually decides, which `aliceHoldsAPlainKeyPointingAtBob` then
+# catches. A guard must prove the condition is the WHOLE condition.
+mutate "VibenetActor.delegateAddress must only ever answer for a .delegate actor" \
+  'guard kind == .delegate else { return nil }' \
+  'guard true else { return nil }'
 
 # The mapping section must never reshuffle between opens — flipping the
 # primary sort to descending is exactly the kind of drift a card comparison
 # across two composes of an unchanged room would catch as "broken".
 mutate "VibenetAccountMapping.links must sort by from ascending, not descending" \
-  'if f != .orderedSame { return f == .orderedAscending }' \
-  'if f != .orderedSame { return f == .orderedDescending }'
+  'let f = a.from.localizedCaseInsensitiveCompare(b.from)
+            if f != .orderedSame { return f == .orderedAscending }' \
+  'let f = a.from.localizedCaseInsensitiveCompare(b.from)
+            if f != .orderedSame { return f == .orderedDescending }'
 
 # `expiry == 0` is Keystore.sol's own convention for "never expires" —
 # folding it into the soonest reading would report a key that can never
@@ -1513,8 +1684,33 @@ mutate "VibenetKeyAggregation.compose's accountCount must exclude accounts with 
 # change on a two-kind room, but a real misreading on one with several,
 # where the least-capable kind would lead instead of the most standard one.
 mutate "VibenetKeyAggregation.compose's byKind must sort sortRank ASCENDING, not descending" \
-  '.sorted { $0.sortRank < $1.sortRank }' \
-  '.sorted { $0.sortRank > $1.sortRank }'
+  'VibenetAuthenticatorKind.allCases
+            .sorted { $0.sortRank < $1.sortRank }' \
+  'VibenetAuthenticatorKind.allCases
+            .sorted { $0.sortRank > $1.sortRank }'
+
+# Owners must lead. Reversing this buries the keys that can spend the
+# account under the ones that cannot — the wrong end of a list somebody
+# opens to find out who has control.
+mutate "VibenetKeyGrouping.sections must draw owners FIRST, never last" \
+  'VibenetKeyGroup.allCases
+            .sorted { $0.sortRank < $1.sortRank }' \
+  'VibenetKeyGroup.allCases
+            .sorted { $0.sortRank > $1.sortRank }'
+
+# An admin (scope 0) has no POLICY bit set, so testing the bit FIRST files
+# every owner key under "Limited keys" — the §463 inversion again, wearing
+# a new hat: total authority displayed as the most restricted group there is.
+mutate "VibenetKeyGroup.of must test isAdmin BEFORE the policy bit" \
+  'if actor.scope.isAdmin { return .owner }' \
+  'if false { return .owner }'
+
+# An empty group drawn as a heading with nothing under it is the empty
+# state this codebase omits rather than prints — and worse here, it would
+# claim the account HAS a category of key it does not have.
+mutate "VibenetKeyGrouping.sections must omit an EMPTY group, never draw its heading" \
+  'guard let members = buckets[group], !members.isEmpty else { return nil }' \
+  'let members = buckets[group] ?? []'
 
 # A coarser round loses real precision — the whole reason 4 decimal places
 # was chosen (enough to separate "some" from "dust" on a devnet) rather

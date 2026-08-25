@@ -335,6 +335,71 @@ enum VibenetAuthenticatorKind: String, Equatable, Hashable, CaseIterable, Codabl
     }
 }
 
+// MARK: - actorId, and what it actually identifies (MEASURED 2026-08-24)
+
+/// `ActorId.fromAddress(addr)` is `bytes32(uint256(uint160(addr)))` — an
+/// address right-aligned into a 32-byte word, so the low 20 bytes are the
+/// address and the high 12 are zero. That one line of `ActorId.sol` is the
+/// key to two facts this feature had wrong from the day it shipped, both
+/// found by decoding real `ActorAuthorized` logs off vibenet rather than by
+/// reading Swift (chain height 328,220, 199 authorizations sampled):
+///
+/// **1. `authenticator` IS NOT THE KEY.** It is the CONTRACT that validates
+/// the key. 127 of those 199 actors are secp256k1 and every single one
+/// carries `authenticator == 0x…01` (`K1_AUTHENTICATOR`, `Keystore.sol`'s
+/// own fixed constant) across 112 DISTINCT accounts — while only 118 of them
+/// are distinct keys. So comparing authenticators to find a reused key
+/// reports that every ordinary wallet key on every pair of watched accounts
+/// is the same key. It is `actorId` that identifies a key, globally:
+/// `Keystore` stores actors as `_actorConfig[actorId][account]`, so one
+/// actorId appearing under two accounts is the same key authorized twice,
+/// which is exactly the fact `VibenetKeyReuse` exists to state.
+///
+/// **2. A DELEGATE'S TARGET IS IN ITS actorId, NOT ITS authenticator.**
+/// `DelegateAuthenticator.authenticate` returns
+/// `actorId = ActorId.fromAddress(delegate)`, and the actor's authenticator
+/// is the DelegateAuthenticator CONTRACT — the same address for every
+/// delegate on the chain (all 5 live ones read `0x8130b7d4…`). So a mapping
+/// that compared an authenticator against another account's address could
+/// never match on a live read, however many delegate relationships really
+/// existed.
+///
+/// Both bugs rendered perfectly and both were invisible to the harness,
+/// because the demo fixture hand-set values the chain does not produce — a
+/// fixture only tests the rule it names if it FAILS that rule and passes
+/// every other one, and these fixtures failed a rule vibenet never applies.
+enum VibenetActorId {
+    /// The address an address-derived actorId names, or nil when the id is
+    /// not address-shaped (a P-256/WebAuthn key's id is a hash of its public
+    /// key, which has no address inside it and must never be read as one).
+    ///
+    /// The high-12-bytes-are-zero test is the WHOLE check and it is not
+    /// merely a sanity guard: without it every 32-byte hash yields a
+    /// plausible-looking 20-byte "address" that belongs to nobody, and this
+    /// value is compared against real watched addresses.
+    static func address(fromActorId actorId: String) -> String? {
+        var s = actorId.lowercased()
+        if s.hasPrefix("0x") { s.removeFirst(2) }
+        guard s.count == 64, s.allSatisfy(\.isHexDigit) else { return nil }
+        guard s.prefix(24).allSatisfy({ $0 == "0" }) else { return nil }
+        let tail = String(s.suffix(40))
+        // All-zero is the zero address, never a real account.
+        guard tail.contains(where: { $0 != "0" }) else { return nil }
+        return "0x" + tail
+    }
+
+    /// The reverse — an address as the 32-byte actorId word that
+    /// `ActorId.fromAddress` would produce, which is what an indexed
+    /// `eth_getLogs` topic filter needs to ask "who named this address as
+    /// their delegate".
+    static func actorId(forAddress address: String) -> String? {
+        var s = address.lowercased()
+        if s.hasPrefix("0x") { s.removeFirst(2) }
+        guard s.count == 40, s.allSatisfy(\.isHexDigit) else { return nil }
+        return "0x" + String(repeating: "0", count: 24) + s
+    }
+}
+
 /// A candidate for the empty state's "recently created on vibenet" list —
 /// a real address off `AccountCreated`, never a demo prop. `createdAt` is
 /// nil on a failed block-time lookup and is OMITTED by the view rather than
@@ -551,6 +616,30 @@ struct VibenetActor: Identifiable, Equatable, Codable {
     /// would fail the decode of the whole room — the `RSSStore.Feed` trap
     /// this codebase has paid for twice.
     var policyManager: String?
+    /// `Keystore.getPolicyCommitment` — the hash of the policy configuration
+    /// this key is bound to, read in the SAME call as `policyManager`
+    /// (`getActorWithPolicy`) and nil for every ungated key. Optional for the
+    /// `policyManager` reason: this type is persisted in `VibenetState`'s
+    /// snapshot, and Swift synthesises `decodeIfPresent` for an Optional, so
+    /// every snapshot already on a device decodes with this as nil.
+    ///
+    /// **IT IS AN IDENTIFIER, NEVER A READING**, and that distinction is this
+    /// field's whole reason to be careful: the commitment is what
+    /// `PolicyManager` emits on every execution (`PolicyExecuted`'s third
+    /// indexed topic), so it is the join that lets a session key say how many
+    /// times it has actually been used. It is NOT the policy, and the policy
+    /// itself is not on chain at all — see `VibenetPolicyReadability`.
+    var policyCommitment: String?
+
+    /// The ACCOUNT a delegate actor delegates to — decoded from `actorId`,
+    /// which is where `DelegateAuthenticator` puts it (see `VibenetActorId`
+    /// for the measurement). nil for every non-delegate actor, and nil for a
+    /// delegate whose id is somehow not address-shaped, which the chain
+    /// should never produce but which must not be guessed at if it does.
+    var delegateAddress: String? {
+        guard kind == .delegate else { return nil }
+        return VibenetActorId.address(fromActorId: actorId)
+    }
 
     /// "Never expires" / "Expired Mar 3" / "Expires in 3h" — this key's own
     /// clock, read and then thrown away by every screen this feature has
@@ -690,6 +779,18 @@ struct VibenetAccountItem: Identifiable, Equatable, Codable {
     /// they're different assets with no shared unit, the `PrivacyPoolsRoom`
     /// rule.
     let tokenBalances: [VibenetTokenBalance]
+    /// Every `PolicyExecuted` this account has emitted, folded per
+    /// commitment — joined to a gated key by `policyCommitment`. Empty when
+    /// the account has no gated key, when the read failed, or when nothing
+    /// has ever executed; a key's OWN zero is spoken ("Never used") off its
+    /// commitment being absent from this list, which is why an empty array
+    /// here is not itself a signal.
+    let policyUses: [VibenetPolicyUse]
+    /// Accounts that authorized THIS address as their delegate — Base's own
+    /// "Sub-accounts". Empty when none, when the read failed, or when the
+    /// address is not a delegate anywhere, which are not distinguished
+    /// because none of them has anything to draw.
+    let subAccounts: [VibenetSubAccount]
 
     /// The one alarm-worthy fact (the task's own ruling): a locked account.
     /// Deliberately NOT "not established" — an account that has never done
@@ -699,7 +800,8 @@ struct VibenetAccountItem: Identifiable, Equatable, Codable {
     init(address: String, reached: Bool, established: Bool, actors: [VibenetActor],
          locked: Bool, hasInitiatedUnlock: Bool, unlocksAt: UInt64?, unlockDelay: UInt16?,
          changeSequences: VibenetChangeSequences? = nil, history: [VibenetKeyMoment] = [],
-         nativeBalance: Double? = nil, tokenBalances: [VibenetTokenBalance] = []) {
+         nativeBalance: Double? = nil, tokenBalances: [VibenetTokenBalance] = [],
+         policyUses: [VibenetPolicyUse] = [], subAccounts: [VibenetSubAccount] = []) {
         self.address = address
         self.reached = reached
         self.established = established
@@ -715,6 +817,8 @@ struct VibenetAccountItem: Identifiable, Equatable, Codable {
         self.history = history
         self.nativeBalance = nativeBalance
         self.tokenBalances = tokenBalances
+        self.policyUses = policyUses
+        self.subAccounts = VibenetSubAccounts.ordered(subAccounts)
     }
 
     /// The row's own alarm clock, R2.2 — the soonest FUTURE expiry inside
@@ -1090,21 +1194,36 @@ struct VibenetRoom: Equatable, Codable {
                 VibenetActor(actorId: "0x0000000000000000000000000000000000000000000000000000000000000002",
                              authenticator: "0xaaaa1111222233334444555566667777888899aa",
                              kind: .p256, scope: VibenetScope(raw: VibenetScope.sender), expiry: 0),
+                // A SESSION KEY, exactly as vibenet's own live ones read:
+                // scope 0x0006 (POLICY|NONCE) — all 22 gated actors sampled
+                // on 2026-08-24 carried precisely that — gated to the
+                // config's policy manager, and carrying a commitment that
+                // joins to the `policyUses` entry below. It is the fixture
+                // for Base's "Monthly Vibes" subscription shape, and the one
+                // place the demo can prove that a used session key says so
+                // while its TERMS stay unreadable (`VibenetPolicyReadability`).
                 VibenetActor(actorId: "0x0000000000000000000000000000000000000000000000000000000000000003",
                              authenticator: "0xbbbb1111222233334444555566667777888899bb",
                              kind: .webAuthn, scope: VibenetScope(raw: VibenetScope.policy | VibenetScope.nonce),
-                             expiry: 0),
-                // THE ONE demo address that IS compared against something:
-                // this actor's authenticator is `lockedPlain`'s own address
-                // below, a real watched-to-watched delegate relationship —
-                // "rich" authorized "lockedPlain" as its delegate. It's the
-                // only reason the demo has a non-empty mapping section for
-                // `VibenetAccountMapping.links` to find at all; every other
-                // authenticator in this fixture is cosmetic (see the comment
-                // above). Still deliberately non-vanity, same reason as its
-                // siblings.
-                VibenetActor(actorId: "0x0000000000000000000000000000000000000000000000000000000000000004",
-                             authenticator: "0x2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c",
+                             expiry: 0,
+                             policyManager: "0xdddd1111222233334444555566667777888899dd",
+                             policyCommitment: "0x00000000000000000000000000000000000000000000000000000000000000c0"),
+                // THE ONE demo actor whose id IS compared against something —
+                // and the fixture that was ENCODED WRONG until 2026-08-24.
+                //
+                // "rich" authorized "lockedPlain" as its delegate. On the real
+                // chain that reads as `actorId = ActorId.fromAddress(delegate)`
+                // — lockedPlain's address right-aligned into a 32-byte word —
+                // with `authenticator` being the DelegateAuthenticator
+                // CONTRACT, the same for every delegate on vibenet. This
+                // fixture used to put the delegate's address in the
+                // AUTHENTICATOR field, which the chain never does, so it
+                // proved `VibenetAccountMapping.links` worked while the live
+                // path could not match once. A fixture that encodes data the
+                // chain does not produce tests nothing but itself.
+                // 24 zeros then `lockedPlain`'s 40 hex chars = one 32-byte word.
+                VibenetActor(actorId: "0x0000000000000000000000002b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c",
+                             authenticator: "0xeeee1111222233334444555566667777888899ee",
                              kind: .delegate, scope: VibenetScope(raw: VibenetScope.sponsorPayer), expiry: 0),
                 // SCOPE 0 — the admin, and the one state the demo could not
                 // show before (prd §463). It renders as a single inverted
@@ -1143,7 +1262,25 @@ struct VibenetRoom: Equatable, Codable {
             // leave the "does this fold correctly" question untested.
             nativeBalance: 2.5,
             tokenBalances: [VibenetTokenBalance(symbol: "USDV", amount: 500.25),
-                            VibenetTokenBalance(symbol: "NFV", amount: 12)])
+                            VibenetTokenBalance(symbol: "NFV", amount: 12)],
+            // The session key above HAS run — the one demo fixture proving a
+            // gated key can say how often it acted while still refusing to
+            // state terms it cannot read.
+            policyUses: [VibenetPolicyUse(
+                commitment: "0x00000000000000000000000000000000000000000000000000000000000000c0",
+                count: 4, lastUsed: Date.now.addingTimeInterval(-2 * 86_400))],
+            // Base's "Spending Account" shape: one sub-account already
+            // watched (so it also appears as a linked account) and one NOT,
+            // which is the whole reason this read exists — an account you can
+            // act for and had no idea about.
+            subAccounts: [
+                VibenetSubAccount(address: "0x3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d",
+                                  watched: true,
+                                  authorizedAt: Date.now.addingTimeInterval(-9 * 86_400)),
+                VibenetSubAccount(address: "0x7f1e2d3c4b5a69788796a5b4c3d2e1f009182736",
+                                  watched: false,
+                                  authorizedAt: Date.now.addingTimeInterval(-3 * 86_400)),
+            ])
 
         let lockedPlain = VibenetAccountItem(
             address: "0x2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c",
@@ -1232,8 +1369,14 @@ enum VibenetAccountMapping {
         var out: [VibenetDelegateLink] = []
         for item in items {
             for actor in item.actors where actor.kind == .delegate {
-                guard let target = items.first(where: {
-                    $0.address.caseInsensitiveCompare(actor.authenticator) == .orderedSame
+                // `delegateAddress`, NEVER `authenticator` — a delegate
+                // actor's authenticator is the DelegateAuthenticator
+                // CONTRACT, identical for every delegate on the chain, so
+                // the old comparison could not match a real account once.
+                // See `VibenetActorId` for the live measurement.
+                guard let delegate = actor.delegateAddress,
+                      let target = items.first(where: {
+                    $0.address.caseInsensitiveCompare(delegate) == .orderedSame
                 }) else { continue }
                 out.append(VibenetDelegateLink(from: item.address, to: target.address))
             }
@@ -1257,10 +1400,16 @@ enum VibenetAccountMapping {
 /// addresses would draw twice, once under each heading, disagreeing about
 /// what actually relates them.
 struct VibenetSharedKey: Identifiable, Equatable, Hashable {
-    var id: String { "\(account):\(authenticator)" }
+    var id: String { "\(account):\(actorId)" }
     /// The other watched account this key is ALSO authorized on.
     let account: String
-    let authenticator: String
+    /// THE KEY'S OWN IDENTITY — the actorId, never the authenticator (which
+    /// names the validating contract and is shared by every key of a kind;
+    /// see `VibenetActorId` for the measurement that caught this). `Keystore`
+    /// stores actors as `_actorConfig[actorId][account]`, so one actorId
+    /// under two accounts is one key authorized twice, which is precisely
+    /// what this type claims.
+    let actorId: String
     let kind: VibenetAuthenticatorKind
 }
 
@@ -1285,11 +1434,20 @@ enum VibenetKeyReuse {
         var out: Set<VibenetSharedKey> = []
         for actor in item.actors where actor.kind != .delegate {
             for other in items where other.address.caseInsensitiveCompare(item.address) != .orderedSame {
+                // MATCHED ON actorId. Matching on `authenticator` — which
+                // this shipped doing — compares which CONTRACT validates the
+                // key, and 127 of the 199 live actors sampled on 2026-08-24
+                // shared one (`K1_AUTHENTICATOR`) across 112 distinct
+                // accounts. That reported the most ordinary configuration
+                // there is — two accounts, a wallet key each — as a reused
+                // key, on the row whose whole job is warning that losing one
+                // key endangers several accounts. A false alarm here is worse
+                // than silence: it teaches the reader to ignore the line.
                 guard other.actors.contains(where: {
                     $0.kind != .delegate &&
-                    $0.authenticator.caseInsensitiveCompare(actor.authenticator) == .orderedSame
+                    $0.actorId.caseInsensitiveCompare(actor.actorId) == .orderedSame
                 }) else { continue }
-                out.insert(VibenetSharedKey(account: other.address, authenticator: actor.authenticator, kind: actor.kind))
+                out.insert(VibenetSharedKey(account: other.address, actorId: actor.actorId, kind: actor.kind))
             }
         }
         return out.sorted { a, b in
@@ -1325,6 +1483,246 @@ extension Array where Element == VibenetSharedKey {
             return String(localized: "Also authorized on \(name(only.account))")
         }
         return String(localized: "Also authorized on \(count) other accounts")
+    }
+}
+
+// MARK: - What a session key's policy says — and what it CANNOT say
+
+/// **THE SPEND CAP IS NOT ON CHAIN. DO NOT GO LOOKING FOR IT AGAIN.**
+///
+/// Base's own account demo (`chain.base.org/demos/account`) presents two
+/// apps built on EIP-8130 — a "Monthly Vibes" SUBSCRIPTION ("at most 5 USDC
+/// per month, and only via the USDC transfer") and a "Spending Account"
+/// sub-account. Neither is a new primitive: the subscription is a
+/// POLICY-scoped actor bound to `SessionPolicy`, and the spending account is
+/// a second account with the main one authorized as a delegate. Both are
+/// shapes this room already reads. What this room could not say is the part
+/// people actually want — the CAP — and the reason is structural, not a gap
+/// in this app:
+///
+/// `SessionPolicy` stores **mutable spend usage only**. Its `Config` (the
+/// `TokenLimit[]` carrying `token`, `limit`, `period` and `recipients`, and
+/// the `CallScope[]` carrying allowed targets and selectors) is COMMITTED,
+/// not stored: `Keystore` keeps `manager(20) || commitment(32)` and nothing
+/// else, the commitment being a hash the config is checked against when it
+/// is re-supplied on every execute. `SessionPolicy.getCurrentSpend` does
+/// exist and would give the period usage — but it takes the `TokenLimit`
+/// as an argument and its own doc says the result "is only meaningful when
+/// `limit` is the committed TokenLimit from the binding's config", which is
+/// exactly the thing we do not have. There is no event carrying the config
+/// either: `ActorAuthorized`'s `actorData` is
+/// `authenticator || expiry || scope || bytes4(0) || manager || commitment`
+/// (decoded from real logs, 2026-08-24) and stops at the commitment.
+///
+/// So a cap shown here would be invented, and a spend bar would be invented
+/// twice over. What IS readable is whether the key has been USED, which is
+/// `VibenetPolicyUse` below — and the honest sentence that the terms live
+/// off chain, which is this enum's own line. Revisit only if Base ships a
+/// getter that takes `(account, actorId)` and returns the config.
+enum VibenetPolicyReadability {
+    /// Said once, under a gated key, and never dressed up as a limitation of
+    /// this app: the reader is being told a true thing about EIP-8130.
+    static var note: String {
+        String(localized: "Its limits were agreed off chain — only the account and the app hold the terms.")
+    }
+}
+
+/// How many times a policy-gated key has actually executed, and when it last
+/// did — the one live fact about a session key that the chain does publish.
+///
+/// `PolicyManager` emits
+/// `PolicyExecuted(address indexed account, address indexed policy, bytes32
+/// indexed commitment, address caller)` on every run, so a key's own
+/// `policyCommitment` joins straight to its usage with no decoding at all —
+/// all three fields this needs are indexed topics. MEASURED 2026-08-24:
+/// topic0 `0x0576b52e…`, 6 executions live on vibenet's PolicyManager.
+///
+/// This is what turns "Limited to the policy manager" — a sentence that
+/// reads identically for all 22 gated keys on the devnet — into a fact about
+/// YOUR key. It is deliberately a COUNT and a DATE, never a rate, an average
+/// or a projection: three executions is not "3 per month", and a
+/// subscription that has run once is not "£5/mo".
+struct VibenetPolicyUse: Equatable, Codable {
+    /// The commitment these executions were recorded against — the join key,
+    /// carried so a caller can match it to an actor without re-deriving it.
+    let commitment: String
+    let count: Int
+    /// The most recent execution's block time, or nil when the block-time
+    /// lookup failed. Never `.now`: a fallback rendered as a sentence dates
+    /// an old execution to today, the standing rule this bridge already
+    /// keeps for every landed event.
+    let lastUsed: Date?
+
+    /// "Used 4 times · last 2 days ago" / "Used once" / "Never used" —
+    /// the whole claim. A zero count is a REAL and useful reading on a
+    /// subscription key (it says the thing has never charged), so unlike
+    /// most empty states in this codebase it is spoken rather than omitted.
+    func line(now: Date) -> String {
+        let uses = count == 0
+            ? String(localized: "Never used")
+            : (count == 1 ? String(localized: "Used once")
+                          : String(localized: "Used \(count) times"))
+        guard count > 0, let lastUsed else { return uses }
+        return "\(uses) · \(String(localized: "last \(lastUsed.formatted(.relative(presentation: .named)))"))"
+    }
+}
+
+extension Array where Element == VibenetPolicyUse {
+    /// This list's entry for one actor's commitment, or nil. Case-insensitive
+    /// for the reason every hex compare in this file is: an RPC's casing is
+    /// not a promise.
+    func use(for actor: VibenetActor) -> VibenetPolicyUse? {
+        guard let commitment = actor.policyCommitment else { return nil }
+        return first { $0.commitment.caseInsensitiveCompare(commitment) == .orderedSame }
+    }
+}
+
+// MARK: - Sub-accounts: who names a watched address as their delegate
+
+/// An account that authorized a watched address as its DELEGATE — i.e. an
+/// account the watched address can act for. Base's own demo calls this a
+/// "Spending Account" and gives it a tab of its own ("Sub-accounts") beside
+/// Assets, Owners and Session keys.
+///
+/// `VibenetAccountMapping.links` already finds these, but only between two
+/// addresses the person has BOTH already watched, which is the case that
+/// needs no discovery. This is the other direction and the useful one: a
+/// single indexed log filter — `ActorAuthorized` with `topics[2]` pinned to
+/// `ActorId.fromAddress(watched)` — returns every account on the chain that
+/// named this address, watched or not. One cheap filtered read per watched
+/// address, no global walk (MEASURED 2026-08-24: the filter answers, and
+/// finds the one real delegator of a sampled account).
+struct VibenetSubAccount: Identifiable, Equatable, Codable {
+    var id: String { address }
+    /// The account that did the authorizing — the one this watched address
+    /// can act for.
+    let address: String
+    /// Whether this device already watches it. The whole point of the read
+    /// is the FALSE case (an account you can act for and had no idea about),
+    /// so the flag is what lets the view offer to watch it rather than
+    /// listing something already on screen elsewhere.
+    let watched: Bool
+    /// When the authorization landed, nil on a failed block-time lookup.
+    let authorizedAt: Date?
+}
+
+enum VibenetSubAccounts {
+    /// "You can act for 2 accounts · 1 not watched" — nil when there are
+    /// none, which is the ordinary case and earns no empty row.
+    static func line(_ accounts: [VibenetSubAccount]) -> String? {
+        guard !accounts.isEmpty else { return nil }
+        let unwatched = accounts.filter { !$0.watched }.count
+        var line = accounts.count == 1
+            ? String(localized: "Can act for 1 account")
+            : String(localized: "Can act for \(accounts.count) accounts")
+        if unwatched > 0 {
+            line += unwatched == 1
+                ? String(localized: " · 1 not watched")
+                : String(localized: " · \(unwatched) not watched")
+        }
+        return line
+    }
+
+    /// Unwatched first (they are the discovery this read exists for), then
+    /// newest, then address — TOTAL, so the list cannot reshuffle between
+    /// opens over an unchanged chain.
+    static func ordered(_ accounts: [VibenetSubAccount]) -> [VibenetSubAccount] {
+        accounts.sorted { a, b in
+            if a.watched != b.watched { return !a.watched }
+            switch (a.authorizedAt, b.authorizedAt) {
+            case let (x?, y?) where x != y: return x > y
+            case (nil, _?): return false
+            case (_?, nil): return true
+            default: break
+            }
+            return a.address.localizedCaseInsensitiveCompare(b.address) == .orderedAscending
+        }
+    }
+}
+
+// MARK: - Owners vs session keys (Base's own information architecture)
+
+/// Base's account demo splits an account's keys into **Owners** and
+/// **Session keys**, and that split is not a presentation choice — it is the
+/// POLICY scope bit, which is the difference between a key that can spend
+/// the account and one that may only call one contract under terms the
+/// account agreed to. This room drew both as one undifferentiated list, so
+/// an admin key and a capped subscription key sat shoulder to shoulder with
+/// nothing but chip colour between them.
+///
+/// THREE groups, not two, because there is a real third case Base's own UI
+/// has no room for: a key with neither the POLICY bit nor total authority —
+/// scoped, but not to a contract. Folding it into either group would be a
+/// claim about it that the scope does not make.
+enum VibenetKeyGroup: String, Equatable, Codable, CaseIterable {
+    /// Scope 0 — unrestricted. The spec's own word is admin.
+    case owner
+    /// The POLICY bit: may call exactly one target, its configured manager.
+    case session
+    /// Everything else — scoped, but not gated to a contract.
+    case scoped
+
+    /// Declaration order IS display order: owners first, because a key that
+    /// can do anything outranks one that can do one thing.
+    var sortRank: Int {
+        switch self {
+        case .owner: 0
+        case .session: 1
+        case .scoped: 2
+        }
+    }
+
+    var title: String {
+        switch self {
+        case .owner:   String(localized: "Owners")
+        case .session: String(localized: "Session keys")
+        case .scoped:  String(localized: "Limited keys")
+        }
+    }
+
+    /// One clause saying what membership MEANS — drawn under the heading, so
+    /// the group name never has to be guessed at from the keys inside it.
+    var caption: String {
+        switch self {
+        case .owner:   String(localized: "Full control of this account")
+        case .session: String(localized: "Limited to one contract, under agreed terms")
+        case .scoped:  String(localized: "Some permissions, no contract limit")
+        }
+    }
+
+    static func of(_ actor: VibenetActor) -> VibenetKeyGroup {
+        if actor.scope.isAdmin { return .owner }
+        if actor.scope.raw & VibenetScope.policy != 0 { return .session }
+        return .scoped
+    }
+}
+
+/// One group and its keys, ready to draw.
+struct VibenetKeySection: Identifiable, Equatable {
+    var id: String { group.rawValue }
+    let group: VibenetKeyGroup
+    let actors: [VibenetActor]
+}
+
+enum VibenetKeyGrouping {
+    /// The account's keys, split by what they can do and alphabetical WITHIN
+    /// each group — `VibenetAccountItem.alphabetical`'s judgement-free order
+    /// preserved exactly (user, 2026-08-24: *"for ease the keys could just be
+    /// listed in alphabetical order then we aren't making some judgement
+    /// call"*). Grouping is NOT ranking: it names a real distinction the
+    /// scope bits already draw, rather than deciding which of your keys
+    /// matters. An empty group is omitted, never drawn as a heading with
+    /// nothing under it.
+    static func sections(_ actors: [VibenetActor]) -> [VibenetKeySection] {
+        var buckets: [VibenetKeyGroup: [VibenetActor]] = [:]
+        for actor in actors { buckets[VibenetKeyGroup.of(actor), default: []].append(actor) }
+        return VibenetKeyGroup.allCases
+            .sorted { $0.sortRank < $1.sortRank }
+            .compactMap { group in
+                guard let members = buckets[group], !members.isEmpty else { return nil }
+                return VibenetKeySection(group: group,
+                                         actors: VibenetAccountItem.alphabetical(members))
+            }
     }
 }
 

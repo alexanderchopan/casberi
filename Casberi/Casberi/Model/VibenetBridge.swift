@@ -420,6 +420,16 @@ enum VibenetTopics {
     /// byte, which is what makes this one trustworthy without a live log
     /// to match it against.
     static let accountUnlockInitiated = "0x3aa02eb34bef59a5898ff00768e28faaa44610222c4be33b4ff1549abf3ac5a7"
+    /// `PolicyExecuted(address indexed account, address indexed policy, bytes32 indexed commitment, address caller)`
+    /// — emitted by `PolicyManager` (NOT the Keystore) on every run of a
+    /// policy-gated key. Derived by keccak and then MEASURED against the live
+    /// chain on 2026-08-24: 6 real executions matched it.
+    ///
+    /// All three fields worth having are INDEXED, which is what makes this
+    /// affordable: one filtered read per account gives every execution, and
+    /// the commitment topic joins each straight to the key that made it, with
+    /// no `data` to decode at all.
+    static let policyExecuted = "0x0576b52ea4ec966438d3c15a05c64ec622b3bb0991f2b4e8ba159e9bd00b7a42"
     /// `AccountCreated(address indexed account, bytes32 userSalt, bytes32 codeHash)` —
     /// the ONLY door onto "which accounts exist at all" (`Keystore.sol`
     /// exposes no enumeration call), so it's what the empty-state discovery
@@ -460,6 +470,22 @@ enum VibenetABI {
     /// `getPolicyCommitment` sibling, and `getActorWithPolicy`.
     static func policyManagerCall(_ address: String, actorId: String) -> String {
         "0xa1994f16" + padAddress(address) + padTopic32(actorId)
+    }
+
+    /// `getPolicyCommitment(address,bytes32)` — 0x560846aa. MEASURED live on
+    /// 2026-08-24 against a real gated actor: returns the 32-byte commitment
+    /// its policy is bound to.
+    ///
+    /// **`getActorWithPolicy` WOULD HAVE BEEN ONE CALL FOR ALL THREE FACTS,
+    /// AND IT REVERTS.** It is declared in `Keystore.sol` on GitHub `main`
+    /// and is NOT in vibenet's deployed build (commit a9ae95e1b) — measured
+    /// the same day, `execution reverted`, while `getActorConfig`,
+    /// `getPolicyManager` and this each answered correctly. Reaching for it
+    /// on the strength of the published source would have taken every gated
+    /// key's read down with it. The source of truth for this devnet is the
+    /// devnet, not the repository it was built from.
+    static func policyCommitmentCall(_ address: String, actorId: String) -> String {
+        "0x560846aa" + padAddress(address) + padTopic32(actorId)
     }
 
     /// `getLockStatus(address)` — 0x0f36f691
@@ -634,15 +660,149 @@ enum VibenetRead {
         // keeps a nil manager — "Send to one contract" still stands, it just
         // cannot say which, which is the honest degradation.
         var manager: String?
-        if scope.raw & VibenetScope.policy != 0,
-           let raw = await VibenetChain.ethCall(
-               to: keystore, data: VibenetABI.policyManagerCall(account, actorId: actorId)),
-           let read = VibenetABI.addressWord(raw, at: 0),
-           read.lowercased() != VibenetAuthenticatorKind.zeroAddress {
-            manager = read
+        var commitment: String?
+        if scope.raw & VibenetScope.policy != 0 {
+            // Both gated-key facts in one round trip each, concurrently —
+            // `getActorWithPolicy` would have been one call for all three and
+            // reverts on the deployed build (see its ABI doc). The commitment
+            // is what joins this key to its `PolicyExecuted` history, i.e.
+            // the difference between "Limited to the policy manager" — a
+            // sentence identical for every gated key on the chain — and a
+            // fact about THIS key.
+            async let managerTask = VibenetChain.ethCall(
+                to: keystore, data: VibenetABI.policyManagerCall(account, actorId: actorId))
+            async let commitmentTask = VibenetChain.ethCall(
+                to: keystore, data: VibenetABI.policyCommitmentCall(account, actorId: actorId))
+            if let raw = await managerTask, let read = VibenetABI.addressWord(raw, at: 0),
+               read.lowercased() != VibenetAuthenticatorKind.zeroAddress {
+                manager = read
+            }
+            // A ZERO commitment is `Keystore`'s own valid "no params" (its
+            // `_slicePolicy` doc says so outright), not a failed read — but it
+            // can never match a `PolicyExecuted` topic for THIS key alone, so
+            // carrying it would join every no-params key on the account to one
+            // another's usage. Dropped rather than stored.
+            if let raw = await commitmentTask, let word = VibenetABI.word(raw, at: 0),
+               word.contains(where: { $0 != "0" }) {
+                commitment = "0x" + word
+            }
         }
         return VibenetActor(actorId: actorId, authenticator: authenticator, kind: kind,
-                            scope: scope, expiry: expiry, policyManager: manager)
+                            scope: scope, expiry: expiry, policyManager: manager,
+                            policyCommitment: commitment)
+    }
+
+    /// Every policy execution this account has made, folded per commitment —
+    /// the count and the most recent time, which is the ONE live fact about a
+    /// session key vibenet publishes (see `VibenetPolicyReadability` for the
+    /// long form of what it deliberately does NOT publish: the spend cap, the
+    /// period and the allowed recipients are committed as a hash, never
+    /// stored, so there is nothing on chain to read them from).
+    ///
+    /// Read off `PolicyManager`, not the Keystore — a different contract, so
+    /// this cannot ride the account read's own `getLogs`. Returns [] rather
+    /// than nil on failure: a key's own "Never used" is spoken off its
+    /// commitment being absent, and an unreachable read and a genuinely
+    /// unused key are not distinguished HERE because the caller draws neither
+    /// differently — the account-level `reached` flag already carries whether
+    /// this pass reached the chain at all.
+    static func policyUses(account: String, policyManager: String?) async -> [VibenetPolicyUse] {
+        guard let policyManager else { return [] }
+        guard let logs = await VibenetChain.getLogs(
+            address: policyManager,
+            topics: [VibenetTopics.policyExecuted, "0x" + VibenetABI.padAddress(account)])
+        else { return [] }
+
+        // commitment → (count, newest block). All three interesting fields
+        // are indexed topics, so nothing here decodes `data`.
+        var counts: [String: Int] = [:]
+        var newestBlock: [String: Int] = [:]
+        for log in logs {
+            guard (log["removed"] as? Bool) != true,
+                  let topics = log["topics"] as? [String], topics.count >= 4,
+                  let blockHex = log["blockNumber"] as? String
+            else { continue }
+            let commitment = topics[3].lowercased()
+            counts[commitment, default: 0] += 1
+            let block = WalletIngest.hexToInt(blockHex)
+            if block > (newestBlock[commitment] ?? -1) { newestBlock[commitment] = block }
+        }
+        guard !counts.isEmpty else { return [] }
+
+        // ONE block-time lookup per distinct newest block — several
+        // commitments can share one, and this is the same "never `.now`"
+        // discipline every other dated read in this file keeps.
+        var times: [Int: Date] = [:]
+        for block in Set(newestBlock.values) {
+            if let date = await VibenetChain.blockTime(block) { times[block] = date }
+        }
+        return counts.map { commitment, count in
+            VibenetPolicyUse(commitment: commitment, count: count,
+                             lastUsed: newestBlock[commitment].flatMap { times[$0] })
+        }
+        // TOTAL order so a persisted snapshot cannot differ from a fresh read
+        // over an identical chain — `Dictionary` iteration order is not
+        // stable across runs, and this array is `Codable` into `VibenetState`.
+        .sorted { $0.commitment < $1.commitment }
+    }
+
+    /// Every account that authorized `address` as its DELEGATE — Base's own
+    /// "Sub-accounts", and the direction `VibenetAccountMapping.links` cannot
+    /// see (that one only relates two addresses the person ALREADY watches,
+    /// which is the case needing no discovery).
+    ///
+    /// ONE indexed filter does the whole job, and only because of how
+    /// `DelegateAuthenticator` works: it returns
+    /// `actorId = ActorId.fromAddress(delegate)`, and `actorId` is
+    /// `ActorAuthorized`'s second indexed topic — so pinning that topic to
+    /// this address asks the node "who named you" directly. No global walk,
+    /// no `data` decoding. MEASURED 2026-08-24 against a real delegate.
+    ///
+    /// A REVOCATION IS HONOURED: an account that later revoked the delegate
+    /// must not still be listed, so the same `survivors` union the actor
+    /// roster uses decides membership here too. Without it this read is
+    /// append-only and would keep claiming authority that was taken away —
+    /// the worst direction for a mistake on a screen about who can spend.
+    static func subAccounts(delegate address: String, keystore: String) async -> [VibenetSubAccount] {
+        guard let actorId = VibenetActorId.actorId(forAddress: address) else { return [] }
+        guard let logs = await VibenetChain.getLogs(
+            address: keystore,
+            topics: [[VibenetTopics.actorAuthorized, VibenetTopics.actorRevoked], NSNull(), actorId])
+        else { return [] }
+
+        // Per delegating account, the latest event wins — `VibenetActorLog
+        // .survivors`' rule, applied one level up (there the id varies and
+        // the account is fixed; here the id is fixed and the account varies).
+        struct Row { let authorized: Bool; let block: Int; let logIndex: Int }
+        var latest: [String: Row] = [:]
+        for log in logs {
+            guard (log["removed"] as? Bool) != true,
+                  let topics = log["topics"] as? [String], topics.count >= 3,
+                  let blockHex = log["blockNumber"] as? String,
+                  let indexHex = log["logIndex"] as? String
+            else { continue }
+            let topic0 = topics[0].lowercased()
+            let authorized = topic0 == VibenetTopics.actorAuthorized
+            guard authorized || topic0 == VibenetTopics.actorRevoked else { continue }
+            let account = "0x" + topics[1].suffix(40)
+            let row = Row(authorized: authorized, block: WalletIngest.hexToInt(blockHex),
+                          logIndex: WalletIngest.hexToInt(indexHex))
+            if let held = latest[account.lowercased()],
+               (held.block, held.logIndex) >= (row.block, row.logIndex) { continue }
+            latest[account.lowercased()] = row
+        }
+
+        let live = latest.filter(\.value.authorized)
+        guard !live.isEmpty else { return [] }
+        var times: [Int: Date] = [:]
+        for block in Set(live.values.map(\.block)) {
+            if let date = await VibenetChain.blockTime(block) { times[block] = date }
+        }
+        let watching = VibenetWatch.shared
+        return live.map { account, row in
+            VibenetSubAccount(address: account, watched: watching.isWatching(account),
+                              authorizedAt: times[row.block])
+        }
     }
 
     /// One account's change-sequence standing on THIS chain — see
@@ -686,6 +846,13 @@ enum VibenetRead {
         async let nativeTask = VibenetChain.getBalance(address: address)
         async let usdvTask = tokenBalance(account: address, contract: contracts.usdv, symbol: "USDV")
         async let nfvTask = tokenBalance(account: address, contract: contracts.nfv, symbol: "NFV")
+        // Both 2026-08-24 additions ride the same concurrent fan-out. Each is
+        // ONE filtered `eth_getLogs` (plus a bounded block-time lookup), and
+        // each answers a question this room could not answer at all before:
+        // has a session key actually been used, and what accounts can this
+        // address act for.
+        async let policyUsesTask = policyUses(account: address, policyManager: contracts.policyManager)
+        async let subAccountsTask = subAccounts(delegate: address, keystore: contracts.keystore)
         let events = await eventsTask
         let lockRaw = await lockTask
         let sequences = await sequencesTask
@@ -749,7 +916,9 @@ enum VibenetRead {
                                   hasInitiatedUnlock: hasInitiatedUnlock,
                                   unlocksAt: unlocksAt, unlockDelay: unlockDelay,
                                   changeSequences: sequences, history: history,
-                                  nativeBalance: nativeBalance, tokenBalances: tokenBalances)
+                                  nativeBalance: nativeBalance, tokenBalances: tokenBalances,
+                                  policyUses: await policyUsesTask,
+                                  subAccounts: await subAccountsTask)
     }
 
     /// One ERC-20-shaped balance for `account` on `contract` — nil for any
@@ -885,6 +1054,19 @@ enum VibenetExplorer {
     private static let base = "https://chain.base.org/vibenet/explorer"
     static func address(_ address: String) -> String { "\(base)/address/\(address)" }
     static func tx(_ hash: String) -> String { "\(base)/tx/\(hash)" }
+
+    /// Base's own EIP-8130 account console — MEASURED 2026-08-24 by driving
+    /// it: it creates accounts (smart or EOA-delegating), mints K1/P-256/
+    /// passkey keys, composes transactions, and demonstrates the two app
+    /// shapes this room reads — a "Monthly Vibes" SUBSCRIPTION (a capped
+    /// session key) and a "Spending Account" (a sub-account).
+    ///
+    /// It is the door for everything this app deliberately does not do. The
+    /// keys that console mints live in the browser, and reading a devnet
+    /// needs none of them; a write path here would mean this app holding a
+    /// signing key for a chain whose whole point is that nothing on it is
+    /// worth anything.
+    static let console = "https://chain.base.org/demos/account"
 }
 
 // MARK: - Landed events (ActorAuthorized / ActorRevoked / AccountLocked)
@@ -985,10 +1167,24 @@ enum VibenetEvents {
         var landedCount = 0
         for event in fresh {
             var keyLabel: String?
+            var expiresAt: Date?
             if event.kind == .actorAuthorized, let actorId = event.actorId,
                let actor = await VibenetRead.actor(account: address, keystore: contracts.keystore,
                                                     actorId: actorId, known: known) {
                 keyLabel = actor.kind.label
+                // A KEY THAT EXPIRES IS A DEADLINE, so it lands as one —
+                // and that is the whole of the work. `NotifySweep` already
+                // scans the live corpus for any row whose `dueAt` is near
+                // and plans a `deadlineNear` for it, so an expiring session
+                // key reaches the lock screen with no `NotifyKind` of this
+                // bridge's own, no new notification code, and none of
+                // `notify-selftest.sh`'s 79 assertions re-proved. The same
+                // reasoning App Store Connect's build expiries already ride.
+                //
+                // `expiry == 0` is Keystore's own "never", never a date.
+                if actor.expiry > 0 {
+                    expiresAt = Date(timeIntervalSince1970: TimeInterval(actor.expiry))
+                }
             }
             let thing = Thing(
                 // `.event`, NOT `.transaction`, and the difference is a
@@ -1026,6 +1222,10 @@ enum VibenetEvents {
             // thing `MoneyReceiptSource`'s own doc forbids. `summary` is
             // display copy this bridge has never used, already deployed.
             thing.summary = event.kind.phrase(keyLabel: keyLabel)
+            // An existing, already-deployed field — no CloudKit deploy. Nil
+            // for every other event kind and for a key that never expires,
+            // so nothing here invents a clock a key does not have.
+            thing.dueAt = expiresAt
             context.insert(thing)
             landedCount += 1
         }
