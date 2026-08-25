@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// The delegate graph as a FIGURE — actors down the left, the accounts they
-/// can act for down the right, one ribbon each (prd §464, 2026-08-24).
+/// can act for down the right, one ribbon each (prd §467, 2026-08-24).
 ///
 /// **Why this replaced a list of sentences.** The room drew one row per link
 /// reading "<name> · Can act for <name>": the same two names in prose, once

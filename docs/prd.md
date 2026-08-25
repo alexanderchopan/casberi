@@ -176,6 +176,7 @@ marks chronological position within the pair.
 | §355b | §355 | collided with the category-chip tint ruling |
 | §369 | §363 | the money receipt collided with the social sheet, which opened the §364–§368 category series and keeps the bare number by document order (2026-08-12 integration merge) |
 | §377a | §377 | the quick-action fix collided with the All-feed fold, which cites §377 nine times across five files and opens the §377–§379 series; the quick action cites it once and is the earlier of the pair (2026-08-14 integration merge) |
+| §467 | §464 | the vibenet room/event-sheet session collided with the Safe rings ruling, which is the one that reached the ledger and therefore keeps the bare number by document order; the vibenet half was never written down at all — see §467 (2026-08-25) |
 
 ## 1. Thesis
 
@@ -32014,3 +32015,330 @@ list without merging.
 and `swiftdata-liveness-audit` all pass. No simulator run has watched a first
 wallet, watched a second from the book, or renamed/removed a roster row
 through its new home.
+
+## 467. The vibenet room becomes four cards, and its event sheet becomes a sheet (RECONSTRUCTED, 2026-08-25 — see the renumbering note)
+
+**THIS ENTRY IS RECONSTRUCTED FROM THE COMMITS AND THE SOURCE, and it is
+labelled as such for §340's reason: inventing the reasoning would poison the
+one thing this ledger is for.** Nothing below is inferred — every claim is
+lifted from the three commits' own bodies (`5b10d362`, `8f2ff0a7`,
+`e9a515e6`, all 2026-08-24/25) or from the doc comments those commits wrote.
+
+**Why it needed a number at all.** All three commits cite **§464**, which in
+this ledger is the Safe room's rings-become-rows ruling written the same day
+by a session that could not see them. That is the collision class §441's
+index already tabulates six times over — two sessions each taking "the next
+free §" — with one difference that makes it worse than a gap: **the citation
+RESOLVES.** `prd-index-audit` checks that every `§N` names a real heading, so
+eight vibenet source files pointing at the Safe entry passed every check
+while sending the next reader to a ruling about a different room. The bare
+number stays with Safe by document order (it is the half that reached the
+ledger); the vibenet half takes §467 and its citations were repointed in the
+same commit as this entry.
+
+### 1. The sparkline could not have drawn, on any device
+
+`VibenetValueHistory.series` needs two readings, and the store only let a
+second land four hours after the first — so **on the day this bridge ships,
+and for anyone watching their first account, the curve is structurally
+unreachable**, and the room said nothing about it. Wallet never hit this
+because its history has been accumulating for months. An opening interval
+(120s, standing down to the settled 4h once six readings exist) makes the
+curve reachable inside one session. Every point is still a real reading: this
+changes how often we look, never invents a value between two looks.
+
+### 2. The treemap was a layout bug, and it is most of what "hodge podge" meant
+
+Every cell carried `.frame(maxWidth: .infinity)` with `.layoutPriority(2)` on
+the lead — and **priority is not a ratio**: it resolves the lead first and
+hands it nearly the whole row, so the card drew one large empty rectangle
+with the second asset squeezed into a sliver against the trailing edge.
+Rebuilt as a 2:1 grid with widths computed from the container. The small
+cells stack symbol over amount, measured twice: side by side they clipped the
+NAME ("U… 500.25"), and with the name given priority they clipped the FIGURE
+("USDV 500…."), which is worse.
+
+### 3. The room is FOUR CARDS, not one (direction B of three)
+
+Reported as *"we need more separation between things, needs to look less
+jumbled"*. **The diagnosis was in the CONTAINER, not the contents**: one
+`dsWidgetSurface` wrapped a crown, a chart, a holdings block, six permission
+rows, a delegate spine and a provenance note — six unrelated readings inside
+one box, which reads as one object that will not parse however well each part
+is drawn. So the box is what changed. **Separation by SURFACE**, chosen over
+separation by space (no cards at all) and by tap (three summary rows opening
+their own screens).
+
+- **`balanceCard`** — the crown and its chart, which BLEEDS to the card's
+  edges so it reads as the card's floor rather than a picture inside a
+  margin. The card clips to its own shape: `dsWidgetSurface` paints a rounded
+  background but does not clip what is drawn over it, so without that the
+  sparkline ran out through the corners to the screen edge.
+- **`holdingsCard`** — silent for a single asset, since the crown states it.
+- **`keysCard`** — `plainLine` is the header rather than a "Keys" label over
+  "8 keys authorized across 3 accounts", which says the word twice. The card
+  boundary is the separation; a label would be a second one.
+- **`linkedCard`** — silent when nobody delegates, so the room never grows an
+  empty fourth card.
+
+The provenance note sits OUTSIDE the cards and is quieter for it: it is a
+fact about the whole room, so a card of its own would make a section of a
+footnote. Scoped to the feed room's aggregate shape only (`stacksIntoCards`)
+— `VibenetScreen`'s roster is a management list where one surface is right,
+and the single-account branch still hands off to `VibenetAccountDetail`.
+`balanceAggregateSection` and `tokenTreemap` are **DELETED rather than left
+behind**: with the stacked path catching `onOpen == nil && count > 1` their
+branch is unreachable, and a second definition of the same reading is exactly
+what someone finds later and wires back up.
+
+Caught by the audit rather than by looking: `VibenetLinkSpine` invented an
+18pt face, off the `DS.Face` ramp entirely. It is `badge` now — the right
+rung, since these are marks identifying a node beside dense text, not
+portraits.
+
+### 4. The event sheet says something
+
+A key authorization opened to its title, a Share disc, and a one-row table
+reading "From — on vibenet" — the title's own last two words wearing a field
+label. Everything a person opens a key event to find out was already in the
+corpus or one lookup away, and no view asked for any of it.
+
+**THE KEY IS THE HARD PART, and the honest answer is usually "we can't
+say".** A landed event's `sourceRef` is `vibenet:<kind>:<txHash>:<logIndex>`
+— the transaction, never the actor — so there is no id to join on, and
+re-shaping the ref would re-land every event in every corpus. The join is
+therefore by EXPIRY and succeeds only when **unambiguous**: exactly one key
+on the account matching the event's `dueAt`. Two keys minted in one block
+with one lifetime is a real shape (a session and its sponsor) and there the
+permissions simply are not drawn. Chips are the most believable thing this
+sheet can print and the least verifiable — "Send anywhere" under the wrong
+key is a claim about what somebody can do with your money, made where a
+reader cannot check it (§83, where it is most expensive).
+
+Two more, both found by looking at the screen: the demo's event refs were
+`vibenet:auth:…` while the bridge stamps `vibenet:actor:…`, so every demo
+authorization failed the is-this-about-a-key test and drew no chips and no
+expiry (§349's Peer/Privacy Pools demo-ref class, again); and "You can act
+for" on the account detail was a clause that stopped dead, while its sibling
+"Can act for you" was complete, so the pair read as one broken and one fine.
+
+## 468. The vibenet room says when it was read, what it could not see, and what moved (user: "how else would you improve the vibenet experience and information to the user", then "do all", then "on the All page the key card should open to a list of keys and permissions that show which keys are in which category", then "on the individual account page, we don't need the avatar before the address b/c its already in the source strip", 2026-08-25)
+
+Eight items proposed and all eight taken, plus two the user added while it
+ran. §467 made this room four cards; this is the pass about what those cards
+are allowed to CLAIM.
+
+### 1. THE ROOM NEVER SAID WHEN IT WAS READ
+
+`VibenetState` persists the last composed room and `FeedScreen`'s head draws
+it synchronously on every scroll, while `VibenetRoomSource.compose()` returns
+early **without saving** when the config fetch fails. So a device that has
+been offline for three days keeps drawing the last good snapshot — complete
+with its confident "As of vibenet's main branch, commit a9ae95e1b" — and **a
+lock state read on Tuesday is pixel-identical to one read a second ago.**
+That is §83's fake status on the one network whose entire premise is that it
+moves under you.
+
+**The provenance line was never this**: it names the CONTRACTS' commit, which
+says what the chain was when we looked and nothing about when that was.
+`VibenetRoom.readAt` is the missing half, stamped at the one call site that
+has genuinely just read; the note gains "read 3h ago" past a 45-minute floor.
+Four rules, each a way to be confidently wrong: the floor exists because a
+timestamp on a current card is noise; the hours are **rounded and floored at
+one**, because a straight `Int(age / 3600)` prints "read 0h ago" for every
+read inside that quarter hour; a read stamped in the FUTURE (a clock that
+moved backwards) says nothing rather than a negative age; and `Date
+.formatted(.relative)` is deliberately unused — it renders a 46-minute-old
+read as "in 1 hour" at some rounding boundaries, on the one caption whose
+whole job is to be unambiguous about the past.
+
+`readAt` is **Optional and that is load-bearing**: this type is `Codable` and
+persisted, Swift synthesises `decodeIfPresent`, so every snapshot already on
+a device decodes rather than failing the decode of the whole room (the
+`RSSStore.Feed` trap, third time in this file). A nil reads as "we don't know
+when" and survives exactly one foreground.
+
+### 2. A PARTIAL READ WAS STATED AS A WHOLE ONE
+
+The crown heads `nativeTotal` with "Across your accounts" while
+`VibenetBalanceAggregation.compose` drops every account whose
+`eth_getBalance` did not answer — so three watched with one unreachable
+printed a **two-account total under a three-account sentence**. §349 ruled
+exactly this out for Gnosis Pay and Railgun.
+
+**The figure is kept rather than withheld** (Railgun's all-or-nothing rule is
+right for money that must reconcile; a devnet balance is a reading, and half
+a reading is worth more than none) — what changes is the sentence over it.
+`nativeHeading` says "Across 2 of 3 accounts" and `unreachedLine` says "1
+account couldn't be read". **`readCount` and `unreachedCount` are two
+different facts** and are counted apart: an account can be reached and still
+have no native reading (that one call failing alone), which lowers coverage
+without being an unreachable account.
+
+The same defect in a second place: `VibenetKeyAggregate.accountCount` counts
+accounts with at least one key, and an unreached account's roster is empty —
+indistinguishable from one that authorized nothing — so "8 keys across 3
+accounts" was silently a floor. It says so now.
+
+### 3. WHAT MOVED SINCE YOU LAST LOOKED
+
+Every card in this room is a snapshot: it says what is true now and never
+what changed. The landed events carry the moments but arrive as feed rows you
+scroll past, so the one question a keystore room is opened with had no answer
+on the surface built to answer it. `redeployedSinceLastSeen` already proved
+the pattern belongs here.
+
+`VibenetKeyChanges` diffs the roster against a device-local ledger
+(`VibenetKeysSeen`, UserDefaults — "have you looked at this" is a fact about
+THIS DEVICE'S SCREEN, the `AddressConnectionsSeen` ruling, so never synced
+and never a `Thing`). **THREE REFUSALS, each a way to invent a security event
+that did not happen:**
+
+1. **An account with no ledger entry seeds SILENTLY** — a first look would
+   otherwise report every key it has ever had as new (the Hyperliquid
+   first-sight bug, fifth bridge).
+2. **AN UNREACHED ACCOUNT CONTRIBUTES NOTHING.** Its roster is empty because
+   the read failed, not because its keys were revoked, and reading that as a
+   revocation announces a break-in every time the devnet has a bad minute.
+   This is `ScreenshotIngest.pruneDeleted`'s never-prune-on-an-empty-read
+   rule in a room that draws rather than deletes — and the write half matters
+   as much: `advanced` KEEPS an unreached account's old set, because
+   overwriting it with the failed read's nothing makes the next successful
+   read report every one of its keys as new.
+3. **An account you stopped watching contributes no revocations.**
+
+The ledger is read and then spent inside one `.task`, in that order, so the
+marker survives exactly the draw it was computed for. Keyed on the roster's
+own fingerprint rather than firing once — a read landing while the room is
+open really is a new look — and fingerprinted on KEY IDS alone, so a balance
+ticking over does not re-fire the ledger and erase a marker somebody is still
+reading. The ledger key is **account-qualified** (`address|actorId`): an
+actorId is unique within an account and nothing says it is across them, and
+an unqualified key HIDES a change rather than inventing one, i.e. silently.
+
+### 4. THE ONE CLOCK WAS A SENTENCE
+
+`soonestExpiry` is a single blue line. Three keys lapsing inside a fortnight
+and three spread over a quarter produce the **identical sentence** and
+completely different pictures, and the spread is what no list gives at any
+length. The keys card now draws `WalletRunwayRail` — §417's rail at card
+scale, reused whole rather than restated, so the room and the "Needs you"
+tile can never disagree about the same dates, and the invariant travels with
+it (the window always CONTAINS now). Two or more expiries, deliberately: one
+has no spread and the sentence beneath already says it exactly. Lapsed keys
+are excluded for the same reason the sentence excludes them — the rail says
+what is AHEAD, and each account's own `urgentLine` already counts the lapsed.
+
+### 5. THE FOUR KINDS OF EVENT WERE UNASKABLE
+
+This room lands exactly four things and had **no §308 facets at all** — every
+other landing bridge got them, so "revoked keys on vibenet" was a free-text
+search over a display title in the one room where that matters most. `Key`,
+`Revoked`, `Locked`, `Unlocking`, under the standing gating rule (a facet
+filters only alongside a NAMED source), which earns its keep here as much as
+anywhere: "key" and "locked" are ordinary English AND words this corpus is
+full of.
+
+**A revoke carries BOTH `Key` and `Revoked`** — it is a key event, so "keys
+on vibenet" must reach it, and the revocation is the narrower question asked
+on top. A lock carries no `Key` at all; it is about the account. **Order in
+`facetTable` is load-bearing**: `Revoked` and `Unlocking` lead, because the
+first phrase match wins and "revoked keys" would otherwise stop at the bare
+"keys" and answer with every key event including the live ones — the exact
+opposite of what was asked, rendered as a perfectly ordinary result.
+
+The tags **heal on the dedupe hit** (the social-bridge pattern), which is the
+only route an event landed by an earlier build has to them: `refSegment` is
+"actor" for both an authorize and a revoke, so they cannot be re-derived from
+a stored ref and have to come from the log this pass is already reading.
+Bounded by that walk, and said so.
+
+### 6. THE ALARM, AND ITS BOUND
+
+An **admin key authorized on a watched account** now reaches the lock screen.
+EIP-8130's scope 0 is unrestricted (§463) — that key can originate anything,
+including the capabilities this build cannot name — so it is exactly the
+"something new can move your funds" news an ERC-20 approval carries, and it
+**reuses `NotifyKind.approvalGranted` rather than a near-duplicate**, the
+Safe-module ruling one branch up. No new kind, so none of
+`notify-selftest.sh`'s 79 assertions is re-proved.
+
+**Only an admin key, and that bound is the whole decision.** Three of this
+room's four events are things you almost certainly did yourself — a session
+key you just minted, a key you just revoked, an unlock you just started — and
+a room that buzzed for all of them fails §306's own "did you already know?"
+test every time. Tag-based, never ref-based, because the scope is not on the
+row at all. Note vibenet is a DEVNET today and the alarm is still built: a key
+expiry from the same room has reached the lock screen through `deadlineNear`
+since the day it shipped, so what keeps the volume honest is the admin gate,
+not the network.
+
+### 7. THE KEY CARD OPENS (user, mid-pass)
+
+*"On the All page the key card should open to a list of keys and permissions
+that show which keys are in which category."* `keysAggregateSection`'s own
+comment has said since 2026-08-24 that it withholds the chevron the design
+draws because "it points at a key tray that does not exist in this build, and
+a chevron that opens nothing is the dead control §83 bans". This is that
+screen; the chevron arrives with it.
+
+"Send anywhere 4" is the one shape of fact you cannot act on: it does not say
+WHICH four, on which account, or when any of them lapses. `VibenetKeyTray`
+**mirrors `VibenetPolicyAggregation.compose` exactly** — same Admin-first
+order, same `orderedPlainBits` order, same exclusion of an admin from every
+bit section — because two derivations of one grouping drift and then a card
+says 4 and the list it opens shows 3. A key appears under EVERY permission it
+holds, which is the question being asked, and the footnote says so or
+fourteen rows over eight keys read as a contradiction. A key holding only
+reserved bits is **counted in that footnote and never given an invented
+category**: a section called "Other" would name a permission nobody can
+check. Routed through `FeedSheetRoute`, never a `.sheet` of the card's own —
+the card is inside the feed's List rows and a `.sheet` there resolves to the
+same presenting controller (the half-open-then-close bug, paid three times).
+
+### 8. THE HERO'S FACE STANDS DOWN WHERE THE RAIL DRAWS IT (user, mid-pass)
+
+*"On the individual account page, we don't need the avatar before the address
+b/c its already in the source strip."* `VibenetScopeRail` is pinned directly
+above the card and draws every watched account's face with the scoped one
+ringed, so a second copy two rows down is the same avatar twice — the
+identical finding that took the face strip out of the stacked room's own stat
+block.
+
+**Conditional, never deleted**, and the condition is the rail's own
+(`VibenetScopeRail.shows` wants more than one account watched): a
+single-account room has no rail, and the account sheet reached from the
+address book has no rail either. Dropping the face unconditionally leaves
+both faceless — a screen about one address showing nothing that identifies it
+at a glance.
+
+### 9. Two cleanups the pass earned
+
+`keysCard` and `keysAggregateSection` held **byte-identical bodies** —
+headline, policy rows, expiry sentence — differing only in the box around
+them, so the same room could say two different things depending on how many
+accounts happened to be watched (§418's duplicate-parser lesson). One
+`keysBody`, each caller's own surface.
+
+And **`verify.sh` had never covered this room's head**: its demo room-head
+step is keyed on `FeedScreen.SourceHead` cases reached through
+`-roomInsightProbe`, and vibenet's head is a `FeedScreen.Shape` case instead
+— so §467's four independently-gated cards could each decline over a demo
+corpus that cannot furnish them, silently. `-vibenetRoomProbe YES` reports
+which of the four draw (and reads the changes ledger **without spending it**,
+since a probe that marked the room as read would erase what the next launch
+is meant to show), and a new hard-fail step asserts all four.
+
+### Cost, and what remains unmeasured
+
+**Nothing to ship**: no new `Thing` property, no request, no CloudKit deploy.
+Every reading is composed from fields already on the row or already in the
+snapshot; the two new stores are UserDefaults.
+
+`vibenet-selftest.sh` gained ~60 assertions and 18 mutations over
+`freshnessLine`, both coverage halves, `VibenetKeySeenDiff`'s three refusals,
+`VibenetKeyTray` and the facet tags. **UNMEASURED on a device**: nothing on
+this host can make a vibenet account authorize an admin key, lose a key, or
+fail one balance read out of three, so the harness is again not the best
+proof these numbers are right but the only one. The key tray, the chevron and
+the stood-down face are all rendering no static check can exercise.

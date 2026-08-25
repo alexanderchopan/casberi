@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// What a vibenet account (or a room of them) holds, drawn as AREAS — the
-/// design's holdings treemap (prd §464, 2026-08-24).
+/// design's holdings treemap (prd §467, 2026-08-24).
 ///
 /// **A 2:1 SPLIT, MEASURED, not an `HStack` of equal children.** The first cut
 /// gave every cell `.frame(maxWidth: .infinity)` with `.layoutPriority(2)` on

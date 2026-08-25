@@ -47,7 +47,7 @@ cd "$(dirname "$0")/.."
 ROOM="Casberi/Casberi/Model/VibenetRoom.swift"
 # `VibenetEventFacts.swift` is Foundation-only for the same reason and is
 # compiled WHOLE beside it — the expiry join it owns is the one place this
-# feature can state a permission it cannot prove (prd §464).
+# feature can state a permission it cannot prove (prd §467).
 FACTS="Casberi/Casberi/Model/VibenetEventFacts.swift"
 BRIDGE="Casberi/Casberi/Model/VibenetBridge.swift"
 CATALOG="Casberi/Casberi/Model/BridgeCatalog.swift"
@@ -109,6 +109,16 @@ src = re.sub(r'(?<![:/])//.*$', '', src, flags=re.M)
 sys.stdout.write(src)
 PY
 }
+CARD="Casberi/Casberi/Screens/VibenetRoomCard.swift"
+DETAIL="Casberi/Casberi/Screens/VibenetAccountDetail.swift"
+TRAY="Casberi/Casberi/Screens/VibenetKeyTraySheet.swift"
+NOTIFY="Casberi/Casberi/Model/NotifySweep.swift"
+for f in "$CARD" "$DETAIL" "$TRAY" "$NOTIFY"; do
+  [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
+done
+strip_comments "$CARD"   > "$TMP/card.nc.swift"
+strip_comments "$DETAIL" > "$TMP/detail.nc.swift"
+strip_comments "$NOTIFY" > "$TMP/notify.nc.swift"
 strip_comments "$ROOM"   > "$TMP/room.nc.swift"
 strip_comments "$BRIDGE" > "$TMP/bridge.nc.swift"
 strip_comments "$SETUP" > "$TMP/setup.nc.swift"
@@ -246,6 +256,108 @@ if grep -q 'WalletValue.money\|priceUSD\|usdValue' "$TMP/bridge.nc.swift" "$TMP/
 fi
 
 echo "drift guards ✓"
+
+# --- prd §468: what the cards are allowed to CLAIM ---------------------------
+# Every one of these fails INVISIBLY: the room still builds, still renders and
+# still looks finished — it just goes back to stating a three-day-old read as
+# current, a two-account total as three, or a failed read as a revocation.
+# Negative greps read the COMMENT-STRIPPED copies, because these files document
+# each rule by naming the very thing they must not do (the Obsidian/Cursor
+# lesson).
+
+# THE STAMP'S ONLY REAL CALL SITE. `readAt` defaults to nil so the two
+# placeholder rooms cannot claim to be reads; if the one place that has
+# genuinely just read stops passing it, every check above still passes and the
+# room silently goes back to drawing three-day-old state with a confident face.
+grep -q 'redeployedSinceLastSeen: redeployed, readAt: .now' "$TMP/bridge.nc.swift" \
+  || { echo "✗ VibenetRoomSource.compose no longer stamps readAt — prd §468: the room cannot say when it was read"; exit 1; }
+
+# The card must ASK the model for its heading. A literal here is the defect
+# this pass fixed: a partial sum under a whole claim.
+grep -q 'aggregate.nativeHeading' "$TMP/card.nc.swift" \
+  || { echo "✗ the balance card no longer draws aggregate.nativeHeading — prd §468: a partial total must say how partial"; exit 1; }
+if grep -q 'Across your accounts' "$TMP/card.nc.swift"; then
+  echo "✗ VibenetRoomCard hardcodes the crown's heading again — prd §468: it belongs to"
+  echo "  VibenetBalanceAggregate, which is the only thing that knows whether the total is complete."
+  exit 1
+fi
+
+# Both coverage sentences reach the screen, or the counts above them are floors
+# nobody is told about.
+grep -q 'unreachedLine' "$TMP/card.nc.swift" \
+  || { echo "✗ the room card no longer draws unreachedLine — prd §468: an unread account is never said"; exit 1; }
+
+# The runway. Without it the room's only clock is one sentence again.
+grep -q 'WalletRunwayRail(dates: aggregate.futureExpiries)' "$TMP/card.nc.swift" \
+  || { echo "✗ the keys card no longer draws the expiry runway — prd §468"; exit 1; }
+
+# ONE definition of the keys block. Two copies drift, and then the same room
+# says two different things depending on how many accounts are watched.
+# OCCURRENCES, never `grep -c`, which counts LINES — a second call appended to
+# the same line survives that spelling, and this harness proved exactly that
+# against itself before the guard landed (the Safe-signer lesson, second time).
+if [[ $(grep -o 'VibenetPolicyAggregation.compose' "$TMP/card.nc.swift" | wc -l | tr -d ' ') -ne 1 ]]; then
+  echo "✗ VibenetRoomCard composes the policy rows more than once — prd §468: keysBody is the"
+  echo "  single definition, and a second copy is §418's duplicate-parser class in this card."
+  exit 1
+fi
+
+# The since-you-last-looked ledger is READ then SPENT, in that order and in one
+# place. Advancing before reading erases the answer while it is being shown.
+grep -q 'keyChanges = VibenetKeysSeen.changes(in: room.items)' "$TMP/card.nc.swift" \
+  || { echo "✗ the room card no longer reads the seen-keys ledger — prd §468"; exit 1; }
+grep -q 'VibenetKeysSeen.advance(room.items)' "$TMP/card.nc.swift" \
+  || { echo "✗ the room card never marks the room as looked at — prd §468: the marker would never clear"; exit 1; }
+
+# Disconnect forgets it, or a re-watch months later diffs a live roster against
+# a year-old ledger and reports the difference as news.
+grep -q 'VibenetKeysSeen.forget()' "$TMP/bridge.nc.swift" \
+  || { echo "✗ disconnect no longer forgets the seen-keys ledger — prd §468"; exit 1; }
+
+# The facets are stamped at landing, or the four kinds of event stay unaskable.
+grep -q 'thing.tags = event.kind.facetTags' "$TMP/bridge.nc.swift" \
+  || { echo "✗ landed vibenet events no longer carry their §308 facets — prd §468"; exit 1; }
+# ...and the four tags really are in the retriever's vocabulary, or the tag
+# exists and no sentence can name it (§375's Photo lesson).
+for tag in Revoked Unlocking Key Locked; do
+  grep -q "\"$tag\")" "Casberi/Casberi/Model/Retriever.swift" \
+    || { echo "✗ the $tag facet is stamped but not in Retriever.facetTable — prd §468"; exit 1; }
+done
+
+# THE ALARM IS GATED ON THE TAG, NEVER THE BARE REF. Without the gate every
+# key event in this room buzzes — three of the four are things you did
+# yourself, which is §306's own did-you-already-know test failing every time.
+grep -q 'ref.hasPrefix("vibenet:actor:"), thing.tags.contains("Admin key")' "$TMP/notify.nc.swift" \
+  || { echo "✗ the vibenet alarm is no longer gated on the Admin key tag — prd §468"; exit 1; }
+grep -q 'thing.tags.append("Admin key")' "$TMP/bridge.nc.swift" \
+  || { echo "✗ nothing stamps the Admin key tag — prd §468: the alarm can never fire"; exit 1; }
+
+# The tray is routed through the screen's single sheet. A `.sheet` on this
+# card resolves to the same presenting controller as FeedScreen's own and
+# rises part way before tearing itself down (ruling 2026-07-28, paid 3 times).
+if grep -qE '\.sheet\(' "$TMP/card.nc.swift"; then
+  echo "✗ VibenetRoomCard presents a sheet of its own — prd §468: the card lives inside"
+  echo "  FeedScreen's List rows, so it must hand the tray out through a closure."
+  exit 1
+fi
+grep -q 'case vibenetKeys(\[VibenetAccountItem\])' "Casberi/Casberi/Screens/FeedScreen.swift" \
+  || { echo "✗ FeedSheetRoute no longer carries the key tray — prd §468"; exit 1; }
+
+# The tray mirrors the card, and the chevron only exists where the tray does.
+grep -q 'VibenetKeyTray.sections' "$TRAY" \
+  || { echo "✗ VibenetKeyTraySheet no longer reads VibenetKeyTray.sections — prd §468"; exit 1; }
+grep -q 'if onOpenKeys != nil' "$TMP/card.nc.swift" \
+  || { echo "✗ the keys chevron is no longer gated on the tray being reachable — prd §468: a"
+       echo "  chevron that opens nothing is the dead control §83 bans"; exit 1; }
+
+# The hero's face stands down only where the rail draws it. Ungated, a
+# single-account room and the address book's own sheet both lose their only
+# identifying mark.
+grep -q 'if showsFace {' "$TMP/detail.nc.swift" \
+  || { echo "✗ VibenetAccountDetail no longer gates its hero face — prd §468"; exit 1; }
+grep -q 'VibenetScopeRail.shows(source: VibenetIdentity.source, watched: fullItems.count)' "$TMP/card.nc.swift" \
+  || { echo "✗ the hero face is no longer gated on the RAIL being present — prd §468: dropping it"; \
+       echo "  unconditionally leaves a one-account room with nothing identifying it"; exit 1; }
 
 # --- compile VibenetRoom.swift WHOLE, unmodified -----------------------------
 
@@ -1529,18 +1641,21 @@ check("tokenTotals is empty when no account holds any token balance",
       ])?.tokenTotals.isEmpty == true)
 
 check("plainLine: several accounts, none locked, never prints '0 locked'",
-      VibenetBalanceAggregate(accountCount: 3, lockedCount: 0, nativeTotal: nil, tokenTotals: [])
+      VibenetBalanceAggregate(accountCount: 3, lockedCount: 0, readCount: 3, unreachedCount: 0,
+                              nativeTotal: nil, tokenTotals: [])
         .plainLine == "3 accounts")
 check("plainLine: a real locked count IS printed",
-      VibenetBalanceAggregate(accountCount: 3, lockedCount: 1, nativeTotal: nil, tokenTotals: [])
+      VibenetBalanceAggregate(accountCount: 3, lockedCount: 1, readCount: 3, unreachedCount: 0,
+                              nativeTotal: nil, tokenTotals: [])
         .plainLine == "3 accounts · 1 locked")
 check("plainLine: singular account, singular locked",
-      VibenetBalanceAggregate(accountCount: 1, lockedCount: 1, nativeTotal: nil, tokenTotals: [])
+      VibenetBalanceAggregate(accountCount: 1, lockedCount: 1, readCount: 1, unreachedCount: 0,
+                              nativeTotal: nil, tokenTotals: [])
         .plainLine == "1 account · 1 locked")
 
 print("")
 
-// MARK: - VibenetEventFacts — the expiry join (prd §464)
+// MARK: - VibenetEventFacts — the expiry join (prd §467)
 
 print("")
 print("VibenetEventFacts — what a key event may claim")
@@ -1591,6 +1706,250 @@ check("an account with no actors reports no key count",
       VibenetEventFacts.compose(account: "0xabc", accountName: "T",
                                 actors: [], dueAt: nil, concernsKey: true).keysNow == nil)
 
+
+// MARK: - prd §468: WHEN was this read?
+//
+// The room's snapshot is drawn synchronously by the feed head on every scroll
+// and `VibenetRoomSource.compose` returns early WITHOUT saving when the config
+// fetch fails — so a device offline for three days kept drawing the last good
+// read behind a confident "As of vibenet's main branch, commit a9ae95e1b".
+// Every check below fails against that shipped reading.
+
+print("")
+print("VibenetRoom.readAt — the staleness the provenance line never carried")
+let readNow = Date(timeIntervalSince1970: 1_800_000_000)
+func roomRead(_ ago: TimeInterval?) -> VibenetRoom {
+    VibenetRoom.compose(items: [], branch: "main", commit: "abc123456", configReached: true,
+                         readAt: ago.map { readNow.addingTimeInterval(-$0) })
+}
+check("a read minutes old says nothing — a timestamp on a current card is noise",
+      VibenetRoom.freshnessLine(roomRead(60), now: readNow) == nil)
+check("no readAt at all says nothing — a pre-§468 snapshot has no date to report",
+      VibenetRoom.freshnessLine(roomRead(nil), now: readNow) == nil)
+// The floor is 45 minutes and the wording is in whole HOURS, so the naive
+// `Int(age / 3600)` prints "read 0h ago" for every read in that quarter hour —
+// a caption saying a room is both stale and zero hours old.
+check("46 minutes rounds UP to an hour, never down to zero",
+      VibenetRoom.freshnessLine(roomRead(46 * 60), now: readNow) == "read 1h ago")
+check("three hours reads as three",
+      VibenetRoom.freshnessLine(roomRead(3 * 3_600), now: readNow) == "read 3h ago")
+check("a day is named, not counted in hours",
+      VibenetRoom.freshnessLine(roomRead(26 * 3_600), now: readNow) == "read yesterday")
+check("under a week counts days",
+      VibenetRoom.freshnessLine(roomRead(3 * 86_400), now: readNow) == "read 3 days ago")
+check("past a week the caption becomes a DATE — 'read 43 days ago' is arithmetic nobody does",
+      VibenetRoom.freshnessLine(roomRead(40 * 86_400), now: readNow)?.hasPrefix("read ") == true)
+check("past a week it is no longer a day count",
+      VibenetRoom.freshnessLine(roomRead(40 * 86_400), now: readNow)?.contains("days ago") == false)
+// A device whose clock moved backwards between the read and the draw.
+check("a read stamped in the FUTURE says nothing, never a negative age",
+      VibenetRoom.freshnessLine(roomRead(-3_600), now: readNow) == nil)
+check("the note carries the age AFTER the provenance — the commit says what, this says when",
+      VibenetRoom.note(roomRead(5 * 3_600), drawn: 0, now: readNow)?.hasSuffix("read 5h ago") == true)
+check("a fresh room's note is unchanged — no clause where there is nothing to say",
+      VibenetRoom.note(roomRead(60), drawn: 0, now: readNow)?.contains("read") == false)
+// A scoped room is the same read; losing the stamp there would make every
+// scoped room look permanently fresh.
+check("scoped() carries the stamp through",
+      VibenetRoom.compose(items: [], branch: nil, commit: nil, configReached: true,
+                           readAt: readNow).scoped(to: nil).readAt == readNow)
+
+// MARK: - prd §468: a PARTIAL read stated as a whole one
+
+print("")
+print("Coverage — a sum missing part of itself may not claim to be everything")
+func balanceItem(_ address: String, reached: Bool, native: Double?) -> VibenetAccountItem {
+    VibenetAccountItem(address: address, reached: reached, established: true, actors: [],
+                        locked: false, hasInitiatedUnlock: false, unlocksAt: nil, unlockDelay: nil,
+                        nativeBalance: native)
+}
+let partial = VibenetBalanceAggregation.compose([
+    balanceItem("0xa", reached: true, native: 1.0),
+    balanceItem("0xb", reached: true, native: 2.0),
+    balanceItem("0xc", reached: false, native: nil),
+])
+check("readCount counts the accounts that CONTRIBUTED, not the accounts watched",
+      partial?.readCount == 2)
+check("accountCount still counts every watched account",
+      partial?.accountCount == 3)
+check("unreachedCount is the accounts whose read never landed",
+      partial?.unreachedCount == 1)
+check("a PARTIAL total says how partial — never 'Across your accounts'",
+      partial?.nativeHeading == "Across 2 of 3 accounts")
+check("and it says so in words underneath too",
+      partial?.unreachedLine == "1 account couldn't be read")
+let whole = VibenetBalanceAggregation.compose([
+    balanceItem("0xa", reached: true, native: 1.0),
+    balanceItem("0xb", reached: true, native: 2.0),
+])
+check("a COMPLETE total keeps the plain heading",
+      whole?.nativeHeading == "Across your accounts")
+check("and says nothing about unreached accounts",
+      whole?.unreachedLine == nil)
+// An unread total has nothing to qualify — "Across 0 of 3" over no figure is
+// arithmetic about an absence.
+check("no figure at all keeps the plain heading rather than qualifying nothing",
+      VibenetBalanceAggregation.compose([balanceItem("0xa", reached: true, native: nil)])?
+        .nativeHeading == "Across your accounts")
+// An account can be REACHED and still have no native reading — that one call
+// failing alone. It reduces the coverage and is not an unreachable account.
+let oneCallFailed = VibenetBalanceAggregation.compose([
+    balanceItem("0xa", reached: true, native: 1.0),
+    balanceItem("0xb", reached: true, native: nil),
+])
+check("a reached account with no balance reading lowers coverage",
+      oneCallFailed?.nativeHeading == "Across 1 of 2 accounts")
+check("...but is NOT reported as unreachable — two different facts, two sentences",
+      oneCallFailed?.unreachedLine == nil)
+
+func keyedItem(_ address: String, reached: Bool, actors: [VibenetActor]) -> VibenetAccountItem {
+    VibenetAccountItem(address: address, reached: reached, established: true, actors: actors,
+                        locked: false, hasInitiatedUnlock: false, unlocksAt: nil, unlockDelay: nil)
+}
+let soon = UInt64(readNow.timeIntervalSince1970) + 3_600
+let later = UInt64(readNow.timeIntervalSince1970) + 30 * 86_400
+let past = UInt64(readNow.timeIntervalSince1970) - 3_600
+func keyActor(_ id: String, _ expiry: UInt64, _ raw: UInt16 = VibenetScope.sender) -> VibenetActor {
+    VibenetActor(actorId: id, authenticator: "0x0", kind: .secp256k1,
+                  scope: VibenetScope(raw: raw), expiry: expiry)
+}
+let keyAgg = VibenetKeyAggregation.compose([
+    keyedItem("0xa", reached: true, actors: [keyActor("0x1", later), keyActor("0x2", soon)]),
+    keyedItem("0xb", reached: true, actors: [keyActor("0x3", 0)]),
+    keyedItem("0xc", reached: false, actors: []),
+], now: readNow)
+check("an unreached account's empty roster is not silently 'authorized nothing'",
+      keyAgg?.unreachedCount == 1)
+check("and the card says so, so the key count reads as the floor it is",
+      keyAgg?.unreachedLine == "1 account couldn't be read")
+// The runway's dates. Same rule as the sentence beside it or the two disagree.
+check("futureExpiries excludes Keystore's own 'never' (expiry 0)",
+      keyAgg?.futureExpiries.count == 2)
+check("futureExpiries is ASCENDING — soonest first",
+      keyAgg?.futureExpiries.first == Date(timeIntervalSince1970: TimeInterval(soon)))
+check("an already-lapsed key is not 'ahead' and never reaches the rail",
+      VibenetKeyAggregation.compose([keyedItem("0xa", reached: true, actors: [keyActor("0x1", past)])],
+                                     now: readNow)?.futureExpiries.isEmpty == true)
+
+// MARK: - prd §468: what changed since you last looked
+
+print("")
+print("VibenetKeySeenDiff — the three refusals")
+let rosterA = keyedItem("0xAbC", reached: true, actors: [keyActor("0x1", 0), keyActor("0x2", 0)])
+check("keyID is account-qualified — an actorId is unique within an account, not across them",
+      VibenetKeySeenDiff.keyID(address: "0xAbC", actorId: "0X1") == "0xabc|0x1")
+// 1. FIRST SIGHT SEEDS SILENTLY. Without this a newly-watched account reports
+//    every key it has ever had as new — the Hyperliquid bug, fifth bridge.
+check("an account with no ledger entry reports NOTHING — first sight is silent",
+      VibenetKeySeenDiff.since(seen: [:], items: [rosterA]).isEmpty)
+let seenBoth = VibenetKeySeenDiff.advanced(seen: [:], items: [rosterA])
+check("advanced() files both keys under the lowercased address",
+      seenBoth["0xabc"]?.count == 2)
+check("a roster that has not moved reports nothing",
+      VibenetKeySeenDiff.since(seen: seenBoth, items: [rosterA]).isEmpty)
+let grown = keyedItem("0xAbC", reached: true,
+                       actors: [keyActor("0x1", 0), keyActor("0x2", 0), keyActor("0x3", 0)])
+check("a key not in the ledger is NEW",
+      VibenetKeySeenDiff.since(seen: seenBoth, items: [grown]).added.count == 1)
+let shrunk = keyedItem("0xAbC", reached: true, actors: [keyActor("0x1", 0)])
+check("a key that has left the roster is a REVOCATION",
+      VibenetKeySeenDiff.since(seen: seenBoth, items: [shrunk]).revokedCount == 1)
+// 2. NEVER PRUNE ON AN EMPTY READ. An unreached account's roster is empty
+//    because the read failed, and reading that as revocation announces a
+//    security event that did not happen every time the devnet has a bad
+//    minute. `ScreenshotIngest.pruneDeleted`'s rule in a room that draws.
+let unreachedRoster = keyedItem("0xAbC", reached: false, actors: [])
+check("AN UNREACHED ACCOUNT REPORTS NO REVOCATION — its empty roster is a failed read",
+      VibenetKeySeenDiff.since(seen: seenBoth, items: [unreachedRoster]).revokedCount == 0)
+check("...and contributes nothing at all",
+      VibenetKeySeenDiff.since(seen: seenBoth, items: [unreachedRoster]).isEmpty)
+check("advanced() KEEPS an unreached account's old set — overwriting it would make every one of its keys read as new next time",
+      VibenetKeySeenDiff.advanced(seen: seenBoth, items: [unreachedRoster])["0xabc"]?.count == 2)
+// 3. An account you stopped watching contributes no revocations — its keys
+//    did not go anywhere.
+check("an unwatched account drops out of the ledger entirely",
+      VibenetKeySeenDiff.advanced(seen: seenBoth, items: [])["0xabc"] == nil)
+check("added and revoked are counted APART — one window can do both",
+      VibenetKeySeenDiff.since(
+        seen: seenBoth,
+        items: [keyedItem("0xAbC", reached: true, actors: [keyActor("0x1", 0), keyActor("0x9", 0)])])
+        == VibenetKeyChanges(added: ["0xabc|0x9"], revokedCount: 1))
+
+print("")
+print("VibenetKeyChanges — the words")
+check("nothing moved, nothing said",
+      VibenetKeyChanges(added: [], revokedCount: 0).line == nil)
+check("one new key",
+      VibenetKeyChanges(added: ["a"], revokedCount: 0).line == "1 key new since you last looked")
+check("several",
+      VibenetKeyChanges(added: ["a", "b"], revokedCount: 0).line == "2 keys new since you last looked")
+// A revocation ALONE has to stand as a sentence — "1 revoked" under nothing
+// else is a fragment.
+check("a revocation alone is a whole sentence",
+      VibenetKeyChanges(added: [], revokedCount: 1).line == "1 key revoked since you last looked")
+check("beside an addition it is the short clause",
+      VibenetKeyChanges(added: ["a"], revokedCount: 2).line
+        == "1 key new since you last looked · 2 revoked")
+
+// MARK: - prd §468: the key tray
+
+print("")
+print("VibenetKeyTray — which keys are in which category")
+let adminKey = keyActor("0xadmin", 0, 0)
+let sender = keyActor("0xsend", 0, VibenetScope.sender)
+let both = keyActor("0xboth", 0, VibenetScope.sender | VibenetScope.selfPayer)
+let reservedOnly = keyActor("0xres", 0, 0x0400)
+let trayItems = [keyedItem("0xa", reached: true, actors: [adminKey, sender]),
+                 keyedItem("0xb", reached: true, actors: [both, reservedOnly])]
+let tray = VibenetKeyTray.sections(trayItems)
+check("Admin leads — scope 0 is unrestricted and is never one of the five bits",
+      tray.first?.label == "Admin")
+check("and holds exactly the admin key",
+      tray.first?.count == 1)
+// THE INVARIANT: the tray and the card must never disagree about a number.
+// Two derivations of one grouping drift, and then a card says 4 and the list
+// it opens shows 3.
+let counts = VibenetPolicyAggregation.compose(trayItems)
+check("every section mirrors the card's own count, label for label",
+      tray.map { [$0.label, "\($0.count)"] } == counts.map { [$0.label, "\($0.count)"] })
+check("an ADMIN is excluded from every bit section — it is not five permissions, it is one word",
+      tray.first(where: { $0.label == "Send anywhere" })?.keys.contains(where: { $0.actor.actorId == "0xadmin" }) == false)
+check("a key holding two bits appears under BOTH — which is the question this screen answers",
+      tray.first(where: { $0.label == "Pay own gas" })?.keys.first?.actor.actorId == "0xboth")
+// A key with only reserved bits is in no section at all. COUNTED AND SAID —
+// never given an invented category, and never silently missing.
+check("a key holding only reserved bits is counted, never filed under an invented name",
+      VibenetKeyTray.unnamedKeyCount(trayItems) == 1)
+check("the footnote says how many keys there really are",
+      VibenetKeyTray.footnote(trayItems)?.hasPrefix("4 keys") == true)
+check("...and warns that one key can appear more than once",
+      VibenetKeyTray.footnote(trayItems)?.contains("appears under each") == true)
+check("...and names the unnameable one rather than losing it",
+      VibenetKeyTray.footnote(trayItems)?.contains("can't name") == true)
+check("no keys at all, no sections",
+      VibenetKeyTray.sections([]).isEmpty)
+check("alsoLine names the OTHER permissions, never the section's own",
+      VibenetKeyTray.alsoLine(VibenetTrayKey(address: "0xb", actor: both), besides: "Send anywhere")
+        == "Also: Pay own gas")
+check("a key with nothing else to say says nothing",
+      VibenetKeyTray.alsoLine(VibenetTrayKey(address: "0xa", actor: sender), besides: "Send anywhere") == nil)
+
+// MARK: - prd §468: the facets
+
+print("")
+print("VibenetEventKind.facetTags")
+check("an authorization is a KEY event",
+      VibenetEventKind.actorAuthorized.facetTags == ["Key"])
+// BOTH, and the order matters for nothing but reading: a revoke is a key event
+// (so "keys on vibenet" must reach it) and the revocation is the narrower
+// question asked on top.
+check("a revoke is a key event AND a revocation",
+      VibenetEventKind.actorRevoked.facetTags == ["Key", "Revoked"])
+check("a lock is about the ACCOUNT — it carries no key facet at all",
+      VibenetEventKind.locked.facetTags == ["Locked"])
+check("an unlock is its own state",
+      VibenetEventKind.unlockInitiated.facetTags == ["Unlocking"])
+
 if failures == 0 {
     print("✓ vibenet self-test: all assertions passed")
 } else {
@@ -1628,7 +1987,16 @@ PY
   then
     echo "  ✗ $name — the mutation did not apply (the shipped source moved)"; exit 1
   fi
-  if ! swiftc -O -o "$TMP/mut" "$target" "$TMP/main.swift" 2>/dev/null; then
+  # `$FACTS` IS NOT OPTIONAL HERE, and leaving it out made every mutation
+  # below pass for the wrong reason (found 2026-08-25, prd §468). The
+  # assertion build compiles ROOM + FACTS + main; this one compiled ROOM +
+  # main, so from the day `VibenetEventFacts` assertions entered `main.swift`
+  # every single mutated build failed with "cannot find 'VibenetEventFacts' in
+  # scope" and was reported as "(rejected at compile)" — the harness's own
+  # word for a mutation the TYPE SYSTEM caught. Thirty-four checks, all green,
+  # none of them testing anything. A check that cannot fail proves nothing;
+  # this one could not even run.
+  if ! swiftc -O -o "$TMP/mut" "$target" "$FACTS" "$TMP/main.swift" 2>/dev/null; then
     echo "  ✓ $name (rejected at compile)"; return
   fi
   if "$TMP/mut" > /dev/null 2>&1; then
@@ -1919,6 +2287,115 @@ mutate "VibenetBalanceAggregation.compose's tokenTotals must sort by symbol asce
 mutate "VibenetBalanceAggregate.plainLine must never print a zero locked count" \
   'if lockedCount > 0 {' \
   'if true {'
+
+# --- prd §468 mutations -----------------------------------------------------
+
+# A room read three days ago and one read a second ago must not draw the same
+# confident face. Without the floor a CURRENT room grows a timestamp; without
+# the rounding a 46-minute-old read says "0h ago", a caption claiming the room
+# is both stale and no time old.
+mutate "freshnessLine must stay silent while the read is current" \
+  'guard age >= freshnessFloor else { return nil }' \
+  'guard age >= 0 else { return nil }'
+
+mutate "freshnessLine must ROUND to the hour, never truncate to zero" \
+  'let hours = max(1, Int((age / 3_600).rounded()))' \
+  'let hours = Int(age / 3_600)'
+
+# A device whose clock moved backwards between the read and the draw.
+mutate "a read stamped in the future must not report a negative age" \
+  'guard age >= freshnessFloor else { return nil }' \
+  'guard abs(age) >= freshnessFloor else { return nil }'
+
+# THE §468 FIX IN ONE LINE: the crown heads a partial sum with a whole claim.
+# §349 ruled this out for Gnosis Pay and Railgun; this was the same defect in a
+# third room.
+mutate "nativeHeading must not claim the whole roster over a partial sum" \
+  'guard readCount < accountCount else { return String(localized: "Across your accounts") }' \
+  'guard readCount < 0 else { return String(localized: "Across your accounts") }'
+
+# readCount is what the total actually covers. Counting items instead makes
+# every partial read look complete while the figure stays short.
+mutate "readCount must count the readings that landed, not the accounts watched" \
+  'readCount: natives.count, unreachedCount: items.filter { !$0.reached }.count,' \
+  'readCount: items.count, unreachedCount: items.filter { !$0.reached }.count,'
+
+# The key count is a FLOOR whenever an account went unread, and the only thing
+# that says so is this clause. (First occurrence in the file is
+# `VibenetKeyAggregate`'"'"'s; the balance twin has its own assertions above.)
+mutate "the key card must say when an account could not be read" \
+  'guard unreachedCount > 0 else { return nil }' \
+  'guard unreachedCount > 99 else { return nil }'
+
+# The rail and the sentence beside it must obey ONE rule: expiry 0 is
+# Keystore-for-never and is not a date, and a lapsed key is not ahead.
+mutate "futureExpiries must exclude the never-expires convention" \
+  'filter { $0 > 0 && TimeInterval($0) > now.timeIntervalSince1970 }' \
+  'filter { TimeInterval($0) > now.timeIntervalSince1970 }'
+
+mutate "futureExpiries must exclude an already-lapsed key" \
+  'filter { $0 > 0 && TimeInterval($0) > now.timeIntervalSince1970 }' \
+  'filter { $0 > 0 }'
+
+# THE SHARPEST ONE HERE. An unreached account has an empty roster because the
+# read failed — reading that as revocation announces a security event that did
+# not happen, every time the devnet has a bad minute. It is
+# `ScreenshotIngest.pruneDeleted`'"'"'s never-prune-on-an-empty-read rule in a
+# room that draws rather than deletes, and it fails in the direction that
+# invents alarming news.
+mutate "an UNREACHED account must never read as having had its keys revoked" \
+  'guard item.reached else { continue }' \
+  'guard true else { continue }'
+
+# First sight seeds silently or a newly-watched account reports every key it
+# has ever had as new — the Hyperliquid first-sight bug, fifth bridge.
+mutate "an account with no ledger entry must seed SILENTLY" \
+  'guard let before = seen[key] else { continue }' \
+  'let before = seen[key] ?? []'
+
+# The write half of the same rule. Overwriting an unreached account with the
+# failed read yields nothing, which makes the NEXT successful read report every
+# one of its keys as new.
+mutate "advanced must keep an unreached account set, never overwrite it with nothing" \
+  '} else if let before = seen[key] {
+                out[key] = before
+            }' \
+  '}'
+
+# An actorId is unique WITHIN an account and nothing says it is across them, so
+# an unqualified key lets one account key mark another as seen — which HIDES a
+# change rather than inventing one, i.e. silently.
+mutate "the ledger key must be account-qualified" \
+  '"\(address.lowercased())|\(actorId.lowercased())"' \
+  '"\(actorId.lowercased())"'
+
+# The tray mirrors the card grouping or a card that says 4 opens a list of 3.
+mutate "the tray must exclude an admin from every bit section, exactly as the card counts do" \
+  'let members = pairs.filter { !$0.actor.scope.isAdmin && $0.actor.scope.raw & bit != 0 }' \
+  'let members = pairs.filter { $0.actor.scope.raw & bit != 0 }'
+
+# A key in no section at all is either said or lost. Losing it is the silent
+# half of §83 — the tray looks complete and is not.
+mutate "a key holding only reserved bits must be COUNTED, never dropped in silence" \
+  'filter { !$0.scope.isAdmin && $0.scope.raw & VibenetScope.known == 0 }' \
+  'filter { false }'
+
+# Without the note the tray row count reads as a contradiction of the card
+# above it — fourteen rows over eight keys.
+mutate "the tray footnote must warn that one key appears under several permissions" \
+  'line += String(localized: " · a key with several permissions appears under each")' \
+  'line += ""'
+
+# A revoke is a KEY event as well as a revocation. Losing the Key facet makes
+# "keys on vibenet" answer with the live ones only — plausible, and wrong.
+mutate "a revoke must keep its Key facet, not only its Revoked one" \
+  'case .actorRevoked: return ["Key", "Revoked"]' \
+  'case .actorRevoked: return ["Revoked"]'
+
+# A lock is about the ACCOUNT.
+mutate "a lock must carry no key facet" \
+  'case .locked: return ["Locked"]' \
+  'case .locked: return ["Locked", "Key"]'
 
 echo ""
 echo "✓ vibenet-selftest: drift guards, assertions and mutations all passed"

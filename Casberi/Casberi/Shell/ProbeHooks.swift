@@ -5996,6 +5996,76 @@ enum ProbeHooks {
                 }
             }
         },
+
+        // `-vibenetRoomProbe YES` — WHICH OF THE FOUR CARDS THE ROOM WOULD
+        // DRAW, and what each one says (prd §468).
+        //
+        // It exists because §467 split this room's head from one surface into
+        // four independently-gated ones (balance, holdings, keys, linked) and
+        // nothing can see them. `verify.sh`'s demo room-head coverage step is
+        // keyed on `FeedScreen.SourceHead` cases reached through
+        // `-roomInsightProbe`, and this room's head is a `FeedScreen.Shape`
+        // case instead — so it has never been in that map, and each of those
+        // four gates can now decline silently over a demo corpus that cannot
+        // furnish it. A card that draws nothing and a card that was never
+        // built look identical from outside.
+        //
+        // One NSLog per card and per reading (the `-todayProbe` truncation
+        // lesson). Composes through `VibenetRoomSource.card()`, the same
+        // synchronous door the feed head uses, so what this prints is what
+        // that head draws rather than a second opinion.
+        Hook(key: "vibenetRoomProbe") { _, _ in
+            Task { @MainActor in
+                guard let room = VibenetRoomSource.card() else {
+                    NSLog("[Casberi] vibenetRoom| NO ROOM — not connected, or no read has ever completed here")
+                    return
+                }
+                NSLog("[Casberi] vibenetRoom| accounts=%d lead=%@ configReached=%@ readAt=%@",
+                      room.items.count,
+                      room.lead.map { VibenetRoom.shortAddress($0.address) } ?? "none",
+                      room.configReached ? "YES" : "no",
+                      room.readAt.map { "\($0)" } ?? "UNSTAMPED")
+                NSLog("[Casberi] vibenetRoom| note=%@",
+                      VibenetRoom.note(room, drawn: room.items.count) ?? "(none)")
+
+                if let balance = VibenetBalanceAggregation.compose(room.items) {
+                    NSLog("[Casberi] vibenetCard| balance DRAWS heading=%@ plain=%@ native=%@ read=%d/%d unreached=%@",
+                          balance.nativeHeading, balance.plainLine,
+                          balance.nativeTotal.map { VibenetBalanceFormat.line($0) } ?? "UNREAD",
+                          balance.readCount, balance.accountCount,
+                          balance.unreachedLine ?? "(none)")
+                    let cells = VibenetBalanceTreemap.cells(balance)
+                    NSLog("[Casberi] vibenetCard| holdings %@ cells=%d",
+                          cells.isEmpty ? "SILENT (one asset or none)" : "DRAWS", cells.count)
+                } else {
+                    NSLog("[Casberi] vibenetCard| balance SILENT — no accounts at all")
+                    NSLog("[Casberi] vibenetCard| holdings SILENT — no accounts at all")
+                }
+
+                if let keys = VibenetKeyAggregation.compose(room.items, now: .now) {
+                    NSLog("[Casberi] vibenetCard| keys DRAWS plain=%@ unreached=%@ runway=%d soonest=%@",
+                          keys.plainLine, keys.unreachedLine ?? "(none)",
+                          keys.futureExpiries.count,
+                          keys.soonestExpiry.map { $0.line(now: .now) } ?? "(none)")
+                    for entry in VibenetPolicyAggregation.compose(room.items) {
+                        NSLog("[Casberi] vibenetPolicy| %@ = %d", entry.label, entry.count)
+                    }
+                } else {
+                    NSLog("[Casberi] vibenetCard| keys SILENT — no key on any watched account")
+                }
+
+                let links = VibenetAccountMapping.links(room.items)
+                NSLog("[Casberi] vibenetCard| linked %@ links=%d",
+                      links.isEmpty ? "SILENT (nobody delegates)" : "DRAWS", links.count)
+
+                // The since-you-last-looked ledger, WITHOUT spending it — a
+                // probe that marked the room as read would erase the very
+                // thing the next launch is meant to show.
+                let changes = VibenetKeysSeen.changes(in: room.items)
+                NSLog("[Casberi] vibenetChanges| new=%d revoked=%d line=%@",
+                      changes.added.count, changes.revokedCount, changes.line ?? "(silent)")
+            }
+        },
     ]
 }
 

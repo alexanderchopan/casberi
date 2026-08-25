@@ -92,6 +92,12 @@ enum HomeComposition {
             // theme somebody keeps things about, while "BNB Smart Chain" is a
             // venue stamped on every row that touched it.
             "Root key", "Session key",                    // Altana keystore
+            // vibenet (prd §468). STATE by this set's own rule: it says what a
+            // key IS (EIP-8130 scope 0, unrestricted), never what anything is
+            // about. Deliberately not a facet either — nobody types "admin
+            // key" as a search, and its whole job is to route one row to the
+            // lock screen (`NotifySweep.classify`).
+            "Admin key",                                  // vibenet keystore
             "BNB Smart Chain",                            // wallet chain label
             // Radicle (prd §400). All five are STATE, not subject: they say
             // what happened to a patch or an issue, never what it is about.

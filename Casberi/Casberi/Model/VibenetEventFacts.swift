@@ -1,7 +1,7 @@
 import Foundation
 
 /// What a vibenet EVENT sheet may say, and — more to the point — what it may
-/// not (prd §464, 2026-08-25).
+/// not (prd §467, 2026-08-25).
 ///
 /// **The sheet it replaces said one thing and it was nothing.** A key
 /// authorization opened to its title, a Share disc, and a one-row table

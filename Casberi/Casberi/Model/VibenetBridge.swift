@@ -291,6 +291,10 @@ enum VibenetBridge {
         // Or the feed's head keeps drawing accounts nobody watches
         // anymore — the snapshot outlives the watch list otherwise.
         VibenetState.forget()
+        // And the "which keys had you seen" ledger — a re-watch months later
+        // is a first sight, which seeds silently rather than reporting every
+        // key change since as news.
+        VibenetKeysSeen.forget()
         store.remove(VibenetIdentity.seatID)
     }
 }
@@ -965,6 +969,59 @@ enum VibenetSeenCommit {
     }
 }
 
+/// WHICH KEYS THIS DEVICE HAS ALREADY SEEN, per account — the ledger behind
+/// `VibenetKeyChanges`. `VibenetSeenCommit`'s neighbour and its exact shape,
+/// for its exact reason: "have you looked at this" is a fact about this
+/// device's screen, so it is UserDefaults, never a `Thing`, never synced.
+///
+/// The DIFFING rules — silent first sight, an unreached account contributing
+/// nothing, an unwatched account dropping out — all live in
+/// `VibenetKeySeenDiff` where the harness can compile them. This half is
+/// storage only.
+enum VibenetKeysSeen {
+    private static let key = "vibenet.keys.seen.v1"
+
+    private static func book() -> [String: Set<String>] {
+        guard let data = UserDefaults.standard.data(forKey: key),
+              let raw = try? JSONDecoder().decode([String: [String]].self, from: data)
+        else { return [:] }
+        return raw.mapValues(Set.init)
+    }
+
+    /// What has moved since this device last looked at these accounts. Does
+    /// NOT advance — reading and marking-as-read are two acts, and the card
+    /// must be able to draw the answer before it spends it.
+    static func changes(in items: [VibenetAccountItem]) -> VibenetKeyChanges {
+        VibenetKeySeenDiff.since(seen: book(), items: items)
+    }
+
+    /// Mark this roster as looked at.
+    static func advance(_ items: [VibenetAccountItem]) {
+        let next = VibenetKeySeenDiff.advanced(seen: book(), items: items)
+        guard let data = try? JSONEncoder().encode(next.mapValues(Array.init)) else { return }
+        UserDefaults.standard.set(data, forKey: key)
+    }
+
+    /// Disconnecting forgets it — the `VibenetState.forget` rule: a re-watch
+    /// later is a first sight again, which seeds silently rather than
+    /// reporting a year of key changes as news.
+    static func forget() {
+        UserDefaults.standard.removeObject(forKey: key)
+    }
+
+    /// Plant a book directly — the demo's door. NOT behind `#if DEBUG`:
+    /// `demo-selftest.py`'s check A exists because `ChipMemory.seedDemo` once
+    /// shipped DEBUG-only inside a file carrying none, so the demo furnished
+    /// nothing in Release and every check here (all of them DEBUG) said it
+    /// did. Without this the demo's key card can never draw its
+    /// since-you-last-looked line, because a first sight seeds silently — by
+    /// design, and correctly.
+    static func seed(_ book: [String: Set<String>]) {
+        guard let data = try? JSONEncoder().encode(book.mapValues(Array.init)) else { return }
+        UserDefaults.standard.set(data, forKey: key)
+    }
+}
+
 // MARK: - Composing the room
 
 enum VibenetRoomSource {
@@ -993,9 +1050,15 @@ enum VibenetRoomSource {
         let items = await IngestSupport.boundedGather(addresses, maxConcurrent: 3) { address in
             await VibenetRead.account(address, contracts: contracts)
         }
+        // `readAt` — stamped HERE and only here, because this is the only
+        // place in the app that has genuinely just read the chain. See
+        // `VibenetRoom.readAt` for the defect it closes; `vibenet-selftest.sh`
+        // guards that this call site still passes it, since a room that
+        // silently loses its timestamp goes back to drawing three-day-old
+        // state with a confident face.
         let room = VibenetRoom.compose(items: items, branch: contracts.branch,
                                        commit: contracts.commit, configReached: true,
-                                       redeployedSinceLastSeen: redeployed)
+                                       redeployedSinceLastSeen: redeployed, readAt: .now)
         VibenetState.save(room)
         // The line the crown draws under. Recorded here, from the read that
         // already fetched the balances, so the chart is REAL on every device
@@ -1181,11 +1244,20 @@ enum VibenetEvents {
         guard let contracts = await VibenetConfig.current() else { return 0 }
         let addresses = VibenetWatch.shared.addresses
         guard !addresses.isEmpty else { return 0 }
-        let existing = IngestSupport.existingSourceRefs(context, source: VibenetIdentity.source)
+        // The ROWS, not just their refs (2026-08-25, prd §468): an event
+        // already in the corpus dedupes out of the landing path, and the
+        // social-bridge rule is that a bridge heals on the dedupe hit — which
+        // is the only way the §308 facet tags below can ever reach an event
+        // landed by an earlier build. `refSegment` is "actor" for BOTH an
+        // authorize and a revoke, so the tags cannot be re-derived from a
+        // stored ref; they have to come from the log, which this pass is
+        // already reading. Bounded by the walk, and stated as such: an event
+        // older than `VibenetLogChunking`'s reach is never revisited.
+        let byRef = IngestSupport.thingsByRef(context, source: VibenetIdentity.source)
 
         var landed = 0
         for address in addresses {
-            landed += await landAccount(address, contracts: contracts, context: context, existing: existing)
+            landed += await landAccount(address, contracts: contracts, context: context, existing: byRef)
         }
         return landed
     }
@@ -1221,7 +1293,7 @@ enum VibenetEvents {
 
     @MainActor
     private static func landAccount(_ address: String, contracts: VibenetContracts,
-                                    context: ModelContext, existing: Set<String>) async -> Int {
+                                    context: ModelContext, existing: [String: Thing]) async -> Int {
         let ownerTopic = "0x" + VibenetABI.padAddress(address)
         async let actorLogsTask = VibenetChain.getLogs(
             address: contracts.keystore,
@@ -1248,7 +1320,19 @@ enum VibenetEvents {
                 ? .unlockInitiated : .locked
             if let e = parse(log, kind: kind) { events.append(e) }
         }
-        let fresh = events.filter { !existing.contains(ref($0)) }
+        // HEAL ON THE DEDUPE HIT, before the fresh split — the facet tags
+        // (prd §468) are the whole reason, and an event landed by an earlier
+        // build has no other route to them. `isLive` guarded because a row can
+        // be deleted under an async pass (corollary 6); only ever ADDS a
+        // missing tag, so a tag somebody's own edit removed is not re-forced.
+        for event in events {
+            guard let thing = existing[ref(event)], thing.isLive else { continue }
+            let wanted = event.kind.facetTags
+            let missing = wanted.filter { !thing.tags.contains($0) }
+            if !missing.isEmpty { thing.tags.append(contentsOf: missing) }
+        }
+
+        let fresh = events.filter { existing[ref($0)] == nil }
         guard !fresh.isEmpty else { return 0 }
 
         // Block times, ONE call per distinct block among the new events —
@@ -1265,10 +1349,19 @@ enum VibenetEvents {
         for event in fresh {
             var keyLabel: String?
             var expiresAt: Date?
+            /// prd §468 — the one vibenet event worth the lock screen. See the
+            /// tag's use in `NotifySweep.classify`.
+            var isAdminKey = false
             if event.kind == .actorAuthorized, let actorId = event.actorId,
                let actor = await VibenetRead.actor(account: address, keystore: contracts.keystore,
                                                     actorId: actorId, known: known) {
                 keyLabel = actor.kind.label
+                // EIP-8130's scope 0 is UNRESTRICTED (prd §463) — a key that
+                // can do everything, including the reserved things this build
+                // cannot name. Read here, at landing, from the same live
+                // re-read that resolves the kind, because the scope is not
+                // recoverable from the row afterwards.
+                isAdminKey = actor.scope.isAdmin
                 // A KEY THAT EXPIRES IS A DEADLINE, so it lands as one —
                 // and that is the whole of the work. `NotifySweep` already
                 // scans the live corpus for any row whose `dueAt` is near
@@ -1319,6 +1412,16 @@ enum VibenetEvents {
             // thing `MoneyReceiptSource`'s own doc forbids. `summary` is
             // display copy this bridge has never used, already deployed.
             thing.summary = event.kind.phrase(keyLabel: keyLabel)
+            // The §308 facets — an existing, already-deployed field, so no
+            // CloudKit deploy. See `VibenetEventKind.facetTags` for why a
+            // revoke carries two and a lock carries none.
+            thing.tags = event.kind.facetTags
+            // "Admin key" — a MECHANICAL tag, not a facet: it is stamped by
+            // one bridge for one state and nobody would type it as a search.
+            // It is the whole of what makes this row reach the lock screen,
+            // and it is a tag rather than a ref segment because changing the
+            // ref would re-land every event already in every corpus.
+            if isAdminKey { thing.tags.append("Admin key") }
             // An existing, already-deployed field — no CloudKit deploy. Nil
             // for every other event kind and for a key that never expires,
             // so nothing here invents a clock a key does not have.

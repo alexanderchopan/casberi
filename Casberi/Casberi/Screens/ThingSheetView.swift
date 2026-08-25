@@ -531,7 +531,7 @@ struct ThingSheetView: View {
                         .padding(.top, DS.Space.s3)
                         .settleIn(delay: 0.06)
                 }
-                // A vibenet key event's own anatomy (prd §464) — see
+                // A vibenet key event's own anatomy (prd §467) — see
                 // `VibenetEventCard`. BELOW the title, never above it: the
                 // title is the event ("New passkey authorized for …9a0b") and
                 // this card is what follows FROM it — which account, how many
@@ -1568,7 +1568,7 @@ struct ThingSheetView: View {
             && reception?.provenance == nil
             && noteReception?.provenance == nil
             // …and never on a vibenet event, which has its own card above
-            // (prd §464). "From — on vibenet" is the title's own last two
+            // (prd §467). "From — on vibenet" is the title's own last two
             // words wearing a field label — the "one-row table saying
             // nothing" this block's own §363 note already stood down for
             // elsewhere. The card states the account, its live key count and
@@ -2179,7 +2179,7 @@ struct ThingSheetView: View {
         }
     }
 
-    /// A vibenet key event's facts, or nil for everything else (prd §464).
+    /// A vibenet key event's facts, or nil for everything else (prd §467).
     ///
     /// Cheap enough to sit on the body path: two string compares reject every
     /// other row in the corpus before anything is read, and the room itself is

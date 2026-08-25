@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// A vibenet key event, as its own anatomy (prd §464, 2026-08-25).
+/// A vibenet key event, as its own anatomy (prd §467, 2026-08-25).
 ///
 /// **What it replaces.** These events opened to a title, a Share disc and a
 /// one-row table reading "From — on vibenet" — the title's own last two words

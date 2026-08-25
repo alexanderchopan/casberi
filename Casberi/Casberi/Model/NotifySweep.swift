@@ -230,6 +230,35 @@ enum NotifySweep {
         if ref.hasPrefix("wallet:safeconfig:"), thing.tags.contains("Module added") {
             return .approvalGranted
         }
+        // — vibenet: an ADMIN key was authorized on a watched account
+        //   (2026-08-25, prd §468). EIP-8130's scope 0 is UNRESTRICTED — that
+        //   key can originate anything, including the capabilities this build
+        //   cannot name — so it is exactly the "something new can move your
+        //   funds" news an ERC-20 approval carries, and it REUSES that kind
+        //   rather than a near-duplicate, the Safe-module ruling two lines up.
+        //
+        //   ONLY an admin key, and that bound is the whole decision. This room
+        //   lands four kinds of event and three of them are things you almost
+        //   certainly did yourself: a session key you just minted, a key you
+        //   just revoked, an unlock you just started. A room that buzzed for
+        //   all of them would fail §306's own "did you already know?" test
+        //   every time, which is the test that keeps a landed row from
+        //   notifying. An admin key you did NOT mint is the one event here
+        //   nobody would already know about, and it is rare by construction.
+        //
+        //   Tag-based, never ref-based: `refSegment` is "actor" for both an
+        //   authorize and a revoke, and the scope is not on the row at all —
+        //   `VibenetEvents.landAccount` stamps it from the live re-read.
+        //
+        //   Note vibenet is a DEVNET today and this alarm is deliberately
+        //   still built: a key expiry from the same room has reached the lock
+        //   screen through `deadlineNear` since the day it shipped, so the
+        //   room already notifies about the less consequential of its two
+        //   clocks. What keeps the volume honest is the admin gate, not the
+        //   network.
+        if ref.hasPrefix("vibenet:actor:"), thing.tags.contains("Admin key") {
+            return .approvalGranted
+        }
         // — DeFi liquidation proximity (2026-08-09): Aave and Morpho share the
         //   `wallet:defi:` prefix (`WalletDeFi.sync`/`MorphoDeFi.sync`),
         //   Hyperliquid mints its own (`HyperliquidDeFi`'s risk bucket). Both

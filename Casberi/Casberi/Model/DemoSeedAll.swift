@@ -448,6 +448,10 @@ enum DemoSeedAll {
         // ends on the fixture's total, which is not their balance. Dropped
         // whole, and it refills from their own next sweep.
         VibenetValueStore.forget()
+        // And the seen-keys ledger, for the same reason and one step
+        // stronger: the demo fixture's four addresses are not theirs, so a
+        // ledger left behind would diff a real roster against a demo's.
+        VibenetKeysSeen.forget()
 
         // Apple Wallet's own bespoke connected flag, and App Store Connect's
         // planted standing — same accepted risk as Cloudflare above: a real
@@ -678,7 +682,7 @@ enum DemoSeedAll {
             // (`VibenetEventKind.refSegment`), corrected 2026-08-25. The demo
             // invented its own spelling, and the moment anything downstream
             // matched on the real one — the event sheet asks `vibenet:actor`
-            // to decide whether an event is about a KEY (§464) — every demo
+            // to decide whether an event is about a KEY (§467) — every demo
             // authorization silently failed the test and drew no permissions
             // and no expiry. Same class as §349's Peer/Privacy Pools demo
             // refs: the rows land, the room renders, and the one reading that
@@ -700,7 +704,7 @@ enum DemoSeedAll {
                 thing.summary = phrase
                 // ONE authorization carries the expiry of a real key in the
                 // fixture, so the event sheet's permission chips and its
-                // "Expires" row are exercised by the demo (§464). The value is
+                // "Expires" row are exercised by the demo (§467). The value is
                 // `demoFixture`'s own actor-1 expiry on this account, and that
                 // is the whole requirement: `VibenetEventFacts` names a key's
                 // permissions only when EXACTLY ONE key on the account matches
@@ -711,6 +715,21 @@ enum DemoSeedAll {
                 if ref == "actor:demo2" {
                     thing.dueAt = Date(timeIntervalSince1970: 4_102_444_800)
                 }
+                // The §308 facets the real bridge stamps (prd §468) — without
+                // them the demo's four vibenet rows are the only rows in this
+                // room a facet ask can never reach, which is exactly the demo
+                // parity §349 made a standing rule.
+                switch ref {
+                case "locked:demo3":               thing.tags = ["Locked"]
+                case "actor:demo4":                thing.tags = ["Key", "Revoked"]
+                default:                           thing.tags = ["Key"]
+                }
+                // ONE demo authorization is an ADMIN key, so the row that
+                // reaches the lock screen (`NotifySweep.classify`) exists in
+                // the demo at all. `demoFixture`'s own scope-0 actor lives on
+                // a different account, and that is fine: the tag is the whole
+                // gate and nothing joins the two.
+                if ref == "actor:demo1" { thing.tags.append("Admin key") }
             }
         }
     }
@@ -3199,6 +3218,35 @@ enum DemoSeedAll {
         VibenetValueStore.replaceAccounts(book)
     }
 
+    /// The vibenet room's "since you last looked" ledger (prd §468).
+    ///
+    /// A first sight seeds SILENTLY by design — otherwise a newly-watched
+    /// account reports every key it has ever had as new — so a demo with no
+    /// ledger can never draw that line, and the one reading in this room that
+    /// answers "did anything change while I wasn't looking" would be invisible
+    /// in the tour.
+    ///
+    /// DERIVED FROM THE FIXTURE, never a hand list of ids: the book is the
+    /// fixture's own advanced state with one real key removed (so it reads as
+    /// NEW) and one phantom added (so it reads as REVOKED). A fixture edit
+    /// therefore cannot leave this seeding a set of ids that match nothing —
+    /// the §349 demo-ref lesson, avoided by construction rather than by care.
+    private static func seedVibenetSeenKeys() {
+        let items = VibenetRoom.demoFixture().items
+        var book = VibenetKeySeenDiff.advanced(seen: [:], items: items)
+        guard let account = items.first(where: { $0.actors.count > 1 }) else { return }
+        let bookKey = account.address.lowercased()
+        var set = book[bookKey] ?? []
+        // SORTED before dropping, so the same key is chosen on every run —
+        // a `Set`'s iteration order is not stable across launches, and a demo
+        // whose card says "1 key new" about a different key each time is a
+        // demo nobody can screenshot twice.
+        if let dropped = set.sorted().first { set.remove(dropped) }
+        set.insert(VibenetKeySeenDiff.keyID(address: account.address, actorId: "0xdemorevokedkey"))
+        book[bookKey] = set
+        VibenetKeysSeen.seed(book)
+    }
+
     private static func seedCloudflareEstate() {
         CloudflareEstateStore.save(CloudflareEstate(
             zoneNames: ["demo0": "casberi.app", "demo1": "api.casberi.app"],
@@ -4377,6 +4425,7 @@ enum DemoSeedAll {
         // (2.514), because the crown states that number directly above the
         // line and a chart ending anywhere else would contradict it.
         seedVibenetHistory()
+        seedVibenetSeenKeys()
         // 5c · Base Vibenet — the watch list, not the room's content.
         // `VibenetRoomSource.compose()` returns `VibenetRoom.demoFixture()`
         // whole under `DemoMode.isActive` and never touches these addresses

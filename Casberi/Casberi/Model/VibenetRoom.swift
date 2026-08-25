@@ -946,6 +946,30 @@ struct VibenetRoom: Equatable, Codable {
     /// UserDefaults of its own. False on a first-ever read by construction —
     /// there's nothing yet to compare against, never a redeploy to report.
     let redeployedSinceLastSeen: Bool
+    /// WHEN THIS ROOM WAS READ, and the reason it exists is a defect this
+    /// feature shipped with: `VibenetState` persists the last composed room
+    /// and `FeedScreen`'s head draws it synchronously on every scroll, while
+    /// `VibenetRoomSource.compose()` returns early WITHOUT saving when the
+    /// config fetch fails — so a device that has been offline for three days
+    /// keeps drawing the last good snapshot, complete with its confident "As
+    /// of vibenet's main branch, commit a9ae95e1b" provenance, and a lock
+    /// state read on Tuesday is pixel-identical to one read a second ago.
+    /// That is the §83 fake status on the one network whose entire premise is
+    /// that it moves under you.
+    ///
+    /// The provenance line was never this: it names the CONTRACTS' commit,
+    /// which says what the chain was when we looked and nothing about when
+    /// that was. `TodayBrief`'s "as of Xh ago" and `ASCStanding.observed` are
+    /// the app's own precedents for the distinction.
+    ///
+    /// OPTIONAL, and load-bearing rather than tidy — this type is `Codable`
+    /// and persisted, and Swift synthesises `decodeIfPresent` for an
+    /// Optional, so every snapshot already on a device decodes with this as
+    /// nil rather than failing the decode of the whole room (the
+    /// `RSSStore.Feed` trap, third time in this file). A nil reads as "we
+    /// don't know when", which is honest and survives exactly one foreground:
+    /// the next composed read stamps it.
+    let readAt: Date?
 
     var isEmpty: Bool { items.isEmpty }
     var lockedCount: Int { items.filter(\.alarmed).count }
@@ -978,13 +1002,19 @@ struct VibenetRoom: Equatable, Codable {
         return VibenetRoom(
             items: items.filter { $0.address.caseInsensitiveCompare(address) == .orderedSame },
             branch: branch, commit: commit, configReached: configReached,
-            redeployedSinceLastSeen: redeployedSinceLastSeen)
+            redeployedSinceLastSeen: redeployedSinceLastSeen, readAt: readAt)
     }
 
+    /// `readAt` DEFAULTS TO NIL rather than to `.now`, deliberately: a
+    /// default of "now" would let a room composed from nothing — the empty
+    /// placeholder two screens build before their first read — claim to be a
+    /// fresh reading of the chain. The one call site that has really just
+    /// read passes it, and `vibenet-selftest.sh` guards that it still does.
     static func compose(items raw: [VibenetAccountItem], branch: String?, commit: String?,
-                         configReached: Bool, redeployedSinceLastSeen: Bool = false) -> VibenetRoom {
+                         configReached: Bool, redeployedSinceLastSeen: Bool = false,
+                         readAt: Date? = nil) -> VibenetRoom {
         VibenetRoom(items: ordered(raw), branch: branch, commit: commit, configReached: configReached,
-                    redeployedSinceLastSeen: redeployedSinceLastSeen)
+                    redeployedSinceLastSeen: redeployedSinceLastSeen, readAt: readAt)
     }
 
     /// A locked account first (the one alarm this room can raise), then an
@@ -1119,7 +1149,7 @@ struct VibenetRoom: Equatable, Codable {
     /// the two — reported as "look at it touching the walls". Now it
     /// lives INSIDE the one card, at the bottom, the same position every
     /// other room's provenance line already keeps.
-    static func note(_ room: VibenetRoom, drawn: Int) -> String? {
+    static func note(_ room: VibenetRoom, drawn: Int, now: Date = .now) -> String? {
         guard room.configReached else {
             return String(localized: "vibenet is an experimental devnet — its contracts redeploy often, and this read couldn't reach the current set.")
         }
@@ -1130,7 +1160,46 @@ struct VibenetRoom: Equatable, Codable {
                                      : String(localized: "\(hidden) more watched"))
         }
         parts.append(provenanceLine(room))
+        // WHEN, after WHAT — the commit says what the chain was, this says
+        // how long ago we looked, and only the pair is a provenance. Last in
+        // the join because it is the clause that changes between draws.
+        if let age = freshnessLine(room, now: now) { parts.append(age) }
         return parts.joined(separator: " · ")
+    }
+
+    /// A stale snapshot is only worth saying once it is old enough that the
+    /// chain could plausibly have moved under it — under this, the card is
+    /// simply current and a timestamp is noise on a caption already carrying
+    /// two clauses. Forty-five minutes rather than an hour so a room read at
+    /// the top of the hour does not read as fresh for fifty-nine more
+    /// minutes; the wording below is in whole hours regardless.
+    static let freshnessFloor: TimeInterval = 45 * 60
+
+    /// "read 3h ago" / "read yesterday" / "read Mar 3" — nil while the read
+    /// is recent, and nil when there is no `readAt` at all (a snapshot
+    /// written by a build before that field existed; see the property's own
+    /// doc for why that state survives exactly one foreground).
+    ///
+    /// NEVER a relative-date formatter: `Date.formatted(.relative)` renders
+    /// a 46-minute-old read as "in 1 hour" at some rounding boundaries and
+    /// this caption's whole job is to be unambiguous about the past.
+    /// A read stamped in the FUTURE — a device whose clock moved backwards
+    /// between the read and the draw — reads as nothing rather than as a
+    /// negative age.
+    static func freshnessLine(_ room: VibenetRoom, now: Date) -> String? {
+        guard let readAt = room.readAt else { return nil }
+        let age = now.timeIntervalSince(readAt)
+        guard age >= freshnessFloor else { return nil }
+        // ROUNDED, never truncated, and floored at one: the freshness floor
+        // is 45 minutes, so a straight `Int(age / 3600)` prints "read 0h ago"
+        // for every read between 45 and 60 minutes old — a caption that says
+        // a room is both stale and zero hours old.
+        let hours = max(1, Int((age / 3_600).rounded()))
+        if hours < 24 { return String(localized: "read \(hours)h ago") }
+        let days = hours / 24
+        if days == 1 { return String(localized: "read yesterday") }
+        if days < 7 { return String(localized: "read \(days) days ago") }
+        return String(localized: "read \(readAt.formatted(.dateTime.month(.abbreviated).day()))")
     }
 
     /// The config's own provenance alone, since vibenet's contracts
@@ -1337,9 +1406,13 @@ struct VibenetRoom: Equatable, Codable {
             reached: true, established: false,
             actors: [], locked: false, hasInitiatedUnlock: false, unlocksAt: nil, unlockDelay: nil)
 
+        // `readAt: .now` — the fixture stands in for a read that just
+        // happened (`VibenetRoomSource.compose` returns this INSTEAD of
+        // touching the network), so anything less would make the demo's own
+        // room draw a staleness note about a read it never made.
         return compose(items: [rich, lockedPlain, unlocking, notEstablishedYet],
                         branch: "main", commit: "a9ae95e1bdemo",
-                        configReached: true, redeployedSinceLastSeen: true)
+                        configReached: true, redeployedSinceLastSeen: true, readAt: .now)
     }
 }
 
@@ -1990,6 +2063,133 @@ enum VibenetPolicyAggregation {
     }
 }
 
+// MARK: - The key tray (2026-08-25, prd §468) — which keys are in which category
+
+/// One key in the tray, carrying the account it belongs to.
+///
+/// The pairing is the whole point: room-wide, a key means nothing without the
+/// account it can act for, and the card above it counts keys across every
+/// watched account at once.
+struct VibenetTrayKey: Equatable, Identifiable {
+    let address: String
+    let actor: VibenetActor
+    /// Account-qualified, for the reason `VibenetKeySeenDiff.keyID` gives: an
+    /// `actorId` is unique WITHIN an account and nothing says it is unique
+    /// across them, and a `ForEach` over a colliding id is a SwiftUI identity
+    /// bug that renders as rows disappearing.
+    var id: String { VibenetKeySeenDiff.keyID(address: address, actorId: actor.actorId) }
+}
+
+/// One permission, and every key in the room that holds it.
+struct VibenetTraySection: Equatable, Identifiable {
+    let label: String
+    let keys: [VibenetTrayKey]
+    var id: String { label }
+    var count: Int { keys.count }
+}
+
+/// WHAT THE KEYS CARD OPENS INTO (user, 2026-08-25: *"the key card should open
+/// to a list of keys and permissions that show which keys are in which
+/// category"*).
+///
+/// The card states six numbers — "Send anywhere 4", "Pay own gas 2" — and a
+/// number is the one thing you cannot act on: knowing four keys can send
+/// anywhere does not tell you WHICH four, or on which account, or when any of
+/// them lapses. `keysAggregateSection`'s own comment has said since 2026-08-24
+/// that it withholds its chevron because "it points at a key tray that does
+/// not exist in this build, and a chevron that opens nothing is the dead
+/// control §83 bans". This is that screen; the chevron becomes honest with it.
+///
+/// **IT MIRRORS `VibenetPolicyAggregation.compose` EXACTLY** — same Admin-first
+/// order, same `orderedPlainBits` order, same exclusion of an admin from every
+/// bit section, same dropping of a permission nobody holds. Two derivations of
+/// one grouping drift, and then a card says 4 and the list it opens shows 3.
+/// The ceiling that follows is stated rather than papered over: see
+/// `unnamedKeyCount`.
+enum VibenetKeyTray {
+    static func sections(_ items: [VibenetAccountItem]) -> [VibenetTraySection] {
+        let pairs = items.flatMap { item in item.actors.map { VibenetTrayKey(address: item.address, actor: $0) } }
+        guard !pairs.isEmpty else { return [] }
+        var out: [VibenetTraySection] = []
+        let admins = pairs.filter { $0.actor.scope.isAdmin }
+        if !admins.isEmpty {
+            out.append(VibenetTraySection(label: String(localized: "Admin"), keys: ordered(admins)))
+        }
+        for (bit, plain) in VibenetScope.orderedPlainBits {
+            let members = pairs.filter { !$0.actor.scope.isAdmin && $0.actor.scope.raw & bit != 0 }
+            if !members.isEmpty {
+                out.append(VibenetTraySection(label: plain, keys: ordered(members)))
+            }
+        }
+        return out
+    }
+
+    /// Keys that appear in NO section — a non-admin key holding only reserved
+    /// bits this build cannot name (`Scopes.sol` reserves 0x0020…0x8000).
+    ///
+    /// COUNTED AND SAID, never given an invented category: a section called
+    /// "Other" would name a permission nobody can check, which is the one
+    /// thing this whole file refuses to do. The tray states the count in a
+    /// footnote so a reader can tell a key that is missing from every section
+    /// from a key that was never read.
+    static func unnamedKeyCount(_ items: [VibenetAccountItem]) -> Int {
+        items.flatMap(\.actors)
+            .filter { !$0.scope.isAdmin && $0.scope.raw & VibenetScope.known == 0 }
+            .count
+    }
+
+    /// "8 keys · a key with several permissions appears in each" — the note
+    /// without which the tray's row count looks like it contradicts the card's
+    /// key count. It does not: a key holding two bits is genuinely in two
+    /// categories, and that is what the screen is for.
+    static func footnote(_ items: [VibenetAccountItem]) -> String? {
+        let total = items.flatMap(\.actors).count
+        guard total > 0 else { return nil }
+        var line = total == 1 ? String(localized: "1 key") : String(localized: "\(total) keys")
+        if sections(items).contains(where: { $0.count > 0 }) {
+            line += String(localized: " · a key with several permissions appears under each")
+        }
+        let unnamed = unnamedKeyCount(items)
+        if unnamed > 0 {
+            line += unnamed == 1
+                ? String(localized: " · 1 holds only permissions this build can't name")
+                : String(localized: " · \(unnamed) hold only permissions this build can't name")
+        }
+        return line
+    }
+
+    /// "Also: Pay own gas, Send in order" — the OTHER named permissions a key
+    /// in this section holds, or nothing.
+    ///
+    /// Without it the tray answers half the question: it says which keys are
+    /// in a category and not what else those keys can do, so a session key
+    /// that only sends and an admin-adjacent key that sends AND pays for
+    /// others read identically inside "Send anywhere". Excludes the section's
+    /// own label rather than re-printing it, and never lists the unknown tail
+    /// (`+N unknown` is a count, not a permission — the footnote carries it).
+    static func alsoLine(_ key: VibenetTrayKey, besides label: String) -> String? {
+        let others = key.actor.scope.plainNames.filter { $0 != label }
+        guard !others.isEmpty else { return nil }
+        return String(localized: "Also: \(others.joined(separator: ", "))")
+    }
+
+    /// TOTAL, and judgement-free: by the key's own displayed title, then the
+    /// account, then the actorId. `VibenetAccountItem.alphabetical`'s ruling
+    /// (user, §463: *"the keys could just be listed in alphabetical order then
+    /// we aren't making some judgement call"*) carried across accounts — the
+    /// account is the tie-break rather than the lead, because the reader is
+    /// scanning a permission's members, not browsing accounts.
+    private static func ordered(_ keys: [VibenetTrayKey]) -> [VibenetTrayKey] {
+        keys.sorted { a, b in
+            let t = a.actor.kind.plainTitle.localizedCaseInsensitiveCompare(b.actor.kind.plainTitle)
+            if t != .orderedSame { return t == .orderedAscending }
+            let addr = a.address.localizedCaseInsensitiveCompare(b.address)
+            if addr != .orderedSame { return addr == .orderedAscending }
+            return a.actor.actorId < b.actor.actorId
+        }
+    }
+}
+
 struct VibenetKeyAggregate: Equatable {
     let total: Int
     /// By kind, in the Keystore's OWN declared order (`sortRank`) — never
@@ -2002,11 +2202,32 @@ struct VibenetKeyAggregate: Equatable {
     /// account holding none isn't counted, so "9 keys across 4 accounts"
     /// never claims a key for an account that authorized nothing.
     let accountCount: Int
+    /// Watched accounts whose read never reached the chain. `accountCount`
+    /// silently excludes them — an unreached account has an empty roster,
+    /// which is indistinguishable here from one that authorized nothing — so
+    /// without this the card reports "8 keys across 3 accounts" over a room
+    /// where a fourth account's keys were simply never counted. The balance
+    /// aggregate's own `unreachedCount` for the identical reason; this is one
+    /// defect in two places.
+    let unreachedCount: Int
     /// The soonest FUTURE expiry across the whole room, or nil when
     /// nothing is still ticking — `VibenetAccountItem.urgentLine`'s exact
     /// rule (`expiry == 0` never counts, an already-expired key never
     /// counts either), read once here rather than re-derived per caller.
     let soonestExpiry: VibenetKeySoonestExpiry?
+    /// EVERY future expiry in the room, ascending — what the keys card draws
+    /// as a runway (`WalletRunwayRail`, §417's rail at card scale).
+    ///
+    /// `soonestExpiry` is one date in a sentence; three keys lapsing inside a
+    /// fortnight and three spread over a quarter produce the identical
+    /// sentence and completely different pictures, and the spread is the
+    /// thing a list cannot give at any length. Same rule as the sentence, so
+    /// the two can never disagree: `expiry == 0` is Keystore's "never" and
+    /// is not a date, and an ALREADY-LAPSED key is excluded — the rail's
+    /// window always contains `now`, so a lapsed key would draw left of the
+    /// marker under a heading about what is ahead, and each account's own
+    /// `urgentLine` already counts the lapsed ones.
+    let futureExpiries: [Date]
 
     /// "9 keys authorized across 4 accounts" / "9 keys authorized" (one
     /// account) / "1 key authorized" — the room-wide count nowhere else on
@@ -2017,6 +2238,18 @@ struct VibenetKeyAggregate: Equatable {
                               : String(localized: "\(total) keys authorized")
         }
         return String(localized: "\(total) keys authorized across \(accountCount) accounts")
+    }
+
+    /// "1 account couldn't be read" — the count above is a FLOOR whenever
+    /// this is non-nil, and saying so is what keeps it from being a wrong
+    /// number. Drawn beneath the headline rather than folded into it: the
+    /// headline is the room's largest sentence and a clause that is absent on
+    /// every healthy room does not belong inside it.
+    var unreachedLine: String? {
+        guard unreachedCount > 0 else { return nil }
+        return unreachedCount == 1
+            ? String(localized: "1 account couldn't be read")
+            : String(localized: "\(unreachedCount) accounts couldn't be read")
     }
 }
 
@@ -2050,8 +2283,139 @@ enum VibenetKeyAggregation {
             }
             .map { VibenetKeySoonestExpiry(address: $0.0, actor: $0.1) }
 
+        let futureExpiries = pairs
+            .map(\.1.expiry)
+            .filter { $0 > 0 && TimeInterval($0) > now.timeIntervalSince1970 }
+            .sorted()
+            .map { Date(timeIntervalSince1970: TimeInterval($0)) }
+
         return VibenetKeyAggregate(total: pairs.count, byKind: byKind,
-                                    accountCount: accountCount, soonestExpiry: soonest)
+                                    accountCount: accountCount,
+                                    unreachedCount: items.filter { !$0.reached }.count,
+                                    soonestExpiry: soonest, futureExpiries: futureExpiries)
+    }
+}
+
+// MARK: - What changed since you last looked
+
+/// The room's keys, DIFFED against what this device last saw.
+///
+/// Every card in this room is a snapshot: it says what is true now and never
+/// what moved. The landed events (`VibenetEvents`) carry the moments, but they
+/// arrive in the feed as rows you scroll past, so the one question a person
+/// opens a keystore room with — *did anything change while I wasn't looking* —
+/// had no answer on the surface built to answer it. `redeployedSinceLastSeen`
+/// already proves the pattern belongs here; this is the same shape for the
+/// thing that matters more than a contract address.
+///
+/// Foundation-only like the rest of this file: the ledger itself lives in
+/// `VibenetKeysSeen` (UserDefaults, `VibenetSeenCommit`'s neighbour) and is
+/// handed in already read, so nothing here touches a store. "Have you looked
+/// at this" is a fact about THIS DEVICE'S SCREEN — the `AddressConnectionsSeen`
+/// ruling — so it is deliberately not synced and deliberately not a `Thing`.
+struct VibenetKeyChanges: Equatable, Codable {
+    /// The keys seen for the first time this look, as `keyID`s. A SET rather
+    /// than a count, so a key row can mark itself rather than the card merely
+    /// announcing a number nobody can locate.
+    let added: Set<String>
+    /// Keys that were in the ledger and are not in the roster any more.
+    /// A COUNT and not a set, because there is nothing left to mark: the row
+    /// is gone. Never the same thing as `added.count` inverted — an account
+    /// can gain and lose keys in one window.
+    let revokedCount: Int
+
+    var isEmpty: Bool { added.isEmpty && revokedCount == 0 }
+
+    /// "2 keys new since you last looked · 1 revoked", or nothing.
+    ///
+    /// REVOKED IS NEVER SAID ALONE AS A GOOD THING and never coloured here —
+    /// a revocation you performed and a revocation somebody else performed
+    /// read identically from the chain, so this states the fact and leaves
+    /// the judgement to the person, exactly as `AddressConnections` refuses
+    /// to rank a relationship.
+    var line: String? {
+        guard !isEmpty else { return nil }
+        var parts: [String] = []
+        if !added.isEmpty {
+            parts.append(added.count == 1
+                ? String(localized: "1 key new since you last looked")
+                : String(localized: "\(added.count) keys new since you last looked"))
+        }
+        if revokedCount > 0 {
+            // Worded to stand alone when it is the only clause: "1 revoked"
+            // under nothing else would be a fragment.
+            parts.append(added.isEmpty
+                ? (revokedCount == 1
+                    ? String(localized: "1 key revoked since you last looked")
+                    : String(localized: "\(revokedCount) keys revoked since you last looked"))
+                : (revokedCount == 1
+                    ? String(localized: "1 revoked")
+                    : String(localized: "\(revokedCount) revoked")))
+        }
+        return parts.joined(separator: " · ")
+    }
+}
+
+enum VibenetKeySeenDiff {
+    /// The ledger's key. An `actorId` is unique WITHIN an account and nothing
+    /// says it is unique across them (a delegate authenticator's id is derived
+    /// from an address, and one address can be a delegate for several
+    /// accounts) — so filing by `actorId` alone would let one account's key
+    /// mark another's as already seen, which fails in the direction that
+    /// hides a change rather than inventing one, i.e. silently.
+    ///
+    /// Lowercased on both halves: an address's case is an EIP-55 checksum and
+    /// the chain hands back both spellings across different calls.
+    static func keyID(address: String, actorId: String) -> String {
+        "\(address.lowercased())|\(actorId.lowercased())"
+    }
+
+    /// What moved since `seen` was written.
+    ///
+    /// THREE REFUSALS, and each of them is a way to be confidently wrong:
+    ///
+    /// 1. **An account with no entry in the ledger seeds SILENTLY.** A first
+    ///    look at a newly-watched account would otherwise report every key it
+    ///    has ever had as new — the Hyperliquid first-sight bug, which this
+    ///    codebase has now paid for in four bridges.
+    /// 2. **AN UNREACHED ACCOUNT CONTRIBUTES NOTHING.** Its roster is empty
+    ///    because the read failed, not because its keys were revoked, and
+    ///    reading that as a revocation announces a security event that did not
+    ///    happen every time the devnet has a bad minute. This is
+    ///    `ScreenshotIngest.pruneDeleted`'s never-prune-on-an-empty-read rule
+    ///    in a room that draws rather than deletes.
+    /// 3. **An account no longer watched contributes no revocations.** You
+    ///    stopped watching it; its keys did not go anywhere.
+    static func since(seen: [String: Set<String>], items: [VibenetAccountItem]) -> VibenetKeyChanges {
+        var added: Set<String> = []
+        var revoked = 0
+        for item in items {
+            guard item.reached else { continue }
+            let key = item.address.lowercased()
+            guard let before = seen[key] else { continue }
+            let now = Set(item.actors.map { keyID(address: item.address, actorId: $0.actorId) })
+            added.formUnion(now.subtracting(before))
+            revoked += before.subtracting(now).count
+        }
+        return VibenetKeyChanges(added: added, revokedCount: revoked)
+    }
+
+    /// The ledger after this look. Keyed on the CURRENT roster, so an address
+    /// that is no longer watched drops out — and an UNREACHED account keeps
+    /// whatever it had, never an empty set: overwriting it with the failed
+    /// read's nothing would make the next successful read report every one of
+    /// its keys as new. Rule 2 above, in the half that writes.
+    static func advanced(seen: [String: Set<String>], items: [VibenetAccountItem]) -> [String: Set<String>] {
+        var out: [String: Set<String>] = [:]
+        for item in items {
+            let key = item.address.lowercased()
+            if item.reached {
+                out[key] = Set(item.actors.map { keyID(address: item.address, actorId: $0.actorId) })
+            } else if let before = seen[key] {
+                out[key] = before
+            }
+        }
+        return out
     }
 }
 
@@ -2075,6 +2439,25 @@ struct VibenetBalanceAggregate: Equatable {
     let accountCount: Int
     /// A real state, never printed at zero — see `plainLine`.
     let lockedCount: Int
+    /// HOW MANY ACCOUNTS THE TOTAL BELOW ACTUALLY COVERS, and it exists
+    /// because the card shipped stating a partial sum as a whole one: the
+    /// crown heads `nativeTotal` with "Across your accounts" while
+    /// `compose` drops every account whose `eth_getBalance` did not answer,
+    /// so three watched with one unreachable printed a two-account total
+    /// under a three-account sentence. That is exactly what §349 ruled out
+    /// for Gnosis Pay and Railgun — a sum missing any part may not be stated
+    /// as though it were complete.
+    ///
+    /// The figure is KEPT rather than withheld (Railgun's all-or-nothing rule
+    /// is right for money that must reconcile; a devnet balance is a reading,
+    /// and half a reading is worth more than none) — what changes is the
+    /// sentence over it. See `nativeHeading`.
+    let readCount: Int
+    /// Watched accounts whose read did not reach the chain at all. Distinct
+    /// from `accountCount - readCount`: an account can be reached and still
+    /// have no native balance (that one read failing alone), and the two are
+    /// different sentences.
+    let unreachedCount: Int
     /// Sum of every item's OWN `nativeBalance` that landed a reading — nil
     /// when NOT ONE watched account has one, never a guessed 0 (§83): a
     /// room where every native read failed and a room genuinely holding
@@ -2105,6 +2488,32 @@ struct VibenetBalanceAggregate: Equatable {
         }
         return line
     }
+
+    /// The crown's own heading, owned by the model rather than hardcoded in
+    /// the card, so the words and the arithmetic they describe can never
+    /// drift apart (the `SafeRoom.subject` rule: one function, both readers).
+    ///
+    /// "Across your accounts" ONLY when the total really covers all of them.
+    /// A partial sum says so and says how partial, which is the whole of the
+    /// fix: the figure stays useful and stops claiming to be everything.
+    /// A single account never counts — "Across 1 of 1 accounts" is arithmetic
+    /// nobody needs.
+    var nativeHeading: String {
+        guard nativeTotal != nil else { return String(localized: "Across your accounts") }
+        guard readCount < accountCount else { return String(localized: "Across your accounts") }
+        return String(localized: "Across \(readCount) of \(accountCount) accounts")
+    }
+
+    /// What the room could not see, in words, or nothing. Separate from
+    /// `plainLine` because that line is the card's own subtitle and this is
+    /// an apology — folding them would make every healthy room's subtitle
+    /// carry a clause it never uses.
+    var unreachedLine: String? {
+        guard unreachedCount > 0 else { return nil }
+        return unreachedCount == 1
+            ? String(localized: "1 account couldn't be read")
+            : String(localized: "\(unreachedCount) accounts couldn't be read")
+    }
 }
 
 enum VibenetBalanceAggregation {
@@ -2128,6 +2537,7 @@ enum VibenetBalanceAggregation {
             .sorted { $0.symbol < $1.symbol }
         return VibenetBalanceAggregate(
             accountCount: items.count, lockedCount: items.filter(\.alarmed).count,
+            readCount: natives.count, unreachedCount: items.filter { !$0.reached }.count,
             nativeTotal: nativeTotal, tokenTotals: tokenTotals)
     }
 }
@@ -2286,6 +2696,31 @@ enum VibenetEventKind: Equatable {
         case .actorAuthorized, .actorRevoked: return "actor"
         case .locked: return "locked"
         case .unlockInitiated: return "unlocking"
+        }
+    }
+
+    /// The §308 FACETS this event carries, stamped on `Thing.tags` at
+    /// landing.
+    ///
+    /// This room lands exactly four kinds of thing and, until now, no way to
+    /// ask for one of them: every other landing bridge in the app got facets
+    /// and this one shipped without, so "revoked keys on vibenet" was a
+    /// free-text search over a display title. The gating rule (§308: a facet
+    /// filters only alongside a NAMED source) matters more here than almost
+    /// anywhere, because "key" and "locked" are ordinary English AND words
+    /// this corpus is full of — a note about an API key, an article about a
+    /// locked account somewhere else.
+    ///
+    /// A REVOKE CARRIES BOTH `Key` AND `Revoked`, deliberately: it is a key
+    /// event, so "keys on vibenet" must reach it, and the revocation is the
+    /// narrower question asked on top. A lock event carries no `Key` at all —
+    /// it is about the account.
+    var facetTags: [String] {
+        switch self {
+        case .actorAuthorized: return ["Key"]
+        case .actorRevoked: return ["Key", "Revoked"]
+        case .locked: return ["Locked"]
+        case .unlockInitiated: return ["Unlocking"]
         }
     }
 

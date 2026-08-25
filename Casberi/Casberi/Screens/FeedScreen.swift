@@ -374,6 +374,19 @@ struct FeedScreen: View {
         /// Carries a handle and a source, so no `Thing` and no liveness
         /// question.
         case person(source: String, handle: String)
+        /// The vibenet key tray (2026-08-25, prd §468) — which keys are in
+        /// which permission category, opened from the keys card. Routed here
+        /// for the standing reason every case above it is: the card lives
+        /// inside this List's rows, and a `.sheet` on a row resolves to the
+        /// same presenting controller as this one — the half-open-then-close
+        /// bug (ruling 2026-07-28).
+        ///
+        /// Carries the ACCOUNT ITEMS by value rather than reading the room at
+        /// present time, the `deposits`/`locks` ruling: a composed read can
+        /// land under an open tray, and a tray that re-read mid-presentation
+        /// would renumber itself while being looked at. Value types
+        /// throughout, so no `Thing` and no liveness question.
+        case vibenetKeys([VibenetAccountItem])
 
         var id: String {
             switch self {
@@ -386,6 +399,7 @@ struct FeedScreen: View {
             case .market(let p): "market:\(p.id)"
             case .nftPicks(let address, _): "nftPicks:\(address)"
             case .person(let source, let handle): "person:\(source):\(handle)"
+            case .vibenetKeys: "vibenetKeys"
             }
         }
     }
@@ -2722,6 +2736,8 @@ struct FeedScreen: View {
                         source: source, handle: handle,
                         displayName: nil, bio: nil, avatarURL: nil))
                 }
+            case .vibenetKeys(let items):
+                VibenetKeyTraySheet(items: items)
             }
         }
         #if !targetEnvironment(macCatalyst)
@@ -3022,12 +3038,23 @@ struct FeedScreen: View {
                     // is `chrome.vibenetScope`'s own toggle rule — tapping
                     // the account already scoped to returns to "All",
                     // matching `VibenetScopeRail`'s own tap.
+                    //
+                    // `onOpenKeys` routes through THIS screen's single
+                    // `.sheet` (prd §468) rather than being presented by the
+                    // card: the card is inside this List's rows, and a
+                    // `.sheet` there resolves to the same presenting
+                    // controller — the half-open-then-close bug. It carries
+                    // the ROOM's items, which are already scoped by the rail,
+                    // so a tray opened from a scoped room lists that
+                    // account's keys and a tray opened from All lists
+                    // everyone's — the same "click all you see all" rule the
+                    // cards above it follow.
                     VibenetRoomCard(room: room, onRemove: { _ in }, onScope: { address in
                         withAnimation(DS.Motion.standard) {
                             chrome.vibenetScope = (chrome.vibenetScope?.caseInsensitiveCompare(address) == .orderedSame)
                                 ? nil : address
                         }
-                    })
+                    }, onOpenKeys: { feedSheet = .vibenetKeys(room.items) })
                 case .altana(let card):
                     AltanaRoomCard(card: card) {
                         // The door is Altana's own explorer — the only place a

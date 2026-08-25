@@ -37,6 +37,13 @@ struct VibenetAccountDetail: View {
     /// section, since it's a fact about ONE key, not about the account as
     /// a whole.
     var sharedKeys: [VibenetSharedKey] = []
+    /// Whether to draw the hero's own identicon (user, 2026-08-25). FALSE
+    /// wherever `VibenetScopeRail` is already on screen above this card,
+    /// which is the only place the face is a duplicate; TRUE everywhere else,
+    /// which is the default because a screen about one address with nothing
+    /// identifying it at a glance is the worse failure of the two. See the
+    /// hero's own comment for the full reasoning.
+    var showsFace: Bool = true
 
     private static let mark = DS.brandHue(for: "Base Vibenet") ?? Color.fixed("#0052ff")
 
@@ -147,7 +154,26 @@ struct VibenetAccountDetail: View {
     private var hero: some View {
         VStack(alignment: .leading, spacing: DS.Space.s3) {
             HStack(alignment: .center, spacing: DS.Space.s3) {
-                WalletFace(address: item.address, size: DS.Face.shelf, circular: true)
+                // THE FACE IS THE RAIL'S WHEN THE RAIL IS THERE (user,
+                // 2026-08-25: *"on the individual account page, we don't need
+                // the avatar before the address b/c its already in the source
+                // strip"*). `VibenetScopeRail` is pinned directly above this
+                // card and draws every watched account's face with the scoped
+                // one ringed — so a second copy of the same identicon two
+                // rows down is the same avatar twice, the identical finding
+                // that took the face strip out of the stacked room's own stat
+                // block (`VibenetRoomCard`'s header doc).
+                //
+                // CONDITIONAL, never deleted, and the condition is the rail's
+                // OWN (`VibenetScopeRail.shows` wants more than one account
+                // watched): a single-account room has no rail, and the
+                // account sheet reached from the address book has no rail
+                // either. Dropping the face unconditionally would leave both
+                // of those faceless — a screen about one address, showing
+                // nothing that identifies it at a glance.
+                if showsFace {
+                    WalletFace(address: item.address, size: DS.Face.shelf, circular: true)
+                }
                 VStack(alignment: .leading, spacing: 3) {
                     Text(VibenetWatch.shared.name(for: item.address) ?? VibenetRoom.shortAddress(item.address))
                         .dsText(.heading22)

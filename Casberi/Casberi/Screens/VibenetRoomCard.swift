@@ -78,7 +78,7 @@ import SwiftUI
 /// page is perhaps N accounts and balance, then the keys, then the
 /// events."* So the feed room draws NO face at all: a plain stat block
 /// (a native-balance crown over its own chart, plus per-symbol token
-/// totals — `balanceCard`/`holdingsCard` since §464 split them onto
+/// totals — `balanceCard`/`holdingsCard` since §467 split them onto
 /// separate surfaces) stands in for the chip strip, and the mapping
 /// section that briefly lived on this card moved OFF it entirely, onto
 /// `VibenetAccountDetail`'s own hub diagram — the user settled on "N
@@ -119,6 +119,25 @@ struct VibenetRoomCard: View {
     /// caller owns the toggle rule (tap the already-scoped account again
     /// to return to "All", `VibenetScopeRail`'s own tap rule).
     var onScope: (String) -> Void = { _ in }
+    /// Opens the key tray — which keys are in which permission category
+    /// (prd §468, `VibenetKeyTraySheet`). nil where there is nowhere to
+    /// present it, and the chevron is gated on the same nil rather than drawn
+    /// unconditionally: this card's own comment has said since 2026-08-24 that
+    /// a chevron pointing at a tray that does not exist is the dead control
+    /// §83 bans, and that is just as true of a caller who cannot present one.
+    ///
+    /// A CLOSURE, never a `.sheet` of this card's own: this card lives inside
+    /// `FeedScreen`'s List rows, and a `.sheet` on a row resolves to the same
+    /// presenting controller as the screen's own — the half-open-then-close
+    /// bug (ruling 2026-07-28, paid three times).
+    var onOpenKeys: (() -> Void)? = nil
+
+    /// What moved since this device last looked at these keys — captured
+    /// ONCE when the roster appears and then immediately spent (`advance`),
+    /// so the marker survives the draw it was computed for and is gone by the
+    /// next one. Reading and marking-as-read are two acts; computing this in
+    /// the body instead would erase the answer while it was being shown.
+    @State private var keyChanges: VibenetKeyChanges?
 
     private static let mark = DS.brandHue(for: "Base Vibenet") ?? Color.fixed("#0052ff")
     /// The most rows drawn before the footnote takes over, INCLUDING the
@@ -161,9 +180,33 @@ struct VibenetRoomCard: View {
         .modifier(VibenetDetailContextMenu(
             address: room.items.count == 1 ? room.lead?.address : nil,
             onRename: onRename, onRemove: onRemove))
+        // READ THE LEDGER, THEN SPEND IT — in that order, and both inside one
+        // task, so the answer survives exactly the draw it was computed for.
+        // Keyed on the roster's own fingerprint rather than firing once:
+        // a read landing while the room is open really is a new look, and a
+        // card that captured its answer at mount would go on saying "2 keys
+        // new" about a roster that has since changed underneath it.
+        .task(id: Self.rosterFingerprint(room.items)) {
+            keyChanges = VibenetKeysSeen.changes(in: room.items)
+            VibenetKeysSeen.advance(room.items)
+        }
     }
 
-    /// **THE FEED ROOM IS SEVERAL CARDS, NOT ONE (prd §464, 2026-08-25 —
+    /// A stable, cheap identity for "which keys are on screen right now" —
+    /// `.task(id:)` wants something `Equatable` and `[VibenetAccountItem]`
+    /// carries histories, balances and policy uses that change on every
+    /// composed read without any KEY having moved. Fingerprinting the key ids
+    /// alone means a balance ticking over does not re-fire the ledger and
+    /// erase a marker somebody is still reading.
+    private static func rosterFingerprint(_ items: [VibenetAccountItem]) -> String {
+        items.flatMap { item in
+            item.actors.map { VibenetKeySeenDiff.keyID(address: item.address, actorId: $0.actorId) }
+        }
+        .sorted()
+        .joined(separator: ",")
+    }
+
+    /// **THE FEED ROOM IS SEVERAL CARDS, NOT ONE (prd §467, 2026-08-25 —
     /// direction B of three the user picked from).**
     ///
     /// It was one `dsWidgetSurface` wrapping a crown, a chart, a holdings
@@ -240,10 +283,22 @@ struct VibenetRoomCard: View {
                 // isn't cached yet can only UNDER-report a link, never
                 // invent one that isn't real.
                 let fullItems = VibenetRoomSource.card()?.items ?? room.items
+                // THE HERO'S FACE, only when the rail is not already drawing
+                // it (user, 2026-08-25 — see `VibenetAccountDetail.showsFace`).
+                // The condition is `VibenetScopeRail.shows`' own, spelled
+                // against the same two facts it reads: the rail exists in the
+                // FEED room (`onOpen == nil`) and only above one watched
+                // account (`fullItems.count > 1`). `fullItems`, never
+                // `room.items` — this branch is reached precisely because the
+                // rail narrowed the room to one, so the scoped count is always
+                // 1 here and would hide the rail from itself.
+                let railDrawsTheFace = onOpen == nil
+                    && VibenetScopeRail.shows(source: VibenetIdentity.source, watched: fullItems.count)
                 VibenetAccountDetail(
                     item: lead,
                     links: VibenetAccountMapping.links(fullItems),
-                    sharedKeys: VibenetKeyReuse.sharing(lead, in: fullItems))
+                    sharedKeys: VibenetKeyReuse.sharing(lead, in: fullItems),
+                    showsFace: !railDrawsTheFace)
             } else if let lead = room.lead {
                 if let onOpen {
                     // `VibenetScreen`'s OWN roster (see this type's header
@@ -279,7 +334,7 @@ struct VibenetRoomCard: View {
                     }
                 }
                 // NO `else`. The feed room's aggregate shape is the STACKED
-                // one now (§464) — `stacksIntoCards` catches exactly
+                // one now (§467) — `stacksIntoCards` catches exactly
                 // `onOpen == nil && count > 1`, so the branch that used to
                 // draw a single combined stat block here is unreachable, and
                 // the block itself is gone rather than left as a second
@@ -319,7 +374,7 @@ struct VibenetRoomCard: View {
         .dsWidgetSurface()
     }
 
-    // MARK: - The four stacked cards (prd §464, direction B)
+    // MARK: - The four stacked cards (prd §467, direction B)
 
     /// THE CROWN, and the chart it sits over. Holdings moved out to their
     /// own card — the crown answers "how much", the holdings block answers
@@ -335,7 +390,11 @@ struct VibenetRoomCard: View {
     private var balanceCard: some View {
         if let aggregate = VibenetBalanceAggregation.compose(room.items) {
             card {
-                Text(String(localized: "Across your accounts"))
+                // The MODEL's heading, never a literal: "Across your
+                // accounts" is only true when the total below really covers
+                // all of them, and `compose` silently drops every account
+                // whose balance read failed. See `nativeHeading`.
+                Text(aggregate.nativeHeading)
                     .dsText(.label12)
                     .foregroundStyle(DS.textTertiary)
                 if let nativeTotal = aggregate.nativeTotal {
@@ -366,6 +425,16 @@ struct VibenetRoomCard: View {
                     .foregroundStyle(DS.textTertiary)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.top, 2)
+                // What the room could not see, said plainly and only when it
+                // happened — the figure above stays useful, and stops being a
+                // claim about accounts nobody read.
+                if let missing = aggregate.unreachedLine {
+                    Text(missing)
+                        .dsText(.label12)
+                        .foregroundStyle(DS.textTertiary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.top, 2)
+                }
                 if let series = VibenetValueHistory.series(history) {
                     TokenChartPlot(chart: TokenChart(closes: series,
                                                      price: series.last ?? 0,
@@ -409,40 +478,119 @@ struct VibenetRoomCard: View {
     @ViewBuilder
     private var keysCard: some View {
         if let aggregate = VibenetKeyAggregation.compose(room.items, now: .now) {
-            card {
-                Text(aggregate.plainLine)
-                    .dsText(.heading17)
-                    .foregroundStyle(DS.textPrimary)
-                    .fixedSize(horizontal: false, vertical: true)
-                let policies = VibenetPolicyAggregation.compose(room.items)
-                if !policies.isEmpty {
-                    VStack(alignment: .leading, spacing: 0) {
-                        ForEach(Array(policies.enumerated()), id: \.offset) { index, entry in
-                            HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                                Text(entry.label)
-                                    .dsText(.body17)
-                                    .foregroundStyle(DS.textPrimary)
-                                    .lineLimit(1)
-                                Spacer(minLength: DS.Space.s2)
-                                Text("\(entry.count)")
-                                    .dsText(.subhead13)
-                                    .foregroundStyle(DS.textSecondary)
-                                    .monospacedDigit()
-                            }
-                            .padding(.vertical, 5)
-                            .chartArrival(index: index, reduceMotion: reduceMotion)
-                        }
+            card { keysTappable(aggregate) }
+        }
+    }
+
+    /// The keys block, as a door when there is somewhere to go and as plain
+    /// content when there isn't. ONE definition for both hosts, so the tray
+    /// cannot become reachable from the stacked room and not from the other
+    /// shape — which is exactly the kind of difference nobody would notice.
+    @ViewBuilder
+    private func keysTappable(_ aggregate: VibenetKeyAggregate) -> some View {
+        if let onOpenKeys {
+            Button {
+                DSHaptic.selection()
+                onOpenKeys()
+            } label: {
+                VStack(alignment: .leading, spacing: 0) { keysBody(aggregate) }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .dsHover()
+        } else {
+            keysBody(aggregate)
+        }
+    }
+
+    /// THE KEYS BLOCK, ONE DEFINITION.
+    ///
+    /// It was written twice — once inside `keysCard` (the stacked feed room)
+    /// and once inside `keysAggregateSection` (every other shape) — with
+    /// identical headline, policy rows and expiry sentence, differing only in
+    /// the box around them. Two copies of one reading drift, and then the same
+    /// room says two different things depending on how many accounts happen to
+    /// be watched; the §418 duplicate-parser lesson, one card over. The
+    /// SURFACE stays each caller's own, because that is the part that really
+    /// differs.
+    @ViewBuilder
+    private func keysBody(_ aggregate: VibenetKeyAggregate) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+            Text(aggregate.plainLine)
+                .dsText(.heading17)
+                .foregroundStyle(DS.textPrimary)
+                .fixedSize(horizontal: false, vertical: true)
+            if onOpenKeys != nil {
+                Spacer(minLength: DS.Space.s2)
+                Image(systemName: "chevron.right")
+                    .accessibilityHidden(true)
+                    .dsGlyph(12, weight: .semibold)
+                    .foregroundStyle(DS.textTertiary)
+            }
+        }
+        // Directly under the headline, because it is an apology FOR the
+        // headline: the count above is a floor whenever this draws.
+        if let missing = aggregate.unreachedLine {
+            Text(missing)
+                .dsText(.label12)
+                .foregroundStyle(DS.textTertiary)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.top, 2)
+        }
+        // WHAT MOVED. The one question this room is opened with that a
+        // snapshot structurally cannot answer — drawn in the room's own mark
+        // rather than a state colour, because a key added and a key revoked
+        // are both merely news here and neither is graded (§295's
+        // same-weight ruling, and `VibenetKeyChanges.line`'s own note).
+        if let moved = keyChanges?.line {
+            Text(moved)
+                .dsText(.label12).fontWeight(.semibold)
+                .foregroundStyle(Self.mark)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.top, 2)
+        }
+        let policies = VibenetPolicyAggregation.compose(room.items)
+        if !policies.isEmpty {
+            VStack(alignment: .leading, spacing: 0) {
+                ForEach(Array(policies.enumerated()), id: \.offset) { index, entry in
+                    HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                        Text(entry.label)
+                            .dsText(.body17)
+                            .foregroundStyle(DS.textPrimary)
+                            .lineLimit(1)
+                        Spacer(minLength: DS.Space.s2)
+                        Text("\(entry.count)")
+                            .dsText(.subhead13)
+                            .foregroundStyle(DS.textSecondary)
+                            .monospacedDigit()
                     }
-                    .padding(.top, DS.Space.s2)
-                }
-                if let soonest = aggregate.soonestExpiry {
-                    Text(soonest.line(now: .now))
-                        .dsText(.label12).fontWeight(.semibold)
-                        .foregroundStyle(Self.mark)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .padding(.top, DS.Space.s2)
+                    .padding(.vertical, 5)
+                    .chartArrival(index: index, reduceMotion: reduceMotion)
                 }
             }
+            .padding(.top, DS.Space.s2)
+        }
+        // THE SHAPE OF WHAT'S AHEAD — §417's rail, reused whole rather than
+        // restated, so the room and the "Needs you" tile can never disagree
+        // about the same dates. The sentence below names ONE key; three keys
+        // lapsing inside a fortnight and three spread over a quarter produce
+        // the identical sentence and completely different pictures.
+        //
+        // TWO OR MORE, deliberately: a single future expiry has no spread to
+        // draw and the sentence beneath already says it exactly.
+        if aggregate.futureExpiries.count >= 2 {
+            WalletRunwayRail(dates: aggregate.futureExpiries)
+                .padding(.top, DS.Space.s3)
+        }
+        // The one clock, and only the soonest — the card ends on a single
+        // blue sentence rather than a stack of competing attention lines.
+        if let soonest = aggregate.soonestExpiry {
+            Text(soonest.line(now: .now))
+                .dsText(.label12).fontWeight(.semibold)
+                .foregroundStyle(Self.mark)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.top, DS.Space.s2)
         }
     }
 
@@ -483,41 +631,7 @@ struct VibenetRoomCard: View {
     private var keysAggregateSection: some View {
         if let aggregate = VibenetKeyAggregation.compose(room.items, now: .now) {
             VStack(alignment: .leading, spacing: 0) {
-                Text(aggregate.plainLine)
-                    .dsText(.heading17)
-                    .foregroundStyle(DS.textPrimary)
-                    .fixedSize(horizontal: false, vertical: true)
-                let policies = VibenetPolicyAggregation.compose(room.items)
-                if !policies.isEmpty {
-                    VStack(alignment: .leading, spacing: 0) {
-                        ForEach(Array(policies.enumerated()), id: \.offset) { index, entry in
-                            HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                                Text(entry.label)
-                                    .dsText(.body17)
-                                    .foregroundStyle(DS.textPrimary)
-                                    .lineLimit(1)
-                                Spacer(minLength: DS.Space.s2)
-                                Text("\(entry.count)")
-                                    .dsText(.subhead13)
-                                    .foregroundStyle(DS.textSecondary)
-                                    .monospacedDigit()
-                            }
-                            .padding(.vertical, 5)
-                            .chartArrival(index: index, reduceMotion: reduceMotion)
-                        }
-                    }
-                    .padding(.top, DS.Space.s2)
-                }
-                // The one clock, and only the soonest — the card ends on a
-                // single blue sentence rather than a stack of competing
-                // attention lines.
-                if let soonest = aggregate.soonestExpiry {
-                    Text(soonest.line(now: .now))
-                        .dsText(.label12).fontWeight(.semibold)
-                        .foregroundStyle(Self.mark)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .padding(.top, DS.Space.s2)
-                }
+                keysTappable(aggregate)
             }
             // **ITS OWN SURFACE (2026-08-24).** The design gives the keys a
             // card and the balance above it none, and that asymmetry is the

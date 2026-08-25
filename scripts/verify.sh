@@ -1840,6 +1840,50 @@ else
   fi
 fi
 
+# ── 6a. Vibenet's FOUR cards (headless, HARD FAIL) ───────────────────
+# prd §468. The map above is keyed on `FeedScreen.SourceHead` cases reached
+# through `-roomInsightProbe`; vibenet's head is a `FeedScreen.Shape` case
+# instead, so it has never been in that map and has never been covered by
+# anything — while §467 split it from ONE surface into FOUR independently
+# gated ones (balance, holdings, keys, linked).
+#
+# That is exactly the class step 6 exists for, one door over: each of those
+# four gates can decline over a demo corpus that cannot furnish it, and a card
+# that draws nothing looks identical to a card that was never built. HARD FAIL
+# for step 6's own reason — one candidate per card, nothing to rank against,
+# so a demo corpus that can make a card compose makes it compose every run.
+#
+# `linked` is asserted too and that is deliberate rather than incidental: the
+# demo fixture's delegate mapping is what makes the fourth card exist at all,
+# and it is the card most easily lost to a fixture edit.
+step "Demo vibenet cards"
+VIBE_LOG="$OUT/vibenet-cards.log"
+if [[ -z "$POURED" ]]; then
+  print -P "%F{yellow}⚠ demo never finished pouring (see the Demo pour step above) — skipping vibenet cards%f"
+else
+  xcrun simctl spawn "$DEVICE" log stream --predicate 'process == "Casberi" AND eventMessage CONTAINS "vibenetCard"' \
+    --style compact > "$VIBE_LOG" 2>/dev/null &
+  VBPID=$!
+  sleep 1
+  xcrun simctl terminate "$DEVICE" "$BUNDLE" 2>/dev/null || true
+  xcrun simctl launch "$DEVICE" "$BUNDLE" -onboarded YES -vibenetRoomProbe YES >/dev/null 2>&1 || true
+  for i in {1..10}; do
+    sleep 1
+    grep -q "vibenetCard| linked" "$VIBE_LOG" 2>/dev/null && break
+  done
+  kill $VBPID 2>/dev/null || true
+  xcrun simctl terminate "$DEVICE" "$BUNDLE" 2>/dev/null || true
+  MISSING_CARDS=()
+  for card in balance holdings keys linked; do
+    grep -q "vibenetCard| $card DRAWS" "$VIBE_LOG" 2>/dev/null || MISSING_CARDS+=("$card")
+  done
+  if (( ${#MISSING_CARDS[@]} == 0 )); then
+    print -P "%F{green}✓ demo vibenet cards (4/4)%f"
+  else
+    fail "vibenet card(s) never draw over the demo: ${MISSING_CARDS[*]} — see $VIBE_LOG"
+  fi
+fi
+
 # ── 6b. THE DEMO REACHES NOTHING, measured (headless, HARD FAIL) ─────
 # The empirical half of `demo-selftest.py`'s check J, and the reason it exists
 # is that J is a HAND LIST. J names five per-view reads somebody thought to

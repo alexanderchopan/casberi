@@ -892,6 +892,29 @@ enum Retriever {
             // it is the only word anybody would use for L2BEAT's rung.
             (["milestones", "milestone", "upgrades", "upgrade", "launches", "launch"], "Milestone"),
             (["stage changes", "stages", "stage"], "Stage"),
+            // The vibenet room's four kinds (2026-08-25, prd §468). It lands
+            // exactly four things — a key authorized, a key revoked, an
+            // account locked, an unlock started — and until now nothing could
+            // ask for one of them; a keystore room where "which keys were
+            // revoked" is a free-text search over a display title is the one
+            // room in the app where that matters most.
+            //
+            // ORDER IS LOAD-BEARING HERE. `Revoked` and `Unlocking` lead
+            // `Key`/`Locked` because the first phrase match wins and "revoked
+            // keys" would otherwise stop at the bare "keys" and answer with
+            // every key event including the ones still live — the exact
+            // opposite of what was asked, rendered as a perfectly ordinary
+            // result.
+            //
+            // The gating rule earns its keep as much as anywhere in this
+            // table: "key" and "locked" are ordinary English AND words this
+            // corpus is full of (a note about an API key, an article about a
+            // locked account). Behind a named source they narrow; unscoped
+            // they can never quietly empty a result.
+            (["revoked keys", "revocations", "revocation", "revoked"], "Revoked"),
+            (["unlocking", "unlocks", "unlock"], "Unlocking"),
+            (["key changes", "keys", "key"], "Key"),
+            (["locked accounts", "locked"], "Locked"),
         ]
     }()
 
