@@ -192,6 +192,31 @@ struct VibenetKnownAuthenticators: Equatable {
     let delegate: String
 }
 
+/// The Keystore contracts a policy manager might BE, so a gated key can name
+/// what it is gated to instead of printing hex at somebody (prd §463).
+///
+/// MEASURED, not assumed: every policy-gated key on vibenet on 2026-08-24 —
+/// 7 of the 34 live actors sampled — named the same manager, and it is
+/// exactly the config's own `PolicyManager`. Both addresses were already
+/// parsed by `VibenetConfig` and read by nothing.
+struct VibenetKnownPolicyManagers: Equatable {
+    let policyManager: String?
+    let sessionPolicy: String?
+
+    /// The manager's name, or nil when it is a contract this build cannot
+    /// name — the caller shows the short address then, never an invented
+    /// label (§83).
+    func name(for address: String) -> String? {
+        func same(_ a: String?) -> Bool {
+            guard let a else { return false }
+            return a.caseInsensitiveCompare(address) == .orderedSame
+        }
+        if same(policyManager) { return String(localized: "the policy manager") }
+        if same(sessionPolicy) { return String(localized: "the session policy") }
+        return nil
+    }
+}
+
 /// Which of the Keystore's named authenticators an actor's key is, or a
 /// custom one this build doesn't recognize. `Hashable` so `actorSummary`
 /// can group a roster by kind without a hand-rolled key.
@@ -512,6 +537,20 @@ struct VibenetActor: Identifiable, Equatable, Codable {
     /// arithmetic on it — the caller decides whether to compare it to "now",
     /// so nothing here can quietly disagree with what time the view drew at.
     let expiry: UInt64
+    /// The ONE contract a policy-gated key may call — `Keystore.sol`'s
+    /// `getPolicyManager`, read only for keys whose POLICY bit is set and nil
+    /// for every other key (prd §463). "Send to one contract" states the
+    /// restriction and could never say WHICH contract, which is the half that
+    /// makes the restriction meaningful: gated to a session policy you
+    /// recognise is a different fact from gated to something you don't.
+    ///
+    /// OPTIONAL, and that is load-bearing rather than tidy: this type is
+    /// `Codable` and persisted in `VibenetState`'s snapshot, and Swift
+    /// synthesises `decodeIfPresent` for an Optional, so every snapshot
+    /// already on a device decodes with this as nil. A non-optional field
+    /// would fail the decode of the whole room — the `RSSStore.Feed` trap
+    /// this codebase has paid for twice.
+    var policyManager: String?
 
     /// "Never expires" / "Expired Mar 3" / "Expires in 3h" — this key's own
     /// clock, read and then thrown away by every screen this feature has
@@ -528,6 +567,19 @@ struct VibenetActor: Identifiable, Equatable, Codable {
             return String(localized: "Expired \(expiresAt.formatted(.dateTime.month(.abbreviated).day()))")
         }
         return String(localized: "Expires \(expiresAt.formatted(.relative(presentation: .named)))")
+    }
+
+    /// WHICH contract a gated key may call — the half "Send to one contract"
+    /// could never say (prd §463). Named when the config recognises it, short
+    /// address otherwise, and nil when the key is not gated at all or the
+    /// manager did not read: a gated key that cannot name its target still
+    /// says it is gated, via its chip, rather than being handed a guess.
+    func policyLine(known: VibenetKnownPolicyManagers) -> String? {
+        guard scope.raw & VibenetScope.policy != 0, let manager = policyManager else { return nil }
+        if let name = known.name(for: manager) {
+            return String(localized: "Limited to \(name)")
+        }
+        return String(localized: "Limited to \(VibenetRoom.shortAddress(manager))")
     }
 
     /// What weight a key's expiry has earned on screen. The label alone

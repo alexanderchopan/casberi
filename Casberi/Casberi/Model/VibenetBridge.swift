@@ -452,6 +452,16 @@ enum VibenetABI {
         "0xd1a62df4" + padAddress(address) + padTopic32(actorId)
     }
 
+    /// `getPolicyManager(address,bytes32)` — 0xa1994f16. MEASURED live against
+    /// vibenet on 2026-08-24, not derived and hoped for: 7 of 34 sampled
+    /// actors carried the POLICY bit and every one answered with the config's
+    /// own `PolicyManager`. Note the spec's prose names a `getPolicy` that
+    /// `Keystore.sol` does not declare — the contract has this, its
+    /// `getPolicyCommitment` sibling, and `getActorWithPolicy`.
+    static func policyManagerCall(_ address: String, actorId: String) -> String {
+        "0xa1994f16" + padAddress(address) + padTopic32(actorId)
+    }
+
     /// `getLockStatus(address)` — 0x0f36f691
     static func lockStatusCall(_ address: String) -> String {
         "0x0f36f691" + padAddress(address)
@@ -615,8 +625,24 @@ enum VibenetRead {
         let expiry = VibenetABI.uintWord(raw, at: 1)
         let scopeRaw = UInt16(truncatingIfNeeded: VibenetABI.uintWord(raw, at: 2))
         let kind = VibenetAuthenticatorKind.identify(authenticator: authenticator, known: known)
+        let scope = VibenetScope(raw: scopeRaw)
+        // The second call is made ONLY for a policy-gated key, which is what
+        // keeps this cheap: most keys are not gated (27 of 34 sampled live),
+        // and asking every key would double this bridge's per-actor cost to
+        // learn a fact that is zero for nearly all of them. A gated key whose
+        // manager reads back as the zero address, or does not read at all,
+        // keeps a nil manager — "Send to one contract" still stands, it just
+        // cannot say which, which is the honest degradation.
+        var manager: String?
+        if scope.raw & VibenetScope.policy != 0,
+           let raw = await VibenetChain.ethCall(
+               to: keystore, data: VibenetABI.policyManagerCall(account, actorId: actorId)),
+           let read = VibenetABI.addressWord(raw, at: 0),
+           read.lowercased() != VibenetAuthenticatorKind.zeroAddress {
+            manager = read
+        }
         return VibenetActor(actorId: actorId, authenticator: authenticator, kind: kind,
-                            scope: VibenetScope(raw: scopeRaw), expiry: expiry)
+                            scope: scope, expiry: expiry, policyManager: manager)
     }
 
     /// One account's change-sequence standing on THIS chain — see

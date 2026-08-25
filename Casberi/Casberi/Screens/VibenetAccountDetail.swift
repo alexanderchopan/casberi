@@ -39,6 +39,14 @@ struct VibenetAccountDetail: View {
 
     private static let mark = DS.brandHue(for: "Base Vibenet") ?? Color.fixed("#0052ff")
 
+    /// The contracts a policy manager might be, off the cached config — so a
+    /// gated key names what it is gated to rather than printing hex.
+    private static var knownManagers: VibenetKnownPolicyManagers {
+        let c = VibenetConfig.cached()
+        return VibenetKnownPolicyManagers(policyManager: c?.policyManager,
+                                          sessionPolicy: c?.sessionPolicy)
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Space.s6) {
             hero
@@ -232,6 +240,15 @@ struct VibenetAccountDetail: View {
                 .sharedLine(name: { VibenetWatch.shared.name(for: $0) ?? VibenetRoom.shortAddress($0) })
             {
                 Text(line)
+                    .dsText(.label11)
+                    .foregroundStyle(DS.textTertiary)
+            }
+            // WHICH contract a gated key may call. Sits above the expiry
+            // because it qualifies the chip directly above IT — "Send to one
+            // contract" and then the contract — while expiry is about the key
+            // as a whole.
+            if let policy = actor.policyLine(known: Self.knownManagers) {
+                Text(policy)
                     .dsText(.label11)
                     .foregroundStyle(DS.textTertiary)
             }
