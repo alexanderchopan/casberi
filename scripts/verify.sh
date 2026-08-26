@@ -2219,8 +2219,26 @@ else
       # The space also keeps `strip=` from matching inside `stripTiles=`.
       grep -qE " ${feature}=[1-9]" "$ALLFEED_LOG" 2>/dev/null || ALLFEED_MISSING+=("$feature")
     done
+    # THE NEGATIVE (2026-08-26): the All room must draw NO head. Every entry
+    # above asks "can this feature draw"; this one asks the opposite, and it is
+    # the only shape that could have caught the bug it exists for. prd §219 —
+    # "**The All feed is untouched** — 26pt squares everywhere, because native
+    # anatomies relax only inside the source's own room" — and `liveStream` was
+    # the one head whose gate never said so, so a live Twitch broadcast took the
+    # All head across every source and stacked a full-bleed frame above the
+    # §389c cover. `cover=1` went on printing the whole time, which is exactly
+    # why no positive check here could see it: both cards drew, and drawing is
+    # all a positive check asks about.
+    #
+    # A hard fail rather than a warning, for `sourceHead`'s reason: nothing here
+    # is ranked against anything, so there is no run-to-run noise to protect
+    # against — a 1 in ANY census this launch emitted means a head reached the
+    # room, which is a real regression every time.
+    if grep -qE " hero=[1-9]" "$ALLFEED_LOG" 2>/dev/null; then
+      fail "a head drew in the All room (hero=1) — prd §219 leaves that feed untouched; it stacks above the §389c cover. See $ALLFEED_LOG"
+    fi
     if (( ${#ALLFEED_MISSING[@]} == 0 )); then
-      print -P "%F{green}✓ demo All-room coverage (${#ALLFEED_REQUIRED[@]}/${#ALLFEED_REQUIRED[@]})%f"
+      print -P "%F{green}✓ demo All-room coverage (${#ALLFEED_REQUIRED[@]}/${#ALLFEED_REQUIRED[@]}, no head)%f"
     else
       fail "All-room features the demo cannot draw: ${ALLFEED_MISSING[*]} — see $ALLFEED_LOG"
     fi

@@ -2035,6 +2035,26 @@ struct FeedScreen: View {
     ///   stands-alone row keeps its own position at the top of the rows, so
     ///   covering something older would put a newer row underneath an older
     ///   card — the very thing this rewrite exists to make impossible.
+    /// - A HERO already took the head (2026-08-26). This is the no-stacking
+    ///   rule the other §389 ledes have always followed — `waitingSection`,
+    ///   `listeningLedeSection` and `readingLedeSection` are each spelled
+    ///   `if !heroShown` — and the cover was never joined to it, because it is
+    ///   decided in `bundledSections`' memo rather than in the body where
+    ///   `heroShown` lives.
+    ///
+    ///   **It is a BACKSTOP, and today it can never fire — deliberately.**
+    ///   `bundledSections` runs for the All room alone, and no head registry
+    ///   names "All": `sourceHead`, `topicMap`, `leaderboard`, `distribution`,
+    ///   `mosaic` and `FeedHeatmap.label` all switch on `source` and answer nil,
+    ///   and `anniversary` is scoped to the memories room and the two journals.
+    ///   The one head that DID reach this room was `liveStream`, which took the
+    ///   All head over every source until it was scoped to the stream's own
+    ///   room in this same change — so the stack this decline describes was
+    ///   real, and the fix for it is one level up. This exists so a future
+    ///   registry entry for All cannot silently recreate it: the head and the
+    ///   cover would otherwise stack again with nothing in either file saying
+    ///   they must not. The covered thing is never lost — it drops back into
+    ///   its own row at the top of the day.
     ///
     /// Scoped to the FIRST group: a cover is the top of the feed, and reaching
     /// into yesterday for one would be ranking, not position.
@@ -2043,7 +2063,8 @@ struct FeedScreen: View {
     /// the whole thing list to read one group, on the screen with this app's
     /// worst measured perf history (`derivationKey`'s own
     /// 6.3-seconds-across-44-renders note).
-    private func ledeThingID(in days: [(String, [Thing])]) -> UUID? {
+    private func ledeThingID(in days: [(String, [Thing])], heroShown: Bool) -> UUID? {
+        guard !heroShown else { return nil }
         let count = days.reduce(0) { $0 + $1.1.count }
         guard count >= Self.ledeMinRows, let head = days.first?.1 else { return nil }
         for thing in head {
@@ -2911,7 +2932,33 @@ struct FeedScreen: View {
         // 2 — the hero holds this reference across renders and a heal pass can
         // delete under it); `isLive(_:)` is the Twitch broadcast set. Both,
         // in that order.
-        let liveStream = visible.first { $0.isLive && isLive($0) }
+        //
+        // SCOPED TO THE STREAM'S OWN ROOM (2026-08-26), which is what §219
+        // ruled and this gate never said. That entry is about the MEDIA SOURCE
+        // feeds and states the boundary in its own words — "**The All feed is
+        // untouched** — 26pt squares everywhere, because native anatomies relax
+        // only inside the source's own room" — and the full-bleed live frame is
+        // exactly such an anatomy. Its sibling from the same pass, `liveFirst`
+        // (the row-level float-to-top), was scoped `source == "Twitch"` from the
+        // day it shipped; this one was not, so a live broadcast reached across
+        // every source and took the head of All.
+        //
+        // Reported against the demo, which seeds a live stream
+        // (`TwitchIngest.seedDemo`) and so lit it every time: All drew the
+        // Twitch frame, then a day header, then the §389c cover — TWO
+        // full-width cards where the room's shape is one card over a plain
+        // list. Not a demo bug; any corpus with Twitch connected and somebody on
+        // air drew the same thing.
+        //
+        // It is also the one place All still REORDERED. §389c rewrote the cover
+        // specifically so it could not reach past a newer row ("volume
+        // compresses and NEVER reorders", §35) — and this promoted a Twitch row
+        // over everything newer than it, in the room that rule is about.
+        //
+        // Spelled as a match on the ROW's source rather than a literal, so the
+        // registry stays in `isLive(_:)` alone: a second source with a live set
+        // gets this behaviour in its own room and nowhere else.
+        let liveStream = visible.first { $0.isLive && isLive($0) && $0.source == source }
         // The social room's own head (item 5, 2026-07-27) — faces, ringed on
         // fresh activity, beat `FeedHeatmap`'s pre-existing "Casting
         // activity"/"Posting activity" density grid for Farcaster/Bluesky
@@ -3555,7 +3602,7 @@ struct FeedScreen: View {
                 // All is where volume floods — bundles + the new-since
                 // divider live here. A single source's shape IS that source;
                 // bundling there would collapse the whole screen into one row.
-                bundledSections(visible, nextEventID: nextEventID)
+                bundledSections(visible, nextEventID: nextEventID, heroShown: heroShown)
                 corpusFloorSection(visible)
             } else {
                 // Threads fold BEFORE day-grouping (item 6, 2026-07-27): a
@@ -3736,6 +3783,7 @@ struct FeedScreen: View {
     /// changed, and `verify.sh` greps for presence, not for the last write.
     private func logAllFeedCensus(groups: [(String, [FeedRow])],
                                   hasCover: Bool,
+                                  heroShown: Bool,
                                   boundary: String?,
                                   moment: Bool,
                                   imageOnly: Set<UUID>,
@@ -3765,6 +3813,17 @@ struct FeedScreen: View {
         let lines = [
             "days=\(groups.count) rows=\(single + strip + bundle)",
             "cover=\(hasCover ? 1 : 0)",
+            // ALWAYS 0, and that is the assertion (2026-08-26). §219 ruled
+            // "the All feed is untouched — native anatomies relax only inside
+            // the source's own room", and until this date `liveStream` was the
+            // one head whose gate did not say so: a live Twitch broadcast took
+            // the All head over every source, stacking a full-bleed frame above
+            // the §389c cover with a day header wedged between them. `cover=1`
+            // kept printing throughout, so the census this room already had
+            // could not see it. Printed rather than inferred because the two
+            // heads are decided in different files and only this line watches
+            // both — see `verify.sh`'s All-room step, which fails on a 1.
+            "hero=\(heroShown ? 1 : 0)",
             "single=\(single) strip=\(strip) bundle=\(bundle)",
             "stripTiles=\(stripTiles) bundleArt=\(bundleArt)",
             "imageOnly=\(imageOnly.count) wideArt=\(wideArt.count)",
@@ -3792,7 +3851,8 @@ struct FeedScreen: View {
     @MainActor private static var lastAllFeedCensus = ""
     #endif
 
-    private func bundledSections(_ visible: [Thing], nextEventID: UUID?) -> some View {
+    private func bundledSections(_ visible: [Thing], nextEventID: UUID?,
+                                 heroShown: Bool) -> some View {
         // Derive ONCE per render, then share — the day bundles, each day's true
         // total, and the new-since boundary. Read inside the row/header loops
         // (as `newBoundaryID` and `dayGroups.first(where:)` were) they rebuilt
@@ -3801,7 +3861,18 @@ struct FeedScreen: View {
         // Memoized (PERF 2026-07-31 — see `DerivationMemo`): recomputed only
         // when `visible` actually changed, not on all ~18 launch-window body
         // passes over the same set.
-        let key = derivationKey(visible)
+        //
+        // `heroShown` is IN THE KEY, and it has to be: a stream going live or
+        // going off air changes it without changing `visible` at all, and the
+        // cover is decided inside this memo — see `ledeThingID`'s fourth
+        // decline. Left out, a stream that just went live would sit above a
+        // cover until the next corpus write, which is the stacked pair this
+        // gate exists to prevent, arriving by the back door. It costs one more
+        // `combine` on a hit.
+        var hasher = Hasher()
+        hasher.combine(derivationKey(visible))
+        hasher.combine(heroShown)
+        let key = hasher.finalize()
         if memo.key != key {
             memo.key = key
             memo.days = perfAccum("dayGrouping") { recentDaysThenCoarseTail(visible) }
@@ -3809,7 +3880,7 @@ struct FeedScreen: View {
             // which is the whole of the fix: chosen after it, the newest thing
             // could be inside a fold and the card would lead with something
             // older than a row beneath it.
-            memo.lede = ledeThingID(in: memo.days)
+            memo.lede = ledeThingID(in: memo.days, heroShown: heroShown)
             // `nextEventID` rides in so the clock carve-out (prd §377) can
             // spare the next-up row. Both it and the live set can change
             // WITHOUT `visible` changing, and this memo keys on the snapshot's
@@ -3934,7 +4005,8 @@ struct FeedScreen: View {
             // forever. The question here is what the room CAN draw, which is a
             // property of the whole composed feed; whether the window is open
             // is reported separately, as its own fact.
-            logAllFeedCensus(groups: memo.groups, hasCover: ledeThing != nil, boundary: boundary,
+            logAllFeedCensus(groups: memo.groups, hasCover: ledeThing != nil,
+                             heroShown: heroShown, boundary: boundary,
                              moment: split.moment, imageOnly: imageOnly, wideArt: wideArt,
                              coarse: coarse, subjects: subjects, more: window.more,
                              dayLine: dayLine,
