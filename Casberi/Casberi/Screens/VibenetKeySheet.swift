@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// ONE KEY'S WHOLE STORY, AS A SHEET (2026-08-25, prd §478 — the last
-/// inline expander in the room, closed).
+/// inline expander in the room, closed; ANATOMY rebuilt in §480).
 ///
 /// `VibenetAccountDetail.keyRow` used to be its own disclosure: tapping the
 /// card rotated a chevron and grew the row in place — terms block, origin,
@@ -10,10 +10,34 @@ import SwiftUI
 /// on a `fillFaint` radius-12 box INSIDE the key's own card, a box in a box.
 ///
 /// A key is an object; opening an object is a presentation, not a row
-/// growing under the thumb. Everything the expanded row showed is here, on
-/// the sheet's own plane with no inner containers, plus the room the row
-/// never had: §470's copy verbs as visible doors rather than a context menu
-/// somebody has to know to long-press for.
+/// growing under the thumb.
+///
+/// **§480 — IT HAD NO ANATOMY, AND THAT IS WHY IT LOOKED MADE POORLY**
+/// (user, with screenshots: *"how can we improve the design of these detail
+/// sheets, they look like they were made poorly"*). §478 moved the expanded
+/// row's CONTENTS onto a bigger surface and did not give them a shape, so the
+/// sheet inherited the row's flat run of lines. Six faults, all of them
+/// structural rather than cosmetic:
+///
+/// 1. **The identity line crammed three identifiers together** — a face, the
+///    account's `…4513`, the key's `…ed9b` and the expiry, on one line, with
+///    nothing saying which ellipsis was which. Two different objects wearing
+///    the same shape, side by side, is the worst thing a detail screen can do.
+/// 2. **Everything sat at one rung**, so nothing led: the kind's detail
+///    clause, a lone chip, a date row and 66 characters of hex all read as
+///    equally important.
+/// 3. **Two different fact layouts on one sheet** — "Authorized · date ·
+///    block" was a three-column row while the terms used a 74pt label column.
+/// 4. **The full id wrapped naked**, unlabeled, in the quietest ink, which
+///    reads as debris rather than as the value it is.
+/// 5. **Three blue links in a row** is web-footer grammar.
+/// 6. **A void below the content**, because the tray was pinned to 540.
+///
+/// The shape now is the one this app already uses for a subject sheet: WHOSE
+/// it is as a real row, WHAT IT MAY DO promoted (it is the question the sheet
+/// is opened with), then one facts group under a single label column, then
+/// the id as a labeled field, then the verbs. Each block is captioned, so the
+/// eye lands somewhere rather than reading a list of sentences.
 ///
 /// VALUE TYPES ONLY — `VibenetActor` and `VibenetAccountItem` are structs
 /// handed in by the presenter, never re-read at present time, so nothing
@@ -32,7 +56,7 @@ struct VibenetKeySheet: View {
     /// the key. The tray's rows used to scope directly; §478 gave a key its
     /// own sheet, so the follow-up lives one level in, where the account it
     /// names is on screen beside it. nil where there is nothing to scope, and
-    /// the account line is then a plain read rather than a dead door.
+    /// the account row is then a plain read rather than a dead door.
     ///
     /// The PRESENTER dismisses and then scopes, in that order — the room
     /// re-composes behind this sheet, and asking for that while it is still up
@@ -48,79 +72,20 @@ struct VibenetKeySheet: View {
     }
 
     var body: some View {
-        DSTray(title: actor.kind.plainTitle, height: 540,
-               detents: [.height(540), .large]) {
+        // SIZED TO ITS CONTENT (§480). A fixed 540 left a third of the sheet
+        // empty under a short key and made the whole thing read as unfinished.
+        // The height is the blocks that will actually draw — a key with no
+        // terms and no origin is a genuinely shorter object than a session key
+        // with both.
+        DSTray(title: actor.kind.plainTitle, height: trayHeight,
+               detents: [.height(trayHeight), .large]) {
             ScrollView {
-                VStack(alignment: .leading, spacing: 0) {
-                    // WHOSE it is, and which one it is — the collapsed row's
-                    // two quiet facts, restated because a sheet must stand
-                    // alone: it can be on screen after the list behind it
-                    // scrolled or re-scoped.
-                    HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                        accountDoor
-                        Text(VibenetKeyIdentity.short(actor.actorId))
-                            .dsText(.label11).monospaced()
-                            .foregroundStyle(DS.textTertiary)
-                            .lineLimit(1)
-                            .fixedSize()
-                        Spacer(minLength: DS.Space.s2)
-                        let standing = actor.expiryStanding(now: .now)
-                        Text(actor.expiryLabel(now: .now))
-                            .dsText(.label12)
-                            .fontWeight(standing == .soon ? .semibold : .regular)
-                            .foregroundStyle(standing == .soon ? Self.mark : DS.textTertiary)
-                            .lineLimit(1)
-                    }
-                    if let detail = actor.kind.plainDetail {
-                        Text(detail)
-                            .dsText(.label11)
-                            .foregroundStyle(DS.textTertiary)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .padding(.top, 2)
-                    }
-                    // WHAT IT MAY DO — the same chip grammar as everywhere
-                    // (user, §478: "they should be chips instead of like a
-                    // sentence"): admin inverts, the unknown tail outlines,
-                    // named permissions wear the room's mark at 12%.
-                    chips
-                        .padding(.top, DS.Space.s3)
-                    // THE TERMS — label/value rows ON THE SHEET, not on a
-                    // faint box: the sheet is the container (§478's own
-                    // rule), and the labels' fixed column is what makes them
-                    // scannable, not a fill behind them.
-                    let terms = termRows
-                    if !terms.isEmpty {
-                        VStack(alignment: .leading, spacing: 0) {
-                            ForEach(Array(terms.enumerated()), id: \.offset) { _, term in
-                                HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                                    Text(term.label)
-                                        .dsText(.label11)
-                                        .foregroundStyle(DS.textTertiary)
-                                        .frame(width: 74, alignment: .leading)
-                                    Text(term.value)
-                                        .dsText(.label11)
-                                        .fontWeight(term.weighted ? .semibold : .regular)
-                                        .foregroundStyle(DS.textSecondary)
-                                        .fixedSize(horizontal: false, vertical: true)
-                                        .frame(maxWidth: .infinity, alignment: .leading)
-                                }
-                                .padding(.vertical, 3)
-                            }
-                        }
-                        .padding(.top, DS.Space.s3)
-                    }
-                    origin
-                    // THE FULL ID (prd §473's ruling, kept): a developer
-                    // comparing against a console log needs the whole word on
-                    // a screen, not only on the clipboard.
-                    Text(actor.actorId)
-                        .dsText(.label11).monospaced()
-                        .foregroundStyle(DS.textTertiary)
-                        .textSelection(.enabled)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .padding(.top, DS.Space.s4)
+                VStack(alignment: .leading, spacing: DS.Space.s6) {
+                    subject
+                    permissions
+                    facts
+                    identity
                     doors
-                        .padding(.top, DS.Space.s4)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.bottom, DS.Space.s4)
@@ -129,40 +94,91 @@ struct VibenetKeySheet: View {
         }
     }
 
-    /// WHOSE KEY THIS IS, and the way to it. A door only where the presenter
-    /// can scope — otherwise a plain name, never a control that does nothing.
+    /// Roughly what the content needs, so the tray is neither padded with void
+    /// nor cut off. Deliberately approximate — `.large` is one drag away, and
+    /// the failure this replaces was a fixed number too big for every key.
+    private var trayHeight: CGFloat {
+        var h: CGFloat = 300                       // subject + permissions + id + doors
+        h += CGFloat(termRows.count) * 26          // one facts row each
+        if origin != nil { h += 52 }               // authorized + block
+        return min(660, h)
+    }
+
+    // MARK: - 1. Whose key this is
+
+    /// WHOSE IT IS, as a real row rather than three ids on one line (§480).
+    ///
+    /// The account is a different OBJECT from the key, so it gets a row of its
+    /// own with a face and a name — the shape every other account row in this
+    /// room already has — and the key's own short id moves down to the
+    /// identity block where the full value lives. Nothing on this sheet now
+    /// puts two ellipsis strings side by side.
     @ViewBuilder
-    private var accountDoor: some View {
+    private var subject: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            if let detail = actor.kind.plainDetail {
+                // The kind's own clause, under the tray's title, which IS the
+                // kind — so this reads as a subtitle rather than as a stray
+                // sentence in the body.
+                Text(detail)
+                    .dsText(.subhead13)
+                    .foregroundStyle(DS.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            accountRow
+        }
+    }
+
+    @ViewBuilder
+    private var accountRow: some View {
         let name = VibenetWatch.shared.name(for: item.address)
             ?? VibenetRoom.shortAddress(item.address)
+        let body = HStack(spacing: DS.Space.s3) {
+            WalletFace(address: item.address, size: DS.Face.rowCircle, circular: true)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(String(localized: "Acts for"))
+                    .dsText(.label11)
+                    .foregroundStyle(DS.textTertiary)
+                Text(name)
+                    .dsText(.body17)
+                    .foregroundStyle(DS.textPrimary)
+                    .lineLimit(1)
+            }
+            Spacer(minLength: DS.Space.s2)
+            if onScope != nil {
+                Image(systemName: "chevron.right")
+                    .accessibilityHidden(true)
+                    .dsGlyph(11, weight: .semibold)
+                    .foregroundStyle(DS.textTertiary)
+            }
+        }
+            .padding(.vertical, DS.Space.s2)
+            .padding(.horizontal, DS.Space.s3)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous)
+                .fill(DS.fillFaint))
+            .contentShape(Rectangle())
+
         if let onScope {
             Button {
                 DSHaptic.selection()
                 onScope(item.address)
-            } label: {
-                HStack(spacing: 5) {
-                    WalletFace(address: item.address, size: DS.Face.badge, circular: true)
-                    Text(name)
-                        .dsText(.subhead13)
-                        .foregroundStyle(DS.textPrimary)
-                        .lineLimit(1)
-                    Image(systemName: "chevron.right")
-                        .accessibilityHidden(true)
-                        .dsGlyph(10, weight: .semibold)
-                        .foregroundStyle(DS.textTertiary)
-                }
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .dsHover()
+            } label: { body }
+                .buttonStyle(.plain)
+                .dsHover()
         } else {
-            HStack(spacing: 5) {
-                WalletFace(address: item.address, size: DS.Face.badge, circular: true)
-                Text(name)
-                    .dsText(.subhead13)
-                    .foregroundStyle(DS.textSecondary)
-                    .lineLimit(1)
-            }
+            body
+        }
+    }
+
+    // MARK: - 2. What it may do
+
+    /// THE ANSWER THE SHEET IS OPENED WITH, promoted and captioned (§480). It
+    /// was a lone chip floating under a sentence.
+    private var permissions: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            caption(String(localized: "What it can do"))
+            chips
         }
     }
 
@@ -194,6 +210,129 @@ struct VibenetKeySheet: View {
         }
     }
 
+    // MARK: - 3. The facts, in ONE column
+
+    /// EVERY FACT ON ONE LABEL COLUMN (§480). The expiry was stranded up in
+    /// the identity line and the origin used a three-column layout of its own,
+    /// so a sheet with four facts had three ways of stating one.
+    private var facts: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            caption(String(localized: "Terms"))
+            VStack(alignment: .leading, spacing: 0) {
+                factRow(String(localized: "Expires"),
+                        actor.expiryLabel(now: .now),
+                        weighted: actor.expiryStanding(now: .now) == .soon,
+                        tinted: actor.expiryStanding(now: .now) == .soon)
+                ForEach(Array(termRows.enumerated()), id: \.offset) { _, term in
+                    factRow(term.label, term.value, weighted: term.weighted, tinted: false)
+                }
+                if let origin, let began = origin.date {
+                    factRow(String(localized: "Authorized"),
+                            began.formatted(.dateTime.day().month(.abbreviated).year()),
+                            weighted: false, tinted: false)
+                    // The BLOCK, not a transaction door — the moment carries
+                    // no txHash (`VibenetActorEvent` never needed one), and a
+                    // link built from a block number would open the wrong page.
+                    factRow(String(localized: "Block"),
+                            origin.block.formatted(.number.grouping(.automatic)),
+                            weighted: false, tinted: false)
+                }
+            }
+        }
+    }
+
+    private func factRow(_ label: String, _ value: String,
+                         weighted: Bool, tinted: Bool) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s3) {
+            Text(label)
+                .dsText(.label12)
+                .foregroundStyle(DS.textTertiary)
+                .frame(width: 84, alignment: .leading)
+            Text(value)
+                .dsText(.callout15)
+                .fontWeight(weighted ? .semibold : .regular)
+                .foregroundStyle(tinted ? Self.mark : DS.textPrimary)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(.vertical, 5)
+    }
+
+    // MARK: - 4. Which key this is
+
+    /// THE ID AS A LABELED FIELD (§480), not 66 characters of unannounced hex
+    /// wrapping in the quietest ink. Still selectable, and still the whole
+    /// value — §473's ruling, which this only gives a name and a ground.
+    private var identity: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            caption(String(localized: "Key id"))
+            Text(actor.actorId)
+                .dsText(.mono12)
+                .foregroundStyle(DS.textSecondary)
+                .textSelection(.enabled)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(DS.Space.s3)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous)
+                    .fill(DS.fillFaint))
+        }
+    }
+
+    // MARK: - 5. The verbs
+
+    /// §470's copy verbs — ONE row of quiet capsules (§480), not three blue
+    /// links side by side, which is web-footer grammar and made three
+    /// secondary actions look like the sheet's primary content.
+    private var doors: some View {
+        FlowLayout(spacing: DS.Space.s2) {
+            door(String(localized: "Copy key id"), symbol: "doc.on.doc") {
+                DSPasteboard.copySensitive(actor.actorId)
+            }
+            if let signer = VibenetKeyIdentity.signerAddress(actor) {
+                door(String(localized: "Copy signer"), symbol: "person.crop.circle") {
+                    DSPasteboard.copySensitive(signer)
+                }
+            }
+            door(String(localized: "Copy account"), symbol: "wallet.pass") {
+                DSPasteboard.copySensitive(item.address)
+            }
+        }
+    }
+
+    private func door(_ title: String, symbol: String, act: @escaping () -> Void) -> some View {
+        Button {
+            DSHaptic.tap()
+            act()
+        } label: {
+            HStack(spacing: 5) {
+                Image(systemName: symbol)
+                    .accessibilityHidden(true)
+                    .dsGlyph(11, weight: .semibold)
+                Text(title)
+            }
+            .dsText(.label12).fontWeight(.semibold)
+            .foregroundStyle(DS.textSecondary)
+            .lineLimit(1)
+            .fixedSize()
+            .padding(.horizontal, DS.Space.s3)
+            .padding(.vertical, 7)
+            .background(Capsule(style: .continuous).fill(DS.fillFaint))
+            .contentShape(Capsule())
+        }
+        .buttonStyle(PressSpring())
+        .dsHover()
+    }
+
+    /// One block caption — the thing this sheet had none of, and the reason
+    /// every line read as equally important.
+    private func caption(_ text: String) -> some View {
+        Text(text)
+            .dsText(.label12)
+            .foregroundStyle(DS.textTertiary)
+    }
+
+    // MARK: - Model
+
     /// One label/value pair in the terms — `VibenetAccountDetail`'s own
     /// composition, moved here whole when the expansion did (§478). Every
     /// value is the model's own string, never a substring cut back out of a
@@ -222,71 +361,11 @@ struct VibenetKeySheet: View {
         return out
     }
 
-    /// WHEN THIS KEY BEGAN — silent when its beginning cannot be named
-    /// (outside `VibenetKeyHistory.cap`, an older build's row, a failed
-    /// block-time read): all three mean the same thing to a reader and none
-    /// is worth a sentence.
-    @ViewBuilder
-    private var origin: some View {
-        if let origin = VibenetKeyOrigin.authorized(actor, in: item.history), let began = origin.date {
-            HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                Text(String(localized: "Authorized"))
-                    .dsText(.label11)
-                    .foregroundStyle(DS.textTertiary)
-                    .frame(width: 74, alignment: .leading)
-                Text(began.formatted(.dateTime.day().month(.abbreviated).year()))
-                    .dsText(.label11)
-                    .foregroundStyle(DS.textSecondary)
-                Spacer(minLength: DS.Space.s2)
-                // The BLOCK, not a transaction door — the moment carries no
-                // txHash (`VibenetActorEvent` never needed one), and a link
-                // built from a block number would open the wrong page.
-                Text(String(localized: "block \(origin.block.formatted(.number.grouping(.automatic)))"))
-                    .dsText(.label11)
-                    .foregroundStyle(DS.textTertiary)
-                    .monospacedDigit()
-            }
-            .padding(.top, DS.Space.s3)
-        }
-    }
-
-    /// §470's copy verbs, VISIBLE at last — on the row they were a context
-    /// menu because a row already carrying a title, chips and a clock had no
-    /// room for three more controls; a sheet does. `copySensitive` for every
-    /// item, each being exactly the "an address, a key" class that modifier
-    /// exists for.
-    private var doors: some View {
-        FlowLayout(spacing: DS.Space.s3) {
-            door(String(localized: "Copy key id"), symbol: "doc.on.doc") {
-                DSPasteboard.copySensitive(actor.actorId)
-            }
-            if let signer = VibenetKeyIdentity.signerAddress(actor) {
-                door(String(localized: "Copy signer address"), symbol: "person.crop.circle") {
-                    DSPasteboard.copySensitive(signer)
-                }
-            }
-            door(String(localized: "Copy account address"), symbol: "wallet.pass") {
-                DSPasteboard.copySensitive(item.address)
-            }
-        }
-    }
-
-    private func door(_ title: String, symbol: String, act: @escaping () -> Void) -> some View {
-        Button {
-            DSHaptic.tap()
-            act()
-        } label: {
-            HStack(spacing: 4) {
-                Text(title)
-                Image(systemName: symbol)
-                    .accessibilityHidden(true)
-            }
-            .dsText(.label12).fontWeight(.semibold)
-            .foregroundStyle(Self.mark)
-            .lineLimit(1)
-            .fixedSize()
-        }
-        .buttonStyle(.plain)
-        .dsHover()
+    /// WHEN THIS KEY BEGAN — nil when its beginning cannot be named (outside
+    /// `VibenetKeyHistory.cap`, an older build's row, a failed block-time
+    /// read): all three mean the same thing to a reader and none is worth a
+    /// sentence, so the two rows simply do not draw.
+    private var origin: VibenetKeyMoment? {
+        VibenetKeyOrigin.authorized(actor, in: item.history)
     }
 }

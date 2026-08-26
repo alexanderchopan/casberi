@@ -157,6 +157,7 @@ or by description rather than by `§N`.
 | §437 (two-wallet placement) | a two-wallet sky's bodies separated at the minimum step, and no ring stroke drawn | §438 — at two wallets the bodies distribute evenly around the whole connected ring (a bearing carries no information there), and both rings are drawn |
 | §468 (the key tray's shape) | the tray groups BY PERMISSION — a heading per permission, a key repeated under each one it holds, with an "Also:" sentence naming its others | §478 — one row per key, A–Z, permissions as chips on the row, the census demoted to a filter strip. The QUESTION §468 asked ("which keys are in which category") is unchanged and still answered; only the axis flipped. |
 | §471 (the census group, the tray's row group) | the six permission rows and the tray's rows each sit on their own `fillFaint` radius-14 fill, so a census "reads as a container" | §478 — the card and the sheet ARE the containers; the inner fill was justified by the rows being doors, and §476 deleted the doors |
+| §473 (a key's card) | a key is a CARD on the account page, and the whole card is a toggle that expands it in place | §478 deleted the expansion (a key's depth is `VibenetKeySheet`); §480 then deleted the card, which existed only to be the expander's ground — the tray's row is the one row grammar |
 | §470 (a tray row's tap) | a key row in the tray SCOPES the room to that key's account | §479 — the row opens the KEY (§478 gave it a sheet) and the scope is a door inside that sheet, so one key has one tap outcome on every surface; the follow-up moved rather than being deleted |
 | §471 / §463 (row separators) | rows divided by `Rectangle().fill(DS.fillFaint).frame(height: 1)`, described in-source as "a FILL at the faintest rung… nothing strokes a line" | §478 — user: *"do NOT USE HAIRLINES"*. §8 has zero exceptions and a one-point fill is a line; rows are separated by air, and `vibenet-selftest.sh` fails the build on the shape |
 
@@ -33611,3 +33612,81 @@ timelock open.
 no static check can exercise one: the harness proves the ranking, the cap, the
 windowing and which ranges are offered — including that the demo's own curve
 can draw the strip — and cannot prove any of it feels right.
+
+
+## 480. The detail sheet had no anatomy, and the two key lists were two grammars (user, with screenshots: "how can we improve the design of these detail sheets, they look like they were made poorly", then "on the individual account page, why isn't the way we display keys similar in some way to how we display them on the All page", then "what happens if an account has like ten keys, won't they still need to be able to see it the same way?", 2026-08-25)
+
+Three reports, and the second explains the first.
+
+### 1. THE SHEET WAS A ROW'S CONTENTS ON A BIGGER SURFACE
+
+§478 moved `keyRow`'s expanded block onto `VibenetKeySheet` and **did not give
+it a shape**, so it inherited the row's flat run of lines. Six faults, all
+structural rather than cosmetic:
+
+1. **The identity line crammed three identifiers together** — a face, the
+   account's `…4513`, the key's `…ed9b` and the expiry, on ONE line, with
+   nothing saying which ellipsis was which. Two different objects wearing the
+   same shape side by side is the worst thing a detail screen can do.
+2. **Everything sat at one rung**: the kind's clause, a lone chip, a date row
+   and 66 characters of hex all read as equally important.
+3. **Two fact layouts on one sheet** — "Authorized · date · block" was three
+   columns while the terms used a 74pt label column.
+4. **The full id wrapped naked**, unlabeled, in the quietest ink — it read as
+   debris rather than as the value §473 put there on purpose.
+5. **Three blue links in a row**: web-footer grammar, and it made three
+   secondary verbs look like the sheet's primary content.
+6. **A void below the content**, because the tray was pinned to 540 whatever
+   the key had to say.
+
+Now five CAPTIONED blocks — the thing it had none of, and the reason nothing
+led: the subject (the kind's clause as a subtitle under the tray title, which
+IS the kind, then "Acts for" as a real account row with a face), **what it can
+do** (chips promoted — it is the question the sheet is opened with), **terms**
+(every fact on ONE 84pt label column, expiry included, so the sheet has one
+way of stating a fact instead of three), **key id** (labeled, on its own
+ground, still selectable), and the verbs as one row of quiet capsules. The
+tray is sized to what will actually draw.
+
+### 2. TWO KEY LISTS, TWO GRAMMARS (supersedes §473's card per key)
+
+The account page drew a CARD per key with group captions; the tray drew flat
+rows with chips. They diverged because they came from different passes — and
+**the card existed so the row could expand**. §478 deleted the expansion, so
+the card outlived the feature that justified it, exactly as §471's census box
+outlived the doors it held (§478's own finding, one screen over).
+
+The tray's row is the one row grammar: kind, id tail, chips, expiry, chevron.
+**One principled difference, not drift** — the tray leads with the account's
+FACE because it is room-wide and a key title alone is the same words on four
+accounts; on the account page every row is the same account, so a face would
+be one picture repeated down the column.
+
+### 3. …AND THEN A TEN-KEY ACCOUNT COULD NOT NARROW
+
+Asked immediately, and correct: giving both surfaces one row grammar left the
+TRAY holding the only filter, so the two diverged again at exactly the size
+where narrowing matters — ten keys was one tap on the All page and a long
+scroll on the account's own. The account page gets the same strip, scoped,
+reading the same `VibenetKeyTray.census`, so a chip here and a chip there can
+never disagree about a count.
+
+Two rules carried with it. **The count line follows the filter** — "10 keys"
+becomes "3 of 10 keys" — because a count describing a list the screen is not
+showing is the §471 defect (a card saying 4 opening a list of 3) in a new
+place. And **the strip draws only when there is something to choose between**
+(`census.count > 1`): on an account whose every key is an Admin, that chip
+narrows to the list you are already looking at, which is §83's dead control
+wearing a permission's name.
+
+**HELD OPEN, deliberately**: while a filter is active the page shows two
+taxonomies at once — permission chips above, `VibenetKeyGrouping`'s
+Owners/Session keys/Limited keys below. The groups are kept because they are
+the one thing this page knows that the tray does not (a session key gated to a
+single contract is a different animal from an owner key), and the groups
+recompute over the FILTERED set so empty ones drop out on their own. If it
+reads as noisy on a real ten-key account the fix is to stand the groups down
+while a filter is active — one line, and it wants a device rather than an
+argument.
+
+**UNMEASURED on a device.** Every claim here is about how a screen reads.

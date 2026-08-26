@@ -474,13 +474,25 @@ struct VibenetAccountDetail: View {
         // second `heading22` here would be the same landmark twice. The COUNT
         // stays: it is a reading, not a title.
         VStack(alignment: .leading, spacing: DS.Space.s6) {
-            Text(item.actors.count == 1
-                 ? String(localized: "1 key")
-                 : String(localized: "\(item.actors.count) keys"))
-                .dsText(.heading17)
-                .foregroundStyle(DS.textPrimary)
-                .fixedSize(horizontal: false, vertical: true)
-            ForEach(VibenetKeyGrouping.sections(item.actors)) { section in
+            VStack(alignment: .leading, spacing: DS.Space.s3) {
+                Text(keyCountLine)
+                    .dsText(.heading17)
+                    .foregroundStyle(DS.textPrimary)
+                    .fixedSize(horizontal: false, vertical: true)
+                // NARROWING, ON THIS PAGE TOO (2026-08-25, prd §480, user:
+                // *"what happens if an account has like ten keys, won't they
+                // still need to be able to see it the same way?"*).
+                //
+                // They do, and they could not: §480 gave both surfaces one row
+                // grammar and left the TRAY holding the only filter, so the
+                // two diverged at exactly the size where narrowing matters —
+                // an account with ten keys was a long scroll here and one tap
+                // on the All page. It is the tray's own strip, scoped to this
+                // account, reading the same `VibenetKeyTray.census` so a chip
+                // here and a chip there can never disagree about a count.
+                keyFilterStrip
+            }
+            ForEach(VibenetKeyGrouping.sections(filteredActors)) { section in
                 VStack(alignment: .leading, spacing: DS.Space.s3) {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(section.group.title)
@@ -635,6 +647,125 @@ struct VibenetAccountDetail: View {
         }
     }
 
+    /// Which permission the list is narrowed to, or nil for every key (prd
+    /// §480). `@State`, so it dies with the screen — a look, not a
+    /// preference, and a page that reopened pre-filtered would show fewer
+    /// keys than its own count line says exist.
+    @State private var keyFilter: String?
+
+    /// This account's own census — the same derivation the tray's strip and
+    /// the room's card read, so three surfaces can never disagree on a count.
+    private var keyCensus: [VibenetPolicyCount] { VibenetKeyTray.census([item]) }
+
+    /// The keys actually listed.
+    private var filteredActors: [VibenetActor] {
+        guard let keyFilter else { return item.actors }
+        return item.actors.filter {
+            VibenetKeyTray.holds(VibenetTrayKey(address: item.address, actor: $0),
+                                 permission: keyFilter)
+        }
+    }
+
+    /// "10 keys", or "3 of 10 keys" while narrowed — the count must never
+    /// describe a list the screen is not showing, which is the shape §471
+    /// objected to when a card said 4 and its list showed 3.
+    private var keyCountLine: String {
+        let total = item.actors.count
+        let shown = filteredActors.count
+        if keyFilter != nil && shown != total {
+            return String(localized: "\(shown) of \(total) keys")
+        }
+        return total == 1 ? String(localized: "1 key") : String(localized: "\(total) keys")
+    }
+
+    /// The tray's own strip, scoped to this account.
+    ///
+    /// **Drawn only when there is something to choose between** (`count > 1`)
+    /// — on an account whose every key is an Admin the chip would narrow to
+    /// the list you are already looking at, which is §83's dead control with
+    /// a permission's name on it.
+    @ViewBuilder
+    private var keyFilterStrip: some View {
+        let census = keyCensus
+        if census.count > 1 {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: DS.Space.s2) {
+                    keyChip(label: String(localized: "All"), count: nil, value: nil)
+                    ForEach(Array(census.enumerated()), id: \.offset) { _, entry in
+                        keyChip(label: entry.label, count: entry.count, value: entry.label)
+                    }
+                }
+            }
+            .scrollIndicators(.hidden)
+        }
+    }
+
+    private func keyChip(label: String, count: Int?, value: String?) -> some View {
+        let on = keyFilter == value
+        return Button {
+            DSHaptic.selection()
+            withAnimation(reduceMotion ? nil : DS.Motion.standard) { keyFilter = value }
+        } label: {
+            HStack(spacing: 5) {
+                Text(label)
+                    .dsText(.label12).fontWeight(.semibold)
+                if let count {
+                    Text("\(count)")
+                        .dsText(.label12)
+                        .monospacedDigit()
+                        .opacity(0.7)
+                }
+            }
+            // A NEUTRAL fill for the selection, never the room's mark: blue
+            // here means a key is about to expire, and which slice you are
+            // looking at is not urgent.
+            .foregroundStyle(on ? DS.textPrimary : DS.textSecondary)
+            .padding(.horizontal, DS.Space.s3)
+            .padding(.vertical, 6)
+            .background(Capsule(style: .continuous).fill(on ? DS.fillStrong : DS.fillFaint))
+            .contentShape(Capsule())
+        }
+        .buttonStyle(PressSpring())
+        .dsHover()
+        .accessibilityAddTraits(on ? [.isSelected] : [])
+    }
+
+    /// One key's permissions — `VibenetKeySheet`'s own chip grammar (§463),
+    /// so a key reads the same on the row, the tray and its own sheet.
+    private func keyChips(_ actor: VibenetActor) -> some View {
+        let labels = actor.scope.grantedPlainLabels
+        let isAdmin = actor.scope.isAdmin
+        return FlowLayout(spacing: 6) {
+            ForEach(Array(labels.enumerated()), id: \.offset) { index, label in
+                let isUnknownTail = index == labels.count - 1 && actor.scope.unknownCount > 0
+                Text(label)
+                    .dsText(.label11)
+                    .fontWeight(isAdmin ? .semibold : .regular)
+                    .foregroundStyle(isAdmin ? DS.page
+                                     : (isUnknownTail ? DS.textTertiary : DS.textPrimary))
+                    .lineLimit(1)
+                    .fixedSize()
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background {
+                        // Three claims, three treatments. ADMIN inverts: scope
+                        // 0 is every capability there is, including reserved
+                        // ones this build cannot name, so it must not read as
+                        // one more permission among five. The unknown tail is
+                        // OUTLINED — a visibly different claim from a named
+                        // permission, never an invented name in the same fill.
+                        if isAdmin {
+                            Capsule().fill(DS.textPrimary)
+                        } else if isUnknownTail {
+                            Capsule().strokeBorder(DS.textTertiary, lineWidth: 1)
+                        } else {
+                            Capsule().fill(Self.mark.opacity(0.12))
+                        }
+                    }
+            }
+        }
+    }
+
     /// Which new keys have already spent their arrival wash (prd §479) — one
     /// shot each, so a re-compose does not re-light a row somebody is reading.
     @State private var glowedKeys: Set<String> = []
@@ -653,152 +784,83 @@ struct VibenetAccountDetail: View {
     /// `isTracking`. See `trackOnLockScreen`.
     @State private var lockScreenTick: UInt8 = 0
 
+    /// ONE KEY, ONE ROW — THE TRAY'S OWN ROW (2026-08-25, prd §480).
+    ///
+    /// Reported: *"on the individual account page, why isn't the way we
+    /// display keys similar in some way to how we display them on the All
+    /// page."* They were two grammars because they came from two passes —
+    /// this was §473's CARD PER KEY, and that card existed **so the row could
+    /// expand**. §478 deleted the expansion and the card outlived the feature
+    /// that justified it, exactly as §471's census box outlived the doors it
+    /// held.
+    ///
+    /// So the tray's row is the one row grammar: kind, id tail, permission
+    /// chips, expiry, chevron. **One principled difference, not drift** — the
+    /// tray leads with the account's FACE because it is room-wide and a key
+    /// title alone is the same words on four accounts; here every row is the
+    /// same account, so a face would be the identical picture repeated down
+    /// the column and the row starts at its own name instead.
     private func keyRow(_ actor: VibenetActor, door: Bool) -> some View {
-        // TWO TIERS, not eight equal lines (prd §471). The row used to be a
-        // flat `VStack(spacing: 6)` of up to eight `label11` tertiary lines —
-        // detail clause, chips, shared-key line, policy contract, use count,
-        // readability paragraph, expiry — every one in the same ink at the
-        // same rung, so finding the clock meant reading all of them. Now the
-        // top tier is the OBJECT (what it is, when it lapses, what it can do)
-        // and the terms sit below it in their own block.
-        VStack(alignment: .leading, spacing: 0) {
-            // THE CLOCK JOINS THE TITLE ROW. It was the last of the eight
-            // lines, in the quietest ink; it is the single fact a person
-            // scans a key list for.
-            HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                Text(actor.kind.plainTitle)
-                    .dsText(.heading17)
-                    .foregroundStyle(DS.textPrimary)
-                    .lineLimit(1)
-                // WHICH key is new (prd §479) — the locatable half of the
-                // card's "1 new" pill, in that pill's own grammar (the room's
-                // mark, page-coloured text) so the two read as one piece of
-                // news rather than two claims.
-                if isNew(actor) {
-                    Text(String(localized: "New"))
-                        .dsText(.label11).fontWeight(.semibold)
-                        .foregroundStyle(DS.page)
-                        .padding(.horizontal, 6).padding(.vertical, 2)
-                        .background(Capsule().fill(Self.mark))
-                        .fixedSize()
-                }
-                Spacer(minLength: DS.Space.s2)
-                let standing = actor.expiryStanding(now: .now)
-                Text(actor.expiryLabel(now: .now))
-                    .dsText(.label11)
-                    .fontWeight(standing == .soon ? .semibold : .regular)
-                    .foregroundStyle(standing == .soon ? DS.tint : DS.textTertiary)
-                    .lineLimit(1)
-                    .fixedSize()
-                // A plain chevron, gated on the door (§83): it says "this
-                // opens", and only when this caller can present the sheet it
-                // would open. The rotation went with the disclosure it
-                // announced (§478).
-                if door {
-                    Image(systemName: "chevron.right")
-                        .accessibilityHidden(true)
-                        .dsGlyph(11, weight: .semibold)
+        HStack(alignment: .top, spacing: DS.Space.s3) {
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: DS.Space.s2) {
+                    Text(actor.kind.plainTitle)
+                        .dsText(.body17)
+                        .foregroundStyle(DS.textPrimary)
+                        .lineLimit(1)
+                    // WHICH KEY (prd §470) — two keys of one kind on one
+                    // account are otherwise adjacent rows reading identically
+                    // end to end. Noun-less and monospaced: a secp256k1
+                    // actorId is an address and a passkey's is a hash, so any
+                    // label would be a fabrication on half the rows.
+                    Text(VibenetKeyIdentity.short(actor.actorId))
+                        .dsText(.label11).monospaced()
                         .foregroundStyle(DS.textTertiary)
+                        .lineLimit(1)
+                        .fixedSize()
+                    if isNew(actor) {
+                        Text(String(localized: "New"))
+                            .dsText(.label11).fontWeight(.semibold)
+                            .foregroundStyle(DS.page)
+                            .padding(.horizontal, 6).padding(.vertical, 2)
+                            .background(Capsule().fill(Self.mark))
+                            .fixedSize()
+                    }
                 }
-            }
-            // The detail clause and the id share ONE line — the id was
-            // occupying the title row's trailing slot, which is where the
-            // clock belongs, and neither is a headline fact.
-            HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
                 if let detail = actor.kind.plainDetail {
                     Text(detail)
                         .dsText(.label11)
                         .foregroundStyle(DS.textTertiary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                Spacer(minLength: DS.Space.s2)
-                // WHICH KEY THIS IS (prd §470). Without it two passkeys on
-                // one account are two identical rows — same title, same
-                // detail clause, often the same chips — and nothing on the
-                // screen or in the app could tell them apart or hand you the
-                // value to look one up. Monospaced and NOUN-LESS: a
-                // secp256k1 actorId is an address and a passkey's is a hash,
-                // so any label naming it would be a fabrication on half the
-                // rows (see `VibenetKeyIdentity.short`).
-                Text(VibenetKeyIdentity.short(actor.actorId))
-                    .dsText(.label11).monospaced()
-                    .foregroundStyle(DS.textTertiary)
-                    .lineLimit(1)
-                    .fixedSize()
-            }
-            .padding(.top, 2)
-            // The scope, as chips. `grantedPlainLabels` is never empty (see
-            // its doc), so there is no blank-row branch to draw — an admin
-            // arrives here as one inverted chip rather than as nothing.
-            //
-            // `s2` above rather than the old 6, so the chips read as a band
-            // of objects rather than as one more text line in the stack.
-            let labels = actor.scope.grantedPlainLabels
-            let isAdmin = actor.scope.isAdmin
-            FlowLayout(spacing: 6) {
-                ForEach(Array(labels.enumerated()), id: \.offset) { index, label in
-                    let isUnknownTail = index == labels.count - 1 && actor.scope.unknownCount > 0
-                    Text(label)
-                        .dsText(.label11)
-                        .fontWeight(isAdmin ? .semibold : .regular)
-                        .foregroundStyle(isAdmin ? DS.page
-                                         : (isUnknownTail ? DS.textTertiary : DS.textPrimary))
                         .lineLimit(1)
-                        .fixedSize()
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 3)
-                        .background {
-                            // Three claims, three treatments. ADMIN inverts:
-                            // scope 0 is every capability there is, including
-                            // reserved ones this build cannot name, so it must
-                            // not read as one more permission among five. The
-                            // unknown-count tail draws OUTLINED — a visibly
-                            // different claim from a named permission, never an
-                            // invented name wearing the same fill (§83).
-                            if isAdmin {
-                                Capsule().fill(DS.textPrimary)
-                            } else if isUnknownTail {
-                                Capsule().strokeBorder(DS.textTertiary, lineWidth: 1)
-                            } else {
-                                Capsule().fill(Self.mark.opacity(0.12))
-                            }
-                        }
                 }
+                // The scope, as chips — `grantedPlainLabels` is never empty
+                // (see its doc), so there is no blank-row branch: an admin
+                // arrives as one inverted chip rather than as nothing.
+                keyChips(actor)
+                    .padding(.top, 4)
             }
-            .padding(.top, DS.Space.s2)
-            // THE DEPTH IS GONE FROM THE ROW (prd §478): terms, origin and
-            // the full id live on `VibenetKeySheet`, reached by the tap. What
-            // stays is exactly what a list is for — which key, what it may
-            // do, when it expires.
+            Spacer(minLength: DS.Space.s2)
+            let standing = actor.expiryStanding(now: .now)
+            Text(actor.expiryLabel(now: .now))
+                .dsText(.label11)
+                .fontWeight(standing == .soon ? .semibold : .regular)
+                .foregroundStyle(standing == .soon ? DS.tint : DS.textTertiary)
+                .multilineTextAlignment(.trailing)
+                .fixedSize(horizontal: false, vertical: true)
+            if door {
+                Image(systemName: "chevron.right")
+                    .accessibilityHidden(true)
+                    .dsGlyph(11, weight: .semibold)
+                    .foregroundStyle(DS.textTertiary)
+                    .padding(.top, 2)
+            }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        // s4 AND NOT s3 (prd §471). `DS.Radius.widget` is 20, and at 14pt of
-        // padding the first glyph of every line sits optically inside the
-        // corner's curve — the card reads as text pressed against its own
-        // wall, which is the "padding on the edges looks wrong" report. s4 is
-        // the card-padding rung the rest of the app uses; s3 is a gap rung.
-        .padding(DS.Space.s4)
-        // A key is an OBJECT — something that can act for this account —
-        // so it gets an object's surface rather than sitting in a run of
-        // undifferentiated text. Several keys in a row read as several
-        // things, which is the fact this section is about.
-        //
-        // FULL OPACITY (prd §471). At 0.5 over the default black page this
-        // resolved to about #08080a — a 3% lift, a stain rather than a
-        // surface, so eight of them in a column read as one gray slab and the
-        // reasoning above went unhonoured. The shadow this modifier already
-        // carries is what lifts the card; halving the fill only removed the
-        // edge that made it one.
-        .dsWidgetSurface(cornerRadius: DS.Radius.widget)
-        // …AND IT ARRIVES LIT (prd §479). A one-shot wash in the room's mark
-        // that fades over ~1.4s, so a new key is findable in a column of eight
-        // by looking rather than by reading. The CHIP is what persists; this
-        // is only the thing that draws your eye to it.
-        //
-        // Reduce Motion takes the wash away entirely rather than freezing it
-        // on: a permanent tint would become a second, quieter status colour on
-        // a row that already has one.
+        // NO CARD, NO SEPARATOR (§480 / §478). The group this sits in is the
+        // container; a card per row was the expander's ground and a hairline
+        // is banned outright. Air is what separates rows here.
+        .padding(.vertical, DS.Space.s3)
         .overlay {
+            // …and it arrives lit when it is new (prd §479), one shot.
             if isNew(actor), !reduceMotion {
                 RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous)
                     .fill(Self.mark.opacity(glowedKeys.contains(actor.actorId) ? 0 : 0.14))
@@ -811,18 +873,7 @@ struct VibenetAccountDetail: View {
                     }
             }
         }
-        // THE VALUES, ON DEMAND (prd §470). The row shows a four-character
-        // tail, which answers "which of these two" and nothing else; a
-        // developer comparing against a console log or a raw
-        // `getActorConfig` read needs the whole word, and there was no way to
-        // get it out of this app at all.
-        //
-        // A CONTEXT MENU, not visible buttons: this is the third tier of a
-        // row that already carries a title, a clause, chips and a clock, and
-        // three more controls on it would bury the reading it exists for.
-        // `copySensitive` for every item — each is literally the "an address,
-        // a sign-in code" case `DSPasteboard`'s own doc names, so each takes
-        // the short expiry and never leaves this device.
+        .contentShape(Rectangle())
         .contextMenu {
             Button {
                 DSHaptic.tap()
