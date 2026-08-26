@@ -34289,3 +34289,120 @@ on a device before any of it is spent. `WalletCompositionStrip` stays inside the
 balance card. No new `Thing` field, no request, no CloudKit deploy. The four
 `walletGroupHeader` questions survive as headers the day a scope holds two
 unlike kinds of thing.
+## 484. Every catalog category is walked, and the demo's nine missing seats are the ones that never landed a row (user: "the demo mode does not show all sources active, for example, wallet is missing coinbase kraken, and soem others. shouldn't we have ALL that way we have a north star and reference and also user can see for any of the things that matter to them?", then "make sure to go through each category of apps in the catalogue to make sure we have a demo room", 2026-08-26)
+
+The catalog was walked group by group rather than seat by seat, and the answer
+is narrow: **eighteen of the twenty-one categories were already complete.** 103
+connectable offers, 88 of them furnished. The whole gap sat in three places —
+**Wallet (13 of 23)**, **Agent (6 of 10)** and **Notes (3 of 4)** — and the
+Wallet ten are the report.
+
+### WHY THE GAP WAS EXACTLY THERE, AND NOT ANYWHERE ELSE
+
+Every one of the ten lands **no `Thing` of its own**. That is not incidental —
+it is the single property that made them invisible to the demo, and it made them
+invisible to the CHECK as well. `demo-selftest.py` check E proves a seat by
+finding its name as a literal in `DemoSeedAll`, which is the right question for
+the eighty seats whose rooms are made of rows and structurally the wrong one for
+these: a wallet-riding protocol lands under `source: "Wallet"` or lands nothing,
+and an exchange balance lands nothing by §163's own ruling, which is that it
+MERGES into the combined total. Check G then exempted all ten as
+`KNOWN_BALANCE_ONLY` — "never land a `Thing` … so they can never earn their own
+tray icon". **That reasoning conflated two different things.** Landing no rows
+means a seat cannot be proven BY CHECK E; it says nothing about whether the seat
+can be FURNISHED. Nine of the ten could be, and now are.
+
+So the exemption set shrank from ten names to one, and a new **check M** proves
+the nine the other way: each names the ONE fixture its card is drawn from, and
+the check fails if that fixture is deleted, renamed, or — the half-wired state
+every other check in the file would pass — declared and never read.
+
+### WHAT NOW FURNISHES THEM
+
+**The five wallet-riding protocols** (Aave, Morpho, Hyperliquid, Aerodrome,
+Uniswap) draw from `WalletDemoState.state`, the synthetic `WalletLiveState`
+`WalletWatch.liveState` returns for the whole demo. Aave, Morpho and Aerodrome
+have drawn there since §351; **Uniswap and Hyperliquid were the two empty books
+in a struct of five**, so those two seats had nothing to show and were exempted
+as though that were a property of the bridges rather than of the fixture. Each is
+seeded to show the reading its seat is SOLD on rather than a healthy row —
+Uniswap gets one position in range and one out, because its alert fires both ways
+and a book of in-range positions demonstrates half a feature; Hyperliquid gets an
+open perp plus a spot balance, because the composition strip states the two as
+one deposit and a perp account with no spot hides half of that sum.
+
+**The four exchanges** (Coinbase, Kraken, Binance, Gemini Exchange) draw from
+`ExchangeBridge.demoBalances`, merged by `WalletPortfolio.demoFixture` at
+combined scope only — mirroring both halves of §163's rule, so a feed scoped to
+one wallet still answers "what does THIS address hold" with no venue in it.
+Together they are about a third of the crown: enough that the venue chips and the
+"which of my places holds this" read are plainly doing something, not so much
+that the wallets beside them become a rounding error. SOL is venue-only on
+purpose — a symbol no watched wallet holds is what proves the treemap draws the
+MERGED set rather than the wallets' own.
+
+**NO FAKE KEY IS EVER WRITTEN.** The obvious shortcut — store a demo credential
+so `ExchangeBridge.credentials(_:)` answers — would put a bogus key in the real
+Keychain and arm every read in that file against a live host the moment the demo
+ended. The fixture is read directly instead; `connect`/`disconnect` are
+untouched. It is also why the four seats' proof line reads "Read-only key" and
+not "Rides your wallet": the verdict is what that bridge's whole design turns on,
+and it is a thing the demo can say truthfully.
+
+### THE LATENT BUG THIS FOUND, WHICH IS THE MORE INTERESTING HALF
+
+A wallet-riding seat is not claimed by `seatTable` alone.
+`BridgeStore.reconcileWalletSeats()` re-derives all eleven from
+`WalletSeatEvidence` and **REMOVES any whose count is zero**. The demo reaches no
+network, so it earns no evidence — and the only reason its Peer, Privacy Pools,
+Railgun, Gnosis Pay and ether.fi seats survived at all is that
+`BridgeRefresh.refreshAllConnected` returns before that reconcile while
+`DemoMode.isActive`.
+
+**They did not survive a visit to their own setup screens.** `PeerScreen`,
+`PrivacyPoolsScreen`, `RailgunScreen`, `SafeScreen` and the wallet picker each
+call `reconcileWalletSeats()` on appear, so opening any one of them mid-demo
+silently stripped those five seats out of the catalog — five apps that were
+connected a moment ago reading "not connected", with a room full of their rows
+still on screen. `DemoSeedAll.seedWalletSeatEvidence` marks all eleven so the
+reconcile AGREES with the seat table wherever it runs, and `teardown` forgets
+them **by wallet, never by key**: a dev install may hold real evidence for the
+same protocol at a real address, and this is the one demo mark that governs
+whether a seat exists at all. Altana had done this one seat at a time since §403;
+this is the same act for the other eleven, in one place, so the next
+wallet-riding bridge has an obvious line to add itself to. Safe is deliberately
+absent — `SafeBridge.seedDemoSnapshot` marks its own detected registry, which is
+what that seat counts, and a second mark here would be a second source of truth.
+
+### THE SIX THAT STAY UNSEATED, EACH WITH ITS REASON
+
+**ETH Validators** is refused on arithmetic, not plumbing. A validator's minimum
+activation balance is 32 ETH — at the demo's own seeded ETH price ($3,180,
+`tokenSeeds`) that is ~$102,000 against a demo portfolio of ~$19,700. Seeding one
+would not add a reading to the wallet room, it would REPLACE it: the crown grows
+six-fold, the treemap collapses to a single ETH cell, and every other holding the
+room exists to show becomes a sliver. **There is no smaller honest number,
+because 32 ETH is what a validator is.** Revisit if the demo's money story is
+ever scaled to a size that can carry one.
+
+**The four BYOK agent providers** (Bankr, Grok, OpenRouter, Venice) are refused
+for the same reason the exchanges are furnished without a key, one step further
+on. "Connecting" one only stores an API key, and the key is the whole seat —
+there is no reading to fake underneath it. A demo that claimed one connected
+would put "Ask Venice" in the composer over a key that does not exist, and the
+tap would reach a live host with a bogus credential: a dead control (§83) that
+also breaks `DemoMode`'s no-network rule on the way. The honest demo of a BYOK
+seat is its setup screen.
+
+**Apple Notes** stands on its existing ruling — tried on 2026-08-11 and reverted
+the same day. `NotesShareScreen` is an INSTRUCTION CARD whose own intro says
+there is nothing to connect, and iOS never tells a share extension which app a
+share came from, so a seat would claim a connected state the real screen
+explicitly refuses to claim.
+
+### COST
+
+No new `Thing` field, no request, no CloudKit deploy. The demo's row count is
+unchanged — every one of these nine is a reading, not a row, which is the whole
+reason they were missing.
+

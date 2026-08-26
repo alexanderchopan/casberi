@@ -567,6 +567,46 @@ enum ExchangeBridge {
         }
     }
 
+    // MARK: - The demo
+
+    /// What the furnished demo's four exchange seats hold (2026-08-26, prd
+    /// §484 — user: *"the demo mode does not show all sources active, for
+    /// example, wallet is missing coinbase kraken … shouldn't we have ALL"*).
+    ///
+    /// **These four seats could not be furnished any other way, and that is
+    /// why they were missing rather than merely unseeded.** An exchange lands
+    /// no `Thing` at all — §163's whole ruling is that a balance MERGES into
+    /// the wallet's combined total — so no amount of corpus seeding reaches
+    /// them, and `DemoMode` reaches no network, so `pricedBalances()` above
+    /// answers with nothing. The result was a demo where four connectable
+    /// catalog offers read "not connected" and the crown decomposed into
+    /// wallets alone, on the one screen §163 exists to correct.
+    ///
+    /// **NO FAKE KEY IS EVER WRITTEN.** The obvious shortcut — store a demo
+    /// credential in `TokenVault` so `credentials(_:)` answers — would put a
+    /// bogus key in the real Keychain and arm every read in this file against
+    /// a live host the moment the demo ended. This is a fixture read by
+    /// `WalletPortfolio.demoFixture` instead; nothing here touches the vault,
+    /// and `connect`/`disconnect` are untouched.
+    ///
+    /// The same tuple shape `pricedBalances()` returns, so the merge in
+    /// `WalletPortfolio.from` cannot treat a demo venue differently from a
+    /// real one. Amounts are chosen against the demo's own seeded wallet
+    /// curve (~$19.7k across three wallets): together the venues are about a
+    /// third of the crown — enough that the venue chips and the "which of my
+    /// places holds this" read are plainly doing something, not so much that
+    /// the wallets they sit beside become a rounding error. SOL is venue-only
+    /// on purpose: a symbol no watched wallet holds is what proves the
+    /// treemap is drawing the MERGED set rather than the wallets' own.
+    static let demoBalances: [(symbol: String, usd: Double, venue: Venue)] = [
+        ("ETH",  4_120, .coinbase),
+        ("USDC", 1_980, .coinbase),
+        ("ETH",  2_240, .kraken),
+        ("SOL",    860, .kraken),
+        ("USDC", 1_150, .binance),
+        ("ETH",    640, .geminiExchange),
+    ]
+
     // MARK: - Connect
 
     /// Verifies first, stores only on `.readOnly`. The order is the whole

@@ -139,6 +139,16 @@ DEMO_FILES = {
     # `BridgeApp.demo` here rather than in `DemoSeedAll.seatTable`, which is
     # exactly why check G could only ever test them by name (2026-08-20).
     "BridgeStore": CASBERI / "Model/BridgeStore.swift",
+    # Read-only references for check M — the three fixtures that furnish the
+    # ROWLESS seats (2026-08-26). A wallet-riding protocol and an exchange
+    # land no `Thing` of their own, so check E's literal-row search can never
+    # see them and check M reads the fixture instead. Read-only: checks A and
+    # B are scoped to `DEMO_FACING_FUNCS` and to DemoMode/DemoSeedAll, so
+    # naming `ExchangeBridge` here does not put its (entirely legitimate)
+    # network verbs under check B.
+    "WalletWarnings": CASBERI / "Model/WalletWarnings.swift",
+    "ExchangeBridge": CASBERI / "Model/ExchangeBridge.swift",
+    "WalletPortfolio": CASBERI / "Model/WalletPortfolio.swift",
 }
 
 # Check J — the reads a VIEW makes on its own, which `BridgeRefresh`'s demo
@@ -480,6 +490,112 @@ def check_l_seat_names_resolve_at_runtime(files_text):
               resolves(name), True)
 
 
+# A seat that furnishes a READING rather than rows (2026-08-26, prd §484).
+#
+# Check E asks "does this seat's name appear as a literal anywhere else in
+# `DemoSeedAll`", which is the right question for the eighty seats whose
+# rooms are made of `Thing`s and structurally the WRONG one for these nine.
+# A wallet-riding protocol lands under `source: "Wallet"` or lands nothing at
+# all; an exchange balance lands nothing by §163's own ruling, which is that
+# it MERGES into the combined total. Neither can ever satisfy check E, and
+# before this pass that was read as "these cannot be demoed" — which was the
+# bug, not the rule.
+#
+# So they are exempt from E and answerable to M instead, which is strictly
+# STRONGER: E accepts a name appearing in any literal at all (its own
+# documented looseness — three of these nine passed E by accident, off an
+# unrelated "Aerodrome vote closes" row title and a "Coinbase" counterparty
+# name), while M demands the specific fixture the seat's card is drawn from.
+# An entry here without a fixture fails; a fixture that is deleted fails.
+KNOWN_ROWLESS_SEAT = {
+    "Aave", "Morpho", "Hyperliquid", "Aerodrome", "Uniswap",
+    "Coinbase", "Kraken", "Binance", "Gemini Exchange",
+}
+
+# What proves each rowless seat is really furnished: (file key, regex). Each
+# pattern names the ONE fixture field that surface reads, so a check can only
+# pass while that field is actually populated.
+#
+# The DeFi five point at `WalletDemoState.state`, which is what
+# `WalletWatch.liveState` returns for the whole demo — the only door those
+# protocols have, since `DemoMode` reaches no network. Aave's is matched on
+# `protocolName:` rather than on a book assignment because Aave and Spark
+# share one array and one type; the other four each own a field.
+#
+# The exchanges point at `ExchangeBridge.demoBalances`, one venue case each,
+# plus the merge in `WalletPortfolio.demoFixture` — BOTH halves, because a
+# fixture nothing reads furnishes nothing, and that half-wired state is
+# exactly what a seat table would still have claimed as connected.
+ROWLESS_SEAT_FIXTURE = {
+    "Aave":            ("WalletWarnings", r'protocolName:\s*"Aave"'),
+    "Morpho":          ("WalletWarnings", r's\.morpho\s*=\s*MorphoDeFi\.Book\('),
+    "Hyperliquid":     ("WalletWarnings", r's\.hyperliquid\s*=\s*HyperliquidDeFi\.Book\('),
+    "Aerodrome":       ("WalletWarnings", r's\.aerodrome\s*=\s*AerodromeDeFi\.Book\('),
+    "Uniswap":         ("WalletWarnings", r's\.uniswap\s*=\s*UniswapLiquidity\.Book\('),
+    # Scoped to the `demoBalances` table BODY, never the whole file: every one
+    # of these venue cases also appears in the real read above it
+    # (`Holding(… venue: .kraken)`), so a file-wide grep would keep passing
+    # after the demo entry was deleted — measured on this check's own first
+    # run, where dropping Kraken from the fixture left the suite green.
+    "Coinbase":        ("ExchangeBridge:demoBalances", r'\.coinbase\)'),
+    "Kraken":          ("ExchangeBridge:demoBalances", r'\.kraken\)'),
+    "Binance":         ("ExchangeBridge:demoBalances", r'\.binance\)'),
+    "Gemini Exchange": ("ExchangeBridge:demoBalances", r'\.geminiExchange\)'),
+}
+
+
+def extract_demo_balances(exchange_src):
+    """The body of `ExchangeBridge.demoBalances` — the four exchange seats'
+    only fixture. Returned alone so a venue case can be looked for INSIDE it
+    rather than anywhere in a file that names every venue several times."""
+    clean = strip_comments(exchange_src)
+    m = re.search(
+        r'static let demoBalances: \[\(symbol: String, usd: Double, venue: Venue\)\] = \[(.*?)\n    \]',
+        clean, re.DOTALL)
+    return m.group(1) if m else None
+
+
+def check_m_rowless_seats_are_furnished(files_text):
+    """Check M — every `KNOWN_ROWLESS_SEAT` really has its fixture, and the
+    exchange fixture is really read.
+
+    The failure this catches renders as a perfectly healthy catalog: the seat
+    says connected, the room it belongs to draws, and the one card that seat
+    was supposed to add is simply absent — which from outside is
+    indistinguishable from that wallet not using the protocol. It is the
+    §349 shape, one layer down from rows.
+
+    Asserted in both directions, so the hatch cannot widen on its own: a name
+    exempted from check E must be in `ROWLESS_SEAT_FIXTURE`, and a name in
+    `ROWLESS_SEAT_FIXTURE` must really be a seat."""
+    names, _ = extract_seat_table(files_text["DemoSeedAll"])
+    if names is None:
+        check("M · seatTable found", False, True)
+        return
+    for name in sorted(KNOWN_ROWLESS_SEAT):
+        check(f'M · rowless seat "{name}" is still a seat', name in (names or []), True)
+        entry = ROWLESS_SEAT_FIXTURE.get(name)
+        if entry is None:
+            check(f'M · rowless seat "{name}" names a fixture', False, True)
+            continue
+        file_key, pattern = entry
+        if file_key.endswith(":demoBalances"):
+            clean = extract_demo_balances(files_text[file_key.split(":")[0]])
+            if clean is None:
+                check("M · ExchangeBridge.demoBalances found", False, True)
+                continue
+        else:
+            clean = strip_comments(files_text[file_key])
+        check(f'M · rowless seat "{name}" has its demo fixture',
+              re.search(pattern, clean) is not None, True)
+    # The exchange fixture must be READ, not merely declared — `demoFixture`
+    # is the only path by which a venue reaches the crown, the treemap and the
+    # venue chips.
+    portfolio = strip_comments(files_text["WalletPortfolio"])
+    check("M · demoFixture merges the exchange balances",
+          "ExchangeBridge.demoBalances" in portfolio, True)
+
+
 def check_e_seat_names_have_rows(files_text):
     """Check E — every `seatTable` name appears as a literal string
     somewhere OUTSIDE the table's own declaration — i.e., in one of the
@@ -497,6 +613,11 @@ def check_e_seat_names_have_rows(files_text):
     clean_names, clean_span = extract_seat_table(clean)
     rest = clean[:clean_span[0]] + clean[clean_span[1]:]
     for name in names:
+        # A rowless seat cannot satisfy this by construction — check M proves
+        # its fixture instead, and asserts it is still a seat, so a name here
+        # can never fall out of both checks at once.
+        if name in KNOWN_ROWLESS_SEAT:
+            continue
         check(f'E · seatTable "{name}" has a seeded row',
               f'"{name}"' in rest, True)
 
@@ -615,23 +736,27 @@ KNOWN_BYOK_PROVIDER = {
     "Bankr", "Grok", "OpenRouter", "Venice",
 }
 KNOWN_BALANCE_ONLY = {
-    # Merge into the Wallet room's holdings/composition read
-    # (`WalletPortfolio`/`WalletComposition`) — never land a `Thing` with
-    # their own source, so they can never earn their own tray icon
-    # regardless of connection status, in the demo or for a real user.
-    # Verified against each bridge file: `ExchangeBridge.swift` (Coinbase/
-    # Kraken/Binance/Gemini Exchange — balances only, no `Thing(kind:`
-    # anywhere in the file), `EthValidatorWatch.swift` (validator positions,
-    # same shape), and the wallet-riding DeFi protocols that stamp
-    # `source: "Wallet"` on everything they land (Aave, Aerodrome,
-    # Hyperliquid, Morpho) plus Uniswap, which appears only as a
-    # `transferCounterparty` string inside a Wallet transaction, never its
-    # own source. ("Safe" is NOT here — it gained its own distinct source
-    # 2026-08-11, mid-session; re-verify a name here against the real
-    # bridge file before trusting an old list, this one already went stale
-    # once.)
-    "Coinbase", "Kraken", "Binance", "Gemini Exchange", "ETH Validators",
-    "Aave", "Aerodrome", "Hyperliquid", "Morpho", "Uniswap",
+    # Merges into the Wallet room's holdings read (`WalletPortfolio`) and
+    # lands no `Thing` of its own — but that is NO LONGER a reason to be
+    # exempt, and this set shrank from ten names to one on 2026-08-26
+    # (prd §484, user: *"the demo mode does not show all sources active, for
+    # example, wallet is missing coinbase kraken … shouldn't we have ALL"*).
+    # The old reasoning conflated two different things: landing no rows means
+    # a seat cannot be proven by check E, not that it cannot be FURNISHED.
+    # Nine of the ten now have demo fixtures and real seats, proven by check
+    # M via `KNOWN_ROWLESS_SEAT` below.
+    #
+    # ETH VALIDATORS IS THE ONE THAT STAYS, and the reason is arithmetic
+    # rather than plumbing. A beacon-chain validator's minimum activation
+    # balance is 32 ETH — at the demo's own seeded ETH price ($3,180,
+    # `DemoSeedAll.tokenSeeds`) that is ~$102,000 against a demo portfolio of
+    # ~$19,700 across three wallets. Seeding one would not add a reading to
+    # the wallet room, it would REPLACE it: the crown grows six-fold, the
+    # treemap collapses to a single ETH cell, and every other holding the
+    # room exists to show becomes a sliver. There is no smaller honest
+    # number, because 32 ETH is what a validator is. Revisit if the demo's
+    # money story is ever scaled up to a size that can carry one.
+    "ETH Validators",
 }
 KNOWN_CHIPLESS_CAPTURE = {
     # Rides the generic share-sheet capture path (`Thing`'s own default
@@ -963,6 +1088,7 @@ def run_checks(files_text):
     check_d_seat_names_are_real(files_text)
     check_l_seat_names_resolve_at_runtime(files_text)
     check_e_seat_names_have_rows(files_text)
+    check_m_rowless_seats_are_furnished(files_text)
     check_f_shape_coverage(files_text)
     check_g_catalog_offers_have_demo_seats(files_text)
     check_k_legacy_seats_match_their_rows(files_text)
@@ -1037,6 +1163,50 @@ def self_test():
             "if DemoMode.isActive {\n            return Array(PredictionDemoBook.polymarket",
             "if false {\n            return Array(PredictionDemoBook.polymarket", 1)),
         check_j_per_view_reads_gated, True)
+
+    # Check M's four fixtures. The first two are the real failure — a
+    # fixture deleted or renamed while its seat keeps claiming connected —
+    # and the third is the half-wired state that would otherwise pass every
+    # other check in this file: the balances declared and nothing reading
+    # them, so the seats read connected and the crown never changes.
+    ok &= verify_fixture(
+        "a deleted DeFi demo book is caught",
+        lambda f: f.__setitem__("WalletWarnings", f["WalletWarnings"].replace(
+            "s.uniswap = UniswapLiquidity.Book(", "s.uniswapX = UniswapLiquidity.Book(", 1)),
+        check_m_rowless_seats_are_furnished, True)
+
+    ok &= verify_fixture(
+        "a dropped exchange venue is caught",
+        # A venue removed from `demoBalances` — the seat still claims
+        # connected and the crown silently loses that money. BINANCE, not
+        # Kraken: Kraken holds two entries in the table, so re-pointing one of
+        # them leaves the other matching and the mutation survives (measured
+        # on this fixture's own first run — the "right result for the wrong
+        # reason" class this repo keeps re-earning). Binance holds exactly
+        # one, so this really unseats it.
+        lambda f: f.__setitem__("ExchangeBridge", f["ExchangeBridge"].replace(
+            '("USDC", 1_150, .binance)', '("USDC", 1_150, .coinbase)', 1)),
+        check_m_rowless_seats_are_furnished, True)
+
+    ok &= verify_fixture(
+        "an exchange fixture nothing reads is caught",
+        # Targets the `for` line, NOT the first occurrence — the doc comment
+        # above it names the same symbol, and replacing that instead leaves
+        # the real read in place and the fixture proving nothing (caught on
+        # this fixture's own first run).
+        lambda f: f.__setitem__("WalletPortfolio", f["WalletPortfolio"].replace(
+            "for holding in ExchangeBridge.demoBalances",
+            "for holding in [(symbol: String, usd: Double, venue: ExchangeBridge.Venue)]()", 1)),
+        check_m_rowless_seats_are_furnished, True)
+
+    ok &= verify_fixture(
+        "a rowless seat dropped from the seat table is caught",
+        # The other direction: the fixture survives, the SEAT goes — so the
+        # demo furnishes a card for an app its catalog says is not connected,
+        # which is check G's failure arriving through the exemption set.
+        lambda f: f.__setitem__("DemoSeedAll", f["DemoSeedAll"].replace(
+            '("Hyperliquid", "Rides your wallet",', '("HyperliquidX", "Rides your wallet",', 1)),
+        check_m_rowless_seats_are_furnished, True)
 
     ok &= verify_fixture(
         "a re-seeded source in infra() is caught",

@@ -173,6 +173,82 @@ struct WalletPortfolio: Equatable {
     /// The combined treemap's cells — the merged amounts run through the same
     /// builder a single wallet's cells use, so the two maps can't drift on
     /// weighting, value markers, or route markers.
+    /// The demo's holdings, built from what the demo ITSELF already wrote
+    /// (prd §483, 2026-08-26 — user: *"we need the demo mode to have ALL things
+    /// so it shows user what the app does … it is always our north star"*).
+    ///
+    /// **Why the Holdings scope was missing entirely.** `portfolioRead` is a
+    /// live network call and `DemoMode` reaches nothing by design (a real sweep
+    /// would read the seeded-but-fake address and write a value sample of ZERO
+    /// over the seeded curve). So `blockStream` never painted, `present(…)`
+    /// correctly reported the scope absent, and the demo could not show the
+    /// treemap — the room's single most distinctive drawing — at all.
+    ///
+    /// **Derived, never hardcoded, and that is the whole design.** It reads the
+    /// newest `ValueSample` the demo already seeded for each watched wallet and
+    /// uses that sample's own `holdings` map. So the map's total is the crown's
+    /// total BY CONSTRUCTION rather than by two constants agreeing — and a
+    /// figure disagreeing with the drawing beneath it is exactly the §83 failure
+    /// the demo exists to avoid demonstrating. (The connected exchanges are
+    /// added on top of that at combined scope, the same way the live read adds
+    /// them — see the merge below for why that leaves the crown above the tip
+    /// of its own curve in the demo exactly as it does in the app.)
+    ///
+    /// Scoped the same way the live read is: filtered AFTER gathering, so every
+    /// wallet still contributes to the combined shape.
+    static func demoFixture(scopeTo address: String? = nil) -> WalletPortfolio {
+        let watched = WalletStore.shared.addresses.filter {
+            guard let address else { return true }
+            return WalletWatch.sameAddress($0.address, address)
+        }
+        var bySymbol: [String: Double] = [:]
+        var holders: [String: [Holder]] = [:]
+        var total = 0.0
+        for entry in watched {
+            guard let newest = WalletStore.shared.valueSamples(forAddress: entry.address).last
+            else { continue }
+            total += newest.usd
+            for (symbol, usd) in (newest.holdings ?? [:]) where usd > 0 {
+                bySymbol[symbol, default: 0] += usd
+                holders[symbol, default: []].append(
+                    Holder(address: entry.address, label: entry.label ?? entry.address, usd: usd))
+            }
+        }
+        // THE CONNECTED EXCHANGES MERGE, exactly as they do live (2026-08-26,
+        // prd §484). `portfolioRead`'s real path folds `pricedBalances()` in
+        // at combined scope only, so this mirrors both halves of that rule:
+        // the fixture joins when nothing is scoped, and a feed scoped to one
+        // wallet still answers "what does THIS address hold" with no venue in
+        // it. Without this the four exchange seats had no way to appear
+        // anywhere in the demo — see `ExchangeBridge.demoBalances`.
+        //
+        // Note this is deliberately ADDED ON TOP of the value samples rather
+        // than folded into them, which is what makes the crown sit above the
+        // tip of its own curve. That is not a seam: `recordSample` records
+        // per WATCHED WALLET and a venue has no recorded line, so the live app
+        // has the same relationship between the number and the sparkline
+        // under it. A demo that hid the gap would be demonstrating a wallet
+        // room this app does not ship.
+        if address == nil {
+            for holding in ExchangeBridge.demoBalances where holding.usd > 0 {
+                total += holding.usd
+                bySymbol[holding.symbol, default: 0] += holding.usd
+                holders[holding.symbol, default: []].append(
+                    Holder(address: holding.venue.rawValue,
+                           label: holding.venue.display, usd: holding.usd))
+            }
+        }
+        guard !bySymbol.isEmpty else { return WalletPortfolio() }
+        let positions = bySymbol
+            .map { symbol, usd in
+                Position(symbol: symbol, usd: usd, route: nil,
+                         holders: (holders[symbol] ?? []).sorted { $0.usd > $1.usd })
+            }
+            .sorted { $0.usd > $1.usd }
+        return WalletPortfolio(totalUSD: total, positions: positions,
+                               walletCount: watched.count)
+    }
+
     var treemapCells: [String] {
         WalletIngest.treemapCells(
             bySymbol: Dictionary(uniqueKeysWithValues: positions.map { ($0.symbol, $0.usd) }),

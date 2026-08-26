@@ -561,6 +561,26 @@ enum WalletWatch {
 /// veAERO locks — one melting, one permanent — because the melt bar's whole
 /// claim is the DIFFERENCE between locked amount and remaining voting power,
 /// and a single lock can't show it.
+///
+/// **UNISWAP AND HYPERLIQUID JOINED IT ON 2026-08-26 (prd §484), and their
+/// absence is the shape this whole file exists to prevent.** Both are
+/// connectable catalog offers, both are `BridgeStore.walletSeats` members,
+/// and both were read every foreground pass by `WalletWatch.liveState` — so
+/// on a real wallet they draw a card each and contribute to the composition
+/// strip. In the demo they were the two empty books in a struct of five, so
+/// the two seats had nothing to show and were exempted from
+/// `demo-selftest.py`'s catalog-coverage check as if that were a property of
+/// the bridges rather than of this fixture. A book here is the ONLY way
+/// either can appear: `DemoMode` reaches nothing, and neither protocol lands
+/// a `Thing` of its own, so no amount of corpus seeding could have reached
+/// them.
+///
+/// Each is seeded to show the reading its seat is SOLD on rather than a
+/// healthy row: Uniswap gets one position in range and one out (the alert
+/// its catalog summary leads with — "stops earning the moment price leaves
+/// its range, and nothing tells you"), and Hyperliquid gets an open perp
+/// plus a spot balance, since the composition strip states the two as one
+/// deposit and a perp account with no spot would hide half of that sum.
 enum WalletDemoState {
     static var state: WalletLiveState {
         var s = WalletLiveState()
@@ -578,6 +598,54 @@ enum WalletDemoState {
                            vaultName: "Steakhouse USDC", assetSymbol: "USDC",
                            usd: 12_600, vaultAddress: "0xvault",
                            totalAssetsUsd: 41_000_000, netApy: 0.058, allocation: [])])
+        // Uniswap V3/V4 liquidity (2026-08-26). TWO positions and the pair is
+        // the point: `UniswapLiquidity`'s alert fires BOTH ways, so a book of
+        // in-range positions demonstrates half a feature. The out-of-range one
+        // is V4 and therefore carries no on-chain fee reading — `fee0`/`fee1`
+        // stay 0 there by the same rule the live read keeps (V4 has no cheap
+        // `collect()` simulation), so the fixture can't imply a number the
+        // real bridge would never have.
+        s.uniswap = UniswapLiquidity.Book(positions: [
+            .init(network: "eth-mainnet", address: "0xdemo", version: 3, tokenId: 884_120,
+                  token0: "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+                  token1: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+                  token0Symbol: "WETH", token1Symbol: "USDC", feeTier: 3_000,
+                  tickLower: 199_800, tickUpper: 203_400, currentTick: 201_460,
+                  inRange: true, uncollectedFee0: 0.0412, uncollectedFee1: 62.10,
+                  uncollectedFeeUSD: 193, valueUSD: 7_400),
+            .init(network: "base-mainnet", address: "0xdemo", version: 4, tokenId: 12_907,
+                  token0: "0x4200000000000000000000000000000000000006",
+                  token1: "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+                  token0Symbol: "WETH", token1Symbol: "USDC", feeTier: 500,
+                  tickLower: 204_200, tickUpper: 206_000, currentTick: 201_460,
+                  inRange: false, uncollectedFee0: 0, uncollectedFee1: 0,
+                  uncollectedFeeUSD: 34, valueUSD: 2_150),
+        ])
+
+        // Hyperliquid (2026-08-26) — one open perp, one spot balance, one
+        // staked-HYPE delegation left out on purpose: the unlock countdown is
+        // already seeded as a dated ROW (`DemoSeedAll.walletRoom`'s
+        // "Staked HYPE unlocks"), and stating it here as well would put the
+        // same fact on screen twice in one scroll.
+        //
+        // `liquidationPx` sits ~34% under the mark, comfortably outside
+        // `isNearLiquidation` — the demo already carries a position drifting
+        // toward risk (Morpho, hf 1.32), and a second alarm on the same screen
+        // makes both read as decoration. `perpAccountValue` is the account's
+        // own equity and is deliberately LARGER than `positionValue`: an
+        // account is margin plus position, and making them equal would imply
+        // full deployment nobody runs.
+        s.hyperliquid = HyperliquidDeFi.Book(
+            positions: [
+                .init(owner: "0xdemo", account: "0xdemo", accountLabel: nil,
+                      coin: "ETH", isLong: true, sizeAbs: 1.5, entryPx: 2_980,
+                      markPx: 3_180, liquidationPx: 2_104, positionValue: 4_770,
+                      leverageX: 3, leverageType: "cross",
+                      unrealizedPnl: 300, fundingSinceOpen: -12.40),
+            ],
+            spot: [.init(symbol: "HYPE", amount: 42.5, usd: 1_260)],
+            perpAccountValue: 5_120)
+
         s.aerodrome = AerodromeDeFi.Book(locks: [
             .init(owner: "0xdemo", tokenId: 41_882, amountAERO: 12_977,
                   votingPower: 5_342,

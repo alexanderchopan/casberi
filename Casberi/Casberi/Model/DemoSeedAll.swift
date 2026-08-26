@@ -414,6 +414,11 @@ enum DemoSeedAll {
         // The keystore snapshot and its seat evidence (prd §403).
         AltanaState.clear()   // takes the seeded ghosts with it (§410)
         AltanaKeystore.evidence.forget(demoWallet)
+        // The other eleven wallet-riding seats' marks (prd §484). BY WALLET,
+        // never a blanket clear of the key: a dev install may have real
+        // evidence for the same protocol at a real address, and this is the
+        // one demo mark that governs whether a seat exists at all.
+        for evidence in walletSeatEvidence { evidence.forget(demoWallet) }
         // The seeded anonymity sets (prd §397). Scoped BY LABEL, unlike the
         // PostHog/Cloudflare stores above, and that is not fussiness: the
         // live sizes are global and re-bought within a day, but a landing
@@ -4548,7 +4553,66 @@ enum DemoSeedAll {
         // 7 · The address book — the counterparties the transfers above name,
         // so the wallet's people have faces. See `seedAddressBook`.
         seedAddressBook()
+
+        // 9 · The wallet-riding seats' EVIDENCE. See `seedWalletSeatEvidence`.
+        seedWalletSeatEvidence()
     }
+
+    /// The evidence marks behind every `BridgeStore.walletSeats` member
+    /// (2026-08-26, prd §484), and the reconcile that turns them into seats.
+    ///
+    /// **This fixes a latent bug as well as filling five gaps, and the bug is
+    /// the more interesting half.** A wallet-riding seat is not claimed by
+    /// `seatTable` alone — `reconcileWalletSeats()` re-derives all eleven from
+    /// evidence and REMOVES any whose count is zero. The demo reaches no
+    /// network, so it earns no evidence, and `BridgeRefresh.refreshAllConnected`
+    /// returns before that reconcile while `DemoMode.isActive` — which is the
+    /// only reason the demo's Peer, Privacy Pools, Railgun, Gnosis Pay and
+    /// ether.fi seats survived at all. They did not survive a visit to their
+    /// own setup screens: `PeerScreen`, `PrivacyPoolsScreen`, `RailgunScreen`,
+    /// `SafeScreen` and the wallet picker each call `reconcileWalletSeats()`
+    /// on appear, so opening any one of them mid-demo silently stripped those
+    /// seats out of the catalog. Marking the evidence makes the reconcile
+    /// AGREE with the seat table instead of fighting it, everywhere it runs.
+    ///
+    /// It also backs the five that had no seat at all — Aave, Morpho,
+    /// Hyperliquid, Aerodrome and Uniswap — which is the honest reading now
+    /// that the demo really does furnish each one's book
+    /// (`WalletDemoState.state`): a seat is a claim about what is connected,
+    /// and every one of those five draws a card in the demo's own Positions
+    /// scope. Altana already did this one seat at a time (§403); this is the
+    /// same act for the other eleven, in one place, so the next wallet-riding
+    /// bridge has an obvious line to add itself to.
+    ///
+    /// **It marks and does not reconcile.** `reconcileWalletSeats()` needs a
+    /// `BridgeStore`, which this path has none of — and calling it from
+    /// `DemoMode.begin`, which does, would run BEFORE any of this, since the
+    /// rows and the bridge state are poured after the mode is claimed. The
+    /// seats themselves come from `seatTable` at `begin`; what this changes is
+    /// that every later reconcile — a setup screen's `onAppear`, a foreground
+    /// pass after the demo is left — now AGREES with that table instead of
+    /// emptying it.
+    ///
+    /// Scoped to `demoWallet` alone rather than all three: the proof line
+    /// states a COUNT, and every seeded position, deposit, fill and card
+    /// spend keys on the first wallet, so "Watching 1 wallet" is the true
+    /// sentence. Safe is absent on purpose — `SafeBridge.seedDemoSnapshot`
+    /// marks its own detected registry (§6 above), which is what that seat
+    /// counts, and a second mark here would be a second source of truth.
+    /// `teardown` forgets every one of these by the same list.
+    private static func seedWalletSeatEvidence() {
+        for evidence in walletSeatEvidence { evidence.remember(demoWallet) }
+    }
+
+    /// Every wallet-riding seat's evidence mark, seeded together and forgotten
+    /// together. ONE list, read by both halves — two copies is how a demo
+    /// leaves a mark behind on the way out.
+    private static let walletSeatEvidence: [WalletSeatEvidence] = [
+        PeerBridge.evidence, PrivacyPoolsBridge.evidence, RailgunBridge.evidence,
+        GnosisPayBridge.evidence, WalletDeFi.evidence, MorphoDeFi.evidence,
+        HyperliquidDeFi.evidence, AerodromeDeFi.evidence, UniswapLiquidity.evidence,
+        EtherFiUnstake.evidence, EtherFiCash.evidence,
+    ]
 
     // MARK: - Seats
 
@@ -4617,6 +4681,34 @@ enum DemoSeedAll {
         ("Base Vibenet", "4 accounts watched", "Reads which keys can act for a watched account."),
         ("Gnosis Pay", "Rides your wallet", "Reads what the card settled onchain."),
         ("ether.fi", "Rides your wallet", "Reads what the card settled onchain."),
+        // The five wallet-riding PROTOCOLS (2026-08-26, prd §484). They were
+        // the largest hole in the demo — five connectable offers in the
+        // catalog's biggest group, every one of them read on a real wallet by
+        // `WalletWatch.liveState` every foreground pass, and none of them
+        // claimed here. Their rows are not rows: each lands under
+        // `source: "Wallet"` or nothing at all, so `demo-selftest.py` check E
+        // cannot see them and they are named in its `KNOWN_ROWLESS_SEAT`,
+        // where check M proves each one's BOOK instead. Aave, Morpho and
+        // Aerodrome have drawn in the demo since §351; Uniswap and
+        // Hyperliquid joined `WalletDemoState` in this pass, so all five now
+        // say something in the Positions scope rather than merely appearing
+        // in the catalog.
+        ("Aave", "Rides your wallet", "Reads your collateral and debt."),
+        ("Morpho", "Rides your wallet", "Reads your positions and vault deposits."),
+        ("Hyperliquid", "Rides your wallet", "Reads your open positions and staked HYPE."),
+        ("Aerodrome", "Rides your wallet", "Reads your veAERO locks."),
+        ("Uniswap", "Rides your wallet", "Reads your liquidity, in range or out."),
+        // The four exchanges (2026-08-26, prd §484). NOT "Rides your wallet" —
+        // an exchange is a read-only KEY, the one thing the demo will not fake
+        // (see `ExchangeBridge.demoBalances`), so the proof line states the
+        // verdict that bridge's whole design turns on rather than a watch it
+        // does not have. Their balances merge into the crown and the treemap
+        // via `WalletPortfolio.demoFixture`; they land no rows, so they are
+        // `KNOWN_ROWLESS_SEAT` members too.
+        ("Coinbase", "Read-only key", "Reads your balances, never trades."),
+        ("Kraken", "Read-only key", "Reads your balances, never trades."),
+        ("Binance", "Read-only key", "Reads your balances, never trades."),
+        ("Gemini Exchange", "Read-only key", "Reads your balances, never trades."),
         ("Apple Wallet", "Synced 6m ago", "Reads Apple Card, Cash and Savings."),
         ("Privacy", "Synced 2h ago", "Reads your virtual-card purchases."),
         ("Bitrefill", "Synced 4h ago", "Reads your orders and refills."),
