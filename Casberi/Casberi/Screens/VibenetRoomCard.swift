@@ -186,6 +186,9 @@ struct VibenetRoomCard: View {
     /// next one. Reading and marking-as-read are two acts; computing this in
     /// the body instead would erase the answer while it was being shown.
     @State private var keyChanges: VibenetKeyChanges?
+    /// Whether the folded delegate spine is open (prd §477). `@State`, so it
+    /// shuts when you leave the room — it is a look, not a preference.
+    @State private var linksOpen = false
 
     private static let mark = DS.brandHue(for: "Base Vibenet") ?? Color.fixed("#0052ff")
     /// The most rows drawn before the footnote takes over, INCLUDING the
@@ -337,8 +340,6 @@ struct VibenetRoomCard: View {
             accountsCard
             sectionHeader(String(localized: "Keys"))
             keysCard
-            sectionHeader(String(localized: "Linked accounts"))
-            linkedCard
             // OUTSIDE the cards, and quieter for it. Provenance is a fact
             // about the whole room rather than about any one reading, so a
             // card of its own would make a section out of a footnote.
@@ -389,39 +390,58 @@ struct VibenetRoomCard: View {
             .clipShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
     }
 
-    /// Everything that is NOT the stacked feed room, exactly as it was.
+    /// Everything that is NOT the stacked feed room.
+    ///
+    /// **THE DETAIL BRANCH NO LONGER TAKES THE SLAB (2026-08-25, prd §477).**
+    /// Reported with screenshots: *"the All screen in vibenet is good, but the
+    /// individual account screens are not in the same format… you have one
+    /// giant slab that contains all the components in it."* Exactly so — this
+    /// property wrapped its WHOLE body in one `.padding(s4)` +
+    /// `.dsWidgetSurface()`, and for the single-account branch that body is
+    /// the entire `VibenetAccountDetail`: hero, crown, chart, holdings, every
+    /// key, the links, the history, the sync line and the doors, inside one
+    /// rounded rectangle.
+    ///
+    /// §467 fixed precisely this shape for the aggregate ("six unrelated
+    /// readings inside one box read as one object that will not parse") and
+    /// §475/§476 gave it section headers — and the scoped view, which is the
+    /// SAME room narrowed to one account, kept the pre-§467 anatomy the whole
+    /// time. So `VibenetAccountDetail` owns its own cards now and this branch
+    /// hands it the bare page, while the ROSTER branch below keeps the single
+    /// surface that is right for a list of one-line rows.
     private var oneSurface: some View {
-        VStack(alignment: .leading, spacing: 0) {
+        Group {
             if let lead = room.lead, room.items.count == 1 {
-                // `room` reaching this branch may be SCOPED to just this
-                // one account (the face rail narrowed it) or genuinely be
-                // the only account watched — either way, a delegate
-                // relationship can name an account that's currently OUT
-                // of scope, so links are derived from the FULL watch list
-                // rather than this card's own (possibly narrowed) `room`.
-                // The same deliberate bypass `VibenetAccountSheet` already
-                // makes, for the identical reason — see that file's own
-                // doc. Falling back to `room.items` when the full read
-                // isn't cached yet can only UNDER-report a link, never
-                // invent one that isn't real.
-                let fullItems = VibenetRoomSource.card()?.items ?? room.items
-                // THE HERO'S FACE, only when the rail is not already drawing
-                // it (user, 2026-08-25 — see `VibenetAccountDetail.showsFace`).
-                // The condition is `VibenetScopeRail.shows`' own, spelled
-                // against the same two facts it reads: the rail exists in the
-                // FEED room (`onOpen == nil`) and only above one watched
-                // account (`fullItems.count > 1`). `fullItems`, never
-                // `room.items` — this branch is reached precisely because the
-                // rail narrowed the room to one, so the scoped count is always
-                // 1 here and would hide the rail from itself.
-                let railDrawsTheFace = onOpen == nil
-                    && VibenetScopeRail.shows(source: VibenetIdentity.source, watched: fullItems.count)
-                VibenetAccountDetail(
-                    item: lead,
-                    links: VibenetAccountMapping.links(fullItems),
-                    sharedKeys: VibenetKeyReuse.sharing(lead, in: fullItems),
-                    showsFace: !railDrawsTheFace)
-            } else if let lead = room.lead {
+                detailBranch(lead)
+            } else {
+                rosterBranch
+            }
+        }
+    }
+
+    /// The scoped account — bare, so the detail's own cards are the surfaces.
+    @ViewBuilder
+    private func detailBranch(_ lead: VibenetAccountItem) -> some View {
+        // `room` reaching this branch may be SCOPED to just this one account
+        // (the face rail narrowed it) or genuinely be the only account
+        // watched — either way, a delegate relationship can name an account
+        // that's currently OUT of scope, so links are derived from the FULL
+        // watch list rather than this card's own (possibly narrowed) `room`.
+        let fullItems = VibenetRoomSource.card()?.items ?? room.items
+        // THE HERO'S FACE, only when the rail is not already drawing it.
+        let railDrawsTheFace = onOpen == nil
+            && VibenetScopeRail.shows(source: VibenetIdentity.source, watched: fullItems.count)
+        VibenetAccountDetail(
+            item: lead,
+            links: VibenetAccountMapping.links(fullItems),
+            sharedKeys: VibenetKeyReuse.sharing(lead, in: fullItems),
+            showsFace: !railDrawsTheFace)
+            .padding(.horizontal, DS.Space.s4)
+    }
+
+    private var rosterBranch: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            if let lead = room.lead {
                 if let onOpen {
                     // `VibenetScreen`'s OWN roster (see this type's header
                     // doc) — every account is a full navigable row,
@@ -726,12 +746,83 @@ struct VibenetRoomCard: View {
     /// reason to open.
     @ViewBuilder
     private var accountsCard: some View {
+        let links = VibenetAccountMapping.links(room.items)
         card {
             VStack(alignment: .leading, spacing: 0) {
                 ForEach(Array(drawn.enumerated()), id: \.element.id) { index, item in
-                    accountRow(item, isLast: index == drawn.count - 1)
+                    // The last ROW is only the last thing in the card when
+                    // there are no links folded under it — otherwise its
+                    // separator is what joins the roster to the disclosure.
+                    accountRow(item, isLast: index == drawn.count - 1 && links.isEmpty)
                 }
+                if !links.isEmpty { linkedDisclosure(links) }
             }
+        }
+    }
+
+    /// **WHO CAN ACT FOR WHOM, FOLDED INTO ACCOUNTS (2026-08-25, prd §477,
+    /// user's own suggestion).**
+    ///
+    /// §476 gave it a third section of its own, on the user's ruling that the
+    /// spine is "a figure worth its own frame". They then read it in place and
+    /// reversed themselves: *"i agree with you now about linked accounts is
+    /// kind of placed in a weird spot after keys, what is an alternative…? we
+    /// could have it be a part of the first section but is a tap to expand."*
+    ///
+    /// That is the right answer and it is better than either previous one. A
+    /// delegate link is a fact ABOUT the accounts listed directly above it, so
+    /// it belongs to that card — and after KEYS it read as a third subject
+    /// because the thing between it and its own subject was a different one.
+    /// Folded as a disclosure it keeps the figure (open it and the spine is
+    /// exactly as it was) while costing one row when shut, which is what a
+    /// relationship most people do not have should cost.
+    ///
+    /// Shut by default: `VibenetAccountMapping.links` is watched-to-watched
+    /// only, so on most rooms this is empty and never draws at all; where it
+    /// does, the count is the headline and the graph is the tap.
+    @ViewBuilder
+    private func linkedDisclosure(_ links: [VibenetDelegateLink]) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Button {
+                DSHaptic.selection()
+                withAnimation(reduceMotion ? nil : DS.Motion.standard) {
+                    linksOpen.toggle()
+                }
+            } label: {
+                HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                    Text(links.count == 1
+                         ? String(localized: "1 linked account")
+                         : String(localized: "\(links.count) linked accounts"))
+                        .dsText(.body17)
+                        .foregroundStyle(DS.textPrimary)
+                        .lineLimit(1)
+                    Spacer(minLength: DS.Space.s2)
+                    Image(systemName: "chevron.right")
+                        .accessibilityHidden(true)
+                        .dsGlyph(11, weight: .semibold)
+                        .foregroundStyle(DS.textTertiary)
+                        .rotationEffect(.degrees(linksOpen ? 90 : 0))
+                }
+                .padding(.vertical, DS.Space.s2)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .dsHover()
+            if linksOpen {
+                VibenetLinkSpine(links: links,
+                                 name: { Self.displayName($0) },
+                                 onPick: onScope,
+                                 reduceMotion: reduceMotion)
+                    .padding(.top, DS.Space.s2)
+                Text(String(localized: "Who can act for whom, read from the keystore."))
+                    .dsText(.subhead13)
+                    .foregroundStyle(DS.textTertiary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, DS.Space.s2)
+            }
+        }
+        .overlay(alignment: .top) {
+            Rectangle().fill(DS.fillFaint).frame(height: 1)
         }
     }
 
@@ -1099,40 +1190,6 @@ struct VibenetRoomCard: View {
         .accessibilityLabel(Text("\(row.actor.kind.plainTitle) on \(Self.displayName(row.address)), \(row.actor.expiryLabel(now: .now))"))
     }
 
-    /// WHO CAN ACT FOR WHOM. Silent when there are no links, so a room
-    /// where nobody delegates never grows an empty fourth card.
-    @ViewBuilder
-    private var linkedCard: some View {
-        let links = VibenetAccountMapping.links(room.items)
-        if !links.isEmpty {
-            card {
-                // NO eyebrow — the section header above says "Linked
-                // accounts" already, and repeating it inside the card is the
-                // duplication §475 removed from the keys headline in the same
-                // pass ("we don't need to repeat that word").
-                VibenetLinkSpine(links: links,
-                                 name: { Self.displayName($0) },
-                                 // A NODE SCOPES THE ROOM (prd §476). The
-                                 // spine's faces wore `keyRow`'s object
-                                 // treatment and had no handler at all — an
-                                 // inert figure styled like something you tap,
-                                 // beside a card whose nearest live tap LEAVES
-                                 // THE APP for the explorer. Reported as the
-                                 // explorer jump; the honest fix is that
-                                 // nothing in this figure ever leaves, and a
-                                 // node goes where every other account tap in
-                                 // this room goes.
-                                 onPick: onScope,
-                                 reduceMotion: reduceMotion)
-                    .padding(.top, DS.Space.s2)
-                Text(String(localized: "Who can act for whom, read from the keystore."))
-                    .dsText(.subhead13)
-                    .foregroundStyle(DS.textTertiary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.top, DS.Space.s2)
-            }
-        }
-    }
 
     /// A watched account's own name, or its short address — the same
     /// fallback every row on this card already makes, so the spine can never

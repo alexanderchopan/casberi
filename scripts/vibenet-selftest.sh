@@ -560,12 +560,65 @@ chipsFn=$(sed -n '/private var accountChips: some View {/,/^    }$/p' "$TMP/card
 # SECTION HEADERS ARE WALLET'S, outside the card and in primary ink.
 grep -q 'private func sectionHeader' "$TMP/card.nc.swift" \
   || { echo "✗ the room lost its section headers — prd §475: walletGroupHeader's recipe"; exit 1; }
-# The room's three sections, by their §476 nouns.
-for header in "Accounts" "Keys" "Linked accounts"; do
+# The room's TWO sections (prd §477, superseding §476's three): Linked accounts
+# folded into Accounts as a disclosure, on the user's own second reading — a
+# delegate link is a fact ABOUT the accounts listed above it, and sitting after
+# KEYS it read as a third subject because the thing between it and its subject
+# was a different one.
+for header in "Accounts" "Keys"; do
   grep -q "sectionHeader(String(localized: \"$header\"))" "$TMP/card.nc.swift" \
-    || { echo "✗ the '$header' section header is gone — prd §476: the room is accounts, the"
-         echo "  keys that can act for them, and the links between them"; exit 1; }
+    || { echo "✗ the '$header' section header is gone — prd §476/§477"; exit 1; }
 done
+if grep -q 'sectionHeader(String(localized: "Linked accounts"))' "$TMP/card.nc.swift"; then
+  echo "✗ Linked accounts is a section of its own again — prd §477: it folds into the"
+  echo "  Accounts card as a disclosure, because it is a fact about those accounts."
+  exit 1
+fi
+grep -q 'private func linkedDisclosure' "$TMP/card.nc.swift" \
+  || { echo "✗ the folded delegate spine is gone — prd §477"; exit 1; }
+
+# --- prd §477: the account page is cards, not one slab ----------------------
+#
+# Reported with screenshots: "the All screen in vibenet is good, but the
+# individual account screens are not in the same format… you have one giant
+# slab that contains all the components in it." `oneSurface` wrapped its WHOLE
+# body — and for the single-account branch that body is the entire
+# VibenetAccountDetail — in one padding + dsWidgetSurface. §467 fixed exactly
+# that shape for the aggregate and the scoped view kept the pre-§467 anatomy.
+grep -q 'private func detailBranch' "$TMP/card.nc.swift" \
+  || { echo "✗ the scoped account is not split out of oneSurface — prd §477: it takes the"
+       echo "  roster's slab again and every reading lands in one box"; exit 1; }
+detailFn=$(sed -n '/private func detailBranch/,/^    }$/p' "$TMP/card.nc.swift")
+if [[ "$detailFn" == *'dsWidgetSurface'* ]]; then
+  echo "✗ the scoped account branch draws its own surface — prd §477: the detail owns its"
+  echo "  cards now, and a surface around them is the slab again."
+  exit 1
+fi
+# …and the detail really does carry cards of its own, or removing the slab
+# leaves every reading loose on the page.
+grep -q 'private func card<Content: View>' "$TMP/detail.nc.swift" \
+  || { echo "✗ VibenetAccountDetail has no card of its own — prd §477"; exit 1; }
+grep -q 'private func sectionHeader' "$TMP/detail.nc.swift" \
+  || { echo "✗ VibenetAccountDetail lost its section headers — prd §477: the room's own"
+       echo "  landmarks, so narrowing to one account is the same screen"; exit 1; }
+
+# THE CONFIG IS MEMOISED. `knownManagers` is a COMPUTED static reached from
+# `termRows`, which runs per key row — so an eight-key account decoded the
+# config eight times per body pass, on every scroll frame. That is the account
+# page's jitter, and it survived §476 because that fix hoisted a different
+# store in a different file.
+grep -q 'if memoLoaded { return memo }' "$TMP/bridge.nc.swift" \
+  || { echo "✗ VibenetConfig.cached decodes on every call again — prd §477: it is reached"
+       echo "  once per key row from a view body"; exit 1; }
+grep -q 'memoLoaded = false' "$TMP/bridge.nc.swift" \
+  || { echo "✗ forgetCache no longer drops the config memo — prd §477: a demo teardown would"
+       echo "  leave the seeded contracts live in process"; exit 1; }
+# …and the account page reads its own curve once per address, not per pass.
+if grep -q 'let history = VibenetValueStore.samples(for: item.address)' "$TMP/detail.nc.swift"; then
+  echo "✗ the account page decodes its history in the body again — prd §477: §476 fixed"
+  echo "  this in VibenetRoomCard and missed it here, which is why the jitter survived."
+  exit 1
+fi
 
 # --- prd §476: the accounts card, the scoping taps, the undeployed dialogue --
 #
@@ -662,7 +715,14 @@ grep -q 'reached: true, established: false' "$TMP/room.nc.swift" \
 # indent under it, the §471 edge-mismatch defect recreated the other way. So
 # `card()` must NOT carry the margin, and `stackedRoom`'s OWN close must.
 stackedFn=$(sed -n '/private var stackedRoom: some View {/,/^    }$/p' "$TMP/card.nc.swift")
-oneFn=$(sed -n '/private var oneSurface: some View {/,/^    }$/p' "$TMP/card.nc.swift")
+# §477 split `oneSurface` into its two branches, and the margin went with
+# them: the scoped account is bare (its own cards are the surfaces) and the
+# roster keeps the single slab that is right for one-line rows. BOTH must
+# still sit 18pt off the screen edge, so both are checked.
+oneFn=$(sed -n '/private func detailBranch/,/^    }$/p' "$TMP/card.nc.swift")
+rosterFn=$(sed -n '/private var rosterBranch: some View {/,/^    }$/p' "$TMP/card.nc.swift")
+[[ "$rosterFn" == *'.padding(.horizontal, DS.Space.s4)'* ]] \
+  || { echo "✗ the roster shape's outer margin is gone — prd §474/§477"; exit 1; }
 cardFn=$(sed -n '/private func card<Content: View>/,/^    }$/p' "$TMP/card.nc.swift")
 [[ -n "$stackedFn" && -n "$oneFn" && -n "$cardFn" ]] \
   || { echo "✗ prd §474's guard could not find stackedRoom/oneSurface/card() by their signatures —"
@@ -671,7 +731,7 @@ cardFn=$(sed -n '/private func card<Content: View>/,/^    }$/p' "$TMP/card.nc.sw
   || { echo "✗ the stacked room's outer margin is gone — prd §474: its cards would run flush"
        echo "  to both screen edges again"; exit 1; }
 [[ "$oneFn" == *'.padding(.horizontal, DS.Space.s4)'* ]] \
-  || { echo "✗ the one-account/roster shape's outer margin is gone — prd §474"; exit 1; }
+  || { echo "✗ the scoped account shape's outer margin is gone — prd §474/§477"; exit 1; }
 if [[ "$cardFn" == *'.padding(.horizontal, DS.Space.s4)'* ]]; then
   echo "✗ card() itself carries the outer margin — prd §474: that doubles it under the"
   echo "  footnote (which sits outside card(), inside stackedRoom's own VStack) and puts"

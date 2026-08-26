@@ -96,9 +96,33 @@ enum VibenetConfig {
     /// treating every app open as the first one.
     static let ttl: TimeInterval = 10 * 60
 
+    /// The cached contracts — MEMOISED IN PROCESS (2026-08-25, prd §477).
+    ///
+    /// Every call was a `UserDefaults` read plus a `JSONDecoder` pass, and the
+    /// callers are in view bodies: `VibenetAccountDetail.knownManagers` is a
+    /// COMPUTED static reached from `termRows`, which runs once per key row —
+    /// so an account with eight keys decoded this config eight times per body
+    /// pass, on every scroll frame. That is the account page's jitter, and it
+    /// survived §476's fix because that one hoisted a different store in a
+    /// different file.
+    ///
+    /// A cache of a cache, which is why memoising is safe rather than clever:
+    /// the only writers are `store` and `forgetCache`, both of which drop the
+    /// memo, so it cannot go stale behind a fetch. Not `@MainActor`-isolated
+    /// because `cached()` never was — the memo is written only through those
+    /// two paths and the decoded value is a `let`-only struct.
+    private nonisolated(unsafe) static var memo: VibenetContracts?
+    private nonisolated(unsafe) static var memoLoaded = false
+
     static func cached() -> VibenetContracts? {
-        guard let data = UserDefaults.standard.data(forKey: cacheKey) else { return nil }
-        return try? JSONDecoder().decode(VibenetContracts.self, from: data)
+        if memoLoaded { return memo }
+        memoLoaded = true
+        guard let data = UserDefaults.standard.data(forKey: cacheKey) else {
+            memo = nil
+            return nil
+        }
+        memo = try? JSONDecoder().decode(VibenetContracts.self, from: data)
+        return memo
     }
 
     /// THE DEMO'S CONTRACTS (2026-08-25, prd §476).
@@ -139,12 +163,18 @@ enum VibenetConfig {
     /// Drops the cached config — demo teardown's own call. A live install
     /// re-fetches on its next sweep, so this is only ever a cache miss.
     static func forgetCache() {
+        memo = nil
+        memoLoaded = false
         UserDefaults.standard.removeObject(forKey: cacheKey)
         UserDefaults.standard.removeObject(forKey: fetchedAtKey)
     }
 
     private static func store(_ contracts: VibenetContracts) {
         guard let data = try? JSONEncoder().encode(contracts) else { return }
+        // The memo goes with it, or a fetch lands and every view keeps reading
+        // the config it replaced.
+        memo = contracts
+        memoLoaded = true
         UserDefaults.standard.set(data, forKey: cacheKey)
         UserDefaults.standard.set(Date(), forKey: fetchedAtKey)
     }

@@ -33261,3 +33261,100 @@ is guarded against regrowing a `focus`.
 before and after and it has not been measured — the decode was found by
 reading, and whether the scroll is smooth now is a device check. Every other
 item is layout, wiring and taps that no static check can exercise.
+
+## 477. The scoped account was never restructured, the jitter was in another file, and Linked accounts folds into Accounts (user: "the All screen in vibenet is good, but the individual account screens are not in the same format, why not? you have one giant slab that contains all the components in it", then "i agree with you now about linked accounts is kind of placed in a weird spot after keys… we could have it be a part of the first section but is a tap to expand", then "the jitters are still there when scrolling on those two pages", 2026-08-25)
+
+Three reports, with screenshots. All three are corrections to work done earlier
+the same day, and the honest summary of the first two is that a fix was applied
+where it was noticed rather than everywhere it belonged.
+
+### 1. THE SLAB WAS NEVER THIS VIEW'S, AND THAT IS WHY NOBODY LOOKED
+
+`VibenetRoomCard.oneSurface` wrapped its WHOLE body in one `.padding(s4)` plus
+`.dsWidgetSurface()`. For the single-account branch that body is the entire
+`VibenetAccountDetail` — hero, crown, chart, holdings, every key row, the
+links, the history, the sync line and the doors — inside one rounded
+rectangle. The screenshots show it exactly.
+
+**§467 fixed this precise shape for the aggregate** ("six unrelated readings
+inside one box read as one object that will not parse") and §475/§476 gave that
+one section headers. The scoped view is the SAME ROOM narrowed to one account,
+and it kept the pre-§467 anatomy through four passes, because the container
+lived in a different property from the content and every pass edited the
+content.
+
+So `oneSurface` splits: `detailBranch` hands the detail a BARE page, and
+`rosterBranch` keeps the single slab, which is right for a list of one-line
+rows and always was. `VibenetAccountDetail` owns its own cards now — the room's
+own `card()` recipe and `sectionHeader()` — so narrowing the room is the same
+screen with fewer accounts in it. Its inline `heading22` and `heading17` titles
+went with the change: a section header above a card and the same words inside
+it is one landmark drawn twice (§475's own "we don't need to repeat that
+word", third application).
+
+History, sync and the doors became ONE card rather than three loose blocks:
+they are one subject — what this account has done, and where to go and see it
+— and it takes no header, because a title over the last card would be a fourth
+landmark for a footer.
+
+### 2. THE JITTER WAS REAL AND §476 FIXED IT IN THE WRONG FILE
+
+§476 found `VibenetRoomCard`'s history decode and hoisted it, and the report
+came straight back: *"the jitters are still there when scrolling on those two
+pages."* Two more decodes, both worse:
+
+**`VibenetConfig.cached()` is reached once per KEY ROW.**
+`VibenetAccountDetail.knownManagers` is a COMPUTED static that calls it, and
+`termRows` reads that static for every key — so an eight-key account did eight
+`UserDefaults` reads and eight `JSONDecoder` passes over the config **per body
+pass**, on every scroll frame. It is memoised now: a cache of a cache, which is
+what makes memoising safe rather than clever — the only writers are `store` and
+`forgetCache` and both drop the memo, so it cannot go stale behind a fetch.
+
+**And the account page's own curve**, `VibenetValueStore.samples(for:)` inline
+in `balanceSection` — the identical bug §476 fixed in the room card and did not
+look for here. Read once per address in a `.task` now.
+
+**The standing lesson, and it is the same one twice in one day**: a perf defect
+of this shape is never in one place, because the pattern that causes it (a
+decode behind a computed property, read from a view body) is a habit rather
+than a mistake. Grep the whole feature for the call, not the file that was
+reported.
+
+### 3. LINKED ACCOUNTS FOLDS INTO ACCOUNTS, AS A DISCLOSURE (the user's own answer)
+
+§476 gave it a third section on the user's ruling that the spine is "a figure
+worth its own frame" — and they read it in place and reversed themselves,
+which is worth recording as a good outcome rather than a mistake: seeing a
+thing beats reasoning about it, and this ledger's whole purpose is that the
+reasoning survives either way.
+
+It sits at the foot of the ACCOUNTS card now, one row shut, the full spine
+open. The reason it read as "a weird spot after keys" is structural: a delegate
+link is a fact ABOUT the accounts listed above it, and putting KEYS between it
+and its own subject made it read as a third subject. Folded, it keeps the
+figure entirely (open it and the spine is exactly as it was, tap-to-scope
+included) while costing one row when shut — which is the right price for a
+relationship most rooms do not have, since `VibenetAccountMapping.links` is
+watched-to-watched only and returns nothing on most.
+
+`linkedCard` had no caller left and is DELETED rather than left dormant — the
+second time in two passes for this same function, and the same standing rule.
+
+### Cost, and what remains unmeasured
+
+**Nothing to ship**: no new `Thing` property, no request, no CloudKit deploy.
+Both perf changes remove work.
+
+`vibenet-selftest` gained guards that the scoped branch never draws its own
+surface, that the detail carries a card and a section header of its own, that
+the config memo exists and that `forgetCache` drops it, that the account page
+never decodes its history in a body again, and that Linked accounts is a
+disclosure rather than a section. §476's three-section guard is now a
+TWO-section guard plus a negative on the third, and §474's margin guard follows
+`oneSurface`'s split into two branches.
+
+**UNMEASURED on a device, and this is the second time that matters here.** The
+jitter is the one item with a before and after that a person can feel, and it
+has now been "fixed" twice by reading rather than profiling. If it survives
+this pass too, the next step is an Instruments trace rather than a third guess.

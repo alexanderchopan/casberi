@@ -66,25 +66,100 @@ struct VibenetAccountDetail: View {
     }
 
     var body: some View {
+        // **THE SAME ANATOMY AS THE ROOM (2026-08-25, prd §477).** Reported
+        // with screenshots: the aggregate is cards with section headers and
+        // this screen was one giant slab holding every component. It was never
+        // this view's slab — `VibenetRoomCard.oneSurface` wrapped the whole
+        // thing — but the fix belongs here, because the sections have to
+        // become cards for the surface to be worth removing.
+        //
+        // Bare hero, bare balance, then a card per reading under Wallet's own
+        // `heading22` headers. Exactly `stackedRoom`'s shape, so narrowing the
+        // room to one account is the same screen with fewer accounts in it.
         VStack(alignment: .leading, spacing: DS.Space.s6) {
             hero
-            // **WHAT THIS ACCOUNT HOLDS (2026-08-24, reported alongside the
-            // missing sparkline).** This screen listed an account's keys, its
-            // links, its history and its doors, and never once said what was
-            // IN it — so narrowing the room to one account lost the only
-            // reading the room had led with, and the balance was reachable
-            // only by going back out to the aggregate. The design gives the
-            // scoped view the same anatomy as the aggregate for exactly this
-            // reason; it is the same crown, scoped, on its own history.
             balanceSection
             if !item.actors.isEmpty {
+                sectionHeader(String(localized: "Keys"))
                 keysSection
             }
-            linkedAccountsSection
-            subAccountsSection
+            if hasLinks || !item.subAccounts.isEmpty {
+                sectionHeader(String(localized: "Linked accounts"))
+                linkedCard
+                subAccountsCard
+            }
+            recordCard
+        }
+        .task(id: item.address) {
+            history = VibenetValueStore.samples(for: item.address)
+        }
+    }
+
+    /// Does this account take part in any delegate relationship at all — the
+    /// gate on the Linked accounts section, so an account nobody delegates to
+    /// and which delegates to nobody grows no empty header.
+    private var hasLinks: Bool {
+        links.contains {
+            $0.from.caseInsensitiveCompare(item.address) == .orderedSame
+                || $0.to.caseInsensitiveCompare(item.address) == .orderedSame
+        }
+    }
+
+    /// The surface every card on this screen wears — `VibenetRoomCard.card`'s
+    /// own recipe, so the scoped view and the aggregate draw the same object.
+    @ViewBuilder
+    private func card<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 0) { content() }
+            .padding(DS.Space.s4)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .dsWidgetSurface()
+            .clipShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
+    }
+
+    /// `walletGroupHeader`'s recipe, matching the room's own `sectionHeader`.
+    private func sectionHeader(_ title: String) -> some View {
+        Text(title)
+            .dsText(.heading22)
+            .foregroundStyle(DS.textPrimary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .accessibilityAddTraits(.isHeader)
+            .padding(.top, DS.Space.s2)
+            .padding(.bottom, -DS.Space.s3)
+    }
+
+    /// The delegate spine, in a card of its own.
+    @ViewBuilder
+    private var linkedCard: some View {
+        if hasLinks {
+            card { linkedAccountsSection }
+        }
+    }
+
+    /// Sub-accounts, in a card of their own — the OTHER direction from the
+    /// spine above (who named YOU), which is why it is a second card rather
+    /// than more rows in the first.
+    @ViewBuilder
+    private var subAccountsCard: some View {
+        if !item.subAccounts.isEmpty {
+            card { subAccountsSection }
+        }
+    }
+
+    /// THE RECORD — history, sync and the doors, in one card (prd §477).
+    ///
+    /// Three readings that were three loose blocks at the foot of the slab,
+    /// and they are one subject: what this account has DONE and where to go
+    /// and see it. No section header, deliberately — a title over the last
+    /// card would be a fourth landmark for a footer, and the room's own
+    /// provenance note sits bare for the same reason.
+    @ViewBuilder
+    private var recordCard: some View {
+        card {
             historySection
             syncSection
+                .padding(.top, DS.Space.s3)
             doorsSection
+                .padding(.top, DS.Space.s4)
         }
     }
 
@@ -101,9 +176,16 @@ struct VibenetAccountDetail: View {
     /// reading draws no line (a single point is a flat line, and a flat line
     /// on a balance chart reads as "went to zero"), one asset draws no
     /// holdings block because the crown above already states it.
+    /// This account's curve, read ONCE per address rather than per body pass
+    /// (2026-08-25, prd §477). It was `VibenetValueStore.samples(for:)` inline
+    /// in the body — a `UserDefaults` read and a full `JSONDecoder` pass over
+    /// the whole per-account book, on every scroll frame. §476 fixed exactly
+    /// this in `VibenetRoomCard` and missed it here, which is why the jitter
+    /// survived on the account page.
+    @State private var history: [VibenetValueSample] = []
+
     @ViewBuilder
     private var balanceSection: some View {
-        let history = VibenetValueStore.samples(for: item.address)
         if item.nativeBalance != nil || !item.tokenBalances.isEmpty {
             VStack(alignment: .leading, spacing: 0) {
                 if let native = item.nativeBalance {
@@ -336,18 +418,11 @@ struct VibenetAccountDetail: View {
         // separated a group's caption from its first key, so "Owners" and
         // "Session keys" read as one continuous column of cards rather than
         // as two groups.
+        // NO HEADER OF ITS OWN (prd §477) — `body` draws the section header
+        // above this now, exactly as the room does above its keys card, so a
+        // second `heading22` here would be the same landmark twice. The COUNT
+        // stays: it is a reading, not a title.
         VStack(alignment: .leading, spacing: DS.Space.s6) {
-            // THE SECTION HEADER, the room's own (prd §475) — `heading22` in
-            // primary ink, the same title the aggregate draws above its keys
-            // card, so narrowing the room to one account keeps the same
-            // landmarks rather than renaming them.
-            Text(String(localized: "What's authorized"))
-                .dsText(.heading22)
-                .foregroundStyle(DS.textPrimary)
-                .accessibilityAddTraits(.isHeader)
-                .fixedSize(horizontal: false, vertical: true)
-            // …and the count drops the verb the header now carries, exactly
-            // as `VibenetKeyAggregate.countHeadline` does one screen up.
             Text(item.actors.count == 1
                  ? String(localized: "1 key")
                  : String(localized: "\(item.actors.count) keys"))
@@ -838,15 +913,12 @@ struct VibenetAccountDetail: View {
             // you") is complete and the pair read as one broken and one fine.
             incoming.map { Spoke(address: $0.from, label: String(localized: "You can act for them")) }
         if !spokes.isEmpty {
-            VStack(alignment: .leading, spacing: DS.Space.s3) {
-                Text(String(localized: "Linked accounts"))
-                    .dsText(.heading17)
-                    .foregroundStyle(DS.textPrimary)
-                    .fixedSize(horizontal: false, vertical: true)
-                VStack(alignment: .leading, spacing: DS.Space.s2) {
-                    ForEach(spokes) { spoke in
-                        spokeRow(spoke)
-                    }
+            // No title — `body`'s section header says "Linked accounts" and a
+            // `heading17` repeating it inside the card is the duplication
+            // §475 already removed from the keys headline (prd §477).
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                ForEach(spokes) { spoke in
+                    spokeRow(spoke)
                 }
             }
         }
