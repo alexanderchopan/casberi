@@ -15,15 +15,6 @@ import SwiftUI
 struct VibenetAccountDetail: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    /// The key whose row is open, by `actorId` (prd §473, direction B of
-    /// three drawn). ONE AT A TIME rather than a set: two open rows push the
-    /// third off the screen and the block is a comparison you make against
-    /// the collapsed rows around it, not against another open one.
-    ///
-    /// `@State`, so it shuts when you leave — it is a lookup, not a
-    /// preference, and a row left open forever is the density this room has
-    /// twice been reported for.
-    @State private var openKey: String?
     @Environment(\.colorScheme) private var scheme
     let item: VibenetAccountItem
     /// This account's OUTGOING and INCOMING delegate relationships — both
@@ -54,6 +45,28 @@ struct VibenetAccountDetail: View {
     /// identifying it at a glance is the worse failure of the two. See the
     /// hero's own comment for the full reasoning.
     var showsFace: Bool = true
+    /// OPEN A KEY (2026-08-25, prd §478) — replaces the `openKey` inline
+    /// disclosure this view carried since §473. A key's depth (terms, origin,
+    /// full id, the copy doors) lives on `VibenetKeySheet` now; a row that
+    /// grew in place under the thumb was the room's last inline expander.
+    ///
+    /// nil where the caller cannot present a sheet, and the row is then a
+    /// plain read with NO chevron — a disclosure pointing at a sheet that
+    /// cannot exist is the dead control §83 bans.
+    var onOpenKey: ((VibenetActor) -> Void)? = nil
+    /// Keys this device is seeing for the FIRST time, as
+    /// `VibenetKeySeenDiff.keyID`s (prd §479).
+    ///
+    /// The room's card has said "1 new" since §471 and nothing on any screen
+    /// could tell you WHICH — a count you cannot locate is the shape §471
+    /// itself objected to on the census. A marked row is the other half of
+    /// that pill.
+    ///
+    /// Handed in rather than read here, because reading the ledger MARKS it
+    /// read (`VibenetKeysSeen.advance`), and a view that spent the answer
+    /// while drawing it would erase the marker mid-look. The room card reads
+    /// and spends it once, in its own `.task`.
+    var newKeyIDs: Set<String> = []
 
     private static let mark = DS.brandHue(for: "Base Vibenet") ?? Color.fixed("#0052ff")
 
@@ -206,8 +219,8 @@ struct VibenetAccountDetail: View {
                         .lineLimit(1)
                         .minimumScaleFactor(0.6)
                         .padding(.top, 2)
-                    if let change = VibenetValueHistory.delta(history),
-                       let move = VibenetValueHistory.move(history) {
+                    if let change = VibenetValueHistory.delta(windowed),
+                       let move = VibenetValueHistory.move(windowed) {
                         HStack(spacing: 5) {
                             Image(systemName: change >= 0
                                   ? "arrowtriangle.up.fill" : "arrowtriangle.down.fill")
@@ -215,25 +228,26 @@ struct VibenetAccountDetail: View {
                             Text("\(VibenetBalanceFormat.line(abs(move))) ETH (\(VibenetBalanceFormat.percent(change)))")
                                 .dsText(.callout15).fontWeight(.semibold)
                                 .monospacedDigit()
-                            Text(String(localized: "since watching"))
+                            Text(range.sinceLine)
                                 .dsText(.callout15)
                                 .foregroundStyle(DS.textTertiary)
                         }
                         .foregroundStyle(TokenChartStyle.accent(change: change, scheme: scheme))
                         .padding(.top, 2)
                     }
-                    if let series = VibenetValueHistory.series(history) {
+                    if let series = VibenetValueHistory.series(windowed) {
                         TokenChartPlot(chart: TokenChart(closes: series,
                                                          price: series.last ?? 0,
-                                                         change: VibenetValueHistory.delta(history) ?? 0),
+                                                         change: VibenetValueHistory.delta(windowed) ?? 0),
                                        accent: TokenChartStyle.accent(
-                                           change: VibenetValueHistory.delta(history) ?? 0, scheme: scheme),
+                                           change: VibenetValueHistory.delta(windowed) ?? 0, scheme: scheme),
                                        // 120, the aggregate's and Wallet's own
                                        // (prd §475) — it was 90 here, so the
                                        // same curve changed size on the way in.
                                        height: 120, pulses: false,
                                        lineWidth: 2.6, fillOpacity: 0.24, endpointDot: true)
                             .padding(.top, DS.Space.s3)
+                        rangeStrip
                     }
                 }
                 if let scoped = VibenetBalanceAggregation.compose([item]) {
@@ -360,9 +374,46 @@ struct VibenetAccountDetail: View {
                     // nil is that event, and the account is now unlocked
                     // pending the next read, so the row says so rather than
                     // holding the last countdown it managed to compute.
-                    Text(String(localized: "Ready to unlock"))
-                        .dsText(.heading17)
-                        .foregroundStyle(Self.mark)
+                    // THE LANDING (prd §479). Until now this branch simply
+                    // swapped in a new sentence — the timelock opening, the
+                    // one moment in this room somebody might genuinely sit
+                    // and wait for, and it arrived with less ceremony than a
+                    // list row gets.
+                    //
+                    // The bar FILLS to full and stays (the countdown's own
+                    // capsule, at 1.0, so the drawing does not disappear at
+                    // the instant it completes), the words land with the
+                    // press spring, and ONE haptic fires — exactly once,
+                    // guarded by `landed`, because a `TimelineView`
+                    // re-evaluates every second and an unguarded haptic
+                    // would buzz once a second forever.
+                    //
+                    // `tap`, NOT `success`: `DSHaptic.success` is reserved by
+                    // this app's own haptic grammar for a WRITE's outcome and
+                    // is fired only by `ShellChrome.flash(tone:)`, so the buzz
+                    // and the toast naming it can never drift apart. Nothing
+                    // was written here — a delay elapsed on the chain — and
+                    // `tap` is that token's own case, "a state toggle
+                    // landing".
+                    //
+                    // `DSHaptic` is a no-op on Mac Catalyst by construction,
+                    // so this degrades to the visual alone there rather than
+                    // needing a platform branch of its own.
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(String(localized: "Ready to unlock"))
+                            .dsText(.heading17)
+                            .foregroundStyle(Self.mark)
+                            .scaleEffect(landed ? 1 : 0.94)
+                            .animation(reduceMotion ? nil : DS.Motion.press, value: landed)
+                        Capsule().fill(Self.mark)
+                            .frame(height: 6)
+                            .frame(maxWidth: .infinity)
+                    }
+                    .task {
+                        guard !landed else { return }
+                        landed = true
+                        DSHaptic.tap()
+                    }
                 }
             }
             trackOnLockScreen
@@ -460,84 +511,32 @@ struct VibenetAccountDetail: View {
                         }
                     }
                     ForEach(Array(section.actors.enumerated()), id: \.element.id) { index, actor in
-                        // THE WHOLE CARD IS THE TOGGLE (prd §473, direction B).
-                        // A key is one object and its card is one target — a
-                        // chevron small enough to be a separate hit area would
-                        // be the 44pt-floor problem this room just fixed on the
-                        // census rows, reintroduced.
-                        Button {
-                            DSHaptic.selection()
-                            withAnimation(reduceMotion ? nil : DS.Motion.standard) {
-                                openKey = isOpen(actor) ? nil : actor.actorId
+                        // THE WHOLE CARD IS THE DOOR (prd §478, superseding
+                        // §473's toggle). A key is one object and its card is
+                        // one target — §473's reasoning, kept — but the tap
+                        // PRESENTS `VibenetKeySheet` now instead of growing
+                        // the row in place, which was the room's last inline
+                        // expander.
+                        if let onOpenKey {
+                            Button {
+                                DSHaptic.selection()
+                                onOpenKey(actor)
+                            } label: {
+                                keyRow(actor, door: true).contentShape(Rectangle())
                             }
-                        } label: {
-                            keyRow(actor).contentShape(Rectangle())
+                            .buttonStyle(.plain)
+                            .dsHover()
+                            .chartArrival(index: index, reduceMotion: reduceMotion)
+                        } else {
+                            keyRow(actor, door: false)
+                                .chartArrival(index: index, reduceMotion: reduceMotion)
                         }
-                        .buttonStyle(.plain)
-                        .dsHover()
-                        .chartArrival(index: index, reduceMotion: reduceMotion)
                     }
                 }
             }
         }
     }
 
-
-    /// One key, one row — plain title, one honest detail clause, then its
-    /// granted permissions as chips (R2.3's exact capsule grammar) laid
-    /// out with `FlowLayout` so a whole capsule wraps to the next line but
-    /// the text INSIDE one never does.
-    /// One label/value pair in a key's terms block.
-    private struct KeyTerm {
-        let label: String
-        let value: String
-        /// "Has this ever run" is the reading someone opens a subscription key
-        /// to find, so it carries weight where the contract line does not.
-        var weighted = false
-    }
-
-    /// A KEY'S TERMS, as label/value pairs (prd §471).
-    ///
-    /// Every value here is the model's own composed string or one of its new
-    /// preposition-free accessors (`policyTarget`, `sharedTarget`) — never a
-    /// substring cut back out of a localized sentence, which is this
-    /// codebase's standing rule wherever a figure and a sentence describe one
-    /// fact (`MoneyReceipt`'s own guard).
-    ///
-    /// `VibenetPolicyReadability.note` is deliberately NOT here: it is a fact
-    /// about session keys as a class and now sits once in that group's
-    /// caption, rather than once per key. See `keysSection`.
-    private func termRows(_ actor: VibenetActor) -> [KeyTerm] {
-        var out: [KeyTerm] = []
-        if let target = actor.policyTarget(known: Self.knownManagers) {
-            out.append(KeyTerm(label: String(localized: "Limited to"), value: target))
-            // The one LIVE fact about a session key vibenet publishes, and the
-            // difference between a sentence every gated key on the chain
-            // shares and a fact about this one. Gated with the contract for
-            // the reason it always was: a key with no policy has no runs.
-            let use = item.policyUses.use(for: actor)
-            out.append(KeyTerm(label: String(localized: "Activity"),
-                               value: use?.line(now: .now) ?? String(localized: "Never used"),
-                               weighted: true))
-        }
-        // A fact about THIS key, not the account — where else this exact
-        // authorized address can also act. Neutral weight on purpose: reusing
-        // a key across devnet test accounts is often deliberate, so this
-        // states the fact without dressing it as an alarm the way a real
-        // expiry countdown earns.
-        //
-        // MATCHED ON actorId, never on authenticator — the authenticator is
-        // the CONTRACT that validates the key and is shared by every key of a
-        // kind, so the old filter lit this line on every ordinary wallet key
-        // across every pair of watched accounts.
-        if let shared = sharedKeys
-            .filter({ $0.actorId.caseInsensitiveCompare(actor.actorId) == .orderedSame })
-            .sharedTarget(name: { VibenetWatch.shared.name(for: $0) ?? VibenetRoom.shortAddress($0) })
-        {
-            out.append(KeyTerm(label: String(localized: "Also on"), value: shared))
-        }
-        return out
-    }
 
     /// TRACK THIS DELAY ON THE LOCK SCREEN (prd §473).
     ///
@@ -593,58 +592,68 @@ struct VibenetAccountDetail: View {
         }
     }
 
+    /// How far back this account's own curve looks (prd §479) — the room's
+    /// own control, on the room's own scoped view, so the two surfaces do not
+    /// answer the same question differently.
+    @State private var range: VibenetChartRange = .all
+
+    /// The samples the crown's move and the line both read — ONE derivation,
+    /// so a figure and its curve can never describe different windows.
+    private var windowed: [VibenetValueSample] {
+        VibenetValueHistory.windowed(history, range: range, now: .now)
+    }
+
+    /// `VibenetRoomCard.rangeStrip`'s own recipe. Drawn only where the book
+    /// can answer more than one span, so it is never a row of chips redrawing
+    /// one line.
+    @ViewBuilder
+    private var rangeStrip: some View {
+        let options = VibenetValueHistory.options(history, now: .now)
+        if options.count > 1 {
+            HStack(spacing: DS.Space.s2) {
+                ForEach(options, id: \.self) { option in
+                    let on = option == range
+                    Button {
+                        DSHaptic.selection()
+                        withAnimation(reduceMotion ? nil : DS.Motion.standard) { range = option }
+                    } label: {
+                        Text(option.label)
+                            .dsText(.label12).fontWeight(.semibold)
+                            .foregroundStyle(on ? DS.textPrimary : DS.textTertiary)
+                            .padding(.horizontal, DS.Space.s3)
+                            .padding(.vertical, 6)
+                            .background(Capsule(style: .continuous)
+                                .fill(on ? DS.fillStrong : Color.clear))
+                            .contentShape(Capsule())
+                    }
+                    .buttonStyle(PressSpring())
+                    .dsHover()
+                    .accessibilityAddTraits(on ? [.isSelected] : [])
+                }
+            }
+            .padding(.top, DS.Space.s2)
+        }
+    }
+
+    /// Which new keys have already spent their arrival wash (prd §479) — one
+    /// shot each, so a re-compose does not re-light a row somebody is reading.
+    @State private var glowedKeys: Set<String> = []
+
+    /// Whether this key is one this device has not seen before.
+    private func isNew(_ actor: VibenetActor) -> Bool {
+        newKeyIDs.contains(VibenetKeySeenDiff.keyID(address: item.address, actorId: actor.actorId))
+    }
+
+    /// Whether the unlock has already landed on this mount (prd §479) — the
+    /// haptic is a MOMENT and fires once, where the `TimelineView` around it
+    /// re-evaluates every second.
+    @State private var landed = false
+
     /// Bumped whenever the control acts, purely so the label re-reads
     /// `isTracking`. See `trackOnLockScreen`.
     @State private var lockScreenTick: UInt8 = 0
 
-    /// Case-insensitively, for the reason every hex compare in this feature
-    /// is: an RPC's casing is not a promise, and a row that will not close
-    /// because the id came back differently cased is a control that has
-    /// stopped working for a reason nobody could see.
-    private func isOpen(_ actor: VibenetActor) -> Bool {
-        openKey?.caseInsensitiveCompare(actor.actorId) == .orderedSame
-    }
-
-    /// WHEN THIS KEY BEGAN, and nothing else — the only content on the
-    /// expanded row that is not already on the collapsed one (prd §473).
-    ///
-    /// Silent when its beginning cannot be named: outside
-    /// `VibenetKeyHistory.cap`, landed by a build before the id was stamped,
-    /// or a block-time lookup that failed. All three mean the same thing to a
-    /// reader and none of them is worth a sentence.
-    @ViewBuilder
-    private func keyOrigin(_ actor: VibenetActor) -> some View {
-        if let origin = VibenetKeyOrigin.authorized(actor, in: item.history), let began = origin.date {
-            VStack(alignment: .leading, spacing: 0) {
-                Text(String(localized: "Its life"))
-                    .dsText(.label12)
-                    .foregroundStyle(DS.textTertiary)
-                HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                    Text(String(localized: "Authorized"))
-                        .dsText(.label11)
-                        .foregroundStyle(DS.textSecondary)
-                    Text(began.formatted(.dateTime.day().month(.abbreviated).year()))
-                        .dsText(.label11)
-                        .foregroundStyle(DS.textPrimary)
-                    Spacer(minLength: DS.Space.s2)
-                    // The BLOCK, not a transaction door. The moment carries no
-                    // txHash — `VibenetActorEvent` never needed one — and a
-                    // "view transaction" link built from a block number would
-                    // open the wrong page. A block height is a fact this read
-                    // really has; the door can arrive the day the moment
-                    // carries a hash.
-                    Text(String(localized: "block \(origin.block.formatted(.number.grouping(.automatic)))"))
-                        .dsText(.label11)
-                        .foregroundStyle(DS.textTertiary)
-                        .monospacedDigit()
-                }
-                .padding(.top, 4)
-            }
-            .padding(.top, DS.Space.s3)
-        }
-    }
-
-    private func keyRow(_ actor: VibenetActor) -> some View {
+    private func keyRow(_ actor: VibenetActor, door: Bool) -> some View {
         // TWO TIERS, not eight equal lines (prd §471). The row used to be a
         // flat `VStack(spacing: 6)` of up to eight `label11` tertiary lines —
         // detail clause, chips, shared-key line, policy contract, use count,
@@ -661,6 +670,18 @@ struct VibenetAccountDetail: View {
                     .dsText(.heading17)
                     .foregroundStyle(DS.textPrimary)
                     .lineLimit(1)
+                // WHICH key is new (prd §479) — the locatable half of the
+                // card's "1 new" pill, in that pill's own grammar (the room's
+                // mark, page-coloured text) so the two read as one piece of
+                // news rather than two claims.
+                if isNew(actor) {
+                    Text(String(localized: "New"))
+                        .dsText(.label11).fontWeight(.semibold)
+                        .foregroundStyle(DS.page)
+                        .padding(.horizontal, 6).padding(.vertical, 2)
+                        .background(Capsule().fill(Self.mark))
+                        .fixedSize()
+                }
                 Spacer(minLength: DS.Space.s2)
                 let standing = actor.expiryStanding(now: .now)
                 Text(actor.expiryLabel(now: .now))
@@ -669,15 +690,16 @@ struct VibenetAccountDetail: View {
                     .foregroundStyle(standing == .soon ? DS.tint : DS.textTertiary)
                     .lineLimit(1)
                     .fixedSize()
-                // The disclosure, ROTATED rather than swapped for a second
-                // glyph — the same mark turning is what says "this is the
-                // thing you just opened"; two glyphs are two states blinking
-                // (the source chips' 2026-07-14 ruling).
-                Image(systemName: "chevron.right")
-                    .accessibilityHidden(true)
-                    .dsGlyph(11, weight: .semibold)
-                    .foregroundStyle(DS.textTertiary)
-                    .rotationEffect(.degrees(isOpen(actor) ? 90 : 0))
+                // A plain chevron, gated on the door (§83): it says "this
+                // opens", and only when this caller can present the sheet it
+                // would open. The rotation went with the disclosure it
+                // announced (§478).
+                if door {
+                    Image(systemName: "chevron.right")
+                        .accessibilityHidden(true)
+                        .dsGlyph(11, weight: .semibold)
+                        .foregroundStyle(DS.textTertiary)
+                }
             }
             // The detail clause and the id share ONE line — the id was
             // occupying the title row's trailing slot, which is where the
@@ -744,55 +766,10 @@ struct VibenetAccountDetail: View {
                 }
             }
             .padding(.top, DS.Space.s2)
-            // THE TERMS — the second tier. A label/value block on its own
-            // faint ground rather than three or four more sentences in the
-            // same gray as everything above: the labels are scannable, so a
-            // reader looking for "has this ever run" finds it without reading
-            // the contract line first.
-            //
-            // `VibenetPolicyReadability.note` is DELIBERATELY ABSENT here —
-            // it moved to the "Session keys" group caption, said once instead
-            // of once per key (see `keysSection`).
-            let terms = termRows(actor)
-            if isOpen(actor), !terms.isEmpty {
-                VStack(alignment: .leading, spacing: 0) {
-                    ForEach(Array(terms.enumerated()), id: \.offset) { _, term in
-                        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                            Text(term.label)
-                                .dsText(.label11)
-                                .foregroundStyle(DS.textTertiary)
-                                .frame(width: 74, alignment: .leading)
-                            Text(term.value)
-                                .dsText(.label11)
-                                .fontWeight(term.weighted ? .semibold : .regular)
-                                .foregroundStyle(DS.textSecondary)
-                                .fixedSize(horizontal: false, vertical: true)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                        }
-                        .padding(.vertical, 3)
-                    }
-                }
-                .padding(.horizontal, DS.Space.s3)
-                .padding(.vertical, DS.Space.s2)
-                .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(DS.fillFaint))
-                .padding(.top, DS.Space.s3)
-            }
-            if isOpen(actor) {
-                keyOrigin(actor)
-                // THE FULL ID, on a screen at last (prd §473). §470 put it on
-                // the clipboard and said the row shows a four-character tail
-                // because that answers "which of these two" and nothing else —
-                // true, and it left a developer comparing against a console
-                // log with no way to READ the value, only to paste it
-                // somewhere else first. It fits here because an open row has
-                // the width for it and a closed one does not.
-                Text(actor.actorId)
-                    .dsText(.label11).monospaced()
-                    .foregroundStyle(DS.textTertiary)
-                    .textSelection(.enabled)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.top, DS.Space.s3)
-            }
+            // THE DEPTH IS GONE FROM THE ROW (prd §478): terms, origin and
+            // the full id live on `VibenetKeySheet`, reached by the tap. What
+            // stays is exactly what a list is for — which key, what it may
+            // do, when it expires.
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         // s4 AND NOT s3 (prd §471). `DS.Radius.widget` is 20, and at 14pt of
@@ -813,6 +790,27 @@ struct VibenetAccountDetail: View {
         // carries is what lifts the card; halving the fill only removed the
         // edge that made it one.
         .dsWidgetSurface(cornerRadius: DS.Radius.widget)
+        // …AND IT ARRIVES LIT (prd §479). A one-shot wash in the room's mark
+        // that fades over ~1.4s, so a new key is findable in a column of eight
+        // by looking rather than by reading. The CHIP is what persists; this
+        // is only the thing that draws your eye to it.
+        //
+        // Reduce Motion takes the wash away entirely rather than freezing it
+        // on: a permanent tint would become a second, quieter status colour on
+        // a row that already has one.
+        .overlay {
+            if isNew(actor), !reduceMotion {
+                RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous)
+                    .fill(Self.mark.opacity(glowedKeys.contains(actor.actorId) ? 0 : 0.14))
+                    .allowsHitTesting(false)
+                    .task {
+                        try? await Task.sleep(nanoseconds: 220_000_000)
+                        withAnimation(.easeOut(duration: 1.2)) {
+                            _ = glowedKeys.insert(actor.actorId)
+                        }
+                    }
+            }
+        }
         // THE VALUES, ON DEMAND (prd §470). The row shows a four-character
         // tail, which answers "which of these two" and nothing else; a
         // developer comparing against a console log or a raw
@@ -924,16 +922,15 @@ struct VibenetAccountDetail: View {
         }
     }
 
-    /// One linked account, one row — `keyRow`'s own object treatment
-    /// (padding, `.dsWidgetSurface(cornerRadius: DS.Radius.widget,
-    /// fillOpacity: 0.5)`), reused rather than inventing a fourth
-    /// surface style on one screen: a linked account is an OBJECT the
-    /// same way a key is, and the section right above this one already
-    /// makes that argument. Face, its own identity (name if watched has
-    /// one, else the short address — the same identity every other
-    /// surface in this room shows, so a row never introduces an account
-    /// under a different name than its own roster row does), and the
-    /// one clause saying which direction the relationship runs.
+    /// One linked account, one row — FLAT on its card (2026-08-25, prd
+    /// §478). It wore its own `dsWidgetSurface` at half opacity INSIDE
+    /// `linkedCard`, which is the literal "cards in cards" of the report —
+    /// and the half-opacity fill was §471's own named defect ("a 3% lift, a
+    /// stain rather than a surface") shipped again the same week it was
+    /// written down. The card is the object; these are its rows. Face, its
+    /// own identity (name if watched has one, else the short address — the
+    /// same identity every other surface in this room shows), and the one
+    /// clause saying which direction the relationship runs.
     private func spokeRow(_ spoke: Spoke) -> some View {
         HStack(spacing: DS.Space.s3) {
             WalletFace(address: spoke.address, size: DS.Face.rowCircle, circular: true)
@@ -950,8 +947,9 @@ struct VibenetAccountDetail: View {
             Spacer(minLength: 0)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(DS.Space.s3)
-        .dsWidgetSurface(cornerRadius: DS.Radius.widget, fillOpacity: 0.5)
+        // No surface of its own (§478): rows on a card, separated by the
+        // stack's spacing, never boxes in the box.
+        .padding(.vertical, DS.Space.s1)
     }
 
     // MARK: - Sub-accounts (2026-08-24)
@@ -1024,8 +1022,8 @@ struct VibenetAccountDetail: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(DS.Space.s3)
-        .dsWidgetSurface(cornerRadius: DS.Radius.widget, fillOpacity: 0.5)
+        // Flat for `spokeRow`'s reason (§478) — the card is the container.
+        .padding(.vertical, DS.Space.s1)
     }
 
     // MARK: - History (R2.1)

@@ -38,6 +38,19 @@ struct VibenetAccountSheet: View {
     @State private var renaming = false
     @State private var renameText = ""
 
+    /// The key whose sheet is up (prd §478 — a key's depth is a
+    /// presentation, never a row growing in place). A local wrapper rather
+    /// than making `VibenetActor` `Identifiable` in the model: identity here
+    /// is presentation state, and the account-qualified id is
+    /// `VibenetKeySeenDiff.keyID`'s own reasoning — an actorId is unique
+    /// within an account, not across them.
+    private struct PresentedKey: Identifiable {
+        let actor: VibenetActor
+        let item: VibenetAccountItem
+        var id: String { VibenetKeySeenDiff.keyID(address: item.address, actorId: actor.actorId) }
+    }
+    @State private var openedKey: PresentedKey?
+
     private static let mark = DS.brandHue(for: "Base Vibenet") ?? Color.fixed("#0052ff")
 
     private var item: VibenetAccountItem? { room.items.first { $0.address == address } }
@@ -63,7 +76,8 @@ struct VibenetAccountSheet: View {
                         VibenetAccountDetail(
                             item: item,
                             links: VibenetAccountMapping.links(room.items),
-                            sharedKeys: VibenetKeyReuse.sharing(item, in: room.items))
+                            sharedKeys: VibenetKeyReuse.sharing(item, in: room.items),
+                            onOpenKey: { openedKey = PresentedKey(actor: $0, item: item) })
                             .padding(DS.Space.s4)
                     }
                     .dsPageBackground()
@@ -103,6 +117,14 @@ struct VibenetAccountSheet: View {
                         }
                     }
                 }
+            }
+            // This sheet is its own presentation host, so a nested sheet
+            // presents cleanly — the half-open-then-close class is about a
+            // `.sheet` on a List ROW resolving to the screen's controller,
+            // which this is not.
+            .sheet(item: $openedKey) { key in
+                VibenetKeySheet(actor: key.actor, item: key.item,
+                                sharedKeys: VibenetKeyReuse.sharing(key.item, in: room.items))
             }
             .alert(String(localized: "Name this account"), isPresented: $renaming) {
                 TextField(String(localized: "Name"), text: $renameText)

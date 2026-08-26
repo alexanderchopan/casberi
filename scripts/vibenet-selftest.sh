@@ -112,6 +112,7 @@ PY
 CARD="Casberi/Casberi/Screens/VibenetRoomCard.swift"
 DETAIL="Casberi/Casberi/Screens/VibenetAccountDetail.swift"
 TRAY="Casberi/Casberi/Screens/VibenetKeyTraySheet.swift"
+KEYSHEET="Casberi/Casberi/Screens/VibenetKeySheet.swift"
 SPINE="Casberi/Casberi/Screens/VibenetLinkSpine.swift"
 NOTIFY="Casberi/Casberi/Model/NotifySweep.swift"
 for f in "$CARD" "$DETAIL" "$TRAY" "$NOTIFY"; do
@@ -119,6 +120,7 @@ for f in "$CARD" "$DETAIL" "$TRAY" "$NOTIFY"; do
 done
 strip_comments "$CARD"   > "$TMP/card.nc.swift"
 strip_comments "$TRAY"   > "$TMP/tray.nc.swift"
+strip_comments "$KEYSHEET" > "$TMP/keysheet.nc.swift"
 strip_comments "$DETAIL" > "$TMP/detail.nc.swift"
 strip_comments "$NOTIFY" > "$TMP/notify.nc.swift"
 strip_comments "$ROOM"   > "$TMP/room.nc.swift"
@@ -381,8 +383,18 @@ if grep -qE '\.sheet\(' "$TMP/card.nc.swift"; then
   echo "  FeedScreen's List rows, so it must hand the tray out through a closure."
   exit 1
 fi
-grep -q 'case vibenetKeys(\[VibenetAccountItem\])' "Casberi/Casberi/Screens/FeedScreen.swift" \
+grep -q 'case vibenetKeys(\[VibenetAccountItem\]' "Casberi/Casberi/Screens/FeedScreen.swift" \
   || { echo "✗ FeedSheetRoute no longer carries the key tray — prd §468"; exit 1; }
+# …and the KEY's own sheet beside it (prd §478), or the detail's rows have
+# nowhere to open and fall back to expanding in place.
+grep -q 'case vibenetKey(VibenetActor' "Casberi/Casberi/Screens/FeedScreen.swift" \
+  || { echo "✗ FeedSheetRoute no longer carries a key's own sheet — prd §478"; exit 1; }
+# THE NEW-KEY SET TRAVELS WITH THE REQUEST (prd §479). The card reads the
+# seen-ledger and SPENDS it; a tray that re-read would mark nothing while the
+# card beside it says "1 new".
+grep -q 'newKeyIDs: Set<String>' "Casberi/Casberi/Screens/FeedScreen.swift" \
+  || { echo "✗ the key tray route no longer carries the new-key set — prd §479: the ledger is"
+       echo "  spent by the card, so the tray cannot read it a second time"; exit 1; }
 
 # --- prd §473: the revoked key's deadline, the key's beginning, the activity --
 #
@@ -417,12 +429,24 @@ grep -q 'let actorLogsRead = await actorLogsTask' "$TMP/bridge.nc.swift" \
 # THE MOMENT CARRIES ITS KEY, or a key can never find its own beginning.
 grep -q 'actorId: e.actorId' "$TMP/bridge.nc.swift" \
   || { echo "✗ landed key moments no longer carry their actorId — prd §473"; exit 1; }
-grep -q 'VibenetKeyOrigin.authorized(actor, in: item.history)' "$TMP/detail.nc.swift" \
-  || { echo "✗ the expanded key row no longer reads its own beginning — prd §473"; exit 1; }
-# …and the expanded content is GATED, or the row is not a disclosure at all and
-# the density §471 fixed comes straight back.
-grep -q 'if isOpen(actor)' "$TMP/detail.nc.swift" \
-  || { echo "✗ the key row's detail is no longer gated on being open — prd §473"; exit 1; }
+grep -q 'VibenetKeyOrigin.authorized(actor, in: item.history)' "$TMP/keysheet.nc.swift" \
+  || { echo "✗ the key sheet no longer reads a key's own beginning — prd §473's reading, on"
+       echo "  §478's surface (the row's inline disclosure moved to VibenetKeySheet)"; exit 1; }
+# THE ROW NO LONGER EXPANDS (prd §478, superseding §473's disclosure): a key's
+# depth is a PRESENTATION — the last inline expander in the room, closed. The
+# density §471 fixed is protected by the depth living on another surface
+# entirely, so the old is-it-gated guard has nothing left to gate.
+if grep -q 'isOpen(actor)\|openKey' "$TMP/detail.nc.swift"; then
+  echo "✗ the detail's key rows expand in place again — prd §478: a key's depth is"
+  echo "  VibenetKeySheet's, reached by the tap, never a row growing under the thumb."
+  exit 1
+fi
+# …and the sheet carries the depth the row gave up, or the tap opens less than
+# the disclosure showed: the full id on a screen (§473) and the terms.
+grep -q 'actor.actorId' "$TMP/keysheet.nc.swift" \
+  || { echo "✗ VibenetKeySheet lost the full key id — prd §473's ruling, kept by §478"; exit 1; }
+grep -q 'policyTarget(known:' "$TMP/keysheet.nc.swift" \
+  || { echo "✗ VibenetKeySheet lost the terms — the depth §478 moved out of the row"; exit 1; }
 
 # THE LIVE ACTIVITY IS A CONTROL, NEVER AUTOMATIC (prd §473). An unlock happens
 # on the chain, possibly to an account somebody merely watches; starting one
@@ -536,8 +560,11 @@ grep -q 'height: 120' "$TMP/detail.nc.swift" \
 # THE MOVE STATES ITS AMOUNT, not a bare percent — Wallet's "▲ $224.51 (1.8%)".
 # Guarded on BOTH surfaces, since the account sheet is where the percent-only
 # form actually shipped.
+# (The ARGUMENT is no longer `history` on either surface — §479 windows the
+# series by the chosen range and the move is computed over exactly what the
+# line draws, which was always this guard's real subject.)
 for f in "$TMP/card.nc.swift" "$TMP/detail.nc.swift"; do
-  grep -q 'VibenetValueHistory.move(history)' "$f" \
+  grep -q 'VibenetValueHistory.move(' "$f" \
     || { echo "✗ a vibenet crown states its move as a bare percent again (${f:t}) — prd §475:"
          echo "  the percent alone cannot say how much, and the amount is what the line shows"; exit 1; }
 done
@@ -740,9 +767,47 @@ if [[ "$cardFn" == *'.padding(.horizontal, DS.Space.s4)'* ]]; then
   exit 1
 fi
 
-# The tray mirrors the card, and the chevron only exists where the tray does.
-grep -q 'VibenetKeyTray.sections' "$TRAY" \
-  || { echo "✗ VibenetKeyTraySheet no longer reads VibenetKeyTray.sections — prd §468"; exit 1; }
+# The tray is the ROSTER — one row per key (prd §478, superseding §468's
+# per-permission sections). Under those sections a card reading "8 keys" opened
+# a list of fourteen rows, and a key holding three bits was three rows with a
+# different "Also:" line each.
+grep -q 'VibenetKeyTray.roster' "$TRAY" \
+  || { echo "✗ VibenetKeyTraySheet no longer reads VibenetKeyTray.roster — prd §478"; exit 1; }
+# …and the sections shape must not come back beside it, which is how one screen
+# ends up with two derivations of one grouping.
+if grep -q 'VibenetKeyTray.sections\|VibenetTraySection' "$TRAY"; then
+  echo "✗ VibenetKeyTraySheet groups by permission again — prd §478: the roster is one row"
+  echo "  per key, and the permission census is the FILTER STRIP above it."
+  exit 1
+fi
+# The strip mirrors the card, and it does so by FORWARDING the card's own
+# derivation rather than re-deriving it — the invariant §468 stated and §478
+# keeps: a card that says 4 must never open a list showing 3.
+grep -q 'VibenetKeyTray.census' "$TRAY" \
+  || { echo "✗ the tray's filter strip no longer reads VibenetKeyTray.census — prd §478"; exit 1; }
+# PERMISSIONS ARE CHIPS, NEVER A SENTENCE (user, 2026-08-25: "for policies like
+# send anywhere pay own gas etc they should be chips instead of like a
+# sentence") — §463's own grammar, which the account detail has drawn since
+# that day, so one key is one object across both surfaces.
+grep -q 'grantedPlainLabels' "$TRAY" \
+  || { echo "✗ the tray's rows no longer draw a key's permissions as chips — prd §478 /"
+       echo "  §463: a comma-joined sentence is what this replaced"; exit 1; }
+# NO HAIRLINES ANYWHERE IN THE ROOM (user, 2026-08-25: "do NOT USE HAIRLINES").
+# §8's no-line rule has zero exceptions, and every one of these sites called a
+# one-point `fillFaint` rectangle "a fill, not a stroke" — a rationalisation.
+# Rows are separated by air.
+#
+# Reads the COMMENT-STRIPPED copies, because both files document this rule by
+# naming the API it bans — a guard grepping raw source fires on the prose
+# explaining it (the Obsidian/Cursor lesson, earned again here on this guard's
+# own first run).
+for f in "$TMP/tray.nc.swift" "$TMP/card.nc.swift"; do
+  if grep -q 'frame(height: 1)' "$f"; then
+    echo "✗ $f draws a hairline again — §8 has zero exceptions and a one-point fill is a line."
+    echo "  Separate rows with padding (DS.Space), never with a rectangle."
+    exit 1
+  fi
+done
 # ONE DOOR, NOT SEVEN (prd §476, superseding §471's per-row doors). The tray
 # shows every section whatever it is handed, so a per-permission "focus" was a
 # scroll position — six chevrons promising six destinations that were one.
@@ -816,10 +881,27 @@ grep -q 'DSPasteboard.copy(VibenetAccountDebug.text(' "$TMP/detail.nc.swift" \
 grep -A 2 'private var doorsSection: some View {' "$TMP/detail.nc.swift" | grep -q 'FlowLayout' \
   || { echo "✗ the doors row is not flowing — prd §470: five fixed-size doors in an HStack"; echo "  clip off the trailing one rather than wrapping"; exit 1; }
 
-# A tapped key must reach its account. The tray dead-ended on its own answer
-# before this, and the caller owns dismiss-then-scope for RoomDoor's reason.
-grep -q 'VibenetKeyTraySheet(items: items, onPick:' "$FEED" \
-  || { echo "✗ the key tray's rows no longer scope to their account — prd §470"; exit 1; }
+# A tapped key must still reach its account (prd §470's requirement), but the
+# route changed in §479: a tray row opens the KEY (§478 gave it a sheet), and
+# the scope is a door INSIDE that sheet — otherwise one object had two
+# different tap outcomes depending on which surface you found it on. So the
+# tray still takes the scope closure and hands it down.
+grep -q 'VibenetKeyTraySheet(items: items,' "$FEED" \
+  || { echo "✗ FeedScreen no longer presents the key tray — prd §468"; exit 1; }
+grep -q 'onPick:' "$FEED" \
+  || { echo "✗ the key tray can no longer scope to an account — prd §470"; exit 1; }
+grep -q 'onScope: onPick.map' "$TMP/tray.nc.swift" \
+  || { echo "✗ the tray no longer hands the scope down to the key's own sheet — prd §479:"
+       echo "  §470's follow-up moved inside the key rather than being deleted"; exit 1; }
+grep -q 'var onScope:' "$TMP/keysheet.nc.swift" \
+  || { echo "✗ VibenetKeySheet has no door to its account — prd §479"; exit 1; }
+# …and a tray row must NOT scope directly any more, or the same object has two
+# tap outcomes again.
+if grep -q 'onPick(key.address)' "$TMP/tray.nc.swift"; then
+  echo "✗ a tray row scopes directly again — prd §479: a row opens the key, and the"
+  echo "  account is the door inside that sheet."
+  exit 1
+fi
 grep -B 2 'chrome.vibenetScope = address' "$FEED" | grep -q 'feedSheet = nil' \
   || { echo "✗ the tray scopes WITHOUT dismissing first — prd §470: vibenetScope re-composes"; echo "  the room behind the sheet, so the change lands under a covered screen"; exit 1; }
 
@@ -2349,7 +2431,7 @@ check("a key past the window is never a bar — a full-length bar would say 'a q
 check("...and nothing inside the window was dropped, so nothing is hidden",
       shelfR?.hiddenInWindow == 0)
 check("the tail names both counts APART — the card's own bound is not the room's",
-      shelfR?.tailLine == "1 lapses later")
+      shelfR?.tailLine == "1 expires later")
 
 // The cap, and that the two tail counts stay separate. Summing them would make
 // "3 more" mean two different things at once.
@@ -2366,7 +2448,7 @@ check("the ones that did not fit are counted, never silently dropped",
 check("and counted APART from the ones past the window",
       shelfCapped?.beyondWindow == 1)
 check("the tail says both, in that order",
-      shelfCapped?.tailLine == "1 more within 90 days · 1 lapses later")
+      shelfCapped?.tailLine == "1 more within 90 days · 1 expires later")
 check("a full shelfR with nothing left over says nothing rather than an empty tail",
       VibenetKeyShelf.compose([keyedItem("0xa", reached: true,
                                           actors: [shelfActor("1", days: 2), shelfActor("2", days: 4)])],
@@ -2550,48 +2632,192 @@ check("beside an addition it is the short clause",
       VibenetKeyChanges(added: ["a"], revokedCount: 2).line
         == "1 key new since you last looked · 2 revoked")
 
-// MARK: - prd §468: the key tray
+// MARK: - prd §479: the attention strip, and the chart's window
 
 print("")
-print("VibenetKeyTray — which keys are in which category")
+print("VibenetAttention — one thing that needs you")
+let attnSoon = keyActor("0xsoon", UInt64(Date().addingTimeInterval(2 * 86_400).timeIntervalSince1970),
+                        VibenetScope.sender)
+let attnLater = keyActor("0xlater", UInt64(Date().addingTimeInterval(300 * 86_400).timeIntervalSince1970),
+                         VibenetScope.sender)
+let attnNow = Date()
+// The fixture's own premise first — an assertion about ranking is worthless if
+// the states it ranks aren't the states it thinks they are.
+check("fixture premise: one key really is inside the urgency window and one really isn't",
+      attnSoon.expiryStanding(now: attnNow) == .soon
+        && attnLater.expiryStanding(now: attnNow) == .later)
+
+// Local fixtures — the file's own `unlockingItem` pins one address and takes a
+// delay, which is the wrong shape for a roster of several accounts.
+func attnLocked(_ address: String) -> VibenetAccountItem {
+    VibenetAccountItem(address: address, reached: true, established: true, actors: [],
+                        locked: true, hasInitiatedUnlock: false, unlocksAt: nil, unlockDelay: nil)
+}
+func attnUnlocking(_ address: String) -> VibenetAccountItem {
+    VibenetAccountItem(address: address, reached: true, established: true, actors: [],
+                        locked: true, hasInitiatedUnlock: true,
+                        unlocksAt: UInt64(attnNow.addingTimeInterval(3600).timeIntervalSince1970),
+                        unlockDelay: 7200)
+}
+let attnItems = [
+    // Locked, no unlock started — a state.
+    attnLocked("0xlocked"),
+    // Mid-unlock — a state WITH a clock.
+    attnUnlocking("0xunlocking"),
+    // A key about to expire — the only line with something to lose.
+    keyedItem("0xkeys", reached: true, actors: [attnSoon, attnLater]),
+]
+let attn = VibenetAttention.compose(attnItems, now: attnNow)
+
+// THE RANKING IS THE ARGUMENT: a decision you can lose something by ignoring
+// outranks a state, and a state with a clock outranks one without.
+check("a key about to expire leads — it is the only line with a deadline",
+      attn.first?.subject == .key(address: "0xkeys", actorId: "0xsoon"))
+check("...then the account with a clock on it",
+      attn.dropFirst().first?.subject == .account(address: "0xunlocking"))
+check("...then the one that is merely locked",
+      attn.dropFirst(2).first?.subject == .account(address: "0xlocked"))
+check("a key OUTSIDE the window is not promoted — the window is the whole gate",
+      attn.contains { $0.subject == .key(address: "0xkeys", actorId: "0xlater") } == false)
+// SILENT WHEN QUIET. No all-clear: an unreached account is not known to be
+// fine, so there is no state this strip could honestly call clear.
+check("a healthy room says nothing at all rather than drawing an all-clear",
+      VibenetAttention.compose([keyedItem("0xok", reached: true, actors: [attnLater])],
+                               now: attnNow).isEmpty)
+// The one line about US rather than about an account, and it goes LAST.
+let attnUnreached = VibenetAttention.compose(
+    [keyedItem("0xdead", reached: false, actors: []),
+     keyedItem("0xkeys", reached: true, actors: [attnSoon])], now: attnNow)
+check("an unreached read is reported…",
+      attnUnreached.contains { $0.subject == .unreached(count: 1) })
+check("...but never above a key that expires this week — a network problem is not your most urgent business",
+      attnUnreached.last?.subject == .unreached(count: 1))
+// TOTAL ORDER — a strip that reshuffles between opens over identical data
+// reads as broken.
+check("the order is total, so two identical composes agree",
+      VibenetAttention.compose(attnItems, now: attnNow)
+        == VibenetAttention.compose(attnItems.reversed(), now: attnNow))
+// CAPPED, and what the cap dropped is COUNTED rather than lost.
+let attnMany = VibenetAttention.compose(
+    [attnLocked("0xa"), attnLocked("0xb"), attnLocked("0xc"), attnLocked("0xd")], now: attnNow)
+check("at most three lines are drawn",
+      VibenetAttention.drawn(attnMany).count == VibenetAttention.rowCap)
+check("...and the rest are counted, never silently dropped",
+      VibenetAttention.tail(attnMany) == "and 1 more")
+check("nothing hidden, nothing said",
+      VibenetAttention.tail(Array(attnMany.prefix(2))) == nil)
+
+print("")
+print("VibenetValueHistory.windowed / options — how far back the curve looks")
+let chartNow = Date()
+// A book reaching 45 days back, one reading a day.
+let longBook = (0..<45).map { day in
+    VibenetValueSample(at: chartNow.addingTimeInterval(-Double(44 - day) * 86_400),
+                       native: 1 + Double(day) / 45)
+}
+check("a week window holds only the week's readings",
+      VibenetValueHistory.windowed(longBook, range: .week, now: chartNow).count == 8)
+check("all means all",
+      VibenetValueHistory.windowed(longBook, range: .all, now: chartNow).count == longBook.count)
+check("every range is offered when the book reaches past all of them",
+      VibenetValueHistory.options(longBook, now: chartNow) == [.week, .month, .all])
+// A RANGE IS OFFERED ONLY WHEN IT DRAWS A DIFFERENT LINE — otherwise it is
+// §83's dead control wearing a time label.
+let shortBook = (0..<4).map { day in
+    VibenetValueSample(at: chartNow.addingTimeInterval(-Double(3 - day) * 86_400), native: 1)
+}
+check("a four-day book offers NOTHING — 1W, 1M and All would be one line under three names",
+      VibenetValueHistory.options(shortBook, now: chartNow).isEmpty)
+let monthBook = (0..<14).map { day in
+    VibenetValueSample(at: chartNow.addingTimeInterval(-Double(13 - day) * 86_400), native: 1)
+}
+check("a fortnight offers the week and All, but not the month it does not reach",
+      VibenetValueHistory.options(monthBook, now: chartNow) == [.week, .all])
+// THE WINDOW NEVER STARVES THE LINE. One point draws nothing (`series`' own
+// rule, and a flat line reads as "went to zero"), so a range holding one
+// reading falls back to the two newest.
+let sparse = [VibenetValueSample(at: chartNow.addingTimeInterval(-40 * 86_400), native: 1),
+              VibenetValueSample(at: chartNow.addingTimeInterval(-39 * 86_400), native: 2)]
+check("a window holding one reading falls back to two, so the line never collapses to a point",
+      VibenetValueHistory.windowed(sparse, range: .week, now: chartNow).count == 2)
+check("an empty book offers no ranges rather than a lone dead chip",
+      VibenetValueHistory.options([], now: chartNow).isEmpty)
+// DEMO PARITY (prd §479): the demo's own curve must be able to draw the strip,
+// or the control exists everywhere except the one place it is demonstrated.
+check("the demo's curve reaches past a month, so the demo draws all three chips",
+      VibenetValueHistory.options(VibenetDemoHistoryShape.samples(now: chartNow), now: chartNow)
+        == [.week, .month, .all])
+
+// MARK: - prd §468 / §478: the key tray, one row per key
+
+print("")
+print("VibenetKeyTray — every key, once, with what it may do")
 let adminKey = keyActor("0xadmin", 0, 0)
 let sender = keyActor("0xsend", 0, VibenetScope.sender)
 let both = keyActor("0xboth", 0, VibenetScope.sender | VibenetScope.selfPayer)
 let reservedOnly = keyActor("0xres", 0, 0x0400)
 let trayItems = [keyedItem("0xa", reached: true, actors: [adminKey, sender]),
                  keyedItem("0xb", reached: true, actors: [both, reservedOnly])]
-let tray = VibenetKeyTray.sections(trayItems)
-check("Admin leads — scope 0 is unrestricted and is never one of the five bits",
-      tray.first?.label == "Admin")
-check("and holds exactly the admin key",
-      tray.first?.count == 1)
-// THE INVARIANT: the tray and the card must never disagree about a number.
-// Two derivations of one grouping drift, and then a card says 4 and the list
-// it opens shows 3.
+let tray = VibenetKeyTray.roster(trayItems)
+// §478's WHOLE POINT, and the one assertion that would have failed on the
+// shape it replaced: a card reading "4 keys" opened a list of five rows there
+// (0xboth held two bits, so it was drawn under two headings), which is why
+// that screen needed a footnote apologising for its own row count.
+check("the roster draws every key exactly once — the row count IS the key count",
+      tray.count == trayItems.flatMap(\.actors).count)
+check("...including the key holding two permissions, which the sections shape drew twice",
+      tray.filter { $0.actor.actorId == "0xboth" }.count == 1)
+check("...and the one holding only reserved bits, which the sections shape drew NOWHERE",
+      tray.contains { $0.actor.actorId == "0xres" })
+// TOTAL ORDER, and judgement-free (§463). A roster that reshuffled between
+// opens over identical data reads as broken.
+check("ordered by displayed title, then account, then actorId — no power ranking",
+      tray == VibenetKeyTray.roster(trayItems.reversed()))
+check("every row carries its own account, so one key is never two objects",
+      tray.allSatisfy { !$0.address.isEmpty })
+// THE INVARIANT SURVIVES ITS SECTIONS: the strip and the card must never
+// disagree about a number, so the census is FORWARDED rather than re-derived.
 let counts = VibenetPolicyAggregation.compose(trayItems)
-check("every section mirrors the card's own count, label for label",
-      tray.map { [$0.label, "\($0.count)"] } == counts.map { [$0.label, "\($0.count)"] })
-check("an ADMIN is excluded from every bit section — it is not five permissions, it is one word",
-      tray.first(where: { $0.label == "Send anywhere" })?.keys.contains(where: { $0.actor.actorId == "0xadmin" }) == false)
-check("a key holding two bits appears under BOTH — which is the question this screen answers",
-      tray.first(where: { $0.label == "Pay own gas" })?.keys.first?.actor.actorId == "0xboth")
-// A key with only reserved bits is in no section at all. COUNTED AND SAID —
-// never given an invented category, and never silently missing.
+check("the filter strip's counts are the card's own, label for label",
+      VibenetKeyTray.census(trayItems).map { [$0.label, "\($0.count)"] }
+        == counts.map { [$0.label, "\($0.count)"] })
+// …and filtering by a strip label must select exactly the keys that label
+// counted, or the strip says 4 and shows 3 — the same drift, one level down.
+check("filtering by a permission selects exactly as many keys as its chip counts",
+      counts.allSatisfy { entry in
+          tray.filter { VibenetKeyTray.holds($0, permission: entry.label) }.count == entry.count
+      })
+check("an ADMIN is excluded from every bit filter — it is not five permissions, it is one word",
+      VibenetKeyTray.holds(VibenetTrayKey(address: "0xa", actor: adminKey),
+                           permission: "Send anywhere") == false)
+check("...and IS the Admin filter",
+      VibenetKeyTray.holds(VibenetTrayKey(address: "0xa", actor: adminKey), permission: "Admin"))
+check("a key holding two bits matches BOTH filters — which is the question this screen answers",
+      VibenetKeyTray.holds(VibenetTrayKey(address: "0xb", actor: both), permission: "Send anywhere")
+        && VibenetKeyTray.holds(VibenetTrayKey(address: "0xb", actor: both), permission: "Pay own gas"))
+check("a permission this build cannot name matches nothing rather than everything",
+      VibenetKeyTray.holds(VibenetTrayKey(address: "0xb", actor: reservedOnly),
+                           permission: "Send anywhere") == false)
+// A key with only reserved bits is in no CATEGORY at all. COUNTED AND SAID —
+// never given an invented category, and (since §478) never missing from the
+// roster either.
 check("a key holding only reserved bits is counted, never filed under an invented name",
       VibenetKeyTray.unnamedKeyCount(trayItems) == 1)
 check("the footnote says how many keys there really are",
       VibenetKeyTray.footnote(trayItems)?.hasPrefix("4 keys") == true)
-check("...and warns that one key can appear more than once",
-      VibenetKeyTray.footnote(trayItems)?.contains("appears under each") == true)
+check("...and how many accounts they sit on",
+      VibenetKeyTray.footnote(trayItems)?.contains("across 2 accounts") == true)
 check("...and names the unnameable one rather than losing it",
       VibenetKeyTray.footnote(trayItems)?.contains("can't name") == true)
-check("no keys at all, no sections",
-      VibenetKeyTray.sections([]).isEmpty)
-check("alsoLine names the OTHER permissions, never the section's own",
-      VibenetKeyTray.alsoLine(VibenetTrayKey(address: "0xb", actor: both), besides: "Send anywhere")
-        == "Also: Pay own gas")
-check("a key with nothing else to say says nothing",
-      VibenetKeyTray.alsoLine(VibenetTrayKey(address: "0xa", actor: sender), besides: "Send anywhere") == nil)
+// The apology for the OLD shape must not outlive it: a footnote still saying
+// a key "appears under each" would describe a screen this no longer is.
+check("the footnote no longer apologises for a row count that no longer exceeds the key count",
+      VibenetKeyTray.footnote(trayItems)?.contains("appears under each") == false)
+check("an account contributing no keys is not counted in the footnote's accounts",
+      VibenetKeyTray.footnote([keyedItem("0xa", reached: true, actors: [sender]),
+                               keyedItem("0xc", reached: true, actors: [])])?.contains("across") == false)
+check("no keys at all, no roster",
+      VibenetKeyTray.roster([]).isEmpty)
 
 // MARK: - prd §470: a key's own identity, and the developer's paste
 
@@ -3257,10 +3483,13 @@ mutate "a key holding only reserved bits must be COUNTED, never dropped in silen
   'filter { !$0.scope.isAdmin && $0.scope.raw & VibenetScope.known == 0 }' \
   'filter { false }'
 
-# Without the note the tray row count reads as a contradiction of the card
-# above it — fourteen rows over eight keys.
-mutate "the tray footnote must warn that one key appears under several permissions" \
-  'line += String(localized: " · a key with several permissions appears under each")' \
+# The footnote says how many accounts the roster spans — without it "8 keys"
+# over a two-account room reads as eight keys on the account you are looking at.
+# (§478 retired the clause this mutation used to target: under the per-key
+# roster the row count EQUALS the key count, so the apology it made had nothing
+# left to apologise for.)
+mutate "the tray footnote must say how many accounts the keys sit on" \
+  'line += String(localized: ", across \(accounts) accounts")' \
   'line += ""'
 
 # A revoke is a KEY event as well as a revocation. Losing the Key facet makes

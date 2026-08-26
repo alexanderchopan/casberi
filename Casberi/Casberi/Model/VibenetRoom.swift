@@ -1443,7 +1443,25 @@ struct VibenetRoom: Equatable, Codable {
                                    // key or several, so this just doubles
                                    // the expiry-sub-label coverage above.
                                    expiry: 4_102_444_800)],
-            locked: true, hasInitiatedUnlock: true, unlocksAt: 4_102_444_800, unlockDelay: 43_200,
+            // **THE UNLOCK ACTUALLY LANDS IN THE DEMO (2026-08-25, prd §479).**
+            // This was pinned to 4_102_444_800 — the year 2100 — so the
+            // countdown ticked forever and the moment §479 built (the bar
+            // filling, the words landing, the one haptic) could not occur in
+            // the demo at all: the branch that draws it was unreachable by
+            // construction, which is precisely the demo-parity gap
+            // `demo-selftest`'s own checks exist to catch.
+            //
+            // Ninety seconds out, computed live like every other date in this
+            // fixture. Someone who opens the demo's unlocking account and
+            // stays on it watches a timelock open, which is the one thing
+            // this room can show that no other room in the app can. The
+            // progress bar is honest for the whole run — `unlockDelay` is the
+            // real span and `unlockProgress` reads both endpoints — and after
+            // it lands the account reads "Ready to unlock", which is a true
+            // statement about a fixture whose delay has elapsed.
+            locked: true, hasInitiatedUnlock: true,
+            unlocksAt: UInt64(Date.now.addingTimeInterval(90).timeIntervalSince1970),
+            unlockDelay: 43_200,
             // The multichain footer line has never rendered in the demo —
             // this is the fixture's one non-nil standing.
             changeSequences: VibenetChangeSequences(multichain: 12, localEpoch: 2, localSequence: 5),
@@ -2043,6 +2061,237 @@ enum VibenetValueHistory {
     }
 }
 
+/// ONE THING THAT NEEDS YOU, AT THE TOP (2026-08-25, prd §479).
+///
+/// **The room's urgency was scattered across four surfaces** and none of them
+/// was the first thing you saw: a key about to expire lived in the Keys
+/// card's footer (below a census and a headline), "Locked" was a pill on an
+/// Accounts row, an unlock countdown was that row's subtitle, and an
+/// unreached read was a footnote under the crown. So the question somebody
+/// opens this room with — *is anything wrong?* — took a scroll and four
+/// different readings to answer.
+///
+/// This is Wallet's own "Worth a look" applied here (`WalletWarningsStrip`,
+/// prd §212): what's it worth and is it okay are the two questions one glance
+/// asks, and they belong together. Same rules as that strip, deliberately:
+///
+/// - **Silent when there is nothing to say.** No empty state, no "all clear"
+///   — a room with nothing wrong simply does not draw this. An all-clear
+///   badge is a claim this read cannot support anyway (an unreached account
+///   is not known to be fine).
+/// - **It never invents urgency.** Every line here is a fact some other
+///   surface already states; this only promotes it. Two readings of one fact
+///   cannot drift, because both compose from the same accessors.
+/// - **It states, it does not grade.** No severity colour per row — the room
+///   spends its one colour on expiry urgency and nothing else (§463), and a
+///   locked account is not an emergency, it is a state.
+///
+/// RANKED, and the order is the argument: something that needs a DECISION
+/// from you outranks something merely happening to you, and a thing with a
+/// clock outranks a thing without one.
+enum VibenetAttention {
+    /// What a line is about — the caller uses this to route the tap, never to
+    /// colour the row.
+    enum Subject: Equatable {
+        /// A key inside its urgency window, on this account.
+        case key(address: String, actorId: String)
+        /// This account is locked, or unlocking.
+        case account(address: String)
+        /// The read did not reach the chain for this many accounts.
+        case unreached(count: Int)
+    }
+
+    struct Line: Equatable, Identifiable {
+        let subject: Subject
+        /// The whole sentence, composed from the model's own words.
+        let text: String
+        /// Sorting only — never drawn, and never mapped to a colour.
+        let rank: Int
+        var id: String {
+            switch subject {
+            case .key(let a, let k):  return "key:\(a.lowercased()):\(k.lowercased())"
+            case .account(let a):     return "account:\(a.lowercased())"
+            case .unreached:          return "unreached"
+            }
+        }
+    }
+
+    /// At most this many lines. A strip that can grow without bound is a
+    /// second feed, and the point of this one is that it is glanceable — the
+    /// overflow is COUNTED rather than dropped (`tail`), the way every capped
+    /// reading in this app says what it did not draw.
+    static let rowCap = 3
+
+    /// Every account whose keys are inside `urgencyWindow`, whose lock needs
+    /// reading, or whose read failed — ranked, capped, and empty when the
+    /// room is quiet.
+    static func compose(_ items: [VibenetAccountItem], now: Date) -> [Line] {
+        var out: [Line] = []
+
+        // RANK 3 — a key about to expire. The only line with a real deadline
+        // and the only one you can lose something by ignoring: when it
+        // lapses, whatever that key was doing stops.
+        for item in items {
+            // `actors` is already in `orderedActors`' own order (the init
+            // sorts it), so this walk is stable without re-sorting.
+            for actor in item.actors where actor.expiryStanding(now: now) == .soon {
+                out.append(Line(
+                    subject: .key(address: item.address, actorId: actor.actorId),
+                    text: String(localized: "\(actor.kind.plainTitle) on \(VibenetRoom.shortAddress(item.address)) — \(actor.expiryLabel(now: now).lowercased())"),
+                    rank: 3))
+            }
+        }
+
+        // RANK 2 — an account mid-unlock. It has a clock, and the moment it
+        // reaches zero something becomes possible that was not before.
+        // RANK 1 — locked with no unlock started: a state, not a countdown.
+        for item in items where item.alarmed {
+            if item.hasInitiatedUnlock {
+                let clock = item.unlockLabel(now: now) ?? String(localized: "Ready to unlock")
+                out.append(Line(subject: .account(address: item.address),
+                                text: String(localized: "\(VibenetRoom.shortAddress(item.address)) — \(clock.lowercased())"),
+                                rank: 2))
+            } else {
+                out.append(Line(subject: .account(address: item.address),
+                                text: String(localized: "\(VibenetRoom.shortAddress(item.address)) is locked"),
+                                rank: 1))
+            }
+        }
+
+        // RANK 0 — what we could not see. LAST on purpose: it is the one line
+        // that is about US rather than about the account, and promoting a
+        // network problem above a key that expires tomorrow would be this
+        // strip grading its own failure as the reader's most urgent business.
+        let unreached = items.filter { !$0.reached }.count
+        if unreached > 0 {
+            out.append(Line(
+                subject: .unreached(count: unreached),
+                text: unreached == 1
+                    ? String(localized: "1 account couldn't be read")
+                    : String(localized: "\(unreached) accounts couldn't be read"),
+                rank: 0))
+        }
+
+        // TOTAL order — rank, then the line itself, so a room with two keys
+        // expiring the same day draws them in a stable order rather than in
+        // whichever order the accounts happened to be walked.
+        return out.sorted { a, b in
+            if a.rank != b.rank { return a.rank > b.rank }
+            return a.text.localizedCaseInsensitiveCompare(b.text) == .orderedAscending
+        }
+    }
+
+    /// The drawn lines, capped.
+    static func drawn(_ lines: [Line]) -> [Line] { Array(lines.prefix(rowCap)) }
+
+    /// "and 2 more" — what the cap did not draw, or nothing. Counted rather
+    /// than dropped, so a strip showing three of five never reads as a room
+    /// with three things to answer.
+    static func tail(_ lines: [Line]) -> String? {
+        let hidden = lines.count - rowCap
+        guard hidden > 0 else { return nil }
+        return hidden == 1
+            ? String(localized: "and 1 more")
+            : String(localized: "and \(hidden) more")
+    }
+}
+
+/// HOW FAR BACK THE CURVE LOOKS (2026-08-25, prd §479).
+///
+/// `VibenetValueStore` has kept real per-account history since §467 and the
+/// chart only ever drew "since watching" — the whole book, however long that
+/// is. A range control is what turns a line into something you can ask a
+/// question of, and every reading it produces is REAL: this windows the
+/// samples already on disk and never resamples, interpolates or invents a
+/// point between two looks.
+///
+/// **A range is OFFERED only when it would draw a different line** (`options`
+/// below). A "1W" chip on a book three days old is a control that changes
+/// nothing — §83's dead control, wearing a time label.
+enum VibenetChartRange: String, CaseIterable, Equatable {
+    case week, month, all
+
+    /// The label the chip carries. "All" rather than "Max": this book starts
+    /// when you began watching, so "Max" would claim a history that predates
+    /// us.
+    var label: String {
+        switch self {
+        case .week:  return String(localized: "1W")
+        case .month: return String(localized: "1M")
+        case .all:   return String(localized: "All")
+        }
+    }
+
+    /// How far back this range reaches, or nil for the whole book.
+    var span: TimeInterval? {
+        switch self {
+        case .week:  return 7 * 86_400
+        case .month: return 30 * 86_400
+        case .all:   return nil
+        }
+    }
+
+    /// What the chart's own subline says the move is measured over — the
+    /// crown's delta is computed on the WINDOWED series, so the sentence
+    /// beside it has to name the same window or the two disagree on screen.
+    var sinceLine: String {
+        switch self {
+        case .week:  return String(localized: "past week")
+        case .month: return String(localized: "past month")
+        case .all:   return String(localized: "since watching")
+        }
+    }
+}
+
+extension VibenetValueHistory {
+    /// The samples inside a range, oldest first.
+    ///
+    /// **Never fewer than two when the book has two** — a window that cuts the
+    /// series down to one point would draw nothing (`series`' own rule), so a
+    /// range holding one reading falls back to the two newest. The line stays
+    /// honest either way: both points are real readings, and the only thing
+    /// the fallback changes is that the leftmost point may predate the window
+    /// the chip names, which is the truthful shape of "you have one reading
+    /// this week".
+    static func windowed(_ samples: [VibenetValueSample],
+                         range: VibenetChartRange,
+                         now: Date) -> [VibenetValueSample] {
+        guard let span = range.span else { return samples }
+        let floor = now.addingTimeInterval(-span)
+        let inside = samples.filter { $0.at >= floor }
+        if inside.count >= 2 { return inside }
+        return Array(samples.suffix(2))
+    }
+
+    /// WHICH RANGES ARE WORTH OFFERING, given the book.
+    ///
+    /// A range earns a chip only when it holds at least two readings of its
+    /// own AND draws a different span from the next one up — otherwise "1W"
+    /// and "1M" and "All" are three chips drawing one identical line, which is
+    /// three dead controls rather than one.
+    ///
+    /// Returns EMPTY when there is nothing to choose between, and the caller
+    /// then draws no strip at all rather than a lone "All" chip that does
+    /// nothing.
+    static func options(_ samples: [VibenetValueSample], now: Date) -> [VibenetChartRange] {
+        guard samples.count >= 2, let oldest = samples.first?.at else { return [] }
+        let coveredBy = now.timeIntervalSince(oldest)
+        var out: [VibenetChartRange] = []
+        for range in [VibenetChartRange.week, .month] {
+            guard let span = range.span else { continue }
+            // Its own window must hold two readings…
+            guard windowed(samples, range: range, now: now).count >= 2 else { continue }
+            // …and the book must reach PAST it, or this range and "All" are
+            // the same line under two names.
+            guard coveredBy > span else { continue }
+            out.append(range)
+        }
+        guard !out.isEmpty else { return [] }
+        out.append(.all)
+        return out
+    }
+}
+
 /// The demo's balance curve, as PURE logic so the harness can hold it.
 ///
 /// It lives here rather than in `DemoSeedAll` for the reason every other
@@ -2056,10 +2305,26 @@ enum VibenetDemoHistoryShape {
     /// anywhere else would contradict the figure it sits under.
     static let endsOn = 2.514
 
+    /// How far apart the demo's readings sit.
+    ///
+    /// **It is NOT `VibenetValueHistory.throttle` any more (2026-08-25, prd
+    /// §479), and the old comment claiming it was `a fortnight` was wrong
+    /// arithmetic**: fourteen points four hours apart is 52 HOURS, about two
+    /// days. That went unnoticed while the chart had one fixed window — and
+    /// the moment a range control existed it mattered, because
+    /// `VibenetValueHistory.options` offers a range only when the book
+    /// reaches past it, so a two-day book offers nothing and the demo drew no
+    /// strip at all while a real month-old room drew three chips.
+    ///
+    /// 36 hours over 30 readings is ~45 days: enough that 1W and 1M each hold
+    /// several readings of their own and each draws a visibly different line,
+    /// which is the whole condition `options` tests for.
+    static let spacing: TimeInterval = 36 * 3600
+
     /// Deterministic — no randomness, so two demo entries draw the identical
-    /// line. Spaced at the store's own throttle, so this is exactly the shape
-    /// a real watcher's readings would have after a fortnight. The dips are
-    /// what keep it reading as a balance rather than a ramp.
+    /// line. The dips are what keep it reading as a balance rather than a
+    /// ramp, and the last stretch is deliberately busier so a 1W window has
+    /// its own shape rather than being a straight run into the final point.
     static func samples(now: Date) -> [VibenetValueSample] {
         samples(endingOn: endsOn, now: now)
     }
@@ -2070,10 +2335,13 @@ enum VibenetDemoHistoryShape {
     /// object, and so each one still ends on the figure its own crown states.
     static func samples(endingOn end: Double, now: Date) -> [VibenetValueSample] {
         let shape: [Double] = [0.72, 0.78, 0.74, 0.95, 1.10, 1.04, 1.32,
-                               1.55, 1.49, 1.78, 2.05, 1.98, 2.31, 1.0]
+                               1.55, 1.49, 1.78, 2.05, 1.98, 2.31, 2.16,
+                               2.42, 2.28, 2.55, 2.71, 2.60, 2.88, 2.74,
+                               2.96, 3.12, 2.99, 3.24, 3.08, 3.31, 3.18,
+                               3.36, 1.0]
         return shape.enumerated().map { index, factor in
             VibenetValueSample(
-                at: now.addingTimeInterval(-Double(shape.count - 1 - index) * VibenetValueHistory.throttle),
+                at: now.addingTimeInterval(-Double(shape.count - 1 - index) * spacing),
                 native: end * factor)
         }
     }
@@ -2334,14 +2602,6 @@ struct VibenetTrayKey: Equatable, Identifiable {
     var id: String { VibenetKeySeenDiff.keyID(address: address, actorId: actor.actorId) }
 }
 
-/// One permission, and every key in the room that holds it.
-struct VibenetTraySection: Equatable, Identifiable {
-    let label: String
-    let keys: [VibenetTrayKey]
-    var id: String { label }
-    var count: Int { keys.count }
-}
-
 /// WHAT THE KEYS CARD OPENS INTO (user, 2026-08-25: *"the key card should open
 /// to a list of keys and permissions that show which keys are in which
 /// category"*).
@@ -2363,21 +2623,58 @@ struct VibenetTraySection: Equatable, Identifiable {
 /// The ceiling that follows is stated rather than papered over: see
 /// `unnamedKeyCount`.
 enum VibenetKeyTray {
-    static func sections(_ items: [VibenetAccountItem]) -> [VibenetTraySection] {
-        let pairs = items.flatMap { item in item.actors.map { VibenetTrayKey(address: item.address, actor: $0) } }
-        guard !pairs.isEmpty else { return [] }
-        var out: [VibenetTraySection] = []
-        let admins = pairs.filter { $0.actor.scope.isAdmin }
-        if !admins.isEmpty {
-            out.append(VibenetTraySection(label: String(localized: "Admin"), keys: ordered(admins)))
-        }
-        for (bit, plain) in VibenetScope.orderedPlainBits {
-            let members = pairs.filter { !$0.actor.scope.isAdmin && $0.actor.scope.raw & bit != 0 }
-            if !members.isEmpty {
-                out.append(VibenetTraySection(label: plain, keys: ordered(members)))
-            }
-        }
-        return out
+    /// **ONE ROW PER KEY, A–Z (2026-08-25, prd §478), superseding the
+    /// per-permission sections this enum shipped with on 2026-08-25.**
+    ///
+    /// §468 built this tray as sections — one heading per permission, a key
+    /// listed under each permission it holds — and it answered its question
+    /// from the PERMISSION's side. The cost was structural rather than
+    /// cosmetic: **a card saying "8 keys" opened a list of fourteen rows**,
+    /// which needed `footnote`'s own sentence to explain away, and the same
+    /// key appeared three times with a different "Also:" line each time, so
+    /// the one question you cannot answer by scrolling is the one somebody
+    /// opens this screen with — *what can THIS key do, and when does it
+    /// lapse?*
+    ///
+    /// This answers it from the KEY's side, which is also **§463's own
+    /// settled grammar** (user: *"i think we are stuck doing chips per
+    /// key"*, and *"the keys could just be listed in alphabetical order then
+    /// we aren't making some judgement call"*) — the shape the account
+    /// detail has drawn since that day, now the tray's too, so a key reads
+    /// the same on both surfaces. The permission is still on every row, as
+    /// its own chips; nothing that §468 asked to see has been taken away,
+    /// and the row count now equals the key count.
+    ///
+    /// TOTAL and judgement-free, exactly as `ordered` was: displayed title,
+    /// then account, then actorId. No grouping by account either — a key's
+    /// account is on its own row, and grouping would re-introduce a heading
+    /// whose only job is to be scrolled past.
+    static func roster(_ items: [VibenetAccountItem]) -> [VibenetTrayKey] {
+        ordered(items.flatMap { item in
+            item.actors.map { VibenetTrayKey(address: item.address, actor: $0) }
+        })
+    }
+
+    /// How many keys hold each named permission — the CENSUS, for the tray's
+    /// own filter strip, and the exact list `VibenetPolicyAggregation.compose`
+    /// gives the card above it.
+    ///
+    /// Forwarded rather than re-derived: two derivations of one grouping
+    /// drift, and then a card says 4 and the list it opens shows 3. That was
+    /// `sections`' own stated invariant and it survives its deletion.
+    static func census(_ items: [VibenetAccountItem]) -> [VibenetPolicyCount] {
+        VibenetPolicyAggregation.compose(items)
+    }
+
+    /// Whether a key belongs to the permission a filter names — the one
+    /// membership test, so the strip's counts and what the strip SHOWS can
+    /// never disagree. Mirrors `VibenetPolicyAggregation.compose` exactly:
+    /// "Admin" is the admins, and a bit label excludes an admin (an admin is
+    /// unrestricted, not a holder of five named bits — §463).
+    static func holds(_ key: VibenetTrayKey, permission label: String) -> Bool {
+        if key.actor.scope.isAdmin { return label == String(localized: "Admin") }
+        guard let bit = VibenetScope.orderedPlainBits.first(where: { $0.1 == label })?.0 else { return false }
+        return key.actor.scope.raw & bit != 0
     }
 
     /// Keys that appear in NO section — a non-admin key holding only reserved
@@ -2394,16 +2691,26 @@ enum VibenetKeyTray {
             .count
     }
 
-    /// "8 keys · a key with several permissions appears in each" — the note
-    /// without which the tray's row count looks like it contradicts the card's
-    /// key count. It does not: a key holding two bits is genuinely in two
-    /// categories, and that is what the screen is for.
+    /// "8 keys, across 3 accounts" — what the roster is, said once at the top.
+    ///
+    /// **The clause it used to open with is GONE, because the thing it
+    /// apologised for is (prd §478).** Under §468's sections it read "8 keys
+    /// · a key with several permissions appears under each", and that
+    /// sentence existed to explain why fourteen rows sat under a card saying
+    /// eight. One row per key needs no such explanation; keeping the sentence
+    /// would describe a screen this no longer is.
+    ///
+    /// The unnamed-key clause survives untouched — that one is not an
+    /// apology for the layout, it is the standing §83 admission that a key
+    /// holding only reserved bits is counted here and can be described
+    /// nowhere.
     static func footnote(_ items: [VibenetAccountItem]) -> String? {
         let total = items.flatMap(\.actors).count
         guard total > 0 else { return nil }
         var line = total == 1 ? String(localized: "1 key") : String(localized: "\(total) keys")
-        if sections(items).contains(where: { $0.count > 0 }) {
-            line += String(localized: " · a key with several permissions appears under each")
+        let accounts = items.filter { !$0.actors.isEmpty }.count
+        if accounts > 1 {
+            line += String(localized: ", across \(accounts) accounts")
         }
         let unnamed = unnamedKeyCount(items)
         if unnamed > 0 {
@@ -2412,21 +2719,6 @@ enum VibenetKeyTray {
                 : String(localized: " · \(unnamed) hold only permissions this build can't name")
         }
         return line
-    }
-
-    /// "Also: Pay own gas, Send in order" — the OTHER named permissions a key
-    /// in this section holds, or nothing.
-    ///
-    /// Without it the tray answers half the question: it says which keys are
-    /// in a category and not what else those keys can do, so a session key
-    /// that only sends and an admin-adjacent key that sends AND pays for
-    /// others read identically inside "Send anywhere". Excludes the section's
-    /// own label rather than re-printing it, and never lists the unknown tail
-    /// (`+N unknown` is a count, not a permission — the footnote carries it).
-    static func alsoLine(_ key: VibenetTrayKey, besides label: String) -> String? {
-        let others = key.actor.scope.plainNames.filter { $0 != label }
-        guard !others.isEmpty else { return nil }
-        return String(localized: "Also: \(others.joined(separator: ", "))")
     }
 
     /// TOTAL, and judgement-free: by the key's own displayed title, then the
@@ -2858,8 +3150,8 @@ enum VibenetKeyShelf {
             }
             if beyondWindow > 0 {
                 parts.append(beyondWindow == 1
-                    ? String(localized: "1 lapses later")
-                    : String(localized: "\(beyondWindow) lapse later"))
+                    ? String(localized: "1 expires later")
+                    : String(localized: "\(beyondWindow) expire later"))
             }
             return parts.isEmpty ? nil : parts.joined(separator: " · ")
         }

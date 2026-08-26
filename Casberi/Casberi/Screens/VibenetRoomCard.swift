@@ -163,7 +163,21 @@ struct VibenetRoomCard: View {
     /// mirrors `VibenetPolicyAggregation.compose` exactly (its own stated
     /// invariant), so a label from the card always resolves to a section in
     /// the tray and neither side needs a second vocabulary.
-    var onOpenKeys: (() -> Void)? = nil
+    ///
+    /// TAKES THE NEW-KEY SET (2026-08-25, prd §479): this card reads the
+    /// seen-ledger and SPENDS it in its own `.task`, so the tray cannot read
+    /// it again — a second read returns empty, and the tray would mark
+    /// nothing while the card beside it says "1 new". The answer travels with
+    /// the request.
+    var onOpenKeys: ((Set<String>) -> Void)? = nil
+    /// OPEN A KEY'S SHEET (2026-08-25, prd §478) — the scoped account's key
+    /// rows present `VibenetKeySheet` instead of expanding in place, and this
+    /// card cannot own the presentation for `onOpenKeys`'s own reason: it
+    /// lives inside `FeedScreen`'s List rows, where a `.sheet` on a row is
+    /// the half-open-then-close class. Carries the actor, the account it acts
+    /// for, and the room-wide shared-key facts the sheet's "Also on" line
+    /// needs — all value types, captured at tap time.
+    var onOpenKey: ((VibenetActor, VibenetAccountItem, [VibenetSharedKey]) -> Void)? = nil
     /// Scope the room to one account (2026-08-25, prd §476).
     ///
     /// **§469 deleted an `onScope` and it was right to.** That one fired from
@@ -189,6 +203,14 @@ struct VibenetRoomCard: View {
     /// Whether the folded delegate spine is open (prd §477). `@State`, so it
     /// shuts when you leave the room — it is a look, not a preference.
     @State private var linksOpen = false
+    /// How far back the curve looks (prd §479). `@State`, so it dies with the
+    /// room — it is a look, not a preference, and a chart that reopened
+    /// windowed would state a move over a span nobody chose this session.
+    @State private var range: VibenetChartRange = .all
+    /// Whether the crown has counted up yet this mount (prd §479). ONE SHOT:
+    /// the fill is a greeting, and a figure that re-counted on every re-compose
+    /// would be a number that never settles while you read it.
+    @State private var counted = false
 
     private static let mark = DS.brandHue(for: "Base Vibenet") ?? Color.fixed("#0052ff")
     /// The most rows drawn before the footnote takes over, INCLUDING the
@@ -316,6 +338,12 @@ struct VibenetRoomCard: View {
             // made the one reading both rooms share the one element that
             // looked different in each.
             balanceHero
+            // WHAT NEEDS YOU, FIRST (prd §479). Wallet's own "Worth a look"
+            // sits under its balance card for the reason this does: what's it
+            // worth and is it okay are the two questions one glance asks.
+            // Silent when the room is quiet — no all-clear, which is a claim
+            // an unreached read cannot support anyway.
+            attentionStrip
             holdingsCard
             // SECTION HEADERS, Wallet's own (`walletGroupHeader`): "What you
             // hold" / "What it's doing" are `heading22` in PRIMARY ink,
@@ -431,11 +459,17 @@ struct VibenetRoomCard: View {
         // THE HERO'S FACE, only when the rail is not already drawing it.
         let railDrawsTheFace = onOpen == nil
             && VibenetScopeRail.shows(source: VibenetIdentity.source, watched: fullItems.count)
+        let shared = VibenetKeyReuse.sharing(lead, in: fullItems)
         VibenetAccountDetail(
             item: lead,
             links: VibenetAccountMapping.links(fullItems),
-            sharedKeys: VibenetKeyReuse.sharing(lead, in: fullItems),
-            showsFace: !railDrawsTheFace)
+            sharedKeys: shared,
+            showsFace: !railDrawsTheFace,
+            onOpenKey: onOpenKey.map { open in { actor in open(actor, lead, shared) } },
+            // The card read the ledger and spent it; the detail draws the
+            // answer (prd §479). Reading it there instead would erase the
+            // marker while it was being shown.
+            newKeyIDs: keyChanges?.added ?? [])
             .padding(.horizontal, DS.Space.s4)
     }
 
@@ -514,10 +548,21 @@ struct VibenetRoomCard: View {
                 // own section, which is scoped to that account and is a
                 // different reading from this room-wide one).
             } else {
-                Text(VibenetRoom.headline(room, now: .now))
-                    .dsText(.heading17)
-                    .foregroundStyle(DS.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
+                // THE EMPTY ROOM OFFERS A WAY OUT OF ITSELF (prd §479).
+                // "Nothing watched on vibenet yet" was a dead end on the one
+                // screen where somebody has arrived wanting to see something:
+                // the only route on was to leave, find the catalog, and open
+                // the setup screen. The discovery list that setup screen
+                // already draws works anywhere — it is keyless, needs no
+                // account, and watching from here lands rows in this very
+                // room.
+                VStack(alignment: .leading, spacing: DS.Space.s3) {
+                    Text(VibenetRoom.headline(room, now: .now))
+                        .dsText(.heading17)
+                        .foregroundStyle(DS.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    VibenetDiscoverySection(onWatched: {})
+                }
             }
 
             // The bottom-of-card provenance note (2026-08-23, moved off
@@ -586,28 +631,56 @@ struct VibenetRoomCard: View {
                     // `price48`, Wallet's crown rung — not `price40`. The two
                     // rooms state the same kind of reading and were stating it
                     // two sizes apart.
-                    Text("\(VibenetBalanceFormat.line(nativeTotal)) ETH")
+                    //
+                    // IT COUNTS UP ON ARRIVAL (prd §479). Watching your first
+                    // account drops you straight into this room (§465) and the
+                    // figure simply appeared — the one moment the room is
+                    // certain to be watched, spent on nothing. `numericText`
+                    // is the transition the app already owns (the unlock
+                    // countdown's own), so this is the house grammar rather
+                    // than a new effect: the crown mounts at zero and lands on
+                    // the real reading one runloop later.
+                    //
+                    // ONE SHOT and Reduce-Motion-aware: `counted` latches, so
+                    // a re-compose while somebody is reading never re-rolls
+                    // the number, and with Reduce Motion on the figure is
+                    // simply correct from the first frame.
+                    Text("\(VibenetBalanceFormat.line(counted ? nativeTotal : 0)) ETH")
                         .dsText(.price48)
                         .foregroundStyle(DS.textPrimary)
                         .monospacedDigit()
                         .lineLimit(1)
                         .minimumScaleFactor(0.6)
                         .padding(.top, 2)
+                        .contentTransition(.numericText())
+                        .task {
+                            guard !counted else { return }
+                            if reduceMotion { counted = true; return }
+                            // A runloop turn, so the zero really renders and
+                            // the change is a transition rather than the
+                            // initial value.
+                            try? await Task.sleep(nanoseconds: 40_000_000)
+                            withAnimation(.easeOut(duration: 0.55)) { counted = true }
+                        }
                 }
                 // THE MOVE, WITH ITS AMOUNT (§475). Wallet states the move as
                 // "▲ $224.51 (1.8%) today" — the figure FIRST, the percent in
                 // parentheses — and its own note says why: the percent alone
                 // cannot say how much, and the amount is what the reader is
                 // actually looking at on the line above.
-                if let change = VibenetValueHistory.delta(history),
-                   let move = VibenetValueHistory.move(history) {
+                if let change = VibenetValueHistory.delta(windowed),
+                   let move = VibenetValueHistory.move(windowed) {
                     HStack(spacing: 5) {
                         Image(systemName: change >= 0 ? "arrowtriangle.up.fill" : "arrowtriangle.down.fill")
                             .dsGlyph(9)
                         Text("\(VibenetBalanceFormat.line(abs(move))) ETH (\(VibenetBalanceFormat.percent(change)))")
                             .dsText(.callout15).fontWeight(.semibold)
                             .monospacedDigit()
-                        Text(String(localized: "since watching"))
+                        // The window's OWN name (prd §479) — the delta beside
+                        // it is computed over exactly this series, so a fixed
+                        // "since watching" beside a 1W move would be the two
+                        // disagreeing on screen.
+                        Text(range.sinceLine)
                             .dsText(.callout15)
                             .foregroundStyle(DS.textTertiary)
                     }
@@ -629,19 +702,142 @@ struct VibenetRoomCard: View {
                         .fixedSize(horizontal: false, vertical: true)
                         .padding(.top, 2)
                 }
-                if let series = VibenetValueHistory.series(history) {
+                if let series = VibenetValueHistory.series(windowed) {
                     TokenChartPlot(chart: TokenChart(closes: series,
                                                      price: series.last ?? 0,
-                                                     change: VibenetValueHistory.delta(history) ?? 0),
+                                                     change: VibenetValueHistory.delta(windowed) ?? 0),
                                    accent: TokenChartStyle.accent(
-                                       change: VibenetValueHistory.delta(history) ?? 0, scheme: scheme),
+                                       change: VibenetValueHistory.delta(windowed) ?? 0, scheme: scheme),
                                    // 120, Wallet's own height for this figure.
                                    height: 120, pulses: false,
                                    lineWidth: 2.6, fillOpacity: 0.24, endpointDot: true)
                         .padding(.top, DS.Space.s3)
+                    rangeStrip
                 }
                 accountChips
             }
+        }
+    }
+
+    /// ONE THING THAT NEEDS YOU (prd §479) — `VibenetAttention`'s lines, as
+    /// rows on a faint ground directly under the crown.
+    ///
+    /// A `fillFaint` capsule-ish group and NOT a `card`, deliberately: the
+    /// cards below are the room's readings and this is a notice about them,
+    /// so it wears the same weight `WalletWarningsStrip` does inside Wallet's
+    /// balance card rather than becoming a fifth card competing with them.
+    /// The hero above it is bare, so this is the first bounded shape on the
+    /// screen — which is the point.
+    ///
+    /// NO STATE COLOUR PER ROW. The room spends its one colour on expiry
+    /// urgency (§463) and a locked account is a state rather than an alarm;
+    /// grading these rows would teach a second, contradictory colour language
+    /// three points below the crown.
+    @ViewBuilder
+    private var attentionStrip: some View {
+        let lines = VibenetAttention.compose(room.items, now: .now)
+        if !lines.isEmpty {
+            VStack(alignment: .leading, spacing: 0) {
+                ForEach(Array(VibenetAttention.drawn(lines).enumerated()), id: \.element.id) { index, line in
+                    attentionRow(line)
+                        .chartArrival(index: index, reduceMotion: reduceMotion)
+                }
+                if let tail = VibenetAttention.tail(lines) {
+                    Text(tail)
+                        .dsText(.label11)
+                        .foregroundStyle(DS.textTertiary)
+                        .padding(.top, DS.Space.s2)
+                }
+            }
+            .padding(.horizontal, DS.Space.s3)
+            .padding(.vertical, DS.Space.s2)
+            .background(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous)
+                .fill(DS.fillFaint))
+        }
+    }
+
+    /// One line, and a DOOR to the thing it names — a notice you cannot act
+    /// on is the shape §471 already removed from the census once. A key line
+    /// scopes to its account (where that key's own row lives); an account
+    /// line scopes to the account; the unreached line is a plain read,
+    /// because "the network did not answer" has no destination.
+    @ViewBuilder
+    private func attentionRow(_ line: VibenetAttention.Line) -> some View {
+        switch line.subject {
+        case .key(let address, _), .account(let address):
+            if let onScope {
+                Button {
+                    DSHaptic.selection()
+                    onScope(address)
+                } label: { attentionRowBody(line, door: true) }
+                    .buttonStyle(.plain)
+                    .dsHover()
+            } else {
+                attentionRowBody(line, door: false)
+            }
+        case .unreached:
+            attentionRowBody(line, door: false)
+        }
+    }
+
+    private func attentionRowBody(_ line: VibenetAttention.Line, door: Bool) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+            Text(line.text)
+                .dsText(.subhead13)
+                .foregroundStyle(DS.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: DS.Space.s2)
+            if door {
+                Image(systemName: "chevron.right")
+                    .accessibilityHidden(true)
+                    .dsGlyph(11, weight: .semibold)
+                    .foregroundStyle(DS.textTertiary)
+            }
+        }
+        .padding(.vertical, DS.Space.s2)
+        .contentShape(Rectangle())
+    }
+
+    /// The samples the crown, the delta and the line all read (prd §479) —
+    /// ONE derivation, so the figure, its move and its curve can never
+    /// describe different windows.
+    private var windowed: [VibenetValueSample] {
+        VibenetValueHistory.windowed(history, range: range, now: .now)
+    }
+
+    /// HOW FAR BACK (prd §479) — drawn only where the book can actually
+    /// answer more than one span (`options` returns empty otherwise), so this
+    /// is never a row of chips redrawing one identical line.
+    ///
+    /// A neutral fill for the selection, never the room's mark: blue here
+    /// means a key is about to expire, and which window you are looking at is
+    /// not urgent.
+    @ViewBuilder
+    private var rangeStrip: some View {
+        let options = VibenetValueHistory.options(history, now: .now)
+        if options.count > 1 {
+            HStack(spacing: DS.Space.s2) {
+                ForEach(options, id: \.self) { option in
+                    let on = option == range
+                    Button {
+                        DSHaptic.selection()
+                        withAnimation(reduceMotion ? nil : DS.Motion.standard) { range = option }
+                    } label: {
+                        Text(option.label)
+                            .dsText(.label12).fontWeight(.semibold)
+                            .foregroundStyle(on ? DS.textPrimary : DS.textTertiary)
+                            .padding(.horizontal, DS.Space.s3)
+                            .padding(.vertical, 6)
+                            .background(Capsule(style: .continuous)
+                                .fill(on ? DS.fillStrong : Color.clear))
+                            .contentShape(Capsule())
+                    }
+                    .buttonStyle(PressSpring())
+                    .dsHover()
+                    .accessibilityAddTraits(on ? [.isSelected] : [])
+                }
+            }
+            .padding(.top, DS.Space.s2)
         }
     }
 
@@ -753,7 +949,7 @@ struct VibenetRoomCard: View {
                     // The last ROW is only the last thing in the card when
                     // there are no links folded under it — otherwise its
                     // separator is what joins the roster to the disclosure.
-                    accountRow(item, isLast: index == drawn.count - 1 && links.isEmpty)
+                    accountRow(item)
                 }
                 if !links.isEmpty { linkedDisclosure(links) }
             }
@@ -821,26 +1017,28 @@ struct VibenetRoomCard: View {
                     .padding(.top, DS.Space.s2)
             }
         }
-        .overlay(alignment: .top) {
-            Rectangle().fill(DS.fillFaint).frame(height: 1)
-        }
+        // NO RULE ABOVE IT (user, 2026-08-25: *"do NOT USE HAIRLINES"*). This
+        // one drew a line across the whole card to mark where the roster ended
+        // and the disclosure began; `s2` of air says the same thing, and §8
+        // says it is the only thing allowed to.
+        .padding(.top, DS.Space.s2)
     }
 
     @ViewBuilder
-    private func accountRow(_ item: VibenetAccountItem, isLast: Bool) -> some View {
+    private func accountRow(_ item: VibenetAccountItem) -> some View {
         if let onScope {
             Button {
                 DSHaptic.selection()
                 onScope(item.address)
-            } label: { accountRowBody(item, isLast: isLast, door: true) }
+            } label: { accountRowBody(item, door: true) }
                 .buttonStyle(.plain)
                 .dsHover()
         } else {
-            accountRowBody(item, isLast: isLast, door: false)
+            accountRowBody(item, door: false)
         }
     }
 
-    private func accountRowBody(_ item: VibenetAccountItem, isLast: Bool, door: Bool) -> some View {
+    private func accountRowBody(_ item: VibenetAccountItem, door: Bool) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: DS.Space.s3) {
                 WalletFace(address: item.address, size: DS.Face.rowCircle, circular: true)
@@ -894,12 +1092,12 @@ struct VibenetRoomCard: View {
                 }
             }
         }
-        .padding(.vertical, DS.Space.s2)
-        .overlay(alignment: .bottom) {
-            if !isLast {
-                Rectangle().fill(DS.fillFaint).frame(height: 1)
-            }
-        }
+        // NO SEPARATOR (user, 2026-08-25: *"do NOT USE HAIRLINES"*) — §8's
+        // no-line rule has zero exceptions, and a one-point `fillFaint`
+        // rectangle is a hairline whatever the comment beside it called it.
+        // `s3` in its place: air is what this design system separates rows
+        // with, and at `s2` the rows were relying on the line to be a list.
+        .padding(.vertical, DS.Space.s3)
         .contentShape(Rectangle())
     }
 
@@ -988,26 +1186,33 @@ struct VibenetRoomCard: View {
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.top, 2)
         }
-        // THE CENSUS, AS ITS OWN GROUP AND AS DOORS (prd §471).
+        // THE CENSUS SITS ON THE CARD, NOT IN A BOX ON IT (2026-08-25, prd
+        // §478, reported: "cards in cards").
         //
-        // Six permission rows loose in the card, at `.padding(.vertical, 5)`
-        // — 36pt tall, under the 44pt hit floor — were the densest thing on
-        // this screen and the reason it read as "tightly packed". They sit on
-        // one `fillFaint` group now, so a census reads as a container rather
-        // than as a run of sentences, and each row is its own 46pt door into
-        // the tray AT THAT PERMISSION: "Send anywhere · 4" is the one shape
-        // of fact you cannot act on, and the follow-up it wants is those four
-        // keys, not the whole roster.
+        // §471 put these six rows on their own `fillFaint` radius-14 group,
+        // and its reasoning was about DOORS: each row was "its own 46pt door
+        // into the tray AT THAT PERMISSION", so the group was the container
+        // those six destinations sat in. **§476 then deleted the doors** —
+        // "they all go to the same place" — and the container outlived the
+        // thing it was containing: a rounded fill inside a rounded card,
+        // holding six plain reads, indented from the headline they belong to.
+        //
+        // A card IS a container. These rows are what this card is about, so
+        // they sit on it directly, at the same left edge as the headline
+        // above them, separated by the faint fill every other row group in
+        // this room already uses. Nothing is lost but the second box: the
+        // rows, their order and their separators are untouched.
+        //
+        // The 44pt hit floor §471 cites is not a claim on this block any
+        // more either — these rows are reads, not targets.
         let policies = VibenetPolicyAggregation.compose(room.items)
         if !policies.isEmpty {
             VStack(alignment: .leading, spacing: 0) {
                 ForEach(Array(policies.enumerated()), id: \.offset) { index, entry in
-                    policyRow(entry, isLast: index == policies.count - 1)
+                    policyRow(entry)
                         .chartArrival(index: index, reduceMotion: reduceMotion)
                 }
             }
-            .padding(.horizontal, DS.Space.s3)
-            .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(DS.fillFaint))
             .padding(.top, DS.Space.s3)
         }
         // WHAT THE CENSUS COULD NOT COUNT. A footnote and never a row — see
@@ -1032,7 +1237,7 @@ struct VibenetRoomCard: View {
         if let onOpenKeys {
             Button {
                 DSHaptic.selection()
-                onOpenKeys()
+                onOpenKeys(keyChanges?.added ?? [])
             } label: {
                 HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
                     Text(aggregate.countHeadline)
@@ -1075,11 +1280,11 @@ struct VibenetRoomCard: View {
     ///
     /// ONE DOOR NOW: the card's headline. These rows are what the door is
     /// ABOUT, and a census reads as a census rather than a menu.
-    private func policyRow(_ entry: VibenetPolicyCount, isLast: Bool) -> some View {
-        policyRowBody(entry, isLast: isLast)
+    private func policyRow(_ entry: VibenetPolicyCount) -> some View {
+        policyRowBody(entry)
     }
 
-    private func policyRowBody(_ entry: VibenetPolicyCount, isLast: Bool) -> some View {
+    private func policyRowBody(_ entry: VibenetPolicyCount) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
             Text(entry.label)
                 .dsText(.body17)
@@ -1091,15 +1296,9 @@ struct VibenetRoomCard: View {
                 .foregroundStyle(DS.textSecondary)
                 .monospacedDigit()
         }
+        // NO SEPARATOR (user, 2026-08-25: *"do NOT USE HAIRLINES"*) — §8 has
+        // zero exceptions and a one-point fill is a line.
         .padding(.vertical, DS.Space.s2)
-        // A separator between rows and never under the last one — a FILL at
-        // the faintest rung, which is what this design system draws instead
-        // of a hairline (§8: nothing strokes a line).
-        .overlay(alignment: .bottom) {
-            if !isLast {
-                Rectangle().fill(DS.fillFaint).frame(height: 1)
-            }
-        }
         .contentShape(Rectangle())
     }
 
@@ -1124,7 +1323,7 @@ struct VibenetRoomCard: View {
     private func expiryFooter(_ aggregate: VibenetKeyAggregate) -> some View {
         if let shelf = VibenetKeyShelf.compose(room.items, now: .now) {
             VStack(alignment: .leading, spacing: 0) {
-                Text(String(localized: "Keys that lapse"))
+                Text(String(localized: "Keys expiring"))
                     .dsText(.label12)
                     .foregroundStyle(DS.textTertiary)
                 VStack(alignment: .leading, spacing: 9) {

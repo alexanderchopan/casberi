@@ -155,6 +155,10 @@ or by description rather than by `§N`.
 | §435 (the sky) | a connected body pulled toward the centre from its wallets' midpoint, links bowed toward the centre, and a caption pairing the connected count with the book's size | §436 — the caption states the count alone (connected is a counterparty, never a subset of the book); §437 — connected bodies sit on their own ring at the angle between the wallets they reach, and links are straight |
 | §436 (the twin ring) | a twin cluster as a small ring built on the shared midpoint | §437 — twins spread along the connected ring they already sit on; neighbouring twins are still exactly one `twinSpread` apart, so the density ruling stands |
 | §437 (two-wallet placement) | a two-wallet sky's bodies separated at the minimum step, and no ring stroke drawn | §438 — at two wallets the bodies distribute evenly around the whole connected ring (a bearing carries no information there), and both rings are drawn |
+| §468 (the key tray's shape) | the tray groups BY PERMISSION — a heading per permission, a key repeated under each one it holds, with an "Also:" sentence naming its others | §478 — one row per key, A–Z, permissions as chips on the row, the census demoted to a filter strip. The QUESTION §468 asked ("which keys are in which category") is unchanged and still answered; only the axis flipped. |
+| §471 (the census group, the tray's row group) | the six permission rows and the tray's rows each sit on their own `fillFaint` radius-14 fill, so a census "reads as a container" | §478 — the card and the sheet ARE the containers; the inner fill was justified by the rows being doors, and §476 deleted the doors |
+| §470 (a tray row's tap) | a key row in the tray SCOPES the room to that key's account | §479 — the row opens the KEY (§478 gave it a sheet) and the scope is a door inside that sheet, so one key has one tap outcome on every surface; the follow-up moved rather than being deleted |
+| §471 / §463 (row separators) | rows divided by `Rectangle().fill(DS.fillFaint).frame(height: 1)`, described in-source as "a FILL at the faintest rung… nothing strokes a line" | §478 — user: *"do NOT USE HAIRLINES"*. §8 has zero exceptions and a one-point fill is a line; rows are separated by air, and `vibenet-selftest.sh` fails the build on the shape |
 
 ### Renumbered entries
 
@@ -33358,3 +33362,252 @@ TWO-section guard plus a negative on the third, and §474's margin guard follows
 jitter is the one item with a before and after that a person can feel, and it
 has now been "fixed" twice by reading rather than profiling. If it survives
 this pass too, the next step is an Instruments trace rather than a third guess.
+
+## 478. The keys stop being a census you decode and become a list you scan — plus the two rules the room had been quietly breaking (user: "how would you improve the UI of the vibenet experience, more like robinhood or apple… we have the bones right, but it still looks poor. cards in cards, inline expanding in weird ways and so on… I want the vibenet expereince to feel like a tool you can move through quickly to see information like the keys", then "ok, do it", then "can you make sure instead of 'lapsing' you say 'expiring'", then "hey also in your version i see harilines" / "do NOT USE HAIRLINES", then "perhaps for policies like send anywhere pay own gass etc they should be chips instead of like a sentence", 2026-08-25)
+
+Two Apple-grammar and two Robinhood-grammar artboards were drawn before any
+code changed, and the diagnosis they produced is that **the room's contents
+were right and three of its containers were wrong** — which is §467's own
+finding ("the diagnosis was in the CONTAINER, not the contents") reaching one
+level further in than that pass did.
+
+### 1. THE KEY TRAY IS ONE ROW PER KEY (supersedes §468's sections)
+
+§468 built the tray as sections — a heading per permission, a key listed under
+each one it holds, an "Also:" sentence naming the rest — and it answered its
+question from the PERMISSION's side. The cost is structural rather than
+cosmetic and is visible in the tray's own footnote: **a card reading "8 keys"
+opened a list of fourteen rows**, and that sentence existed to explain the
+discrepancy away. One key holding three bits was three rows, each reading
+slightly differently, so the question somebody actually opens this screen with
+— *what can THIS key do, and when does it expire?* — was the one you had to
+assemble by scrolling.
+
+The roster is the key's own list now: alphabetical (§463's ruling, *"the keys
+could just be listed in alphabetical order then we aren't making some
+judgement call"*), one row each, its permissions as CHIPS on the row.
+**Nothing §468 asked to see has been removed** — the permission is still on
+every row, and the census survives as a FILTER STRIP at the top, so "which
+keys are in which category" is one tap rather than a scroll. What changed is
+that the row count now equals the key count.
+
+**It is also §463's grammar, finally shared.** `VibenetAccountDetail` has
+drawn a key as title + chips since that day; the tray drew the same object as
+a sentence under a heading. One key was two different-looking things depending
+on which surface you found it on.
+
+**The invariant survives its sections, and that is the load-bearing part.**
+§468's stated rule was that the tray and the card must never disagree about a
+number, because two derivations of one grouping drift. `VibenetKeyTray.census`
+therefore FORWARDS `VibenetPolicyAggregation.compose` rather than re-deriving
+it, and `holds(_:permission:)` is the one membership test both the strip's
+counts and the strip's filtering read — so a chip saying 4 can never show 3.
+Harness-proven in both directions.
+
+**A key holding only reserved bits now appears.** Under sections it was in no
+section at all — counted in the footnote, drawn nowhere, which is the §83
+shape (a fact stated and then withheld). In a roster it is simply a row, with
+its `+N unknown` chip.
+
+### 2. NO HAIRLINES, AND THE COMMENT WAS THE TELL
+
+Reported bluntly: *"do NOT USE HAIRLINES."* Four sites drew
+`Rectangle().fill(DS.fillFaint).frame(height: 1)` between rows, and **every
+one of them carried a comment saying it was not a hairline** — "a FILL at the
+faintest rung, which is what this design system draws instead of a hairline
+(§8: nothing strokes a line)". That is a rationalisation, and re-reading §8
+settles it: the rule is *no hairlines — zero exceptions*, and it is about what
+is DRAWN, not about which API draws it. A one-point rectangle is a line.
+
+Gone from the census rows, the account rows, the linked-accounts disclosure
+and every tray row. `DS.Space` in their place — the account rows went `s2` →
+`s3`, because at `s2` they were relying on the line to read as a list.
+Mechanical now: `vibenet-selftest.sh` fails the build on `frame(height: 1)` in
+either file. **Its own first run fired on the comment explaining the rule** —
+the Obsidian/Cursor lesson again, so the guard reads a comment-stripped copy.
+
+### 3. THE CENSUS SITS ON THE CARD (supersedes §471's group)
+
+§471 put the six permission rows on their own `fillFaint` radius-14 fill, and
+its argument was about DOORS: each row was "its own 46pt door into the tray AT
+THAT PERMISSION", so the group was the container those six destinations lived
+in. **§476 then deleted the doors** — *"they all go to the same place"* — and
+the container outlived the thing it contained: a rounded fill inside a rounded
+card, indented from the headline it belongs to, holding six plain reads. This
+is the literal "cards in cards" of the report. A card IS a container; the rows
+are what the card is about, so they sit on it, at the headline's own left
+edge. Same rows, same order, one less box. The tray's identical group went the
+same way for the same reason.
+
+### 4. "EXPIRING", NOT "LAPSING"
+
+User's own word. `"Keys that lapse"` → `"Keys expiring"`, and
+`VibenetKeyShelf.tailLine`'s `"1 lapses later"` → `"1 expires later"`. It also
+matches the noun every other surface already uses (`expiryLabel`,
+`expiryStanding`, the event sheet's "Expires" row), so the room had been
+teaching two words for one fact.
+
+### 5. THE LAST INLINE EXPANDER, CLOSED (same session, on "lets continue")
+
+`VibenetAccountDetail.keyRow` was §473's disclosure: tapping the card rotated
+a chevron and grew the row in place — terms on a `fillFaint` radius-12 box
+INSIDE the key's own card (both §478 defects at once), origin, the full id.
+**`Screens/VibenetKeySheet.swift` is that depth as a presentation**: the terms
+as plain label/value rows on the sheet's own plane, the origin, the full
+selectable id, and §470's copy verbs as visible doors instead of a context
+menu somebody has to know to long-press for. The row keeps exactly what a
+list is for — kind, id tail, chips, clock — and its chevron is gated on the
+door existing (§83).
+
+The wiring is the tray's own: the detail takes an `onOpenKey` closure and
+never presents (it lives inside `FeedScreen`'s List rows — the
+half-open-then-close class); `FeedScreen` carries a `vibenetKey` route on its
+single sheet, and `VibenetAccountSheet` — its own presentation host — nests
+the sheet locally. All value types captured at tap time.
+
+**Flattened in the same motion:** `spokeRow`/`subAccountRow` wore their own
+`dsWidgetSurface(fillOpacity: 0.5)` INSIDE `linkedCard`/`subAccountsCard` —
+cards in cards, and the half-opacity fill was §471's own named defect ("a 3%
+lift, a stain rather than a surface") shipped again the week it was written
+down. They are flat rows on their card now.
+
+### What was deliberately NOT changed
+
+- **The expiry shelf keeps its bars** (§471, a user pick of three candidates).
+  It is a figure, not a container, and it says something rows cannot: where
+  several keys sit relative to each other on one fixed 90-day scale.
+- **Linked accounts keeps its tap-to-expand** (§477) — that disclosure is the
+  user's own design, arrived at after reversing themselves twice, and it costs
+  one row when shut. The mockups show the door alternative; it is a decision,
+  not a defect.
+
+**UNMEASURED on a device.** Every change here is layout and copy; the harness
+proves the roster's arithmetic, the census forwarding and the filter's
+agreement with it, and proves no hairline is drawn — it cannot prove the room
+reads better, which is the claim being made.
+
+
+## 479. The room gets a first line, a window, and four moments (user: "how else would you improve the overall UI, make it more consumer friendly, colorful if needed and add surprise and delight", then "i don't want a hue, but do ALL the other things you mentioned / at the same time, we need to make sure the Mac experience doesn't suffer while we improve mobile, just keep that in mind. / also need to make sure the demo version has parity", 2026-08-25)
+
+Casberi already owns a delight grammar — berry rain, coin flips, the star
+flight (§441), staged arrivals, the receipt tear (§369), count-up numerals —
+and **vibenet used almost none of it**, which is why it read as the most
+engineer-brained room in the app. So almost nothing here is invented: it is
+this room finally speaking the house language.
+
+**A per-account identity hue was proposed and REFUSED by the user.**
+`WalletFace.tint(for:)` computes a stable hue per address and vibenet has
+never used it; pouring it into the crown on a scoped account would have made
+each account visually its own room, the way §297 re-tints a scoped wallet.
+Declined ("i don't want a hue"), and worth recording because the room's
+colour scarcity is now a decision twice over rather than an omission: **Base
+blue still means one thing here, a key about to expire.**
+
+### 1. ONE THING THAT NEEDS YOU, ABOVE EVERYTHING (`VibenetAttention`)
+
+The room's urgency was spread across four surfaces and none of them was first:
+an expiring key sat in the Keys card's FOOTER (below an eyebrow, a headline
+and a census), "Locked" was a pill on an Accounts row, an unlock countdown was
+that row's subtitle, and an unreached read was a footnote under the crown. The
+question a person opens this room with — *is anything wrong?* — took a scroll
+and four readings.
+
+Wallet's own "Worth a look" (§212), applied here: what's it worth and is it
+okay are the two questions one glance asks. Same three rules, deliberately —
+**silent when there is nothing to say** (no all-clear, which an unreached read
+could not honestly support anyway), **it never invents urgency** (every line
+is a fact another surface already states, composed from the same accessors so
+the two cannot drift), and **it states rather than grades** (no per-row
+severity colour; the room spends its one colour elsewhere).
+
+RANKED, and the order is the argument: a key inside `urgencyWindow` (something
+you can lose by ignoring) → an account mid-unlock (a state WITH a clock) →
+merely locked (a state) → **the unreached read LAST**, because a network
+problem is about us rather than about the account, and promoting it above a
+key expiring tomorrow would be the strip grading its own failure as the
+reader's most urgent business. Capped at three with the remainder COUNTED, and
+every line is a door to the thing it names.
+
+### 2. HOW FAR BACK THE CURVE LOOKS (`VibenetChartRange`)
+
+`VibenetValueStore` has kept real per-account history since §467 and the chart
+only ever drew the whole book. `1W / 1M / All` windows the samples already on
+disk — **it never resamples, interpolates or invents a point between two
+looks** — and the crown's move is computed over exactly the windowed series,
+with the subline naming that window (`sinceLine`), so the figure and the line
+can never describe different spans.
+
+**A range is offered only when it would draw a DIFFERENT line** (`options`):
+its own window must hold two readings AND the book must reach past it, or
+"1W", "1M" and "All" are three chips redrawing one line — §83's dead control
+wearing a time label. Below that the strip does not draw at all. Both the room
+and the scoped account get it, from one recipe, so the two surfaces do not
+answer one question differently.
+
+### 3. THE MOMENTS
+
+- **The unlock lands.** The countdown has ticked per second since §472 and
+  crossing zero did nothing but swap in a sentence — the one moment in this
+  room somebody might genuinely sit and wait for. The bar fills and STAYS, the
+  words land on the press spring, and one haptic fires exactly once (`landed`
+  latches; a `TimelineView` re-evaluates every second and an unguarded haptic
+  would buzz once a second forever). **`DSHaptic.tap`, never `success`** — this
+  app reserves `success` for a WRITE's outcome fired through
+  `ShellChrome.flash(tone:)` so the buzz and the toast naming it cannot drift
+  apart, and nothing was written here: a delay elapsed on the chain.
+- **The crown counts up** on arrival, once, via the numeric transition the app
+  already owns. Watching your first account drops you straight into this room
+  (§465) and the figure simply appeared — the one moment the room is certain
+  to be watched, spent on nothing.
+- **A new key is findable.** The card has said "1 new" since §471 and nothing
+  on any screen could say WHICH — a count you cannot locate, which is the
+  shape §471 itself objected to on the census. A "New" chip in the card's own
+  grammar, on both the detail and the tray, plus a one-shot wash on arrival.
+  **The set travels with the request** (`onOpenKeys` takes it): the card reads
+  the seen-ledger and SPENDS it, so a tray re-reading would mark nothing while
+  the card beside it says "1 new".
+- **The spine lights.** The address book's own §441 behaviour ("a tapped spine
+  node LIGHTS its own ribbons for 240ms before the sheet covers them"), on the
+  spine that is the same drawing and did not have it. §295's same-weight
+  ruling is intact: a transient answer to a gesture, never a claim about which
+  relationship matters.
+
+### 4. THE EMPTY ROOM OFFERS A WAY OUT OF ITSELF
+
+"Nothing watched on vibenet yet" was a dead end on the one screen where
+somebody has arrived wanting to see something — the only route on was to
+leave, find the catalog and open setup. `VibenetDiscoverySection` is keyless,
+needs no account and works anywhere, so it draws right there.
+
+### 5. A TRAY ROW OPENS THE KEY (supersedes §470's scope-on-tap)
+
+§470 made a tray row scope the room, which was right when a key had nowhere of
+its own to open. §478 gave it one, and the same object then had two different
+tap outcomes depending on which surface you found it on. The row opens the key
+now and **§470's follow-up moved INSIDE it** as an account door, rather than
+being deleted.
+
+### Mac, and the demo — the two constraints named with the request
+
+**Mac Catalyst was a build gate, not a hope**: green, and everything new
+routes through `DS.Space` (already tighter on Catalyst by its own ruling),
+every new control carries `.dsHover()`, and `DSHaptic` is a no-op there by
+construction, so the landing degrades to its visual without a platform branch.
+
+**Demo parity found two real gaps, both of the "unreachable by construction"
+class `demo-selftest` exists for.** The demo's balance curve spanned **52
+hours** while its own comment claimed "a fortnight" (fourteen points four
+hours apart — arithmetic nobody had checked, harmless while the chart had one
+fixed window and fatal the moment `options` tested how far the book reaches),
+so the demo would have drawn no range strip at all while a real month-old room
+drew three chips; it is 30 readings at 36h now, ~45 days. And the demo's
+unlocking account was pinned to **`4_102_444_800` — the year 2100** — so the
+landing above could never occur in the one place the feature gets
+demonstrated; it is ninety seconds out, computed live like every other date in
+that fixture, so somebody who sits on that account in the demo watches a
+timelock open.
+
+**UNMEASURED on a device.** Every moment here is time- or gesture-driven and
+no static check can exercise one: the harness proves the ranking, the cap, the
+windowing and which ranges are offered — including that the demo's own curve
+can draw the strip — and cannot prove any of it feels right.

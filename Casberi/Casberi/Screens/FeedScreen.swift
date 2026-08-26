@@ -386,7 +386,12 @@ struct FeedScreen: View {
         /// land under an open tray, and a tray that re-read mid-presentation
         /// would renumber itself while being looked at. Value types
         /// throughout, so no `Thing` and no liveness question.
-        case vibenetKeys([VibenetAccountItem])
+        case vibenetKeys([VibenetAccountItem], newKeyIDs: Set<String>)
+        /// One key's own sheet (prd §478) — the scoped vibenet account's key
+        /// rows present rather than expand in place. Actor + the account it
+        /// acts for + the room-wide shared-key facts, all value types
+        /// captured at tap time, the `vibenetKeys` reasoning exactly.
+        case vibenetKey(VibenetActor, VibenetAccountItem, [VibenetSharedKey])
 
         var id: String {
             switch self {
@@ -400,6 +405,8 @@ struct FeedScreen: View {
             case .nftPicks(let address, _): "nftPicks:\(address)"
             case .person(let source, let handle): "person:\(source):\(handle)"
             case .vibenetKeys: "vibenetKeys"
+            case .vibenetKey(let actor, let item, _):
+                "vibenetKey:\(VibenetKeySeenDiff.keyID(address: item.address, actorId: actor.actorId))"
             }
         }
     }
@@ -2368,7 +2375,7 @@ struct FeedScreen: View {
                     source: source, handle: handle,
                     displayName: nil, bio: nil, avatarURL: nil))
             }
-        case .vibenetKeys(let items):
+        case .vibenetKeys(let items, let newKeyIDs):
             // A tapped key SCOPES THE ROOM to its account (prd §470),
             // which is the follow-up the tray previously dead-ended on.
             //
@@ -2383,10 +2390,17 @@ struct FeedScreen: View {
             // No animation on the scope write, deliberately: the room is
             // behind a dismissing sheet, so an animation animates
             // something nobody can see and lands mid-transition.
-            VibenetKeyTraySheet(items: items, onPick: { address in
-                feedSheet = nil
-                chrome.vibenetScope = address
-            })
+            VibenetKeyTraySheet(items: items,
+                                onPick: { address in
+                                    feedSheet = nil
+                                    chrome.vibenetScope = address
+                                },
+                                // The same new-key set the room card read and
+                                // spent, so a key marked "New" on the card's
+                                // own detail is marked here too (prd §479).
+                                newKeyIDs: newKeyIDs)
+        case .vibenetKey(let actor, let item, let shared):
+            VibenetKeySheet(actor: actor, item: item, sharedKeys: shared)
         }
     }
 
@@ -3145,7 +3159,12 @@ struct FeedScreen: View {
                     // everyone's — the same "click all you see all" rule the
                     // cards above it follow.
                     VibenetRoomCard(room: room, onRemove: { _ in },
-                                    onOpenKeys: { feedSheet = .vibenetKeys(room.items) },
+                                    onOpenKeys: { newKeyIDs in
+                                        feedSheet = .vibenetKeys(room.items, newKeyIDs: newKeyIDs)
+                                    },
+                                    onOpenKey: { actor, item, shared in
+                                        feedSheet = .vibenetKey(actor, item, shared)
+                                    },
                                     onScope: vibenetScoper)
                 case .altana(let card):
                     AltanaRoomCard(card: card) {

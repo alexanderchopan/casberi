@@ -37,6 +37,13 @@ struct VibenetLinkSpine: View {
     var onPick: ((String) -> Void)? = nil
     let reduceMotion: Bool
 
+    /// The node whose ribbons are lit (prd §479) — set for a beat on tap and
+    /// cleared before the destination opens. `@State`, so it cannot outlive
+    /// the view; a light that survived the gesture would be a ranking.
+    @State private var lit: String?
+
+    private static let mark = DS.brandHue(for: "Base Vibenet") ?? Color.fixed("#0052ff")
+
     /// Row pitch. Tall enough that two adjacent faces read as separate nodes
     /// and tight enough that four links stay inside a card.
     private static let pitch: CGFloat = 34
@@ -87,8 +94,35 @@ struct VibenetLinkSpine: View {
     /// rather than as a connection.
     @ViewBuilder
     private func ribbons(leftX: CGFloat, rightX: CGFloat) -> some View {
+        // TWO PASSES: every ribbon at rest, then the tapped node's own on top
+        // (prd §479). The address book's spine has answered a tap this way
+        // since §441 — "a tapped spine node LIGHTS its own ribbons for 240ms
+        // before the sheet covers them" — and this spine, which is the same
+        // drawing, did not. Free consistency, and it answers the one question
+        // a tap on a node raises: which of these lines was I just told about?
+        //
+        // §295's same-weight ruling is intact: the light is a TRANSIENT answer
+        // to a gesture, not a claim that one relationship matters more. At
+        // rest every ribbon is identical, exactly as before.
+        ZStack {
+            ribbonPath(leftX: leftX, rightX: rightX, only: nil)
+                .stroke(DS.fillLine, style: StrokeStyle(lineWidth: 1, lineCap: .round))
+            if let lit {
+                ribbonPath(leftX: leftX, rightX: rightX, only: lit)
+                    .stroke(Self.mark.opacity(0.9),
+                            style: StrokeStyle(lineWidth: 1.6, lineCap: .round))
+                    .transition(.opacity)
+            }
+        }
+    }
+
+    /// The ribbons, or just the ones touching one address.
+    private func ribbonPath(leftX: CGFloat, rightX: CGFloat, only address: String?) -> Path {
         Path { path in
             for link in links {
+                if let address,
+                   link.from.caseInsensitiveCompare(address) != .orderedSame,
+                   link.to.caseInsensitiveCompare(address) != .orderedSame { continue }
                 guard let fromRow = index(of: link.to, in: actors),
                       let toRow = index(of: link.from, in: accounts) else { continue }
                 let start = CGPoint(x: leftX - 6, y: rowCentre(fromRow))
@@ -100,7 +134,6 @@ struct VibenetLinkSpine: View {
                               control2: CGPoint(x: end.x - run * 0.55, y: end.y))
             }
         }
-        .stroke(DS.fillLine, style: StrokeStyle(lineWidth: 1, lineCap: .round))
     }
 
     @ViewBuilder
@@ -127,7 +160,21 @@ struct VibenetLinkSpine: View {
             if let onPick {
                 Button {
                     DSHaptic.selection()
-                    onPick(address)
+                    // LIGHT, THEN GO (prd §479, §441's own order): the beat
+                    // happens before the sheet covers the drawing, so there is
+                    // something to have seen. Reduce Motion skips straight to
+                    // the destination — a light that cannot fade is a light
+                    // that stays on.
+                    if reduceMotion {
+                        onPick(address)
+                    } else {
+                        withAnimation(.easeOut(duration: 0.12)) { lit = address }
+                        Task {
+                            try? await Task.sleep(nanoseconds: 240_000_000)
+                            withAnimation(.easeOut(duration: 0.2)) { lit = nil }
+                            onPick(address)
+                        }
+                    }
                 } label: {
                     nodeBody(address, emphasised: emphasised).contentShape(Rectangle())
                 }

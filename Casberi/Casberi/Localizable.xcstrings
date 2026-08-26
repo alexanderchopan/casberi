@@ -4327,6 +4327,34 @@
         }
       }
     },
+    "%@ is locked" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ está bloqueada"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ はロック中です"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@이(가) 잠김"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 已锁定"
+          }
+        }
+      }
+    },
     "%@ is new." : {
       "localizations" : {
         "es" : {
@@ -5365,6 +5393,40 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "%@（%@）"
+          }
+        }
+      }
+    },
+    "%@ on %@ — %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ on %2$@ — %3$@"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ en %2$@ — %3$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%2$@ の %1$@ — %3$@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%2$@의 %1$@ — %3$@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%2$@ 上的 %1$@ — %3$@"
           }
         }
       }
@@ -11349,6 +11411,34 @@
         }
       }
     },
+    "%lld expire later" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld caducan más adelante"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld 件はそれ以降に失効"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld개는 이후에 만료"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld 个稍后过期"
+          }
+        }
+      }
+    },
     "%lld fail" : {
       "localizations" : {
         "es" : {
@@ -12751,6 +12841,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "%lld 个赞"
+          }
+        }
+      }
+    },
+    "%lld linked accounts" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld cuentas vinculadas"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "リンクされたアカウント %lld 件"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "연결된 계정 %lld개"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld 个关联账户"
           }
         }
       }
@@ -20262,6 +20380,34 @@
         }
       }
     },
+    ", across %lld accounts" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : ", en %lld cuentas"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "、%lld アカウントにわたって"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : ", %lld개 계정에 걸쳐"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "，分布在 %lld 个账户"
+          }
+        }
+      }
+    },
     ", last seen down ~$%@" : {
       "localizations" : {
         "es" : {
@@ -21136,6 +21282,34 @@
         }
       }
     },
+    "1 expires later" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1 caduca más adelante"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1 件はそれ以降に失効"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1개는 이후에 만료"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1 个稍后过期"
+          }
+        }
+      }
+    },
     "1 fake token symbol" : {
       "localizations" : {
         "es" : {
@@ -21664,6 +21838,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "1 项逾期"
+          }
+        }
+      }
+    },
+    "1 linked account" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1 cuenta vinculada"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "リンクされたアカウント 1 件"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "연결된 계정 1개"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1 个关联账户"
           }
         }
       }
@@ -23680,6 +23882,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "14 个赞 · 3 次转发"
+          }
+        }
+      }
+    },
+    "1M" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1M"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1か月"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1개월"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1个月"
+          }
+        }
+      }
+    },
+    "1W" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1S"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1週"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1주"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1周"
           }
         }
       }
@@ -50193,6 +50451,34 @@
         }
       }
     },
+    "Keys expiring" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Claves que caducan"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "失効するキー"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "만료되는 키"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "将失效的密钥"
+          }
+        }
+      }
+    },
     "Keys now" : {
       "localizations" : {
         "es" : {
@@ -55766,6 +56052,34 @@
         }
       }
     },
+    "New" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Nueva"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "新規"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "신규"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "新增"
+          }
+        }
+      }
+    },
     "New %@ authorized" : {
       "localizations" : {
         "es" : {
@@ -57548,6 +57862,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "所关注账户中没有任何密钥拥有此版本能够命名的权限。"
+          }
+        }
+      }
+    },
+    "No key on a watched account was read." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No se leyó ninguna clave en las cuentas que sigues."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "追跡中のアカウントでキーを読み取れませんでした。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "추적 중인 계정에서 키를 읽지 못했습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "未读取到所关注账户的任何密钥。"
           }
         }
       }
@@ -98937,6 +99279,34 @@
         }
       }
     },
+    "and 1 more" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "y 1 más"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ほか 1 件"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "외 1개"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "还有 1 项"
+          }
+        }
+      }
+    },
     "arrives %@" : {
       "localizations" : {
         "es" : {
@@ -103380,6 +103750,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "支付方式"
+          }
+        }
+      }
+    },
+    "past month" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "el último mes"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "過去1か月"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "지난 달"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "过去一个月"
+          }
+        }
+      }
+    },
+    "past week" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "la última semana"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "過去1週間"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "지난 주"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "过去一周"
           }
         }
       }
