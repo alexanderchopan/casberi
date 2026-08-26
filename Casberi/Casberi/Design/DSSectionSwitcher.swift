@@ -1,0 +1,161 @@
+import SwiftUI
+
+/// What a room's scope control needs of a scope (prd §483, 2026-08-26).
+///
+/// Deliberately tiny, and deliberately NOT tied to any one room's enum: Wallet
+/// and Vibenet arrived at the same control within a day of each other with
+/// completely different vocabularies — `Activity · Holdings · Positions · NFTs
+/// · Risk · Permissions` against `Holdings · Recent · Accounts · Keys` — which
+/// is the shape that says the control is generic and the words are not.
+///
+/// Conform in the room's own layer, never on the model type itself: both scope
+/// enums are Foundation-only so their rules can be compiled WHOLE by a
+/// `swiftc` harness, and a SwiftUI protocol on the declaration would end that.
+/// A bare `extension X: DSSectionScope {}` beside the call site costs nothing
+/// and keeps the harness door open.
+protocol DSSectionScope: Identifiable, Hashable {
+    /// The chip's word. Short nouns — a scope strip that scrolls because its
+    /// labels are sentences is a strip nobody reads (user ruling, 2026-08-26:
+    /// *"we can't really have the sections we what you hold etc b/c they are
+    /// too long"*).
+    var label: String { get }
+    /// What the scope holds, for the accessibility label and the tooltip.
+    /// Short nouns are learnable but not self-explaining, and one of Wallet's
+    /// ("Permissions") must not read as an app-settings screen when what sits
+    /// behind it is ranked by the dollars somebody can take right now (§292).
+    var summary: String { get }
+}
+
+extension DSSectionScope {
+    /// A room with nothing more to say than the word itself. Defaulted so a
+    /// room adopting this control is never forced to invent a second string
+    /// per scope just to satisfy the protocol — an invented one would be worse
+    /// than the label repeated.
+    var summary: String { label }
+}
+
+/// A room's SCOPE control — which of its readings is on screen.
+///
+/// **A TEXT sibling of `CategoryVenueSwitcher`, not an extension of it.** That
+/// control draws `BridgeIcon` and nothing else: every seat it scopes is a brand
+/// with a bundled mark, so it is icon-only by construction and structurally
+/// cannot render "Positions". These scopes have no marks and never will — they
+/// are readings of one subject, not products — so the choice was a text sibling
+/// or a room-shaped `if` inside a control two rooms share. This is the sibling;
+/// `CategoryVenueSwitcher` is untouched.
+///
+/// Everything else is deliberately identical, because two switchers a few
+/// points apart on the same screen that behave differently read as a bug: the
+/// glass capsule, the horizontal scroll **clipped to that capsule** (§357's own
+/// 2026-08-11 fix — `dsGlass` paints a capsule but does not bound its content,
+/// so a half-scrolled chip draws past the glass onto the page), the
+/// `matchedGeometryEffect` travel on the selected fill with its Reduce Motion
+/// branch (§360 — swapping in `glassEffectID` silently deletes the travel it
+/// replaces, since the decoration is inert on a shape carrying no
+/// `glassEffect`, and the still frames look correct either way), the re-centre
+/// on change, and the edge-ease scroll transition.
+///
+/// **The one thing it adds is the dot**, and it is what makes a conditional
+/// scope safe to put at the END of a strip: `Risk` and `Permissions` are absent
+/// on most wallets, so they sit last — a conditional scope in the middle shifts
+/// every scope after it the day it appears — and position is therefore not how
+/// you find an alarm. The dot is, and it is visible from every other scope.
+/// That is the job the briefly-considered "Needs you" scope was invented to do
+/// and did worse, since it could only ever say that SOMETHING wanted you.
+struct DSSectionSwitcher<Scope: DSSectionScope>: View {
+
+    let sections: [Scope]
+    let active: Scope
+    /// Scopes with something that wants answering. A set rather than a single
+    /// optional so the caller is never forced to decide which one "the" alarm
+    /// belongs to — several can want you at once, and each says so for itself.
+    var attention: Set<Scope> = []
+    let onPick: (Scope) -> Void
+
+    @Namespace private var ns
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        ScrollViewReader { proxy in
+            ScrollView(.horizontal, showsIndicators: false) {
+                DSGlassContainer(spacing: 2) {
+                    HStack(spacing: 2) {
+                        ForEach(sections) { section in
+                            chip(section)
+                        }
+                    }
+                }
+                .padding(4)
+            }
+            .scrollBounceBehavior(.basedOnSize)
+            .clipShape(Capsule(style: .continuous))
+            .dsGlass(cornerRadius: 999)
+            .onAppear { proxy.scrollTo(active.id, anchor: .center) }
+            .onChange(of: active) { _, now in
+                withAnimation(DS.Motion.standard) { proxy.scrollTo(now.id, anchor: .center) }
+            }
+        }
+        // Sizes to its content up to the width available, so a room with only
+        // two scopes draws a short capsule rather than a full-width bar with
+        // four empty inches in it — `CategoryVenueSwitcher`'s own rule.
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func chip(_ section: Scope) -> some View {
+        let isOn = section == active
+        let wants = attention.contains(section)
+        return Button {
+            guard !isOn else { return }
+            DSHaptic.selection()
+            onPick(section)
+        } label: {
+            HStack(spacing: DS.Space.s1 + 2) {
+                if wants {
+                    Circle()
+                        .fill(DS.attention)
+                        .frame(width: 6, height: 6)
+                }
+                Text(section.label)
+                    .dsText(.label12)
+                    .fontWeight(isOn ? .semibold : .medium)
+                    .foregroundStyle(isOn ? DS.textPrimary : DS.textSecondary)
+                    .lineLimit(1)
+            }
+            .padding(.horizontal, DS.Space.s3)
+            .padding(.vertical, DS.Space.s2)
+            .background {
+                ZStack {
+                    Capsule(style: .continuous).fill(DS.fillFaint)
+                    if isOn {
+                        // `DS.tintDim` — the token whose documented job is exactly this
+                        // ("tint at rest-chip opacity"), rather than a second
+                        // hand-spelled 0.18 that drifts from it.
+                        let fill = Capsule(style: .continuous).fill(DS.tintDim)
+                        if reduceMotion {
+                            fill
+                        } else {
+                            fill.matchedGeometryEffect(id: "dsSectionActiveFill", in: ns)
+                        }
+                    }
+                }
+            }
+            .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .dsHover()
+        .id(section.id)
+        // The dot is visual and carries real information, so the label says it
+        // too — and names what the scope HOLDS, since these nouns are learnable
+        // but not self-explaining.
+        .accessibilityLabel(wants
+                            ? String(localized: "\(section.label), \(section.summary), needs you")
+                            : String(localized: "\(section.label), \(section.summary)"))
+        .accessibilityAddTraits(isOn ? [.isSelected] : [])
+        .dsTooltip(section.summary)
+        .scrollTransition(.interactive, axis: .horizontal) { content, phase in
+            content
+                .scaleEffect(reduceMotion || phase.isIdentity ? 1 : 0.9)
+                .opacity(phase.isIdentity ? 1 : 0.6)
+        }
+    }
+}

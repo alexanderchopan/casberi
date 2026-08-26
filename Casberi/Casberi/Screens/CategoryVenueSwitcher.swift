@@ -154,8 +154,27 @@ struct CategoryVenueSwitcher: View {
             // `DS.Face.row`, not `DS.Mark.row` — the same 26, but a CIRCULAR
             // mark is sized off the face ramp (`face-ramp-audit.py` enforces it,
             // and caught this the first time it was written the other way).
+            // **TWO ROWS OF CIRCLES STACKED SHARE ONE OUTER DIAMETER** (prd
+            // §483, 2026-08-26, user: *"why don't we use the same size circles
+            // for the source rooms and the account avatars, isn't it
+            // disjointed"* — it was).
+            //
+            // The `DS.Face` ramp sizes the FACE by what it sits beside, and
+            // says nothing about a mark row sitting directly above a face row —
+            // which is what the wallet room became when the account rail came
+            // down out of the pinned chrome. This chip was a 26pt mark in `s2`
+            // padding, so it presented a **46pt** circle directly above the
+            // rail's **36pt** faces: two adjacent rows of circles, ten points
+            // apart, for no reason a reader could name.
+            //
+            // The seat is pinned to `DS.Face.list` (36) — the tier every avatar
+            // in the app already wears — and the MARK stays at `row` (26), so
+            // nothing gets harder to read. A frame rather than a smaller
+            // padding, because the number that has to match is the outer one,
+            // and deriving it from padding means it drifts the day the padding
+            // is tuned for something else.
             BridgeIcon(name: venue, size: DS.Face.row, circular: true)
-                .padding(DS.Space.s2)
+                .frame(width: DS.Face.list, height: DS.Face.list)
             .background {
                 ZStack {
                     Capsule(style: .continuous).fill(DS.fillFaint)

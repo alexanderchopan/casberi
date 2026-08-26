@@ -124,26 +124,74 @@ struct WalletFace: View {
         return Color(hue: hue, saturation: 0.68, brightness: 0.78)
     }
 
+    /// **A PERSON, NOT A PATTERN** (prd §483, 2026-08-26, user: *"these colored
+    /// circles end up looking like bullets or buttons and not necessarily
+    /// accounts"*, then *"i think silhouette is best"*).
+    ///
+    /// **What the gradient got wrong, and why it was not tunable.** It was two
+    /// hues a short arc apart with two blurred blobs over them, and every one of
+    /// those choices removed SILHOUETTE: a gradient has no edges, the blobs
+    /// blurred at `size * 0.06` — about 2pt at the 36 the rail draws — so they
+    /// smeared into one wash, and the hue was free-range, so two addresses could
+    /// land a few degrees apart and read as the same face. What survived was a
+    /// filled circle in a colour, which is a bullet.
+    ///
+    /// **The ruling that settles it is the user's own: these are "just different
+    /// accounts of the same thing".** Your four or five wallets are not told
+    /// apart by picture, they are told apart by NAME — so the mark's job is to
+    /// say *a who lives here*, and identity belongs to the word beside it. An
+    /// identicon inverts that: it claims the picture carries identity, and then
+    /// five gradients have to be learned. One mark, honestly uniform, is the
+    /// smaller promise and the true one.
+    ///
+    /// So: one person glyph, everywhere, on a ground tinted from the address.
+    /// The tint is a WEAK cue by design — enough that a rail of five is not a
+    /// row of clones, never enough to be mistaken for the identity itself.
+    ///
+    /// **A CURATED 12-stop wheel, not a free hue.** The old face could produce
+    /// any hue at any moment, including two neighbours a hair apart and the
+    /// muddy stretch between olive and brown. Fixed stops make both impossible,
+    /// and they are muted rather than vivid because a rail of six saturated
+    /// circles reads as a paint chart rather than as a roster.
+    ///
+    /// **CONSEQUENCE, and it is not optional:** with one uniform mark the rail
+    /// MUST caption its faces, or five accounts are five identical glyphs. See
+    /// `FaceScopeRail.namesInRoom` — §450 dropped those captions on the strength
+    /// of the crown card naming the pick, and that caption is gone too.
     private var identicon: some View {
-        let seed = rng
-        // Two hues a short arc apart — vivid but never garish (fixed S/B in
-        // the berry register). Light/dark both read: the fill is mid-bright,
-        // the blobs a touch lighter, so the mark holds on either page.
-        let c1 = Color(hue: seed.base, saturation: 0.62, brightness: 0.82)
-        let c2 = Color(hue: seed.alt, saturation: 0.70, brightness: 0.72)
-        return LinearGradient(colors: [c1, c2],
-                              startPoint: .topLeading, endPoint: .bottomTrailing)
+        // The SAME first draw `signatureHue` takes, so a wallet's face and its
+        // value line still agree — the derivation is untouched, only what it
+        // selects changed: a stop on a twelve-colour wheel instead of a hue on
+        // a continuous one.
+        let slot = Int(rng.base * Double(Self.grounds.count)) % Self.grounds.count
+        let ground = Self.grounds[slot]
+        let ink = Self.inks[slot]
+        return ground
             .overlay {
-                GeometryReader { geo in
-                    let d = geo.size.width
-                    Circle().fill(.white.opacity(0.22))
-                        .frame(width: d * 0.5, height: d * 0.5)
-                        .offset(x: seed.b1.width * d * 0.6, y: seed.b1.height * d * 0.6)
-                    Circle().fill(.black.opacity(0.12))
-                        .frame(width: d * 0.42, height: d * 0.42)
-                        .offset(x: seed.b2.width * d * 0.7, y: seed.b2.height * d * 0.7)
-                }
-                .blur(radius: size * 0.06)
+                Image(systemName: "person.fill")
+                    .font(.system(size: size * 0.46, weight: .medium))
+                    .foregroundStyle(ink)
+                    // The glyph's own optical centre sits low in its box; without
+                    // this the head crowds the top of the circle and the mark
+                    // reads as cropped rather than as a portrait.
+                    .offset(y: size * 0.03)
             }
     }
+
+    /// The twelve grounds. Muted and dark so the mark reads as a roster; fixed
+    /// so no address can land on mud or a hair from its neighbour.
+    fileprivate static let grounds: [Color] = [
+        .fixed("#2E3A46"), .fixed("#3A3340"), .fixed("#243A34"), .fixed("#3E3630"),
+        .fixed("#2C3348"), .fixed("#3D2F35"), .fixed("#26383D"), .fixed("#37333C"),
+        .fixed("#2F3A2E"), .fixed("#42352C"), .fixed("#2A3140"), .fixed("#383036"),
+    ]
+
+    /// The paired inks, one per ground — light enough to hold the glyph at 20pt
+    /// against its own ground, never white (a white silhouette on a dark circle
+    /// is the system's own "no photo" placeholder, and this is not an absence).
+    fileprivate static let inks: [Color] = [
+        .fixed("#9FC0D8"), .fixed("#C4A9D6"), .fixed("#8FC9AE"), .fixed("#D8BA96"),
+        .fixed("#A8B4E0"), .fixed("#D8A2AE"), .fixed("#93C3CC"), .fixed("#BEB2CE"),
+        .fixed("#A7C79B"), .fixed("#DCB88E"), .fixed("#9EAAD4"), .fixed("#CBA6B4"),
+    ]
 }

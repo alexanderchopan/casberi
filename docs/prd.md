@@ -79,6 +79,13 @@ at all.
 
 | Ruling | What it said | Changed by |
 |---|---|---|
+| §475 | The wallet room's four group headers — "What you hold" / "What it's doing" / "Who can reach it" / "Coming up" | amended by §483 (the four become SCOPES under short nouns, split into six; the questions survive as headers for a scope holding two unlike things) |
+| §387 | The NFT shelf sits directly under the holdings map — the two are one "what you hold" pair | amended by §483 (still a pair, now expressed as two scopes: a wall of pictures and a treemap are the room's two most visual things and neither should lead the other) |
+| §468 | The hero face stands down wherever the face rail is drawing one | amended by §482 (the rail folded into the crown's chip strip, so there is no duplicate to prevent and the face is unconditional) |
+| §475 | The account chips are gated on the SCOPED room, so a scoped room carries no strip describing all of them | amended by §482 (the strip became the scoping control, so it reads the full watch list and stays put when you pick — gated on that count instead) |
+| §450 | The wallet rail draws faces only — the crown card below names the pick | amended by §483 (the crown's caption is gone and the face no longer carries identity, so the rail captions again) |
+| §479 | The attention strip sits directly under the crown, and draws each line as one sentence | amended by §482 (below the holdings — Wallet's precedent lives INSIDE a balance card and this room's hero is bare; and the line is a row with a face, not a sentence) |
+| §467 | The delegate spine states its direction ONCE, in the caption beneath | amended by §482 (the columns were swapped so authority leads, and the roles are named at the head of each column — the caption was too far from the drawing to be read as part of it) |
 | §57 | Telegram REMOVED from the catalog — all three doors in fail, so the seat is cut entirely | reversed by §456 (a public channel is not a chat, and the export door was rejected on a premise this app's own nine import bridges overturned) |
 | §362 | The face rail always captions its faces — it compresses rather than dropping them, on both rails alike | caption half reversed for the WALLET rail by §450 |
 | §182 | The watch cap is a SHELF of faces with dashed rings for the free slots | superseded by §448 |
@@ -33833,3 +33840,452 @@ show you did not sign, which is a fact rather than a taste, and §387's "no junk
 fold" is the standing answer to hiding things behind a switch. Nothing here
 touches the Solana arm — Alchemy's NFT API is EVM-only, so a Solana NFT was never
 in this filter's reach and the copy claims nothing about it.
+
+## 482. The attention strip is deleted and the room becomes four scopes, the account rail folds into the crown, and the delegate spine stops drawing authority backwards (user, with screenshots: "this looks old on the all screen", then "what is the section tho? i mean what's it for?", then "'Needs you' should we call it 'worth a look'?" / "worth a look is what we use in Wallet", then "i think below because that way holdings and sparkline are together", then "also the linked account image with two accounts its hard to tell who can do what in terms of parent child or whatever. presuming the first one has greater authority but not really clear", then "Vibenet has it's own categories… no need to invent things or use wallet's exactly where we don't have. the goal is to have this experience and overall look", then "o wait no way… we can' hta ve the positions risk etc at the top" / "needs to be below the sparkline" / "we cannot have four rows of chips", then "if you click one of the accounts, it should still keep the row in the same place so user can navigate back", then "make the account circles the same size then that we have for social avatars… should always be consistent", 2026-08-26)
+
+Three artboards were drawn before any code changed — the room as it ships, the
+two directions, and the strip at 1.7× — which is §478's own method, and it is
+what turned "this looks old" into four separable findings rather than a taste.
+
+### 1. THE STRIP WAS RE-GRAMMARED, RE-TITLED TWICE, AND THEN DELETED
+
+It began as §479's three sentences at one weight (`line.text`, `subhead13`,
+`textSecondary`) on a faint ground — in a room where §478 had already ruled the
+opposite for keys: *a list you scan, not a census you decode*. Reported as
+*"this looks old on the all screen"*. Four costs, invisible because it looked
+tidy: the account was a fragment you read FOR rather than a face you saw;
+subject and state carried identical weight so nothing led; a three-day deadline
+was typographically identical to a lock that is not going anywhere, which made
+`compose`'s ranking — the whole argument of §479 — invisible; and an unlabelled
+faint box is a riddle you must read all three rows to identify.
+
+It was given a row anatomy (face · title · detail · clock) and a name. **The
+name then moved three times in one afternoon — "Needs you" → "Worth a look" →
+"Risk" — and that churn was the real diagnosis.** The thing grouped four unlike
+facts (a key's deadline, an account's lock, an unlock's countdown, our own
+failed read) by nothing except *you might want to look*, so no word could fit
+all four. Each rename was individually well argued and the set never converged.
+
+**So the strip is DELETED, and scoping is what replaced it.** The test was run
+row type by row type before anything was removed, because that is the check
+that bit the parallel Wallet session twice the same day:
+
+| Row | Where it already lives |
+|---|---|
+| Key expiring | the Keys scope's runway (`shelfRow`) — same blue, same countdown |
+| Locked | that account's roster row pill |
+| Unlocking | that row's ticking subtitle and progress bar |
+| Couldn't be read | that row's own subtitle, in words |
+
+Nothing was lost. The strip existed only because all four were buried in one
+long scroll, and **a scope strip is a better answer to burial than a summary of
+it.** `VibenetAttention` survives with its ranking intact and its job moved one
+layer down: it decides which CHIP wears a dot (`VibenetSection.attention`).
+Never presence — the room always HAS keys and accounts, so presence-lighting is
+the §83 overclaim that retired "Needs attention" on 2026-07-23.
+
+### 2. THE ROOM IS FOUR SCOPES, IN VIBENET'S OWN WORDS
+
+`Holdings · Recent · Accounts · Keys`, on the same `DSSectionSwitcher` Wallet's
+§483 introduced. The user's instruction drew the line precisely: *"Vibenet has
+it's own categories, you already have them basically… no need to invent things
+or use wallet's exactly where we don't have. the goal is to have this
+experience and overall look."* **The control is shared, the vocabulary is not.**
+Vibenet has no Positions, NFTs, Permissions or Risk — no money deployed, no
+collectibles, nothing granted to a third party — so borrowing those names would
+be four scopes permanently empty or four lies.
+
+Every scope is content the room already had, so the mapping is an IDENTITY and
+nothing could be lost in the rearrangement. Holdings leads, carrying §482's own
+earlier ruling forward: the crown, its sparkline and the token tiles are one
+reading at three grains.
+
+### 3. WHERE THE CONTROLS GO — THREE CORRECTIONS IN ONE SITTING
+
+**The switcher shipped in `MainSurface.roomControls` and was rejected on
+sight**: *"o wait no way… we can' hta ve the positions risk etc at the top"*,
+then *"needs to be below the sparkline"*. Pinned at the shell it was the FOURTH
+stacked chrome row and the crown started roughly halfway down the screen.
+§357's reasoning (a control destroyed by the transition it commands) is what
+put it there, and that reasoning is sound about `safeAreaInset` and silent
+about how many rows a reader will accept before the first fact.
+
+Below the crown, **the crown and its chart become always-on, belonging to no
+scope** — which settles §482's own ordering ruling permanently rather than by
+arranging things carefully. **Stated cost:** in the content the strip scrolls
+away, §357's complaint one level down. The fix is a pinned `Section` header,
+not a return to the inset; deliberately not done yet.
+
+**Then: *"we cannot have four rows of chips."*** The row that had to go was a
+real redundancy — the face rail and the value chips under the sparkline were
+both a horizontal strip of this room's accounts, same faces, same order, one
+above the crown and one below, and only the lower one said what each was worth.
+The rail is FOLDED into those chips: same scoping, plus the numbers, one row
+fewer. Tapping the figure you want to see bigger is also a more direct gesture
+than operating a separate control that happens to affect it.
+
+Three defects that fold produced, each found by looking rather than by reading:
+
+1. **The chips must derive from the FULL watch list — this amends §475.** That
+   ruling gated the strip on `room.items.count > 1` so a scoped room would not
+   carry "the one element still describing all of them", which was right while
+   the strip was a passive read of balances and wrong the moment it became the
+   scoping control: derived from the scoped room, picking an account collapsed
+   it to one item, the gate hid it, and *the control deleted itself on use*,
+   stranding you in the scope it had just made. Reported as *"if you click one
+   of the accounts, it should still keep the row in the same place so user can
+   navigate back."* The count gate SURVIVES (one account is a label, not a
+   control) — what it counts changed. **Caught by the harness rather than by a
+   reader**: the §475 guard went red on the change that reversed it, which is
+   the whole reason that guard was written down instead of remembered.
+2. **The scoped branch must redraw the strip**, since scoping swaps the whole
+   card for the detail view and the chips would go with the hero.
+3. **`showsFace` was gated on "is the rail already drawing this face?" — this
+   amends §468.** That rule was *never two faces, never zero*: the hero stood
+   down only where the rail drew one. With the rail folded into the chip strip
+   the gate has nothing left to de-duplicate, so it would hide the scoped
+   account's only identifying mark. The intent survives untouched and the
+   mechanism is gone. Also caught by its own guard rather than by a reader.
+
+**Sizing, measured rather than assumed.** Asked for *"the same size then that we
+have for social avatars… and same size the source chips are… should always be
+consistent"* — those are two different numbers: the rail draws `DS.Face.list`
+(36) while source chips are 40 folded / 46 expanded, because a source chip is a
+bridge mark in a chip SLOT and this is a face on the ramp. 36 wins: it is the
+tier every other avatar wears, and matching 46 would make account faces the
+largest faces in the app.
+
+**Scoping changes the screen, it never navigates** (*"you shouldn't really 'go'
+to another page, the screen you are on should change… just like we do on
+Wallet"*) — the chip sets `chrome.vibenetScope` and the same room re-composes.
+No route push exists on this path, and a guard keeps it that way.
+
+### 4. THE SPINE WAS DRAWING AUTHORITY BACKWARDS
+
+`VibenetDelegateLink.from` is *the account that authorized* and `to` is *the
+delegate acting for it*. `VibenetLinkSpine` drew `to` on the LEFT and `from` on
+the right — so the face you read first held the least power, and the report is
+exactly what that produces: *"presuming the first one has greater authority but
+not really clear."* The presumption is the normal left-to-right reading. It was
+wrong, and nothing in the drawing said so.
+
+**The only signal was the right column's heavier weight**, and weight reads as
+importance, not as role — it half-said the right thing in a language that cannot
+say roles at all.
+
+Two changes (§467 amended by §482), and its refusal of per-row arrows survives both. **The columns
+are swapped**, so the account that granted the power leads and the row reads
+left-to-right in one direction; the weight difference now AGREES with the roles
+instead of contradicting them, and is kept for that reason (two signals saying
+one thing is redundancy, which is what a figure about permissions should have).
+**And the roles are named at the head of each column** — "Account" / "Can act for
+it", `label11` tertiary. §467 was right that the direction should be said ONCE
+rather than per row, and wrong about where once is: it said it in a caption 60pt
+below in tertiary ink, detached from the columns it explained, which is why the
+drawing read backwards for as long as it existed. Named at the top, one label
+serves four links as easily as one, and the caption shrinks to the thing the
+heads cannot say — where the reading came from.
+
+**The ribbon's row lookup was swapped with the columns.** It has to be: a
+mismatched ribbon joins the wrong two faces while the figure still looks
+perfectly well drawn, which is this whole section's failure mode a second time.
+
+A third direction was drawn and declined for now — below a floor of three links
+there is no shape to see, so a single link could be a sentence rather than a
+figure. Chosen against on the user's own ground ("it's less words"): the swapped
+columns plus two labels answer the one-link case as well, without a second
+rendering path to keep in step with the first.
+
+### WHAT THIS DOES NOT CHANGE
+
+`VibenetAttention.compose`'s ranking, its cap, its "and N more" tail, its silence
+when the room is quiet, and its refusal to grade a row by colour (§479) are all
+untouched — the strip's blue is still spent on expiry urgency and nothing else
+(§463). §295's same-weight ruling on the spine's ribbons is untouched. No new
+`Thing` field, no request, no CloudKit deploy.
+
+## 483. The wallet room becomes six scopes, and every card lands in exactly one (user: "i love our wallet bones and IA, but i just don't yet feel 'wow' when i see it", then "what would cashapp do with the stuff below", then "we can't really have the sections we what you hold etc b/c they are too long. so it needs to be Transactions, Holdings, Positions, NFTs, Risk", then "I think it is Permissions", 2026-08-26)
+
+Asked why the room didn't feel special, the honest first answer was not a taste
+problem. **The room ran to ~2,900pt of standing cards before the first ordinary
+transaction row** on a wallet that has everything — about three and a half
+screens. Thirteen blocks: eight standing state, three attention split across
+three separate cards at three different depths, and two events, one of which was
+the three-row patch added on 2026-08-18 *because* the feed was too far down.
+Every card was individually justified, most with a section here and a self-test
+of its own. **The arrangement was the problem, not any card in it.**
+
+Two other findings from the same pass, recorded because they are the reasons the
+room read flat rather than ugly, and only the first is fixed here. **The room
+had lost its colour one correct decision at a time** — brand hue off the treemap
+(2026-08-10), the crown pour off by default (§204 amendment), the hero's tint
+card deleted (2026-08-16), `chipGradient` retired the night it shipped. Each
+ruling was right alone; together they left one colour on the screen, the
+direction accent, and near-black everywhere else. And **the app's one vivid
+proprietary object is drawn at badge scale**: `WalletFace` is a two-hue gradient
+with two blurred blobs, unique per address, and it never draws above 56pt.
+
+### THE SHAPE
+
+Six scopes behind one pinned control: **`Activity` · `Holdings` · `Positions` ·
+`NFTs` · `Risk` · `Permissions`.**
+
+**Five of the six are the room's own `walletGroupHeader` groups** — "What you
+hold" / "What it's doing" / "Who can reach it" / "Coming up", shipped
+2026-08-20 (§475) — renamed to short nouns and split twice. That is the entire
+reason this is safe: **the mapping from card to scope is IDENTITY.** No card is
+dropped, none is duplicated, and content loss is therefore structurally
+impossible rather than merely unlikely. It also made the change small — four
+conditional blocks became six cases.
+
+The two splits, each because one word could not carry both halves honestly:
+`NFTs` leaves "What you hold" (the only scope whose content is pictures), and
+"What it's doing" becomes `Positions` (money deployed) and `Risk` (money that
+could move against you). An approval granted on purpose is not a hazard; a
+health factor is not a holding.
+
+### THE NAMES, AND THE ONE THAT WAS ARGUED
+
+Short nouns, on the user's ruling that the four questions are too long for a
+control. **That does not kill the questions** — they were section HEADERS, not
+toggle labels, and the two rulings that looked contradictory (§475's questions
+are what make Wallet and Vibenet read as one product; §476's plain nouns are
+more intuitive) were never about the same layer. Nouns for the control,
+questions for the page. The headers are gone from the wallet block only because
+the chip now says the same words in the same place.
+
+`Activity`, not "Transactions" (long, and §8 asks for Bob's words) and not
+"Recent" — **wrong by construction**, since the scope leads with forward-dated
+rows.
+
+**`Permissions` was argued and lost, and the loss is recorded because the
+argument still governs the card inside it.** The case for `Access`: the approvals
+card does not rank permissions, it ranks `min(allowance, balance) × price` — the
+dollars somebody can take right now — so "Permissions" reads like a settings
+screen over a card whose whole content is exposure. The user ruled `Permissions`,
+and it holds better than the argument allowed: every member was granted by an
+action taken (`approve`, `enableModule`, a 7702 authorization), which is a
+tighter category than "reach". **The standing rule is that the NAME is a
+category and the CARD carries the urgency** — keep §292's dollar ranking and
+headline exactly as they are and the softer word costs nothing.
+
+Two members left that scope on the user's own challenge ("Access may be not
+always true"): `SafeSignBlock` → `Activity` as an "Ahead" row (a queued
+signature is a task with a clock, not somebody's reach) and
+`SignerKey.presence == .destroyed` → `Risk` (§427 — on an N-of-N Safe,
+unrecoverable).
+
+### ORDER IS STRUCTURAL, NOT TASTE
+
+Events → state → hazards. **`Risk` and `Permissions` are CONDITIONAL and
+therefore go LAST.** A conditional scope in the middle shifts every scope after
+it the day it appears or disappears, and a control that reflows under you is one
+you stop trusting. At the end its absence changes nothing — and position was
+never how you find an alarm, because `risk` carries an attention dot visible
+from every other scope. That dot is the job a briefly-drawn "Needs you" scope
+was invented to do and did worse: it could only say that *something* wanted you.
+
+**`Activity` leads and is the default** for the reason the whole direction was
+chosen — every other room in this app opens on its feed, and making Wallet the
+exception is what put its transactions three screens down. Holdings-first was
+recommended first and reversed: §482 is about content sitting BETWEEN the crown
+and the holdings in a continuous scroll, and one tap is not that.
+
+### THE DOT IS EARNED, AND ONE SCOPE DELIBERATELY HAS NONE
+
+It rides `walletLive.warnings` — the set the room already computes for the
+Worth-a-look strip — and **never mere presence**. A wallet with a 3.0 health
+factor HAS a risk reading and is in no trouble at all; lighting on presence is
+the §83 overclaim that retired "Needs attention" on 2026-07-23 ("we don't know
+if it needs attention, do we?"). **`Permissions` takes no dot at all yet**: the
+honest test is an unlimited allowance against a token you actually hold, and
+choosing that threshold is a ruling rather than a chassis change — a dot firing
+on every approval ever granted trains you to ignore the one that matters.
+
+### WHAT MOVED, AND WHAT DID NOT
+
+The flow band **heads `Activity`**, which is compatible with the 2026-08-01
+ruling rather than a reversal of it: that ruling requires it to follow the
+crown's delta pill because it is "the second half of the crown number's
+sentence", and with `Activity` the default it still does. The generalised rule
+this settles — **each scope leads with the drawing that summarizes its own
+rows** (flow band → Activity, treemap → Holdings, the grid → NFTs,
+`WalletRiskStrip`'s axis → Risk) — is a strong default and deliberately not a
+law: a rule that every scope MUST have a drawing eventually invents one for a
+scope with nothing to say.
+
+"Coming up" becomes **"Ahead" at the head of `Activity`**. It was briefly folded
+into `Risk` while that scope was being drawn, which mislabelled most of it — a
+veAERO unlock is a date you are waiting FOR. The timeline has two directions.
+
+The crown's newest-few rows (§208, 2026-08-18) are **dropped in `Activity` and
+kept everywhere else.** They exist because the feed was two screens down; in
+`Activity` it is the next thing on the page, so leading with three and repeating
+them is §208's own "never say one thing twice" committed by the fix for it. In
+every other scope the transactions are not on screen at all, and those three
+rows are the only place that room says what just happened.
+
+### THE CONTROL
+
+`Design/DSSectionSwitcher.swift` — a TEXT sibling of `CategoryVenueSwitcher`,
+not an extension of it. That control draws `BridgeIcon` and nothing else, so it
+structurally cannot render "Positions"; these scopes have no marks and never
+will, being readings of one subject rather than products. Everything else is
+deliberately identical (the glass capsule, the scroll clipped to it, the
+`matchedGeometryEffect` travel with its Reduce Motion branch per §360, the
+re-centre, the edge-ease), because two switchers a few points apart that behave
+differently read as a bug.
+
+**Generic over a `DSSectionScope` protocol from the first commit**, at Vibenet's
+request and before either room shipped: that room arrived at the same control
+within a day with a completely different vocabulary (`Holdings · Recent ·
+Accounts · Keys`), which is the shape that proves the control is shared and the
+words are not. Conformance lives beside each call site, never on the declaration
+— both scope enums are Foundation-only so a `swiftc` harness can compile them
+WHOLE, and a SwiftUI protocol on the type would end that.
+
+It mounts in `MainSurface.roomControls`, BELOW the face rail (whose money, then
+which reading of it) and for §357's reason: `FeedScreen` carries
+`.id(filter.source)`, so an inset on the screen is destroyed on every room change
+and the `@Namespace` goes with it, leaving the selection fill nothing to travel
+through. **Gated entirely on `chrome.walletSections`**, which only the wallet
+room writes and clears on the way out — so the toggle cannot draw over a Vibenet
+or Social room, by construction rather than by a source test in two files that
+could drift.
+
+`ShellChrome.walletSection` is **session-only, deliberately not
+`MarketsRoom.landing`'s shape**: those venues are separate watchlists, these are
+facets of one subject, and a wallet reopening on `Permissions` three days later
+answers a question nobody asked. It survives a room change (the wallet category
+spans several rooms, §356); `WalletSection.resolve` sends a remembered scope
+whose content has since gone back to `Activity` rather than to an empty page
+claiming to be a section.
+
+### WHAT THE DEVICE THEN CHANGED, SAME DAY
+
+The chassis above landed and was then reshaped four times against the real
+room. Recorded because each correction came from LOOKING, not from reading, and
+three of them reversed something written above.
+
+**`home` LEADS, AND THE SPARKLINE IS ITS DRAWING, NOT THE ROOM'S FURNITURE**
+(user: *"above the toggles is always a visual of some kind and then a list below
+it"*, then *"maybe home is the first screen and it shows the sparkline and last
+three transactions below"*). Seven scopes, not six. Every scope is now exactly
+one drawing above the control and one list below it — Home's drawing happens to
+be the balance and its line, Activity's is the flow diagram, Holdings' is the
+treemap. On `.activity` the crown gives up its figure entirely (*"on activity,
+we don't need the value, just show the sankey"*): a balance sitting over a flow
+diagram is a second, louder answer to a question nobody asked there.
+
+**THE TOGGLE CAME OUT OF `roomControls`, AND SO DID THE FACE RAIL.** Both were
+pinned; with the source chips and the venue rail that made FOUR strips of chips
+before any content and pushed the crown to ~45% down the screen (*"we cannot
+have four rows of chips"*, *"we need to have those toggles be below the
+sparkline"*, *"these avatars and address book should go BELOW the sparkline"*).
+Everything above the bar is now ONE FIXED SLOT, 200pt, top-aligned and clipped —
+which makes *"this bar should be in a fixed position on each page, it should not
+move"* true by construction rather than by each scope happening to agree. **The
+slot is an EDITING constraint, not a layout one**: a scope whose drawing does
+not fit gets trimmed, never scaled and never allowed to push the bar.
+
+**THE ADDRESS BOOK LEADS THE RAIL** (*"address book can be first before All"*) —
+it is the only slot that LEAVES the room, and trailing the faces put the one
+DOOR at the far end of a scrolling strip. And the venue rail's seat was pinned
+to `DS.Face.list` so two stacked rows of circles share one diameter: it drew a
+46pt circle (26 mark + `s2` padding) directly above the rail's 36pt faces, ten
+points apart for no reason a reader could name. **`DS.Face` sizes a FACE by what
+it sits beside and never covered a mark row above a face row** — that is the gap
+this closes.
+
+**COLOUR RULE, asked for directly** (*"what is our color rule and are we being
+consistent?"* — we were not): **one tint; SELECTION is the only thing that
+fills; weight says reach.** Solid `DS.tint` for a control that changes the ROOM
+(the category chips), `DS.tintDim` for one that scopes WITHIN it (venue rail,
+face rail, section toggle), `DS.fillFaint` at rest — never tint. `allSlot` was
+the offender: it painted `tintDim` whether or not it was on, carrying its state
+in text weight and a 0.7 opacity lift, the two quietest cues the ramp has, on
+the one slot whose job is to say "you are looking at everything".
+
+**THE CROWN LOST ITS CAPTION AND ITS THIRD LINE.** "watched" restated the range
+chips below it; "Mostly ETH" was a third line under a figure that already had
+two, answering a question the Holdings scope answers properly; and "Across your
+accounts" said exactly what the lit "All" on the rail says (*"is it redundant?"*
+— yes). The caption survives only SCOPED, where it is the wallet's own name
+(§450) and the only place that name appears. Those three deletions are what got
+three transactions above the fold.
+
+### THE FACES STOPPED BEING PATTERNS (user: *"these colored circles end up looking like bullets or buttons and not necessarily accounts"*, then *"i think silhouette is best"*)
+
+`WalletFace` drew a two-hue gradient with two blurred blobs, and **every one of
+those choices removed SILHOUETTE**: a gradient has no edges, the blobs blurred
+at `size * 0.06` (≈2pt at the 36 the rail draws) so they smeared into one wash,
+and the hue was free-range, so two addresses could land a few degrees apart and
+read as the same face. What survived was a filled circle in a colour.
+
+**The ruling that settles it is the user's own: these are "just different
+accounts of the same thing".** Your wallets are not told apart by picture, they
+are told apart by NAME — so the mark says *a who lives here* and identity
+belongs to the word beside it. One person glyph, everywhere, on a ground from a
+curated 12-stop wheel; the tint is a weak cue by design.
+
+**Which forces the captions back onto the rail — this AMENDS §450.** That ruling
+dropped them on the strength of the crown naming the pick; the crown's caption
+is gone and the face no longer carries identity, so five accounts would be five
+identical glyphs. The trade is deliberate: identity moved from a colour you had
+to learn to a word you can read.
+
+Declined, with reasons: an off-the-shelf avatar set (Boring Avatars, DiceBear —
+both good, both JS or an HTTP service, and nothing may leave the device, so it
+is ~60 lines of Swift either way and we should own the vocabulary); a monogram
+of the address characters (redundant — every place a face appears, the label
+beside it spells the address); and the octopus per-account (one mark used once
+means something, used per-account it moves identity back onto hue, which is the
+thing that just failed — it is the right EMPTY state instead).
+
+### THE FLOW BAND: LINES, NOT BANDS
+
+Redrawn from scratch after nine attempts, and the finding is worth more than the
+drawing. **A band has to be thick enough to MEAN its amount and thick enough to
+HOLD its label, and those two demands fight** — which was every problem it had:
+a $300 lane could not carry its own name, so labels were crammed inside shapes,
+reversed out in two different treatments, and clipped. The user's own diagnosis
+ended it: *"you don't even really need weighted bands to convey — they have name
+and number on them already."*
+
+Weighted HAIRLINES (1…3.6pt) converging on a GATE, labels in their own columns.
+Four consequences, each answering something the bands could not:
+
+  • **a stroke has no duty to contain anything**, so no word can ever be crammed
+  • **a gate, not a point** — weighted lines converging on one coordinate all
+    collapse to zero width at the same spot and pile into a smudge exactly where
+    the eye lands; a gate gives each line its own slot, so the weights survive
+  • **the gate draws the net for free** — each slot is proportional, so the
+    in-lines fill it and the out-lines fill only `out/in` of it: lit full height
+    on the left, part height on the right, and the difference is what stayed
+  • **it ends a quiet dishonesty.** The old ribbons ran lane→spine→lane and
+    looked like a sankey, but `inLanes` and `outLanes` are separate arrays and
+    NOTHING in the data pairs a source with a destination. They implied Peer's
+    money went to Uniswap. Converging on the wallet's own face claims only what
+    is true: money reached you, and some of it left.
+
+The header went from four lines to one for the same reason the caption went —
+the drawing labels both its columns, so "in $7K · out $3K" was the sum of one
+and the sum of the other, both already on screen. The band took the 3 lines back
+(138 → 150), which is what makes four ribbons readable rather than a smear. The
+coverage note ("1 move couldn't be priced") MOVED below the drawing rather than
+being deleted: it is §83, and a caveat about a figure belongs under it.
+
+**Asked directly how Apple would draw this, the honest answer is that they would
+not.** Apple Card, Screen Time, Health, Batteries, Fitness — every one draws a
+QUANTITY and its COMPOSITION, never a flow. The face at the centre is knowingly
+the un-Apple choice and the one thing in the room that is ours; it earns its
+24pt by being the only ornament in it.
+
+### WHAT THIS DOES NOT CHANGE
+
+Every card is the one that shipped, moved and not redrawn — no restyling, no new
+typography, no spacing pass, and that split is deliberate so the IA can be judged
+on a device before any of it is spent. `WalletCompositionStrip` stays inside the
+balance card. No new `Thing` field, no request, no CloudKit deploy. The four
+`walletGroupHeader` questions survive as headers the day a scope holds two
+unlike kinds of thing.

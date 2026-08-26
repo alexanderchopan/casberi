@@ -87,7 +87,9 @@ struct WalletFlowBand: View {
     @State private var picked: WalletFlow.Lane?
     @State private var pickedClear: Task<Void, Never>?
 
-    private let bandHeight: CGFloat = 138
+    /// 150, up from 138 (prd §483) — the height the header's three deleted
+    /// lines gave back, inside the room's fixed 200pt visual slot.
+    private let bandHeight: CGFloat = 150
     private let laneGap: CGFloat = 2
     private let spineWidth: CGFloat = 12
     /// One line of `label12` fits a 14pt slab; the floor keeps every lane
@@ -101,8 +103,30 @@ struct WalletFlowBand: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            VStack(alignment: .leading, spacing: DS.Space.s1) {
-                WalletSectionLabel(title: String(localized: "Where it moved"))
+            // **ONE LINE ABOVE THE BAND** (user ruling, prd §483: *"i want to
+            // get rid of as much words as possible that are above the sankey"*,
+            // and *"really lean into this clean restrained apple like
+            // version"*). This carried FOUR: a heading, the window and totals,
+            // the net, and the coverage note.
+            //
+            // **The heading and the window went because the drawing already
+            // said them.** The band labels its left column with names AND
+            // amounts and its right the same way, so "in $7K · out $3K" was the
+            // sum of one column and the sum of the other, both on screen — §208
+            // ("never say one thing twice") committed by a header. "Since you
+            // started watching" is the same window for every reading in this
+            // room and never changes.
+            //
+            // **And the real cost was legibility, not tidiness.** Inside §483's
+            // fixed 200pt slot those four lines left the band 96pt, where four
+            // ribbons are ~12pt tall and cross into a smear. At one line the
+            // band gets 150 and you can follow Coinbase to Bitrefill with your
+            // eye — which is the only thing this drawing exists to let you do.
+            //
+            // The NET survives (`netLine`) because it is the one figure here
+            // that is nowhere else in the scope: in−out, and the reader would
+            // have to do the subtraction themselves.
+            HStack(spacing: DS.Space.s2) {
                 Text(pickedLine ?? summary)
                     .dsText(.label12)
                     .foregroundStyle(picked == nil ? DS.textTertiary : DS.textPrimary)
@@ -111,17 +135,11 @@ struct WalletFlowBand: View {
                     .opacity(entered ? 1 : 0)
                     .offset(y: entered ? 0 : 3)
                     .animation(netAnimation, value: entered)
-                if let note = coverageNote {
-                    // Stated, never swallowed — a band drawn from six of nine
-                    // moves is a different claim from one drawn from all nine.
-                    Text(note)
-                        .dsText(.label12).foregroundStyle(DS.textTertiary)
-                        .lineLimit(2)
-                }
+                Spacer(minLength: 0)
             }
             .padding(.horizontal, WalletCardStyle.pad)
-            .padding(.top, WalletCardStyle.pad)
-            .padding(.bottom, DS.Space.s3)
+            .padding(.top, DS.Space.s3)
+            .padding(.bottom, DS.Space.s2)
 
             // The band itself takes no horizontal padding: the bleed IS the
             // design, and the card's clip below supplies the only rounding.
@@ -132,6 +150,7 @@ struct WalletFlowBand: View {
             // The money moves through the band once, in the direction it
             // actually moved. See the type doc's amended ruling.
             .chartWipe(reduceMotion: reduceMotion)
+
             // A `Path` and a stack of rectangles read as NOTHING to VoiceOver,
             // and this diagram is the only place the app states where the money
             // came from and where it went (2026-08-04, prd §299). One figure,
@@ -139,6 +158,23 @@ struct WalletFlowBand: View {
             // gives its spine, rather than a dozen stray slab labels.
             .accessibilityElement(children: .combine)
             .accessibilityLabel(Text(spokenDiagram))
+
+            // **THE COVERAGE NOTE MOVED BELOW THE BAND, IT DID NOT GO** (prd
+            // §483). Stated, never swallowed — a band drawn from six of nine
+            // moves is a different claim from one drawn from all nine, and that
+            // is §83, not decoration.
+            //
+            // Below rather than above because it is a caveat ABOUT the drawing:
+            // above, it was one of four lines you read before reaching the
+            // thing it qualifies. One line at 20pt still fits the room's fixed
+            // 200pt slot beside a 150pt band and a 26pt reading.
+            if let note = coverageNote {
+                Text(note)
+                    .dsText(.label12).foregroundStyle(DS.textTertiary)
+                    .lineLimit(1)
+                    .padding(.horizontal, WalletCardStyle.pad)
+                    .padding(.top, DS.Space.s2)
+            }
         }
         // A plain set: each element owns its own delayed animation above.
         .onAppear { entered = true }
@@ -152,7 +188,9 @@ struct WalletFlowBand: View {
     }
 
     private var summary: String {
-        "\(windowLabel) · in \(WalletValue.money(band.inUSD)) · out \(WalletValue.money(band.outUSD))"
+        // No `windowLabel`: it is the same window for every reading in this
+        // room, so it never distinguished anything (prd §483).
+        "in \(WalletValue.money(band.inUSD)) · out \(WalletValue.money(band.outUSD))"
     }
 
     /// "Kept +$1.0K" — the one-sentence outcome, the move Cash App would make
@@ -226,50 +264,167 @@ struct WalletFlowBand: View {
         let height: CGFloat
     }
 
+    /// **LINES, NOT BANDS** (prd §483, 2026-08-26, user: *"we need a diagram,
+    /// not a table … i think what we had could be fine if they were lines and
+    /// not bands"*, then *"do q4"*).
+    ///
+    /// **Why the bands had to go, and it is one sentence.** A band has to be
+    /// thick enough to MEAN its amount and thick enough to HOLD its label, and
+    /// those two demands fight — which is every problem this drawing had: a
+    /// $300 lane could not carry its own name, so labels were crammed inside
+    /// shapes, reversed out in two different treatments, and clipped.
+    ///
+    /// A stroke has no such duty. It carries STRUCTURE — how many arrived, how
+    /// many left, that everything passed through one place — which is the thing
+    /// the list twelve points below structurally cannot show, and the whole
+    /// reason this scope leads with a figure rather than more rows. The amounts
+    /// live in labels, in their own columns, where nothing can crowd them.
+    ///
+    /// **A GATE, NOT A POINT, and that is geometry rather than taste.** The
+    /// strokes are weighted (1…3.6pt), and weighted lines converging on a
+    /// single coordinate all collapse to zero width at the same spot — four of
+    /// them pile into a smudge just before it, destroying the widths exactly
+    /// where the eye lands. A gate gives every line its own slot to arrive at,
+    /// so the weights survive the middle.
+    ///
+    /// **And the gate draws the net for free.** Each slot is proportional to
+    /// its lane, so the in-lines fill the whole gate while the out-lines fill
+    /// only `outUSD/inUSD` of it: lit full height on the left, part height on
+    /// the right, and the difference is what stayed. That is the one reading a
+    /// sentence had to assert before — now it is a shape.
+    ///
+    /// **It also ends a quiet dishonesty.** The old ribbons ran lane→spine→lane
+    /// and looked like a sankey, but `inLanes` and `outLanes` are separate
+    /// arrays and nothing in the data pairs a source with a destination. Those
+    /// ribbons implied that Peer's money went to Uniswap. Converging on the
+    /// wallet's own FACE claims only what is true: money reached you, and some
+    /// of it left.
     private func diagram(width: CGFloat) -> some View {
-        let slabWidth = width * 0.36
-        let spineX = width / 2 - spineWidth / 2
         let inSegs = segments(band.inLanes, sideTotal: band.inUSD)
         let outSegs = segments(band.outLanes, sideTotal: band.outUSD)
+        let cx = width * 0.50
+        let cy = bandHeight / 2
+        let gate = min(bandHeight - 24, 78)
+        let gateTop = cy - gate / 2
+        // The gate's lit share — what left, against what arrived. Clamped
+        // because a wallet can spend more than it took in over a window, and a
+        // segment taller than its own track reads as a drawing error.
+        let leftShare = band.inUSD > 0
+            ? min(1, band.outUSD / band.inUSD) : 0
+        let heaviest = max(band.inLanes.first?.usd ?? 0, 1)
 
         return ZStack(alignment: .topLeading) {
-            // Connectors first — straight tapers, square shoulders.
+            // The gate: a hairline track, and a brighter segment for the part
+            // of it that leaves again.
+            Capsule(style: .continuous)
+                .fill(DS.textPrimary.opacity(0.16))
+                .frame(width: 1.2, height: gate)
+                .offset(x: cx - 0.6, y: gateTop)
+            Capsule(style: .continuous)
+                .fill(DS.textPrimary.opacity(0.42))
+                .frame(width: 2.2, height: gate * CGFloat(leftShare))
+                .offset(x: cx - 1.1, y: gateTop)
+
             ForEach(inSegs.indices, id: \.self) { i in
-                connector(fromX: slabWidth, fromTop: inSegs[i].slabTop,
-                          toX: spineX, toTop: inSegs[i].spineTop,
-                          height: inSegs[i].height)
-                    .fill(DS.confirm.opacity(0.22))
+                let seg = inSegs[i]
+                strand(from: CGPoint(x: labelColumn, y: seg.slabTop + seg.height / 2),
+                       to: CGPoint(x: cx, y: gateTop + gateOffset(inSegs, i, gate: gate,
+                                                                  total: band.inUSD, share: 1)))
+                    .stroke(DS.confirm.opacity(0.74 - 0.09 * Double(seg.rank)),
+                            style: StrokeStyle(lineWidth: strandWidth(seg.lane.usd, of: heaviest),
+                                               lineCap: .round))
             }
             ForEach(outSegs.indices, id: \.self) { i in
-                connector(fromX: spineX + spineWidth, fromTop: outSegs[i].spineTop,
-                          toX: width - slabWidth, toTop: outSegs[i].slabTop,
-                          height: outSegs[i].height)
-                    .fill(DS.textPrimary.opacity(0.10))
+                let seg = outSegs[i]
+                strand(from: CGPoint(x: cx, y: gateTop + gateOffset(outSegs, i, gate: gate,
+                                                                    total: band.outUSD,
+                                                                    share: leftShare)),
+                       to: CGPoint(x: width - labelColumn, y: seg.slabTop + seg.height / 2))
+                    .stroke(DS.textPrimary.opacity(0.44 - 0.055 * Double(seg.rank)),
+                            style: StrokeStyle(lineWidth: strandWidth(seg.lane.usd, of: heaviest),
+                                               lineCap: .round))
             }
 
-            // The slabs — SOLID, square, running into the card's edges.
             ForEach(inSegs.indices, id: \.self) { i in
-                slab(inSegs[i], width: slabWidth, incoming: true)
-                    .offset(y: inSegs[i].slabTop)
+                endpoint(inSegs[i], x: labelColumn, incoming: true, width: width)
             }
             ForEach(outSegs.indices, id: \.self) { i in
-                slab(outSegs[i], width: slabWidth, incoming: false)
-                    .offset(x: width - slabWidth, y: outSegs[i].slabTop)
+                endpoint(outSegs[i], x: width - labelColumn, incoming: false, width: width)
             }
 
-            // The spine — you.
-            RoundedRectangle(cornerRadius: spineWidth / 2, style: .continuous)
-                .fill(spineTint.opacity(0.65))
-                .frame(width: spineWidth, height: bandHeight - 4)
-                .offset(x: spineX, y: 2)
+            // The gate is YOURS — the one ornament in the room, and the only
+            // thing here that says what the convergence means.
             if let spineAddress {
-                WalletFace(address: spineAddress, size: DS.Face.row, circular: true)
+                // `DS.Face.row` (26), not a raw number — and `row` rather than
+                    // `rowCircle` because this is an ALL-CIRCLE drawing with no
+                    // squircle marks beside it to optically match (the tier's
+                    // own rule).
+                    WalletFace(address: spineAddress, size: DS.Face.row, circular: true)
                     .overlay(Circle().stroke(DS.page, lineWidth: 3))
                     .scaleEffect(entered ? 1 : 0.4)
                     .animation(faceAnimation, value: entered)
-                    .position(x: width / 2, y: bandHeight * 0.42)
+                    .position(x: cx, y: cy)
             }
         }
+    }
+
+    /// The label gutter on each side. Text NEVER shares space with a stroke —
+    /// the rule the band version could not keep.
+    private var labelColumn: CGFloat { 94 }
+
+    /// 1…3.6pt by amount. Enough that the heaviest lane reads heavier at a
+    /// glance; never so much that a stroke has to contain anything.
+    private func strandWidth(_ usd: Double, of heaviest: Double) -> CGFloat {
+        1.0 + 2.6 * CGFloat(min(1, usd / heaviest))
+    }
+
+    /// Where a lane meets the gate — the CENTRE of a slot sized by its share,
+    /// so the arrivals stack rather than crushing together.
+    private func gateOffset(_ segs: [Seg], _ i: Int, gate: CGFloat,
+                            total: Double, share: Double) -> CGFloat {
+        guard total > 0 else { return gate / 2 }
+        let span = gate * CGFloat(share)
+        let before = segs.prefix(i).reduce(0.0) { $0 + $1.lane.usd }
+        let mine = segs[i].lane.usd
+        return span * CGFloat((before + mine / 2) / total)
+    }
+
+    private func strand(from a: CGPoint, to b: CGPoint) -> Path {
+        Path { p in
+            p.move(to: a)
+            p.addCurve(to: b,
+                       control1: CGPoint(x: a.x + (b.x - a.x) * 0.55, y: a.y),
+                       control2: CGPoint(x: a.x + (b.x - a.x) * 0.45, y: b.y))
+        }
+    }
+
+    /// A terminal dot and its name — the amount beside it, both outside the
+    /// stroke field.
+    @ViewBuilder
+    private func endpoint(_ seg: Seg, x: CGFloat, incoming: Bool, width: CGFloat) -> some View {
+        let y = seg.slabTop + seg.height / 2
+        Circle()
+            .fill(incoming ? DS.confirm.opacity(0.9 - 0.1 * Double(seg.rank))
+                           : DS.textPrimary.opacity(0.5 - 0.06 * Double(seg.rank)))
+            .frame(width: 5.2, height: 5.2)
+            .position(x: x, y: y)
+        HStack(spacing: 5) {
+            if !incoming { Spacer(minLength: 0) }
+            Text(seg.lane.name)
+                .dsText(.subhead13).foregroundStyle(DS.textPrimary)
+                .lineLimit(1)
+            Text(WalletValue.money(seg.lane.usd))
+                .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                .monospacedDigit()
+            if incoming { Spacer(minLength: 0) }
+        }
+        .frame(width: labelColumn - 12, alignment: incoming ? .trailing : .leading)
+        .position(x: incoming ? (labelColumn - 12) / 2
+                              : width - (labelColumn - 12) / 2,
+                  y: y)
+        .contentShape(Rectangle())
+        .onTapGesture { pick(seg.lane) }
+        .accessibilityHidden(true)
     }
 
     /// The diagram as a sentence — the same facts the drawing carries, in the

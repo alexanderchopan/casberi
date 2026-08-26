@@ -225,15 +225,26 @@ struct FaceScopeRail: View {
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 2) {
+                // THE BOOK LEADS (user ruling, prd §483, 2026-08-26: *"address
+                // book can be first before All"*). It trailed the faces until
+                // this, which put the one slot that is a DOOR at the far end of
+                // a scrolling strip — reachable only after scrolling past every
+                // face, on the rail whose whole job is to get you to a face.
+                // Leading, it is where a nav control sits and it never moves as
+                // the watch list grows.
+                //
+                // It is also the only slot here that LEAVES the room, so the
+                // strip now reads outward-in: the door, then everything, then
+                // each one.
+                if let bookTitle, onOpenBook != nil {
+                    bookSlot(title: bookTitle)
+                }
                 allSlot
                 ForEach(items) { item in
                     slot(item)
                 }
                 if let addTitle, onAdd != nil {
                     addSlot(title: addTitle)
-                }
-                if let bookTitle, onOpenBook != nil {
-                    bookSlot(title: bookTitle)
                 }
             }
             .padding(.horizontal, DS.Space.s4)
@@ -275,7 +286,18 @@ struct FaceScopeRail: View {
                     .dsText(.label11).fontWeight(.semibold)
                     .foregroundStyle(isOn ? DS.textPrimary : DS.textSecondary)
                     .frame(width: faceSize, height: faceSize)
-                    .background(Circle().fill(DS.tintDim))
+                    // **SELECTION IS THE ONLY THING THAT FILLS** (prd §483,
+                    // 2026-08-26 — the colour rule, asked for directly: *"pick
+                    // a rule and lets stick to it"*).
+                    //
+                    // This painted `DS.tintDim` whether or not it was on, so
+                    // "All" looked tinted while a wallet was scoped and carried
+                    // its state in text weight and a 0.7 opacity lift alone —
+                    // the two quietest cues the ramp has, on the one slot whose
+                    // job is to say "you are looking at everything". Now it is
+                    // `fillFaint` at rest and tint when picked, which is what
+                    // the section toggle and the venue switcher already do.
+                    .background(Circle().fill(isOn ? DS.tintDim : DS.fillFaint))
                 // Reserves the caption's line so this circle sits level with
                 // the faces beside it. With no captions in the rail there is no
                 // line to reserve, and it centres in its slot instead.

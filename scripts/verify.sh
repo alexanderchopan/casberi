@@ -1138,6 +1138,15 @@ harness "Apple Wallet pure-logic self-test" "apple wallet self-test" "scripts/ap
 # dispute that never fires, eleven alarms where there should be one and a count.
 harness "Notification pure-logic self-test" "notify self-test" "scripts/notify-selftest.sh" "the notification logic self-test failed — run scripts/notify-selftest.sh"
 
+# The wallet room's SCOPE rules (prd §483) — which of its six readings is on
+# screen. Every failure renders as a perfectly ordinary room: a scope that never
+# appears (indistinguishable from a wallet that genuinely has no positions), a
+# remembered scope resolving to the wrong one so the room opens somewhere nobody
+# picked, a CONDITIONAL scope landing mid-strip so every chip after it shifts the
+# day an approval is revoked, or a strip drawn over a single scope, which is a
+# label wearing a control's clothes (§83). None of that fails a build or a sweep.
+harness "Wallet section scopes" "wallet sections" "scripts/wallet-section-selftest.sh" "the wallet section self-test failed — run scripts/wallet-section-selftest.sh"
+
 # Pure-logic self-test for the Stripe and PostHog room heads (prd §298). Neither
 # bridge has ever run against a live account from this host, and every failure
 # here is a silent wrong answer: a dispute due tomorrow placed at the far end of

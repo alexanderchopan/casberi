@@ -15,6 +15,19 @@ import UIKit
 /// or reconcile two route singletons the way the old Home/Feed split did. Each
 /// body keeps its own inner pushes (a project, a bridge panel) but no longer
 /// carries a stack of its own.
+// `WalletSection` is Foundation-only so `wallet-section-selftest.sh` can
+// compile it WHOLE; the SwiftUI protocol therefore lands here, beside the
+// only place that consumes it, rather than on the declaration. Vibenet's
+// own scope enum conforms the same way beside its own call site — one
+// control, two vocabularies, neither type dragging SwiftUI into a harness.
+extension WalletSection: DSSectionScope {}
+
+// Conformed beside the call site rather than on the declaration, for the
+// reason Wallet's own does: `VibenetSection` stays Foundation-only so a
+// `swiftc` harness can compile it WHOLE, and a SwiftUI protocol on the
+// declaration ends that (prd §482).
+extension VibenetSection: DSSectionScope {}
+
 struct MainSurface: View {
     // Whole corpus, newest first — but hydrating ONLY the columns this surface
     // reads (2026-07-24 perf). This screen never renders a Thing's body
@@ -355,21 +368,17 @@ struct MainSurface: View {
     @ViewBuilder
     private var roomControls: some View {
         categorySwitcher
-        walletScopeRail
         socialScopeRail
-        vibenetScopeRail
+        // **VIBENET'S FACE RAIL IS FOLDED INTO ITS CROWN (prd §482
+        // amendment, 2026-08-26, user: "we cannot have four rows of chips").**
+        // It and the value chips under the sparkline were both a strip of
+        // this room's accounts — one above the crown, one below it — and only
+        // the lower one said what each account was worth. The scoping moved
+        // down into those chips, which costs a row of chrome and loses
+        // nothing. Wallet's rail is untouched: its crown carries no
+        // per-account strip to fold into.
     }
 
-    /// Whichever folded category room is showing, its venue switcher (prd §351,
-    /// 2026-08-11; hoisted here by §357). Each scope is that seat's own room,
-    /// whole and unchanged — this mounts nothing and shapes nothing, it only
-    /// asks the surface to switch rooms, through the same `go(to:)` door a chip
-    /// tap and a swipe take.
-    ///
-    /// The venues arrive in LEARNED order (that is what `CategoryFold.landing`
-    /// needs); `scopes` puts them in catalog order for display, because a
-    /// capsule this short has not earned learned order and one that reshuffles
-    /// between opens reads as broken.
     @ViewBuilder
     private var categorySwitcher: some View {
         if let category = BridgeCatalog.category(forSource: filter.source) {
@@ -411,63 +420,6 @@ struct MainSurface: View {
     /// control twitching. The reason the strip declines is the same reason this
     /// one should: folding buys back vertical space, and a surface wide enough
     /// to wear a rail is not short of it.
-    @ViewBuilder
-    private var walletScopeRail: some View {
-        if WalletScopeRail.shows(source: filter.source, watched: wallet.addresses.count) {
-            FaceScopeRail(
-                items: WalletScopeRail.items(wallet.addresses),
-                scope: chrome.walletScope,
-                compact: chrome.minimized && !showsRail,
-                // Faces only — the crown card directly below names the pick
-                // (prd §450). `compact:` is still handed over above, and still
-                // gated on `!showsRail`, because it is the shared initializer's
-                // and the social rail reads it; this rail ignores it, having
-                // already arrived 20pt shorter than the captioned one.
-                namesInRoom: true,
-                matches: WalletScopeRail.matches,
-                // Animated, as it was on the feed: the lit face's opacity and
-                // weight crossfade rather than snapping, and the room's own
-                // re-derivation (rows, balance, treemap) rides the same curve.
-                onPick: { picked in
-                    withAnimation(DS.Motion.standard) { chrome.walletScope = picked }
-                },
-                // No re-tap verb: there is no "deeper" a watched address goes
-                // that the room you are already in does not already show.
-                onReTap: nil,
-                // ONE slot, not two (prd §466, dropped 2026-08-24, matching
-                // Vibenet's own rail the same day). Watching another wallet
-                // and seeing the whole roster are the same screen now — the
-                // roster moved into the book — so a separate ADD slot would
-                // point at the identical destination as the book door.
-                addTitle: nil,
-                onAdd: nil,
-                // The door to everyone who is NOT on this rail, AND — since
-                // §466 — the door to the roster itself when there's more to
-                // add (prd §461/§466).
-                bookTitle: String(localized: "Address Book"),
-                onOpenBook: { route.push(.addressBook) })
-            .padding(.top, showsRail && !demoActive ? DS.Space.s2 : 0)
-        }
-    }
-
-    /// The social face rail — the same control the wallets wear (prd §362,
-    /// 2026-08-11, user ruling: *"the best way to [make it simple] is things
-    /// being the same"*).
-    ///
-    /// Membership comes from the network's OWN store rather than the corpus, so
-    /// the rail is complete on the first frame of a room change; the ring comes
-    /// the other way, published by the feed (`ShellChrome.freshHandles`), because
-    /// only the feed knows this room's last-visit stamp. See that property for
-    /// why the two halves flow in opposite directions.
-    ///
-    /// There is no add slot: following someone is not a thing you do from a rail
-    /// of the people you already follow, and the room's own header already
-    /// carries the door to its account manager. The wallet rail has one because
-    /// the wallet manager is the ONLY door to watching another address.
-    /// The vibenet room's own accounts (2026-08-23) — see
-    /// `VibenetScopeRail`. Scoping is display-only here: picking a face
-    /// narrows the room to that account's events, which is what the rail
-    /// means everywhere else it appears.
     @ViewBuilder
     private var vibenetScopeRail: some View {
         // Derived from the ROOM, never from the watch list directly — the

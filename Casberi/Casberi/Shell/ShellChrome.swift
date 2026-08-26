@@ -71,6 +71,82 @@ final class ShellChrome {
     /// wallet is a feed with no rows and no way to explain itself.
     var walletScope: String?
 
+    /// Which READING of the wallet room is on screen (prd §483, 2026-08-26) —
+    /// nil until the room resolves one, then whatever was last picked.
+    ///
+    /// **Here rather than on `FeedScreen` for `walletScope`'s reason exactly**:
+    /// the screen carries `.id(filter.source)`, so its `@State` dies on every
+    /// room change, and the control that sets this is shell-mounted (§357) so
+    /// it would outlive the state it drives. The two properties are separate
+    /// because they answer different questions — `walletScope` is WHOSE money,
+    /// this is WHICH reading of it — and either can change without the other.
+    ///
+    /// **It is NOT persisted across launches, unlike `MarketsRoom.landing`.**
+    /// That room remembers because its venues are separate watchlists and
+    /// reopening on Tokens for somebody who lives in Kalshi costs a tap on the
+    /// very first tap. These are facets of ONE subject and `activity` is the
+    /// room's front door — every other room in this app opens on its feed, and
+    /// a wallet that reopened on Permissions three days after you last looked
+    /// at an approval would be answering a question nobody asked.
+    ///
+    /// Not cleared on a room change on purpose: the wallet CATEGORY spans
+    /// several rooms (§356) and a reading survives moving between them, the
+    /// same span `walletScope` keeps. `WalletSection.resolve` handles the case
+    /// where the remembered scope's content has since gone.
+    var walletSection: WalletSection?
+
+    /// Which scopes the wallet room currently HAS something for, published by
+    /// that room and read by the shell-mounted switcher (prd §483).
+    ///
+    /// **The shell cannot compute this and must not try.** Presence is decided
+    /// by `GenStream` contents, `WalletLiveState` and the NFT shelf — all of
+    /// them `FeedScreen`'s, none of them reachable from here. So the room
+    /// publishes and the control consumes, exactly the way `marketVenues`
+    /// carries the Markets fold's membership up to the same inset.
+    ///
+    /// It doubles as the switcher's own GATE: only the wallet room ever writes
+    /// it and it is cleared on the way out, so the toggle cannot appear over a
+    /// Vibenet- or Social-scoped room by mistake — a rule that holds by
+    /// construction rather than by a source-name test in two files that could
+    /// drift apart.
+    var walletSections: [WalletSection] = []
+
+    /// Which of those scopes hold something that wants answering — the dot on
+    /// the strip. Published beside `walletSections` for the same reason and
+    /// cleared with it.
+    var walletSectionAttention: Set<WalletSection> = []
+
+    /// The vibenet room's scope, and the two lists behind its switcher (prd
+    /// §482, 2026-08-26) — `walletSection`'s trio one room over, deliberately
+    /// SEPARATE properties rather than a shared generic pair.
+    ///
+    /// **Why not one `sections: [any DSSectionScope]`.** The two rooms publish
+    /// different enums and only one of them may draw at a time; separate
+    /// properties make "these can never both be non-empty" a thing the gates
+    /// enforce by construction, where a shared list would need a discriminator
+    /// and a cast at the mount point. It also keeps each room's clear-on-exit
+    /// honest: whoever writes it owns it.
+    ///
+    /// Same lifetime rules as Wallet's, for the same reasons: the scope
+    /// survives a room change within the category, `VibenetSection.resolve`
+    /// handles a remembered scope whose content has since gone, and neither
+    /// persists across launches — these are facets of one subject, and Holdings
+    /// is the front door (§482).
+    var vibenetSection: VibenetSection?
+
+    /// Which scopes the vibenet room currently HAS something for. The shell
+    /// cannot compute this — presence needs the composed `VibenetRoom` and the
+    /// landed event rows, neither reachable from here — so the room publishes
+    /// and the control consumes. Doubles as the switcher's GATE: only that room
+    /// writes it and it clears on the way out, so this and `walletSections`
+    /// cannot both be non-empty.
+    var vibenetSections: [VibenetSection] = []
+
+    /// Which of those wear a dot — `VibenetAttention`'s ranking, one layer
+    /// down (see `VibenetSection.attention`). Published beside
+    /// `vibenetSections` and cleared with it.
+    var vibenetSectionAttention: Set<VibenetSection> = []
+
     /// Which watched account a SOCIAL room is scoped to — nil = all of them
     /// (prd §362, 2026-08-11). The handle as the account's own store spells it
     /// (`SocialAccount.key`), matched against `Thing.authorHandle`.

@@ -88,10 +88,60 @@ struct WalletBalanceHeadline: View {
     /// and so a wallet with no name at all can spend the whole line on its
     /// address instead of repeating it.
     var captionDetail: String? = nil
+    /// Whether an empty `caption` collapses instead of reserving its row.
+    ///
+    /// The caption is normally always present, so its `HStack` could hold the
+    /// layout unconditionally. The wallet room's unscoped Home has no caption
+    /// at all now (prd §483 — the rail's lit "All" says it), and an empty
+    /// `Text` still draws a line box, so without this the room shows a gap
+    /// where the words used to be.
+    var hidesEmptyCaption: Bool = false
     /// "Mostly ETH · +$310" — WHY the line moved, from the same per-token
     /// snapshots the combined sheet's "What moved" reads. nil when the record
     /// can't attribute the move yet.
+    /// WHY it moved, in the quietest ink on the screen.
+    ///
+    /// Nil in the wallet room since 2026-08-26 (prd §483, *"remove … 'mostly
+    /// eth'"*): it was a third line under a figure that already had two, and
+    /// the Holdings scope one tap away answers the same question properly.
+    /// Kept as a parameter because the token rooms still use it.
     var mover: String? = nil
+    /// Whether the LINE is drawn.
+    ///
+    /// False in the wallet room's non-Home scopes (prd §483), where another
+    /// visual takes the line's place directly below — so the crown keeps its
+    /// figure, its move line and its range, and gives up only the plot and the
+    /// range chips.
+    ///
+    /// **It suppresses the DRAWING, never the chart itself, and that
+    /// distinction cost a build.** Passing `chart: nil` instead read as "no
+    /// reading has landed": the total falls back to `chart?.price` when the
+    /// portfolio read is unavailable — which is every demo and every offline
+    /// launch — so the crown showed **$0** in every scope but Home, under a
+    /// sentence explaining that the line had not started yet. Both were true of
+    /// the parameter and neither was true of the wallet.
+    var drawsChart: Bool = true
+    /// Whether the FIGURE and its move line draw.
+    ///
+    /// False in the wallet room's non-Home scopes (prd §483, user: *"on
+    /// activity, we don't need the value, just show the sankey"*). Every scope
+    /// owns one drawing; on Home that drawing is the balance and its line, and
+    /// elsewhere the balance would be a second, louder answer sitting on top of
+    /// the one you actually asked for.
+    ///
+    /// The total is one tap away on Home in every case, so nothing is lost that
+    /// is not immediately recoverable — and the room stops claiming a figure
+    /// belongs to a treemap or a flow band that does not produce it.
+    var drawsReading: Bool = true
+    /// How tall the line draws.
+    ///
+    /// Shorter in the wallet room than the 120 it shipped at (user ruling, prd
+    /// §483: *"ideally the three transactions would show without user having to
+    /// scroll. we should shorten the area we devote to sparkline"*). The line's
+    /// job on Home is to say which way and roughly how far, and it does that at
+    /// 96 as well as at 120 — the 24pt buys a third transaction row above the
+    /// fold, which is the thing the room is actually opened for.
+    var chartHeight: CGFloat = 120
     /// The windows this history can honestly answer; fewer than two draws no
     /// chips (a lone chip is a dead control).
     var ranges: [WalletRange] = []
@@ -180,16 +230,18 @@ struct WalletBalanceHeadline: View {
             // element was its faintest. The honesty corollary the design law
             // already states for backgrounds, applied to ink: when there's no
             // action, don't render a control at all.
-            if let onOpen {
-                Button(action: onOpen) {
-                    reading.contentShape(Rectangle())
+            if drawsReading {
+                if let onOpen {
+                    Button(action: onOpen) {
+                        reading.contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                } else {
+                    reading
                 }
-                .buttonStyle(.plain)
-            } else {
-                reading
             }
 
-            if let chart {
+            if let chart, drawsChart {
                 // Taller, heavier, and ending on a solid dot (prd §157) — the
                 // line is the total said a second way, so it carries weight
                 // like the total does.
@@ -219,7 +271,7 @@ struct WalletBalanceHeadline: View {
                 // screen: a wallet's transactions sat behind ten standing
                 // cards, and the fix is a shorter hero rather than a folded
                 // room (Options A and B, both declined).
-                TokenChartPlot(chart: chart, accent: accent, height: 120, pulses: false,
+                TokenChartPlot(chart: chart, accent: accent, height: chartHeight, pulses: false,
                                lineWidth: 2.6, fillOpacity: 0.24, endpointDot: true,
                                marks: marks,
                                onTapMark: marks.isEmpty ? nil : { onOpenMark($0.id) },
@@ -243,10 +295,15 @@ struct WalletBalanceHeadline: View {
                     .onChange(of: chart.closes) { draw(redraw: true) }
                     .padding(.top, DS.Space.s1)
                 if ranges.count > 1 { rangeChips }
-            } else {
+            } else if chart == nil {
                 // No line yet — say why, rather than leaving the number
                 // hanging over empty space. The total above it is already
                 // real; this is only about the SHAPE not existing yet.
+                //
+                // `chart == nil` rather than `else`: a scope that deliberately
+                // hands its slot to another drawing has a chart and simply is
+                // not showing it, so explaining an absence there would describe
+                // a line that exists.
                 Text("The line starts once a second reading lands.")
                     .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                     .padding(.top, 2)
@@ -287,6 +344,7 @@ struct WalletBalanceHeadline: View {
     /// tap; identical either way.
     private var reading: some View {
         VStack(alignment: .leading, spacing: DS.Space.s1) {
+                    if !(hidesEmptyCaption && caption.isEmpty && captionAddress == nil) {
                     HStack(spacing: 5) {
                         // The scoped wallet's own face, at the ramp's badge
                         // tier (prd §450). The rail above rings the picked
@@ -307,6 +365,7 @@ struct WalletBalanceHeadline: View {
                                 .dsGlyph(10)
                                 .foregroundStyle(DS.textTertiary)
                         }
+                    }
                     }
                     // The app's money voice ($19.9K), not a token price — this is
                     // a portfolio total, and `WalletValue.money` is what the
@@ -377,9 +436,10 @@ struct WalletBalanceHeadline: View {
                 .dsText(.callout15).fontWeight(.semibold)
                 .foregroundStyle(ink)
                 .monospacedDigit()
-            Text(range.deltaLabel)
-                .dsText(.callout15)
-                .foregroundStyle(DS.textTertiary)
+            // THE WINDOW WORD IS GONE (user ruling, prd §483: *"remove
+            // 'watched'"*). It named the range the delta was measured over —
+            // true, and the range chips directly below already say it, so the
+            // line was spending its width restating the control beneath it.
             Spacer(minLength: 0)
         }
         .lineLimit(1).minimumScaleFactor(0.7)
@@ -592,7 +652,18 @@ struct WalletCompositionStrip: View {
         if !composition.isEmpty {
             let r = reading
             VStack(alignment: .leading, spacing: DS.Space.s2) {
-                WalletSectionLabel(title: String(localized: "In protocols"))
+                // **"Positions", not "In protocols" (user ruling, prd §483:
+                // *"for 'in protocols' call it 'positions' because isn't that
+                // what it is? i dunno what 'in protocols' means"*).** The old
+                // heading was trying to explain WHERE the money went, while
+                // the lines underneath already say WHAT in plain words —
+                // Deposited, Locked, Owed. A heading only has to be a label.
+                //
+                // Deliberately the SAME word as the scope chip. This strip is
+                // the summary of exactly what that scope holds, so sharing the
+                // name is what makes the crown's line read as a preview of it
+                // rather than as a fifth unrelated card.
+                WalletSectionLabel(title: String(localized: "Positions"))
                 if let r {
                     Text(r.text)
                         .dsText(.heading22)
