@@ -224,12 +224,22 @@ enum WalletNFTShelf {
                 // timestamp (measured 2026-08-15). Captured here because it is
                 // the only place the order still exists; everything downstream
                 // works on a flattened set.
+                // OpenSea's safelist standing, kept for the feed's NFT-origin
+                // rule (prd §481) and drawn nowhere. Two spellings are accepted
+                // because OpenSea's own vocabulary changed and Alchemy passes
+                // through whichever it was given; anything else — "requested",
+                // "not_requested", absent — is NOT evidence of anything and
+                // reads false, which is the only safe direction for a field
+                // that can add a row and never remove one.
+                let safelist = (openSea?["safelistRequestStatus"] as? String)?.lowercased()
+                let verified = safelist == "verified" || safelist == "approved"
                 out.append(NFTCollection(network: network,
                                          contract: addr.lowercased(),
                                          name: name,
                                          imageURL: art,
                                          count: count,
                                          isSpam: (c["isSpam"] as? Bool) == true,
+                                         isVerified: verified,
                                          arrival: out.count))
             }
             guard let next = root["pageKey"] as? String, !next.isEmpty else { break }

@@ -175,6 +175,27 @@ enum WalletUserOps {
         return .paid(native: fallbackNative)
     }
 
+    /// Whether `wallet` is the ACTOR behind this transaction — it sent it, or
+    /// its UserOperation rode in it (2026-08-26, prd §481).
+    ///
+    /// The same question `attribution` already answers, asked without the money:
+    /// `.paid` and `.sponsored` both mean the wallet acted (a sponsored
+    /// operation is still one it signed) and only `.notYours` is somebody else.
+    /// It DELEGATES rather than re-deriving, because a second reading of a
+    /// receipt would eventually disagree with the first about a Safe.
+    ///
+    /// `fallbackNative: 1` is the one wart and it is deliberate: `attribution`
+    /// refuses a zero fee because a gas TOTAL must not absorb an unreadable
+    /// receipt, while this caller does not care what the transaction cost — it
+    /// asks only who sent it. A real fee is never zero for an EOA sender
+    /// anyway, so the substitution changes no real answer.
+    static func wasSentByWallet(logs: [[String: Any]], from: String?, wallet: String) -> Bool {
+        switch attribution(logs: logs, from: from, wallet: wallet, fallbackNative: 1) {
+        case .paid, .sponsored: return true
+        case .notYours:         return false
+        }
+    }
+
     /// Every UserOperation in a receipt whose emitter we don't recognise —
     /// the probe's drift line. An entry here means a new EntryPoint version is
     /// live and `knownEntryPoints` is behind, which shows up as gas we decline

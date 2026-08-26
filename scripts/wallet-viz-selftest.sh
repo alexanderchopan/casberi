@@ -846,6 +846,31 @@ check(WalletUserOps.unknownEmitters(
         logs: [uoLog(sender: ME, paymaster: ZERO, costWei: TENTH)]).isEmpty,
       "a known EntryPoint is not reported as drift")
 
+// WHO SENT IT, asked without the money (2026-08-26, prd §481) — the NFT-origin
+// rule's only question of a receipt. It must agree with `attribution` on every
+// case above, because it IS `attribution`: two readings of one receipt
+// eventually disagree about a Safe, and then the gas total and the feed filter
+// tell different stories about the same transaction.
+func sentByMe(_ logs: [[String: Any]], from: String?) -> Bool {
+    WalletUserOps.wasSentByWallet(logs: logs, from: from, wallet: ME)
+}
+check(sentByMe([], from: ME), "an ordinary EOA sender is the actor")
+check(!sentByMe([], from: OTHER), "a Safe owner's transaction is not the Safe's own act")
+check(!sentByMe([], from: nil), "a receipt with no `from` names no actor")
+check(sentByMe([uoLog(sender: ME, paymaster: ZERO, costWei: TENTH)], from: OTHER),
+      "our own UserOperation in somebody else's bundle is still our act")
+// The one that a bare `receipt.from == wallet` gets wrong, and the reason this
+// delegates rather than re-deriving: a sponsored operation is one WE signed,
+// even though a paymaster paid and a bundler sent it.
+check(sentByMe([uoLog(sender: ME, paymaster: PAYMR, costWei: TENTH)], from: OTHER),
+      "a sponsored operation is still one we signed")
+check(!sentByMe([uoLog(sender: OTHER, paymaster: ZERO, costWei: TENTH)], from: OTHER),
+      "a stranger's operation in the same bundle is not our act")
+// A zero fee must not be read as "not ours". `attribution` refuses a zero
+// fallback because a gas TOTAL must not absorb an unreadable receipt; this
+// caller does not care what the transaction cost, so it must survive the case.
+check(sentByMe([], from: ME), "a free transaction we sent is still ours")
+
 // Every canonical EntryPoint is trusted, not just the one above.
 for ep in WalletUserOps.knownEntryPoints {
     check(attr([uoLog(sender: ME, paymaster: ZERO, costWei: TENTH, emitter: ep)], from: OTHER)

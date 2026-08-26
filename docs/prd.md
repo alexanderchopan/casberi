@@ -33690,3 +33690,146 @@ while a filter is active — one line, and it wants a device rather than an
 argument.
 
 **UNMEASURED on a device.** Every claim here is about how a screen reads.
+
+## 481. A spam NFT mint is one you didn't sign, not one that's cheap (user: "the user problem is that they get an event for minting an NFT, but most NFT's are spam… what can we do to filter those out? any NFT below a certain dollar we don't show an event for?", 2026-08-26)
+
+**The reported problem.** A junk NFT is minted to a watched wallet and lands as
+an event in the feed. Notifications already decline it (`NotifySweep` never
+speaks about a landed row), so the complaint is precisely about the event list.
+
+**The filter already existed and could never have caught this.** Since
+2026-07-15 `WalletIngest.refresh` drops a received ERC-721/1155 whose contract
+is not among the wallet's non-spam held collections — the sibling of the dust
+floor that drops junk ERC-20s. A **mint** defeats it by construction:
+
+1. the mint puts the piece in the wallet, so the "do you hold it" arm passes; and
+2. the only thing left is Alchemy's `isSpam`, which is a REPUTATION signal on a
+   contract that is usually minutes old.
+
+So the filter's evidence arrives after the event does. **Every spam mint is a
+first offence.** That is why junk NFTs *transferred* in get dropped and junk
+NFTs *minted* in do not — a distinction nothing on screen could have suggested.
+
+**THE DOLLAR FLOOR IS REFUSED, and §387's ruling is the first reason.** That
+entry already decided it for the shelf: *"a floor is a bid on the thinnest book
+in this app, it moves without you, and it would be a number people believe (§83)
+beside art somebody keeps for reasons that aren't the number."* Two further
+reasons are specific to the event list and are what make it not merely
+unattractive but wrong:
+
+- **It fails by construction on the case it is aimed at.** A collection minted
+  an hour ago has no floor — that is what "new" means — so a dollar rule reads a
+  mint somebody just performed and a spam drop as the same thing, and hides the
+  one they cared about. Silently, with no way to find out.
+- **It is the only rule a spammer can buy past.** A wash-traded floor costs a few
+  dollars and defeats it permanently.
+
+The token side gets away with `holdingFloor` because a fungible token has a real
+price from a real pool. An NFT floor is not that kind of number.
+
+**THE AXIS THAT WORKS: WHO SIGNED THE TRANSACTION.** A mint you performed is one
+you signed; a mint pushed at you is sent by somebody else. On the TRANSFER
+record the two are identical — both arrive from the void — and one level up, at
+the TRANSACTION, they are completely different. This is the anchor `WalletSafety`
+already turns on: *"addresses THIS wallet has sent to are the unambiguous trust
+anchor — never the received side, which is exactly what a poisoner controls."* A
+spammer controls what they send you. They cannot make you sign.
+
+`Model/WalletNFTOrigin.swift` carries the whole decision as a pure function.
+Six rungs, in this order, each with a reason the order depends on:
+
+1. Not an NFT category → keep. This rule speaks about NFTs and nothing else.
+2. No contract → keep. Fails open, like every rung below.
+3. **A PICK OVERRIDES THE VENDOR'S GUESS** — §387's own words, carried into the
+   feed. Honouring `isSpam` over a collection somebody explicitly chose would
+   silently drop the arrivals of the one collection they told us they care about.
+4. **OpenSea safelisting vouches.** Its ABSENCE proves nothing (most legitimate
+   collections are not safelisted), so this is a keep-only rung and must never be
+   inverted into a drop.
+5. **A counterparty this wallet has SENT to vouches** — a friend who gifts you a
+   piece is usually somebody you have transacted with.
+6. The 2026-07-15 holdings rule, kept whole and still ahead of the receipt
+   question, so a collection you do not hold costs no read.
+7. **Did you send the transaction?** One `eth_getTransactionReceipt`.
+
+**THE VOID GUARD IS THE SHARPEST EDGE IN THE FILE.** Burning is done by SENDING
+to `0x…0000` or `0x…dEaD`, so a wallet that has ever burned anything carries the
+void in its known-good set — and without an explicit exclusion, rung 5 would
+vouch for **every mint ever**, switching the whole filter off for exactly the
+long-lived wallets that most need it, with nothing on screen to say so. Pinned
+by an assertion and a mutation.
+
+**DROP, NEVER FLAG.** `FeedFold.tier` puts `isFlagged` in `.concerns`, the feed's
+HIGHEST tier — so flagging a spam mint would PROMOTE it to sit beside a dispute
+deadline and a pending approval. Dropping is also what the received side already
+does by rule; flagging is the SENT-side pattern, and only because dropping there
+would eat real history (`WalletSafety.flagFakeTransfer`).
+
+**THE CHEAPER SIGNAL WAS CONSIDERED AND REFUSED.** "Did this same transaction
+also move something OUT of the wallet?" is free and catches every paid mint —
+but a contract can emit a `Transfer` event claiming the wallet sent something it
+never sent, which is the exact attack `flagFakeTransfer` exists for. **A signal a
+spammer can forge is worse than no signal, because it looks like one.** The
+receipt is the un-forgeable answer, so the receipt is what gets read.
+
+**COSTS.** No new `Thing` property, so **no CloudKit Production deploy**. The
+receipt read is keyless — `WalletApprovals.rpcRead`, the measured public pool
+`WalletGas` already uses, **zero Alchemy credits**. Safelisting is a THIRD
+projection of the cached `WalletNFTShelf.collections` bytes `ownedNFTContracts`
+and the picker already share, so it costs no request at all. Reads are bought
+only for legs that reach rung 7, which is exactly "the NFT rows that would have
+reached the feed today" — none for a wallet nobody is airdropping. Bounded at
+`nftReceiptBudget` (24) per pass; **overflow is KEPT, not dropped**, and the
+consequence is stated rather than hidden: a wallet taking more than 24 NFTs in
+one pass sees the excess until `isSpam` catches up next pass.
+
+**FAIL OPEN, EVERY ARM.** A nil holdings set means the READ failed; a nil
+`signed` means the receipt did. `nftTransactionWasSent` returns `Bool?` and the
+nil and the false are DIFFERENT ANSWERS — nil keeps the row, false drops it.
+Collapsing them would turn a flaky RPC host into a silent spam filter.
+
+**ONE READING OF A RECEIPT.** `WalletUserOps.wasSentByWallet` DELEGATES to
+`attribution` rather than re-deriving: `.paid` and `.sponsored` both mean the
+wallet acted (a sponsored operation is still one it signed) and only `.notYours`
+is somebody else. A bare `receipt.from == you` is wrong for every smart account —
+a 4337 bundle is sent by a bundler and a Safe transaction by an owner — so the
+naive test would call a mint you paid for somebody else's. Two readings of one
+receipt would eventually disagree about a Safe, and then the gas total and the
+feed filter would tell different stories about the same transaction.
+
+**SAFELISTING IS EVIDENCE, NEVER A LABEL.** `NFTCollection.isVerified` is read
+and drawn NOWHERE. §387 ruled that a third party's classification may order the
+picker and must never print beside somebody's own collection, because "verified"
+states a guess as a fact (§83) exactly as loudly as "spam" does. Guarded as a
+negative grep on the picker and the shelf card.
+
+**`-nftOriginProbe YES|"<network>|<hash>"`.** Bare `YES` prints the rule's
+inputs per wallet; a hash asks the decisive question for one transaction through
+the same read the ingest makes. It exists because "a spam mint still showed" and
+"a mint of mine disappeared" have SIX causes that look identical from the feed —
+no watched wallet, the collections read failing, a receipt host not answering,
+the budget exceeded, the void sitting in known-good, or the rule working — and
+only two are bugs. `verified=0` beside a healthy `collections=` is the shape of a
+drifted `safelistRequestStatus` parse.
+
+**Guarded by `scripts/wallet-nft-selftest.sh`**, which now compiles
+`WalletNFTOrigin.swift` WHOLE alongside `WalletNFTPicks.swift` and
+`WalletVerbs.swift` — all three Foundation-only by design, so the rule USES
+`WalletVerbs.isVoid` and `NFTPickKey.make` rather than mirroring either (a copied
+void set or a second key format is exactly the drift this project keeps paying
+for). 22 assertions, 9 mutations, 7 new drift guards — including a mechanical
+form of the no-floor-price ruling and of drop-never-flag. `wallet-viz-selftest.sh`
+covers `wasSentByWallet` against the same fixtures `attribution` already has.
+
+**UNBUILT and UNMEASURED.** Authored on Linux with no Xcode and no Swift
+toolchain: nothing here has been compiled, `verify.sh` has not run, and the
+`safelistRequestStatus` field is doc-derived — no key on this host reaches
+`g.alchemy.com`. Every path fails open, so the worst case of a wrong parse is
+the feed the user is complaining about today. Run `scripts/verify.sh` before
+trusting any of it.
+
+**Deliberately NOT built.** A user-facing toggle: the rule drops only what it can
+show you did not sign, which is a fact rather than a taste, and §387's "no junk
+fold" is the standing answer to hiding things behind a switch. Nothing here
+touches the Solana arm — Alchemy's NFT API is EVM-only, so a Solana NFT was never
+in this filter's reach and the copy claims nothing about it.

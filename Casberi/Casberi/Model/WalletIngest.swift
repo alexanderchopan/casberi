@@ -329,6 +329,19 @@ enum WalletIngest {
         // `getContractsForOwner` is an EVM method, and the legs it filters are
         // EVM legs anyway.
         let ownedNFTs = await ownedNFTContracts(addresses: evmAddresses)
+        // …and the same cached bytes' other two answers, for the NFT-origin
+        // rule (2026-08-26, prd §481). Both are KEEP-ONLY signals: a collection
+        // somebody picked for their shelf (§387's "a pick overrides the
+        // vendor's guess", applied to the feed) and one OpenSea has safelisted.
+        // Neither can remove a row, so a failed read costs nothing but a
+        // narrower keep. `picks` is per-wallet because a pick is; `verified` is
+        // flat because safelisting is a fact about the collection.
+        let verifiedNFTs = await verifiedNFTKeys(addresses: evmAddresses)
+        var pickedNFTs: [String: Set<String>] = [:]
+        for address in evmAddresses {
+            let picks = WalletNFTStore.shared.book.picks(wallet: address)
+            if !picks.isEmpty { pickedNFTs[address.lowercased()] = picks }
+        }
 
         // Fold each wallet's legs by (address, chain, tx hash): a hash that
         // BOTH sends and receives for one wallet is a trade — one
@@ -348,6 +361,17 @@ enum WalletIngest {
         // side, which is exactly what a poisoner controls. One fetch for the
         // whole pass, before the per-leg loop below needs it.
         let knownGoodByOwner = WalletSafety.knownGoodCounterparties(context: context, owners: evmAddresses)
+
+        // WHO SENT THE TRANSACTION each received NFT arrived in (2026-08-26,
+        // prd §481). The rule and the reasoning live in `WalletNFTOrigin`; what
+        // matters here is that this is the LAST question asked, after every
+        // free rung has declined, so a pass buys one keyless receipt read per
+        // NFT row that would otherwise reach the feed and none at all for a
+        // wallet nobody is airdropping.
+        let nftSigned = await nftSignatures(fresh: fresh, ownedNFTs: ownedNFTs,
+                                            pickedNFTs: pickedNFTs,
+                                            verifiedNFTs: verifiedNFTs,
+                                            knownGood: knownGoodByOwner)
 
         var landed: [Thing] = []
         for key in order {
@@ -388,12 +412,27 @@ enum WalletIngest {
                     // Spam TOKEN: a received ERC-20 not held above the floor.
                     if leg.category == "erc20", let heldPriced,
                        !heldPriced.contains(contract) { continue }
-                    // Spam NFT: a received ERC-721/1155 whose contract isn't
-                    // among the wallet's non-spam holdings on that chain
-                    // (Alchemy's own isSpam classification).
-                    if leg.category == "erc721" || leg.category == "erc1155",
-                       let owned = ownedNFTs["\(leg.address.lowercased())|\(leg.chain.network)"],
-                       !owned.contains(contract) { continue }
+                    // Spam NFT (2026-08-26, prd §481): the 2026-07-15 holdings
+                    // rule PLUS the question it could never answer — a mint puts
+                    // the piece in your wallet, so "do you hold it" passes by
+                    // construction and the only thing left is a reputation flag
+                    // on a contract minutes old. `WalletNFTOrigin` carries the
+                    // whole decision and its reasons; `askWhoSent` reaching here
+                    // means no receipt could be read, which keeps the row.
+                    if WalletNFTOrigin.isNFT(leg.category) {
+                        let owner = leg.address.lowercased()
+                        let verdict = WalletNFTOrigin.verdict(
+                            WalletNFTOrigin.Leg(network: leg.chain.network,
+                                                category: leg.category,
+                                                contract: contract,
+                                                counterparty: (leg.t["from"] as? String)),
+                            ownedContracts: ownedNFTs["\(owner)|\(leg.chain.network)"],
+                            picked: pickedNFTs[owner] ?? [],
+                            verified: verifiedNFTs,
+                            knownGood: knownGoodByOwner[owner] ?? [],
+                            signed: nftSigned["\(leg.chain.network)|\(leg.hash)|\(owner)"])
+                        if verdict == .drop { continue }
+                    }
                 }
                 if let thing = thing(from: leg.t, chain: leg.chain, received: leg.received,
                                      ref: leg.ref, address: leg.address, names: names) {
@@ -2241,6 +2280,147 @@ enum WalletIngest {
     static func ownedNFTContracts(addresses: [String]) async -> [String: Set<String>] {
         await WalletNFTShelf.collections(addresses: addresses)
             .mapValues { Set($0.lazy.filter { !$0.isSpam }.map(\.contract)) }
+    }
+
+    /// The collections OpenSea has SAFELISTED, as `NFTPickKey` keys, flattened
+    /// across every watched wallet (2026-08-26, prd §481).
+    ///
+    /// A THIRD projection of the same cached `WalletNFTShelf.collections` bytes
+    /// `ownedNFTContracts` and the picker already share — no request of its own,
+    /// which is the only reason this signal is worth having at all.
+    ///
+    /// FLAT rather than per-wallet on purpose: safelisting is a property of the
+    /// COLLECTION, not of who holds it, so keying it per owner would be a
+    /// narrower claim than the fact supports. Contrast `ownedNFTContracts`,
+    /// whose whole content is "does THIS wallet hold it".
+    ///
+    /// A failed read contributes nothing rather than a wrong keep — the empty
+    /// set is the safe direction for a rung that can only add rows.
+    static func verifiedNFTKeys(addresses: [String]) async -> Set<String> {
+        var out: Set<String> = []
+        for (key, collections) in await WalletNFTShelf.collections(addresses: addresses) {
+            // The map is keyed "address|network" and a pick key is
+            // "network|contract" — different shapes for different questions, so
+            // the network is taken from the OWNER key rather than assumed.
+            guard let network = key.split(separator: "|", maxSplits: 1,
+                                          omittingEmptySubsequences: false)
+                                   .map(String.init).last, !network.isEmpty else { continue }
+            for c in collections where c.isVerified {
+                out.insert(NFTPickKey.make(network: network, contract: c.contract))
+            }
+        }
+        return out
+    }
+
+    /// How many transaction receipts one pass will buy to answer "did you send
+    /// this?" (prd §481).
+    ///
+    /// A budget rather than a limit on what is judged: reads are keyless (the
+    /// measured public RPC pool, zero Alchemy credits) and paced, but a wallet
+    /// being carpet-bombed could otherwise ask for dozens in one foreground.
+    /// **Overflow is KEPT, not dropped** — the fail-open direction every arm of
+    /// this filter takes, and the honest consequence is stated rather than
+    /// hidden: a wallet taking more than this many NFTs in a single pass sees
+    /// the excess until Alchemy's own `isSpam` catches up on the next one.
+    private static let nftReceiptBudget = 24
+
+    /// One (network, hash, address) whose receipt this pass needs. A top-level
+    /// value type rather than a local struct, mirroring `WalletGas.Job` — it
+    /// crosses into a task group, and a type that crosses concurrency domains
+    /// should be one the compiler can see.
+    private struct NFTReceiptJob {
+        let network: String
+        let hash: String
+        let address: String
+    }
+
+    /// The budget, for `-nftOriginProbe` to print. Exposed rather than
+    /// re-spelled in the probe: a probe quoting its own copy of a number can
+    /// report a bound the app is not actually keeping.
+    static var nftReceiptBudgetForProbe: Int { nftReceiptBudget }
+
+    /// Which of this pass's received-NFT transactions the wallet actually SENT,
+    /// keyed "network|hash|address" (2026-08-26, prd §481).
+    ///
+    /// One `eth_getTransactionReceipt` per candidate on the same measured
+    /// public hosts `WalletGas` already reads — keyless, so this costs no
+    /// Alchemy credits — and the verdict comes from `WalletUserOps.attribution`
+    /// rather than a bare `receipt.from == you`, which is wrong for every smart
+    /// account: a 4337 bundle is sent by a bundler and a Safe transaction by an
+    /// owner, so the naive test would call a mint you paid for somebody else's.
+    /// `.paid` and `.sponsored` both mean the wallet is the ACTOR (a sponsored
+    /// operation is still one you signed); only `.notYours` is somebody else.
+    ///
+    /// A hash absent from the returned map is one whose receipt could not be
+    /// read, which the caller reads as "keep" — the nil-means-fail-open
+    /// contract `ownedNFTContracts` already established.
+    ///
+    /// Candidates are scanned from `fresh` rather than from the folded groups,
+    /// so an NFT PURCHASE that swap-folding will consume costs one wasted read.
+    /// Deliberate: re-deriving the swap test here to save it would put a second
+    /// copy of that rule in the file, and a rule with two copies drifts.
+    @MainActor
+    private static func nftSignatures(fresh: [Leg],
+                                      ownedNFTs: [String: Set<String>],
+                                      pickedNFTs: [String: Set<String>],
+                                      verifiedNFTs: Set<String>,
+                                      knownGood: [String: Set<String>]) async -> [String: Bool] {
+        var candidates: [NFTReceiptJob] = []
+        var seen = Set<String>()
+        for leg in fresh where leg.received && WalletNFTOrigin.isNFT(leg.category) {
+            guard !leg.hash.isEmpty else { continue }
+            let owner = leg.address.lowercased()
+            let verdict = WalletNFTOrigin.verdict(
+                WalletNFTOrigin.Leg(network: leg.chain.network, category: leg.category,
+                                    contract: leg.contract,
+                                    counterparty: (leg.t["from"] as? String)),
+                ownedContracts: ownedNFTs["\(owner)|\(leg.chain.network)"],
+                picked: pickedNFTs[owner] ?? [],
+                verified: verifiedNFTs,
+                knownGood: knownGood[owner] ?? [],
+                signed: nil)
+            // Only the undecided cost a read. Every free rung has already had
+            // its say, so this count is exactly "the NFT rows that would reach
+            // the feed today" — which is the number being complained about.
+            guard verdict == .askWhoSent else { continue }
+            let key = "\(leg.chain.network)|\(leg.hash)|\(owner)"
+            guard seen.insert(key).inserted else { continue }
+            candidates.append(NFTReceiptJob(network: leg.chain.network,
+                                            hash: leg.hash, address: owner))
+        }
+        guard !candidates.isEmpty else { return [:] }
+        let budgeted = Array(candidates.prefix(nftReceiptBudget))
+        let answers = await IngestSupport.boundedGather(budgeted, maxConcurrent: 4) { c -> (String, Bool)? in
+            guard let sent = await nftTransactionWasSent(network: c.network, hash: c.hash,
+                                                         address: c.address) else { return nil }
+            return ("\(c.network)|\(c.hash)|\(c.address)", sent)
+        }
+        // `uniquingKeysWith` rather than `uniqueKeysWithValues`, which TRAPS on a
+        // duplicate: `seen` already makes the keys unique, and a wallet refresh
+        // is the wrong place to find out that an invariant slipped.
+        return Dictionary(answers.compactMap { $0 }, uniquingKeysWith: { first, _ in first })
+    }
+
+    /// Whether `address` sent transaction `hash` on `network` — nil when the
+    /// receipt could not be read at all (prd §481).
+    ///
+    /// The nil and the false are DIFFERENT ANSWERS and the split is the whole
+    /// point: nil is "we don't know", which keeps the row, and false is
+    /// "somebody else sent it", which drops it. Collapsing them would turn a
+    /// flaky RPC host into a silent spam filter — the mistake
+    /// `ownedNFTContracts` already refuses to make one rung above.
+    ///
+    /// Internal rather than private so `-nftOriginProbe` reads through the SAME
+    /// function the ingest does; a probe with its own copy of the read is a
+    /// probe that can report a health the app never had.
+    static func nftTransactionWasSent(network: String, hash: String,
+                                      address: String) async -> Bool? {
+        guard let receipt = await WalletApprovals.rpcRead(
+                network: network, method: "eth_getTransactionReceipt",
+                params: [hash]) as? [String: Any] else { return nil }
+        return WalletUserOps.wasSentByWallet(
+            logs: (receipt["logs"] as? [[String: Any]]) ?? [],
+            from: receipt["from"] as? String, wallet: address)
     }
 
     /// Alchemy network ids → the Dexscreener chain slugs TokenChart routes

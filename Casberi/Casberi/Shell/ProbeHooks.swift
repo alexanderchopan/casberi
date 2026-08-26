@@ -2757,6 +2757,71 @@ enum ProbeHooks {
                 }
             }
         },
+        // `-nftOriginProbe YES|"<network>|<hash>"` — the NFT-origin rule (prd
+        // §481), which decides whether an NFT arriving at a watched wallet
+        // becomes a row. One NSLog per fact (the `-todayProbe` truncation
+        // lesson).
+        //
+        // Bare `YES` prints the rule's INPUTS per wallet: how many collections
+        // each chain answered with, how many OpenSea has safelisted, how many
+        // are picked, and how many known-good counterparties the corpus knows.
+        // It exists because "a spam mint still showed" and "a mint of mine
+        // disappeared" have SIX causes that look identical from the feed — no
+        // watched wallet, the collections read failing (so every arm fails open
+        // and NOTHING is filtered), a receipt host not answering (same), the
+        // pass exceeding `nftReceiptBudget`, the void sitting in known-good
+        // because this wallet once burned something, or the rule working
+        // exactly as designed — and only two of them are bugs. `verified=0`
+        // beside a healthy `collections=` is the shape of a drifted
+        // `safelistRequestStatus` parse; `knownGoodVoid=YES` is the shape of the
+        // rule being switched off by an old burn.
+        //
+        // Given a "<network>|<hash>" it asks the DECISIVE question for one
+        // transaction, through the same read the ingest makes: did this wallet
+        // send it? `sent=unread` is the fail-open case and is not a failure.
+        //
+        // Spends nothing in the census case (the collections read is the cached
+        // one the wallet refresh already made) and one keyless receipt read in
+        // the hash case — no Alchemy credits either way.
+        Hook(key: "nftOriginProbe") { value, _ in
+            Task { @MainActor in
+                let watched = WalletStore.shared.addresses
+                guard !watched.isEmpty else {
+                    NSLog("nftOrigin: no watched wallet — pair with -walletAddress")
+                    return
+                }
+                let spec = value.trimmingCharacters(in: .whitespacesAndNewlines)
+                let parts = spec.split(separator: "|", maxSplits: 1).map(String.init)
+                if parts.count == 2, !parts[0].isEmpty, !parts[1].isEmpty {
+                    for entry in watched {
+                        let resolved = await WalletIngest.resolvedAddresses([entry.address])
+                        for address in resolved.filter({ ENS.isHexAddress($0) }) {
+                            let sent = await WalletIngest.nftTransactionWasSent(
+                                network: parts[0], hash: parts[1], address: address)
+                            let verdict = sent.map { $0 ? "YES" : "no" }
+                                ?? "unread (fails open — the row is kept)"
+                            NSLog("nftOrigin| wallet=%@ network=%@ hash=%@ sent=%@",
+                                  address, parts[0], parts[1], verdict)
+                        }
+                    }
+                    return
+                }
+                for entry in watched {
+                    let resolved = await WalletIngest.resolvedAddresses([entry.address])
+                    let evm = resolved.filter { ENS.isHexAddress($0) }
+                    let byKey = await WalletNFTShelf.collections(addresses: resolved)
+                    let verified = await WalletIngest.verifiedNFTKeys(addresses: evm)
+                    let picks = WalletNFTStore.shared.book.picks(wallet: entry.address)
+                    let held = byKey.values.reduce(0) { $0 + $1.count }
+                    NSLog("nftOrigin| wallet=%@ evm=%d chainsRead=%d of %d collections=%d verified=%d picked=%d",
+                          entry.address, evm.count, byKey.count,
+                          evm.count * WalletNFTShelf.networks.count,
+                          held, verified.count, picks.count)
+                    NSLog("nftOrigin| budget=%d per pass; a chain that did not answer fails OPEN",
+                          WalletIngest.nftReceiptBudgetForProbe)
+                }
+            }
+        },
         // `-nftShelfProbe YES` composes the shelf the Wallet room would draw
         // (prd §387) for every watched wallet with picks: the header line, then
         // one `nftPiece|` line per piece with the OpenSea door it opens.

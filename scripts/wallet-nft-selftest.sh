@@ -39,6 +39,9 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 PICKS="Casberi/Casberi/Model/WalletNFTPicks.swift"
+ORIGIN="Casberi/Casberi/Model/WalletNFTOrigin.swift"
+VERBS="Casberi/Casberi/Model/WalletVerbs.swift"
+USEROPS="Casberi/Casberi/Model/WalletUserOps.swift"
 SHELF="Casberi/Casberi/Model/WalletNFTShelf.swift"
 INGEST="Casberi/Casberi/Model/WalletIngest.swift"
 FEED="Casberi/Casberi/Screens/FeedScreen.swift"
@@ -46,7 +49,13 @@ CARD="Casberi/Casberi/Screens/WalletNFTShelfCard.swift"
 PICKER="Casberi/Casberi/Screens/WalletNFTPickerSheet.swift"
 STORE="Casberi/Casberi/Model/WalletStore.swift"
 REACH="Casberi/Casberi/Model/NetworkReach.swift"
-for f in "$PICKS" "$SHELF" "$INGEST" "$FEED" "$CARD" "$PICKER" "$STORE" "$REACH"; do
+# Compiled WHOLE and unmodified, all three Foundation-only BY DESIGN — so
+# `WalletNFTOrigin` can USE `WalletVerbs.isVoid` and `NFTPickKey.make` rather
+# than mirroring either. A copied void-address set or a second key format is
+# exactly the drift this project keeps paying for.
+SOURCES=("$PICKS" "$ORIGIN" "$VERBS")
+
+for f in "$PICKS" "$ORIGIN" "$VERBS" "$USEROPS" "$SHELF" "$INGEST" "$FEED" "$CARD" "$PICKER" "$STORE" "$REACH"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 
@@ -72,6 +81,9 @@ strip_comments "$SHELF"  > "$TMP/shelf.nc"
 strip_comments "$INGEST" > "$TMP/ingest.nc"
 strip_comments "$FEED"   > "$TMP/feed.nc"
 strip_comments "$CARD"   > "$TMP/card.nc"
+strip_comments "$ORIGIN"  > "$TMP/origin.nc"
+strip_comments "$USEROPS" > "$TMP/userops.nc"
+strip_comments "$PICKER"  > "$TMP/picker.nc"
 
 fail() { echo "  ✗ $1"; exit 1; }
 ok()   { echo "  ✓ $1"; }
@@ -198,6 +210,76 @@ for host in "eth-mainnet.g.alchemy.com" "base-mainnet.g.alchemy.com"; do
   grep -q "$host" "$REACH" || fail "$host is not in the reach registry"
 done
 ok "the shelf reaches only already-declared hosts"
+
+
+# --- the NFT-origin rule (2026-08-26, prd §481) ------------------------------
+
+# 10. THE RULE IS ACTUALLY WIRED. `WalletNFTOrigin` is a pure decision with no
+#     callers of its own; if the landing loop stops consulting it, every
+#     assertion below still passes over dead code while the feed goes back to
+#     showing every spam mint. This is the guard the whole file rests on.
+grep -q "WalletNFTOrigin.verdict" "$TMP/ingest.nc" \
+  || fail "WalletIngest no longer calls WalletNFTOrigin.verdict — the rule is dead code"
+ok "the landing loop consults the NFT-origin rule"
+
+grep -q "nftSignatures" "$TMP/ingest.nc" \
+  || fail "WalletIngest no longer reads who sent a received NFT — only the 2026-07-15 arm is left"
+ok "the pass asks who sent each undecided NFT"
+
+# 11. THE RECEIPT READ IS KEYLESS. The argument for asking at all is that it
+#     costs no Alchemy credits: `WalletApprovals.rpcRead` is the measured public
+#     pool `WalletGas` already uses. Routed at a `g.alchemy.com` host instead,
+#     this feature starts spending on every airdrop a stranger sends.
+grep -q "WalletApprovals.rpcRead" "$TMP/ingest.nc" \
+  || fail "the NFT receipt read left the keyless public RPC pool"
+ok "the receipt read is keyless (no Alchemy credits)"
+
+# 12. ONE READING OF A RECEIPT. `wasSentByWallet` must DELEGATE to
+#     `attribution` rather than re-deriving the answer — two readings of the
+#     same receipt eventually disagree about a Safe, and then the gas total and
+#     the feed filter tell different stories about the same transaction.
+grep -q "attribution(logs:" "$TMP/userops.nc" \
+  || fail "wasSentByWallet no longer delegates to attribution — there are two readings now"
+ok "who-sent-it delegates to the one receipt reading"
+
+# 13. NO DOLLAR FLOOR, ANYWHERE. §387's standing ruling, now mechanical: a
+#     floor is a bid on the thinnest book in this app, it moves without you, and
+#     it is a number people believe (§83). It also fails BY CONSTRUCTION on the
+#     case this feature exists for — a collection minted an hour ago has no
+#     floor, so a dollar rule hides the mint somebody just performed — and it is
+#     the one rule a spammer can buy past with a wash trade.
+for nc in "$TMP/origin.nc" "$TMP/shelf.nc" "$TMP/ingest.nc"; do
+  grep -q "floorPrice" "$nc" \
+    && fail "a floor price reached $nc — §387 ruled it out and §481 restated why"
+done
+ok "no floor price reaches the shelf, the ingest or the origin rule"
+
+# 14. DROP, NEVER FLAG. `FeedFold.tier` puts `isFlagged` in `.concerns`, the
+#     feed's HIGHEST tier — so flagging a spam mint would PROMOTE it to sit
+#     beside a dispute deadline. The received side drops by rule; flagging is
+#     the sent-side pattern and only because dropping there eats real history.
+grep -qE "addSecurityFlag|isFlagged" "$TMP/origin.nc" \
+  && fail "the NFT-origin rule reaches a security flag — flagging promotes a spam mint to .concerns"
+ok "the origin rule drops rather than flags"
+
+# 15. THE VERIFIED PROJECTION COSTS NOTHING. Same claim as guard 1, for the
+#     third projection: safelisting is worth having ONLY because it rides bytes
+#     the wallet refresh already bought.
+grep -q "WalletNFTShelf.collections" "$TMP/ingest.nc" \
+  || fail "verifiedNFTKeys no longer projects the cached collections read"
+grep -q "safelistRequestStatus" "$TMP/shelf.nc" \
+  || fail "the safelist standing is no longer parsed — verified= is silently always 0"
+ok "safelisting is a third projection of the one cached read"
+
+# 16. SAFELISTING IS ORDER-AND-EVIDENCE, NEVER A LABEL. §387 ruled that a third
+#     party's classification may sort the picker and must never print beside
+#     somebody's own collection — "verified" states a guess as a fact exactly as
+#     loudly as "spam" does.
+grep -q "isVerified" "$TMP/picker.nc" \
+  && fail "the picker draws isVerified — §387 forbids labelling a collection with a vendor's guess"
+grep -q "isVerified" "$TMP/card.nc" \
+  && fail "the shelf card draws isVerified — §387 forbids labelling a collection with a vendor's guess"
+ok "safelisting is never drawn"
 
 echo
 echo "assertions"
@@ -420,12 +502,113 @@ let data = try! JSONEncoder().encode(book)
 let back = try! JSONDecoder().decode(NFTPickBook.self, from: data)
 check("the book round-trips through JSON", back == book)
 
+
+// ---------------------------------------------------------------------------
+// WalletNFTOrigin — where a received NFT came from (2026-08-26, prd §481).
+//
+// Every failure below renders as a perfectly ordinary wallet feed. A spam mint
+// that keeps showing looks exactly like one the rule has not reached yet, and a
+// legitimate mint that vanishes looks exactly like a chain that went quiet —
+// which is why none of this can be judged by opening the app.
+
+let NET   = "eth-mainnet"
+let MINE  = "0xmine"
+let JUNK  = "0xjunk"
+let FRIEND = "0xfriend"
+let VOID0 = "0x0000000000000000000000000000000000000000"
+let DEAD  = "0x000000000000000000000000000000000000dead"
+
+func nftLeg(_ contract: String?, from: String?,
+            category: String = "erc721") -> WalletNFTOrigin.Leg {
+    WalletNFTOrigin.Leg(network: NET, category: category,
+                        contract: contract, counterparty: from)
+}
+func pk(_ contract: String) -> String { NFTPickKey.make(network: NET, contract: contract) }
+
+func say(_ leg: WalletNFTOrigin.Leg,
+         owned: Set<String>? = [MINE, JUNK],
+         picked: Set<String> = [],
+         verified: Set<String> = [],
+         knownGood: Set<String> = [],
+         signed: Bool? = nil) -> WalletNFTOrigin.Verdict {
+    WalletNFTOrigin.verdict(leg, ownedContracts: owned, picked: picked,
+                            verified: verified, knownGood: knownGood, signed: signed)
+}
+
+// THE HEADLINE, and the whole reason the file exists. A mint arrives from the
+// void, so the 2026-07-15 "do you hold it" arm passes by construction; the only
+// thing that separates the one you performed from the one pushed at you is who
+// sent the transaction.
+check("a mint you sent is kept",
+      say(nftLeg(MINE, from: VOID0), signed: true) == .keep)
+check("a mint somebody else sent is dropped",
+      say(nftLeg(MINE, from: VOID0), signed: false) == .drop)
+check("a mint nobody has read a receipt for is undecided, not dropped",
+      say(nftLeg(MINE, from: VOID0), signed: nil) == .askWhoSent)
+
+// THE VOID GUARD — the sharpest edge in the rule. Burning is done by SENDING to
+// the void, so a wallet that has ever burned anything carries `0x…0000` in its
+// known-good set. Without the guard the counterparty rung would vouch for every
+// mint ever, and the whole filter would be switched off by one old burn, with
+// nothing on screen to say so.
+check("the void is never a known-good counterparty (0x0)",
+      say(nftLeg(MINE, from: VOID0), knownGood: [VOID0], signed: false) == .drop)
+check("the void is never a known-good counterparty (0x…dEaD)",
+      say(nftLeg(MINE, from: DEAD), knownGood: [DEAD], signed: false) == .drop)
+check("a real address you have sent to still vouches",
+      say(nftLeg(MINE, from: FRIEND), knownGood: [FRIEND], signed: false) == .keep)
+check("a known-good counterparty is matched case-insensitively",
+      say(nftLeg(MINE, from: "0xFRIEND"), knownGood: [FRIEND], signed: false) == .keep)
+check("an address you have NOT sent to does not vouch",
+      say(nftLeg(MINE, from: "0xstranger"), knownGood: [FRIEND], signed: false) == .drop)
+
+// THE FREE KEEPS. Both can only ever ADD a row, so both must beat the drop.
+check("a picked collection is kept even when everything else says drop",
+      say(nftLeg(JUNK, from: VOID0), owned: [], picked: [pk(JUNK)], signed: false) == .keep)
+check("a safelisted collection is kept even when everything else says drop",
+      say(nftLeg(JUNK, from: VOID0), owned: [], verified: [pk(JUNK)], signed: false) == .keep)
+check("a pick for a DIFFERENT collection does not vouch",
+      say(nftLeg(JUNK, from: VOID0), picked: [pk(MINE)], signed: false) == .drop)
+check("a pick key is the picker's own format",
+      WalletNFTOrigin.key(for: nftLeg(MINE, from: nil)) == pk(MINE))
+check("a leg with no contract has no key",
+      WalletNFTOrigin.key(for: nftLeg(nil, from: nil)) == nil)
+
+// THE 2026-07-15 RULE, UNCHANGED — and it still runs BEFORE the receipt
+// question, so a collection you do not hold costs no read.
+check("a received NFT you do not hold is dropped",
+      say(nftLeg("0xother", from: FRIEND), signed: true) == .drop)
+check("and it is dropped without asking who sent it",
+      say(nftLeg("0xother", from: FRIEND), signed: nil) == .drop)
+
+// FAIL OPEN, EVERY ARM. A nil owned set means the READ failed; a nil `signed`
+// means the receipt did. Neither may become a silent spam filter.
+check("an unread holdings set still asks who sent it",
+      say(nftLeg(MINE, from: VOID0), owned: nil, signed: nil) == .askWhoSent)
+check("an unread holdings set plus a known sender is still a drop",
+      say(nftLeg(MINE, from: VOID0), owned: nil, signed: false) == .drop)
+
+// SCOPE. This rule speaks about NFTs and nothing else — an ERC-20 has the dust
+// floor and a native coin has no filter by design. Widening it here would drop
+// tokens twice and coins wrongly.
+check("erc1155 is an NFT too",
+      say(nftLeg(MINE, from: VOID0, category: "erc1155"), signed: false) == .drop)
+check("an erc20 is not this rule's business",
+      say(nftLeg(MINE, from: VOID0, category: "erc20"), signed: false) == .keep)
+check("a native transfer is not this rule's business",
+      say(nftLeg(nil, from: FRIEND, category: "external"), signed: false) == .keep)
+check("an NFT with no contract is kept",
+      say(nftLeg(nil, from: VOID0), signed: false) == .keep)
+check("isNFT names both NFT categories and nothing else",
+      WalletNFTOrigin.isNFT("erc721") && WalletNFTOrigin.isNFT("erc1155")
+        && !WalletNFTOrigin.isNFT("erc20") && !WalletNFTOrigin.isNFT("external"))
+
 print(failures == 0 ? "\nAll assertions passed." : "\n\(failures) FAILED")
 exit(failures == 0 ? 0 : 1)
 SWIFT
 
-if ! swiftc -O -o "$TMP/run" "$PICKS" "$TMP/main.swift" 2>"$TMP/build.log"; then
-  echo "✗ the shipped WalletNFTPicks.swift did not compile against the harness"
+if ! swiftc -O -o "$TMP/run" "${SOURCES[@]}" "$TMP/main.swift" 2>"$TMP/build.log"; then
+  echo "✗ the shipped sources did not compile against the harness"
   grep -E 'error:' "$TMP/build.log" | head -20
   exit 1
 fi
@@ -438,11 +621,20 @@ echo
 echo "mutations (each must be caught)"
 
 WORK="$TMP/work"
-mutate() {
-  local name="$1" from="$2" to="$3"
+# Mutates ONE of the compiled sources and rebuilds the whole set, so a
+# mutation in `WalletNFTOrigin.swift` is still linked against the real
+# `WalletNFTPicks`/`WalletVerbs` it leans on. `target` is the file to break;
+# every other source is copied through untouched.
+mutate_in() {
+  local target="$1" name="$2" from="$3" to="$4"
   rm -rf "$WORK"; mkdir -p "$WORK"
-  cp "$PICKS" "$WORK/WalletNFTPicks.swift"
-  MUT_FROM="$from" MUT_TO="$to" python3 - "$WORK/WalletNFTPicks.swift" <<'PY'
+  local copies=()
+  for src in "${SOURCES[@]}"; do
+    cp "$src" "$WORK/$(basename "$src")"
+    copies+=("$WORK/$(basename "$src")")
+  done
+  local broken="$WORK/$(basename "$target")"
+  MUT_FROM="$from" MUT_TO="$to" python3 - "$broken" <<'PY'
 import os, sys
 path = sys.argv[1]
 src = open(path).read()
@@ -451,10 +643,10 @@ if frm not in src:
     sys.stderr.write("ANCHOR-MISSING\n"); sys.exit(2)
 open(path, "w").write(src.replace(frm, to, 1))
 PY
-  if [[ $? -ne 0 ]] || ! grep -qF -- "$to" "$WORK/WalletNFTPicks.swift"; then
+  if [[ $? -ne 0 ]] || ! grep -qF -- "$to" "$broken"; then
     echo "  ✗ $name — the mutation did not apply (the shipped source moved)"; exit 1
   fi
-  if ! swiftc -O -o "$TMP/mut" "$WORK/WalletNFTPicks.swift" "$TMP/main.swift" 2>/dev/null; then
+  if ! swiftc -O -o "$TMP/mut" "${copies[@]}" "$TMP/main.swift" 2>/dev/null; then
     echo "  ✓ $name (rejected at compile)"; return
   fi
   if "$TMP/mut" > /dev/null 2>&1; then
@@ -462,6 +654,9 @@ PY
   fi
   echo "  ✓ $name"
 }
+
+mutate()        { mutate_in "$PICKS"  "$@"; }
+mutate_origin() { mutate_in "$ORIGIN" "$@"; }
 
 # 1. A checksummed pick key never matches the lowercased read — every tap on
 #    that collection looks ignored, forever.
@@ -532,6 +727,66 @@ mutate "the wallet key left un-normalised" \
 mutate "retain keeping everything" \
   'byWallet = byWallet.filter { keep.contains($0.key) }' \
   'byWallet = byWallet.filter { _ in true }'
+
+# --- the NFT-origin rule's mutations (prd §481) ------------------------------
+# Each is a plausible simplification, and each ships a feed that renders
+# perfectly while saying the wrong thing about what arrived.
+
+# 11. THE HEADLINE. A mint pushed at you by a stranger reads as one you made.
+mutate_origin "a mint sent by somebody else kept" \
+  'case .some(false): return .drop' \
+  'case .some(false): return .keep'
+
+# 12. An unread receipt becoming a decision rather than an absence — the point
+#     at which "we don't know" and "you sent it" stop being different answers.
+mutate_origin "an unread receipt treated as a yes" \
+  'case .none:        return .askWhoSent' \
+  'case .none:        return .keep'
+
+# 13. THE VOID GUARD. A wallet that once burned something has 0x…0000 in its
+#     known-good set, so without this the counterparty rung vouches for EVERY
+#     mint and the whole filter is off — silently, and only for the wallets that
+#     have been around long enough to have burned anything.
+mutate_origin "the void allowed to vouch as a counterparty" \
+  '!WalletVerbs.isVoid(counterparty),' \
+  'counterparty.count >= 0,'
+
+# 14. A counterparty compared without folding case — the addresses arrive
+#     checksummed from one source and lowercased from another, so a friend's
+#     gift is dropped depending on which read found it.
+mutate_origin "a counterparty compared without folding case" \
+  'knownGood.contains(counterparty.lowercased())' \
+  'knownGood.contains(counterparty)'
+
+# 15/16. The two free keeps neutered. Both are the only thing standing between a
+#     collection somebody chose (§387) and a vendor's classification of it.
+mutate_origin "a pick no longer overriding the vendor's guess" \
+  'if picked.contains(key) { return .keep }' \
+  'if picked.contains(key + "!") { return .keep }'
+
+mutate_origin "safelisting no longer vouching" \
+  'if verified.contains(key) { return .keep }' \
+  'if verified.contains(key + "!") { return .keep }'
+
+# 17. The 2026-07-15 arm inverted — every junk airdrop kept and every real
+#     collection dropped, which is the loudest possible version of this bug and
+#     still invisible to a build.
+mutate_origin "the holdings arm inverted" \
+  'if let ownedContracts, !ownedContracts.contains(leg.contract ?? "") { return .drop }' \
+  'if let ownedContracts, ownedContracts.contains(leg.contract ?? "") { return .drop }'
+
+# 18. The holdings arm made undecided rather than decisive, which is what buys a
+#     receipt read for every junk airdrop the free rung already answered — the
+#     budget spent on exactly the rows it was meant to skip.
+mutate_origin "the holdings arm no longer decisive" \
+  'if let ownedContracts, !ownedContracts.contains(leg.contract ?? "") { return .drop }' \
+  'if let ownedContracts, !ownedContracts.contains(leg.contract ?? "") { return .askWhoSent }'
+
+# 19. ERC-1155 falling out of the definition. Half of NFT spam is 1155s, so the
+#     filter would look like it works and let through most of what it is for.
+mutate_origin "erc1155 dropped from the NFT definition" \
+  'category == "erc721" || category == "erc1155"' \
+  'category == "erc721"'
 
 echo
 echo "wallet-nft self-test passed."

@@ -87,6 +87,20 @@ struct NFTCollection: Identifiable, Sendable, Equatable {
     /// (2026-08-15, see `NFTCollectionOrder`).
     let count: Int
     let isSpam: Bool
+    /// Whether OpenSea has SAFELISTED the collection
+    /// (`openSeaMetadata.safelistRequestStatus`, 2026-08-26, prd §481).
+    ///
+    /// Read for the feed's NFT-origin rule, where it can only ever ADD a row:
+    /// safelisting is positive evidence, and its ABSENCE is no evidence at all
+    /// (most legitimate collections are not safelisted). Deliberately drawn
+    /// NOWHERE in the picker — §387 ruled that a third party's classification
+    /// may order that list and never label it, and a "verified" badge beside
+    /// somebody's own collection states a guess as a fact (§83) just as loudly
+    /// as a "spam" one does.
+    ///
+    /// Defaulted so the memberwise init keeps working for any caller that has
+    /// no opinion; the one real call site fills it in.
+    var isVerified: Bool = false
     /// Where this collection sat in the chain's own response — 0 is the most
     /// recently transferred.
     ///
