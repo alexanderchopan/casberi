@@ -4151,6 +4151,23 @@ struct FeedScreen: View {
             // absent one, and the count of sections above the bar has to match
             // on every scope for the bar to land in the same place.
             if section == .home {
+                // **NOT `DSRoomSlot`, AND THE REASON IS STRUCTURAL** (prd
+                // §495, user: "one template").
+                //
+                // Wallet's chassis is built from List SECTIONS; vibenet's from
+                // a `VStack`. Wrapping a `Section` in a plain view collapses
+                // it into a single row and drops the `listRowSeparator(.hidden)`
+                // its rows carry — which put a HAIRLINE under the sparkline,
+                // and hairlines are banned outright by §8. Caught on the
+                // device one build after the wrap, not by reading.
+                //
+                // So the two rooms share the constants (`DSRoomChassis`) and
+                // the RULES — fixed height, one inset, top-aligned, clipped,
+                // headline row reserved — but Wallet applies them at the
+                // section level because that is what a `List` will accept.
+                // Making this literally one view means turning the seven
+                // scope builders into plain views inside one Section, which is
+                // a real refactor and its own ruling.
                 walletTilesSection(visible, streamTotal: all.count, drawsChart: true)
                     .frame(minHeight: Self.walletVisualSlot,
                            maxHeight: Self.walletVisualSlot,
@@ -4203,12 +4220,8 @@ struct FeedScreen: View {
             // sat that spacing higher there. Two zero-height boxes, each
             // invisible, and the difference between them was the bug.
             if section != .home {
-                // A `Color.clear` floor, for the reason vibenet's own slot
-                // carries one (prd §493): `.frame(minHeight:)` does not hold an
-                // `EmptyView` open, so a scope whose figure declines — NFTs
-                // with no picks, Permissions with no holder — collapses the
-                // slot and takes the chip bar a third of a screen up. Measured
-                // in the other room; the same shape is here.
+                // Same section-level application as Home above — see that
+                // note for why this cannot be `DSRoomSlot` today.
                 ZStack(alignment: .top) {
                     Color.clear
                     walletScopeVisualSection(section)

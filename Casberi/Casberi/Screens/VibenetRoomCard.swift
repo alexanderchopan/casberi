@@ -455,40 +455,24 @@ struct VibenetRoomCard: View {
             // ("collapsing to `maxHeight: 0` is NOT the same as not emitting")
             // arriving from the opposite direction — there an empty Section
             // still took spacing, here a non-empty frame took none.
-            ZStack(alignment: .top) {
-                Color.clear
+            // **ONE SLOT, AND IT IS `DSRoomSlot`** (prd §495, user: "one
+            // template"). This wrapped its own `ZStack` + fixed frame + clip
+            // around figures that now go through `DSRoomSlot`, which applies
+            // exactly those three things — a box inside a box, and the second
+            // copy of the rule Wallet was also keeping.
+            //
+            // Home draws the crown, which names itself in `price48`, so it
+            // passes no headline; the row is still RESERVED, which is what
+            // keeps its first pixel level with every other scope's and what
+            // clears the settings gear.
+            Group {
                 if (section ?? .home) == .home {
-                    balanceHero
+                    DSRoomSlot(headline: nil) { balanceHero }
                 } else {
                     scopeVisual
                 }
             }
-            .frame(minHeight: Self.visualSlot, maxHeight: Self.visualSlot,
-                   alignment: .top)
-            .clipped()
-                // **THE CHROME GROUP GETS ITS OWN SPACING, not the card
-                // separation** (prd §491; reported as *"the toggle bar is
-                // lower on vibenet than wallet"*).
-                //
-                // MEASURED: from the crown's first pixel to the chip bar, this
-                // room ran 63pt taller than Wallet — and the box above was
-                // already identical, so all of it was here. `stackedRoom`'s
-                // `spacing: s6` is §471's ruling and it is about CARDS: two
-                // 20pt-radius surfaces 14pt apart read as one slab with seams,
-                // so they were pushed to 24. The hero, the account rail and
-                // the scope strip are not cards and not three objects — they
-                // are one piece of chrome, and 24pt twice inside it is what
-                // pushed the bar down two thirds of the gap.
-                //
-                // `s2` between them, which is what Wallet's list insets come
-                // to. §471 is untouched: the gap BELOW this group, to the
-                // first real card, is still `s6`.
-                // The chassis gaps come from `DSRoomChassis`, which Wallet
-                // reads too — see that type for why they had to stop being two
-                // hand-tuned stacks. The negatives cancel `stackedRoom`'s own
-                // `s6`, which is §471's CARD separation and is untouched below
-                // this group.
-                .padding(.bottom, DSRoomChassis.railGap - DS.Space.s6)
+            .padding(.bottom, DSRoomChassis.railGap - DS.Space.s6)
             accountChips
                 .padding(.bottom, DSRoomChassis.switcherGap - DS.Space.s6)
             scopeStrip
@@ -1227,70 +1211,15 @@ struct VibenetRoomCard: View {
     /// room, and matching the crown's rung would claim it is the room's total.
     @ViewBuilder
     private func scopeFigure<Figure: View>(headline: String?,
-                                           @ViewBuilder figure: () -> Figure) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
-            // **THE HEADLINE ROW IS ALWAYS RESERVED** (prd §495, user: *"WHY
-            // AREN'T YOU USING THE SAME TEMPLATE FOR ALL"* — and the answer
-            // was that we were not).
-            //
-            // The slot is a fixed 210pt box, so the box never moved — but
-            // WHAT WENT IN IT was composed three different ways: Home and
-            // Activity and Accounts drew their own headline inside their own
-            // drawing, Permissions passed one here, and Holdings passed nil
-            // and then faked the gear clearance with 44pt of top padding. So
-            // each scope's drawing began at a different y inside the same box,
-            // and everything above the strip reshaped on every tap. Reported
-            // three times as the toggle bar jumping — correctly, because the
-            // region above it really was moving even though the bar was not.
-            //
-            // Reserving the row unconditionally is what makes the box's
-            // INTERIOR identical across scopes, and it earns the gear
-            // clearance for free: the settings control overlays this corner,
-            // and a headline-height gap is exactly what it needs. `Color
-            // .clear` rather than an empty `Text`, so the reserved height is
-            // the ramp's line height and not whatever an empty string
-            // measures.
-            Group {
-                if let headline {
-                    Text(headline)
-                        .dsText(.stat24)
-                        .foregroundStyle(DS.textPrimary)
-                        .monospacedDigit()
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.7)
-                } else {
-                    Color.clear
-                }
-            }
-            .frame(height: Self.headlineRow, alignment: .leading)
-            .padding(.bottom, DS.Space.s3)
-            figure()
-        }
-        // **THE FRAME TAKES THE SLOT'S HEIGHT** (prd §495). This stack sized
-        // to its CONTENT, so a figure asking for `maxHeight: .infinity` was
-        // being offered exactly its own height and every "fill the slot" and
-        // "centre in the slot" instruction inside one silently did nothing —
-        // the reserved height was there, and nothing could reach it.
-        //
-        // `topLeading`, so the headline stays where it has always been and
-        // only the figure below it gains the room.
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .padding(.horizontal, DSRoomChassis.contentInset)
-        // **ONE INSET, AND IT LANDS ON THE ROW'S LEADING** (prd §495, user:
-        // *"the content below
-        // toggle row should all have similar template. right now permissions
-        // for example the indentation is not the same as it is on activity"*).
-        //
-        // `stackedRoom` applies `DS.Space.s4` at its root, and
-        // `DSRoomChassis.inset` IS `DS.Space.s4` — so every figure and list
-        // that added it was indented 30pt while `VibenetAccountDetail`, which
-        // adds nothing and inherits the root, sat at 15. Two left edges on one
-        // screen, and a third at 68 once a key row added its own leading
-        // column on top.
-        //
-        // The rule is the chassis inset and it is applied ONCE, by the
-        // container. A figure that re-applies it is not obeying the rule
-        // twice, it is breaking it.
+                                           @ViewBuilder figure: @escaping () -> Figure) -> some View {
+        // **`DSRoomSlot` IS THE TEMPLATE NOW** (prd §495, user: "one
+        // template"). Everything this function used to spell — the reserved
+        // headline row, the inset, the fixed height, the top alignment, the
+        // clip — lives in one type that Wallet draws through as well. This
+        // stays as a name the room's own call sites already read, and adds
+        // nothing of its own; a room that re-adds a rule here is a room
+        // building its sixth template.
+        DSRoomSlot(headline: headline, figure: figure)
     }
 
     /// WHERE THE CHANGES LANDED — the Activity scope's drawing (prd §491,

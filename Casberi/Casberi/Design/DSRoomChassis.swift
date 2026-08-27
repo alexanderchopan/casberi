@@ -104,3 +104,68 @@ enum DSRoomChassis {
     /// `listRowInsets` was exact.
     static let contentInset: CGFloat = DS.Space.s3
 }
+
+/// THE SLOT ITSELF — one definition of the box every room scope draws into
+/// (prd §495, user: *"Wallet and Vibenet should use same template"*, then
+/// *"one template"*).
+///
+/// **Shared COMPONENTS were never a shared TEMPLATE, and that is what kept
+/// breaking.** `DSRoomChassis` owned four distances and `DSSectionSwitcher`
+/// owned a control; neither owned the COMPOSITION. So Wallet built its
+/// chassis from `List` sections with `listRowInsets` and vibenet from a
+/// `VStack` with negative paddings, and inside vibenet alone five scopes
+/// filled the same fixed box five different ways — one drawing its own
+/// headline, one passing it to the chassis, one passing nil and faking the
+/// settings-gear clearance with 44pt of padding. The box never moved, so
+/// every screenshot said the toggle bar was where it should be; what moved
+/// was the drawing INSIDE the box, which reshapes the whole region above the
+/// bar and is indistinguishable from the bar moving. Reported three times.
+///
+/// This is the box: fixed height, one horizontal inset, top-aligned, clipped,
+/// and a headline row that is RESERVED whether or not a headline is drawn.
+///
+/// **Reserving the row unconditionally is the load-bearing part.** It makes
+/// every scope's drawing begin at the same y, and it earns the settings
+/// gear's clearance for free — that control overlays this corner, and a
+/// headline-height gap is exactly what it needs, which is why the 44pt hack
+/// that used to buy it could be deleted rather than moved.
+struct DSRoomSlot<Figure: View>: View {
+    /// The scope's own headline, or nil where the drawing names itself. The
+    /// ROW is reserved either way — see the type's own note.
+    let headline: String?
+    @ViewBuilder let figure: () -> Figure
+
+    /// `stat24`'s line height, spelled from the ramp rather than measured:
+    /// a measured height settles the frame a frame late, which is the same
+    /// walk arriving slower (`visualSlot`'s own reasoning).
+    static var headlineRow: CGFloat { 30 }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Group {
+                if let headline {
+                    Text(headline)
+                        .dsText(.stat24)
+                        .foregroundStyle(DS.textPrimary)
+                        .monospacedDigit()
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                } else {
+                    // `Color.clear`, not an empty `Text`: the reserved height
+                    // must be the ramp's line height rather than whatever an
+                    // empty string happens to measure.
+                    Color.clear
+                }
+            }
+            .frame(height: Self.headlineRow, alignment: .leading)
+            .padding(.bottom, DS.Space.s3)
+            figure()
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .padding(.horizontal, DSRoomChassis.contentInset)
+        .frame(minHeight: DSRoomChassis.visualSlot,
+               maxHeight: DSRoomChassis.visualSlot,
+               alignment: .top)
+        .clipped()
+    }
+}
