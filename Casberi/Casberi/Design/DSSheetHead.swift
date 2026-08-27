@@ -43,6 +43,20 @@ struct DSSheetHead<Disc: View>: View {
     /// What it means NOW, in a sentence. The receipt's own closing line, and
     /// the part that makes a head an answer rather than a label.
     var sentence: String?
+    /// The pour behind the paper — the room's own hue, the way a money
+    /// receipt takes the transaction's. nil draws the plain raised surface.
+    var hue: Color?
+    /// Whether the paper is TORN along its bottom edge.
+    ///
+    /// On a money receipt this carries state (§363: torn means final, flat
+    /// means the paper is still in the machine). A sheet with no such
+    /// distinction passes true and simply gets the receipt's silhouette,
+    /// which is the part that makes it read as an object rather than as text
+    /// on a page — the difference the user named: *"right now it just looks
+    /// like a jumble of text"*.
+    var torn: Bool = true
+
+    @Environment(\.colorScheme) private var scheme
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -88,6 +102,34 @@ struct DSSheetHead<Disc: View>: View {
                     .padding(.top, DS.Space.s4)
             }
         }
+        // **IT IS A PIECE OF PAPER, NOT A BLOCK OF TEXT** (prd §495).
+        //
+        // The head was drawn bare on the page and read as "a jumble of text"
+        // beside Wallet's, whose whole legibility comes from being an OBJECT:
+        // a raised surface, a pour of the room's hue at the top, and the
+        // scalloped bottom edge that makes it a receipt rather than a card.
+        // `ReceiptPaper` is that silhouette and is reused rather than
+        // re-drawn, so the two rooms cannot drift into two papers.
+        //
+        // This is a deliberate exception to "headers no cards": that ruling
+        // is about a LIST's rows and a room's readings, and this is a single
+        // object standing for a single moment — which is exactly what §363
+        // argued when it gave the receipt its paper in the first place.
+        .padding(.horizontal, DS.Space.s4)
+        .padding(.top, DS.Space.s6)
+        .padding(.bottom, DS.Space.s6 + (ReceiptPaper.tooth + 2) * (torn ? 1 : 0))
         .frame(maxWidth: .infinity, alignment: .leading)
+        .background(alignment: .top) {
+            if let hue {
+                LinearGradient(colors: [hue.opacity(DS.receiptPourOpacity(scheme)),
+                                        hue.opacity(0)],
+                               startPoint: .top, endPoint: .bottom)
+                    .frame(height: 150)
+                    .frame(maxWidth: .infinity, alignment: .top)
+            }
+        }
+        .background(DS.surfaceRaised)
+        .clipShape(ReceiptPaper(tear: torn ? 1 : 0))
+        .shadow(color: DS.raisedShadow, radius: 10, y: 2)
     }
 }

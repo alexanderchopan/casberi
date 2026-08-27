@@ -115,18 +115,35 @@ struct VibenetKeySheet: View {
     /// puts two ellipsis strings side by side.
     @ViewBuilder
     private var subject: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s2) {
-            if let detail = actor.kind.plainDetail {
-                // The kind's own clause, under the tray's title, which IS the
-                // kind — so this reads as a subtitle rather than as a stray
-                // sentence in the body.
-                Text(detail)
-                    .dsText(.subhead13)
-                    .foregroundStyle(DS.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
+        // **THE SHARED SHEET HEAD** (prd §495, user: *"so should account
+        // sheets, and permissions sheets"*). Same anatomy as the event sheet
+        // and as Wallet's money receipt, which is where it was settled (§363).
+        //
+        // The disc is the ACCOUNT this key acts for — a key's subject is the
+        // account, the way a transaction's is its counterparty — and it is
+        // the door, which is why the account row that used to sit under this
+        // block is gone: the receipt draws no counterparty row beneath its
+        // own disc either.
+        DSSheetHead(disc: {
+            Button { onScope?(item.address) } label: {
+                WalletFace(address: item.address, size: DS.Face.shelf, circular: true)
             }
-            accountRow
-        }
+            .buttonStyle(.plain)
+            .disabled(onScope == nil)
+            .dsHover()
+        },
+                    // The state worth stamping on a key is its EXPIRY
+                    // standing — a key about to lapse is the one thing about
+                    // it somebody may have to act on. Neutral otherwise, by
+                    // §490's rule that ink here marks unboundedness and
+                    // urgency, never decoration.
+                    stamp: actor.expiryStanding(now: .now) == .soon
+                        ? String(localized: "Expiring") : nil,
+                    stampInk: DS.attention,
+                    lead: nil,
+                    title: actor.kind.plainTitle,
+                    secondary: actor.kind.plainDetail,
+                    sentence: nil)
     }
 
     @ViewBuilder
