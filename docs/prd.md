@@ -35488,3 +35488,104 @@ headline, and this one has none by ruling.
 bar moving on a pick, a sub-account that opens somewhere wrong, and one that
 does not open at all), and whether Positions and Risk sharing a column-on-a-
 baseline silhouette is one shape too many for two scopes.
+
+## 495. A key event opens to what happened, not to a label (user: "show me three mockups for activity thing" → "so i like B", 2026-08-26)
+
+§467 built this sheet's first anatomy and was right about the diagnosis —
+the row it replaced opened to a title, a Share disc and a one-row table
+reading "From — on vibenet", the title's own last two words wearing a field
+label. What it shipped was thinner than intended, and reported as such:
+*"the activity thing sheet is under designed needs more info and better
+UI"*.
+
+Three designs were drawn. **A** was the receipt — the app's existing
+"a thing happened" anatomy (§363), leading with the key count, 6 up from 5,
+the new one lit in a row of six. **B** put the key at the centre: its kind,
+its permissions, a life bar from minted to expiry, and the account's other
+keys beneath. **C** drew the event as one moment on the account's timeline,
+its neighbours dimmed, the §399 journal pattern.
+
+The pick was **B, minus the life bar and minus the roster** — *"we are in
+activity i don't think we need to know about multiple keys because we have
+one item we are looking at. we are looking at an event."* The roster and the
+count both answer a question about the ACCOUNT, and the account has its own
+card one tap away.
+
+### 1. One anatomy, four kinds
+
+B as drawn answered an authorization and was the wrong shape for the other
+three: a revoked key is gone, and a lock and an unlock are not about a key
+at all. Shipping it as mocked would have meant a second sheet for three
+quarters of this room's events, so `VibenetEventFacts.Kind` is the one axis
+and the anatomy holds while its contents change — the chips are silent on a
+lock, and the consequence sentence is per-kind ("It expires in 3 days" / "It
+can no longer act for this account" / "No key can act until it is
+unlocked").
+
+The kind is read off `sourceRef`'s own segment, never a title: the title is
+localized and parsing it back into data is what `MoneyReceiptSource`'s doc
+forbids. An authorization and a revocation SHARE the segment `actor`, so
+those two are separated by the `Revoked` facet the landing stamps. An
+unrecognised shape falls back to `authorized`, the only kind whose anatomy
+degrades to a generic ("A new key", no chips) rather than to a wrong claim
+about a lock.
+
+### 2. The event's own words are the head, and the generic title stands down
+
+`Thing.summary` is the title minus the address, and it BEATS anything this
+card can derive — the reason is WHEN it was written. The landing resolves
+the key's kind from a live read at the moment the event arrived
+(`VibenetEventKind.phrase(keyLabel:)`), so it says "New passkey authorized"
+even for a key that has since been revoked, while the expiry join below runs
+against the account's CURRENT roster and can only name a key still there.
+Deriving the head would silently downgrade every event whose key is gone to
+"A key" — which is most revocations.
+
+So `ThingSheetView`'s generic title block stands down for these rows, the
+same way it already does for a token chart and for the note anatomies.
+Drawing both set the same sentence twice, once with the address and once
+without, one line apart — §366's failure with both halves visible at once.
+The eyebrow is the DATE and not the verb for the same reason: `summary`
+already carries the verb, and "Authorized" above "New passkey authorized" is
+§366 one word at a time.
+
+### 3. The transaction, which was there all along
+
+Every landed event's ref is `vibenet:<kind>:<txHash>:<logIndex>` and no view
+had ever asked for the hash — so until today this sheet's only control was
+Share, in a room about who can spend your money. `VibenetExplorer.tx`
+already existed. No new `Thing` field, so no CloudKit deploy.
+
+The parse is POSITIONAL and it has to be: an actor event's segment is
+`actor` and a lock's is `locked`, so a prefix test would need the same list
+twice. Four components, the hash third, and it must LOOK like a hash — `0x`
+and 64 hex digits — because the string reaches a URL and a ref arrives here
+having been through a `Thing` and a CloudKit round trip. A ref that fails
+the shape yields nil and no door is drawn, which is §83's answer: no verb
+beats a verb that lands somewhere else.
+
+### 4. The key's identity rides the SAME join as its permissions
+
+`matchedActor` replaces `matchedPermissions` as the primitive, and the rule
+§467 set is untouched: a key is named only when the account holds EXACTLY
+ONE key whose expiry matches the event's. Deliberately not a looser join for
+the name than for the chips — a sheet must never name a key it could not
+name the permissions of.
+
+### 5. Two demo defects, both the §349 class
+
+The demo's refs were `vibenet:actor:demo1` — three components — so every
+demo event failed the hash shape and the new door was silently absent from
+the corpus the demo exists to show. And the branches keying off those refs
+moved to the phrase, because a ref is now a 70-character string nobody can
+match by eye. The hashes are invented and could not be otherwise; tapping
+one opens an explorer page that says no such transaction, which is the
+honest failure a demo permalink makes here. A real hash would send somebody
+to a stranger's transaction and imply it was theirs.
+
+### What this does NOT do
+
+No timeline, no neighbours, no key roster — C and B's own roster were both
+declined above. And the sheet still cannot say what a key has DONE with its
+permissions; `policyCommitment` is the join that would make that answerable
+and nothing reads it yet.

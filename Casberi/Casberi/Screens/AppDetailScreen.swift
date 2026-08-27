@@ -149,7 +149,12 @@ struct AppDetailScreen: View {
             }
         } else if connected {
             VerbCapsule(verb: .open) {
-                if let id = bridge?.id { route.pushBridge(BridgeRouter.destination(forID: id)) }
+                // Through the shared door: a wallet-riding seat with no screen
+                // of its own opens the ROOM its rows land in rather than the
+                // wallet manager, so this page's Open and the catalog's agree.
+                if let id = bridge?.id {
+                    BridgeRouter.open(seatID: id, route: route, chrome: chrome)
+                }
             }
         } else if offer.connectable {
             if offer.needsSetup {

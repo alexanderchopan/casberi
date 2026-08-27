@@ -370,24 +370,29 @@ enum BridgeRouter {
         Row(offer: "0xBow Privacy Pools", id: "privacypools", destination: .privacyPools),
         Row(offer: "Railgun", id: "railgun", destination: .railgun),
         Row(offer: "Safe", id: "safe", destination: .safe),
-        // Gnosis Pay has no screen of its own, and routes BOTH ways to the
-        // wallet manager (prd §222). Connect, because watching the wallet is
-        // the only real action — the §209 reasoning. Open, because the
-        // generic BridgeDetailScreen carries a Remove button, and this seat
-        // is a MIRROR of "has a watched wallet spent on a card": removing it
-        // would silently re-register on the next foreground, which is exactly
-        // the dead control the honesty rule forbids. The spends themselves
-        // live in the feed, where every other landed thing lives.
+        // Gnosis Pay has no screen of its own (prd §222). CONNECT routes to
+        // the wallet manager, because watching the wallet is the only real
+        // action — the §209 reasoning. What it must never route to is the
+        // generic BridgeDetailScreen: that carries a Remove button, and this
+        // seat is a MIRROR of "has a watched wallet spent on a card", so
+        // removing it would silently re-register on the next foreground —
+        // exactly the dead control the honesty rule forbids. OPEN no longer
+        // comes here at all: the spends live in the feed, where every other
+        // landed thing lives, so it opens that room (`roomSource(forID:)`).
         Row(offer: "Gnosis Pay", id: "gnosispay", destination: .wallet),
-        // The five DeFi protocols seated 2026-07-30 route BOTH ways to the
-        // wallet manager for the same two reasons Gnosis Pay does — watching
-        // a wallet is the only real action, and the generic
-        // `BridgeDetailScreen`'s Remove would be a dead control against a
-        // seat that re-registers itself next foreground. They add a third:
-        // their live book already has a home in the Wallet feed's own DeFi
-        // tiles, so a screen here would only duplicate it. If one ever grows
-        // something to manage that the feed can't carry, it earns its own
-        // screen then — that's what Peer/0xBow/Safe have.
+        // The five DeFi protocols seated 2026-07-30 have no screen of their
+        // own for the same two reasons Gnosis Pay doesn't — watching a wallet
+        // is the only real action, and the generic `BridgeDetailScreen`'s
+        // Remove would be a dead control against a seat that re-registers
+        // itself next foreground. They add a third: their live book already
+        // has a home in the Wallet feed's own DeFi tiles, so a screen here
+        // would only duplicate it. If one ever grows something to manage that
+        // the feed can't carry, it earns its own screen then — that's what
+        // Peer/0xBow/Safe have.
+        //
+        // So CONNECT lands here, on the wallet manager. OPEN does not, since
+        // 2026-08-26: it goes to that DeFi tile in the Wallet room, which is
+        // the thing the tile advertised (`roomSource(forID:)`).
         Row(offer: "Aave",        id: "aave",        destination: .wallet),
         Row(offer: "Morpho",      id: "morpho",      destination: .wallet),
         Row(offer: "Uniswap",     id: "uniswap",     destination: .wallet),
@@ -488,6 +493,70 @@ enum BridgeRouter {
     /// Unknown ids — the demo seats — fall to the generic detail screen.
     static func destination(forID id: String) -> Destination {
         rows.first { $0.id == id }?.destination ?? .detail(id: id)
+    }
+
+    /// The ROOM a connected seat opens INSTEAD of pushing a screen, keyed by
+    /// `BridgeStore` id — a real `Thing.source`, never the catalog name. That
+    /// is `RoomDoor`'s rule and it matters for the same reason: the two differ
+    /// where the catalog brands a seat more fully than the bridge stamps it,
+    /// and naming the catalog form lands on a room that can never hold a row,
+    /// INVISIBLY (the pop happens, the filter is written, and the empty state
+    /// looks like an honest empty state).
+    ///
+    /// Every entry is a WALLET-RIDING seat with no screen of its own (prd
+    /// §494, 2026-08-26). Their Open used to push the wallet MANAGER, which is a
+    /// roster of addresses — one step short of the thing the tile advertises:
+    /// "Aerodrome · never miss the weekly vote" opened onto a list of wallets,
+    /// with the lock's countdown another tap away through that screen's own
+    /// `RoomDoor`. These seats are EVIDENCE-gated (`WalletSeatEvidence`), so
+    /// one exists only once a real position has been SEEN — which leaves
+    /// "show me it" as the only honest thing Open can mean here.
+    ///
+    /// The five DeFi protocols all land `source: "Wallet"` (prd §349), so they
+    /// open the Wallet room, where their live book already has a home in the
+    /// DeFi tiles. Gnosis Pay and ether.fi land under sources of their own and
+    /// open those — the same rule, and their rows' own comment already said
+    /// the spends "live in the feed, where every other landed thing lives".
+    ///
+    /// Two routes are deliberately UNCHANGED. **Connect** still lands on the
+    /// manager (`destination(forOffer:)` above): watching a wallet is the only
+    /// real action, and before one is watched there is nothing in a room to
+    /// see. **Fix** still lands there too — a broken seat is repaired in the
+    /// manager, and sending it to a room would be the dead control the honesty
+    /// rule forbids. Only Open moves.
+    ///
+    /// Peer, 0xBow, Railgun, Safe and Altana ride wallets too and are NOT here:
+    /// each owns a screen carrying something the room can't (a fill history, a
+    /// signature queue, this phone's signer key), so pushing it is not a step
+    /// short of anything.
+    static func roomSource(forID id: String) -> String? {
+        switch id {
+        // `WalletIngest` stamps this literal on every row of all five; there
+        // is no constant to read, and `WalletScreen`'s own `RoomDoor` spells
+        // it the same way.
+        case "aave", "morpho", "uniswap", "hyperliquid", "aerodrome": "Wallet"
+        case "gnosispay": GnosisPayBridge.sourceName
+        case "etherfi":   EtherFiCash.source
+        default: nil
+        }
+    }
+
+    /// Open a CONNECTED seat — the one door every catalog Open takes, so the
+    /// tile, the shelf row, the Open capsule, the product page and the
+    /// `-openBridgeDetail` probe can never disagree about where a seat leads.
+    ///
+    /// POP FIRST when it is a room. `sourceRequest` is read by `MainSurface`,
+    /// which sits BEHIND this pushed stack — asking before popping changes the
+    /// room nobody is looking at (`RoomDoor`'s lesson, spelled again here
+    /// because this fires from a different stack).
+    @MainActor
+    static func open(seatID id: String, route: HomeRoute, chrome: ShellChrome) {
+        if let room = roomSource(forID: id) {
+            route.path = []
+            chrome.sourceRequest = room
+        } else {
+            route.pushBridge(destination(forID: id))
+        }
     }
 }
 

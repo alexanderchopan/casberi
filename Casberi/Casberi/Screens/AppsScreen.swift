@@ -398,13 +398,19 @@ struct AppsScreen: View {
             if let name = UserDefaults.standard.string(forKey: "openSetup") {
                 route.pushBridge(BridgeRouter.destination(forOffer: name))
             }
-            // `-openBridgeDetail "<BridgeStore id>"` pushes a CONNECTED seat's
-            // manage screen — the route a connected tile's Open takes. The
-            // setup hook above can't reach it: a bridge whose connect is a
-            // system permission (Photos, Calendar…) has no setup screen, so
-            // `destination(forOffer:)` gives nothing to push.
+            // `-openBridgeDetail "<BridgeStore id>"` takes a CONNECTED seat's
+            // Open — its manage screen, or its ROOM for a wallet-riding seat
+            // that has none (prd §494). The setup hook above can't reach it: a
+            // bridge whose connect is a system permission (Photos, Calendar…)
+            // has no setup screen, so `destination(forOffer:)` gives nothing
+            // to push.
             if let id = UserDefaults.standard.string(forKey: "openBridgeDetail") {
-                route.pushBridge(BridgeRouter.destination(forID: id))
+                // Through the shared door, not `pushBridge` — a wallet-riding
+                // seat opens its ROOM now, and a probe that still pushed the
+                // manager would exercise a route no person takes.
+                NSLog("[Casberi] openBridgeDetail| %@ -> %@", id,
+                      BridgeRouter.roomSource(forID: id) ?? "push")
+                BridgeRouter.open(seatID: id, route: route, chrome: chrome)
             }
             #endif
         }
@@ -1088,6 +1094,41 @@ struct AppsScreen: View {
         .id("card-" + name)
     }
 
+    /// The seat id a cell should open as a ROOM rather than push, or nil.
+    ///
+    /// Tier 2 ONLY — a tier-0 cell is a BROKEN seat whose tap means Fix, and
+    /// fixing happens in the manager. Routing that to a room would be a
+    /// control that looks like it repairs something and doesn't (§83).
+    private func roomSeat(_ entry: Ranked) -> String? {
+        guard entry.tier == 2, let bridge = entry.bridge,
+              BridgeRouter.roomSource(forID: bridge.id) != nil else { return nil }
+        return bridge.id
+    }
+
+    /// A catalog cell's tap. Almost every cell PUSHES, as a plain
+    /// `NavigationLink` value — the product page for an app you could add, the
+    /// manager for one that's connected. A wallet-riding seat with no screen
+    /// of its own instead opens the room its rows land in
+    /// (`BridgeRouter.roomSource`), which is a POP, not a push, so it cannot
+    /// be a link value and takes a `Button` wearing the same style.
+    @ViewBuilder
+    private func catalogTap<Label: View>(roomSeat id: String?,
+                                         destination: HomeRoute.Node,
+                                         @ViewBuilder label: () -> Label) -> some View {
+        if let id {
+            Button {
+                DSHaptic.tap()
+                BridgeRouter.open(seatID: id, route: route, chrome: chrome)
+            } label: {
+                label()
+            }
+        } else {
+            NavigationLink(value: destination) {
+                label()
+            }
+        }
+    }
+
     /// One app on the wall — icon, name underneath, home-screen style. The
     /// verb and status line moved off the tile onto the destination it opens
     /// (the product page's Connect/Open, or the manager's own proof line) —
@@ -1102,7 +1143,7 @@ struct AppsScreen: View {
             }
             return .appDetail(entry.offer.name)
         }()
-        return NavigationLink(value: destination) {
+        return catalogTap(roomSeat: roomSeat(entry), destination: destination) {
             VStack(spacing: DS.Space.s1) {
                 BridgeIcon(name: entry.offer.name, size: DS.Mark.tile)
                     .saturation(soon ? 0 : 1)
@@ -1174,7 +1215,7 @@ struct AppsScreen: View {
             return .appDetail(entry.offer.name)
         }()
         return HStack(spacing: DS.Space.s3) {
-            NavigationLink(value: destination) {
+            catalogTap(roomSeat: roomSeat(entry), destination: destination) {
                 HStack(spacing: DS.Space.s3) {
                     BridgeIcon(name: entry.offer.name, size: DS.Mark.tile)
                         .saturation(soon ? 0 : 1)
@@ -1273,7 +1314,7 @@ struct AppsScreen: View {
         case 2:
             if let bridge = entry.bridge {
                 VerbCapsule(verb: .open) {
-                    route.pushBridge(BridgeRouter.destination(forID: bridge.id))
+                    BridgeRouter.open(seatID: bridge.id, route: route, chrome: chrome)
                 }
             }
         case 1:

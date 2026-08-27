@@ -430,6 +430,88 @@ def audit_room_doors(name: str, body: str, stamped: set, roomless: set = frozens
     return findings
 
 
+# ── the seat that opens a room (check 7c, 2026-08-26) ──────────────────────
+#
+# `BridgeRouter.roomSource(forID:)` is `RoomDoor` reached from the other side:
+# a connected catalog seat with no screen of its own opens the ROOM its rows
+# land in, by popping the stack and asking `MainSurface.go(to:)` for a source.
+# So it inherits check 7a's failure mode EXACTLY — hand it a string no bridge
+# stamps and nothing errors, the pop happens, the filter is written, and the
+# tile lands you in a room that will never hold a row. The natural mistake is
+# the same one: passing the CATALOG name ("0xBow Privacy Pools", "Gnosis Pay")
+# where the bridge stamps something else.
+#
+# Two more halves that only exist on this side of the door:
+#
+#   · The SEAT ID must be a real one. A typo is not a crash and not an empty
+#     room — `roomSource` simply answers nil and Open pushes the wallet
+#     manager, which is the behaviour this table was written to replace. The
+#     feature silently reverts for that seat and looks exactly like shipping.
+#   · A seat named here must route to `.wallet`. Listing one that owns a real
+#     screen (Peer's fills, Safe's queue) makes that screen UNREACHABLE from
+#     the catalog — the room opens instead, and it holds rows, so nothing
+#     about it reads as broken.
+#
+# STATED CEILING, the same one check 7a states and for the same reason: only a
+# LITERAL can be resolved from text. A case answering with a constant
+# (`EtherFiCash.source`, `GnosisPayBridge.sourceName`) is skipped, and that is
+# the right answer rather than a gap — one constant read by both the stamp and
+# the door is the pattern that cannot drift at all (§311's lesson).
+ROOM_SOURCE_FN_RE = re.compile(
+    r'static func roomSource\(forID id: String\) -> String\? \{(.*?)\n    \}', re.S)
+ROOM_SOURCE_CASE_RE = re.compile(r'^\s*case\s+(.+?):\s*(.+?)\s*$', re.M)
+WALLET_SEAT_ID_RE = re.compile(r'WalletSeat\(id:\s*"([^"]+)"')
+ROUTER_ROW_RE = re.compile(r'Row\(offer:\s*"[^"]*",\s*id:\s*"([^"]+)",\s*'
+                           r'destination:\s*([.\w]+)')
+
+
+def room_source_cases(routing_src: str):
+    """Every (seat id, value expression) pair in `roomSource(forID:)`."""
+    m = ROOM_SOURCE_FN_RE.search(routing_src)
+    if not m:
+        return None
+    out = []
+    for ids, value in ROOM_SOURCE_CASE_RE.findall(m.group(1)):
+        if ids.strip() == "default":
+            continue
+        for sid in re.findall(r'"([^"]+)"', ids):
+            out.append((sid, value.strip()))
+    return out
+
+
+def audit_seat_rooms(routing_src: str, store_src: str, stamped: set,
+                     roomless: set = frozenset()):
+    cases = room_source_cases(routing_src)
+    if cases is None:
+        return ["BridgeRouting.swift: BridgeRouter.roomSource(forID:) is gone — "
+                "check 7c can no longer see which seats open a room"]
+    seats = set(WALLET_SEAT_ID_RE.findall(store_src))
+    rows = dict(ROUTER_ROW_RE.findall(routing_src))
+    findings = []
+    for sid, value in cases:
+        if sid not in seats:
+            findings.append(f"BridgeRouting.swift: roomSource names seat “{sid}”, "
+                            f"which is not a WalletSeat id — Open silently falls "
+                            f"back to pushing the wallet manager")
+        if sid in rows and rows[sid] != ".wallet":
+            findings.append(f"BridgeRouting.swift: seat “{sid}” routes to "
+                            f"{rows[sid]}, a screen of its own — opening its room "
+                            f"instead makes that screen unreachable")
+        lit = re.fullmatch(r'"([^"]+)"', value)
+        if not lit:
+            continue                   # a constant — see the ceiling above
+        src = lit.group(1)
+        if src in roomless:
+            findings.append(f"BridgeRouting.swift: seat “{sid}” opens “{src}”, "
+                            f"which Corpus.earnsRoom refuses — the door lands "
+                            f"nowhere")
+        elif src not in stamped:
+            findings.append(f"BridgeRouting.swift: seat “{sid}” opens “{src}”, "
+                            f"which no bridge stamps as Thing.source — the room "
+                            f"will always be empty (did you pass the catalog name?)")
+    return findings
+
+
 def audit_token_sources(tokens_src: str, stamped: set):
     """`TokenBridge.source` is `rawValue` for all of them — prove it.
 
@@ -759,6 +841,77 @@ def self_test() -> bool:
     # A source that IS stamped and still has no room — the half check 7 was
     # blind to on its first day, found by reading `Corpus.earnsRoom` rather
     # than by a failure.
+    # ── check 7c — the seat that opens a room ─────────────────────────────
+    routing_ok = ('    static func roomSource(forID id: String) -> String? {\n'
+                  '        switch id {\n'
+                  '        case "aave", "morpho": "Wallet"\n'
+                  '        case "gnosispay": GnosisPayBridge.sourceName\n'
+                  '        default: nil\n'
+                  '        }\n'
+                  '    }\n'
+                  '        Row(offer: "Aave", id: "aave", destination: .wallet),\n'
+                  '        Row(offer: "Morpho", id: "morpho", destination: .wallet),\n'
+                  '        Row(offer: "Gnosis Pay", id: "gnosispay", destination: .wallet),\n')
+    seats_ok = ('WalletSeat(id: "aave", name: "Aave",\n'
+                'WalletSeat(id: "morpho", name: "Morpho",\n'
+                'WalletSeat(id: "gnosispay", name: "Gnosis Pay",\n')
+    stamped_w = {"Wallet", "Peer"}
+    if audit_seat_rooms(routing_ok, seats_ok, stamped_w):
+        print("  ✗ flagged a correct seat-room table"); ok = False
+    else:
+        print("  ✓ passes a correct seat-room table (a constant is not a literal)")
+
+    # The catalog name where the source was wanted — check 7a's trap, reached
+    # from the other side. "Gnosis Pay" happens to be both here, so the fixture
+    # uses a seat whose two spellings really differ.
+    routing_catalog_name = routing_ok.replace('case "aave", "morpho": "Wallet"',
+                                              'case "aave", "morpho": "0xBow Privacy Pools"')
+    f = audit_seat_rooms(routing_catalog_name, seats_ok, stamped_w)
+    if not any("no bridge stamps" in x for x in f):
+        print("  ✗ missed a seat opening an unstamped source"); ok = False
+    else:
+        print("  ✓ catches a seat that opens a source no bridge stamps")
+
+    # A typo in the seat id is not a crash and not an empty room — Open just
+    # goes back to pushing the manager, which looks exactly like shipping.
+    routing_typo = routing_ok.replace('case "aave", "morpho": "Wallet"',
+                                      'case "aav", "morpho": "Wallet"')
+    f = audit_seat_rooms(routing_typo, seats_ok, stamped_w)
+    if not any("not a WalletSeat id" in x for x in f):
+        print("  ✗ missed a seat id that does not exist"); ok = False
+    else:
+        print("  ✓ catches a seat id no WalletSeat carries")
+
+    # A seat that owns a real screen must not be listed — the room opens and
+    # holds rows, so the unreachable screen reads as nothing at all.
+    routing_has_screen = (routing_ok
+        .replace('case "aave", "morpho": "Wallet"', 'case "peer": "Peer"')
+        .replace('        Row(offer: "Aave", id: "aave", destination: .wallet),\n',
+                 '        Row(offer: "Peer", id: "peer", destination: .peer),\n'))
+    f = audit_seat_rooms(routing_has_screen,
+                         seats_ok + 'WalletSeat(id: "peer", name: "Peer",\n',
+                         stamped_w)
+    if not any("makes that screen unreachable" in x for x in f):
+        print("  ✗ missed a seat whose own screen it would hide"); ok = False
+    else:
+        print("  ✓ catches a seat that already owns a screen")
+
+    # A source that is stamped and still has no room (Corpus.earnsRoom says no).
+    f = audit_seat_rooms(routing_ok.replace('case "aave", "morpho": "Wallet"',
+                                            'case "aave", "morpho": "You"'),
+                         seats_ok, stamped_w | {"You"}, roomless={"You"})
+    if not any("earnsRoom refuses" in x for x in f):
+        print("  ✗ missed a seat opening a roomless source"); ok = False
+    else:
+        print("  ✓ catches a seat opening a stamped-but-roomless source")
+
+    # The function itself going away must be a finding, not a silent pass —
+    # otherwise a refactor turns this whole check off with nothing to say so.
+    if not audit_seat_rooms("enum BridgeRouter {}", seats_ok, stamped_w):
+        print("  ✗ a missing roomSource() passed silently"); ok = False
+    else:
+        print("  ✓ catches roomSource() disappearing")
+
     f = audit_room_doors("fixture.swift",
                          'RoomDoor(name: "Contacts", source: "Contacts")',
                          {"Contacts", "Peer"}, {"Contacts", "You"})
@@ -833,6 +986,12 @@ def main() -> int:
 
     findings += audit_token_sources(
         strip_comments(open(os.path.join(MODEL, "TokenBridges.swift")).read()), stamped)
+
+    # Check 7c — the door reached from the catalog side.
+    findings += audit_seat_rooms(
+        strip_comments(open(os.path.join(MODEL, "BridgeRouting.swift")).read()),
+        strip_comments(open(os.path.join(MODEL, "BridgeStore.swift")).read()),
+        stamped, roomless)
 
     catalog_findings, offers = audit_catalog(strip_comments(open(CATALOG).read()))
     findings += catalog_findings
