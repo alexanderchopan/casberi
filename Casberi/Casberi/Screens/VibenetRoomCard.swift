@@ -306,8 +306,23 @@ struct VibenetRoomCard: View {
         // the ADDRESSES rather than the key fingerprint above: a balance
         // landing does not change which curves exist, and re-decoding both
         // books every time a reading ticks would put the cost straight back.
-        .task(id: room.items.map(\.address).joined(separator: ",")) {
-            history = VibenetValueStore.samples()
+        // **SCOPED, THE CURVE IS THAT ACCOUNT'S** (prd §495). `history` fed
+        // the crown's sparkline AND its delta pill, and was loaded unscoped —
+        // so narrowing the room to one account drew that account's balance
+        // beside the WHOLE ROOM's change: on the device, "0.014 ETH" over
+        // "▲ 0.7039 ETH (38.9%)", a rise of fifty times the stated holding.
+        //
+        // §83 where it is most expensive, and the data to be right has existed
+        // since §467: `VibenetValueStore.samples(for:)` records a real
+        // per-account history on every sweep, and `VibenetAccountDetail` has
+        // read it back since §477. Only the room's own crown never did.
+        //
+        // The task is keyed on the SCOPE as well as the roster, or picking a
+        // face leaves the previous account's curve on screen until something
+        // else happens to invalidate it.
+        .task(id: "\(scopedAddress ?? "")|\(room.items.map(\.address).joined(separator: ","))") {
+            history = scopedAddress.map { VibenetValueStore.samples(for: $0) }
+                ?? VibenetValueStore.samples()
             accountHistories = VibenetValueStore.accountSamples()
         }
     }
