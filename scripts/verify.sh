@@ -1310,7 +1310,7 @@ harness "Vibenet pure-logic self-test" "vibenet self-test" "scripts/vibenet-self
 # offer to do anything), an undated authorization ranked as the oldest fact,
 # ribbons scaled ACROSS kinds so one revocation draws as a hairline beside forty
 # grants, a lock counted as a key moment it has no block for, and a headline
-# apologising with "0 you don't watch yet".
+# apologising with "0 unwatched".
 harness "Vibenet scope drawings self-test" "8 mutations, 9 drift guards" "scripts/vibenet-scopes-selftest.sh" "the vibenet scope drawings self-test failed — run scripts/vibenet-scopes-selftest.sh"
 
 # The design system's first mechanical check (prd §299). Every other rule in

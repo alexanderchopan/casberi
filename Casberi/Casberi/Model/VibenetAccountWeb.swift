@@ -84,18 +84,32 @@ enum VibenetAccountWeb {
                    unwatched: nodes.filter { !$0.watched }.count)
     }
 
-    /// "2 accounts · 1 you don't watch yet" — the headline.
+    /// "2 accounts · 1 unwatched" — the headline.
     ///
     /// The unwatched clause is DROPPED when there are none, rather than
-    /// reading "0 you don't watch yet": a healthy state that has to say a
-    /// zero out loud is a card apologising for being fine.
+    /// reading "0 unwatched": a healthy state that has to say a zero out loud
+    /// is a card apologising for being fine.
+    ///
+    /// **The second clause is three words, not five** (user, 2026-08-26; it
+    /// shipped as "1 you don't watch yet" and truncated to "1 you don't
+    /// watch…" on a 402pt screen). The headline is `stat24` and shares its
+    /// line with the room's settings gear, which is 44pt of reserved trailing
+    /// corner — so the budget here is about 300pt, and a sentence-shaped
+    /// clause cannot fit it at that size. The card carries a
+    /// `minimumScaleFactor`, but shrinking a headline to fit is a worse answer
+    /// than writing one that fits: it makes the room's largest type a
+    /// different size on every scope.
+    ///
+    /// "Unwatched" over "you don't watch": the row it points at already says
+    /// "Not watched" and now carries a Watch button, so the headline is
+    /// naming a state, not making a request.
     static func headline(_ web: Web) -> String {
         let n = web.nodes.count
         let count = n == 1
             ? String(localized: "1 account")
             : String(localized: "\(n) accounts")
         guard web.unwatched > 0 else { return count }
-        return String(localized: "\(count) · \(web.unwatched) you don't watch yet")
+        return String(localized: "\(count) · \(web.unwatched) unwatched")
     }
 
     /// The whole drawing as one sentence — §299's rule, since a web of faces

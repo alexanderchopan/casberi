@@ -16,7 +16,7 @@
 #   • ribbons scaled across kinds, so one revocation draws as a hairline
 #     beside forty grants and an account being emptied of keys reads as quiet
 #   • a lock counted as a key moment, inventing an event with no block
-#   • the headline saying "0 you don't watch yet" — a card apologising for
+#   • the headline saying "0 unwatched" — a card apologising for
 #     being fine
 #
 # None of that fails a build, and no simulator can make a key be revoked.
@@ -86,11 +86,30 @@ check(VibenetAccountWeb.web(owner: "0xo", subAccounts: []) == nil,
 // ── the headline drops a zero rather than printing one ───────────────────────
 let allWatched = VibenetAccountWeb.web(owner: "0xo", subAccounts: [sub("0xa", true, 3)])!
 check(!VibenetAccountWeb.headline(allWatched).contains("0"),
-      "a fully watched web never says '0 you don't watch yet'")
+      "a fully watched web never says '0 unwatched'")
 check(VibenetAccountWeb.headline(allWatched) == "1 account",
       "one watched sub-account reads as a bare count")
 check(VibenetAccountWeb.headline(web).contains("2"),
       "the unwatched count reaches the headline when there is one")
+// THE HEADLINE HAS TO FIT ONE LINE OF `stat24` BESIDE THE GEAR (user,
+// 2026-08-26). It shipped as "2 accounts · 1 you don't watch yet" and
+// truncated mid-word on a 402pt screen — the card's own comment already said
+// the gear reserves 44pt of the trailing corner, and the remaining ~300pt at
+// 24pt is about 28 characters. The card carries a `minimumScaleFactor`, so
+// the failure is not a crash but a headline drawn smaller on this scope than
+// on the other four, or an ellipsis where the count should be.
+//
+// A character budget, not a rendered width: nothing here can measure text.
+// It is deliberately loose (32, against a fit of ~28) so it catches a clause
+// growing back into a sentence and never fires on a legitimately larger
+// number — "12 accounts · 11 unwatched" is 26 and must pass.
+check(VibenetAccountWeb.headline(web).count <= 32,
+      "the headline fits its line rather than relying on being shrunk")
+let manyIndexes: [Int] = Array(0..<12)
+let manyWeb = VibenetAccountWeb.web(owner: "0xo", subAccounts:
+    manyIndexes.map { sub("0xsub\($0)", $0 == 0, Double($0 + 1)) })!
+check(VibenetAccountWeb.headline(manyWeb).count <= 32,
+      "and still fits with two-digit counts on both sides")
 
 // ── the flow ─────────────────────────────────────────────────────────────────
 func moment(_ authorized: Bool, _ block: Int) -> VibenetKeyMoment {

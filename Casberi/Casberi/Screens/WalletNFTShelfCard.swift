@@ -211,9 +211,34 @@ struct WalletNFTShelfCard: View {
     /// list directly below carries every one of them.
     private var strip: some View {
         let shown = Array(pieces.prefix(Self.quadCap))
-        return HStack(spacing: DS.Space.s2) {
-            ForEach(shown) { piece in
-                quadCell(piece)
+        // **2x2, NOT 1x4** (user, 2026-08-26: *"on wallet the nfts should be
+        // in a 2x2 in the slot"*).
+        //
+        // The row drew four cells across a 402pt screen — ~87pt each — inside
+        // a slot 210pt tall, so the art was small AND the slot carried ~120pt
+        // of dead space beneath it. A grid spends the height the slot already
+        // reserves: each cell roughly doubles in area and the drawing fills
+        // its box, which is what every other scope's figure is being held to.
+        //
+        // A `LazyVGrid` is deliberately NOT used — there are at most four
+        // cells, all on screen, so laziness buys nothing and costs a sizing
+        // pass; two `HStack`s in a `VStack` settle their frame immediately,
+        // which is `coverSide`'s own reason for being spelled rather than
+        // measured.
+        return VStack(spacing: DS.Space.s2) {
+            ForEach(Array(Self.pairs(shown).enumerated()), id: \.offset) { _, row in
+                HStack(spacing: DS.Space.s2) {
+                    ForEach(row) { piece in
+                        quadCell(piece)
+                    }
+                    // A LAST ROW OF ONE KEEPS ITS CELL HALF-WIDTH. Without
+                    // this, three pieces draw one cell across the full width
+                    // under two half-width ones, which reads as a feature
+                    // ("this one is bigger") rather than as the end of a list.
+                    if row.count == 1 {
+                        Color.clear.frame(width: Self.coverSide, height: Self.coverSide)
+                    }
+                }
             }
         }
         // **PIECES, NOT COLLECTION COVERS (prd §493, correcting §483's own
@@ -228,7 +253,19 @@ struct WalletNFTShelfCard: View {
         // The pick model is UNTOUCHED and needs no amendment: §387 picks a
         // CONTRACT ("show my Squiggles"), and what is DISPLAYED is the pieces
         // those picks bring back. Pick by collection, show the art.
-        .frame(maxWidth: .infinity, alignment: .leading)
+        // **THE GRID IS SQUARE AND CENTRED, and both halves of that are the
+        // gear.** NFT art is square, and the slot is 210pt tall, so two rows
+        // fix the cell at ~101pt on a side — which means a cell stretched to
+        // the full column width would be a 181x101 landscape box holding a
+        // square picture, i.e. the dead space moved rather than removed.
+        //
+        // Sizing the cells square makes the grid 210pt wide, and CENTRING it
+        // is what clears the room's settings gear: that control is an overlay
+        // on this slot's top-trailing corner, and a full-width top row draws
+        // straight under it (measured — the gear sat on the second tile).
+        // Holdings buys the same clearance with `.padding(.top, DS.Face.shelf)`
+        // because a treemap can lose height; art cannot lose a row.
+        .frame(maxWidth: .infinity)
         .padding(.horizontal, DSRoomChassis.inset)
     }
 
@@ -283,10 +320,28 @@ struct WalletNFTShelfCard: View {
         }
     }
 
-    /// The slot's height, spent on art. Spelled rather than measured for
+    /// One ROW of the quad, spent on art. Spelled rather than measured for
     /// `walletVisualSlot`'s own reason: a measured height settles a frame late,
     /// which is the same jump arriving slower.
-    private static let coverSide: CGFloat = 150
+    ///
+    /// Two of these plus the gap between them is what fills the slot, so this
+    /// is derived from `DSRoomChassis.visualSlot` rather than typed — the two
+    /// cannot drift, and a change to the chassis moves the art with it.
+    private static var coverSide: CGFloat {
+        (DSRoomChassis.visualSlot - DS.Space.s2) / 2
+    }
+
+    /// The shown pieces in rows of two.
+    ///
+    /// A free function on the type rather than a computed property so the
+    /// harness can reach it: the pairing is the one piece of arithmetic here
+    /// that can be wrong in a way that still renders (three pieces as 2+1
+    /// versus 1+2, which puts the odd cell in the wrong corner).
+    static func pairs(_ shown: [WalletNFTShelf.NFTPiece]) -> [[WalletNFTShelf.NFTPiece]] {
+        stride(from: 0, to: shown.count, by: 2).map {
+            Array(shown[$0..<min($0 + 2, shown.count)])
+        }
+    }
 
     @ViewBuilder
     private func quadArt(_ piece: WalletNFTShelf.NFTPiece) -> some View {
@@ -299,8 +354,7 @@ struct WalletNFTShelfCard: View {
                 RemoteThumb(urlString: piece.imageURL, size: Self.tile)
             }
         }
-        .frame(maxWidth: .infinity)
-        .frame(height: Self.coverSide)
+        .frame(width: Self.coverSide, height: Self.coverSide)
         .clipShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
         .accessibilityLabel(Text(piece.collection))
     }

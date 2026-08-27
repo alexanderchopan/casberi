@@ -16,6 +16,10 @@ struct VibenetAccountWebCard: View {
     var onWatch: ((String) -> Void)? = nil
     let reduceMotion: Bool
 
+    /// The most air allowed between two nodes once the web is filling its
+    /// box — see the `Spacer`s in `body`.
+    private static let maxSpread: CGFloat = 34
+
     private var drawn: [VibenetAccountWeb.Node] {
         Array(web.nodes.prefix(VibenetAccountWeb.nodesShown))
     }
@@ -30,7 +34,7 @@ struct VibenetAccountWebCard: View {
                 // CLEARS THE GEAR. The room's settings button is an overlay on
                 // the trailing edge of this whole block, so a headline that
                 // takes the full width runs under it — measured on the device,
-                // where "2 accounts · 1 you don't watch yet" was clipped
+                // where the headline was clipped
                 // mid-word by a control sitting on top of it.
                 .padding(.trailing, DS.Face.shelf + DS.Space.s3)
             HStack(alignment: .top, spacing: DS.Space.s3) {
@@ -46,20 +50,44 @@ struct VibenetAccountWebCard: View {
                         .lineLimit(1)
                 }
                 .padding(.top, DS.Space.s2)
+                // **THE ROWS SPREAD TO FILL THE SLOT** (user, 2026-08-26:
+                // *"on accounts too much space between the charts and the
+                // account row"*). Same reasoning as the Activity band: the
+                // slot's height is reserved whether or not the figure spends
+                // it, so a two-node web drew ~80pt of picture and left ~120pt
+                // of black above the account rail.
+                //
+                // `Spacer`s between the rows rather than a computed row
+                // height, because unlike the flow band these rows have no
+                // geometry of their own to stretch — nothing is positioned
+                // against an index, so the layout can simply be told to use
+                // the room. `maxSpread` is what stops two nodes drifting to
+                // opposite ends of the box and reading as a drawing that lost
+                // its middle.
                 VStack(alignment: .leading, spacing: DS.Space.s2) {
                     ForEach(Array(drawn.enumerated()), id: \.element.id) { index, node in
+                        if index > 0 { Spacer(minLength: 0).frame(maxHeight: Self.maxSpread) }
                         row(node)
                             .chartArrival(index: index, reduceMotion: reduceMotion)
                     }
                     if web.nodes.count > VibenetAccountWeb.nodesShown {
+                        Spacer(minLength: 0).frame(maxHeight: Self.maxSpread)
                         Text(String(localized: "and \(web.nodes.count - VibenetAccountWeb.nodesShown) more"))
                             .dsText(.label12).foregroundStyle(DS.textTertiary)
                     }
+                    // Anything the rows and their spreads did not take sits
+                    // BELOW them, so a single node stays at the top of the box
+                    // beside the owner it hangs off rather than floating in
+                    // the middle of it.
+                    Spacer(minLength: 0)
                 }
+                .frame(maxHeight: .infinity, alignment: .top)
                 Spacer(minLength: 0)
             }
             .padding(.top, DS.Space.s3)
+            .frame(maxHeight: .infinity, alignment: .top)
         }
+        .frame(maxHeight: .infinity, alignment: .top)
         // One spoken sentence (§299): a web of faces and dashes reads as
         // nothing, and the ORDER — unwatched first — is the claim.
         .accessibilityElement(children: .combine)

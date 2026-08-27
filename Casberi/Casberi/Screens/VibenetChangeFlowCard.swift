@@ -30,7 +30,17 @@ struct VibenetChangeFlowCard: View {
         Array(flow.addresses.prefix(VibenetChangeFlow.addressesShown))
     }
 
-    private let rowHeight: CGFloat = 34
+    /// The TALLEST a row is allowed to get once the band is filling its box.
+    ///
+    /// The band spends whatever height the slot gives it (see `body`), which
+    /// on a two-row flow would otherwise put 100pt between two 26pt faces —
+    /// filled, and reading as a drawing that lost its middle. Rows grow to
+    /// this and no further, and what is left over becomes an even margin
+    /// above and below, so a short flow sits CENTRED in the slot rather than
+    /// stretched across it or stranded at its top.
+    private let maxRowHeight: CGFloat = 56
+    /// The floor, for a flow with more rows than the slot can spend on them.
+    private let minRowHeight: CGFloat = 34
     private let labelColumn: CGFloat = 112
     private let faceColumn: CGFloat = 118
 
@@ -40,10 +50,20 @@ struct VibenetChangeFlowCard: View {
                 .dsText(.stat24)
                 .foregroundStyle(DS.textPrimary)
                 .lineLimit(1)
+            // **THE BAND FILLS THE SLOT** (user, 2026-08-26: *"in activity
+            // there is too much space between the slot image and the avatar
+            // row"*).
+            //
+            // It was pinned to `rows * 34 + 8` — its natural height — inside a
+            // slot fixed at `DSRoomChassis.visualSlot`, so a three-row flow
+            // drew 110pt of picture and left ~60pt of black above the account
+            // rail. Every scope's drawing owes the whole box: the slot's
+            // height is reserved whether or not the figure spends it, and an
+            // unspent reservation is not restraint, it is a gap.
             GeometryReader { geo in
-                band(width: geo.size.width)
+                band(width: geo.size.width, height: geo.size.height)
             }
-            .frame(height: CGFloat(max(kinds.count, addresses.count)) * rowHeight + 8)
+            .frame(maxHeight: .infinity)
             .padding(.top, DS.Space.s2)
             if flow.addresses.count > VibenetChangeFlow.addressesShown {
                 Text(String(localized: "and \(flow.addresses.count - VibenetChangeFlow.addressesShown) more"))
@@ -61,7 +81,12 @@ struct VibenetChangeFlowCard: View {
         }
     }
 
-    private func band(width: CGFloat) -> some View {
+    private func band(width: CGFloat, height: CGFloat) -> some View {
+        let rows = max(1, max(kinds.count, addresses.count))
+        let rowHeight = min(maxRowHeight,
+                            max(minRowHeight, height / CGFloat(rows)))
+        // What the rows do not spend, split evenly — see `maxRowHeight`.
+        let top = max(0, (height - rowHeight * CGFloat(rows)) / 2)
         let fieldStart = labelColumn
         let fieldEnd = max(fieldStart + 20, width - faceColumn)
         return ZStack(alignment: .topLeading) {
@@ -70,7 +95,8 @@ struct VibenetChangeFlowCard: View {
             ForEach(flow.edges) { edge in
                 if let k = kinds.firstIndex(of: edge.kind),
                    let a = addresses.firstIndex(of: edge.address) {
-                    ribbon(edge, from: y(k), to: y(a), x0: fieldStart, x1: fieldEnd)
+                    ribbon(edge, from: y(k, rowHeight, top), to: y(a, rowHeight, top),
+                           x0: fieldStart, x1: fieldEnd)
                 }
             }
             ForEach(Array(kinds.enumerated()), id: \.element) { index, kind in
@@ -86,7 +112,7 @@ struct VibenetChangeFlowCard: View {
                         .monospacedDigit()
                 }
                 .frame(width: labelColumn - DS.Space.s2, alignment: .leading)
-                .position(x: (labelColumn - DS.Space.s2) / 2, y: y(index))
+                .position(x: (labelColumn - DS.Space.s2) / 2, y: y(index, rowHeight, top))
             }
             ForEach(Array(addresses.enumerated()), id: \.element) { index, address in
                 HStack(spacing: DS.Space.s2) {
@@ -97,7 +123,7 @@ struct VibenetChangeFlowCard: View {
                         .lineLimit(1)
                 }
                 .frame(width: faceColumn - DS.Space.s2, alignment: .leading)
-                .position(x: fieldEnd + (faceColumn - DS.Space.s2) / 2, y: y(index))
+                .position(x: fieldEnd + (faceColumn - DS.Space.s2) / 2, y: y(index, rowHeight, top))
                 .contentShape(Rectangle())
                 .onTapGesture { onPick?(address) }
                 // The band speaks as one element and carries the taps as
@@ -107,8 +133,8 @@ struct VibenetChangeFlowCard: View {
         }
     }
 
-    private func y(_ index: Int) -> CGFloat {
-        rowHeight / 2 + CGFloat(index) * rowHeight
+    private func y(_ index: Int, _ rowHeight: CGFloat, _ top: CGFloat) -> CGFloat {
+        top + rowHeight / 2 + CGFloat(index) * rowHeight
     }
 
     /// One ribbon, scaled against the heaviest edge OF ITS OWN KIND.
