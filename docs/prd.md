@@ -35174,3 +35174,317 @@ selftest, catalog sync, the liveness audit and the design/face/motion ramps are
 green. **No screenshot of the fixed strip has been taken** — the resolver change
 is one lookup and the assets are on disk, but the Markets room's own tiles are
 unseen this pass.
+
+## 490. Permissions gets the reading a dollar ranking cannot make (user: "for permissions... it could even be a count in some way N delegations N spam transfers or something i dunno" → "ok lets do D", 2026-08-26)
+
+The wallet room's last empty slot. `Permissions` opened straight onto its own
+approvals list — §247's gap, a room leading with a list of its own rows — and
+the drawing it now leads with is one that list structurally cannot produce.
+
+**Four options were drawn and the count-based one won, but not as a count.** A
+bare tally is precisely what §292 exists to replace, and that entry says so in
+its opening line: *"a count can't, because approvals aren't equal."* What
+`WalletPermissions` counts is CAPABILITY — six fixed rungs ordered by reach,
+unbounded first — so the rung is the unit and the number only says how many
+things have that power. Ten grants collapse into the same four rows and forty
+do too, which is the property the user's own scaling question exposed as the
+deciding one ("what happens if someone had like 10 of these, then how does the
+chart update?"): the two money-ranked options degrade into a figure plus a
+truncated list, and this one does not change shape at all.
+
+**The rung a money ranking cannot place is the argument for the whole card.** A
+Safe module moves funds with no signature, an EIP-7702 delegate runs as your
+wallet, an Altana root credential signs as your wallet, and an operator grant
+(`setApprovalForAll`) manages a whole collection this app prices at nothing.
+None has a dollar figure. A card built on `min(allowance, balance) × price`
+either omits them — hiding the most dangerous things in the scope — or sorts
+them as zero, which puts them last. §292 names that trap in its own words and
+answers it with a separate line; at four kinds of holder a line is no longer
+enough.
+
+**`scopedSigner` sits ABOVE a capped grant**, which looks backwards and is
+§293's ceiling rule: the keystore publishes no way to read a session key's
+scope, and a bound we cannot read must never be drawn as a small one.
+
+**Three refusals worth keeping.** A rung states a total only when EVERY holder
+in it is priced — a partial sum looks complete, which is worse than no sum. The
+eyebrow stays silent rather than printing `$0` for a wallet whose only holder is
+a module: real exposure, no dollars, and a zero says the opposite. And "no
+amount to state" appears only on the two rungs where a figure was EXPECTED
+(`Power.canCarryAmount`) — on a module or a collection grant it is an apology
+for a fact.
+
+**`WalletActingParties` finally reaches a view.** It has been readable since
+§293 and was drawn NOWHERE — reachable only from a probe — so a module that can
+spend without a signature was invisible in the app that exists to point at
+exactly that. It joins `WalletWatch.liveState`'s existing fan-out, sharing the
+delegation read and the cached Safe snapshot, so it costs no new round trip.
+
+**The demo could not show it, or the NFT quad, and both causes were structural.**
+`liveState` returns `WalletDemoState.state` wholesale in demo mode, so the new
+acting-parties read was never reached — the fixture is where it belonged.
+`nftShelfWallet` required exactly one watched wallet, a rule written before the
+NFTs scope existed, so that chip could never appear either.
+
+Guarded by `scripts/wallet-permissions-selftest.sh`: `WalletPermissions`
+compiled WHOLE, 11 mutations, 10 drift guards. No simulator can install a Safe
+module or make a delegate appear, so the harness is the only proof these rungs
+are ordered right.
+
+## 491. The vibenet room gets Wallet's chassis, and one file owns the geometry (user: "we want to make the room as much like wallet as we can" → "they are NOT the same. can you make sure you have a tempalte for wallet that you are applying here to vibenet", 2026-08-26)
+
+Reported three times in one session — *"the home toggle bar is in the wrong
+place, so it's not like Wallet"*, then *"they still are not in teh same place"*,
+then the template request — and the third report was the correct diagnosis. Each
+earlier fix was another measurement, which is why each one drifted again.
+
+**`Design/DSRoomChassis.swift` owns the four distances** (slot height,
+figure→rail, rail→switcher, switcher→content) and BOTH rooms read them. The
+PARTS were already shared — `FaceScopeRail` draws the faces in both,
+`DSSectionSwitcher` the chips — and the spacing between them was not, so two
+hand-tuned stacks could not stay equal. Measured before: Wallet's bar at 579pt,
+vibenet's at 745.
+
+**Three structural fixes, none of them padding.** (1) ONE BOX HOLDS THE CROWN
+*OR* THE FIGURE, never both stacked — Wallet's Positions scope opens "Deposited
+$61,000" and the crown is REPLACED; this room kept its crown and added a 210pt
+box beneath, so it was crown+210 where Wallet is 210. That was 124 of the 166pt.
+(2) Each scope therefore carries its own headline — except Holdings, which names
+itself cell by cell and where Wallet shows no total either. (3) A COMPONENT
+INSIDE THE CHASSIS STATES NO DISTANCE TO ITS NEIGHBOURS: `scopeStrip` carried an
+18pt top pad on top of the shared gap, which is exactly the drift the chassis
+exists to end.
+
+**Every scope's drawing already existed and was buried.** The treemap, the key
+shelf and the delegate spine sat in cards a scroll BELOW the strip that names
+them, so the room asked "which reading?" and answered with the same wall of cards
+whichever chip you picked. Promoted, bare (§483's no-cards ruling).
+
+**TREEMAPS SHOW PROPORTION, NOT AMOUNTS — both rooms** (user: *"treemap is just
+ot show proportions… remove it on both, make the treemap just the symbols"*).
+Every figure in a cell was repeated exactly by the list under it, and the cell
+showed the ROUNDED one. Wallet has had that list all along; this room had
+nothing below the drawing, so the same cut would have deleted its amounts — it
+gets the list, reading from the same cells in the same rank order.
+
+**ONE ACCOUNT TAKES THE CHASSIS TOO.** `stacksIntoCards` required `count > 1`,
+so narrowing to a single account — by the rail, or simply by watching one —
+swapped the whole page for `VibenetAccountDetail` and left the chassis behind.
+Every figure built for this room was invisible to a single-account user, which is
+the ordinary case, and the branch made it look intentional. The detail now draws
+the section the scope asks for: keys under Permissions, links and sub-accounts
+under Accounts, the record under Activity. Its own doc had already said it should
+be "exactly `stackedRoom`'s shape" — the intent was there, the wiring was not.
+
+**Keys → Permissions**, because the room next door names the same scope after the
+QUESTION rather than the objects. §482 said this room has no Permissions because
+nothing is granted to a third party; that was about token approvals and it was
+wrong about keys — a key IS a grant of authority.
+
+- The scope leads with the capability census this room has computed since §463
+  and spent on a filter strip. **Admin is called Admin** (user ruling), not a
+  paraphrase.
+- The list groups keys **by account**, replacing that filter strip: a second row
+  of toggles under the scope switcher is the control the switcher exists to be
+  the only one of. NOT the per-permission sections §478 deleted — those listed a
+  key under every permission it held, so "8 keys" opened fourteen rows. A key
+  belongs to one account, so grouping by account cannot do that.
+
+**Accounts leads with the sub-account web**, the delegate spine as fallback. The
+spine draws watched↔watched links, so it says nothing for somebody watching one
+account, and its subject is the same relationship the web covers more completely.
+`VibenetBridge.subAccounts` has read this since the bridge shipped and exactly
+one card in one branch drew it. The unwatched node is the point — an account you
+control and may not know about. **Per account, never aggregated**: a sub-account
+authorized ONE address, and merging owners' nodes would attribute a relationship
+to an account that does not hold it.
+
+**Activity leads with event kind → the account it landed on.** The obvious
+sankey — key → account — is one this data cannot support: an authorization
+records that a key BECAME able to act, not who granted it, so that ribbon would
+draw a source the chain never states. Ribbons are weighted WITHIN a kind and
+never across: an authorization is not larger than a revocation, they are
+different things that happened, not more and less of one thing.
+
+**NAMING.** secp256k1 is named for its curve, never "Wallet key" — that collided
+with the room next door AND disagreed with the live read, since `VibenetBridge`
+has always built event titles from `kind.label`. One key type, two names,
+depending which surface you looked at. Passkey stays Passkey and **WebAuthn now
+appears in no user-facing string** (user: *"passkey is fine, don't say
+webauthn"*). NONCE reads **"Order its own sends"**, was "Send in order" — that
+had the polarity backwards: the bit is a PERMISSION to sequence, and a label
+written as a constraint is understood as the opposite of what it grants. "Send to
+one contract" is EIP-8130 verbatim and stays.
+
+**Four of `vibenet-selftest`'s guards were RED at HEAD**, each a ruling that
+shipped while its guard asserted the old version — including one still requiring
+the room to open on Holdings, a rule written before the room had a Home scope.
+Amended to assert the rule rather than the spelling.
+
+`scripts/vibenet-scopes-selftest.sh` compiles both new drawings WHOLE: 8
+mutations, 9 drift guards. Two of its own mutations were broken before the guards
+were — one flipped a single branch of a comparator, leaving an INCONSISTENT
+ordering whose output Swift is free to choose, and it chose the correct answer;
+and one changed a rawValue that `allCases` cannot see. The harness also hit
+CLAUDE.md's own recorded trap on its first run: `strip … | grep -q` under
+`pipefail` reports a finding against correct source, because `grep -q` closes the
+pipe and the writer's SIGPIPE becomes the pipeline's status.
+
+**UNMEASURED:** no vibenet account has been read live from this host, the
+sub-account web's "Watch it" verb is not wired (`onWatch: nil`, so the row is a
+plain read), and the single-account chassis was verified by scoping rather than
+by the state a real single-account user is in.
+
+## 494. A catalog seat's Open lands on the thing it advertised (user: "we show hyperliquid, aerodrom, morpho, and aave in the app catalogue but they don't have rooms… isn't whatever is on them automatically shown on the wallet? so what is the logic?" → "yes do it", 2026-08-26)
+
+The question was whether these seats should exist at all, and the answer already
+in the tree is yes, for the reason the user guessed: **the seat is
+EVIDENCE-gated.** `BridgeStore.reconcileWalletSeats()` reads
+`WalletSeatEvidence` and REMOVES any seat whose count is zero, so an Aerodrome
+tile reads connected only once a real veAERO lock has been seen at a watched
+wallet. It gates nothing and costs nothing — since §207 there are no connect
+switches and every one of these sweeps already runs unconditionally inside
+`WalletIngest.refresh` — so a seat is pure display doing two jobs: unconnected
+it is the product page (watch that address and the vote deadline lands as a
+real date), connected it is a receipt that the app really did detect the
+position. `WalletSeatEvidence`'s own doc had already settled it: *"a seat that
+lights up the day your first lock is seen is a moment, while one that's always
+on is wallpaper."*
+
+**What was wrong was the door, not the seat.** Open pushed the wallet MANAGER —
+a roster of addresses — so "Aerodrome · never miss the weekly vote" opened onto
+a list of wallets, with the countdown one further tap away through that
+screen's own `RoomDoor`. A tile that advertises a reading and opens onto
+something else is one step short of the honesty rule rather than a breach of
+it, which is why nothing had ever reported it.
+
+`BridgeRouter.roomSource(forID:)` is the fix and it is `RoomDoor` reached from
+the other side: a connected seat with no screen of its own pops the stack and
+asks `MainSurface.go(to:)` for the source its rows land in. Seven seats. The
+five DeFi protocols all stamp `source: "Wallet"` (§349), so they open the
+Wallet room and the DeFi tiles that were the whole argument for not giving them
+a screen. Gnosis Pay and ether.fi stamp sources of their own and open those —
+the same rule, and their rows' own comment already said the spends "live in the
+feed, where every other landed thing lives".
+
+**Three routes deliberately do not move.** CONNECT still lands on the manager:
+watching a wallet is the only real action, and before one is watched there is
+nothing in a room to see. FIX still lands there too — a broken seat is repaired
+in the manager, and sending it to a room would be a control that looks like it
+repairs something and doesn't (§83); that is why `roomSeat(_:)` is tier 2 only.
+And Peer, 0xBow, Railgun, Safe and Altana ride wallets too and are NOT in the
+table: each owns a screen carrying something a room cannot (a fill history, a
+signature queue, this phone's signer key), so pushing it is not a step short of
+anything.
+
+`BridgeRouter.open(seatID:route:chrome:)` is the ONE door every Open now takes
+— the wall tile, the shelf row, the Open capsule, the product page and
+`-openBridgeDetail` — so the five can never disagree about where a seat leads.
+Note the probe had to move with them: a hook that still pushed the manager
+would be exercising a route no person takes, which is the shape of a check that
+passes while measuring nothing. A room open is a POP, not a push, so it cannot
+be a `NavigationLink` value; `catalogTap` branches to a `Button` wearing the
+same `PressSpring()`, and everything else stays a link value exactly as before.
+
+**The failure mode is invisible, so it is mechanical** —
+`setup-copy-audit.py` check 7c. It inherits check 7a's trap whole (hand the
+door a string no bridge stamps and NOTHING errors: the pop happens, the filter
+is written, and you land in a room that will never hold a row) and adds two
+that exist only on this side. A TYPO in a seat id is not a crash and not an
+empty room — `roomSource` answers nil, Open goes back to pushing the manager,
+and the feature silently reverts for that seat while looking exactly like
+shipping. And a seat named here that owns a real screen makes that screen
+UNREACHABLE from the catalog, with the room opening in its place and holding
+rows, so nothing about it reads as broken. Six fixtures, including the function
+disappearing — a refactor that deletes it must be a finding, not a silent pass.
+Same stated ceiling as 7a and for the same reason: only a literal can be
+resolved from text, so a case answering with a constant (`EtherFiCash.source`,
+`GnosisPayBridge.sourceName`) is skipped, because one constant read by both the
+stamp and the door is the pattern that cannot drift at all (§311's lesson).
+
+**UNSEEN on a device.** iOS builds clean and every static audit passes, but no
+screenshot was taken; the tap to check first is Open on a connected Aave seat
+while already standing in the Wallet room, where `go(to:)`'s same-source guard
+returns early and the pop is the whole of the movement.
+
+## 493. Headers instead of cards, and four slots stop being lists (user: "I don't like whats in the slot. It's more words than graphics… What would Apple do? Lets emulate and stay consistent", 2026-08-26)
+
+A tuning pass over both rooms, and the ruling that governs the rest of it is
+the smallest one: **no cards in a scope's list, anywhere.**
+
+**What Apple does, since that was the question.** Cards are for surfaces where
+each is a DIFFERENT KIND of reading you might act on separately — Health,
+Fitness. Its MONEY screens are plain rows under section headers: Wallet
+transactions, Stocks. A scope's list is groups of ONE kind of thing, so it takes
+the money-screen treatment. It is also what both rooms already did everywhere
+else — every drawing is bare (§483), Holdings' list is bare, Permissions' list
+is bare — so Lending, Liquidity, Perps and Approvals were the last four
+surfaces disagreeing with their own room. Applied to all of them at once
+rather than to the section that prompted it, because the ask was CONSISTENCY
+and one de-carded list beside three carded ones is the drift it was meant to
+end.
+
+**Positions: columns on a baseline, deposits up and debt DOWN** (user pick of
+three). What it replaced was a figure over a list of places — *"more words than
+graphics"* — restating the list one scroll below. The baseline is what earns
+the shape: every other candidate states debt as ONE total, and a total cannot
+say WHICH place is levered. Two things measured on the device: every label sits
+on ONE strip regardless of whether its column has a debt tail (hung off each
+column, four names landed at two heights and read as two rows), and LOCKED is a
+small dashed mark at the line rather than a full-height outline — at column
+height an unpriced holding invites exactly the comparison §240 rule 2 forbids.
+
+**Risk: columns standing on a liquidation floor**, replacing §483's ranked
+bars. Those were correct and not visual enough — four horizontal tracks with a
+percentage on each is a table with the numbers right-aligned. The floor is a
+metaphor that is literally true: the line is a real price at which a real thing
+happens. §299's finding survives and is why these are columns rather than the
+dots it killed — a column has length, which is the property being compared.
+
+**NFTs: the quad shows PIECES again, correcting §483's own grouping.** This
+shelf has displayed individual NFTs since it existed (`pieceCap` fetches 24 and
+the old strip drew them), and grouping them into collection covers silently
+reduced the room to one cell per contract. The demo made it look intentional:
+`demoCollections` seeds exactly two, so a grouped quad could only ever draw two
+cells, which reads as a thin demo rather than a wrong drawing. **The pick model
+needed no amendment** — §387 picks a CONTRACT and what is DISPLAYED is the
+pieces those picks bring back. Pick by collection, show the art. Four is a
+DISPLAY cap, so the list carries every piece that came back (§307).
+
+The list says the piece's name, its collection and its chain. It does NOT say
+"1 of N": `NFTCollection.count` is how many THIS WALLET holds, and printing it
+as an edition size is a confident wrong answer about somebody's art. No price,
+ever (§387, §481).
+
+**Permissions rung labels are sentence case.** They were lowercase fragments
+completing the count beside them ("2 can move a token with no limit"), which
+reads as one sentence in a mock and as a broken one on the device — the count
+is a 24pt figure in its own column and the label a 16pt line beside it, so they
+never scan as one clause and a lowercase opening just looks like a missing
+capital.
+
+**Vibenet's attention dots are gone.** §482 gave the deleted attention strip's
+ranking a second life as "which chip wears a dot", and on the device the answer
+was BOTH conditional chips permanently — this room's ordinary state includes a
+key inside its expiry window and a locked account. A marker that is always lit
+is chrome. Every fact survives where it already lived: a key's countdown is its
+own row, a locked account is its roster pill and its Activity edge.
+`VibenetAttention` still ranks; nothing reads it for a dot.
+
+**Admin is a chip, not a sentence.** `grantedPlainLabels` already returns
+exactly `["Admin"]` for an unrestricted key — `isAdmin` is `raw == 0`, so there
+are no bits to list — so the chip row needs no admin branch and no gloss.
+
+**1inch and OpenSea have marks.** `brand-opensea.imageset` held a
+`Contents.json` and NO IMAGE FILE, so it could never have resolved; nothing in
+the app can see an empty imageset, and the monogram fallback made it look like
+a deliberate no-brand.
+
+Vibenet's Holdings treemap now clears the room's gear button, which it was
+drawing underneath — every other scope's figure is pushed down by its own
+headline, and this one has none by ruling.
+
+**NOT done in this pass, and open:** vibenet's Accounts scope end to end (the
+bar moving on a pick, a sub-account that opens somewhere wrong, and one that
+does not open at all), and whether Positions and Risk sharing a column-on-a-
+baseline silhouette is one shape too many for two scopes.

@@ -58,39 +58,31 @@ struct WalletRiskStrip: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // **RANKED BARS, NOT DOTS ON A TRACK** (2026-08-26, prd §483 —
-            // Risk "R3", chosen over a single figure and over an arc gauge).
+            // **COLUMNS STANDING ON A LIQUIDATION FLOOR (user pick, prd §493),
+            // replacing the ranked bars of §483.**
             //
-            // The axis this replaces was one track carrying every position as
-            // a dot, with alternating labels above and below to keep them off
-            // each other. Two costs, both structural rather than tuning: the
-            // dots crowd at exactly the end that matters (a wallet in trouble
-            // has several positions near the edge, which is when the drawing
-            // is least readable), and reading it at all meant matching a label
-            // to a dot by eye. One bar per position collides with nothing at
-            // any density, and Screen Time's own idiom answers the question in
-            // the ranking itself: THE SHORTEST BAR IS THE WORRY, so no colour
-            // scale has to say which — which is why the track's warm end is
-            // gone rather than restyled. §299's "dots on a track read as
-            // nothing" survives here; this is that finding taken one step
-            // further.
-            Text(String(localized: "Room to move"))
-                .dsText(.heading22).foregroundStyle(DS.textPrimary)
-            Text(String(localized: "before each position closes"))
-                .dsText(.subhead13).foregroundStyle(DS.textSecondary)
-                .padding(.top, 1)
-
-            VStack(alignment: .leading, spacing: DS.Space.s4) {
-                ForEach(Array(entries.enumerated()), id: \.element.id) { index, entry in
-                    row(entry, index: index)
-                }
+            // Those bars were correct and not visual enough: four horizontal
+            // tracks with a percentage on each is a table with the numbers
+            // right-aligned. The floor is the reading — a red line every column
+            // stands on, and the shortest column visibly nearest it — and it is
+            // a metaphor that is literally TRUE here, because the line is a
+            // real price at which a real thing happens.
+            //
+            // §299's finding survives and is why this is columns rather than
+            // dots: dots on a track read as nothing, and they crowd at exactly
+            // the end that matters. A column has length, which is the property
+            // being compared.
+            Text(String(localized: "Room before liquidation"))
+                .dsText(.label12).foregroundStyle(DS.textTertiary)
+            GeometryReader { geo in
+                floor(width: geo.size.width)
             }
-            .padding(.top, DS.Space.s4)
+            .frame(height: Self.chartHeight)
+            .padding(.top, DS.Space.s2)
         }
-        // The set still speaks as ONE sentence in the ranked order (§299's
-        // ruling, unchanged by the redraw): a screen reader hearing seven
-        // separate bars has to hold the order itself, which is the whole
-        // reading.
+        // The set speaks as ONE sentence in the ranked order (§299's ruling,
+        // unchanged by the redraw): a screen reader hearing seven columns has
+        // to hold the order itself, which is the whole reading.
         .accessibilityElement(children: .combine)
         .accessibilityLabel(Text(spokenAxis))
         .accessibilityActions {
@@ -102,48 +94,63 @@ struct WalletRiskStrip: View {
         }
     }
 
-    /// One position: its own words on the right of the title line, its room as
-    /// the bar beneath.
-    ///
-    /// **Colour marks the alarm and NOTHING else.** A green "safe" bar beside
-    /// an orange one would be this app grading a position, and the length
-    /// already grades it; `DS.tint` is the room's ordinary voice, so a bar
-    /// that is merely long says so by being long.
+    private static let chartHeight: CGFloat = 158
+    /// Where the floor sits. Columns grow UP from it, so the space below is
+    /// only the label strip's.
+    private static let floorY: CGFloat = 118
+    /// How many positions the slot draws before folding.
+    private static let columnCap = 4
+
     @ViewBuilder
-    private func row(_ entry: WalletRiskScale.Entry, index: Int) -> some View {
-        let body = VStack(alignment: .leading, spacing: DS.Space.s2) {
-            HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                Text(entry.label)
-                    .dsText(.subhead13).foregroundStyle(DS.textPrimary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.85)
-                Spacer(minLength: DS.Space.s2)
-                // The PROTOCOL's own number, never restated as a percentage of
-                // ours — `WalletRiskScale.Entry.detail` exists for exactly
-                // that, and the bar is the only thing here in our units.
-                Text(entry.detail)
-                    .dsText(.label12)
-                    .foregroundStyle(entry.atRisk ? DS.attention : DS.textSecondary)
-                    .monospacedDigit()
-                    .lineLimit(1)
-                    .fixedSize()
-            }
-            ShareBar(fraction: clamped(entry.headroom), index: index,
-                     fill: entry.atRisk ? DS.attention : DS.tint,
-                     reduceMotion: reduceMotion)
-        }
-        if let onPick {
-            Button {
-                DSHaptic.selection()
-                onPick(entry)
-            } label: { body.contentShape(Rectangle()) }
-                .buttonStyle(.plain)
-                .dsHover()
-                // The combined element above carries the speech and the
-                // actions; a label here would be written and never read.
+    private func floor(width: CGFloat) -> some View {
+        let shown = Array(entries.prefix(Self.columnCap))
+        let step = width / CGFloat(max(1, shown.count))
+        let barWidth = max(20, step - DS.Space.s4)
+        ZStack(alignment: .topLeading) {
+            ForEach(Array(shown.enumerated()), id: \.element.id) { index, entry in
+                let h = max(8, clamped(entry.headroom) * (Self.floorY - 22))
+                VStack(alignment: .leading, spacing: 0) {
+                    // The PROTOCOL's own number, above its own column — never
+                    // restated in a unit the protocol does not use, which is
+                    // `Entry.detail`'s whole reason for existing.
+                    Text(entry.detail)
+                        .dsText(.label11).fontWeight(.semibold)
+                        .foregroundStyle(entry.atRisk ? DS.attention : DS.confirm)
+                        .lineLimit(1).minimumScaleFactor(0.7)
+                        .frame(width: barWidth, alignment: .leading)
+                        .padding(.bottom, 3)
+                    RoundedRectangle(cornerRadius: 6, style: .continuous)
+                        .fill(entry.atRisk ? DS.attention : DS.confirm.opacity(0.8))
+                        .frame(width: barWidth, height: h)
+                    Spacer(minLength: 0)
+                }
+                .padding(.top, Self.floorY - h - 18)
+                .offset(x: CGFloat(index) * step)
+                .contentShape(Rectangle())
+                .onTapGesture { onPick?(entry) }
                 .accessibilityHidden(true)
-        } else {
-            body
+            }
+            // THE FLOOR. Drawn over the columns rather than under them, so a
+            // position sitting at zero headroom still shows a line through it
+            // rather than a bar that merely stops somewhere.
+            Rectangle()
+                .fill(DS.destructive)
+                .frame(height: 1.5)
+                .offset(y: Self.floorY)
+            Text(String(localized: "liquidation"))
+                .dsText(.label11).foregroundStyle(DS.destructive)
+                .padding(.top, Self.floorY + 4)
+            HStack(alignment: .top, spacing: 0) {
+                ForEach(Array(shown.enumerated()), id: \.element.id) { _, entry in
+                    Text(entry.label)
+                        .dsText(.label11).foregroundStyle(DS.textSecondary)
+                        .lineLimit(1).minimumScaleFactor(0.7)
+                        .frame(width: barWidth, alignment: .leading)
+                        .frame(width: step, alignment: .leading)
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(.top, Self.floorY + 22)
         }
     }
 

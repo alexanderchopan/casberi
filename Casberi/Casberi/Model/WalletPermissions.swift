@@ -62,16 +62,30 @@ enum WalletPermissions {
 
         static func < (a: Power, b: Power) -> Bool { a.rawValue < b.rawValue }
 
-        /// The rung's sentence, always in the plural-agnostic form the view
-        /// completes with a count ("2 can move a token with no limit").
+        /// The rung's label — SENTENCE CASE, standing on its own (user ruling,
+        /// prd §493).
+        ///
+        /// It was a lowercase fragment completing the count beside it ("2 can
+        /// move a token with no limit"), which reads as one sentence in a
+        /// screenshot and as a broken one on the device: the count is a 24pt
+        /// figure in its own column and the label is a 16pt line beside it, so
+        /// they never scan as a single clause — a lowercase opening just
+        /// looked like a capital had gone missing.
+        ///
+        /// Each is now a phrase that survives being read alone, which is how
+        /// it is actually read. The verb goes with it: "Can move a token with
+        /// no limit" says what the thing DOES, where a bare noun ("Unlimited
+        /// token") would name the grant and leave the reader to infer the
+        /// power. `Admin` stays one word because that is what the app has
+        /// always called it (§490).
         var phrase: String {
             switch self {
-            case .actsAsWallet:          String(localized: "can act as your wallet")
-            case .movesWithoutSignature: String(localized: "can spend without a signature")
-            case .unlimitedToken:        String(localized: "can move a token with no limit")
-            case .wholeCollection:       String(localized: "can manage a whole collection")
-            case .scopedSigner:          String(localized: "can sign as your wallet")
-            case .cappedAmount:          String(localized: "can move up to a cap")
+            case .actsAsWallet:          String(localized: "Can act as your wallet")
+            case .movesWithoutSignature: String(localized: "Can spend without a signature")
+            case .unlimitedToken:        String(localized: "Can move a token with no limit")
+            case .wholeCollection:       String(localized: "Can manage a whole collection")
+            case .scopedSigner:          String(localized: "Can sign as your wallet")
+            case .cappedAmount:          String(localized: "Can move up to a cap")
             }
         }
 

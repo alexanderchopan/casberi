@@ -1136,6 +1136,17 @@ struct VibenetRoomCard: View {
                 // move") both do. A headline is per-scope, not per-slot.
                 scopeFigure(headline: nil) {
                     VibenetHoldingsBlock(cells: cells, reduceMotion: reduceMotion)
+                        // **CLEARS THE GEAR, and fills what is left.** The room's
+                        // settings button is an overlay on the trailing top of
+                        // this whole block, and a figure with no headline starts
+                        // at the very top — so the treemap's top-right cell drew
+                        // UNDER it (measured: the gear sat on the NFV cell).
+                        // Every other scope's figure is pushed down by its own
+                        // headline; this one has none by ruling (§491: Wallet
+                        // shows no total here either), so it takes the same
+                        // clearance explicitly.
+                        .padding(.top, DS.Face.shelf)
+                        .frame(maxHeight: .infinity, alignment: .top)
                 }
             }
         }
@@ -1326,18 +1337,30 @@ struct VibenetRoomCard: View {
                         .fixedSize()
                 }
             }
+            // **CHIPS, and ADMIN IS ONE OF THEM (user ruling, prd §493:
+            // *"for Admin it doesn't need a sentence. Admin is the chip"*).**
+            //
+            // `grantedPlainLabels` already returns exactly `["Admin"]` for an
+            // unrestricted key — `isAdmin` is `raw == 0`, so there are no bits
+            // to list — which means the chip row needs no admin branch and no
+            // gloss beside it. It says what the key can do in the room's own
+            // one list of permission wording, so a chip here and a rung in the
+            // slot above can never disagree about either the words or their
+            // order.
+            //
             // `FlowLayout` and the chip recipe are the TRAY's, reused rather
             // than re-drawn: two chip styles for one fact is how a room comes
             // to disagree with the sheet it opens.
             FlowLayout(spacing: 6) {
                 ForEach(key.actor.scope.grantedPlainLabels, id: \.self) { label in
+                    let admin = key.actor.scope.isAdmin
                     Text(label)
                         .dsText(.label11)
-                        .fontWeight(key.actor.scope.isAdmin ? .semibold : .regular)
-                        .foregroundStyle(key.actor.scope.isAdmin ? DS.attention : DS.tint)
+                        .fontWeight(admin ? .semibold : .regular)
+                        .foregroundStyle(admin ? DS.attention : DS.tint)
                         .padding(.horizontal, DS.Space.s2)
                         .padding(.vertical, 3)
-                        .background((key.actor.scope.isAdmin ? DS.attention : DS.tint).opacity(0.14),
+                        .background((admin ? DS.attention : DS.tint).opacity(0.14),
                                     in: Capsule(style: .continuous))
                 }
             }

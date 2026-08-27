@@ -108,8 +108,24 @@ struct WalletApprovalExposureCard: View {
                         .padding(.top, DS.Space.s2)
                 }
             }
-            .padding(WalletCardStyle.pad)
-            .dsWidgetSurface(fillOpacity: WalletCardStyle.fill)
+            // **HEADERS, NO CARD (user ruling, prd §493: "Lets do headers no
+            // cards").** Applied to EVERY scope list in both rooms, not to this
+            // one section — the ask was consistency, and a single de-carded
+            // list beside two carded ones is the drift it was meant to end.
+            //
+            // The reasoning, since "what would Apple do" was the question:
+            // Apple uses cards where each is a DIFFERENT KIND of reading you
+            // might act on separately (Health, Fitness). Its MONEY screens —
+            // Wallet transactions, Stocks — are plain rows under section
+            // headers. A scope's list is groups of ONE kind of thing, so it
+            // takes the money-screen treatment.
+            //
+            // It is also what the room already did everywhere else: every
+            // scope's drawing is bare (§483), Holdings' list is bare,
+            // Permissions' list is bare. These were the last three surfaces
+            // disagreeing with their own room.
+            .padding(.horizontal, DSRoomChassis.inset)
+            .padding(.bottom, DS.Space.s4)
         }
     }
 

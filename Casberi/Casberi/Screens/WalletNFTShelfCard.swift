@@ -210,25 +210,46 @@ struct WalletNFTShelfCard: View {
     /// there are more collections than fit, the slot says so in words and the
     /// list directly below carries every one of them.
     private var strip: some View {
-        let groups = Array(coverGroups.prefix(4))
+        let shown = Array(pieces.prefix(Self.quadCap))
         return HStack(spacing: DS.Space.s2) {
-            ForEach(Array(groups.enumerated()), id: \.offset) { _, group in
-                quadCell(group)
+            ForEach(shown) { piece in
+                quadCell(piece)
             }
         }
-        // **A ROW, not a 2x2** (measured on the device). The slot is 402pt
-        // wide and about 170pt tall, so a square grid is bounded by its
-        // HEIGHT: a 2x2 drew a 170pt square of art marooned in the left third
-        // of a wide, empty box. A row spends the axis that is actually
-        // available, and every cover stays as large as the slot allows.
+        // **PIECES, NOT COLLECTION COVERS (prd §493, correcting §483's own
+        // quad).** This shelf has shown INDIVIDUAL NFTs since it existed —
+        // `WalletNFTShelf.pieceCap` fetches 24 and the old strip drew them —
+        // and grouping them by collection for the quad silently reduced the
+        // room to one cover per contract. The demo made it look intentional:
+        // `demoCollections` seeds exactly two, so a grouped quad could only
+        // ever draw two cells, which read as "the demo is thin" rather than
+        // "the drawing is wrong".
         //
-        // Cells FILL rather than sitting at a fixed size, so two collections
-        // draw two large covers and four draw four smaller ones — a shelf
-        // that always fills, rather than one that looks half-loaded on the
-        // common case of holding fewer than four.
+        // The pick model is UNTOUCHED and needs no amendment: §387 picks a
+        // CONTRACT ("show my Squiggles"), and what is DISPLAYED is the pieces
+        // those picks bring back. Pick by collection, show the art.
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, DS.Space.s4)
+        .padding(.horizontal, DSRoomChassis.inset)
     }
+
+    /// Which chain a piece lives on, in a word — the one fact a row can add
+    /// that neither its name nor its collection carries.
+    static func chainWord(_ piece: WalletNFTShelf.NFTPiece) -> String {
+        let raw = piece.chainPath.isEmpty ? piece.network : piece.chainPath
+        return raw
+            .replacingOccurrences(of: "-mainnet", with: "")
+            .replacingOccurrences(of: "eth", with: "Ethereum")
+            .capitalized
+    }
+
+    /// How many pieces the fixed slot draws.
+    ///
+    /// **A DISPLAY cap, so the list below must carry the rest** — the pick is
+    /// unlimited and the fetch returns up to `WalletNFTShelf.pieceCap` (24), so
+    /// a quad that simply stopped at four would drop twenty pieces with nothing
+    /// saying so (§307's silent-truncation class). `WalletNFTCollectionRows`
+    /// lists every piece that came back.
+    private static let quadCap = 4
 
     /// One cover per PICKED COLLECTION, in the order the pieces came back, up
     /// to four. Grouped rather than fetched: `pieces` is already the shelf's
@@ -246,21 +267,19 @@ struct WalletNFTShelfCard: View {
         }
     }
 
-    /// One quarter of the quad. The door is the COVER's OpenSea page — the
-    /// nearest honest destination, since a collection's own page is a market
-    /// listing and this app has never claimed to price these (§387).
+    /// One quarter of the quad. The door is the piece's own OpenSea page.
     @ViewBuilder
-    private func quadCell(_ group: (collection: String, cover: WalletNFTShelf.NFTPiece, count: Int)) -> some View {
+    private func quadCell(_ piece: WalletNFTShelf.NFTPiece) -> some View {
         // A piece on a chain OpenSea doesn't list (Robinhood) has no door, so
         // it draws as a picture and not as a control — §83, and §275
         // specifically: a verb that looks live and lands nowhere is worse than
         // no verb.
-        if let url = group.cover.openSeaURL {
-            Button { openURL(url) } label: { quadArt(group.cover) }
+        if let url = piece.openSeaURL {
+            Button { openURL(url) } label: { quadArt(piece) }
                 // The photograph register (§384) — a picture lifts.
                 .buttonStyle(PressLift())
         } else {
-            quadArt(group.cover)
+            quadArt(piece)
         }
     }
 
@@ -288,19 +307,25 @@ struct WalletNFTShelfCard: View {
 
 }
 
-/// THE COLLECTIONS BEHIND THE QUAD, one row each (2026-08-26, prd §483).
+/// EVERY PIECE THE SHELF HOLDS (prd §493, was the collections behind the quad).
 ///
-/// The scope's list half. Its sibling above draws four covers; this names
-/// every picked collection, including the ones the quad had no room for —
-/// which is what lets the quad cap at four without hiding anything.
+/// The scope's list half, and the reason the quad may cap at four: the pick is
+/// unlimited and `WalletNFTShelf.pieceCap` fetches up to 24, so a drawing that
+/// stopped at four would drop twenty pieces with nothing saying so — §307's
+/// silent-truncation class. This lists every piece that came back.
 ///
-/// **There is no price column and there will not be one.** §387 refused a
-/// floor price and §481 refused it again, both for the same reason: a floor is
-/// a bid on the thinnest book in this app, it moves without you, and a number
-/// people believe (§83) does not belong beside art somebody keeps for reasons
-/// that are not the number. `WalletNFTShelf` stores no value anywhere, so
-/// there is nothing here to round — the row says what it is, how many of it
-/// this wallet holds, and where to go.
+/// **There is no price column and there will not be one.** §387 refused a floor
+/// price and §481 refused it again, on the same ground — a floor is a bid on
+/// the thinnest book in this app, it moves without you, and a number people
+/// believe (§83) does not belong beside art somebody keeps for reasons that are
+/// not the number. `WalletNFTShelf` stores no value anywhere, so there is
+/// nothing here to round.
+///
+/// What a row CAN say is all real and already stored: the piece's own name, the
+/// collection it belongs to, and the chain it lives on. A "1 of N" would need
+/// the collection's total supply, which `NFTCollection.count` does NOT carry —
+/// that field is how many of them THIS WALLET holds, and printing it as an
+/// edition size would be a confident wrong answer about somebody's art.
 struct WalletNFTCollectionRows: View {
     let wallet: String
     var onEdit: () -> Void
@@ -312,31 +337,15 @@ struct WalletNFTCollectionRows: View {
 
     private var demo: Bool { DemoMode.isActive }
 
-    /// Every picked collection with something to show, held-count first seen
-    /// order — the same grouping the quad makes, so the two halves can never
-    /// list a different set.
-    private var groups: [(collection: String, cover: WalletNFTShelf.NFTPiece, count: Int)] {
-        var order: [String] = []
-        var byCollection: [String: [WalletNFTShelf.NFTPiece]] = [:]
-        for piece in pieces {
-            if byCollection[piece.collection] == nil { order.append(piece.collection) }
-            byCollection[piece.collection, default: []].append(piece)
-        }
-        return order.compactMap { name in
-            guard let held = byCollection[name], let cover = held.first else { return nil }
-            return (name, cover, held.count)
-        }
-    }
-
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            ForEach(groups, id: \.collection) { group in
-                row(group)
+            ForEach(pieces) { piece in
+                row(piece)
             }
-            // The way back into the picker. It sits UNDER the list rather than
-            // in a header, because the quad above already carries the scope's
-            // heading and a second one here would be the two-display-lines
-            // failure §447 recorded.
+            // The way back into the picker. Under the list rather than in a
+            // header, because the quad above already carries the scope's
+            // heading and a second one here would be §447's two stacked
+            // display lines.
             if !demo {
                 Button(action: onEdit) {
                     Text(String(localized: "Choose collections"))
@@ -367,27 +376,29 @@ struct WalletNFTCollectionRows: View {
     }
 
     @ViewBuilder
-    private func row(_ group: (collection: String, cover: WalletNFTShelf.NFTPiece, count: Int)) -> some View {
+    private func row(_ piece: WalletNFTShelf.NFTPiece) -> some View {
         let body = HStack(spacing: DS.Space.s3) {
-            mark(group.cover)
+            art(piece)
             VStack(alignment: .leading, spacing: 1) {
-                Text(group.collection)
+                Text(piece.name)
                     .dsText(.heading17).foregroundStyle(DS.textPrimary)
                     .lineLimit(1)
-                Text(group.count == 1
-                     ? String(localized: "1 piece")
-                     : String(localized: "\(group.count) pieces"))
+                Text(piece.collection)
                     .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                    .lineLimit(1)
+                Text(WalletNFTShelfCard.chainWord(piece))
+                    .dsText(.label12).foregroundStyle(DS.textTertiary)
+                    .lineLimit(1)
             }
             Spacer(minLength: 0)
-            if group.cover.openSeaURL != nil {
+            if piece.openSeaURL != nil {
                 Image(systemName: "chevron.right")
                     .dsGlyph(11)
                     .foregroundStyle(DS.textTertiary)
             }
         }
         .padding(.vertical, DS.Space.s2)
-        if let url = group.cover.openSeaURL {
+        if let url = piece.openSeaURL {
             Button { openURL(url) } label: { body.contentShape(Rectangle()) }
                 .buttonStyle(.plain)
                 .dsHover()
@@ -396,19 +407,19 @@ struct WalletNFTCollectionRows: View {
         }
     }
 
-    /// The collection's cover at row scale — the same art the quad shows, so
-    /// the row and the quarter above are visibly the same collection.
+    /// The piece at row scale — the same art the quad shows, so a row and the
+    /// quarter above are visibly the same NFT.
     @ViewBuilder
-    private func mark(_ piece: WalletNFTShelf.NFTPiece) -> some View {
+    private func art(_ piece: WalletNFTShelf.NFTPiece) -> some View {
         Group {
             if let seed = piece.demoSeed {
                 DemoNFTArt(seed: seed)
             } else {
-                RemoteThumb(urlString: piece.imageURL, size: DS.Face.list)
+                RemoteThumb(urlString: piece.imageURL, size: 56)
             }
         }
-        .frame(width: DS.Face.list, height: DS.Face.list)
-        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .frame(width: 56, height: 56)
+        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
         .accessibilityHidden(true)
     }
 }

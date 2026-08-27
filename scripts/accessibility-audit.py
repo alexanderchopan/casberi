@@ -180,6 +180,15 @@ KNOWN_EXEMPT = {
     # prefers, and a trait on the face would add a stray label for a figure
     # that already speaks in full.
     "VibenetChangeFlowCard.swift:102",
+    #
+    # The wallet Risk floor's columns (2026-08-26, prd §493) — same treatment
+    # and same strength of claim as the change flow above: the figure speaks as
+    # ONE combined sentence in its ranked order (§299), and each column's tap
+    # is published as a named `.accessibilityActions` Button ("Open Aave"), so
+    # the gesture is reachable by the route the platform prefers. A trait on
+    # the column would add a stray label to a figure that already speaks in
+    # full — which is what §299 forbade when this was dots on a track.
+    "WalletRiskStrip.swift:130",
 }
 
 # Size expressions that already encode the floor, so an explicit number is not

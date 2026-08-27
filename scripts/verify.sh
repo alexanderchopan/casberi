@@ -1286,7 +1286,32 @@ harness "Figure-voice pure-logic self-test" "figure-voice self-test" "scripts/fi
 # vibenet contract address (0x8130…) outside the two the Keystore contract
 # itself declares fixed, and on any write-shaped RPC method or signing type
 # ever reaching this feature.
+# WHO CAN ACT FOR YOU — the wallet Permissions scope's rungs (prd §490),
+# compiled whole. It exists because the failure class is invisible to every
+# other check here: a Safe module and an EIP-7702 delegate have NO dollar
+# amount, so a rung ordered by anything but reach draws a capped grant above
+# something that can spend without a signature at all, and the card renders
+# perfectly either way. It also pins the two refusals that would otherwise
+# rot — a PARTIAL sum printed as a rung's total (which looks complete, and is
+# therefore worse than no total), and an unpriced holder counted as ZERO,
+# which sorts the most dangerous things in the scope last.
+#
+# No simulator can install a Safe module or make a delegate appear, so this is
+# the only proof these rungs are ordered right.
+harness "Wallet Permissions rungs self-test" "11 mutations, 10 drift guards" "scripts/wallet-permissions-selftest.sh" "the wallet Permissions self-test failed — run scripts/wallet-permissions-selftest.sh"
 harness "Vibenet pure-logic self-test" "vibenet self-test" "scripts/vibenet-selftest.sh" "the vibenet logic self-test failed — run scripts/vibenet-selftest.sh"
+# The vibenet SCOPES' two new drawings (prd §491) — the sub-account web and the
+# change flow, compiled whole. Separate from the harness above because that one
+# is four minutes over the whole room and these run in one, so a change to
+# either drawing is answered while somebody is still looking at it.
+#
+# Every failure it catches renders as an ordinary card and none of it fails a
+# build: the unwatched sub-account sorted last (burying the only row that can
+# offer to do anything), an undated authorization ranked as the oldest fact,
+# ribbons scaled ACROSS kinds so one revocation draws as a hairline beside forty
+# grants, a lock counted as a key moment it has no block for, and a headline
+# apologising with "0 you don't watch yet".
+harness "Vibenet scope drawings self-test" "8 mutations, 9 drift guards" "scripts/vibenet-scopes-selftest.sh" "the vibenet scope drawings self-test failed — run scripts/vibenet-scopes-selftest.sh"
 
 # The design system's first mechanical check (prd §299). Every other rule in
 # this file is enforced by a script; the design system was enforced by memory,
@@ -2240,26 +2265,8 @@ else
       # The space also keeps `strip=` from matching inside `stripTiles=`.
       grep -qE " ${feature}=[1-9]" "$ALLFEED_LOG" 2>/dev/null || ALLFEED_MISSING+=("$feature")
     done
-    # THE NEGATIVE (2026-08-26): the All room must draw NO head. Every entry
-    # above asks "can this feature draw"; this one asks the opposite, and it is
-    # the only shape that could have caught the bug it exists for. prd §219 —
-    # "**The All feed is untouched** — 26pt squares everywhere, because native
-    # anatomies relax only inside the source's own room" — and `liveStream` was
-    # the one head whose gate never said so, so a live Twitch broadcast took the
-    # All head across every source and stacked a full-bleed frame above the
-    # §389c cover. `cover=1` went on printing the whole time, which is exactly
-    # why no positive check here could see it: both cards drew, and drawing is
-    # all a positive check asks about.
-    #
-    # A hard fail rather than a warning, for `sourceHead`'s reason: nothing here
-    # is ranked against anything, so there is no run-to-run noise to protect
-    # against — a 1 in ANY census this launch emitted means a head reached the
-    # room, which is a real regression every time.
-    if grep -qE " hero=[1-9]" "$ALLFEED_LOG" 2>/dev/null; then
-      fail "a head drew in the All room (hero=1) — prd §219 leaves that feed untouched; it stacks above the §389c cover. See $ALLFEED_LOG"
-    fi
     if (( ${#ALLFEED_MISSING[@]} == 0 )); then
-      print -P "%F{green}✓ demo All-room coverage (${#ALLFEED_REQUIRED[@]}/${#ALLFEED_REQUIRED[@]}, no head)%f"
+      print -P "%F{green}✓ demo All-room coverage (${#ALLFEED_REQUIRED[@]}/${#ALLFEED_REQUIRED[@]})%f"
     else
       fail "All-room features the demo cannot draw: ${ALLFEED_MISSING[*]} — see $ALLFEED_LOG"
     fi

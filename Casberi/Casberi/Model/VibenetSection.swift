@@ -146,16 +146,28 @@ enum VibenetSection: String, CaseIterable, Identifiable, Sendable {
     /// scope of its own would be this room grading its own failure as a
     /// category of the reader's business (§479's ordering rule, restated as a
     /// mapping).
+    /// **NO DOTS (user ruling, prd §493: "get rid of the yellow dot").**
+    ///
+    /// §482 gave the strip's ranking a second life here — the attention strip
+    /// was deleted and its job became "which chip wears a dot". On the device
+    /// the answer was BOTH of the two conditional chips, permanently: this
+    /// room's ordinary state includes a key inside its expiry window and an
+    /// account that is locked, so the dots were on more often than off and
+    /// stopped meaning anything. A marker that is always lit is chrome.
+    ///
+    /// The facts are not lost and were never carried by the dot: a key's
+    /// countdown is its own row in Permissions, drawn in blue when urgent, and
+    /// a locked account is its roster row's pill and its Activity edge. §482's
+    /// own deletion note made exactly this argument about the strip — it is
+    /// the same argument one layer down.
+    ///
+    /// `VibenetAttention` survives untouched and still ranks; nothing reads its
+    /// ranking for a dot any more. Returning an empty set rather than deleting
+    /// the call keeps `DSSectionSwitcher`'s `attention` parameter honest for
+    /// Wallet, which uses it for a genuinely rare state (§483: Risk alone, and
+    /// only when a position has crossed its own protocol's alert threshold).
     static func attention(_ room: VibenetRoom, now: Date = .now) -> Set<VibenetSection> {
-        var out: Set<VibenetSection> = []
-        for line in VibenetAttention.compose(room.items, now: now) {
-            switch line.subject {
-            case .key:       out.insert(.permissions)
-            case .account:   out.insert(.accounts)
-            case .unreached: out.insert(.accounts)
-            }
-        }
-        return out
+        []
     }
 
     /// What to show when the stored choice is gone or was never made.
