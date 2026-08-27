@@ -225,9 +225,9 @@ struct WalletNFTShelfCard: View {
         // pass; two `HStack`s in a `VStack` settle their frame immediately,
         // which is `coverSide`'s own reason for being spelled rather than
         // measured.
-        return VStack(spacing: DS.Space.s2) {
+        return VStack(spacing: Self.quadGap) {
             ForEach(Array(Self.pairs(shown).enumerated()), id: \.offset) { _, row in
-                HStack(spacing: DS.Space.s2) {
+                HStack(spacing: Self.quadGap) {
                     ForEach(row) { piece in
                         quadCell(piece)
                     }
@@ -328,8 +328,17 @@ struct WalletNFTShelfCard: View {
     /// is derived from `DSRoomChassis.visualSlot` rather than typed — the two
     /// cannot drift, and a change to the chassis moves the art with it.
     private static var coverSide: CGFloat {
-        (DSRoomChassis.visualSlot - DS.Space.s2) / 2
+        (DSRoomChassis.visualSlot - Self.quadGap) / 2
     }
+
+    /// The air between the four covers (user, 2026-08-27: *"we can space them
+    /// out farther from each other so it is more visually appealing"*).
+    ///
+    /// `s4` rather than `s2`, and the cell side is DERIVED from it above so
+    /// the grid still fits the slot exactly — widening the gap without
+    /// shrinking the cells is what overflows a fixed box and gets clipped,
+    /// which this scope had just been fixed for.
+    private static var quadGap: CGFloat { DS.Space.s4 }
 
     /// The shown pieces in rows of two.
     ///
