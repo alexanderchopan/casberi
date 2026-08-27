@@ -4261,7 +4261,19 @@ struct FeedScreen: View {
                 // ROW is still reserved, which is what makes each drawing
                 // start at the same y and what clears the settings gear.
                 Section {
-                    DSRoomSlot(headline: nil) {
+                    // `reservesHeadline: false`, like Home above (prd §495).
+                    //
+                    // **The rule is: reserve the row only when the CHASSIS
+                    // draws the headline.** Vibenet's figures pass theirs to
+                    // `scopeFigure`, so the chassis owns that line and must
+                    // keep room for it. Wallet's figures name themselves
+                    // INSIDE their own drawing, so reserving a row above them
+                    // both leaves a blank band and — the part that was
+                    // visible — steals 42pt from drawings sized for the whole
+                    // slot: the holdings treemap and the NFT quad were both
+                    // clipped along their bottom edge, since the quad derives
+                    // its cell size from `visualSlot` directly.
+                    DSRoomSlot(headline: nil, reservesHeadline: false) {
                         walletScopeVisualSection(section)
                     }
                     .listRowBackground(Color.clear)

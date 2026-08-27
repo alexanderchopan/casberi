@@ -145,6 +145,16 @@ struct DSRoomSlot<Figure: View>: View {
     /// The guarantee the row exists to give is that every scope's FIRST PIXEL
     /// lands at the same y. A crown honours that by standing in the row, not
     /// by standing under it.
+    ///
+    /// **THE RULE: reserve the row only where the CHASSIS draws the
+    /// headline.** Vibenet's figures pass theirs in, so the chassis owns that
+    /// line and must keep room for it. Wallet's name themselves inside their
+    /// own drawing, so reserving a row above them leaves a blank band AND
+    /// takes 42pt from a figure sized for the whole slot — which clipped the
+    /// holdings treemap and the NFT quad along their bottom edge the first
+    /// time this shipped, because the quad derives its cell size from
+    /// `DSRoomChassis.visualSlot` directly rather than from what it is
+    /// offered.
     var reservesHeadline: Bool = true
     @ViewBuilder let figure: () -> Figure
 

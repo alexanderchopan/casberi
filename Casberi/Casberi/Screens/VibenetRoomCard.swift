@@ -582,9 +582,21 @@ struct VibenetRoomCard: View {
             // scope happens to be last — in `.permissions` it would be a footnote
             // about accounts under a census of keys.
             if shows(.accounts), let note = VibenetRoom.note(room, drawn: drawn.count) {
+                // **INDENTED TO THE ROW'S TEXT COLUMN** (prd §495, user: *"the
+                // indentation issues here should maybe be where the
+                // transactions start or middle aligned w/ the icon? i dunno
+                // looks weird"*).
+                //
+                // It read as a footnote on the whole LIST because it sat flush
+                // with the faces, while what it actually explains is the one
+                // row above it — the account that is "Not established yet".
+                // Aligning it with that row's TEXT is what says so, and it
+                // uses the row's own leading column so the two can never
+                // drift apart.
                 Text(note)
                     .dsText(.label12)
                     .foregroundStyle(DS.textTertiary)
+                    .padding(.leading, DS.Face.rowCircle + DS.Space.s2)
             }
         }
         // **THE MARGIN FROM THE SCREEN EDGE (2026-08-25, prd §474).** Reported:
