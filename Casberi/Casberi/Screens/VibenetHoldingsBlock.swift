@@ -66,17 +66,20 @@ struct VibenetHoldingsBlock: View {
         Group {
             if isLead {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(cell.symbol)
-                        .dsText(.body17)
-                        .foregroundStyle(DS.textPrimary)
-                        .lineLimit(1)
+                    // **THE TOKEN'S OWN MARK (user, prd §491: Wallet's holdings
+                    // cells carry one and these did not).** `AssetMark` resolves
+                    // a bundled mark where one exists and falls back to a
+                    // monogram where it does not — which is the honest outcome
+                    // here, since a devnet token has no brand art and inventing
+                    // a hue for it is exactly what that type refuses to do.
+                    HStack(spacing: DS.Space.s2) {
+                        AssetMark(name: cell.symbol, size: 22)
+                        Text(cell.symbol)
+                            .dsText(.body17)
+                            .foregroundStyle(DS.textPrimary)
+                            .lineLimit(1)
+                    }
                     Spacer(minLength: 0)
-                    Text(cell.amount)
-                        .dsText(.subhead13).fontWeight(.semibold)
-                        .foregroundStyle(DS.textPrimary)
-                        .monospacedDigit()
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.6)
                 }
             } else {
                 // STACKED, not side by side — measured twice. A stacked cell
@@ -88,17 +91,18 @@ struct VibenetHoldingsBlock: View {
                 // wrong number, where a truncated word is merely an unreadable
                 // one. Stacking gives each its own line and neither has to lose.
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(cell.symbol)
-                        .dsText(.callout15)
-                        .foregroundStyle(DS.textPrimary)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.7)
-                    Text(cell.amount)
-                        .dsText(.subhead13)
-                        .foregroundStyle(DS.textSecondary)
-                        .monospacedDigit()
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.6)
+                    // The mark rides the SYMBOL's line, never the figure's:
+                    // the stack below exists because a symbol and a figure
+                    // could not share ~86pt without one of them clipping, and
+                    // a mark on the figure's line would re-open exactly that.
+                    HStack(spacing: DS.Space.s1 + 2) {
+                        AssetMark(name: cell.symbol, size: 16)
+                        Text(cell.symbol)
+                            .dsText(.callout15)
+                            .foregroundStyle(DS.textPrimary)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
+                    }
                 }
             }
         }

@@ -2480,7 +2480,7 @@ struct FeedScreen: View {
     /// number is spelled here rather than measured, because measuring it would
     /// mean the bar settles a frame LATE — which is the same jump, arriving
     /// slower.
-    private static let walletVisualSlot: CGFloat = 210
+    private static var walletVisualSlot: CGFloat { DSRoomChassis.visualSlot }
 
     /// How many moves Home shows. Three, matching Wallet's own crown rows:
     /// enough to say what just happened, few enough that the scope stays one
@@ -2543,8 +2543,12 @@ struct FeedScreen: View {
                     onAdd: nil,
                     bookTitle: String(localized: "Address Book"),
                     onOpenBook: { route.push(.addressBook) })
+                    // `DSRoomChassis`, which Vibenet reads too — see that
+                    // type for why these gaps stopped being two hand-tuned
+                    // stacks.
                     .listRowInsets(EdgeInsets(top: 0, leading: 0,
-                                              bottom: DS.Space.s2, trailing: 0))
+                                              bottom: DSRoomChassis.switcherGap,
+                                              trailing: 0))
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
             }
@@ -2626,8 +2630,9 @@ struct FeedScreen: View {
                     attention: chrome.walletSectionAttention) { picked in
                         withAnimation(DS.Motion.standard) { chrome.walletSection = picked }
                     }
-                    .listRowInsets(EdgeInsets(top: 0, leading: DS.Space.s4,
-                                              bottom: DS.Space.s3, trailing: DS.Space.s4))
+                    .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
+                                              bottom: DSRoomChassis.contentGap,
+                                              trailing: DSRoomChassis.inset))
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
             }

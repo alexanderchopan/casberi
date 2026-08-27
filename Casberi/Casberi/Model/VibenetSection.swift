@@ -52,8 +52,18 @@ enum VibenetSection: String, CaseIterable, Identifiable, Sendable {
     /// own reasoning), so it is stated where a reader will look for it and
     /// where a self-test can assert it.
     ///
-    /// **Holdings leads, and that is §482's ruling carried forward.** The user
-    /// moved the attention strip below the holdings card that afternoon —
+    /// **HOME LEADS (prd §491, amending §482's "Holdings leads").** That ruling
+    /// was made before this room had a Home scope at all, and its objection was
+    /// specific: opening on Accounts or Keys put a tap between the crown and
+    /// its own breakdown. Home answers that outright, because Home IS the crown
+    /// and its sparkline — and the instruction for this room is that it match
+    /// Wallet, which opens on Home. `resolve` has fallen back to `.home` since
+    /// the scope existed; the doc below and one guard were the only things that
+    /// still said Holdings, which is how a ruling outlives its own reason.
+    ///
+    /// The original reasoning, kept because it is still why Holdings sits
+    /// where it does in the order: the user moved the attention strip below the
+    /// holdings card that afternoon —
     /// *"i think below because that way holdings and sparkline are together"* —
     /// because the crown, its sparkline and the per-token tiles are ONE reading
     /// at three grains. Opening on any other scope puts a tap between the crown

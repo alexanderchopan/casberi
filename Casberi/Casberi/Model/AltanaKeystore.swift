@@ -489,10 +489,22 @@ enum AltanaKeystore {
 
         /// The word a person already knows. nil for `unknown`, which is what
         /// keeps the label honest — a row simply omits it.
+        ///
+        /// **"secp256k1 key", not "Wallet key" (user ruling, prd §491).** Named
+        /// after the curve for the reason vibenet's own `plainTitle` was: this
+        /// app's other half is called Wallet, so a key type named after it
+        /// reads as belonging to that room. `.p256` stays "Passkey" — that IS
+        /// the word a person knows for it, and it collides with nothing.
         var label: String? {
             switch self {
-            case .secp256k1: String(localized: "Wallet key")
-            case .p256:      String(localized: "Passkey")
+            case .secp256k1: String(localized: "secp256k1 key")
+            // **"P-256 key", not "Passkey"** (prd §491). This registry's enum
+            // has two curves and no WebAuthn case, so calling P-256 "Passkey"
+            // named a CURVE after one way of registering it — and vibenet, one
+            // room over, lists `.p256` and `.webAuthn` as separate rows on the
+            // same account. The same credential cannot be a passkey here and a
+            // P-256 key there.
+            case .p256:      String(localized: "P-256 key")
             case .unknown:   nil
             }
         }

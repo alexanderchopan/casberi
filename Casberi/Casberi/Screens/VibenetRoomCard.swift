@@ -399,22 +399,71 @@ struct VibenetRoomCard: View {
             // drawing sits in it top-aligned. Fitted, the runway and the spine
             // are different heights and the toggle walks up and down the
             // screen as you use it.
-            balanceHero
-            // **NOT EMITTED ON HOME** — the crown's own chart already fills
-            // this height there, so drawing an empty 210pt box as well would
-            // push the bar a third of a screen lower on the one scope the room
-            // opens to. Wallet paid for the subtler half of this: collapsing
-            // to `maxHeight: 0` is NOT the same as not emitting, because a
-            // container still gives an empty child its spacing.
-            if (section ?? .home) != .home {
-                scopeVisual
-                    .frame(minHeight: Self.visualSlot, maxHeight: Self.visualSlot,
-                           alignment: .top)
-                    .clipped()
+            // **ONE FIXED BOX HOLDS THE CROWN *OR* THE SCOPE'S FIGURE — never
+            // both stacked** (prd §491, matching Wallet's §483 spec exactly;
+            // reported as *"the home toggle bar is in the wrong place, so it's
+            // not like Wallet"*).
+            //
+            // MEASURED: Wallet's chip bar sits at 579pt and this room's sat at
+            // 745 — 166pt lower — and the cause was structural rather than
+            // spacing. Wallet's 210pt box contains the crown AND its chart, and
+            // on any other scope the crown is REPLACED: its Positions scope
+            // opens "Deposited $61,000", not the wallet total. This room kept
+            // its crown on every scope and then added a 210pt box beneath it,
+            // so the room was crown + 210 where Wallet is 210.
+            //
+            // Which means each scope owes its own headline, because it no
+            // longer inherits the crown's — see `scopeFigure`.
+            Group {
+                if (section ?? .home) == .home {
+                    balanceHero
+                } else {
+                    scopeVisual
+                }
             }
+            .frame(minHeight: Self.visualSlot, maxHeight: Self.visualSlot,
+                   alignment: .top)
+            .clipped()
+                // **THE CHROME GROUP GETS ITS OWN SPACING, not the card
+                // separation** (prd §491; reported as *"the toggle bar is
+                // lower on vibenet than wallet"*).
+                //
+                // MEASURED: from the crown's first pixel to the chip bar, this
+                // room ran 63pt taller than Wallet — and the box above was
+                // already identical, so all of it was here. `stackedRoom`'s
+                // `spacing: s6` is §471's ruling and it is about CARDS: two
+                // 20pt-radius surfaces 14pt apart read as one slab with seams,
+                // so they were pushed to 24. The hero, the account rail and
+                // the scope strip are not cards and not three objects — they
+                // are one piece of chrome, and 24pt twice inside it is what
+                // pushed the bar down two thirds of the gap.
+                //
+                // `s2` between them, which is what Wallet's list insets come
+                // to. §471 is untouched: the gap BELOW this group, to the
+                // first real card, is still `s6`.
+                // The chassis gaps come from `DSRoomChassis`, which Wallet
+                // reads too — see that type for why they had to stop being two
+                // hand-tuned stacks. The negatives cancel `stackedRoom`'s own
+                // `s6`, which is §471's CARD separation and is untouched below
+                // this group.
+                .padding(.bottom, DSRoomChassis.railGap - DS.Space.s6)
             accountChips
+                .padding(.bottom, DSRoomChassis.switcherGap - DS.Space.s6)
             scopeStrip
+                .padding(.bottom, DSRoomChassis.contentGap - DS.Space.s6)
             if shows(.holdings) { holdingsCard }
+            // **THE AMOUNTS THE MAP GAVE UP (prd §491).** Stripping the figures
+            // out of the treemap is only honest where a list carries them, and
+            // Wallet has had `walletTokenListSection` under its map all along
+            // while this scope had NOTHING below the drawing — so the same cut
+            // that merely de-duplicated Wallet would have deleted this room's
+            // amounts outright.
+            //
+            // Same source as the map, never a second derivation: one call to
+            // `VibenetBalanceTreemap.cells` would otherwise become two, and a
+            // list that disagrees with the picture above it is worse than
+            // either alone.
+            if promoted(.holdings) { holdingsList }
             // **THE ATTENTION STRIP IS GONE (2026-08-26, prd §482).** It was
             // added by §479 and re-grammared and re-titled twice in one
             // afternoon before it was deleted the same day, and the churn was
@@ -510,11 +559,22 @@ struct VibenetRoomCard: View {
         if onPickScope != nil, VibenetSection.shows(present: scopes) {
             DSSectionSwitcher(
                 sections: scopes,
-                active: section ?? .holdings,
+                // `.home`, not `.holdings` — §491's amendment, and the same
+                // default `resolve` has always fallen back to. Left at
+                // `.holdings` this lights the wrong chip on the room's own
+                // opening screen, which is a control disagreeing with what is
+                // drawn above it.
+                active: section ?? .home,
                 attention: scopeAttention) { picked in
                     onPickScope?(picked)
                 }
-                .padding(.top, DS.Space.s4)
+                // NO TOP PADDING OF ITS OWN (prd §491). `DSRoomChassis` owns
+                // the rail→switcher gap for both rooms, and an 18pt pad here
+                // was added on top of it — which is precisely the drift the
+                // chassis exists to end, measured on the device as this room's
+                // bar sitting 17pt below Wallet's after every other gap had
+                // already been matched. A component inside the chassis states
+                // no distance to its neighbours.
         }
     }
 
@@ -524,6 +584,20 @@ struct VibenetRoomCard: View {
     /// untouched by construction rather than by a flag each has to pass.
     private func shows(_ candidate: VibenetSection) -> Bool {
         section == nil || section == candidate
+    }
+
+    /// Whether this scope's figure has been PROMOTED into the slot above, and
+    /// so must not be drawn a second time in the card below it (prd §491).
+    ///
+    /// `shows(_:)` is true for a scope's own card AND for the unscoped room,
+    /// which is exactly right for the card and exactly wrong for the figure:
+    /// standing in Holdings, the treemap is in the slot AND `holdingsCard`
+    /// still holds one, so the room drew the same picture twice on one screen
+    /// — §208's "never say one thing twice", committed by the fix for the gap
+    /// above it. Unscoped, nothing is promoted and every card keeps its own
+    /// figure, which is the behaviour the room had before scopes existed.
+    private func promoted(_ candidate: VibenetSection) -> Bool {
+        section == candidate
     }
 
     /// The surface every stacked card wears — one definition, so four cards
@@ -802,7 +876,20 @@ struct VibenetRoomCard: View {
                         .foregroundStyle(DS.textPrimary)
                         .monospacedDigit()
                         .lineLimit(1)
-                        .minimumScaleFactor(0.6)
+                        // **0.9, not 0.6 (prd §491).** Both rooms set the same
+                        // rung — `price48` — and on the device this one rendered
+                        // at about 55% of Wallet's, which reads as two different
+                        // type scales rather than one. The cause was not the
+                        // tier but this floor: "2.514 ETH" is a longer string
+                        // than "$33K", so a permissive floor let it shrink far
+                        // below the rung it declares. A crown that silently
+                        // renders at 29pt where its neighbour renders at 48 is
+                        // not the same crown, whatever the source says.
+                        //
+                        // It still needs SOME give — an unlucky balance can run
+                        // long — but the give is now a nudge rather than a
+                        // different size class.
+                        .minimumScaleFactor(0.9)
                         .padding(.top, 2)
                         .contentTransition(.numericText())
                         .task {
@@ -839,11 +926,19 @@ struct VibenetRoomCard: View {
                     .foregroundStyle(TokenChartStyle.accent(change: change, scheme: scheme))
                     .padding(.top, 2)
                 }
-                Text(aggregate.plainLine)
-                    .dsText(.subhead13)
-                    .foregroundStyle(DS.textTertiary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.top, 2)
+                // **NO "4 accounts · 2 locked" (prd §491).** Two reasons and
+                // they point the same way. It is the same class of line the
+                // user cut from Wallet's crown on 2026-08-26 (*"remove
+                // 'watched' and 'mostly eth'"*) — a standing fact restating
+                // what the strip below already shows, since the account rail
+                // IS the account count and a locked account wears its own pill
+                // there. And it is what made this crown overflow: the box is a
+                // hard 210pt shared with the chart, so a third line pushed the
+                // range chips off the bottom, clipped.
+                //
+                // `unreachedLine` below is NOT this and stays: it appears only
+                // when a read failed, and it is what keeps the total from
+                // being a silent claim about accounts nobody could see.
                 // What the room could not see, said plainly and only when it
                 // happened — the figure above stays useful, and stops being a
                 // claim about accounts nobody read.
@@ -854,18 +949,12 @@ struct VibenetRoomCard: View {
                         .fixedSize(horizontal: false, vertical: true)
                         .padding(.top, 2)
                 }
-                if let series = VibenetValueHistory.series(windowed) {
-                    TokenChartPlot(chart: TokenChart(closes: series,
-                                                     price: series.last ?? 0,
-                                                     change: VibenetValueHistory.delta(windowed) ?? 0),
-                                   accent: TokenChartStyle.accent(
-                                       change: VibenetValueHistory.delta(windowed) ?? 0, scheme: scheme),
-                                   // 120, Wallet's own height for this figure.
-                                   height: 120, pulses: false,
-                                   lineWidth: 2.6, fillOpacity: 0.24, endpointDot: true)
-                        .padding(.top, DS.Space.s3)
-                    rangeStrip
-                }
+                // The chart sits INSIDE the crown, inside the one fixed box —
+                // Wallet's shape exactly, where the crown and its chart are one
+                // figure sharing the slot. It travelled out to `scopeVisual`
+                // for a few minutes on the way to this and left Home with no
+                // chart at all; it is drawn here and nowhere else.
+                homeFigure
             }
         }
     }
@@ -875,20 +964,232 @@ struct VibenetRoomCard: View {
     /// Home's is the sparkline, which the crown draws itself — so this is
     /// empty there rather than a second drawing. Every other scope steps into
     /// the same box, which is what makes the toggle land in one place.
+    /// **EVERY SCOPE'S DRAWING ALREADY EXISTED — none of these is new**
+    /// (2026-08-26, prd §491, Wallet's §483 move applied here).
+    ///
+    /// The slot was `EmptyView()` on all five while the treemap, the shelf and
+    /// the spine sat in cards a scroll BELOW the strip that names them. So the
+    /// room asked "which reading?" and then answered with the same wall of
+    /// cards whichever chip you picked — a control that scoped the list and
+    /// left the picture behind.
+    ///
+    /// The promotion is the whole change, and it is deliberately not a
+    /// redrawing: each figure is the component that was already there, bare
+    /// (§483: *"we don't do cards"*), with its own eyebrow dropped because the
+    /// chip one row down already says the word. What stays below is the DETAIL
+    /// the drawing summarises — the same overview→detail pair Wallet's Risk
+    /// scope keeps with its lending cards.
     @ViewBuilder
     private var scopeVisual: some View {
         switch section ?? .home {
-        case .home, .activity: EmptyView()
-        case .holdings:        EmptyView()
-        case .accounts:        EmptyView()
-        case .keys:            EmptyView()
+        // Home's is the crown's own sparkline, which is why the slot is not
+        // emitted there at all rather than emitted empty (see `stackedRoom`).
+        //
+        // **Activity has no drawing YET, and empty is the honest state.** Its
+        // events are `VibenetKeyMoment`s — a grant or a revocation at a block
+        // — not money moving, so Wallet's flow band is a borrowed shape that
+        // would say nothing here. What the data supports is a timeline of
+        // authorizations against revocations, which is a figure this app does
+        // not have; inventing one to fill the box is how a slot gets a
+        // drawing that means less than the rows beneath it.
+        // Home's box is the crown itself (`balanceHero`), so it never
+        // reaches here — see `stackedRoom`.
+        case .home:            EmptyView()
+        case .activity:        EmptyView()
+        case .holdings:        holdingsFigure
+        case .accounts:        accountsFigure
+        case .keys:            keysFigure
+        }
+    }
+
+    /// THE VALUE OVER TIME — Home's figure, and it goes through the SLOT
+    /// rather than living inside the crown (prd §491).
+    ///
+    /// It was nested in `balanceHero`, which put the bar in a different place
+    /// on Home than on every other scope in two separate ways. Suppressing it
+    /// off Home fixed the gross case (the chart AND a scope's drawing, stacked)
+    /// and pinning it to `visualSlot` fixed most of the rest — but a nested
+    /// figure still misses the inter-element spacing the sibling slot gets, so
+    /// Home stayed about 24pt high. Two fixes for one guarantee is a sign the
+    /// guarantee is being defended in the wrong place: Home is not a special
+    /// case, it is the scope whose figure happens to be a chart.
+    ///
+    /// So `stackedRoom` emits the slot on EVERY scope now and this is what
+    /// fills it on Home. One code path, one geometry, and the bar cannot walk.
+    @ViewBuilder
+    private var homeFigure: some View {
+        if let series = VibenetValueHistory.series(windowed) {
+            VStack(alignment: .leading, spacing: 0) {
+                TokenChartPlot(chart: TokenChart(closes: series,
+                                                 price: series.last ?? 0,
+                                                 change: VibenetValueHistory.delta(windowed) ?? 0),
+                               accent: TokenChartStyle.accent(
+                                   change: VibenetValueHistory.delta(windowed) ?? 0, scheme: scheme),
+                               // 120, Wallet's own height for this figure.
+                               height: 120, pulses: false,
+                               lineWidth: 2.6, fillOpacity: 0.24, endpointDot: true)
+                // **NO RANGE STRIP (user ruling, prd §491: "you still have this
+                // on vibenet but not on wallet remove it please").**
+                //
+                // Wallet has the same control — `WalletRange.offered(for:)`,
+                // gated on having enough history to offer a window — and this
+                // room's own gate (`VibenetValueHistory.options`) is the same
+                // shape. They diverged on DATA, not design: the demo wallet has
+                // too few samples to offer a range, this room's demo has a long
+                // series, so one showed chips and the other did not. The two
+                // rooms are meant to read identically, and identical is now the
+                // ruling rather than an accident of what each corpus holds.
+                //
+                // **What is given up is real and is Wallet's own trade**
+                // (§482 added this strip so a 1W delta could not be misread as
+                // an all-time one): the delta above no longer names its window
+                // anywhere. `range` stays `.all` — the whole record — which is
+                // the one window that cannot be mistaken for a shorter one.
+            }
+        }
+    }
+
+    /// Every holding with its amount, under the map that shows their shares.
+    ///
+    /// Ordered by the map's own ranking (`cells` is already sorted), so the
+    /// biggest cell and the top row are the same token — a list re-sorted by
+    /// name would make the reader re-find in the list what they just saw in
+    /// the picture.
+    @ViewBuilder
+    private var holdingsList: some View {
+        if let aggregate = VibenetBalanceAggregation.compose(room.items) {
+            let cells = VibenetBalanceTreemap.cells(aggregate)
+            if !cells.isEmpty {
+                VStack(alignment: .leading, spacing: 0) {
+                    ForEach(Array(cells.enumerated()), id: \.element.symbol) { index, cell in
+                        HStack(spacing: DS.Space.s3) {
+                            AssetMark(name: cell.symbol, size: DS.Face.list)
+                            Text(cell.symbol)
+                                .dsText(.heading17)
+                                .foregroundStyle(DS.textPrimary)
+                                .lineLimit(1)
+                            Spacer(minLength: DS.Space.s2)
+                            Text(cell.amount)
+                                .dsText(.callout15)
+                                .foregroundStyle(DS.textSecondary)
+                                .monospacedDigit()
+                                .lineLimit(1)
+                        }
+                        .padding(.vertical, DS.Space.s2)
+                        .chartArrival(index: index, reduceMotion: reduceMotion)
+                    }
+                }
+                .padding(.horizontal, DSRoomChassis.inset)
+            }
+        }
+    }
+
+    /// WHAT THE ACCOUNTS HOLD — the treemap, lifted out of `holdingsCard`.
+    @ViewBuilder
+    private var holdingsFigure: some View {
+        if let aggregate = VibenetBalanceAggregation.compose(room.items) {
+            let cells = VibenetBalanceTreemap.cells(aggregate)
+            if !cells.isEmpty {
+                // **NO HEADLINE ON HOLDINGS (user, prd §491: "wallet doesn't
+                // show the total").** Every other scope needs one because it
+                // replaced the crown and would otherwise open on a picture
+                // with nothing naming its magnitude — but this drawing names
+                // itself: each cell carries its token and its amount, so a
+                // total above it is the figure said twice, once in a form that
+                // cannot be broken down and once in the form that can.
+                //
+                // Wallet's Holdings scope has no headline for the same reason,
+                // while its Positions ("Deposited $61,000") and Risk ("Room to
+                // move") both do. A headline is per-scope, not per-slot.
+                scopeFigure(headline: nil) {
+                    VibenetHoldingsBlock(cells: cells, reduceMotion: reduceMotion)
+                }
+            }
+        }
+    }
+
+    /// A scope figure's frame: its own headline, then the drawing.
+    ///
+    /// **The headline is what the crown used to lend it.** Every scope but Home
+    /// now REPLACES the crown rather than sitting under it (see `stackedRoom`),
+    /// so a figure with no headline opens on a picture with nothing naming its
+    /// magnitude — which would be worse than the stacking it fixed.
+    ///
+    /// `stat24`, not the crown's `price48`: this states ONE reading of the
+    /// room, and matching the crown's rung would claim it is the room's total.
+    @ViewBuilder
+    private func scopeFigure<Figure: View>(headline: String?,
+                                           @ViewBuilder figure: () -> Figure) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            if let headline {
+                Text(headline)
+                    .dsText(.stat24)
+                    .foregroundStyle(DS.textPrimary)
+                    .monospacedDigit()
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                    .padding(.bottom, DS.Space.s3)
+            }
+            figure()
+        }
+        .padding(.horizontal, DS.Space.s4)
+    }
+
+    /// WHO CAN ACT FOR WHOM — the delegate spine, lifted out of its
+    /// disclosure.
+    ///
+    /// **It was folded behind a chevron** (`linkedDisclosure`, §477) because it
+    /// was one figure among many in a long card and had to earn its height.
+    /// As the scope's lead it IS the height — a spine you must open to see is
+    /// a drawing that loses to the list under it, and this scope exists to put
+    /// the picture first.
+    @ViewBuilder
+    private var accountsFigure: some View {
+        let links = VibenetAccountMapping.links(room.items)
+        if !links.isEmpty {
+            scopeFigure(headline: VibenetBalanceAggregation.compose(room.items)?.plainLine) {
+                VibenetLinkSpine(links: links,
+                                 name: { Self.displayName($0) },
+                                 onPick: onScope,
+                                 reduceMotion: reduceMotion)
+            }
+        }
+    }
+
+    /// WHEN KEYS LAPSE — the shelf, lifted out of `expiryFooter`.
+    ///
+    /// Its eyebrow ("Keys expiring") is dropped for the reason every other
+    /// figure here drops one: the chip below says Keys, and the rows say
+    /// expiring. `tailLine` is KEPT — it is not a label, it is the count of
+    /// what the shelf could not draw, which §307's silent-truncation rule
+    /// says must survive wherever the drawing goes.
+    @ViewBuilder
+    private var keysFigure: some View {
+        if let shelf = VibenetKeyShelf.compose(room.items, now: .now) {
+            let keys = VibenetKeyAggregation.compose(room.items, now: .now)
+            scopeFigure(headline: keys.map {
+                $0.total == 1 ? String(localized: "1 key")
+                              : String(localized: "\($0.total) keys")
+            }) {
+                VStack(alignment: .leading, spacing: 9) {
+                    ForEach(Array(shelf.rows.enumerated()), id: \.element.id) { index, row in
+                        shelfRow(row)
+                            .chartArrival(index: index, reduceMotion: reduceMotion)
+                    }
+                    if let tail = shelf.tailLine {
+                        Text(tail)
+                            .dsText(.label11)
+                            .foregroundStyle(DS.textTertiary)
+                    }
+                }
+            }
         }
     }
 
     /// Fixed, not fitted — see `stackedRoom`. Spelled rather than measured,
     /// because measuring it would settle the bar a frame LATE, which is the
     /// same jump arriving slower (Wallet's `walletVisualSlot`, same reason).
-    private static let visualSlot: CGFloat = 210
+    private static var visualSlot: CGFloat { DSRoomChassis.visualSlot }
 
     /// The samples the crown, the delta and the line all read (prd §479) —
     /// ONE derivation, so the figure, its move and its curve can never
@@ -898,40 +1199,6 @@ struct VibenetRoomCard: View {
     }
 
     /// HOW FAR BACK (prd §479) — drawn only where the book can actually
-    /// answer more than one span (`options` returns empty otherwise), so this
-    /// is never a row of chips redrawing one identical line.
-    ///
-    /// A neutral fill for the selection, never the room's mark: blue here
-    /// means a key is about to expire, and which window you are looking at is
-    /// not urgent.
-    @ViewBuilder
-    private var rangeStrip: some View {
-        let options = VibenetValueHistory.options(history, now: .now)
-        if options.count > 1 {
-            HStack(spacing: DS.Space.s2) {
-                ForEach(options, id: \.self) { option in
-                    let on = option == range
-                    Button {
-                        DSHaptic.selection()
-                        withAnimation(reduceMotion ? nil : DS.Motion.standard) { range = option }
-                    } label: {
-                        Text(option.label)
-                            .dsText(.label12).fontWeight(.semibold)
-                            .foregroundStyle(on ? DS.textPrimary : DS.textTertiary)
-                            .padding(.horizontal, DS.Space.s3)
-                            .padding(.vertical, 6)
-                            .background(Capsule(style: .continuous)
-                                .fill(on ? DS.fillStrong : Color.clear))
-                            .contentShape(Capsule())
-                    }
-                    .buttonStyle(PressSpring())
-                    .dsHover()
-                    .accessibilityAddTraits(on ? [.isSelected] : [])
-                }
-            }
-            .padding(.top, DS.Space.s2)
-        }
-    }
 
     /// WHOSE THE NUMBER IS — `WalletFaceChips`' shape, and the reading this
     /// room had the data for and never drew (prd §475).
@@ -1167,7 +1434,8 @@ struct VibenetRoomCard: View {
                     // separator is what joins the roster to the disclosure.
                     accountRow(item)
                 }
-                if !links.isEmpty { linkedDisclosure(links) }
+                // Not when the spine is the scope's own lead — see `promoted`.
+                if !links.isEmpty, !promoted(.accounts) { linkedDisclosure(links) }
             }
         }
     }
@@ -1329,7 +1597,7 @@ struct VibenetRoomCard: View {
     private var holdingsCard: some View {
         if let aggregate = VibenetBalanceAggregation.compose(room.items) {
             let cells = VibenetBalanceTreemap.cells(aggregate)
-            if !cells.isEmpty {
+            if !cells.isEmpty, !promoted(.holdings) {
                 card {
                     Text(String(localized: "Holdings"))
                         .dsText(.label12)
@@ -1446,7 +1714,11 @@ struct VibenetRoomCard: View {
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.top, DS.Space.s2)
         }
-        expiryFooter(aggregate)
+        // Not when the shelf is the scope's own lead — see `promoted`. The
+        // SENTENCE half survives either way: `expiryFooter` draws it exactly
+        // where the shelf declines, and that fallback is what the card had
+        // before any figure existed.
+        if !promoted(.keys) { expiryFooter(aggregate) }
     }
 
     /// The headline, as a door to the whole tray when there is one to open.

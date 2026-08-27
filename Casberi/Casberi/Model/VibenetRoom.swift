@@ -241,6 +241,12 @@ enum VibenetAuthenticatorKind: String, Equatable, Hashable, CaseIterable, Codabl
         switch self {
         case .secp256k1: String(localized: "secp256k1 key")
         case .p256:      String(localized: "P-256 key")
+        // **"Passkey" — never "WebAuthn"** (user ruling, prd §491: *"passkey
+        // is fine, don't say webauthn"*). It is the word Apple puts in front of
+        // people and the one they already know; WebAuthn is the spec behind it
+        // and belongs in this comment rather than on a row. The curve names
+        // above are technical because there is no plainer word for a curve —
+        // this one has a plainer word, so it uses it.
         case .webAuthn:  String(localized: "Passkey")
         case .delegate:  String(localized: "Delegate")
         case .custom:    String(localized: "Custom authenticator")
@@ -251,9 +257,24 @@ enum VibenetAuthenticatorKind: String, Equatable, Hashable, CaseIterable, Codabl
     /// single-key sentence's own title. Each line is the WHOLE claim this
     /// build is willing to make; nothing here is embellished past what the
     /// chain itself proves.
+    ///
+    /// **secp256k1 IS ITS PLAIN NAME (user ruling, prd §491: *"we can't call
+    /// it wallet key, it should be like secp256 key or whatever the different
+    /// keys are"*).** It read "Wallet key", which was wrong twice over. It
+    /// collided with the room next door — an app whose other half is literally
+    /// called Wallet, so a key type named after it reads as belonging there —
+    /// and it disagreed with `label`, which has always said "secp256k1 key" and
+    /// is what the LIVE READ uses: `VibenetBridge` composes every event title
+    /// from `actor.kind.label`, so the chain's own events already said
+    /// secp256k1 while this said Wallet. One key type, two names, depending on
+    /// which surface you were looking at.
+    ///
+    /// The other four are unchanged: a passkey is a passkey to everyone, and
+    /// `.delegate`'s "Another contract" is a different axis — plain English for
+    /// something with no user-facing name — not a spec name withheld.
     var plainTitle: String {
         switch self {
-        case .secp256k1: String(localized: "Wallet key")
+        case .secp256k1: String(localized: "secp256k1 key")
         case .p256:      String(localized: "P-256 key")
         case .webAuthn:  String(localized: "Passkey")
         case .delegate:  String(localized: "Another contract")
@@ -269,7 +290,10 @@ enum VibenetAuthenticatorKind: String, Equatable, Hashable, CaseIterable, Codabl
         switch self {
         case .secp256k1: String(localized: "secp256k1 — the standard Ethereum key")
         case .p256:      String(localized: "the curve passkeys and secure enclaves use")
-        case .webAuthn:  String(localized: "Face ID, Touch ID, or a security key — WebAuthn")
+        // The spec's name is cut (user, prd §491: *"don't say webauthn"*).
+        // What is left is the whole of what a person needs: the three things
+        // that actually unlock it.
+        case .webAuthn:  String(localized: "Face ID, Touch ID, or a security key")
         case .delegate:  String(localized: "a contract signs for this account")
         case .custom:    nil
         }

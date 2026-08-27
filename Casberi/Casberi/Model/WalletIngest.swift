@@ -1702,7 +1702,24 @@ enum WalletIngest {
                 // lookup, so a fake USDC can't wear the real one's mark. No
                 // space in the marker — the cell parser slices on one.
                 let label = SymbolConfusables.isSuspicious(sym) ? "⚠︎" + sym : sym
-                return "\(label) \(treemapWeight(usd)) @v:\(TokenStats.compact(usd))\(route)"
+                // **NO VALUE IN THE CELL (user ruling, prd §491: *"if there is
+                // a list of holdings below that will show amounts, then do we
+                // need the amounts in the treemap? treemap is just to show
+                // proportions… remove it on both, make the treemap just the
+                // symbols"*).**
+                //
+                // The `@v:` marker put a compacted dollar figure in each cell,
+                // and every one of them is repeated exactly by the token list
+                // directly under the map — so the map spent its area saying
+                // twice what the rows say once, and the figure it showed was
+                // the ROUNDED one ("$21K"), which is the worse of the two
+                // places to read a number.
+                //
+                // What the map is for is the comparison between cells, and
+                // that is carried by area and rank, not by the labels. The
+                // symbol stays because a cell nobody can name is not a
+                // proportion of anything.
+                return "\(label) \(treemapWeight(usd))\(route)"
             }
     }
 

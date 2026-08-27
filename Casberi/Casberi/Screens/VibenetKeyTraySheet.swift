@@ -287,7 +287,19 @@ struct VibenetKeyTraySheet: View {
             WalletFace(address: key.address, size: DS.Face.rowCircle, circular: true)
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: DS.Space.s2) {
-                    Text(key.actor.kind.plainTitle)
+                    // **`shortLabel`, not `plainTitle` (prd §491).** This row
+                    // carries the kind, an actor id, a New badge and an expiry
+                    // on one line, and `plainTitle`'s longest forms do not fit:
+                    // "Custom authenticator" has been clipping to "Custom
+                    // authenti…" since the tray shipped, and renaming the
+                    // secp256k1 curve off "Wallet key" made it clip too
+                    // ("secp25…"), which is worse than the name it replaced —
+                    // a curve truncated mid-digit is unreadable.
+                    //
+                    // `shortLabel` exists for exactly this and loses nothing
+                    // here: the tray is titled keys, so "secp256k1" needs no
+                    // "key" after it, and "Passkey" is unchanged.
+                    Text(key.actor.kind.shortLabel)
                         .dsText(.body17)
                         .foregroundStyle(DS.textPrimary)
                         .lineLimit(1)

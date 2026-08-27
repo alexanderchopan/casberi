@@ -299,8 +299,20 @@ grep -q 'redeployedSinceLastSeen: redeployed, readAt: .now' "$TMP/bridge.nc.swif
 
 # The card must ASK the model for its heading. A literal here is the defect
 # this pass fixed: a partial sum under a whole claim.
-grep -q 'aggregate.nativeHeading' "$TMP/card.nc.swift" \
-  || { echo "✗ the balance card no longer draws aggregate.nativeHeading — prd §468: a partial total must say how partial"; exit 1; }
+# §468's rule — A PARTIAL TOTAL MUST SAY HOW PARTIAL — kept, but the line that
+# keeps it changed (prd §482, amended here 2026-08-26). It was
+# `nativeHeading` ("Across 2 of 3 accounts"), an eyebrow ABOVE the crown; the
+# §482 rewrite dropped that eyebrow and the rule now rides `unreachedLine`
+# ("1 account couldn't be read"), drawn under the subtitle and only when it
+# happened. That is the same promise by a better route: it NAMES THE GAP
+# rather than stating coverage, so a healthy room says nothing at all instead
+# of carrying a permanent "Across your accounts" that means nothing.
+#
+# So the guard asserts the RULE, not the spelling: one of the two must be
+# drawn. Amended rather than reverted — the ruling shipped, the guard went
+# stale behind it, and re-imposing the old wording would undo a decision.
+grep -qE 'aggregate\.(nativeHeading|unreachedLine)' "$TMP/card.nc.swift" \
+  || { echo "✗ the balance card says nothing when the total is partial — prd §468: a partial total must say how partial"; exit 1; }
 if grep -q 'Across your accounts' "$TMP/card.nc.swift"; then
   echo "✗ VibenetRoomCard hardcodes the crown's heading again — prd §468: it belongs to"
   echo "  VibenetBalanceAggregate, which is the only thing that knows whether the total is complete."
@@ -557,7 +569,13 @@ fi
 # changes size between the room and the account one tap into it.
 [[ "$heroFn" == *'.dsText(.price48)'* ]] \
   || { echo "✗ the aggregate crown is no longer price48 — prd §475: Wallet's crown rung"; exit 1; }
-[[ "$heroFn" == *'height: 120'* ]] \
+# The 120pt rule is unchanged; the FUNCTION it lives in moved (prd §491). The
+# chart was nested inside `balanceHero` and is now `homeFigure`, drawn through
+# the same fixed slot every other scope's figure uses — which is what stopped
+# the account rail landing 24pt higher on Home than anywhere else. A guarded
+# figure that moves files takes its guard with it, so this looks at the card
+# rather than at one function of it.
+grep -q 'height: 120' "$TMP/card.nc.swift" \
   || { echo "✗ the aggregate sparkline is no longer 120pt — prd §475: Wallet's own height"; exit 1; }
 grep -q '.dsText(.price48)' "$TMP/detail.nc.swift" \
   || { echo "✗ the account sheet's crown is not price48 — prd §475: it drew the same reading"
@@ -735,12 +753,17 @@ if grep -qE 'attention.*=.*present|attention.*sections.contains' "Casberi/Casber
   echo "  locked, unlocking or unread."
   exit 1
 fi
-# HOLDINGS LEADS. §482's own ruling, carried forward: the crown, its sparkline
-# and the token tiles are one reading at three grains, so opening anywhere else
-# puts a tap between the crown and its own breakdown.
-grep -q 'return .holdings' "Casberi/Casberi/Model/VibenetSection.swift" \
-  || { echo "✗ the room no longer opens on Holdings — prd §482: any other default puts a"
-       echo "  tap between the crown and the tiles that break it down."; exit 1; }
+# HOME LEADS (prd §491, amending §482's "Holdings leads"). That ruling was made
+# before this room HAD a Home scope: Holdings led because the crown, its
+# sparkline and the token tiles are one reading at three grains, and opening on
+# Accounts or Keys put a tap between the crown and its own breakdown. Adding
+# Home answers that objection outright — Home IS the crown and its sparkline —
+# and the user's instruction for this room is that it match Wallet, which opens
+# on Home. `resolve` has fallen back to `.home` since the scope existed; only
+# this guard and the type's own doc still said otherwise.
+grep -q 'return .home' "Casberi/Casberi/Model/VibenetSection.swift" \
+  || { echo "✗ the room no longer opens on Home — prd §491: Wallet's room opens on its"
+       echo "  crown and this one matches it."; exit 1; }
 # THE SWITCHER IS GATED ON WHAT THE ROOM PUBLISHED, never on a source name —
 # so this and the wallet toggle cannot both draw, and the gate cannot drift
 # from the room feeding it.
@@ -973,7 +996,17 @@ grep -q 'if showsFace {' "$TMP/detail.nc.swift" \
        echo "  rail that used to draw a duplicate is folded into the chip strip, so a gate"
        echo "  here hides the account's only identifying mark. A 36pt chip is a mark, not"
        echo "  the screen's subject."; exit 1; }
-if grep -q 'VibenetScopeRail' "$TMP/card.nc.swift"; then
+# **MOUNTED, not merely NAMED (amended prd §491).** The rule is that the card
+# must not put the pinned rail VIEW back on screen — that rail is unmounted, so
+# a gate reading it asks a question whose answer is always no. It is not that
+# the type may never be mentioned: `VibenetScopeRail.items(_:)` and `.matches`
+# are the static address→item mapping the in-content chip strip is built from,
+# and reusing them is what keeps that strip from being a lookalike of Wallet's
+# rather than the same thing (the §482 amendment's own complaint). Banning the
+# NAME made the guard fire on the fix it was written to encourage.
+#
+# A constructor call is the mounting; a dotted member is the mapping.
+if grep -qE 'VibenetScopeRail\(' "$TMP/card.nc.swift"; then
   echo "✗ the card consults the face rail again — prd §482: that rail is unmounted, so"
   echo "  any gate reading it is asking a question whose answer is always no."
   exit 1
@@ -1609,8 +1642,24 @@ check("shortLabel is a real word, just without the key/authenticator suffix",
 // each line is the WHOLE claim this build is willing to make.
 print("")
 print("VibenetAuthenticatorKind.plainTitle / plainDetail — meaning over jargon")
-check("secp256k1 reads as a wallet key, not the scheme name",
-      VibenetAuthenticatorKind.secp256k1.plainTitle == "Wallet key")
+// **THE SCHEME NAME, not "Wallet key" (user ruling, prd §491, REVERSING this
+// assertion's own premise).** It read "Wallet key" on the reasoning that plain
+// words beat spec jargon — right in general and wrong for this one, twice: the
+// app's other half is a room called Wallet, so a key type named after it reads
+// as belonging there; and `label` has always said "secp256k1 key", which is
+// what `VibenetBridge` composes every live event title from. One key type
+// with two names depending on the surface.
+//
+// The ruling is scoped to the CURVES. `.delegate` keeps "Another contract"
+// below, because that is plain English for a thing with no user-facing name
+// rather than a spec name withheld, and `.webAuthn` reads "Passkey" — the word
+// people already know — with "WebAuthn" now absent from every user-facing
+// string in the app.
+check("secp256k1 reads as its scheme name, never after the Wallet room",
+      VibenetAuthenticatorKind.secp256k1.plainTitle == "secp256k1 key")
+check("a passkey is a passkey, and the spec is never named at somebody",
+      VibenetAuthenticatorKind.webAuthn.plainTitle == "Passkey"
+        && !(VibenetAuthenticatorKind.webAuthn.plainDetail ?? "").contains("WebAuthn"))
 check("a delegate reads as another contract signing, not spec jargon",
       VibenetAuthenticatorKind.delegate.plainTitle == "Another contract")
 check("P-256 names the CURVE only, never where a particular key lives",
