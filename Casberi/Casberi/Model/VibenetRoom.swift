@@ -291,6 +291,35 @@ enum VibenetAuthenticatorKind: String, Equatable, Hashable, CaseIterable, Codabl
         }
     }
 
+    /// THE MARK a key row leads with (prd §495, user: *"for the icons we just
+    /// add plus or locked symbol like we are elsewhere and whatever icons we
+    /// need for other verbs. we don't need some emoji"*).
+    ///
+    /// An SF Symbol in a tinted square, the same grammar `VibenetEventRow`
+    /// uses for an event's kind and every `BandRow` uses for a source — the
+    /// Permissions rows were the one list in this room leading with nothing.
+    ///
+    /// **Each of these is a FACT this app already states in words, not a
+    /// glyph invented to fill the column.** `faceid` because a passkey IS
+    /// Face ID, Touch ID or a security key (`plainDetail` says exactly that);
+    /// `link` because a delegate is a contract signing for this account; `key`
+    /// for the two raw curves, which are keys and nothing more interesting.
+    /// A key we cannot identify gets NO mark rather than a generic one — the
+    /// same rule `VibenetEventRow` follows for an unfaceted event, and the
+    /// reason `custom` is nil here rather than falling back to `key`.
+    ///
+    /// **No colour.** §490 ruled that ink in this room marks UNBOUNDEDNESS
+    /// and nothing else, and an admin key already says so with its own chip;
+    /// tinting the mark would either repeat that chip or contradict it.
+    var markSymbol: String? {
+        switch self {
+        case .secp256k1, .p256: "key"
+        case .webAuthn:         "faceid"
+        case .delegate:         "link"
+        case .custom:           nil
+        }
+    }
+
     /// The technical name plus one honest clause — nil where there is
     /// nothing certain to add. `.p256` names the CURVE only, never where a
     /// particular key happens to live (a passkey and a raw P-256 key are

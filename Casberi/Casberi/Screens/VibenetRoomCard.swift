@@ -1444,8 +1444,19 @@ struct VibenetRoomCard: View {
             VStack(alignment: .leading, spacing: DS.Space.s4) {
                 ForEach(byAccount, id: \.address) { item in
                     VStack(alignment: .leading, spacing: DS.Space.s2) {
-                        HStack(spacing: DS.Space.s2) {
-                            WalletFace(address: item.address, size: DS.Face.rowCircle, circular: true)
+                        // **THE HEADER AND ITS KEYS SHARE ONE LEADING COLUMN**
+                        // (prd §495, user: *"the letters here have different
+                        // indentations. the …0b1c and secp256k1 for example.
+                        // they need to be the same"*).
+                        //
+                        // The header led with a `rowCircle` face (28) and
+                        // `s2`, the key rows with a `Mark.list` mark (36) and
+                        // `s3` — so their text started ten points apart, one
+                        // line under the other. Same size, same gap now, which
+                        // is also `VibenetEventRow`'s column: three lists in
+                        // this room, one edge.
+                        HStack(spacing: DS.Space.s3) {
+                            WalletFace(address: item.address, size: DS.Mark.list, circular: true)
                             Text(Self.displayName(item.address))
                                 .dsText(.subhead13)
                                 .foregroundStyle(DS.textSecondary)
@@ -1474,9 +1485,43 @@ struct VibenetRoomCard: View {
     /// The chips are `grantedPlainLabels` — the room's ONE list of permission
     /// wording, so a chip here and a rung in the slot above can never disagree
     /// about either the words or their order.
+
+    /// A key's leading mark — an SF Symbol in a tinted square, the same shape
+    /// `VibenetEventRow` gives an event's kind (prd §495).
+    ///
+    /// `DS.Mark.list`, so a key row's mark, an event row's mark and a face
+    /// all sit in one leading column at one size. Neutral ink by §490 (see
+    /// `markSymbol`), and ABSENT rather than generic for a kind this build
+    /// cannot name — an empty seat still holds the column, so the titles stay
+    /// aligned whether or not the mark drew.
     @ViewBuilder
+    private func keyMark(_ kind: VibenetAuthenticatorKind) -> some View {
+        RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous)
+            .fill(DS.fillFaint)
+            .frame(width: DS.Mark.list, height: DS.Mark.list)
+            .overlay {
+                if let symbol = kind.markSymbol {
+                    Image(systemName: symbol)
+                        .accessibilityHidden(true)
+                        .dsGlyph(15, weight: .regular)
+                        .foregroundStyle(DS.textSecondary)
+                }
+            }
+    }
+
     private func permissionRow(_ key: VibenetTrayKey) -> some View {
-        let body = VStack(alignment: .leading, spacing: DS.Space.s2) {
+        // The mark leads, the text block follows — one leading column shared
+        // with the account header above and with every event row in the feed.
+        let body = HStack(alignment: .top, spacing: DS.Space.s3) {
+            keyMark(key.actor.kind)
+            keyRowText(key)
+        }
+        return wrapped(body, key)
+    }
+
+    @ViewBuilder
+    private func keyRowText(_ key: VibenetTrayKey) -> some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
             HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
                 Text(key.actor.kind.shortLabel)
                     .dsText(.callout15)
@@ -1522,19 +1567,24 @@ struct VibenetRoomCard: View {
                 }
             }
         }
-        .padding(.leading, DS.Face.rowCircle + DS.Space.s2)
-        .padding(.vertical, DS.Space.s1)
+    }
+
+    /// The row's door, unchanged — split out so `permissionRow` can compose
+    /// the mark and the text without the button wrapping only half of it.
+    @ViewBuilder
+    private func wrapped(_ body: some View, _ key: VibenetTrayKey) -> some View {
+        let padded = body.padding(.vertical, DS.Space.s1)
         if let onOpenKey {
             Button {
                 DSHaptic.selection()
                 onOpenKey(key.actor,
                           room.items.first { $0.address == key.address } ?? room.items[0],
                           [])
-            } label: { body.contentShape(Rectangle()) }
+            } label: { padded.contentShape(Rectangle()) }
                 .buttonStyle(.plain)
                 .dsHover()
         } else {
-            body
+            padded
         }
     }
 
