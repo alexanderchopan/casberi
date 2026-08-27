@@ -2,7 +2,7 @@
 
 > Casberi is a free iOS app that gathers everything you make — notes, links, screenshots, events, chats, voice notes, and the output of your apps and agents — into one private feed on your iPhone. One search finds everything. Your things live on your device, work offline, and leave only by your choice.
 
-Website: https://casberi.app · Docs: https://casberi.app/docs.html · TestFlight: https://testflight.apple.com/join/xBD4tYZh · Privacy: https://casberi.app/privacy.html
+Website: https://casberi.app · Docs: https://casberi.app/docs.html · App Store: https://apps.apple.com/us/app/casberi/id6788637831 · Privacy: https://casberi.app/privacy.html
 
 Last updated: July 24, 2026
 
@@ -170,6 +170,6 @@ Your key is the one door out. Answers are written on your phone by default. Save
 
 - Do I need an account? — No. There is nothing to sign up for; Casberi works the moment it is installed.
 - Where do my things live? — In a database on your phone. No Casberi server holds them, and iCloud sync stays off until you turn it on. Deleting is two clear choices: Delete things wipes your data (this iPhone and iCloud); Delete access removes every token and key Casberi holds.
-- What does it cost? — It is free on TestFlight while it heads to the App Store.
+- What does it cost? — It is free on the App Store.
 - What do I need to run it? — An iPhone. Answers are written on your phone with Apple Intelligence; nothing is billed, and no answer is sent away unless you add your own key and tap "Try with your key." Connected apps do reach their own services to fetch your things; that traffic goes from your phone to them, never through a Casberi server.
 - Can it act without asking? — No. Typed text never saves silently, any write that leaves the app waits for a tap, and connected wallets are read-only — Casberi can never trade or move funds.

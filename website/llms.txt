@@ -4,7 +4,7 @@
 
 Key facts:
 
-- Native iOS app (iPhone), free on TestFlight while it heads to the App Store.
+- Native iOS app (iPhone), free on the App Store.
 - Everything becomes a "thing" in one feed; one search spans all of it.
 - Capture in one gesture: share sheet, screenshots, Siri, paste, voice. Typed text never saves silently.
 - Nearly a hundred apps connect as bridges: Photos, Calendar, Reminders, Contacts, Apple Health, Apple Wallet, Strava, Apple Music, HomeKit, RSS, Substack, Bluesky, Farcaster, Reddit, Pinterest, Gmail, iCloud Mail, GitHub, GitLab, Jira, Slack, Trello, Notion, Linear, Todoist, Stripe, PostHog, Sentry, Vercel, Cloudflare, App Store Connect, Readwise, Raindrop, Obsidian, Kindle, Cal.com, Calendly, Spotify, YouTube, Podcasts, Twitch, Steam, Shopify, Deals, Open Food Facts, Instagram / Snapchat / TikTok / X imports, ChatGPT / Claude / Claude Code / Cursor / Gemini / Day One / Apple Journal imports, and more.
