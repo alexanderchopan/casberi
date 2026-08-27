@@ -648,60 +648,173 @@ struct WalletCompositionStrip: View {
         return nil
     }
 
+    /// The borrowed share of what is deposited, 0…1, or nil when there is
+    /// nothing to take a share OF.
+    ///
+    /// Clamped at 1 because the two figures come from different protocol
+    /// reads and a debt read that lands while its collateral read didn't
+    /// would otherwise draw a bar past the end of its own track.
+    private var borrowedShare: Double? {
+        guard composition.hasOwed, composition.deposited > 0 else { return nil }
+        return min(1, composition.owed / composition.deposited)
+    }
+
     var body: some View {
         if !composition.isEmpty {
-            let r = reading
-            VStack(alignment: .leading, spacing: DS.Space.s2) {
-                // **"Positions", not "In protocols" (user ruling, prd §483:
-                // *"for 'in protocols' call it 'positions' because isn't that
-                // what it is? i dunno what 'in protocols' means"*).** The old
-                // heading was trying to explain WHERE the money went, while
-                // the lines underneath already say WHAT in plain words —
-                // Deposited, Locked, Owed. A heading only has to be a label.
+            VStack(alignment: .leading, spacing: 0) {
+                // **THE FIGURE LEADS, and the places are a plain list under it
+                // (prd §483, 2026-08-26 — Positions "B", chosen against a
+                // stacked share bar).** The bar was the better drawing of one
+                // question and the wrong question here: the Lending, liquidity
+                // and perp cards a scroll below already name every place with
+                // its own amount, so a per-place bar in the slot redraws that
+                // list one screen up — §447's exact finding, where a card
+                // opened with two display lines and then a map repeating the
+                // header word for word.
                 //
-                // Deliberately the SAME word as the scope chip. This strip is
-                // the summary of exactly what that scope holds, so sharing the
-                // name is what makes the crown's line read as a preview of it
-                // rather than as a fifth unrelated card.
-                WalletSectionLabel(title: String(localized: "Positions"))
-                if let r {
-                    Text(r.text)
-                        .dsText(.heading22)
-                        .foregroundStyle(DS.textPrimary)
-                        .monospacedDigit()
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.7)
+                // What the list below CANNOT say is the whole and the
+                // leverage, so that is what the slot says. It also gives this
+                // scope the same grammar as Home — a figure, then support —
+                // which is what makes the seven slots read as one room.
+                // The deposits tray hangs on the EYEBROW, not on a place row:
+                // a row is one protocol and the tray is all of them, so a
+                // per-row chevron would promise something narrower than what
+                // opens.
+                eyebrow(String(localized: "Deposited"), onOpen: onOpenDeposits)
+                Text(composition.hasDeposited
+                     ? WalletValue.money(composition.deposited)
+                     : lockedValue)
+                    .dsText(.price40)
+                    .foregroundStyle(DS.textPrimary)
+                    .monospacedDigit()
+                    .lineLimit(1)
+                    // **0.85, not 0.6, and the reason is the fixed slot.** The
+                    // scope's box is a hard 210pt, so SwiftUI resolves an
+                    // over-tall VStack by spending every child's scale factor
+                    // — and this one had the most to give, so on a real
+                    // composition the 40pt lead rendered at about 24pt while
+                    // the eyebrows above it stayed put. The figure came out
+                    // SMALLER than the crown it is the counterpart to, which
+                    // reads as a different tier of number rather than the same
+                    // one about a different pile. Floored here and the places
+                    // capped below, so the compression lands where it costs
+                    // least.
+                    .minimumScaleFactor(0.85)
+                    .padding(.top, 2)
+
+                // **Borrowed is the second reading, and the ONLY colour here.**
+                // `DS.attention` rather than `DS.destructive`: a debt you
+                // opened on purpose is not an alarm (the strip's own standing
+                // note, kept), and red in this room is spent on a liquidation.
+                if let share = borrowedShare {
+                    Text(String(localized: "Borrowed against it"))
+                        .dsText(.label12).foregroundStyle(DS.textTertiary)
+                        .padding(.top, DS.Space.s4)
+                    HStack(spacing: DS.Space.s3) {
+                        ShareBar(fraction: share, fill: DS.attention,
+                                 reduceMotion: reduceMotion)
+                        Text("−" + WalletValue.money(composition.owed))
+                            .dsText(.stat24).foregroundStyle(DS.textPrimary)
+                            .monospacedDigit()
+                            .lineLimit(1)
+                            .fixedSize()
+                    }
+                    .padding(.top, DS.Space.s2)
                 }
+
+                // The places, as a grouped list rather than a keyed legend:
+                // there is no per-place chart above for a coloured dot to key
+                // TO, so dots here would be decoration, and inventing a
+                // categorical ramp for them is `AssetMark`'s no-invented-hue
+                // rule in a second place.
                 if composition.hasDeposited {
-                    line(title: String(localized: "Deposited"),
-                         places: composition.depositedPlaces,
-                         value: r?.promotes == "Deposited"
-                             ? "" : WalletValue.money(composition.deposited),
-                         onOpen: onOpenDeposits)
+                    VStack(alignment: .leading, spacing: 0) {
+                        // Capped so the figure above never has to shrink to
+                        // make room: a wallet in eight protocols would
+                        // otherwise push the lead down to a caption. The
+                        // remainder is not hidden — the deposits tray behind
+                        // the eyebrow carries every one of them.
+                        ForEach(composition.deposits.prefix(Self.placeRowCap)) { deposit in
+                            placeRow(deposit.place, WalletValue.money(deposit.usd))
+                        }
+                        if composition.deposits.count > Self.placeRowCap {
+                            Text(String(localized: "\(composition.deposits.count - Self.placeRowCap) more"))
+                                .dsText(.label12).foregroundStyle(DS.textTertiary)
+                                .padding(.top, 2)
+                        }
+                    }
+                    // 8, not 12. The slot is a hard 210pt and this list is
+                    // the last thing in it, so every point above it is a point
+                    // the third place is clipped by — measured on the device,
+                    // where it was.
+                    .padding(.top, DS.Space.s2)
                 }
-                if composition.hasLocked {
-                    line(title: String(localized: "Locked"),
-                         places: composition.lockedPlaces,
-                         value: r?.promotes == "Locked" ? "" : lockedValue,
-                         onOpen: onOpenLocks,
-                         melt: composition.soleMelt)
-                }
-                if composition.hasOwed {
-                    // The minus is spelled, never implied by color: red here
-                    // would claim urgency the room spends color on elsewhere
-                    // (a liquidation, an active approval), and a debt you
-                    // opened on purpose isn't an alarm.
-                    line(title: String(localized: "Owed"),
-                         places: composition.owedPlaces,
-                         value: "−" + WalletValue.money(composition.owed),
-                         onOpen: nil)
+
+                // Locked keeps its own voice and its own units — §240 rule 2,
+                // and the reason there is no dollar figure to put it beside.
+                // Promoted to the headline above when there is nothing
+                // deposited, so it is never said twice.
+                if composition.hasLocked, composition.hasDeposited {
+                    placeRow(String(localized: "Locked"), lockedValue,
+                             onOpen: onOpenLocks)
+                        .padding(.top, DS.Space.s2)
                 }
             }
-            .padding(.horizontal, DS.Space.s3)
-            .padding(.vertical, DS.Space.s3)
-            .background(DS.fillFaint,
-                        in: RoundedRectangle(cornerRadius: DS.Radius.widget,
-                                             style: .continuous))
+        }
+    }
+
+    /// How many places the slot lists before folding the rest into a count.
+    /// Three, measured against the 210pt box: a fourth row costs the lead
+    /// figure its size, and the tray behind the eyebrow holds them all.
+    private static let placeRowCap = 3
+
+    /// A section label, optionally a door.
+    @ViewBuilder
+    private func eyebrow(_ title: String, onOpen: (() -> Void)? = nil) -> some View {
+        let line = HStack(spacing: 4) {
+            Text(title)
+                .dsText(.label12).foregroundStyle(DS.textTertiary)
+            if onOpen != nil {
+                Image(systemName: "chevron.right")
+                    .dsGlyph(9)
+                    .foregroundStyle(DS.textTertiary)
+            }
+        }
+        if let onOpen {
+            Button(action: onOpen) { line.contentShape(Rectangle()) }
+                .buttonStyle(.plain)
+        } else {
+            line
+        }
+    }
+
+    /// One place: what it is on the left, how much on the right. `callout15`
+    /// under a 40pt figure for `line`'s old reason — a row-weight title here
+    /// would argue with the figure instead of supporting it.
+    @ViewBuilder
+    private func placeRow(_ title: String, _ value: String,
+                          onOpen: (() -> Void)? = nil) -> some View {
+        let row = HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+            Text(title)
+                .dsText(.callout15).foregroundStyle(DS.textPrimary)
+                .lineLimit(1)
+            Spacer(minLength: DS.Space.s2)
+            Text(value)
+                .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                .monospacedDigit()
+                .lineLimit(1)
+            if onOpen != nil {
+                Image(systemName: "chevron.right")
+                    .dsGlyph(9)
+                    .foregroundStyle(DS.textTertiary)
+            }
+        }
+        .padding(.vertical, 3)
+        if let onOpen {
+            Button(action: onOpen) { row.contentShape(Rectangle()) }
+                .buttonStyle(.plain)
+        } else {
+            row
         }
     }
 

@@ -87,9 +87,16 @@ struct WalletFlowBand: View {
     @State private var picked: WalletFlow.Lane?
     @State private var pickedClear: Task<Void, Never>?
 
-    /// 150, up from 138 (prd §483) — the height the header's three deleted
-    /// lines gave back, inside the room's fixed 200pt visual slot.
-    private let bandHeight: CGFloat = 150
+    /// 148. It went 138 → 170 when the coverage note was deleted, on the
+    /// reasoning that the reclaimed height should go into the gaps between
+    /// labels — which was right while each end was two stacked lines. Once
+    /// `endpoint` put name and amount on ONE baseline (~37pt of type per end
+    /// down to ~21pt) the gaps came back for free, and 170 was then spending
+    /// the slot on air: the room's slot is fixed, so height this drawing does
+    /// not need is height the list below never gets. 164 rather than 148 on
+    /// the device: at 148 the drawing cleared the slot by about 45pt, which is
+    /// the dead band this pass was fixing wearing the opposite sign.
+    private let bandHeight: CGFloat = 164
     private let laneGap: CGFloat = 2
     private let spineWidth: CGFloat = 12
     /// One line of `label12` fits a 14pt slab; the floor keeps every lane
@@ -159,32 +166,33 @@ struct WalletFlowBand: View {
             .accessibilityElement(children: .combine)
             .accessibilityLabel(Text(spokenDiagram))
 
-            // **THE COVERAGE NOTE MOVED BELOW THE BAND, IT DID NOT GO** (prd
-            // §483). Stated, never swallowed — a band drawn from six of nine
-            // moves is a different claim from one drawn from all nine, and that
-            // is §83, not decoration.
+            // **THE COVERAGE NOTE IS GONE** (user ruling, prd §483: *"get rid
+            // of '1 move couldn't be priced' — this is a summary, we don't need
+            // all"*). It said the band was drawn from six of nine moves rather
+            // than all nine.
             //
-            // Below rather than above because it is a caveat ABOUT the drawing:
-            // above, it was one of four lines you read before reaching the
-            // thing it qualifies. One line at 20pt still fits the room's fixed
-            // 200pt slot beside a 150pt band and a 26pt reading.
-            if let note = coverageNote {
-                Text(note)
-                    .dsText(.label12).foregroundStyle(DS.textTertiary)
-                    .lineLimit(1)
-                    .padding(.horizontal, WalletCardStyle.pad)
-                    .padding(.top, DS.Space.s2)
-            }
+            // That is a real §83 fact and it is worth saying WHY dropping it is
+            // not the overclaim it looks like: this scope's own list sits
+            // directly below the toggle and holds every move, priced or not. The
+            // drawing was never the complete record and does not have to be —
+            // it is the summary, the list is the record, and a caveat about
+            // completeness belongs to whichever one CLAIMS to be complete.
+            //
+            // `coverageNote` survives, unused by this view, because it is also
+            // read by `spokenDiagram`: a sighted reader has the list two rows
+            // down, and a VoiceOver reader stepping through the figure does not.
         }
         // A plain set: each element owns its own delayed animation above.
         .onAppear { entered = true }
-        // Clipped FIRST, surfaced second (2026-08-22): the band bleeds to the
-        // card's own edges, so the clip has to reach it — and `dsWidgetSurface`
-        // carries a shadow, which a clip applied after would cut away. Same
-        // recipe as every other card in the room; see `WalletRiskStrip` for why
-        // `fillFaint` was the wrong ground.
-        .clipShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
-        .dsWidgetSurface(fillOpacity: WalletCardStyle.fill)
+        // **NO CARD, NO CLIP** (user ruling, prd §483: *"it is still on a card
+        // and shouldn't be"*). The 2026-08-22 recipe above — clip first, surface
+        // second — existed because the band BLED to the card's edges and the
+        // clip had to reach them. There is no card now, and nothing to bleed
+        // against: the drawing is hairlines with their own margins, so a clip
+        // would only cut the strokes' round caps at the extremes.
+        //
+        // Every drawing in this room sits bare on the page now — the sparkline,
+        // the treemap, and this.
     }
 
     private var summary: String {
@@ -325,9 +333,20 @@ struct WalletFlowBand: View {
                 .frame(width: 2.2, height: gate * CGFloat(leftShare))
                 .offset(x: cx - 1.1, y: gateTop)
 
+            // **THE OUTER END OF EVERY STRAND IS EVENLY SPACED, NOT
+            // PROPORTIONAL** (prd §483). The labels sat at their lane's own
+            // proportional position, which is where the AMOUNT puts them — so
+            // the small lanes bunched, and once the label became two lines they
+            // drew on top of each other on both sides ("Sam" over "Uniswap",
+            // "Other" over "Bitrefill").
+            //
+            // Proportion belongs at the GATE, where it is the reading; at the
+            // rim it was only ever deciding where a word goes. Even spacing
+            // there also fills the band's full height instead of clustering
+            // everything into its middle third.
             ForEach(inSegs.indices, id: \.self) { i in
                 let seg = inSegs[i]
-                strand(from: CGPoint(x: labelColumn, y: seg.slabTop + seg.height / 2),
+                strand(from: CGPoint(x: labelColumn, y: rimY(i, of: inSegs.count)),
                        to: CGPoint(x: cx, y: gateTop + gateOffset(inSegs, i, gate: gate,
                                                                   total: band.inUSD, share: 1)))
                     .stroke(DS.confirm.opacity(0.74 - 0.09 * Double(seg.rank)),
@@ -339,17 +358,17 @@ struct WalletFlowBand: View {
                 strand(from: CGPoint(x: cx, y: gateTop + gateOffset(outSegs, i, gate: gate,
                                                                     total: band.outUSD,
                                                                     share: leftShare)),
-                       to: CGPoint(x: width - labelColumn, y: seg.slabTop + seg.height / 2))
+                       to: CGPoint(x: width - labelColumn, y: rimY(i, of: outSegs.count)))
                     .stroke(DS.textPrimary.opacity(0.44 - 0.055 * Double(seg.rank)),
                             style: StrokeStyle(lineWidth: strandWidth(seg.lane.usd, of: heaviest),
                                                lineCap: .round))
             }
 
             ForEach(inSegs.indices, id: \.self) { i in
-                endpoint(inSegs[i], x: labelColumn, incoming: true, width: width)
+                endpoint(inSegs[i], y: rimY(i, of: inSegs.count), incoming: true, width: width)
             }
             ForEach(outSegs.indices, id: \.self) { i in
-                endpoint(outSegs[i], x: width - labelColumn, incoming: false, width: width)
+                endpoint(outSegs[i], y: rimY(i, of: outSegs.count), incoming: false, width: width)
             }
 
             // The gate is YOURS — the one ornament in the room, and the only
@@ -370,7 +389,11 @@ struct WalletFlowBand: View {
 
     /// The label gutter on each side. Text NEVER shares space with a stroke —
     /// the rule the band version could not keep.
-    private var labelColumn: CGFloat { 94 }
+    /// 100, not 128. With the name on its own line a gutter no longer has to
+    /// hold "Coinbase $2K" side by side — and 128 each side left the strokes
+    /// only 98pt of a 354pt band to cross in, which is what made the drawing
+    /// read as cramped in its own middle. The field is 154 now.
+    private var labelColumn: CGFloat { 100 }
 
     /// 1…3.6pt by amount. Enough that the heaviest lane reads heavier at a
     /// glance; never so much that a stroke has to contain anything.
@@ -398,29 +421,62 @@ struct WalletFlowBand: View {
         }
     }
 
-    /// A terminal dot and its name — the amount beside it, both outside the
-    /// stroke field.
+    /// Where a strand meets the rim — EVENLY spaced, never proportional.
+    ///
+    /// Proportion is the gate's job; here it only decides where a word sits, and
+    /// putting words at their amount's position bunches the small lanes until
+    /// they overlap. Even spacing also uses the band's whole height rather than
+    /// crowding everything into its middle.
+    private func rimY(_ i: Int, of count: Int) -> CGFloat {
+        guard count > 1 else { return bandHeight / 2 }
+        let inset: CGFloat = 16
+        return inset + (bandHeight - inset * 2) * CGFloat(i) / CGFloat(count - 1)
+    }
+
+    /// A lane's name and amount at the rim.
+    ///
+    /// **NO TERMINAL DOT** (user: *"do the lines even need dots at the end?"* —
+    /// they do not). A dot marked where a stroke ended, which the stroke's own
+    /// round cap already does, sitting against a label that names the same
+    /// thing. Three marks for one lane; the two that carry meaning stay.
+    ///
+    /// **NAME AND AMOUNT SHARE ONE BASELINE, the amount pushed hard against the
+    /// screen edge** (2026-08-26, prd §483 — reported as *"perhaps this is a
+    /// little too tall it feels jammed in… seems like we could use the space
+    /// better"*, and it was, measurably).
+    ///
+    /// Stacked, each end cost ~37pt of type inside a ~42pt rim step, so four
+    /// lanes filled the band with about 5pt of air and the strokes had nowhere
+    /// to curve. On one baseline an end costs ~21pt, which buys back roughly
+    /// 16pt PER LANE — and it is bought from the axis that was scarce (height)
+    /// rather than from the gutters, which is why `labelColumn` does not move:
+    /// the earlier fix already took those from 128 to 100 and the collisions
+    /// were never horizontal.
+    ///
+    /// A `Spacer(minLength:)` between them, not a fixed gutter: the name may
+    /// shrink to 0.8 and the amount never may, because a truncated figure is a
+    /// WRONG figure while a tightened name is still the same word.
     @ViewBuilder
-    private func endpoint(_ seg: Seg, x: CGFloat, incoming: Bool, width: CGFloat) -> some View {
-        let y = seg.slabTop + seg.height / 2
-        Circle()
-            .fill(incoming ? DS.confirm.opacity(0.9 - 0.1 * Double(seg.rank))
-                           : DS.textPrimary.opacity(0.5 - 0.06 * Double(seg.rank)))
-            .frame(width: 5.2, height: 5.2)
-            .position(x: x, y: y)
-        HStack(spacing: 5) {
-            if !incoming { Spacer(minLength: 0) }
+    private func endpoint(_ seg: Seg, y: CGFloat, incoming: Bool, width: CGFloat) -> some View {
+        // The SAME order on both sides — name first, figure at the outer edge
+        // — rather than mirrored. Mirroring reads as tidier in a sketch and
+        // costs the reader the one thing this drawing is for: with the figures
+        // in a single column down each edge they compare at a glance, and
+        // mirrored they zig-zag.
+        HStack(alignment: .firstTextBaseline, spacing: 0) {
             Text(seg.lane.name)
                 .dsText(.subhead13).foregroundStyle(DS.textPrimary)
                 .lineLimit(1)
+                .minimumScaleFactor(0.8)
+            Spacer(minLength: DS.Space.s2)
             Text(WalletValue.money(seg.lane.usd))
-                .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+                .dsText(.label12).foregroundStyle(DS.textSecondary)
                 .monospacedDigit()
-            if incoming { Spacer(minLength: 0) }
+                .fixedSize()
         }
-        .frame(width: labelColumn - 12, alignment: incoming ? .trailing : .leading)
-        .position(x: incoming ? (labelColumn - 12) / 2
-                              : width - (labelColumn - 12) / 2,
+        .frame(width: labelColumn - 10, alignment: incoming ? .trailing : .leading)
+        .position(x: incoming ? (labelColumn - 10) / 2
+                              : width - (labelColumn - 10) / 2,
                   y: y)
         .contentShape(Rectangle())
         .onTapGesture { pick(seg.lane) }

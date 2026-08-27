@@ -152,7 +152,23 @@ KNOWN_EXEMPT = {
     # 384 → 388 (2026-08-22): the card gained its shared surface recipe
     # above this line, which is code, so the key moved exactly as the
     # note above says it does. The gesture and the ruling are unchanged.
-    "WalletFlowBand.swift:388",
+    #
+    # 388 → 480 and 597 (2026-08-26, prd §483): the band lost its card and its
+    # header, `endpoint` put each lane's name and amount on one baseline, and
+    # `bandHeight` came down — all code above these lines, so both keys moved
+    # exactly as the note above says they do. TWO now rather than one: the lane
+    # slab and the endpoint label are separate gestures and always were, and
+    # the second only surfaced because the first stopped absorbing it when the
+    # comment-stripped offsets changed. The ruling is unchanged for both — each
+    # press names a lane the combined `spokenDiagram` sentence already speaks
+    # in full, so a trait here manufactures the stray labels §299 forbids.
+    # 480/597 → 482/599 the same day, when `bandHeight` came back up to fill
+    # the slot on the device. Same drift, same reason, and worth noting that
+    # this key is fragile BY DESIGN: it drifts safe (a stale key stops
+    # exempting and the finding returns loudly), so re-pinning it is the cost
+    # of a set that can never silently swallow something new.
+    "WalletFlowBand.swift:482",
+    "WalletFlowBand.swift:599",
 }
 
 # Size expressions that already encode the floor, so an explicit number is not

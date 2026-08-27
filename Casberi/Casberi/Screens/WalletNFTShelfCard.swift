@@ -192,43 +192,222 @@ struct WalletNFTShelfCard: View {
             .padding(.horizontal, DS.Space.s4)
     }
 
+    /// **A QUAD OF FOUR COLLECTIONS, one cover each** (2026-08-26, prd §483 —
+    /// user: *"the chart is four large NFTs in a quad b/c they can pick four
+    /// to show"*, then *"it can be a quad of the collections"*).
+    ///
+    /// Four COLLECTIONS rather than four pieces, which is what keeps §387's
+    /// pick unit intact: a pick names a contract, never a token id, because
+    /// *"show my Squiggles" is a sentence someone means* and picking three
+    /// specific tokens out of a collection is filing. So the quad shows the
+    /// picks themselves, and the cover is simply the first piece that came
+    /// back for each — the shelf's own read, grouped, with no second fetch and
+    /// no new stored state.
+    ///
+    /// **Four, and the fifth is a count, never a scroll.** The strip this
+    /// replaces scrolled horizontally inside a room that already scrolls
+    /// vertically, so the pieces past the third were reachable only by a
+    /// gesture nothing announced. A quad is the whole reading at once; if
+    /// there are more collections than fit, the slot says so in words and the
+    /// list directly below carries every one of them.
     private var strip: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: DS.Space.s2) {
-                ForEach(pieces) { piece in
-                    // A piece on a chain OpenSea doesn't list (Robinhood) has
-                    // no door, so it draws as a picture and not as a control —
-                    // §83, and §275 specifically: a verb that looks live and
-                    // lands nowhere is worse than no verb.
-                    if let url = piece.openSeaURL {
-                        Button { openURL(url) } label: {
-                            tile(piece)
+        let groups = coverGroups
+        return VStack(spacing: DS.Space.s2) {
+            ForEach(0..<2, id: \.self) { row in
+                HStack(spacing: DS.Space.s2) {
+                    ForEach(0..<2, id: \.self) { col in
+                        let i = row * 2 + col
+                        if i < groups.count {
+                            quadCell(groups[i])
+                        } else {
+                            // An absent quarter is EMPTY, never a placeholder
+                            // tile: a grey square where art goes reads as a
+                            // picture that failed to load, which is the one
+                            // thing a shelf must not say about somebody's own
+                            // collection.
+                            Color.clear
                         }
-                        // The photograph register (§384) — a picture lifts.
-                        .buttonStyle(PressLift())
-                    } else {
-                        tile(piece)
                     }
                 }
             }
-            .padding(.horizontal, DS.Space.s4)
-            // The lift overshoots the tile, so the strip needs room to grow
-            // into or a pressed edge tile is clipped by its own scroll view.
-            .padding(.vertical, 4)
+        }
+        .aspectRatio(1, contentMode: .fit)
+        .padding(.horizontal, DS.Space.s4)
+    }
+
+    /// One cover per PICKED COLLECTION, in the order the pieces came back, up
+    /// to four. Grouped rather than fetched: `pieces` is already the shelf's
+    /// cached read for exactly this pick book.
+    private var coverGroups: [(collection: String, cover: WalletNFTShelf.NFTPiece, count: Int)] {
+        var order: [String] = []
+        var byCollection: [String: [WalletNFTShelf.NFTPiece]] = [:]
+        for piece in pieces {
+            if byCollection[piece.collection] == nil { order.append(piece.collection) }
+            byCollection[piece.collection, default: []].append(piece)
+        }
+        return order.compactMap { name in
+            guard let held = byCollection[name], let cover = held.first else { return nil }
+            return (name, cover, held.count)
+        }
+    }
+
+    /// One quarter of the quad. The door is the COVER's OpenSea page — the
+    /// nearest honest destination, since a collection's own page is a market
+    /// listing and this app has never claimed to price these (§387).
+    @ViewBuilder
+    private func quadCell(_ group: (collection: String, cover: WalletNFTShelf.NFTPiece, count: Int)) -> some View {
+        // A piece on a chain OpenSea doesn't list (Robinhood) has no door, so
+        // it draws as a picture and not as a control — §83, and §275
+        // specifically: a verb that looks live and lands nowhere is worse than
+        // no verb.
+        if let url = group.cover.openSeaURL {
+            Button { openURL(url) } label: { quadArt(group.cover) }
+                // The photograph register (§384) — a picture lifts.
+                .buttonStyle(PressLift())
+        } else {
+            quadArt(group.cover)
         }
     }
 
     @ViewBuilder
-    private func tile(_ piece: WalletNFTShelf.NFTPiece) -> some View {
-        if let seed = piece.demoSeed {
-            // The demo's pieces are drawn, not loaded — generated art, never a
-            // real collection's work (prd §387).
-            DemoNFTArt(seed: seed)
-                .frame(width: Self.tile, height: Self.tile)
-                .accessibilityLabel(Text(piece.name))
-        } else {
-            RemoteThumb(urlString: piece.imageURL, size: Self.tile)
-                .accessibilityLabel(Text(piece.name))
+    private func quadArt(_ piece: WalletNFTShelf.NFTPiece) -> some View {
+        Group {
+            if let seed = piece.demoSeed {
+                // The demo's pieces are drawn, not loaded — generated art,
+                // never a real collection's work (prd §387).
+                DemoNFTArt(seed: seed)
+            } else {
+                RemoteThumb(urlString: piece.imageURL, size: Self.tile)
+            }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .clipShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
+        .accessibilityLabel(Text(piece.collection))
+    }
+
+}
+
+/// THE COLLECTIONS BEHIND THE QUAD, one row each (2026-08-26, prd §483).
+///
+/// The scope's list half. Its sibling above draws four covers; this names
+/// every picked collection, including the ones the quad had no room for —
+/// which is what lets the quad cap at four without hiding anything.
+///
+/// **There is no price column and there will not be one.** §387 refused a
+/// floor price and §481 refused it again, both for the same reason: a floor is
+/// a bid on the thinnest book in this app, it moves without you, and a number
+/// people believe (§83) does not belong beside art somebody keeps for reasons
+/// that are not the number. `WalletNFTShelf` stores no value anywhere, so
+/// there is nothing here to round — the row says what it is, how many of it
+/// this wallet holds, and where to go.
+struct WalletNFTCollectionRows: View {
+    let wallet: String
+    var onEdit: () -> Void
+
+    @ObservedObject private var picks = WalletNFTStore.shared
+    @Environment(\.openURL) private var openURL
+
+    @State private var pieces: [WalletNFTShelf.NFTPiece] = []
+
+    private var demo: Bool { DemoMode.isActive }
+
+    /// Every picked collection with something to show, held-count first seen
+    /// order — the same grouping the quad makes, so the two halves can never
+    /// list a different set.
+    private var groups: [(collection: String, cover: WalletNFTShelf.NFTPiece, count: Int)] {
+        var order: [String] = []
+        var byCollection: [String: [WalletNFTShelf.NFTPiece]] = [:]
+        for piece in pieces {
+            if byCollection[piece.collection] == nil { order.append(piece.collection) }
+            byCollection[piece.collection, default: []].append(piece)
+        }
+        return order.compactMap { name in
+            guard let held = byCollection[name], let cover = held.first else { return nil }
+            return (name, cover, held.count)
+        }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ForEach(groups, id: \.collection) { group in
+                row(group)
+            }
+            // The way back into the picker. It sits UNDER the list rather than
+            // in a header, because the quad above already carries the scope's
+            // heading and a second one here would be the two-display-lines
+            // failure §447 recorded.
+            if !demo {
+                Button(action: onEdit) {
+                    Text(String(localized: "Choose collections"))
+                        .dsText(.subhead13).fontWeight(.medium)
+                        .foregroundStyle(DS.tint)
+                        .padding(.vertical, DS.Space.s3)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(PressSpring())
+            }
+        }
+        .task(id: taskKey) { await load() }
+    }
+
+    /// Both the wallet AND the pick signature — the sibling card's own reason:
+    /// a pick removed and another added in one sitting leaves a count
+    /// unchanged.
+    private var taskKey: String {
+        "\(wallet)|\(picks.book.picks(wallet: wallet).sorted().joined(separator: ","))"
+    }
+
+    private func load() async {
+        guard demo || picks.hasPicks(wallet: wallet) else {
+            pieces = []
+            return
+        }
+        pieces = await WalletNFTShelf.pieces(for: wallet, book: picks.book)
+    }
+
+    @ViewBuilder
+    private func row(_ group: (collection: String, cover: WalletNFTShelf.NFTPiece, count: Int)) -> some View {
+        let body = HStack(spacing: DS.Space.s3) {
+            mark(group.cover)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(group.collection)
+                    .dsText(.heading17).foregroundStyle(DS.textPrimary)
+                    .lineLimit(1)
+                Text(group.count == 1
+                     ? String(localized: "1 piece")
+                     : String(localized: "\(group.count) pieces"))
+                    .dsText(.subhead13).foregroundStyle(DS.textSecondary)
+            }
+            Spacer(minLength: 0)
+            if group.cover.openSeaURL != nil {
+                Image(systemName: "chevron.right")
+                    .dsGlyph(11)
+                    .foregroundStyle(DS.textTertiary)
+            }
+        }
+        .padding(.vertical, DS.Space.s2)
+        if let url = group.cover.openSeaURL {
+            Button { openURL(url) } label: { body.contentShape(Rectangle()) }
+                .buttonStyle(.plain)
+                .dsHover()
+        } else {
+            body
+        }
+    }
+
+    /// The collection's cover at row scale — the same art the quad shows, so
+    /// the row and the quarter above are visibly the same collection.
+    @ViewBuilder
+    private func mark(_ piece: WalletNFTShelf.NFTPiece) -> some View {
+        Group {
+            if let seed = piece.demoSeed {
+                DemoNFTArt(seed: seed)
+            } else {
+                RemoteThumb(urlString: piece.imageURL, size: DS.Face.list)
+            }
+        }
+        .frame(width: DS.Face.list, height: DS.Face.list)
+        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .accessibilityHidden(true)
     }
 }

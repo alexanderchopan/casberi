@@ -1356,6 +1356,18 @@ enum WalletIngest {
     /// - **Scoped, or a single wallet** → that wallet's own map, unchanged.
     @MainActor
     static func portfolioRead(scopeTo address: String? = nil) async -> (doc: [String], portfolio: WalletPortfolio)? {
+        // **THE DEMO READS NOTHING, SO IT BUILDS ITS OWN** (prd §483). Without
+        // this the Holdings scope is absent from the demo entirely — the room's
+        // most distinctive drawing, missing from the thing that exists to show
+        // people what the app does. Derived from the demo's OWN seeded value
+        // samples, so the map can never disagree with the crown; see
+        // `WalletPortfolio.demoFixture`.
+        if DemoMode.isActive {
+            let portfolio = WalletPortfolio.demoFixture(scopeTo: address)
+            guard !portfolio.isEmpty else { return nil }
+            let cells = portfolio.treemapCells.joined(separator: ", ")
+            return (["root = TagMap(\(q("")), \(q("")), [\(cells)], \(q("token")))"], portfolio)
+        }
         var groups = await topHoldingsByWallet()
         // The Wallet feed can scope to one watched wallet (prd §128) — filter
         // the groups AFTER the fetch, never before, so every wallet's value

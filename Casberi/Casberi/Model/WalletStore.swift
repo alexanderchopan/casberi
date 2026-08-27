@@ -68,9 +68,26 @@ final class WalletStore {
     /// person can see. And the short form is PERSISTED as a placeholder name
     /// by `WalletStore.add`, so books written before this ruling hold the old
     /// spelling: use `isAutoName(_:for:)`, never `== shortAddress(…)`.
+    /// **BARE FOUR, no leading ellipsis** (user ruling, prd §483, 2026-08-26:
+    /// *"if there is no name given for an account it shows last four of the
+    /// account not even …xxxx just xxxx"*).
+    ///
+    /// The ellipsis was doing one job — saying "this is a fragment" — and
+    /// nothing that carries this string needs telling: it appears as a rail
+    /// caption under a face, as a row's leading identity, or beside a name it
+    /// is already the detail for. In every one of those the surrounding UI
+    /// already says it is an account. What the character actually cost was the
+    /// four glyphs that matter, in a 66pt rail slot, where a label truncates at
+    /// roughly nine characters.
+    ///
+    /// **The poisoning check below is unaffected and that is the point** —
+    /// `isAutoName` still keys on this function, so a lookalike matching on the
+    /// last four is still caught on exactly the characters the person can see.
+    /// Books written before this ruling hold the old spelling, which is why
+    /// that helper accepts both.
     static func shortAddress(_ address: String) -> String {
         guard address.count > 12 else { return address }
-        return "…\(address.suffix(4))"
+        return String(address.suffix(4))
     }
 
     /// Is `name` a placeholder this app generated, rather than something the
@@ -90,8 +107,13 @@ final class WalletStore {
     static func isAutoName(_ name: String, for address: String) -> Bool {
         guard !name.isEmpty else { return false }
         if name == shortAddress(address) { return true }
-        // The pre-2026-08-12 head-and-tail form.
         guard address.count > 12 else { return false }
+        // Books written before a spelling change still hold the OLD placeholder,
+        // and a placeholder we no longer recognise reads as a name the person
+        // typed — so the wallet would stop being offered a real one. Both dead
+        // forms stay listed: the ellipsis-four (to 2026-08-26, prd §483) and the
+        // pre-2026-08-12 head-and-tail.
+        if name == "…\(address.suffix(4))" { return true }
         return name == "\(address.prefix(6))…\(address.suffix(4))"
     }
 
