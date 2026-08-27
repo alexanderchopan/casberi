@@ -386,7 +386,16 @@ let passkey = AK.Key(id: "0x" + kid(30), isRoot: false,
                      chainLabel: "BNB Smart Chain")
 guard let kindCard = AltanaRoom.compose(readings: [reading("0xa", [root, passkey])], now: now),
       let kindRow = kindCard.rows.last else { print("  ✗ a passkey composes"); exit(1) }
-check(kindRow.title == "Passkey", "a P-256 credential is titled by the word a person already owns")
+// **"P-256 key", NOT "Passkey"** (prd §491, amending §405's own wording).
+// That ruling named this registry's `.p256` after the CURVE because the enum
+// here has two curves and no WebAuthn case, so "Passkey" named a curve after
+// one way of registering it — and vibenet, one room over, lists `.p256` and
+// `.webAuthn` as separate rows on the same account. The same credential
+// cannot be a passkey here and a P-256 key there.
+//
+// The guard is amended rather than deleted: what §405 actually ruled is that
+// the row is titled by its KIND rather than by its role, and that is intact.
+check(kindRow.title == "P-256 key", "a P-256 credential is titled by its curve")
 check(kindRow.detail?.contains("Session key") != true,
       "…and the role is IMPLIED by the grant, not respelled (§406)")
 // The role IS said when nothing else implies it: a kind-titled session with
@@ -398,7 +407,7 @@ let grantless = AK.Key(id: "0x" + kid(32), isRoot: false,
 guard let grantlessCard = AltanaRoom.compose(readings: [reading("0xa", [root, grantless])], now: now) else {
     print("  ✗ a grantless session composes"); exit(1)
 }
-check(grantlessCard.rows.last?.title == "Passkey", "…(fixture premise: the title took the kind)")
+check(grantlessCard.rows.last?.title == "P-256 key", "…(fixture premise: the title took the kind)")
 check(grantlessCard.rows.last?.detail?.contains("Session key") == true,
       "…so with NO grant to imply it, the role IS said — the exception that keeps the rule honest")
 let unknownKind = AltanaRoom.compose(readings: [reading("0xa", [root, live])], now: now)
@@ -442,7 +451,7 @@ let kindRoot = AK.Key(id: "0x" + kid(33), isRoot: true, expiry: nil,
 guard let kindRootCard = AltanaRoom.compose(readings: [reading("0xa", [kindRoot, live])], now: now) else {
     print("  ✗ a kind-titled root composes"); exit(1)
 }
-check(kindRootCard.rows.first?.title == "Passkey", "…(fixture premise: the title took the kind)")
+check(kindRootCard.rows.first?.title == "P-256 key", "…(fixture premise: the title took the kind)")
 check(kindRootCard.rows.first?.detail?.hasPrefix("Root ·") == true,
       "a kind-titled root's detail leads the bare word Root — its title already says key")
 
@@ -552,7 +561,7 @@ sheetM = AltanaKeySheet.Model(keyID: "0x" + String(repeating: "0", count: 64),
                               expiry: Date(timeIntervalSince1970: TimeInterval(sessExp)),
                               signatureCount: 0, chainLabel: "BNB Smart Chain",
                               curve: .p256, alsoSignsFor: [])
-check(AltanaKeySheet.subtitle(sheetM) == "Passkey · BNB Smart Chain",
+check(AltanaKeySheet.subtitle(sheetM) == "P-256 key · BNB Smart Chain",
       "THE ROLE IS GONE FROM THE SUBTITLE — the title states or implies it, and two adjacent lines both saying session was §406's complaint")
 check(AltanaKeySheet.title(sheetM) == "24-hour key",
       "…(fixture premise: the title is the grant phrase, which implies the role)")

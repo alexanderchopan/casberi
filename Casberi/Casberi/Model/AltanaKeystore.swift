@@ -493,8 +493,11 @@ enum AltanaKeystore {
         /// **"secp256k1 key", not "Wallet key" (user ruling, prd §491).** Named
         /// after the curve for the reason vibenet's own `plainTitle` was: this
         /// app's other half is called Wallet, so a key type named after it
-        /// reads as belonging to that room. `.p256` stays "Passkey" — that IS
-        /// the word a person knows for it, and it collides with nothing.
+        /// reads as belonging to that room. `.p256` is named for its curve
+        /// too — see the note on the case itself, which is where the reason
+        /// lives. (This paragraph said the opposite until 2026-08-27: §491
+        /// changed the case and left the doc above it standing, so the file
+        /// argued with itself for a day.)
         var label: String? {
             switch self {
             case .secp256k1: String(localized: "secp256k1 key")
