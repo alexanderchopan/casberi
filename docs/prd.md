@@ -99,6 +99,8 @@ at all.
 | §440 | The wallet manager: four sections — the way in, who you watch, how they connect, the record | superseded by §461 (the last two are a room of their own) |
 | §441 | Starring an address flies its face from the book row to the shelf slot | amended by §448 |
 | §295 | The connections card leads with a headline counting the connected addresses | amended by §448 |
+| §465 | Wallet and vibenet keep two names ledgers — the structure copied, never the type | amended by §496 (the LEDGER is shared now; the two screens stay separate types, reading and writing one `AddressBook`) |
+| §472 | Stopping the last watched vibenet account forgets the names given to your accounts | amended by §496 (names live in `AddressBook` now and outlive every watch — disconnect only drops the chip) |
 | §18 | Feed spec | amended by §64 |
 | §417 | The holdings card leads with its reading at `heading22` | amended by §447 |
 | §155 | The combined holdings map's subline names the money and the wallet count | amended by §447 |
@@ -193,6 +195,7 @@ marks chronological position within the pair.
 | §369 | §363 | the money receipt collided with the social sheet, which opened the §364–§368 category series and keeps the bare number by document order (2026-08-12 integration merge) |
 | §377a | §377 | the quick-action fix collided with the All-feed fold, which cites §377 nine times across five files and opens the §377–§379 series; the quick action cites it once and is the earlier of the pair (2026-08-14 integration merge) |
 | §467 | §464 | the vibenet room/event-sheet session collided with the Safe rings ruling, which is the one that reached the ledger and therefore keeps the bare number by document order; the vibenet half was never written down at all — see §467 (2026-08-25) |
+| §482 (amendment) | A short address under a face is only the last four digits, with no ellipsis | reversed by §495 (the short form only ever appears where a NAME would have been — it is the fallback half of `name(for:) ?? shortAddress(…)` at all fourteen call sites — so the ellipsis is what stops "9a0b" reading as a name somebody chose; the 66pt width argument did not survive measurement at ~34pt) |
 
 ## 1. Thesis
 
@@ -35658,3 +35661,271 @@ tidying type tiers. The inventory is done and the decision is open.
 its scope: a scoped account's crown draws the WHOLE room's delta beside its
 own balance (0.014 ETH with the room's +38.9%), and the Accounts scope's
 headline is the balance aggregate's line rather than anything about accounts.
+
+
+### 6. ROOMS AND SHEETS, 2026-08-27 — one template, and what it cost to find
+
+Everything above is the event sheet. What follows is the same day's work on
+the ROOMS either side of it, appended here rather than given a number of its
+own because ~20 commits cite §495 for it and a citation that resolves to the
+wrong reasoning is worse than a long entry.
+
+**The report was "the toggle bar jumps" and it was made three times.** I
+answered it twice with measurements proving the bar does not move — 542.0pt
+on every scope, to the pixel — and both answers were true and useless. The
+bar never moved. What moved was EVERYTHING ABOVE IT.
+
+The room's slot is a fixed 210pt box, so the box was never the variable.
+What varied was how the box got FILLED, and there were three templates
+where there should have been one: Home drew its crown directly with its own
+headline, Activity and Accounts drew cards that carried their own headlines
+inside, Permissions passed its headline to the chassis, and Holdings passed
+nil and then faked the settings-gear clearance with 44pt of top padding. So
+each scope's drawing began at a different y inside the same box, and tapping
+a chip reshaped the whole region above the bar — which is indistinguishable
+from the bar moving, and just as wrong.
+
+The user named the diagnosis before I found it: *"WHY AREN'T YOU USING THE
+SAME TEMPLATE FOR ALL"*.
+
+#### What one template means
+
+`DSRoomSlot` is the single definition of that box — fixed height, one
+horizontal inset, top-aligned, clipped, and a headline row RESERVED whether
+or not a headline is drawn. Both rooms draw through it.
+
+Reserving the row unconditionally is the load-bearing part: it is what makes
+every scope's drawing start at the same y, and it earns the gear clearance
+for free, which is why Holdings' 44pt hack could be deleted rather than
+moved. **`reservesHeadline` is the one parameter and the rule is: reserve
+the row only where the CHASSIS draws the headline.** A crown IS the headline,
+so it stands in the row rather than under it; Wallet's figures name
+themselves inside their own drawings, so its slots take the whole box.
+
+Getting that rule wrong shipped a regression the user caught on three
+screens at once — the holdings treemap, the NFT quad and the Permissions
+rungs all clipped along their bottom edge, because a 42pt reserved band came
+straight out of figures sized for the whole slot.
+
+#### `DSSheetHead`, and why the first cut failed
+
+All three vibenet sheets — event, key, account — now open with the money
+receipt's anatomy (§363): a subject disc and a state stamp on one row, then
+when, then the thing's own words, then one supporting line, then one
+sentence saying what it means now. That shape was written for money and is
+not ABOUT money; every part answers a question any event has.
+
+**The first cut of it was rejected, and the reason is the lesson.** I
+adapted the anatomy by reading `MoneyReceiptCard`'s source and reproduced
+its arrangement faithfully — and the user said *"it just looks like a jumble
+of text"*, because what makes the receipt legible is invisible in source: it
+is an OBJECT. A raised surface, a pour of the room's hue, and the scalloped
+torn edge. Bare on the page the same words really are a jumble. Read the
+screen, not only the file.
+
+#### The jump, finally
+
+Two causes, found in order, neither visible to a settled screenshot:
+
+1. **The transition.** Each scope produced its own `DSRoomSlot`, so SwiftUI
+   REPLACED one view with another rather than updating one in place, and
+   under `withAnimation` it interpolated that replacement — two drawings of
+   different natural heights briefly sharing the box. The content swap is
+   instant now. The SELECTION still animates, so 2026-07-14's "selection is
+   an object travelling, not two states blinking" is untouched.
+2. **The scroll clamp.** Changing scope replaces the room's content, so the
+   list's extent changes under a scroll offset that no longer means
+   anything and the scroll view clamps. `returnToRoomTop` fixes it — and it
+   was hooked to the scope CHIPS and not the face RAIL, because the first
+   report named the chips, so tapping an account still threw the bar up the
+   screen until the user reported it again.
+
+The user diagnosed both: *"it lands in place, but jumps"*, and *"before it
+was in different places, so you fixed part of it"*.
+
+#### Wallet could not join at first, and the hairline is why
+
+Wallet's chassis is built from List SECTIONS and vibenet's from a `VStack`.
+Wrapping a `Section` in a plain view collapses it into one row and drops the
+`listRowSeparator(.hidden)` its rows carry — which put a HAIRLINE under the
+sparkline, and §8 bans those outright. That is what made the first attempt
+fail, and it was found by INSTALLING the build: it compiled, and all 72
+checks stayed green.
+
+Wallet's seven scope builders are bare views now, the `Section` and its row
+modifiers are written once at the call site, and both rooms draw the same
+slot. Measured after: Wallet Home and Holdings both put the strip at 552.0pt
+and both start their drawing at 273.3pt.
+
+#### Smaller rulings from the same day
+
+- **No mark on a key row.** A row's mark is its own SUBJECT — a holding's
+  token, an account's face, an event's change. A key's subject is a key, and
+  no glyph reads as one. The user's argument is the one that settles it:
+  *"if we use key then it would be like why aren't we using it in places we
+  use a + sign"*, and then, seeing it built, *"it makes it all become a
+  wall"*.
+- **The NFT quad fills its quadrants.** Four squares cannot tile a 370x210
+  box; the choice is crop the art, change the count, or leave margins. The
+  user chose the crop and accepted the gear overlapping one cell.
+- **`LiveTimeText` everywhere.** A row said "23 hours ago" — 110pt of a
+  402pt screen — while every other row in the app says "23h". The title was
+  wrapping for want of width the trailing slot did not need.
+- **One leading column.** Card figures, lists and the account detail all
+  land on the row's own leading (`s4 + s3` = 27pt), derived rather than
+  typed. An earlier fix the same day landed them on 15pt, which aligned them
+  with each other and pulled both twelve points off the rows beneath — the
+  doubling was real, 15 was not the number.
+- **The chassis tightened one rung.** `railGap`/`switcherGap` to `s1`,
+  `contentGap` to `s2`. Measured first, because "one more row" is a number:
+  the chrome above the first row was 535pt of an 874pt screen and a two-line
+  row is ~90pt, so a whole extra row costs ~85pt and the only place that
+  much slack exists is the slot every drawing was just made to fill.
+
+#### 7. THE ELLIPSIS COMES BACK (2026-08-27) — reverses §482's amendment
+
+§482's amendment ruled a short address is "only last four digits no
+ellipsis". This reverses it, on the user's word after seeing it shipped.
+
+**The reason is what the short form is FOR.** It is never decoration and
+never a caption in its own right: at every one of its fourteen call sites it
+is the fallback half of `name(for:) ?? shortAddress(…)`, so it appears
+exactly where a NAME would have been. The ellipsis is the one mark
+separating "this has no name, here is the tail of its address" from "this is
+called 9a0b" — and without it the app asserts a name nobody gave, which is
+§83 in its quietest voice. The width argument that motivated dropping it did
+not survive measurement: "…9a0b" at `label12` is about 34pt inside the
+rail's 66pt caption slot.
+
+**What survives is the half that was never about the ellipsis — NO DOUBLE
+TRUNCATION.** `0xd889…de…` was §450's real defect, an ellipsis arriving
+twice because two layers each truncated, and `address-safety-selftest` still
+counts them: exactly one, never two, never zero.
+
+### What this day did NOT fix
+
+**Nothing in this repo measures what the screen does.** All 72 harnesses are
+static text or pure logic, and every defect above was found by the user
+looking at a device — the three-times-reported jump, the clipped figures,
+the hairline, the doubled identity, the indentation. A layout assertion that
+screenshots each scope and compares where the strip and the drawing land
+would catch this entire class, and does not exist.
+
+**The two rooms still compose differently.** They share the slot, the sheet
+head, the constants and the row grammar — but Wallet arranges them as List
+sections and vibenet as a stack. That is the remaining half of "one
+template", and it is why the standing lesson of the day is: **shared
+COMPONENTS are not a shared TEMPLATE.** Five scopes built from the same
+parts drifted into five shapes while every check stayed green.
+
+## 496. One address book, two rooms — Kind.key, a note field, and where an address was met (user: "i want to combine the address book for wallet and vibenet, basically one address book even tho it shows in both rooms. i want to add keys as an address type. i want to add a 'note' field for ever address entry so a user can add a note, and i want to tag or somehow denot where the address is from so someone knows vibenet over something else", then "build the spec", 2026-08-27)
+
+**Amends §465 and §472.** §465 split Wallet's book from vibenet's roster into
+two screens on the reasoning "the structure is copied, never the type" — and
+that half stands. What it got wrong, found only by asking to merge them, was
+the DATA: vibenet kept its own device-local, disconnect-clearing name
+dictionary (`vibenet.watch.names.v1`) instead of the one ledger
+`AddressBook`'s own header already states the doctrine for — "names lived in
+two places that never met... a name the person typed is their data, not
+bookkeeping, so it now lives in exactly one place and outlives every watch."
+That doctrine was written for the Wallet/`CounterpartyLabels` merge and never
+carried to the seat that shipped right after it.
+
+**One store, two screens.** `AddressBook` is the single ledger for both rooms.
+`VibenetWatch` keeps the watch list (which addresses are watched — free on a
+keyless devnet, uncapped, unchanged) but `name(for:)`/`setName(_:for:)` now
+delegate straight to `AddressBook.shared`; every existing call site keeps
+calling the same two methods and sees no difference except that a name now
+survives disconnect and reaches a second device. `VibenetAddressBookScreen`
+keeps its own roster (watched, uncapped, managed there) and
+`AddressBookScreen` shows the whole book, vibenet entries included, each
+badged where it was met. A door on the vibenet screen ("Full address book")
+walks to the shared list, so "one book" is something you can actually walk to
+rather than only a claim in a comment.
+
+**Identity stays the address; network is a TAG.** `AddressBook.key(for:)` is
+unchanged — the same hex keypair watched on vibenet and later met on mainnet
+is one entry, unioned rather than split, the same fill-in-don't-erase shape
+`groups`/`provenance` already use. `Entry.networks: [String]?` carries the
+tags (`AddressBook.Network.vibenet` today; nil/empty is every pre-existing
+mainnet row, unmarked). A composite network+address key was considered and
+refused — it would break `KeyValueMirror`'s stored keys and the alias
+reconcile for every book already synced to iCloud.
+
+**`Kind.key`, asserted, never detected.** An address that signs FOR an
+account — a vibenet authorized secp256k1/delegate key, structurally any
+future signer key — takes the square mark (it's an instrument, not a who) and
+is filed by the door that met it (`VibenetKeySheet`'s "Add to Address Book",
+gated on `VibenetKeyIdentity.signerAddress` — the same guard "Copy signer"
+already used, since a passkey's actorId is a hash with no address inside it
+and there is nothing to file). `AddressKind.detect`/`detectPending` skip
+`.key` entries and every devnet-only entry entirely: `detect`'s five reads are
+MAINNET RPCs, and asking them about a vibenet keystore account answers "no
+code anywhere" and confidently mislabels it `.wallet`. A key COUNTS in the
+book like any other entry — it is an ordinary `AddressBook.Entry` under a
+new `Kind`, not a side ledger, so `AddressBook.shared.count`/`all` include it
+for free.
+
+**`note: String?` — the person's own words, searchable, never printed on a
+row.** Fill-in on merge, stamps `updatedAt` (unlike `setKind`, a note IS the
+person's edit), no-op when unchanged so re-saving an identical note doesn't
+push the whole book to iCloud. Edited in place on the wallet book's
+`AddressCard` (a `TextField(axis: .vertical)` over `DS.surfaceWell`, saved on
+blur rather than per keystroke — `entries`' own `didSet` pushes the whole
+book on every write) and, on the vibenet side, in a `DSTray` reached from the
+account sheet's overflow menu (design law: trays are never hand-rolled, and
+an alert's single-line field would cut a note back to a label the moment it
+tried to be one).
+
+**The Codable hazard, and why it's fixed in the same commit as the case that
+needed it.** `Kind` is a `String`-backed enum decoded through ONE `try?` per
+book (`AddressBook.init`, and `KeyValueMirror`'s remote pull) — an unknown raw
+value used to throw, which would decode a whole incoming book to `[:]`. An
+older build pulling a book that now contains `"key"` would drop it, and its
+next push could clobber the remote blob. `Kind.init(from:)` now falls back to
+`.unknown` on any raw value it doesn't recognise — the honest reading a
+never-checked entry already gets — so the NEXT case added here is safe by
+construction. This only protects builds that carry it; it cannot reach back
+and fix a build that already shipped without it. Accepted risk, stated rather
+than hidden: solo user, few devices, and the alternative (freezing the enum)
+costs the feature this section is about.
+
+**Migration is a fill-in, once.** `AddressBook.migrateVibenetIfNeeded()` reads
+`vibenet.watch.names.v1`/`vibenet.watch.addresses.v1` straight off
+`UserDefaults` — never through `VibenetWatch.shared`, the same no-mutual-
+init-ordering rule the Wallet/`CounterpartyLabels` migration above it already
+follows — and fills in a name (or a short-form fallback for a watched-but-
+unnamed address) only where the book doesn't already have one. The old
+storage key is never deleted (downgrade safety, every migration here keeps
+this rule). `VibenetWatch.add` files the book from today forward, the same
+invariant `AddressBook.addToGroup` already enforces for groups.
+
+**Disconnect stops forgetting names — the copy that used to promise
+otherwise is rewritten.** `VibenetWatch.removeAll()` no longer touches names
+at all (they aren't its data any more); `VibenetAddressBookScreen`'s
+last-account confirm dialog said "the names you gave your accounts are
+forgotten" and now says they stay in the Address Book, because as of this
+entry that's true.
+
+**Demo parity**: `DemoSeedAll` seeds a `.key` entry (`demoVibenetKeySigner`,
+provenance "Vibenet key · Vibe Wallet") and a note on one of the vibenet
+watch addresses; teardown forgets both by address, plus the four watch
+addresses' book entries that `VibenetWatch.remove` (correctly) no longer
+takes with it — the four literal addresses are repeated in the teardown loop
+rather than deduped through a shared list, matching this file's own existing
+style for that block.
+
+**What this deliberately does not do**: merge the two WATCH lists (mainnet's
+cap-five economics vs. the free devnet stand as they were); build a vibenet-
+side kind detector; give a passkey/P-256 key a book entry (no address, so
+nothing to file — the copy test excludes them, not a disabled control); touch
+`exportText` (a note contains commas and newlines and would corrupt the
+`Name, address, group…` bulk-paste round-trip `addBulk` reads back —
+`exportPayload`/`importPayload` carry note/networks losslessly instead); or
+parameterise the two screens into one. `AddressBookScreen`'s own ruling
+stands: the structure is copied, never the type — even though both now read
+and write the one ledger underneath.
+
+**UNMEASURED**: the tolerant `Kind` decode has not been exercised against a
+real cross-device iCloud pull carrying a `.key` entry from an older-vs-newer
+build pair; the vibenet-side note tray has not been seen on a device.
