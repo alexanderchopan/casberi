@@ -152,11 +152,13 @@ struct VibenetKeySheet: View {
                     .foregroundStyle(DS.textTertiary)
             }
         }
+            // **NO CARD** (user, 2026-08-26: *"Lets do headers no cards"*).
+            // This drew on a `fillFaint` slab INSIDE a presented sheet, which
+            // is a card on a card — the same shape §478 called out one level
+            // down and the same one §495 took out of the event sheet and the
+            // account detail. The row is a row.
             .padding(.vertical, DS.Space.s2)
-            .padding(.horizontal, DS.Space.s3)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous)
-                .fill(DS.fillFaint))
             .contentShape(Rectangle())
 
         if let onScope {
@@ -220,7 +222,10 @@ struct VibenetKeySheet: View {
             caption(String(localized: "Terms"))
             VStack(alignment: .leading, spacing: 0) {
                 factRow(String(localized: "Expires"),
-                        actor.expiryLabel(now: .now),
+                        // The VALUE form, not `expiryLabel` — under a label
+                        // already reading "Expires" that one made the row say
+                        // "Expires · Expires in 3 days" (prd §495).
+                        actor.expiryValue(now: .now),
                         weighted: actor.expiryStanding(now: .now) == .soon,
                         tinted: actor.expiryStanding(now: .now) == .soon)
                 ForEach(Array(termRows.enumerated()), id: \.offset) { _, term in
@@ -271,10 +276,11 @@ struct VibenetKeySheet: View {
                 .foregroundStyle(DS.textSecondary)
                 .textSelection(.enabled)
                 .fixedSize(horizontal: false, vertical: true)
-                .padding(DS.Space.s3)
+                // No card here either (§495). §480 gave the id a "ground" so
+                // it would stop being unannounced hex; the CAPTION above is
+                // what actually did that work, and the box was the part the
+                // no-cards ruling removes.
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous)
-                    .fill(DS.fillFaint))
         }
     }
 

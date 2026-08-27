@@ -1873,6 +1873,29 @@ check("a past expiry reads as expired, not as a countdown that went negative",
       actorWithExpiry(UInt64(refNow.timeIntervalSince1970) - 3600).expiryLabel(now: refNow)
         .hasPrefix("Expired"))
 
+// ── prd §495: the LABEL-COLUMN form, which must never repeat its own label ───
+//
+// A third form beside `expiryLabel` and `expiryClock`. The key sheet's Terms
+// table drew `expiryLabel` under a label already reading "Expires", so the row
+// said "Expires · Expires in 3 days" — §366's read-its-first-line-twice with
+// both halves on ONE line.
+check("the value never repeats the word its own label already says",
+      !actorWithExpiry(UInt64(refNow.timeIntervalSince1970) + 3600)
+        .expiryValue(now: refNow).lowercased().contains("expires"))
+// The two branches where `expiryClock` returns nil, which is where a naive
+// "just use the clock" would print an EMPTY cell beside the word "Expires" —
+// worse than either fact, and invisible until somebody holds such a key.
+check("a key that never expires says so rather than nothing",
+      actorWithExpiry(0).expiryValue(now: refNow) == "Never")
+check("an expired key names its date rather than going blank",
+      actorWithExpiry(UInt64(refNow.timeIntervalSince1970) - 3600)
+        .expiryValue(now: refNow).hasPrefix("Expired"))
+// …and the STANDALONE form is untouched: it is drawn where nothing else says
+// what the date is for, so it must keep its verb.
+check("expiryLabel still stands alone",
+      actorWithExpiry(UInt64(refNow.timeIntervalSince1970) + 3600)
+        .expiryLabel(now: refNow).hasPrefix("Expires"))
+
 check("no unlock initiated yet — the badge has nothing to count down to",
       account(locked: true, hasInitiatedUnlock: false).unlockLabel(now: refNow) == nil)
 let readyItem = VibenetAccountItem(address: "0x1", reached: true, established: true, actors: [],
@@ -3974,6 +3997,28 @@ mutateFacts "a ref from another bridge draws no door" \
   'guard parts.count == 4, parts[0] == "vibenet"' \
   'guard parts.count == 4'
 
+
+# **THE TERMS TABLE USES THE VALUE FORM** (prd §495). Under a label already
+# reading "Expires", `expiryLabel` makes the row say "Expires · Expires in 3
+# days". Anchored to the sheet because that is the only place the choice
+# exists — the model offers both forms on purpose.
+grep -q 'actor.expiryValue(now: .now)' "Casberi/Casberi/Screens/VibenetKeySheet.swift" \
+  || { echo "✗ the key sheet's Expires row is back on the standalone form — prd §495: it"
+       echo "  sits under a label that already says the word, so the row reads"
+       echo "  \"Expires · Expires in 3 days\"."; exit 1; }
+
+# **NO CARDS IN THE KEY SHEET** (user, 2026-08-26: "Lets do headers no cards").
+# Both the account row and the key id drew on a `fillFaint` slab INSIDE a
+# presented sheet — a card on a card, the shape §478 called out one level down.
+# Comment-stripped, because the file documents the deletion by naming it.
+sed 's|//.*||' "Casberi/Casberi/Screens/VibenetKeySheet.swift" > "$TMP/keysheet.nc.swift"
+if grep -qE 'RoundedRectangle\(cornerRadius: DS\.Radius\.(widget|card).*\n?.*fill\(DS\.fillFaint\)' "$TMP/keysheet.nc.swift" \
+   || grep -q 'dsWidgetSurface' "$TMP/keysheet.nc.swift"; then
+  echo "✗ the key sheet is drawing cards again — prd §495: a slab inside a presented"
+  echo "  sheet is a card on a card, and the caption above each block is what gives it"
+  echo "  a ground."
+  exit 1
+fi
 
 echo ""
 echo "✓ vibenet-selftest: drift guards, assertions and mutations all passed"

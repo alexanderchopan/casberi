@@ -297,7 +297,11 @@ enum VibenetAuthenticatorKind: String, Equatable, Hashable, CaseIterable, Codabl
     /// both possible and this build cannot tell them apart).
     var plainDetail: String? {
         switch self {
-        case .secp256k1: String(localized: "secp256k1 — the standard Ethereum key")
+        // **NO CURVE NAME HERE** (prd §495). This is drawn directly under
+        // `plainTitle`, which is "secp256k1 key", at all three of its call
+        // sites — so the prefix set the word twice one line apart, §366's
+        // read-its-first-line-twice. The other three cases never had one.
+        case .secp256k1: String(localized: "the standard Ethereum key")
         case .p256:      String(localized: "the curve passkeys and secure enclaves use")
         // The spec's name is cut (user, prd §491: *"don't say webauthn"*).
         // What is left is the whole of what a person needs: the three things
@@ -714,6 +718,28 @@ struct VibenetActor: Identifiable, Equatable, Codable {
             return String(localized: "Expired \(expiresAt.formatted(.dateTime.month(.abbreviated).day()))")
         }
         return String(localized: "Expires \(clock)")
+    }
+
+    /// THE EXPIRY AS A LABEL-COLUMN VALUE (prd §495) — what sits beside a
+    /// row whose LABEL is already the word "Expires".
+    ///
+    /// A third form beside `expiryLabel` and `expiryClock`, and the split is
+    /// the same one `VibenetEventKind` makes between `title` and `phrase`:
+    /// `expiryLabel` has to stand alone ("Expires in 3 days") because it is
+    /// drawn where nothing else says what the date is for, and the key
+    /// sheet's Terms table used it under a label reading "Expires" — so the
+    /// row read "Expires · Expires in 3 days".
+    ///
+    /// Never just `expiryClock`: that returns nil for a key with no expiry
+    /// and for one already gone, and a blank value beside "Expires" is worse
+    /// than either fact.
+    func expiryValue(now: Date) -> String {
+        guard expiry > 0 else { return String(localized: "Never") }
+        let expiresAt = Date(timeIntervalSince1970: TimeInterval(expiry))
+        guard let clock = expiryClock(now: now) else {
+            return String(localized: "Expired \(expiresAt.formatted(.dateTime.month(.abbreviated).day()))")
+        }
+        return clock
     }
 
     /// THE CLOCK ALONE — "in 3 days", "tomorrow" — with no verb in front of
