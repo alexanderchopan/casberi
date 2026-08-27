@@ -85,11 +85,30 @@ struct VibenetAccountSheet: View {
                         // a card — the shape §478 named and §495 has spent the
                         // session removing.
                         accountHead(item)
+                            // The paper is inset from the screen edges like
+                            // every other card in this app — without it the
+                            // receipt runs full-bleed and its top corners are
+                            // cut by the sheet's own rounding.
+                            .padding(.horizontal, DS.Space.s4)
                             .padding(.bottom, DS.Space.s4)
                         VibenetAccountDetail(
+                            // **THE SHEET'S HEAD NAMES THE ACCOUNT NOW** (prd
+                            // §495), so the detail's own identity block stands
+                            // down here — the address, the face and the name
+                            // were being drawn twice, once inside the paper
+                            // and again two lines under it.
+                            //
+                            // What the sheet is FOR is everything below that:
+                            // the keys and the sub-accounts (user: "for the
+                            // account sheet it should show the sub accounts
+                            // and keys… that is more important when coming
+                            // from the All aggregated page"). Both already
+                            // draw, because the sheet passes no scope and
+                            // `wants(_:)` answers true for all of them.
                             item: item,
                             links: VibenetAccountMapping.links(room.items),
                             sharedKeys: VibenetKeyReuse.sharing(item, in: room.items),
+                            showsFace: false,
                             onOpenKey: { openedKey = PresentedKey(actor: $0, item: item) })
                             .padding(DS.Space.s4)
                     }

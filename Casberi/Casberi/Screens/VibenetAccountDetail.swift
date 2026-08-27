@@ -337,7 +337,16 @@ struct VibenetAccountDetail: View {
     /// section below simply begins.
     private var hero: some View {
         VStack(alignment: .leading, spacing: DS.Space.s3) {
-            HStack(alignment: .center, spacing: DS.Space.s3) {
+            // **THE WHOLE IDENTITY BLOCK STANDS DOWN, not just the face**
+            // (prd §495). `showsFace` hid the portrait and left the name and
+            // the address, so a sheet whose own head already names the account
+            // still drew it twice — the face gone and the words staying is the
+            // half-fix that reads as a bug rather than a choice.
+            //
+            // `state` below it survives either way: the head stamps the
+            // standing, and this is where the standing's own detail lives.
+            if showsFace {
+                HStack(alignment: .center, spacing: DS.Space.s3) {
                 // THE FACE IS THE RAIL'S WHEN THE RAIL IS THERE (user,
                 // 2026-08-25: *"on the individual account page, we don't need
                 // the avatar before the address b/c its already in the source
@@ -355,9 +364,7 @@ struct VibenetAccountDetail: View {
                 // either. Dropping the face unconditionally would leave both
                 // of those faceless — a screen about one address, showing
                 // nothing that identifies it at a glance.
-                if showsFace {
                     WalletFace(address: item.address, size: DS.Face.shelf, circular: true)
-                }
                 VStack(alignment: .leading, spacing: 3) {
                     Text(VibenetWatch.shared.name(for: item.address) ?? VibenetRoom.shortAddress(item.address))
                         .dsText(.heading22)
@@ -375,6 +382,7 @@ struct VibenetAccountDetail: View {
                         .truncationMode(.middle)
                 }
                 Spacer(minLength: DS.Space.s2)
+                }
             }
             state
         }

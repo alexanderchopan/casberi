@@ -3241,6 +3241,18 @@ struct FeedScreen: View {
             // quiet diff.
             .onChange(of: chrome.walletSection) { _, _ in returnToRoomTop(proxy) }
             .onChange(of: chrome.vibenetSection) { _, _ in returnToRoomTop(proxy) }
+            // **AND ON AN ACCOUNT PICK** (prd §495, user: *"clicking on an
+            // account in vibenet fucks up the screen… it makes the silhouette
+            // and toggle bar jump to the top"*).
+            //
+            // Same defect as the scope chips and the same fix: narrowing the
+            // room to one account replaces its whole content, the list's
+            // extent changes under a scroll offset that no longer means
+            // anything, and the scroll view clamps — which throws the rail and
+            // the strip up the screen. The SCOPE chips were hooked here and
+            // the FACE rail was not, because the first report named the chips.
+            .onChange(of: chrome.walletScope) { _, _ in returnToRoomTop(proxy) }
+            .onChange(of: chrome.vibenetScope) { _, _ in returnToRoomTop(proxy) }
     }
 
     /// The id the room's head carries, so a scope change can return to it.
