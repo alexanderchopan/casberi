@@ -60,6 +60,11 @@ struct VibenetAccountDetail: View {
     /// record under Activity. nil keeps the whole page, for any caller that
     /// still wants it.
     var section: VibenetSection? = nil
+    /// Scope the room to another account — how a watched sub-account row
+    /// opens (prd §493). nil leaves that row a plain read rather than
+    /// pretending at a door, which is the rule every other object row on this
+    /// screen already follows.
+    var onScope: ((String) -> Void)? = nil
     /// OPEN A KEY (2026-08-25, prd §478) — replaces the `openKey` inline
     /// disclosure this view carried since §473. A key's depth (terms, origin,
     /// full id, the copy doors) lives on `VibenetKeySheet` now; a row that
@@ -120,8 +125,20 @@ struct VibenetAccountDetail: View {
                 if section == nil { sectionHeader(String(localized: "Keys")) }
                 keysSection
             }
+            // **THE HEADER SURVIVES UNDER A SCOPE HERE, unlike Permissions'
+            // (prd §493).** Reported as *"when you open a subaccount it opens
+            // to something wrong"* — and the card was right, the framing was
+            // not. These rows are about a RELATIONSHIP, so each leads with the
+            // OTHER account's face and name; with no header above them a
+            // scoped page opens on somebody else's address and reads as having
+            // opened the wrong account.
+            //
+            // The rule §491 applied — drop the header, the chip already says
+            // it — holds only where the chip says the SAME word. The chip says
+            // "Accounts"; this says "Linked accounts", which is a different
+            // claim, so the header is doing work rather than repeating one.
             if wants(.accounts), hasLinks || !item.subAccounts.isEmpty {
-                if section == nil { sectionHeader(String(localized: "Linked accounts")) }
+                sectionHeader(String(localized: "Linked accounts"))
                 linkedCard
                 subAccountsCard
             }
@@ -1075,7 +1092,38 @@ struct VibenetAccountDetail: View {
     /// `spokeRow`'s object treatment, reused rather than inventing a fifth
     /// surface on one screen — a sub-account is an object the same way a key
     /// and a linked account are.
+    ///
+    /// **IT IS A CONTROL NOW (prd §493).** Reported as *"shows a subaccount you
+    /// could tap but doesn't open"*, and it was exactly that: a face, a name, a
+    /// date and a pill — the anatomy of every tappable row in this app — with
+    /// no gesture on it at all. §83's dead control, wearing a row's clothes.
+    ///
+    /// The verb depends on what the row IS, which is the honest split: a
+    /// WATCHED sub-account is already in the room, so the tap scopes to it; an
+    /// UNWATCHED one is an account you can act for and are not following, so
+    /// the tap starts watching it — which is the only thing this app can
+    /// usefully do about it and the whole reason the read exists.
+    @ViewBuilder
     private func subAccountRow(_ sub: VibenetSubAccount) -> some View {
+        let inner = subAccountBody(sub)
+        if sub.watched, let onScope {
+            Button { DSHaptic.selection(); onScope(sub.address) }
+                label: { inner.contentShape(Rectangle()) }
+                .buttonStyle(.plain)
+                .dsHover()
+        } else if !sub.watched {
+            Button {
+                DSHaptic.selection()
+                VibenetWatch.shared.add(sub.address)
+            } label: { inner.contentShape(Rectangle()) }
+                .buttonStyle(.plain)
+                .dsHover()
+        } else {
+            inner
+        }
+    }
+
+    private func subAccountBody(_ sub: VibenetSubAccount) -> some View {
         HStack(spacing: DS.Space.s3) {
             WalletFace(address: sub.address, size: DS.Face.rowCircle, circular: true)
             VStack(alignment: .leading, spacing: 2) {
@@ -1093,13 +1141,21 @@ struct VibenetAccountDetail: View {
                 }
             }
             Spacer(minLength: 0)
+            // The pill SAYS THE VERB now rather than only the state. It was
+            // "Not watched", which names a fact and offers nothing — and the
+            // row it sits on is the one place in this app where the answer to
+            // that fact is one tap away.
             if !sub.watched {
-                Text(String(localized: "Not watched"))
+                Text(String(localized: "Watch"))
                     .dsText(.label11)
-                    .foregroundStyle(DS.textTertiary)
+                    .foregroundStyle(DS.tint)
                     .lineLimit(1).fixedSize()
                     .padding(.horizontal, 8).padding(.vertical, 3)
-                    .background { Capsule().strokeBorder(DS.textTertiary, lineWidth: 1) }
+                    .background { Capsule().strokeBorder(DS.tint, lineWidth: 1) }
+            } else {
+                Image(systemName: "chevron.right")
+                    .dsGlyph(11)
+                    .foregroundStyle(DS.textTertiary)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

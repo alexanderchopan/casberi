@@ -425,7 +425,23 @@ struct VibenetRoomCard: View {
             //
             // Which means each scope owes its own headline, because it no
             // longer inherits the crown's — see `scopeFigure`.
-            Group {
+            // **THE SLOT HOLDS ITS HEIGHT EVEN WHEN THE FIGURE DECLINES.**
+            //
+            // Reported as *"clicking in accounts makes the bar move around"*,
+            // and measured: picking an account with no sub-accounts and no
+            // links moved the chip bar from 575pt to 355pt — exactly this
+            // slot's height. `.frame(minHeight:)` DOES NOT hold an `EmptyView`
+            // open: a `@ViewBuilder` that produces nothing has no layout
+            // presence at all, so the frame collapsed and everything below
+            // jumped up a third of a screen the moment you used the control.
+            //
+            // The `Color.clear` underneath is what gives the frame something
+            // to be applied to. It is the same class §483 recorded for Wallet
+            // ("collapsing to `maxHeight: 0` is NOT the same as not emitting")
+            // arriving from the opposite direction — there an empty Section
+            // still took spacing, here a non-empty frame took none.
+            ZStack(alignment: .top) {
+                Color.clear
                 if (section ?? .home) == .home {
                     balanceHero
                 } else {
@@ -474,6 +490,7 @@ struct VibenetRoomCard: View {
                     // The chassis draws the face in the rail above.
                     showsFace: false,
                     section: section ?? .home,
+                    onScope: onScope,
                     onOpenKey: onOpenKey.map { open in
                         { actor in open(actor, lead, VibenetKeyReuse.sharing(lead, in: fullItems)) }
                     },
@@ -2367,38 +2384,102 @@ struct VibenetRoomCard: View {
     }
 }
 
-/// One landed vibenet event, led by WHO it happened to (R4.2).
+/// One landed vibenet event, led by WHAT HAPPENED (2026-08-26).
 ///
-/// Reported 2026-08-23: *"i can't see which accounts they are from."* The
-/// room fell to `.plain`, so every row wore one identical brand glyph and
-/// the only identifying mark was a truncated `…f21f` at the END of an
-/// 80-char title, in the same weight as the rest of the sentence — two
-/// accounts' events were indistinguishable at a glance, in a room whose
-/// entire subject is which account something happened to. Every other
-/// identity room in this app leads with a face; this one now does too.
+/// **The history.** R4.2 (2026-08-23) made this row face-led after a report
+/// — *"i can't see which accounts they are from"* — because the room had
+/// fallen to `.plain`, so every row wore one identical brand glyph and the
+/// only identifying mark was a truncated `…f21f` at the END of an 80-char
+/// title. That fix was right about the problem and overcorrected on the
+/// remedy: it promoted the ACCOUNT to the title, so a stream of one
+/// account's events repeated the same word ten times down the screen and
+/// the news — what actually happened — sat demoted in the subtitle.
 ///
-/// Reads `authorHandle` (the account) and `summary` (the event without
-/// the address) — both stamped at landing, so nothing here parses a
-/// display title back into data. A row that predates those falls back to
-/// its whole title, which still says everything, just less prettily.
+/// **The shape now.** The event leads, the account names itself in the line
+/// beneath, and the leading slot carries the event's KIND as a tinted mark.
+/// R4.2's complaint stays fixed: the account is still in its own slot in
+/// its own weight, and by its NICKNAME where it has one, which is a
+/// stronger identity than either a face or a hex tail.
+///
+/// The mark is this app's own row grammar rather than a new vocabulary —
+/// every Wallet row leads with a tinted glyph in exactly this position.
+///
+/// **The kind comes off the §308 FACETS**, never a parsed title: the
+/// landing stamps `Key` / `Revoked` / `Locked` / `Unlocking` on `tags`
+/// (`VibenetEventKind.facetTags`), so this reads data rather than prose,
+/// and a localized title can never change what the row draws. `Revoked` is
+/// tested BEFORE `Key` because a revoke carries both by design.
+///
+/// Reads `authorHandle` (the account) and `summary` (the event without the
+/// address) — both stamped at landing. A row that predates those falls back
+/// to its whole title, which still says everything, just less prettily.
 struct VibenetEventRow: View {
     let thing: Thing
+
+    /// The four kinds this room lands, each with the mark it draws.
+    ///
+    /// A fifth case is deliberately absent: a row whose facets say nothing
+    /// (landed by a build before §308 stamped them) draws NO mark rather
+    /// than a generic one, and its title carries the whole sentence anyway
+    /// — a guessed glyph on a security row is the §83 fake status in the
+    /// one room where believing it is expensive.
+    private enum Kind {
+        case authorized, revoked, locked, unlocking
+
+        var glyph: String {
+            switch self {
+            case .authorized: return "plus"
+            case .revoked:    return "minus"
+            case .locked:     return "lock.fill"
+            case .unlocking:  return "lock.open.fill"
+            }
+        }
+
+        var hue: Color {
+            switch self {
+            // A new key is not GOOD news, it is news — so the room's own
+            // tint, never `confirm`. Green here would read as "this was
+            // fine", which is precisely the judgement this row must not
+            // make on somebody's behalf.
+            case .authorized: return DS.tint
+            case .revoked:    return DS.destructive
+            case .locked, .unlocking: return DS.attention
+            }
+        }
+    }
+
+    private var kind: Kind? {
+        let tags = thing.tags
+        if tags.contains("Revoked")   { return .revoked }
+        if tags.contains("Locked")    { return .locked }
+        if tags.contains("Unlocking") { return .unlocking }
+        if tags.contains("Key")       { return .authorized }
+        return nil
+    }
 
     var body: some View {
         if thing.isLive {
             HStack(alignment: .center, spacing: DS.Space.s3) {
-                if let address = thing.authorHandle {
-                    WalletFace(address: address, size: DS.Face.list, circular: true)
+                if let kind {
+                    RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous)
+                        .fill(kind.hue.opacity(0.16))
+                        .frame(width: Self.markSize, height: Self.markSize)
+                        .overlay {
+                            Image(systemName: kind.glyph)
+                                .accessibilityHidden(true)
+                                .dsGlyph(15, weight: .semibold)
+                                .foregroundStyle(kind.hue)
+                        }
                 }
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(title)
+                    Text(thing.summary ?? thing.title)
                         .dsText(.heading17)
                         .foregroundStyle(DS.textPrimary)
-                        .lineLimit(1)
-                    Text(thing.summary ?? thing.title)
+                        .lineLimit(2)
+                    Text(accountLabel)
                         .dsText(.label12)
                         .foregroundStyle(DS.textSecondary)
-                        .lineLimit(2)
+                        .lineLimit(1)
                 }
                 Spacer(minLength: DS.Space.s2)
                 Text(thing.capturedAt.formatted(.relative(presentation: .named)))
@@ -2410,10 +2491,15 @@ struct VibenetEventRow: View {
         }
     }
 
+    /// `DS.Mark.list`, which is `DS.Face.list` — so a room that mixes these
+    /// rows with any face-led row keeps ONE leading column: the marks and the
+    /// faces sit on the same edge and every title starts at the same x.
+    private static let markSize: CGFloat = DS.Mark.list
+
     /// The account's nickname when it has one, else its short address —
     /// the same identity the room card and the sheet show, so one account
     /// never reads as two different things across three surfaces.
-    private var title: String {
+    private var accountLabel: String {
         guard let address = thing.authorHandle else { return thing.title }
         return VibenetWatch.shared.name(for: address) ?? VibenetRoom.shortAddress(address)
     }

@@ -739,20 +739,39 @@ if grep -qE 'attentionStrip|attentionRowBody|attentionMark' "$TMP/card.nc.swift"
   echo "  subtitle). A summary of four scopes is not an answer to burial; scoping is."
   exit 1
 fi
-# ...but the RANKING survives, one layer down. `VibenetAttention` earning its
-# keep is the whole reason deleting the view was safe rather than lossy.
-grep -q 'VibenetAttention.compose' "Casberi/Casberi/Model/VibenetSection.swift" \
-  || { echo "✗ the dots no longer read VibenetAttention — prd §482: the strip's ranking"
-       echo "  survives as which CHIP wears a dot. Without it the dots are presence, which"
-       echo "  is the §83 overclaim that retired \"Needs attention\" on 2026-07-23."; exit 1; }
-# DOTS ARE NOT PRESENCE. The room ALWAYS has keys and ALWAYS has accounts, so a
-# dot lit by presence is lit forever and teaches you to ignore it.
-if grep -qE 'attention.*=.*present|attention.*sections.contains' "Casberi/Casberi/Model/VibenetSection.swift"; then
-  echo "✗ a dot is being lit by presence — prd §482: only VibenetAttention decides,"
-  echo "  and it only speaks for a key inside its urgency window or an account that is"
-  echo "  locked, unlocking or unread."
+# THE DOTS ARE GONE TOO (user ruling, 2026-08-26), and this guard is AMENDED
+# rather than deleted — the rule it protects is now the stronger one.
+#
+# §482 gave the chips dots ranked by `VibenetAttention`, on the reasoning that
+# the deleted strip's RANKING had to survive somewhere. It did not survive
+# CONTACT: Wallet's strip carries no dots, this room's standing instruction is
+# to match Wallet, and a dot on a chip cannot say WHAT needs doing — you tap to
+# find out, which is the hunt the scopes exist to end. Every fact a dot pointed
+# at is drawn inside the scope that owns it, which was already §482's own
+# argument for deleting the strip; the dots were that argument left half-made.
+#
+# So `attention(_:)` returns EMPTY, and the check is that it stays empty. A dot
+# relit later is lit by PRESENCE unless somebody rebuilds the ranking with it,
+# and this room ALWAYS has keys and ALWAYS has accounts — a dot lit by presence
+# is lit forever and teaches you to ignore it, the §83 overclaim that retired
+# "Needs attention" on 2026-07-23.
+#
+# `VibenetAttention` itself is NOT deleted and is deliberately NOT required to
+# be called: it is the room's one ranking of what needs a person. A guard that
+# demanded the call would be demanding the dots back.
+sed 's|//.*||' "Casberi/Casberi/Model/VibenetSection.swift" > "$TMP/section.nc.swift"
+if grep -qE 'VibenetAttention|attention.*=.*present|attention.*sections\.contains' "$TMP/section.nc.swift"; then
+  echo "✗ a scope chip is wearing a dot again — user ruling 2026-08-26: the dots went"
+  echo "  with the strip's last remnant. A dot cannot say what needs doing, so you tap"
+  echo "  to find out; every fact one pointed at is already drawn inside the scope that"
+  echo "  owns it. Wallet's strip carries none, and this room matches Wallet."
   exit 1
 fi
+# ...and it stays a real EMPTY, not a door somebody deleted. Keeping the
+# function is what keeps this reasoning attached to it: a future dot then has
+# to argue with these lines rather than inventing itself somewhere else.
+grep -q 'func attention' "Casberi/Casberi/Model/VibenetSection.swift" \
+  || { echo "✗ attention(_:) is gone entirely — keep the door, return []."; exit 1; }
 # HOME LEADS (prd §491, amending §482's "Holdings leads"). That ruling was made
 # before this room HAD a Home scope: Holdings led because the crown, its
 # sparkline and the token tiles are one reading at three grains, and opening on

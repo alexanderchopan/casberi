@@ -4140,7 +4140,16 @@ struct FeedScreen: View {
             // sat that spacing higher there. Two zero-height boxes, each
             // invisible, and the difference between them was the bug.
             if section != .home {
-                walletScopeVisualSection(section)
+                // A `Color.clear` floor, for the reason vibenet's own slot
+                // carries one (prd §493): `.frame(minHeight:)` does not hold an
+                // `EmptyView` open, so a scope whose figure declines — NFTs
+                // with no picks, Permissions with no holder — collapses the
+                // slot and takes the chip bar a third of a screen up. Measured
+                // in the other room; the same shape is here.
+                ZStack(alignment: .top) {
+                    Color.clear
+                    walletScopeVisualSection(section)
+                }
                     .frame(minHeight: Self.walletVisualSlot,
                            maxHeight: Self.walletVisualSlot,
                            alignment: .top)
