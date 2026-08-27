@@ -15,8 +15,26 @@ import SwiftUI
 /// plain: every ribbon is the same weight and no node carries a hue, because
 /// this card makes NO claim that one relationship matters more than another.
 /// Nothing here may be sized or coloured to suggest a ranking that was never
-/// computed. The direction is stated ONCE in the caption beneath, in words,
-/// rather than repeated per row as an arrow nobody reads twice.
+/// computed.
+///
+/// **WHICH WAY AUTHORITY RUNS IS DRAWN NOW (2026-08-26, prd §482).** Reported:
+/// *"hard to tell who can do what in terms of parent child… presuming the
+/// first one has greater authority but not really clear."* The presumption is
+/// the normal left-to-right reading and it was exactly backwards: `to` (the
+/// DELEGATE) was drawn on the left and `from` (the account that authorized
+/// it) on the right, so the face you read first held the least power. The
+/// only signal was the right column's heavier weight, and weight reads as
+/// importance, not as role — it half-said the right thing in a language that
+/// cannot say roles at all.
+///
+/// Two changes, and §467's refusal of per-row arrows survives both. **The
+/// columns are swapped**, so the account that granted the power leads and the
+/// row reads left-to-right in one direction — the weight difference below now
+/// AGREES with the roles instead of contradicting them. **And the roles are
+/// named at the head of each column** rather than in a caption 60pt below in
+/// tertiary ink: §467 was right that the direction should be said once rather
+/// than per row, and wrong about where once is. Named at the top, one label
+/// serves four links as easily as one.
 ///
 /// **Dedup is the load-bearing part.** One account can authorize several
 /// delegates and one delegate can act for several accounts, so the same
@@ -57,6 +75,11 @@ struct VibenetLinkSpine: View {
     private static let leftColumn: CGFloat = 0.42
 
     /// The distinct addresses on each side, in first-appearance order.
+    ///
+    /// `accounts` is `from` — the side that AUTHORIZED — and it draws on the
+    /// LEFT (prd §482); `actors` is `to`, the delegate, and draws on the
+    /// right. Named for what they are rather than for where they sit, so a
+    /// future layout change cannot make these two names lie.
     private var actors: [String] { Self.distinct(links.map(\.to)) }
     private var accounts: [String] { Self.distinct(links.map(\.from)) }
 
@@ -78,14 +101,36 @@ struct VibenetLinkSpine: View {
             let width = proxy.size.width
             let leftX = width * Self.leftColumn
             let rightX = width * 0.58
-            ZStack(alignment: .topLeading) {
-                ribbons(leftX: leftX, rightX: rightX)
-                column(actors, x: 0, alignment: .leading, emphasised: false)
-                column(accounts, x: rightX, alignment: .leading, emphasised: true)
+            VStack(alignment: .leading, spacing: DS.Space.s1) {
+                // THE ROLES, NAMED ONCE (prd §482). `label11` tertiary, the
+                // quietest rung on the ramp: these are what the columns ARE,
+                // not a reading of their own, and a heading that competes
+                // with the names beneath it would be a third thing to read.
+                HStack(spacing: 0) {
+                    Text(String(localized: "Account"))
+                        .frame(width: rightX, alignment: .leading)
+                    Text(String(localized: "Can act for it"))
+                    Spacer(minLength: 0)
+                }
+                .dsText(.label11)
+                .foregroundStyle(DS.textTertiary)
+                ZStack(alignment: .topLeading) {
+                    ribbons(leftX: leftX, rightX: rightX)
+                    column(accounts, x: 0, alignment: .leading, emphasised: true)
+                    column(actors, x: rightX, alignment: .leading, emphasised: false)
+                }
+                .frame(height: height)
             }
         }
-        .frame(height: height)
+        .frame(height: height + Self.headRoom)
     }
+
+    /// What the column heads add to the figure's own height — the label's
+    /// line height plus the gap under it. Spelled out because the frame is
+    /// computed rather than laid out: a `GeometryReader` reports the size it
+    /// was GIVEN, so a head drawn inside one that did not account for it is
+    /// a head drawn over the first row.
+    private static let headRoom: CGFloat = 15 + DS.Space.s1
 
     /// The connections themselves — ONE `Path` per link, all the same weight.
     /// A cubic rather than a straight line for the reason the address book's
@@ -123,8 +168,12 @@ struct VibenetLinkSpine: View {
                 if let address,
                    link.from.caseInsensitiveCompare(address) != .orderedSame,
                    link.to.caseInsensitiveCompare(address) != .orderedSame { continue }
-                guard let fromRow = index(of: link.to, in: actors),
-                      let toRow = index(of: link.from, in: accounts) else { continue }
+                // LEFT is the account that authorized, RIGHT is its
+                // delegate (prd §482) — the ribbon must follow the columns
+                // or every line joins the wrong two faces while the figure
+                // still looks perfectly well drawn.
+                guard let fromRow = index(of: link.from, in: accounts),
+                      let toRow = index(of: link.to, in: actors) else { continue }
                 let start = CGPoint(x: leftX - 6, y: rowCentre(fromRow))
                 let end = CGPoint(x: rightX - 6, y: rowCentre(toRow))
                 let run = max(24, end.x - start.x)
@@ -187,11 +236,17 @@ struct VibenetLinkSpine: View {
     }
 
     /// The two columns keep their DIFFERENT weights, which is not a ranking
-    /// and so not §295's business: the left column is who ACTS and the right
-    /// is the account acted for, and the weight is what tells a reader which
-    /// side of the sentence a node is on before any name is read. Making both
-    /// primary (a slip while wiring the tap) turned the figure into two
-    /// identical columns joined by lines.
+    /// and so not §295's business: the left column is the account that
+    /// AUTHORIZED and the right is its delegate, and the weight tells a
+    /// reader which side of the sentence a node is on before any name is
+    /// read. Making both primary (a slip while wiring the tap) turned the
+    /// figure into two identical columns joined by lines.
+    ///
+    /// Since §482 the heavier side is the one with more authority, so the
+    /// weight now AGREES with the column heads instead of pointing the other
+    /// way. Kept rather than dropped for that reason: two signals saying one
+    /// thing is redundancy, which is what a figure about permissions should
+    /// have.
     private func nodeBody(_ address: String, emphasised: Bool) -> some View {
         HStack(spacing: 7) {
             WalletFace(address: address, size: Self.faceSize, circular: true)

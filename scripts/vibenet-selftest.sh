@@ -128,6 +128,14 @@ strip_comments "$BRIDGE" > "$TMP/bridge.nc.swift"
 strip_comments "$SETUP" > "$TMP/setup.nc.swift"
 strip_comments "$BOOK"  > "$TMP/book.nc.swift"
 strip_comments "$SPINE" > "$TMP/spine.nc.swift"
+SURFACE="Casberi/Casberi/Shell/MainSurface.swift"
+FEED="Casberi/Casberi/Screens/FeedScreen.swift"
+SECTION="Casberi/Casberi/Model/VibenetSection.swift"
+for f in "$SURFACE" "$FEED" "$SECTION"; do
+  [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
+done
+strip_comments "$SURFACE" > "$TMP/surface.nc.swift"
+strip_comments "$FEED"    > "$TMP/feed.nc.swift"
 
 # --- prd §465: setup is what you do ONCE, the room what you do REPEATEDLY ----
 # Every check here fails INVISIBLY if it is not made: the screens still build,
@@ -580,9 +588,29 @@ grep -q 'accountHistories = VibenetValueStore.accountSamples()' "$TMP/card.nc.sw
   || { echo "✗ the account chips no longer read each account's own history — prd §475/§476:"
        echo "  a room-wide series under a per-account face is §83's fake status"; exit 1; }
 chipsFn=$(sed -n '/private var accountChips: some View {/,/^    }$/p' "$TMP/card.nc.swift")
-[[ "$chipsFn" == *'room.items.count > 1'* ]] \
-  || { echo "✗ the account chips are no longer gated on more than one account — prd §475:"
-       echo "  scoped, they would be the one element still describing all of them"; exit 1; }
+# **§475's GATE IS AMENDED BY §482, and the harness caught the conflict rather
+# than the conflict shipping.** §475 gated this strip on `room.items.count > 1`
+# so that a SCOPED room would not carry "the one element still describing all
+# of them". Correct while the strip was a passive read of balances; wrong the
+# moment it became the room's scoping control, because derived from the scoped
+# room it collapses to one item, the gate hides it, and the control deletes
+# itself on use — reported as "if you click one of the accounts, it should
+# still keep the row in the same place so user can navigate back".
+#
+# So the count gate SURVIVES (one account is not a control, §83) and what it
+# counts changes: the full watch list, not the room in hand.
+[[ "$chipsFn" == *'Self.fullItems(fallback: room)'* ]] \
+  || { echo "✗ the account chips read the SCOPED room again — prd §482 amends §475: picking"
+       echo "  an account collapses that room to one item, the count gate then hides the"
+       echo "  strip, and the only way back out of the scope goes with it."; exit 1; }
+[[ "$chipsFn" == *'strip.count > 1'* ]] \
+  || { echo "✗ the account chips lost their count gate — prd §475 (still standing): one"
+       echo "  account is a label, not a control."; exit 1; }
+# The full-list read must not silently fall back to the scoped room either.
+fullFn=$(sed -n '/static func fullItems(fallback room:/,/^    }$/p' "$TMP/card.nc.swift")
+[[ "$fullFn" == *'VibenetRoomSource.card()'* ]] \
+  || { echo "✗ fullItems no longer reads the room source — prd §482: without it the strip"
+       echo "  is the scoped room again by another name."; exit 1; }
 
 # SECTION HEADERS ARE WALLET'S, outside the card and in primary ink.
 grep -q 'private func sectionHeader' "$TMP/card.nc.swift" \
@@ -675,6 +703,110 @@ grep -q 'faucetAddress' "$TMP/card.nc.swift" \
 grep -q 'onPick: onScope' "$TMP/card.nc.swift" \
   || { echo "✗ the link spine's nodes are inert again — prd §476: a figure styled like"
        echo "  something you tap must go somewhere, and never out of the app"; exit 1; }
+# --- prd §482: the room is SCOPED, and the strip is gone -------------------
+# The attention strip was added, re-grammared, re-titled twice and deleted in
+# one day. What replaced it is a scope strip, and every check here fails
+# INVISIBLY — the room renders in each case and simply says less than it
+# should, or claims something that is not on screen.
+
+# THE STRIP IS GONE, and must not grow back. It had no stable identity: four
+# unlike facts grouped by "you might want to look", which is why no name fitted
+# (Needs you → Worth a look → Risk). Each fact now lives in the scope that owns
+# it. Reads the COMMENT-STRIPPED copy because the source explains the deletion
+# by naming what it deleted (the Obsidian lesson, and it fired here first run).
+if grep -qE 'attentionStrip|attentionRowBody|attentionMark' "$TMP/card.nc.swift"; then
+  echo "✗ the attention strip is back — prd §482: it was deleted, not renamed, because"
+  echo "  every row it carried is already drawn in its own scope (a key's deadline on"
+  echo "  the Keys runway, a lock on its roster row, an unreached read in that row's"
+  echo "  subtitle). A summary of four scopes is not an answer to burial; scoping is."
+  exit 1
+fi
+# ...but the RANKING survives, one layer down. `VibenetAttention` earning its
+# keep is the whole reason deleting the view was safe rather than lossy.
+grep -q 'VibenetAttention.compose' "Casberi/Casberi/Model/VibenetSection.swift" \
+  || { echo "✗ the dots no longer read VibenetAttention — prd §482: the strip's ranking"
+       echo "  survives as which CHIP wears a dot. Without it the dots are presence, which"
+       echo "  is the §83 overclaim that retired \"Needs attention\" on 2026-07-23."; exit 1; }
+# DOTS ARE NOT PRESENCE. The room ALWAYS has keys and ALWAYS has accounts, so a
+# dot lit by presence is lit forever and teaches you to ignore it.
+if grep -qE 'attention.*=.*present|attention.*sections.contains' "Casberi/Casberi/Model/VibenetSection.swift"; then
+  echo "✗ a dot is being lit by presence — prd §482: only VibenetAttention decides,"
+  echo "  and it only speaks for a key inside its urgency window or an account that is"
+  echo "  locked, unlocking or unread."
+  exit 1
+fi
+# HOLDINGS LEADS. §482's own ruling, carried forward: the crown, its sparkline
+# and the token tiles are one reading at three grains, so opening anywhere else
+# puts a tap between the crown and its own breakdown.
+grep -q 'return .holdings' "Casberi/Casberi/Model/VibenetSection.swift" \
+  || { echo "✗ the room no longer opens on Holdings — prd §482: any other default puts a"
+       echo "  tap between the crown and the tiles that break it down."; exit 1; }
+# THE SWITCHER IS GATED ON WHAT THE ROOM PUBLISHED, never on a source name —
+# so this and the wallet toggle cannot both draw, and the gate cannot drift
+# from the room feeding it.
+# The gate lives in the CARD now, not the shell — see the placement note
+# below. Still gated entirely on what the room published, never a source name.
+stripFn=$(sed -n '/private var scopeStrip: some View {/,/^    }$/p' "$TMP/card.nc.swift")
+[[ "$stripFn" == *'VibenetSection.shows(present: scopes)'* ]] \
+  || { echo "✗ the vibenet switcher's gate moved — prd §482: it is gated ENTIRELY on the"
+       echo "  scopes the room published, so a room with one reading draws no control."; exit 1; }
+# **AND IT MUST NOT GO BACK TO THE SHELL.** Mounted in `roomControls` it was
+# the FOURTH stacked chrome row and the user rejected it on sight ("o wait no
+# way… we can' hta ve the positions risk etc at the top", then "needs to be
+# below the sparkline"). §357's reasoning is what put it there and is sound
+# about `safeAreaInset` while silent about how many rows precede the first
+# fact — so the next reader will find that argument compelling and re-mount it.
+# Reads the COMMENT-STRIPPED copy: `MainSurface` explains the removal by
+# naming what was removed.
+if grep -q 'vibenetSectionSwitcher' "$TMP/surface.nc.swift"; then
+  echo "✗ the vibenet scope strip is pinned at the shell again — prd §482: it belongs"
+  echo "  below the crown, inside the card. See VibenetRoomCard.scopeStrip, which also"
+  echo "  states what that placement costs (it scrolls away)."
+  exit 1
+fi
+# CLEARED ON THE WAY OUT. A stale non-empty list leaves the toggle drawn over
+# whichever room you moved to — and since the list IS the gate, the clear is
+# what makes "these two cannot both draw" true by construction.
+grep -q 'chrome.vibenetSections = \[\]' "$TMP/feed.nc.swift" \
+  || { echo "✗ the vibenet scopes are never cleared — prd §482: without the onDisappear"
+       echo "  clear, the toggle survives into the next room."; exit 1; }
+# A SCOPE WITH NO ROWS MUST NOT CLAIM TO BE CAUGHT UP. "That's everything from
+# Base Vibenet · 4 events" under a census of keys is a claim about a list that
+# is not on screen — §83, and it shipped for the length of one build.
+grep -q 'vibenetShowsRows' "$TMP/feed.nc.swift" \
+  || { echo "✗ the caught-up footer is ungated again — prd §482: vibenet draws rows in"
+       echo "  .recent alone, so \"That's everything\" belongs there alone."; exit 1; }
+
+# --- prd §482: the spine draws which way authority runs ---------------------
+# `from` authorized, `to` is its delegate. Draw them the other way round and
+# the face you read first holds the least power — which is exactly what
+# shipped, and exactly what was reported. The figure looks perfect either way.
+grep -q 'column(accounts, x: 0' "$TMP/spine.nc.swift" \
+  || { echo "✗ the spine no longer leads with the account that AUTHORIZED — prd §482:"
+       echo "  left-to-right must run from authority to delegate, or the first face read"
+       echo "  is the one with the least power."; exit 1; }
+grep -q 'column(actors, x: rightX' "$TMP/spine.nc.swift" \
+  || { echo "✗ the spine's delegate column moved — prd §482: \`to\` draws on the right."; exit 1; }
+# THE RIBBON MUST FOLLOW THE COLUMNS. Mismatched, every line joins the wrong
+# two faces while the drawing still looks well made — this section's own
+# failure mode, a second time.
+grep -q 'index(of: link.from, in: accounts)' "$TMP/spine.nc.swift" \
+  && grep -q 'index(of: link.to, in: actors)' "$TMP/spine.nc.swift" \
+  || { echo "✗ the spine's ribbons no longer match its columns — prd §482: a mismatched"
+       echo "  ribbon joins the wrong two faces and looks perfectly well drawn."; exit 1; }
+# THE ROLES ARE NAMED AT THE COLUMNS. §467 was right that direction is said
+# ONCE rather than per row, and wrong about where once is: a caption 60pt
+# below in tertiary ink is not part of the drawing.
+grep -q 'Can act for it' "$TMP/spine.nc.swift" \
+  || { echo "✗ the spine lost its column heads — prd §482: without them the only role"
+       echo "  signal is a weight difference, and weight reads as importance, not role."; exit 1; }
+# ...and the caption stops carrying the direction, or the two can disagree.
+if grep -q 'Who can act for whom' "$TMP/card.nc.swift"; then
+  echo "✗ the direction is back in the caption — prd §482: it is drawn at the columns now,"
+  echo "  and two statements of one direction are two that can drift apart."
+  exit 1
+fi
+
 if grep -qE 'VibenetExplorer|Link\(destination' "$TMP/spine.nc.swift"; then
   echo "✗ the link spine opens a URL — prd §476: the explorer lives behind the labelled"
   echo "  Explorer door on the account detail, never behind a node in a figure."
@@ -831,9 +963,21 @@ fi
 # identifying mark.
 grep -q 'if showsFace {' "$TMP/detail.nc.swift" \
   || { echo "✗ VibenetAccountDetail no longer gates its hero face — prd §468"; exit 1; }
-grep -q 'VibenetScopeRail.shows(source: VibenetIdentity.source, watched: fullItems.count)' "$TMP/card.nc.swift" \
-  || { echo "✗ the hero face is no longer gated on the RAIL being present — prd §468: dropping it"; \
-       echo "  unconditionally leaves a one-account room with nothing identifying it"; exit 1; }
+# **§482 AMENDS THE OTHER HALF: THE HERO FACE IS UNCONDITIONAL NOW.** §468's
+# rule was "stand down only where the RAIL draws it" — never two faces, never
+# zero. The rail folded into the crown's chip strip, so the gate that used to
+# prevent a duplicate would now hide the scoped account's only identifying
+# mark. The INTENT is intact and the mechanism is gone; the guard follows.
+[[ "$(sed -n '/private func detailBranch/,/^    }$/p' "$TMP/card.nc.swift")" == *'showsFace: true'* ]] \
+  || { echo "✗ the scoped account's hero face is gated again — prd §482 amends §468: the"
+       echo "  rail that used to draw a duplicate is folded into the chip strip, so a gate"
+       echo "  here hides the account's only identifying mark. A 36pt chip is a mark, not"
+       echo "  the screen's subject."; exit 1; }
+if grep -q 'VibenetScopeRail' "$TMP/card.nc.swift"; then
+  echo "✗ the card consults the face rail again — prd §482: that rail is unmounted, so"
+  echo "  any gate reading it is asking a question whose answer is always no."
+  exit 1
+fi
 
 # --- prd §470: a key's identity, and the developer's paste -------------------
 # Each of these fails INVISIBLY: the rows still draw, the tray still opens, the
@@ -2706,6 +2850,60 @@ check("...and the rest are counted, never silently dropped",
       VibenetAttention.tail(attnMany) == "and 1 more")
 check("nothing hidden, nothing said",
       VibenetAttention.tail(Array(attnMany.prefix(2))) == nil)
+
+// THE DRAWN PARTS (prd §482). The strip used to be three sentences at one
+// weight, which sorted correctly and then drew the sort away: a three-day
+// deadline and a static lock rendered identically, so §479's whole ranking
+// argument was invisible. Every check below is a silent wrong answer — the
+// row still draws, still looks tidy, and still says the wrong thing loudest.
+check("the whole sentence survives as the accessibility label — VoiceOver must not read four fragments",
+      attn.first?.text.isEmpty == false)
+check("a line about a key says so in its own title, and never grades",
+      attn.first?.title == "Key expiring")
+check("...names the key AND the account, because the title alone is true of any of them",
+      attn.first?.detail?.contains("…keys") == true)
+// THE CLOCK IS WHAT MAKES THE RANK LEGIBLE. A row with a countdown draws it;
+// a row without draws NOTHING rather than a dash, so the empty slot is the
+// reading and the ranking can be seen without being graded.
+check("a key inside the window carries its countdown",
+      attn.first?.clock != nil)
+check("...and it is the ONE urgency this room tints (§463)",
+      attn.first?.urgent == true)
+check("an account mid-unlock carries a clock too — it is a state WITH one",
+      attn.dropFirst().first?.clock != nil)
+check("...but is never tinted: a lock is a state, not an alarm",
+      attn.dropFirst().first?.urgent == false)
+check("a lock with no unlock started draws NO clock — the empty slot is the reading",
+      attn.dropFirst(2).first?.clock == nil)
+check("...and says WHY it has none, or two lock rows read identically at a glance",
+      attn.dropFirst(2).first?.detail?.isEmpty == false
+        && attn.dropFirst(2).first?.detail != attn.dropFirst().first?.detail)
+// THE UNREACHED LINE IS ABOUT US. It counts, it never names: several accounts
+// fail one pass for ONE reason, and naming the first would make a network
+// problem look like one address's fault.
+let attnUnreachedLine = attnUnreached.last
+check("the unreached line counts the accounts…",
+      attnUnreachedLine?.detail == "1 account")
+check("...never names one, and never carries a clock or a tint",
+      attnUnreachedLine?.detail?.contains("0x") == false
+        && attnUnreachedLine?.clock == nil
+        && attnUnreachedLine?.urgent == false)
+// ONE DERIVATION (prd §482): the trailing figure and the sentence beside it
+// must come from the same date, or a row can say "in 3 days" while its own
+// label says something else. `expiryLabel` composes FROM `expiryClock`.
+check("the label is built from the clock, so the two can never name different moments",
+      actorWithExpiry(UInt64(refNow.timeIntervalSince1970) + 3600).expiryLabel(now: refNow)
+        == "Expires " + (actorWithExpiry(UInt64(refNow.timeIntervalSince1970) + 3600)
+                          .expiryClock(now: refNow) ?? "!!"))
+check("a key that never expires has no countdown — 'never' is a word, not a clock",
+      actorWithExpiry(0).expiryClock(now: refNow) == nil)
+check("an already-expired key has none either — a countdown that has run out is not a countdown",
+      actorWithExpiry(UInt64(refNow.timeIntervalSince1970) - 3600).expiryClock(now: refNow) == nil)
+check("the unlock label composes from its own clock for the same reason",
+      countingItem.unlockLabel(now: refNow)
+        == "Unlocks " + (countingItem.unlockClock(now: refNow) ?? "!!"))
+check("a ready unlock has no clock — 'ready' is a state and belongs in the title",
+      readyItem.unlockClock(now: refNow) == nil)
 
 print("")
 print("VibenetValueHistory.windowed / options — how far back the curve looks")

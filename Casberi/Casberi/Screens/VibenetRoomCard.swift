@@ -112,6 +112,7 @@ struct VibenetRoomCard: View {
     /// bottom" — not an animation at all. `.task(id:)` reads both books once
     /// when the roster's fingerprint changes and holds the result, which is
     /// the same shape the key-changes ledger beside it already uses.
+
     @State private var history: [VibenetValueSample] = []
     /// Every watched account's own curve, keyed by lowercased address — one
     /// decode for the whole strip rather than one per chip.
@@ -194,6 +195,42 @@ struct VibenetRoomCard: View {
     /// the shortcut; this is the list.
     var onScope: ((String) -> Void)? = nil
 
+    /// WHICH READING IS ON SCREEN (prd §482, 2026-08-26), or nil for the
+    /// whole room in one scroll.
+    ///
+    /// nil is not a legacy path — it is what `VibenetScreen`'s management
+    /// roster and the single-account branch want, and both are surfaces where
+    /// a scope strip would be a control over one thing (§83). Only the FEED
+    /// room, which is the one that ran long, is scoped.
+    var section: VibenetSection? = nil
+
+    /// The scope strip's own inputs, so the control can be drawn INSIDE this
+    /// card rather than pinned above the room (prd §482 amendment, 2026-08-26
+    /// — user: *"we can' hta ve the positions risk etc at the top"*, then
+    /// *"needs to be below the sparkline"*).
+    ///
+    /// Handed in rather than read from `ShellChrome` here: this card is also
+    /// drawn by `VibenetScreen`, which has no scope state and wants none, and
+    /// a card that reaches into the shell for it would need a stand-down rule
+    /// on every other caller. Empty `scopes` draws no strip, which is what
+    /// every non-feed caller gets for free.
+    var scopes: [VibenetSection] = []
+    var scopeAttention: Set<VibenetSection> = []
+    var onPickScope: ((VibenetSection) -> Void)? = nil
+
+    /// Which account the room is scoped to, and the door to the book — the
+    /// two halves of the face rail this card ABSORBED (prd §482 amendment,
+    /// 2026-08-26, user: *"we cannot have four rows of chips"*).
+    ///
+    /// The rail and the value chips under the sparkline were both a strip of
+    /// this room's accounts, one above the crown and one below it, and only
+    /// one of them showed what each account was worth. Folding the scoping
+    /// into the chips that already carry the numbers costs a row of chrome
+    /// and loses nothing: it is the same faces, the same order, now saying
+    /// what they are worth as well as which one you are in.
+    var scopedAddress: String? = nil
+    var onOpenBook: (() -> Void)? = nil
+
     /// What moved since this device last looked at these keys — captured
     /// ONCE when the roster appears and then immediately spent (`advance`),
     /// so the marker survives the draw it was computed for and is gone by the
@@ -210,6 +247,7 @@ struct VibenetRoomCard: View {
     /// Whether the crown has counted up yet this mount (prd §479). ONE SHOT:
     /// the fill is a greeting, and a figure that re-counted on every re-compose
     /// would be a number that never settles while you read it.
+
     @State private var counted = false
 
     private static let mark = DS.brandHue(for: "Base Vibenet") ?? Color.fixed("#0052ff")
@@ -337,37 +375,56 @@ struct VibenetRoomCard: View {
             // was this room claiming an emphasis they already carry, and it
             // made the one reading both rooms share the one element that
             // looked different in each.
-            balanceHero
-            // WHAT NEEDS YOU, FIRST (prd §479). Wallet's own "Worth a look"
-            // sits under its balance card for the reason this does: what's it
-            // worth and is it okay are the two questions one glance asks.
-            // Silent when the room is quiet — no all-clear, which is a claim
-            // an unreached read cannot support anyway.
-            attentionStrip
-            holdingsCard
-            // SECTION HEADERS, Wallet's own (`walletGroupHeader`): "What you
-            // hold" / "What it's doing" are `heading22` in PRIMARY ink,
-            // OUTSIDE the card they introduce, at the same margin as the bare
-            // hero above. This room said the same kind of thing in `label12`
-            // tertiary INSIDE each card — a caption, which is a different
-            // object from a section title, and the reason the two rooms read
-            // as different products at a glance.
+            // **THE CROWN AND ITS CHART ARE ALWAYS ON, ABOVE THE CONTROL
+            // (prd §482 amendment).** They belong to no scope: they are the
+            // room's identity rather than one of its readings, and a strip
+            // that could scope them away would let you open vibenet and not
+            // be told the balance.
             //
-            // **THREE NOUNS, and they are the room's own (2026-08-25, prd
-            // §476).** §475 named these sections after what §467 happened to
-            // have built — "What's authorized" over a keys census, with the
-            // accounts themselves nowhere. Reported: *"perhaps the sections
-            // should be Keys and the other be Accounts… it's not yet fully
-            // intuitive."* They are: this room is about ACCOUNTS and the KEYS
-            // that can act for them, and those are the two things somebody
-            // opens it to see. Linked accounts stays a card of its own (user)
-            // rather than folding into Accounts — the delegate graph is a
-            // figure worth its own frame, and burying it under a roster
-            // demotes the one drawing this room has.
-            sectionHeader(String(localized: "Accounts"))
-            accountsCard
-            sectionHeader(String(localized: "Keys"))
-            keysCard
+            // It also settles §482's own ruling permanently instead of by
+            // careful ordering. That entry moved the attention strip below
+            // the holdings because *"holdings and sparkline are together"* —
+            // with the crown pinned above the control, nothing can ever get
+            // between the two again.
+            balanceHero
+            scopeStrip
+            if shows(.holdings) { holdingsCard }
+            // **THE ATTENTION STRIP IS GONE (2026-08-26, prd §482).** It was
+            // added by §479 and re-grammared and re-titled twice in one
+            // afternoon before it was deleted the same day, and the churn was
+            // the diagnosis: the thing had no stable identity. It grouped four
+            // unlike facts — a key's deadline, an account's lock, an unlock's
+            // countdown, our own failed read — by nothing except "you might
+            // want to look", which is why no name (Needs you → Worth a look →
+            // Risk) ever fitted all four.
+            //
+            // **Scoping dissolves it, and NOTHING IS LOST — checked row type
+            // by row type before deleting, because that is the test that bit
+            // the wallet session twice today.** A key expiring is the Keys
+            // scope's own runway (`shelfRow`, same blue, same countdown); a
+            // locked account is its roster row's pill; an unlocking one is
+            // that row's ticking subtitle and progress bar; an unreached read
+            // is that row's subtitle in words (`VibenetRoom` line ~1155,
+            // "Couldn't reach the chain"). The strip existed only because all
+            // four were buried in one long scroll, and a scope strip is a
+            // better answer to burial than a summary of it.
+            //
+            // `VibenetAttention` survives with its ranking intact, one layer
+            // down: it decides which CHIP wears a dot
+            // (`VibenetSection.attention`). The work is kept, the surface that
+            // could not be named is gone.
+            if shows(.accounts) {
+                // The header is dropped when the strip is naming the scope —
+                // a chip reading "Accounts" above a heading reading "Accounts"
+                // says one thing twice, and the heading is the one that can go
+                // because the chip is also the control.
+                if section == nil { sectionHeader(String(localized: "Accounts")) }
+                accountsCard
+            }
+            if shows(.keys) {
+                if section == nil { sectionHeader(String(localized: "Keys")) }
+                keysCard
+            }
             // OUTSIDE the cards, and quieter for it. Provenance is a fact
             // about the whole room rather than about any one reading, so a
             // card of its own would make a section out of a footnote.
@@ -378,7 +435,11 @@ struct VibenetRoomCard: View {
             // over-correction that would put it back out of alignment with
             // the cards' own text, the opposite direction from the bug this
             // whole modifier exists to fix.
-            if let note = VibenetRoom.note(room, drawn: drawn.count) {
+            // Provenance follows the ROSTER it describes ("N more watched",
+            // and where the config was read) rather than trailing whichever
+            // scope happens to be last — in `.keys` it would be a footnote
+            // about accounts under a census of keys.
+            if shows(.accounts), let note = VibenetRoom.note(room, drawn: drawn.count) {
                 Text(note)
                     .dsText(.label12)
                     .foregroundStyle(DS.textTertiary)
@@ -399,6 +460,44 @@ struct VibenetRoomCard: View {
         // card sat 18pt in from them — the exact inconsistency reported, and
         // the fix is the one line every sibling already carries.
         .padding(.horizontal, DS.Space.s4)
+    }
+
+    /// The scope strip, BELOW the crown (prd §482 amendment, 2026-08-26).
+    ///
+    /// **It was pinned in `MainSurface.roomControls` for one build and that
+    /// was wrong**, reported the moment it was seen: *"o wait no way… we
+    /// can' hta ve the positions risk etc at the top"*. Mounted at the shell
+    /// it was the FOURTH stacked chrome row — source chips, venue rail, face
+    /// rail, then this — and the crown started roughly halfway down the
+    /// screen. §357's reasoning (a control destroyed by the transition it
+    /// commands) is what put it up there, and that reasoning is sound about
+    /// `safeAreaInset` and silent about how many rows a reader will accept
+    /// before the first fact.
+    ///
+    /// **STATED COST, so nobody has to rediscover it:** in the content it
+    /// SCROLLS AWAY, which is §357's complaint one level down — a scope
+    /// control you cannot reach while deep in the rows it scopes. The fix is
+    /// a pinned `Section` header rather than a return to the inset, and it is
+    /// deliberately not done here: the user asked to see this shape first.
+    @ViewBuilder
+    private var scopeStrip: some View {
+        if onPickScope != nil, VibenetSection.shows(present: scopes) {
+            DSSectionSwitcher(
+                sections: scopes,
+                active: section ?? .holdings,
+                attention: scopeAttention) { picked in
+                    onPickScope?(picked)
+                }
+                .padding(.top, DS.Space.s4)
+        }
+    }
+
+    /// Whether a scope's content draws. nil `section` means the whole room in
+    /// one scroll, which is what the management roster and the single-account
+    /// branch want — so the scoped feed room narrows and every other caller is
+    /// untouched by construction rather than by a flag each has to pass.
+    private func shows(_ candidate: VibenetSection) -> Bool {
+        section == nil || section == candidate
     }
 
     /// The surface every stacked card wears — one definition, so four cards
@@ -456,21 +555,38 @@ struct VibenetRoomCard: View {
         // that's currently OUT of scope, so links are derived from the FULL
         // watch list rather than this card's own (possibly narrowed) `room`.
         let fullItems = VibenetRoomSource.card()?.items ?? room.items
-        // THE HERO'S FACE, only when the rail is not already drawing it.
-        let railDrawsTheFace = onOpen == nil
-            && VibenetScopeRail.shows(source: VibenetIdentity.source, watched: fullItems.count)
         let shared = VibenetKeyReuse.sharing(lead, in: fullItems)
-        VibenetAccountDetail(
-            item: lead,
-            links: VibenetAccountMapping.links(fullItems),
-            sharedKeys: shared,
-            showsFace: !railDrawsTheFace,
-            onOpenKey: onOpenKey.map { open in { actor in open(actor, lead, shared) } },
-            // The card read the ledger and spent it; the detail draws the
-            // answer (prd §479). Reading it there instead would erase the
-            // marker while it was being shown.
-            newKeyIDs: keyChanges?.added ?? [])
-            .padding(.horizontal, DS.Space.s4)
+        VStack(alignment: .leading, spacing: 0) {
+            // **THE STRIP STAYS WHEN YOU SCOPE (prd §482 amendment,
+            // 2026-08-26).** Picking an account used to swap the whole card
+            // for this detail and the chips vanished with the hero — the
+            // control deleted itself on use, reported directly: "if you
+            // click one of the accounts, it should still keep the row in the
+            // same place so user can navigate back, and right now it
+            // doesn't". Same strip, same place, picked chip filled; re-tap
+            // or All to come back. Only for the feed room (`onScope` is nil
+            // on the setup screen, where scoping was never offered).
+            if onScope != nil {
+                accountChips
+                    .padding(.bottom, DS.Space.s3)
+            }
+            VibenetAccountDetail(
+                item: lead,
+                links: VibenetAccountMapping.links(fullItems),
+                sharedKeys: shared,
+                // ALWAYS, since the rail folded into the chips (prd §482
+                // amendment): the old gate hid this face while the shell
+                // rail drew a matching one above — with that rail gone the
+                // gate would hide the scoped account's identity entirely,
+                // and a 26pt chip is a mark, not a portrait.
+                showsFace: true,
+                onOpenKey: onOpenKey.map { open in { actor in open(actor, lead, shared) } },
+                // The card read the ledger and spent it; the detail draws the
+                // answer (prd §479). Reading it there instead would erase the
+                // marker while it was being shown.
+                newKeyIDs: keyChanges?.added ?? [])
+        }
+        .padding(.horizontal, DS.Space.s4)
     }
 
     private var rosterBranch: some View {
@@ -719,85 +835,6 @@ struct VibenetRoomCard: View {
         }
     }
 
-    /// ONE THING THAT NEEDS YOU (prd §479) — `VibenetAttention`'s lines, as
-    /// rows on a faint ground directly under the crown.
-    ///
-    /// A `fillFaint` capsule-ish group and NOT a `card`, deliberately: the
-    /// cards below are the room's readings and this is a notice about them,
-    /// so it wears the same weight `WalletWarningsStrip` does inside Wallet's
-    /// balance card rather than becoming a fifth card competing with them.
-    /// The hero above it is bare, so this is the first bounded shape on the
-    /// screen — which is the point.
-    ///
-    /// NO STATE COLOUR PER ROW. The room spends its one colour on expiry
-    /// urgency (§463) and a locked account is a state rather than an alarm;
-    /// grading these rows would teach a second, contradictory colour language
-    /// three points below the crown.
-    @ViewBuilder
-    private var attentionStrip: some View {
-        let lines = VibenetAttention.compose(room.items, now: .now)
-        if !lines.isEmpty {
-            VStack(alignment: .leading, spacing: 0) {
-                ForEach(Array(VibenetAttention.drawn(lines).enumerated()), id: \.element.id) { index, line in
-                    attentionRow(line)
-                        .chartArrival(index: index, reduceMotion: reduceMotion)
-                }
-                if let tail = VibenetAttention.tail(lines) {
-                    Text(tail)
-                        .dsText(.label11)
-                        .foregroundStyle(DS.textTertiary)
-                        .padding(.top, DS.Space.s2)
-                }
-            }
-            .padding(.horizontal, DS.Space.s3)
-            .padding(.vertical, DS.Space.s2)
-            .background(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous)
-                .fill(DS.fillFaint))
-        }
-    }
-
-    /// One line, and a DOOR to the thing it names — a notice you cannot act
-    /// on is the shape §471 already removed from the census once. A key line
-    /// scopes to its account (where that key's own row lives); an account
-    /// line scopes to the account; the unreached line is a plain read,
-    /// because "the network did not answer" has no destination.
-    @ViewBuilder
-    private func attentionRow(_ line: VibenetAttention.Line) -> some View {
-        switch line.subject {
-        case .key(let address, _), .account(let address):
-            if let onScope {
-                Button {
-                    DSHaptic.selection()
-                    onScope(address)
-                } label: { attentionRowBody(line, door: true) }
-                    .buttonStyle(.plain)
-                    .dsHover()
-            } else {
-                attentionRowBody(line, door: false)
-            }
-        case .unreached:
-            attentionRowBody(line, door: false)
-        }
-    }
-
-    private func attentionRowBody(_ line: VibenetAttention.Line, door: Bool) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-            Text(line.text)
-                .dsText(.subhead13)
-                .foregroundStyle(DS.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-            Spacer(minLength: DS.Space.s2)
-            if door {
-                Image(systemName: "chevron.right")
-                    .accessibilityHidden(true)
-                    .dsGlyph(11, weight: .semibold)
-                    .foregroundStyle(DS.textTertiary)
-            }
-        }
-        .padding(.vertical, DS.Space.s2)
-        .contentShape(Rectangle())
-    }
-
     /// The samples the crown, the delta and the line all read (prd §479) —
     /// ONE derivation, so the figure, its move and its curve can never
     /// describe different windows.
@@ -862,14 +899,34 @@ struct VibenetRoomCard: View {
     /// reading nobody took.
     @ViewBuilder
     private var accountChips: some View {
-        if room.items.count > 1 {
+        // THE FULL WATCH LIST, NEVER THE SCOPED ROOM (prd §482 amendment,
+        // 2026-08-26, user: "if you click one of the accounts, it should
+        // still keep the row in the same place so user can navigate back,
+        // and right now it doesn't"). Derived from the scoped room, picking
+        // an account collapsed this strip to one item and the `count > 1`
+        // gate then HID it — the control deleted itself on use, stranding
+        // you in the scope it created. The strip is the room's navigation,
+        // so it draws the whole roster with the picked chip filled, exactly
+        // the rail rule it inherited.
+        let strip = Self.fullItems(fallback: room)
+        if strip.count > 1 {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: DS.Space.s2) {
-                    ForEach(room.items) { item in
-                        if let native = item.nativeBalance {
-                            accountChip(item, native: native)
-                        }
+                    // "All" leads, and it is a CHIP rather than a cleared
+                    // selection: a strip whose unscoped state is "nothing
+                    // highlighted" gives you no way to see that unscoped IS a
+                    // state, which is the same reason the face rail carried
+                    // one.
+                    if onScope != nil { allChip }
+                    // EVERY account, not only the ones with a balance. As a
+                    // read-only strip, dropping an unread account was right —
+                    // it had no number to show. As the SCOPING control it is
+                    // the §83 dead end: the account you most want to look at
+                    // is often the one whose balance did not come back.
+                    ForEach(strip) { item in
+                        accountChip(item, native: item.nativeBalance)
                     }
+                    if let onOpenBook { bookChip(onOpenBook) }
                 }
             }
             .scrollIndicators(.hidden)
@@ -877,28 +934,124 @@ struct VibenetRoomCard: View {
         }
     }
 
-    private func accountChip(_ item: VibenetAccountItem, native: Double) -> some View {
+    /// Every watched account, however the room in hand is scoped — the strip
+    /// and the detail branch read the same source, so the two can never
+    /// disagree about who is on the roster.
+    private static func fullItems(fallback room: VibenetRoom) -> [VibenetAccountItem] {
+        let full = VibenetRoomSource.card()?.items ?? []
+        return full.count > 1 ? full : room.items
+    }
+
+    /// The unscoped state, as a chip of its own.
+    @ViewBuilder
+    private var allChip: some View {
+        let on = scopedAddress == nil
+        Button {
+            DSHaptic.selection()
+            onScope?("")
+        } label: {
+            Text(String(localized: "All"))
+                .dsText(.subhead13).fontWeight(.semibold)
+                .foregroundStyle(on ? DS.textPrimary : DS.textSecondary)
+                .padding(.horizontal, DS.Space.s3)
+                // ONE HEIGHT FOR THE WHOLE STRIP, and it is `DS.Hit.min`
+                // (prd §482 amendment): an account chip is a 36pt face plus
+                // its 4pt padding, which lands on exactly 44 — so matching it
+                // is both the tap-target floor and the reason the three chip
+                // species read as one row rather than three sizes.
+                .frame(minWidth: DS.Hit.min, minHeight: DS.Hit.min)
+                .background(Capsule(style: .continuous)
+                    .fill(on ? DS.fillStrong : DS.fillFaint))
+        }
+        .buttonStyle(.plain)
+        .dsHover()
+    }
+
+    /// The book door the rail used to carry. Kept rather than dropped: it is
+    /// the only way to the full list from this room, and §465's ruling that
+    /// vibenet has ONE tier (watching another account and seeing the whole
+    /// list are the same screen) is what makes one slot enough.
+    private func bookChip(_ open: @escaping () -> Void) -> some View {
+        Button {
+            DSHaptic.selection()
+            open()
+        } label: {
+            Image(systemName: "person.text.rectangle")
+                .accessibilityHidden(true)
+                .dsGlyph(13, weight: .semibold)
+                .foregroundStyle(DS.textSecondary)
+                .padding(.horizontal, DS.Space.s3)
+                // 27pt before this — the smallest thing in the strip and the
+                // one the accessibility audit caught (§482 amendment). Same
+                // 44 as its neighbours.
+                .frame(minWidth: DS.Hit.min, minHeight: DS.Hit.min)
+                .background(Capsule(style: .continuous).fill(DS.fillFaint))
+        }
+        .buttonStyle(.plain)
+        .dsHover()
+        .accessibilityLabel(Text(String(localized: "Address Book")))
+    }
+
+    private func accountChip(_ item: VibenetAccountItem, native: Double?) -> some View {
         // From the ONE book read in `.task`, never a fresh decode per chip.
         let samples = accountHistories[item.address.lowercased()] ?? []
         let change = VibenetValueHistory.delta(samples)
-        return HStack(spacing: 6) {
-            WalletFace(address: item.address, size: DS.Face.badge, circular: true)
-            Text("\(VibenetBalanceFormat.line(native)) ETH")
-                .dsText(.label12).fontWeight(.semibold)
-                .foregroundStyle(DS.textPrimary)
-                .monospacedDigit()
-            if let change {
-                Text(VibenetBalanceFormat.percent(change))
-                    .dsText(.label12)
-                    .foregroundStyle(TokenChartStyle.accent(change: change, scheme: scheme))
-                    .monospacedDigit()
+        let on = scopedAddress?.caseInsensitiveCompare(item.address) == .orderedSame
+        return Button {
+            DSHaptic.selection()
+            // RE-TAP RETURNS TO ALL, the rail's own toggle rule — otherwise
+            // the only way out of a scope is to find the All chip again,
+            // which on a long strip is a scroll.
+            onScope?(on ? "" : item.address)
+        } label: {
+            HStack(spacing: 6) {
+                // **`DS.Face.list` (36) — THE AVATAR TIER, and the same size
+                // this face wore in the rail this strip replaced** (prd §482
+                // amendment, 2026-08-26, user: "make the account circles the
+                // same size then that we have for social avatars… should
+                // always be consistent"). As a passive read the `badge` mark
+                // tier was right; as the room's SCOPING control it was easy
+                // to miss, which was the report.
+                //
+                // Measured rather than assumed, because the request named two
+                // sizes that are NOT the same: `FaceScopeRail` draws 36 here
+                // (it passes `namesInRoom`, which pins `.list`), while the
+                // source chips are 40 folded / 46 expanded. They differ
+                // because a source chip is a bridge mark in a chip SLOT and
+                // this is a face on the ramp — matching 46 would make account
+                // faces the largest faces in the app. 36 is the tier every
+                // other avatar in this app already wears.
+                WalletFace(address: item.address, size: DS.Face.list, circular: true)
+                // The NAME when the balance could not be read: a chip with a
+                // face and nothing beside it is unidentifiable, and "couldn't
+                // read" is a fact this strip can state in one word.
+                if let native {
+                    Text("\(VibenetBalanceFormat.line(native)) ETH")
+                        .dsText(.subhead13).fontWeight(.semibold)
+                        .foregroundStyle(DS.textPrimary)
+                        .monospacedDigit()
+                } else {
+                    Text(Self.displayName(item.address))
+                        .dsText(.subhead13).fontWeight(.semibold)
+                        .foregroundStyle(DS.textSecondary)
+                        .lineLimit(1)
+                }
+                if let change, native != nil {
+                    Text(VibenetBalanceFormat.percent(change))
+                        .dsText(.label12)
+                        .foregroundStyle(TokenChartStyle.accent(change: change, scheme: scheme))
+                        .monospacedDigit()
+                }
             }
+            // A face sits tight to the leading edge — `WalletFaceChips`' own
+            // measurement, so the two strips are the same object in two rooms.
+            .padding(.leading, 4)
+            .padding(.trailing, DS.Space.s3).padding(.vertical, 4)
+            .background(Capsule(style: .continuous)
+                .fill(on ? DS.fillStrong : DS.fillFaint))
         }
-        // A face sits tight to the leading edge — `WalletFaceChips`' own
-        // measurement, so the two strips are the same object in two rooms.
-        .padding(.leading, 4)
-        .padding(.trailing, DS.Space.s3).padding(.vertical, 4)
-        .background(Capsule(style: .continuous).fill(DS.fillFaint))
+        .buttonStyle(.plain)
+        .dsHover()
     }
 
     /// A room-level section title — `walletGroupHeader`'s recipe (prd §475):
@@ -1010,7 +1163,12 @@ struct VibenetRoomCard: View {
                                  onPick: onScope,
                                  reduceMotion: reduceMotion)
                     .padding(.top, DS.Space.s2)
-                Text(String(localized: "Who can act for whom, read from the keystore."))
+                // The direction moved INTO the figure as column heads
+                // (prd §482), so this says only what the heads cannot: where
+                // the reading came from. "Who can act for whom" was carrying
+                // the whole direction from 60pt below, in tertiary ink, and
+                // was the reason the drawing read backwards.
+                Text(String(localized: "Read from the keystore."))
                     .dsText(.subhead13)
                     .foregroundStyle(DS.textTertiary)
                     .fixedSize(horizontal: false, vertical: true)

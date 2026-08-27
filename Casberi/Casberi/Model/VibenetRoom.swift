@@ -677,10 +677,28 @@ struct VibenetActor: Identifiable, Equatable, Codable {
     func expiryLabel(now: Date) -> String {
         guard expiry > 0 else { return String(localized: "Never expires") }
         let expiresAt = Date(timeIntervalSince1970: TimeInterval(expiry))
-        guard expiresAt > now else {
+        guard let clock = expiryClock(now: now) else {
             return String(localized: "Expired \(expiresAt.formatted(.dateTime.month(.abbreviated).day()))")
         }
-        return String(localized: "Expires \(expiresAt.formatted(.relative(presentation: .named)))")
+        return String(localized: "Expires \(clock)")
+    }
+
+    /// THE CLOCK ALONE — "in 3 days", "tomorrow" — with no verb in front of
+    /// it (prd §482). A row whose title already says *Key expiring* must not
+    /// then say *Expires in 3 days* beside it, and a trailing slot has no
+    /// room for the verb anyway.
+    ///
+    /// `expiryLabel` COMPOSES FROM THIS rather than formatting its own date,
+    /// so the sentence and the trailing figure can never name different
+    /// moments — the one-derivation rule this file already holds everywhere a
+    /// reading is drawn twice. nil for a key that never expires and for one
+    /// already expired: neither is a countdown, and both are said in words by
+    /// the label instead.
+    func expiryClock(now: Date) -> String? {
+        guard expiry > 0 else { return nil }
+        let expiresAt = Date(timeIntervalSince1970: TimeInterval(expiry))
+        guard expiresAt > now else { return nil }
+        return expiresAt.formatted(.relative(presentation: .named))
     }
 
     /// WHICH contract a gated key may call — the half "Send to one contract"
@@ -911,9 +929,18 @@ struct VibenetAccountItem: Identifiable, Equatable, Codable {
     /// "Locked" state, which has no countdown to show yet.
     func unlockLabel(now: Date) -> String? {
         guard let unlocksAt, unlocksAt > 0 else { return nil }
+        guard let clock = unlockClock(now: now) else { return String(localized: "Unlock ready") }
+        return String(localized: "Unlocks \(clock)")
+    }
+
+    /// The unlock's clock alone, `expiryClock`'s twin (prd §482) — and nil
+    /// once the timelock is up, because "ready" is a state rather than a
+    /// countdown. `unlockLabel` composes from it for the same reason.
+    func unlockClock(now: Date) -> String? {
+        guard let unlocksAt, unlocksAt > 0 else { return nil }
         let at = Date(timeIntervalSince1970: TimeInterval(unlocksAt))
-        guard at > now else { return String(localized: "Unlock ready") }
-        return String(localized: "Unlocks \(at.formatted(.relative(presentation: .named)))")
+        guard at > now else { return nil }
+        return at.formatted(.relative(presentation: .named))
     }
 
     /// 0…1 through the unlock timelock, or nil when EITHER endpoint is
@@ -2104,7 +2131,29 @@ enum VibenetAttention {
     struct Line: Equatable, Identifiable {
         let subject: Subject
         /// The whole sentence, composed from the model's own words.
+        ///
+        /// **Still the whole reading, and still load-bearing** (prd §482):
+        /// the parts below are how the row is DRAWN, this is what VoiceOver
+        /// speaks, so a person who cannot see the three columns still gets
+        /// one sentence rather than three fragments read out in a row.
         let text: String
+        /// What happened, in the row's own ink — "Key expiring", "Locked".
+        /// A state, never a grade: §479's rule that this strip states rather
+        /// than grades is why none of these is an imperative.
+        let title: String
+        /// Which account, and the qualifier that makes the title specific —
+        /// "Wallet key · …0b1c". nil where the line has no account to name
+        /// (the unreached read is about US, not about an address).
+        let detail: String?
+        /// The countdown, or nil where the line has none. The ONLY place a
+        /// row spends colour, and only when `urgent` — §463 spends this
+        /// room's one colour on expiry urgency and nothing else, so a lock
+        /// with a clock on it gets the figure and not the tint.
+        let clock: String?
+        /// Whether `clock` is the expiry urgency §463 governs. Never true
+        /// for a lock, an unlock or an unreached read: a locked account is a
+        /// state, not an alarm.
+        let urgent: Bool
         /// Sorting only — never drawn, and never mapped to a colour.
         let rank: Int
         var id: String {
@@ -2135,9 +2184,18 @@ enum VibenetAttention {
             // `actors` is already in `orderedActors`' own order (the init
             // sorts it), so this walk is stable without re-sorting.
             for actor in item.actors where actor.expiryStanding(now: now) == .soon {
+                let clock = actor.expiryClock(now: now)
                 out.append(Line(
                     subject: .key(address: item.address, actorId: actor.actorId),
                     text: String(localized: "\(actor.kind.plainTitle) on \(VibenetRoom.shortAddress(item.address)) — \(actor.expiryLabel(now: now).lowercased())"),
+                    title: String(localized: "Key expiring"),
+                    detail: String(localized: "\(actor.kind.plainTitle) · \(VibenetRoom.shortAddress(item.address))"),
+                    clock: clock,
+                    // The one urgency this room tints (§463). Only ever true
+                    // here, and only when there really is a countdown to
+                    // tint — a key inside the window whose clock could not
+                    // be read gets the row and not the colour.
+                    urgent: clock != nil,
                     rank: 3))
             }
         }
@@ -2147,13 +2205,27 @@ enum VibenetAttention {
         // RANK 1 — locked with no unlock started: a state, not a countdown.
         for item in items where item.alarmed {
             if item.hasInitiatedUnlock {
-                let clock = item.unlockLabel(now: now) ?? String(localized: "Ready to unlock")
+                let phrase = item.unlockLabel(now: now) ?? String(localized: "Ready to unlock")
                 out.append(Line(subject: .account(address: item.address),
-                                text: String(localized: "\(VibenetRoom.shortAddress(item.address)) — \(clock.lowercased())"),
+                                text: String(localized: "\(VibenetRoom.shortAddress(item.address)) — \(phrase.lowercased())"),
+                                title: String(localized: "Unlocking"),
+                                detail: VibenetRoom.shortAddress(item.address),
+                                // nil once the timelock is up: "ready" is a
+                                // state and belongs in the title, not in a
+                                // slot whose whole meaning is "time left".
+                                clock: item.unlockClock(now: now),
+                                urgent: false,
                                 rank: 2))
             } else {
                 out.append(Line(subject: .account(address: item.address),
                                 text: String(localized: "\(VibenetRoom.shortAddress(item.address)) is locked"),
+                                title: String(localized: "Locked"),
+                                // The qualifier is what separates this row
+                                // from the one above it at a glance: both
+                                // say a lock, only one of them is moving.
+                                detail: String(localized: "\(VibenetRoom.shortAddress(item.address)) · no unlock started"),
+                                clock: nil,
+                                urgent: false,
                                 rank: 1))
             }
         }
@@ -2169,6 +2241,15 @@ enum VibenetAttention {
                 text: unreached == 1
                     ? String(localized: "1 account couldn't be read")
                     : String(localized: "\(unreached) accounts couldn't be read"),
+                title: String(localized: "Couldn't be read"),
+                // COUNTED, never named. Several accounts can fail one pass
+                // and they fail it for one reason; naming the first would
+                // make a network problem look like one address's fault.
+                detail: unreached == 1
+                    ? String(localized: "1 account")
+                    : String(localized: "\(unreached) accounts"),
+                clock: nil,
+                urgent: false,
                 rank: 0))
         }
 
