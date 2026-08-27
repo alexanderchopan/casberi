@@ -236,7 +236,7 @@ struct WalletNFTShelfCard: View {
                     // under two half-width ones, which reads as a feature
                     // ("this one is bigger") rather than as the end of a list.
                     if row.count == 1 {
-                        Color.clear.frame(width: Self.coverSide, height: Self.coverSide)
+                        Color.clear.frame(width: Self.cellWidth, height: Self.cellHeight)
                     }
                 }
             }
@@ -327,8 +327,21 @@ struct WalletNFTShelfCard: View {
     /// Two of these plus the gap between them is what fills the slot, so this
     /// is derived from `DSRoomChassis.visualSlot` rather than typed — the two
     /// cannot drift, and a change to the chassis moves the art with it.
-    private static var coverSide: CGFloat {
+    /// Half the slot's height, less the gap — one quadrant tall.
+    private static var cellHeight: CGFloat {
         (DSRoomChassis.visualSlot - Self.quadGap) / 2
+    }
+
+    /// One quadrant WIDE. Derived from the phone's own width less the room's
+    /// two insets, because the grid has to fill the box rather than sit
+    /// centred in it — see `quadArt` for the ruling.
+    ///
+    /// Spelled from the layout rather than measured, for `visualSlot`'s
+    /// reason: a measured width settles the frame a frame late. 402 is the
+    /// design width; a wider screen simply gives each cell more, which is
+    /// what `maxWidth: .infinity` on the row already allows for.
+    private static var cellWidth: CGFloat {
+        (402 - DSRoomChassis.inset * 2 - Self.quadGap) / 2
     }
 
     /// The air between the four covers (user, 2026-08-27: *"we can space them
@@ -338,7 +351,7 @@ struct WalletNFTShelfCard: View {
     /// the grid still fits the slot exactly — widening the gap without
     /// shrinking the cells is what overflows a fixed box and gets clipped,
     /// which this scope had just been fixed for.
-    private static var quadGap: CGFloat { DS.Space.s4 }
+    private static var quadGap: CGFloat { DS.Space.s2 }
 
     /// The shown pieces in rows of two.
     ///
@@ -363,7 +376,20 @@ struct WalletNFTShelfCard: View {
                 RemoteThumb(urlString: piece.imageURL, size: Self.tile)
             }
         }
-        .frame(width: Self.coverSide, height: Self.coverSide)
+        // **THE CELL IS A QUADRANT OF THE SLOT, NOT A SQUARE** (user,
+        // 2026-08-27: *"i feel like there is a slot there and they could cover
+        // the quadrants better and fine if the gear covers one"*).
+        //
+        // Square cells fit the art without cropping and left ~80pt of margin
+        // on each side, because the slot is 370x210 and four squares cannot
+        // tile a 1.76 box. Filling the quadrants trades a centre crop for a
+        // box that is actually full — the user's call, and the crop is the
+        // ordinary thumbnail crop rather than a loss of the subject.
+        //
+        // `scaledToFill` before the clip, or a non-square source letterboxes
+        // inside a landscape cell and puts the margins back one level down.
+        .scaledToFill()
+        .frame(width: Self.cellWidth, height: Self.cellHeight)
         .clipShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
         .accessibilityLabel(Text(piece.collection))
     }
