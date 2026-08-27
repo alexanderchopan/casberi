@@ -389,7 +389,13 @@ grep -q 'AddressBookShape.lastPhrase(activity.lastAt)' "$TMP/views-bare.swift" \
 # nothing watched — the state a new person is in — it does not exist; the
 # roster's row is always there. The minimum corpus is the common one here, which
 # is the correction §436–§438 kept paying for.
-grep -q 'route.push(.addressBook)' "$SHELL_MAIN" \
+# **THE DOOR MOVED, IT DID NOT GO** (2026-08-27). §483's rail rewrite left the
+# rail's book slot in `FeedScreen` (`onOpenBook:`) while this guard kept
+# reading `MainSurface`, where §357 had moved the room CONTROLS. §461's ruling
+# is intact — the rail still carries the book glyph — so the fix is to ask
+# both files rather than to name one. Asking both is also the stronger check:
+# it survives the next move.
+grep -qs 'route.push(.addressBook)' "$SHELL_MAIN" "Casberi/Casberi/Screens/FeedScreen.swift" \
   || { echo "✗ the wallet rail's address-book slot is gone — the room would be reachable only from the roster (§461)"; exit 1; }
 grep -q 'bookTitle: String(localized: "Address Book")' "$SHELL_MAIN" \
   || { echo "✗ the rail's book door lost its name — the slot is captionless, so the label IS its only naming (VoiceOver and the Mac tooltip)"; exit 1; }
