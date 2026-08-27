@@ -2463,7 +2463,7 @@ struct FeedScreen: View {
         // door belongs.
         case .risk:        walletRiskSection
         case .nfts:        walletNFTSection
-        case .permissions: EmptyView()
+        case .permissions: walletPermissionsSection
         }
     }
 
@@ -2481,6 +2481,11 @@ struct FeedScreen: View {
     /// mean the bar settles a frame LATE — which is the same jump, arriving
     /// slower.
     private static let walletVisualSlot: CGFloat = 210
+
+    /// How many moves Home shows. Three, matching Wallet's own crown rows:
+    /// enough to say what just happened, few enough that the scope stays one
+    /// drawing and one short list rather than becoming the stream twice.
+    private static let vibenetHomeRows = 3
 
     /// The wallet scope rail — the Address Book door, "All", and a face per
     /// watched wallet — drawn in the room's own content directly under the
@@ -2660,7 +2665,13 @@ struct FeedScreen: View {
                 || !walletLive.hyperliquid.positions.isEmpty,
             nfts: nftShelfEntry != nil,
             risk: !(walletRiskEntries ?? []).isEmpty,
-            permissions: !walletLive.exposure.isEmpty)
+            // NOT `!exposure.isEmpty` any more (prd §490): the scope now draws
+            // for a wallet with no token grant at all but a Safe module or a
+            // 7702 delegate acting on it. Spelled as the section's OWN gate so
+            // the two cannot drift — the failure that gave §483 its rule was a
+            // chip that opened a blank page.
+            permissions: !WalletPermissionsSource.holders(exposure: walletLive.exposure,
+                                                          acting: walletLive.acting).isEmpty)
         // **`warnings`, not "does Risk exist".** A wallet with a 3.0 health
         // factor HAS a risk reading and is in no trouble at all, so lighting
         // the dot on presence would be the §83 overclaim that got "Needs
@@ -2716,7 +2727,7 @@ struct FeedScreen: View {
         guard shape == .vibenet else { return true }
         let scopes = vibenetSectionPublication.sections
         return !VibenetSection.shows(present: scopes)
-            || VibenetSection.resolve(chrome.vibenetSection, present: scopes) == .recent
+            || VibenetSection.resolve(chrome.vibenetSection, present: scopes) == .activity
     }
 
     /// Which of the Privacy Pools room's three readings have anything to show
@@ -4261,7 +4272,27 @@ struct FeedScreen: View {
             // Days, like most rooms: unlike x402 (where every row shares
             // one sync timestamp) these are real events at real block
             // times, so a chronological grouping is honest here.
-            if vibenetShowsRows {
+            // **HOME'S LIST IS THE LAST FEW MOVES; ACTIVITY'S IS THE STREAM**
+            // (prd §482 amendment, Wallet's §483 rule: every scope is one
+            // drawing and one list). Home drew a chart and then nothing —
+            // half a scope — because the rows were gated to Activity alone.
+            //
+            // Home takes three, UNGROUPED: day headings over three rows are
+            // headings over one row each, and the reading here is "the last
+            // few things", not "what happened on Monday". Activity keeps the
+            // full stream in days, and the three are NOT repeated at its top —
+            // §208's own "never say one thing twice", which is the same call
+            // Wallet made for its own crown rows.
+            let vScope = VibenetSection.resolve(chrome.vibenetSection,
+                                                present: vibenetSectionPublication.sections)
+            let vScoped = VibenetSection.shows(present: vibenetSectionPublication.sections)
+            if vScoped && vScope == .home {
+                let latest = Array(visible.live.prefix(Self.vibenetHomeRows))
+                if !latest.isEmpty {
+                    groupedSections([(String(localized: "Latest"), latest)],
+                                    nextEventID: nextEventID)
+                }
+            } else if vibenetShowsRows {
                 let days = chronoGroups(visible)
                 groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days))
             }
@@ -6660,6 +6691,12 @@ struct FeedScreen: View {
         // never "the one with the most" — a shelf that reshuffles when an
         // airdrop lands reads as broken (§292's total-order rule).
         if watched.count == 1 { return watched.first }
+        // The demo has no pick book by ruling (§387 — a picker there teaches a
+        // decision that evaporates), so the pick test below would always fail
+        // and the scope could never appear in the one place it MUST (the demo
+        // is the north star, and a scope invisible there is a feature nobody
+        // sees).
+        if DemoMode.isActive { return watched.first }
         return watched.first { WalletNFTStore.shared.hasPicks(wallet: $0.address) }
     }
 
@@ -6753,6 +6790,35 @@ struct FeedScreen: View {
     /// card, and re-checks `isLive` at the moment of the tap: a foreground
     /// heal can delete an approval row between the card being built and the
     /// finger landing (corollary 4's stale-array window, one layer up).
+    /// WHO CAN ACT FOR YOU — the `Permissions` scope's lead (prd §490).
+    ///
+    /// The scope had NO drawing at all until this: it opened straight onto the
+    /// approvals list, which is the shape §247 named as the gap ("a room that
+    /// leads with a list of its own rows"). The reading it leads with now is
+    /// one the list structurally cannot make — a Safe module and an EIP-7702
+    /// delegate have no dollar amount, so they can never be ranked into a card
+    /// built on `min(allowance, balance) × price`, and they are the most
+    /// dangerous things in this scope.
+    ///
+    /// Declines when there is genuinely nothing, which on most wallets is most
+    /// of the time — no grants and nothing acting is the healthy state, and a
+    /// card announcing it would be a permanent fixture saying "fine".
+    @ViewBuilder
+    private var walletPermissionsSection: some View {
+        let holders = WalletPermissionsSource.holders(exposure: walletLive.exposure,
+                                                      acting: walletLive.acting)
+        if !holders.isEmpty {
+            Section {
+                WalletPermissionsCard(holders: holders)
+                    .modifier(RowEntrance(index: 1, wave: shapeWave, style: entranceStyle))
+                    .padding(.bottom, DS.Space.s3)
+                    .listRowInsets(WalletCardStyle.rowInsets)
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+            }
+        }
+    }
+
     @ViewBuilder
     private var walletApprovalsSection: some View {
         if !walletLive.exposure.isEmpty {

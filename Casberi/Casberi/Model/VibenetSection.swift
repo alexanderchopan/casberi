@@ -39,8 +39,9 @@ import Foundation
 /// dot** (`attention(_:now:)`). The work it did is kept; the surface that could
 /// not be named is gone.
 enum VibenetSection: String, CaseIterable, Identifiable, Sendable {
+    case home
+    case activity
     case holdings
-    case recent
     case accounts
     case keys
 
@@ -57,12 +58,13 @@ enum VibenetSection: String, CaseIterable, Identifiable, Sendable {
     /// because the crown, its sparkline and the per-token tiles are ONE reading
     /// at three grains. Opening on any other scope puts a tap between the crown
     /// and its own breakdown, which is the same split by a different route.
-    static let order: [VibenetSection] = [.holdings, .recent, .accounts, .keys]
+    static let order: [VibenetSection] = [.home, .activity, .holdings, .accounts, .keys]
 
     var label: String {
         switch self {
+        case .home:     return String(localized: "Home")
+        case .activity: return String(localized: "Activity")
         case .holdings: return String(localized: "Holdings")
-        case .recent:   return String(localized: "Recent")
         case .accounts: return String(localized: "Accounts")
         case .keys:     return String(localized: "Keys")
         }
@@ -75,8 +77,9 @@ enum VibenetSection: String, CaseIterable, Identifiable, Sendable {
     /// the credentials in `TokenVault`.
     var summary: String {
         switch self {
-        case .holdings: return String(localized: "What these accounts hold, and how it moved")
-        case .recent:   return String(localized: "What happened on vibenet, newest first")
+        case .home:     return String(localized: "The line, and the last few moves")
+        case .activity: return String(localized: "What happened, newest first")
+        case .holdings: return String(localized: "What these accounts hold")
         case .accounts: return String(localized: "The accounts you watch, and who can act for them")
         case .keys:     return String(localized: "Every key on every account, and when each expires")
         }
@@ -97,8 +100,14 @@ enum VibenetSection: String, CaseIterable, Identifiable, Sendable {
     /// on a fresh watch, and both appear the moment they are not.
     static func present(_ room: VibenetRoom, hasEvents: Bool) -> [VibenetSection] {
         guard !room.items.isEmpty else { return [] }
-        var out: [VibenetSection] = [.holdings]
-        if hasEvents { out.append(.recent) }
+        // `home` is unconditional, the way Wallet's is: it is the front door
+        // and its drawing is the crown's own line, which a watched account
+        // always has (even "couldn't be read", which is itself the answer).
+        var out: [VibenetSection] = [.home]
+        if hasEvents { out.append(.activity) }
+        // Holdings needs a token reading — the crown's native total is on Home
+        // already, so a Holdings scope with nothing but ETH restates it.
+        if room.items.contains(where: { !$0.tokenBalances.isEmpty }) { out.append(.holdings) }
         out.append(.accounts)
         if room.items.contains(where: { !$0.actors.isEmpty }) { out.append(.keys) }
         return order.filter(out.contains)
@@ -133,7 +142,7 @@ enum VibenetSection: String, CaseIterable, Identifiable, Sendable {
 
     /// What to show when the stored choice is gone or was never made.
     ///
-    /// **Resets to `holdings` rather than remembering**, and the divergence
+    /// **Resets to `home` rather than remembering**, and the divergence
     /// from `MarketsRoom.landing` is deliberate and is the same call
     /// `WalletSection` made: a venue there is a separate watchlist you were
     /// working in, so returning you to it is a kindness, while these four are
@@ -141,7 +150,7 @@ enum VibenetSection: String, CaseIterable, Identifiable, Sendable {
     /// A room that opens on Keys because you last looked at Keys hides the
     /// balance behind a tap for a reason you have long forgotten.
     static func resolve(_ wanted: VibenetSection?, present: [VibenetSection]) -> VibenetSection {
-        guard let wanted, present.contains(wanted) else { return .holdings }
+        guard let wanted, present.contains(wanted) else { return .home }
         return wanted
     }
 

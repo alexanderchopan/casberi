@@ -386,7 +386,33 @@ struct VibenetRoomCard: View {
             // the holdings because *"holdings and sparkline are together"* —
             // with the crown pinned above the control, nothing can ever get
             // between the two again.
+            // **THE CROWN AND ITS CHART ARE ALWAYS ON, ABOVE THE CONTROL.**
+            // They belong to no scope: they are the room's identity rather
+            // than one of its readings, and a strip that could scope them away
+            // would let you open vibenet and not be told the balance.
+            //
+            // **HOME'S CHART IS ITS DRAWING; every other scope gets one of its
+            // own in the SAME FIXED SLOT** (prd §482 amendment, Wallet's §483
+            // contract). The bar must land in the same place on every scope,
+            // and the only way that is true is if everything above it is one
+            // height — so the slot is fixed rather than fitted and each
+            // drawing sits in it top-aligned. Fitted, the runway and the spine
+            // are different heights and the toggle walks up and down the
+            // screen as you use it.
             balanceHero
+            // **NOT EMITTED ON HOME** — the crown's own chart already fills
+            // this height there, so drawing an empty 210pt box as well would
+            // push the bar a third of a screen lower on the one scope the room
+            // opens to. Wallet paid for the subtler half of this: collapsing
+            // to `maxHeight: 0` is NOT the same as not emitting, because a
+            // container still gives an empty child its spacing.
+            if (section ?? .home) != .home {
+                scopeVisual
+                    .frame(minHeight: Self.visualSlot, maxHeight: Self.visualSlot,
+                           alignment: .top)
+                    .clipped()
+            }
+            accountChips
             scopeStrip
             if shows(.holdings) { holdingsCard }
             // **THE ATTENTION STRIP IS GONE (2026-08-26, prd §482).** It was
@@ -503,18 +529,22 @@ struct VibenetRoomCard: View {
     /// The surface every stacked card wears — one definition, so four cards
     /// cannot drift into four slightly different boxes.
     @ViewBuilder
+    /// **NO OUTLINE (prd §482 amendment, 2026-08-26, user: "we don't have card
+    /// outlines").** Wallet's §483 pass took the same step and the reasoning
+    /// carries: once each scope shows ONE reading, the card is drawing a
+    /// boundary around the only thing on screen. §467 gave every reading its
+    /// own surface to fix "some hodge podge put together view" — six unrelated
+    /// readings in one box — and scoping solved that problem at the root, so
+    /// the surface is now separating a thing from nothing.
+    ///
+    /// The padding STAYS: it is what keeps content off the screen edge (§474's
+    /// reported bug), and it was never the card doing that job.
     private func card<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: 0) { content() }
-            .padding(DS.Space.s4)
+            .padding(.vertical, DS.Space.s2)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .dsWidgetSurface()
-            // CLIPPED TO ITS OWN SHAPE, because one card deliberately bleeds
-            // its chart past the padding (`balanceCard`). `dsWidgetSurface`
-            // paints a rounded background but does not clip what is drawn on
-            // top of it, so without this the sparkline ran out through the
-            // card's rounded corners to the screen edge — the fill squaring
-            // off exactly where the card curves.
-            .clipShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
+            // The clip went with the surface: it existed to stop the chart
+            // bleeding through a rounded CORNER, and there is no corner now.
     }
 
     /// Everything that is NOT the stacked feed room.
@@ -736,13 +766,19 @@ struct VibenetRoomCard: View {
     private var balanceHero: some View {
         if let aggregate = VibenetBalanceAggregation.compose(room.items) {
             VStack(alignment: .leading, spacing: 0) {
-                // The MODEL's heading, never a literal: "Across your
-                // accounts" is only true when the total below really covers
-                // all of them, and `compose` silently drops every account
-                // whose balance read failed. See `nativeHeading`.
-                Text(aggregate.nativeHeading)
-                    .dsText(.label12)
-                    .foregroundStyle(DS.textTertiary)
+                // **NO "Across N of M accounts" (prd §482 amendment,
+                // 2026-08-26, user: "we don't have 'across 2 accounts'").**
+                // Wallet cut its own twin the same day for a reason that
+                // holds here exactly: the lit chip in the account strip
+                // below already says whose money this is — "All", or one
+                // account's own face — so the caption restated a control
+                // sitting six points away.
+                //
+                // The half that was load-bearing SURVIVES, moved: when a
+                // balance read fails the total silently stops covering
+                // everything, and `unreachedLine` below says so in words.
+                // That was always the honest part of this caption; the
+                // count was chrome.
                 if let nativeTotal = aggregate.nativeTotal {
                     // `price48`, Wallet's crown rung — not `price40`. The two
                     // rooms state the same kind of reading and were stating it
@@ -792,13 +828,13 @@ struct VibenetRoomCard: View {
                         Text("\(VibenetBalanceFormat.line(abs(move))) ETH (\(VibenetBalanceFormat.percent(change)))")
                             .dsText(.callout15).fontWeight(.semibold)
                             .monospacedDigit()
-                        // The window's OWN name (prd §479) — the delta beside
-                        // it is computed over exactly this series, so a fixed
-                        // "since watching" beside a 1W move would be the two
-                        // disagreeing on screen.
-                        Text(range.sinceLine)
-                            .dsText(.callout15)
-                            .foregroundStyle(DS.textTertiary)
+                        // **NO WINDOW NAME BESIDE THE MOVE (prd §482
+                        // amendment, user: "we don't have… 'since watching'").**
+                        // §479 put it here so a 1W delta could not read as an
+                        // all-time one — a real hazard, and the range chips
+                        // under the chart now answer it: the lit chip IS the
+                        // window, in the same eyeful. Wallet states its move
+                        // with no window word for the same reason.
                     }
                     .foregroundStyle(TokenChartStyle.accent(change: change, scheme: scheme))
                     .padding(.top, 2)
@@ -830,10 +866,29 @@ struct VibenetRoomCard: View {
                         .padding(.top, DS.Space.s3)
                     rangeStrip
                 }
-                accountChips
             }
         }
     }
+
+    /// What sits in the fixed slot for the scope on screen.
+    ///
+    /// Home's is the sparkline, which the crown draws itself — so this is
+    /// empty there rather than a second drawing. Every other scope steps into
+    /// the same box, which is what makes the toggle land in one place.
+    @ViewBuilder
+    private var scopeVisual: some View {
+        switch section ?? .home {
+        case .home, .activity: EmptyView()
+        case .holdings:        EmptyView()
+        case .accounts:        EmptyView()
+        case .keys:            EmptyView()
+        }
+    }
+
+    /// Fixed, not fitted — see `stackedRoom`. Spelled rather than measured,
+    /// because measuring it would settle the bar a frame LATE, which is the
+    /// same jump arriving slower (Wallet's `walletVisualSlot`, same reason).
+    private static let visualSlot: CGFloat = 210
 
     /// The samples the crown, the delta and the line all read (prd §479) —
     /// ONE derivation, so the figure, its move and its curve can never
@@ -897,49 +952,57 @@ struct VibenetRoomCard: View {
     /// since this morning has one sample, and `VibenetValueHistory.delta`
     /// returns nil rather than a zero — a flat 0.0% beside a face claims a
     /// reading nobody took.
-    @ViewBuilder
-    private var accountChips: some View {
-        // THE FULL WATCH LIST, NEVER THE SCOPED ROOM (prd §482 amendment,
-        // 2026-08-26, user: "if you click one of the accounts, it should
-        // still keep the row in the same place so user can navigate back,
-        // and right now it doesn't"). Derived from the scoped room, picking
-        // an account collapsed this strip to one item and the `count > 1`
-        // gate then HID it — the control deleted itself on use, stranding
-        // you in the scope it created. The strip is the room's navigation,
-        // so it draws the whole roster with the picked chip filled, exactly
-        // the rail rule it inherited.
-        let strip = Self.fullItems(fallback: room)
-        if strip.count > 1 {
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: DS.Space.s2) {
-                    // "All" leads, and it is a CHIP rather than a cleared
-                    // selection: a strip whose unscoped state is "nothing
-                    // highlighted" gives you no way to see that unscoped IS a
-                    // state, which is the same reason the face rail carried
-                    // one.
-                    if onScope != nil { allChip }
-                    // EVERY account, not only the ones with a balance. As a
-                    // read-only strip, dropping an unread account was right —
-                    // it had no number to show. As the SCOPING control it is
-                    // the §83 dead end: the account you most want to look at
-                    // is often the one whose balance did not come back.
-                    ForEach(strip) { item in
-                        accountChip(item, native: item.nativeBalance)
-                    }
-                    if let onOpenBook { bookChip(onOpenBook) }
-                }
-            }
-            .scrollIndicators(.hidden)
-            .padding(.top, DS.Space.s3)
-        }
-    }
-
-    /// Every watched account, however the room in hand is scoped — the strip
-    /// and the detail branch read the same source, so the two can never
-    /// disagree about who is on the roster.
+    /// Every watched account, however the room in hand is scoped — so picking
+    /// one cannot collapse the rail to a single face and hide it (the §475
+    /// amendment; the control must never delete itself on use).
     private static func fullItems(fallback room: VibenetRoom) -> [VibenetAccountItem] {
         let full = VibenetRoomSource.card()?.items ?? []
         return full.count > 1 ? full : room.items
+    }
+
+    /// **WALLET'S OWN RAIL, NOT A LOOKALIKE (prd §482 amendment, 2026-08-26,
+    /// user: "you need to do home like wallet has, and it's icons aren't like
+    /// that and it also has an address book" — then "it has silouheete icons
+    /// and now text to the right, and the name below the icon").**
+    ///
+    /// This was a hand-rolled strip of capsules: a face with its BALANCE to
+    /// the right. Wallet's rail is a face with its NAME BELOW, an "All" word in
+    /// a circle the same size, and a book slot — and the difference was not
+    /// styling, it was that I rebuilt a component instead of calling it. Three
+    /// things came back for free by calling it: the caption Wallet's §483
+    /// restored (amending §450), the selection grammar (opacity and weight,
+    /// never a ring — §351), and the book door in its own slot.
+    ///
+    /// The balance moved OUT of the chip with no loss: the crown states the
+    /// scoped account's total the moment you pick one, which is the same number
+    /// one line up and in the room's largest type.
+    @ViewBuilder
+    private var accountChips: some View {
+        let strip = Self.fullItems(fallback: room)
+        if strip.count > 1, let onScope {
+            FaceScopeRail(
+                items: VibenetScopeRail.items(strip.map(\.address)),
+                scope: scopedAddress,
+                // Never folded: `compact` existed for a PINNED strip that had
+                // to yield height to content scrolling under it. In the content
+                // there is nothing to yield to (Wallet's own note, same move).
+                compact: false,
+                // FALSE, so the names DRAW. The flag means "the room below
+                // already names these", which was true when a roster sat under
+                // the rail — on Home the list is three events, so nothing else
+                // says which account is which.
+                namesInRoom: false,
+                matches: VibenetScopeRail.matches,
+                onPick: { picked in onScope(picked ?? "") },
+                onReTap: nil,
+                // ONE slot, not two (§465): watching another account and seeing
+                // the whole list are the same screen here, so a "+" beside the
+                // book would point at the same place twice.
+                addTitle: nil,
+                onAdd: nil,
+                bookTitle: String(localized: "Address Book"),
+                onOpenBook: onOpenBook)
+        }
     }
 
     /// The unscoped state, as a chip of its own.

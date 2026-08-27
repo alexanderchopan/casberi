@@ -184,12 +184,24 @@ struct WalletLiveState: Equatable {
     /// carry. Built from the checks `activeApprovals` already ran, so it costs
     /// no read of its own.
     var exposure: WalletApprovalExposure = WalletApprovalExposure()
+    /// Everything that can act AS the account rather than spend a token of it
+    /// — Safe modules, an EIP-7702 delegate, Altana credentials (§293).
+    ///
+    /// Read here rather than by the card, because the card is drawn inside a
+    /// `List` and a chain read hung off a row's `.task` fires on every scroll
+    /// that remounts it. It is the cheapest read in this state (one `eth_call`
+    /// per address plus a cached Safe lookup), and until §490 it had NO seat
+    /// in any view at all — `WalletActingParties` was reachable only from a
+    /// probe, so a Safe module that can move funds with no signature was
+    /// invisible in the app that exists to point at exactly that.
+    var acting: [WalletActingParties.Account] = []
 
     static func == (a: WalletLiveState, b: WalletLiveState) -> Bool {
         a.warnings == b.warnings
             && a.flagged.map(\.id) == b.flagged.map(\.id)
             && a.activeApprovals.map(\.id) == b.activeApprovals.map(\.id)
             && a.exposure == b.exposure
+            && a.acting == b.acting
             && a.morpho == b.morpho
             && a.uniswap == b.uniswap
             && a.hyperliquid == b.hyperliquid
@@ -300,6 +312,11 @@ enum WalletWatch {
         async let unstakeBook = EtherFiUnstake.book(addresses: resolved)
         async let safe = SafeBridge.pendingCounts(addresses: resolved)
         async let delegs = WalletSafety.currentDelegations(addresses: resolved)
+        // Joins the same concurrent fan-out rather than running after it: it
+        // shares `WalletSafety`'s delegation read and `SafeBridge`'s cached
+        // module snapshot, so sequencing it would add latency and no safety
+        // (prd §490).
+        async let actingRead = WalletActingParties.read(addresses: resolved)
         async let approvalsRead = WalletApprovals.activeApprovals(hexAddresses: resolved, context: context)
 
         let positions = await defi
@@ -368,7 +385,8 @@ enum WalletWatch {
                                owner: owner),
             flagged: dedupedFlagged,
             activeApprovals: dedupedApprovals,
-            exposure: exposure)
+            exposure: exposure,
+            acting: await actingRead)
     }
 
     /// Hex compares case-insensitively (EIP-55 case is a checksum), base58
@@ -655,6 +673,55 @@ enum WalletDemoState {
                   votingPower: 3_400, lockEnd: nil, isPermanent: true,
                   lastVoted: .now.addingTimeInterval(-2 * 86_400)),
         ])
+
+        // WHO CAN ACT FOR IT (prd §490). The demo's Permissions scope was
+        // EMPTY without this and the chip therefore never appeared at all —
+        // `liveState` returns this fixture wholesale in demo mode, so the
+        // acting-parties read added to the live path is never reached here.
+        //
+        // Both fixtures are deliberately the kinds with NO dollar amount: the
+        // token grants below are already priced, so what the demo was missing
+        // is precisely the class that card exists to show — a holder no
+        // money-ranked card can rank, which is the argument for the card.
+        s.acting = [WalletActingParties.Account(
+            address: "0xdemo",
+            accountID: nil,
+            parties: [
+                .init(kind: .safeModule(safe: "0xdemo"),
+                      address: "0x1f3b9a5c0d2e4f6a8b0c1d2e3f4a5b6c7d8e9f01",
+                      name: "Spending limit"),
+                .init(kind: .delegate(network: "eth-mainnet"),
+                      address: "0x63c0c19a282a1b52b07dd5a65b58948a07dae32b",
+                      name: "Metamask Delegator"),
+            ],
+            modulesUnreadable: false)]
+
+        // The token half, so the card draws every rung it has rather than the
+        // two the fixture above can reach. Ranked biggest-first, which is the
+        // order `WalletApprovalExposure` itself produces and which the rungs
+        // preserve when they name their two.
+        s.exposure = WalletApprovalExposure(
+            priced: [
+                .init(thingID: UUID(), spender: "Uniswap",
+                      spenderAddress: "0x7a250d5630b4cf539739df2c5dacb4c659f2488d",
+                      named: true, symbol: "USDC", forAll: false, unlimited: true,
+                      usd: 6_204, capTokens: nil,
+                      grantedAt: .now.addingTimeInterval(-96 * 86_400)),
+                .init(thingID: UUID(), spender: "1inch",
+                      spenderAddress: "0x1111111254eeb25477b68fb85ed929f73a960582",
+                      named: true, symbol: "USDT", forAll: false, unlimited: false,
+                      usd: 500, capTokens: 500,
+                      grantedAt: .now.addingTimeInterval(-14 * 86_400)),
+            ],
+            unpriced: [
+                // An operator grant — all of one collection, at no stated
+                // price, which is the rung a dollar ranking cannot place.
+                .init(thingID: UUID(), spender: "OpenSea",
+                      spenderAddress: "0x1e0049783f008a0085193e00003d00cd54003c71",
+                      named: true, symbol: "Field Notes", forAll: true, unlimited: true,
+                      usd: nil, capTokens: nil,
+                      grantedAt: .now.addingTimeInterval(-220 * 86_400)),
+            ])
         return s
     }
 }

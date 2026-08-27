@@ -185,6 +185,19 @@ enum WalletActingParties {
     @MainActor
     static func read(addresses: [String]) async -> [Account] {
         guard !addresses.isEmpty else { return [] }
+        // THE DEMO REACHES NOTHING (prd §484's rule, and §490's need for it).
+        //
+        // Without this the demo's Permissions scope is empty forever: the
+        // seeded wallet address is nobody's, so every `eth_call` here answers
+        // for an address that holds no code and the card correctly draws the
+        // one thing the demo must never draw — nothing. `WalletNFTShelf`
+        // solves the identical problem the identical way one file over.
+        //
+        // Both fixtures are the kinds with NO dollar amount, deliberately: the
+        // token grants are already seeded and priced, so what the demo was
+        // missing is exactly the class this card exists to show — a holder a
+        // money-ranked card structurally cannot rank.
+        if DemoMode.isActive { return demoAccounts(addresses) }
         let safes = SafeBridge.knownModules()
         let delegations = await WalletSafety.currentDelegations(addresses: addresses)
         // One `eth_call` per address, and for every wallet that exists today
@@ -249,6 +262,27 @@ enum WalletActingParties {
     /// Two Safes can enable the SAME module, and a delegate can be read on
     /// several chains — one row per distinct (kind, address) pair, or the list
     /// repeats itself and inflates how many parties there really are.
+    /// The demo's acting parties — one Safe module and one 7702 delegate on
+    /// the first watched address, named the way a real read would name them.
+    ///
+    /// Named, not hex: `Party.displayName` falls back to short hex for a
+    /// contract nothing can name, and a demo whose whole job is to show what a
+    /// furnished app looks like should show the resolved case.
+    private static func demoAccounts(_ addresses: [String]) -> [Account] {
+        guard let first = addresses.first else { return [] }
+        return [Account(address: first,
+                        accountID: nil,
+                        parties: [
+                            Party(kind: .safeModule(safe: first),
+                                  address: "0x1f3b9a5c0d2e4f6a8b0c1d2e3f4a5b6c7d8e9f01",
+                                  name: "Spending limit"),
+                            Party(kind: .delegate(network: "eth-mainnet"),
+                                  address: "0x63c0c19a282a1b52b07dd5a65b58948a07dae32b",
+                                  name: "Metamask Delegator"),
+                        ],
+                        modulesUnreadable: false)]
+    }
+
     private static func dedupe(_ parties: [Party]) -> [Party] {
         var seen = Set<String>()
         return parties.filter { seen.insert($0.id).inserted }

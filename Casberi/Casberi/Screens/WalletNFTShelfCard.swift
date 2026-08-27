@@ -119,18 +119,17 @@ struct WalletNFTShelfCard: View {
 
     private var shelf: some View {
         VStack(alignment: .leading, spacing: 0) {
-            header
             if pieces.isEmpty {
                 emptyNote
             } else {
                 strip
             }
         }
-        .padding(.vertical, WalletCardStyle.pad)
-        // Was the room's only opaque card, which made the NFT shelf the
-        // brightest object on a screen where a liquidation axis sits two cards
-        // above it (2026-08-22). One fill for every card in the room.
-        .dsWidgetSurface(fillOpacity: WalletCardStyle.fill)
+        // BARE ON THE PAGE (§483: *"we don't do cards"*), and NO HEADER: the
+        // scope chip directly below already says "NFTs" and the rows below
+        // that name every collection, so a title here is the third voice
+        // §447 recorded — a card opening with two display lines and then a
+        // drawing repeating the header word for word.
     }
 
     private var header: some View {
@@ -211,27 +210,23 @@ struct WalletNFTShelfCard: View {
     /// there are more collections than fit, the slot says so in words and the
     /// list directly below carries every one of them.
     private var strip: some View {
-        let groups = coverGroups
-        return VStack(spacing: DS.Space.s2) {
-            ForEach(0..<2, id: \.self) { row in
-                HStack(spacing: DS.Space.s2) {
-                    ForEach(0..<2, id: \.self) { col in
-                        let i = row * 2 + col
-                        if i < groups.count {
-                            quadCell(groups[i])
-                        } else {
-                            // An absent quarter is EMPTY, never a placeholder
-                            // tile: a grey square where art goes reads as a
-                            // picture that failed to load, which is the one
-                            // thing a shelf must not say about somebody's own
-                            // collection.
-                            Color.clear
-                        }
-                    }
-                }
+        let groups = Array(coverGroups.prefix(4))
+        return HStack(spacing: DS.Space.s2) {
+            ForEach(Array(groups.enumerated()), id: \.offset) { _, group in
+                quadCell(group)
             }
         }
-        .aspectRatio(1, contentMode: .fit)
+        // **A ROW, not a 2x2** (measured on the device). The slot is 402pt
+        // wide and about 170pt tall, so a square grid is bounded by its
+        // HEIGHT: a 2x2 drew a 170pt square of art marooned in the left third
+        // of a wide, empty box. A row spends the axis that is actually
+        // available, and every cover stays as large as the slot allows.
+        //
+        // Cells FILL rather than sitting at a fixed size, so two collections
+        // draw two large covers and four draw four smaller ones — a shelf
+        // that always fills, rather than one that looks half-loaded on the
+        // common case of holding fewer than four.
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, DS.Space.s4)
     }
 
@@ -269,6 +264,11 @@ struct WalletNFTShelfCard: View {
         }
     }
 
+    /// The slot's height, spent on art. Spelled rather than measured for
+    /// `walletVisualSlot`'s own reason: a measured height settles a frame late,
+    /// which is the same jump arriving slower.
+    private static let coverSide: CGFloat = 150
+
     @ViewBuilder
     private func quadArt(_ piece: WalletNFTShelf.NFTPiece) -> some View {
         Group {
@@ -280,7 +280,8 @@ struct WalletNFTShelfCard: View {
                 RemoteThumb(urlString: piece.imageURL, size: Self.tile)
             }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .frame(maxWidth: .infinity)
+        .frame(height: Self.coverSide)
         .clipShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
         .accessibilityLabel(Text(piece.collection))
     }
