@@ -546,6 +546,12 @@ enum VibenetScopeRail {
         addresses.map { address in
             FaceScopeRail.Item(
                 id: address,
+                // **THE ELLIPSIS STAYS** (prd §495, reversing §482's
+                // amendment). The caption is the fallback half of a name, so
+                // the mark that says "this has no name, here is its tail" is
+                // exactly what it needs — see `WalletStore.shortAddress` for
+                // the full reasoning and for the measurement that retired the
+                // width argument.
                 caption: VibenetWatch.shared.name(for: address)
                     ?? VibenetRoom.shortAddress(address),
                 face: .wallet(address: address))

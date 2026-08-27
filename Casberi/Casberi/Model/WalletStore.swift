@@ -85,9 +85,29 @@ final class WalletStore {
     /// last four is still caught on exactly the characters the person can see.
     /// Books written before this ruling hold the old spelling, which is why
     /// that helper accepts both.
+    /// **THE ELLIPSIS IS BACK** (prd §495, user 2026-08-27, reversing their own
+    /// 2026-08-26 ruling "if it is an address then only has last four digits no
+    /// ellipsis").
+    ///
+    /// The reason is what the short form is FOR. It is never decoration and
+    /// never a caption in its own right: at every call site in this app it is
+    /// the fallback half of `name(for:) ?? shortAddress(…)`, so it appears
+    /// exactly where a NAME would have been. The ellipsis is the one mark that
+    /// separates "this has no name, here is the tail of its address" from
+    /// "this is called 9a0b" — and without it the app asserts a name nobody
+    /// gave, which is §83 in the quietest possible voice.
+    ///
+    /// The width argument that motivated dropping it does not survive
+    /// measurement: `…9a0b` at `label12` is about 34pt inside the rail's 66pt
+    /// caption slot.
+    ///
+    /// **What survives from that ruling is the half that was never about the
+    /// ellipsis — NO DOUBLE TRUNCATION.** `0xd889…de…` was the real defect,
+    /// an ellipsis arriving twice because two layers each truncated, and
+    /// `address-safety-selftest` still counts them: exactly one, never two.
     static func shortAddress(_ address: String) -> String {
         guard address.count > 12 else { return address }
-        return String(address.suffix(4))
+        return "…\(address.suffix(4))"
     }
 
     /// Is `name` a placeholder this app generated, rather than something the

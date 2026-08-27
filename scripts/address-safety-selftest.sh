@@ -26,7 +26,7 @@ done
 # @Observable store). They're shimmed below — so these guards fail the run if
 # the shipped originals ever stop matching what the shim mirrors. A shim that
 # silently disagrees with production would make this whole harness a liar.
-grep -q 'return String(address.suffix(4))' \
+grep -q 'return "…\\(address.suffix(4))"' \
   Casberi/Casberi/Model/WalletStore.swift \
   || { echo "✗ WalletStore.shortAddress changed shape — update the shim in $0"; exit 1; }
 grep -q 'return name == "\\(address.prefix(6))…\\(address.suffix(4))"' \
@@ -49,7 +49,7 @@ import Foundation
 enum WalletStore {
     static func shortAddress(_ address: String) -> String {
         guard address.count > 12 else { return address }
-        return String(address.suffix(4))
+        return "…\(address.suffix(4))"
     }
     static func isAutoName(_ name: String, for address: String) -> Bool {
         guard !name.isEmpty else { return false }
@@ -134,7 +134,7 @@ expect("a poisoned twin is caught", look(real, fake), "yes")
 expect("…and the check is symmetric", look(fake, real), "yes")
 expect("display forms really do collide",
        (AddressSafety.displayForm(real) ?? "?") + "==" + (AddressSafety.displayForm(fake) ?? "?"),
-       "eaed==eaed")
+       "…eaed==…eaed")
 // The false positive that would matter most: an address against ITSELF in
 // checksummed form. EIP-55 case is a checksum, not identity — warning here
 // would fire on every wallet in the book.
@@ -158,8 +158,8 @@ expect("Solana twins collide too", look(sol, solTwin), "yes")
 // answer would be "no".
 expect("hex display folds case",
        AddressSafety.displayForm("0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed") ?? "nil",
-       "eaed")
-expect("base58 display keeps case", AddressSafety.displayForm(sol) ?? "nil", "AWWM")
+       "…eaed")
+expect("base58 display keeps case", AddressSafety.displayForm(sol) ?? "nil", "…AWWM")
 // Names are excluded: two long names sharing a truncation aren't an attack.
 expect("names are never lookalikes",
        look("supercalifragilistic1.eth", "supercalifragilistic2.eth"), "no")
@@ -168,9 +168,9 @@ expect("a name has no display form",
 // Short strings can't hide anything — shortAddress passes them through.
 expect("short strings don't collide", look("0xabc", "0xdef"), "no")
 
-// THE ONE TRUNCATION RULE, AMENDED (2026-08-12 "…XXXX only, i don't want
-// double truncation" → 2026-08-26 "if it is an address then only has last four
-// digits no ellipsis").
+// THE ONE TRUNCATION RULE, AND ITS AMENDMENT REVERSED (2026-08-12 "…XXXX
+// only, i don't want double truncation" → 2026-08-26 "only last four digits no
+// ellipsis" → 2026-08-27, prd §495, back to the ellipsis).
 //
 // The original ruling was about the CASCADE — `0xd889…de…`, an ellipsis
 // arriving twice because two layers each truncated — and that half is
@@ -185,11 +185,11 @@ expect("short strings don't collide", look("0xabc", "0xdef"), "no")
 print("Truncation shape:")
 for a in [real, sol, "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"] {
     let short = WalletStore.shortAddress(a)
-    expect("no head on \(a.prefix(6))", short.hasPrefix("0x") ? "yes" : "no", "no")
-    expect("no ellipsis on \(a.prefix(6))",
-           String(short.filter { $0 == "…" }.count), "0")
-    expect("four characters on \(a.prefix(6))", String(short.count), "4")
-    expect("it is the TAIL on \(a.prefix(6))", short, String(a.suffix(4)))
+    expect("no head on \(a.prefix(6))", short.hasPrefix("…") ? "yes" : "no", "yes")
+    expect("exactly ONE ellipsis on \(a.prefix(6))",
+           String(short.filter { $0 == "…" }.count), "1")
+    expect("four characters after it on \(a.prefix(6))", String(short.dropFirst().count), "4")
+    expect("it is the TAIL on \(a.prefix(6))", String(short.dropFirst()), String(a.suffix(4)))
 }
 
 // THE MIGRATION. The short form is persisted as a placeholder name by
@@ -200,13 +200,13 @@ for a in [real, sol, "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"] {
 // a real ENS name, and `CounterpartyRetitle` pushes a hash into a title.
 print("Auto-name recognition:")
 expect("the current form is an auto-name",
-       WalletStore.isAutoName("eaed", for: real) ? "yes" : "no", "yes")
+       WalletStore.isAutoName("…eaed", for: real) ? "yes" : "no", "yes")
 expect("the LEGACY form is still an auto-name",
        WalletStore.isAutoName("0x5aae…eaed", for: real) ? "yes" : "no", "yes")
 expect("a name the person typed is not",
        WalletStore.isAutoName("Main", for: real) ? "yes" : "no", "no")
 expect("another address's short form is not",
-       WalletStore.isAutoName("AWWM", for: real) ? "yes" : "no", "no")
+       WalletStore.isAutoName("…AWWM", for: real) ? "yes" : "no", "no")
 expect("empty is not an auto-name",
        WalletStore.isAutoName("", for: real) ? "yes" : "no", "no")
 
