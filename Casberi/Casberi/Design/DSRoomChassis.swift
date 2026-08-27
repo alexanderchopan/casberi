@@ -133,6 +133,19 @@ struct DSRoomSlot<Figure: View>: View {
     /// The scope's own headline, or nil where the drawing names itself. The
     /// ROW is reserved either way — see the type's own note.
     let headline: String?
+    /// Whether to reserve the headline row at all.
+    ///
+    /// **True for a figure that draws below a heading; FALSE for one that IS
+    /// the heading** (prd §495). Both rooms' Home scopes lead with the crown —
+    /// a `price48` figure that occupies exactly the role a headline plays —
+    /// so reserving a blank row above it pushes the crown 30pt down the screen
+    /// and misaligns it with every other scope's headline, which is the
+    /// opposite of what reserving the row is for.
+    ///
+    /// The guarantee the row exists to give is that every scope's FIRST PIXEL
+    /// lands at the same y. A crown honours that by standing in the row, not
+    /// by standing under it.
+    var reservesHeadline: Bool = true
     @ViewBuilder let figure: () -> Figure
 
     /// `stat24`'s line height, spelled from the ramp rather than measured:
@@ -142,6 +155,21 @@ struct DSRoomSlot<Figure: View>: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
+            if reservesHeadline {
+                headlineRowView
+            }
+            figure()
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .padding(.horizontal, DSRoomChassis.contentInset)
+        .frame(minHeight: DSRoomChassis.visualSlot,
+               maxHeight: DSRoomChassis.visualSlot,
+               alignment: .top)
+        .clipped()
+    }
+
+    @ViewBuilder
+    private var headlineRowView: some View {
             Group {
                 if let headline {
                     Text(headline)
@@ -159,13 +187,5 @@ struct DSRoomSlot<Figure: View>: View {
             }
             .frame(height: Self.headlineRow, alignment: .leading)
             .padding(.bottom, DS.Space.s3)
-            figure()
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .padding(.horizontal, DSRoomChassis.contentInset)
-        .frame(minHeight: DSRoomChassis.visualSlot,
-               maxHeight: DSRoomChassis.visualSlot,
-               alignment: .top)
-        .clipped()
     }
 }

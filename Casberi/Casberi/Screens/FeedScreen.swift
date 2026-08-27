@@ -2574,8 +2574,7 @@ struct FeedScreen: View {
     private var walletCompositionSection: some View {
         let composition = walletComposition
         if !composition.isEmpty {
-            Section {
-                WalletCompositionStrip(
+                            WalletCompositionStrip(
                     composition: composition,
                     onOpenDeposits: { feedSheet = .deposits(composition) },
                     // Owed gets no door on purpose — the Lending card below
@@ -2588,10 +2587,6 @@ struct FeedScreen: View {
                     // identical slots reads as that scope being a different
                     // kind of thing, which it is not.
                     .padding(.bottom, DS.Space.s3)
-                    .listRowInsets(WalletCardStyle.rowInsets)
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-            }
         }
     }
 
@@ -4186,28 +4181,22 @@ struct FeedScreen: View {
             // absent one, and the count of sections above the bar has to match
             // on every scope for the bar to land in the same place.
             if section == .home {
-                // **NOT `DSRoomSlot`, AND THE REASON IS STRUCTURAL** (prd
-                // §495, user: "one template").
-                //
-                // Wallet's chassis is built from List SECTIONS; vibenet's from
-                // a `VStack`. Wrapping a `Section` in a plain view collapses
-                // it into a single row and drops the `listRowSeparator(.hidden)`
-                // its rows carry — which put a HAIRLINE under the sparkline,
-                // and hairlines are banned outright by §8. Caught on the
-                // device one build after the wrap, not by reading.
-                //
-                // So the two rooms share the constants (`DSRoomChassis`) and
-                // the RULES — fixed height, one inset, top-aligned, clipped,
-                // headline row reserved — but Wallet applies them at the
-                // section level because that is what a `List` will accept.
-                // Making this literally one view means turning the seven
-                // scope builders into plain views inside one Section, which is
-                // a real refactor and its own ruling.
-                walletTilesSection(visible, streamTotal: all.count, drawsChart: true)
-                    .frame(minHeight: Self.walletVisualSlot,
-                           maxHeight: Self.walletVisualSlot,
-                           alignment: .top)
-                    .clipped()
+                // The same one template as every scope below and as every
+                // vibenet scope (prd §495). Home is a bare view now too, so
+                // the Section and its row modifiers are written once here
+                // rather than inside the builder.
+                Section {
+                    // `reservesHeadline: false` — the crown IS this scope's
+                    // headline (`price48`), so it stands IN the row rather
+                    // than under it, which is what puts its first pixel level
+                    // with every other scope's headline.
+                    DSRoomSlot(headline: nil, reservesHeadline: false) {
+                        walletTilesSection(visible, streamTotal: all.count, drawsChart: true)
+                    }
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(WalletCardStyle.rowInsets)
+                }
             }
             // THE TOGGLE SITS BELOW THE SPARKLINE, IN THE CONTENT (user ruling,
             // 2026-08-26: *"we need to have those toggles be below the
@@ -4255,28 +4244,30 @@ struct FeedScreen: View {
             // sat that spacing higher there. Two zero-height boxes, each
             // invisible, and the difference between them was the bug.
             if section != .home {
-                // **STRUCTURALLY IDENTICAL TO HOME ABOVE** (prd §495, user:
-                // *"On Wallet now, Home in the toggle bar is at a different
-                // place than the others and it jumps"*).
+                // **ONE TEMPLATE, AND WALLET IS IN IT NOW** (prd §495, user:
+                // "Wallet and Vibenet should use same template" → "one
+                // template" → "we need to finish the other half").
                 //
-                // This wrapped its section in `ZStack { Color.clear; … }`
-                // while Home applied the frame directly — and both builders
-                // return List SECTIONS, so the wrapper put a Section inside a
-                // plain view. That collapses it into one row, drops the
-                // `listRowSeparator(.hidden)` its rows carry (the HAIRLINE
-                // visible above the face rail) and changes its measured
-                // height, which is the ~24pt that put the strip lower on every
-                // scope than on Home.
+                // The seven scope builders used to be List SECTIONS, each
+                // carrying its own `Section { … }` and its own row modifiers —
+                // which is what stopped Wallet reaching `DSRoomSlot` on the
+                // first attempt, because wrapping a Section in a plain view
+                // collapses it and drops its hidden separator (a HAIRLINE, §8
+                // bans them). They are bare views now, the Section is here and
+                // written once, and the box is the same `DSRoomSlot` every
+                // vibenet scope draws into.
                 //
-                // The `Color.clear` was holding the frame open against an
-                // empty figure — vibenet's own lesson — but it cannot do that
-                // job here, because what it is holding open is not a view.
-                // Same shape as Home now: builder, frame, clip.
-                walletScopeVisualSection(section)
-                    .frame(minHeight: Self.walletVisualSlot,
-                           maxHeight: Self.walletVisualSlot,
-                           alignment: .top)
-                    .clipped()
+                // `headline: nil`: Wallet's figures name themselves today. The
+                // ROW is still reserved, which is what makes each drawing
+                // start at the same y and what clears the settings gear.
+                Section {
+                    DSRoomSlot(headline: nil) {
+                        walletScopeVisualSection(section)
+                    }
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(WalletCardStyle.rowInsets)
+                }
             }
             walletScopeRailSection
             walletSectionSwitcherSection(section)
@@ -6229,8 +6220,7 @@ struct FeedScreen: View {
         // never render at all.
         if chart != nil || total != nil || !warnings.isEmpty || !composition.isEmpty
             || !latest.isEmpty {
-            Section {
-                // ONE card (prd §212, 2026-07-25) — the balance, the per-wallet
+                            // ONE card (prd §212, 2026-07-25) — the balance, the per-wallet
                 // split, and the security read. Three parcels of equal weight
                 // until this pass, and they were never three subjects: "what's
                 // it worth", "whose is it", "is it okay" are the questions of a
@@ -6450,10 +6440,6 @@ struct FeedScreen: View {
                 // appear as they land, they just no longer each stage a
                 // separate surface into the room.
                 .modifier(RowEntrance(index: 0, wave: shapeWave, style: entranceStyle))
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
-                .listRowInsets(WalletCardStyle.rowInsets)
-            }
         }
     }
 
@@ -6772,14 +6758,9 @@ struct FeedScreen: View {
     @ViewBuilder
     private var walletFlowSection: some View {
         if let band = WalletFlowSource.band(from: visible, since: flowWindowStart) {
-            Section {
-                WalletFlowBand(band: band, windowLabel: balanceRange.flowLabel,
+                            WalletFlowBand(band: band, windowLabel: balanceRange.flowLabel,
                                spineAddress: spineWalletAddress)
                     .modifier(RowEntrance(index: 1, wave: shapeWave, style: entranceStyle))
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-                    .listRowInsets(WalletCardStyle.rowInsets)
-            }
         }
     }
 
@@ -6875,17 +6856,12 @@ struct FeedScreen: View {
         // you hold" header asks the same question, and one copy is what keeps
         // the header and this card from ever disagreeing.
         if let entry = nftShelfEntry {
-            Section {
-                WalletNFTShelfCard(
+                            WalletNFTShelfCard(
                     wallet: entry.address,
                     label: entry.label.isEmpty ? entry.short : entry.label,
                     onEdit: { feedSheet = .nftPicks(address: entry.address,
                                                     label: entry.label.isEmpty ? entry.short : entry.label) })
                     .modifier(RowEntrance(index: 2, wave: shapeWave, style: entranceStyle))
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-                    .listRowInsets(WalletCardStyle.rowInsets)
-            }
         }
     }
 
@@ -6897,8 +6873,7 @@ struct FeedScreen: View {
     @ViewBuilder
     private var walletRiskSection: some View {
         if let entries = walletRiskEntries {
-            Section {
-                WalletRiskStrip(entries: entries, onPick: { entry in
+                            WalletRiskStrip(entries: entries, onPick: { entry in
                     // Overview → detail (prd §417). The strip ranks every
                     // leveraged position on one axis; the card below states the
                     // one you picked in its own protocol's units. The target is
@@ -6909,10 +6884,6 @@ struct FeedScreen: View {
                     cardScrollTarget = Self.riskCardAnchor(for: entry.id)
                 })
                     .modifier(RowEntrance(index: 2, wave: shapeWave, style: entranceStyle))
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-                    .listRowInsets(WalletCardStyle.rowInsets)
-            }
         }
     }
 
@@ -6945,14 +6916,9 @@ struct FeedScreen: View {
         let holders = WalletPermissionsSource.holders(exposure: walletLive.exposure,
                                                       acting: walletLive.acting)
         if !holders.isEmpty {
-            Section {
-                WalletPermissionsCard(holders: holders)
+                            WalletPermissionsCard(holders: holders)
                     .modifier(RowEntrance(index: 1, wave: shapeWave, style: entranceStyle))
                     .padding(.bottom, DS.Space.s3)
-                    .listRowInsets(WalletCardStyle.rowInsets)
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-            }
         }
     }
 
@@ -7470,8 +7436,7 @@ struct FeedScreen: View {
     @ViewBuilder
     private var holdingsBlockSection: some View {
         if !blockStream.els.isEmpty {
-            Section {
-                VStack(alignment: .leading, spacing: DS.Space.s2) {
+                            VStack(alignment: .leading, spacing: DS.Space.s2) {
                     // THE DRAWING LEADS (2026-08-22, prd §447) — nothing above
                     // the map at all. §417 put the concentration sentence here
                     // at `heading22` on Lending's and Approvals' anatomy, and
@@ -7542,12 +7507,8 @@ struct FeedScreen: View {
                 // stops the whole treemap from hard-popping in the moment
                 // the holdings read lands (2026-07-20, wallet streaming fix).
                 .modifier(RowEntrance(index: 1, wave: shapeWave, style: entranceStyle))
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
                 // The card needs the page gutter the bare map didn't (it used
                 // to bleed to the screen edge and self-pad its cells).
-                .listRowInsets(WalletCardStyle.rowInsets)
-            }
         }
     }
 

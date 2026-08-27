@@ -467,7 +467,9 @@ struct VibenetRoomCard: View {
             // clears the settings gear.
             Group {
                 if (section ?? .home) == .home {
-                    DSRoomSlot(headline: nil) { balanceHero }
+                    // The crown IS the headline here too — see Wallet's
+                    // own Home slot and `reservesHeadline`.
+                    DSRoomSlot(headline: nil, reservesHeadline: false) { balanceHero }
                 } else {
                     scopeVisual
                 }
