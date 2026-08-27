@@ -73,7 +73,28 @@ let cast: [Face] = [
           query: "topType=WinterHat3&accessoriesType=Prescription02&hairColor=Brown&facialHairType=BeardLight&facialHairColor=Brown&clotheType=Hoodie&clotheColor=Gray02&eyeType=Squint&eyebrowType=DefaultNatural&mouthType=Serious&skinColor=Brown"),
     .init(handle: "tufte_bot", note: "X — liked (a bot account, and it has a face like any other)",
           query: "topType=ShortHairSides&accessoriesType=Round&hairColor=Black&facialHairType=Blank&clotheType=GraphicShirt&clotheColor=White&eyeType=Wink&eyebrowType=Default&mouthType=Twinkle&skinColor=Yellow"),
+    // The address book (2026-08-26). `ContactsIngest` stamps
+    // `CNContact.thumbnailImageData` onto `previewImageData`, so a real
+    // Contacts search returns people with faces; the demo's three had none, and
+    // `PersonCard` falls back to their INITIALS on a grey disc — the one card
+    // in the app whose whole subject is a person, drawn as two letters.
+    .init(handle: "ana", note: "Contacts — Ana Kovač",
+          query: "topType=LongHairBigHair&accessoriesType=Blank&hairColor=BrownDark&facialHairType=Blank&clotheType=BlazerSweater&eyeType=Default&eyebrowType=Default&mouthType=Smile&skinColor=Light"),
+    .init(handle: "samrees", note: "Contacts — Sam Rees (named apart from the Farcaster `sam`: two different people, and one face on both would say otherwise)",
+          query: "topType=ShortHairShaggyMullet&accessoriesType=Blank&hairColor=Auburn&facialHairType=BeardMedium&facialHairColor=Auburn&clotheType=ShirtCrewNeck&clotheColor=Blue01&eyeType=Default&eyebrowType=DefaultNatural&mouthType=Serious&skinColor=Light"),
+    .init(handle: "mira", note: "Contacts — Mira Novak",
+          query: "topType=LongHairFroBand&accessoriesType=Prescription02&hairColor=Black&facialHairType=Blank&clotheType=Overall&clotheColor=Gray01&eyeType=Happy&eyebrowType=RaisedExcited&mouthType=Smile&skinColor=Brown"),
 ]
+
+/// Regenerating every face on every run rewrites thirteen imagesets to add one,
+/// which buries a real change in noise. `ONLY=ana,mira` scopes a run to the
+/// handles named; unset, it does the whole cast.
+let only: Set<String> = {
+    guard let raw = ProcessInfo.processInfo.environment["ONLY"], !raw.isEmpty else { return [] }
+    return Set(raw.split(separator: ",").map {
+        $0.trimmingCharacters(in: .whitespaces)
+    })
+}()
 
 let side: CGFloat = 320
 let root = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
@@ -93,6 +114,7 @@ func fetch(_ query: String) -> Data? {
 
 var wrote = 0
 for face in cast {
+    if !only.isEmpty && !only.contains(face.handle) { continue }
     guard let svg = fetch(face.query), let art = NSImage(data: svg) else {
         FileHandle.standardError.write("✗ \(face.handle) — no render\n".data(using: .utf8)!)
         continue

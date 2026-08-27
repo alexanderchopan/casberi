@@ -35081,3 +35081,96 @@ a fact about the networks rather than drift.
 harness is green, but no screenshot of any of these rooms has been taken this
 pass; a Nostr room with two watched accounts is the one worth looking at first,
 since its rail, its rings and its person filter all turn on together.
+
+## 492. A letter glyph is wrong exactly where the real bridge draws an image (user, with a screenshot of the GeckoTerminal strip: "do a sweep of the demo and make sure we have images and icons instead of letter glyphs everywhere like this", 2026-08-26)
+
+Three coloured squircles reading **A · J · B**, then "GeckoTerminal · 3h" — a
+`StripRow` folding the demo's three trending tokens, drawing each member's
+`previewImageURL`, which for that room resolved to a generated MONOGRAM.
+
+**THE RULE THE SWEEP RAN ON, since "no letters anywhere" is the wrong rule.** A
+monogram is the honest answer wherever the connected app has no picture either:
+FinanceKit hands us a merchant NAME and no logo, so Whole Foods and Uber wearing
+initials is what a real Apple Wallet room looks like; `MailBridge` reads no
+avatar, so `SenderInitial` is right; `CardPointers` has no card artwork to draw
+and matching "Amex Gold" against a token brand would put somebody else's logo on
+a credit card. **A letter is a DEFECT exactly where the real bridge stamps an
+image and only the demo is missing one** — that is the §369 demo-parity rule
+applied to pixels rather than to fields, and it is the only test that separates
+the four fixes below from the six things that correctly keep their letters.
+
+**1 · The trending coins, and the reasoning that had gone stale.** The monograms
+were a deliberate 2026-08-12 call — "a trending row is somebody else's token
+whose logo we have no right to reproduce" — which is true of a token we do not
+bundle and simply **false of one we do**: AERO and JUP wear their real marks in
+the wallet treemap and the watchlist two rooms away, so the letter claimed a
+limit the app does not have. `UIImage.demoSample` resolves `sample:coin-` through
+`BrandMark` FIRST and keeps the monogram as the fallback, which is what a real
+long-tail trending token still gets. Brett is replaced by Curve, the third
+symbol this app already ships a mark for, so the row spans the seat's three demo
+chains (Base, Solana, Ethereum) with no two sharing one; the price moves from
+`0.42 + symbol.count / 10` to a stated figure, since that formula gave two of
+three rows the same number.
+
+**2 · `GenTxRow` kept a private asset namespace, and USDC paid for it.** The
+synthesized transaction row resolved its mark against `token-eth`/`token-sol`/
+`token-link` — three imagesets nothing else in the app used — behind a hardcoded
+three-symbol `known` set, while `BrandMark` ships forty-odd token marks. So the
+asset most transactions in this corpus actually move drew a blue circle with a
+**U** in it, one card away from its real logo. It resolves through `BrandMark`
+now; the three orphan assets are deleted. **This is the `TokenIcon`/`AssetMark`
+split of 2026-08-04 for a third time** (two tables disagreed, so wstETH drew
+nothing in the treemap and a real mark in the row beneath it) — one table, or
+the same symbol renders two ways on two screens.
+
+**3 · Three names had no mark and should have.** `Spark` (the wallet
+composition's second lending place), `1inch` and `OpenSea` (the approvals
+exposure card's spenders) all fell to `AssetMark`'s monogram, which that file's
+own doc says is the wrong answer: "when a symbol has no bundled mark the answer
+is to BUNDLE one, not to reach for it at render time." All three are bundled.
+OpenSea gains a real catalog tile for free, since `BridgeIcon` reads the same
+`brand-*` namespace.
+
+**4 · The contacts had no faces.** `ContactsIngest` stamps
+`CNContact.thumbnailImageData` onto `previewImageData`, so a real address-book
+search answers with people you recognize; the demo's three carried none and
+`PersonCard` fell back to their INITIALS on a grey disc — two letters standing in
+for a person, on the one card in this app whose entire subject is who somebody
+is. Three faces join the cast (`scripts/make-demo-avatars.swift`, which gained an
+`ONLY=` filter so adding one face no longer rewrites thirteen imagesets and
+buries the real change in noise). Sam Rees is generated apart from the Farcaster
+`sam`: two different people, and one face on both would say otherwise.
+
+**5 · `AppIconTile` is deleted.** A squircle drawing the source's first letter on
+a brand fill, unconditionally, with a hairline border — and **no call sites at
+all**: `BridgeIcon` has drawn the real bundled asset since the catalog shipped,
+falling back to an SF glyph rather than a letter. A letter-glyph stand-in nothing
+could reach, and a hairline the design law forbids. Its colour table stays;
+`KindGlyph` reads it.
+
+**WHAT KEEPS ITS LETTERS, each for a stated reason.** The merchant, mail-sender
+and CardPointers monograms above. **The publication and org marks
+(`sample-avatar-hackernews`/`-theverge`/`-techcrunch`/`-smallthings`/
+`-latencyclub`/`-kyutai`/`-espresso-lab`) are the one judgement call and are
+LEFT ALONE deliberately**: `RSSIngest` stamps a site's FAVICON there, and a
+letter on a coloured square is what several of those favicons literally are —
+Hacker News's is an orange square with a Y. Bundling the real logos would make
+the demo prettier and would also put The Verge's mark beside a byline the demo
+invented, which is the §83 objection wearing a nicer typeface. **The open
+question is the other half of that pair: whether the demo should name real
+publications at all**, since it already invents every byline and two of the five
+publications. Renaming them fictional would let all five carry a drawn emblem
+with nothing to misrepresent — a content ruling, not an asset one, and left to
+the user. `AgentPanelGrid.TileBadge`'s letter survives too and is unreachable:
+its only host, `AgentOpenBoard`, stopped docking at §386e.
+
+**Noticed and NOT fixed:** the OpenSea drops draw `art(i)`, the bundled sample
+photographs — pictures of the real world where a real drop is generative art,
+and `DemoNFTArt` (which the wallet NFT shelf already uses) is sitting right
+there. Not a letter, so out of this sweep's scope.
+
+**MEASURED how far?** iOS Simulator and Mac Catalyst both build; the demo
+selftest, catalog sync, the liveness audit and the design/face/motion ramps are
+green. **No screenshot of the fixed strip has been taken** — the resolver change
+is one lookup and the assets are on disk, but the Markets room's own tiles are
+unseen this pass.

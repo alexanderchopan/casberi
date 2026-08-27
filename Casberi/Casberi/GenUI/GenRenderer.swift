@@ -3642,13 +3642,22 @@ struct GenSkeletonBlock: View {
 /// TxRow(verb, amount, detail) — verb leads; "Received" wears confirm.
 /// A token mark opens the row (ruling 2026-07-07: icons live at row scale,
 /// never in the treemap): the asset that ARRIVES leads — the last ticker in
-/// a swap, the only one otherwise. Bundled marks for the majors; anything
-/// else wears a monogram coin, which is also what long-tail tokens get when
-/// live Zerion data arrives.
+/// a swap, the only one otherwise. Resolution is `BrandMark`'s — the one table
+/// the wallet treemap, every watchlist row and `AssetMark` already share —
+/// so anything the app bundles draws its real logo here too; anything else
+/// wears a monogram coin, which is also what long-tail tokens get when live
+/// Zerion data arrives.
 private struct GenTxRow: View {
     let el: GenEl
 
-    private static let known: Set<String> = ["ETH", "SOL", "LINK"]
+    /// The colour a monogram coin wears when nothing is bundled. The BUNDLED
+    /// set is no longer listed here: this file kept its own three-symbol
+    /// `known` set against its own `token-eth`/`token-sol`/`token-link`
+    /// assets, a namespace nothing else in the app uses, while `BrandMark`
+    /// ships forty-odd token marks the wallet treemap and every watchlist row
+    /// already draw. So USDC — the asset most transactions in this corpus
+    /// actually move — wore a blue circle with a "U" in it, one card away from
+    /// its real logo (2026-08-26).
     private static let coinColor: [String: Color] = [
         "USDC": Color.fixed("#2775ca"), "BTC": Color.fixed("#f7931a"),
         "ETH": Color.fixed("#3c3c44"), "SOL": Color.fixed("#141418"),
@@ -3669,8 +3678,7 @@ private struct GenTxRow: View {
     @ViewBuilder private var tokenMark: some View {
         if let ticker {
             Group {
-                if Self.known.contains(ticker),
-                   let ui = UIImage(named: "token-\(ticker.lowercased())") {
+                if let ui = BrandMark.image(for: ticker) {
                     Image(uiImage: ui).resizable().scaledToFill()
                 } else {
                     let coin = Self.coinColor[ticker] ?? DS.gray200

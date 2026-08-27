@@ -263,11 +263,14 @@ print("wrote \(faceCount) faces")
 // rows carried no image at all and fell back to the source glyph, which drew
 // the same green GeckoTerminal mark three times.
 //
-// Monograms, not anybody's logo — the same call the publication marks above
-// make, and for the same reason: the field holds a remote image we have no
-// right to reproduce, so the stand-in should read as a stand-in. The demo's
-// three WATCHED tokens (ETH/SOL/DEGEN) are different: those resolve to the
-// app's own shipped `brand-*` assets, which it already draws elsewhere.
+// THE FALLBACK ONLY, since 2026-08-26. `UIImage.demoSample` resolves a
+// `sample:coin-` ref against the app's own shipped `brand-*` marks FIRST, and
+// every symbol the demo trends today (AERO/CRV/JUP) is one of them — a letter
+// beside two more logos claimed a limit the app doesn't have, since those same
+// coins wear their real marks in the wallet treemap two rooms away. These stay
+// as the answer for a symbol we DON'T bundle, which is what a real long-tail
+// trending token would be: a monogram, not anybody's logo, because there the
+// field really does hold a remote image we have no right to reproduce.
 
 struct Coin {
     let symbol: String

@@ -1,31 +1,12 @@
 import SwiftUI
 
-/// Squircle app-icon stand-in. Gap list §9.6: letter/brand tiles stand in until
-/// real app-icon assets ship per store guidelines. Radius follows the 22.37%
-/// app-icon ratio. Brand colors are identity (color rule allows identity), and
-/// they live here in the design layer — components never inline the hex.
-struct AppIconTile: View {
-    let source: String
-    var size: CGFloat = 40
-
-    private var brand: Color { DS.brandColor(for: source) }
-    private var letter: String { String(source.prefix(1)).uppercased() }
-
-    var body: some View {
-        RoundedRectangle(cornerRadius: DS.Radius.appIcon(size), style: .continuous)
-            .fill(brand)
-            .frame(width: size, height: size)
-            .overlay(
-                Text(letter)
-                    .font(.system(size: size * 0.44, weight: .semibold))
-                    .foregroundStyle(.white)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: DS.Radius.appIcon(size), style: .continuous)
-                    .strokeBorder(.black.opacity(0.08), lineWidth: 1)
-            )
-    }
-}
+// `AppIconTile` lived here until 2026-08-26 — a squircle that drew the source's
+// FIRST LETTER on a brand fill, unconditionally, with a hairline border. It had
+// no call sites left (`BridgeIcon` has drawn the real bundled asset since the
+// catalog shipped, falling back to an SF glyph rather than a letter), so it was
+// a letter-glyph stand-in nothing could reach and a hairline the design law
+// forbids. The colour table below is what was actually being used — `KindGlyph`
+// reads it — so it stays.
 
 extension DS {
     /// Brand-color table for the icon stand-ins. Identity color, kept out of the

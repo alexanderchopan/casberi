@@ -605,6 +605,18 @@ enum DemoSeedAll {
             .jpegData(compressionQuality: 0.7)
     }
 
+    /// A cast face as STORED BYTES, for the rows whose picture rides
+    /// `previewImageData` rather than a `sample:` ref — `ContactsIngest`
+    /// stamps `CNContact.thumbnailImageData` there, so that is the field the
+    /// contact card reads and the only one a face can arrive by.
+    ///
+    /// PNG, never JPEG: the avataaars faces are circle-styled with transparent
+    /// corners, and a JPEG has no alpha, so a re-encoded face arrives on a
+    /// black square (the generator's own lesson, one file over).
+    private static func facePixels(_ handle: String) -> Data? {
+        UIImage.demoSample(for: "sample:avatar-\(handle)")?.pngData()
+    }
+
     /// The import receipt a bulk-import room needs so ALL shows one row for it
     /// instead of the whole archive (`Corpus.showsInAll`).
     private static func receipt(_ source: String, _ line: String, days: Double) -> Thing {
@@ -709,7 +721,7 @@ enum DemoSeedAll {
             // refs: the rows land, the room renders, and the one reading that
             // needed the ref is quietly absent.
             ("0x1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b", "New passkey authorized", "actor:demo1", 1.0),
-            ("0x1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b", "New wallet key authorized", "actor:demo2", 1.0),
+            ("0x1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b", "New secp256k1 key authorized", "actor:demo2", 1.0),
             ("0x2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c", "Locked on vibenet", "locked:demo3", 2.0),
             ("0x3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d", "Key revoked", "actor:demo4", 4.0),
         ].map { address, phrase, ref, days in
@@ -2478,8 +2490,16 @@ enum DemoSeedAll {
         // .now` on every token in a pass, so a real room shows them together
         // under one heading. Spread across three days they drew three
         // one-row day sections separated by empty space.
-        let trending: [(name: String, symbol: String, days: Double)] = [
-            ("Aerodrome", "AERO", 0.2), ("Brett", "BRETT", 0.3), ("Jupiter", "JUP", 0.45),
+        // SYMBOLS THIS APP ALREADY SHIPS A MARK FOR (2026-08-26). The third
+        // row was Brett, whose logo is bundled nowhere, so it drew a generated
+        // monogram beside two more — the room read as three coloured letters
+        // where a real trending list is three logos. Curve is on Ethereum, so
+        // the three still span the seat's three demo chains (Base, Solana,
+        // Ethereum) and no two share one.
+        let trending: [(name: String, symbol: String, days: Double, price: Double)] = [
+            ("Aerodrome", "AERO", 0.2, 0.82),
+            ("Curve DAO", "CRV", 0.3, 0.61),
+            ("Jupiter", "JUP", 0.45, 0.47),
         ]
         out += trending.map { t in
             row(.link, "\(t.name) · $\(t.symbol)", source: "GeckoTerminal",
@@ -2493,7 +2513,7 @@ enum DemoSeedAll {
                 // sheet's own heading; carried only in the title, that branch
                 // takes its nil path and the sheet falls through to the small
                 // grey fallback line.
-                thing.priceValue = 0.42 + Double(t.symbol.count) / 10
+                thing.priceValue = t.price
                 thing.priceCurrency = "USD"
             }
         }
@@ -3191,7 +3211,7 @@ enum DemoSeedAll {
     private static func seedAltanaKeystore() {
         let now = Date.now
         // A REAL secp256k1 point, measured off BNB 2026-08-18 — so the demo's
-        // curve label ("Wallet key") is computed by the shipped detector from
+        // curve label ("secp256k1 key") is computed by the shipped detector from
         // key material that genuinely lies on the curve, not asserted. A made-up
         // point would satisfy neither equation and render as `.unknown`, which
         // is exactly the demo silently under-showing a feature.
@@ -4162,14 +4182,21 @@ enum DemoSeedAll {
     /// bridges and is worth the demo proving.
     private static func contactsAndHome() -> [Thing] {
         var out: [Thing] = []
-        let people: [(String, String, String, String, String)] = [
-            ("Ana Kovač", "Designer", "Studio", "+385 91 234 5678", "ana@studio.com"),
-            ("Sam Rees", "Joiner", "Rees & Sons", "+44 7700 900 118", "sam@reesandsons.co.uk"),
-            ("Mira Novak", "Architect", "Novak Atelier", "+385 98 765 4321", "mira@novakatelier.hr"),
+        // The sixth field is the cast face (2026-08-26). `ContactsIngest` stamps
+        // `CNContact.thumbnailImageData` onto `previewImageData`, so a real
+        // address book answers a search with people you recognize; the demo's
+        // three carried none, and `PersonCard` falls back to INITIALS on a grey
+        // disc — two letters standing in for a person, on the one card in this
+        // app whose entire subject is who somebody is.
+        let people: [(String, String, String, String, String, String)] = [
+            ("Ana Kovač", "Designer", "Studio", "+385 91 234 5678", "ana@studio.com", "ana"),
+            ("Sam Rees", "Joiner", "Rees & Sons", "+44 7700 900 118", "sam@reesandsons.co.uk", "samrees"),
+            ("Mira Novak", "Architect", "Novak Atelier", "+385 98 765 4321", "mira@novakatelier.hr", "mira"),
         ]
         out += people.enumerated().map { i, p in
             row(.contact, p.0, source: "Contacts", ref: "demo:contact:\(i)",
                 days: Double(30 + i), content: "\(p.1) · \(p.2) · \(p.4)") { t in
+                t.previewImageData = facePixels(p.5)
                 t.facts = [
                     ThingFact("Role", p.1), ThingFact("Company", p.2),
                     ThingFact("Mobile", p.3, .call), ThingFact("Work", p.4, .mail),
