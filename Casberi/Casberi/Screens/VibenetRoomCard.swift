@@ -1205,7 +1205,11 @@ struct VibenetRoomCard: View {
                         // headline; this one has none by ruling (§491: Wallet
                         // shows no total here either), so it takes the same
                         // clearance explicitly.
-                        .padding(.top, DS.Face.shelf)
+                        // The 44pt gear-clearance padding is GONE (§495):
+                        // `scopeFigure` reserves the headline row for every
+                        // scope now, which is the clearance, and doing it
+                        // there means Holdings' drawing starts at the same y
+                        // as every other scope's instead of 44pt lower.
                         .frame(maxHeight: .infinity, alignment: .top)
                 }
             }
@@ -1225,15 +1229,41 @@ struct VibenetRoomCard: View {
     private func scopeFigure<Figure: View>(headline: String?,
                                            @ViewBuilder figure: () -> Figure) -> some View {
         VStack(alignment: .leading, spacing: 0) {
-            if let headline {
-                Text(headline)
-                    .dsText(.stat24)
-                    .foregroundStyle(DS.textPrimary)
-                    .monospacedDigit()
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.7)
-                    .padding(.bottom, DS.Space.s3)
+            // **THE HEADLINE ROW IS ALWAYS RESERVED** (prd §495, user: *"WHY
+            // AREN'T YOU USING THE SAME TEMPLATE FOR ALL"* — and the answer
+            // was that we were not).
+            //
+            // The slot is a fixed 210pt box, so the box never moved — but
+            // WHAT WENT IN IT was composed three different ways: Home and
+            // Activity and Accounts drew their own headline inside their own
+            // drawing, Permissions passed one here, and Holdings passed nil
+            // and then faked the gear clearance with 44pt of top padding. So
+            // each scope's drawing began at a different y inside the same box,
+            // and everything above the strip reshaped on every tap. Reported
+            // three times as the toggle bar jumping — correctly, because the
+            // region above it really was moving even though the bar was not.
+            //
+            // Reserving the row unconditionally is what makes the box's
+            // INTERIOR identical across scopes, and it earns the gear
+            // clearance for free: the settings control overlays this corner,
+            // and a headline-height gap is exactly what it needs. `Color
+            // .clear` rather than an empty `Text`, so the reserved height is
+            // the ramp's line height and not whatever an empty string
+            // measures.
+            Group {
+                if let headline {
+                    Text(headline)
+                        .dsText(.stat24)
+                        .foregroundStyle(DS.textPrimary)
+                        .monospacedDigit()
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                } else {
+                    Color.clear
+                }
             }
+            .frame(height: Self.headlineRow, alignment: .leading)
+            .padding(.bottom, DS.Space.s3)
             figure()
         }
         // **THE FRAME TAKES THE SLOT'S HEIGHT** (prd §495). This stack sized
@@ -1278,10 +1308,15 @@ struct VibenetRoomCard: View {
             (address: $0.address, moments: $0.history, locked: $0.locked)
         })
         if let flow {
-            VibenetChangeFlowCard(flow: flow,
-                                  name: { Self.displayName($0) },
-                                  onPick: onScope,
-                                  reduceMotion: reduceMotion)
+            // Through `scopeFigure` like every other scope (prd §495) — the
+            // card drew its own headline, which is what made this scope's
+            // drawing start at a different y from the rest.
+            scopeFigure(headline: VibenetChangeFlow.headline(flow)) {
+                VibenetChangeFlowCard(flow: flow,
+                                      name: { Self.displayName($0) },
+                                      onPick: onScope,
+                                      reduceMotion: reduceMotion)
+            }
         }
     }
 
@@ -1336,10 +1371,12 @@ struct VibenetRoomCard: View {
         // reading the narrower list since it was written.
         let links = VibenetAccountMapping.links(Self.fullItems(fallback: room))
         if let web {
-            VibenetAccountWebCard(web: web,
-                                  name: { Self.displayName($0) },
-                                  onWatch: nil,
-                                  reduceMotion: reduceMotion)
+            scopeFigure(headline: VibenetAccountWeb.headline(web)) {
+                VibenetAccountWebCard(web: web,
+                                      name: { Self.displayName($0) },
+                                      onWatch: nil,
+                                      reduceMotion: reduceMotion)
+            }
         } else if !links.isEmpty {
             scopeFigure(headline: VibenetBalanceAggregation.compose(room.items)?.plainLine) {
                 VibenetLinkSpine(links: links,
@@ -1800,6 +1837,13 @@ struct VibenetRoomCard: View {
     /// because measuring it would settle the bar a frame LATE, which is the
     /// same jump arriving slower (Wallet's `walletVisualSlot`, same reason).
     private static var visualSlot: CGFloat { DSRoomChassis.visualSlot }
+
+    /// The height `scopeFigure` reserves for a headline, drawn or not.
+    ///
+    /// `stat24`'s own line height — spelled from the ramp rather than
+    /// measured, for `visualSlot`'s reason: a measured height settles the
+    /// frame a frame late, which is the same walk arriving slower.
+    private static let headlineRow: CGFloat = 30
 
     /// The samples the crown, the delta and the line all read (prd §479) —
     /// ONE derivation, so the figure, its move and its curve can never

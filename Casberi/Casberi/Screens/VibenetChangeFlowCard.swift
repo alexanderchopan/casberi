@@ -46,10 +46,6 @@ struct VibenetChangeFlowCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text(VibenetChangeFlow.headline(flow))
-                .dsText(.stat24)
-                .foregroundStyle(DS.textPrimary)
-                .lineLimit(1)
             // **THE BAND FILLS THE SLOT** (user, 2026-08-26: *"in activity
             // there is too much space between the slot image and the avatar
             // row"*).

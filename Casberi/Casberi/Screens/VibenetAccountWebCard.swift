@@ -26,17 +26,6 @@ struct VibenetAccountWebCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text(VibenetAccountWeb.headline(web))
-                .dsText(.stat24)
-                .foregroundStyle(DS.textPrimary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.7)
-                // CLEARS THE GEAR. The room's settings button is an overlay on
-                // the trailing edge of this whole block, so a headline that
-                // takes the full width runs under it — measured on the device,
-                // where the headline was clipped
-                // mid-word by a control sitting on top of it.
-                .padding(.trailing, DS.Face.shelf + DS.Space.s3)
             HStack(alignment: .top, spacing: DS.Space.s3) {
                 // The owner, once, on the left — the account every node here
                 // hangs off. Drawn at `shelf` rather than `row` so the
