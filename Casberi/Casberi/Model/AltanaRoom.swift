@@ -34,6 +34,24 @@ import Foundation
 /// It is stated quietly and never alarmed about: an expired key is safe, it is
 /// just noise in the list.
 ///
+/// ## The card is a LIST (prd §488, 2026-08-26)
+///
+/// It was a CONSTELLATION until then — accounts down the left, a token per
+/// credential, a drawn line for every account a key can sign for — plus a
+/// dot rail underneath for the deadlines. Reported as messy, and it was, for
+/// reasons that measured rather than argued: the layout was absolutely
+/// positioned from a width this file computed (`88 + 62·N`), so a fifth key
+/// overflowed a 321pt card with no scroll to catch it; a token carried six
+/// visual variables (fill, border colour, border dash, opacity, glyph, plus
+/// its ties' colour and dash) inside a 44pt circle; and the rail carried
+/// `VibenetKeyShelf`'s own defect, unfixed (see `shelfWindow`).
+///
+/// One row per credential now, in one grammar: a seat that says root-or-
+/// session, the key's name and grant, a bar whose length is time left on a
+/// FIXED window, and one countdown. The rare fact the ties existed for — one
+/// credential signing for two accounts — is the faces on that credential's
+/// own row, which is where somebody looking at the key would look for it.
+///
 /// ## Refused, with reasons
 ///
 /// **No security score and no judgement on key count.** Three keys is neither
@@ -92,8 +110,9 @@ enum AltanaRoom {
         ///
         /// A key id derives from its public key, so the same id under two
         /// accounts is ONE credential with two registrations — which is why
-        /// the card draws one token with two ties rather than two tokens, and
-        /// why the census counts credentials rather than registrations.
+        /// the card draws ONE ROW for it — wearing the faces of both accounts
+        /// (§488; it was one token with two ties until then) — and why the
+        /// census counts credentials rather than registrations.
         var accountAddresses: [String] = []
 
         /// Signs for more than one watched account.
@@ -104,7 +123,7 @@ enum AltanaRoom {
         /// we saw it before it went — which is why a ghost is forward-only and
         /// can never be backfilled on first sight.
         ///
-        /// It is drawn because a picture with no memory answers "who can sign
+        /// It is listed because a card with no memory answers "who can sign
         /// as me" and silently refuses "who used to" — and the second question
         /// is the one somebody asks after a scare.
         var isGone: Bool = false
@@ -156,6 +175,75 @@ enum AltanaRoom {
             if let usageNote { parts.append(usageNote) }
             return parts.isEmpty ? nil : parts.joined(separator: " · ")
         }
+
+        // MARK: - The shelf reading (prd §488)
+
+        /// How much of this credential's life is left, as a fraction of ONE
+        /// FIXED WINDOW shared by every row — or nil where a bar would be a
+        /// claim rather than a reading.
+        ///
+        /// **nil is the common and correct answer for three of the four
+        /// states**, and each is its own reason: a ROOT has no end, so a full
+        /// bar would state a completion that does not exist (`progress`'s own
+        /// rule, §405); an EXPIRED key has no time left to draw; a REVOKED one
+        /// is not on the shelf at all. A bar here means exactly one thing —
+        /// time remaining, on a scale every other bar shares — and absence
+        /// means "no clock", which is the true reading in all three.
+        ///
+        /// Clamped at the top rather than dropped: a key lapsing beyond the
+        /// window draws FULL and its countdown says the real figure, so the
+        /// bar reads "at least a quarter" and the number stays exact. That
+        /// differs from `VibenetKeyShelf`, which excludes those rows and
+        /// counts them in a tail — because that shelf is a THREE-ROW FOOTER
+        /// ranked by urgency, where a full-length bar would outrank the keys
+        /// it was drawn beside, and this is the room's whole key list, where
+        /// the row exists whatever its date.
+        ///
+        /// COMPUTED FROM `expiry` AT DRAW TIME, never from `daysLeft` — the
+        /// head is memoized (`FeedScreen.headMemo`), so a card left open past
+        /// midnight would otherwise count down to a number captured when the
+        /// room composed.
+        func shelfFraction(now: Date) -> Double? {
+            guard !isRoot, !isGone, !expired, let expiry else { return nil }
+            let remaining = expiry.timeIntervalSince(now)
+            guard remaining > 0 else { return nil }
+            return min(1, max(AltanaRoom.minimumFraction, remaining / AltanaRoom.shelfWindow))
+        }
+
+        /// The row's trailing word — the one clock this card keeps.
+        ///
+        /// Compact by design ("9h", "12d"), because it sits in a narrow
+        /// right-hand column against a bar that already says roughly how long:
+        /// the ROOM says how much is left, the key's own sheet says the dates.
+        /// Days round UP, never down (`VibenetKeyShelfRow.countdown`'s rule) —
+        /// a key with 30 hours left reading "1d" understates it on the one
+        /// line whose job is to say how much time there is.
+        func countdown(now: Date) -> String {
+            if isGone { return String(localized: "revoked") }
+            if expired { return String(localized: "expired") }
+            guard let expiry else {
+                // A root, or a session whose expiry could not be read. Both
+                // are honestly "no end we can see"; only the root is common.
+                return isRoot ? String(localized: "no expiry") : "—"
+            }
+            let remaining = expiry.timeIntervalSince(now)
+            guard remaining > 0 else { return String(localized: "expired") }
+            if remaining < 3600 { return String(localized: "<1h") }
+            if remaining < 86_400 {
+                return String(localized: "\(Int(remaining / 3600))h")
+            }
+            return String(localized: "\(Int((remaining / 86_400).rounded(.up)))d")
+        }
+
+        /// Inside the window worth acting on today — the ONE row that earns
+        /// the room's mark. Same threshold the headline's alarm uses
+        /// (`urgentWindowHours`), read from it rather than restated, so a row
+        /// drawn blue is a row the headline is talking about.
+        func isUrgent(now: Date) -> Bool {
+            guard !isGone, !expired, let expiry else { return false }
+            let hours = expiry.timeIntervalSince(now) / 3600
+            return hours > 0 && hours < Double(AltanaRoom.urgentWindowHours)
+        }
     }
 
     /// A credential we watched disappear (§410).
@@ -175,30 +263,39 @@ enum AltanaRoom {
         let noticedAt: Date
     }
 
-    /// One deadline on the "next" rail (§408a).
-    ///
-    /// POSITION ONLY — never a length. A span drawn as a bar invites the
-    /// reading that a long grant is somehow more than a short one, which is
-    /// the user's own objection to the timeline draft: seeing a long line for
-    /// a wallet key beside a shorter one for a passkey tells you nothing you
-    /// can act on. A dot says the one thing that IS actionable — when,
-    /// relative to now and to the others.
-    struct RailDot: Equatable, Identifiable {
-        /// The key id of the first credential in the group.
-        let id: String
-        /// True fraction from now to the furthest live deadline, 0…1.
-        let position: Double
-        /// "9h · Passkey", or "2 keys" once a group merged.
-        let label: String
-        /// How many deadlines this dot stands for.
-        let count: Int
-    }
+    // MARK: - The shelf (prd §488)
 
-    /// Dots closer together than this merge into one, because two overlapping
-    /// dots are one unreadable dot. The merge keeps the TRUE position of the
-    /// earliest in the group and says how many — it never nudges a dot to a
-    /// time that is not its own.
-    static let railMergeGap = 0.05
+    /// The window every bar on this card is drawn against — a quarter, FIXED.
+    ///
+    /// **It replaces an elastic axis that had `VibenetKeyShelf`'s defect, in
+    /// the room next door, unfixed.** §408a drew the deadlines as dots on a
+    /// rail spanning `now … furthest live deadline`: `now` is the minimum by
+    /// construction (every expiry is in the future), so the now-marker was
+    /// pinned at zero on every render this feature ever drew — a constant, on
+    /// the element that gave the rail its meaning — and the axis stretched to
+    /// whatever the furthest key was, so a 30-day key crushed a 9-hour key to
+    /// position 0.01, indistinguishable from the marker.
+    ///
+    /// A fixed window is what makes two bars comparable: at a glance, and
+    /// across two accounts, and between this card and the same card yesterday.
+    /// 90 days is the horizon over which a lapsing key is still something you
+    /// can act on (`VibenetKeyShelf.window`, same value on purpose — two
+    /// keystore rooms drawing one figure on two scales would read as a bug,
+    /// and `altana-selftest.sh` guards the pair).
+    static let shelfWindow: TimeInterval = 90 * 86_400
+    /// The smallest bar that still reads as a bar rather than as a hole — a
+    /// key lapsing within the hour is 0.0005 of a quarter and would draw as
+    /// nothing at all on the one row that matters most. The number beside it
+    /// is exact; the bar is the picture.
+    static let minimumFraction = 0.02
+
+    /// How many credentials the card lists before the tail takes over.
+    ///
+    /// The measured BNB corpus runs to a handful of keys per account, so this
+    /// bites rarely — but a card that silently stops at six looks exactly like
+    /// an account that has six (the truncation class this repo has now paid
+    /// for in four import rooms), so the remainder is COUNTED and said.
+    static let rowCap = 6
 
     /// One account's keys, behind its face (§407a).
     struct AccountGroup: Equatable, Identifiable {
@@ -213,18 +310,18 @@ enum AltanaRoom {
     /// Until this, `compose` ranked accounts and drew ONE, relegating the rest
     /// to "1 other watched wallet also has keys" — a footnote about the thing
     /// the card exists to show. The keyring draws them all, each behind its
-    /// identicon, so the aggregate the footnote gestured at is the picture.
+    /// identicon, so the aggregate the footnote gestured at is the card.
     struct Card: Equatable {
         /// Ordered: the account with the soonest live deadline first — the
         /// same urgency ranking that used to pick the lead now merely picks
         /// who is drawn on top.
         let accounts: [AccountGroup]
         /// EVERY credential exactly once, deduped by key id (§408a) — the
-        /// constellation's tokens, and the honest unit for the census.
+        /// card's rows, and the honest unit for the census.
         let credentials: [KeyRow]
         /// Distinct credentials that can sign right now. NOT a count of
         /// registrations: a key signing for two accounts is one credential,
-        /// and the picture shows one token, so the sentence says one.
+        /// and the card draws one row, so the sentence says one.
         let usableCount: Int
         let rootCount: Int
         /// Hours until the soonest LIVE expiry anywhere, when that is close
@@ -238,8 +335,20 @@ enum AltanaRoom {
         /// credential by construction (an id derives from its public key), so
         /// this is the single-point-of-failure fact with no inference in it.
         let sharedKeyIDs: Set<String>
-        /// The deadlines ahead, as positions on one shared rail (§408a).
-        let rail: [RailDot]
+
+        /// The credentials this card LISTS, soonest-first order already
+        /// applied by `compose` — capped, so the card cannot grow without
+        /// bound on an account somebody has been generous with.
+        var drawn: [KeyRow] { Array(credentials.prefix(rowCap)) }
+
+        /// What the cap left off, said rather than silently dropped.
+        var moreLine: String? {
+            let hidden = credentials.count - drawn.count
+            guard hidden > 0 else { return nil }
+            return hidden == 1
+                ? String(localized: "1 more key")
+                : String(localized: "\(hidden) more keys")
+        }
 
         /// The first account's address — kept for the headline's tap target
         /// (the explorer door opens on the most urgent account).
@@ -295,9 +404,9 @@ enum AltanaRoom {
         /// **A key SIGNS FOR an account; it never "holds" one** (user ruling,
         /// §408a). Holding implies custody of the account itself, which is the
         /// §83 overclaim this whole seat is careful about — the registry says
-        /// only what may sign. Since §408a the tie is DRAWN, so this sentence
-        /// exists as the accessible reading of the picture rather than as the
-        /// only place the fact appears.
+        /// only what may sign. Since §488 the shared credential's row wears
+        /// the FACES of both accounts, so this sentence is the accessible
+        /// reading of that rather than the only place the fact appears.
         var sharedNote: String? {
             guard !sharedKeyIDs.isEmpty else { return nil }
             let accountsSigned = credentials.filter(\.isShared)
@@ -308,7 +417,7 @@ enum AltanaRoom {
         }
 
         /// What was revoked, remembered (§410) — the sentence beside the
-        /// ghosts, so the picture has an accessible reading.
+        /// ghosts, so the list has an accessible reading.
         ///
         /// "NOTICED", never "revoked on": the registry drops a revoked key
         /// without telling us when it went, so the only honest date is the
@@ -321,6 +430,22 @@ enum AltanaRoom {
                 ? String(localized: "1 key was revoked while you were watching")
                 : String(localized: "\(gone) keys were revoked while you were watching")
         }
+
+        /// THE CARD'S ONE LINE, ranked (prd §488).
+        ///
+        /// Both sentences below became SUMMARIES OF VISIBLE ROWS the moment
+        /// the constellation became a list: a revoked credential is a row
+        /// reading "revoked" and a stale one is a row reading "expired", so
+        /// stacking two grey sentences under them says the same facts a second
+        /// time in a weaker voice. What the sentences still carry is the part
+        /// the rows cannot — the QUALIFIER ("while you were watching", which
+        /// is the forward-only honesty §410 turns on) and the INSTRUCTION (the
+        /// registry still lists a key that cannot act, so go and tidy it).
+        ///
+        /// One at a time, revocation first: a key somebody took away outranks
+        /// a key that merely lapsed, and the hygiene line comes back on its
+        /// own once the ghost ages out of `AltanaState.ghostLifetime`.
+        var note: String? { revokedNote ?? staleNote }
 
         /// The hygiene line — nil when there is nothing to tidy.
         var staleNote: String? {
@@ -388,8 +513,12 @@ enum AltanaRoom {
     /// identical data reads as broken — the `ASCRoom` ruling): a wallet with a
     /// live deadline outranks one without, soonest first; then more keys;
     /// then the address itself, so ties can never flip.
+    /// - Parameter scope: one watched account, RESOLVED TO ITS STORED HEX by
+    ///   the caller (`AltanaRoom.card(scope:)`) — the face rail's pick. nil is
+    ///   "All", which is every watched account at once.
     static func compose(readings: [AltanaKeystore.Reading],
-                        ghosts: [Ghost] = [], now: Date) -> Card? {
+                        ghosts: [Ghost] = [], now: Date,
+                        scope: String? = nil) -> Card? {
         let withKeys = readings.filter { !$0.keys.isEmpty }
         guard !withKeys.isEmpty else { return nil }
 
@@ -420,15 +549,15 @@ enum AltanaRoom {
             }
         }
 
-        let groups = ranked.map { reading in
+        var groups = ranked.map { reading in
             AccountGroup(address: reading.address,
                          rows: orderedRows(reading.keys, now: now))
         }
 
-        // ONE token per credential (§408a). A key id derives from its public
-        // key, so the same id under two accounts is one credential with two
-        // registrations — drawn once, with a tie to each account it can sign
-        // for, and counted once.
+        // ONE ROW per credential (§408a, §488). A key id derives from its
+        // public key, so the same id under two accounts is one credential with
+        // two registrations — drawn once, wearing the face of each account it
+        // can sign for, and counted once.
         var byID: [String: KeyRow] = [:]
         var order: [String] = []
         for group in groups {
@@ -448,7 +577,7 @@ enum AltanaRoom {
         var credentials = order.compactMap { byID[$0] }
 
         // The ghosts (§410), appended once each and therefore always last:
-        // revoked credentials the picture remembers, so it answers "who used
+        // revoked credentials the card remembers, so it answers "who used
         // to" as well as "who can". An id that came BACK is skipped — a key
         // re-registered under the same id is alive again, and drawing both
         // would be wrong in two directions at once.
@@ -464,17 +593,51 @@ enum AltanaRoom {
                 accountAddresses: [ghost.address], isGone: true))
         }
 
+        // NARROWED TO THE FACE RAIL'S PICK (prd §488), and narrowed HERE
+        // rather than by filtering the readings on the way in, for one
+        // reason: `accountAddresses` is built above by walking every account,
+        // so a credential that also signs for a wallet now out of scope keeps
+        // saying so. Filtering first would make the single most valuable fact
+        // on a scoped card — this key can sign for something else too —
+        // structurally unsayable, which is the reading §408a built the whole
+        // tie for.
+        var scopedKeys = allKeys
+        if let scope {
+            // A scope that matches NOTHING declines — it must never fall
+            // through to the aggregate, which would draw every watched
+            // account under one ringed face. Caught by this harness's own
+            // fixture on its first run, where the obvious `if let scope, let
+            // match = …` did exactly that.
+            guard let match = ranked.first(where: { sameAddress($0.address, scope) }) else {
+                return nil
+            }
+            groups = groups.filter { sameAddress($0.address, scope) }
+            credentials = credentials.filter { row in
+                row.accountAddresses.contains { sameAddress($0, scope) }
+            }
+            shared = shared.intersection(credentials.map { $0.id.lowercased() })
+            scopedKeys = match.keys
+            // A scope naming a wallet with no keys leaves nothing to head the
+            // room with — and that is a real state (you watch five wallets and
+            // picked the one Altana has never seen), so it declines rather
+            // than silently falling back to the aggregate, which would answer
+            // a question nobody asked.
+            guard !credentials.isEmpty else { return nil }
+        }
+
         return Card(accounts: groups,
                     credentials: credentials,
-                    // DEDUPED: the picture shows one token for a shared key,
-                    // so the sentence counts one.
+                    // DEDUPED: the card draws one row for a shared key, so
+                    // the sentence counts one.
                     usableCount: credentials.filter { !$0.expired && !$0.isGone }.count,
                     rootCount: credentials.filter(\.isRoot).count,
-                    urgentHours: urgentHours(allKeys, now: now),
-                    staleCount: allKeys.filter { $0.isExpiredButListed(now: now) }.count,
-                    chains: orderedChains(allKeys),
-                    sharedKeyIDs: shared,
-                    rail: rail(credentials, now: now))
+                    // Read off the SCOPED key set, so a scoped card's alarm,
+                    // census and hygiene line all describe the account whose
+                    // face is ringed above them — not the room they came from.
+                    urgentHours: urgentHours(scopedKeys, now: now),
+                    staleCount: scopedKeys.filter { $0.isExpiredButListed(now: now) }.count,
+                    chains: orderedChains(scopedKeys),
+                    sharedKeyIDs: shared)
     }
 
     /// How the card orders its credentials — and it is `compose` that owns
@@ -553,156 +716,20 @@ enum AltanaRoom {
         return Int(hours)
     }
 
-    // MARK: - The constellation's geometry (§408a)
+    // MARK: - Address identity
 
-    /// Where every node sits, in points, and what ties to what.
+    /// Case-insensitive, because every account a keystore names is EVM hex and
+    /// EIP-55 case is a CHECKSUM rather than identity — the same rule
+    /// `WalletWatch.sameAddress` keeps for hex, spelled locally because this
+    /// file is Foundation-only so a `swiftc` harness can compile it whole.
     ///
-    /// PURE, and here rather than in the view for one reason: this is the only
-    /// place that can guarantee ONE TOKEN PER CREDENTIAL. The first cut drew
-    /// each account's credentials in its own row, which put a shared key on
-    /// screen twice — so the picture showed six tokens while the sentence
-    /// counted four, which is the very disagreement §408a exists to end. A
-    /// shared credential has one position and several ties, and that is only
-    /// expressible as a layout.
-    struct Placement: Equatable {
-        struct Node: Equatable, Identifiable {
-            let id: String
-            let x: Double
-            let y: Double
-        }
-        struct Tie: Equatable, Identifiable {
-            let account: String
-            let credential: String
-            /// This credential can sign for more than one account, so the tie
-            /// is drawn in the card's own hue rather than as quiet chrome.
-            let shared: Bool
-            /// The credential was revoked (§410) — the tie is drawn CUT, which
-            /// is the whole reading: it reached this account and no longer
-            /// does. A ghost with an intact tie would say the opposite.
-            var severed: Bool = false
-            var id: String { account + "→" + credential }
-        }
-        let accounts: [Node]
-        let credentials: [Node]
-        let ties: [Tie]
-        let width: Double
-        let height: Double
+    /// Deliberately NOT the base58 arm of that function: a Solana address is
+    /// case-SENSITIVE and folding case there merges distinct wallets — and no
+    /// Solana address can reach this file, since the registry is EVM.
+    static func sameAddress(_ a: String, _ b: String) -> Bool {
+        a.caseInsensitiveCompare(b) == .orderedSame
     }
 
-    static let tokenSize: Double = 44
-    static let faceSize: Double = 30
-    static let nodeGap: Double = 18
-    /// Tall enough that a token, its two label lines AND a clear channel
-    /// between rows all fit — the channel is what a shared credential's ties
-    /// route through, instead of cutting diagonally across the labels of the
-    /// row above (measured on the sim: at 96 the tie crossed "Session key /
-    /// expired" and made both unreadable).
-    static let rowGap: Double = 124
-
-    /// Lays the constellation out.
-    ///
-    /// Accounts run down the left. Each account's EXCLUSIVE credentials sit in
-    /// a row beside it. A SHARED credential is placed once, in a column to the
-    /// right of everything, at the mean height of the accounts it serves — so
-    /// its ties fan visibly to both, which is the whole reading.
-    ///
-    /// Deterministic: positions derive from the card's own ordering, so the
-    /// picture cannot reshuffle between two draws of identical data.
-    static func placement(_ card: Card) -> Placement {
-        let faceX = faceSize / 2
-        let firstTokenX = faceX + faceSize / 2 + nodeGap + tokenSize / 2 + nodeGap
-        let step = tokenSize + nodeGap
-
-        var accountNodes: [Placement.Node] = []
-        var credentialNodes: [Placement.Node] = []
-        var ties: [Placement.Tie] = []
-        var maxX = firstTokenX
-
-        for (index, account) in card.accounts.enumerated() {
-            let y = tokenSize / 2 + Double(index) * rowGap
-            accountNodes.append(.init(id: account.address, x: faceX, y: y))
-
-            let exclusive = card.credentials.filter {
-                $0.accountAddresses == [account.address]
-            }
-            for (column, credential) in exclusive.enumerated() {
-                let x = firstTokenX + Double(column) * step
-                credentialNodes.append(.init(id: credential.id, x: x, y: y))
-                ties.append(.init(account: account.address, credential: credential.id,
-                                  shared: false, severed: credential.isGone))
-                maxX = max(maxX, x)
-            }
-        }
-
-        // The shared ones, once each, to the right of every exclusive token.
-        let shared = card.credentials.filter(\.isShared)
-        for (column, credential) in shared.enumerated() {
-            let ys = credential.accountAddresses.compactMap { address in
-                accountNodes.first { $0.id == address }?.y
-            }
-            guard !ys.isEmpty else { continue }
-            let x = maxX + step + Double(column) * step
-            let y = ys.reduce(0, +) / Double(ys.count)
-            credentialNodes.append(.init(id: credential.id, x: x, y: y))
-            for address in credential.accountAddresses {
-                ties.append(.init(account: address, credential: credential.id, shared: true))
-            }
-        }
-
-        let width = (credentialNodes.map(\.x).max() ?? firstTokenX) + tokenSize / 2
-        let height = (accountNodes.map(\.y).max() ?? tokenSize / 2) + tokenSize / 2 + 22
-        return Placement(accounts: accountNodes, credentials: credentialNodes,
-                         ties: ties, width: width, height: height)
-    }
-
-    /// The deadlines ahead as positions on ONE rail (§408a).
-    ///
-    /// The span is now → the furthest LIVE deadline, so the last dot always
-    /// sits at the end and the rail is never mostly empty. Positions are true
-    /// fractions of that span; dots closer than `railMergeGap` merge, keeping
-    /// the earliest one's real position and saying how many. Nothing is ever
-    /// nudged to a time it does not have.
-    ///
-    /// Empty when nothing is expiring — a rail with no dots is a rail with
-    /// nothing to say, and the card omits it rather than drawing an empty axis.
-    static func rail(_ credentials: [KeyRow], now: Date) -> [RailDot] {
-        let live = credentials
-            .filter { !$0.expired && !$0.isGone }
-            .compactMap { row -> (KeyRow, Date)? in row.expiry.map { (row, $0) } }
-            .filter { $0.1 > now }
-            .sorted { $0.1 < $1.1 }
-        guard let furthest = live.last?.1 else { return [] }
-        let span = furthest.timeIntervalSince(now)
-        guard span > 0 else { return [] }
-
-        var dots: [RailDot] = []
-        for (row, expiry) in live {
-            let position = min(1, max(0, expiry.timeIntervalSince(now) / span))
-            if var last = dots.last, position - last.position < railMergeGap {
-                last = RailDot(id: last.id, position: last.position,
-                               label: String(localized: "\(last.count + 1) keys"),
-                               count: last.count + 1)
-                dots[dots.count - 1] = last
-                continue
-            }
-            dots.append(RailDot(id: row.id, position: position,
-                                label: dotLabel(row, now: now), count: 1))
-        }
-        return dots
-    }
-
-    /// "9h · Passkey" near, "25d · Passkey" further out — the same relative
-    /// clock the tokens use, so the rail and the rest of the card never
-    /// disagree about the same deadline.
-    static func dotLabel(_ row: KeyRow, now: Date) -> String {
-        let title = row.title
-        if let hours = row.hoursLeft {
-            return hours <= 0 ? String(localized: "<1h · \(title)")
-                              : String(localized: "\(hours)h · \(title)")
-        }
-        if let days = row.daysLeft { return String(localized: "\(days)d · \(title)") }
-        return title
-    }
 
     /// The soonest expiry still in the future, or nil.
     static func soonestDeadline(_ reading: AltanaKeystore.Reading, now: Date) -> Date? {

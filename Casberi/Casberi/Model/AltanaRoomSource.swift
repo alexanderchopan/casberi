@@ -72,12 +72,12 @@ enum AltanaState {
         }
     }
 
-    /// Revoked credentials the picture remembers (§410).
+    /// Revoked credentials the card remembers (§410).
     ///
     /// Kept HERE rather than as `Thing` rows because a ghost is a property of
-    /// the current picture, not an event in the feed — the event already
+    /// the current reading, not an event in the feed — the event already
     /// landed as a row when §404 detected the revocation. This is what lets
-    /// the constellation still draw it.
+    /// the key list still carry it.
     private static let goneKey = "altana.gone"
 
     struct StoredGhost: Codable, Equatable {
@@ -90,7 +90,7 @@ enum AltanaState {
     }
 
     /// How long a ghost is remembered, and how many. A revocation from months
-    /// ago is not the picture any more — it is history, and the row that
+    /// ago is not the current reading any more — it is history, and the row that
     /// landed at the time is where history belongs.
     static let ghostLifetime: TimeInterval = 30 * 86_400
     static let ghostCap = 4
@@ -146,12 +146,31 @@ extension AltanaRoom {
 
     /// The head, composed from the stored snapshot. No network, no fetch.
     ///
-    /// nil has four causes and they render identically, which is why
+    /// nil has five causes and they render identically, which is why
     /// `-altanaRoomProbe` prints the snapshot before the card: nothing
-    /// watched, no wallet holds keys, the snapshot failed to decode, or the
-    /// leading wallet is under `minimumKeys`.
-    static func card(now: Date = .now) -> Card? {
-        compose(readings: AltanaState.readings, ghosts: AltanaState.ghosts, now: now)
+    /// watched, no wallet holds keys, the snapshot failed to decode, the
+    /// total is under `minimumKeys`, or the face rail is scoped to a wallet
+    /// the keystore has never seen.
+    ///
+    /// **The scope is RESOLVED here rather than inside `compose` (prd §488).**
+    /// `chrome.walletScope` holds the WATCHED spelling, which may be an ENS
+    /// name, while a reading is stamped with the resolved hex — so a raw
+    /// compare inside the pure model would silently empty the card for exactly
+    /// the wallets people bother to name (`WalletStore.scopeMatches`'s own
+    /// 2026-07-20 lesson, and the same reason `AddressFlight` keys on the
+    /// book's form rather than the raw address). The store lives out here, so
+    /// the resolution does too, and `compose` gets plain hex.
+    static func card(now: Date = .now, scope: String? = nil) -> Card? {
+        let readings = AltanaState.readings
+        let resolved = scope.flatMap { s in
+            readings.first { WalletStore.shared.scopeMatches($0.address, scope: s) }?.address
+        }
+        // A scope that resolves to nothing is a wallet this keystore has never
+        // seen — passed through as the UNRESOLVED string so `compose` declines,
+        // rather than dropped, which would draw the aggregate under a ringed
+        // face that has nothing to do with it.
+        return compose(readings: readings, ghosts: AltanaState.ghosts, now: now,
+                       scope: resolved ?? scope)
     }
 
     /// `-altanaRoomProbe YES` — the stored readings, then the composed card.
@@ -173,16 +192,17 @@ extension AltanaRoom {
         lines.append("altanaRoom| accounts: \(card.accounts.count)")
         lines.append("altanaRoom| chains: \(card.chains.joined(separator: ", "))")
         if let hours = card.urgentHours { lines.append("altanaRoom| urgent: \(hours)h to the soonest expiry") }
-        // Every row IN DRAWN ORDER, roots included — the order is the thing
-        // most worth seeing here, since it is what §405 found wrong.
-        // The rail, in drawn order — positions only (§408a).
-        for dot in card.rail {
-            lines.append("  altanaRail| \(dot.label) at \(Int(dot.position * 100))%"
-                + (dot.count > 1 ? " (merged \(dot.count))" : ""))
-        }
-        // Every CREDENTIAL once, deduped — what the constellation draws.
+        if let more = card.moreLine { lines.append("altanaRoom| capped: \(more)") }
+        // Every CREDENTIAL once, deduped, IN DRAWN ORDER — the order is the
+        // thing most worth seeing here, since it is what §405 found wrong.
+        // `bar=` is the shelf fraction the row draws against the fixed 90-day
+        // window (§488) and `—` is a row with no clock at all: a root, an
+        // expired key or a ghost. It is printed beside `daysLeft` on purpose —
+        // a bar that disagrees with the countdown beside it is the one failure
+        // here that renders as a perfectly ordinary row.
         for s in card.credentials {
             let pct = s.progress.map { "\(Int($0 * 100))%" } ?? "—"
+            let bar = s.shelfFraction(now: now).map { "\(Int($0 * 100))%" } ?? "—"
             lines.append("  altanaKey| \(s.id.prefix(18))…"
                 + " role=\(s.isRoot ? "root" : "session")"
                 + " kind=\(s.kindLabel ?? "—")"
@@ -190,6 +210,8 @@ extension AltanaRoom {
                 + " signed=\(s.signatureCount)"
                 + " signsFor=\(s.accountAddresses.count)"
                 + " progress=\(pct)"
+                + " bar=\(bar)"
+                + " countdown=\(s.countdown(now: now))"
                 + " daysLeft=\(s.daysLeft.map(String.init) ?? "—")"
                 + " expired=\(s.expired ? "YES" : "NO")"
                 + " chain=\(s.chainLabel ?? "?")")

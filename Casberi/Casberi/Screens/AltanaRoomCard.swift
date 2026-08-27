@@ -1,37 +1,51 @@
 import SwiftUI
 
-/// THE ALTANA ROOM'S HEAD (prd §403, the keyring in §407a, the CONSTELLATION
-/// in §408a) — every credential on every watched account, and what each can
-/// sign for, as one picture of right now.
+/// THE ALTANA ROOM'S HEAD (prd §403, the keyring in §407a, the constellation
+/// in §408a, THE LIST in §488) — every credential on every watched account,
+/// what each can sign for, and how long each has left.
 ///
-/// ## Why the constellation replaced the bands
+/// ## Why the list replaced the constellation
 ///
-/// §407a drew one token per REGISTRATION, grouped in a band per account, with
-/// a shared credential appearing twice and wearing a 16pt link badge to say
-/// so. Three things were wrong with that and the user named all three:
+/// §408a drew accounts down the left, one token per credential, and a routed
+/// line for every account a key could sign for, over a dot rail of the
+/// deadlines. Reported as messy, and the reasons measured rather than argued:
 ///
-/// 1. **The circles were not the same size.** Each token's arc swept a
-///    different fraction and a root wore none at all, so a row of equal
-///    circles read as unequal ones. The arcs are GONE — a credential's
-///    remaining time is on the rail below and on its sheet, and the token
-///    carries identity only. Weight (solid vs outlined) is what marks the
-///    root now; size never varies.
-/// 2. **The tie was a badge.** The most important and rarest fact on the card
-///    — one credential signing for two accounts — was a grey glyph in a
-///    corner plus a sentence in the footer. It is a DRAWN LINE now: one
-///    token, two ties. The picture says it; the sentence is the accessible
-///    reading of the picture rather than the only place it exists.
-/// 3. **Duration drawn as length says nothing.** A long bar for a root beside
-///    a short one for a session invites a comparison that carries no
-///    information — the user's own words. The rail keeps POSITION and drops
-///    length entirely: a dot where each deadline falls, relative to now and
-///    to the others.
+/// 1. **It had no card.** This was the only room head in the Wallet group
+///    with neither `dsWidgetSurface()` nor an outer `.padding(.horizontal)` —
+///    Gnosis Pay, Stripe, Safe and Privacy Pools all end with both — so its
+///    content sat naked on the page, flush to the screen edge. That is §474's
+///    reported vibenet bug, unfixed here, and it was most of the complaint.
+/// 2. **The layout was absolutely positioned and could overflow.** Width came
+///    out of `AltanaRoom.placement` as `88 + 62·N`, against a card content
+///    width of ~321pt on a 393pt phone: a fifth exclusive key drew past the
+///    edge with no scroll to catch it, and at a 62pt step under 62pt labels,
+///    adjacent captions abutted with zero gap. Three accounts spent ~314pt of
+///    screen before the rail.
+/// 3. **A 44pt circle carried six variables** — fill, border colour, border
+///    dash, opacity, glyph, plus its ties' own colour and dash. That is the
+///    decode load §478 removed one room over: *"the keys stop being a census
+///    you decode and become a list you scan."*
+/// 4. **The rail had `VibenetKeyShelf`'s defect, unfixed.** See
+///    `AltanaRoom.shelfWindow` — the now-marker was a constant and the axis
+///    was elastic.
+/// 5. **Two clocks.** Every token said "3h left" and the rail dot beneath it
+///    said "9h · Passkey" about the same deadline.
 ///
-/// ## The census counts credentials, not registrations
+/// One row per credential now, one clock per row, one bar shape shared with
+/// every other card in the app (`ShareBar`). The rare fact the ties existed
+/// for — one credential signing for two of your accounts — is drawn as the
+/// FACES on that credential's own row, which is where somebody asking about
+/// that key would look for it.
 ///
-/// Because the picture draws a shared key once, the sentence counts it once.
-/// "5 keys" for four credentials was the card disagreeing with its own
-/// drawing.
+/// ## The faces stand down when the room is scoped
+///
+/// Altana is in the Wallet category, so `WalletScopeRail` draws your wallet
+/// faces above this room whenever more than one is watched, and since §488 the
+/// head obeys that pick. In a scoped room every row belongs to the same
+/// account, so a face on each one is a column of the same picture repeated —
+/// they draw only where they distinguish something, which is an unscoped room,
+/// or a credential that signs for more than one account (where it is the whole
+/// point, scoped or not).
 ///
 /// ## Liveness
 ///
@@ -51,15 +65,16 @@ struct AltanaRoomCard: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private static let mark = DS.brandHue(for: "Altana") ?? Color.fixed("#3565e3")
-    /// EVERY token is this size. The one rule the last cut broke.
-    private static let token: CGFloat = 44
-    /// Above this many accounts the constellation stops being readable and the
-    /// card falls back to a plain list — stated rather than discovered.
-    static let maxDrawnAccounts = 3
+    /// The credential seat. EVERY row is this size — the one rule §408a's
+    /// tokens broke and the reason they are gone: weight says root, never size.
+    private static let seat: CGFloat = 28
+    /// The countdown column. Fixed, so the numbers line up down the card
+    /// rather than floating at the end of titles of different lengths — and
+    /// wide enough for the longest word it draws ("no expiry").
+    private static let clockWidth: CGFloat = 64
 
-    private var drawable: Bool {
-        card.accounts.count <= Self.maxDrawnAccounts && !card.credentials.isEmpty
-    }
+    /// Whether a row names the account it signs for. See the type doc.
+    private var namesAccounts: Bool { card.accounts.count > 1 }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -83,248 +98,168 @@ struct AltanaRoomCard: View {
                     .padding(.top, DS.Space.s1)
             }
 
-            if drawable {
-                constellation
-                    .padding(.top, DS.Space.s4)
-            } else {
-                // Too many accounts to draw legibly — the tokens still list,
-                // which is worse than the picture and better than a tangle.
-                flatTokens
-                    .padding(.top, DS.Space.s4)
-            }
-
-            if !card.rail.isEmpty {
-                railView
-                    .padding(.top, DS.Space.s4)
-            }
-
-            // ONE line (§408a): the tie replaced the shared sentence as the
-            // card's primary telling, and the scope ceiling lives on the key's
-            // own sheet, which states it beside the dates it governs.
-            VStack(alignment: .leading, spacing: DS.Space.s1) {
-                if let revoked = card.revokedNote {
-                    Text(revoked)
-                        .dsText(.subhead13)
-                        .foregroundStyle(DS.textSecondary)
-                }
-                if let stale = card.staleNote {
-                    Text(stale)
-                        .dsText(.subhead13)
-                        .foregroundStyle(DS.textSecondary)
+            VStack(alignment: .leading, spacing: DS.Space.s3) {
+                ForEach(Array(card.drawn.enumerated()), id: \.element.id) { index, row in
+                    keyRow(row, index: index)
+                        .chartArrival(index: index, reduceMotion: reduceMotion)
                 }
             }
             .padding(.top, DS.Space.s4)
+
+            // What the cap left off — counted, never silently dropped.
+            if let more = card.moreLine {
+                Text(more)
+                    .dsText(.label12)
+                    .foregroundStyle(DS.textTertiary)
+                    .padding(.top, DS.Space.s3)
+            }
+
+            // ONE line (§488): both sentences this replaced were summaries of
+            // rows now drawn above, and what survives is the part the rows
+            // cannot carry — see `AltanaRoom.Card.note`.
+            if let note = card.note {
+                Text(note)
+                    .dsText(.label12)
+                    .foregroundStyle(DS.textTertiary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, DS.Space.s3)
+            }
         }
         .padding(DS.Space.s4)
         .frame(maxWidth: .infinity, alignment: .leading)
+        // THE CARD RECIPE, which this head never had (prd §488). Every sibling
+        // room head applies exactly this pair after its own padding, and
+        // `insightSection` presents them all edge-to-edge on purpose ("the card
+        // owns its own padding"), so without it this one's content ran to both
+        // screen edges while every neighbouring room sat 18pt in from them.
+        .dsWidgetSurface()
+        .padding(.horizontal, DS.Space.s4)
         .accessibilityElement(children: .contain)
         .accessibilityLabel(Text(accessibilitySummary))
     }
 
-    /// The picture: accounts down the left, every credential exactly once, and
-    /// a tie from each account to everything that can sign for it.
+    // MARK: - One credential
+
+    /// A row, in one grammar for all four states.
     ///
-    /// Positions come from `AltanaRoom.placement` rather than from stacked
-    /// rows — the first cut stacked per account, which drew a shared key twice
-    /// and made the picture contradict its own census.
-    private var constellation: some View {
-        let plan = AltanaRoom.placement(card)
-        return ZStack(alignment: .topLeading) {
-            // Ties first, so a token always sits on top of its own lines.
-            ForEach(plan.ties) { tie in
-                if let a = plan.accounts.first(where: { $0.id == tie.account }),
-                   let c = plan.credentials.first(where: { $0.id == tie.credential }) {
-                    Path { path in
-                        path.move(to: CGPoint(x: a.x, y: a.y))
-                        if tie.shared {
-                            // ROUTED, not diagonal: out from the face, along
-                            // the channel between rows, then in to the token.
-                            // A straight line here crosses the labels of every
-                            // row it passes and takes them with it.
-                            let lane = CGPoint(x: a.x + 20, y: a.y)
-                            path.addLine(to: lane)
-                            path.addLine(to: CGPoint(x: lane.x, y: c.y))
-                            path.addLine(to: CGPoint(x: c.x, y: c.y))
-                        } else {
-                            path.addLine(to: CGPoint(x: c.x, y: c.y))
-                        }
-                    }
-                    .stroke(tie.shared ? Self.mark.opacity(0.9)
-                                       : DS.textTertiary.opacity(tie.severed ? 0.20 : 0.28),
-                            style: StrokeStyle(lineWidth: tie.shared ? 2.5 : 2,
-                                               lineCap: .round,
-                                               // CUT, for a revoked credential
-                                               // (§410): it reached this account
-                                               // and no longer does, and an
-                                               // intact line says the opposite.
-                                               dash: tie.severed ? [2, 5] : []))
-                }
-            }
-
-            ForEach(plan.accounts) { node in
-                VStack(spacing: 2) {
-                    WalletFace(address: node.id, size: DS.Face.rowCircle, circular: true)
-                    Text(WalletStore.shortAddress(node.id))
-                        .dsText(.label12)
-                        .foregroundStyle(DS.textTertiary)
-                        .fixedSize()
-                }
-                .position(x: node.x, y: node.y + 10)
-            }
-
-            ForEach(Array(plan.credentials.enumerated()), id: \.element.id) { index, node in
-                if let row = card.credentials.first(where: { $0.id == node.id }) {
-                    tokenColumn(row)
-                        .position(x: node.x, y: node.y + 18)
-                        .chartArrival(index: index, reduceMotion: reduceMotion)
-                }
-            }
-        }
-        .frame(width: plan.width, height: plan.height + 22, alignment: .topLeading)
-    }
-
-    private var flatTokens: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: DS.Space.s3) {
-                ForEach(card.credentials) { row in tokenColumn(row) }
-            }
-        }
-    }
-
-    /// Credentials this account can be signed for by, in the drawn order the
-    /// account's own rows established.
-    private func credentials(for address: String) -> [AltanaRoom.KeyRow] {
-        card.credentials.filter { $0.accountAddresses.contains(address) }
-    }
-
-    private func tie(shared: Bool) -> some View {
-        Rectangle()
-            .fill(shared ? Self.mark.opacity(0.85) : DS.textTertiary.opacity(0.28))
-            .frame(width: 14, height: 2)
-    }
-
+    /// The bar draws only where a bar is a reading — `shelfFraction` returns
+    /// nil for a root (no end), an expired key (no time left) and a ghost (not
+    /// on the shelf at all), so those rows collapse to two lines and their
+    /// absence of a bar says "no clock", which is exactly true.
     @ViewBuilder
-    private func tokenColumn(_ row: AltanaRoom.KeyRow) -> some View {
+    private func keyRow(_ row: AltanaRoom.KeyRow, index: Int) -> some View {
+        let now = Date.now
+        let urgent = row.isUrgent(now: now)
+        let finished = row.expired || row.isGone
         Button {
             DSHaptic.selection()
             onPickKey(row)
         } label: {
-            VStack(spacing: DS.Space.s2) {
-                ZStack {
-                    Circle()
-                        .fill(row.isGone ? DS.surfaceRaised.opacity(0.6)
-                                         : (row.isRoot ? Self.mark : DS.surfaceRaised))
-                    Circle()
-                        .strokeBorder(row.isGone ? DS.textTertiary.opacity(0.30)
-                                                 : (row.isShared ? Self.mark
-                                                                 : DS.textTertiary.opacity(row.isRoot ? 0 : 0.28)),
-                                      style: StrokeStyle(lineWidth: 2,
-                                                         dash: row.isGone ? [2, 4] : []))
-                    Image(systemName: glyph(row))
-                        .dsGlyph(18)
-                        .foregroundStyle(row.isGone ? DS.textTertiary
-                                                    : (row.isRoot ? .white : DS.textPrimary))
-                }
-                // EVERY token, the same size — no exceptions (§408a).
-                .frame(width: Self.token, height: Self.token)
-
-                VStack(spacing: 1) {
-                    Text(row.title)
-                        .dsText(.label12).fontWeight(.medium)
-                        .foregroundStyle(DS.textPrimary)
-                        .lineLimit(1)
-                    if let line = tokenLine(row) {
-                        Text(line)
+            HStack(alignment: .top, spacing: DS.Space.s3) {
+                seatMark(row)
+                VStack(alignment: .leading, spacing: DS.Space.s2) {
+                    HStack(spacing: DS.Space.s2) {
+                        Text(row.title)
+                            .dsText(.subhead13).fontWeight(.medium)
+                            .foregroundStyle(DS.textPrimary)
+                            .lineLimit(1)
+                        if showsFaces(row) { faces(row) }
+                        Spacer(minLength: DS.Space.s2)
+                        Text(row.countdown(now: now))
                             .dsText(.label12)
-                            .foregroundStyle(DS.textSecondary)
+                            .fontWeight(urgent ? .semibold : .regular)
+                            .foregroundStyle(urgent ? Self.mark : DS.textTertiary)
                             .monospacedDigit()
+                            .lineLimit(1)
+                            .frame(width: Self.clockWidth, alignment: .trailing)
+                    }
+                    if let fraction = row.shelfFraction(now: now) {
+                        // Blue is spent on urgency and only on urgency (§471),
+                        // so the one key you might have to act on today is the
+                        // one coloured bar on the card.
+                        ShareBar(fraction: fraction,
+                                 index: index,
+                                 fill: urgent ? Self.mark : DS.fillStrong,
+                                 reduceMotion: reduceMotion)
+                    }
+                    if let detail = row.detail {
+                        Text(detail)
+                            .dsText(.label12)
+                            .foregroundStyle(DS.textTertiary)
                             .lineLimit(1)
                     }
                 }
             }
-            .frame(minWidth: 62)
-            .opacity(row.expired || row.isGone ? 0.45 : 1)
+            .opacity(finished ? 0.45 : 1)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text(accessibility(row)))
     }
 
-    /// The rail: WHEN, never how long (§408a).
-    private var railView: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s2) {
-            Text(String(localized: "What expires next"))
-                .dsText(.label12).fontWeight(.semibold)
-                .foregroundStyle(DS.textSecondary)
-            GeometryReader { geo in
-                ZStack(alignment: .topLeading) {
-                    Capsule()
-                        .fill(DS.textTertiary.opacity(0.18))
-                        .frame(height: 5)
-                        .offset(y: 5)
-                    // The now-marker: the rail always CONTAINS now, so a dot
-                    // can never draw to the left of it.
-                    Capsule()
-                        .fill(DS.textSecondary)
-                        .frame(width: 2.5, height: 13)
-                        .offset(x: 0, y: 1)
-                    ForEach(card.rail) { dot in
-                        Circle()
-                            .fill(Self.mark)
-                            .frame(width: 10, height: 10)
-                            .offset(x: max(0, min(geo.size.width - 10, geo.size.width * dot.position - 5)),
-                                    y: 2.5)
-                    }
-                }
-            }
-            .frame(height: 18)
-            // Labels below, first and last only: a label per dot is a thicket,
-            // and these two are the ones worth reading — the next thing to
-            // happen and the edge of the window.
-            HStack(alignment: .top) {
-                if let first = card.rail.first {
-                    Text(first.label)
-                        .dsText(.label12)
-                        .foregroundStyle(DS.textSecondary)
-                }
-                Spacer(minLength: DS.Space.s2)
-                if let last = card.rail.last, card.rail.count > 1 {
-                    Text(last.label)
-                        .dsText(.label12)
-                        .foregroundStyle(DS.textSecondary)
-                }
+    /// Root or session, said by WEIGHT and never by size (§408a's one surviving
+    /// token rule): a root is solid in the room's mark, a session is outlined,
+    /// a revoked credential is outlined in a dashed stroke — which is the whole
+    /// reading, since the registry has dropped it and only our own memory of it
+    /// remains (§410).
+    private func seatMark(_ row: AltanaRoom.KeyRow) -> some View {
+        ZStack {
+            Circle()
+                .fill(row.isRoot && !row.isGone ? Self.mark : DS.fillFaint)
+            Circle()
+                .strokeBorder(DS.textTertiary.opacity(row.isRoot && !row.isGone ? 0 : 0.28),
+                              style: StrokeStyle(lineWidth: 1.5,
+                                                 dash: row.isGone ? [2, 3] : []))
+            Image(systemName: glyph(row))
+                .dsGlyph(14)
+                .foregroundStyle(row.isRoot && !row.isGone ? .white : DS.textSecondary)
+        }
+        .frame(width: Self.seat, height: Self.seat)
+    }
+
+    /// The accounts this credential can sign for.
+    ///
+    /// Overlapped rather than spaced, so a pair reads as one fact ("this key,
+    /// those two accounts") rather than as two separate marks — `FacePile`'s
+    /// own shape, spelled here because that view draws `RemoteThumb` from URLs
+    /// and these are `WalletFace` identicons off an address.
+    private func faces(_ row: AltanaRoom.KeyRow) -> some View {
+        HStack(spacing: -DS.Face.badge * 0.34) {
+            ForEach(row.accountAddresses.prefix(3), id: \.self) { address in
+                WalletFace(address: address, size: DS.Face.badge, circular: true)
+                    .overlay(Circle().strokeBorder(DS.surfaceRaised, lineWidth: 1.5))
             }
         }
+        .fixedSize()
+    }
+
+    /// A face earns its place only where it distinguishes something: an
+    /// unscoped room (rows belong to different accounts), or a credential that
+    /// signs for more than one account, which is the fact the whole
+    /// constellation was built to say.
+    private func showsFaces(_ row: AltanaRoom.KeyRow) -> Bool {
+        namesAccounts || row.isShared
     }
 
     private func glyph(_ row: AltanaRoom.KeyRow) -> String {
         row.kindLabel == String(localized: "Passkey") ? "touchid" : "key.horizontal"
     }
 
-    private func tokenLine(_ row: AltanaRoom.KeyRow) -> String? {
-        if row.isGone { return String(localized: "revoked") }
-        if row.expired { return String(localized: "expired") }
-        if let hours = row.hoursLeft {
-            return hours == 0 ? String(localized: "under 1h")
-                              : String(localized: "\(hours)h left")
-        }
-        if let days = row.daysLeft { return String(localized: "\(days)d left") }
-        if row.isRoot { return String(localized: "no expiry") }
-        return nil
-    }
-
     private func accessibility(_ row: AltanaRoom.KeyRow) -> String {
         var parts = [row.title]
-        if row.isGone { parts.append(String(localized: "revoked")) }
         if row.isRoot { parts.append(String(localized: "root key")) }
         if row.isShared {
             parts.append(String(localized: "signs for \(row.accountAddresses.count) accounts"))
         }
-        if let line = tokenLine(row) { parts.append(line) }
+        if let detail = row.detail { parts.append(detail) }
+        parts.append(row.countdown(now: .now))
         return parts.joined(separator: ", ")
     }
 
-    /// The picture, said once for anyone not looking at it.
+    /// The card, said once for anyone not looking at it. Deliberately fuller
+    /// than what is drawn: the shared and hygiene sentences are pictures and
+    /// row states on screen, and neither reads as anything to VoiceOver.
     private var accessibilitySummary: String {
         var parts = [card.headline]
         if let shared = card.sharedNote { parts.append(shared) }

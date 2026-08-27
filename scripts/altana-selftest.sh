@@ -71,6 +71,59 @@ print -r -- "$CARDCODE" | grep -q 'AltanaKeystore.call\|eth_call' && {
 grep -q 'if DemoMode.isActive { return .seeded }' "$SOURCE" \
   || { echo "✗ the demo live-check no longer returns .seeded — it would claim a check it never made"; exit 1; }
 
+# --- prd §488: the list, the card recipe, and the fixed window -------------
+CARD="Casberi/Casberi/Screens/AltanaRoomCard.swift"
+[[ -f "$CARD" ]] || { echo "✗ $CARD not found"; exit 1; }
+# Read COMMENT-STRIPPED, because this card documents the redesign by NAMING
+# everything it must no longer do — the constellation, the tokens, the rail.
+# Grepping raw source fires on the prose explaining the guard: the
+# Obsidian/Cursor lesson, which this project has now paid for six times.
+CARDVIEW=$(sed 's://.*::' "$CARD" | sed '/^[[:space:]]*\/\/\//d')
+
+# THE CARD RECIPE. This head was the only one in the Wallet group with neither,
+# so its content ran flush to both screen edges while every sibling sat 18pt in
+# — §474's reported bug, and the largest single part of "the room looks messy".
+print -r -- "$CARDVIEW" | grep -q 'dsWidgetSurface()' \
+  || { echo "✗ the Altana head lost its card surface — prd §488: every sibling room head"
+       echo "  ends .dsWidgetSurface() + .padding(.horizontal, DS.Space.s4), and"
+       echo "  insightSection presents them all edge-to-edge on purpose"; exit 1; }
+print -r -- "$CARDVIEW" | grep -q 'padding(.horizontal, DS.Space.s4)' \
+  || { echo "✗ the Altana head lost its outer margin — prd §488/§474"; exit 1; }
+
+# ONE BAR OBJECT. The room next door rolled its own capsule pair for two
+# months; two keystore rooms drawing one figure two ways is what
+# DSSectionSwitcher was made generic on day one to avoid.
+print -r -- "$CARDVIEW" | grep -q 'ShareBar(' \
+  || { echo "✗ the key rows no longer draw ShareBar — prd §488"; exit 1; }
+
+# THE CONSTELLATION AND THE RAIL MAY NOT RETURN. Both had defects no restyling
+# fixes: an absolutely-positioned width that overflowed a 321pt card with no
+# scroll, and an elastic axis whose now-marker was a constant.
+for dead in 'AltanaRoom.placement' 'card.rail' 'Placement(' 'RailDot'; do
+  print -r -- "$CARDVIEW" | grep -q "$dead" && {
+    echo "✗ the Altana head is drawing $dead again — prd §488 replaced both with a list"; exit 1; }
+done
+ROOMCODE=$(sed 's://.*::' "$ROOM" | sed '/^[[:space:]]*\/\/\//d')
+for dead in 'struct Placement' 'struct RailDot' 'static func placement' 'static func rail('; do
+  print -r -- "$ROOMCODE" | grep -q "$dead" && {
+    echo "✗ $ROOM declares $dead again — prd §488"; exit 1; }
+done
+
+# ONE WINDOW, TWO ROOMS. Altana's shelf and vibenet's are the same figure over
+# the same subject; two keystore rooms drawing bars on two different scales
+# would read as a bug, and neither file can see the other's constant.
+VIBE="Casberi/Casberi/Model/VibenetRoom.swift"
+ALT_W=$(grep -o 'static let shelfWindow: TimeInterval = [0-9_ *]*' "$ROOM" | grep -o '[0-9_]* \* [0-9_]*' | head -1)
+VIB_W=$(grep -o 'static let window: TimeInterval = [0-9_ *]*' "$VIBE" | grep -o '[0-9_]* \* [0-9_]*' | head -1)
+[[ -n "$ALT_W" && "$ALT_W" == "$VIB_W" ]] \
+  || { echo "✗ the two keystore rooms' shelf windows disagree ('$ALT_W' vs '$VIB_W') — prd §488"; exit 1; }
+
+# THE FACE RAIL'S PICK REACHES THE HEAD. Altana is in the Wallet category, so
+# WalletScopeRail has drawn above this room since §356; a head that ignores the
+# ringed face is the dead control §83 bans.
+grep -q 'AltanaRoom.card(scope: selectedWallet)' "Casberi/Casberi/Screens/FeedScreen.swift" \
+  || { echo "✗ the Altana head no longer obeys the wallet scope — prd §488"; exit 1; }
+
 TMP=$(mktemp -d /tmp/altana-selftest.XXXXXX)
 trap 'rm -rf "$TMP"' EXIT
 # MUST be named main.swift — with several files on the command line, only
@@ -539,89 +592,134 @@ check(sharedCred.accountAddresses == ["0xaaa", "0xbbb"],
       "…in the order the accounts are drawn, so the ties are stable between opens")
 check(multi.credentials.allSatisfy { !$0.isShared }, "distinct keys are never marked shared")
 
-// ── §408a: the rail is POSITIONS, never lengths ───────────────────────────
-// The user's objection to the timeline: a long bar beside a short one invites
-// a comparison that carries nothing. A dot says the one actionable thing.
-let railNow = Date(timeIntervalSince1970: 1_787_083_931)
+// ── §488: THE SHELF — one bar per key, on ONE FIXED WINDOW ───────────────
+// This replaces §408a's dot rail, which carried `VibenetKeyShelf`'s own
+// measured defect: the axis spanned `now … furthest live deadline`, so `now`
+// was the minimum on every render (every expiry is in the future) and the
+// marker was a constant, while a single far-off key crushed everything else
+// against it. Every failure below renders as a perfectly ordinary row.
+let shelfNow = Date(timeIntervalSince1970: 1_787_083_931)
 func at(_ n: Int, hours: Double) -> AK.Key {
-    key(n, root: false, reg: sessReg, exp: Int(railNow.timeIntervalSince1970 + hours * 3600))
+    key(n, root: false, reg: sessReg, exp: Int(shelfNow.timeIntervalSince1970 + hours * 3600))
 }
-guard let railCard = AltanaRoom.compose(
-        readings: [reading("0xa", [root, at(80, hours: 9), at(81, hours: 720)])], now: railNow) else {
-    print("  ✗ a rail composes"); exit(1)
+func rowFor(_ k: AK.Key, with others: [AK.Key] = [root]) -> AltanaRoom.KeyRow? {
+    AltanaRoom.compose(readings: [reading("0xa", others + [k])], now: shelfNow)?
+        .credentials.first { $0.id == k.id }
 }
-check(railCard.rail.count == 2, "one dot per live deadline")
-check(railCard.rail.last?.position == 1.0,
-      "the FURTHEST deadline anchors the end — the rail is never mostly empty")
-check((railCard.rail.first?.position ?? 1) < 0.02,
-      "…and a 9-hour deadline against a 30-day span sits hard against now, which is the reading")
-check(railCard.rail.first?.label.contains("9h") == true, "the near dot says its own clock")
-check(railCard.rail.allSatisfy { $0.count == 1 }, "well-separated deadlines do not merge")
 
-// The span is the FURTHEST deadline, not a fixed window — and the case above
-// cannot tell the two apart, because its furthest deadline happens to be 30
-// days out, so a hard-coded 30-day window agrees with it exactly. This is the
-// fixture that separates them: everything inside ten days, where a fixed
-// window would bunch every dot into the first third and leave two-thirds of
-// the rail empty for no reason.
-guard let shortSpan = AltanaRoom.compose(
-        readings: [reading("0xa", [root, at(85, hours: 24), at(86, hours: 240)])], now: railNow) else {
-    print("  ✗ a short-span rail composes"); exit(1)
+guard let near = rowFor(at(80, hours: 9)),
+      let mid  = rowFor(at(81, hours: 45 * 24)),
+      let far  = rowFor(at(82, hours: 200 * 24)) else {
+    print("  ✗ the shelf rows compose"); exit(1)
 }
-check(shortSpan.rail.last?.position == 1.0,
-      "a ten-day furthest deadline still anchors the END — the rail scales to what is actually ahead")
-check((shortSpan.rail.first?.position ?? 0) > 0.05,
-      "…and the near dot spreads out with it, rather than bunching against now")
+check(abs((mid.shelfFraction(now: shelfNow) ?? 0) - 0.5) < 0.01,
+      "half the window left draws half a bar")
+check(far.shelfFraction(now: shelfNow) == 1.0,
+      "a key beyond the window CLAMPS to a full bar — the countdown beside it stays exact")
+check(near.shelfFraction(now: shelfNow) == AltanaRoom.minimumFraction,
+      "a key lapsing in hours is floored to a bar you can still see, never drawn as a hole")
 
-// Two deadlines an hour apart against a month-long span are one unreadable
-// dot, so they merge — keeping the EARLIER one's true position.
-guard let merged = AltanaRoom.compose(
-        readings: [reading("0xa", [root, at(82, hours: 9), at(83, hours: 10), at(84, hours: 720)])],
-        now: railNow) else { print("  ✗ a merging rail composes"); exit(1) }
-check(merged.rail.count == 2, "two dots inside the merge gap become one")
-check(merged.rail.first?.count == 2, "…which says how many it stands for")
-check(merged.rail.first?.label.contains("2") == true, "…in its label")
-check(merged.rail.first?.position == railCard.rail.first?.position,
-      "…at the EARLIER deadline's real position — a merge never invents a time")
+// THE FIXTURE THAT SEPARATES A FIXED WINDOW FROM AN ELASTIC ONE, and the only
+// one that can: the same 9-hour key in two rooms whose furthest deadline is
+// wildly different must draw the SAME bar. Under the old rail these two were
+// 0.012 and 0.9 — the same key, two pictures, neither comparable to the other.
+guard let nearBesideFar = AltanaRoom.compose(
+        readings: [reading("0xa", [root, at(83, hours: 9), at(84, hours: 2000)])], now: shelfNow)?
+        .credentials.first(where: { $0.id == at(83, hours: 9).id }),
+      let nearAlone = rowFor(at(83, hours: 9)) else {
+    print("  ✗ the two-room comparison composes"); exit(1)
+}
+check(nearBesideFar.shelfFraction(now: shelfNow) == nearAlone.shelfFraction(now: shelfNow),
+      "THE WINDOW IS FIXED — a key's bar cannot change because another key exists")
 
-// An expired key is not ahead of anything, and a root has no deadline at all.
-check(AltanaRoom.compose(readings: [reading("0xa", [root, over])], now: now)?.rail.isEmpty == true,
-      "nothing live to expire means no rail — an empty axis is not a reading")
+// The states with no clock. nil is the correct answer for three of the four,
+// and each is its own reason: no end, no time left, not on the shelf at all.
+guard let clockless = AltanaRoom.compose(readings: [reading("0xa", [root, live, over])], now: shelfNow),
+      let rootRow = clockless.credentials.first(where: \.isRoot),
+      let expiredRow = clockless.credentials.first(where: { $0.id == over.id }) else {
+    print("  ✗ the clockless rows compose"); exit(1)
+}
+check(rootRow.shelfFraction(now: shelfNow) == nil,
+      "A ROOT HAS NO BAR — drawing one would state a completion that does not exist")
+check(rootRow.countdown(now: shelfNow) == "no expiry", "…and says so in words")
+check(expiredRow.shelfFraction(now: shelfNow) == nil, "an expired key has no bar")
+check(expiredRow.countdown(now: shelfNow) == "expired", "…and its countdown says which state it is in")
 
-// ── §408a: the layout draws each credential ONCE ─────────────────────────
-// The bug this replaced: per-account rows put a shared key on screen twice, so
-// the picture showed six tokens while the census said four. A picture that
-// disagrees with its own caption is worse than either alone.
-let plan = AltanaRoom.placement(sharedCard)
-check(plan.credentials.count == sharedCard.credentials.count,
-      "ONE NODE PER CREDENTIAL — a shared key is drawn once, never once per account")
-check(Set(plan.credentials.map(\.id)).count == plan.credentials.count,
-      "…and no id is placed twice")
-check(plan.accounts.count == 2, "both accounts are placed")
-check(plan.ties.count == 4,
-      "four ties: each account to its own root, and both to the shared key")
-let sharedTies = plan.ties.filter(\.shared)
-check(sharedTies.count == 2, "the shared credential ties to BOTH accounts")
-check(Set(sharedTies.map(\.account)).count == 2, "…to two DIFFERENT accounts")
-check(plan.ties.filter { !$0.shared }.allSatisfy { tie in
-        sharedCard.credentials.first { $0.id == tie.credential }?.isShared == false },
-      "…and an exclusive tie never points at a shared credential")
+// The countdown. Days round UP — 30 hours reading "1d" understates it on the
+// one line whose whole job is to say how much time there is.
+check(near.countdown(now: shelfNow) == "9h", "under a day counts in hours")
+check(mid.countdown(now: shelfNow) == "45d", "past a day counts in days")
+check(rowFor(at(85, hours: 30))?.countdown(now: shelfNow) == "2d",
+      "30 hours left rounds UP to 2d, never down to 1d")
+check(rowFor(at(86, hours: 0.5))?.countdown(now: shelfNow) == "<1h",
+      "inside the hour says so rather than printing 0h")
 
-// The shared node sits between the accounts it serves — that is what makes
-// the fan readable as one key reaching two places.
-if let sharedNode = plan.credentials.first(where: { node in
-       sharedCard.credentials.first { $0.id == node.id }?.isShared == true }) {
-    let ys = plan.accounts.map(\.y).sorted()
-    check(sharedNode.y > ys[0] && sharedNode.y < ys[1],
-          "the shared token is placed BETWEEN its accounts, so both ties fan visibly")
-    check(plan.credentials.filter { $0.id != sharedNode.id }.allSatisfy { $0.x < sharedNode.x },
-          "…and to the right of every exclusive token, so its ties cross nothing")
-} else { check(false, "the shared node is placed") }
+// The mark, and it is the headline's own threshold rather than a second one.
+check(near.isUrgent(now: shelfNow), "a key inside the day is the row that earns the mark")
+check(rowFor(at(87, hours: 25))?.isUrgent(now: shelfNow) == false,
+      "…and one just outside it is not — same threshold the headline's alarm uses")
+check(expiredRow.isUrgent(now: shelfNow) == false, "an expired key is never urgent — it is finished")
 
-// Deterministic: the same card lays out identically every time, or the
-// picture reshuffles between two draws of the same data.
-check(AltanaRoom.placement(sharedCard) == plan, "the layout is deterministic")
-check(plan.width > 0 && plan.height > 0, "the frame has real size")
+// ── §488: the cap is said, never silent ──────────────────────────────────
+// A card that stops at six looks exactly like an account that has six — the
+// silent-truncation class this repo has paid for in four import rooms.
+let many = (100...107).map { at($0, hours: Double($0 - 99) * 24) }
+guard let capped = AltanaRoom.compose(readings: [reading("0xa", [root] + many)], now: shelfNow) else {
+    print("  ✗ a capped card composes"); exit(1)
+}
+check(capped.credentials.count == 9, "every credential is still counted")
+check(capped.drawn.count == AltanaRoom.rowCap, "…while only the cap is drawn")
+check(capped.moreLine?.contains("3") == true, "…and the remainder is SAID")
+check(AltanaRoom.compose(readings: [reading("0xa", [root, live])], now: shelfNow)?.moreLine == nil,
+      "a card inside the cap says nothing about it")
+
+// ── §488: the face rail's pick narrows the head ──────────────────────────
+// Altana sits in the Wallet category, so the wallet face rail has drawn above
+// this room since §356 and the head ignored it entirely — a scope control the
+// head does not obey is the dead control §83 bans.
+guard let scoped = AltanaRoom.compose(readings: [shA, shB], now: now, scope: "0xaaa") else {
+    print("  ✗ a scoped card composes"); exit(1)
+}
+check(scoped.accounts.count == 1, "one account draws when one is picked")
+check(scoped.accounts.first?.address == "0xaaa", "…the one that was picked")
+check(scoped.credentials.allSatisfy { $0.accountAddresses.contains("0xaaa") },
+      "…and every row can sign for it")
+check(scoped.credentials.count == 2, "the other account's own root is gone")
+
+// THE ONE THAT MATTERS: narrowing happens AFTER the dedupe, so a credential
+// that also signs for a wallet now out of scope keeps saying so. Filtering the
+// readings on the way in would make the single most valuable fact on a scoped
+// card structurally unsayable.
+guard let scopedShared = scoped.credentials.first(where: { $0.id == sharedKey.id }) else {
+    print("  ✗ the shared credential survives scoping"); exit(1)
+}
+check(scopedShared.isShared, "A SCOPED ROW STILL KNOWS IT IS SHARED")
+check(scopedShared.accountAddresses.count == 2, "…and still names both accounts it signs for")
+check(scoped.sharedNote != nil, "…so the sentence survives too")
+
+// Hex compares case-insensitively — EIP-55 case is a checksum, not identity.
+check(AltanaRoom.compose(readings: [shA, shB], now: now, scope: "0xAAA")?.accounts.count == 1,
+      "a checksummed spelling of the same address is the same account")
+// A scope this keystore has never seen DECLINES rather than falling back to
+// the aggregate, which would draw every account under one ringed face.
+check(AltanaRoom.compose(readings: [shA, shB], now: now, scope: "0xzzz") == nil,
+      "a wallet the keystore has never seen has no card, and does not borrow one")
+check(AltanaRoom.compose(readings: [shA, shB], now: now, scope: nil)?.accounts.count == 2,
+      "and All is unchanged")
+
+// The alarm and the census follow the scope, or a scoped card reports the
+// room's soonest deadline under one account's face.
+guard let scopedB = AltanaRoom.compose(readings: [acctA, acctB], now: now, scope: "0xaaa") else {
+    print("  ✗ the unhurried account composes scoped"); exit(1)
+}
+// Asserted as "not 0xbbb's number", never as "nil": 0xaaa's own session lands
+// exactly on the 24-hour urgency boundary, so a nil here would pass for a
+// reason that has nothing to do with scoping — the right-result-wrong-reason
+// class this repo keeps re-earning.
+check(multi.urgentHours == 4, "the unscoped card's alarm is the soonest deadline anywhere")
+check(scopedB.urgentHours != 4,
+      "THE ALARM IS SCOPED — 0xbbb's four-hour deadline is not 0xaaa's news")
+check(scopedB.usableCount == 2, "…and so is the census")
 
 // ── §410: revoked credentials the picture remembers ─────────────────────
 // The registry DROPS a revoked key from getKeys, so a ghost can only ever be
@@ -630,7 +728,7 @@ check(plan.width > 0 && plan.height > 0, "the frame has real size")
 func ghost(_ n: Int, address: String = "0xaaa", root: Bool = false) -> AltanaRoom.Ghost {
     AltanaRoom.Ghost(address: address, keyID: "0x" + kid(n), isRoot: root,
                      kindLabel: "Passkey", chainLabel: "BNB Smart Chain",
-                     noticedAt: railNow.addingTimeInterval(-3 * 86_400))
+                     noticedAt: shelfNow.addingTimeInterval(-3 * 86_400))
 }
 guard let withGhost = AltanaRoom.compose(
         readings: [reading("0xaaa", [root, live])], ghosts: [ghost(90)], now: now) else {
@@ -643,18 +741,32 @@ check(withGhost.usableCount == 2,
 check(withGhost.revokedNote?.contains("1 key") == true, "the sentence names the count")
 check(withGhost.revokedNote?.contains("while you were watching") == true,
       "…and says WHILE YOU WERE WATCHING, because the history before that is unknowable")
-check(withGhost.rail.allSatisfy { $0.id != ghost(90).keyID },
-      "a ghost carries no deadline onto the rail")
-
-// The tie is CUT — an intact one would say it still reaches the account.
-let ghostPlan = AltanaRoom.placement(withGhost)
-guard let cut = ghostPlan.ties.first(where: { $0.credential == ghost(90).keyID }) else {
-    print("  ✗ the ghost is tied to its account"); exit(1)
+// A ghost is not on the shelf at all — it has no clock, and a bar for it would
+// say it is still running down toward something (§488; it was a CUT TIE in the
+// constellation, which is the same reading in the drawing that replaced it).
+guard let ghostRow = withGhost.credentials.first(where: \.isGone) else {
+    print("  ✗ the ghost is a row"); exit(1)
 }
-check(cut.severed, "the ghost's tie is SEVERED")
-check(ghostPlan.ties.filter { !$0.severed }.allSatisfy { tie in
-        withGhost.credentials.first { $0.id == tie.credential }?.isGone == false },
-      "…and no living credential's tie is")
+check(ghostRow.shelfFraction(now: now) == nil, "a revoked credential draws no bar")
+check(ghostRow.countdown(now: now) == "revoked", "…and its row says which state it is in")
+check(ghostRow.isUrgent(now: now) == false, "…and it is never urgent — it is already gone")
+
+// ── §488: ONE line, ranked ───────────────────────────────────────────────
+// Both sentences became summaries of drawn rows the moment the constellation
+// became a list, so the card says one and the rows carry the rest.
+guard let both = AltanaRoom.compose(
+        readings: [reading("0xaaa", [root, live, over])], ghosts: [ghost(92)], now: now) else {
+    print("  ✗ a card with both notes composes"); exit(1)
+}
+check(both.revokedNote != nil && both.staleNote != nil, "the fixture really has both to say")
+check(both.note == both.revokedNote,
+      "REVOCATION OUTRANKS HYGIENE — a key somebody took away beats a key that merely lapsed")
+guard let staleOnly = AltanaRoom.compose(
+        readings: [reading("0xaaa", [root, live, over])], now: now) else {
+    print("  ✗ a stale-only card composes"); exit(1)
+}
+check(staleOnly.note == staleOnly.staleNote,
+      "…and the hygiene line comes back on its own once there is no ghost")
 
 // A key that came BACK is alive, not a ghost — drawing both would be wrong in
 // two directions at once.

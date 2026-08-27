@@ -5398,7 +5398,14 @@ struct FeedScreen: View {
         // keys are chain state, not rows, and re-reading them on every draw
         // would spend an `eth_call` per scroll (`AltanaState`).
         case AltanaKeystore.source:
-            return AltanaRoom.card().map { .altana($0) }
+            // Scoped by the face rail, exactly as the wallet crown and the
+            // vibenet card are (prd §488). Altana is in the Wallet CATEGORY,
+            // so `WalletScopeRail` has drawn your wallet faces above this room
+            // since §356 — and until now the card ignored the pick entirely,
+            // so ringing a face changed the rows beneath and left the head
+            // describing every account. A scope control the head does not obey
+            // is the dead control §83 bans.
+            return AltanaRoom.card(scope: selectedWallet).map { .altana($0) }
         // Composed from the SNAPSHOT the sweep wrote, exactly like Altana
         // above and for the same reason: this room's subject is chain
         // state, and composing it live would spend an `eth_call` per

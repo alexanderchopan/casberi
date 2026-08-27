@@ -215,6 +215,16 @@ struct ShareBar: View {
     var index: Int = 0
     /// Draw full, then recede to `fraction` — see the type doc.
     var melt: Bool = false
+    /// The fill, when this bar's room spends colour on something other than
+    /// "here is a share" (2026-08-26, prd §488).
+    ///
+    /// Every caller before Altana drew a share of a whole, where the tint is
+    /// the room's ordinary voice. A KEY SHELF is a different sentence — bar
+    /// length is time remaining, and blue is spent on urgency and only on
+    /// urgency (§471), so an unhurried key must be able to draw the same
+    /// SHAPE in a quieter fill. Defaulted, so no existing caller changes and
+    /// there is still exactly one bar object in the app.
+    var fill: Color = DS.tint
     let reduceMotion: Bool
 
     @State private var entered = false
@@ -230,7 +240,7 @@ struct ShareBar: View {
             ZStack(alignment: .leading) {
                 Capsule(style: .continuous).fill(DS.fillFaint)
                 Capsule(style: .continuous)
-                    .fill(DS.tint)
+                    .fill(fill)
                     .frame(width: max(2, geo.size.width * width))
             }
         }

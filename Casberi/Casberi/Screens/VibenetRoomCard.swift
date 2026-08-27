@@ -1367,15 +1367,16 @@ struct VibenetRoomCard: View {
                 .foregroundStyle(DS.textSecondary)
                 .lineLimit(1)
                 .frame(width: 104, alignment: .leading)
-            GeometryReader { geo in
-                ZStack(alignment: .leading) {
-                    Capsule().fill(DS.fillFaint)
-                    Capsule()
-                        .fill(urgent ? Self.mark : DS.fillStrong)
-                        .frame(width: max(3, geo.size.width * row.fraction(now: .now)))
-                }
-            }
-            .frame(height: 7)
+            // `ShareBar` — the app's one bar object, which this row rolled
+            // its own copy of until 2026-08-26 (prd §488). Altana's key list
+            // draws the same figure for the same reason, and two keystore
+            // rooms drawing one figure two ways is the thing `DSSectionSwitcher`
+            // was made generic on day one to avoid. The fill override is what
+            // let the shared bar take this row without giving up §471's rule
+            // that blue is spent on urgency and only on urgency.
+            ShareBar(fraction: row.fraction(now: .now),
+                     fill: urgent ? Self.mark : DS.fillStrong,
+                     reduceMotion: reduceMotion)
             Text(row.countdown(now: .now))
                 .dsText(.label11)
                 .fontWeight(urgent ? .semibold : .regular)

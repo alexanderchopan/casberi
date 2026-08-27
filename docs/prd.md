@@ -79,6 +79,10 @@ at all.
 
 | Ruling | What it said | Changed by |
 |---|---|---|
+| §408a | The Altana head is a CONSTELLATION — one token per credential, a drawn tie to every account it can sign for, over a dot rail of the deadlines | superseded by §488 (the layout was absolutely positioned and overflowed the card, a 44pt token carried six visual variables, and the rail's now-marker was a constant on an elastic axis; one row per credential, one bar on a fixed window) |
+| §407a | Every watched account draws, each behind its own identicon, as a node the credentials hang off | amended by §488 (accounts are the face rail's scope and the faces ON a shared credential's row — the head obeys the ringed face rather than drawing every account at once) |
+| §420 | The CardPointers head: the soonest offer in full, a card-by-card tally of active offers, and a footnote counting the undated | amended by §487 (all three deleted — row one restated a card higher, a count the module doctrine refuses, and a fact that now sits on the rows it describes; the head is one sentence and a deadline rail) |
+| §420 | An offer's expiry lands on `dueAt` and `heal` clears it when the offer finishes | amended by §487 (clearing the date alone left redeemed, expired, snoozed and genuinely-undated offers wearing one shape, so `heal` stamps `mark` too and the head stops counting spent coupons as waiting) |
 | §475 | The wallet room's four group headers — "What you hold" / "What it's doing" / "Who can reach it" / "Coming up" | amended by §483 (the four become SCOPES under short nouns, split into six; the questions survive as headers for a scope holding two unlike things) |
 | §387 | The NFT shelf sits directly under the holdings map — the two are one "what you hold" pair | amended by §483 (still a pair, now expressed as two scopes: a wall of pictures and a treemap are the room's two most visual things and neither should lead the other) |
 | §468 | The hero face stands down wherever the face rail is drawing one | amended by §482 (the rail folded into the crown's chip strip, so there is no duplicate to prevent and the face is unconditional) |
@@ -34289,6 +34293,7 @@ on a device before any of it is spent. `WalletCompositionStrip` stays inside the
 balance card. No new `Thing` field, no request, no CloudKit deploy. The four
 `walletGroupHeader` questions survive as headers the day a scope holds two
 unlike kinds of thing.
+
 ## 484. Every catalog category is walked, and the demo's nine missing seats are the ones that never landed a row (user: "the demo mode does not show all sources active, for example, wallet is missing coinbase kraken, and soem others. shouldn't we have ALL that way we have a north star and reference and also user can see for any of the things that matter to them?", then "make sure to go through each category of apps in the catalogue to make sure we have a demo room", 2026-08-26)
 
 The catalog was walked group by group rather than seat by seat, and the answer
@@ -34406,3 +34411,510 @@ No new `Thing` field, no request, no CloudKit deploy. The demo's row count is
 unchanged — every one of these nine is a reading, not a row, which is the whole
 reason they were missing.
 
+## 485. The Railgun room stops talking over itself, and two money rooms become ledgers (user: "the railgun room looks messy how would you clean it up in the restrained style we are doing for wallet", 2026-08-26)
+
+§483's editing pass, applied one room over. Railgun is a VENUE inside the Wallet
+fold, so it is reached from the very rail that room's restraint was spent on —
+and it read as the room that had not had the pass.
+
+Three defects on the head, and none of them was a taste problem: each was the
+card stating one fact several times, or drawing a picture of a different number
+than the one printed beside it.
+
+### THE CARD SAID ONE THING FOUR TIMES
+
+A headline naming the leading token, a subline splitting shielded from received,
+a line per token splitting shielded from received AGAIN, and a footnote. On a
+two-direction room the words "shielded" and "received" could appear five times
+on one card before it said anything.
+
+**`RailgunRoom.note` is DELETED, not merely undrawn.** Now that every drawn
+token carries both of its own figures, the subline stated the sum of one column
+and the sum of the other, both already on screen — §208 committed by a header,
+which is the exact deletion the wallet crown's caption took in §483. Its one
+irreplaceable fact, a move whose token could not be read at all, was already in
+the footnote.
+
+### THE LEAD HAD A BAR AND NO ROW
+
+The lead token was named inside the prose headline and deliberately given no row
+— but it still drew a bar, so the card's first bar measured a token whose label
+was two lines above it while every bar below sat on a labelled row. **Every
+drawn token gets a row now, the lead included.** The headline still names it,
+because a headline is a sentence about the room and a row is a reading of a
+token.
+
+### THE BAR AND THE TEXT MEASURED DIFFERENT QUANTITIES
+
+`RailgunRoom.share` was a fraction of the busiest token's **move count**, drawn
+directly under a line stating an **amount**. Read left to right it looked like a
+picture of the number printed next to it, and it never was.
+
+The fix is not a better bar, it is the right question. Across tokens there is no
+honest comparison to draw at all — no two share a unit, which is why this room
+already refuses to sum them — so a cross-token bar could only ever mean count.
+**Within one token the comparison is real**: what went into the pool against
+what came back out, in the same unit. `RailgunRoom.pair` returns that as two
+fractions on **the token's own maximum**, and `RailgunRoomCard` draws it as two
+hairlines with **no track behind them**, because a track is a shared axis and
+there isn't one.
+
+Three properties that make it honest rather than merely tidy:
+
+  • **a direction with no MOVES is a real zero, an unreadable amount is not.**
+    A token nothing ever came back from draws its one line; a token whose other
+    side could not be read draws nothing at all, because half a pair presented
+    as a whole is the partial-sum failure `Token` already exists to refuse.
+  • **more back than in is the COMMON case here, not a corner.** `RailgunBridge`'s
+    own ceiling is that only about half of shields are attributable, so the
+    in-side is routinely the short one — scaling to the bigger of the two is
+    what keeps that from drawing as "all of it came back". Mutation-proven.
+  • **colour follows the money column in the rows below**, not this card's own
+    old "no green/red" line. That line was written when the card had no drawing
+    at all, and the rule it defends — neither direction is good or bad — is kept:
+    nothing is red, and nothing is ranked by direction. Green says *this
+    arrived*, which is what it says on every wallet row in the app.
+
+### AND UNDER THE HEAD, THE ROOM WAS PROSE
+
+Railgun and Privacy Pools had **no `FeedScreen.Shape` case at all**, so both fell
+to `.plain` and drew the generic band: one identical glyph and an 80-character
+sentence per row, in rooms where every row is a transfer. The amount and the
+direction were already stamped on those rows (§369, §397) and
+`BandRow.moneyColumn` — §158's ledger reading, which lifts the figure out of the
+sentence into a right-aligned column — was already built to read exactly that
+pair. It had one caller.
+
+`Shape.ledger` is that flag and nothing else. **Not `.wallet`**, which carries
+that room's whole apparatus (its section switcher, its crown, its tiles, its
+warnings) where these rooms have heads of their own. A non-transfer row is
+unaffected by construction: Privacy Pools' proof-required alert carries no
+`transferDirection`, so the column declines it and it keeps its sentence — the
+flag is opt-in per ROW, not per room.
+
+**Privacy Pools stamps the SIDE now**, which §369 and §397 never did — they
+landed the amount and never landed which way it went, so the pair was half
+stamped and the column could never have drawn. Deposits are `sent` (money into
+the pool is money out of the wallet), reclaims `received`, and `healDirections`
+repairs rows landed before today, because a forward-only cursor cannot reach
+them and a room half in figures and half in prose reads worse than either.
+
+**GNOSIS PAY IS DELIBERATELY EXCLUDED, and the reason is data.** Its title states
+the spend in FIAT ("Spent €42.80 with Gnosis Pay") while its `transferAmount` is
+the TOKEN amount ("42.80 EURe") — two spellings of one figure — so the column's
+substring lift can never match and the row would print the amount twice, in two
+units. Its honest column is the fiat one (§222 already ruled that), which means
+teaching the money column to prefer `priceValue`/`priceCurrency` for a real ISO
+currency; that changes what §374's mask reads (the trailing SYMBOL of
+`transferAmount`) and belongs in its own pass.
+
+### THE DEMO'S OWN TRAP, PAID FOR ON THIS PASS
+
+The money column lifts the figure out of the sentence **by substring**. The real
+bridges build both strings from one `WalletIngest.format` call, so they always
+match; the demo wrote them separately, so a seeded row whose title read
+"0.1500 ETH" and whose stamp read "0.15 ETH" would have printed the amount twice
+in the one place a first-time reader sees this room. Both seeds now spend ONE
+string in both places, and the Railgun seed stamps `transferAmount` at all,
+which it never had.
+
+### WHAT THIS DOES NOT CHANGE
+
+No new `Thing` field, no request, no CloudKit deploy. `RailgunRoom` stays
+Foundation-only and `scripts/wallet-rooms-selftest.sh` still compiles it WHOLE:
++9 assertions, +2 mutations, +12 drift guards, including the negative that the
+subline and the move-count bar cannot come back — read from a comment-stripped
+copy, since three files explain this pass by naming what it deleted (the
+Obsidian/Cursor lesson, and it fired on the first run exactly as predicted).
+
+**UNSEEN ON A DEVICE.** Nothing on this host can make a shield land, and the
+simulator was skipped by standing preference — this is a build, the audits and
+the harness, not a look at the room.
+
+## 486. The 0xBow room becomes three scopes, and the gap in the bar gets a name (user: "the 0xbow room looks messy how would you clean it up in the restrained style we are doing for wallet", 2026-08-26)
+
+The third room in three days to take `DSSectionSwitcher` — Wallet (§483),
+vibenet (§482), this — and the one where the diagnosis was easiest to state,
+because the mess was not any drawing. **The head stacked SEVEN blocks in one
+slab**: headline, note, holdings line, split bar, legend, respond door, cover
+line, footnote. Three of them were grey sentences in three different type tiers
+at three different positions (`subhead13` note, `subhead13` cover, `label12`
+footnote), which is §315's setup-copy failure arriving in a room head. It stated
+its counts three times over — "3 deposits need your proof" (headline), "3 of 5
+still waiting on the screener" (note), "3 in review · oldest 4 days" (legend) —
+and it ended in a run-on of up to six `·`-joined clauses.
+
+**A REGROUPING, not a redraw**, on §483's own terms: every block that shipped
+lands in exactly one scope, so content loss is structurally impossible rather
+than merely unlikely.
+
+### THE SHAPE
+
+Three scopes behind one control: **`Activity` · `Shielded` · `Review`.**
+
+  - **Activity** — the deposits and reclaims themselves, as rows, plus the one
+    line about what has happened here.
+  - **Shielded** — what is in the pools per asset, its cover, and the caveats a
+    money line owes.
+  - **Review** — the split, its legend, and the 0xBow door.
+
+**ORDER is events → state → hazard**, and the tail is structural rather than
+taste: `shielded` and `review` are both CONDITIONAL — a room whose deposits all
+came back out has no holdings, and a room of pre-§311 deposits has no states —
+so they sit after the one scope that is always there. A conditional scope in the
+middle shifts every scope after it the day it appears. **`Activity` leads and is
+the default**, for §483's reason: every other room in this app opens on its
+feed.
+
+**THE HEADLINE BELONGS TO NO SCOPE.** It stays above the control, bare on the
+page the way Wallet's crown is (§475: a container around the room's lead is the
+app claiming an emphasis the content already has), because it is the room's
+identity and §349's trouble-leads ranking is what puts "a deposit needs your
+proof" there. A strip that could scope that away would let you open the room and
+not be told the one thing it exists to say.
+
+**THE DOT IS EARNED** (§483's rule): `needsProof` and `declined` light it —
+both are errands only a person can run — and **being in review does not**, which
+is this room's NORMAL state and a dot that fires on ordinary progress is one you
+stop reading. `Permissions`' "choose the threshold deliberately" reasoning, in a
+room where the threshold is obvious.
+
+### THE FOOTNOTE IS NOT DELETED, IT IS DISTRIBUTED
+
+Every clause went to the reading it qualifies, which is the difference between a
+footnote and a caption: `unpriced` and the holdings overflow are caveats on a
+FIGURE and sit under the figure (`shieldedNote`); the observed review time, the
+idle clause and the orphan reclaims are facts about what HAPPENED and sit under
+Activity (`activityNote`). The `note` stopped being a second sentence under the
+headline and became the split bar's own caption, in the scope whose subject it
+is.
+
+**And the untagged clause became a legend ROW.** The split's denominator
+includes deposits carrying no state tag, so the bar deliberately falls short of
+the full width — and that gap was explained only by a clause several blocks
+below it. It has a row now, drawn in **exactly the colour the bar's TRACK is
+drawn in**, which is the whole of its correctness: the untagged deposits ARE the
+track showing through. `mark.opacity(0.35)` there would file them with the
+resolved states, and that is a claim — an untagged review is not over, it is
+unrecorded. It is a real door (the newest deposit wearing none of the bridge's
+tags), never a label, and it sorts LAST rather than into `rank`'s ladder,
+because "we do not know" has no position relative to a decline.
+
+### A REAL DEFECT, FOUND WRITING IT
+
+`note` reached its `waiting == 0` branch for a room of pre-§311 deposits —
+`waiting` counts SEGMENTS, and such a room has none — so a room whose every
+deposit's standing is unrecorded announced **"Every review is finished"**: a
+claim about the screener made with no evidence, one line under a headline that
+had just correctly declined to make it ("2 deposits in Privacy Pools"). It says
+"Where these stand isn't recorded" now, and the mutation is pinned.
+
+### WHAT IS SHARED, AND WHAT IS NOT
+
+The ROW anatomy is §485's, landed the same afternoon by a concurrent pass: both
+wallet-riding money rooms took `BandRow`'s money column under a shared `.ledger`
+shape. This adds nothing there and gates it — the rows are Activity's list —
+**scoped by SOURCE**, because Railgun shares that shape and has no scopes, and a
+gate that forgot to say so would silently blank its room.
+
+The card draws its own strip (vibenet's shape, not Wallet's shell-mounted one),
+so the shell holds ONE property rather than a trio: presence is derived from the
+composed room at the one place that has it, and a published list would be state
+nothing reads.
+
+### COVERAGE
+
+`wallet-rooms-selftest.sh` compiles `PrivacyPoolsSection.swift` WHOLE beside the
+five heads — Foundation-only for exactly that reason — with 11 new mutations and
+21 new drift guards, including that presence and rendering stay spelled the same
+way in both files (§483 shipped a Risk chip over an empty page once) and that
+the legend dot and the bar's track stay one colour. `-privacyPoolsRoomProbe`
+reports the scopes, the strip's own gate and the legend AS DRAWN, because a room
+that draws no control has several causes and only one is a bug. The demo gained
+**one untagged deposit** (`demo8`), which is what makes the bar fall short and
+the Unknown row appear on the corpus the demo actually shows — without it §486's
+headline reading would have shipped unexercised.
+
+**UNSEEN ON A DEVICE.** Nothing on this host can make a screener rule, and the
+simulator was skipped by standing preference — this is the build, the audits and
+the harness, not a look at the room.
+
+## 487. The CardPointers room had no shape, so the head said everything and the rows said nothing (user: "the cardpointers room looks messy how would you clean it up in the restrained style we are doing for wallet", 2026-08-26)
+
+**Two thirds of this was not a taste problem.** `FeedScreen.Shape.init(source:)`
+had no `"CardPointers"` case, so the room fell to `.plain` and drew a `BandRow`
+per offer: one glyph, `titleLine`'s clamped `Card · Merchant`, and a trailing
+timestamp. That is the x402 finding (§319) and the X finding (§313) and the
+Instagram finding (§395) for the fourth time, and here it produced three
+symptoms at once.
+
+**The two facts that make an offer an offer were on the row's own model and on
+no screen.** `CardPointersIngest` has written the terms to `summary` and the
+expiry to `dueAt` since the seat shipped; `BandRow` reads neither — `summary`
+appears nowhere in it. So "$10 back on $50+" was visible for exactly ONE offer
+in the room, inside the head card, and the deadline for that same one. Every
+other row was a bare merchant name.
+
+**Chronology carried zero information and actively lied about the order.** Every
+offer lands with `capturedAt: .now`, so day-grouping produced one "Today" header
+over the whole room with every row wearing the same time — while the head above
+announced "4 offers expire this week" over a list sorted by the sync, not by any
+deadline. The head and the rows were describing two different books.
+
+**And a spent coupon was indistinguishable from a live one.** `heal` cleared
+`dueAt` when an offer finished and stamped nothing else, so redeemed, expired,
+snoozed and genuinely-undated offers all landed as one dateless shape.
+`CardPointersRoomSource.compose` then handed every row to the head as `.active`,
+which means **"N offers waiting" counted coupons already spent, forever.**
+
+### THE CUT
+
+`WalletRow`'s own header states the principle this pass applies: *the fix isn't
+fewer reads, it's fewer containers.*
+
+**The head goes from four blocks to one sentence and a rail.** It carried the
+headline, the soonest offer in full, a card-by-card tally, and a footnote
+counting the undated. Three of those are deleted and each for its own reason:
+the soonest block was **row one restated a card higher**; the tally was a
+**count**, which the module doctrine already refuses as a thing and which nobody
+can act on; and the footnote described a group that now sits in the list under
+its own header, next to the rows it is about (§208 — never say one thing twice).
+What survives is the sentence and `WalletRunwayRail` — whether the deadlines are
+bunched or spread, which is the one reading a sorted list genuinely cannot give
+(§417), and the reason the head still earns a slot. **The no-total refusal is
+untouched**: §420 forbids "$312 waiting for you" because an offer is worth its
+face value only to somebody who was going to spend there anyway, and the values
+share no unit; the harness now fails the build if the word `total` reaches that
+card at all.
+
+**The row becomes `WalletRow`, the app's three-slot anatomy** — the mark, the
+title, a gray subline, a trailing value — which is already the shape the
+wallet's own "Coming up" deadlines wear, and these rows are exactly that. The
+merchant leads, their words for the offer are the subline, the deadline is the
+trailing slot, and it reddens once it has passed. **The mark is the CARD's
+initials, and that is what paid for deleting the tally**: the grouping it was
+counting is legible down the left edge of the room instead. Never `AssetMark` —
+this app bundles no card artwork, and matching "Amex Gold" against a token brand
+would put somebody else's logo on their credit card.
+
+**Three groups, replacing the day.** *Coming up* (dated, soonest first — the
+room's subject, and the only thing in it that gets worse while you do nothing),
+*No end date* (active, no expiry — named rather than hidden, because a room
+leading with "4 expire this week" over a book where nine more have no date is
+quietly wrong about its own completeness), and *Not active* (redeemed, expired,
+or deliberately snoozed). No `boundary:` divider, for x402's reason one room
+over: a new-since mark is chronological and this room has one timestamp.
+
+**A past-dated ACTIVE offer leads "Coming up" rather than getting a group of its
+own.** Their `active` status is the authority on whether an offer is over and a
+date we parsed is not — the ruling `CardPointers.room` already makes — so while
+they still call it live we still list it as something to act on, and the row's
+own subline reads "3 days ago". It is transient in any case: the next sync flips
+the status and the row moves.
+
+**`heal` stamps `mark` now**, which is an existing stored property — **no new
+`Thing` field, so no CloudKit deploy**. `.done` here means "not in play", exactly
+the set `Status.needsYou` already answers false for, and it is CLEARED again when
+an offer comes back, because an un-snoozed offer is live and a row that can never
+re-enter the list is a row that quietly disappears.
+
+**NO SCOPE CONTROL, deliberately.** §483 gave the wallet six scopes because that
+room ran to ~2,900pt of standing cards before its first ordinary row. This room
+has one card and a few dozen rows; a switcher over a single list is §357's dead
+control, and §349's "a head must never draw less than what it displaces" is met
+by the groups rather than by a chip strip.
+
+### WHAT PROVES IT
+
+`scripts/cardpointers-selftest.sh` compiles `CardPointersOffer.swift` whole — 16
+mutations and 16 drift guards, the guards reading COMMENT-STRIPPED copies because
+every file here documents these rulings by naming what it must no longer do (the
+Obsidian/Cursor lesson). The merchant strip and the card initials moved INTO the
+Foundation-only half rather than being spelled twice, because the row now leads
+with the merchant too and two copies of a strip is where a room's head and its own
+rows start naming different things.
+
+**Two fixtures were right for the wrong reason and one guard could not fail.** The
+deadline-order fixture arrived already ascending, so deleting the sort left it
+green — it is handed its dates backwards now. And the drift guards were written as
+`sed … | grep -q`, which under `pipefail` is the SIGPIPE race CLAUDE.md already
+records costing `ondevice-selftest.sh` a real missed finding: all eight FeedScreen
+guards reported DRIFT against a tree that satisfied every one of them, while all
+eight guards on the small room-card file passed. It fires on a big file and not a
+small one. They read the stripped source into a shell variable and test it as a
+substring — no pipe, nothing to signal. All six guard shapes were then
+mutation-proven against copies of the real files.
+
+The demo seeds all three groups, because a demo that fills one proves only that
+one exists — and the finished offer is the one worth having, since before this
+pass a spent coupon was indistinguishable from a live dateless one and a demo
+that seeds none cannot show that it now is. (The old comment there claimed the
+Hilton row was "snoozed" while the seed only left it undated; those are separate
+groups now, so it says what it does.)
+
+**UNSEEN ON A DEVICE, and unmeasured besides.** §420's grade stands: no account
+this project can reach has ever read a single offer, so every field shape is
+still guessed. This is the build on both platforms, the audits and the harness —
+the simulator was skipped by standing preference.
+
+## 488. The Altana room stops being a diagram and becomes a list (user: "the altana room looks messy how would you clean it up in the restrained style we are doing for wallet", 2026-08-26)
+
+Asked how to clean it up, and the honest first answer was that almost none of
+it was taste. Five findings, four of them measurable, and the largest was not a
+drawing at all.
+
+### 1. IT HAD NO CARD
+
+`AltanaRoomCard` ended at `.padding(DS.Space.s4)` and nothing else. Every other
+room head in the Wallet group — `GnosisPayRoomCard`, `StripeRoomCard`,
+`SafeRoomCard`, `PrivacyPoolsRoomCard` — ends `.dsWidgetSurface()` +
+`.padding(.horizontal, DS.Space.s4)`, and `FeedScreen.insightSection` presents
+them all edge-to-edge on purpose ("the card owns its own padding"). So this
+head's content sat naked on the page and ran flush to both screen edges while
+every neighbouring room sat 18pt in from them.
+
+**That is §474 exactly** — *"the margins aren't the same consistency as on the
+wallet, so it looks like they are touching the screen"* — reported and fixed for
+vibenet on 2026-08-25 and never carried across. It is one line, and it was most
+of "messy".
+
+### 2. THE CONSTELLATION OVERFLOWED, AND COULD NOT NOT OVERFLOW
+
+`AltanaRoom.placement` returned a width computed from the token count:
+`88 + 62·N + 22`. Card content width on a 393pt phone is ~321pt, so **a fifth
+exclusive key drew past the edge** — inside a `ZStack` with a hard
+`.frame(width: plan.width)` and no scroll to catch it. The label under each
+token had `minWidth: 62` inside a 62pt step, so adjacent captions abutted with
+zero gap by construction. Three accounts spent ~314pt of screen before the rail
+even began.
+
+A drawing whose size is a function of the data, laid out in absolute points
+against a width it cannot see, has no failure mode except clipping.
+
+### 3. SIX VARIABLES IN A 44pt CIRCLE
+
+Fill (root), border colour (shared), border dash (revoked), opacity
+(expired/revoked), glyph (passkey/key), plus its ties' own colour, dash and
+routing. **This is the decode load §478 removed one room over** — *"the keys
+stop being a census you decode and become a list you scan"* — and the same
+answer applies here.
+
+### 4. THE RAIL HAD `VibenetKeyShelf`'S DEFECT, UNFIXED
+
+`AltanaRoom.rail` spanned `now … furthest live deadline`. Every key expiry is
+in the future, so **`now` was the minimum on every render this feature ever
+drew** — the marker was literally `.offset(x: 0)`, a constant, on the element
+that gives a rail its meaning — and the axis stretched to whatever the furthest
+key happened to be, so a 30-day key crushed a 9-hour key to position 0.01,
+indistinguishable from the marker.
+
+§471 measured this in vibenet on 2026-08-25, drew three replacements and the
+user picked bars on a fixed window. This room went on drawing the retired
+figure. **The generalisable half: when a room is fixed for a measured defect,
+grep for the same figure elsewhere before closing the session** — `WidgetRunway`
+had two callers and only one was corrected.
+
+### 5. TWO CLOCKS
+
+Every token said "3h left" and the rail dot under it said "9h · Passkey" about
+the same deadline — §471's shelf-XOR-sentence rule broken by adjacency rather
+than by wording.
+
+### THE SHAPE
+
+**One row per credential, one grammar for all four states**: a 28pt seat that
+says root-or-session by WEIGHT (§408a's one surviving token rule — size never
+varies), the key's name, a bar whose length is time remaining, one countdown,
+and the grant underneath.
+
+**The bar draws only where a bar is a reading.** `shelfFraction` returns nil for
+a root (no end — drawing one states a completion that does not exist), an
+expired key (no time left) and a ghost (not on the shelf at all), so those rows
+collapse to two lines and the ABSENCE of a bar says "no clock", which is exactly
+true in all three. A bar here means one thing and only one thing.
+
+**`ShareBar`, the app's one bar object**, which vibenet's shelf had been rolling
+its own copy of since §471. It took a `fill` parameter — defaulted, so no
+existing caller changes — because §471's rule that blue is spent on urgency and
+only on urgency needs a quieter fill for the unhurried rows. Two keystore rooms
+drawing one figure two ways is what `DSSectionSwitcher` was made generic on day
+one to avoid.
+
+**The window is FIXED at 90 days, the same constant as `VibenetKeyShelf.window`,
+and the harness guards the pair** — neither Foundation-only file can see the
+other's number. The fixture that proves a fixed window from an elastic one is
+the only one that can: the same 9-hour key in two rooms whose furthest deadline
+differs must draw the same bar.
+
+**A key beyond the window CLAMPS to full rather than being excluded**, which is
+the one deliberate divergence from vibenet's shelf: that one is a three-row
+footer ranked by urgency, where a full-length bar would outrank the keys drawn
+beside it. This is the room's whole key list, where the row exists whatever its
+date, and the countdown beside it stays exact.
+
+### THE TIE BECOMES A FACE
+
+The rarest and most valuable fact on this card — one credential signing for two
+of your accounts — was a routed polyline plus a footer sentence. It is the
+overlapping FACES on that credential's own row now, which is where somebody
+asking about that key would look for it, and `WalletFace` is the app's one vivid
+proprietary object (§483's own observation that it never draws above 56pt).
+
+Faces draw only where they distinguish something: an unscoped room, or a shared
+credential. In a room scoped to one account, a face on every row is one picture
+repeated down a column.
+
+### THE FACE RAIL'S PICK REACHES THE HEAD
+
+Altana is in the Wallet category, so `WalletScopeRail` has drawn your wallet
+faces above this room since §356 — and **the head ignored the pick entirely**,
+while `walletScopeAllows` had been narrowing the rows beneath it the whole time.
+Ringing a face changed the feed and left the card describing every account: a
+scope control the head does not obey is the dead control §83 bans.
+
+Three rules, each with a failure it prevents. The scope is **resolved to hex by
+the caller** (`chrome.walletScope` holds the watched spelling, which may be an
+ENS name, while a reading is stamped with the resolved form — a raw compare
+inside the pure model empties the card for exactly the wallets people bother to
+name). Narrowing happens **after the dedupe**, so a credential that also signs
+for a wallet now out of scope keeps saying so — filtering the readings on the
+way in would make the single most valuable fact on a scoped card structurally
+unsayable. And a scope matching nothing **declines** rather than falling through
+to the aggregate, which would draw every account under one ringed face; the
+first cut did exactly that, and this harness's own fixture caught it on the
+first run.
+
+### ONE LINE AT THE BOTTOM, RANKED
+
+Both grey sentences became summaries of drawn rows the moment the constellation
+became a list — a revoked credential is a row reading "revoked" and a stale one
+is a row reading "expired". What the sentences still carry is the part the rows
+cannot: the qualifier ("while you were watching", the forward-only honesty §410
+turns on) and the instruction (the registry still lists a key that cannot act).
+So one at a time, revocation first, and the hygiene line returns on its own once
+the ghost ages out of `ghostLifetime`.
+
+The census cap is the same discipline: six rows drawn, the remainder COUNTED and
+said, because a card that stops at six looks exactly like an account that has
+six.
+
+### COST, AND WHAT REMAINS UNMEASURED
+
+**Nothing to ship**: no new `Thing` property, no request, no CloudKit deploy —
+the card still composes from the `AltanaState` snapshot the sweep already wrote,
+and every number here was already in it. ~150 lines of geometry deleted.
+
+`altana-selftest.sh` is 161 checks: the shelf's fractions and countdowns, the
+fixed-window comparison, the cap, the scope's four rules, and the ranked note.
+Seven new drift guards, **each mutation-proven against a mirror of the real
+tree** — the card recipe, the outer margin, `ShareBar`, the constellation
+returning to either file, the two windows drifting apart, and the head ceasing
+to obey the scope. The negative guards read a COMMENT-STRIPPED copy, because
+this card documents the redesign by naming everything it must no longer do (the
+Obsidian/Cursor lesson, sixth instance).
+
+**UNSEEN on a device.** Nothing on this host can register a key, revoke one or
+make a grant expire — there are 39 keys on Earth and we own none — so the
+harness is again not the best proof these rows are right but the only one, and
+every spacing decision here is rendering no static check can exercise. iOS
+Simulator and Mac Catalyst both compile.
