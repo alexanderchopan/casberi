@@ -1456,7 +1456,15 @@ struct VibenetRoomCard: View {
                         // is also `VibenetEventRow`'s column: three lists in
                         // this room, one edge.
                         HStack(spacing: DS.Space.s3) {
-                            WalletFace(address: item.address, size: DS.Mark.list, circular: true)
+                            // `DS.Face.list`, not `DS.Mark.list` — the two
+                            // resolve to the same number, and a FACE takes its
+                            // size from the face ramp. `face-ramp-audit`
+                            // enforces exactly that and caught this the first
+                            // time it ran, which is the point of having it: the
+                            // alignment below is what matters, and it survives
+                            // because the two ramps agree at this tier by
+                            // design (`Mark.list = Face.list`).
+                            WalletFace(address: item.address, size: DS.Face.list, circular: true)
                             Text(Self.displayName(item.address))
                                 .dsText(.subhead13)
                                 .foregroundStyle(DS.textSecondary)
