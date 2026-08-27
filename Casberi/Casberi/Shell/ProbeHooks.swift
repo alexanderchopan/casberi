@@ -4748,7 +4748,7 @@ enum ProbeHooks {
                      } : nil)
                 note("cardPointersHead", source == CardPointersRoomSource.source
                      ? CardPointersRoomSource.compose(things: things).map {
-                        "\($0.headline) · \($0.cards.count) cards · undated \($0.undated)"
+                        "\($0.headline) · \($0.deadlines.count) deadlines"
                      } : nil)
                 // Unlike the three above this one DOES read `things` (the
                 // runs ARE the subject — see `CursorRoomSource`'s own note),

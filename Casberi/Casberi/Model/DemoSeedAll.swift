@@ -654,23 +654,34 @@ enum DemoSeedAll {
 
     /// CardPointers (prd §420) — offers on two cards, spread so the room's
     /// head has something true to lead with on the first open: one inside the
-    /// week (so the deadline headline fires), one further out, one snoozed
-    /// (which must NOT reach the head — it is the thing the room is most
-    /// likely to get wrong), and one with no expiry at all (so the "undated"
-    /// clause has a case). A demo whose offers all expired in one week would
-    /// make the head correctly decline and `verify.sh`'s room-head coverage
-    /// read that decline as a gap — the §375 X lesson, two rooms over.
+    /// week (so the deadline headline fires) and one further out. A demo whose
+    /// offers all expired in one week would make the head correctly decline
+    /// and `verify.sh`'s room-head coverage read that decline as a gap — the
+    /// §375 X lesson, two rooms over.
+    ///
+    /// **It seeds all THREE of the room's groups (prd §487)**, because a demo
+    /// that fills one of them proves only that one exists: a dated pair for
+    /// "Coming up", one live offer CardPointers gave no expiry for ("No end
+    /// date"), and one finished for "Not active". The last is the one worth
+    /// having — before §487 a spent coupon was indistinguishable from a live
+    /// dateless one, and a demo that seeds no finished offer cannot show that
+    /// it now is. Note the old comment here claimed the Hilton row was
+    /// "snoozed" while the seed only left it undated; the two groups are
+    /// separate now, so it says what it does.
     private static func cardPointers() -> [Thing] {
         [
-            ("Amex Gold · Amazon", "cardpointers:offer:demo1", 4.0, "$10 back on $50+", true),
-            ("Amex Gold · Shell", "cardpointers:offer:demo2", 19.0, "20% back, up to $8", true),
-            ("Chase Sapphire · Hilton", "cardpointers:offer:demo3", 2.0, "$50 back on $250+", false),
-            ("Chase Sapphire · Uber", "cardpointers:offer:demo4", 0.0, "$5 back on rides", true),
-        ].map { title, ref, dueInDays, terms, dated in
+            ("Amex Gold · Amazon", "cardpointers:offer:demo1", 4.0, "$10 back on $50+", Mark.none),
+            ("Amex Gold · Shell", "cardpointers:offer:demo2", 19.0, "20% back, up to $8", Mark.none),
+            ("Chase Sapphire · Uber", "cardpointers:offer:demo3", 0.0, "$5 back on rides", Mark.none),
+            ("Chase Sapphire · Hilton", "cardpointers:offer:demo4", 0.0, "$50 back on $250+", Mark.done),
+        ].map { title, ref, dueInDays, terms, mark in
             row(.reminder, title, source: "CardPointers", ref: ref, days: 1.0, hour: 9) { thing in
                 thing.summary = terms
                 thing.authorHandle = title.components(separatedBy: " · ").first
-                if dated { thing.dueAt = at(-dueInDays, 12) }
+                thing.mark = mark
+                // A finished offer keeps no deadline, exactly as
+                // `CardPointersIngest.heal` leaves it.
+                if dueInDays > 0, mark != .done { thing.dueAt = at(-dueInDays, 12) }
             }
         }
     }
@@ -2721,7 +2732,7 @@ enum DemoSeedAll {
         // and one that adds 0.86 to 400. The reclaimed pair below is the
         // other deliberate shape — see `poolExits`.
         // `amount` is ONE string, spent twice — the title says it and
-        // `transferAmount` stamps it (prd §485). They have to be the same
+        // `transferAmount` stamps it (2026-08-26). They have to be the same
         // characters, not merely the same number: `BandRow`'s money column
         // lifts the figure out of the sentence by SUBSTRING, so a seed whose
         // title reads "0.1500 ETH" and whose stamp reads "0.15 ETH" prints the
@@ -2759,7 +2770,7 @@ enum DemoSeedAll {
                 // without this the demo's deposits lead with their title and
                 // the sheet's headline number never draws.
                 t.transferAmount = p.amount
-                // The side, so the room draws its ledger column (prd §485) —
+                // The side, so the room draws its ledger column (2026-08-26) —
                 // the same stamp `PrivacyPoolsBridge` makes. Money into the
                 // pool is money out of the wallet.
                 t.transferDirection = "sent"
@@ -2785,6 +2796,29 @@ enum DemoSeedAll {
             t.transferDirection = "received"
             t.priceValue = 0.15
             t.priceCurrency = "ETH"
+        })
+        // ONE DEPOSIT WITH NO STATE TAG (2026-08-26, prd §486) — a pre-§311
+        // deposit, the shape every real long-lived depositor has and the demo
+        // had none of. It is what makes the split bar fall short of the full
+        // width and what puts the "Unknown" row in the legend, so the reading
+        // that closed §486's complaint — the gap in the bar being labelled
+        // rather than explained in a footnote — is exercised on the corpus the
+        // demo actually shows. Without it the demo's bar is always full and
+        // that row can only be seen by someone who happens to have an old
+        // deposit of their own.
+        //
+        // It carries no `priceValue` either, which is the same honesty one
+        // reading over: it lands in `unpriced` and the money line's caption
+        // says so, rather than the demo quietly presenting a partial figure as
+        // a total.
+        out.append(row(.transaction, "Put 0.0500 ETH into Privacy Pools",
+                       source: "Privacy Pools",
+                       ref: PrivacyPoolsRoom.depositPrefix + "demo8",
+                       days: 52, hour: 20, content: "Ethereum · 0xBow",
+                       tags: ["Shielded"]) { t in
+            t.walletAddress = demoWallet
+            t.transferAmount = "0.0500 ETH"
+            t.transferDirection = "sent"
         })
         // Peer ranks on the funding RAIL, stamped on `authorHandle`.
         let fills: [(String, String, Double)] = [
@@ -2887,7 +2921,7 @@ enum DemoSeedAll {
                 t.transferAmount = r.amount
                 t.priceValue = r.value
                 t.priceCurrency = r.symbol
-                if r.1 == "unshield" {
+                if r.verb == "unshield" {
                     t.enrichedText = "Railgun can't tell you who sent this — inside the pool the sender is private by design."
                 }
             }

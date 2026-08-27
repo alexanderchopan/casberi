@@ -1,19 +1,26 @@
 import SwiftUI
 
-/// What the CardPointers room leads with (prd §420): the nearest deadline, then
-/// the cards the offers sit on.
+/// What the CardPointers room leads with (prd §420, §487): one sentence about
+/// the deadlines, and the shape of them.
 ///
 /// **It states no total value, by ruling.** The obvious card is "$312 waiting
 /// for you" and it is false twice — an offer is worth its face value only to
 /// somebody who was going to spend there anyway (a CEILING, not a saving), and
-/// the values do not share a unit ("$10 back on $50+" beside "20% off"). Their
-/// own words for the soonest offer are shown; nothing is added up.
+/// the values do not share a unit ("$10 back on $50+" beside "20% off").
+/// Nothing here is added up.
 ///
-/// Holds no `Thing` (liveness corollary 5) — it is handed a value and calls
-/// back with a `sourceRef`, so the lookup happens against the live corpus.
+/// **And it states nothing the rows below already state.** §487 deleted the
+/// soonest-offer block (row one, restated a card higher), the card-by-card
+/// tally (a count, which the module doctrine refuses as a thing) and the
+/// undated footnote (now a group header sitting on the rows it describes).
+/// What is left is the sentence and `WalletRunwayRail` — whether the deadlines
+/// are bunched or spread, which is the one reading a sorted list cannot give
+/// (§417) and the reason the head still earns its slot at all.
+///
+/// Holds no `Thing` and no callback (liveness corollary 5) — it is handed a
+/// headline and a list of dates, and every row below is its own door.
 struct CardPointersRoomCard: View {
     let room: CardPointers.Room
-    var onOpen: (String) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Space.s3) {
@@ -21,58 +28,11 @@ struct CardPointersRoomCard: View {
                 .dsText(.heading22)
                 .foregroundStyle(DS.textPrimary)
 
-            if let soonest = room.soonest {
-                Button { onOpen(soonest.id) } label: {
-                    VStack(alignment: .leading, spacing: DS.Space.s1) {
-                        Text(soonest.merchant)
-                            .dsText(.heading17)
-                            .foregroundStyle(DS.textPrimary)
-                        // Their words, never ours, and never a number we made.
-                        if let terms = soonest.terms {
-                            Text(terms)
-                                .dsText(.callout15)
-                                .foregroundStyle(DS.textSecondary)
-                        }
-                        if let expires = soonest.expires {
-                            Text("Expires \(expires.formatted(.relative(presentation: .named)))")
-                                .dsText(.subhead13)
-                                .foregroundStyle(DS.textTertiary)
-                        }
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-            }
-
-            if !room.cards.isEmpty {
-                VStack(alignment: .leading, spacing: DS.Space.s2) {
-                    ForEach(room.cards) { card in
-                        HStack(spacing: DS.Space.s2) {
-                            Text(card.name)
-                                .dsText(.callout15)
-                                .foregroundStyle(DS.textSecondary)
-                                .lineLimit(1)
-                            Spacer(minLength: DS.Space.s2)
-                            Text(card.active == 1
-                                 ? String(localized: "1 offer")
-                                 : String(localized: "\(card.active) offers"))
-                                .dsText(.subhead13)
-                                .foregroundStyle(DS.textTertiary)
-                        }
-                    }
-                }
-            }
-
-            // Named rather than hidden: a head claiming "4 expire this week"
-            // over a book where others carry no date at all is quietly wrong
-            // about its own completeness.
-            if room.undated > 0 {
-                Text(room.undated == 1
-                     ? String(localized: "1 more offer with no end date")
-                     : String(localized: "\(room.undated) more offers with no end date"))
-                    .dsText(.subhead13)
-                    .foregroundStyle(DS.textTertiary)
+            // Nothing at all when every offer is dateless: an empty track is a
+            // parcel holding a slot, and the room's own "No end date" group is
+            // already saying the true thing one screen down.
+            if !room.deadlines.isEmpty {
+                WalletRunwayRail(dates: room.deadlines)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

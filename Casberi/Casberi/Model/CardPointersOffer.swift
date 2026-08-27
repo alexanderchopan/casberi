@@ -111,6 +111,43 @@ enum CardPointers {
             terms: string(d, ["description", "terms", "offer", "summary", "details"]))
     }
 
+    // MARK: - Reading a landed row back
+
+    /// The merchant, with the card stripped off the front of a landed title.
+    ///
+    /// **A strip, not a parse.** `CardPointersIngest.title(for:)` writes
+    /// "<card> · <merchant>" and the card is its OWN stored field, so this
+    /// removes a known prefix rather than splitting on a separator a merchant
+    /// might contain. If the prefix is not there the whole title IS the
+    /// merchant — the same rule `GnosisPayRoomSource` follows for its amounts.
+    ///
+    /// It lives here, in the Foundation-only half, because §487 gave it a
+    /// SECOND reader: the room head rebuilds offers from rows, and now the row
+    /// itself leads with the merchant. Two copies of a strip is where a room's
+    /// head and its own rows quietly start naming different things.
+    static let titleSeparator = " · "
+
+    static func merchant(title: String, card: String?) -> String {
+        guard let card, !card.isEmpty else { return title }
+        let prefix = card + titleSeparator
+        guard title.hasPrefix(prefix) else { return title }
+        return String(title.dropFirst(prefix.count))
+    }
+
+    /// The card's initials for a row's leading mark — at most two letters, from
+    /// the first two WORDS ("Amex Gold" → "AG", "Chase Sapphire Reserve" →
+    /// "CS"). Never a brand mark: this app bundles no card artwork, and
+    /// `AssetMark` matching "Gold" against a token would put somebody else's
+    /// logo on their credit card.
+    ///
+    /// Empty for a card we could not read, which the caller draws as the row's
+    /// ordinary kind glyph rather than as a blank disc.
+    static func initials(card: String?) -> String {
+        guard let card else { return "" }
+        let words = card.split(whereSeparator: { !$0.isLetter && !$0.isNumber })
+        return String(words.prefix(2).compactMap(\.first)).uppercased()
+    }
+
     /// The payload is a JSON STRING inside the tool result, and its top level
     /// may reasonably be either an array or an object wrapping one.
     static func decodeList(_ payload: String) -> [Offer] {
@@ -127,7 +164,7 @@ enum CardPointers {
 
 extension CardPointers {
 
-    /// What the CardPointers room LEADS with (prd §420, §349).
+    /// What the CardPointers room LEADS with (prd §420, §487).
     ///
     /// **It never states a total value, and that is the load-bearing refusal.**
     /// The obvious card here is "$312 waiting for you", and it is false twice
@@ -142,21 +179,22 @@ extension CardPointers {
     /// thing here that gets worse while you do nothing, and it is the reading
     /// the app is uniquely placed to make: CardPointers knows your offers, and
     /// this app already has the machinery that puts a date on a lock screen.
+    ///
+    /// **§487 cut it to one sentence and a rail, and the deletions are the
+    /// point.** It used to carry four blocks: the headline, the soonest offer
+    /// in full, a card-by-card tally, and a footnote counting the undated. The
+    /// soonest block was the first row of the list restated one card higher;
+    /// the tally was a count, which the module doctrine already refuses as a
+    /// thing and which nobody can act on; and the footnote described a group
+    /// that now sits in the list under its own header, next to the rows it is
+    /// about (§208 — never say one thing twice). What survives is the sentence
+    /// and the one reading a sorted list genuinely cannot give: whether the
+    /// deadlines are bunched or spread (§417).
     struct Room: Equatable {
         var headline: String
-        var soonest: Offer?
-        var cards: [CardRow]
-        /// Offers we hold that carry NO expiry. Named rather than hidden: a
-        /// room claiming "4 need you this week" over a book where nine more
-        /// have unknown dates is quietly wrong about its own completeness.
-        var undated: Int
-    }
-
-    struct CardRow: Equatable, Identifiable {
-        var name: String
-        var active: Int
-        var soonest: Date?
-        var id: String { name }
+        /// Every deadline still ahead, soonest first. The rail's only input —
+        /// dates, never rows, so the head holds no `Thing` (corollary 5).
+        var deadlines: [Date]
     }
 
     /// Below this the room has nothing worth a head and falls back to whatever
@@ -171,46 +209,14 @@ extension CardPointers {
         let live = offers.filter { $0.status.needsYou }
         guard live.count >= roomFloor else { return nil }
 
-        let dated = live.compactMap { offer -> (Offer, Date)? in
-            guard let e = offer.expires else { return nil }
-            return (offer, e)
-        }
+        let dated = live.compactMap { offer -> Date? in offer.expires }
         // An offer whose date has already passed is not a deadline. It is left
-        // out of the soonest rather than reported as overdue, because their
-        // `expired` status is the authority on that and a date we parsed is not.
-        let ahead = dated.filter { $0.1 > now }.sorted { $0.1 < $1.1 }
-        let soonest = ahead.first?.0
+        // out rather than reported as overdue, because their `expired` status
+        // is the authority on that and a date we parsed is not.
+        let ahead = dated.filter { $0 > now }.sorted()
 
         let cutoff = now.addingTimeInterval(TimeInterval(soonWindowDays) * 86_400)
-        let expiringSoon = ahead.filter { $0.1 <= cutoff }.count
-
-        var byCard: [String: (count: Int, soonest: Date?)] = [:]
-        for offer in live {
-            // An offer whose card we could not read is still counted in the
-            // headline and simply has no row — dropping it from both would
-            // make the rows disagree with the count above them.
-            guard let card = offer.card else { continue }
-            var entry = byCard[card] ?? (0, nil)
-            entry.count += 1
-            if let e = offer.expires, e > now, entry.soonest == nil || e < entry.soonest! {
-                entry.soonest = e
-            }
-            byCard[card] = entry
-        }
-        // Total order: most offers, then soonest deadline, then name. A card
-        // list that reshuffles between opens over identical data reads as
-        // broken (the App Store Connect ruling, §324).
-        let cards = byCard
-            .map { CardRow(name: $0.key, active: $0.value.count, soonest: $0.value.soonest) }
-            .sorted {
-                if $0.active != $1.active { return $0.active > $1.active }
-                switch ($0.soonest, $1.soonest) {
-                case let (l?, r?) where l != r: return l < r
-                case (nil, _?): return false
-                case (_?, nil): return true
-                default: return $0.name < $1.name
-                }
-            }
+        let expiringSoon = ahead.filter { $0 <= cutoff }.count
 
         let headline: String
         if expiringSoon > 0 {
@@ -223,9 +229,6 @@ extension CardPointers {
                 : String(localized: "\(live.count) offers waiting")
         }
 
-        return Room(headline: headline,
-                    soonest: soonest,
-                    cards: cards,
-                    undated: live.filter { $0.expires == nil }.count)
+        return Room(headline: headline, deadlines: ahead)
     }
 }

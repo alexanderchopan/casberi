@@ -249,13 +249,26 @@ enum CardPointersIngest {
     /// **A finished offer keeps its `dueAt` cleared**, or a redeemed coupon
     /// goes on claiming a deadline and reaches the lock screen through
     /// machinery that has no idea it is over.
+    ///
+    /// **And it is MARKED, since §487.** Clearing the date alone left three
+    /// different things wearing one appearance: an offer with genuinely no end
+    /// date, one somebody snoozed, and one already redeemed all landed as a
+    /// dateless row, so the room listed spent coupons among the live ones and
+    /// the head counted them in "N offers waiting" forever. `mark` is an
+    /// existing stored property — no new field, so **no CloudKit deploy** —
+    /// and `.done` here means "not in play", which is exactly the set
+    /// `Status.needsYou` already answers false for. It is CLEARED again when
+    /// an offer comes back, because an un-snoozed offer is live again and a
+    /// row that can never return to the list is a row that quietly disappears.
     @MainActor
     private static func heal(_ thing: Thing, with offer: CardPointers.Offer) {
         guard thing.isLive else { return }
         if offer.status.needsYou {
             if thing.dueAt != offer.expires { thing.dueAt = offer.expires }
-        } else if thing.dueAt != nil {
-            thing.dueAt = nil
+            if thing.mark == .done { thing.mark = .none }
+        } else {
+            if thing.dueAt != nil { thing.dueAt = nil }
+            if thing.mark != .done { thing.mark = .done }
         }
         if let terms = offer.terms, thing.summary != terms { thing.summary = terms }
         let wanted = title(for: offer)

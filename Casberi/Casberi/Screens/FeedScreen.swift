@@ -751,12 +751,18 @@ struct FeedScreen: View {
     /// itself stays private, since nothing outside this file has business
     /// knowing the other twenty-two cases.
     static func isSocialRoom(_ source: String) -> Bool {
-        Shape(source: source) == .social
+        // ASKED OF `SocialRoom`, NOT OF `Shape` (2026-08-26, prd §489). The
+        // rail and the accounts behind it must answer for the same set or the
+        // rail draws faces the room cannot filter to — which is exactly what a
+        // `Shape`-only answer would have produced the moment Nostr joined
+        // `.social` while `SocialRoomSource.accounts` still had two cases.
+        // One registry, two readers.
+        SocialRoom.hasRoster(source)
     }
 
     /// The shape a source takes when its chip is in force.
     private enum Shape {
-        case all, photos, wallet, ledger, calendar, gmail, chat, social, reminders, bookmarks, notes, you, music, media, tokens, bitrefill, oneclaw, snapchat, files, instagram, x, x402, appStoreConnect, cursor, walletbeat, l2beat, telegram, vibenet, plain
+        case all, photos, wallet, ledger, calendar, gmail, chat, social, reminders, bookmarks, notes, you, music, media, tokens, bitrefill, oneclaw, snapchat, files, instagram, tiktok, x, x402, appStoreConnect, cursor, cardPointers, walletbeat, l2beat, telegram, vibenet, plain
 
         /// Rooms whose lead is a GRID of pictures, and which therefore earn the
         /// wide content cap on a regular-width window (2026-08-17).
@@ -844,7 +850,17 @@ struct FeedScreen: View {
             case "ChatGPT", "Claude", "Gemini": self = .chat
             // Posts read as posts in their own room (2026-07-13) — split from
             // .chat: a saved conversation is a snippet row, a post is a card.
-            case "Farcaster", "Bluesky": self = .social
+            // NOSTR JOINED 2026-08-26 (prd §489) — two years of this room
+            // being a room for two of the three networks that land into it.
+            // It had no case here at all, so its rows fell to `.plain`'s
+            // generic band: no faces above the room, no post cards, no thread
+            // folding, no person filter. All of it was already built and
+            // already knew about Nostr — `PostCard.author` branches on its hex
+            // pubkey to shorten it for display, `SocialThreadCard` does the
+            // same, `SocialThread.replies` reads its threads, and
+            // `NostrStore.socialAccounts` was drawn on the setup screen. One
+            // switch statement never learned the name.
+            case "Farcaster", "Bluesky", "Nostr": self = .social
             // X, 2026-08-06 — the same ruling as the line above, arriving two
             // years of somebody's writing late. The room had NO case here at
             // all, so it fell to `.plain` and drew a `BandRow` per row: an
@@ -882,6 +898,24 @@ struct FeedScreen: View {
             // predicate). A fourth would make this room's shape unverifiable
             // rather than verified, which is the worse half of both options.
             case "Instagram":           self = .instagram
+            // TikTok, 2026-08-26 (prd §489) — the SECOND room with no case
+            // here, found by auditing the other seven rather than by a report,
+            // because nobody had opened it lately. A room of saved videos drew
+            // one `BandRow` per row: a 26pt leader square and `titleLine`'s
+            // 80-character clamp over what is, before `TikTokImport.fetchFaces`
+            // has run, the raw share URL. The cover art the face pass fetches
+            // was stored on `previewImageURL` and drawn at no size at all.
+            //
+            // Its own case rather than joining `.instagram`: that room's rows
+            // carry `postText` and read as post cards, and TikTok's carry none
+            // (its caption lands on `enrichedText`, retrieval-only) — see
+            // `SocialRoom.rowKind` for why that makes a post card dishonest
+            // here and a reading row correct.
+            // The LITERAL, like `case "Instagram"` above it —
+            // `demo-selftest.py`'s check F reads this switch to prove every
+            // shape has a seeded source, and it resolves only three
+            // indirections by name.
+            case "TikTok":              self = .tiktok
             case "X":                   self = .x
             // Telegram, 2026-08-23 (prd §456) — the first room holding BOTH a
             // live drip and an import under one source, so it has the widest
@@ -927,9 +961,23 @@ struct FeedScreen: View {
             // is an excerpt of a conversation; and `.plain`, which this fell
             // to before, drew the outcome and the report away entirely.
             case "Cursor":              self = .cursor
+            // CardPointers, 2026-08-26 (prd §487) — the x402 finding again,
+            // six rooms later and with the same three symptoms. It had no case
+            // here, so `.plain` drew a `BandRow` per offer: one glyph, the
+            // `Card · Merchant` title, and a trailing timestamp that is
+            // `capturedAt` — which the ingest stamps `.now`, so every row in
+            // the room shared one time under one "Today" header. The two facts
+            // that make an offer an offer were on the row's own model and on
+            // no screen: the terms on `summary` (which `BandRow` never reads)
+            // and the deadline on `dueAt` (which only the head drew, for one
+            // offer). Its own case rather than `.reminders`, whose band is a
+            // one-line fact — an offer is three.
+            //
             // The LITERAL, like `case "Cursor"` above it — `demo-selftest.py`'s
             // check F reads this switch to prove every shape has a seeded
             // source, and it resolves only three indirections by name.
+            case "CardPointers":        self = .cardPointers
+            // The LITERAL, for the same reason as the line above.
             case "Walletbeat":          self = .walletbeat
             // The LITERAL, for the same reason as `case "Walletbeat"` above —
             // `demo-selftest.py`'s check F reads this switch by name.
@@ -1007,7 +1055,7 @@ struct FeedScreen: View {
         // Frames settle in like the music room's covers — a touch of scale so
         // the art reads as arriving, not sliding.
         case .media:    .init(dx: 0, dy: 10, scale: 0.97, step: 0.035)
-        case .social, .x, .instagram: .init(dx: 0, dy: 12, scale: 0.98, step: 0.035)
+        case .social, .x, .instagram, .tiktok: .init(dx: 0, dy: 12, scale: 0.98, step: 0.035)
         default:        .init(dx: 0, dy: 8, scale: 1, step: 0.028)
         }
     }
@@ -1409,7 +1457,7 @@ struct FeedScreen: View {
     /// compare against `authorHandle` would empty every non-social room, where
     /// that field is nil on essentially every row.
     private func personScopeAllows(_ thing: Thing) -> Bool {
-        guard shape == .social, let scope = chrome.personScope else { return true }
+        guard SocialRoom.hasRoster(source), let scope = chrome.personScope else { return true }
         return thing.authorHandle == scope
     }
 
@@ -2080,26 +2128,6 @@ struct FeedScreen: View {
     ///   stands-alone row keeps its own position at the top of the rows, so
     ///   covering something older would put a newer row underneath an older
     ///   card — the very thing this rewrite exists to make impossible.
-    /// - A HERO already took the head (2026-08-26). This is the no-stacking
-    ///   rule the other §389 ledes have always followed — `waitingSection`,
-    ///   `listeningLedeSection` and `readingLedeSection` are each spelled
-    ///   `if !heroShown` — and the cover was never joined to it, because it is
-    ///   decided in `bundledSections`' memo rather than in the body where
-    ///   `heroShown` lives.
-    ///
-    ///   **It is a BACKSTOP, and today it can never fire — deliberately.**
-    ///   `bundledSections` runs for the All room alone, and no head registry
-    ///   names "All": `sourceHead`, `topicMap`, `leaderboard`, `distribution`,
-    ///   `mosaic` and `FeedHeatmap.label` all switch on `source` and answer nil,
-    ///   and `anniversary` is scoped to the memories room and the two journals.
-    ///   The one head that DID reach this room was `liveStream`, which took the
-    ///   All head over every source until it was scoped to the stream's own
-    ///   room in this same change — so the stack this decline describes was
-    ///   real, and the fix for it is one level up. This exists so a future
-    ///   registry entry for All cannot silently recreate it: the head and the
-    ///   cover would otherwise stack again with nothing in either file saying
-    ///   they must not. The covered thing is never lost — it drops back into
-    ///   its own row at the top of the day.
     ///
     /// Scoped to the FIRST group: a cover is the top of the feed, and reaching
     /// into yesterday for one would be ranking, not position.
@@ -2108,8 +2136,7 @@ struct FeedScreen: View {
     /// the whole thing list to read one group, on the screen with this app's
     /// worst measured perf history (`derivationKey`'s own
     /// 6.3-seconds-across-44-renders note).
-    private func ledeThingID(in days: [(String, [Thing])], heroShown: Bool) -> UUID? {
-        guard !heroShown else { return nil }
+    private func ledeThingID(in days: [(String, [Thing])]) -> UUID? {
         let count = days.reduce(0) { $0 + $1.1.count }
         guard count >= Self.ledeMinRows, let head = days.first?.1 else { return nil }
         for thing in head {
@@ -2324,6 +2351,89 @@ struct FeedScreen: View {
             }
     }
 
+    /// Every token the treemap maps, as rows (prd §483).
+    ///
+    /// **The half this scope never had.** The room has drawn a holdings BOARD
+    /// since §158 and never a list, because the board was the only holdings
+    /// object in a room of cards and had to answer everything. Under §483 each
+    /// scope is one drawing and one list, and this is the list — the board
+    /// keeps the shape of the thing, these say what is in it.
+    ///
+    /// It reads the SAME `portfolio.positions` the treemap does rather than
+    /// re-deriving, so a cell and its row can never disagree about a number,
+    /// and it costs no read: the portfolio is already in hand for the crown.
+    ///
+    /// **`UnitTreemap` caps at six cells**, so on a wallet holding more than
+    /// that the board has always been a partial answer with nothing saying so.
+    /// The list is where the rest live, which is the other reason it belongs
+    /// here rather than behind a door.
+    @ViewBuilder
+    private var walletTokenListSection: some View {
+        if let portfolio, !portfolio.isEmpty {
+            Section {
+                ForEach(portfolio.positions) { position in
+                    Button {
+                        // The cell's own door, at row scale — a token's chart
+                        // when it is watched, the quick sheet when it is only
+                        // held (the 2026-07-14 split, unchanged).
+                        if let route = position.route,
+                           let r = TokenQuickRoute.from(sentinel: "@token:\(route):\(position.symbol)") {
+                            if let thing = r.watchedThing(in: modelContext) {
+                                openThing(thing)
+                            } else {
+                                feedSheet = .token(r.withHolders(position.holders))
+                            }
+                        }
+                    } label: {
+                        HStack(spacing: DS.Space.s3) {
+                            TokenIcon(symbol: position.symbol, size: DS.Face.list)
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text(position.symbol)
+                                    .dsText(.body17).foregroundStyle(DS.textPrimary)
+                                    .lineLimit(1)
+                                // Whose it is, only where that is a real
+                                // question — one watched wallet has no split to
+                                // report and the line would be noise (§212's
+                                // own guard, one level down).
+                                if position.holders.count > 1 {
+                                    Text(position.holders.prefix(2)
+                                            .map(\.label).joined(separator: " · "))
+                                        .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                                        .lineLimit(1)
+                                }
+                            }
+                            Spacer(minLength: DS.Space.s2)
+                            VStack(alignment: .trailing, spacing: 1) {
+                                Text(WalletValue.money(position.usd))
+                                    .dsText(.body17).foregroundStyle(DS.textPrimary)
+                                    .monospacedDigit()
+                                // Its share of everything — the one fact the
+                                // board states that a bare amount does not, and
+                                // the reason someone opens this scope at all.
+                                if portfolio.totalUSD > 0 {
+                                    // Whole percents: a holdings share is read
+                                    // to compare, not to reconcile, and "56%"
+                                    // beside "55.7%" is precision nobody asked
+                                    // for on a figure that moves hourly.
+                                    Text("\(Int((position.usd / portfolio.totalUSD * 100).rounded()))%")
+                                        .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                                        .monospacedDigit()
+                                }
+                            }
+                        }
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(RowPress())
+                    .dsHover()
+                    .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DS.Space.s4,
+                                              bottom: DS.Space.s2, trailing: DS.Space.s4))
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                }
+            }
+        }
+    }
+
     /// The one drawing this scope leads with, above the toggle (prd §483).
     ///
     /// **The rule, in the user's own words: "above the toggles is always a
@@ -2345,9 +2455,15 @@ struct FeedScreen: View {
         case .activity:    walletFlowSection
         case .holdings:    holdingsBlockSection
         case .positions:   walletCompositionSection
-        case .risk:        walletWarningsSection
-        case .nfts,
-             .permissions: EmptyView()
+        // **THE RANKED BARS LEAD, NOT "Worth a look"** (prd §483, 2026-08-26).
+        // The warnings row is a ROW — one line with a chevron — so in a 210pt
+        // slot it drew a sentence and 180pt of nothing, while the one drawing
+        // this scope has sat below it in the list. They swap: the bars head
+        // the scope, the row keeps its place at the top of the list where a
+        // door belongs.
+        case .risk:        walletRiskSection
+        case .nfts:        walletNFTSection
+        case .permissions: EmptyView()
         }
     }
 
@@ -2456,8 +2572,13 @@ struct FeedScreen: View {
                     // Owed gets no door on purpose — the Lending card below
                     // already states health per protocol.
                     onOpenLocks: { feedSheet = .locks(composition) })
-                    .padding(WalletCardStyle.pad)
-                    .dsWidgetSurface()
+                    // BARE ON THE PAGE (user ruling, prd §483: *"we don't do
+                    // cards"*). A scope's lead drawing sits in the visual slot
+                    // exactly as the sparkline, the treemap and the flow band
+                    // do — a tinted plate under one of four otherwise
+                    // identical slots reads as that scope being a different
+                    // kind of thing, which it is not.
+                    .padding(.bottom, DS.Space.s3)
                     .listRowInsets(WalletCardStyle.rowInsets)
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
@@ -2474,8 +2595,8 @@ struct FeedScreen: View {
         if !warnings.isEmpty {
             Section {
                 WalletWarningsStrip(warnings: warnings) { feedSheet = .worthALook }
-                    .padding(WalletCardStyle.pad)
-                    .dsWidgetSurface()
+                    // Bare, for `walletCompositionSection`'s reason.
+                    .padding(.bottom, DS.Space.s3)
                     .listRowInsets(WalletCardStyle.rowInsets)
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
@@ -2596,6 +2717,41 @@ struct FeedScreen: View {
         let scopes = vibenetSectionPublication.sections
         return !VibenetSection.shows(present: scopes)
             || VibenetSection.resolve(chrome.vibenetSection, present: scopes) == .recent
+    }
+
+    /// Which of the Privacy Pools room's three readings have anything to show
+    /// (prd §486).
+    ///
+    /// **EVERY FLAG IS THE SCOPE'S OWN RENDER GATE, SPELLED THE SAME WAY** —
+    /// §483's lesson, learned there from a Risk chip that opened an empty page.
+    /// `shielded` is exactly the test `PrivacyPoolsRoomCard.shieldedHasContent`
+    /// makes, and `review` exactly the one `reviewHasContent` makes; the card
+    /// draws the untagged deposits as a legend row of their own, which is why
+    /// a room with no state tags at all still earns that scope.
+    ///
+    /// Derived here rather than published to the shell like Wallet's and
+    /// Vibenet's, because the CARD draws this strip: there is no shell-mounted
+    /// control to feed, so a published list would be state nothing reads.
+    private func privacyPoolsSections(_ room: PrivacyPoolsRoom) -> [PrivacyPoolsSection] {
+        PrivacyPoolsSection.present(shielded: !room.holdings.isEmpty,
+                                    review: !room.segments.isEmpty || room.untagged > 0)
+    }
+
+    /// Whether the Privacy Pools room's rows draw — `vibenetShowsRows`'s shape,
+    /// and true for every other room the `.ledger` shape serves.
+    ///
+    /// Railgun shares that shape and has no scopes, so it must never be gated
+    /// by one; the source test is what keeps this room's control from reaching
+    /// into its neighbour's room. Recomposing the room here is the same read
+    /// the head above already makes on this pass — `PrivacyPoolsRoomSource`
+    /// composes from `visible` and touches nothing else — and deriving it is
+    /// what keeps the gate and the strip from describing different rooms.
+    private func privacyPoolsShowsRows(_ visible: [Thing]) -> Bool {
+        guard source == PrivacyPoolsRoomSource.source,
+              let room = PrivacyPoolsRoomSource.compose(things: visible) else { return true }
+        let scopes = privacyPoolsSections(room)
+        return !PrivacyPoolsSection.shows(present: scopes)
+            || PrivacyPoolsSection.resolve(chrome.privacyPoolsSection, present: scopes) == .activity
     }
 
     struct VibenetSectionPublication: Equatable {
@@ -2961,6 +3117,11 @@ struct FeedScreen: View {
                 // entirely one clause up.
                 if shape != .reminders && shape != .wallet
                     && vibenetShowsRows
+                    // The same gate for the Privacy Pools room's own scopes
+                    // (prd §486), and for the same reason: "you're all caught
+                    // up" under a Shielded card with no stream on screen is the
+                    // §83 fake status the clause above it was added to end.
+                    && privacyPoolsShowsRows(visible)
                     && !hidesPastEvents(visible) && !memo.windowHasMore {
                     caughtUpFooter(visible)
                 }
@@ -3298,33 +3459,7 @@ struct FeedScreen: View {
         // 2 — the hero holds this reference across renders and a heal pass can
         // delete under it); `isLive(_:)` is the Twitch broadcast set. Both,
         // in that order.
-        //
-        // SCOPED TO THE STREAM'S OWN ROOM (2026-08-26), which is what §219
-        // ruled and this gate never said. That entry is about the MEDIA SOURCE
-        // feeds and states the boundary in its own words — "**The All feed is
-        // untouched** — 26pt squares everywhere, because native anatomies relax
-        // only inside the source's own room" — and the full-bleed live frame is
-        // exactly such an anatomy. Its sibling from the same pass, `liveFirst`
-        // (the row-level float-to-top), was scoped `source == "Twitch"` from the
-        // day it shipped; this one was not, so a live broadcast reached across
-        // every source and took the head of All.
-        //
-        // Reported against the demo, which seeds a live stream
-        // (`TwitchIngest.seedDemo`) and so lit it every time: All drew the
-        // Twitch frame, then a day header, then the §389c cover — TWO
-        // full-width cards where the room's shape is one card over a plain
-        // list. Not a demo bug; any corpus with Twitch connected and somebody on
-        // air drew the same thing.
-        //
-        // It is also the one place All still REORDERED. §389c rewrote the cover
-        // specifically so it could not reach past a newer row ("volume
-        // compresses and NEVER reorders", §35) — and this promoted a Twitch row
-        // over everything newer than it, in the room that rule is about.
-        //
-        // Spelled as a match on the ROW's source rather than a literal, so the
-        // registry stays in `isLive(_:)` alone: a second source with a live set
-        // gets this behaviour in its own room and nowhere else.
-        let liveStream = visible.first { $0.isLive && isLive($0) && $0.source == source }
+        let liveStream = visible.first { $0.isLive && isLive($0) }
         // The social room's own head (item 5, 2026-07-27) — faces, ringed on
         // fresh activity, beat `FeedHeatmap`'s pre-existing "Casting
         // activity"/"Posting activity" density grid for Farcaster/Bluesky
@@ -3332,8 +3467,15 @@ struct FeedScreen: View {
         // chain silently, so the roster built for item 5 had never actually
         // rendered — a density grid says nothing a face with a ring doesn't
         // already say better).
-        let rosterAccounts: [SocialAccount] = liveStream == nil && shape == .social
-            ? (source == "Farcaster" ? FarcasterStore.shared.socialAccounts : BlueskyStore.shared.socialAccounts)
+        // ONE DISPATCH (2026-08-26, prd §489). This was a
+        // `source == "Farcaster" ? … : BlueskyStore…` ternary, which is not a
+        // lookup but a coin flip with two faces: any third network reaching it
+        // would have been handed Bluesky's watched accounts. See
+        // `SocialRoomSource.accounts(for:)`, which `MainSurface` now reads too,
+        // so the rail above the room and the roster inside it can never name
+        // two different sets of people.
+        let rosterAccounts: [SocialAccount] = liveStream == nil
+            ? SocialRoomSource.accounts(for: source)
             : []
         // THE PER-SOURCE HEADS — the rooms whose lede can only come from that
         // room's own model, because the registries below are pure over `Thing`
@@ -3485,9 +3627,10 @@ struct FeedScreen: View {
                         }
                     }
                 case .cardPointers(let room):
-                    CardPointersRoomCard(room: room) { ref in
-                        openBySourceRef(ref, in: visible)
-                    }
+                    // No callback since §487: the head stopped naming a single
+                    // offer, so it has nothing to open — every offer is its own
+                    // row a scroll below, and each of those is its own door.
+                    CardPointersRoomCard(room: room)
                 case .walletbeat(let room):
                     WalletbeatRoomCard(room: room) { ref in
                         // The card names a real row's `sourceRef`, so this lands
@@ -3632,17 +3775,53 @@ struct FeedScreen: View {
                         }
                     }
                 case .privacyPools(let room):
-                    PrivacyPoolsRoomCard(room: room) { state in
-                        // Matched on the DEPOSIT ref as well as the tag: an
-                        // alert row about a cleared deposit carries no state
-                        // tag, but a future one might, and landing on the
-                        // announcement instead of the deposit it announces is
-                        // the wrong row by one hop.
-                        openNewest(source: PrivacyPoolsRoomSource.source, in: visible) { thing in
-                            (thing.sourceRef?.hasPrefix(PrivacyPoolsRoom.depositPrefix) ?? false)
-                                && thing.tags.contains(state.rawValue)
-                        }
-                    }
+                    // Computed once and read three times: presence decides the
+                    // strip, the dot and the row gate, and three separate reads
+                    // are three chances for them to describe different rooms.
+                    let poolScopes = privacyPoolsSections(room)
+                    PrivacyPoolsRoomCard(
+                        room: room,
+                        onOpen: { slice in
+                            // Matched on the DEPOSIT ref as well as the tag: an
+                            // alert row about a cleared deposit carries no state
+                            // tag, but a future one might, and landing on the
+                            // announcement instead of the deposit it announces
+                            // is the wrong row by one hop.
+                            //
+                            // The UNKNOWN slice is the same match with the test
+                            // inverted — a deposit wearing none of the bridge's
+                            // state tags (prd §486). It is a real door rather
+                            // than a label for the same reason every other
+                            // legend row is one: these are deposits you can go
+                            // and look at, and the one thing this card cannot
+                            // say about them is on the row itself.
+                            openNewest(source: PrivacyPoolsRoomSource.source, in: visible) { thing in
+                                guard thing.sourceRef?.hasPrefix(PrivacyPoolsRoom.depositPrefix) ?? false
+                                else { return false }
+                                switch slice {
+                                case .state(let state): return thing.tags.contains(state.rawValue)
+                                case .unknown: return PrivacyPoolsRoom.state(tags: thing.tags) == nil
+                                }
+                            }
+                        },
+                        // WHICH READING IS ON SCREEN (prd §486). Resolved
+                        // rather than read raw: a scope remembered from a room
+                        // whose last deposit has since been reclaimed falls
+                        // back to Activity instead of rendering an empty page
+                        // claiming to be a section — `WalletSection.resolve`'s
+                        // rule, two rooms over.
+                        section: PrivacyPoolsSection.resolve(
+                            chrome.privacyPoolsSection, present: poolScopes),
+                        scopes: poolScopes,
+                        scopeAttention: PrivacyPoolsSection.attention(
+                            needsProof: room.needsYou != nil,
+                            declined: room.needsReclaim != nil,
+                            present: poolScopes),
+                        onPickScope: { picked in
+                            withAnimation(DS.Motion.standard) {
+                                chrome.privacyPoolsSection = picked
+                            }
+                        })
                 case .gnosisPay(let room):
                     GnosisPayRoomCard(room: room) { currency in
                         openNewest(source: GnosisPayRoomSource.source, in: visible) { thing in
@@ -3879,7 +4058,7 @@ struct FeedScreen: View {
             let latest = section == .home
                 ? Array(all.prefix(Self.walletTodayRows))
                 : []
-            let led = Set(latest.map(\.id))
+
             // The hero, and the only block with no header of its own: a title
             // above the first thing on a screen is noise (see
             // `walletGroupHeader` for the whole ruling).
@@ -3887,16 +4066,18 @@ struct FeedScreen: View {
             // the same fixed box every other scope's drawing does — otherwise
             // Home is a crown plus an empty slot and the bar sits a third of a
             // screen lower there than anywhere else.
-            walletTilesSection(visible, streamTotal: all.count,
-                               drawsChart: section == .home)
-                // `maxHeight: 0` off Home, not `.infinity` — the crown's own
-                // box keeps its natural height otherwise, so the room reserved
-                // BOTH the crown's slot and the scope's, and the bar sat a
-                // slot lower on every scope but Home.
-                .frame(minHeight: section == .home ? Self.walletVisualSlot : 0,
-                       maxHeight: section == .home ? Self.walletVisualSlot : 0,
-                       alignment: .top)
-                .clipped()
+            // NOT EMITTED off Home — see the visual slot's own note below for
+            // why collapsing it to `maxHeight: 0` was not enough: an empty
+            // `Section` still takes list spacing, so a zero-height box is not a
+            // absent one, and the count of sections above the bar has to match
+            // on every scope for the bar to land in the same place.
+            if section == .home {
+                walletTilesSection(visible, streamTotal: all.count, drawsChart: true)
+                    .frame(minHeight: Self.walletVisualSlot,
+                           maxHeight: Self.walletVisualSlot,
+                           alignment: .top)
+                    .clipped()
+            }
             // THE TOGGLE SITS BELOW THE SPARKLINE, IN THE CONTENT (user ruling,
             // 2026-08-26: *"we need to have those toggles be below the
             // sparkline"*, and *"we cannot have four rows of chips"*).
@@ -3933,11 +4114,22 @@ struct FeedScreen: View {
             // three lines of reading and a 138pt band) ran to roughly three
             // times the sparkline's height and pushed the bar a third of a
             // screen down.
-            walletScopeVisualSection(section)
-                .frame(minHeight: section == .home ? 0 : Self.walletVisualSlot,
-                       maxHeight: section == .home ? 0 : Self.walletVisualSlot,
-                       alignment: .top)
-                .clipped()
+            // **NOT EMITTED AT ALL ON HOME** — the counterpart of the crown's
+            // own gate above, and the actual reason the bar kept moving.
+            //
+            // Both were emitted always and collapsed with `maxHeight: 0`, which
+            // collapses the VIEW and not the SECTION: a `List` still gives an
+            // empty section its own spacing. So Home drew ONE MORE SECTION than
+            // every other scope — its crown plus an empty visual — and the bar
+            // sat that spacing higher there. Two zero-height boxes, each
+            // invisible, and the difference between them was the bug.
+            if section != .home {
+                walletScopeVisualSection(section)
+                    .frame(minHeight: Self.walletVisualSlot,
+                           maxHeight: Self.walletVisualSlot,
+                           alignment: .top)
+                    .clipped()
+            }
             walletScopeRailSection
             walletSectionSwitcherSection(section)
             // THE FOUR `walletGroupHeader` GROUPS BECOME SCOPES (prd §483).
@@ -3995,22 +4187,55 @@ struct FeedScreen: View {
                 walletStreamSections(walletStreamRows(all), nextEventID: nextEventID)
                 walletSeeAllSection(total: all.count)
             case .holdings:
-                // The treemap is this scope's DRAWING and sits above the
-                // control; what belongs here is the list of what it maps.
-                // Not built yet — the room has never had a per-token list,
-                // only the board — so the scope currently shows the board
-                // alone and the list is the next thing to make.
-                EmptyView()
+                walletTokenListSection
             case .positions:
                 walletDeFiSection
                 walletLiquiditySection
                 walletPerpsSection
             case .nfts:
-                walletNFTSection
+                // The QUAD is the drawing above; these are the collections
+                // behind it, named (prd §483, user: *"below the toggle bar is
+                // those four in a list w/ collection name and so on"*).
+                walletNFTListSection
             case .risk:
-                walletRiskSection
+                // The bars moved up into the slot, so the list is the door
+                // they were covering — see `walletScopeVisualSection`.
+                walletWarningsSection
+                // **§417's OVERVIEW→DETAIL PAIR, restored.** `WalletRiskStrip`
+                // is documented as the overview of exactly these cards ("the
+                // cards below state each position in its own protocol's
+                // units, and this is the one view that puts them in an
+                // order"), and its dot walk sets `cardScrollTarget` to one of
+                // their anchors. Heading the scope with the strip split the
+                // pair across two scopes, which broke that walk silently — it
+                // scrolled to an anchor that was not on screen — and left
+                // this list empty on any wallet with nothing to warn about,
+                // which is most of them.
+                //
+                // They draw in BOTH scopes, and that is not "saying one thing
+                // twice": the two are never on screen together, and they
+                // answer different questions — in Positions they are the
+                // detail behind where the money is, here they are the detail
+                // behind what is close to closing.
+                walletDeFiSection
+                walletPerpsSection
             case .permissions:
                 walletApprovalsSection
+            }
+        case .ledger:
+            // THE ROWS ARE A SCOPE IN ONE OF THE TWO ROOMS THIS SHAPE SERVES
+            // (prd §486) — Privacy Pools' Activity. Railgun shares the row
+            // anatomy and has no scopes at all, and `privacyPoolsShowsRows`
+            // answers true for it by construction rather than by a second
+            // source test here.
+            //
+            // Days, and the memoized grouping every other source room uses:
+            // these are real events at real block times, so a chronological
+            // grouping is honest.
+            if privacyPoolsShowsRows(visible) {
+                let days = chronoDays(visible)
+                groupedSections(days, nextEventID: nextEventID,
+                                boundary: boundaryThingID(in: days))
             }
         case .calendar:
             calendarSections(visible, nextEventID: nextEventID)
@@ -4045,6 +4270,12 @@ struct FeedScreen: View {
             // the new-since divider is a chronological mark, and in a room
             // where every row shares one timestamp it would land arbitrarily.
             groupedSections(x402Lanes(visible), nextEventID: nextEventID)
+        case .cardPointers:
+            // Deadlines, not days — see `cardPointersGroups`. No `boundary:`,
+            // for x402's reason one room over: every offer carries the
+            // `capturedAt` of the sync that first saw it, so a new-since
+            // divider in this room marks nothing.
+            groupedSections(cardPointersGroups(visible), nextEventID: nextEventID)
         case .walletbeat:
             // Your watched wallets lead as standing report cards, then the news
             // below in days. A rating is not an event and must not be filed under
@@ -4115,7 +4346,7 @@ struct FeedScreen: View {
                 // All is where volume floods — bundles + the new-since
                 // divider live here. A single source's shape IS that source;
                 // bundling there would collapse the whole screen into one row.
-                bundledSections(visible, nextEventID: nextEventID, heroShown: heroShown)
+                bundledSections(visible, nextEventID: nextEventID)
                 corpusFloorSection(visible)
             } else {
                 // Threads fold BEFORE day-grouping (item 6, 2026-07-27): a
@@ -4126,7 +4357,7 @@ struct FeedScreen: View {
                 // inline. Scoped to `.social` — every other shape's `visible`
                 // passes through untouched.
                 let (roomThings, threadReplies): ([Thing], [String: [Thing]]) =
-                    shape == .social ? foldThreadReplies(visible) : (visible, [:])
+                    SocialRoom.foldsThreads(source) ? foldThreadReplies(visible) : (visible, [:])
                 // Live-first in a source's own room (2026-07-21): a stream
                 // that's on RIGHT NOW is the one row whose relevance isn't
                 // chronological, so it leads its group. No-op for sources
@@ -4296,7 +4527,6 @@ struct FeedScreen: View {
     /// changed, and `verify.sh` greps for presence, not for the last write.
     private func logAllFeedCensus(groups: [(String, [FeedRow])],
                                   hasCover: Bool,
-                                  heroShown: Bool,
                                   boundary: String?,
                                   moment: Bool,
                                   imageOnly: Set<UUID>,
@@ -4326,17 +4556,6 @@ struct FeedScreen: View {
         let lines = [
             "days=\(groups.count) rows=\(single + strip + bundle)",
             "cover=\(hasCover ? 1 : 0)",
-            // ALWAYS 0, and that is the assertion (2026-08-26). §219 ruled
-            // "the All feed is untouched — native anatomies relax only inside
-            // the source's own room", and until this date `liveStream` was the
-            // one head whose gate did not say so: a live Twitch broadcast took
-            // the All head over every source, stacking a full-bleed frame above
-            // the §389c cover with a day header wedged between them. `cover=1`
-            // kept printing throughout, so the census this room already had
-            // could not see it. Printed rather than inferred because the two
-            // heads are decided in different files and only this line watches
-            // both — see `verify.sh`'s All-room step, which fails on a 1.
-            "hero=\(heroShown ? 1 : 0)",
             "single=\(single) strip=\(strip) bundle=\(bundle)",
             "stripTiles=\(stripTiles) bundleArt=\(bundleArt)",
             "imageOnly=\(imageOnly.count) wideArt=\(wideArt.count)",
@@ -4364,8 +4583,7 @@ struct FeedScreen: View {
     @MainActor private static var lastAllFeedCensus = ""
     #endif
 
-    private func bundledSections(_ visible: [Thing], nextEventID: UUID?,
-                                 heroShown: Bool) -> some View {
+    private func bundledSections(_ visible: [Thing], nextEventID: UUID?) -> some View {
         // Derive ONCE per render, then share — the day bundles, each day's true
         // total, and the new-since boundary. Read inside the row/header loops
         // (as `newBoundaryID` and `dayGroups.first(where:)` were) they rebuilt
@@ -4374,18 +4592,7 @@ struct FeedScreen: View {
         // Memoized (PERF 2026-07-31 — see `DerivationMemo`): recomputed only
         // when `visible` actually changed, not on all ~18 launch-window body
         // passes over the same set.
-        //
-        // `heroShown` is IN THE KEY, and it has to be: a stream going live or
-        // going off air changes it without changing `visible` at all, and the
-        // cover is decided inside this memo — see `ledeThingID`'s fourth
-        // decline. Left out, a stream that just went live would sit above a
-        // cover until the next corpus write, which is the stacked pair this
-        // gate exists to prevent, arriving by the back door. It costs one more
-        // `combine` on a hit.
-        var hasher = Hasher()
-        hasher.combine(derivationKey(visible))
-        hasher.combine(heroShown)
-        let key = hasher.finalize()
+        let key = derivationKey(visible)
         if memo.key != key {
             memo.key = key
             memo.days = perfAccum("dayGrouping") { recentDaysThenCoarseTail(visible) }
@@ -4393,7 +4600,7 @@ struct FeedScreen: View {
             // which is the whole of the fix: chosen after it, the newest thing
             // could be inside a fold and the card would lead with something
             // older than a row beneath it.
-            memo.lede = ledeThingID(in: memo.days, heroShown: heroShown)
+            memo.lede = ledeThingID(in: memo.days)
             // `nextEventID` rides in so the clock carve-out (prd §377) can
             // spare the next-up row. Both it and the live set can change
             // WITHOUT `visible` changing, and this memo keys on the snapshot's
@@ -4518,8 +4725,7 @@ struct FeedScreen: View {
             // forever. The question here is what the room CAN draw, which is a
             // property of the whole composed feed; whether the window is open
             // is reported separately, as its own fact.
-            logAllFeedCensus(groups: memo.groups, hasCover: ledeThing != nil,
-                             heroShown: heroShown, boundary: boundary,
+            logAllFeedCensus(groups: memo.groups, hasCover: ledeThing != nil, boundary: boundary,
                              moment: split.moment, imageOnly: imageOnly, wideArt: wideArt,
                              coarse: coarse, subjects: subjects, more: window.more,
                              dayLine: dayLine,
@@ -4828,7 +5034,7 @@ struct FeedScreen: View {
     /// reason: it is a fact about arriving in a room, and recomputing it as rows
     /// stream in would dissolve the rings one by one while you watched.
     private func publishFreshHandles() {
-        guard shape == .social, let since = newSince else {
+        guard SocialRoom.hasRoster(source), let since = newSince else {
             chrome.freshHandles = []
             return
         }
@@ -5245,6 +5451,74 @@ struct FeedScreen: View {
                 (label, rows.sorted { (rank($0), $0.capturedAt) > (rank($1), $1.capturedAt) })
             }
             .sorted { ($0.1.count, $1.0) > ($1.1.count, $0.0) }
+    }
+
+    /// The CardPointers room grouped by DEADLINE rather than by day (prd §487)
+    /// — the `x402Lanes` shape, for a sharper version of the same reason.
+    ///
+    /// A day is not merely the wrong axis here, it is a constant: every offer
+    /// lands with `capturedAt: .now`, so day-grouping produced ONE "Today"
+    /// header over the entire room and an order that was the sync's, not
+    /// anybody's. Meanwhile the room's own head announced "4 offers expire this
+    /// week" over a list sorted by nothing of the kind — the head and the rows
+    /// describing two different books.
+    ///
+    /// Three groups, and each one is a fact the rows cannot state for
+    /// themselves:
+    ///
+    ///  • **Coming up** — dated offers, soonest first. This is the room's
+    ///    subject and the only thing in it that gets worse while you do
+    ///    nothing.
+    ///  • **No end date** — active, and CardPointers gave us no expiry. Named
+    ///    rather than hidden: a room leading with "4 expire this week" over a
+    ///    book where nine more have no date at all is quietly wrong about its
+    ///    own completeness. This header is what let the head drop its footnote
+    ///    (§208 — the fact now sits on the rows it is about).
+    ///  • **Not active** — redeemed, expired, or deliberately snoozed. Before
+    ///    §487 these were indistinguishable from live dateless offers, because
+    ///    `heal` cleared the date and stamped nothing, so spent coupons sat in
+    ///    the list looking available.
+    ///
+    /// **A past-dated ACTIVE offer leads "Coming up" rather than getting a
+    /// group of its own.** Their `active` status is the authority on whether an
+    /// offer is over and a date we parsed is not (the ruling `CardPointers.room`
+    /// already makes), so while they still call it live we still list it as
+    /// something to act on — and the row's own subtitle reads "3 days ago", so
+    /// nothing is claimed that is not true. It is a transient state in any
+    /// case: the next sync flips the status and the row moves.
+    private func cardPointersGroups(_ visible: [Thing]) -> [(String, [Thing])] {
+        let now = Date.now
+        var ahead: [(Thing, Date)] = []
+        var dateless: [Thing] = []
+        var notActive: [Thing] = []
+        // Live at the BOUNDARY, before any stored property is read (corollary
+        // 4) — `visible` may be a debounced snapshot.
+        for thing in visible.live {
+            if thing.mark == .done {
+                notActive.append(thing)
+            } else if let due = thing.dueAt {
+                ahead.append((thing, due))
+            } else {
+                dateless.append(thing)
+            }
+        }
+        // Total orders throughout: `capturedAt` is one shared instant in this
+        // room, so it can break no tie, and a list that reshuffles between
+        // opens over identical data reads as broken (§324).
+        let dated = ahead
+            .sorted { $0.1 == $1.1 ? $0.0.title < $1.0.title : $0.1 < $1.1 }
+            .map(\.0)
+        var out: [(String, [Thing])] = []
+        if !dated.isEmpty { out.append((String(localized: "Coming up"), dated)) }
+        if !dateless.isEmpty {
+            out.append((String(localized: "No end date"),
+                        dateless.sorted { $0.title < $1.title }))
+        }
+        if !notActive.isEmpty {
+            out.append((String(localized: "Not active"),
+                        notActive.sorted { $0.title < $1.title }))
+        }
+        return out
     }
 
     /// The Cursor room grouped by REPOSITORY rather than by day (2026-08-08,
@@ -6371,7 +6645,50 @@ struct FeedScreen: View {
         if let selectedWallet {
             return watched.first { WalletWatch.sameAddress($0.address, selectedWallet) }
         }
-        return watched.count == 1 ? watched.first : nil
+        // **UNSCOPED FALLS BACK TO THE FIRST WALLET WITH PICKS, not to nil**
+        // (2026-08-26, prd §483). The old `count == 1` rule predates the NFTs
+        // SCOPE existing: it was written when this card sat inside one long
+        // room, where showing one wallet's art unscoped would have been a
+        // silent claim about all of them. As a scope it is worse than
+        // conservative, it is broken — anybody watching two wallets got a
+        // chip that could never appear, however many collections they had
+        // picked, with no way to find out why short of unwatching a wallet.
+        //
+        // The pick book is what makes the fallback honest: a wallet only
+        // qualifies here because its owner named collections FOR it, so the
+        // shelf is answering a question that was actually asked. Watch order,
+        // never "the one with the most" — a shelf that reshuffles when an
+        // airdrop lands reads as broken (§292's total-order rule).
+        if watched.count == 1 { return watched.first }
+        return watched.first { WalletNFTStore.shared.hasPicks(wallet: $0.address) }
+    }
+
+    /// The collections behind the quad, one row each (prd §483, 2026-08-26).
+    ///
+    /// A separate section rather than a `layout` branch inside one call so the
+    /// room's own rule holds: ONE drawing in the slot, ONE list below, and the
+    /// slot is height-clipped while the list is not. Both read the same
+    /// cached pick fetch, so the pair costs one network read, not two.
+    ///
+    /// **No price on these rows**, which is the whole reason they can say what
+    /// they say: §387 refused a floor and §481 refused it again, on the same
+    /// ground — a floor is a bid on the thinnest book in this app, it moves
+    /// without you, and printing one puts a number people believe (§83)
+    /// beside art somebody keeps for reasons that are not the number. The
+    /// shelf stores no value anywhere, so there is nothing here to round.
+    @ViewBuilder
+    private var walletNFTListSection: some View {
+        if let entry = nftShelfEntry {
+            Section {
+                WalletNFTCollectionRows(
+                    wallet: entry.address,
+                    onEdit: { feedSheet = .nftPicks(address: entry.address,
+                                                    label: entry.label.isEmpty ? entry.short : entry.label) })
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(WalletCardStyle.rowInsets)
+            }
+        }
     }
 
     /// The picked-NFT shelf. Renders nothing at all for a wallet with no picks
@@ -6810,7 +7127,8 @@ struct FeedScreen: View {
         // stored dates — dropping it here would have quietly cost this room
         // its "new since" divider.
         let boundary = boundaryID(in: groups)
-        ForEach(groups, id: \.0) { label, dayRows in
+        ForEach(Array(groups.enumerated()), id: \.element.0) { groupIndex, group in
+            let (label, dayRows) = group
             // Rows in a day share ONE card silhouette (2026-07-21); a single
             // that stands alone breaks the run, and a fold — like the All
             // room's bundles — merges into it like any row-shaped thing.
@@ -6889,7 +7207,12 @@ struct FeedScreen: View {
                 }
                 .textCase(nil)
                 .padding(.leading, DS.Space.s4)
-                .padding(.top, DS.Space.s6)
+                // The FIRST day heading sits directly under the scope
+                // switcher, which already carries its own bottom inset — the
+                // macro pad belongs BETWEEN days, not above the first one, and
+                // spending it there opened a ~45pt dead band on Activity that
+                // Home (whose lead section is a small header) never had.
+                .padding(.top, groupIndex == 0 ? DS.Space.s1 : DS.Space.s6)
                 .padding(.bottom, DS.Space.s1)
                 .listRowInsets(EdgeInsets())
                 .listRowBackground(Color.clear)
@@ -6982,8 +7305,16 @@ struct FeedScreen: View {
                     // The map says WHAT you hold; this one row says the two
                     // things it is structurally unable to say, and opens the
                     // rest. Three separate text objects until 2026-08-22 — see
-                    // `holdingsTail`.
-                    holdingsTail
+                    // **THE TAIL LINE IS GONE** (user ruling, prd §483:
+                    // *"get rid of the words"*). It carried a concentration
+                    // sentence ("ETH 62% · 28% stables") and an "All 3 ›" door.
+                    //
+                    // Both were answers to a question the board alone could not
+                    // settle — WHICH tokens, in what share — and the token list
+                    // directly below the toggle now answers it properly, with
+                    // every holding, its amount and its own percentage. The
+                    // door in particular pointed at a tray showing less than
+                    // the list it would have covered.
                 }
                 // The holdings CARD (prd §160) — title, map, and the
                 // concentration line become one parcel. GenTagMap already
@@ -6991,7 +7322,18 @@ struct FeedScreen: View {
                 // inner gutter; only the bottom needs closing, since the map
                 // pads its own top.
                 .padding(.bottom, DS.Space.s3)
-                .dsWidgetSurface(fillOpacity: Self.walletCardFill)
+                // **NO CARD** (user ruling, prd §483: *"your treemap is in a
+                // card, we don't do cards"*). The room's drawings sit bare on
+                // the page — the sparkline does, the flow diagram does, and a
+                // surface under this one made it the only boxed figure left.
+                //
+                // **It IMPROVES the magnitude ramp rather than costing it**,
+                // which is the opposite of what I assumed: `DS.ink`'s dark floor
+                // is #131316 and the card was #111113 — two points apart, so the
+                // quietest cell was very nearly invisible ON the card. Against
+                // the #000 page it is nineteen points clear. The ramp is
+                // untouched, and the user's "Darker" pick from 2026-08-10
+                // stands.
                 // The SECTION's own arrival, not the cells' — GenTagMap
                 // already stages its cells once mounted; this is what
                 // stops the whole treemap from hard-popping in the moment
@@ -7080,37 +7422,6 @@ struct FeedScreen: View {
             && (thing.tags.contains("Photo") || thing.tags.contains("Video"))
     }
 
-    /// A row about the ACCOUNT rather than about anything it posted
-    /// (2026-08-18, prd §396) — the two tags `XArchiveImport` stamps on the
-    /// three categories that have no author: `Access` (an app that can act as
-    /// you) and `Account` (the day you joined, and every rename since).
-    ///
-    /// Tag-tested rather than kind-tested, because a LIKED post is `.link`
-    /// too and is very much a post.
-    private static func isXAccountRow(_ thing: Thing) -> Bool {
-        thing.isLive
-            && (thing.tags.contains("Access") || thing.tags.contains("Account"))
-    }
-
-    /// A row in the X room that is a POST — the rows this room draws as a
-    /// card rather than as a band (2026-08-18, prd §396a).
-    ///
-    /// ONE definition with TWO readers, and that is the point: `shapedRow`
-    /// picks the anatomy and `standsAlone` decides whether it gets a surface
-    /// of its own, and when those two disagreed the room drew post cards
-    /// squeezed into a merged run of bare rows — a card by anatomy with no
-    /// card under it. Spelling the test twice is how they would drift again.
-    ///
-    /// Everything that is NOT a post says so by being something else: the
-    /// app's own import receipt, a DM transcript, and the account's own record
-    /// (a connected app, the day you joined, a handle you used to wear).
-    private static func isXPostRow(_ thing: Thing) -> Bool {
-        thing.isLive
-            && !Corpus.isImportReceipt(thing)
-            && thing.kind != .chat
-            && !isXAccountRow(thing)
-    }
-
     /// A wordless picture from a followed CHANNEL (2026-08-23, prd §456).
     ///
     /// Live rows only: an imported conversation or a saved message never
@@ -7122,15 +7433,6 @@ struct FeedScreen: View {
             && Corpus.arrivedLive(thing)
             && thing.previewImageData != nil
             && (thing.postText ?? "").isEmpty
-    }
-
-    /// A row that is somebody's POST rather than a transcript or our own note
-    /// about an import.
-    private static func isTelegramPostRow(_ thing: Thing) -> Bool {
-        thing.isLive
-            && !Corpus.isImportReceipt(thing)
-            && thing.kind != .chat
-            && (thing.postText?.isEmpty == false || Corpus.arrivedLive(thing))
     }
 
     /// A tile whose picture is one FRAME of a video, so the grid can mark it.
@@ -7558,16 +7860,21 @@ struct FeedScreen: View {
     private func standsAlone(_ thing: Thing) -> Bool {
         guard thing.modelContext != nil else { return false }
         if thing.kind == .approval && thing.mark != .done { return true }  // consent card
-        if shape == .social { return true }                                // PostCard, media at width
-        // The X room's posts are the same anatomy and were missing this
-        // (2026-08-18, prd §396a): §313 gave that room its OWN shape rather
-        // than reusing `.social`, and this registry was one of the things the
-        // new case never joined — so a room of post cards drew them merged
-        // into a run of bare rows, which is exactly what "it reads like a row,
-        // not a card" describes. Scoped to the POSTS: the receipt, a DM
-        // transcript and the account's own record are bands and merge the way
-        // every other band does.
-        if shape == .x { return Self.isXPostRow(thing) }
+        // A POST CARD NEVER MERGES, IN ANY OF THE SEVEN ROOMS THAT DRAW ONE
+        // (2026-08-26, prd §489) — and the answer is DERIVED from the same
+        // `rowKind` that picks the anatomy, never spelled beside it.
+        //
+        // That derivation is the fix. §396a happened because `shapedRow` and
+        // this function answered "is this a post" in two places and drifted; it
+        // was then repaired for X alone, and Instagram and Telegram went on
+        // drawing post cards squeezed into a merged run of bare rows — a card
+        // by anatomy with no card under it — in rooms nobody had reported.
+        // Two more instances of one bug, in a registry the two new cases never
+        // joined. There is now nothing to join: if `rowKind` says card, this
+        // says card.
+        if SocialRoom.drawsPosts(thing.source) {
+            return SocialRoomSource.standsAlone(thing)
+        }
         if shape == .chat && thing.mark == .doing { return true }          // TakeawayCard
         if TokenPulse.shared.pulse(for: thing) != nil { return true }      // TokenRow fat anatomy
         if PredictionPulse.shared.pulse(for: thing) != nil { return true } // PredictionRow, same
@@ -7876,6 +8183,39 @@ struct FeedScreen: View {
             }
     }
 
+    /// One row in any of the seven post rooms (2026-08-26, prd §489).
+    ///
+    /// The anatomy is `SocialRoom.rowKind`'s answer and nothing else — this
+    /// function has no rules of its own, and that is the contract. Adding a
+    /// branch here re-opens the drift the table closed: the rule belongs in
+    /// `SocialRoom`, where a harness can reach it and where `standsAlone` reads
+    /// the same answer.
+    ///
+    /// `thing` is already liveness-guarded by `shapedRow`, which is the only
+    /// caller.
+    @ViewBuilder
+    private func socialRow(_ thing: Thing, replies: [String: [Thing]],
+                           index: Int, nextEventID: UUID?,
+                           imageOnly: Bool, wideArt: Bool) -> some View {
+        let kids = replies[thing.id.uuidString] ?? []
+        switch SocialRoomSource.rowKind(thing, hasReplies: !kids.isEmpty) {
+        case .band:
+            BandRow(thing: thing,
+                    emphasized: thing.id == nextEventID,
+                    live: false,
+                    imageOnly: imageOnly,
+                    wideArt: wideArt)
+        case .excerpt(let lines):
+            ExcerptRow(thing: thing, lines: lines)
+        case .reading:
+            ReadingRow(thing: thing)
+        case .post(let whole):
+            PostCard(thing: thing, whole: whole)
+        case .thread(let whole):
+            SocialThreadCard(head: thing, replies: kids, whole: whole)
+        }
+    }
+
     @ViewBuilder
     private func shapedRow(_ thing: Thing, nextEventID: UUID?, index: Int = 0,
                            imageOnly: Bool = false,
@@ -7907,6 +8247,42 @@ struct FeedScreen: View {
             switch shape {
             case .calendar:  BandRow(thing: thing, emphasized: thing.id == nextEventID)
             case .reminders: BandRow(thing: thing)
+            // A CardPointers offer is three facts, not one (prd §487): who it
+            // is with, what it gives, and when it runs out. `BandRow` could
+            // draw one of them — the title — and did, while the terms sat on
+            // `summary` (which it never reads) and the deadline on `dueAt`
+            // (which only the head drew, for a single offer). `WalletRow` is
+            // the app's three-slot anatomy and already the shape the wallet's
+            // own "Coming up" deadlines wear, which is what these rows are.
+            //
+            // The mark is the CARD's initials, and that is what paid for
+            // deleting the head's card-by-card tally: the grouping it counted
+            // is legible down the left edge of the room instead. Never
+            // `AssetMark` — this app bundles no card artwork, and matching
+            // "Amex Gold" against a token brand would put somebody else's logo
+            // on their credit card.
+            //
+            // Bare, with no tap of its own: `shapedListRow` already wraps every
+            // row in the single Button that opens the sheet, and a second one
+            // here would be a button inside a button.
+            case .cardPointers:
+                WalletRow(mark: CardPointers.initials(card: thing.authorHandle).isEmpty
+                            ? .kind(thing.kind)
+                            : .monogram(CardPointers.initials(card: thing.authorHandle),
+                                        tint: DS.textSecondary),
+                          title: CardPointers.merchant(title: thing.title,
+                                                       card: thing.authorHandle),
+                          // Their words for what the offer gives, never a
+                          // number we made (§420's no-total refusal, on the row
+                          // this time).
+                          subtitle: thing.summary) {
+                    if let due = thing.dueAt {
+                        Text(FeedLedeFace.dueLine(due))
+                            .dsText(.subhead13)
+                            .foregroundStyle(FeedLedeFace.isOverdue(due)
+                                             ? DS.attention : DS.textTertiary)
+                    }
+                }
             case .music:     MusicRow(thing: thing)
             // The medium's own proportions (prd §219) — a still arrives as a
             // still, a Steam header as a capsule, a pin as a pin. One row
@@ -7930,143 +8306,25 @@ struct FeedScreen: View {
             case .ledger: BandRow(thing: thing, moneyColumn: true, rippleIndex: index)
             case .notes:  ExcerptRow(thing: thing, lines: 3)
             case .chat:   ExcerptRow(thing: thing, lines: 2)
-            case .social:
-                // A FOLLOWER IS A PERSON, not an article somebody shared
-                // (2026-08-12). `SocialInbound.landFollower` lands a follow as
-                // a `.link`, and the branch below reads every `.link` in this
-                // room as a shared article — so "Sam (@sam) started following
-                // you" drew as a reading-list row, with their face on the
-                // record and the source glyph on screen. The ROW disagreed
-                // with its own SHEET, which `SocialSheet.shape` already sends
-                // to the `.person` anatomy on exactly this test. `BandRow`
-                // leads with the avatar for a `faceSources` row, so the two
-                // now say the same thing.
-                if thing.socialContext == "follow" {
-                    BandRow(thing: thing)
-                } else if thing.kind == .link {
-                    // Item 1 (2026-07-27): an article a post shared lands as
-                    // its own thing now — it reads like the reading list it
-                    // actually is, not a post with no author of its own.
-                    ReadingRow(thing: thing)
-                } else if let kids = replies[thing.id.uuidString], !kids.isEmpty {
-                    // Item 6 (2026-07-27): a head with folded-in self-replies
-                    // reads as one thread card; everything else is a plain post.
-                    SocialThreadCard(head: thing, replies: kids)
-                } else {
-                    PostCard(thing: thing)
-                }
-            // The X room (2026-08-06). A post reads as a post, and that
-            // includes a LIKED one — it is somebody else's post, and
-            // `XArchiveImport.fetchFaces` has stamped its author since the
-            // seat shipped, which is the field `PostCard` leads with.
+            // THE SEVEN POST ROOMS, ONE BRANCH (2026-08-26, prd §489).
             //
-            // Two rows here are not posts and say so by being something else:
-            // the app's own import receipt (a `.note` by kind, but the one row
-            // in the room nobody wrote — it keeps the plain band it wears in
-            // All) and a DM conversation, which is a transcript and reads as
-            // the excerpt every other chat room draws.
-            case .x:
-                if !Self.isXPostRow(thing) {
-                    // A DM is a transcript and reads as the excerpt every
-                    // other chat room draws; everything else that isn't a post
-                    // — the import receipt, a connected app, the day you
-                    // joined, a handle you used to wear — has no author at
-                    // all, so a post card would draw a face and a handle over
-                    // a fact about the account.
-                    if thing.kind == .chat {
-                        ExcerptRow(thing: thing, lines: 2)
-                    } else {
-                        BandRow(thing: thing,
-                                emphasized: thing.id == nextEventID,
-                                live: false,
-                                imageOnly: imageOnly,
-                                wideArt: wideArt)
-                    }
-                } else if let kids = replies[thing.id.uuidString], !kids.isEmpty {
-                    // A self-thread's head, drawn with its continuations
-                    // (2026-08-18, prd §396) — the social rooms' card, on the
-                    // room that has the deepest threads in the corpus.
-                    SocialThreadCard(head: thing, replies: kids, whole: true)
-                } else {
-                    // WHOLE, not clamped (2026-08-18, prd §396a). This room is
-                    // an archive of somebody's own writing and the words are
-                    // the entire content of every row — see `PostCard.whole`.
-                    PostCard(thing: thing, whole: true)
-                }
-            case .telegram:
-                // Three row kinds under one source (prd §456). A conversation
-                // is a transcript and reads as the excerpt every other chat
-                // room draws; our own import receipt keeps the plain band it
-                // wears in All; everything else is a post — a channel's
-                // broadcast, or a link you sent yourself.
-                if !Self.isTelegramPostRow(thing) {
-                    if thing.kind == .chat {
-                        ExcerptRow(thing: thing, lines: 2)
-                    } else {
-                        BandRow(thing: thing,
-                                emphasized: thing.id == nextEventID,
-                                live: false,
-                                imageOnly: imageOnly,
-                                wideArt: wideArt)
-                    }
-                } else if Corpus.arrivedLive(thing) {
-                    // A channel post is written to be read, and the words are
-                    // the whole row — the X room's ruling (§396a), for the
-                    // same reason.
-                    PostCard(thing: thing, whole: true)
-                } else {
-                    // A saved message is usually a bare link somebody sent
-                    // themselves, so it reads as one.
-                    ReadingRow(thing: thing)
-                }
-            case .instagram:
-                // Our own note about the import keeps its plain band, and a
-                // saved conversation stays an excerpt — the X room's split
-                // exactly. Everything else in here IS a post: your captions,
-                // and the posts you saved or liked, which `InstagramCaptions`
-                // gives real words and a real cover.
-                if Corpus.isImportReceipt(thing) {
-                    BandRow(thing: thing,
-                            emphasized: thing.id == nextEventID,
-                            live: false,
-                            imageOnly: imageOnly,
-                            wideArt: wideArt)
-                } else if thing.kind == .chat {
-                    ExcerptRow(thing: thing, lines: 2)
-                } else if thing.tags.contains("Comment") {
-                    // A comment is not a post. It is a sentence you left on
-                    // somebody else's, and the export does not carry the post
-                    // it was left on — so it reads as an excerpt rather than as
-                    // a card claiming to be something it can't show.
-                    ExcerptRow(thing: thing, lines: 3)
-                } else if thing.kind == .link, thing.postText == nil {
-                    // A save whose words `InstagramCaptions` has not read back
-                    // yet, which right after an import is most of the room. It
-                    // is a handle and a date and nothing else (§245), and a
-                    // post card over it would print that handle TWICE — once as
-                    // the byline and once as the body, since `PostCard.words`
-                    // falls back to the title. So it stays the excerpt row it
-                    // has always been, and becomes a card the moment there is
-                    // something to put in one.
-                    //
-                    // Covers arrive on the SAME visit as the words, so a row
-                    // reaching here has no picture to lose.
-                    ExcerptRow(thing: thing, lines: 2)
-                } else if thing.tags.contains("Photo"), thing.previewImageData == nil {
-                    // A picture post whose thumbnail never landed — past
-                    // `ImportMedia.perImport`, or a file that would not decode.
-                    // The grid correctly refuses it (a tile promises a
-                    // picture), and a post card would show the placeholder word
-                    // "Photo" as its entire body. The plain band is what this
-                    // row honestly is: a date, and that something was posted.
-                    BandRow(thing: thing,
-                            emphasized: thing.id == nextEventID,
-                            live: false,
-                            imageOnly: imageOnly,
-                            wideArt: wideArt)
-                } else {
-                    PostCard(thing: thing)
-                }
+            // This was five hand-rolled branches — `.social`, `.x`,
+            // `.telegram`, `.instagram`, and `.plain` standing in for TikTok
+            // and Nostr because neither had a case at all — each re-spelling
+            // the same four decisions in its own dialect. The rules moved to
+            // `SocialRoom.rowKind`, which is Foundation-only and therefore the
+            // first time any of them can be compiled and mutation-proved by a
+            // harness; nothing inside this file could ever be reached by one.
+            //
+            // Every row's own reasoning travelled with it — a follower is a
+            // person, a comment is not a post, an archive draws its words
+            // whole — and is now written once in `SocialRoom` beside the source
+            // it governs, rather than four times in four places that agreed
+            // only by accident.
+            case .social, .x, .telegram, .instagram, .tiktok:
+                socialRow(thing, replies: replies, index: index,
+                          nextEventID: nextEventID,
+                          imageOnly: imageOnly, wideArt: wideArt)
             case .vibenet:
                 // Face-led (R4.2): the room's subject is WHICH ACCOUNT
                 // something happened to, and `.plain`'s band drew one
@@ -8634,15 +8892,16 @@ struct FeedScreen: View {
         // `\.kind` below is a persisted read — the one that trapped in 150.
         let rows = rows.filter(\.isLive)
         guard source != "All" else { return "\(rows.count)" }
-        if shape == .social {
-            return rows.count == 1 ? "1 post" : "\(rows.count) posts"
-        }
-        // The X room says posts too, and only when every row in the group IS
-        // one (2026-08-18, prd §396a). Its rows are `.note` and `.link` by
-        // kind, so the general path below called a day of your own writing "12
-        // notes"; but the room also holds connected apps and the day you
-        // joined, and calling those posts would be worse than saying things.
-        if shape == .x, rows.allSatisfy(Self.isXPostRow) {
+        // A DAY OF POSTS SAYS POSTS, in every room that draws one, and only
+        // when EVERY row in the group is one (2026-08-26, prd §489).
+        //
+        // X's rule (§396a) generalised, and a deliberate change to the three
+        // live rooms, which said "posts" unconditionally: a day holding twelve
+        // casts and one shared article was calling the article a thirteenth
+        // post. It now falls through to the generic noun, which is vaguer and
+        // true. The test is the same `rowKind` the rows themselves drew from,
+        // so the header can never disagree with what is under it.
+        if SocialRoom.drawsPosts(source), SocialRoomSource.groupIsPosts(rows) {
             return rows.count == 1 ? "1 post" : "\(rows.count) posts"
         }
         let kinds = Set(rows.map(\.kind))
