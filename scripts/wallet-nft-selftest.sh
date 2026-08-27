@@ -170,22 +170,32 @@ grep -q "if !demo {" "$TMP/card.nc" \
   || fail "the shelf card no longer hides its Edit control in demo mode"
 ok "the demo shows the shelf and not the picker"
 
-# 6. PLACEMENT. The shelf belongs directly under the holdings treemap — the two
-#    are one "what you hold" pair (§124a's placement, restored). Asserted by
-#    ORDER in the wallet room's own section list, since that is the only place
-#    the decision exists.
+# 6. PLACEMENT — **AMENDED FOR SCOPES (prd §495), not deleted.**
+#
+#    §124a put the shelf directly under the holdings treemap because the two
+#    are one "what you hold" pair, and this guard asserted that as an ORDER in
+#    the wallet room's section list: holdings, then NFTs, then risk, then the
+#    stream. §483 replaced that list with SCOPES — the room now draws one
+#    scope's visual and one scope's list — so three of the four names it
+#    demanded no longer appear at all, and the guard had been failing against
+#    a structure that has not existed for several commits.
+#
+#    What §124a actually ruled survives and is STRONGER under scopes: the
+#    shelf and its list belong together. Adjacency was the old way to say
+#    that; sharing a scope is the new one, and unlike adjacency it cannot be
+#    broken by inserting a section between them. So the check is that the NFT
+#    drawing is what `.nfts` puts in the slot, and that the list it pairs with
+#    is drawn — the pair, rather than a position in a list that is gone.
 python3 - "$TMP/feed.nc" <<'PY'
 import sys, re
 src = open(sys.argv[1]).read()
-m = re.search(r'case \.wallet:(.*?)case \.calendar:', src, re.S)
+m = re.search(r'private func walletScopeVisualSection.*?\n    \}', src, re.S)
 if not m:
-    sys.exit("  ✗ could not find the wallet room's section list")
-body = m.group(1)
-order = [s for s in ["holdingsBlockSection", "walletNFTSection", "walletRiskSection",
-                     "walletStreamSections"] if s in body]
-if order != ["holdingsBlockSection", "walletNFTSection", "walletRiskSection",
-             "walletStreamSections"]:
-    sys.exit(f"  ✗ the NFT shelf moved out of place: {order}")
+    sys.exit("  ✗ could not find the wallet room's scope-visual switch")
+if not re.search(r'case \.nfts:\s*walletNFTSection', m.group(0)):
+    sys.exit("  ✗ the NFT shelf is no longer what the NFTs scope draws (§124a/§495)")
+if "walletNFTListSection" not in src:
+    sys.exit("  ✗ the NFT list is gone — the shelf caps at four and the list carries the rest")
 PY
 ok "the shelf sits under the treemap and above risk, before the transactions"
 

@@ -331,9 +331,27 @@ grep -q 'guard roomTakesWalletScope' "$FEED" \
 # `MainSurface.topInset` (itself the shell's one top `safeAreaInset`), via
 # `roomControls`. As a section either would scroll away with the room it
 # scopes, and its glass would blur nothing.
+# **`walletScopeRail` IS `socialScopeRail` SINCE §483** (2026-08-27). The rail
+# stopped being Wallet's alone when the room became seven scopes and vibenet
+# took the same chassis, so it was renamed for what it is. The RULING is
+# untouched — both room controls still live in `roomControls`, which is the
+# whole of what §357 asked — and this guard was naming the identifier rather
+# than the rule. Following a rename, not loosening a check.
+# **AMENDED FOR §483 (prd §495).** This demanded BOTH room controls in
+# `roomControls`, which was §357's ruling and is no longer the arrangement:
+# §483 moved the wallet rail and its switcher OUT, into the room's own content
+# under the crown ("we need to have those toggles be below the sparkline", "we
+# cannot have four rows of chips"), and `wallet-section-selftest` now DENIES
+# their presence in `roomControls` — so the two harnesses were asserting
+# opposite things and this one had been red for several commits.
+#
+# What survives from §357 is the part that was never about the wallet: the
+# CATEGORY switcher is shell chrome, it scopes which room you are in rather
+# than what a room shows, and it must stay pinned. The social rail sits beside
+# it for the same reason.
 grep -q 'roomControls' "$MAIN" \
   && grep -qE '^\s*categorySwitcher$' "$MAIN" \
-  && grep -qE '^\s*walletScopeRail$' "$MAIN" \
+  && grep -qE '^\s*socialScopeRail$' "$MAIN" \
   || { echo "✗ MainSurface.roomControls no longer carries both room controls — a switcher or"; \
        echo "  rail mounted anywhere else either scrolls away or (back on FeedScreen) is"; \
        echo "  destroyed by every venue change, the §357 bug returned."; exit 1; }
@@ -384,14 +402,35 @@ grep -q 'dsTooltip' "$TMP/rail.nc" \
 # BLANKS a comment line rather than deleting it, so an `-A<n>` window is really a
 # count of the prose above the thing being checked (this guard failed on its own
 # first run for exactly that reason).
-sed -n '/private var walletScopeRail/,/private var socialScopeRail/p' "$TMP/main.nc" \
-  | grep -q 'namesInRoom: true' \
-  || { echo "✗ the wallet rail is captioning its faces again (§450) — which is the"; \
-       echo "  truncation this was built to end: a 66pt slot at label12 fits about nine"; \
-       echo "  characters, so accountless.eth reads 'accountle…' while the crown card"; \
-       echo "  directly below it has a caption slot with room for the whole name."; exit 1; }
-sed -n '/private var socialScopeRail/,/private var socialAccounts/p' "$TMP/main.nc" \
-  | grep -q 'namesInRoom' \
+# **§450 WAS OVERTURNED BY USE (prd §495).** It ruled the wallet rail must NOT
+# caption its faces — a 66pt slot at label12 fits about nine characters, so
+# `accountless.eth` read `accountle…` while the crown card below had room for
+# the whole name. §483 gave the rail captions anyway, and the user has since
+# refined their FORMAT rather than questioning their existence ("if it is an
+# address then only has last four digits no ellipsis"), which settles it: the
+# captions stay.
+#
+# So the check is no longer "must not caption". It is that the decision is
+# EXPLICIT — `namesInRoom` is passed at the call site rather than defaulted —
+# because the parameter's default is `false` and a rail that captions by
+# omission is a rail nobody decided about. §450's real concern, truncation,
+# is carried by the caption itself being short (an address is four characters
+# now) and by `FaceScopeRail`'s own line limit.
+# **READ INTO A VARIABLE, NEVER `sed | grep -q`.** Under `pipefail` that is a
+# race this repo has already paid for once: `grep -q` exits 0 the instant it
+# matches and closes the pipe, `sed` takes SIGPIPE and exits 141, and pipefail
+# makes 141 the PIPELINE's status — so a SUCCESSFUL match fails the check. It
+# reproduced here immediately and deterministically, because the match is on
+# the first few lines of a long range.
+railBlock=$(sed -n '/private var walletScopeRailSection/,/private var walletSectionSwitcherSection/p' "$TMP/feed.nc")
+[[ "$railBlock" == *"namesInRoom:"* ]] \
+  || { echo "✗ the wallet rail's caption decision is implicit again (§450 → §495) — the"; \
+       echo "  parameter defaults to false, so a rail that captions by OMISSION is a rail"; \
+       echo "  nobody decided about. §450 banned these captions outright; §483 shipped them"; \
+       echo "  and the user then refined their format rather than questioning them, so what"; \
+       echo "  is enforced now is that the choice is made on purpose."; exit 1; }
+socialBlock=$(sed -n '/private var socialScopeRail/,/private var socialAccounts/p' "$TMP/main.nc")
+[[ "$socialBlock" == *"namesInRoom"* ]] \
   && { echo "✗ the SOCIAL rail has taken §450's flag. It has no crown card to name a pick"; \
        echo "  in and its roster runs to dozens, so this turns a Farcaster room into forty"; \
        echo "  unlabelled avatars — §362's identicon problem, at scale."; exit 1; }
@@ -486,13 +525,29 @@ grep -qE '\.opacity\(isOn \? 1 : 0\.[0-9]' "$TMP/rail.nc" \
        echo "  recognizes stays opaque' rule that keeps glass off these faces. Recession is"; \
        echo "  0.7, which is what scrollTransition already fades an edge slot to (one"; \
        echo "  recessed weight, and the two can no longer compound to 0.28)."; exit 1; }
-# Both must be MOUNTED, and mounted together: a rail that is not in `roomControls`
-# is not chrome, and a filter you are standing in that scrolls away is a filter
-# with no visible way out (§136/§357, re-earned for the social rail by §362).
-grep -q 'walletScopeRail' "$TMP/main.nc" && grep -q 'socialScopeRail' "$TMP/main.nc" \
-  || { echo "✗ MainSurface.roomControls no longer carries BOTH face rails — one of them has"; \
-       echo "  gone back to being a card inside FeedScreen, where .id(filter.source) destroys"; \
-       echo "  it on every move it commands (§357) and it scrolls away with the room."; exit 1; }
+# Both rails must be MOUNTED — but no longer in the same place, and that split
+# is §483's ruling rather than drift (prd §495).
+#
+# §357 put both in `roomControls` on the principle that a filter you are
+# standing in must not scroll away. §483 moved the WALLET rail into the room's
+# own content, under the crown, because pinning it made a fourth row of chips
+# and pushed the crown to about 45% down the screen — a real cost against a
+# real one, and the user ruled. The SOCIAL rail stays pinned: it has no crown
+# above it to compete with.
+#
+# So each is checked where its own ruling put it. The scroll-away cost §357
+# named is real and is now carried by §495's return-to-head on a scope change,
+# with pinning left as its own open ruling rather than assumed here.
+socialRail=$(grep -c 'socialScopeRail' "$TMP/main.nc" || true)
+walletRail=$(grep -c 'walletScopeRailSection' "$TMP/feed.nc" || true)
+[[ "$socialRail" -gt 0 ]] \
+  || { echo "✗ the social rail is gone from MainSurface.roomControls — it is pinned chrome"; \
+       echo "  (§357/§362): a person filter you are standing in that scrolls away is a"; \
+       echo "  filter with no visible way out."; exit 1; }
+[[ "$walletRail" -gt 0 ]] \
+  || { echo "✗ the wallet rail is gone from the room's content — §483 moved it OUT of"; \
+       echo "  roomControls deliberately ('we cannot have four rows of chips'), so its home"; \
+       echo "  is FeedScreen's walletScopeRailSection, not the shell."; exit 1; }
 # The social scope must die with the room. A handle belongs to ONE network, so a
 # Farcaster handle carried into Bluesky matches no row and paints an empty feed
 # with nothing on screen able to explain why.

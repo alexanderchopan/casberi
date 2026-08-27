@@ -222,6 +222,14 @@ enum ExchangeBridge {
         case kraken, coinbase
         var display: String { rawValue.capitalized }
     }
+    // §484's demo fixture reads this table. EMPTY on purpose — see the note
+    // on `WalletStore.shared`.
+    struct DemoHolding {
+        let symbol: String
+        let usd: Double
+        let venue: Venue
+    }
+    static let demoBalances: [DemoHolding] = []
 }
 
 // `WalletRange` shares this file with `WalletPortfolio` and reads the value
@@ -233,7 +241,33 @@ enum WalletStore {
         let usd: Double
         var holdings: [String: Double]? = nil
     }
+    // **INERT BY CONSTRUCTION** (prd §495). `WalletPortfolio.demoFixture`
+    // (§484) reads the real store, the watch helper and the exchange table,
+    // so the file stopped compiling against the old stub — which reported as
+    // this whole harness failing, not as one function being unreachable.
+    //
+    // These answer EMPTY rather than with a fixture: `demoFixture` is not
+    // under test here (the holdings arithmetic below composes its own
+    // portfolios directly), and a stub that returned data would let a future
+    // assertion pass against numbers this file invented rather than against
+    // the shipped composer.
+    struct WatchedAddress {
+        let address: String
+        var label: String? = nil
+    }
+    static let shared = WalletStore.Store()
+    struct Store {
+        var addresses: [WatchedAddress] { [] }
+        func valueSamples(forAddress address: String) -> [ValueSample] { [] }
+    }
 }
+
+enum WalletWatch {
+    static func sameAddress(_ a: String, _ b: String) -> Bool {
+        a.caseInsensitiveCompare(b) == .orderedSame
+    }
+}
+
 SWIFT
 
 cat > "$DRIVER" <<'SWIFT'

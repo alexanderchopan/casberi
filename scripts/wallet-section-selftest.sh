@@ -216,10 +216,23 @@ guard FeedScreen.swift "WalletSection.resolve(" \
 
 # The crown and its chart belong to NO scope, so the switcher must come AFTER
 # them: above it, the toggle would appear to scope the balance it does not scope.
-crown_at=$(grep -n "walletTilesSection(visible, latest: latest" "$work/FeedScreen.swift.bare" | head -1 | cut -d: -f1)
+# **`|| true` IS LOAD-BEARING, and its absence made this guard fail SILENTLY**
+# (prd §495). Under `set -e` an assignment takes the exit status of its command
+# substitution, so a `grep` that matches nothing kills the script THERE —
+# before reaching the `|| fail` written two lines below to explain it. The
+# whole harness then exited 1 having printed every check as ok and no reason
+# at all, which is the "a check that cannot say why is not a check" failure
+# this repo bans, arriving in the checker rather than the code.
+#
+# The anchor itself had also drifted: the crown's call gained `streamTotal:`
+# and `drawsChart:` (§483) and lost `latest:`, so it had been matching nothing
+# for several commits. Anchored on the FUNCTION NAME plus its first argument,
+# which is what this guard actually cares about — the crown's position — and
+# not on a signature that will keep changing.
+crown_at=$(grep -n "walletTilesSection(visible" "$work/FeedScreen.swift.bare" | head -1 | cut -d: -f1 || true)
 # The CALL SITE, not the declaration — which sits earlier in the file and
 # made this guard fire on a correctly-ordered room the first time it ran.
-switch_at=$(grep -n "walletSectionSwitcherSection(section)" "$work/FeedScreen.swift.bare" | head -1 | cut -d: -f1)
+switch_at=$(grep -n "walletSectionSwitcherSection(section)" "$work/FeedScreen.swift.bare" | head -1 | cut -d: -f1 || true)
 [[ -n "$crown_at" && -n "$switch_at" ]] || fail "drift: cannot locate the crown or the switcher in the wallet block"
 (( crown_at < switch_at )) || fail "drift: the switcher is drawn ABOVE the crown — it must sit below the sparkline"
 
