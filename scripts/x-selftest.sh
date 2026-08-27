@@ -146,14 +146,25 @@ grep -qF 'private var facesAreDoors: Bool { SocialThread.isSocial(thing.source) 
 # it: the room drew post cards merged into a run of bare rows. Both halves are
 # guarded, because either alone leaves the room looking wrong in a way no
 # other check can see.
-grep -qF 'if shape == .x { return Self.isXPostRow(thing) }' "$FEEDSCREEN_395" \
+# AMENDED 2026-08-26 (prd §489), not deleted — the ruling is unchanged and the
+# mechanism under it got stronger. `isXPostRow` is gone because it was one of
+# five dialects of one question; `SocialRoom.rowKind` is the single answer now,
+# and `standsAlone` is DERIVED from it rather than spelled beside it, so the
+# "renderer and surface must read ONE predicate" clause below is enforced by
+# construction rather than by these two greps. What still needs guarding is that
+# the X room reaches that table at all, and that the table still says WHOLE for
+# it — the room is an archive of somebody's own writing and the words are the
+# entire content of every row.
+grep -qF 'return SocialRoomSource.standsAlone(thing)' "$FEEDSCREEN_395" \
   || { echo "✗ the X room's posts no longer stand alone — a card by anatomy with no card under it"; exit 1; }
-grep -q 'private static func isXPostRow' "$FEEDSCREEN_395" \
-  || { echo "✗ the post test is gone — the renderer and the surface must read ONE predicate or they drift"; exit 1; }
-grep -qF 'PostCard(thing: thing, whole: true)' "$FEEDSCREEN_395" \
-  || { echo "✗ the X room clamps its posts again — the longest tweets are exactly the ones cut"; exit 1; }
-grep -qF 'SocialThreadCard(head: thing, replies: kids, whole: true)' "$FEEDSCREEN_395" \
-  || { echo "✗ a folded thread clamps each part — an argument that never reaches its conclusion"; exit 1; }
+grep -qF 'case .social, .x, .telegram, .instagram, .tiktok:' "$FEEDSCREEN_395" \
+  || { echo "✗ the X room left the shared row branch — its rows would fall to the generic band (§313's finding, again)"; exit 1; }
+grep -qF 'return hasReplies ? .thread(whole: true) : .post(whole: true)' Casberi/Casberi/Model/SocialRoom.swift \
+  || { echo "✗ the X room clamps its posts again — the longest tweets are exactly the ones cut, and a folded thread becomes an argument that never reaches its conclusion"; exit 1; }
+grep -qF 'PostCard(thing: thing, whole: whole)' "$FEEDSCREEN_395" \
+  || { echo "✗ the row no longer draws the table's own words rule"; exit 1; }
+grep -qF 'SocialThreadCard(head: thing, replies: kids, whole: whole)' "$FEEDSCREEN_395" \
+  || { echo "✗ a folded thread no longer draws the table's own words rule"; exit 1; }
 # The ladder itself: whole up to a tweet, an excerpt past it. A bare `nil`
 # would hand one long-form post the entire scroll.
 grep -qF 'return words.count <= Self.wholeChars ? nil : Self.longformLines' Casberi/Casberi/Screens/ShapedRows.swift \
@@ -280,7 +291,10 @@ grep -q 'summary.droppedPosts += max(0, rows.count - postCap)' "$XARCH" \
 FEEDSCREEN="Casberi/Casberi/Screens/FeedScreen.swift"
 grep -q 'case "X":                   self = .x' "$FEEDSCREEN" \
   || { echo "✗ X has no room shape again — it falls to .plain and the room is a wall of 80-char BandRows"; exit 1; }
-grep -q 'PostCard(thing: thing)' "$FEEDSCREEN" \
+# AMENDED 2026-08-26 (prd §489): the five post rooms draw through one call, so
+# the words rule is the table's (`whole:`) rather than four literal call sites.
+# The ruling is unchanged — something must still render a post as a post.
+grep -qF 'PostCard(thing: thing, whole: whole)' "$FEEDSCREEN" \
   || { echo "✗ nothing renders a post as a post"; exit 1; }
 # An IMPORT has no media URL to give — `ImportMedia` decodes the archive's own
 # file to bytes on the row, inside the folder grant. Without a stored-bytes

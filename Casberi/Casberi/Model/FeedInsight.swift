@@ -99,6 +99,23 @@ enum FeedInsight {
         case "Podcasts":
             return counted(things, title: "Your shows", unit: ("episode", "episodes"),
                            scope: .publisher, key: handle)
+        // Telegram, 2026-08-26 (prd §489) — the room had NO head of any kind
+        // and led with the year grid, which answers WHEN over a room whose
+        // subject is WHOSE. Its channel posts arrive through `FeedFollowBridges`
+        // like every other feed follow, so the channel's own name is already
+        // stamped on `authorHandle` — this is Podcasts' read exactly, one
+        // source over, and needed no bridge change.
+        //
+        // `.publisher` scope, not `.writer`: a Telegram channel is a
+        // publication, which is why it wears a MARK rather than a face
+        // (`BandRow.publisherMarkSources`). The imported half of the room —
+        // saved messages and conversations — carries no handle, so `counted`
+        // skips it rather than filing it under a blank; the board is about the
+        // channels, which is the half that has any.
+        case TelegramChannel.source:
+            return counted(things, title: "Which channels fill this",
+                           unit: ("post", "posts"),
+                           scope: .publisher, key: handle)
         case "Steam":
             return steamPlaytime(things)
         case "Snapchat":

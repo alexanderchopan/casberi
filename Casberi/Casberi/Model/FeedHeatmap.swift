@@ -47,6 +47,12 @@ enum FeedHeatmap {
         // as casting density. Windowed to ~14 weeks (see `columns`).
         "Farcaster":     Label(title: "Casting activity",     unit: "cast",       units: "casts", columns: 14),
         "Bluesky":       Label(title: "Posting activity",     unit: "post",       units: "posts", columns: 14),
+        // Nostr, 2026-08-26 (prd §489) — the third live network, and it had no
+        // entry here, so a Nostr room with one watched account (no rail, since
+        // the rail needs two) had NOTHING above its rows at all: no head, no
+        // board, no grid. Bluesky's entry exactly, because the room is the same
+        // room and every item in it is a note somebody posted.
+        "Nostr":         Label(title: "Posting activity",     unit: "note",       units: "notes", columns: 14),
         // The two import sources (2026-07-31). Both are a FULL year on
         // purpose, unlike the social feeds above: an export is dated across
         // years rather than being a rolling recent sample, so the grid it
