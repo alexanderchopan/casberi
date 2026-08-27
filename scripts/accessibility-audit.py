@@ -179,7 +179,7 @@ KNOWN_EXEMPT = {
     # The gesture is therefore reachable to VoiceOver by the route the platform
     # prefers, and a trait on the face would add a stray label for a figure
     # that already speaks in full.
-    "VibenetChangeFlowCard.swift:128",
+    "VibenetChangeFlowCard.swift:124",
     #
     # The wallet Risk floor's columns (2026-08-26, prd §493) — same treatment
     # and same strength of claim as the change flow above: the figure speaks as
