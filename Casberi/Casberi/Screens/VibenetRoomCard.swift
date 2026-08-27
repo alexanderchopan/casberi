@@ -1172,7 +1172,6 @@ struct VibenetRoomCard: View {
                         .chartArrival(index: index, reduceMotion: reduceMotion)
                     }
                 }
-                .padding(.horizontal, DSRoomChassis.inset)
             }
         }
     }
@@ -1245,7 +1244,20 @@ struct VibenetRoomCard: View {
         // `topLeading`, so the headline stays where it has always been and
         // only the figure below it gains the room.
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .padding(.horizontal, DS.Space.s4)
+        // **NO INSET OF ITS OWN** (prd §495, user: *"the content below the
+        // toggle row should all have similar template. right now permissions
+        // for example the indentation is not the same as it is on activity"*).
+        //
+        // `stackedRoom` applies `DS.Space.s4` at its root, and
+        // `DSRoomChassis.inset` IS `DS.Space.s4` — so every figure and list
+        // that added it was indented 30pt while `VibenetAccountDetail`, which
+        // adds nothing and inherits the root, sat at 15. Two left edges on one
+        // screen, and a third at 68 once a key row added its own leading
+        // column on top.
+        //
+        // The rule is the chassis inset and it is applied ONCE, by the
+        // container. A figure that re-applies it is not obeying the rule
+        // twice, it is breaking it.
     }
 
     /// WHERE THE CHANGES LANDED — the Activity scope's drawing (prd §491,
@@ -1267,7 +1279,6 @@ struct VibenetRoomCard: View {
                                   name: { Self.displayName($0) },
                                   onPick: onScope,
                                   reduceMotion: reduceMotion)
-                .padding(.horizontal, DSRoomChassis.inset)
         }
     }
 
@@ -1326,7 +1337,6 @@ struct VibenetRoomCard: View {
                                   name: { Self.displayName($0) },
                                   onWatch: nil,
                                   reduceMotion: reduceMotion)
-                .padding(.horizontal, DSRoomChassis.inset)
         } else if !links.isEmpty {
             scopeFigure(headline: VibenetBalanceAggregation.compose(room.items)?.plainLine) {
                 VibenetLinkSpine(links: links,
@@ -1452,7 +1462,6 @@ struct VibenetRoomCard: View {
                     }
                 }
             }
-            .padding(.horizontal, DSRoomChassis.inset)
         }
     }
 
