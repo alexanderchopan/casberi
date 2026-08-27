@@ -50,19 +50,35 @@ struct VibenetEventCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            eyebrow
-            Text(title)
-                .dsText(.heading28)
-                .foregroundStyle(DS.textPrimary)
-                .fixedSize(horizontal: false, vertical: true)
-                .textSelection(.enabled)
-            if let subtitle {
-                Text(subtitle)
-                    .dsText(.callout15)
-                    .foregroundStyle(DS.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.top, 2)
-            }
+            // **WALLET'S RECEIPT ANATOMY** (prd §495, user: *"the sheet for
+            // activity should look in some way like the design we have for
+            // wallet activity"*, and then the same for the account and
+            // permissions sheets).
+            //
+            // `DSSheetHead` is `MoneyReceiptCard`'s head (§363) with the money
+            // taken out: subject disc and state stamp on one row, then when,
+            // then the thing's own words, then one supporting line, then one
+            // sentence saying what it means now. Every part answers a question
+            // an EVENT has, which is why this sheet had been inventing a worse
+            // version of the same shape.
+            //
+            // The disc is the ACCOUNT's face — the event's subject — matching
+            // the receipt, where the disc is the counterparty and is a door.
+            DSSheetHead(disc: {
+                Button { onAccount(facts.account) } label: {
+                    WalletFace(address: facts.account, size: DS.Face.shelf, circular: true)
+                }
+                .buttonStyle(.plain)
+                .dsHover()
+            },
+                        stamp: verbStamp,
+                        stampInk: facts.kind == .locked ? DS.attention : DS.textSecondary,
+                        lead: happenedAt.map {
+                            $0.formatted(.dateTime.day().month().hour().minute())
+                        },
+                        title: title,
+                        secondary: subtitle,
+                        sentence: consequence)
 
             // WHAT THIS KEY MAY DO — chips, the shape the design settled on
             // after a grid was drawn and refused ("the chips look better, the
@@ -75,33 +91,11 @@ struct VibenetEventCard: View {
                     .padding(.top, DS.Space.s3)
             }
 
-            // The consequence, in a sentence. This is the block that makes ONE
-            // anatomy work for all four kinds (prd §495): an authorization
-            // states its expiry, a revoke states that the key is finished, a
-            // lock states that nothing can act. Each is a fact the event
-            // itself carries — none is inferred.
-            if let consequence {
-                Text(consequence)
-                    .dsText(.body17)
-                    .foregroundStyle(DS.textPrimary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.top, DS.Space.s4)
-            }
-
-            // THE ACCOUNT — a row, not a spec value, because it is the one
-            // thing on this card worth walking into and a face is what makes
-            // that legible before the words are read.
-            Button {
-                onAccount(facts.account)
-            } label: {
-                walkRow(mark: { WalletFace(address: facts.account,
-                                           size: DS.Face.row, circular: true) },
-                        label: String(localized: "Account"),
-                        value: facts.accountName)
-            }
-            .buttonStyle(.plain)
-            .dsHover()
-            .padding(.top, DS.Space.s4)
+            // **NO ACCOUNT ROW** (prd §495). The head's disc IS the account
+            // and is already a door, so a row naming it again below is §366's
+            // read-it-twice with a face and a chevron attached. The receipt
+            // this anatomy comes from makes the same call: its subject disc is
+            // the counterparty, and it draws no counterparty row.
 
             // THE TRANSACTION — the one verb this sheet can honestly offer,
             // and it was missing entirely: until §495 the only control here
@@ -158,6 +152,18 @@ struct VibenetEventCard: View {
                 .foregroundStyle(DS.textTertiary)
         }
         .contentShape(Rectangle())
+    }
+
+    /// The state word the head stamps, top-right — the receipt's own stamp
+    /// slot. A verb rather than a noun, because what a key event records is
+    /// something that HAPPENED to the account.
+    private var verbStamp: String {
+        switch facts.kind {
+        case .authorized: String(localized: "Authorized")
+        case .revoked:    String(localized: "Revoked")
+        case .locked:     String(localized: "Locked")
+        case .unlocking:  String(localized: "Unlocking")
+        }
     }
 
     /// WHEN IT HAPPENED, above the title.
