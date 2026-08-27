@@ -667,10 +667,33 @@ if [[ "$detailFn" == *'dsWidgetSurface'* ]]; then
   echo "  cards now, and a surface around them is the slab again."
   exit 1
 fi
-# …and the detail really does carry cards of its own, or removing the slab
-# leaves every reading loose on the page.
-grep -q 'private func card<Content: View>' "$TMP/detail.nc.swift" \
-  || { echo "✗ VibenetAccountDetail has no card of its own — prd §477"; exit 1; }
+# …and the detail really does GROUP its readings, or removing the slab leaves
+# every reading loose on the page.
+#
+# **AMENDED BY §495, not deleted.** §477 asked for cards here and this guard
+# demanded the `card<Content: View>` recipe. The user then ruled the other way
+# for the whole app — *"Lets do headers no cards"* — and specifically for this
+# screen: *"on accounts when you click an item in the list… poor design and
+# also has a card. needs to look like the others."* The room this page is
+# reached FROM draws no cards, so three slabs here changed the grammar of the
+# app under you at one tap, which is the opposite of §477's own stated goal of
+# making the scoped view feel like the same screen.
+#
+# What SURVIVES from §477 is the part that was never about cards: the detail
+# must not be one undifferentiated slab, and its readings must be grouped by a
+# landmark a reader can see. That landmark is now a header.
+grep -q 'sectionHeader(String(localized: "Linked accounts"))' "$TMP/detail.nc.swift" \
+  || { echo "✗ the account detail no longer groups its readings — prd §495: §477's slab"
+       echo "  was split into cards and §495 turned those into headers; with neither, every"
+       echo "  reading is loose on the page and the slab's own defect is back."; exit 1; }
+# …and the cards may not come back. Reads the COMMENT-STRIPPED copy: the file
+# documents the deletion by naming what it deleted (the Obsidian lesson).
+if grep -qE 'private func card<Content: View>|dsWidgetSurface' "$TMP/detail.nc.swift"; then
+  echo "✗ the account detail is drawing cards again — prd §495: the room it is reached"
+  echo "  from draws none, and a card inside a pushed screen whose parent has none is"
+  echo "  the grammar changing under the reader at one tap."
+  exit 1
+fi
 grep -q 'private func sectionHeader' "$TMP/detail.nc.swift" \
   || { echo "✗ VibenetAccountDetail lost its section headers — prd §477: the room's own"
        echo "  landmarks, so narrowing to one account is the same screen"; exit 1; }
@@ -2448,21 +2471,65 @@ check("an expiry that matches no key names nothing",
       VibenetEventFacts.matchedPermissions(actors: [expiringKey, neverKey],
                                            dueAt: Date(timeIntervalSince1970: 12345)).isEmpty)
 
+let goodRef = "vibenet:actor:0x" + String(repeating: "a", count: 64) + ":0"
 let facts = VibenetEventFacts.compose(
     account: "0xabc", accountName: "Treasury",
-    actors: [expiringKey, neverKey], dueAt: due, concernsKey: true)
-check("compose counts the account's LIVE keys", facts.keysNow == 2)
+    actors: [expiringKey, neverKey], dueAt: due, kind: .authorized, sourceRef: goodRef)
 check("compose carries the expiry through", facts.expires == due)
 // A lock or an unlock is about the ACCOUNT. It must never borrow a key's
 // permissions just because the expiry happens to line up.
 let lockFacts = VibenetEventFacts.compose(
     account: "0xabc", accountName: "Treasury",
-    actors: [expiringKey, neverKey], dueAt: due, concernsKey: false)
+    actors: [expiringKey, neverKey], dueAt: due, kind: .locked, sourceRef: goodRef)
 check("an event that is NOT about a key claims no permissions",
       lockFacts.permissions.isEmpty)
-check("an account with no actors reports no key count",
+
+// ── prd §495: the key rides the SAME join as its permissions ─────────────────
+//
+// Deliberately not a looser join for the NAME than for the chips: a sheet that
+// could name a key it cannot name the permissions of would print a confident
+// "Passkey" over a blank permission row, which reads as "this key can do
+// nothing" rather than as "we could not tell which key this was".
+check("a unique match names the key too", facts.key?.title == "secp256k1 key")
+// The fixture's id is four characters, so it is returned WHOLE — the guard's
+// own boundary, and the case that would otherwise render as a bare ellipsis
+// with nothing after it.
+check("a short id is returned whole rather than elided to nothing",
+      facts.key?.shortID == "0x01")
+check("a real actor id is elided to its TAIL, the way the Permissions list writes it",
+      VibenetEventFacts.shortActorID("0x9f3c00000000000000000000000000000000cafe0006") == "…0006")
+check("an AMBIGUOUS match names no key, not just no permissions",
       VibenetEventFacts.compose(account: "0xabc", accountName: "T",
-                                actors: [], dueAt: nil, concernsKey: true).keysNow == nil)
+                                actors: [expiringKey, twin], dueAt: due,
+                                kind: .authorized, sourceRef: goodRef).key == nil)
+check("a lock names no key however the expiries line up", lockFacts.key == nil)
+check("the kind decides whether a key is even looked for",
+      VibenetEventFacts.Kind.locked.concernsKey == false
+      && VibenetEventFacts.Kind.unlocking.concernsKey == false
+      && VibenetEventFacts.Kind.authorized.concernsKey
+      && VibenetEventFacts.Kind.revoked.concernsKey)
+
+// ── prd §495: the transaction hash, POSITIONALLY ─────────────────────────────
+//
+// This string reaches a URL, and a ref arrives having been through a `Thing`
+// and a CloudKit round trip. Every rejection below draws NO door rather than a
+// door that lands somewhere else (§83).
+let hash64 = "0x" + String(repeating: "b", count: 64)
+check("the hash is the THIRD component, whatever the kind's segment is",
+      VibenetEventFacts.transactionHash("vibenet:actor:\(hash64):0") == hash64
+      && VibenetEventFacts.transactionHash("vibenet:locked:\(hash64):3") == hash64)
+check("a demo-shaped three-component ref yields no door",
+      VibenetEventFacts.transactionHash("vibenet:actor:demo1") == nil)
+check("a ref from another bridge yields no door",
+      VibenetEventFacts.transactionHash("peer:sell:\(hash64):0") == nil)
+check("a short hash yields no door",
+      VibenetEventFacts.transactionHash("vibenet:actor:0xdeadbeef:0") == nil)
+check("a non-hex hash yields no door",
+      VibenetEventFacts.transactionHash("vibenet:actor:0x" + String(repeating: "z", count: 64) + ":0") == nil)
+check("a hash with no 0x yields no door",
+      VibenetEventFacts.transactionHash("vibenet:actor:" + String(repeating: "b", count: 66) + ":0") == nil)
+check("no ref at all yields no door", VibenetEventFacts.transactionHash(nil) == nil)
+check("compose carries the hash through", facts.txHash == "0x" + String(repeating: "a", count: 64))
 
 
 // MARK: - prd §468: WHEN was this read?
@@ -3291,6 +3358,44 @@ PY
   echo "  ✓ $name"
 }
 
+# The same, against `$FACTS` instead of `$ROOM` (prd §495).
+#
+# A SECOND FUNCTION rather than a parameter on the first, and the reason is
+# the failure that produced it: five §495 mutations were first written against
+# `mutate`, which copies `$ROOM` and only `$ROOM`, so every one reported
+# ANCHOR-MISSING against a file it was never going to read. That reads as "the
+# shipped source moved" when the source was exactly where the harness left it
+# — a check failing for a reason unrelated to the code it guards. Naming the
+# file in the function name makes the mistake unmakeable.
+mutateFacts() { # mutateFacts <name> <from> <to>
+  local name="$1" from="$2" to="$3"
+  local target="$TMP/m-facts.swift"
+  cp "$FACTS" "$target"
+  if ! MUT_FROM="$from" MUT_TO="$to" python3 "$TMP/mutapply.py" "$target"
+  then
+    echo "  ✗ $name — the mutation did not apply (the shipped source moved)"; exit 1
+  fi
+  if ! swiftc -O -o "$TMP/mutf" "$ROOM" "$target" "$TMP/main.swift" 2>/dev/null; then
+    echo "  ✓ $name (rejected at compile)"; return
+  fi
+  if "$TMP/mutf" > /dev/null 2>&1; then
+    echo "  ✗ $name — the harness still passed, so nothing was testing this"; exit 1
+  fi
+  echo "  ✓ $name"
+}
+
+# The applier, written to a file so `mutateFacts` needs no heredoc inside its
+# own body — nesting one inside an edit of this script cost a whole pass.
+cat > "$TMP/mutapply.py" <<'MUTAPPLY'
+import os, sys
+path = sys.argv[1]
+src = open(path).read()
+frm, to = os.environ["MUT_FROM"], os.environ["MUT_TO"]
+if frm not in src:
+    sys.stderr.write("ANCHOR-MISSING\n"); sys.exit(2)
+open(path, "w").write(src.replace(frm, to, 1))
+MUTAPPLY
+
 # A revoked actorId reading as live is the sharpest possible failure here —
 # it would tell someone a key can still act for an account when it can't.
 # An off-by-one here either re-reads one block twice (harmless but wasteful)
@@ -3828,6 +3933,47 @@ mutate "the paste must use the judgement-free order, never arrival order" \
 mutate "the short id must be the TAIL, never the head" \
   'VibenetRoom.shortAddress(actorId)' \
   'String(actorId.prefix(6))'
+
+# ── prd §495: the event sheet ────────────────────────────────────────────────
+
+# A LOOSER JOIN FOR THE NAME THAN FOR THE CHIPS. Naming a key without being
+# able to name its permissions prints a confident "Passkey" over a blank
+# permission row, which reads as "this key can do nothing" rather than as "we
+# could not tell which key this was" — §467's whole ruling, undone one field
+# over.
+mutateFacts "the key must be named by the SAME unambiguous join as its permissions" \
+  'let matched = kind.concernsKey ? matchedActor(actors: actors, dueAt: dueAt) : nil' \
+  'let matched = kind.concernsKey ? actors.first : nil'
+
+# A LOCK BORROWING A KEY. The expiries can legitimately line up — the account
+# whose key expires is the account that got locked — so nothing about the data
+# stops this; only the kind does.
+mutateFacts "a lock or an unlock must never name a key" \
+  'kind.concernsKey ? matchedActor(actors: actors, dueAt: dueAt) : nil' \
+  'matchedActor(actors: actors, dueAt: dueAt)'
+
+# THE HASH BY POSITION, NOT BY GUESS. Reading the LAST component picks up the
+# log index — a plausible-looking short string that fails the shape check and
+# silently removes the door from every event. The §311 class: the room does not
+# break, it goes quiet.
+mutateFacts "the transaction hash is the third component" \
+  'let hash = String(parts[2])' \
+  'let hash = String(parts[3])'
+
+# THE SHAPE CHECK IS WHAT KEEPS A REF OUT OF A URL. A ref arrives having been
+# through a `Thing` and a CloudKit round trip; without this every malformed one
+# becomes a link.
+mutateFacts "a hash that is not hash-shaped draws no door" \
+  'guard hash.count == 66, hash.hasPrefix("0x"),' \
+  'guard !hash.isEmpty,'
+
+# THE OTHER BRIDGES' REFS. Dropping the namespace test lets `peer:sell:0x…:0`
+# through, and this sheet only ever draws a VIBENET explorer — so the door
+# would open a vibenet page for a Base transaction and say it was the same one.
+mutateFacts "a ref from another bridge draws no door" \
+  'guard parts.count == 4, parts[0] == "vibenet"' \
+  'guard parts.count == 4'
+
 
 echo ""
 echo "✓ vibenet-selftest: drift guards, assertions and mutations all passed"

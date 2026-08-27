@@ -19,84 +19,212 @@ import SwiftUI
 /// worse than a gap on this particular card.
 struct VibenetEventCard: View {
     let facts: VibenetEventFacts
-    /// The event's own words, minus the address the account row already shows
-    /// — `Thing.summary`, which every landed event stamps for this purpose.
+    /// THE EVENT'S OWN WORDS, and since §495 this card's HEAD rather than a
+    /// line under one — `Thing.summary`, which every landed event stamps as
+    /// its title minus the address.
+    ///
+    /// **It beats anything this card could derive, and the reason is WHEN it
+    /// was written.** The landing resolves the key's kind from a live read at
+    /// the moment the event arrived (`VibenetEventKind.phrase(keyLabel:)`),
+    /// so `summary` says "New passkey authorized" even for a key that has
+    /// since been revoked — while the expiry join below runs against the
+    /// account's CURRENT roster and can only name a key that is still there.
+    /// Deriving the head would silently downgrade every event whose key is
+    /// gone to "A key", which is most revocations.
     let lead: String?
+    /// When it happened. The event's own `capturedAt`, which is a real block
+    /// time rather than when we looked.
+    var happenedAt: Date? = nil
     /// Opens the account's own card. A closure, never a `.sheet` of this
     /// card's own: a presentation attached to a view inside a presented sheet
     /// resolves to the same controller and tears itself down (CLAUDE.md, "one
     /// screen, one `.sheet`", paid three times).
     var onAccount: (String) -> Void
+    /// Opens the transaction on a block explorer. nil where the ref could not
+    /// be read as a hash, and then no door is drawn at all — §83: no verb
+    /// beats a verb that lands somewhere else.
+    var onTransaction: ((String) -> Void)? = nil
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     private static let mark = DS.brandHue(for: "Base Vibenet") ?? Color.fixed("#0052ff")
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            if let lead, !lead.isEmpty {
-                Text(lead)
-                    .dsText(.body17)
+            eyebrow
+            Text(title)
+                .dsText(.heading28)
+                .foregroundStyle(DS.textPrimary)
+                .fixedSize(horizontal: false, vertical: true)
+                .textSelection(.enabled)
+            if let subtitle {
+                Text(subtitle)
+                    .dsText(.callout15)
                     .foregroundStyle(DS.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, 2)
             }
+
             // WHAT THIS KEY MAY DO — chips, the shape the design settled on
             // after a grid was drawn and refused ("the chips look better, the
-            // grid is just really bad"). Drawn only on a provable match.
+            // grid is just really bad"). Drawn only on a provable match, so on
+            // most events there is nothing here and that is correct — see
+            // `VibenetEventFacts` for why a guess is worse than a gap.
             if !facts.permissions.isEmpty {
                 VibenetPermissionChips(names: facts.permissions,
                                        reduceMotion: reduceMotion)
                     .padding(.top, DS.Space.s3)
             }
+
+            // The consequence, in a sentence. This is the block that makes ONE
+            // anatomy work for all four kinds (prd §495): an authorization
+            // states its expiry, a revoke states that the key is finished, a
+            // lock states that nothing can act. Each is a fact the event
+            // itself carries — none is inferred.
+            if let consequence {
+                Text(consequence)
+                    .dsText(.body17)
+                    .foregroundStyle(DS.textPrimary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, DS.Space.s4)
+            }
+
             // THE ACCOUNT — a row, not a spec value, because it is the one
             // thing on this card worth walking into and a face is what makes
             // that legible before the words are read.
             Button {
                 onAccount(facts.account)
             } label: {
-                HStack(spacing: DS.Space.s3) {
-                    WalletFace(address: facts.account, size: DS.Face.row, circular: true)
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text(String(localized: "Account"))
-                            .dsText(.label12)
-                            .foregroundStyle(DS.textTertiary)
-                        Text(facts.accountName)
-                            .dsText(.heading17)
-                            .foregroundStyle(DS.textPrimary)
-                            .lineLimit(1)
-                    }
-                    Spacer(minLength: DS.Space.s2)
-                    Image(systemName: "chevron.right")
-                        .accessibilityHidden(true)
-                        .dsGlyph(12, weight: .semibold)
-                        .foregroundStyle(DS.textTertiary)
-                }
-                .contentShape(Rectangle())
+                walkRow(mark: { WalletFace(address: facts.account,
+                                           size: DS.Face.row, circular: true) },
+                        label: String(localized: "Account"),
+                        value: facts.accountName)
             }
             .buttonStyle(.plain)
             .dsHover()
             .padding(.top, DS.Space.s4)
 
-            // The two remaining facts, each silent when unknown. "Keys now" is
-            // deliberately present-tense: it is the account's live roster, not
-            // a count anybody recorded at the time this happened.
-            if facts.keysNow != nil || facts.expires != nil {
-                VStack(alignment: .leading, spacing: DS.Space.s2) {
-                    if let keys = facts.keysNow {
-                        factRow(String(localized: "Keys now"), "\(keys)", tinted: false)
-                    }
-                    if let expires = facts.expires {
-                        factRow(String(localized: "Expires"),
-                                Self.expiryWords(expires),
-                                tinted: expires.timeIntervalSinceNow < Self.soon)
-                    }
+            // THE TRANSACTION — the one verb this sheet can honestly offer,
+            // and it was missing entirely: until §495 the only control here
+            // was Share, while every event has carried its own hash inside
+            // its `sourceRef` since the room shipped.
+            if let hash = facts.txHash, let onTransaction {
+                Button {
+                    onTransaction(hash)
+                } label: {
+                    walkRow(mark: {
+                        RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous)
+                            .fill(DS.fillFaint)
+                            .frame(width: DS.Face.row, height: DS.Face.row)
+                            .overlay {
+                                Image(systemName: "arrow.up.forward")
+                                    .accessibilityHidden(true)
+                                    .dsGlyph(11, weight: .semibold)
+                                    .foregroundStyle(DS.textTertiary)
+                            }
+                    },
+                    label: String(localized: "Transaction"),
+                    value: Self.shortHash(hash))
                 }
+                .buttonStyle(.plain)
+                .dsHover()
                 .padding(.top, DS.Space.s3)
             }
         }
-        .padding(DS.Space.s4)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(DS.fillFaint,
-                    in: RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
+    }
+
+    /// **NO CARD** (user, 2026-08-26: *"Lets do headers no cards"*, and §483's
+    /// own "we don't do cards"). It drew on a `fillFaint` slab, which put a
+    /// second surface inside a presented sheet — a card on a card.
+    @ViewBuilder
+    private func walkRow<Mark: View>(@ViewBuilder mark: () -> Mark,
+                                     label: String,
+                                     value: String) -> some View {
+        HStack(spacing: DS.Space.s3) {
+            mark()
+            VStack(alignment: .leading, spacing: 1) {
+                Text(label)
+                    .dsText(.label12)
+                    .foregroundStyle(DS.textTertiary)
+                Text(value)
+                    .dsText(.heading17)
+                    .foregroundStyle(DS.textPrimary)
+                    .lineLimit(1)
+            }
+            Spacer(minLength: DS.Space.s2)
+            Image(systemName: "chevron.right")
+                .accessibilityHidden(true)
+                .dsGlyph(12, weight: .semibold)
+                .foregroundStyle(DS.textTertiary)
+        }
+        .contentShape(Rectangle())
+    }
+
+    /// WHEN IT HAPPENED, above the title.
+    ///
+    /// The DATE and not the verb: `lead` is a whole sentence carrying the
+    /// verb already ("New passkey authorized"), so an eyebrow reading
+    /// "Authorized" is §366's read-its-first-line-twice one word at a time.
+    /// A lock takes the attention hue here — the one kind whose eyebrow is
+    /// worth a colour, because it is the one where the standing state changed
+    /// rather than the roster.
+    @ViewBuilder
+    private var eyebrow: some View {
+        if let happenedAt {
+            Text(happenedAt.formatted(.dateTime.day().month().hour().minute()))
+                .dsText(.label12)
+                .foregroundStyle(facts.kind == .locked ? DS.attention : DS.textTertiary)
+                .lineLimit(1)
+                .padding(.bottom, 2)
+        }
+    }
+
+    /// THE SUBJECT.
+    ///
+    /// The event's own words where it has them (see `lead`). The fallbacks
+    /// below are for a row landed before `summary` was stamped: on a key
+    /// event the KEY where the join could name it, else the honest generic;
+    /// on a lock or an unlock the ACCOUNT, because that is what the event is
+    /// about.
+    private var title: String {
+        if let lead, !lead.isEmpty { return lead }
+        if let key = facts.key { return key.title }
+        switch facts.kind {
+        case .authorized: return String(localized: "A new key")
+        case .revoked:    return String(localized: "A key")
+        case .locked:     return String(localized: "This account is locked")
+        case .unlocking:  return String(localized: "This account is unlocking")
+        }
+    }
+
+    /// The key's own clause plus its short id, so the sheet names the same
+    /// key the Permissions list does. Silent on a lock — there is no key.
+    private var subtitle: String? {
+        guard let key = facts.key else { return nil }
+        guard let detail = key.detail else { return key.shortID }
+        return "\(key.shortID) · \(detail)"
+    }
+
+    /// WHAT IT MEANS NOW — one sentence, assembled from stamped facts and
+    /// never parsed out of a title.
+    private var consequence: String? {
+        switch facts.kind {
+        case .authorized:
+            guard let expires = facts.expires else {
+                return facts.key == nil
+                    ? nil
+                    : String(localized: "It does not expire.")
+            }
+            return expires.timeIntervalSinceNow <= 0
+                ? String(localized: "It has since expired.")
+                : Self.expiryClause(expires)
+        case .revoked:
+            return String(localized: "It can no longer act for this account.")
+        case .locked:
+            return String(localized: "No key can act for this account until it is unlocked.")
+        case .unlocking:
+            return String(localized: "When the timelock elapses, this account can be spent from again.")
+        }
     }
 
     /// Under a week is worth the brand hue — the same threshold the room's own
@@ -104,20 +232,30 @@ struct VibenetEventCard: View {
     /// urgent there too.
     private static let soon: TimeInterval = 7 * 24 * 3600
 
-    private func factRow(_ label: String, _ value: String, tinted: Bool) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s3) {
-            Text(label)
-                .dsText(.label12)
-                .foregroundStyle(DS.textTertiary)
-                .frame(width: 80, alignment: .leading)
-            Text(value)
-                .dsText(.callout15)
-                .fontWeight(tinted ? .semibold : .regular)
-                .foregroundStyle(tinted ? Self.mark : DS.textPrimary)
-                .monospacedDigit()
-                .fixedSize(horizontal: false, vertical: true)
-            Spacer(minLength: 0)
+    /// A transaction hash, short enough for a row. Head AND tail, unlike an
+    /// address: a hash has no checksum case and no ENS name, so the head is
+    /// the only part anybody recognises when comparing against an explorer.
+    static func shortHash(_ hash: String) -> String {
+        guard hash.count > 14 else { return hash }
+        return hash.prefix(8) + "…" + hash.suffix(4)
+    }
+
+    /// The expiry as a SENTENCE.
+    ///
+    /// Spelled out rather than lowercasing `expiryWords`, which was the first
+    /// cut and shipped "It expires dec 31, 2099." — the month's own capital
+    /// eaten by a blanket `.lowercased()`. A near expiry reads "tomorrow" or
+    /// "in 3 days" and a far one takes "on" before its date, which is the
+    /// clause the countdown forms deliberately do not want.
+    static func expiryClause(_ date: Date, now: Date = .now) -> String {
+        let seconds = date.timeIntervalSince(now)
+        if seconds < soon {
+            let days = max(1, Int((seconds / 86_400).rounded(.up)))
+            return days == 1
+                ? String(localized: "It expires tomorrow.")
+                : String(localized: "It expires in \(days) days.")
         }
+        return String(localized: "It expires on \(date.formatted(.dateTime.day().month().year())).")
     }
 
     /// A date, or a countdown when one is close enough to act on. The room

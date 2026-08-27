@@ -137,8 +137,14 @@ struct VibenetAccountDetail: View {
             // it — holds only where the chip says the SAME word. The chip says
             // "Accounts"; this says "Linked accounts", which is a different
             // claim, so the header is doing work rather than repeating one.
-            if wants(.accounts), hasLinks || !item.subAccounts.isEmpty {
-                sectionHeader(String(localized: "Linked accounts"))
+            // ONE HEADER PER GROUP, not one over both (prd §495). It was a
+            // single "Linked accounts" covering two sections that answer
+            // OPPOSITE questions — who can act for you, and who you can act
+            // for — so the second arrived unlabelled under the first one's
+            // name. Turning the cards into headed groups made that visible as
+            // a doubled heading on the device; the fix is the header moving
+            // INTO each group rather than a second one being removed.
+            if wants(.accounts) {
                 linkedCard
                 subAccountsCard
             }
@@ -165,17 +171,6 @@ struct VibenetAccountDetail: View {
         }
     }
 
-    /// The surface every card on this screen wears — `VibenetRoomCard.card`'s
-    /// own recipe, so the scoped view and the aggregate draw the same object.
-    @ViewBuilder
-    private func card<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: 0) { content() }
-            .padding(DS.Space.s4)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .dsWidgetSurface()
-            .clipShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
-    }
-
     /// `walletGroupHeader`'s recipe, matching the room's own `sectionHeader`.
     private func sectionHeader(_ title: String) -> some View {
         Text(title)
@@ -187,21 +182,38 @@ struct VibenetAccountDetail: View {
             .padding(.bottom, -DS.Space.s3)
     }
 
-    /// The delegate spine, in a card of its own.
+    /// The delegate spine — a HEADER and its rows (prd §495).
+    ///
+    /// **The cards are gone** (user, 2026-08-26: *"on accounts when you click
+    /// an item in the list… we can do better, poor design and also has a
+    /// card. needs to look like the others"*, and the standing ruling from the
+    /// same session, *"Lets do headers no cards"*).
+    ///
+    /// This screen was three slabs on a page reached FROM a room that draws
+    /// none, so narrowing to one account changed the grammar of the app under
+    /// you — which is the opposite of §477's own goal of making the scoped
+    /// view feel like the same screen. A header names a group; a slab draws a
+    /// box around it and then a second box around the next one.
     @ViewBuilder
     private var linkedCard: some View {
         if hasLinks {
-            card { linkedAccountsSection }
+            VStack(alignment: .leading, spacing: DS.Space.s3) {
+                sectionHeader(String(localized: "Linked accounts"))
+                linkedAccountsSection
+            }
         }
     }
 
-    /// Sub-accounts, in a card of their own — the OTHER direction from the
-    /// spine above (who named YOU), which is why it is a second card rather
-    /// than more rows in the first.
+    /// Sub-accounts — the OTHER direction from the spine above (who named
+    /// YOU), which is why it is a second group rather than more rows in the
+    /// first.
     @ViewBuilder
     private var subAccountsCard: some View {
         if !item.subAccounts.isEmpty {
-            card { subAccountsSection }
+            VStack(alignment: .leading, spacing: DS.Space.s3) {
+                sectionHeader(String(localized: "Sub-accounts"))
+                subAccountsSection
+            }
         }
     }
 
@@ -214,13 +226,14 @@ struct VibenetAccountDetail: View {
     /// provenance note sits bare for the same reason.
     @ViewBuilder
     private var recordCard: some View {
-        card {
+        VStack(alignment: .leading, spacing: 0) {
             historySection
             syncSection
                 .padding(.top, DS.Space.s3)
             doorsSection
                 .padding(.top, DS.Space.s4)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     // MARK: - Balance (2026-08-24)
@@ -852,7 +865,7 @@ struct VibenetAccountDetail: View {
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: DS.Space.s2) {
                     Text(actor.kind.plainTitle)
-                        .dsText(.body17)
+                        .dsText(.heading17)
                         .foregroundStyle(DS.textPrimary)
                         .lineLimit(1)
                     // WHICH KEY (prd §470) — two keys of one kind on one
@@ -1071,15 +1084,14 @@ struct VibenetAccountDetail: View {
     @ViewBuilder
     private var subAccountsSection: some View {
         if let line = VibenetSubAccounts.line(item.subAccounts) {
+            // No title — the group header above says "Sub-accounts" now that
+            // the card is gone (§495), and a `heading17` repeating it is the
+            // duplication §475 removed from the keys headline and §477
+            // removed from the spine one section up.
             VStack(alignment: .leading, spacing: DS.Space.s3) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(String(localized: "Sub-accounts"))
-                        .dsText(.heading17)
-                        .foregroundStyle(DS.textPrimary)
-                    Text(line)
-                        .dsText(.label11)
-                        .foregroundStyle(DS.textTertiary)
-                }
+                Text(line)
+                    .dsText(.label11)
+                    .foregroundStyle(DS.textTertiary)
                 VStack(alignment: .leading, spacing: DS.Space.s2) {
                     ForEach(item.subAccounts) { sub in
                         subAccountRow(sub)

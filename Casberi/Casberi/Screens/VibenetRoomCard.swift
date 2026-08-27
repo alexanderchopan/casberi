@@ -1259,7 +1259,16 @@ struct VibenetRoomCard: View {
         let web = owner.flatMap {
             VibenetAccountWeb.web(owner: $0.address, subAccounts: $0.subAccounts)
         }
-        let links = VibenetAccountMapping.links(room.items)
+        // **THE LINKS COME FROM THE FULL ROOM, never `room.items`** (prd
+        // §495). A link relates TWO accounts, so a scoped room — one item —
+        // can never produce one, and reading the scoped list made this figure
+        // answer "nothing is shared" directly above a list saying "…9a0b ·
+        // you can act for them". Two answers to one question, one scroll
+        // apart, on the screen whose whole subject is who can act for whom
+        // (§83). `VibenetAccountDetail` is handed `links(fullItems)` at both
+        // of its call sites for exactly this reason; the figure had been
+        // reading the narrower list since it was written.
+        let links = VibenetAccountMapping.links(Self.fullItems(fallback: room))
         if let web {
             VibenetAccountWebCard(web: web,
                                   name: { Self.displayName($0) },
@@ -1273,7 +1282,73 @@ struct VibenetRoomCard: View {
                                  onPick: onScope,
                                  reduceMotion: reduceMotion)
             }
+        } else {
+            // **AN EMPTY SCOPE STILL DRAWS** (prd §495, user: *"even if there
+            // are no accounts we need an empty state image"*).
+            //
+            // This was the one scope that could render NOTHING: no web and no
+            // links left a 210pt reserved box empty, which reads as a drawing
+            // that failed to load rather than as an answer. And it is the
+            // ORDINARY case — a sub-account is Base's own "Spending Account"
+            // shape and most accounts have never made one.
+            accountsEmptyFigure
         }
+    }
+
+    /// NOTHING IS SHARED — the Accounts scope with no relationship to draw.
+    ///
+    /// **It is a real reading, not an apology.** "No other account can act for
+    /// this one" is the answer somebody opens a permissions room hoping for,
+    /// so it is stated in the room's own headline tier rather than as grey
+    /// fine print under a blank box.
+    ///
+    /// The drawing is the web's own vocabulary with one end missing: the
+    /// account's face, and beside it the dashed empty ring
+    /// `VibenetAccountWebCard` uses for an account that exists and is not
+    /// being followed. Here the ring stands for an account that does not
+    /// exist — which is why the connector between them is absent rather than
+    /// dashed. A line to nothing would be a relationship drawn where there is
+    /// none (§83, on the screen whose whole subject is who can act for whom).
+    ///
+    /// **It never says the chain is empty**, only that nothing was read: the
+    /// sub-account read answers for the accounts this app watches, so "no
+    /// sub-accounts" is a fact about the roster and not about Base.
+    @ViewBuilder
+    private var accountsEmptyFigure: some View {
+        let subject = scopedAddress
+            ?? room.items.first?.address
+        scopeFigure(headline: String(localized: "Nothing is shared")) {
+            VStack(alignment: .leading, spacing: DS.Space.s4) {
+                HStack(spacing: DS.Space.s4) {
+                    if let subject {
+                        WalletFace(address: subject, size: DS.Face.shelf, circular: true)
+                    }
+                    Circle()
+                        .strokeBorder(DS.fillLine,
+                                      style: StrokeStyle(lineWidth: 1.4, dash: [3, 3]))
+                        .frame(width: DS.Face.shelf, height: DS.Face.shelf)
+                        .opacity(0.6)
+                }
+                Text(emptyAccountsLine)
+                    .dsText(.callout15)
+                    .foregroundStyle(DS.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .frame(maxHeight: .infinity, alignment: .top)
+        }
+    }
+
+    /// The sentence under the empty web. Scoped it speaks about ONE account;
+    /// unscoped about the roster, because "no other account can act for this
+    /// one" is a claim the unscoped view has not checked for every account.
+    private var emptyAccountsLine: String {
+        if let scopedAddress {
+            return String(localized:
+                "No other account can act for \(Self.displayName(scopedAddress)), and it can act for none.")
+        }
+        return room.items.count == 1
+            ? String(localized: "No other account can act for this one, and it can act for none.")
+            : String(localized: "None of the accounts you watch can act for another.")
     }
 
     /// EVERY KEY, UNDER THE ACCOUNT IT CAN ACT FOR (prd §491).
@@ -1420,17 +1495,33 @@ struct VibenetRoomCard: View {
     @ViewBuilder
     private var permissionsFigure: some View {
         let counts = policyRows
-        if !counts.isEmpty {
-            let keys = VibenetKeyAggregation.compose(room.items, now: .now)
+        let keys = VibenetKeyAggregation.compose(room.items, now: .now)
+        if counts.isEmpty {
+            // **AN EMPTY CENSUS IS AN ANSWER** (prd §495, user: *"for empty
+            // states or when there is only one item we need to fill it
+            // better"*). It drew NOTHING, so the room's most important
+            // question — what can act on your accounts — was blank rather
+            // than answered in a reserved 210pt box.
+            permissionsEmptyFigure(keys)
+        } else {
+            let drawn = Array(counts.prefix(Self.permissionRungs))
             scopeFigure(headline: keys.map {
                 $0.total == 1 ? String(localized: "1 key") : String(localized: "\($0.total) keys")
             }) {
                 VStack(alignment: .leading, spacing: 0) {
-                    ForEach(Array(counts.prefix(Self.permissionRungs).enumerated()),
+                    ForEach(Array(drawn.enumerated()),
                             id: \.element.label) { index, row in
                         HStack(alignment: .firstTextBaseline, spacing: DS.Space.s3) {
                             Text("\(row.count)")
-                                .dsText(.stat24)
+                                // **THE TYPE GROWS WHEN THERE ARE FEW RUNGS**
+                                // (prd §495). At a fixed `stat24` a lone rung
+                                // was one small line adrift in the slot's
+                                // reserved height — which reads as a drawing
+                                // that failed rather than as an account with
+                                // one kind of key. The ramp is the SAME
+                                // decision `NoteProse` makes for a short post:
+                                // fewer things to say, said larger.
+                                .dsText(Self.rungFigureTier(drawn.count))
                                 // ADMIN and only admin wears the alarm colour:
                                 // it is the one rung that is unbounded, and
                                 // colouring the others would be this app
@@ -1438,23 +1529,82 @@ struct VibenetRoomCard: View {
                                 .foregroundStyle(index == 0 && row.label == Self.adminLabel
                                                  ? DS.attention : DS.textPrimary)
                                 .monospacedDigit()
-                                .frame(width: 26, alignment: .leading)
+                                .frame(width: drawn.count <= 2 ? 46 : 26, alignment: .leading)
                             Text(row.label)
-                                .dsText(.callout15)
+                                .dsText(Self.rungLabelTier(drawn.count))
                                 .foregroundStyle(DS.textPrimary)
                                 .lineLimit(1)
                                 .minimumScaleFactor(0.85)
                             Spacer(minLength: 0)
                         }
                         .padding(.vertical, 1)
+                        // The rungs SPREAD to fill the slot rather than
+                        // stacking at its top — the Activity band's ruling
+                        // (§493), which the type ramp above cannot finish on
+                        // its own: two rungs set large still leave air, and
+                        // air distributed is a margin while air pooled at the
+                        // bottom is a gap.
+                        if index < drawn.count - 1 {
+                            Spacer(minLength: 0).frame(maxHeight: Self.rungSpread(drawn.count))
+                        }
                     }
                     if counts.count > Self.permissionRungs {
                         Text(String(localized: "and \(counts.count - Self.permissionRungs) more"))
                             .dsText(.label12).foregroundStyle(DS.textTertiary)
                     }
+                    Spacer(minLength: 0)
                 }
+                .frame(maxHeight: .infinity, alignment: .top)
             }
         }
+    }
+
+    /// NOTHING CAN ACT — the Permissions scope with no key to count.
+    ///
+    /// Three distinct states wear three sentences, because collapsing them is
+    /// the §83 failure on the screen where it costs most: "no key can act for
+    /// this account" is a SAFETY claim, and saying it over a read that never
+    /// reached the chain would be the most reassuring possible way to be
+    /// wrong.
+    @ViewBuilder
+    private func permissionsEmptyFigure(_ keys: VibenetKeyAggregate?) -> some View {
+        let unreached = keys?.unreachedCount ?? 0
+        let headline = unreached > 0
+            ? String(localized: "Not read yet")
+            : String(localized: "No keys")
+        scopeFigure(headline: headline) {
+            VStack(alignment: .leading, spacing: DS.Space.s4) {
+                Image(systemName: unreached > 0 ? "antenna.radiowaves.left.and.right.slash" : "key.slash")
+                    .accessibilityHidden(true)
+                    .dsGlyph(30, weight: .regular)
+                    .foregroundStyle(unreached > 0 ? DS.attention : DS.textTertiary)
+                Text(unreached > 0
+                     ? String(localized: "The chain did not answer, so this room cannot say what can act for you.")
+                     : String(localized: "Nothing can act for these accounts on vibenet."))
+                    .dsText(.callout15)
+                    .foregroundStyle(DS.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .frame(maxHeight: .infinity, alignment: .top)
+        }
+    }
+
+    /// The figure's tier by how many rungs share the slot — see the rungs'
+    /// own note. Spelled as a function rather than inline so the label tier
+    /// below cannot drift out of step with it.
+    private static func rungFigureTier(_ count: Int) -> DSTextStyle {
+        count <= 2 ? .price40 : .stat24
+    }
+
+    private static func rungLabelTier(_ count: Int) -> DSTextStyle {
+        count <= 2 ? .heading22 : .callout15
+    }
+
+    /// The most air allowed between two rungs — `VibenetAccountWebCard`'s own
+    /// `maxSpread` reasoning, tighter because a rung is one line rather than
+    /// a face and two.
+    private static func rungSpread(_ count: Int) -> CGFloat {
+        count <= 2 ? 30 : 14
     }
 
     /// The census, composed ONCE for both readers (prd §468's guard, honoured
@@ -1836,6 +1986,21 @@ struct VibenetRoomCard: View {
     }
 
     @ViewBuilder
+
+    /// ONE ROW GRAMMAR FOR AN OBJECT (prd §495).
+    ///
+    /// Reported as *"the list items are not consistent design"*, and measured
+    /// across the room's seven row builders before anything was changed: the same
+    /// KIND of row — a thing with a face, a name and one clause under it — was
+    /// drawn at `body17`, `heading17`, `callout15` and `label11` depending on
+    /// which file it lived in, with faces at both `rowCircle` and `list`.
+    ///
+    /// The settled shape, and the axis is what a row IS rather than where it sits:
+    /// an OBJECT row (an account, a linked account, a sub-account, a key) leads
+    /// with a face or mark at `DS.Face.rowCircle`, names itself at `heading17`,
+    /// and carries one clause at `label11`. A CENSUS rung (a permission count) is
+    /// not an object and keeps its own shape — it is a number and a label, and
+    /// giving it a row's type would make eight keys look like eight things.
     private func accountRow(_ item: VibenetAccountItem) -> some View {
         if let onScope {
             Button {
@@ -1855,7 +2020,7 @@ struct VibenetRoomCard: View {
                 WalletFace(address: item.address, size: DS.Face.rowCircle, circular: true)
                 VStack(alignment: .leading, spacing: 1) {
                     Text(Self.displayName(item.address))
-                        .dsText(.body17)
+                        .dsText(.heading17)
                         .foregroundStyle(DS.textPrimary)
                         .lineLimit(1)
                     // The room's OWN state sentence, never a second wording.

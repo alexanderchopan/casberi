@@ -720,10 +720,29 @@ enum DemoSeedAll {
             // and no expiry. Same class as §349's Peer/Privacy Pools demo
             // refs: the rows land, the room renders, and the one reading that
             // needed the ref is quietly absent.
-            ("0x1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b", "New passkey authorized", "actor:demo1", 1.0),
-            ("0x1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b", "New secp256k1 key authorized", "actor:demo2", 1.0),
-            ("0x2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c", "Locked on vibenet", "locked:demo3", 2.0),
-            ("0x3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d", "Key revoked", "actor:demo4", 4.0),
+            //
+            // **THE REFS CARRY A REAL-SHAPED HASH** (prd §495). They were
+            // `vibenet:actor:demo1` — three components — and the event sheet's
+            // transaction door reads the hash POSITIONALLY out of the real
+            // bridge's own four-component ref, so every demo event failed the
+            // shape and drew no door. The §349 class again, one field over:
+            // the rows land, the sheet renders, and the one control it has is
+            // silently absent from the corpus the demo exists to show.
+            //
+            // The hashes are invented and could not be otherwise — nothing
+            // here reaches a chain — so tapping one opens an explorer page
+            // that says no such transaction. That is the honest failure for a
+            // demo and the same one every other demo permalink here makes; a
+            // real hash would send somebody to a stranger's transaction and
+            // imply it was theirs.
+            ("0x1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b", "New passkey authorized",
+             "actor:0x7c1d4e9a2b6f83c05d17e4a9b820f36cd15e7a48b93c206df41e85a7cb90d24f:0", 1.0),
+            ("0x1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b", "New secp256k1 key authorized",
+             "actor:0x3f8b25c6d017a94e5b83f2016cd74a9e8b520371fc6ad9e04b18752c3ae6f091:1", 1.0),
+            ("0x2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c", "Locked on vibenet",
+             "locked:0x9e04a71b3c8d526f0a94e7128bd35c6f807a1e29d4b60358cf9a2e714d80b365:0", 2.0),
+            ("0x3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d", "Key revoked",
+             "actor:0x5a2c9e18b7043fd61c85920ae3b47d6f0c19a5e8347b26df10a95c8e2b4713a9:0", 4.0),
         ].map { address, phrase, ref, days in
             let short = VibenetRoom.shortAddress(address)
             // The TITLE keeps naming the account — it is what the All feed,
@@ -745,24 +764,30 @@ enum DemoSeedAll {
                 // match nothing and the chips would never draw. The account's
                 // other two actors carry expiry 0 ("never"), which is what
                 // makes this match unique.
-                if ref == "actor:demo2" {
+                //
+                // Keyed on the PHRASE rather than the ref since §495 gave the
+                // refs real transaction hashes: a ref is now a 70-character
+                // string nobody can match by eye, and a demo whose branches
+                // are keyed to one is a demo that breaks silently the next
+                // time a hash is regenerated.
+                if phrase == "New secp256k1 key authorized" {
                     thing.dueAt = Date(timeIntervalSince1970: 4_102_444_800)
                 }
                 // The §308 facets the real bridge stamps (prd §468) — without
                 // them the demo's four vibenet rows are the only rows in this
                 // room a facet ask can never reach, which is exactly the demo
                 // parity §349 made a standing rule.
-                switch ref {
-                case "locked:demo3":               thing.tags = ["Locked"]
-                case "actor:demo4":                thing.tags = ["Key", "Revoked"]
-                default:                           thing.tags = ["Key"]
+                switch phrase {
+                case "Locked on vibenet": thing.tags = ["Locked"]
+                case "Key revoked":       thing.tags = ["Key", "Revoked"]
+                default:                  thing.tags = ["Key"]
                 }
                 // ONE demo authorization is an ADMIN key, so the row that
                 // reaches the lock screen (`NotifySweep.classify`) exists in
                 // the demo at all. `demoFixture`'s own scope-0 actor lives on
                 // a different account, and that is fine: the tag is the whole
                 // gate and nothing joins the two.
-                if ref == "actor:demo1" { thing.tags.append("Admin key") }
+                if phrase == "New passkey authorized" { thing.tags.append("Admin key") }
             }
         }
     }

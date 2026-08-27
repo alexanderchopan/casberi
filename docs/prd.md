@@ -35583,9 +35583,78 @@ one opens an explorer page that says no such transaction, which is the
 honest failure a demo permalink makes here. A real hash would send somebody
 to a stranger's transaction and imply it was theirs.
 
+### 6. The rest of the same report
+
+Four more items came in the same message and are fixed here rather than
+deferred, because each is the SAME failure the sheet had — a surface that
+renders without saying anything.
+
+**The account detail lost its cards.** *"On accounts when you click an item in
+the list… we can do better, poor design and also has a card. needs to look
+like the others."* It was three slabs on a page reached FROM a room that draws
+none, so one tap changed the grammar of the app under you — the opposite of
+§477's own goal of making the scoped view feel like the same screen. Each
+group carries a header now. What survives from §477 is the part that was never
+about cards: the page must not be one undifferentiated slab, and its readings
+must be grouped by a landmark a reader can see. Its harness guard is AMENDED
+to demand the header and to forbid the card, not deleted.
+
+That change surfaced a defect §477 had left standing: ONE header, "Linked
+accounts", covered two sections answering OPPOSITE questions — who can act for
+you, and who you can act for — so the second arrived unlabelled under the
+first one's name. One header per group.
+
+**The Accounts scope draws when it is empty.** It was the one scope that could
+render nothing at all, in the ORDINARY case: a sub-account is Base's own
+"Spending Account" shape and most accounts have never made one, so a reserved
+210pt box sat blank and read as a drawing that failed to load. "Nothing is
+shared" is a real answer and is stated in the room's own headline tier. The
+drawing is the web's own vocabulary with one end missing — the account's face,
+and the dashed ring that means "an account not being followed", here standing
+for an account that does not exist. **No connector between them**, because a
+line to nothing draws a relationship where there is none.
+
+Writing it found a live §83 defect one line away: the figure read
+`VibenetAccountMapping.links(room.items)` — the SCOPED room — and a link
+relates two accounts, so a scoped room of one item can never produce one. The
+figure therefore answered "nothing is shared" directly above a list saying
+"…9a0b · you can act for them". Two answers to one question, one scroll apart,
+on the screen whose whole subject is who can act for whom.
+`VibenetAccountDetail` is handed `links(fullItems)` at both its call sites for
+exactly this reason; the figure had been reading the narrower list since it
+was written.
+
+**Permissions fills its slot and answers when empty.** An empty census drew
+nothing; it now says "No keys" or "Not read yet" — three states, three
+sentences, because *"no key can act for this account"* is a SAFETY claim and
+saying it over a read that never reached the chain is the most reassuring
+possible way to be wrong. And the rungs' type now GROWS when there are few of
+them: at a fixed `stat24` a lone rung was one small line adrift in the
+reserved height, which reads as a drawing that failed rather than as an
+account with one kind of key.
+
+**One row grammar.** *"The list items are not consistent design."* Measured
+across the room's seven row builders before anything was changed: the same
+kind of row — a thing with a face, a name and one clause — was drawn at
+`body17`, `heading17`, `callout15` and `label11` depending on which file it
+lived in. An OBJECT row now leads with a face at `DS.Face.rowCircle`, names
+itself at `heading17` and carries one clause at `label11`. A CENSUS rung is
+not an object and keeps its own shape, because giving it a row's type would
+make eight keys look like eight things.
+
 ### What this does NOT do
 
 No timeline, no neighbours, no key roster — C and B's own roster were both
-declined above. And the sheet still cannot say what a key has DONE with its
+declined above. The sheet still cannot say what a key has DONE with its
 permissions; `policyCommitment` is the join that would make that answerable
 and nothing reads it yet.
+
+**And the trays are NOT settled.** The other half of *"some things open with a
+tray some don't"* is a behaviour question — which rows are doors — and making
+a row a door changes what a tap does, which is not a call to make while
+tidying type tiers. The inventory is done and the decision is open.
+
+**Two defects seen and left alone**, both older than this pass and neither in
+its scope: a scoped account's crown draws the WHOLE room's delta beside its
+own balance (0.014 ETH with the room's +38.9%), and the Accounts scope's
+headline is the balance aggregate's line rather than anything about accounts.

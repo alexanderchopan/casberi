@@ -533,6 +533,19 @@ struct ThingSheetView: View {
                     // covers tokens, trending rows and stocks alike and cannot
                     // drift the way the Site row did.
                     EmptyView()
+                } else if vibenetEventFacts != nil {
+                    // A VIBENET EVENT IS ITS OWN HEAD (prd §495). The card
+                    // below opens with the event's own words at the display
+                    // tier, so drawing `thing.title` above it sets the same
+                    // sentence twice — once with the address and once without,
+                    // one line apart, which is §366's failure with the two
+                    // halves visible at the same time.
+                    //
+                    // The same stand-down the token chart and the note
+                    // anatomies above already make, and for the same reason:
+                    // an object that states its own subject does not want a
+                    // label over it.
+                    EmptyView()
                 } else {
                     titleBlock
                         .padding(.horizontal, DS.Space.s4)
@@ -548,12 +561,17 @@ struct ThingSheetView: View {
                 // every input is already in hand: the event's own stored
                 // fields plus the cached room, no store read and no await.
                 //
-                // No `lead`: `summary` is the title minus the address, so
-                // printing it here sets the same sentence twice, the second
-                // time smaller.
+                // `lead` IS the head now (prd §495, reversing this comment's
+                // own former reasoning): `summary` is the title minus the
+                // address, and since the generic title block stands down above
+                // it is drawn once here rather than twice. It beats anything
+                // this card could derive because the landing resolved the
+                // key's kind from a LIVE read at the time — see the card's own
+                // note on `lead`.
                 if let facts = vibenetEventFacts {
                     VibenetEventCard(facts: facts,
-                                     lead: nil,
+                                     lead: thing.summary,
+                                     happenedAt: thing.capturedAt,
                                      // THE VIBENET ACCOUNT, not the wallet
                                      // address card (2026-08-25, prd §476).
                                      // `openAddressCard` opens `AddressCard`,
@@ -563,7 +581,16 @@ struct ThingSheetView: View {
                                      // keystore account, and none of which this
                                      // bridge feeds. The account's real detail
                                      // is `VibenetAccountSheet`, one door over.
-                                     onAccount: openVibenetAccount)
+                                     onAccount: openVibenetAccount,
+                                     // The chain's own explorer, opened in
+                                     // the person's browser — a hand-off, not
+                                     // a read of ours, so no host of ours
+                                     // joins `NetworkReach`.
+                                     onTransaction: { hash in
+                                         if let url = URL(string: VibenetExplorer.tx(hash)) {
+                                             openURL(url)
+                                         }
+                                     })
                         .padding(.horizontal, DS.Space.s4)
                         .padding(.top, DS.Space.s3)
                         .settleIn(delay: 0.08)
@@ -2223,14 +2250,32 @@ struct ThingSheetView: View {
         // unlock is about the ACCOUNT, so it never claims a key it isn't
         // about. `sourceRef`'s own segment is the authority — the title is
         // localized and must never be parsed.
-        let concernsKey = thing.sourceRef?.hasPrefix("vibenet:actor") ?? false
+        // WHICH OF THE FOUR, off the ref's own segment (prd §495). The
+        // segment is `VibenetEventKind.refSegment`'s constant and an
+        // authorization and a revocation SHARE it — "actor" — so the two are
+        // separated by the tag the landing stamps, never by reading the
+        // localized title. An unrecognised shape falls back to `authorized`,
+        // which is the only kind whose anatomy degrades to the generic
+        // ("A new key", no chips) rather than to a wrong claim about a lock.
+        let ref = thing.sourceRef ?? ""
+        let kind: VibenetEventFacts.Kind
+        if ref.hasPrefix("vibenet:locked") {
+            kind = .locked
+        } else if ref.hasPrefix("vibenet:unlocking") {
+            kind = .unlocking
+        } else if thing.tags.contains("Revoked") {
+            kind = .revoked
+        } else {
+            kind = .authorized
+        }
         return VibenetEventFacts.compose(
             account: account,
             accountName: VibenetWatch.shared.name(for: account)
                 ?? VibenetRoom.shortAddress(account),
             actors: item?.actors ?? [],
             dueAt: thing.dueAt,
-            concernsKey: concernsKey)
+            kind: kind,
+            sourceRef: thing.sourceRef)
     }
 
     /// Opening the address behind the receipt's subject face (prd §369
