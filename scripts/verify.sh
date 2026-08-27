@@ -896,6 +896,18 @@ harness "Legible-ink self-test" "legible-ink self-test" "scripts/legible-ink-sel
 # 2019 archive's counts shown with no date read as numbers just measured.
 harness "Social sheet self-test" "social sheet self-test" "scripts/social-sheet-selftest.sh" "the social sheet self-test failed — run scripts/social-sheet-selftest.sh"
 
+# What anatomy a social ROOM's rows wear (prd §489, 2026-08-26) — the sheet's
+# guard above, one level out, and for a stronger reason: until this pass these
+# rules lived inside five hand-rolled branches in an 8,900-line SwiftUI view,
+# where NO check in this repo could reach them. Not a `swiftc` harness (the file
+# needs SwiftData and SwiftUI), not the screen sweep (it proves a room painted,
+# never that it painted the right anatomy). So they drifted with every gate
+# green: Nostr and TikTok had no case at all, and §396a's "a post card never
+# merges" was repaired for X and never carried to Instagram or Telegram. Its
+# last block is the one that matters — every catalog `Network` seat must resolve
+# in `SocialRoom.table`, so the ninth network cannot ship without a room.
+harness "Social room self-test" "social room self-test" "scripts/social-room-selftest.sh" "the social room self-test failed — run scripts/social-room-selftest.sh"
+
 # An event's enrichment (`Model/EventDetails.swift`, 2026-08-14) — which link
 # in an invite is the way to JOIN the call, and how a collapsed series says it
 # repeats. UNTESTABLE ANY OTHER WAY: every input is a real invite, and the

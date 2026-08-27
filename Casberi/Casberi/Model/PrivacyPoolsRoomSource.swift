@@ -166,7 +166,23 @@ enum PrivacyPoolsRoomSource {
         out.append("note=\(PrivacyPoolsRoom.note(room))")
         out.append("holdings=\(PrivacyPoolsRoom.holdingsLine(room) ?? "none")")
         out.append("cover=\(PrivacyPoolsRoom.coverLine(room.cover) ?? "none")")
-        out.append("footnote=\(PrivacyPoolsRoom.footnote(room, now: now) ?? "none")")
+        // The old single `footnote` is two scope captions now (prd §486) —
+        // printed apart, because they answer different questions and a room
+        // can legitimately have one and not the other.
+        out.append("shieldedNote=\(PrivacyPoolsRoom.shieldedNote(room) ?? "none")")
+        out.append("activityNote=\(PrivacyPoolsRoom.activityNote(room, now: now) ?? "none")")
+        // WHICH SCOPES THE ROOM WOULD OFFER, and which wears the dot. It is
+        // the strip's own gate, so a room that draws no control has a cause
+        // that is otherwise invisible from outside: one scope is not a
+        // control, and a room of two untagged deposits is meant to look like a
+        // short list.
+        let scopes = PrivacyPoolsSection.present(
+            shielded: !room.holdings.isEmpty,
+            review: !room.segments.isEmpty || room.untagged > 0)
+        out.append("privacyPoolsScopes| "
+                   + scopes.map(\.rawValue).joined(separator: ",")
+                   + " · strip=\(PrivacyPoolsSection.shows(present: scopes) ? "YES" : "no")"
+                   + " · dot=\(PrivacyPoolsSection.attention(needsProof: room.needsYou != nil, declined: room.needsReclaim != nil, present: scopes).map(\.rawValue).sorted().joined(separator: ",").isEmpty ? "none" : "review")")
         out.append("totals| deposits=\(room.deposits) inPools=\(room.inPools)"
                    + " waiting=\(room.waiting)"
                    + " untagged=\(room.untagged) unpriced=\(room.unpriced)"
@@ -180,6 +196,14 @@ enum PrivacyPoolsRoomSource {
                        + " · share=\(String(format: "%.2f", PrivacyPoolsRoom.share(count: segment.count, of: room.deposits)))"
                        + " · wait=\(PrivacyPoolsRoom.waitLabel(segment, now: now) ?? "none")"
                        + " · oldestAt=\(segment.oldestAt?.formatted(.iso8601) ?? "none")")
+        }
+        // THE LEGEND AS DRAWN, untagged row included (prd §486) — the split
+        // bar's gap is a row now, and this is the only place its wording can
+        // be checked without a screenshot.
+        for row in PrivacyPoolsRoom.legendRows(room) {
+            out.append("privacyPoolsLegend| \(PrivacyPoolsRoom.name(row.slice))"
+                       + " · \(PrivacyPoolsRoom.legendLine(row, now: now))"
+                       + " · count=\(row.count)")
         }
         for holding in room.holdings {
             out.append("privacyPoolsHolding| \(holding.symbol)"

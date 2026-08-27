@@ -217,6 +217,38 @@ struct PrivacyPoolsRoom: Equatable {
         let oldestAt: Date?
     }
 
+    /// What a legend row NAMES, and therefore what tapping it opens
+    /// (2026-08-26, prd §486).
+    ///
+    /// A state is not the only thing the legend can be about. An untagged
+    /// deposit is a real slice of this room — it is the GAP the split bar
+    /// deliberately leaves — and until this existed it was said only in a
+    /// footnote clause, so the one unlabelled part of the drawing could be
+    /// decoded only by reading a line of tertiary text several blocks below
+    /// it. It gets a legend row of its own now, in the same colour the bar's
+    /// track is drawn in, which is what makes the gap self-explaining.
+    enum Slice: Equatable, Hashable, Identifiable {
+        case state(State)
+        /// Deposits carrying no state tag at all — never assumed pending.
+        case unknown
+
+        var id: String {
+            switch self {
+            case .state(let state): return state.rawValue
+            case .unknown:          return "Unknown"
+            }
+        }
+    }
+
+    /// One row of the legend: a slice, how many deposits are in it, and how
+    /// long the oldest of them has been there.
+    struct LegendRow: Identifiable, Equatable {
+        var id: String { slice.id }
+        let slice: Slice
+        let count: Int
+        let oldestAt: Date?
+    }
+
     /// What one asset still has sitting in the pools (2026-08-17).
     ///
     /// Deposits only, and only ones still IN — a reclaimed deposit is money
@@ -284,7 +316,7 @@ struct PrivacyPoolsRoom: Equatable {
     static let minimumDeposits = 1
 
     /// The card names at most this many assets; the rest are counted in the
-    /// footnote rather than silently dropped (`RailgunRoomSource.rowCap`).
+    /// shielded note rather than silently dropped (`RailgunRoomSource.rowCap`).
     static let holdingCap = 3
 
     /// Every deposit the card knows about, tagged or not, in or out.
@@ -303,6 +335,12 @@ struct PrivacyPoolsRoom: Equatable {
 
     /// The one deposit state that needs the person, if any.
     var needsYou: Segment? { segments.first { $0.state.needsYou } }
+
+    /// The state whose money is sitting in a pool waiting for the person to
+    /// take it back out. An errand like `needsYou`, and the second of the two
+    /// slices that light the scope's dot — see `PrivacyPoolsSection.attention`
+    /// for why being in review is not one.
+    var needsReclaim: Segment? { segments.first { $0.state == .declined } }
 
     var lead: Segment? { segments.first }
 
@@ -592,6 +630,60 @@ struct PrivacyPoolsRoom: Equatable {
         return String(localized: "oldest \(waited) days")
     }
 
+    /// The legend, top to bottom (2026-08-26, prd §486): every state that has
+    /// a deposit, in the card's own ranked order, then the untagged ones.
+    ///
+    /// Unknown goes LAST and is never ranked among the states, because it is
+    /// not a verdict — it is the absence of one, and putting it in `rank`'s
+    /// ladder would have this card assert where it sits relative to a decline.
+    static func legendRows(_ room: PrivacyPoolsRoom) -> [LegendRow] {
+        var rows = room.segments.map {
+            LegendRow(slice: .state($0.state), count: $0.count, oldestAt: $0.oldestAt)
+        }
+        if room.untagged > 0 {
+            rows.append(LegendRow(slice: .unknown, count: room.untagged, oldestAt: nil))
+        }
+        return rows
+    }
+
+    /// A legend row's leading word. The states spell themselves — the raw
+    /// values ARE the bridge's own tags — and the absence of one is named
+    /// plainly rather than left blank.
+    static func name(_ slice: Slice) -> String {
+        switch slice {
+        case .state(let state): return state.rawValue
+        case .unknown:          return String(localized: "Unknown")
+        }
+    }
+
+    /// The legend's trailing text for any row.
+    ///
+    /// Forwards to the `Segment` form for a real state, so there is exactly
+    /// one place that decides what a state means and how its wait is worded.
+    static func legendLine(_ row: LegendRow, now: Date = .now) -> String {
+        switch row.slice {
+        case .state(let state):
+            return legendLine(Segment(state: state, count: row.count, oldestAt: row.oldestAt),
+                              now: now)
+        case .unknown:
+            return unknownLine(row.count)
+        }
+    }
+
+    /// "1 deposit's status is unknown".
+    ///
+    /// This clause used to live in the footnote, several blocks below the bar
+    /// whose gap it explained. It is the legend's own row now — same words,
+    /// beside the thing it is about. It is NOT politeness: a deposit this card
+    /// cannot place is missing from every segment above it, and a standing
+    /// that silently omits rows is the failure the import drop counters exist
+    /// to prevent, one room over.
+    static func unknownLine(_ count: Int) -> String {
+        count == 1
+            ? String(localized: "1 deposit's status is unknown")
+            : String(localized: "\(count) deposits' status is unknown")
+    }
+
     /// "— the oldest has waited 9 days" (2026-08-11), appended to a headline
     /// that is already naming a state someone is WAITING on. Silent under
     /// `noteworthyWaitDays`, and silent for a `nil` segment (the `.declined`,
@@ -662,6 +754,16 @@ struct PrivacyPoolsRoom: Equatable {
         if room.inPools == 0 {
             return String(localized: "All of it has been taken back out")
         }
+        // NOTHING IS TAGGED AT ALL, so nothing can be said about the screener.
+        // Without this the `waiting == 0` clause below fires — `waiting` counts
+        // segments, and a room of pre-§311 deposits has none — and a room whose
+        // every deposit's standing is unrecorded announced "Every review is
+        // finished": the exact claim-without-evidence the untagged rule exists
+        // to prevent, made in the note directly under a headline that had just
+        // correctly declined to make it (2026-08-26, prd §486).
+        if room.segments.isEmpty {
+            return String(localized: "Where these stand isn't recorded")
+        }
         let waiting = room.waiting
         if waiting == 0 {
             return String(localized: "Every review is finished")
@@ -709,7 +811,7 @@ struct PrivacyPoolsRoom: Equatable {
     /// have no common unit, and the one figure that would combine them is a
     /// dollar total this room has no price to compute and no business
     /// inventing. Capped at `holdingCap`; the remainder is named in the
-    /// footnote rather than dropped.
+    /// shielded note rather than dropped.
     static func holdingsLine(_ room: PrivacyPoolsRoom, mask: String? = nil) -> String? {
         let shown = room.holdings.prefix(holdingCap)
         guard !shown.isEmpty else { return nil }
@@ -758,22 +860,18 @@ struct PrivacyPoolsRoom: Equatable {
         return String(localized: "Your \(cover.symbol) hides among about \(now) accepted deposits — up from \(roundedSet(landed)) when you first deposited.")
     }
 
-    /// The quiet line at the foot: deposits with no state we can read, ones we
-    /// cannot price, ragequits with no deposit here, how long review has taken,
-    /// and how long the room has been still.
+    /// The one quiet line under what's SHIELDED: the deposits whose size this
+    /// card could not read, and the assets it had no room to name.
     ///
-    /// The untagged clause is not politeness. A deposit this card cannot place
-    /// is a deposit missing from every segment above it AND a gap in the bar,
-    /// and a standing that silently omits rows is the failure the import drop
-    /// counters exist to prevent, one room over. `unpriced` and the holdings
-    /// overflow are the same rule applied to the money line.
-    static func footnote(_ room: PrivacyPoolsRoom, now: Date = .now) -> String? {
+    /// Half of what used to be a single `footnote`, which joined up to six
+    /// clauses with `·` into a paragraph of tertiary text under the whole card
+    /// (2026-08-26, prd §486). Nothing is dropped — every clause moved to the
+    /// scope it is about, which is the difference between a footnote and a
+    /// caption. These two are the money line's own caveats, and they belong
+    /// beside the money line: `unpriced` and the holdings overflow are both
+    /// "this figure does not cover everything", said where the figure is.
+    static func shieldedNote(_ room: PrivacyPoolsRoom) -> String? {
         var parts: [String] = []
-        if room.untagged > 0 {
-            parts.append(room.untagged == 1
-                         ? String(localized: "1 deposit's status is unknown")
-                         : String(localized: "\(room.untagged) deposits' status is unknown"))
-        }
         if room.unpriced > 0 {
             parts.append(room.unpriced == 1
                          ? String(localized: "1 deposit's size is unknown")
@@ -783,13 +881,27 @@ struct PrivacyPoolsRoom: Equatable {
         if overflow > 0 {
             parts.append(String(localized: "\(overflow) more assets"))
         }
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
+    }
+
+    /// The one quiet line under the room's own events: reclaims that arrived
+    /// without a deposit we hold, how long review has taken HERE, and how long
+    /// the room has been still.
+    ///
+    /// The other half of the old `footnote`. All three are facts about what
+    /// has HAPPENED rather than about what is standing, which is exactly what
+    /// this scope is — a review time is the observed gap between two events,
+    /// and an idle clause is the absence of one.
+    ///
+    /// `reviewDays` is only what THIS device has watched resolve — never a
+    /// claim about 0xBow's screener in general. See `compose`'s own note.
+    static func activityNote(_ room: PrivacyPoolsRoom, now: Date = .now) -> String? {
+        var parts: [String] = []
         if room.unattachedReclaims > 0 {
             parts.append(room.unattachedReclaims == 1
                          ? String(localized: "1 reclaimed before you watched")
                          : String(localized: "\(room.unattachedReclaims) reclaimed before you watched"))
         }
-        // Only what THIS device has actually watched resolve — never a claim
-        // about 0xBow's screener in general. See `compose`'s `reviewDays`.
         if let reviewDays = room.reviewDays {
             parts.append(reviewDays == 0
                          ? String(localized: "review has taken same-day here")

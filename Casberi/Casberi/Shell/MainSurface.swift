@@ -28,6 +28,12 @@ extension WalletSection: DSSectionScope {}
 // declaration ends that (prd §482).
 extension VibenetSection: DSSectionScope {}
 
+// The third room to take this control (prd §486), conformed beside the call
+// site for the reason the two above are: `PrivacyPoolsSection` stays
+// Foundation-only so `wallet-rooms-selftest.sh` can compile it WHOLE beside
+// the room it scopes.
+extension PrivacyPoolsSection: DSSectionScope {}
+
 struct MainSurface: View {
     // Whole corpus, newest first — but hydrating ONLY the columns this surface
     // reads (2026-07-24 perf). This screen never renders a Thing's body

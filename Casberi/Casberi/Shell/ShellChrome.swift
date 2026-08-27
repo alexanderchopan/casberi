@@ -147,6 +147,21 @@ final class ShellChrome {
     /// `vibenetSections` and cleared with it.
     var vibenetSectionAttention: Set<VibenetSection> = []
 
+    /// The Privacy Pools room's scope (prd §486, 2026-08-26) — Wallet's and
+    /// Vibenet's third instance, and the smallest: ONE property rather than a
+    /// trio, because that room's card draws its own strip and derives its own
+    /// presence from the composed room. There is no shell-mounted control to
+    /// feed, so a published list and attention set would be state nothing ever
+    /// reads.
+    ///
+    /// Same lifetime rules as the other two: not persisted across launches
+    /// (`activity` is the front door, and every room in this app opens on its
+    /// feed), not cleared on a room change (the wallet category spans several
+    /// rooms and a reading survives moving between them), and
+    /// `PrivacyPoolsSection.resolve` handles a remembered scope whose content
+    /// has since gone.
+    var privacyPoolsSection: PrivacyPoolsSection?
+
     /// Which watched account a SOCIAL room is scoped to — nil = all of them
     /// (prd §362, 2026-08-11). The handle as the account's own store spells it
     /// (`SocialAccount.key`), matched against `Thing.authorHandle`.

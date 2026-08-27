@@ -50,7 +50,11 @@ POOLS="Casberi/Casberi/Model/PrivacyPoolsRoom.swift"
 GNOSIS="Casberi/Casberi/Model/GnosisPayRoom.swift"
 RAILGUN="Casberi/Casberi/Model/RailgunRoom.swift"
 SAFE="Casberi/Casberi/Model/SafeRoom.swift"
-for f in "$PEER" "$POOLS" "$GNOSIS" "$RAILGUN" "$SAFE"; do
+# The Privacy Pools room's SCOPE enum (prd §486) — Foundation-only for exactly
+# this reason, so the rules behind its strip are compiled WHOLE beside the room
+# they scope rather than reasoned about.
+SECTION="Casberi/Casberi/Model/PrivacyPoolsSection.swift"
+for f in "$PEER" "$POOLS" "$GNOSIS" "$RAILGUN" "$SAFE" "$SECTION"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 
@@ -174,6 +178,76 @@ grep -q 'if room.needsYou != nil {' "$CARD_POOLS" \
   || { echo "✗ the 0xBow door is no longer gated on the one state that needs you — it would be chrome on every other room state"; exit 1; }
 grep -q 'respondURL = URL(string: "https://app.0xbow.io")' "$CARD_POOLS" \
   || { echo "✗ the respond door no longer opens 0xBow — a door telling you to respond must land where responding happens"; exit 1; }
+
+# --- prd §486: the three scopes ---------------------------------------------
+# The card draws its OWN strip (Vibenet's shape, not Wallet's shell-mounted
+# one), so these are the only checks that the control exists at all.
+CARD_STRIPPED="$TMP/poolscard.swift"
+strip_comments "$CARD_POOLS" > "$CARD_STRIPPED"
+grep -q 'DSSectionSwitcher(' "$CARD_STRIPPED" \
+  || { echo "✗ the Privacy Pools card no longer draws its scope strip — the room goes back to seven blocks in one slab"; exit 1; }
+grep -q 'PrivacyPoolsSection.shows(present: scopes)' "$CARD_STRIPPED" \
+  || { echo "✗ the strip is no longer gated on there being more than one scope — one chip is a label, not a control (§83)"; exit 1; }
+# PRESENCE AND RENDERING ARE ONE QUESTION, spelled the same way in both files.
+# §483 shipped a Risk chip that opened an empty page because they were spelled
+# differently two files apart; these are the same two expressions.
+grep -q 'private var shieldedHasContent: Bool { !room.holdings.isEmpty }' "$CARD_STRIPPED" \
+  || { echo "✗ the shielded scope's render gate moved — it must stay identical to the presence flag FeedScreen passes"; exit 1; }
+grep -q '!room.segments.isEmpty || room.untagged > 0' "$CARD_STRIPPED" \
+  || { echo "✗ the review scope's render gate moved — a room of untagged deposits would offer a chip its card then declines to fill"; exit 1; }
+grep -q 'PrivacyPoolsSection.present(shielded: !room.holdings.isEmpty,' "$FEED" \
+  || { echo "✗ FeedScreen's shielded presence no longer matches the card's own gate"; exit 1; }
+grep -q 'review: !room.segments.isEmpty || room.untagged > 0)' "$FEED" \
+  || { echo "✗ FeedScreen's review presence no longer matches the card's own gate"; exit 1; }
+# THE HEADLINE BELONGS TO NO SCOPE. Scoped away, the room could be opened
+# without being told the one thing §349 exists to say.
+grep -q 'headline$' "$CARD_STRIPPED" \
+  || { echo "✗ the headline is no longer drawn above the strip — a scope could hide the room's own standing"; exit 1; }
+# THE GAP IN THE BAR AND ITS LEGEND DOT ARE THE SAME COLOUR, which is the whole
+# of that row's correctness: the untagged deposits ARE the track showing
+# through. `mark.opacity(0.35)` there would file them with the resolved states,
+# which is a claim — an untagged review is not over, it is unrecorded.
+grep -q 'case .unknown:          return DS.fillFaint' "$CARD_STRIPPED" \
+  || { echo "✗ the unknown legend dot no longer takes the bar's own track colour — the gap stops being self-explaining"; exit 1; }
+grep -q 'Capsule(style: .continuous).fill(DS.fillFaint)' "$CARD_STRIPPED" \
+  || { echo "✗ the split bar's track is no longer DS.fillFaint — it and the unknown legend dot must be one colour"; exit 1; }
+grep -q 'ForEach(PrivacyPoolsRoom.legendRows(room))' "$CARD_STRIPPED" \
+  || { echo "✗ the legend iterates segments again — the untagged deposits would lose the row that explains the bar's gap"; exit 1; }
+# The note is the SPLIT'S caption now, not a second sentence under the
+# headline. Drawn in the review body or it is a fact with no home.
+grep -q 'Text(PrivacyPoolsRoom.note(room))' "$CARD_STRIPPED" \
+  || { echo "✗ the card no longer draws the note — the split bar loses the sentence that says what it shows"; exit 1; }
+grep -q 'PrivacyPoolsRoom.shieldedNote(room)' "$CARD_STRIPPED" \
+  || { echo "✗ the money line lost its caveats — deposits it could not price would be silently missing from the figure"; exit 1; }
+grep -q 'PrivacyPoolsRoom.activityNote(room)' "$CARD_STRIPPED" \
+  || { echo "✗ the room's own events lost their caption — the observed review time and the idle clause would be computed and never said"; exit 1; }
+# ONE GESTURE, ONE ANSWER. The card-wide tap retired with §486: the readings
+# are individually tappable rows inside their own cards now, and a whole-card
+# target over them is a second answer to the same gesture.
+if grep -q 'onTapGesture' "$CARD_STRIPPED"; then
+  echo "✗ the Privacy Pools card has a whole-card tap again, over rows that are already buttons"; exit 1
+fi
+# THE ROWS ARE A SCOPE. Without the gate the stream draws under Shielded and
+# Review, and the room is one long scroll again with a control that changes
+# only its head.
+grep -q 'if privacyPoolsShowsRows(visible) {' "$FEED" \
+  || { echo "✗ the Privacy Pools room's rows are no longer gated on its Activity scope"; exit 1; }
+grep -q '&& privacyPoolsShowsRows(visible)' "$FEED" \
+  || { echo "✗ the caught-up footer no longer respects the scope — it would claim you are all caught up with no stream on screen (§83)"; exit 1; }
+# Railgun shares the `.ledger` row shape and has NO scopes, so the gate must
+# stay scoped by source or this room's control reaches into its neighbour's.
+grep -q 'guard source == PrivacyPoolsRoomSource.source,' "$FEED" \
+  || { echo "✗ the row gate is no longer scoped to the Privacy Pools source — it would silently blank the Railgun room"; exit 1; }
+grep -q 'var privacyPoolsSection: PrivacyPoolsSection?' "Casberi/Casberi/Shell/ShellChrome.swift" \
+  || { echo "✗ the shell no longer remembers which reading is on screen"; exit 1; }
+grep -q 'extension PrivacyPoolsSection: DSSectionScope {}' "Casberi/Casberi/Shell/MainSurface.swift" \
+  || { echo "✗ PrivacyPoolsSection no longer conforms to the scope protocol — the strip cannot draw"; exit 1; }
+# The probe is the only way to see a strip that did not draw, and an empty
+# scope list has causes that are invisible from outside.
+grep -q 'privacyPoolsScopes|' "$SRC_POOLS" \
+  || { echo "✗ -privacyPoolsRoomProbe no longer reports the scopes — a room that draws no control has several causes and only one is a bug"; exit 1; }
+grep -q 'privacyPoolsLegend|' "$SRC_POOLS" \
+  || { echo "✗ -privacyPoolsRoomProbe no longer reports the legend as drawn — the untagged row's wording could only be checked by screenshot"; exit 1; }
 
 # Demo parity (the standing ship step): every reading above must COMPOSE over
 # the seeded corpus, or the demo shows a card the real room would not.
@@ -737,10 +811,31 @@ check("an all-resolved room says so",
 check("a wholly unruled room says so",
       PrivacyPoolsRoom.note(PrivacyPoolsRoom.compose(rows: [pp("privacypools:dep:1", ["Pending"])]))
         == "None of them have been ruled on yet")
-let ppFoot = PrivacyPoolsRoom.footnote(pools, now: t0) ?? ""
-check("untagged deposits are named in the footnote",
-      ppFoot.contains("1 deposit's status is unknown"))
-check("orphan reclaims are named", ppFoot.contains("1 reclaimed before you watched"))
+// §486 split the old single `footnote` into two scope captions and moved the
+// untagged clause into the legend. Nothing was dropped — these check that.
+check("untagged deposits are named in the legend, beside the gap they are",
+      PrivacyPoolsRoom.legendRows(pools).contains {
+          if case .unknown = $0.slice { return true }; return false })
+check("the unknown row says what it is",
+      PrivacyPoolsRoom.unknownLine(1) == "1 deposit's status is unknown")
+check("the unknown row pluralises",
+      PrivacyPoolsRoom.unknownLine(3) == "3 deposits' status is unknown")
+check("unknown is the LAST legend row, never ranked among the verdicts",
+      PrivacyPoolsRoom.legendRows(pools).last.map {
+          if case .unknown = $0.slice { return true }; return false } == true)
+check("a room with everything tagged grows no unknown row",
+      PrivacyPoolsRoom.legendRows(
+          PrivacyPoolsRoom.compose(rows: [pp("privacypools:dep:1", ["Cleared"])])).count == 1)
+check("the legend forwards a state row to the segment wording",
+      PrivacyPoolsRoom.legendLine(
+          .init(slice: .state(.pending), count: 1, oldestAt: nil), now: t0) == "1 in review")
+check("a slice's id is stable enough to key a ForEach",
+      PrivacyPoolsRoom.Slice.state(.cleared).id == "Cleared"
+        && PrivacyPoolsRoom.Slice.unknown.id == "Unknown")
+check("the unknown row is NAMED, not left blank",
+      PrivacyPoolsRoom.name(.unknown) == "Unknown")
+let ppAct = PrivacyPoolsRoom.activityNote(pools, now: t0) ?? ""
+check("orphan reclaims are named", ppAct.contains("1 reclaimed before you watched"))
 check("a room of pre-tag deposits gets an honest headline",
       PrivacyPoolsRoom.headline(PrivacyPoolsRoom.compose(rows: [
           pp("privacypools:dep:1"), pp("privacypools:dep:2")]))
@@ -913,6 +1008,96 @@ check("a wait under the floor is not worth naming",
       PrivacyPoolsRoom.legendLine(
           .init(state: .pending, count: 1, oldestAt: day(-1)), now: t0)
         == "1 in review")
+
+print("")
+print("Privacy Pools — the scopes (prd §486)")
+// The room's three readings behind one control. Every failure here renders as
+// an ordinary room: a chip that opens an empty page, a remembered scope
+// resolving somewhere nobody chose, or a strip that reshuffles between opens.
+let ppAll = PrivacyPoolsSection.present(shielded: true, review: true)
+check("the order is events → state → hazard, and it is total",
+      ppAll == [.activity, .shielded, .review])
+check("activity is always there — the room always has a feed",
+      PrivacyPoolsSection.present(shielded: false, review: false) == [.activity])
+check("both readings past activity are conditional",
+      PrivacyPoolsSection.allCases.filter(\.isConditional).sorted { $0.rawValue < $1.rawValue }
+        == [PrivacyPoolsSection.review, .shielded].sorted { $0.rawValue < $1.rawValue })
+check("one scope is not a control",
+      !PrivacyPoolsSection.shows(present: [.activity]))
+check("two are", PrivacyPoolsSection.shows(present: [.activity, .review]))
+// A remembered scope whose content has gone must land on the FEED, never on
+// "whatever is first" — the two differ only when activity is somehow absent,
+// which is the branch that would quietly open a room somewhere nobody chose.
+check("a scope that no longer exists falls back to activity",
+      PrivacyPoolsSection.resolve(.shielded, present: [.activity, .review]) == .activity)
+// THE FIXTURE ABOVE CANNOT TELL THE RULE FROM ITS MUTATION, and this one is
+// why it is here: `order` puts `.activity` first, so "fall back to the feed"
+// and "fall back to whatever is first" give the same answer for every list
+// production can actually build — the mutation swapping one for the other
+// survived on the first run, green. The discriminating case is the branch the
+// type's own doc says cannot happen: a `present` without `.activity` in it.
+// That is exactly the point of naming the fallback rather than taking the
+// head — an unreachable branch that quietly picks a different scope is how a
+// room starts opening somewhere nobody chose.
+//
+// Standing rule, earned again: a fixture only tests the rule it names if it
+// FAILS that rule and passes every other one.
+check("the fallback is the feed by NAME, not whatever happens to be first",
+      PrivacyPoolsSection.resolve(.shielded, present: [.review]) == .activity)
+check("nothing remembered opens the feed",
+      PrivacyPoolsSection.resolve(nil, present: ppAll) == .activity)
+check("a remembered scope that still exists is honoured",
+      PrivacyPoolsSection.resolve(.review, present: ppAll) == .review)
+// EARNED, never mere presence: a deposit in review is this room's NORMAL
+// state, and a dot on every one of them is a dot nobody reads.
+check("being in review earns no dot",
+      PrivacyPoolsSection.attention(needsProof: false, declined: false, present: ppAll).isEmpty)
+check("proof required earns one",
+      PrivacyPoolsSection.attention(needsProof: true, declined: false, present: ppAll) == [.review])
+check("a decline earns one too — the money sits there until you reclaim it",
+      PrivacyPoolsSection.attention(needsProof: false, declined: true, present: ppAll) == [.review])
+check("no dot on a scope that isn't offered",
+      PrivacyPoolsSection.attention(needsProof: true, declined: true,
+                                    present: [.activity]).isEmpty)
+// Presence and rendering are one question. The card draws the shielded reading
+// on exactly `holdingsLine != nil`, and the review reading on segments-or-
+// untagged; a room that offers a chip its card then declines to fill is §83's
+// dead control wearing a scope's clothes (§483 shipped exactly that once).
+check("shielded presence is exactly the money line's own gate",
+      (PrivacyPoolsRoom.holdingsLine(held) != nil) == !held.holdings.isEmpty)
+check("a room of only untagged deposits still earns Review — the legend has a row",
+      { let bare = PrivacyPoolsRoom.compose(rows: [pp("privacypools:dep:1")])
+        return bare.segments.isEmpty && bare.untagged > 0
+      }())
+
+print("")
+print("Privacy Pools — the two scope captions (prd §486)")
+check("the shielded caption names deposits it could not price",
+      (PrivacyPoolsRoom.shieldedNote(PrivacyPoolsRoom.compose(rows: [
+          ppa("privacypools:dep:1", ["Pending"], "ETH", 0.07),
+          pp("privacypools:dep:2", ["Pending"]),
+      ])) ?? "").contains("1 deposit's size is unknown"))
+check("a room with nothing to qualify says nothing",
+      PrivacyPoolsRoom.shieldedNote(PrivacyPoolsRoom.compose(rows: [
+          ppa("privacypools:dep:1", ["Pending"], "ETH", 0.07)])) == nil)
+// The clauses went to the scope each is ABOUT. A review time and an idle gap
+// are facts about what happened; an unreadable size is a caveat on a figure.
+check("the activity caption carries the observed review time, not the money one",
+      (PrivacyPoolsRoom.activityNote(pools, now: t0) ?? "").contains("review has taken")
+        && !(PrivacyPoolsRoom.shieldedNote(pools) ?? "").contains("review has taken"))
+check("a room with nothing to add says nothing",
+      PrivacyPoolsRoom.activityNote(PrivacyPoolsRoom.compose(rows: [
+          pp("privacypools:dep:1", ["Pending"], at: day(-1))]), now: t0) == nil)
+
+// THE NOTE MUST NOT CLAIM A REVIEW FINISHED THAT WAS NEVER RECORDED. `waiting`
+// counts SEGMENTS, and a room of pre-§311 deposits has none — so the
+// `waiting == 0` branch fired and announced "Every review is finished" over
+// deposits whose standing is entirely unknown, one line under a headline that
+// had just correctly declined to say it (found and fixed 2026-08-26).
+check("a wholly untagged room says its standing isn't recorded",
+      PrivacyPoolsRoom.note(PrivacyPoolsRoom.compose(rows: [
+          pp("privacypools:dep:1"), pp("privacypools:dep:2")]))
+        == "Where these stand isn't recorded")
 
 // ===========================================================================
 print("")
@@ -1433,8 +1618,8 @@ if failures > 0 { print("\(failures) failed"); exit(1) }
 print("all assertions passed")
 SWIFT
 
-echo "wallet-rooms-selftest: compiling the five heads WHOLE and unmodified…"
-swiftc -O -o "$TMP/run" "$PEER" "$POOLS" "$GNOSIS" "$RAILGUN" "$SAFE" "$TMP/main.swift" \
+echo "wallet-rooms-selftest: compiling the five heads and the scope enum WHOLE and unmodified…"
+swiftc -O -o "$TMP/run" "$PEER" "$POOLS" "$GNOSIS" "$RAILGUN" "$SAFE" "$SECTION" "$TMP/main.swift" \
   || { echo "✗ the shipped room heads do not compile Foundation-only — something reached Thing/SwiftUI"; exit 1; }
 "$TMP/run" || exit 1
 
@@ -1451,7 +1636,8 @@ mutate() {
   cp "$GNOSIS" "$TMP/GnosisPayRoom.swift"
   cp "$RAILGUN" "$TMP/RailgunRoom.swift"
   cp "$SAFE" "$TMP/SafeRoom.swift"
-  local a="$TMP/PeerRoom.swift" b="$TMP/PrivacyPoolsRoom.swift" c="$TMP/GnosisPayRoom.swift" d="$TMP/RailgunRoom.swift" e="$TMP/SafeRoom.swift"
+  cp "$SECTION" "$TMP/PrivacyPoolsSection.swift"
+  local a="$TMP/PeerRoom.swift" b="$TMP/PrivacyPoolsRoom.swift" c="$TMP/GnosisPayRoom.swift" d="$TMP/RailgunRoom.swift" e="$TMP/SafeRoom.swift" g="$TMP/PrivacyPoolsSection.swift"
   local target
   case "$which" in
     peer)    target="$a" ;;
@@ -1459,6 +1645,7 @@ mutate() {
     gnosis)  target="$c" ;;
     railgun) target="$d" ;;
     safe)    target="$e" ;;
+    section) target="$g" ;;
   esac
   FRM="$frm" TO="$to" python3 - "$target" <<'PY'
 import os, sys
@@ -1472,7 +1659,7 @@ PY
   if [[ $? -ne 0 ]] || ! grep -qF -- "$to" "$target"; then
     echo "  ✗ $name — the mutation did not apply (the shipped source moved)"; exit 1
   fi
-  if ! swiftc -O -o "$TMP/mut" "$a" "$b" "$c" "$d" "$e" "$TMP/main.swift" 2>/dev/null; then
+  if ! swiftc -O -o "$TMP/mut" "$a" "$b" "$c" "$d" "$e" "$g" "$TMP/main.swift" 2>/dev/null; then
     echo "  ✓ $name (rejected at compile)"; return
   fi
   if "$TMP/mut" > /dev/null 2>&1; then
@@ -1638,6 +1825,56 @@ mutate "cover is joined to whatever pool answered first" pools \
 mutate "a resolved state reports how long it waited" pools \
   'guard !segment.state.resolved, let oldestAt = segment.oldestAt else { return nil }' \
   'guard let oldestAt = segment.oldestAt else { return nil }'
+
+# --- prd §486: the scopes, and the legend row that replaced the footnote -----
+# A room whose every deposit's standing is unrecorded announcing "Every review
+# is finished" — a claim about the screener made with no evidence, one line
+# under a headline that had just correctly declined to make it.
+mutate "an unrecorded standing is reported as a finished review" pools \
+  'if room.segments.isEmpty {' \
+  'if false, room.segments.isEmpty {'
+# The untagged deposits ARE the gap in the split bar. Drop their legend row and
+# the one unlabelled part of the drawing goes back to being undecodable — the
+# §486 complaint restored, with the card still rendering perfectly.
+mutate "the untagged deposits lose their legend row" pools \
+  'if room.untagged > 0 {' \
+  'if false, room.untagged > 0 {'
+# Unknown is not a verdict, so it trails them. Ranked among them it would
+# assert where "we do not know" sits relative to a decline.
+mutate "unknown leads the legend instead of trailing it" pools \
+  'rows.append(LegendRow(slice: .unknown, count: room.untagged, oldestAt: nil))' \
+  'rows.insert(LegendRow(slice: .unknown, count: room.untagged, oldestAt: nil), at: 0)'
+# The old single footnote became two captions, and each clause went to the
+# reading it qualifies. Lose the review time and the Activity scope has nothing
+# to say about what has actually happened here.
+mutate "the observed review time drops out of the activity caption" pools \
+  'if let reviewDays = room.reviewDays {' \
+  'if false, let reviewDays = room.reviewDays {'
+# A figure the card could not read, unsaid — the money line then presents
+# partial knowledge as complete, which is the rule this room applies
+# everywhere else.
+mutate "an unreadable deposit size is no longer named beside the figure" pools \
+  'if room.unpriced > 0 {' \
+  'if false, room.unpriced > 0 {'
+# THE SCOPE RULES. Each renders as a perfectly ordinary room.
+mutate "a remembered scope resolves to whatever is first instead of the feed" section \
+  'guard let wanted, present.contains(wanted) else { return .activity }' \
+  'guard let wanted, present.contains(wanted) else { return present.first ?? .activity }'
+mutate "the strip draws over a single scope" section \
+  'static func shows(present: [PrivacyPoolsSection]) -> Bool { present.count > 1 }' \
+  'static func shows(present: [PrivacyPoolsSection]) -> Bool { present.count > 0 }'
+mutate "a conditional scope leads the strip" section \
+  'static let order: [PrivacyPoolsSection] = [.activity, .shielded, .review]' \
+  'static let order: [PrivacyPoolsSection] = [.review, .shielded, .activity]'
+mutate "the dot fires on ordinary progress" section \
+  'guard present.contains(.review), needsProof || declined else { return [] }' \
+  'guard present.contains(.review) else { return [] }'
+mutate "a dot is drawn on a scope the strip does not offer" section \
+  'guard present.contains(.review), needsProof || declined else { return [] }' \
+  'guard needsProof || declined else { return [] }'
+mutate "the shielded scope is offered over an empty page" section \
+  'case .shielded: return shielded' \
+  'case .shielded: return true'
 
 # The cross-currency sum this file exists to refuse.
 mutate "every currency lands in one bucket" gnosis \
