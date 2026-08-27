@@ -45,6 +45,21 @@ struct VibenetAccountDetail: View {
     /// identifying it at a glance is the worse failure of the two. See the
     /// hero's own comment for the full reasoning.
     var showsFace: Bool = true
+    /// WHICH SCOPE IS ASKING (prd §491), or nil for the whole detail.
+    ///
+    /// **This view's sections were always the room's scopes; nothing joined
+    /// them up.** Its own doc says so — *"exactly `stackedRoom`'s shape, so
+    /// narrowing the room to one account is the same screen with fewer
+    /// accounts in it"* — but the card branched instead: `stacksIntoCards`
+    /// required MORE THAN ONE account, so one account got this whole page and
+    /// none of the chassis. Every figure built for the room was therefore
+    /// invisible to a single-account user, which is the ordinary case.
+    ///
+    /// So the branch is gone and this draws the part the scope asked for:
+    /// keys under Permissions, links and sub-accounts under Accounts, the
+    /// record under Activity. nil keeps the whole page, for any caller that
+    /// still wants it.
+    var section: VibenetSection? = nil
     /// OPEN A KEY (2026-08-25, prd §478) — replaces the `openKey` inline
     /// disclosure this view carried since §473. A key's depth (terms, origin,
     /// full id, the copy doors) lives on `VibenetKeySheet` now; a row that
@@ -90,22 +105,37 @@ struct VibenetAccountDetail: View {
         // `heading22` headers. Exactly `stackedRoom`'s shape, so narrowing the
         // room to one account is the same screen with fewer accounts in it.
         VStack(alignment: .leading, spacing: DS.Space.s6) {
-            hero
-            balanceSection
-            if !item.actors.isEmpty {
-                sectionHeader(String(localized: "Keys"))
+            // The hero and the balance belong to the CHASSIS when a scope is
+            // asking — the crown and its figure are already drawn above the
+            // account rail, and drawing them again here is the stacked-crown
+            // bug §491 fixed, arriving by a second route.
+            if section == nil {
+                hero
+                balanceSection
+            }
+            if wants(.permissions), !item.actors.isEmpty {
+                // No header under a scope: the chip one row up already says
+                // Permissions, and a `heading22` repeating it is §447's two
+                // stacked display lines.
+                if section == nil { sectionHeader(String(localized: "Keys")) }
                 keysSection
             }
-            if hasLinks || !item.subAccounts.isEmpty {
-                sectionHeader(String(localized: "Linked accounts"))
+            if wants(.accounts), hasLinks || !item.subAccounts.isEmpty {
+                if section == nil { sectionHeader(String(localized: "Linked accounts")) }
                 linkedCard
                 subAccountsCard
             }
-            recordCard
+            if wants(.activity) { recordCard }
         }
         .task(id: item.address) {
             history = VibenetValueStore.samples(for: item.address)
         }
+    }
+
+    /// Whether the scope asking wants this section — true for every section
+    /// when nothing is scoping (the whole-page caller).
+    private func wants(_ candidate: VibenetSection) -> Bool {
+        section == nil || section == candidate
     }
 
     /// Does this account take part in any delegate relationship at all — the

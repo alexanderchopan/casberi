@@ -347,8 +347,19 @@ struct VibenetRoomCard: View {
     /// roster (`onOpen != nil`) is a management list where one surface is
     /// right, and the single-account branch hands off to
     /// `VibenetAccountDetail`, which owns its own anatomy.
+    /// **ONE ACCOUNT TAKES THE CHASSIS TOO (prd §491).** This required
+    /// `count > 1`, so narrowing to a single account — by the rail, or simply
+    /// by watching one — swapped the whole page for `VibenetAccountDetail` and
+    /// left the chassis behind: no fixed slot, no scope switcher, none of the
+    /// four figures. Every drawing built for this room was invisible to a
+    /// single-account user, which is the ordinary case, and the branch made it
+    /// look intentional.
+    ///
+    /// The detail is not deleted — it draws the section the scope asks for
+    /// (see its own `section` parameter), so scoping now NARROWS the room the
+    /// way Wallet's does rather than replacing it.
     private var stacksIntoCards: Bool {
-        onOpen == nil && room.lead != nil && room.items.count > 1
+        onOpen == nil && room.lead != nil
     }
 
     @ViewBuilder
@@ -451,6 +462,23 @@ struct VibenetRoomCard: View {
                 .padding(.bottom, DSRoomChassis.switcherGap - DS.Space.s6)
             scopeStrip
                 .padding(.bottom, DSRoomChassis.contentGap - DS.Space.s6)
+            // THE SCOPED ACCOUNT'S OWN DETAIL, under the scope that owns each
+            // part of it (prd §491) — keys under Permissions, links and
+            // sub-accounts under Accounts, the record under Activity.
+            if let lead = room.lead, room.items.count == 1 {
+                let fullItems = Self.fullItems(fallback: room)
+                VibenetAccountDetail(
+                    item: lead,
+                    links: VibenetAccountMapping.links(fullItems),
+                    sharedKeys: VibenetKeyReuse.sharing(lead, in: fullItems),
+                    // The chassis draws the face in the rail above.
+                    showsFace: false,
+                    section: section ?? .home,
+                    onOpenKey: onOpenKey.map { open in
+                        { actor in open(actor, lead, VibenetKeyReuse.sharing(lead, in: fullItems)) }
+                    },
+                    newKeyIDs: keyChanges?.added ?? [])
+            }
             if shows(.holdings) { holdingsCard }
             // **THE AMOUNTS THE MAP GAVE UP (prd §491).** Stripping the figures
             // out of the treemap is only honest where a list carries them, and
@@ -496,10 +524,15 @@ struct VibenetRoomCard: View {
                 if section == nil { sectionHeader(String(localized: "Accounts")) }
                 accountsCard
             }
-            if shows(.keys) {
+            if shows(.permissions) {
                 if section == nil { sectionHeader(String(localized: "Keys")) }
-                keysCard
+                // The census card stands down under its own scope — the
+                // capability rungs ARE that census, drawn in the slot above.
+                if !promoted(.permissions) { keysCard }
             }
+            // EVERY KEY, GROUPED BY THE ACCOUNT IT CAN ACT FOR (user pick of
+            // two mocked lists, prd §491).
+            if promoted(.permissions) { permissionsList }
             // OUTSIDE the cards, and quieter for it. Provenance is a fact
             // about the whole room rather than about any one reading, so a
             // card of its own would make a section out of a footnote.
@@ -512,7 +545,7 @@ struct VibenetRoomCard: View {
             // whole modifier exists to fix.
             // Provenance follows the ROSTER it describes ("N more watched",
             // and where the config was read) rather than trailing whichever
-            // scope happens to be last — in `.keys` it would be a footnote
+            // scope happens to be last — in `.permissions` it would be a footnote
             // about accounts under a census of keys.
             if shows(.accounts), let note = VibenetRoom.note(room, drawn: drawn.count) {
                 Text(note)
@@ -995,10 +1028,10 @@ struct VibenetRoomCard: View {
         // Home's box is the crown itself (`balanceHero`), so it never
         // reaches here — see `stackedRoom`.
         case .home:            EmptyView()
-        case .activity:        EmptyView()
+        case .activity:        activityFigure
         case .holdings:        holdingsFigure
         case .accounts:        accountsFigure
-        case .keys:            keysFigure
+        case .permissions:     permissionsFigure
         }
     }
 
@@ -1135,6 +1168,29 @@ struct VibenetRoomCard: View {
         .padding(.horizontal, DS.Space.s4)
     }
 
+    /// WHERE THE CHANGES LANDED — the Activity scope's drawing (prd §491,
+    /// user pick of three).
+    ///
+    /// The slot was empty here and empty was the honest state: Wallet's flow
+    /// band is money and these events are not, so borrowing it would have been
+    /// a shape saying nothing. This is the pairing the data really carries —
+    /// event kind and the account it landed on, both stamped on every
+    /// `VibenetKeyMoment` — and it says the one thing a chronological list
+    /// cannot: which account is churning.
+    @ViewBuilder
+    private var activityFigure: some View {
+        let flow = VibenetChangeFlow.flow(room.items.map {
+            (address: $0.address, moments: $0.history, locked: $0.locked)
+        })
+        if let flow {
+            VibenetChangeFlowCard(flow: flow,
+                                  name: { Self.displayName($0) },
+                                  onPick: onScope,
+                                  reduceMotion: reduceMotion)
+                .padding(.horizontal, DSRoomChassis.inset)
+        }
+    }
+
     /// WHO CAN ACT FOR WHOM — the delegate spine, lifted out of its
     /// disclosure.
     ///
@@ -1145,8 +1201,44 @@ struct VibenetRoomCard: View {
     /// the picture first.
     @ViewBuilder
     private var accountsFigure: some View {
+        // **THE SUB-ACCOUNT WEB LEADS, the delegate spine is the fallback**
+        // (prd §491, user pick of three drawings).
+        //
+        // The spine draws watched↔watched links, so it says NOTHING for
+        // somebody watching one account — the ordinary case — and its subject
+        // is the same relationship the web covers more completely: a
+        // sub-account is an account that authorized you. The web also carries
+        // the half the spine structurally cannot, an account you can act for
+        // and do NOT watch, which is the only row here that can offer to do
+        // anything.
+        //
+        // The spine survives where the web declines and links exist — two
+        // watched accounts that delegate to each other but expose no
+        // sub-account read.
+        // **PER ACCOUNT, and unscoped that means the first account that HAS
+        // any** — not the lead unconditionally. A sub-account is an account
+        // that authorized ONE address, so the drawing has exactly one owner
+        // and aggregating several owners' nodes into one web would attribute
+        // a relationship to an account that does not hold it (§83, on the
+        // screen where the whole reading is who can act for whom).
+        //
+        // Scoped, it is the scoped account's own web or nothing — never
+        // another account's, which is what makes picking a face narrow the
+        // reading rather than change the subject.
+        let owner = scopedAddress.flatMap { scoped in
+            room.items.first { $0.address.caseInsensitiveCompare(scoped) == .orderedSame }
+        } ?? room.items.first { !$0.subAccounts.isEmpty }
+        let web = owner.flatMap {
+            VibenetAccountWeb.web(owner: $0.address, subAccounts: $0.subAccounts)
+        }
         let links = VibenetAccountMapping.links(room.items)
-        if !links.isEmpty {
+        if let web {
+            VibenetAccountWebCard(web: web,
+                                  name: { Self.displayName($0) },
+                                  onWatch: nil,
+                                  reduceMotion: reduceMotion)
+                .padding(.horizontal, DSRoomChassis.inset)
+        } else if !links.isEmpty {
             scopeFigure(headline: VibenetBalanceAggregation.compose(room.items)?.plainLine) {
                 VibenetLinkSpine(links: links,
                                  name: { Self.displayName($0) },
@@ -1155,6 +1247,196 @@ struct VibenetRoomCard: View {
             }
         }
     }
+
+    /// EVERY KEY, UNDER THE ACCOUNT IT CAN ACT FOR (prd §491).
+    ///
+    /// **This replaces a filter strip, and that is the point.** The tray listed
+    /// keys A–Z with `All / Admin 1 / Send anywhere 5` chips above them — a
+    /// second row of toggles directly under the scope switcher, which is the
+    /// control the switcher exists to be the only one of. Grouping answers the
+    /// same question the filter did without a control: standing in a room that
+    /// is already scoped by account, "what can act on THIS account" is the
+    /// grouping, not a filter over it.
+    ///
+    /// **NOT the per-permission sections §478 deleted.** That shape listed one
+    /// heading per permission and the same key appeared under each permission
+    /// it held, so "8 keys" opened fourteen rows. A key belongs to exactly one
+    /// account, so grouping by account cannot do that — the one exception is a
+    /// key shared across accounts, which appears under each, and that is the
+    /// single-point-of-failure this room already computes (`VibenetKeyReuse`)
+    /// and is worth seeing twice.
+    ///
+    /// Accounts in the room's own order; keys within an account in the tray's
+    /// A–Z, which is §478's settled ruling ("then we aren't making some
+    /// judgement call") and is left exactly as it was.
+    @ViewBuilder
+    private var permissionsList: some View {
+        let byAccount = room.items.filter { !$0.actors.isEmpty }
+        if !byAccount.isEmpty {
+            VStack(alignment: .leading, spacing: DS.Space.s4) {
+                ForEach(byAccount, id: \.address) { item in
+                    VStack(alignment: .leading, spacing: DS.Space.s2) {
+                        HStack(spacing: DS.Space.s2) {
+                            WalletFace(address: item.address, size: DS.Face.rowCircle, circular: true)
+                            Text(Self.displayName(item.address))
+                                .dsText(.subhead13)
+                                .foregroundStyle(DS.textSecondary)
+                                .lineLimit(1)
+                            Text(item.actors.count == 1
+                                 ? String(localized: "1 key")
+                                 : String(localized: "\(item.actors.count) keys"))
+                                .dsText(.subhead13)
+                                .foregroundStyle(DS.textTertiary)
+                            Spacer(minLength: 0)
+                        }
+                        ForEach(VibenetKeyTray.ordered(item.actors.map {
+                            VibenetTrayKey(address: item.address, actor: $0)
+                        })) { key in
+                            permissionRow(key)
+                        }
+                    }
+                }
+            }
+            .padding(.horizontal, DSRoomChassis.inset)
+        }
+    }
+
+    /// One key: its type and id, when it lapses, and what it can do as chips.
+    ///
+    /// The chips are `grantedPlainLabels` — the room's ONE list of permission
+    /// wording, so a chip here and a rung in the slot above can never disagree
+    /// about either the words or their order.
+    @ViewBuilder
+    private func permissionRow(_ key: VibenetTrayKey) -> some View {
+        let body = VStack(alignment: .leading, spacing: DS.Space.s2) {
+            HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                Text(key.actor.kind.shortLabel)
+                    .dsText(.callout15)
+                    .foregroundStyle(DS.textPrimary)
+                    .lineLimit(1)
+                Text(VibenetKeyIdentity.short(key.actor.actorId))
+                    .dsText(.label11).monospaced()
+                    .foregroundStyle(DS.textTertiary)
+                Spacer(minLength: DS.Space.s2)
+                if let clock = key.actor.expiryClock(now: .now) {
+                    Text(clock)
+                        .dsText(.label12)
+                        .foregroundStyle(key.actor.expiryStanding(now: .now) == .soon
+                                         ? DS.tint : DS.textTertiary)
+                        .fixedSize()
+                }
+            }
+            // `FlowLayout` and the chip recipe are the TRAY's, reused rather
+            // than re-drawn: two chip styles for one fact is how a room comes
+            // to disagree with the sheet it opens.
+            FlowLayout(spacing: 6) {
+                ForEach(key.actor.scope.grantedPlainLabels, id: \.self) { label in
+                    Text(label)
+                        .dsText(.label11)
+                        .fontWeight(key.actor.scope.isAdmin ? .semibold : .regular)
+                        .foregroundStyle(key.actor.scope.isAdmin ? DS.attention : DS.tint)
+                        .padding(.horizontal, DS.Space.s2)
+                        .padding(.vertical, 3)
+                        .background((key.actor.scope.isAdmin ? DS.attention : DS.tint).opacity(0.14),
+                                    in: Capsule(style: .continuous))
+                }
+            }
+        }
+        .padding(.leading, DS.Face.rowCircle + DS.Space.s2)
+        .padding(.vertical, DS.Space.s1)
+        if let onOpenKey {
+            Button {
+                DSHaptic.selection()
+                onOpenKey(key.actor,
+                          room.items.first { $0.address == key.address } ?? room.items[0],
+                          [])
+            } label: { body.contentShape(Rectangle()) }
+                .buttonStyle(.plain)
+                .dsHover()
+        } else {
+            body
+        }
+    }
+
+    /// WHAT CAN ACT, COUNTED BY WHAT IT CAN DO (prd §491).
+    ///
+    /// Wallet's Permissions anatomy in this room's words, and built on the
+    /// census this room ALREADY computes: `VibenetPolicyAggregation.compose`
+    /// has produced exactly these rows — admin counted apart, then the five
+    /// named bits in `Scopes.sol`'s own declared order — since §463. It fed a
+    /// filter strip; now it is the drawing.
+    ///
+    /// **Counted by CAPABILITY, so the shape never grows.** Eight keys and
+    /// forty draw the same rows, which is the property that let this replace a
+    /// filter strip rather than sit beside one: the strip existed because a
+    /// long list needed narrowing, and a figure that says what there is to
+    /// narrow TO answers the same need without a second row of chips under the
+    /// scope switcher.
+    ///
+    /// **Admin is called "Admin"** (user ruling, prd §491) — the word the app
+    /// already used on the key rows, not a paraphrase. `isAdmin` is `raw == 0`:
+    /// a key with no scope bits set is unrestricted, which is why it is counted
+    /// apart from the five rather than as another bit among them.
+    @ViewBuilder
+    private var permissionsFigure: some View {
+        let counts = policyRows
+        if !counts.isEmpty {
+            let keys = VibenetKeyAggregation.compose(room.items, now: .now)
+            scopeFigure(headline: keys.map {
+                $0.total == 1 ? String(localized: "1 key") : String(localized: "\($0.total) keys")
+            }) {
+                VStack(alignment: .leading, spacing: 0) {
+                    ForEach(Array(counts.prefix(Self.permissionRungs).enumerated()),
+                            id: \.element.label) { index, row in
+                        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s3) {
+                            Text("\(row.count)")
+                                .dsText(.stat24)
+                                // ADMIN and only admin wears the alarm colour:
+                                // it is the one rung that is unbounded, and
+                                // colouring the others would be this app
+                                // grading permissions somebody set on purpose.
+                                .foregroundStyle(index == 0 && row.label == Self.adminLabel
+                                                 ? DS.attention : DS.textPrimary)
+                                .monospacedDigit()
+                                .frame(width: 26, alignment: .leading)
+                            Text(row.label)
+                                .dsText(.callout15)
+                                .foregroundStyle(DS.textPrimary)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.85)
+                            Spacer(minLength: 0)
+                        }
+                        .padding(.vertical, 1)
+                    }
+                    if counts.count > Self.permissionRungs {
+                        Text(String(localized: "and \(counts.count - Self.permissionRungs) more"))
+                            .dsText(.label12).foregroundStyle(DS.textTertiary)
+                    }
+                }
+            }
+        }
+    }
+
+    /// The census, composed ONCE for both readers (prd §468's guard, honoured
+    /// rather than loosened).
+    ///
+    /// §491 gave the Permissions scope a figure built on the same rows
+    /// `keysBody` draws, which made two call sites of one pure function. That
+    /// is not the drift the guard exists to stop — the drift would be two
+    /// DERIVATIONS — but a second call is one edit away from becoming one, and
+    /// the card and its slot figure disagreeing about what can act on your
+    /// accounts is exactly the failure §468 named. One `let`, two readers.
+    private var policyRows: [VibenetPolicyCount] {
+        VibenetPolicyAggregation.compose(room.items)
+    }
+
+    /// How many rungs fit the fixed slot under a headline. Four, measured the
+    /// way Wallet's own were.
+    private static let permissionRungs = 4
+
+    /// The census's own word for an unrestricted key, so the colour test above
+    /// can never drift from the label it is testing.
+    private static let adminLabel = String(localized: "Admin")
 
     /// WHEN KEYS LAPSE — the shelf, lifted out of `expiryFooter`.
     ///
@@ -1694,7 +1976,7 @@ struct VibenetRoomCard: View {
         //
         // The 44pt hit floor §471 cites is not a claim on this block any
         // more either — these rows are reads, not targets.
-        let policies = VibenetPolicyAggregation.compose(room.items)
+        let policies = policyRows
         if !policies.isEmpty {
             VStack(alignment: .leading, spacing: 0) {
                 ForEach(Array(policies.enumerated()), id: \.offset) { index, entry in
@@ -1718,7 +2000,7 @@ struct VibenetRoomCard: View {
         // SENTENCE half survives either way: `expiryFooter` draws it exactly
         // where the shelf declines, and that fallback is what the card had
         // before any figure existed.
-        if !promoted(.keys) { expiryFooter(aggregate) }
+        if !promoted(.permissions) { expiryFooter(aggregate) }
     }
 
     /// The headline, as a door to the whole tray when there is one to open.

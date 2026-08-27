@@ -169,6 +169,17 @@ KNOWN_EXEMPT = {
     # of a set that can never silently swallow something new.
     "WalletFlowBand.swift:482",
     "WalletFlowBand.swift:599",
+    #
+    # Vibenet's change flow (2026-08-26, prd §491) — the same figure-speaks-as-
+    # one-sentence treatment (§299), and with a STRONGER claim than the band
+    # above: there the press surfaces nothing the spoken sentence lacks, so it
+    # is simply hidden; HERE the tap scopes the room to that account, which is
+    # a real destination — so it is published as a named
+    # `.accessibilityActions` Button on the combined element ("Open …9a0b").
+    # The gesture is therefore reachable to VoiceOver by the route the platform
+    # prefers, and a trait on the face would add a stray label for a figure
+    # that already speaks in full.
+    "VibenetChangeFlowCard.swift:102",
 }
 
 # Size expressions that already encode the floor, so an explicit number is not

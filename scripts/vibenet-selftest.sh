@@ -1177,7 +1177,7 @@ check("SELF_PAYER and SPONSOR_PAYER are told apart by WHOSE gas, not by a bare d
       VibenetScope(raw: VibenetScope.selfPayer).plainSummary == "Pay own gas"
         && VibenetScope(raw: VibenetScope.sponsorPayer).plainSummary == "Pay others' gas")
 check("NONCE no longer prints the spec's internal word at the reader",
-      VibenetScope(raw: VibenetScope.nonce).plainSummary == "Send in order")
+      VibenetScope(raw: VibenetScope.nonce).plainSummary == "Order its own sends")
 check("reserved bits alone (nothing named) still yield exactly one chip",
       VibenetScope(raw: 0x0020).grantedPlainLabels == ["+1 unknown"])
 

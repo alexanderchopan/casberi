@@ -60,12 +60,21 @@ struct VibenetScope: Equatable, Codable {
     /// `payer_auth` for a different sender". NONCE is the invented one: the
     /// spec defines only the mechanism — a restricted actor may use sequenced
     /// `nonce_key`s rather than being confined to nonce-free mode — and
-    /// offers no plain phrasing, so "Send in order" is this app's reading of
-    /// it and is the one label here open to a better ruling.
+    /// offers no plain phrasing, so this label is this app's own reading.
+    ///
+    /// **"Order its own sends", was "Send in order" (user ruling, prd §491).**
+    /// That earlier wording had the polarity backwards: NONCE is a PERMISSION
+    /// to sequence — a key holding it may use sequenced `nonce_key`s, a key
+    /// without it is confined to nonce-free mode — and "Send in order" reads
+    /// as a restriction the key is under rather than a capability it has. The
+    /// four bits beside it all name capabilities, so one written as a
+    /// constraint reads as the odd one out and is understood as the opposite
+    /// of what it grants. This entry stays the one open to a better ruling,
+    /// since the spec still supplies no phrasing of its own.
     private static let named: [(bit: UInt16, label: String, plain: String)] = [
         (sender,       "Sender",        "Send anywhere"),
         (policy,       "Policy",        "Send to one contract"),
-        (nonce,        "Nonce",         "Send in order"),
+        (nonce,        "Nonce",         "Order its own sends"),
         (selfPayer,    "Self-payer",    "Pay own gas"),
         (sponsorPayer, "Sponsor-payer", "Pay others' gas"),
     ]
@@ -2832,7 +2841,11 @@ enum VibenetKeyTray {
     /// we aren't making some judgement call"*) carried across accounts — the
     /// account is the tie-break rather than the lead, because the reader is
     /// scanning a permission's members, not browsing accounts.
-    private static func ordered(_ keys: [VibenetTrayKey]) -> [VibenetTrayKey] {
+    /// Internal rather than private since §491: the room's Permissions list
+    /// groups these keys by account and must order them the SAME way the tray
+    /// does — §478's A–Z ruling ("then we aren't making some judgement call")
+    /// belongs to the keys, not to one sheet that shows them.
+    static func ordered(_ keys: [VibenetTrayKey]) -> [VibenetTrayKey] {
         keys.sorted { a, b in
             let t = a.actor.kind.plainTitle.localizedCaseInsensitiveCompare(b.actor.kind.plainTitle)
             if t != .orderedSame { return t == .orderedAscending }

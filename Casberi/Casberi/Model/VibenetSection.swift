@@ -43,7 +43,7 @@ enum VibenetSection: String, CaseIterable, Identifiable, Sendable {
     case activity
     case holdings
     case accounts
-    case keys
+    case permissions
 
     var id: String { rawValue }
 
@@ -68,7 +68,7 @@ enum VibenetSection: String, CaseIterable, Identifiable, Sendable {
     /// because the crown, its sparkline and the per-token tiles are ONE reading
     /// at three grains. Opening on any other scope puts a tap between the crown
     /// and its own breakdown, which is the same split by a different route.
-    static let order: [VibenetSection] = [.home, .activity, .holdings, .accounts, .keys]
+    static let order: [VibenetSection] = [.home, .activity, .holdings, .accounts, .permissions]
 
     var label: String {
         switch self {
@@ -76,7 +76,15 @@ enum VibenetSection: String, CaseIterable, Identifiable, Sendable {
         case .activity: return String(localized: "Activity")
         case .holdings: return String(localized: "Holdings")
         case .accounts: return String(localized: "Accounts")
-        case .keys:     return String(localized: "Keys")
+        // **"Permissions", not "Keys" (user ruling, prd §491).** The scope
+        // was named after the OBJECTS it lists and the room next door names
+        // the same scope after the QUESTION — Wallet's Permissions answers
+        // "who can act for me", and so does this one: a key here IS a grant
+        // of authority, which is exactly what Wallet's top two rungs are.
+        // §482 said this room has no Permissions because nothing is granted
+        // to a third party; that was about token approvals and it was wrong
+        // about keys.
+        case .permissions: return String(localized: "Permissions")
         }
     }
 
@@ -91,7 +99,7 @@ enum VibenetSection: String, CaseIterable, Identifiable, Sendable {
         case .activity: return String(localized: "What happened, newest first")
         case .holdings: return String(localized: "What these accounts hold")
         case .accounts: return String(localized: "The accounts you watch, and who can act for them")
-        case .keys:     return String(localized: "Every key on every account, and when each expires")
+        case .permissions: return String(localized: "What can act on your accounts, and when each lapses")
         }
     }
 
@@ -119,7 +127,7 @@ enum VibenetSection: String, CaseIterable, Identifiable, Sendable {
         // already, so a Holdings scope with nothing but ETH restates it.
         if room.items.contains(where: { !$0.tokenBalances.isEmpty }) { out.append(.holdings) }
         out.append(.accounts)
-        if room.items.contains(where: { !$0.actors.isEmpty }) { out.append(.keys) }
+        if room.items.contains(where: { !$0.actors.isEmpty }) { out.append(.permissions) }
         return order.filter(out.contains)
     }
 
@@ -142,7 +150,7 @@ enum VibenetSection: String, CaseIterable, Identifiable, Sendable {
         var out: Set<VibenetSection> = []
         for line in VibenetAttention.compose(room.items, now: now) {
             switch line.subject {
-            case .key:       out.insert(.keys)
+            case .key:       out.insert(.permissions)
             case .account:   out.insert(.accounts)
             case .unreached: out.insert(.accounts)
             }
