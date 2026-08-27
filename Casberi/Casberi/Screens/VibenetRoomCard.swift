@@ -1421,16 +1421,8 @@ struct VibenetRoomCard: View {
                         // line under the other. Same size, same gap now, which
                         // is also `VibenetEventRow`'s column: three lists in
                         // this room, one edge.
-                        HStack(spacing: DS.Space.s3) {
-                            // `DS.Face.list`, not `DS.Mark.list` — the two
-                            // resolve to the same number, and a FACE takes its
-                            // size from the face ramp. `face-ramp-audit`
-                            // enforces exactly that and caught this the first
-                            // time it ran, which is the point of having it: the
-                            // alignment below is what matters, and it survives
-                            // because the two ramps agree at this tier by
-                            // design (`Mark.list = Face.list`).
-                            WalletFace(address: item.address, size: DS.Face.list, circular: true)
+                        HStack(spacing: DS.Space.s2) {
+                            WalletFace(address: item.address, size: DS.Face.rowCircle, circular: true)
                             Text(Self.displayName(item.address))
                                 .dsText(.subhead13)
                                 .foregroundStyle(DS.textSecondary)
@@ -1459,43 +1451,23 @@ struct VibenetRoomCard: View {
     /// The chips are `grantedPlainLabels` — the room's ONE list of permission
     /// wording, so a chip here and a rung in the slot above can never disagree
     /// about either the words or their order.
-
-    /// A key's leading mark — an SF Symbol in a tinted square, the same shape
-    /// `VibenetEventRow` gives an event's kind (prd §495).
-    ///
-    /// `DS.Mark.list`, so a key row's mark, an event row's mark and a face
-    /// all sit in one leading column at one size. Neutral ink by §490 (see
-    /// `markSymbol`), and ABSENT rather than generic for a kind this build
-    /// cannot name — an empty seat still holds the column, so the titles stay
-    /// aligned whether or not the mark drew.
     @ViewBuilder
-    private func keyMark(_ kind: VibenetAuthenticatorKind) -> some View {
-        RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous)
-            .fill(DS.fillFaint)
-            .frame(width: DS.Mark.list, height: DS.Mark.list)
-            .overlay {
-                if let symbol = kind.markSymbol {
-                    Image(systemName: symbol)
-                        .accessibilityHidden(true)
-                        .dsGlyph(15, weight: .regular)
-                        .foregroundStyle(DS.textSecondary)
-                }
-            }
-    }
-
     private func permissionRow(_ key: VibenetTrayKey) -> some View {
-        // The mark leads, the text block follows — one leading column shared
-        // with the account header above and with every event row in the feed.
-        let body = HStack(alignment: .top, spacing: DS.Space.s3) {
-            keyMark(key.actor.kind)
-            keyRowText(key)
-        }
-        return wrapped(body, key)
-    }
-
-    @ViewBuilder
-    private func keyRowText(_ key: VibenetTrayKey) -> some View {
-        VStack(alignment: .leading, spacing: DS.Space.s2) {
+        // **NO MARK ON A KEY ROW** (prd §495, user: *"do you think having the
+        // key icon makes the entry crowded? it makes it harder to separate and
+        // makes it all become a wall. i don't think we need the key icon"* —
+        // and earlier, the argument that settled it: *"if we use key then it
+        // would be like why aren't we using it in places we use a + sign"*).
+        //
+        // The rule the app follows is that a row's mark is its own SUBJECT — a
+        // holding's token, an account's face, an event's change. A key's
+        // subject is a key, and no glyph reads as one, so any mark here is
+        // invented rather than read. Drawn beside the account face above it,
+        // two mark columns turn a short list into a wall.
+        //
+        // The row indents to the header's TEXT column instead, which is what
+        // it did before the mark and is why the two were aligned.
+        let body = VStack(alignment: .leading, spacing: DS.Space.s2) {
             HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
                 Text(key.actor.kind.shortLabel)
                     .dsText(.callout15)
@@ -1541,13 +1513,9 @@ struct VibenetRoomCard: View {
                 }
             }
         }
-    }
-
-    /// The row's door, unchanged — split out so `permissionRow` can compose
-    /// the mark and the text without the button wrapping only half of it.
-    @ViewBuilder
-    private func wrapped(_ body: some View, _ key: VibenetTrayKey) -> some View {
-        let padded = body.padding(.vertical, DS.Space.s1)
+        let padded = body
+            .padding(.leading, DS.Face.rowCircle + DS.Space.s2)
+            .padding(.vertical, DS.Space.s1)
         if let onOpenKey {
             Button {
                 DSHaptic.selection()
@@ -2796,3 +2764,40 @@ struct VibenetEventRow: View {
         return VibenetWatch.shared.name(for: address) ?? VibenetRoom.shortAddress(address)
     }
 }
+
+
+#if DEBUG
+/// WHERE THE ROOM'S PIECES ACTUALLY ARE, measured by the layout system
+/// itself (prd §495).
+///
+/// **Built after four rounds of measuring screenshots and getting it wrong.**
+/// A pixel scan cannot tell the scope strip from any other wide faint bar,
+/// and a settled screenshot cannot see a transient at all — so every "it does
+/// not move" I reported was a claim about my probe, not about the room. This
+/// asks SwiftUI where the frames are and NSLogs them, which is the only
+/// answer that is checkable.
+///
+/// `vibenetLayout|<scope>|slotTop|figureTop|stripTop` on every layout pass
+/// that changes any of them. Switch scopes and diff the lines: if `stripTop`
+/// differs the bar moves; if only `figureTop` differs the DRAWING moves
+/// inside a fixed box, which reshapes everything above the bar and is what
+/// three reports of "the toggle bar jumps" actually were.
+struct VibenetLayoutKey: PreferenceKey {
+    static var defaultValue: [String: CGFloat] { [:] }
+    static func reduce(value: inout [String: CGFloat], nextValue: () -> [String: CGFloat]) {
+        value.merge(nextValue()) { _, new in new }
+    }
+}
+
+extension View {
+    /// Publish this view's global top edge under `name`.
+    func vibenetLayoutMark(_ name: String) -> some View {
+        background {
+            GeometryReader { geo in
+                Color.clear.preference(key: VibenetLayoutKey.self,
+                                       value: [name: geo.frame(in: .global).minY])
+            }
+        }
+    }
+}
+#endif

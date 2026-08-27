@@ -2651,7 +2651,11 @@ struct FeedScreen: View {
                     sections: chrome.walletSections,
                     active: active,
                     attention: chrome.walletSectionAttention) { picked in
-                        withAnimation(DS.Motion.standard) { chrome.walletSection = picked }
+                        // Instant, for the reason vibenet's own pick states
+                        // at length (prd §495): animating a swap between two
+                        // slots of different natural height moves everything
+                        // below the bar and settles it back.
+                        chrome.walletSection = picked
                     }
                     .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
                                               bottom: DSRoomChassis.contentGap,
@@ -3823,9 +3827,40 @@ struct FeedScreen: View {
                                     scopes: vibenetSectionPublication.sections,
                                     scopeAttention: vibenetSectionPublication.attention,
                                     onPickScope: { picked in
-                                        withAnimation(DS.Motion.standard) {
-                                            chrome.vibenetSection = picked
-                                        }
+                                        // **THE SWAP IS NOT ANIMATED** (prd
+                                        // §495, user: *"it lands in place, but
+                                        // jumps"* — which is the whole
+                                        // diagnosis).
+                                        //
+                                        // §495's template fix made every
+                                        // scope's drawing START at the same y,
+                                        // so the bar lands where it belongs.
+                                        // What was left is the TRANSITION:
+                                        // each scope produces its own
+                                        // `DSRoomSlot`, so SwiftUI replaces
+                                        // one view with another rather than
+                                        // updating one in place, and under
+                                        // `withAnimation` it interpolates that
+                                        // replacement — two drawings of
+                                        // different natural heights briefly
+                                        // sharing the box, which moves the
+                                        // rail and the strip below and settles
+                                        // them back. A jump that no settled
+                                        // screenshot can see, which is exactly
+                                        // why four rounds of measuring stills
+                                        // reported "it does not move".
+                                        //
+                                        // The SELECTION still animates — that
+                                        // is `DSSectionSwitcher`'s own
+                                        // `matchedGeometryEffect`, and §-
+                                        // 2026-07-14's ruling that selection is
+                                        // an object travelling rather than two
+                                        // states blinking is untouched. It is
+                                        // only the CONTENT swap that is
+                                        // instant, which is also the honest
+                                        // reading: two scopes are two answers,
+                                        // not one answer moving.
+                                        chrome.vibenetSection = picked
                                     },
                                     // The face rail's two halves, now the
                                     // crown's (prd §482 amendment).
@@ -4220,12 +4255,24 @@ struct FeedScreen: View {
             // sat that spacing higher there. Two zero-height boxes, each
             // invisible, and the difference between them was the bug.
             if section != .home {
-                // Same section-level application as Home above — see that
-                // note for why this cannot be `DSRoomSlot` today.
-                ZStack(alignment: .top) {
-                    Color.clear
-                    walletScopeVisualSection(section)
-                }
+                // **STRUCTURALLY IDENTICAL TO HOME ABOVE** (prd §495, user:
+                // *"On Wallet now, Home in the toggle bar is at a different
+                // place than the others and it jumps"*).
+                //
+                // This wrapped its section in `ZStack { Color.clear; … }`
+                // while Home applied the frame directly — and both builders
+                // return List SECTIONS, so the wrapper put a Section inside a
+                // plain view. That collapses it into one row, drops the
+                // `listRowSeparator(.hidden)` its rows carry (the HAIRLINE
+                // visible above the face rail) and changes its measured
+                // height, which is the ~24pt that put the strip lower on every
+                // scope than on Home.
+                //
+                // The `Color.clear` was holding the frame open against an
+                // empty figure — vibenet's own lesson — but it cannot do that
+                // job here, because what it is holding open is not a view.
+                // Same shape as Home now: builder, frame, clip.
+                walletScopeVisualSection(section)
                     .frame(minHeight: Self.walletVisualSlot,
                            maxHeight: Self.walletVisualSlot,
                            alignment: .top)
