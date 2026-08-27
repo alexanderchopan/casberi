@@ -74,6 +74,11 @@ extension AddressBook.Entry {
         if let label = kind.label { parts.append(label) }
         else if let script = BitcoinAddress.scriptKind(address) { parts.append(script) }
         if let provenance { parts.append(provenance) }
+        // Where it was MET, when the provenance clause hasn't already said so
+        // (a key filed from vibenet already carries "Vibenet key · …" as its
+        // provenance — saying "Vibenet" twice on one row is the same word
+        // read as a mistake rather than a fact).
+        if let badge = networkBadge, provenance?.contains(badge) != true { parts.append(badge) }
         guard parts.isEmpty else { return parts.joined(separator: " · ") }
         // Nothing else to say. An auto-named row's own NAME is this string, so
         // returning it prints one fact twice; a real name makes it the second
@@ -211,10 +216,25 @@ struct AddressBookRow: View {
                 }
                 // RELATIONSHIP facts, never money (§435). Absent rather than
                 // empty when there is nothing to say — see `subline`.
-                if let line = entry.subline(activity: activity) {
-                    Text(line)
-                        .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                        .lineLimit(1)
+                HStack(spacing: 5) {
+                    if let line = entry.subline(activity: activity) {
+                        Text(line)
+                            .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                            .lineLimit(1)
+                    }
+                    // A NOTE YOU WROTE (prd §498). The note itself stays off
+                    // the row — it is long-form and belongs on the card (§496)
+                    // — but a fact somebody typed about this person should not
+                    // be undiscoverable until they happen to open it. A glyph,
+                    // never an excerpt: an excerpt is the note on the row by
+                    // another name, and it would push the relationship facts
+                    // beside it off the line.
+                    if entry.note?.isEmpty == false {
+                        Image(systemName: "note.text")
+                            .dsGlyph(11)
+                            .foregroundStyle(DS.textTertiary)
+                            .accessibilityLabel(Text("Has a note"))
+                    }
                 }
             }
             Spacer(minLength: DS.Space.s2)
@@ -528,6 +548,23 @@ struct AddressMark: View {
                             .font(.system(size: size * 0.42, weight: .semibold))
                             .foregroundStyle(DS.textSecondary)
                     }
+            } else if entry.kind.isMonogram {
+                // A CONTACT or a SOCIAL profile (prd §498) — a who with no
+                // address behind it. `WalletFace` derives its pattern from the
+                // address, so handing it `contact:AB12…` would draw a
+                // confident identicon of a string nobody will ever see: noise
+                // wearing the costume of identity (§83's shape, in pixels).
+                // A monogram of the name is the honest mark — `AssetMark`'s
+                // own rule for a subject we don't bundle art for.
+                Circle()
+                    .fill(DS.fillFaint)
+                    .frame(width: size, height: size)
+                    .overlay {
+                        Text(Self.monogram(entry.name))
+                            .dsText(.badgeInitial11)
+                            .font(.system(size: size * 0.38, weight: .semibold))
+                            .foregroundStyle(DS.textSecondary)
+                    }
             } else {
                 // CIRCULAR (prd §433, 2026-08-21). This view's own header has
                 // said "a wallet is a WHO … everything else is machinery and
@@ -543,6 +580,33 @@ struct AddressMark: View {
                 WalletFace(address: entry.address, size: size, circular: true)
             }
         }
+        // WHERE IT WAS MET, on the face itself (prd §498, user ruling —
+        // "vibenet maybe we don't need a badge if its an attribute someone
+        // could just filter for it? … or the icon could replace the avatar
+        // they have for their accounts but that may get wonky").
+        //
+        // The badge, and NOT the replacement: taking the face away to mark a
+        // network is exactly the mislabelling §294 exists to undo, one axis
+        // over. And not a filter chip either — a filter answers "show me only
+        // vibenet", while the question you have mid-scan is "what is THIS
+        // row", which only something on the row can answer.
+        //
+        // A dot, not a glyph: at `DS.Face.list` a mark inside 12pt is a smudge,
+        // and the colour IS the statement — Base's own blue, the hue the
+        // vibenet seat already wears everywhere else in the app.
+        .overlay(alignment: .bottomTrailing) {
+            if entry.networkBadge != nil {
+                Circle()
+                    .fill(Self.vibenetHue)
+                    .frame(width: size * 0.34, height: size * 0.34)
+                    // The ring is the PAGE, not a stroke: it reads as the
+                    // badge sitting in front of the face rather than as a
+                    // hairline drawn around it, which is the one thing this
+                    // design system has no exceptions about.
+                    .overlay(Circle().strokeBorder(DS.page, lineWidth: size * 0.055))
+                    .offset(x: size * 0.04, y: size * 0.04)
+            }
+        }
         // The kind reveal (prd §171, 2026-07-22). Detection lands
         // asynchronously — `eth_getCode` answers a beat after the row is on
         // screen — and the mark used to hard-swap from face to square glyph.
@@ -552,6 +616,22 @@ struct AddressMark: View {
         .transition(.scale(scale: 0.82).combined(with: .opacity))
         .id(entry.kind)
         .animation(DS.Motion.standard, value: entry.kind)
+    }
+
+    /// Base's blue — the vibenet seat's own brand hue, resolved the way every
+    /// other vibenet surface resolves it so the badge and the room can never
+    /// drift to two blues.
+    static let vibenetHue = DS.brandHue(for: VibenetIdentity.source)
+        ?? Color.fixed("#0052ff")
+
+    /// Up to two initials from a name, for the addressless kinds. Falls back
+    /// to a single dot rather than a letter when the name yields none — an
+    /// invented initial on somebody's contact card is a small lie in the one
+    /// place the row is claiming to know who they are.
+    static func monogram(_ name: String) -> String {
+        let words = name.split(separator: " ").prefix(2)
+        let letters = words.compactMap { $0.first.map(String.init) }
+        return letters.isEmpty ? "·" : letters.joined().uppercased()
     }
 }
 
@@ -738,6 +818,10 @@ struct AddressCard: View {
     @State private var nameDraft = ""
     @State private var addingGroup = false
     @State private var groupDraft = ""
+    /// The note field's draft (2026-08-27, the address-book unification) —
+    /// see `noteBlock`.
+    @State private var noteDraft = ""
+    @FocusState private var noteFocused: Bool
     /// Bumped when a rename actually rewrote landed titles — the history rows
     /// stagger their cross-fade off it. See `rename(to:)`.
     @State private var renameCascade = 0
@@ -785,6 +869,7 @@ struct AddressCard: View {
                 VStack(spacing: 0) {
                     identityHeader
                     lookalikeBand
+                    noteBlock
                     spine(things)
                     nameNudge
                     // Room for the pinned verb bar. `DS.Hit.min` plus the
@@ -874,8 +959,50 @@ struct AddressCard: View {
     /// behind them. Note this screen is a SHEET, which is why it diverges from
     /// the app-detail page and the token quick sheet, where the pour has the
     /// full page to run into.
+    /// **IT IS A PIECE OF PAPER NOW** (prd §498, user: *"should look like the
+    /// activity sheets we have in terms of design … still look like a contact
+    /// page … i want it to look nice"*).
+    ///
+    /// §495 gave every other sheet in the app one head — a subject disc and a
+    /// stamp, then the name, then supporting lines, all on the money receipt's
+    /// own raised paper with the room's hue poured down it. This card was the
+    /// last identity sheet still drawing its head bare on the page, which is
+    /// exactly what "a jumble of text" described one room over.
+    ///
+    /// It composes `dsReceiptPaper` rather than `DSSheetHead` for ONE reason,
+    /// and it is a real one: this head is partly a control. §444 moved
+    /// renaming in place because naming is the act this card exists for and an
+    /// alert covered the retitle cascade — so the title is a field, not a
+    /// `String`, and the shared type cannot take it. Everything else about the
+    /// paper is the shared modifier's, so the two can differ only in what
+    /// stands on them.
+    ///
+    /// **What stays a contact page rather than a receipt**: the face is
+    /// centred and profile-sized (an identity leads with a face; a transaction
+    /// leads with a disc in the corner), the address keeps its chunked
+    /// monospace block, and the verbs stay on the paper. The hue is the
+    /// ADDRESS'S OWN (§444 — the face is made of the address, so the pour
+    /// behind it is that person's colour rather than a room's).
     private var identityHeader: some View {
         VStack(spacing: 0) {
+            // The stamp row — what this address IS to you, when that is
+            // something worth saying at the top. `DSSheetHead`'s own top row,
+            // in the one arrangement a centred identity can take it: trailing,
+            // above the face, so it never pushes the face off centre.
+            HStack {
+                Spacer(minLength: 0)
+                if let stamp = identityStamp {
+                    Text(stamp)
+                        .dsText(.label12)
+                        .foregroundStyle(DS.textSecondary)
+                        .padding(.horizontal, DS.Space.s2)
+                        .padding(.vertical, 3)
+                        .background(DS.textSecondary.opacity(0.14),
+                                    in: Capsule(style: .continuous))
+                }
+            }
+            .frame(height: 22)
+
             // THE FACE IS MADE OF THE ADDRESS (prd §444) — see `AddressReveal`.
             AddressMark(entry: current, size: DS.Face.profile)
                 .addressFaceReveal(hue: pourHue, isFace: current.kind.glyph == nil)
@@ -899,8 +1026,20 @@ struct AddressCard: View {
             .padding(.top, DS.Space.s3)
         }
         .frame(maxWidth: .infinity)
-        .padding(.top, DS.Space.s3)
+        .dsReceiptPaper(hue: pourHue)
+        .padding(.horizontal, DS.Space.s4)
+        .padding(.top, DS.Space.s2)
         .padding(.bottom, DS.Space.s4)
+    }
+
+    /// The state worth stamping on an identity — one of your own five, or a
+    /// row you are looking at without having kept it. Neutral ink either way:
+    /// neither is a thing to act on, which is the bar `DSSheetHead` sets for
+    /// spending `DS.attention` on a stamp.
+    private var identityStamp: String? {
+        if isWatched { return String(localized: "Watching") }
+        if !isInBook { return String(localized: "Not kept") }
+        return nil
     }
 
     /// Rename, and the door out of the book — the two verbs that are not this
@@ -912,7 +1051,12 @@ struct AddressCard: View {
     /// is where a profile's secondary verbs live.
     private var overflowMenu: some View {
         Menu {
-            Button { beginRename() } label: { Label("Rename", systemImage: "pencil") }
+            // Absent, never disabled, for a contact or a social profile — a
+            // dead menu row is §83's dead control with a longer press (see
+            // `canRename`).
+            if canRename {
+                Button { beginRename() } label: { Label("Rename", systemImage: "pencil") }
+            }
             // §446's watch row is GONE (prd §461) — see the retirement note at
             // `isWatching`. It was here because the pinned bar could only carry
             // one verb; the reason it is not here now is that this card carries
@@ -1003,7 +1147,7 @@ struct AddressCard: View {
             Button { beginRename() } label: {
                 HStack(spacing: DS.Space.s2) {
                     Text(current.name)
-                        .dsText(.heading28).foregroundStyle(DS.textPrimary)
+                        .dsText(.heading22).foregroundStyle(DS.textPrimary)
                         .multilineTextAlignment(.center)
                         // The NAME reveal (2026-08-01) — `AddressMark`'s kind
                         // turn-over (prd §171) applied to the other half of the
@@ -1015,7 +1159,7 @@ struct AddressCard: View {
                         .transition(.scale(scale: 0.9).combined(with: .opacity))
                         .id(current.name)
                         .animation(DS.Motion.standard, value: current.name)
-                    if unnamed {
+                    if unnamed, canRename {
                         Image(systemName: "pencil")
                             .dsGlyph(13)
                             .foregroundStyle(DS.textTertiary)
@@ -1025,8 +1169,14 @@ struct AddressCard: View {
                 .dsTapTarget()
             }
             .buttonStyle(.plain)
+            // A contact's or a profile's name is not ours to rewrite
+            // (`canRename`), so the tap is removed rather than left to do
+            // nothing — §83, in the one place the card is stating who somebody
+            // is. `allowsHitTesting` rather than `.disabled`, which would dim
+            // the name itself and make a perfectly good title read as inert.
+            .allowsHitTesting(canRename)
             .accessibilityLabel(Text(current.name))
-            .accessibilityHint(Text("Rename this address"))
+            .accessibilityHint(canRename ? Text("Rename this address") : Text(""))
         }
     }
 
@@ -1038,7 +1188,19 @@ struct AddressCard: View {
         WalletStore.isAutoName(current.name, for: current.address)
     }
 
+    /// Whether this card may be renamed at all (prd §498).
+    ///
+    /// A CONTACT and a SOCIAL profile are shut, and not because writing them
+    /// is hard: their name belongs to the source that holds them — Apple's
+    /// address book, or the person's own profile — and `AddressBook.setName`
+    /// on one would mint a persisted, iCloud-synced ledger entry keyed
+    /// `contact:AB12…`, which is neither an address nor anything the phone
+    /// book would ever agree with. The name in front of you is theirs; this
+    /// book is showing it, not keeping it.
+    private var canRename: Bool { !current.kind.isMonogram }
+
     private func beginRename() {
+        guard canRename else { return }
         nameDraft = current.name
         DSHaptic.tap()
         withAnimation(DS.Motion.standard) { editingName = true }
@@ -1177,7 +1339,13 @@ struct AddressCard: View {
     private var pourHue: Color {
         switch current.kind {
         case .wallet, .unknown, .smartAccount: return WalletFace.tint(for: current.address)
-        case .contract, .safe:  return DS.tint
+        case .contract, .safe, .key:  return DS.tint
+        // A CONTACT or a SOCIAL profile is a who, so it sits with the faces —
+        // but its "address" is a namespaced key rather than a real one, so the
+        // hue is derived from the NAME. That keeps the pour behind the paper
+        // this person's own colour (§444) without pretending the key it was
+        // derived from means anything.
+        case .contact, .social: return WalletFace.tint(for: current.name)
         }
     }
 
@@ -1228,17 +1396,25 @@ struct AddressCard: View {
         // (§461's negative guard stands: `outcome(ofAdding:)` lives in the
         // roster and nowhere else). It REPLACES the kind word rather than
         // joining it: "Wallet · One of your wallets" says wallet twice.
-        if isWatched {
-            var parts: [String] = [String(localized: "One of your wallets")]
-            if let provenance = current.provenance { parts.append(provenance) }
-            return parts.joined(separator: " · ")
+        // The WATCHED and NOT-KEPT clauses moved to the paper's stamp
+        // (prd §498) — they are states, the stamp is where a state goes, and
+        // saying them here as well is §366's read-it-twice.
+        var parts: [String] = []
+        // A contact or a social profile says nothing about kind — its
+        // provenance ("Contacts", "Bluesky · @uma") already names what it is,
+        // and "Wallet" would be a fabrication on both.
+        if !current.kind.isMonogram {
+            parts.append(current.kind.label
+                         ?? BitcoinAddress.scriptKind(current.address)
+                         ?? String(localized: "Wallet"))
         }
-        let kindWord = current.kind.label
-            ?? BitcoinAddress.scriptKind(current.address)
-            ?? String(localized: "Wallet")
-        var parts: [String] = [kindWord]
         if let provenance = current.provenance { parts.append(provenance) }
-        if !isInBook { parts.append(String(localized: "not in your book")) }
+        // Where it was met — the wallet book showing a vibenet-tagged row so
+        // one book of BOTH populations never leaves you guessing which chain
+        // an address belongs to (2026-08-27, the address-book unification).
+        if let badge = current.networkBadge, current.provenance?.contains(badge) != true {
+            parts.append(badge)
+        }
         return parts.joined(separator: " · ")
     }
 
@@ -1739,6 +1915,47 @@ struct AddressCard: View {
             .padding(.horizontal, DS.Space.s4)
             .padding(.top, DS.Space.s6)
             .settleIn(delay: 0.14)
+        }
+    }
+
+    /// The person's free-text note on this address (2026-08-27, the
+    /// address-book unification) — the one field on this card that isn't a
+    /// fact the chain or the corpus supplied.
+    ///
+    /// Saved on BLUR, not per keystroke: `AddressBook` encodes and pushes the
+    /// whole book to iCloud on every write (`entries`' own `didSet`), so a
+    /// note that saved every character typed would be forty pushes for one
+    /// sentence. Only for an entry actually IN the book — `setNote` is a
+    /// no-op for one that isn't, and a door reached ephemerally (the
+    /// connections card's nodes) has nowhere to keep a note until it's named.
+    @ViewBuilder
+    private var noteBlock: some View {
+        if isInBook {
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                Text("Note")
+                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                TextField("Add a note…", text: $noteDraft, axis: .vertical)
+                    .dsText(.body17)
+                    .foregroundStyle(DS.textPrimary)
+                    .lineLimit(1...6)
+                    .focused($noteFocused)
+                    .padding(DS.Space.s3)
+                    .background(DS.surfaceWell,
+                                in: RoundedRectangle(cornerRadius: DS.Radius.control, style: .continuous))
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, DS.Space.s4)
+            .padding(.top, DS.Space.s4)
+            .onAppear { noteDraft = current.note ?? "" }
+            .onChange(of: current.note) { _, new in
+                // A remote sync can land a note underneath an open draft —
+                // only take it while the field isn't focused, so an iCloud
+                // pull can never overwrite what's mid-type here.
+                if !noteFocused { noteDraft = new ?? "" }
+            }
+            .onChange(of: noteFocused) { was, focused in
+                if was, !focused { book.setNote(noteDraft, for: entry.address) }
+            }
         }
     }
 

@@ -196,6 +196,99 @@ enum AddressBookShape {
         groups.filter { groupMatches($0, query: query) }
     }
 
+    // MARK: - The filter chips (prd §498)
+
+    /// Which population the book is showing — one quiet capsule row, single
+    /// select, above the list (user, 2026-08-27: *"we need filter chips
+    /// somehow"*).
+    ///
+    /// **Why they exist.** §496 made this one book over two rooms and §498
+    /// widened it past crypto, so a list that was one population is now five.
+    /// The chips are what keeps §169's promise — "scannable at fifty rows" —
+    /// now that exclusion no longer does it: the answer to a mixed book is a
+    /// control, not a membership rule.
+    ///
+    /// **There is deliberately no CONTRACTS chip**, and no ONCHAIN one.
+    /// Contracts and Contacts are one letter apart, and two capsules that
+    /// differ by a letter in a horizontal row is a misread waiting to happen —
+    /// so the machinery population has no chip of its own and `wallets` is the
+    /// "hide the machinery" filter people actually reach for. An `onchain`
+    /// chip was refused for the older reason: before §498 every entry was
+    /// on-chain, so it selected everything; it becomes sayable now, and is
+    /// still not worth a sixth capsule while `contacts` and `social` name the
+    /// off-chain half directly.
+    ///
+    /// **There is no VIBENET chip either** (user ruling, same day) — where an
+    /// address was met is a per-ROW fact, answered by the badge `AddressMark`
+    /// draws on the face, and a filter answers a different question than the
+    /// one you have while scanning.
+    ///
+    /// Kinds are matched by RAW STRING, not by `AddressBook.Kind`: this file
+    /// is Foundation-only so the harness can compile it whole and unmodified,
+    /// and importing the book's enum would drag `@Observable` in behind it.
+    /// A drift guard ties these literals to the enum's own cases.
+    enum BookFilter: String, CaseIterable, Sendable {
+        case all, wallets, keys, contacts, social
+
+        /// The capsule's word.
+        var label: String {
+            switch self {
+            case .all:      return String(localized: "All")
+            case .wallets:  return String(localized: "Wallets")
+            case .keys:     return String(localized: "Keys")
+            case .contacts: return String(localized: "Contacts")
+            case .social:   return String(localized: "Social")
+            }
+        }
+
+        /// Whether a row of this kind belongs under this chip.
+        ///
+        /// `wallets` deliberately takes `unknown` and `smartAccount` as well
+        /// as `wallet`: the unmarked "who" population is what somebody means
+        /// by the word, `smartAccount` is somebody's own wallet made of code
+        /// (§294 — the whole point of that case), and `unknown` is the resting
+        /// state EVERY vibenet entry sits in for life, since detection is
+        /// gated off for devnets (§496). Dropping either would file real
+        /// wallets outside the wallet chip, which reads as rows going missing.
+        func matches(kind: String) -> Bool {
+            switch self {
+            case .all:      return true
+            case .wallets:  return kind == "wallet" || kind == "smartAccount" || kind == "unknown"
+            case .keys:     return kind == "key"
+            case .contacts: return kind == "contact"
+            case .social:   return kind == "social"
+            }
+        }
+
+        /// Whether this chip is a real filter at all — `all` narrows nothing,
+        /// so the strip draws it without ever needing members to justify it.
+        var narrows: Bool { self != .all }
+    }
+
+    /// The chips worth drawing over these kinds — `all` always leads, then any
+    /// filter with at least one member, in declaration order.
+    ///
+    /// A chip with no members is never offered: a control whose only possible
+    /// outcome is an empty list is §83's dead control, and on a fresh book
+    /// four of the five would be exactly that.
+    static func availableFilters(kinds: [String]) -> [BookFilter] {
+        BookFilter.allCases.filter { filter in
+            !filter.narrows || kinds.contains(where: { filter.matches(kind: $0) })
+        }
+    }
+
+    /// The filter that should stand, given the one selected and what the book
+    /// can currently offer — `all` whenever the selection has stopped being
+    /// available.
+    ///
+    /// This exists for ONE transition and it is the only way this control can
+    /// strand the screen: remove the last key while `keys` is selected and the
+    /// chip disappears from the strip while still filtering the list, so the
+    /// book reads as empty with nothing on screen explaining why.
+    static func settledFilter(_ selected: BookFilter, kinds: [String]) -> BookFilter {
+        availableFilters(kinds: kinds).contains(selected) ? selected : .all
+    }
+
     // MARK: - The recency phrase (prd §440)
 
     /// When you last dealt with an address, in as few words as the fact needs.

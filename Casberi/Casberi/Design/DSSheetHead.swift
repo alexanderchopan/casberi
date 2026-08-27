@@ -115,21 +115,53 @@ struct DSSheetHead<Disc: View>: View {
         // is about a LIST's rows and a room's readings, and this is a single
         // object standing for a single moment — which is exactly what §363
         // argued when it gave the receipt its paper in the first place.
-        .padding(.horizontal, DS.Space.s4)
-        .padding(.top, DS.Space.s6)
-        .padding(.bottom, DS.Space.s6 + (ReceiptPaper.tooth + 2) * (torn ? 1 : 0))
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(alignment: .top) {
-            if let hue {
-                LinearGradient(colors: [hue.opacity(DS.receiptPourOpacity(scheme)),
-                                        hue.opacity(0)],
-                               startPoint: .top, endPoint: .bottom)
-                    .frame(height: 150)
-                    .frame(maxWidth: .infinity, alignment: .top)
+        .dsReceiptPaper(hue: hue, torn: torn)
+    }
+}
+
+/// THE PAPER ITSELF, without the arrangement on it (prd §498).
+///
+/// `DSSheetHead` above is one anatomy AND one silhouette, which is right for
+/// every sheet whose head is a run of static facts. The address card is the
+/// one head that is partly a CONTROL — §444 moved renaming in place, because
+/// naming is the act that card exists for and an alert covered the cascade it
+/// triggers — so it cannot hand its title over as a `String`.
+///
+/// The answer is not a second paper. Extracting the treatment means the two
+/// heads share the silhouette, the pour, the raised ground and the shadow, and
+/// can only ever differ in what stands on them — the failure mode a sibling
+/// session named the same day: *"shared COMPONENTS are not a shared
+/// TEMPLATE"*, five compositions of the same parts drifting apart with every
+/// check still green. `DSSheetHead` is itself the first caller, so the shared
+/// path is the one every existing sheet already runs.
+struct DSReceiptPaper: ViewModifier {
+    var hue: Color?
+    var torn: Bool = true
+    @Environment(\.colorScheme) private var scheme
+
+    func body(content: Content) -> some View {
+        content
+            .padding(.horizontal, DS.Space.s4)
+            .padding(.top, DS.Space.s6)
+            .padding(.bottom, DS.Space.s6 + (ReceiptPaper.tooth + 2) * (torn ? 1 : 0))
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(alignment: .top) {
+                if let hue {
+                    LinearGradient(colors: [hue.opacity(DS.receiptPourOpacity(scheme)),
+                                            hue.opacity(0)],
+                                   startPoint: .top, endPoint: .bottom)
+                        .frame(height: 150)
+                        .frame(maxWidth: .infinity, alignment: .top)
+                }
             }
-        }
-        .background(DS.surfaceRaised)
-        .clipShape(ReceiptPaper(tear: torn ? 1 : 0))
-        .shadow(color: DS.raisedShadow, radius: 10, y: 2)
+            .background(DS.surfaceRaised)
+            .clipShape(ReceiptPaper(tear: torn ? 1 : 0))
+            .shadow(color: DS.raisedShadow, radius: 10, y: 2)
+    }
+}
+
+extension View {
+    func dsReceiptPaper(hue: Color?, torn: Bool = true) -> some View {
+        modifier(DSReceiptPaper(hue: hue, torn: torn))
     }
 }

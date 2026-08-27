@@ -244,18 +244,8 @@ enum VibenetConfig {
 final class VibenetWatch {
     static let shared = VibenetWatch()
     private static let key = "vibenet.watch.addresses.v1"
-    /// A SEPARATE key from the address list on purpose — an older install's
-    /// watch list decodes untouched whether or not this one has ever
-    /// written anything, and clearing every name can never take a watched
-    /// address down with it.
-    private static let namesKey = "vibenet.watch.names.v1"
 
     private var addressList: [String] { didSet { persist() } }
-    /// Lowercased address → the local nickname. Display-only: never read by
-    /// any network call, never lands on a `Thing`, never appears in a log
-    /// line — the address itself is what identifies the account everywhere
-    /// else in this bridge.
-    private var names: [String: String] { didSet { persistNames() } }
 
     private init() {
         if let data = UserDefaults.standard.data(forKey: Self.key),
@@ -264,12 +254,6 @@ final class VibenetWatch {
         } else {
             addressList = []
         }
-        if let data = UserDefaults.standard.data(forKey: Self.namesKey),
-           let saved = try? JSONDecoder().decode([String: String].self, from: data) {
-            names = saved
-        } else {
-            names = [:]
-        }
     }
 
     var addresses: [String] { addressList }
@@ -277,20 +261,27 @@ final class VibenetWatch {
 
     /// The nickname for an address, or nil when none was set — the row
     /// falls back to the short hex form exactly as before.
+    ///
+    /// **Delegates to `AddressBook` (2026-08-27, the address-book
+    /// unification).** Names used to live in a device-local dictionary here
+    /// (`vibenet.watch.names.v1`, never iCloud-synced, forgotten on
+    /// disconnect) — the exact split `AddressBook`'s own header calls out as
+    /// the reason it exists at all. One vibenet account is one book entry
+    /// now, same as any mainnet wallet; every call site above keeps calling
+    /// this exact method and sees no difference except that the name now
+    /// survives a disconnect and reaches a second device.
     func name(for address: String) -> String? {
-        let key = address.lowercased()
-        guard let n = names[key], !n.isEmpty else { return nil }
-        return n
+        AddressBook.shared.name(for: address)
     }
 
     /// An empty/whitespace-only string CLEARS the name rather than storing
     /// it — there is no separate "remove name" action, so the same text
-    /// field that sets a name is the one that unsets it.
+    /// field that sets a name is the one that unsets it. (Clearing the name
+    /// on an entry the book knows about also drops its kind/provenance/note —
+    /// the same "an empty name is how you leave the book" contract the
+    /// wallet side already carries; see `AddressBook.setName`.)
     func setName(_ raw: String, for address: String) {
-        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-        let key = address.lowercased()
-        if trimmed.isEmpty { names.removeValue(forKey: key) }
-        else { names[key] = trimmed }
+        AddressBook.shared.setName(raw, for: address, networks: [AddressBook.Network.vibenet])
     }
 
     func isWatching(_ address: String) -> Bool {
@@ -312,6 +303,18 @@ final class VibenetWatch {
         let address = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         guard VibenetWatch.isValidAddress(address), !isWatching(address) else { return false }
         addressList.append(address)
+        // Watching implies the book holds it (2026-08-27) — the same
+        // invariant `AddressBook.addToGroup` enforces for groups, one door
+        // over. A short-form name so a freshly-watched account is findable
+        // in the book immediately, exactly the fallback `WalletStore.add`
+        // uses on the mainnet side.
+        let book = AddressBook.shared
+        if book.entry(for: address) == nil {
+            book.setName(WalletStore.shortAddress(address), for: address,
+                        networks: [AddressBook.Network.vibenet])
+        } else {
+            book.addNetwork(AddressBook.Network.vibenet, for: address)
+        }
         return true
     }
 
@@ -323,28 +326,25 @@ final class VibenetWatch {
     /// later brought back a bare `0x…44b1`. Watching and naming are two tiers
     /// over one ledger — §461's ruling for Wallet's book, and the reason this
     /// screen has no cap at all: a name costs nothing to keep.
-    ///
-    /// `removeAll` still clears both, which is what `VibenetBridge.disconnect`
-    /// calls — so "forget everything" remains reachable and remains one
-    /// deliberate act rather than a side effect of tidying a list.
     func remove(_ address: String) {
         addressList.removeAll { $0.caseInsensitiveCompare(address) == .orderedSame }
     }
 
+    /// Stop watching every account. **No longer touches names (2026-08-27,
+    /// the address-book unification, amending §472's own copy).** Names live
+    /// in `AddressBook` now, the one ledger that outlives every watch — the
+    /// exact doctrine that file's header states as the reason it exists —
+    /// so disconnecting the vibenet seat is no different from unwatching a
+    /// mainnet wallet: the chip leaves the strip, the names stay in the
+    /// Address Book. `VibenetAddressBookScreen`'s last-account confirm copy
+    /// was rewritten to say so.
     func removeAll() {
         addressList = []
-        names = [:]
     }
 
     private func persist() {
         if let data = try? JSONEncoder().encode(addressList) {
             UserDefaults.standard.set(data, forKey: Self.key)
-        }
-    }
-
-    private func persistNames() {
-        if let data = try? JSONEncoder().encode(names) {
-            UserDefaults.standard.set(data, forKey: Self.namesKey)
         }
     }
 }

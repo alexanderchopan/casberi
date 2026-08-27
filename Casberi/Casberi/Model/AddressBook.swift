@@ -30,6 +30,7 @@ final class AddressBook {
     private static let key = "wallet.addressBook.v1"
     private static let migratedKey = "wallet.addressBook.migrated.v1"
     private static let kindRecheckKey = "wallet.addressBook.kindRecheck.7702"
+    private static let vibenetMigratedKey = "wallet.addressBook.migrated.vibenet.v1"
 
     /// What the app learned an address IS — detected, never asked (prd §169).
     /// The person supplies a name; the chain supplies the kind. `unknown` is
@@ -51,6 +52,40 @@ final class AddressBook {
         /// prefix; this is the same ruling applied to accounts whose code is
         /// real.
         case smartAccount
+        /// An address that signs FOR an account rather than holding funds of
+        /// its own — a vibenet authorized key today (a secp256k1 or delegate
+        /// authenticator IS an address, per `Keystore.sol`), and structurally
+        /// any future signer key (2026-08-27, the address-book unification).
+        ///
+        /// ASSERTED by the door that filed it (`VibenetKeySheet`'s "Add to
+        /// Address Book"), never DETECTED — `eth_getCode` sees an ordinary EOA
+        /// here (a key is just a keypair), so `AddressKind.detect` can neither
+        /// find nor refute it and skips `.key` entries entirely rather than
+        /// silently downgrading one to `.wallet`.
+        case key
+        /// Somebody in the phone's own address book (2026-08-27, prd §498).
+        ///
+        /// **This is the case that widens §169's copy test**, and it is a
+        /// deliberate reversal rather than an oversight: that ruling made the
+        /// book crypto-only so "the list stays scannable at fifty rows and
+        /// honest at every one", which was right while the book held only
+        /// things you'd paste into a block explorer. The book is now the app's
+        /// one PEOPLE surface, and a person you know by phone is a person.
+        /// The scannability the old ruling protected is protected instead by
+        /// the filter chips (`AddressBookShape.BookFilter`), which is a
+        /// control rather than an exclusion.
+        ///
+        /// A contact carries no address, so it is never `key(for:)`-able as
+        /// one: these entries are EPHEMERAL, built for display by
+        /// `AddressBookPeople` from the corpus and never persisted or synced.
+        /// `AddressBook.entry(for:)` answers nil for one, which is what keeps
+        /// every write door (rename, group, note) correctly shut.
+        case contact
+        /// A social profile you watch — Bluesky, Farcaster, Nostr, Twitch
+        /// (prd §498). Ephemeral like `.contact`, for the same reason: a
+        /// handle is not an address, and `SocialRoomSource` already holds the
+        /// watch list this reads.
+        case social
 
         /// The mark's glyph. Only a WALLET is a "who" — it wears the round
         /// identicon face; everything else gets a square mark, so a book of
@@ -61,11 +96,30 @@ final class AddressBook {
         /// face away to file it with routers and token contracts is the
         /// mislabelling this case exists to undo. It keeps the face and says
         /// what it is in the label instead.
+        ///
+        /// A KEY is machinery, not a who — it is the instrument, not the
+        /// person holding it, so it takes the square mark like a contract.
+        /// A CONTACT and a SOCIAL profile are whos and take no glyph — but
+        /// they are also the two kinds with no address behind them, so the
+        /// round mark they get is a MONOGRAM rather than an identicon (see
+        /// `AddressMark`): an identicon derived from `contact:<ref>` is a
+        /// pattern generated from a string nobody will ever see, which is
+        /// noise wearing the costume of identity.
         var glyph: String? {
             switch self {
             case .contract: return "curlybraces"
             case .safe:     return "shield.lefthalf.filled"
-            case .wallet, .unknown, .smartAccount: return nil
+            case .key:      return "key.fill"
+            case .wallet, .unknown, .smartAccount, .contact, .social: return nil
+            }
+        }
+
+        /// True when the round mark should be drawn from the NAME rather than
+        /// from the address — the two addressless kinds.
+        var isMonogram: Bool {
+            switch self {
+            case .contact, .social: return true
+            default: return false
             }
         }
 
@@ -74,9 +128,45 @@ final class AddressBook {
             case .contract:     return String(localized: "Contract")
             case .safe:         return String(localized: "Safe")
             case .smartAccount: return String(localized: "Smart account")
-            case .wallet, .unknown: return nil
+            case .key:          return String(localized: "Key")
+            // `.contact`/`.social` say nothing here: their row already carries
+            // the source in `provenance` ("Contacts", "Bluesky · @uma"), and a
+            // word repeating what the line beside it says is §366's
+            // read-it-twice.
+            case .wallet, .unknown, .contact, .social: return nil
             }
         }
+
+        /// A raw value this build doesn't know decodes to `.unknown` rather
+        /// than throwing (2026-08-27). Without this, a new case added here
+        /// syncs to iCloud and an OLDER build's next pull decodes the WHOLE
+        /// remote dictionary to `[:]` under the single `try?` `KeyValueMirror`
+        /// wraps every entry decode in — and that build's next push can then
+        /// clobber the remote blob with an empty book. `.unknown` is exactly
+        /// the honest resting state for "we don't know what this build meant
+        /// by this word", the same reading a never-checked entry already gets.
+        /// This only protects builds that carry it — it can't reach back and
+        /// fix a build that already shipped without it — so any FUTURE case
+        /// added to this enum stays safe as long as this stays.
+        init(from decoder: Decoder) throws {
+            let raw = try decoder.singleValueContainer().decode(String.self)
+            self = Kind(rawValue: raw) ?? .unknown
+        }
+    }
+
+    /// Where an address has been MET — a tag on `Entry.networks`, never part
+    /// of its identity. `AddressBook.key(for:)` is unchanged: the same hex
+    /// keypair on vibenet and mainnet is the same entry, unioned rather than
+    /// split (2026-08-27, the address-book unification).
+    enum Network {
+        static let vibenet = "vibenet"
+
+        /// Chains `AddressKind.detect` must not ask about — its five reads
+        /// are mainnet RPCs, and asking them about a devnet keystore account
+        /// answers "no code anywhere" and confidently mislabels it `.wallet`.
+        private static let devnets: Set<String> = [vibenet]
+
+        static func isDevnet(_ tag: String) -> Bool { devnets.contains(tag) }
     }
 
     struct Entry: Codable, Identifiable, Equatable {
@@ -131,7 +221,39 @@ final class AddressBook {
         /// for a book written before this field existed. Optional like every
         /// other addition here, for the decode reason `groups` documents.
         var kindCheckedAt: Date? = nil
+        /// The person's own free-text note on this address (2026-08-27, the
+        /// address-book unification). Optional for the Codable reason
+        /// `groups` documents. Never printed on a row — a note is long-form
+        /// and lives on the entry's own detail sheet; it IS searched
+        /// (`AddressBook.search`), because a field the person can read and
+        /// cannot search reads as broken search, whichever field it is.
+        var note: String? = nil
+        /// Where this address has been MET — see `AddressBook.Network`. A
+        /// fill-in union, like `groups`: an address watched on vibenet and
+        /// later met on mainnet carries both tags. nil/empty means the
+        /// mainnet family, which is every entry written before this field
+        /// existed. Optional for the Codable reason `groups` documents.
+        var networks: [String]? = nil
         var id: String { AddressBook.key(for: address) }
+
+        /// The word this entry's network tags print as — "Vibenet" today,
+        /// nil for the (unmarked) mainnet family. Read by `subline` and
+        /// `kindLine` so a shared address prints where it was met without
+        /// either caller re-spelling the tag-to-word rule.
+        var networkBadge: String? {
+            guard let networks, networks.contains(AddressBook.Network.vibenet) else { return nil }
+            return String(localized: "Vibenet")
+        }
+
+        /// True when every network tag on this entry is a devnet — the gate
+        /// `AddressKind.detect`/`detectPending` use to skip an address whose
+        /// mainnet bytecode reads mean nothing. A mainnet entry (nil/empty
+        /// tags) is never devnet-only, so every pre-existing wallet-book row
+        /// is untouched.
+        var isDevnetOnly: Bool {
+            guard let networks, !networks.isEmpty else { return false }
+            return networks.allSatisfy(AddressBook.Network.isDevnet)
+        }
 
         var short: String { WalletStore.shortAddress(address) }
 
@@ -295,8 +417,21 @@ final class AddressBook {
             !standing.groupNames.contains($0)
         }
         out.groups = combined.isEmpty ? nil : combined
+        // Networks UNION the same way — an address met on vibenet under one
+        // spelling and mainnet under another is met on both.
+        out.networks = Self.unionNetworks(standing.networks, alias.networks ?? [])
+        if out.note == nil { out.note = alias.note }
         out.updatedAt = [standing.updatedAt, alias.updatedAt].compactMap { $0 }.max()
         return out
+    }
+
+    /// The one place network-tag union is spelled — `merging`, `setName`, and
+    /// `addNetwork` all fold into it, so "a tag lands once, order doesn't
+    /// matter" is a single rule rather than three copies of it.
+    private static func unionNetworks(_ existing: [String]?, _ adding: [String]) -> [String]? {
+        var out = existing ?? []
+        for tag in adding where !out.contains(tag) { out.append(tag) }
+        return out.isEmpty ? nil : out
     }
 
     private init() {
@@ -307,6 +442,7 @@ final class AddressBook {
             entries = [:]
         }
         migrateIfNeeded()
+        migrateVibenetIfNeeded()
         recheckContractKinds()
         // Heals books written before names were resolved (2026-07-25) — the
         // duplicate pair collapses on the next launch with no sync and no
@@ -369,6 +505,7 @@ final class AddressBook {
             if entry.name.lowercased().contains(q) { return true }
             if entry.address.lowercased().contains(q) { return true }
             if let provenance = entry.provenance, provenance.lowercased().contains(q) { return true }
+            if let note = entry.note, note.lowercased().contains(q) { return true }
             return entry.groupNames.contains { AddressBookShape.groupMatches($0, query: q) }
         }
     }
@@ -394,7 +531,8 @@ final class AddressBook {
     /// Returns the entry that now stands, or nil when the name was cleared.
     @discardableResult
     func setName(_ name: String, for address: String,
-                 provenance: String? = nil, kind: Kind? = nil) -> Entry? {
+                 provenance: String? = nil, kind: Kind? = nil,
+                 networks: [String]? = nil) -> Entry? {
         let key = Self.key(for: address)
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
@@ -403,10 +541,13 @@ final class AddressBook {
         }
         if var existing = entries[key] {
             existing.name = trimmed
-            // Provenance and kind only ever FILL IN — a later plain rename
-            // must not erase the verified source an entry arrived with.
+            // Provenance, kind and network tags only ever FILL IN — a later
+            // plain rename must not erase the verified source an entry
+            // arrived with, downgrade a real kind, or drop a network it was
+            // already met on.
             if let provenance { existing.provenance = provenance }
             if let kind { existing.kind = kind }
+            if let networks { existing.networks = Self.unionNetworks(existing.networks, networks) }
             existing.updatedAt = .now
             entries[key] = existing
             return existing
@@ -418,9 +559,39 @@ final class AddressBook {
         let entry = Entry(address: Self.resolvedForm(of: address),
                           name: trimmed, addedAt: .now,
                           kind: kind ?? .unknown, provenance: provenance,
-                          updatedAt: .now)
+                          updatedAt: .now, networks: networks)
         entries[key] = entry
         return entry
+    }
+
+    /// Fills in a network tag on an existing entry without touching its name
+    /// — the door `VibenetWatch.add`/the vibenet migration use to mark "this
+    /// address was also met on vibenet" for a row that already exists under
+    /// another name. No-op for an address the book doesn't hold: filing a tag
+    /// implies keeping the address, same as `addToGroup`'s own rule, but
+    /// unlike that door this one is never asked to invent a row — every
+    /// caller has already named the address by the time it reaches here.
+    func addNetwork(_ tag: String, for address: String) {
+        let key = Self.key(for: address)
+        guard var entry = entries[key], !(entry.networks ?? []).contains(tag) else { return }
+        entry.networks = Self.unionNetworks(entry.networks, [tag])
+        entry.updatedAt = .now
+        entries[key] = entry
+    }
+
+    /// Sets (or clears, with nil/empty) the person's free-text note. Stamps
+    /// `updatedAt` — unlike `setKind`, a note IS the person's edit. No-op
+    /// when the note is unchanged, so re-opening and re-saving an identical
+    /// note doesn't push the whole book to iCloud for nothing.
+    func setNote(_ note: String?, for address: String) {
+        let key = Self.key(for: address)
+        guard var entry = entries[key] else { return }
+        let trimmed = note?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let normalized = (trimmed?.isEmpty ?? true) ? nil : trimmed
+        guard entry.note != normalized else { return }
+        entry.note = normalized
+        entry.updatedAt = .now
+        entries[key] = entry
     }
 
     /// Records what an address turned out to BE. Separate from naming because
@@ -562,6 +733,17 @@ final class AddressBook {
     /// on every body pass. This is the same question asked once. Keyed through
     /// `key(forGroup:)` so a lookup can never disagree with `sameGroup` about
     /// whether "family" and "Family" are one group.
+    /// Which KINDS the book currently holds, as raw strings (prd §498) — what
+    /// the filter strip derives its chips from.
+    ///
+    /// A `Set` off `entries.values` rather than `all.map`, for the reason
+    /// `groupCounts` above states one question over: `all` SORTS the whole
+    /// book, and this is read on every body pass by a strip that only needs
+    /// to know whether a population exists at all.
+    var kindsPresent: Set<String> {
+        Set(entries.values.map(\.kind.rawValue))
+    }
+
     var groupCounts: [String: Int] {
         var out: [String: Int] = [:]
         for entry in entries.values {
@@ -754,6 +936,8 @@ final class AddressBook {
             if let provenance = entry.provenance { dict["provenance"] = provenance }
             if !entry.groupNames.isEmpty { dict["groups"] = entry.groupNames }
             if let updatedAt = entry.updatedAt { dict["updatedAt"] = iso.string(from: updatedAt) }
+            if let note = entry.note { dict["note"] = note }
+            if let networks = entry.networks, !networks.isEmpty { dict["networks"] = networks }
             return dict
         }
     }
@@ -780,7 +964,9 @@ final class AddressBook {
                                      ?? .unknown,
                                  provenance: item["provenance"] as? String,
                                  groups: item["groups"] as? [String],
-                                 updatedAt: updated)
+                                 updatedAt: updated,
+                                 note: item["note"] as? String,
+                                 networks: item["networks"] as? [String])
             guard let winner = Self.newer(incoming, than: out[key]) else { continue }
             out[key] = winner
             changed += 1
@@ -910,6 +1096,63 @@ final class AddressBook {
             }
         }
         UserDefaults.standard.set(true, forKey: Self.migratedKey)
+    }
+
+    /// Folds vibenet's own device-local name/watch stores into this book,
+    /// once (2026-08-27, the address-book unification).
+    ///
+    /// Vibenet kept a SEPARATE name dictionary
+    /// (`vibenet.watch.names.v1`, `VibenetWatch`'s own storage, never
+    /// iCloud-synced) — the exact split this book's own header calls out as
+    /// the reason it exists at all, one bridge later: "names lived in two
+    /// places that never met." A name typed on a vibenet account died with
+    /// the seat on disconnect and never reached a second device.
+    ///
+    /// Reads BOTH vibenet storage keys straight off `UserDefaults` rather
+    /// than through `VibenetWatch.shared`, the same no-mutual-init-ordering
+    /// rule `migrateIfNeeded` above already follows for `WalletStore` — and
+    /// `VibenetWatch` no longer reads its names key live once this has run,
+    /// so this is the one remaining reader of it. The storage key itself is
+    /// never deleted (downgrade safety, same rule as every migration here).
+    ///
+    /// A name FILLS IN only — it never overwrites an entry the wallet side
+    /// already named. A watched-but-unnamed address still lands (short form,
+    /// same fallback `WalletStore.add` uses), because watching implies the
+    /// book holds it (the same invariant `addToGroup` enforces for groups,
+    /// `VibenetWatch.add` enforces for network tags from today forward).
+    private func migrateVibenetIfNeeded() {
+        guard !UserDefaults.standard.bool(forKey: Self.vibenetMigratedKey) else { return }
+        var moved = 0
+        if let data = UserDefaults.standard.data(forKey: "vibenet.watch.names.v1"),
+           let names = try? JSONDecoder().decode([String: String].self, from: data) {
+            for (address, name) in names where !name.isEmpty {
+                let key = Self.key(for: address)
+                if entries[key] == nil {
+                    entries[key] = Entry(address: address, name: name, addedAt: .now,
+                                         networks: [Network.vibenet])
+                    moved += 1
+                } else if !(entries[key]?.networks ?? []).contains(Network.vibenet) {
+                    entries[key]?.networks = Self.unionNetworks(entries[key]?.networks, [Network.vibenet])
+                }
+            }
+        }
+        if let data = UserDefaults.standard.data(forKey: "vibenet.watch.addresses.v1"),
+           let addresses = try? JSONDecoder().decode([String].self, from: data) {
+            for address in addresses {
+                let key = Self.key(for: address)
+                if entries[key] == nil {
+                    entries[key] = Entry(address: address, name: WalletStore.shortAddress(address),
+                                         addedAt: .now, networks: [Network.vibenet])
+                    moved += 1
+                } else if !(entries[key]?.networks ?? []).contains(Network.vibenet) {
+                    entries[key]?.networks = Self.unionNetworks(entries[key]?.networks, [Network.vibenet])
+                }
+            }
+        }
+        UserDefaults.standard.set(true, forKey: Self.vibenetMigratedKey)
+        #if DEBUG
+        if moved > 0 { NSLog("[Casberi] addressBookMigrate| vibenet moved %d name(s)", moved) }
+        #endif
     }
 
     /// Forgets every cached `.contract` verdict, once (2026-07-25). Detection

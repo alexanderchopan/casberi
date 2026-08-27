@@ -53,16 +53,18 @@ struct AddressBookScreen: View {
     /// How the list orders itself — A–Z by default (prd §440, unchanged).
     @State private var bookSort: AddressBookShape.Order = .name
     @State private var activity: [String: AddressActivity.Summary] = [:]
-    @State private var connections: AddressConnections.Map?
-    /// Whether `refreshReadings` has run even once (prd §448) — a nil map means
-    /// two different things and only one of them is worth a sentence.
-    @State private var hasWalked = false
-    @State private var newConnections: Set<String> = []
+    /// Which population the strip is showing (prd §498). `@State`, so it dies
+    /// with the screen — a filter is a lookup, not a preference, and one that
+    /// outlived the visit would have somebody open their book to a list that
+    /// is missing most of it with no memory of why.
+    @State private var bookFilter: AddressBookShape.BookFilter = .all
+    /// The off-chain half — contacts and watched social profiles, built for
+    /// display and never written (see `AddressBookPeople`). Refreshed on the
+    /// same pass as `activity`, so the screen keeps its ONE corpus walk.
+    @State private var people: [AddressBook.Entry] = []
     @State private var dropTarget: String?
     @State private var absorbing: String?
     @State private var bookSheet: AddressBookSheetRoute?
-    @State private var namingAddress: String?
-    @State private var namingDraft = ""
     @State private var newGroupForEntry: AddressBook.Entry?
     @State private var groupDraft = ""
     @State private var bulkResult: String?
@@ -110,8 +112,18 @@ struct AddressBookScreen: View {
                     WalletRosterSection(onConnectFound: { bookSheet = .connectPicker($0) })
                 }
                 inputSection
+                // THE FILTER STRIP (prd §498). Deliberately NOT inside the
+                // search fold below: narrowing a search by population is the
+                // combination the two controls exist to make, and a strip that
+                // vanished the moment you typed would take that away exactly
+                // when a book of two hundred needs it most.
+                filterSection
                 if !searching {
-                    spineSection
+                    // The Connected spine LEFT this screen (user ruling,
+                    // 2026-08-27, with a screenshot of it: "please remove this
+                    // from the address book"). §295's arithmetic survives in
+                    // `AddressConnections` and `-connectionsProbe`; the DRAWING
+                    // is gone — see prd §497.
                     groupsSection
                 }
                 bookSection(entries: entries, sections: sections, searching: searching)
@@ -167,18 +179,6 @@ struct AddressBookScreen: View {
         // starting the next — which is what makes the debounce inside actually
         // debounce rather than queue.
         .task(id: draft) { await resolvePreview() }
-        // Naming a connected address (prd §295) — the spine card's one action.
-        // The name rides every landed transfer with this address, past and
-        // future.
-        .alert("Name this address",
-               isPresented: Binding(get: { namingAddress != nil },
-                                    set: { if !$0 { namingAddress = nil } })) {
-            TextField("Name (e.g. Mom)", text: $namingDraft)
-            Button("Save") { nameConnected() }
-            Button("Cancel", role: .cancel) { namingAddress = nil }
-        } message: {
-            Text("Your name for this address rides every transfer with it. A blank name clears it.")
-        }
         .alert("File this paste", isPresented: $filingBulkGroup) {
             TextField("Name (e.g. Family, Cold)", text: $groupDraft)
             Button("Create") { fileBulk(under: groupDraft) }
@@ -445,59 +445,73 @@ struct AddressBookScreen: View {
         .transition(.opacity)
     }
 
-    private func chipLabel(_ text: String, tinted: Bool) -> some View {
-        Text(text)
-            .dsText(.label12).fontWeight(.semibold)
-            .foregroundStyle(tinted ? DS.tint : DS.textSecondary)
-            .lineLimit(1)
-            .padding(.horizontal, DS.Space.s3)
-            .padding(.vertical, 7)
-            .background(DS.fillFaint, in: Capsule())
-    }
+    // MARK: - The filter strip (prd §498)
 
-    // MARK: - Connected (prd §440, trimmed §448)
-
-    /// The spine, or the honest sentence that stands where it would be. All
-    /// three empty states are §448's, unchanged — and all three are facts about
-    /// the ROSTER, which is why this room reads `wallet` at all.
+    /// One quiet capsule row — All, then whichever populations the book
+    /// actually holds. Single select; tapping the active chip returns to All,
+    /// which is the chip strip's own re-tap grammar everywhere else in the app.
+    ///
+    /// **No cards, no segmented control** (user ruling, 2026-08-27: *"not like
+    /// apple b/c theirs is kinda wonky, and no cards"*). It reuses the same
+    /// capsule the groups strip below already draws, so the screen has ONE
+    /// chip shape rather than a second one that merely looks similar.
+    ///
+    /// It draws only when there is a real choice to make: a book of nothing
+    /// but wallets gets All and Wallets, which is one chip pretending to be a
+    /// control, so the strip stands down below two narrowing options.
     @ViewBuilder
-    private var spineSection: some View {
-        if let connections, connections.connectedCount > 0 {
+    private var filterSection: some View {
+        let filters = AddressBookShape.availableFilters(kinds: presentKinds)
+        if filters.filter(\.narrows).count >= 2 {
             Section {
-                AddressSpineCard(map: connections, newNodeIDs: newConnections) { node in
-                    DSHaptic.tap()
-                    namingAddress = node.address
-                    namingDraft = ""
-                } onOpen: { node in
-                    bookSheet = .entry(book.entry(for: node.address)
-                                       ?? AddressBook.Entry(address: node.address,
-                                                            name: node.name,
-                                                            addedAt: .now))
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: DS.Space.s2) {
+                        ForEach(filters, id: \.self) { filter in
+                            Button {
+                                DSHaptic.selection()
+                                withAnimation(DS.Motion.standard) {
+                                    // A re-tap clears, so the strip never
+                                    // needs a separate way back to All.
+                                    bookFilter = (bookFilter == filter) ? .all : filter
+                                }
+                            } label: {
+                                chipLabel(filter.label, tinted: bookFilter == filter,
+                                          selected: bookFilter == filter)
+                            }
+                            .buttonStyle(.plain)
+                            .dsHover()
+                            .accessibilityAddTraits(bookFilter == filter ? .isSelected : [])
+                        }
+                    }
+                    .padding(.horizontal, DS.Space.s4)
+                    .padding(.vertical, DS.Space.s1)
                 }
-                .onAppear { AddressConnectionsSeen.markSeen(newConnections) }
-            } header: {
-                sectionHeader(String(localized: "Connected"))
             }
-            .listRowInsets(EdgeInsets(top: 0, leading: DS.Space.s4,
-                                      bottom: 0, trailing: DS.Space.s4))
+            .listRowInsets(EdgeInsets())
             .listRowBackground(Color.clear)
             .listRowSeparator(.hidden)
         }
-        // The empty line moved to the FOOT (prd §462) — see `quietFootSection`.
-        // §448's ruling that stating none IS an answer stands; what changed is
-        // WHERE it is said: a sentence about a drawing that doesn't exist yet
-        // was one of two almost-empty blocks pushing the record halfway down
-        // the screen.
     }
 
-    /// What stands where the card would be. Nil means draw nothing at all.
-    private var spineEmptyLine: String? {
-        if wallet.addresses.count < 2 {
-            return wallet.addresses.count == 1
-                ? String(localized: "Watch a second address to see how they connect.")
-                : nil
-        }
-        return hasWalked ? String(localized: "No shared addresses yet.") : nil
+    private func chipLabel(_ text: String, tinted: Bool) -> some View {
+        chipLabel(text, tinted: tinted, selected: false)
+    }
+
+    /// `selected` fills the capsule with the tint rather than merely tinting
+    /// the word — selection on this strip has to survive being read at a
+    /// glance beside four unselected neighbours, and tinted 12pt type alone
+    /// does not (§204's own lesson about a bare word in a colour ramp).
+    /// White on the tint in both themes, for the reason the source strip's
+    /// active word chip already gives: the accent is a dark blue either way.
+    private func chipLabel(_ text: String, tinted: Bool, selected: Bool) -> some View {
+        Text(text)
+            .dsText(.label12).fontWeight(.semibold)
+            .foregroundStyle(selected ? .white : (tinted ? DS.tint : DS.textSecondary))
+            .lineLimit(1)
+            .padding(.horizontal, DS.Space.s3)
+            .padding(.vertical, 7)
+            .background(selected ? AnyShapeStyle(DS.tint) : AnyShapeStyle(DS.fillFaint),
+                        in: Capsule())
     }
 
     // MARK: - Groups (prd §440)
@@ -554,7 +568,6 @@ struct AddressBookScreen: View {
     @ViewBuilder
     private func quietFootSection(entries: [AddressBook.Entry]) -> some View {
         let parts: [String] = [
-            spineEmptyLine,
             book.groupNames.isEmpty && entries.count >= Self.groupsOfferFloor
                 ? String(localized: "Groups arrive with your first filing — long-press any row.")
                 : nil,
@@ -659,8 +672,38 @@ struct AddressBookScreen: View {
     /// a watched wallet appearing here would be the duplication §448 deleted the
     /// shelf for, one screen apart instead of one scroll. The search says so
     /// rather than answering nothing — see `emptyBookLine`.
+    /// The rows the list draws — the ledger's own entries plus the off-chain
+    /// half, searched, then narrowed by the chip (prd §498).
+    ///
+    /// The chip narrows LAST, after search, which is what makes the two
+    /// compose: typing "uma" with Social selected asks "which of my social
+    /// people is Uma", and either control alone still answers what it always
+    /// did. `settledFilter` runs here rather than at the tap so a filter whose
+    /// population disappeared underneath it cannot strand the screen on an
+    /// empty list.
     private func visibleEntries() -> [AddressBook.Entry] {
-        book.search(query).filter { !isWatched($0) }
+        let owned = book.search(query).filter { !isWatched($0) }
+        let q = draft.lowercased()
+        // Contacts and social rows carry only a name and a provenance — no
+        // address, no groups, no note — so they are matched on what they have
+        // rather than run through `book.search`, which asks about fields these
+        // structurally cannot fill.
+        let others = q.isEmpty ? people : people.filter {
+            $0.name.lowercased().contains(q)
+                || ($0.provenance?.lowercased().contains(q) ?? false)
+        }
+        let merged = owned + others
+        let settled = AddressBookShape.settledFilter(bookFilter, kinds: presentKinds)
+        guard settled.narrows else { return merged }
+        return merged.filter { settled.matches(kind: $0.kind.rawValue) }
+    }
+
+    /// Every kind the book can currently offer a chip for — the LEDGER's own
+    /// census (unsorted, see `AddressBook.kindsPresent`) plus the off-chain
+    /// rows. Deliberately computed before search, so typing does not make
+    /// chips appear and vanish under the thumb.
+    private var presentKinds: [String] {
+        Array(book.kindsPresent) + people.map(\.kind.rawValue)
     }
 
     /// Matched through the resolution cache, not by raw string (2026-07-25): a
@@ -1042,29 +1085,17 @@ struct AddressBookScreen: View {
         bulkLanded = []
     }
 
-    /// Names a connected address, then brings its landed transfers into line —
-    /// the same pair the thing sheet's own naming flow runs.
-    private func nameConnected() {
-        guard let address = namingAddress else { return }
-        namingAddress = nil
-        AddressBook.shared.setName(namingDraft, for: address)
-        _ = CounterpartyRetitle.applyCurrentName(for: address, in: modelContext)
-        refreshReadings()
-        DSHaptic.success()
-    }
-
-    /// ONE corpus walk, both readings (prd §441) — `AddressActivity` reads
-    /// Wallet + Peer + Privacy Pools things and `AddressConnections` reads a
-    /// subset of them, so fetching twice was fetching the same rows twice.
+    /// ONE corpus walk (prd §441; the Connected spine that shared this walk
+    /// left the screen 2026-08-27, prd §497, so `AddressActivity` is its only
+    /// reader now).
     private func refreshReadings() {
         let things = AddressActivity.relevant(in: modelContext)
         activity = AddressActivity.summaries(from: things)
-        let map = AddressConnections.map(things: things)
-        // WHAT'S NEW SINCE YOU LAST LOOKED (prd §441) — computed before the map
-        // is published, so the card draws its dashed arrivals on the same frame
-        // it first appears rather than a beat later.
-        newConnections = AddressConnectionsSeen.unseen(in: map)
-        connections = map
-        hasWalked = true
+        // The off-chain half (prd §498). Its own scoped fetch rather than a
+        // filter over `things`: that walk is Wallet/Peer/Privacy-Pools rows by
+        // construction and holds no contact, so filtering it would answer
+        // empty forever — the dead-registry shape §313 paid for twice.
+        people = AddressBookPeople.rows(in: modelContext,
+                                        excluding: Set(book.all.map(\.id)))
     }
 }

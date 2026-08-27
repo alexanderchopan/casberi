@@ -13,21 +13,33 @@ import SwiftUI
 /// describes — reachable from the vibenet face rail's book slot and from
 /// the setup page's own door.
 ///
-/// **What it deliberately does NOT copy from Wallet's book.** That one has
-/// TWO tiers — five WATCHED addresses and an unlimited ledger of NAMES —
-/// because on mainnet a watch costs a metered Zerion read on every
+/// **What it deliberately does NOT copy from Wallet's WATCH tier.** Wallet's
+/// screen has TWO tiers — five WATCHED addresses and an unlimited ledger of
+/// NAMES — because on mainnet a watch costs a metered Zerion read on every
 /// foreground and a name costs nothing. Vibenet reads a keyless devnet
 /// RPC: watching is free, so there is no expensive tier to separate out.
 /// One list, no cap counter, no "Everyone else" section, and no
 /// `WalletStore.watchLimit` analog to state — a limit with no cost behind
 /// it is a control that protects nothing (§83's shape).
 ///
-/// **The structure is copied, never the type** (`AddressBookScreen`'s own
-/// ruling): these hold different things under the same word, and
-/// parameterising one screen by source is how the two start owing each
-/// other behaviour neither wants.
+/// **The NAMES ledger is shared now (2026-08-27, the address-book
+/// unification).** Every account named here lives in `AddressBook`, the same
+/// store `AddressBookScreen` reads — a rename here shows up there (badged
+/// "Vibenet") and survives disconnect, because naming is free and outlives
+/// every watch (`AddressBook`'s own founding doctrine, finally applied to
+/// this seat too — it used to keep a separate, device-local, disconnect-
+/// clearing name dictionary, which was the bug this unification fixed).
+/// `VibenetWatch` still owns which addresses are WATCHED, exactly as before.
+///
+/// **The SCREEN is copied, never the type** (`AddressBookScreen`'s own
+/// ruling): this room's roster (watched, uncapped, managed here) and the
+/// wallet book's list (named, capped watch tier, managed there) are
+/// different enough surfaces that parameterising one screen by source is how
+/// the two start owing each other behaviour neither wants — even though both
+/// now read and write the one underlying ledger.
 struct VibenetAddressBookScreen: View {
     @Environment(BridgeStore.self) private var store
+    @Environment(HomeRoute.self) private var route
     @Bindable private var watch = VibenetWatch.shared
 
     /// **SEEDED FROM THE LAST SAVED READ, not from an empty room (prd §472).**
@@ -195,6 +207,37 @@ struct VibenetAddressBookScreen: View {
                     .listRowSeparator(.hidden)
             }
 
+            // ONE BOOK, WALKABLE FROM EITHER ROOM (2026-08-27, the
+            // address-book unification). Every account named here is a row
+            // in the same `AddressBook` the wallet manager reads — this door
+            // is what makes that a claim you can actually walk rather than
+            // one only stated in a comment. Same rung/weight/tint as "Find
+            // another account" above (§476's ruling: one way of saying "here
+            // is something else you can do").
+            Section {
+                Button {
+                    DSHaptic.selection()
+                    route.push(.addressBook)
+                } label: {
+                    HStack(spacing: 3) {
+                        Text(String(localized: "Full address book"))
+                        Image(systemName: "chevron.right")
+                            .dsGlyph(9, weight: .semibold)
+                    }
+                    .dsText(.label12).fontWeight(.semibold)
+                    .foregroundStyle(Self.mark)
+                    .lineLimit(1)
+                    .fixedSize()
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .dsHover()
+            }
+            .listRowInsets(EdgeInsets(top: 0, leading: DS.Space.s4,
+                                      bottom: 0, trailing: DS.Space.s4))
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+
             Color.clear.frame(height: ShellMetrics.bottomInset - 40)
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
@@ -230,8 +273,11 @@ struct VibenetAddressBookScreen: View {
         } message: {
             // What actually happens, in the words of the things it happens to
             // — never "this cannot be undone", which is true of most taps and
-            // tells you nothing about this one.
-            Text(String(localized: "It's the only account you watch, so vibenet disconnects: the chip leaves the source strip, and the names you gave your accounts are forgotten."))
+            // tells you nothing about this one. Rewritten 2026-08-27 (the
+            // address-book unification): names live in the shared Address
+            // Book now, the one ledger that outlives every watch, so
+            // disconnecting no longer destroys them — only the chip goes.
+            Text(String(localized: "It's the only account you watch, so vibenet disconnects: the chip leaves the source strip. The names you gave your accounts stay in your Address Book."))
         }
         .alert(
             String(localized: "Name this account"),

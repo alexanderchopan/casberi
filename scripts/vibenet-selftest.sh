@@ -541,9 +541,24 @@ if [[ "$removeBody" == *"names.removeValue"* ]]; then
   echo "  and re-watching must not hand back a bare 0x…. removeAll still clears both."
   exit 1
 fi
-grep -q 'names = \[:\]' "$TMP/bridge.nc.swift" \
-  || { echo "✗ removeAll no longer clears the names — prd §472: 'forget everything' must stay"
-       echo "  reachable as one deliberate act"; exit 1; }
+# prd §496 REVERSED the removeAll half of §472: names live in the shared
+# AddressBook now and outlive every watch, so `removeAll` (and disconnect
+# through it) must NOT touch them — the guard above this one flips from
+# asserting the clear to forbidding it. VibenetWatch holds no name storage at
+# all any more; a `names` dictionary reappearing in this file is the two-books
+# split §496 exists to end, growing back.
+if grep -q 'names\s*=\s*\[:\]\|names\.removeValue\|private var names' "$TMP/bridge.nc.swift"; then
+  echo "✗ VibenetWatch grew its own name storage back — prd §496: names live in"
+  echo "  AddressBook, the one ledger that outlives every watch. removeAll must"
+  echo "  not clear them and no vibenet-local names dictionary may exist."
+  exit 1
+fi
+# …and the delegation itself: both name doors must route through AddressBook,
+# or the two screens quietly stop reading one ledger.
+grep -q 'AddressBook\.shared\.name(for: address)' "$TMP/bridge.nc.swift" \
+  || { echo "✗ VibenetWatch.name(for:) no longer reads AddressBook — prd §496"; exit 1; }
+grep -q 'AddressBook\.shared\.setName' "$TMP/bridge.nc.swift" \
+  || { echo "✗ VibenetWatch.setName no longer writes AddressBook — prd §496"; exit 1; }
 
 # --- prd §475: cohesion with the Wallet room ---------------------------------
 #

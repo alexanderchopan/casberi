@@ -568,6 +568,18 @@ struct RootShell: View {
             if UserDefaults.standard.bool(forKey: "openSettings") {
                 sceneState.route.present(.settings)
             }
+            // `-openAddressBook YES|vibenet` pushes the address book — the
+            // wallet manager's, or vibenet's roster screen. Added 2026-08-27
+            // (the address-book unification): both screens are otherwise
+            // reachable only through taps (the wallet rail's book glyph, the
+            // vibenet rail's book slot), which no headless run can make, and
+            // the unified book is exactly the kind of change that has to be
+            // LOOKED at — a badge, a note field and a kind mark are invisible
+            // to every probe.
+            if let bookArg = UserDefaults.standard.string(forKey: "openAddressBook") {
+                sceneState.route.push(bookArg.lowercased() == "vibenet"
+                                      ? .vibenetAddressBook : .addressBook)
+            }
             // `-openSources YES` raises the sources tray, which is otherwise
             // reachable ONLY by a long press on the agent bar — a gesture no
             // headless run can make and no screenshot pass can stage. Added
@@ -1864,6 +1876,14 @@ struct RootShell: View {
                         closeSources()
                         withAnimation(DS.Motion.standard) {
                             sceneState.route.present(.settings)
+                        }
+                    },
+                    // The address book's global door (prd §498) — same
+                    // close-then-push shape as its two neighbours.
+                    onOpenAddressBook: {
+                        closeSources()
+                        withAnimation(DS.Motion.standard) {
+                            sceneState.route.push(.addressBook)
                         }
                     }) { label in
                     closeSources()

@@ -100,6 +100,10 @@ at all.
 | §441 | Starring an address flies its face from the book row to the shelf slot | amended by §448 |
 | §295 | The connections card leads with a headline counting the connected addresses | amended by §448 |
 | §465 | Wallet and vibenet keep two names ledgers — the structure copied, never the type | amended by §496 (the LEDGER is shared now; the two screens stay separate types, reading and writing one `AddressBook`) |
+| §169 | The book is crypto-only — an entry is an on-chain address, and emails and phone numbers fail the copy test | amended by §498 (it is the app's one people surface now; contacts and social profiles join as ephemeral rows, and the filter chips protect the scannability the exclusion used to) |
+| §462 | The quiet foot carries the spine's empty line and the filing hint | amended by §497 (the spine line left with the drawing; the foot keeps the filing hint) |
+| §295 | The connections card is the last thing on the Wallet manager | amended by §497 (the spine no longer draws anywhere; the arithmetic and probe survive) |
+| §448 | The spine's three empty states are facts about the roster, stated in the book | amended by §497 (the drawing left the screen, so nothing states them) |
 | §472 | Stopping the last watched vibenet account forgets the names given to your accounts | amended by §496 (names live in `AddressBook` now and outlive every watch — disconnect only drops the chip) |
 | §18 | Feed spec | amended by §64 |
 | §417 | The holdings card leads with its reading at `heading22` | amended by §447 |
@@ -35929,3 +35933,119 @@ and write the one ledger underneath.
 **UNMEASURED**: the tolerant `Kind` decode has not been exercised against a
 real cross-device iCloud pull carrying a `.key` entry from an older-vs-newer
 build pair; the vibenet-side note tray has not been seen on a device.
+
+## 497. The Connected spine leaves the address book (user, with a screenshot of it: "please remove this from the address book", 2026-08-27)
+
+**Amends §295/§440/§448/§462's placement of the connections card; the
+arithmetic survives.** `AddressSpineCard` — the Sam-to-your-two-wallets spine
+under a "Connected" header — is deleted from `AddressBookScreen` and from the
+tree (it had exactly one call site, so the view file goes with the feature,
+and its harness guards go with the view: a guarded view that leaves takes its
+guards with it, the §386p rule). What survives, deliberately: the
+`AddressConnections` model and `-connectionsProbe` (the arithmetic is
+harness-covered in `wallet-viz-selftest.sh` and may be drawn again elsewhere),
+`AddressConnectionsSeen` (unused by any drawing now, kept because its
+seeded-silently contract is the part worth not re-learning), and
+`CounterpartyRetitle` (the book's other callers still use it). The spine's
+naming alert, its empty-state sentence in the quiet foot, and the
+`connections`/`hasWalked`/`newConnections` state all leave with it —
+`refreshReadings` walks the corpus once for `AddressActivity` alone now.
+
+## 498. The book becomes the app's one people surface — filter chips, contacts and social, a badge instead of a chip, and a sheet that is a piece of paper (user: "we need filter chips somehow" → "onchain as a filter" → "maybe even 'keys' as a filter" → "right now it is a mix of wallet address and non wallet address but user can only enter wallet here" → "we could put it next to the user avatar, apps, and all feed buttons in the source tray 🙂" → "i don't necessarily think vibenet needs its own filter. it just needs some use of the vibenet icon for avatars" → "maybe we need 'contacts' for literal apple contacts? and 'social' for social profiles? bc those would include twitch and such too" → "we also need the sheet for when you open one up. should look like the activity sheets we have… still look like a contact page… i want it to look nice", 2026-08-27)
+
+**Amends §169's copy test.** That ruling made the book crypto-only — "emails
+and phone numbers fail that test", so "the list stays scannable at fifty rows
+and honest at every one" — and it was right for a book that held only things
+you would paste into a block explorer. §496 made it one ledger across two
+rooms; this makes it the app's one PEOPLE surface. The scannability §169 was
+protecting is protected by a CONTROL now instead of by an exclusion, which is
+the whole trade: filter chips cost one capsule row and cost nobody a
+population.
+
+**Five chips, and the two that are missing are the interesting ones.**
+`AddressBookShape.BookFilter` — All · Wallets · Keys · Contacts · Social,
+single select, a re-tap clears, derived from what the book actually holds so a
+chip is never offered over an empty population (§83). There is deliberately no
+CONTRACTS chip: "Contracts" and "Contacts" are one letter apart, and two
+capsules that differ by a letter in a horizontal row is a misread waiting to
+happen — machinery has no chip and `Wallets` is the hide-the-machinery filter
+people actually reach for. There is no ONCHAIN chip either: before this entry
+every row was on-chain so it selected everything, and now that it is sayable
+it is still not worth a sixth capsule while Contacts and Social name the
+off-chain half directly. `settledFilter` exists for exactly ONE transition and
+it is the only way this control can strand the screen — remove the last key
+while Keys is selected and the chip leaves the strip while still filtering, so
+the book reads as empty with nothing on screen explaining why.
+
+**Contacts and social are EPHEMERAL, and that is the design**
+(`AddressBookPeople`). Nothing is written to `AddressBook`, persisted, or
+synced. Each row is an `Entry` VALUE built from a source that already holds it
+— the corpus for contacts, the watch stores for social — so the book needs no
+import step, no picker and no permission of its own; unwatching an account
+removes its row by itself with no reconcile pass to get wrong; the iCloud
+mirror never carries a phone number or a handle (the half of §169 worth
+keeping — that ledger is addresses and stays addresses); and every write door
+is shut by CONSTRUCTION rather than by a rule somebody has to remember, since
+`entry(for:)` answers nil for these keys. **The §87 picker ruling therefore
+still stands**: nothing here writes, so following a forty-person starter pack
+still cannot dump forty entries into somebody's ledger. Renaming is refused
+for both kinds and the menu row is ABSENT rather than disabled — their name
+belongs to Apple's address book or to the person's own profile, and
+`setName` on one would mint a synced ledger entry keyed `contact:AB12…`.
+**Twitch is not included, and that is a fact about the roster rather than a
+decision**: `SocialRoomSource.accounts(for:)` is §489's one dispatch and only
+Bluesky, Farcaster and Nostr carry a `socialAccounts` roster.
+
+**The addressless kinds wear a MONOGRAM, not an identicon.** `WalletFace`
+derives its pattern from the address, so handing it `contact:AB12…` draws a
+confident identicon of a string nobody will ever see — noise wearing the
+costume of identity, §83's shape in pixels. Initials of the name, falling back
+to a dot rather than inventing a letter.
+
+**Vibenet gets a BADGE and no chip** (user ruling, offered three ways and this
+is the answer to all three). Not the avatar replacement — taking a face away
+to mark a network is precisely the mislabelling §294 exists to undo, one axis
+over. Not a filter either: a filter answers "show me only vibenet", while the
+question you have mid-scan is "what is THIS row", which only something on the
+row can answer. A dot in Base's own blue at the face's corner, ringed in the
+PAGE colour rather than stroked (this design system has no exceptions to the
+no-line rule), because at `DS.Face.list` a glyph inside 12pt is a smudge and
+the colour is the whole statement.
+
+**The card became a piece of paper** (`dsReceiptPaper`). Every other identity
+sheet took §495's head — a raised surface, the room's hue poured down it, the
+receipt's torn bottom edge — and this was the last one drawing its head bare
+on the page, which is what "a jumble of text" described one room over. It
+composes the MODIFIER rather than `DSSheetHead` for one real reason: this head
+is partly a control, since §444 moved renaming in place (an alert covered the
+retitle cascade), so its title is a field and not a `String`. Extracting the
+paper is what keeps that from becoming a second silhouette — the failure a
+sibling session named the same day, "shared COMPONENTS are not a shared
+TEMPLATE", five compositions of the same parts drifting with every check
+green. `DSSheetHead` is itself the first caller, so the shared path is the one
+every existing sheet already runs. What stays a CONTACT page rather than a
+receipt: the face is centred and profile-sized (an identity leads with a face;
+a transaction leads with a disc in the corner), the address keeps its chunked
+monospace block, the verbs stay on the paper, and the hue is the ADDRESS'S own
+(§444 — the face is made of the address, so the pour behind it is that
+person's colour). The watched/not-kept clauses moved OFF the kind line and
+onto the paper's stamp, where a state belongs; saying them in both places was
+§366's read-it-twice.
+
+**A note glyph on the row.** The note itself stays off the row (§496 — it is
+long-form and belongs on the card), but a fact somebody typed about a person
+should not be undiscoverable until they happen to open it. A glyph, never an
+excerpt: an excerpt is the note on the row by another name and would push the
+relationship facts beside it off the line.
+
+**A third door, in the tray.** `SourcesOverlay`'s header carries the avatar
+and Apps because those OPEN a screen while every cell in the grid below
+FILTERS the one you are on — and §496 turned the book from a wallet detail
+into a place, which is the same class. The Wallet and vibenet rail glyphs
+STAY: those are contextual doors from the room whose addresses you are already
+looking at (§460's shape), this is the global one, and all three draw
+`person.text.rectangle` so three doors to one screen cannot read as three
+destinations.
+
+**UNSEEN on a device**: the badge, the monogram, the paper and the strip are
+all compiled and harnessed, and none has been looked at on a simulator.

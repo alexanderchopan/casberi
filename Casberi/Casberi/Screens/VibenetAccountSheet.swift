@@ -37,6 +37,10 @@ struct VibenetAccountSheet: View {
     /// target to track: this sheet is always about `address`.
     @State private var renaming = false
     @State private var renameText = ""
+    /// The note editor (2026-08-27, the address-book unification) — see
+    /// `noteTray`.
+    @State private var editingNote = false
+    @State private var noteDraft = ""
 
     /// The key whose sheet is up (prd §478 — a key's depth is a
     /// presentation, never a row growing in place). A local wrapper rather
@@ -138,6 +142,16 @@ struct VibenetAccountSheet: View {
                             } label: {
                                 Label(String(localized: "Name this account…"), systemImage: "pencil")
                             }
+                            // NOTE (2026-08-27, the address-book unification)
+                            // — this account is a row in the SAME `AddressBook`
+                            // the wallet manager reads, so a note written here
+                            // shows up there too.
+                            Button {
+                                noteDraft = AddressBook.shared.entry(for: address)?.note ?? ""
+                                editingNote = true
+                            } label: {
+                                Label(String(localized: "Note…"), systemImage: "note.text")
+                            }
                             Button(role: .destructive) {
                                 onRemove(address)
                                 dismiss()
@@ -158,6 +172,7 @@ struct VibenetAccountSheet: View {
                 VibenetKeySheet(actor: key.actor, item: key.item,
                                 sharedKeys: VibenetKeyReuse.sharing(key.item, in: room.items))
             }
+            .sheet(isPresented: $editingNote) { noteTray }
             .alert(String(localized: "Name this account"), isPresented: $renaming) {
                 TextField(String(localized: "Name"), text: $renameText)
                 Button(String(localized: "Save")) {
@@ -195,6 +210,35 @@ struct VibenetAccountSheet: View {
                         : String(localized: "\(item.actors.count) keys"),
                     sentence: accountSentence(item),
                     hue: DS.brandHue(for: VibenetIdentity.source) ?? Color.fixed("#0052ff"))
+    }
+
+    /// The note editor, as a `DSTray` (design law: trays are never
+    /// hand-rolled) rather than an alert — a note is free-form prose, and an
+    /// alert's single-line field would cut it back to a label the moment it
+    /// tried to be one (2026-08-27, the address-book unification).
+    private var noteTray: some View {
+        DSTray(title: String(localized: "Note"), height: 220) {
+            VStack(alignment: .leading, spacing: DS.Space.s3) {
+                TextField(String(localized: "Add a note…"), text: $noteDraft, axis: .vertical)
+                    .dsText(.body17)
+                    .foregroundStyle(DS.textPrimary)
+                    .lineLimit(3...8)
+                    .padding(DS.Space.s3)
+                    .background(DS.surfaceWell,
+                                in: RoundedRectangle(cornerRadius: DS.Radius.control, style: .continuous))
+                Button {
+                    AddressBook.shared.setNote(noteDraft, for: address)
+                    editingNote = false
+                } label: {
+                    Text(String(localized: "Save"))
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(Self.mark)
+            }
+            .padding(.horizontal, DS.Space.s4)
+            .padding(.top, DS.Space.s2)
+        }
     }
 
     /// What the account's standing means now — silent when it is simply fine,

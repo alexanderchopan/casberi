@@ -3850,6 +3850,23 @@ enum ProbeHooks {
             }
             NSLog("Address-book probe: %d named, %d in book", landed, AddressBook.shared.count)
         },
+        // `-addressNote "<address>:<note>"` — seed a note on an entry
+        // headlessly (2026-08-27, the address-book unification). Splits on
+        // the FIRST colon after the address (an address contains no colon; a
+        // note may) — the mirror of `-addressBook`'s LAST-colon split, which
+        // exists because a NAME may carry its own colon-free structure while
+        // a note is free prose. Declared before `-addressBookProbe` so the
+        // seed lands before the read (hooks run in list order). No-op for an
+        // address the book doesn't already hold — pair with `-addressBook`
+        // or `-vibenetWatch` first.
+        Hook(key: "addressNote") { spec, _ in
+            guard let colon = spec.firstIndex(of: ":") else { return }
+            let address = String(spec[spec.startIndex..<colon])
+            let note = String(spec[spec.index(after: colon)...])
+            AddressBook.shared.setNote(note, for: address)
+            NSLog("Address-note probe: note=%d chars on %@",
+                  note.count, AddressBook.key(for: address))
+        },
         // `-addressBookProbe YES` — report the book and the watch cap: every
         // entry with its detected kind and whether it's watched, plus how the
         // cap currently stands. The one check that naming and watching are
@@ -3871,13 +3888,36 @@ enum ProbeHooks {
                 // a poisoning collision is the one finding here that means
                 // something is wrong rather than merely describing the book.
                 NSLog("Address-book probe: lookalike collisions=%d", colliding.count)
+                // THE FILTER STRIP (prd §498) — which chips the book would
+                // offer, and how many rows each holds. A chip filtering the
+                // wrong population renders as an ordinary shorter list, so
+                // this is the only place the two can be compared; and an
+                // ABSENT chip has two causes that look identical from the
+                // screen (no members, or a `matches` arm that stopped taking
+                // a kind), which the per-chip count separates.
+                let bookKinds = AddressBook.shared.all.map(\.kind.rawValue)
+                let offered = AddressBookShape.availableFilters(kinds: bookKinds)
+                NSLog("Address-book probe: chips=%@",
+                      offered.map { filter in
+                          let n = bookKinds.filter { filter.matches(kind: $0) }.count
+                          return "\(filter.rawValue)(\(n))"
+                      }.joined(separator: ", "))
                 for entry in AddressBook.shared.all {
-                    NSLog("  %@ · %@ · kind=%@%@%@%@%@", entry.name, entry.short,
+                    // networks/note appended 2026-08-27 (the address-book
+                    // unification) — a landed count alone can't separate "no
+                    // vibenet tag ever reached this row" from "the read never
+                    // ran", and note LENGTH (never the text — same caution
+                    // `-secretScanProbe` takes) proves the field round-trips
+                    // without printing anyone's private words to a log.
+                    NSLog("  %@ · %@ · kind=%@%@%@%@%@%@%@", entry.name, entry.short,
                           entry.kind.rawValue,
                           watched.contains(entry.id) ? " · WATCHED" : "",
                           entry.provenance.map { " · from \($0)" } ?? "",
                           entry.groupNames.isEmpty ? ""
                             : " · in \(entry.groupNames.joined(separator: "/"))",
+                          (entry.networks ?? []).isEmpty ? ""
+                            : " · networks=\((entry.networks ?? []).joined(separator: "/"))",
+                          entry.note.map { " · note=\($0.count)chars" } ?? "",
                           colliding.contains(entry.id) ? " · ⚠︎ LOOKALIKE" : "")
                 }
             }

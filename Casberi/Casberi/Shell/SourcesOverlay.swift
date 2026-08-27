@@ -64,6 +64,10 @@ struct SourcesOverlay: View {
     /// pushes: a screen that arrives behind a raised panel reads as a control
     /// that did nothing.
     let onSettings: () -> Void
+    /// The address-book door (prd §498) — same contract as the two above it:
+    /// close the panel FIRST, then push, or the screen arrives behind a raised
+    /// panel and the tap reads as a no-op.
+    let onOpenAddressBook: () -> Void
     /// Last so the call site reads as a trailing closure, matching the shape
     /// the `.sheet` call it replaced already had.
     let onPick: (String) -> Void
@@ -426,6 +430,26 @@ struct SourcesOverlay: View {
             }
             door(label: String(localized: "Apps"), action: onOpenCatalog) {
                 AppsDoor()
+            }
+            // THE ADDRESS BOOK (prd §498, user: *"we could put it next to the
+            // user avatar, apps, and all feed buttons in the source tray"*).
+            //
+            // It belongs with these two rather than in the grid below for the
+            // reason this header exists at all: every cell in that grid
+            // FILTERS the screen you are on, and these OPEN a screen. §496
+            // made the book one ledger across two rooms, which is what turned
+            // it from a wallet detail into a place — and the rail glyphs in
+            // Wallet and vibenet stay, because those are contextual doors from
+            // the room whose addresses you are already looking at (§460's
+            // shape), while this is the global one.
+            //
+            // `person.text.rectangle` is the same glyph both rails draw
+            // (§461), so the three doors to one screen cannot read as three
+            // different destinations.
+            door(label: String(localized: "Address Book"), action: onOpenAddressBook) {
+                Image(systemName: "person.text.rectangle")
+                    .dsGlyph(17, weight: .medium)
+                    .foregroundStyle(DS.textPrimary)
             }
         }
     }

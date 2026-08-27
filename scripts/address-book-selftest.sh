@@ -32,8 +32,10 @@
 # It replaces `address-sky-selftest.sh`, deleted with the sky the same day
 # (§440): four device drawings proved a force-free graph layout answers a
 # different geometric question for every corpus shape, and the reading moved to
-# `AddressSpineCard`, whose own arithmetic is `AddressConnections`' and is
-# covered by `wallet-viz-selftest.sh`.
+# `AddressSpineCard` — itself deleted 2026-08-27 (prd §497, user ruling); the
+# arithmetic survives in `AddressConnections`, covered by
+# `wallet-viz-selftest.sh`, and a §497 negative below keeps the drawing from
+# quietly returning.
 #
 # Pure, local, deterministic — no network, no simulator. Exit non-zero on
 # failure.
@@ -61,7 +63,6 @@ ROSTER="Casberi/Casberi/Screens/WalletRosterSection.swift"
 BOOKSCREEN="Casberi/Casberi/Screens/AddressBookScreen.swift"
 VIEWS="Casberi/Casberi/Screens/AddressBookViews.swift"
 GROUPS="Casberi/Casberi/Screens/AddressGroupViews.swift"
-SPINE="Casberi/Casberi/Screens/AddressSpineCard.swift"
 BAR="Casberi/Casberi/Screens/AddressIndexBar.swift"
 FLIGHT="Casberi/Casberi/Screens/AddressFlight.swift"
 SOURCE="Casberi/Casberi/Model/AddressConnectionsSource.swift"
@@ -70,7 +71,7 @@ CONN="Casberi/Casberi/Model/AddressConnections.swift"
 # The shell — where the rail is built and the route node resolved (§461).
 SHELL_MAIN="Casberi/Casberi/Shell/MainSurface.swift"
 ROUTE="Casberi/Casberi/Shell/HomeRoute.swift"
-for f in "$SHAPE" "$BOOK" "$ACTIVITY" "$SCREEN" "$FIELD" "$ROSTER" "$BOOKSCREEN" "$VIEWS" "$GROUPS" "$SPINE" "$BAR" "$FLIGHT" "$SOURCE" "$CONN" "$SHELL_MAIN" "$ROUTE"; do
+for f in "$SHAPE" "$BOOK" "$ACTIVITY" "$SCREEN" "$FIELD" "$ROSTER" "$BOOKSCREEN" "$VIEWS" "$GROUPS" "$BAR" "$FLIGHT" "$SOURCE" "$CONN" "$SHELL_MAIN" "$ROUTE"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 
@@ -92,7 +93,6 @@ sys.stdout.write(src)
 PY
 }
 strip_comments "$FLIGHT" > "$TMP/flight-bare.swift"
-strip_comments "$SPINE"  > "$TMP/spine-bare.swift"
 strip_comments "$SCREEN" > "$TMP/screen-bare.swift"
 strip_comments "$FIELD"  > "$TMP/field-bare.swift"
 strip_comments "$ROSTER" > "$TMP/roster-bare.swift"
@@ -132,7 +132,7 @@ grep -q 'private var bookSort: AddressBookShape.Order = .name' "$BOOKSCREEN" \
 # than to the flag's declaration, which would pass against a `searching` that
 # nothing reads.
 grep -q 'if !searching {' "$TMP/book-bare.swift" \
-  || { echo "✗ the book room no longer folds the spine and the groups while searching"; exit 1; }
+  || { echo "✗ the book room no longer folds the groups strip while searching"; exit 1; }
 
 # ONE SEARCH PER BODY PASS (prd §441). `book.search` was reached four times a
 # pass; the fix is a single `let` threaded down. A section builder that goes
@@ -254,21 +254,15 @@ grep -qE 'rosterSlot|emptyRosterSlot|rosterSlotWidth' "$TMP/screen-bare.swift" "
 # four times before you reached the drawing — a section header, an eyebrow
 # repeating it, a headline counting rows the drawing shows one-per, and a
 # subhead defining the word.
-grep -q 'sectionHeader(String(localized: "Connected"))' "$TMP/book-bare.swift" \
-  || { echo "✗ the connected section's header is not the single word §448 cut it to"; exit 1; }
-grep -q 'How they connect' "$TMP/book-bare.swift" \
-  && { echo "✗ the three-word header is back over a card whose eyebrow said the same thing (§448)"; exit 1; }
-grep -qE 'AddressConnections\.(headline|subhead)' "$TMP/spine-bare.swift" \
-  && { echo "✗ the spine card states its own count in words again — the left column IS the count (§448)"; exit 1; }
+# §497: the Connected spine LEFT the book (user ruling, 2026-08-27). The
+# drawing is deleted; the arithmetic stays in the model for the probe. A
+# reference returning here is the ruling being quietly reversed.
+grep -qE 'AddressSpineCard|sectionHeader\(String\(localized: "Connected"\)\)' "$TMP/book-bare.swift" \
+  && { echo "✗ the Connected spine is back on the address book — §497 removed it (user ruling, with a screenshot)"; exit 1; }
+[[ -f "Casberi/Casberi/Screens/AddressSpineCard.swift" ]] \
+  && { echo "✗ AddressSpineCard.swift is back; §497 deleted it with its only call site"; exit 1; }
 grep -qE 'static func (headline|subhead)\(count:' "$CONN" \
   && { echo "✗ AddressConnections.headline/subhead are back; §448 cut them"; exit 1; }
-# The ZERO case is still a real answer — §295 — it just no longer needs a card
-# wrapped around it. Spelled ONCE and read by both layouts, or one of them ends
-# up honest and the other doesn't.
-grep -q 'private var spineEmptyLine: String?' "$BOOKSCREEN" \
-  || { echo "✗ the connected section's empty states are no longer spelled once for both layouts (§448)"; exit 1; }
-grep -q 'No shared addresses yet.' "$TMP/book-bare.swift" \
-  || { echo "✗ two watched wallets that share nothing say nothing at all now — §295's 'stating none IS an answer' was dropped rather than trimmed"; exit 1; }
 # A group says its COUNT and stops. "3 addresses · none watched" clipped to
 # "3 addresses · none wat…" at 150pt, and whether a group's members are watched
 # is a fact about the Watching section, not about the group.
@@ -291,12 +285,6 @@ grep -q 'AddressMark(entry: member' "$GROUPS" \
   || { echo "✗ a group row lost its members' faces"; exit 1; }
 grep -q 'absorbing == key' "$BOOKSCREEN" \
   || { echo "✗ a dropped face is no longer absorbed by the deck"; exit 1; }
-grep -q 'litNode' "$SPINE" \
-  || { echo "✗ tapping a spine node no longer lights its ribbons before the sheet covers them"; exit 1; }
-grep -q 'newNodeIDs.contains($0.id)' "$SPINE" \
-  || { echo "✗ a newly-seen connection no longer draws dashed"; exit 1; }
-grep -q 'AddressConnectionsSeen.markSeen' "$BOOKSCREEN" \
-  || { echo "✗ nothing marks a drawn connection as seen — every connection would read as new forever"; exit 1; }
 grep -q 'defaults.set(true, forKey: seededKey)' "$SOURCE" \
   || { echo "✗ the seen-set no longer seeds silently on first sight — a year of history would announce itself as today's news (the Hyperliquid 2026-07-30 bug)"; exit 1; }
 
@@ -328,13 +316,10 @@ grep -q 'swipeActions(edge: .trailing, allowsFullSwipe: false)' "$BOOKSCREEN" \
 
 # NEGATIVE, on comment-stripped copies: §435's money ruling. The manager is a
 # PEOPLE screen and the feed's crown owns the money reading, once.
-for f in "$TMP/spine-bare.swift" "$TMP/screen-bare.swift" "$TMP/book-bare.swift" "$TMP/groups-bare.swift"; do
+for f in "$TMP/screen-bare.swift" "$TMP/book-bare.swift" "$TMP/groups-bare.swift"; do
   grep -q 'WalletValue.money' "$f" \
     && { echo "✗ a money figure returned to the address book — §435 struck every one of them off this screen"; exit 1; }
 done
-# …including the one the model still carries for other callers.
-grep -q 'column.usd' "$TMP/spine-bare.swift" \
-  && { echo "✗ the spine reads Column.usd — the model keeps it for other callers, and this screen may not draw it"; exit 1; }
 
 # NEGATIVE: `lastPhrase` may never ask the SYSTEM clock again (prd §448).
 # `isDateInToday`/`isDateInYesterday` ignore the `now` they are handed, so the
@@ -370,7 +355,7 @@ grep -q 'onChange(of: pendingReveal)' "$BOOKSCREEN" \
 # sentence at the foot. The foot line is also §267's discoverability answer,
 # so it may not lose the filing hint.
 grep -q 'private func quietFootSection' "$BOOKSCREEN" \
-  || { echo "✗ the quiet foot is gone — the empty spine line and the filing hint have no home (§462)"; exit 1; }
+  || { echo "✗ the quiet foot is gone — the filing hint has no home (§462; its spine line left with §497)"; exit 1; }
 grep -q 'Groups arrive with your first filing' "$TMP/book-bare.swift" \
   || { echo "✗ the foot lost the filing hint — with the dashed card gone, nothing on the screen says groups exist (§267/§462)"; exit 1; }
 grep -q 'if !groups.isEmpty {' "$TMP/book-bare.swift" \
@@ -421,13 +406,10 @@ grep -q 'addTitle: wallet.canWatchMore ? String(localized: "Add a wallet") : nil
 grep -q 'RoomDoor(name: "Wallet", source: "Wallet")' "$SCREEN" \
   || { echo "✗ the roster lost its View feed door (§460)"; exit 1; }
 
-# §439's reading survived the retirement — it is the one relationship the
-# person asked for by name, and it lives in the model, the bracket and a
-# sentence.
-grep -q 'walletLinks' "$SPINE" \
-  || { echo "✗ the spine no longer draws the direct wallet-to-wallet links (§439)"; exit 1; }
-grep -q 'walletLinkNote' "$TMP/spine-bare.swift" \
-  || { echo "✗ §439 lost its sentence — the bracket alone can be looked at without being understood at two watched wallets"; exit 1; }
+# §439's wallet-to-wallet reading lives in the MODEL alone now — its bracket
+# and sentence left with the spine (§497).
+grep -q 'walletLinks' "$SOURCE" \
+  || { echo "✗ AddressConnections lost the direct wallet-to-wallet links (§439) — the model half must survive the drawing"; exit 1; }
 
 cat > "$TMP/main.swift" <<'SWIFT'
 import Foundation
@@ -611,6 +593,60 @@ check("the phrase follows the `now` it is given",
                                   now: cal.date(from: .init(year: 2021, month: 8, day: 23, hour: 9))!,
                                   calendar: cal) == "yesterday")
 
+// ── The filter chips (prd §498) ─────────────────────────────────────────────
+//
+// Every failure here renders as a perfectly ordinary list: a chip that hides
+// rows it should show, a chip offered over a population that isn't there, or a
+// selection that survives its own population and leaves the book empty with
+// nothing on screen explaining why.
+print("")
+print("Filter chips")
+typealias Filter = AddressBookShape.BookFilter
+
+// WALLETS TAKES THREE KINDS, and each one is a real population this book holds.
+// `unknown` is the sharpest: detection is gated off for devnets (§496), so
+// EVERY vibenet account sits in it for life — drop it and the wallet chip hides
+// an entire network's accounts while looking perfectly correct.
+check("wallets takes a plain wallet", Filter.wallets.matches(kind: "wallet"))
+check("wallets takes a smart account", Filter.wallets.matches(kind: "smartAccount"))
+check("wallets takes an unchecked address", Filter.wallets.matches(kind: "unknown"))
+check("wallets refuses a contract", !Filter.wallets.matches(kind: "contract"))
+check("wallets refuses a safe", !Filter.wallets.matches(kind: "safe"))
+check("wallets refuses a key", !Filter.wallets.matches(kind: "key"))
+check("wallets refuses a contact", !Filter.wallets.matches(kind: "contact"))
+check("keys takes only keys", Filter.keys.matches(kind: "key")
+      && !Filter.keys.matches(kind: "wallet"))
+check("contacts takes only contacts", Filter.contacts.matches(kind: "contact")
+      && !Filter.contacts.matches(kind: "social"))
+check("social takes only social", Filter.social.matches(kind: "social")
+      && !Filter.social.matches(kind: "contact"))
+check("all takes everything", Filter.allCases.allSatisfy { Filter.all.matches(kind: $0.rawValue) })
+check("only all fails to narrow",
+      Filter.allCases.filter { !$0.narrows } == [.all])
+
+// A CHIP WITH NO MEMBERS IS §83'S DEAD CONTROL. On a fresh crypto-only book
+// four of the five would be exactly that.
+check("all is always offered", AddressBookShape.availableFilters(kinds: []) == [.all])
+check("a chip appears only with members",
+      AddressBookShape.availableFilters(kinds: ["wallet", "key"]) == [.all, .wallets, .keys])
+check("chips keep declaration order",
+      AddressBookShape.availableFilters(kinds: ["social", "contact", "wallet"])
+        == [.all, .wallets, .contacts, .social])
+// A contract is a real entry with NO chip of its own — Contracts and Contacts
+// one letter apart is the misread this drops the chip to avoid, and `wallets`
+// is the hide-the-machinery filter instead.
+check("machinery earns no chip of its own",
+      AddressBookShape.availableFilters(kinds: ["contract", "safe"]) == [.all])
+
+// THE ONE TRANSITION THAT CAN STRAND THE SCREEN: the last key is removed while
+// `keys` is selected, so the chip leaves the strip while still filtering.
+check("a selection survives while its population does",
+      AddressBookShape.settledFilter(.keys, kinds: ["wallet", "key"]) == .keys)
+check("a selection whose population vanished falls back to all",
+      AddressBookShape.settledFilter(.keys, kinds: ["wallet"]) == .all)
+check("all always settles as itself",
+      AddressBookShape.settledFilter(.all, kinds: []) == .all)
+
 print("")
 if failures > 0 { print("\(failures) failure(s)"); exit(1) }
 print("all assertions pass")
@@ -716,6 +752,31 @@ mutate "a future date gets a phrase" \
 mutate "an unlettered order starts sectioning" \
   'var sections: Bool { self == .name }' \
   'var sections: Bool { true }'
+
+# ── The filter chips (prd §498) ─────────────────────────────────────────────
+# The Wallets chip hides an entire network. `unknown` is the resting state of
+# EVERY vibenet account for life — detection is gated off for devnets (§496) —
+# so dropping it from this arm files a whole chain's accounts outside the chip
+# that claims to hold the wallets, and the strip looks perfectly correct.
+mutate "the wallets chip stops taking unchecked addresses" \
+  'case .wallets:  return kind == "wallet" || kind == "smartAccount" || kind == "unknown"' \
+  'case .wallets:  return kind == "wallet" || kind == "smartAccount"'
+# A smart account is somebody's own wallet made of code (§294) — the whole
+# reason that kind exists rather than being filed as a contract.
+mutate "the wallets chip stops taking smart accounts" \
+  'case .wallets:  return kind == "wallet" || kind == "smartAccount" || kind == "unknown"' \
+  'case .wallets:  return kind == "wallet" || kind == "unknown"'
+# A chip whose only possible outcome is an empty list — §83's dead control,
+# four times over on a fresh book.
+mutate "a chip is offered over a population that is not there" \
+  '!filter.narrows || kinds.contains(where: { filter.matches(kind: $0) })' \
+  'true'
+# THE STRANDING: remove the last key while Keys is selected and the chip leaves
+# the strip while still filtering, so the book reads as empty with nothing on
+# screen to explain it.
+mutate "a selection outlives the population it filters" \
+  'availableFilters(kinds: kinds).contains(selected) ? selected : .all' \
+  'selected'
 
 echo ""
 echo "address-book-selftest: OK — assertions pass and every mutation is caught."

@@ -315,6 +315,28 @@ struct VibenetKeySheet: View {
                 door(String(localized: "Copy signer"), symbol: "person.crop.circle") {
                     DSPasteboard.copySensitive(signer)
                 }
+                // ADD TO ADDRESS BOOK (2026-08-27, the address-book
+                // unification) — gated on `signerAddress`, exactly the same
+                // guard "Copy signer" uses, and for the same reason: only a
+                // secp256k1/delegate key IS an address (`VibenetKeyIdentity`'s
+                // own doc — a passkey's actorId is a hash of a public key
+                // with no address inside it, so there is nothing here to
+                // file). No verb draws for those kinds — not a disabled one
+                // (§83) — the copy test simply excludes them.
+                door(String(localized: "Add to Address Book"),
+                     symbol: "person.crop.circle.badge.plus") {
+                    let book = AddressBook.shared
+                    let accountName = VibenetWatch.shared.name(for: item.address)
+                        ?? VibenetRoom.shortAddress(item.address)
+                    let isNew = book.entry(for: signer) == nil
+                    book.setName(book.name(for: signer) ?? VibenetRoom.shortAddress(signer),
+                                for: signer,
+                                provenance: String(localized: "Vibenet key · \(accountName)"),
+                                // Never DOWNGRADE an existing entry's kind —
+                                // only a brand-new row is filed as `.key`.
+                                kind: isNew ? .key : nil,
+                                networks: [AddressBook.Network.vibenet])
+                }
             }
             door(String(localized: "Copy account"), symbol: "wallet.pass") {
                 DSPasteboard.copySensitive(item.address)

@@ -446,6 +446,18 @@ enum DemoSeedAll {
             "0x3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d",
             "0x4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e",
         ] { VibenetWatch.shared.remove(address) }
+        // `VibenetWatch.remove` no longer touches the shared book (2026-08-27
+        // — a single unwatch keeps the name, same as the mainnet side), so
+        // the four book entries it landed must be forgotten HERE explicitly,
+        // by address, same rule as everything else in this teardown — plus
+        // the `.key` entry and its note, seeded above and nowhere else.
+        for address in [
+            "0x1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b",
+            "0x2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c",
+            "0x3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d",
+            "0x4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e",
+            demoVibenetKeySigner,
+        ] { AddressBook.shared.remove(address) }
         // The balance curve goes with them. Unlike the watch list above there
         // is no "kept it themselves" case to protect: the store holds ONE
         // series for the room, so a real watcher's readings and the demo's
@@ -1186,6 +1198,12 @@ enum DemoSeedAll {
     /// twelve identical rows. Assigned by what each counterparty really IS: a
     /// person or an exchange deposit address is a wallet, a router or an
     /// orchestrator is a contract, and Gnosis Pay settles through a Safe.
+    /// The demo's one `.key`-kind address-book entry (2026-08-27, the
+    /// address-book unification) — a synthetic vibenet session-key signer,
+    /// distinct from the four watched account addresses seeded below, so the
+    /// demo exercises a key filed as an entry rather than a watched account.
+    static let demoVibenetKeySigner = "0x5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f"
+
     static let demoCounterparties: [(name: String, kind: AddressBook.Kind)] = [
         ("Sam", .wallet), ("Mia", .wallet), ("Coinbase", .wallet),
         ("Stripe", .wallet), ("Bitrefill", .wallet),
@@ -4570,6 +4588,18 @@ enum DemoSeedAll {
             "0x3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d",
             "0x4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e",
         ] { _ = VibenetWatch.shared.add(address) }
+        // 5c-ii · A KEY entry and a NOTED entry (2026-08-27, the address-book
+        // unification) — demo parity for the two kinds `AddressBook` gained,
+        // per §484's doctrine ("go through each category to make sure we
+        // have a demo room"). `VibenetWatch.add` above already lands the
+        // four watch addresses into the shared book tagged `vibenet` — this
+        // is only the two facts nothing else exercises: a `.key`-kind entry
+        // (the "Add to Address Book" door on `VibenetKeySheet`), and a note.
+        AddressBook.shared.setName("Session key", for: demoVibenetKeySigner,
+                                   provenance: "Vibenet key · Vibe Wallet",
+                                   kind: .key, networks: [AddressBook.Network.vibenet])
+        AddressBook.shared.setNote("Ask before spending more than 50 VIBE.",
+                                   for: "0x1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b")
         // 5b · The anonymity sets behind the Privacy Pools deposits seeded in
         // `wallet()` (prd §397). Two numbers, and the pair is the point: the
         // CURRENT set, plus the set at the moment the oldest deposit in each
