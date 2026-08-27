@@ -27,7 +27,6 @@ extension WalletSection: DSSectionScope {}
 // `swiftc` harness can compile it WHOLE, and a SwiftUI protocol on the
 // declaration ends that (prd §482).
 extension VibenetSection: DSSectionScope {}
-
 // The third room to take this control (prd §486), conformed beside the call
 // site for the reason the two above are: `PrivacyPoolsSection` stays
 // Foundation-only so `wallet-rooms-selftest.sh` can compile it WHOLE beside
@@ -507,11 +506,12 @@ struct MainSurface: View {
     /// every body pass and is already this surface's most expensive property
     /// (see `chipSnapshot`).
     private var socialAccounts: [SocialAccount] {
-        switch filter.source {
-        case "Farcaster": return FarcasterStore.shared.socialAccounts
-        case "Bluesky": return BlueskyStore.shared.socialAccounts
-        default: return []
-        }
+        // ONE DISPATCH, shared with the room itself (2026-08-26, prd §489).
+        // This was a two-case switch that failed CLOSED — which is why Nostr's
+        // rail simply never drew, silently, for as long as that seat has
+        // existed, while `HandleSetupScreen` had the complete three-case
+        // version all along. See `SocialRoomSource.accounts(for:)`.
+        SocialRoomSource.accounts(for: filter.source)
     }
 
     /// One pushed room. Split out of the `navigationDestination` closure only
