@@ -3192,11 +3192,51 @@ struct FeedScreen: View {
                 // broken on every later tap.
                 cardScrollTarget = nil
             }
+            // **A SCOPE CHANGE RETURNS TO THE TOP** (prd §495, user: *"when
+            // you click any of the button on the toggle bar the bar jumps. we
+            // need it fixed in place"*).
+            //
+            // The strip is not pinned in either room — Wallet draws it as a
+            // `List` section and vibenet inside its room card — so it scrolls
+            // away with the crown, and measured on the device it goes ENTIRELY
+            // off screen. What reads as a jump is the half-scrolled case: the
+            // scope changes, the content below is a different height, the
+            // scroll view clamps to the new extent, and everything shifts
+            // under the finger that just tapped.
+            //
+            // Returning to the top removes the shift by removing the offset
+            // there is to clamp — and it is the honest behaviour anyway, since
+            // a preserved scroll position into DIFFERENT content is not the
+            // place you were, it is a number that survived.
+            //
+            // **NOT the whole fix, and the difference is worth stating:** the
+            // strip still scrolls away once you are reading, so it cannot be
+            // tapped without scrolling back up. Pinning it into
+            // `MainSurface.roomControls` — where `categorySwitcher` and
+            // `socialScopeRail` already sit pinned — is the structural answer,
+            // and it SUPERSEDES §357's placement for these two rooms rather
+            // than extending it, so it wants its own ruling rather than a
+            // quiet diff.
+            .onChange(of: chrome.walletSection) { _, _ in returnToRoomTop(proxy) }
+            .onChange(of: chrome.vibenetSection) { _, _ in returnToRoomTop(proxy) }
+    }
+
+    /// The id the room's head carries, so a scope change can return to it.
+    private static let roomTopAnchor = "roomTop"
+
+    /// Scroll the room back to its own head, with the standard motion so it
+    /// reads as the room resetting rather than as a jump of its own — which
+    /// is the thing this exists to remove.
+    private func returnToRoomTop(_ proxy: ScrollViewProxy) {
+        withAnimation(DS.Motion.standard) {
+            proxy.scrollTo(Self.roomTopAnchor, anchor: .top)
+        }
     }
 
     private func listBody(_ proxy: ScrollViewProxy) -> some View {
         List {
             roomHead
+                .id(Self.roomTopAnchor)
             roomBody
 
             // Room for the floating bar.

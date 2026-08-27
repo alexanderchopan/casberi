@@ -4020,5 +4020,33 @@ if grep -qE 'RoundedRectangle\(cornerRadius: DS\.Radius\.(widget|card).*\n?.*fil
   exit 1
 fi
 
+# **A SCOPE CHANGE RETURNS THE ROOM TO ITS HEAD** (prd §495, user: "when you
+# click any of the button on the toggle bar the bar jumps. we need it fixed in
+# place").
+#
+# Neither room pins its strip — Wallet draws it as a `List` section and vibenet
+# inside its room card — so it scrolls away with the crown, and the JUMP is the
+# half-scrolled case: the scope changes, the content below is a different
+# height, the scroll view clamps, and everything shifts under the finger that
+# just tapped. Returning to the top removes the offset there is to clamp.
+#
+# Both hooks are required. Wallet's alone leaves the room this was reported
+# against unfixed, and vibenet's alone leaves the room it was reported against
+# SECOND unfixed — they are one defect in two rooms sharing one chassis.
+for scope in walletSection vibenetSection; do
+  grep -q "onChange(of: chrome.$scope) { _, _ in returnToRoomTop(proxy) }" \
+    "Casberi/Casberi/Screens/FeedScreen.swift" \
+    || { echo "✗ a scope change no longer returns $scope's room to its head — prd §495:"
+         echo "  the strip is not pinned, so a scope change with the room scrolled clamps the"
+         echo "  scroll extent and the bar moves under the finger that tapped it."; exit 1; }
+done
+# …and the anchor it scrolls to must be ON the head, or `scrollTo` is a no-op
+# that fails SILENTLY (this file's own 2026-07 lesson: "scrollTo on an id that
+# never rendered is a no-op").
+grep -q '\.id(Self.roomTopAnchor)' "Casberi/Casberi/Screens/FeedScreen.swift" \
+  || { echo "✗ the room head carries no top anchor — prd §495: returnToRoomTop would scroll"
+       echo "  to an id that never rendered, which is a no-op and looks like the fix working"
+       echo "  right up until somebody scrolls."; exit 1; }
+
 echo ""
 echo "✓ vibenet-selftest: drift guards, assertions and mutations all passed"
