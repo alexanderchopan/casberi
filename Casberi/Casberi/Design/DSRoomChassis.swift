@@ -84,4 +84,23 @@ enum DSRoomChassis {
 
     /// The page inset the chassis and its figures share.
     static let inset: CGFloat = DS.Space.s4
+
+    /// **THE INSET INSIDE THE ROOM CARD'S OWN ROOT** — the one that makes a
+    /// card's content land on the same leading as a feed ROW (prd §495).
+    ///
+    /// Derived, never typed, and the derivation is the whole point. A shaped
+    /// feed row leads at `DS.Space.s4 + DS.Space.s3` (27pt), and the room card
+    /// already carries `DS.Space.s4` at its root — so `s3` is what closes the
+    /// gap, and if either term is ever re-tuned the two stay equal by
+    /// construction rather than by somebody remembering.
+    ///
+    /// **This corrects a fix made in the wrong direction earlier the same
+    /// night.** The card's figures had been applying `inset` INSIDE that root
+    /// (30pt total) while `VibenetAccountDetail` applied nothing (15pt), and
+    /// removing the double took the figures to 15 — which aligned them with
+    /// the detail and pulled BOTH 12pt away from the rows they sit above. The
+    /// doubling was real; 15 was not the number to land on. Measured, not
+    /// eyeballed: the pixel scan was too noisy to settle it and the row's own
+    /// `listRowInsets` was exact.
+    static let contentInset: CGFloat = DS.Space.s3
 }

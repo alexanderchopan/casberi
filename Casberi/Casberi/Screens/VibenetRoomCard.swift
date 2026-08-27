@@ -1172,6 +1172,7 @@ struct VibenetRoomCard: View {
                         .chartArrival(index: index, reduceMotion: reduceMotion)
                     }
                 }
+                .padding(.horizontal, DSRoomChassis.contentInset)
             }
         }
     }
@@ -1244,7 +1245,9 @@ struct VibenetRoomCard: View {
         // `topLeading`, so the headline stays where it has always been and
         // only the figure below it gains the room.
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        // **NO INSET OF ITS OWN** (prd §495, user: *"the content below the
+        .padding(.horizontal, DSRoomChassis.contentInset)
+        // **ONE INSET, AND IT LANDS ON THE ROW'S LEADING** (prd §495, user:
+        // *"the content below
         // toggle row should all have similar template. right now permissions
         // for example the indentation is not the same as it is on activity"*).
         //
@@ -1462,6 +1465,7 @@ struct VibenetRoomCard: View {
                     }
                 }
             }
+            .padding(.horizontal, DSRoomChassis.contentInset)
         }
     }
 
@@ -2723,9 +2727,25 @@ struct VibenetEventRow: View {
                         .lineLimit(1)
                 }
                 Spacer(minLength: DS.Space.s2)
-                Text(thing.capturedAt.formatted(.relative(presentation: .named)))
+                // **THE CLOCK'S GRAMMAR, like every other row in this feed**
+                // (prd §495, user: *"another issue is wrapping text. would it
+                // be better if the alert went the whole way across and the
+                // timestamp was on line two?"*).
+                //
+                // Neither, as it turned out: the LAYOUT was fine and the
+                // FORMAT was the outlier. This row said "23 hours ago" —
+                // about 110pt of a 402pt screen — while every `BandRow` in
+                // the app says "23h" through `LiveTimeText`, so the title was
+                // wrapping to two lines for want of width the trailing slot
+                // did not need. Same component now, ~70pt returned to the
+                // title, and one less place where this room's rows read
+                // differently from the rooms either side of it.
+                //
+                // It also ticks: `LiveTimeText` re-renders on the minute, so
+                // a row read at 59 minutes does not still say "59m" an hour
+                // later — which the static format could not do.
+                LiveTimeText(date: thing.capturedAt, color: DS.textTertiary)
                     .dsText(.label11)
-                    .foregroundStyle(DS.textTertiary)
                     .lineLimit(1).fixedSize()
             }
             .padding(.vertical, DS.Space.s2)

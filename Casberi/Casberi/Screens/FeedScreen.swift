@@ -2623,6 +2623,29 @@ struct FeedScreen: View {
     @ViewBuilder
     private func walletSectionSwitcherSection(_ active: WalletSection) -> some View {
         if WalletSection.shows(present: chrome.walletSections) {
+            // **PINNING WAS TRIED HERE AND DOES NOT WORK AS A HEADER**
+            // (prd §495, 2026-08-27).
+            //
+            // The strip scrolls away with the crown — measured, entirely off
+            // screen — so the control that scopes the room cannot be reached
+            // from inside the room it scopes. `.plain` pins section headers,
+            // so `Section { EmptyView() } header: { switcher }` looked like
+            // the fix that costs no height at rest and therefore does not
+            // re-open §483 (which ruled this control OUT of `roomControls`,
+            // where pinning it makes a fourth row of chips and pushes the
+            // crown to 45% down the screen).
+            //
+            // It does not pin: a header only stays while its own section has
+            // ROWS on screen, and this section has none, so the header leaves
+            // with them. Verified on the device, not reasoned about.
+            //
+            // Pinning properly means making the switcher the header of the
+            // section that carries the SCOPE'S CONTENT — which differs per
+            // scope across a dozen section builders — so it is a real
+            // refactor and its own ruling, not a line here. What ships
+            // instead is §495's return-to-head on a scope change, which
+            // removes the JUMP (the reported defect) without pretending to
+            // fix the reachability.
             Section {
                 DSSectionSwitcher(
                     sections: chrome.walletSections,

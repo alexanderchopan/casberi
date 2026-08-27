@@ -150,6 +150,13 @@ struct VibenetAccountDetail: View {
             }
             if wants(.activity) { recordCard }
         }
+        // **THE SAME LEADING AS THE ROOM'S FIGURES AND THE FEED'S ROWS**
+        // (prd §495). This page adds nothing of its own and inherits
+        // `stackedRoom`'s root `s4`, which put it 12pt inside every list it
+        // sits above — the mismatch reported as "permissions… the indentation
+        // is not the same as it is on activity". `contentInset` is derived
+        // from the row's own `listRowInsets`, so the three cannot drift.
+        .padding(.horizontal, DSRoomChassis.contentInset)
         .task(id: item.address) {
             history = VibenetValueStore.samples(for: item.address)
         }
