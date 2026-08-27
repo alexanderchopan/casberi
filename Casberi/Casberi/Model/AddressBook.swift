@@ -160,11 +160,12 @@ final class AddressBook {
     /// split (2026-08-27, the address-book unification).
     enum Network {
         static let vibenet = "vibenet"
+        static let hegota = "hegota"
 
         /// Chains `AddressKind.detect` must not ask about — its five reads
         /// are mainnet RPCs, and asking them about a devnet keystore account
         /// answers "no code anywhere" and confidently mislabels it `.wallet`.
-        private static let devnets: Set<String> = [vibenet]
+        private static let devnets: Set<String> = [vibenet, hegota]
 
         static func isDevnet(_ tag: String) -> Bool { devnets.contains(tag) }
     }
@@ -234,6 +235,34 @@ final class AddressBook {
         /// mainnet family, which is every entry written before this field
         /// existed. Optional for the Codable reason `groups` documents.
         var networks: [String]? = nil
+        /// A picture the SOURCE already has for this person (2026-08-27, user:
+        /// *"we already have their avatar so presumably it would show there.
+        /// for ones we don't we should just use the silhouette icon"*).
+        ///
+        /// Only ever set on the EPHEMERAL rows — a real address's face is
+        /// drawn from the address itself (`WalletFace`, whose identicon is the
+        /// whole point), so this stays nil for every persisted entry and the
+        /// sync mirror never carries a URL. Optional for the Codable reason
+        /// `groups` documents.
+        var avatarURL: String? = nil
+        /// WHERE THIS PERSON IS REACHED, one line per account — "Bluesky ·
+        /// uma", "Farcaster · uma" (2026-08-27, prd §498).
+        ///
+        /// It exists because merging a person's accounts into one row
+        /// (`AddressBookPeople.merged`) left the card with one `address` field
+        /// standing for several things: it held the FIRST source's namespaced
+        /// key, which is our own bookkeeping, and the card would have printed
+        /// it and offered to copy it. A person has no address; they have
+        /// accounts, so the card lists these instead of an address block.
+        ///
+        /// Display strings rather than structured pairs, deliberately: nothing
+        /// computes over them — they are read, and the source that built them
+        /// is the only thing that knows how to spell a handle for its own
+        /// network (a Nostr pubkey is not a Bluesky handle). Ephemeral rows
+        /// only, so this is nil on every persisted entry and the sync mirror
+        /// never carries a handle. Optional for the Codable reason `groups`
+        /// documents.
+        var accounts: [String]? = nil
         var id: String { AddressBook.key(for: address) }
 
         /// The word this entry's network tags print as — "Vibenet" today,

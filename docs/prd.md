@@ -36049,3 +36049,62 @@ destinations.
 
 **UNSEEN on a device**: the badge, the monogram, the paper and the strip are
 all compiled and harnessed, and none has been looked at on a simulator.
+
+## 499. The account sheet stops looking like a database (user: "we need a better way to design the individual account sheet, and the landing part of the address book" → "make it look like somethign apple or cashapp would do or robinhood, right now it looks like someones database" → "we want the notes field to be first class citizen too, not like some random empty box" → "think about how Fantastical and CardHoppers does its addresses" → "and 'together' can be called 'activity' like we do in wallet" → "looks great. ship it", 2026-08-27)
+
+**Amends §498's own head, hours old.** That entry gave this card the money
+receipt's paper (§495's `DSSheetHead`, via the extracted `dsReceiptPaper`) and
+it was the wrong borrowing: a receipt is the anatomy of an EVENT — a thing
+that happened once, on a torn slip — and a person is not an event. Boxing
+somebody in a receipt is what made the sheet read as a record rather than as
+them. The hue survives as the AMBIENT WASH it always was underneath (§444: the
+face is made of the address, so it is that person's own colour), falling to
+nothing behind the identity instead of terminating in a scalloped edge.
+`dsReceiptPaper` and `DSSheetHead` are untouched and still right for every
+event sheet in the app; only this one stops using them.
+
+**The diagnosis was the layout's grammar, not its spacing.** A label column
+with monospaced values is a FACT TABLE, and a fact table is engineer grammar
+however well it is spaced — which is exactly what "someones database" named.
+Consumer grammar inverts it, and every change here is one inversion:
+
+- **Identity leads at hero size.** A 96pt face (`AddressCard.identityFace`,
+  deliberately NOT added to the ramp — it is one screen's hero, and
+  `face-ramp-audit` reads the ramp for marks that REPEAT), the name at the
+  card's own title tier, one quiet line under it, and the group chip riding
+  the identity where a contacts app puts somebody's company. Filing used to
+  sit in the verb row beside Copy, which gave it the weight of an action; it
+  is a fact about who this is.
+- **Three action tiles.** The shape every consumer profile puts under the
+  identity. It replaces two verbs that were hiding: the Copy pill, which sat
+  inside the identity block at caption weight, and the explorer link, which
+  was a row in the overflow menu. Those are the two verbs this sheet is opened
+  for. A tile is ABSENT rather than disabled when its verb cannot run (§83) —
+  a person with no address has nothing to copy and no explorer to open, so the
+  row narrows to Note alone.
+- **Ways to reach them, as one grouped inset** — Cardhop's grammar, named by
+  the user. The VALUE leads at reading size and the source is the small label
+  above it, which is the precise inverse of the label column. One soft inset
+  holds every row, rows are separated by AIR rather than dividers (no
+  hairlines, ever), each carries a round icon disc and its own copy on the
+  trailing edge, and the WHOLE ROW is the hit target because tapping the
+  number is how a contacts app is used. The disc glyph is a SHAPE, not a brand
+  mark: at 16pt a bundled logo is a smudge (the badge lesson, four hours
+  earlier the same day). A plain address gets the identical anatomy with one
+  row, so a wallet and a merged person are not two screens.
+- **Notes is a section, not a field.** It was a caption over a filled well —
+  the anatomy of a form control, which reads as one whether it holds anything
+  or not, and an empty well is a box asking to be filled sitting on a page
+  that is otherwise content. It takes the same rounded header the history
+  below it takes, with Edit on the trailing edge; the note sits at
+  `reading20` directly on the page with no ground of its own. Still a
+  `TextField` — tapping the text is what edits it, which is what a note in a
+  contacts app does — but wearing no box, so what you see is the note rather
+  than the container. The Edit verb appears only once there IS a note, since
+  an empty one's own placeholder line already says what tapping does.
+- **"Activity", matching Wallet's word**, rather than a word invented for this
+  screen.
+
+**UNSEEN on a device at the time of writing**: every part of this is compiled
+and mocked, and the mock is what was approved; the built screen has not been
+looked at.

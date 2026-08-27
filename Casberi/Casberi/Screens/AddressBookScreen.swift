@@ -108,16 +108,27 @@ struct AddressBookScreen: View {
                 // repeatedly-visited half of the book, and the book's own
                 // §461 doc already put "your own wallets" first in its list
                 // of what belongs here.
-                if !searching {
+                // THE FILTER STRIP LEADS (prd §498, seen on a device). It was
+                // below the roster and the field, which on a real book put it
+                // under the fold — a control for the list you cannot see while
+                // deciding to use it. It is the first thing now, because it
+                // governs everything under it.
+                //
+                // Deliberately NOT inside the search fold: narrowing a search
+                // by population is the combination the two controls exist to
+                // make, and a strip that vanished the moment you typed would
+                // take that away exactly when a long book needs it most.
+                filterSection
+                // THE ROSTER stands down under a filter that is not about
+                // wallets (prd §498). It is your own five addresses and they
+                // are wallets by construction, so leaving it on screen under
+                // Keys or Contacts would be a block of wallets sitting above a
+                // list that just promised to hide them — the strip reading as
+                // broken rather than as a filter.
+                if !searching, rosterShown {
                     WalletRosterSection(onConnectFound: { bookSheet = .connectPicker($0) })
                 }
                 inputSection
-                // THE FILTER STRIP (prd §498). Deliberately NOT inside the
-                // search fold below: narrowing a search by population is the
-                // combination the two controls exist to make, and a strip that
-                // vanished the moment you typed would take that away exactly
-                // when a book of two hundred needs it most.
-                filterSection
                 if !searching {
                     // The Connected spine LEFT this screen (user ruling,
                     // 2026-08-27, with a screenshot of it: "please remove this
@@ -370,6 +381,29 @@ struct AddressBookScreen: View {
                         .lineLimit(1)
                 }
                 Spacer(minLength: 0)
+                // THE WATCH VERB, on the preview of what it would watch
+                // (prd §498, the one-field ruling). It sits here rather than
+                // on the field because the field's action is Save and a
+                // control cannot mean two things — and because this is the
+                // only place that can say WHICH address is about to be read,
+                // which for a paste that resolved from an ENS name is not the
+                // text you typed. Absent when the cap is full or the address
+                // is already watched: §83, rather than a button that explains
+                // itself after the tap.
+                if wallet.canWatchMore, !isWatchedAddress(address) {
+                    Button {
+                        watchPreview(address)
+                    } label: {
+                        Text("Watch")
+                            .dsText(.label12).fontWeight(.semibold)
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, DS.Space.s3)
+                            .padding(.vertical, 7)
+                            .background(DS.tint, in: Capsule())
+                    }
+                    .buttonStyle(PressSpring())
+                    .dsHover()
+                }
             }
             .padding(.vertical, DS.Space.s2)
             .padding(.horizontal, DS.Space.s3)
@@ -377,6 +411,31 @@ struct AddressBookScreen: View {
                         in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
             .transition(.opacity.combined(with: .scale(scale: 0.97, anchor: .top)))
         }
+    }
+
+    /// Whether the preview's address is already one of the watched five —
+    /// through the resolution cache, not a raw compare, for `isWatched`'s own
+    /// stated reason (a watch may stand under "vitalik.eth").
+    private func isWatchedAddress(_ address: String) -> Bool {
+        wallet.addresses.contains { wallet.scopeMatches(address, scope: $0.address) }
+    }
+
+    /// Starts watching the previewed address, and names it if the person
+    /// typed a name to reach it.
+    ///
+    /// The RESOLVED address is what is watched, never the typed text —
+    /// `previewAddress` has already done the ENS/SNS lookup, so watching what
+    /// it resolved is what makes the row that appears the same identity the
+    /// preview just showed (§212's names-are-not-identities rule).
+    private func watchPreview(_ address: String) {
+        DSHaptic.tap()
+        // A typed NAME becomes the label, so a wallet watched as
+        // "vitalik.eth" stands under that rather than under its own hex.
+        let label = (address == draft) ? "" : draft
+        _ = WalletStore.shared.add(address, label: label)
+        query = ""
+        fieldFocused = false
+        refreshReadings()
     }
 
     /// The one line under the preview's name — what the book already knows.
@@ -692,7 +751,11 @@ struct AddressBookScreen: View {
             $0.name.lowercased().contains(q)
                 || ($0.provenance?.lowercased().contains(q) ?? false)
         }
-        let merged = owned + others
+        // ONE PERSON, EVERY IDENTITY (prd §498) — a named address and the
+        // social accounts of the same name fold into one row carrying every
+        // block. The book entry is always the base, so nothing persisted can
+        // be shadowed by a name match.
+        let merged = AddressBookPeople.fold(book: owned, people: others)
         let settled = AddressBookShape.settledFilter(bookFilter, kinds: presentKinds)
         guard settled.narrows else { return merged }
         return merged.filter { settled.matches(kind: $0.kind.rawValue) }
@@ -704,6 +767,15 @@ struct AddressBookScreen: View {
     /// chips appear and vanish under the thumb.
     private var presentKinds: [String] {
         Array(book.kindsPresent) + people.map(\.kind.rawValue)
+    }
+
+    /// Whether the watched roster belongs on screen under the current filter —
+    /// see the call site. `settledFilter` rather than `bookFilter` so a
+    /// selection that has quietly fallen back to All brings the roster back
+    /// with it rather than leaving the screen headless.
+    private var rosterShown: Bool {
+        let settled = AddressBookShape.settledFilter(bookFilter, kinds: presentKinds)
+        return settled == .all || settled == .wallets
     }
 
     /// Matched through the resolution cache, not by raw string (2026-07-25): a

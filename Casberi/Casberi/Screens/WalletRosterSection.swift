@@ -43,12 +43,26 @@ struct WalletRosterSection: View {
     var body: some View {
         Section {
             VStack(alignment: .leading, spacing: DS.Space.s3) {
-                if wallet.canWatchMore {
-                    WalletWatchField(
-                        onWatched: { sync() },
-                        showsPeekChip: false,
-                        onConnectFound: onConnectFound)
-                }
+                // **THE WATCH FIELD AND ITS CONNECT ROW LEFT THIS SECTION**
+                // (user ruling, 2026-08-27, on a device: *"this looks like
+                // crap there should only be one address field and one connect
+                // wallet app button"*).
+                //
+                // They were right and the duplication was structural rather
+                // than accidental: this section carried a field that WATCHES
+                // and a connect row, and the book below it carried a field
+                // that SEARCHES-and-names and a connect row of its own — so an
+                // address book showed two near-identical fields and two
+                // identical buttons, four hundred points apart, differing only
+                // in a verb nobody can see. One screen gets one of each; the
+                // book's own omnibox is the survivor because SEARCH is the
+                // thing this screen cannot do without, and the watch verb
+                // moved onto the preview of the address it would watch
+                // (`AddressBookScreen.addressPreview`), which is the one place
+                // it can say WHICH address it is about to start reading.
+                //
+                // This section is now purely the list: who you watch, and
+                // whether the read is in flight.
                 if syncing || result != nil {
                     BridgeSyncStatusRows(syncing: syncing,
                                          syncingLine: String(localized: "Reading onchain activity…"),
@@ -60,11 +74,35 @@ struct WalletRosterSection: View {
             }
         } header: {
             if !watchedEntries.isEmpty || wallet.canWatchMore {
-                sectionHeader(String(localized: "Your wallets"),
+                // "WATCHING", not "Your wallets" (user ruling, 2026-08-27, on
+                // a device: *"we could have a section called 'watching' or
+                // something that pins them to the top but it would still be in
+                // the address book category"*). The old name described a
+                // separate thing sitting above the book; this one describes a
+                // SECTION of it — the same word §448 used before §461 lifted
+                // the roster out, and the same word the letter headings below
+                // it are, so the screen reads as one list with a pinned top.
+                // "Wallets you watch", not the bare "Watching" (user,
+                // 2026-08-27: *"we can say Wallet: Watching or something so
+                // its clear"*) — in a book that now holds keys, contacts and
+                // social people, a lone participle no longer says WHAT is
+                // being watched. The phrase is the house grammar ("Who you
+                // save most", "What you hold"), not a colon header.
+                sectionHeader(String(localized: "Wallets you watch"),
                               trailing: String(localized: "\(wallet.addresses.count) of \(WalletStore.watchLimit)"),
                               busy: syncing)
             }
         }
+        // ONE LIST, NO CARD (same ruling). This section alone kept the inset-
+        // grouped List's default card background while every other section in
+        // the book clears it — so your own wallets sat in a raised slab and
+        // everybody else sat on the page, and the screen read as a wallet
+        // widget with an address book underneath rather than as an address
+        // book. Matching the book's own row insets is what makes the faces
+        // line up down one column with the rows below.
+        .listRowInsets(EdgeInsets(top: 0, leading: DS.Space.s4,
+                                  bottom: 0, trailing: DS.Space.s4))
+        .listRowBackground(Color.clear)
         .listRowSeparator(.hidden)
         .alert("Name this wallet",
                isPresented: Binding(get: { renamingID != nil },

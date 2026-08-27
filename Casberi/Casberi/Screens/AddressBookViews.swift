@@ -55,8 +55,23 @@ extension AddressBook.Entry {
     /// count to attach it to: a date with no dealings behind it would be
     /// describing something the count says didn't happen.
     func subline(activity: AddressActivity.Summary?) -> String? {
+        // A CONTACT or a SOCIAL profile says NOTHING under its name (user
+        // ruling, 2026-08-27, on a device: *"i don't think we need the subtext
+        // for them, just makes it clunky to read"*). Everything the line could
+        // have carried is either already drawn or not worth a line: the source
+        // is the dot on the face, there is no address, no activity count, and
+        // no kind word that isn't a restatement. A name and a face is what a
+        // contacts app row is, and this is that row.
+        guard !kind.isMonogram else { return nil }
         var parts: [String] = []
-        let autoNamed = WalletStore.isAutoName(name, for: address)
+        // A CONTACT or a SOCIAL profile has no address, so it has no short
+        // form worth printing — `short` of `bluesky:you` is the namespaced KEY
+        // this app invented to file the row, and putting it on screen is
+        // showing somebody our bookkeeping (seen on a device, 2026-08-27: the
+        // rows read "bluesky:you · Bluesky · you"). Their provenance says
+        // where they are from, which is the fact the short form was standing
+        // in for everywhere else.
+        let autoNamed = kind.isMonogram || WalletStore.isAutoName(name, for: address)
         if !autoNamed { parts.append(short) }
         if let activity, activity.count > 0 {
             parts.append(String(localized: "\(activity.count) together"))
@@ -554,17 +569,36 @@ struct AddressMark: View {
                 // address, so handing it `contact:AB12…` would draw a
                 // confident identicon of a string nobody will ever see: noise
                 // wearing the costume of identity (§83's shape, in pixels).
-                // A monogram of the name is the honest mark — `AssetMark`'s
-                // own rule for a subject we don't bundle art for.
+                //
+                // **THEIR OWN PICTURE, ELSE A SILHOUETTE** (user ruling,
+                // 2026-08-27, on a device: *"it looks weird when the letter
+                // repeats as the avatar eg U for uma. also we already have
+                // their avatar so presumably it would show there. for ones we
+                // don't we should just use the silhouette icon"*). The
+                // monogram was a letter restating the first letter of the word
+                // beside it — a mark that adds nothing, twice per row. A
+                // silhouette says the one true thing instead: this is a
+                // person, and we have no picture of them.
                 Circle()
                     .fill(DS.fillFaint)
                     .frame(width: size, height: size)
                     .overlay {
-                        Text(Self.monogram(entry.name))
-                            .dsText(.badgeInitial11)
-                            .font(.system(size: size * 0.38, weight: .semibold))
-                            .foregroundStyle(DS.textSecondary)
+                        Image(systemName: "person.fill")
+                            .font(.system(size: size * 0.44))
+                            .foregroundStyle(DS.textTertiary)
                     }
+                    .overlay {
+                        if let raw = entry.avatarURL, let url = URL(string: raw) {
+                            AsyncImage(url: url) { phase in
+                                if let image = phase.image {
+                                    image.resizable().scaledToFill()
+                                        .transition(.opacity)
+                                }   // failure/empty: the silhouette shows through
+                            }
+                            .animation(DS.Motion.standard, value: raw)
+                        }
+                    }
+                    .clipShape(Circle())
             } else {
                 // CIRCULAR (prd §433, 2026-08-21). This view's own header has
                 // said "a wallet is a WHO … everything else is machinery and
@@ -594,19 +628,22 @@ struct AddressMark: View {
         // A dot, not a glyph: at `DS.Face.list` a mark inside 12pt is a smudge,
         // and the colour IS the statement — Base's own blue, the hue the
         // vibenet seat already wears everywhere else in the app.
-        .overlay(alignment: .bottomTrailing) {
-            if entry.networkBadge != nil {
-                Circle()
-                    .fill(Self.vibenetHue)
-                    .frame(width: size * 0.34, height: size * 0.34)
-                    // The ring is the PAGE, not a stroke: it reads as the
-                    // badge sitting in front of the face rather than as a
-                    // hairline drawn around it, which is the one thing this
-                    // design system has no exceptions about.
-                    .overlay(Circle().strokeBorder(DS.page, lineWidth: size * 0.055))
-                    .offset(x: size * 0.04, y: size * 0.04)
-            }
-        }
+        // **NO BADGE ON THE FACE** (user ruling, 2026-08-27, arrived at in
+        // three steps on a device: *"it just needs some use of the vibenet
+        // icon"* → *"i don't want those colored dots"* → *"tbh i don't think
+        // we need a vibenet badge do we?"*).
+        //
+        // The answer is no, and the reason is the same rule that took the
+        // monogram off these faces an hour earlier: a vibenet row already
+        // prints "Vibenet" as its subline, so a badge says one word twice an
+        // inch apart (§366's read-it-twice). The coloured version failed on
+        // its own terms besides — two sources shipped the same purple, so the
+        // dot that existed to separate them could not — and merging a person's
+        // accounts into one entry (`AddressBookPeople.merged`) removed the
+        // disambiguation job that was its last argument.
+        //
+        // What a face carries here is identity and nothing else: their
+        // picture, or an identicon of their address, or a silhouette.
         // The kind reveal (prd §171, 2026-07-22). Detection lands
         // asynchronously — `eth_getCode` answers a beat after the row is on
         // screen — and the mark used to hard-swap from face to square glyph.
@@ -618,21 +655,22 @@ struct AddressMark: View {
         .animation(DS.Motion.standard, value: entry.kind)
     }
 
-    /// Base's blue — the vibenet seat's own brand hue, resolved the way every
-    /// other vibenet surface resolves it so the badge and the room can never
-    /// drift to two blues.
-    static let vibenetHue = DS.brandHue(for: VibenetIdentity.source)
-        ?? Color.fixed("#0052ff")
-
-    /// Up to two initials from a name, for the addressless kinds. Falls back
-    /// to a single dot rather than a letter when the name yields none — an
-    /// invented initial on somebody's contact card is a small lie in the one
-    /// place the row is claiming to know who they are.
-    static func monogram(_ name: String) -> String {
-        let words = name.split(separator: " ").prefix(2)
-        let letters = words.compactMap { $0.first.map(String.init) }
-        return letters.isEmpty ? "·" : letters.joined().uppercased()
-    }
+    /// **Why a TESTNET address needs no mark of its own here** (user, when the
+    /// badge came off: *"my concern was its a testnet address and don't want
+    /// anyone to send funds, but we don't send funds"*).
+    ///
+    /// Right on both halves, and the second is what settles it: this app has
+    /// no send path at all — watching can never move funds, which is the
+    /// promise `WalletConnectBridge` proves with an empty methods list. So the
+    /// hazard is not somebody spending here; it is somebody COPYING a devnet
+    /// address out of here and pasting it into a wallet that can.
+    ///
+    /// That path is guarded by WORDS at the two places it passes through, and
+    /// words are the right instrument because the risk is a misreading rather
+    /// than a mis-tap: the row's subline says "Vibenet", and the card's kind
+    /// line says it directly above the copy pill you would reach for. A badge
+    /// added a third statement, one inch from the first, saying nothing the
+    /// other two do not.
 }
 
 /// Copy — the book's most-used verb, so it rides every row instead of hiding
@@ -807,6 +845,9 @@ struct AddressCard: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
     @Environment(\.openURL) private var openURL
+    /// The identity wash reads the same pour opacity the money receipt does,
+    /// which is scheme-dependent (prd §499).
+    @Environment(\.colorScheme) private var scheme
     // `bridges` retired here 2026-08-24 (prd §461) — it existed for one line,
     // `reconcileWalletSeats()` inside `toggleWatch`, and this card no longer
     // watches anything. An unread `@Environment` is harmless but it is also a
@@ -869,6 +910,14 @@ struct AddressCard: View {
                 VStack(spacing: 0) {
                     identityHeader
                     lookalikeBand
+                    // THE CONSUMER SIGNATURE (prd §499) — one row of equal
+                    // tiles under the identity, which is what every profile
+                    // people already know puts there. It replaces the Copy
+                    // pill that used to hide in the identity block and the
+                    // explorer link buried in the overflow menu: the two verbs
+                    // this sheet is opened for, at the size of verbs.
+                    actionTiles
+                    reachSection
                     noteBlock
                     spine(things)
                     nameNudge
@@ -986,9 +1035,8 @@ struct AddressCard: View {
     private var identityHeader: some View {
         VStack(spacing: 0) {
             // The stamp row — what this address IS to you, when that is
-            // something worth saying at the top. `DSSheetHead`'s own top row,
-            // in the one arrangement a centred identity can take it: trailing,
-            // above the face, so it never pushes the face off centre.
+            // something worth saying at the top. Trailing and above the face,
+            // so it never pushes the face off centre.
             HStack {
                 Spacer(minLength: 0)
                 if let stamp = identityStamp {
@@ -1004,33 +1052,57 @@ struct AddressCard: View {
             .frame(height: 22)
 
             // THE FACE IS MADE OF THE ADDRESS (prd §444) — see `AddressReveal`.
-            AddressMark(entry: current, size: DS.Face.profile)
+            // At `identityFace`, half again the old profile size: this is the
+            // subject of the screen and on a consumer profile the face is the
+            // first thing, not a thumbnail above a table.
+            AddressMark(entry: current, size: Self.identityFace)
                 .addressFaceReveal(hue: pourHue, isFace: current.kind.glyph == nil)
+                .shadow(color: .black.opacity(0.55), radius: 16, y: 8)
             nameField
                 .padding(.top, DS.Space.s3)
             Text(kindLine)
-                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                .padding(.top, 1)
+                .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                .multilineTextAlignment(.center)
+                .padding(.top, 2)
             bitcoinVintageLine
-            addressBlock
+            // THE GROUP RIDES THE IDENTITY (prd §499) — where a contacts app
+            // puts somebody's company. It used to sit in the verb row beside
+            // Copy, which made filing look like an action of the same weight
+            // as copying an address; it is a fact about who this is.
+            groupChips
                 .padding(.top, DS.Space.s2)
-            // ONE VERB ROW, not a stack (prd §462, seen on a device). Copy and
-            // the group control were two centred pills of different widths, one
-            // under the other — an accidental column on the card's only verbs.
-            // Twin capsules, one row; the group chips ride the same line, so a
-            // filed card reads Copy · Family · +.
-            HStack(spacing: DS.Space.s2) {
-                copyPill
-                groupChips
-            }
-            .padding(.top, DS.Space.s3)
         }
         .frame(maxWidth: .infinity)
-        .dsReceiptPaper(hue: pourHue)
         .padding(.horizontal, DS.Space.s4)
         .padding(.top, DS.Space.s2)
-        .padding(.bottom, DS.Space.s4)
+        .padding(.bottom, DS.Space.s6)
+        // AMBIENT WASH, NOT PAPER (prd §499, user: *"right now it looks like
+        // someones database"* → *"make it look like something apple or
+        // cashapp would do"*).
+        //
+        // The receipt paper this card wore for a few hours was §495's head
+        // borrowed from the money receipt, and it is right for an EVENT —
+        // a thing that happened once, on a torn slip. A person is not an
+        // event: boxing them in a receipt is what made the sheet read as a
+        // record rather than as somebody. The hue survives as the wash it
+        // always was underneath (§444 — the face is made of the address, so
+        // this is that person's own colour), falling to nothing behind the
+        // identity instead of terminating in a scalloped edge.
+        .background(alignment: .top) {
+            LinearGradient(colors: [pourHue.opacity(DS.receiptPourOpacity(scheme)),
+                                    pourHue.opacity(0)],
+                           startPoint: .top, endPoint: .bottom)
+                .frame(height: 300)
+                .frame(maxWidth: .infinity, alignment: .top)
+                .allowsHitTesting(false)
+        }
     }
+
+    /// The identity face — bigger than `DS.Face.profile` because this sheet's
+    /// subject IS the face (prd §499). Not added to the ramp: it is one
+    /// screen's hero size, and `face-ramp-audit` reads the ramp for marks that
+    /// repeat.
+    static let identityFace: CGFloat = 96
 
     /// The state worth stamping on an identity — one of your own five, or a
     /// row you are looking at without having kept it. Neutral ink either way:
@@ -1038,7 +1110,12 @@ struct AddressCard: View {
     /// spending `DS.attention` on a stamp.
     private var identityStamp: String? {
         if isWatched { return String(localized: "Watching") }
-        if !isInBook { return String(localized: "Not kept") }
+        // "Not kept" is a state an ADDRESS can be in — you met it and have not
+        // named it. A contact or a social profile is never "kept" and is not
+        // meant to be (`AddressBookPeople`: they are shown, not stored), so the
+        // stamp read as a warning about a row that is working exactly as
+        // designed (prd §498, seen on a device).
+        if !isInBook, !current.kind.isMonogram { return String(localized: "Not kept") }
         return nil
     }
 
@@ -1233,6 +1310,218 @@ struct AddressCard: View {
     /// The first and last group sit one ramp step brighter because they are
     /// the ones every other surface shows (`WalletStore.shortAddress`), so the
     /// eye can find its footing before reading the middle.
+    /// EVERY ACCOUNT ITS OWN BLOCK (prd §498, user: *"what i am saying is an
+    /// account needs multiple address blocks"*).
+    ///
+    /// A merged person is reached in several places, and each of those is a
+    /// value somebody may want the way they want an address: labelled, legible,
+    /// and copyable on its own. So this is the address block repeated per
+    /// account rather than a list of sentences about them — the anatomy a
+    /// contacts app uses for somebody's three phone numbers, which is the same
+    /// problem.
+    ///
+    /// The value is monospaced like an address for the same reason an address
+    /// is: these are identifiers to be compared character by character (a
+    /// Nostr pubkey most of all), not names to be read. Each carries its own
+    /// copy verb, because copying "their Farcaster handle" is a different act
+    /// from copying "their Bluesky handle" and one pill could only ever do one
+    /// of them.
+    /// **WAYS TO REACH THEM, AS ONE GROUPED INSET** (prd §499, user: *"think
+    /// about how Fantastical and Cardhop does its addresses"*).
+    ///
+    /// Cardhop's grammar exactly, and it is the fix for what the user called
+    /// a database: the VALUE leads at reading size and the source is the small
+    /// label above it — the inverse of a label column with mono values, which
+    /// is a fact table however well it is spaced. One soft inset holds every
+    /// row, rows are separated by air rather than by dividers (no hairlines,
+    /// ever), and each carries a round icon disc and its own copy on the
+    /// trailing edge.
+    ///
+    /// The row is a real HIT TARGET — the whole row copies — because in a
+    /// contacts app tapping the number is how you use it; the trailing glyph
+    /// says so rather than being the only place that works.
+    @ViewBuilder
+    private var reachSection: some View {
+        let lines = reachLines
+        if !lines.isEmpty {
+            VStack(spacing: 0) {
+                ForEach(lines, id: \.value) { line in
+                    Button {
+                        DSPasteboard.copy(line.clipboard)
+                        DSHaptic.success()
+                    } label: {
+                        HStack(spacing: DS.Space.s3) {
+                            Image(systemName: line.glyph)
+                                .dsGlyph(16)
+                                .foregroundStyle(DS.textSecondary)
+                                .frame(width: 38, height: 38)
+                                .background(DS.fillFaint, in: Circle())
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text(line.label)
+                                    .dsText(.subhead13)
+                                    .foregroundStyle(DS.textTertiary)
+                                    .lineLimit(1)
+                                // The value at READING size and semibold —
+                                // this is the fact the row exists for.
+                                Text(line.value)
+                                    .dsText(line.monospaced ? .mono13 : .callout15)
+                                    .fontWeight(.semibold)
+                                    .foregroundStyle(DS.textPrimary)
+                                    .textSelection(.enabled)
+                                    .lineLimit(2)
+                                    .truncationMode(.middle)
+                            }
+                            Spacer(minLength: DS.Space.s2)
+                            Image(systemName: "doc.on.doc")
+                                .dsGlyph(13)
+                                .foregroundStyle(DS.textTertiary)
+                        }
+                        .padding(.vertical, DS.Space.s2)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .dsHover()
+                    .accessibilityLabel(Text("\(line.label), \(line.value). Copy"))
+                }
+            }
+            .padding(.horizontal, DS.Space.s4)
+            .padding(.vertical, DS.Space.s1)
+            .background(DS.fillFaint,
+                        in: RoundedRectangle(cornerRadius: DS.Radius.sheet, style: .continuous))
+            .padding(.horizontal, DS.Space.s4)
+            .padding(.bottom, DS.Space.s6)
+        }
+    }
+
+    /// One row per way to reach this entry. A person's accounts when the row
+    /// carries them, else the address itself — so a plain wallet gets the same
+    /// anatomy as a merged person rather than a different screen.
+    private var reachLines: [ReachLine] {
+        if let accounts = current.accounts, !accounts.isEmpty {
+            return accounts.map { line in
+                // "Source · value", split on the FIRST separator — a source
+                // name never contains one, a handle might.
+                let parts = line.components(separatedBy: " · ")
+                let label = parts.first ?? line
+                let value = parts.count > 1
+                    ? parts.dropFirst().joined(separator: " · ") : ""
+                return ReachLine(label: label, value: value,
+                                 copyValue: nil,
+                                 glyph: Self.reachGlyph(for: label),
+                                 // A handle is a NAME and reads as one; only
+                                 // a hex or base58 string needs the mono face
+                                 // that makes character-by-character
+                                 // comparison possible.
+                                 monospaced: ENS.isHexAddress(value) || value.count > 24)
+            }.filter { !$0.value.isEmpty }
+        }
+        guard !current.kind.isMonogram else { return [] }
+        // The HOUSE SHORT FORM for a hex address (seen on a device): the full
+        // forty characters wrap to two dense mono lines and dominate the card,
+        // and every other surface in this app names an address by its tail.
+        // Copying is unaffected — the row and the Copy tile both put the WHOLE
+        // address on the clipboard, which is what the earlier "never elide a
+        // value you can copy" ruling was protecting. That ruling stands where
+        // it was made: a handle or a pubkey, which has no house short form and
+        // is read character by character, is still carried whole.
+        let hex = ENS.isHexAddress(current.address)
+        return [ReachLine(label: AddressBookPeople.addressLabel(for: current),
+                          value: hex ? current.short : current.address,
+                          copyValue: current.address,
+                          glyph: "cube", monospaced: true)]
+    }
+
+    /// One way to reach this entry. `copyValue` is what the clipboard gets and
+    /// defaults to what is drawn — they differ only where the row shows a
+    /// short form of something longer.
+    struct ReachLine {
+        let label: String
+        let value: String
+        var copyValue: String?
+        let glyph: String
+        let monospaced: Bool
+        var clipboard: String { copyValue ?? value }
+    }
+
+    /// The disc's glyph per source. A shape rather than a brand mark: at 16pt
+    /// a bundled logo is a smudge (the badge lesson, earlier the same day),
+    /// and these read as categories — a chain, a person, a place.
+    static func reachGlyph(for label: String) -> String {
+        switch label {
+        case "Bluesky", "Farcaster", "Nostr", "Twitch": return "at"
+        case "Contacts": return "person.crop.circle"
+        case "Vibenet":  return "cube.transparent"
+        default:         return "cube"
+        }
+    }
+
+    /// **THE ACTION TILES** (prd §499) — three equal tiles under the identity,
+    /// the shape every consumer profile puts there.
+    ///
+    /// It replaces two things that were hiding: the Copy pill, which sat
+    /// inside the identity block at the weight of a caption, and the explorer
+    /// link, which was a row in the overflow menu. Those are the two verbs
+    /// this sheet is opened for; they get to look like verbs.
+    ///
+    /// A tile is ABSENT rather than disabled when its verb cannot run — a
+    /// person with no address has nothing to copy and no explorer to open
+    /// (§83), so they get the Note tile alone and the row simply narrows.
+    @ViewBuilder
+    private var actionTiles: some View {
+        let copyValue = reachLines.first?.clipboard
+        HStack(spacing: DS.Space.s2) {
+            if let copyValue {
+                actionTile("doc.on.doc", String(localized: "Copy")) {
+                    DSPasteboard.copy(copyValue)
+                    DSHaptic.success()
+                }
+            }
+            if isInBook {
+                actionTile("square.and.pencil", String(localized: "Note")) {
+                    DSHaptic.tap()
+                    noteFocused = true
+                }
+            }
+            if let link = explorerLink {
+                // "Explorer", not the explorer's NAME. `link.label` is "View
+                // on Etherscan", which on a device overflowed its tile and
+                // stretched it wider than its two neighbours — the equal grid
+                // is what makes this row read as one control (seen on a
+                // device, prd §499). Which explorer it opens is a fact about
+                // the destination, not about the button.
+                actionTile("arrow.up.right", String(localized: "Explorer")) {
+                    DSHaptic.tap()
+                    openURL(link.url)
+                }
+            }
+        }
+        .padding(.horizontal, DS.Space.s4)
+        .padding(.bottom, DS.Space.s6)
+    }
+
+    private func actionTile(_ glyph: String, _ title: String,
+                            _ act: @escaping () -> Void) -> some View {
+        Button(action: act) {
+            VStack(spacing: DS.Space.s1 + 2) {
+                Image(systemName: glyph)
+                    .dsGlyph(19, weight: .medium)
+                    .foregroundStyle(DS.tint)
+                Text(title)
+                    .dsText(.label12).fontWeight(.semibold)
+                    .foregroundStyle(DS.textPrimary)
+                    .lineLimit(1)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, DS.Space.s3 + 2)
+            .background(DS.fillFaint,
+                        in: RoundedRectangle(cornerRadius: DS.Radius.control + 2,
+                                             style: .continuous))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(PressSpring())
+        .dsHover()
+    }
+
     private var addressBlock: some View {
         let chunks = AddressSpine.chunks(current.address)
         return AddressChunkFlow(columnSpacing: DS.Space.s2, rowSpacing: 1) {
@@ -1408,7 +1697,13 @@ struct AddressCard: View {
                          ?? BitcoinAddress.scriptKind(current.address)
                          ?? String(localized: "Wallet"))
         }
-        if let provenance = current.provenance { parts.append(provenance) }
+        // A person whose accounts are listed as BLOCKS below says nothing
+        // here: `provenance` is the first source's name, and the block right
+        // under it is labelled with that same word (§366's read-it-twice,
+        // seen on a device as "Uma / Bluesky / Bluesky · uma").
+        if let provenance = current.provenance, (current.accounts ?? []).isEmpty {
+            parts.append(provenance)
+        }
         // Where it was met — the wallet book showing a vibenet-tagged row so
         // one book of BOTH populations never leaves you guessing which chain
         // an address belongs to (2026-08-27, the address-book unification).
@@ -1597,6 +1892,17 @@ struct AddressCard: View {
     private func spine(_ things: [Thing]) -> some View {
         let events = spineEvents(things)
         if !events.isEmpty {
+            // ACTIVITY, named the way Wallet names it (prd §499) — the list
+            // ran straight out of the note with no header, so two unlike
+            // sections read as one run of rows.
+            HStack {
+                Text("Activity")
+                    .dsText(.heading22)
+                    .foregroundStyle(DS.textPrimary)
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, DS.Space.s4)
+            .padding(.top, DS.Space.s6)
             VStack(spacing: 0) {
                 ForEach(Array(events.enumerated()), id: \.element.id) { index, event in
                     spineEvent(event, index: index, isLast: index == events.count - 1)
@@ -1612,7 +1918,10 @@ struct AddressCard: View {
         // from broken-looking into waiting; it states what WILL fill the space,
         // never a count of nothing (§83). Gated on the corpus, not the events —
         // the named/filed dots above are exactly when this card is looked at.
-        if things.isEmpty {
+        // …but NEVER to a person who has no address (prd §498): a Bluesky
+        // profile will never have a transfer, so promising one is a §83
+        // claim about a thing that cannot happen.
+        if things.isEmpty, !current.kind.isMonogram {
             Text(unnamed
                  ? String(localized: "Transfers with this address land here as they arrive.")
                  : String(localized: "Transfers with \(current.name) land here as they arrive."))
@@ -1928,24 +2237,62 @@ struct AddressCard: View {
     /// sentence. Only for an entry actually IN the book — `setNote` is a
     /// no-op for one that isn't, and a door reached ephemerally (the
     /// connections card's nodes) has nowhere to keep a note until it's named.
+    /// **A FIRST-CLASS SECTION, NOT A FIELD** (prd §499, user: *"we want the
+    /// notes field to be first class citizen too, not like some random empty
+    /// box"*).
+    ///
+    /// It was a caption over a filled well — which is the anatomy of a FORM
+    /// CONTROL, and reads as one whether it holds anything or not: an empty
+    /// well is a box asking to be filled, sitting on a page that is otherwise
+    /// content. So it takes the same rounded section header the history below
+    /// it takes, the text sits at READING size directly on the page with no
+    /// ground of its own, and the empty state keeps the header and offers one
+    /// tinted line rather than an empty rectangle.
+    ///
+    /// The field is still a `TextField` — tapping the text is what edits it,
+    /// which is what a note in a contacts app does — but it wears no box, so
+    /// what you see is the note rather than the container.
+    ///
+    /// Saved on BLUR, not per keystroke: `AddressBook` encodes and pushes the
+    /// whole book to iCloud on every write (`entries`' own `didSet`), so a
+    /// note that saved every character typed would be forty pushes for one
+    /// sentence. Only for an entry actually IN the book — `setNote` is a
+    /// no-op for one that isn't, and a door reached ephemerally (the
+    /// connections card's nodes) has nowhere to keep a note until it's named.
     @ViewBuilder
     private var noteBlock: some View {
         if isInBook {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
-                Text("Note")
-                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                HStack(alignment: .firstTextBaseline) {
+                    Text("Notes")
+                        .dsText(.heading22)
+                        .foregroundStyle(DS.textPrimary)
+                    Spacer(minLength: DS.Space.s2)
+                    // The header's own verb — present only once there is
+                    // something to edit, since an empty note's own line
+                    // already says what tapping it does.
+                    if !(current.note ?? "").isEmpty, !noteFocused {
+                        Button {
+                            DSHaptic.tap()
+                            noteFocused = true
+                        } label: {
+                            Text("Edit")
+                                .dsText(.subhead13).fontWeight(.semibold)
+                                .foregroundStyle(DS.tint)
+                        }
+                        .buttonStyle(.plain)
+                        .dsHover()
+                    }
+                }
                 TextField("Add a note…", text: $noteDraft, axis: .vertical)
-                    .dsText(.body17)
+                    .dsText(.reading20)
                     .foregroundStyle(DS.textPrimary)
-                    .lineLimit(1...6)
+                    .lineLimit(1...8)
                     .focused($noteFocused)
-                    .padding(DS.Space.s3)
-                    .background(DS.surfaceWell,
-                                in: RoundedRectangle(cornerRadius: DS.Radius.control, style: .continuous))
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, DS.Space.s4)
-            .padding(.top, DS.Space.s4)
+            .padding(.top, DS.Space.s6)
             .onAppear { noteDraft = current.note ?? "" }
             .onChange(of: current.note) { _, new in
                 // A remote sync can land a note underneath an open draft —
