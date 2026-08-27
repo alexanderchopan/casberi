@@ -34918,3 +34918,166 @@ make a grant expire — there are 39 keys on Earth and we own none — so the
 harness is again not the best proof these rows are right but the only one, and
 every spacing decision here is rendering no static check can exercise. iOS
 Simulator and Mac Catalyst both compile.
+
+## 489. Eight social rooms were eight different rooms, and one switch statement was why (user: "the social rooms have drifted somewhat. how do we make the rooms more cohesive? presumably you have the same kinds of things in each room so they shoudln't looks so different. example nostr doesn't even have avatars showing at the top like the others. but ther eis more than just that. inventory and propose solutions", 2026-08-26)
+
+Asked to inventory the drift and propose a fix. The named example — Nostr with
+no faces above its room — turned out to be one symptom of a structural cause
+that produced four more, two of which nobody had reported because nobody had
+opened those rooms lately.
+
+### THE INVENTORY
+
+Nine sources land the same three things: a post with an author, a link somebody
+shared, a conversation. The `Thing` model is identical for all of them. What
+differed was the ROOM, and the room was decided by `FeedScreen.Shape.init` — a
+switch each source joined one at a time by copying the last one, with the row
+rules re-spelled inline every time.
+
+Measured across the eight Network seats, thirteen capabilities:
+
+- **Nostr had NO case at all.** Its rows fell to `.plain`'s generic band: no
+  face rail, no post cards, no thread folding, no person filter, no fresh rings,
+  no "N posts" count, and — because it was also absent from `FeedHeatmap` — no
+  head of any kind. Every part of that was already built and already knew about
+  Nostr: `PostCard.author` branches on its hex pubkey to shorten it for display,
+  `SocialThreadCard` does the same, `SocialThread.replies` reads its threads,
+  and `NostrStore.socialAccounts` was already drawn — on the setup screen. One
+  switch statement never learned the name.
+- **TikTok had none either.** A room of saved videos drawing one `BandRow` per
+  row: a 26pt leader square and `titleLine`'s 80-character clamp over what is,
+  before `TikTokImport.fetchFaces` has run, the raw share URL. Found by auditing
+  the other seven, not by a report.
+- **§396a was repaired for X and never carried.** `standsAlone` — "a post card
+  never merges into a run" — named `.social` and `.x` and not `.instagram` or
+  `.telegram`, so both of those rooms drew post cards squeezed into a merged run
+  of bare rows. A card by anatomy with no card under it, twice, unreported. The
+  §396a entry's own doc says spelling the test twice is how it would drift
+  again; it was spelled five times.
+- **Four registries answer "is this social" and they disagree** —
+  `SocialSheetSource.sources` (8), `SocialThread.sources` (3),
+  `BandRow.faceSources` (3), `Shape.init → .social` (2). Three are right on
+  their own terms and are deliberately different questions. The fourth is the
+  one that decides what the room LOOKS like, and it is the only one nothing
+  guarded. That is why the sheet is the only surface that had not drifted:
+  `social-sheet-selftest.sh` fails the build when a `Network` seat skips it.
+- **Three account dispatches, one of them a coin flip.**
+  `FeedScreen.rosterAccounts` was `source == "Farcaster" ? FarcasterStore… :
+  BlueskyStore…`, so any third network reaching it would have been handed
+  BLUESKY's watched accounts — a rail of the wrong faces, ringed by the wrong
+  freshness, filtering to handles that match nothing.
+  `MainSurface.socialAccounts` was a two-case switch that failed CLOSED, which
+  is why Nostr's rail simply never drew rather than drawing wrongly.
+  `HandleSetupScreen` had the complete three-case version all along.
+
+**The trap in the obvious fix, and it is worth stating because it nearly
+shipped:** adding `case "Nostr"` to `Shape.init` turns the rail on, and the
+ternary then fills it with Bluesky's accounts. A room that looks fixed and
+answers with the wrong person's posts. The dispatch had to be folded in the
+same change, not after it.
+
+### 1. ONE TABLE, NOT FIVE DIALECTS
+
+`Model/SocialRoom.swift` — Foundation-only — is now the one answer to what
+anatomy a row wears. `rowKind` returns one of four (`band`, `excerpt(lines:)`,
+`reading`, `post(whole:)`/`thread(whole:)`), and **`standsAlone` is DERIVED from
+it rather than spelled beside it**, which is what makes the §396a class
+structurally impossible rather than fixed per room: if `rowKind` says card, the
+run layout says card. `isXPostRow`, `isTelegramPostRow`, Instagram's five-branch
+inline chain and the roster ternary are all deleted. `FeedScreen`'s five row
+branches are one, and `socialRow` has no rules of its own — a branch added there
+re-opens the drift, and the harness says so.
+
+Every row's own reasoning travelled with it, unchanged: a follower is a person
+(§2026-08-12) not an article; an archive draws its words whole (§396a) and a
+drip room clamps; an Instagram comment is not a post because the export does not
+carry the post it was left on; an uncaptioned save is an excerpt because a post
+card would print the handle twice.
+
+**TikTok gets NO post cards, and that is data rather than taste.**
+`TikTokImport` stamps no `postText` on any row — the caption lands on
+`enrichedText`, retrieval-only by the 2026-07-15 ruling — so `PostCard.words`
+would fall back to the title and print the row's own face as its body. A saved
+video with a cover and a title IS a reading-list entry, and reads as the one
+Telegram's saved messages and the Bookmarks room already draw.
+
+**What the table deliberately does NOT decide.** Grid membership stays in
+`FeedScreen` with the other photo-tile tests: a mixed room's split between a
+picture wall and rows is LAYOUT, it reads `previewImageData` (a heavy column),
+and the four rooms with one each answer differently for a stated reason. Guarded
+both ways, so neither half drifts into the other.
+
+### 2. THE TWO ROOMS WITH NOTHING ABOVE THEM
+
+Nostr joins `FeedHeatmap` with Bluesky's entry — a room with one watched account
+draws no rail (the rail needs two), so without it a single-account Nostr room
+had no head, no board and no grid at all.
+
+Telegram gets a head instead of leading with the year grid, which answers WHEN
+over a room whose subject is WHOSE. Its channel posts arrive through
+`FeedFollowBridges` like every other feed follow, so the channel's own name is
+already on `authorHandle`: "Which channels fill this" is Podcasts' read exactly,
+one source over, and needed no bridge change. `.publisher` scope, not `.writer`
+— a Telegram channel is a publication, which is why it wears a mark rather than
+a face. The imported half of the room carries no handle, so `counted` skips it
+rather than filing it under a blank.
+
+TikTok needed neither: it has had "Who you save most" and "Your TikTok year"
+since it shipped, and both render — the hero chain runs above the shape switch,
+so a room with no `Shape` case still gets its head. Its gap was rows only.
+
+**Telegram gets no face rail, and the reason is stated rather than shrugged:**
+it follows CHANNELS, which would qualify, except no channel picture is reachable
+on the body path — the follow store keeps a name and a feed URL, and the icon
+lands on the rows — and `MainSurface.topInset` is evaluated on every body pass.
+A rail of nine identical Telegram glyphs is the defect R4.2 and §313 both name.
+
+### 3. TWO DELIBERATE CHANGES TO SHIPPED ROOMS
+
+Both fall out of making the rule uniform, and both are the honest reading:
+
+**A day says "posts" only when every row in the group is one.** X's rule (§396a)
+generalised. The three live rooms said "posts" unconditionally, so a day holding
+twelve casts and one shared article was calling the article a thirteenth post.
+It now falls through to the generic noun, which is vaguer and true.
+
+**A shared article and a follow notification no longer take a card of their
+own.** `.social` returned true from `standsAlone` for EVERY row, so a reading
+row and a band each got a surface. They merge now, the way every other band and
+every other reading row in the app does.
+
+### 4. THE GUARD, WHICH IS THE ONLY PART THAT HOLDS
+
+`scripts/social-room-selftest.sh` (in `verify.sh`) compiles `SocialRoom.swift`
+WHOLE and unmodified — ~70 assertions, 19 mutations, 24 drift guards. **Until
+this pass no check in this repo could reach these rules at all**: they lived
+inside an 8,900-line SwiftUI view, so no `swiftc` harness could compile them
+(the file needs SwiftData and SwiftUI), the screen sweep proves a room painted
+and never that it painted the right anatomy, and the liveness audit asks about
+tombstones. They drifted for months with every gate green.
+
+Its last block is the one that matters in six months: **every catalog `Network`
+seat must resolve in `SocialRoom.table`**, or be named in `KNOWN_NO_ROOM` with a
+written reason (empty today). That is `social-sheet-selftest.sh`'s assertion for
+the room, and it is the whole answer to "how do we stop it drifting again" —
+every drift above has one shape, a source joining the catalog, the ingest and
+the sheet while nobody remembered the room. Snapchat is IN the table and answers
+`drawsPosts` false, so the guard sees it decided rather than forgotten.
+
+The negative guards read a COMMENT-STRIPPED copy: all three files document the
+dialects they replaced by naming them, and quote the `Farcaster ? … : Bluesky`
+ternary verbatim (the Obsidian/Cursor lesson, eighth instance).
+
+**What is NOT unified, deliberately.** Not one merged Social room — §351's
+category fold already puts these behind one chip with a venue switcher, and
+merging the rows would put a 2016 archived like beside a cast from four minutes
+ago. Not a board in every room for symmetry — in a live room the face rail IS
+that board, pinned and tappable, and adding one spends the head slot restating
+the control above it. Not one social source set — `SocialThread.sources` is
+three because three networks have a thread reader and a profile lookup, which is
+a fact about the networks rather than drift.
+
+**UNSEEN on a device.** iOS Simulator and Mac Catalyst both compile and the
+harness is green, but no screenshot of any of these rooms has been taken this
+pass; a Nostr room with two watched accounts is the one worth looking at first,
+since its rail, its rings and its person filter all turn on together.
