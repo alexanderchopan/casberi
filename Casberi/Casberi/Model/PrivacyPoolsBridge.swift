@@ -388,6 +388,8 @@ enum PrivacyPoolsBridge {
         // Ragequits that landed BEFORE the loop-closing pass shipped — runs
         // once, ever. See `healReclaimed`.
         healReclaimed(context: context)
+        // …and the direction stamp, for rows that landed before 2026-08-26.
+        healDirections(context: context)
         // At most one keyless GET a day, and only for a wallet that has
         // actually deposited (prd §397).
         await refreshCoverIfDue()
@@ -423,6 +425,34 @@ enum PrivacyPoolsBridge {
                   let label = PrivacyPoolsRoom.label(ref: ref) else { continue }
             retag(label: label, to: PrivacyPoolsRoom.State.reclaimed.rawValue,
                   context: context)
+        }
+        _ = context.saveHonestly()
+        UserDefaults.standard.set(true, forKey: key)
+    }
+
+    /// The one-time repair for rows that landed before the direction stamp
+    /// (prd §485, 2026-08-26) — `healReclaimed`'s shape and its reasoning.
+    ///
+    /// Forward-only cursors cannot reach these rows, so without it the ledger
+    /// column would only ever appear on deposits made from today on: a room
+    /// half in prose and half in figures, which reads worse than either. The
+    /// side is recoverable exactly because the ref already carries it — the
+    /// same two prefixes the room head groups by — so nothing is guessed.
+    @MainActor
+    private static func healDirections(context: ModelContext) {
+        let key = "privacypools.healedDirections"
+        guard !UserDefaults.standard.bool(forKey: key) else { return }
+        let source = sourceName
+        let descriptor = FetchDescriptor<Thing>(
+            predicate: #Predicate { $0.source == source })
+        guard let rows = try? context.fetch(descriptor) else { return }
+        for row in rows where row.isLive {
+            guard row.transferDirection == nil, let ref = row.sourceRef else { continue }
+            if ref.hasPrefix(PrivacyPoolsRoom.depositPrefix) {
+                row.transferDirection = "sent"
+            } else if ref.hasPrefix(PrivacyPoolsRoom.reclaimedPrefix) {
+                row.transferDirection = "received"
+            }
         }
         _ = context.saveHonestly()
         UserDefaults.standard.set(true, forKey: key)
@@ -576,6 +606,14 @@ enum PrivacyPoolsBridge {
             // An existing field — no CloudKit deploy — and rows landed before
             // today simply keep leading with their title.
             if pool != nil { thing.transferAmount = what }
+            // The DIRECTION, so the room's rows read as a ledger (prd §485).
+            // `BandRow.moneyColumn` needs the pair — an amount with no
+            // direction has no sign, so it stays inside the sentence — and
+            // until this the pair was half-stamped: §369 landed the amount and
+            // nothing ever landed the side it went. Money into the pool is
+            // money out of the wallet, which is what "sent" means everywhere
+            // else in this app.
+            thing.transferDirection = "sent"
             // The size as STRUCTURED data (prd §397, 2026-08-17) — the same
             // `priceValue`/`priceCurrency` pair Railgun and Gnosis Pay already
             // stamp, and the only reason the room can state what is in the
@@ -713,6 +751,10 @@ enum PrivacyPoolsBridge {
                 thing.priceValue = value
                 thing.priceCurrency = pool.symbol
             }
+            // Outside the priced branch on purpose: which way the money went
+            // is known even when the pool did not resolve, and a direction is
+            // a fact about the row rather than a companion to the figure.
+            thing.transferDirection = "received"
             out.append(thing)
             // Out of the pool — stop watching its screening status.
             watchlist.removeAll { $0["label"] == exit.label }

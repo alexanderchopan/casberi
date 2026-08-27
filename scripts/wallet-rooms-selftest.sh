@@ -249,6 +249,57 @@ grep -q 'room.currencies.prefix(GnosisPayRoomSource.rowCap)' "$CARD_GNOSIS" \
   || { echo "✗ the Gnosis Pay card no longer honours the currency cap"; exit 1; }
 grep -q 'room.tokens.prefix(RailgunRoomSource.rowCap)' "$CARD_RAILGUN" \
   || { echo "✗ the Railgun card no longer honours the token cap"; exit 1; }
+
+# --- prd §485 (2026-08-26): the Railgun room's restraint pass ---------------
+# The card draws through the SHIPPED pair, and the pair is its only drawing —
+# without it a row carries two figures and no picture, which is the state this
+# pass replaced (a bar measuring move count under a line stating an amount).
+grep -q 'RailgunRoom.pair(token)' "$CARD_RAILGUN" \
+  || { echo "✗ the Railgun card no longer draws through the shipped pair() — its rows would carry figures and no drawing"; exit 1; }
+# EVERY drawn token gets a row, the lead included. Before this the lead was
+# named inside the prose headline and drew a bar with no label of its own, two
+# lines below the words it belonged to.
+grep -q 'ForEach(Array(drawn.enumerated())' "$CARD_RAILGUN" \
+  || { echo "✗ the Railgun card no longer gives every drawn token a row — a lead with a bar and no label is what this pass removed"; exit 1; }
+# The negative half, on a COMMENT-STRIPPED copy: both files explain this pass by
+# NAMING the deleted function, so a guard grepping raw source fires on the prose
+# explaining the fix (the Obsidian/Cursor lesson).
+for f in "$RAILGUN" "$CARD_RAILGUN" "$SRC_RAILGUN"; do
+  strip_comments "$f" > "$TMP/stripped.swift"
+  if grep -q 'RailgunRoom.note\|static func note(\|RailgunRoom.share(\|static func share(' "$TMP/stripped.swift"; then
+    echo "✗ the Railgun subline or its move-count bar is back in $f — the card would restate its own rows' totals above them, and measure a count under a line stating an amount"; exit 1
+  fi
+done
+# The rooms whose every row is a transfer read as a LEDGER, not as prose: the
+# amount leaves the sentence for a right-aligned figure (`BandRow.moneyColumn`,
+# §158's reading). Both had no `Shape` case at all until this pass, so both drew
+# the generic band. Gnosis Pay is deliberately absent — see the switch's own
+# comment for the two-spellings-of-one-figure reason.
+grep -q 'case "Railgun", "Privacy Pools": self = .ledger' "$FEED" \
+  || { echo "✗ the wallet-riding money rooms no longer take the ledger shape — their rows would fall back to the generic band and keep the figure inside the sentence"; exit 1; }
+grep -q 'case .ledger: BandRow(thing: thing, moneyColumn: true' "$FEED" \
+  || { echo "✗ the ledger shape no longer asks for the money column — the shape would exist and change nothing"; exit 1; }
+# The stamps that column reads. `transferAmount` has been landed since §369 and
+# §397; the SIDE is what this pass added, and without it the pair is half
+# stamped and the column can never draw.
+grep -q 'thing.transferDirection = "sent"' "$BR_POOLS" \
+  || { echo "✗ a Privacy Pools deposit no longer stamps its direction — its rows would keep the amount inside the sentence"; exit 1; }
+grep -q 'thing.transferDirection = "received"' "$BR_POOLS" \
+  || { echo "✗ a Privacy Pools reclaim no longer stamps its direction"; exit 1; }
+grep -q 'thing.transferDirection = direction == .shield ? "sent" : "received"' "$BR_RAILGUN" \
+  || { echo "✗ RailgunBridge no longer stamps the direction of a move"; exit 1; }
+grep -q 'thing.transferAmount = amountLine' "$BR_RAILGUN" \
+  || { echo "✗ RailgunBridge no longer stamps transferAmount — the ledger column reads this and nothing else"; exit 1; }
+# THE DEMO'S OWN TRAP, paid for on this pass: the money column lifts the figure
+# out of the sentence by SUBSTRING, so a seed whose title and stamp are the same
+# NUMBER in two spellings ("0.1500 ETH" / "0.15 ETH") prints it twice. One
+# string, spent twice, is the only shape that cannot drift.
+grep -q 'row(.transaction, "Put \\(p.amount) into Privacy Pools"' "$DEMO" \
+  || { echo "✗ the Privacy Pools demo no longer builds its title from the same string it stamps — the demo would print each amount twice"; exit 1; }
+grep -q 't.transferAmount = p.amount' "$DEMO" \
+  || { echo "✗ the Privacy Pools demo no longer stamps the amount it put in its own title"; exit 1; }
+grep -q 't.transferAmount = r.amount' "$DEMO" \
+  || { echo "✗ the Railgun demo no longer stamps transferAmount — every seeded move would keep its figure in its sentence and the ledger column would draw on no row at all"; exit 1; }
 grep -q 'room.entries.prefix(SafeRoomSource.rowCap)' "$CARD_SAFE" \
   || { echo "✗ the Safe card no longer honours the entry cap"; exit 1; }
 # The strip exists so that superseding `FeedInsight.cardMonths` costs nothing.
@@ -1092,16 +1143,53 @@ check("a full tie breaks on symbol",
 print("")
 print("Railgun — words")
 check("the headline names the leading token", RailgunRoom.headline(railgun).contains("ETH"))
+// One token means one row labelled with it, so a headline naming it too said
+// the same word twice within fourteen points (2026-08-26).
+check("a single-token room does not name that token in the headline as well",
+      RailgunRoom.headline(RailgunRoom.compose(moves: [
+        move("railgun:shield:a:0", token: "ETH", amount: 1),
+        move("railgun:shield:b:0", token: "ETH", amount: 2),
+      ])) == "2 moves through Railgun")
 check("a card with no moves at all says so",
       RailgunRoom.headline(RailgunRoom.compose(moves: [])) == "Nothing has moved yet")
-check("both directions are named in the note",
-      RailgunRoom.note(railgun).contains("shielded") && RailgunRoom.note(railgun).contains("received"))
 let rgFoot = RailgunRoom.footnote(railgun, drawn: 3, now: t0) ?? ""
 check("unplaced moves are named — a move missing from every token bucket above",
       rgFoot.contains("1 move has no readable token"))
 check("a room with no moves at all is no card", RailgunRoom.compose(moves: []).isEmpty)
-check("share is a fraction of the busiest token's moves", RailgunRoom.share(moves: 3, of: 6) == 0.5)
-check("a zero denominator can't divide by zero", RailgunRoom.share(moves: 3, of: 0) == 0)
+
+print("")
+print("Railgun — the direction pair (2026-08-26)")
+// The drawing that REPLACED `share`, which was a fraction of the busiest
+// token's MOVE COUNT sitting under a line of text stating an AMOUNT — a bar
+// that read as a picture of the number printed beside it. This one is scaled
+// to the token's OWN maximum, because no two tokens here share a unit.
+func rgFull(_ s: String, shields: Int, unshields: Int,
+            shielded: Double?, back: Double?) -> RailgunRoom.Token {
+    RailgunRoom.Token(symbol: s, shields: shields, unshields: unshields,
+                      shieldedAmount: shielded, unshieldedAmount: back, newest: t0)
+}
+let ethPair = RailgunRoom.pair(eth)          // 3.0 shielded, 0.5 back
+check("the bigger side fills the row", ethPair?.into == 1)
+check("the other side is drawn against it, on this token's own scale",
+      abs((ethPair?.back ?? 0) - 0.5 / 3.0) < 0.0001)
+check("a side whose amount could not be read draws NOTHING — half a pair is not a comparison",
+      RailgunRoom.pair(wbtc) == nil)
+// A direction with no moves is a real zero, and telling that apart from an
+// unknown is the whole reason `pair` reads the COUNT before the amount: a
+// token nothing ever came back from must draw its one line, not vanish.
+let rgBackOnly = rgFull("BACK", shields: 0, unshields: 1, shielded: nil, back: 2)
+check("a direction with no moves is a real zero, never an unknown",
+      RailgunRoom.pair(rgBackOnly)?.into == 0)
+check("…and the side that did move fills the row", RailgunRoom.pair(rgBackOnly)?.back == 1)
+// MORE CAME BACK THAN WENT IN is the COMMON case here, not a corner:
+// `RailgunBridge`'s own ceiling is that only about half of shields are
+// attributable at all, so the in-side is routinely the short one.
+let rgMoreBack = rgFull("MORE", shields: 1, unshields: 1, shielded: 1, back: 4)
+check("more back than in still fits inside the row", RailgunRoom.pair(rgMoreBack)?.back == 1)
+check("…and the shorter side is drawn against the longer one",
+      RailgunRoom.pair(rgMoreBack)?.into == 0.25)
+check("a token that moved nothing on either side draws nothing",
+      RailgunRoom.pair(rgFull("ZERO", shields: 0, unshields: 0, shielded: nil, back: nil)) == nil)
 
 print("")
 print("Safe — ranking is your-turn first, then ready, then oldest first")
@@ -1615,6 +1703,21 @@ mutate "tokens are ranked by recency before move count" railgun \
             if a.newest != b.newest { return a.newest > b.newest }' \
   'if a.newest != b.newest { return a.newest > b.newest }
             if a.moves != b.moves { return a.moves > b.moves }'
+
+# THE PAIR SCALED TO WHAT WENT IN, instead of to the bigger of the two. It
+# renders perfectly and is wrong exactly where this seat is weakest: only about
+# half of Railgun's shields are attributable, so a token that received more than
+# we ever saw shielded is ordinary — and against an in-side scale both its lines
+# draw full, which says "all of it came back" over any ratio at all.
+mutate "the pair is scaled to what went in rather than to the bigger side" railgun \
+  'let top = max(into, back)' \
+  'let top = into'
+# A direction with NO moves reading as an unknown rather than as zero. The pair
+# then goes nil for every token that has only ever been shielded — which is most
+# of them — so the card's drawing silently disappears from the common case.
+mutate "a direction with no moves reads as unknown instead of zero" railgun \
+  'let into: Double? = token.shields == 0 ? 0 : token.shieldedAmount' \
+  'let into: Double? = token.shieldedAmount'
 
 # A signature request only YOU can unblock loses its priority — the exact bug
 # that would make the room's own reason for existing (surfacing what's

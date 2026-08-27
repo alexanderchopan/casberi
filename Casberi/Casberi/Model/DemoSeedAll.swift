@@ -2720,20 +2720,27 @@ enum DemoSeedAll {
         // demo cannot show the difference between a card that respects that
         // and one that adds 0.86 to 400. The reclaimed pair below is the
         // other deliberate shape — see `poolExits`.
-        let pools: [(label: String, title: String, state: String,
+        // `amount` is ONE string, spent twice — the title says it and
+        // `transferAmount` stamps it (prd §485). They have to be the same
+        // characters, not merely the same number: `BandRow`'s money column
+        // lifts the figure out of the sentence by SUBSTRING, so a seed whose
+        // title reads "0.1500 ETH" and whose stamp reads "0.15 ETH" prints the
+        // amount twice in the demo while the real bridge, which builds both
+        // from one `WalletIngest.format`, prints it once.
+        let pools: [(label: String, amount: String, state: String,
                      days: Double, symbol: String, value: Double)] = [
-            ("demo0", "Put 0.0700 ETH into Privacy Pools", "Pending",     2,  "ETH",  0.07),
-            ("demo1", "Put 0.1200 ETH into Privacy Pools", "Pending",     9,  "ETH",  0.12),
-            ("demo2", "Put 250 USDC into Privacy Pools",   "Cleared",     13, "USDC", 250),
-            ("demo3", "Put 0.2500 ETH into Privacy Pools", "Cleared",     17, "ETH",  0.25),
-            ("demo4", "Put 0.0400 ETH into Privacy Pools", "Cleared",     24, "ETH",  0.04),
-            ("demo5", "Put 0.3000 ETH into Privacy Pools", "Needs proof", 31, "ETH",  0.30),
+            ("demo0", "0.0700 ETH", "Pending",     2,  "ETH",  0.07),
+            ("demo1", "0.1200 ETH", "Pending",     9,  "ETH",  0.12),
+            ("demo2", "250 USDC", "Cleared",     13, "USDC", 250),
+            ("demo3", "0.2500 ETH", "Cleared",     17, "ETH",  0.25),
+            ("demo4", "0.0400 ETH", "Cleared",     24, "ETH",  0.04),
+            ("demo5", "0.3000 ETH", "Needs proof", 31, "ETH",  0.30),
             // Reclaimed: still TAGGED `Declined`, deliberately. Its ragequit
             // row below is what turns it `Reclaimed` on the card, so the demo
             // exercises the §397 join — evidence beating a stale tag — rather
             // than pre-baking the answer into the tag and proving nothing.
-            ("demo6", "Put 0.1500 ETH into Privacy Pools", "Declined",    38, "ETH",  0.15),
-            ("demo7", "Put 0.0900 ETH into Privacy Pools", "Cleared",     45, "ETH",  0.09),
+            ("demo6", "0.1500 ETH", "Declined",    38, "ETH",  0.15),
+            ("demo7", "0.0900 ETH", "Cleared",     45, "ETH",  0.09),
         ]
         out += pools.map { p in
             // The ref must carry `PrivacyPoolsRoom.depositPrefix` — the room
@@ -2742,7 +2749,7 @@ enum DemoSeedAll {
             // through as unrecognised, silently zeroing this card. Found
             // building the room-head coverage check (2026-08-10): all six
             // seeded deposits were landing and going straight to `nil`.
-            row(.transaction, p.title, source: "Privacy Pools",
+            row(.transaction, "Put \(p.amount) into Privacy Pools", source: "Privacy Pools",
                 ref: PrivacyPoolsRoom.depositPrefix + p.label,
                 days: p.days, hour: 20, content: "Ethereum · 0xBow",
                 tags: ["Shielded", p.state]) { t in
@@ -2751,7 +2758,11 @@ enum DemoSeedAll {
                 // only from a stamped field, never by parsing the title, so
                 // without this the demo's deposits lead with their title and
                 // the sheet's headline number never draws.
-                t.transferAmount = "\(p.value.formatted(.number.precision(.fractionLength(0...4)))) \(p.symbol)"
+                t.transferAmount = p.amount
+                // The side, so the room draws its ledger column (prd §485) —
+                // the same stamp `PrivacyPoolsBridge` makes. Money into the
+                // pool is money out of the wallet.
+                t.transferDirection = "sent"
                 // …and the structured pair the ROOM reads (prd §397). Without
                 // it every demo deposit is `unpriced`, the holdings line never
                 // draws, and the cover line has no asset to join against —
@@ -2771,6 +2782,7 @@ enum DemoSeedAll {
                        days: 35, hour: 20, content: "Ethereum · 0xBow") { t in
             t.walletAddress = demoWallet
             t.transferAmount = "0.1500 ETH"
+            t.transferDirection = "received"
             t.priceValue = 0.15
             t.priceCurrency = "ETH"
         })
@@ -2850,18 +2862,31 @@ enum DemoSeedAll {
         // .direction(ref:)`'s exact match) or the move is dropped before
         // it's even counted, the same `"demo:"`-prefix miss as Peer/Privacy
         // Pools above.
-        let railgunMoves: [(String, String, String, Double, Double)] = [
-            ("Shielded 0.4000 ETH into Railgun", "shield", "ETH", 0.4000, 6),
-            ("Shielded 500 DAI into Railgun", "shield", "DAI", 500, 14),
-            ("Received 0.1500 ETH from Railgun", "unshield", "ETH", 0.1500, 23),
+        // `amount` is ONE string spent twice — see the Privacy Pools seed
+        // above for why the title and the stamp have to be the same
+        // characters rather than the same number.
+        let railgunMoves: [(amount: String, verb: String, symbol: String,
+                            value: Double, days: Double)] = [
+            ("0.4000 ETH", "shield", "ETH", 0.4000, 6),
+            ("500 DAI", "shield", "DAI", 500, 14),
+            ("0.1500 ETH", "unshield", "ETH", 0.1500, 23),
         ]
         out += railgunMoves.enumerated().map { i, r in
-            row(.transaction, r.0, source: "Railgun", ref: "railgun:\(r.1):demo\(i)",
-                days: r.4, hour: 21, content: "Ethereum · zk-SNARK") { t in
+            let title = r.verb == "shield"
+                ? "Shielded \(r.amount) into Railgun"
+                : "Received \(r.amount) from Railgun"
+            return row(.transaction, title, source: "Railgun",
+                ref: "railgun:\(r.verb):demo\(i)",
+                days: r.days, hour: 21, content: "Ethereum · zk-SNARK") { t in
                 t.walletAddress = demoWallet
-                t.transferDirection = r.1 == "shield" ? "sent" : "received"
-                t.priceValue = r.3
-                t.priceCurrency = r.2
+                t.transferDirection = r.verb == "shield" ? "sent" : "received"
+                // The amount as the ROW reads it (2026-08-26). The bridge has
+                // stamped this since it shipped; the demo never did, so every
+                // seeded Railgun move kept its figure inside its sentence and
+                // the room's new ledger column drew on no row at all.
+                t.transferAmount = r.amount
+                t.priceValue = r.value
+                t.priceCurrency = r.symbol
                 if r.1 == "unshield" {
                     t.enrichedText = "Railgun can't tell you who sent this — inside the pool the sender is private by design."
                 }

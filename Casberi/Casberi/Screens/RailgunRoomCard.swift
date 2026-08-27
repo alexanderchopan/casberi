@@ -1,12 +1,47 @@
 import SwiftUI
 
-/// THE RAILGUN ROOM'S HEAD (2026-08-11) — what's actually moving through the
-/// shielded pool, by token.
+/// THE RAILGUN ROOM'S HEAD (2026-08-11; redrawn 2026-08-26, prd §485) — what's
+/// moving through the shielded pool, by token.
 ///
 /// The anatomy is `PeerRoomCard`'s, which is `CursorRoomCard`'s: a kicker in
 /// the card's own hue, a heavy headline stating the finding as a sentence,
-/// ranked rows, no decoration that isn't a reading. No green/red — a shield
-/// and an unshield are not good or bad, they're just which way the money went.
+/// ranked rows, no decoration that isn't a reading.
+///
+/// ## What the 2026-08-26 pass changed, and why (user: "the railgun room looks
+/// messy — clean it up in the restrained style we are doing for wallet")
+///
+/// Three defects, all of them the card talking over itself — §483's editing
+/// pass applied one room over:
+///
+///   1. **Four sentences said one thing.** A headline naming the lead, a
+///      subline splitting in from out, a line per token splitting in from out
+///      again, and a footnote. "shielded"/"received" could appear five times
+///      on one card. `RailgunRoom.note` is deleted, not merely undrawn — the
+///      totals it stated are the sums of two columns now on screen.
+///   2. **The lead had a bar and no row.** It was named inside the prose
+///      headline, so the card's first bar measured a token whose label was two
+///      lines up, and the bars below it sat on labelled rows. Every drawn
+///      token gets a row now, the lead included.
+///   3. **The bar and the text measured different quantities.** `share` was a
+///      fraction of the busiest token's MOVE COUNT while the figures beside it
+///      were AMOUNTS, so the bar read as a picture of the number printed next
+///      to it. `RailgunRoom.pair` replaces it: in against back, on the token's
+///      own scale, which is the one comparison this room's data supports.
+///
+/// ## The drawing
+///
+/// Two hairlines per token, and deliberately NO track behind them: a track is
+/// a shared axis, and no two tokens here share a unit (see `RailgunRoom.pair`).
+/// Length is the reading, weight is constant.
+///
+/// **Colour follows the money column in the rows below** (`BandRow`'s
+/// `moneyColumn`, which this room now asks for): arriving money is `DS.confirm`
+/// and everything else is neutral ink, the wallet family's standing grammar —
+/// in is green, out is neutral, never red. This AMENDS this card's own
+/// original "no green/red" line, which was written when the card had no drawing
+/// at all: the rule it was defending is that neither direction is good or bad,
+/// and nothing here is painted red or ranked by direction. What green says is
+/// *this arrived*, which is what it says on every wallet row in the app.
 ///
 /// ## Liveness
 ///
@@ -28,7 +63,7 @@ struct RailgunRoomCard: View {
         Array(room.tokens.prefix(RailgunRoomSource.rowCap))
     }
 
-    private var top: Int { room.lead?.moves ?? 0 }
+    private var mask: String? { BalancePrivacy.shared.hidden ? BalancePrivacy.mask : nil }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -40,35 +75,17 @@ struct RailgunRoomCard: View {
                 .dsText(.heading22)
                 .foregroundStyle(DS.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
-                // The lead has no row of its own (see below), so this headline
-                // is the only place its destination can be reached.
                 .dsCardLead(Text("Opens this token")) {
                     guard let lead = room.lead else { return }
                     DSHaptic.selection()
                     onOpen(lead)
                 }
 
-            Text(RailgunRoom.note(room))
-                .dsText(.subhead13)
-                .foregroundStyle(DS.textSecondary)
-                .padding(.top, DS.Space.s1)
-
-            // Only the tokens BEYOND the lead get a row — the lead is already
-            // in the headline. Its bar still draws, because the headline
-            // doesn't carry a proportion.
-            if let lead = room.lead {
-                ShareBar(fraction: RailgunRoom.share(moves: lead.moves, of: top),
-                         reduceMotion: reduceMotion)
-                    .padding(.top, DS.Space.s2)
+            ForEach(Array(drawn.enumerated()), id: \.element.id) { index, token in
+                row(token, index: index)
+                    .chartArrival(index: index, reduceMotion: reduceMotion)
             }
-
-            if drawn.count > 1 {
-                ForEach(Array(drawn.dropFirst().enumerated()), id: \.element.id) { index, token in
-                    row(token, index: index)
-                        .chartArrival(index: index, reduceMotion: reduceMotion)
-                }
-                .padding(.top, DS.Space.s3)
-            }
+            .padding(.top, DS.Space.s3)
 
             if let footnote = RailgunRoom.footnote(room, drawn: drawn.count) {
                 Text(footnote)
@@ -104,21 +121,74 @@ struct RailgunRoomCard: View {
                         .foregroundStyle(DS.textPrimary)
                         .lineLimit(1)
                     Spacer(minLength: DS.Space.s2)
-                    Text(RailgunRoom.tokenLine(token, mask: BalancePrivacy.shared.hidden ? BalancePrivacy.mask : nil))
+                    // No symbol inside the figures — the row's leading label is
+                    // already the token's name, and the old line said that word
+                    // three times before it said anything.
+                    Text(RailgunRoom.tokenLine(token, mask: mask))
                         .dsText(.subhead13)
                         .foregroundStyle(DS.textSecondary)
                         .lineLimit(1)
                 }
                 // The stagger index is shared with the row's own arrival —
-                // `ChartEntrance`'s rule, one beat per row.
-                ShareBar(fraction: RailgunRoom.share(moves: token.moves, of: top),
-                         index: index + 1,
-                         reduceMotion: reduceMotion)
+                // `ChartEntrance`'s rule, one beat per row. Absent whenever
+                // either side's amount is unknown: a pair is a comparison, and
+                // half of one drawn as a whole is the partial-sum failure
+                // `RailgunRoom.Token` exists to refuse.
+                if let pair = RailgunRoom.pair(token) {
+                    DirectionPair(into: pair.into, back: pair.back,
+                                  index: index, reduceMotion: reduceMotion)
+                }
             }
             .padding(.vertical, DS.Space.s1)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(Text("\(token.symbol), \(RailgunRoom.tokenLine(token, mask: BalancePrivacy.shared.hidden ? BalancePrivacy.mask : nil))"))
+        .accessibilityLabel(Text("\(token.symbol), \(RailgunRoom.tokenLine(token, symbol: token.symbol, mask: mask))"))
+    }
+
+    // MARK: - The pair
+
+    /// Two hairlines: what went into the pool, and what came back out of it.
+    ///
+    /// No track behind either — see the type doc. Each line grows from nothing
+    /// on the shared arrival cadence, which is `ChartEntrance`'s contract and
+    /// what keeps `design-motion-audit` satisfied that a drawing sized from
+    /// data has an entrance.
+    private struct DirectionPair: View {
+        let into: Double
+        let back: Double
+        let index: Int
+        let reduceMotion: Bool
+
+        @State private var entered = false
+
+        private static let weight: CGFloat = 3
+
+        var body: some View {
+            GeometryReader { geo in
+                VStack(alignment: .leading, spacing: 3) {
+                    line(width: geo.size.width * (entered ? into : 0),
+                         ink: DS.textPrimary.opacity(0.42))
+                    line(width: geo.size.width * (entered ? back : 0),
+                         ink: DS.confirm)
+                }
+            }
+            .frame(height: Self.weight * 2 + 3)
+            .accessibilityHidden(true)
+            .onAppear {
+                guard !entered else { return }
+                guard !reduceMotion else { entered = true; return }
+                withAnimation(ChartEntrance.arrive(index: index)) { entered = true }
+            }
+        }
+
+        /// A zero-width capsule draws nothing at all, which is the correct
+        /// picture of "none of it came back" — no floor, or an absence would
+        /// read as a small amount.
+        private func line(width: CGFloat, ink: Color) -> some View {
+            Capsule(style: .continuous)
+                .fill(ink)
+                .frame(width: max(0, width), height: Self.weight)
+        }
     }
 }

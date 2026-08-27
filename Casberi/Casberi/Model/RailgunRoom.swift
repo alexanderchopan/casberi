@@ -171,11 +171,35 @@ struct RailgunRoom: Equatable {
         }
     }
 
-    // MARK: - The bar
+    // MARK: - The drawing
 
-    static func share(moves: Int, of top: Int) -> Double {
-        guard top > 0 else { return 0 }
-        return min(max(Double(moves) / Double(top), 0), 1)
+    /// The per-token drawing: how much went INTO the pool against how much
+    /// came BACK, as two fractions — the hairline pair `RailgunRoomCard`
+    /// draws under each token's figures.
+    ///
+    /// **Each row is scaled to its OWN maximum, never to a shared one, and
+    /// that is the whole honesty of it.** No two tokens here share a unit
+    /// (3 ETH against 500 DAI is the sum this room already refuses to make),
+    /// so a common axis would invite exactly the comparison the composer
+    /// declines. Scaled to itself, the pair claims only what is true of one
+    /// token: this much went in, this much of it came back.
+    ///
+    /// Which is also why it REPLACED a share-of-the-busiest-token bar
+    /// (prd §485, 2026-08-26): that bar measured MOVE COUNT while the line of text
+    /// beside it stated an AMOUNT, so read left to right it looked like a
+    /// picture of the number printed next to it. One row, one quantity.
+    ///
+    /// nil whenever either side's amount is unknown — a direction with no
+    /// readable amount cannot be drawn against one that has one, and half a
+    /// pair drawn as a whole is the partial-sum failure `Token` exists to
+    /// refuse. A direction with no MOVES is a real zero, not an unknown.
+    static func pair(_ token: Token) -> (into: Double, back: Double)? {
+        let into: Double? = token.shields == 0 ? 0 : token.shieldedAmount
+        let back: Double? = token.unshields == 0 ? 0 : token.unshieldedAmount
+        guard let into, let back else { return nil }
+        let top = max(into, back)
+        guard top > 0 else { return nil }
+        return (min(into / top, 1), min(back / top, 1))
     }
 
     // MARK: - Days
@@ -192,41 +216,44 @@ struct RailgunRoom: Equatable {
         count == 1 ? String(localized: "1 move") : String(localized: "\(count) moves")
     }
 
-    /// "340.5 USDC shielded" — plain units, not `.formatted(.currency())`:
-    /// a token symbol is not an ISO 4217 code. Self-contained (not
+    /// "340.5 USDC" — plain units, not `.formatted(.currency())`: a token
+    /// symbol is not an ISO 4217 code. Self-contained (not
     /// `WalletIngest.format`) so this file stays Foundation-only.
+    ///
+    /// `symbol` is OPTIONAL because on the card the token's name is the row's
+    /// own leading label, so repeating it inside both figures beside it said
+    /// the same word three times on one line. The probe still passes one.
     ///
     /// `mask` is the §374 hide-balances string, PASSED IN rather than read:
     /// this file is Foundation-only and compiled WHOLE by
     /// `scripts/wallet-rooms-selftest.sh`, so it cannot reach `BalancePrivacy`.
-    /// The SYMBOL survives the mask — a hidden row still says which asset
-    /// moved, which is what makes it a row rather than a blank.
-    static func amountText(_ amount: Double, symbol: String, mask: String? = nil) -> String {
-        guard let mask else {
-            let formatted = amount.formatted(.number.precision(.fractionLength(0...4)))
-            return "\(formatted) \(symbol)"
-        }
-        return "\(mask) \(symbol)"
+    static func amountText(_ amount: Double, symbol: String? = nil, mask: String? = nil) -> String {
+        let figure = mask ?? amount.formatted(.number.precision(.fractionLength(0...4)))
+        guard let symbol, !symbol.isEmpty else { return figure }
+        return "\(figure) \(symbol)"
     }
 
-    /// The line beside a token: how much moved, in real units when known,
-    /// falling back to a bare count — the `PeerRoom.tokenLine` shape.
-    /// `mask` — see `amountText`. The bare-count fallbacks are unaffected:
-    /// a count of shields is not a balance.
-    static func tokenLine(_ token: Token, mask: String? = nil) -> String {
-        if let shielded = token.shieldedAmount, let unshielded = token.unshieldedAmount,
+    /// The figures beside a token: what went in, and what came back — in real
+    /// units when known, falling back to a bare count.
+    ///
+    /// `symbol` defaults to nil for the card (the row already names the
+    /// token); the probe passes the symbol so a dumped line stands alone.
+    /// `mask` — see `amountText`. The bare-count fallbacks are unaffected: a
+    /// count of shields is not a balance.
+    static func tokenLine(_ token: Token, symbol: String? = nil, mask: String? = nil) -> String {
+        if let shielded = token.shieldedAmount, let back = token.unshieldedAmount,
            token.shields > 0, token.unshields > 0 {
-            return String(localized: "\(amountText(shielded, symbol: token.symbol, mask: mask)) shielded · \(amountText(unshielded, symbol: token.symbol, mask: mask)) received")
+            return String(localized: "\(amountText(shielded, symbol: symbol, mask: mask)) shielded · \(amountText(back, symbol: symbol, mask: mask)) back")
         }
         if token.unshields > 0 {
-            if let unshielded = token.unshieldedAmount {
-                return String(localized: "\(amountText(unshielded, symbol: token.symbol, mask: mask)) received")
+            if let back = token.unshieldedAmount {
+                return String(localized: "\(amountText(back, symbol: symbol, mask: mask)) received")
             }
             return token.unshields == 1 ? String(localized: "1 received")
                                         : String(localized: "\(token.unshields) received")
         }
         if let shielded = token.shieldedAmount {
-            return String(localized: "\(amountText(shielded, symbol: token.symbol, mask: mask)) shielded")
+            return String(localized: "\(amountText(shielded, symbol: symbol, mask: mask)) shielded")
         }
         return token.shields == 1 ? String(localized: "1 shielded")
                                   : String(localized: "\(token.shields) shielded")
@@ -235,31 +262,24 @@ struct RailgunRoom: Equatable {
     /// The one line at the top of the card. Volume leads, the same reasoning
     /// as `PeerRoom.headline`: nothing here is trouble, so there is no
     /// "trouble first" rung to open with.
+    ///
+    /// **The subline under it retired 2026-08-26** (§483's restraint, applied
+    /// one room over). It read "7 shielded · 5 received" — which, now that
+    /// every drawn token carries both of its own figures, is the sum of one
+    /// column and the sum of the other, both already on screen. Exactly the
+    /// deletion the wallet crown's caption took, for exactly §208's reason.
     static func headline(_ room: RailgunRoom) -> String {
         guard room.moves > 0 else { return String(localized: "Nothing has moved yet") }
-        guard let lead = room.lead else {
-            // Real moves, no token honestly readable on any of them.
+        // TWO cases, not three (2026-08-26). "6 moves in ETH" over a single row
+        // labelled ETH printed the token's name twice in fourteen points of
+        // each other; the room-level sentence now says what only it can say,
+        // and the rows name the tokens. The same sentence covers a room where
+        // no token was readable at all — true in both, and the rows below are
+        // what tell them apart.
+        guard let lead = room.lead, room.tokens.count > 1 else {
             return String(localized: "\(movesLabel(room.moves)) through Railgun")
         }
-        if room.tokens.count > 1 {
-            return String(localized: "Mostly \(lead.symbol) — \(movesLabel(room.moves)) across \(room.tokens.count) tokens")
-        }
-        return String(localized: "\(movesLabel(room.moves)) in \(lead.symbol)")
-    }
-
-    /// The line under it — the SHAPE of the traffic (in vs out), never a
-    /// restatement of the headline's token/volume.
-    static func note(_ room: RailgunRoom) -> String {
-        if room.shields > 0 && room.unshields > 0 {
-            return String(localized: "\(room.shields) shielded · \(room.unshields) received")
-        }
-        if room.unshields > 0 {
-            return String(localized: "Receiving only — \(room.unshields) in, nothing shielded")
-        }
-        if room.shields > 0 {
-            return String(localized: "Shielding only — \(room.shields) in, nothing received")
-        }
-        return String(localized: "Nothing has moved yet")
+        return String(localized: "Mostly \(lead.symbol) — \(movesLabel(room.moves)) across \(room.tokens.count) tokens")
     }
 
     /// The quiet line at the foot: tokens not drawn, moves that could not be

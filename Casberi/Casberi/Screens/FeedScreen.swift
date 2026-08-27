@@ -756,7 +756,7 @@ struct FeedScreen: View {
 
     /// The shape a source takes when its chip is in force.
     private enum Shape {
-        case all, photos, wallet, calendar, gmail, chat, social, reminders, bookmarks, notes, you, music, media, tokens, bitrefill, oneclaw, snapchat, files, instagram, x, x402, appStoreConnect, cursor, walletbeat, l2beat, telegram, vibenet, plain
+        case all, photos, wallet, ledger, calendar, gmail, chat, social, reminders, bookmarks, notes, you, music, media, tokens, bitrefill, oneclaw, snapchat, files, instagram, x, x402, appStoreConnect, cursor, walletbeat, l2beat, telegram, vibenet, plain
 
         /// Rooms whose lead is a GRID of pictures, and which therefore earn the
         /// wide content cap on a regular-width window (2026-08-17).
@@ -803,6 +803,42 @@ struct FeedScreen: View {
             // need it least.
             case ASCShape.source:       self = .appStoreConnect
             case "Wallet":              self = .wallet
+            // The WALLET-RIDING money rooms (prd §485, 2026-08-26). Both had NO case
+            // here, so they fell to `.plain` and drew the band's generic
+            // sentence row — in rooms whose every row is a transfer, with the
+            // amount and the direction already stamped on it
+            // (`transferAmount`/`transferDirection`, since prd §369 and §397)
+            // and `BandRow.moneyColumn` already built to read exactly that
+            // pair. So the figure sat inside an 80-character sentence, and a
+            // column of moves scanned as a column of prose where the wallet
+            // room beside them has scanned as a ledger since §158.
+            //
+            // `.ledger` rather than `.wallet`: that shape carries the wallet
+            // room's whole apparatus — its section switcher, its crown, its
+            // tiles, its warnings — and these rooms have a head of their own.
+            // What they share with it is one row anatomy and one flag.
+            //
+            // A non-transfer row in these rooms is unaffected by construction:
+            // Privacy Pools' proof-required ALERT carries no
+            // `transferDirection`, so `moneyAmount` returns nil and it keeps
+            // its full sentence. The flag is opt-in per ROW, not per room.
+            //
+            // GNOSIS PAY IS DELIBERATELY NOT HERE, and the reason is data, not
+            // taste: its title states the spend in FIAT ("Spent EUR 42.80 with
+            // Gnosis Pay") while its `transferAmount` is the TOKEN amount
+            // ("42.80 EURe") — two spellings of one figure — so `titleText`'s
+            // strip can never match and the row would print the amount twice,
+            // in two units. Its honest column is the fiat one, which means
+            // teaching the money column to prefer `priceValue`/`priceCurrency`
+            // for a real ISO currency; that changes what §374's mask reads
+            // (the trailing SYMBOL of `transferAmount`) and belongs in its own
+            // pass rather than riding this one.
+            //
+            // The LITERALS, like `case "Cursor"` and `case "Instagram"` below
+            // — `demo-selftest.py`'s check F reads this switch to prove every
+            // shape has a seeded source, and it resolves only three
+            // indirections by name.
+            case "Railgun", "Privacy Pools": self = .ledger
             case "Calendar", "Cal.com", "Calendly": self = .calendar
             case "Gmail", "iCloud Mail": self = .gmail
             case "ChatGPT", "Claude", "Gemini": self = .chat
@@ -7889,6 +7925,9 @@ struct FeedScreen: View {
             // moved amount pulled out of the sentence into a right-aligned
             // figure. Same anatomy as every other row — one opt-in flag.
             case .wallet: BandRow(thing: thing, moneyColumn: true, rippleIndex: index)
+            // The same ledger reading for the wallet-riding money rooms
+            // (prd §485, 2026-08-26) — one flag, one anatomy. See `Shape.init`.
+            case .ledger: BandRow(thing: thing, moneyColumn: true, rippleIndex: index)
             case .notes:  ExcerptRow(thing: thing, lines: 3)
             case .chat:   ExcerptRow(thing: thing, lines: 2)
             case .social:

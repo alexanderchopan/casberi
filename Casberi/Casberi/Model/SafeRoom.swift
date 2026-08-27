@@ -266,9 +266,10 @@ struct SafeRoom: Equatable {
     }
 
     /// The line under it — the module warning, when there is one. Nil rather
-    /// than restating the headline's own count, the `RailgunRoom.note`
-    /// shape: a second sentence earns its place only when it says something
-    /// new.
+    /// than restating the headline's own count: a second sentence earns its
+    /// place only when it says something new. (`RailgunRoom.note` used to be
+    /// the reference here and was DELETED 2026-08-26 for failing exactly this
+    /// test — it restated in prose what that card's rows already drew.)
     ///
     /// It NAMES the Safe once more than one is watched. A module is the one
     /// fact here that asks you to go and act, and an unnamed one sends you to

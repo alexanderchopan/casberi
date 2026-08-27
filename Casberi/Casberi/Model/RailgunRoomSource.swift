@@ -80,17 +80,21 @@ enum RailgunRoomSource {
             return out
         }
         out.append("headline=\(RailgunRoom.headline(room))")
-        out.append("note=\(RailgunRoom.note(room))")
         out.append("footnote=\(RailgunRoom.footnote(room, drawn: min(rowCap, room.tokens.count), now: now) ?? "none")")
         out.append("totals| shields=\(room.shields) unshields=\(room.unshields)"
                    + " unplaced=\(room.unplaced) tokens=\(room.tokens.count)"
                    + " newest=\(room.newest?.formatted(.iso8601) ?? "none")")
-        let top = room.lead?.moves ?? 0
         for token in room.tokens.prefix(rowCap) {
+            // `pair` is the card's whole drawing, and "no pair" is a real and
+            // common answer (one direction's amount unreadable), which renders
+            // as a row with figures and no lines under them — indistinguishable
+            // from a drawing that failed. Named here rather than inferred.
+            let pair = RailgunRoom.pair(token)
             out.append("railgunRoomToken| \(token.symbol)"
-                       + " · \(RailgunRoom.tokenLine(token))"
+                       + " · \(RailgunRoom.tokenLine(token, symbol: token.symbol))"
                        + " · newest=\(token.newest.formatted(.iso8601))"
-                       + " · share=\(String(format: "%.2f", RailgunRoom.share(moves: token.moves, of: top)))")
+                       + " · pair=" + (pair.map { String(format: "in %.2f back %.2f", $0.into, $0.back) }
+                                       ?? "none — one side's amount is unreadable"))
         }
         return out
     }
