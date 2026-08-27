@@ -496,7 +496,7 @@ struct VibenetRoomCard: View {
             // THE SCOPED ACCOUNT'S OWN DETAIL, under the scope that owns each
             // part of it (prd §491) — keys under Permissions, links and
             // sub-accounts under Accounts, the record under Activity.
-            if let lead = room.lead, room.items.count == 1 {
+            if scopedToOneAccount, let lead = room.lead {
                 let fullItems = Self.fullItems(fallback: room)
                 VibenetAccountDetail(
                     item: lead,
@@ -564,7 +564,23 @@ struct VibenetRoomCard: View {
             }
             // EVERY KEY, GROUPED BY THE ACCOUNT IT CAN ACT FOR (user pick of
             // two mocked lists, prd §491).
-            if promoted(.permissions) { permissionsList }
+            //
+            // **NOT WHEN THE DETAIL IS ALREADY DRAWING THEM** (prd §495).
+            // Scoped to one account with Permissions picked, this room drew
+            // the SAME KEY TWICE in two different row designs, one under the
+            // other: `VibenetAccountDetail` above renders its own key list
+            // under `wants(.permissions)`, and then this ran as well. Found by
+            // walking the screen — every check in the tree is green over it,
+            // because two correct lists of one key is not a wrong number, it
+            // is a wrong page.
+            //
+            // The room's list stands down rather than the detail's, and the
+            // reason is in this list's own title: it groups keys BY THE
+            // ACCOUNT they act for, which over a single account is a heading
+            // above the only group. The detail's list groups by CAPABILITY
+            // ("Limited keys"), which is the reading that still says something
+            // once the account is fixed.
+            if promoted(.permissions), !scopedToOneAccount { permissionsList }
             // OUTSIDE the cards, and quieter for it. Provenance is a fact
             // about the whole room rather than about any one reading, so a
             // card of its own would make a section out of a footnote.
@@ -663,6 +679,18 @@ struct VibenetRoomCard: View {
     /// figure, which is the behaviour the room had before scopes existed.
     private func promoted(_ candidate: VibenetSection) -> Bool {
         section == candidate
+    }
+
+    /// Whether the face rail has narrowed this room to ONE account — in which
+    /// case `VibenetAccountDetail` is on screen above, drawing that account's
+    /// own readings, and any room-wide list of the same thing is the second
+    /// copy (prd §495).
+    ///
+    /// The same test `stackedRoom` uses to decide whether to draw the detail
+    /// at all, spelled once so the two can never disagree about which of them
+    /// owns a reading.
+    private var scopedToOneAccount: Bool {
+        room.lead != nil && room.items.count == 1
     }
 
     /// The surface every stacked card wears — one definition, so four cards
@@ -1208,6 +1236,15 @@ struct VibenetRoomCard: View {
             }
             figure()
         }
+        // **THE FRAME TAKES THE SLOT'S HEIGHT** (prd §495). This stack sized
+        // to its CONTENT, so a figure asking for `maxHeight: .infinity` was
+        // being offered exactly its own height and every "fill the slot" and
+        // "centre in the slot" instruction inside one silently did nothing —
+        // the reserved height was there, and nothing could reach it.
+        //
+        // `topLeading`, so the headline stays where it has always been and
+        // only the figure below it gains the room.
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .padding(.horizontal, DS.Space.s4)
     }
 
@@ -1567,9 +1604,24 @@ struct VibenetRoomCard: View {
                         Text(String(localized: "and \(counts.count - Self.permissionRungs) more"))
                             .dsText(.label12).foregroundStyle(DS.textTertiary)
                     }
-                    Spacer(minLength: 0)
+                    // The tail spacer is what makes SEVERAL rungs settle at
+                    // the top with their spread above it. A LONE rung must
+                    // not get one: a trailing `Spacer` takes every spare point
+                    // and pins the content to the top, so the `alignment`
+                    // below would be inert — which is exactly how the first
+                    // cut of this shipped, centred in the source and top-
+                    // aligned on the device.
+                    if drawn.count > 1 { Spacer(minLength: 0) }
                 }
-                .frame(maxHeight: .infinity, alignment: .top)
+                // **ONE RUNG SITS IN THE MIDDLE, not at the top** (prd §495).
+                // The slot's height is reserved whatever the census holds, and
+                // a single rung pinned to the top leaves ~250pt of black under
+                // it that reads as a drawing which failed rather than as an
+                // account with one kind of key. Two or more fill the box by
+                // spreading (above); one has nothing to spread against, so it
+                // takes the middle and the air becomes a margin.
+                .frame(maxHeight: .infinity,
+                       alignment: drawn.count <= 1 ? .center : .top)
             }
         }
     }

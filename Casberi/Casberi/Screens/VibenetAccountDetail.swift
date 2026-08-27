@@ -535,10 +535,23 @@ struct VibenetAccountDetail: View {
         // stays: it is a reading, not a title.
         VStack(alignment: .leading, spacing: DS.Space.s6) {
             VStack(alignment: .leading, spacing: DS.Space.s3) {
-                Text(keyCountLine)
-                    .dsText(.heading17)
-                    .foregroundStyle(DS.textPrimary)
-                    .fixedSize(horizontal: false, vertical: true)
+                // **NOT UNDER THE PERMISSIONS SCOPE** (prd §495). §477 kept
+                // this count on the reasoning that it is a reading rather than
+                // a title — true, and the scope's own slot now states exactly
+                // the same reading in `stat24` a few points above it, so
+                // scoped it was "1 key" over "1 key". A reading is only worth
+                // keeping the second time if the two can differ, and they
+                // cannot: both count `item.actors`.
+                //
+                // It survives OFF that scope, where the slot is drawing
+                // something else entirely and this is the only place the
+                // count appears.
+                if section != .permissions {
+                    Text(keyCountLine)
+                        .dsText(.heading17)
+                        .foregroundStyle(DS.textPrimary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
                 // NARROWING, ON THIS PAGE TOO (2026-08-25, prd §480, user:
                 // *"what happens if an account has like ten keys, won't they
                 // still need to be able to see it the same way?"*).
