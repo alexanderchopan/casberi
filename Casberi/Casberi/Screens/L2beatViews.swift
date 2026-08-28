@@ -208,7 +208,6 @@ struct L2beatMark: View {
 				} else {
 					Text(initial)
 						.dsText(.badgeInitial11)
-						.fontWeight(.bold)
 						.foregroundStyle(DS.textSecondary)
 				}
 			}

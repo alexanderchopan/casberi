@@ -36941,3 +36941,99 @@ None of the four has been seen on a device or simulator. The share bar, the gas
 share and the split bar are all sized from data and all wipe in under
 `chartWipe`; the crossing and the neighbour doors are gesture paths no static
 check exercises.
+
+## 506. The type ramp made mechanical — what drifted, what only looked like drift, and the check that could not be built (user: "can you do a sweep and make sure we are adhering to our font guidelines in terms of sizes and weights and haven't drifted", then "what do you suggest" → "do all and your recommendation", 2026-08-28)
+
+The sweep found the app in better shape than the ledger was. 1,858 `dsText` call
+sites against 28 raw fonts, of which 21 are derived mark sizes that the ramp
+audit already exempts by ruling; zero `Font.custom`, zero `.kerning`, zero
+`.italic()`, zero ALL-CAPS, and all four existing design audits green. **Every
+finding was in the half nothing checked** — `design-ramp-audit.py` scoped itself
+to glyphs and brand marks and said so in its own header, so text sizes and
+weights had no gate at all and had never had one.
+
+### 1. What was really off the ramp
+
+**The Settings colophon**, which drew `.system(size: 17, weight: .semibold)`
+over `.font(.footnote)` — a frozen size that is not even a rung (`heading17` has
+been 18 since the reading-band pass) and the app's ONLY use of a SwiftUI
+semantic style. It sat directly under a doc comment claiming "the name is set in
+the app's own ramp rather than the brand face", which had been false since the
+day it was written. **The widget's posts lead** (§382a) drew a frozen 17
+semibold ROUNDED over 12 medium while every tile beside it — `widgetFigure24`,
+`widgetSubline12`, `widgetTreemapTerm12` — went through `dsText`; the rounded
+face also put the one lead that is a SENTENCE into the money tier's display
+face, against Typography's own 2026-07-09 rule. Both are invisible at the
+default text size and neither grew with it, which is the entire job of the ramp.
+**Nine redundant weight overrides** restated their rung's own weight
+(`price16→.bold`, `label12→.medium`, `heading34→.bold`, `badgeInitial11→.bold`,
+…) — they render identically, so nothing could see them, and each is an author
+who did not know what the rung carried. **One comment lied about its own line**:
+`WalletFeedTiles` said "`price40` is the sanctioned big-money rung" above a
+`price48` draw.
+
+### 2. What only looked like drift, and the correction that followed
+
+Two rungs documented themselves as single-caller and had thirteen and seven
+callers. **The prose was wrong, not the code — in one case.** `price48` said
+"nothing else earns this size; a second user would flatten the hierarchy it
+exists to make", and by then the wallet crown, two vibenet totals and four
+hegotá cards all took it. But the hierarchy it makes is WITHIN one surface (the
+figure against its own caption and rows) and you never see two crowns at once,
+so a second room having its own flattens nothing. The rule that actually holds
+is **one per SURFACE**, and `HegotaRoomCard` correctly takes it four times
+because it holds four cards. `reading20` had generalised the same way, from "a
+social post's own words, and nothing else" to any body of prose leading its
+sheet. Both docs were rewritten to the rule that holds.
+
+`heading28` did NOT generalise cleanly, and that is the one real design change
+here. Nine of its thirteen callers were lede SENTENCES — correct. Three were
+**figures**, all `monospacedDigit`: a request count on the receipts card and two
+wallet-tray totals. A figure at 28 sits between `stat24` and `price40` matching
+neither, in an app whose crown is `price48`, so the money ramp reads as four
+rungs where it has three. Those three moved to **`stat24`**, the ramp's own
+stat-card rung, which the wallet's composition strip a few hundred lines away
+had been using for the identical job all along. `heading28`'s rule is now the
+kind of content, not the number of callers: **it sets a sentence, never a
+figure.**
+
+### 3. The gate
+
+`design-ramp-audit.py` gained checks 3 and 4. Check 3: a LITERAL size on
+`Text`/`Label`, or a semantic system style, is a finding — attributed the same
+conservative way check 1 attributes a glyph, so a `.font()` on a container or
+one that cannot be attributed is still left alone. Check 4: a `.fontWeight()`
+restating its rung's own weight is a finding, with the rung→weight table
+**parsed out of `Shared/Typography.swift` at run time** rather than copied, so
+it can never disagree with the ramp it guards — retune a rung and the redundant
+overrides it creates are findings the same day. Mutation-proven three ways
+against real source, and it earned itself on its first run over the tree by
+finding two redundant overrides down multi-line chains that the by-hand sweep
+had missed entirely.
+
+### 4. Declined, with the measurement
+
+**A caller budget per rung is not checkable**, and this was worked through
+rather than assumed. It is the obvious mechanical form of §506.2 — turn "one per
+surface" into a count — and it is wrong in both directions. A count per FILE is
+the only unit a grep has: it would fire on `HegotaRoomCard`'s four correct
+crowns, and it would miss two crowns on ONE card, which is the actual defect,
+since both live in the same file either way. No grep knows what a surface is.
+Better to say so in the audit's header than to ship an exemption list that is a
+snooze wearing a registry's clothes. The weight IDIOM is likewise not a finding
+and never will be: `.dsText(.x).fontWeight(.y)` across ~250 call sites is the
+system working as designed — size from the ramp, weight as emphasis, which
+`heading17`'s own doc rules — and only the no-op form is drift.
+
+**A stale claim left standing, named rather than fixed**: `ReachCard`'s verdict
+pill calls itself "the second-largest type on the card" and is `label12`, one
+rung UNDER the unit label beside it. Whether the pill should grow is a design
+question this pass did not have a ruling for, and its background gives it visual
+weight its point size does not.
+
+### Unverified
+
+Nothing here has been seen on a device or simulator. Every change is a type rung
+or a deleted no-op, so the risk is a size reading wrong rather than a screen
+failing to draw — the three `heading28`→`stat24` figures (28pt → 24pt) are the
+only visible change and none has been photographed.

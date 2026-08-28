@@ -27,18 +27,53 @@ Two checks, both static, neither needing a build:
      header drew at 54 — one screen, two states, two sizes. Both render
      perfectly; neither is visible in a screenshot of one state.
 
-Three deliberate NON-checks, so this can't become a lint that cries wolf:
+  3. **Text is set off the type ramp, not off a literal.**  Added by prd §506
+     (2026-08-28),
+     and until then this file said in as many words that text was NOT checked.
+     That carve-out was written for `GenRenderer`, which composes model-authored
+     documents — but it exempted the whole tree, and what accumulated under it
+     was not GenRenderer: the Settings colophon drew `.system(size: 17,
+     weight: .semibold)` over `.footnote` under a doc comment claiming it was
+     "set in the app's own ramp", and the widget's posts lead drew a frozen 17
+     rounded while every tile beside it went through `dsText`. Both are
+     invisible at the default text size and neither grows with it, which is the
+     entire job of the ramp. A LITERAL size on `Text`/`Label`, or one of
+     SwiftUI's semantic styles (`.font(.footnote)`), is a finding; a computed
+     size still is not (check 1's rule, unchanged).
+
+  4. **A weight override actually overrides something.**  `.dsText(.x)` then
+     `.fontWeight(.y)` is the app's own idiom and correct — size from the ramp,
+     weight as emphasis (`heading17`'s doc rules it, and 250-odd call sites use
+     it). What is not correct is restating the rung's OWN weight:
+     `.dsText(.price16).fontWeight(.bold)` when `price16` is already bold. It
+     renders identically, so nothing can see it, and each one is an author who
+     did not know what the rung carried — the exact reading-drift a named ramp
+     exists to prevent. The rung→weight table is parsed out of
+     `Shared/Typography.swift` at run time, so this check can never disagree
+     with the ramp it guards.
+
+Four deliberate NON-checks, so this can't become a lint that cries wolf:
 
   * A glyph size that is not a literal (`size * 0.5`, a computed constant) is
     left alone — it is already derived from something, and the caller is the
     only one who knows from what.
-  * `.font(.system(size:))` on TEXT is not flagged. The type ramp is not
-    universal by ruling — `GenRenderer` composes model-authored documents and
-    a handful of views size type off their own container — and a check that
-    demanded `dsText` everywhere would fire on correct code.
-  * Neither check judges WHICH rung was picked. `DS.Mark.hero` on a row would
-    look absurd and this would pass it; that is a design review's job, not a
-    grep's.
+  * Check 3 flags a literal font only when TEXT is unambiguously its subject
+    (a `Text(`/`Label(` nearer than any `Image(systemName:)` in the same short
+    chain). A `.font()` on a container, or one this cannot attribute, is left
+    alone — a check that guessed would fire on correct code, which is what the
+    old blanket carve-out was overreacting to.
+  * Neither ramp check judges WHICH rung was picked. `DS.Mark.hero` on a row
+    would look absurd and this would pass it; that is a design review's job,
+    not a grep's. **Nor is a rung's CALLER BUDGET checkable, and that was
+    measured rather than assumed** (2026-08-28): `price48` documents itself as
+    "one per surface" and `heading28` as "a sentence, never a figure", and both
+    rules were re-derived that day from thirteen and seven call sites that had
+    quietly outgrown a prose "one caller, deliberately". A count per FILE is the
+    only thing a grep could enforce and it is wrong in both directions —
+    `HegotaRoomCard` correctly takes `price48` four times because it holds four
+    cards, while two crowns on ONE card is the real defect and lives in the same
+    file either way. Better to say so than to ship an exemption list that is a
+    snooze wearing a registry's clothes.
 
 **The seam with `face-ramp-audit.py`, which must not be blurred.** That script
 covers ROUND identity marks — a face, a wallet identicon, or an app icon
@@ -81,10 +116,42 @@ SOURCES = [
 
 # `.font(.system(size: <literal>))`, optionally with a weight. A non-literal
 # size (`size * 0.5`) deliberately does not match — see the header.
-GLYPH_FONT = re.compile(r"\.font\(\.system\(size: \d+(?:\.\d+)?(?:, weight: \.\w+)?\)\)")
+GLYPH_FONT = re.compile(
+    r"\.font\(\.system\(size: (\d+(?:\.\d+)?)(?:, weight: \.\w+)?"
+    r"(?:, design: \.\w+)?\)\)")
 SYMBOL = re.compile(r"Image\(_?(?:internalS|s)ystemName")
 TEXTISH = re.compile(r"\bText\(|\bLabel\(")
 MARK_LITERAL = re.compile(r"BridgeIcon\([^)\n]*?\bsize: \d")
+
+# SwiftUI's own semantic styles. Every one of them is a size and a weight this
+# app did not choose, on a curve the ramp does not control.
+SEMANTIC_FONT = re.compile(
+    r"\.font\(\.(largeTitle|title|title2|title3|headline|subheadline|body"
+    r"|callout|footnote|caption|caption2)\)")
+
+# `.dsText(.rung)` and a plain (non-conditional) weight override. A ternary
+# weight is emphasis and never matches, which is the point.
+DSTEXT_RUNG = re.compile(r"\.dsText\(\.(\w+)\)")
+PLAIN_WEIGHT = re.compile(r"\.fontWeight\(\.(\w+)\)")
+RAMP_RUNG = re.compile(
+    r"static let (\w+)\s*=\s*DSTextStyle\(size: [^)]*?weight: \.(\w+)")
+
+TYPOGRAPHY = ROOT / "Casberi" / "Shared" / "Typography.swift"
+
+
+def ramp_weights(path=TYPOGRAPHY):
+    """rung name → its own weight, read out of the ramp itself.
+
+    Parsed rather than copied so check 4 can never disagree with the file it
+    guards: retune a rung's weight and the redundant overrides it creates are
+    findings the same day, with no list here to remember to edit.
+    """
+    try:
+        text = path.read_text(errors="replace")
+    except OSError:
+        return {}
+    return {m.group(1): m.group(2) for m in RAMP_RUNG.finditer(text)}
+
 
 # Each entry is a ruling: "this size is not the ramp's to decide."
 KNOWN_EXEMPT = {
@@ -92,6 +159,19 @@ KNOWN_EXEMPT = {
     # carve-out `DS.Face` already makes for `SourceChips.iconSize` and the
     # Sources Tray, whose marks are sized by their own grid.
     ("Casberi/Casberi/Screens/ShapedRows.swift", "sourceBadgeView"),
+}
+
+# Check 3's own rulings, keyed by (file, enclosing symbol, SIZE). The size is in
+# the key deliberately: `body` is the commonest name in the tree, so a 2-tuple
+# here would exempt every literal font in a 5,000-line file rather than the one
+# that earned it.
+KNOWN_TEXT_EXEMPT = {
+    # 74pt is a MONUMENT — the day brief's one figure, a rung the reading ramp
+    # deliberately does not carry. The call site says so at length and says
+    # nothing else may borrow it without that comment moving too; this entry is
+    # the mechanical half of that sentence, since comments are stripped before
+    # any check runs.
+    ("Casberi/Casberi/GenUI/GenRenderer.swift", "body", 74.0),
 }
 
 
@@ -142,8 +222,10 @@ def _enclosing(lines, index):
     return "?"
 
 
-def audit(roots, exempt=KNOWN_EXEMPT):
+def audit(roots, exempt=KNOWN_EXEMPT, text_exempt=KNOWN_TEXT_EXEMPT,
+          weights=None):
     findings = []
+    weights = ramp_weights() if weights is None else weights
     for path in _swift_files(roots):
         try:
             rel = str(path.relative_to(ROOT))
@@ -166,6 +248,48 @@ def audit(roots, exempt=KNOWN_EXEMPT):
                             f"{rel}:{i + 1} {name}: an SF Symbol sized with a frozen "
                             f".font(.system(size:)) — use .dsGlyph(_:) so it scales "
                             f"with the label beside it")
+
+                elif txt >= 0 and txt > sym:
+                    # --- Check 3a: TEXT at a frozen literal size.
+                    name = _enclosing(lines, i)
+                    size = float(GLYPH_FONT.search(line).group(1))
+                    if (rel, name, size) not in text_exempt:
+                        findings.append(
+                            f"{rel}:{i + 1} {name}: text set at a frozen "
+                            f"{size:g}pt — use .dsText(_:) so it scales with "
+                            f"the person's text size")
+
+            # --- Check 3b: one of SwiftUI's own semantic styles.
+            if SEMANTIC_FONT.search(line):
+                name = _enclosing(lines, i)
+                findings.append(
+                    f"{rel}:{i + 1} {name}: "
+                    f"{SEMANTIC_FONT.search(line).group(0)} — a size and weight "
+                    f"the app did not choose; use a .dsText(_:) rung")
+
+            # --- Check 4: a weight override restating the rung's own weight.
+            rung = DSTEXT_RUNG.search(line)
+            if rung and rung.group(1) in weights:
+                own = weights[rung.group(1)]
+                # The rest of this line, then the chain continuing below it. A
+                # following line only counts while it is still a modifier —
+                # once the chain ends, a `.fontWeight` belongs to another view.
+                tail = line[rung.end():]
+                chain = [tail]
+                for j in range(i + 1, min(i + 4, len(lines))):
+                    nxt = lines[j].strip()
+                    if not nxt.startswith(".") or ".dsText(" in nxt:
+                        break
+                    chain.append(nxt)
+                for seg in chain:
+                    hit = PLAIN_WEIGHT.search(seg)
+                    if hit and hit.group(1) == own:
+                        findings.append(
+                            f"{rel}:{i + 1} {_enclosing(lines, i)}: "
+                            f".dsText(.{rung.group(1)}).fontWeight(.{own}) — "
+                            f"the rung is already .{own}, so this overrides "
+                            f"nothing")
+                        break
 
             # --- Check 2: a brand mark at a literal size.
             if MARK_LITERAL.search(line):
@@ -210,20 +334,70 @@ struct A: View {
 }
 """
 
+DIRTY_TEXT = """
+import SwiftUI
+struct A: View {
+    var body: some View {
+        Text("casberi")
+            .font(.system(size: 17, weight: .semibold))
+    }
+}
+"""
+
+DIRTY_SEMANTIC = """
+import SwiftUI
+struct A: View {
+    var body: some View {
+        Text(buildLine).font(.footnote)
+    }
+}
+"""
+
+DIRTY_WEIGHT_INLINE = """
+import SwiftUI
+struct A: View {
+    var body: some View {
+        Text("Hi").dsText(.price16).fontWeight(.bold)
+    }
+}
+"""
+
+DIRTY_WEIGHT_CHAINED = """
+import SwiftUI
+struct A: View {
+    var body: some View {
+        Text("Hi")
+            .dsText(.label12)
+            .fontWeight(.medium)
+            .foregroundStyle(DS.textPrimary)
+    }
+}
+"""
+
 CLEAN = """
 import SwiftUI
 struct A: View {
     // A glyph used to read .font(.system(size: 13, weight: .semibold)) here,
-    // and the mark used to be BridgeIcon(name: n, size: 38).
+    // the mark used to be BridgeIcon(name: n, size: 38), the colophon used to
+    // be .font(.system(size: 17, weight: .semibold)) over .font(.footnote),
+    // and this line used to read .dsText(.price16).fontWeight(.bold).
     var body: some View {
         HStack {
             Image(systemName: "chevron.right").dsGlyph(13)
             BridgeIcon(name: "Stripe", size: DS.Mark.list)
             /* BridgeIcon(name: "Stripe", size: 38) — the old spelling. */
-            Text("Hi").font(.system(size: 15, weight: .semibold))
             BridgeIcon(name: "Stripe", size: markSize)
             Image(systemName: "x").font(.system(size: size * 0.5, weight: .bold))
+            Text("Hi").dsText(.price16)
+            Text("Emphasis").dsText(.label12).fontWeight(.semibold)
+            Text("Conditional").dsText(.price16).fontWeight(on ? .bold : .regular)
+            Text("Derived").font(.system(size: side * 0.4, weight: .bold))
+            Text("Ramp").font(DSTextStyle.body17.scaledFont)
         }
+        VStack {
+            Text("Chain ended").dsText(.price16)
+        }
+        .fontWeight(.bold)
     }
 }
 """
@@ -234,8 +408,15 @@ def _self_test():
         ("catches a glyph on its own modifier line", DIRTY_GLYPH, 1),
         ("catches a glyph inline on the Image", DIRTY_GLYPH_INLINE, 1),
         ("catches a BridgeIcon literal size", DIRTY_MARK, 1),
-        ("passes clean source, and ignores both comment forms, Text, "
-         "a named mark size and a computed glyph size", CLEAN, 0),
+        ("catches text at a frozen literal size", DIRTY_TEXT, 1),
+        ("catches a semantic system style", DIRTY_SEMANTIC, 1),
+        ("catches a redundant weight override, inline", DIRTY_WEIGHT_INLINE, 1),
+        ("catches a redundant weight override, down a chain",
+         DIRTY_WEIGHT_CHAINED, 1),
+        ("passes clean source, and ignores both comment forms, a named mark "
+         "size, a computed size on either a glyph or Text, a real emphasis "
+         "override, a conditional weight, a ramp-derived font, and a weight "
+         "past the end of the chain", CLEAN, 0),
     ]
     ok = True
     with tempfile.TemporaryDirectory() as tmp:
@@ -261,6 +442,45 @@ def _self_test():
         if got != 0:
             ok = False
         print(f"  {mark} an exempt entry really clears its finding (expected 0, got {got})")
+
+        # ...and the same for check 3's own set, which is keyed on the SIZE too.
+        d = pathlib.Path(tmp) / "textexempt"
+        d.mkdir(parents=True, exist_ok=True)
+        f = d / "Case.swift"
+        f.write_text(DIRTY_TEXT)
+        rel = str(f.relative_to(ROOT)) if str(f).startswith(str(ROOT)) else str(f)
+        got = len(audit([d], text_exempt={(rel, "body", 17.0)}))
+        mark = "✓" if got == 0 else "✗"
+        if got != 0:
+            ok = False
+        print(f"  {mark} a text exemption really clears its finding "
+              f"(expected 0, got {got})")
+        # ...and is narrow: the same symbol at another size is still a finding,
+        # which is the whole reason the size is in the key.
+        got = len(audit([d], text_exempt={(rel, "body", 74.0)}))
+        mark = "✓" if got == 1 else "✗"
+        if got != 1:
+            ok = False
+        print(f"  {mark} a text exemption is scoped to its own size "
+              f"(expected 1, got {got})")
+
+    # Check 4 is only ever as good as its table, and an empty table is a check
+    # that silently passes everything — the failure mode this repo calls a false
+    # green. So the parse is asserted against the real ramp, not trusted.
+    w = ramp_weights()
+    for rung, weight in (("price16", "bold"), ("label12", "medium"),
+                         ("body17", "regular"), ("heading17", "semibold")):
+        got = w.get(rung)
+        mark = "✓" if got == weight else "✗"
+        if got != weight:
+            ok = False
+        print(f"  {mark} the ramp parse reads {rung} as .{weight} (got .{got})")
+    if len(w) < 20:
+        ok = False
+        print(f"  ✗ the ramp parse found only {len(w)} rungs — expected the "
+              f"whole ramp")
+    else:
+        print(f"  ✓ the ramp parse found all {len(w)} rungs")
     return ok
 
 
@@ -281,8 +501,9 @@ def main():
         print("\nSee DS.Mark (Design/DesignTokens.swift) and dsGlyph "
               "(Shared/Typography.swift).")
         return 1
-    print("design-ramp-audit: OK — every glyph scales and every brand mark "
-          "is on the DS.Mark ramp.")
+    print("design-ramp-audit: OK — every glyph scales, every brand mark is on "
+          "the DS.Mark ramp, every label is on the type ramp, and no weight "
+          "override restates its own rung.")
     return 0
 
 

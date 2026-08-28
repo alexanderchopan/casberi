@@ -1143,7 +1143,7 @@ struct PredictionRow: View {
                 if let won = resolvedYes {
                     // Settled: the answer IS the number now.
                     Text(won ? "Yes" : "No")
-                        .dsText(.price16).fontWeight(.bold)
+                        .dsText(.price16)
                         .foregroundStyle(DS.textPrimary)
                     Text("Resolved")
                         .dsText(.label12).foregroundStyle(DS.textTertiary)

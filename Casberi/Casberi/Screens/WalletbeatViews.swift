@@ -167,7 +167,6 @@ struct WalletbeatMark: View {
 				} else {
 					Text(initial)
 						.dsText(.badgeInitial11)
-						.fontWeight(.bold)
 						.foregroundStyle(DS.textSecondary)
 				}
 			}

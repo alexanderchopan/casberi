@@ -126,7 +126,7 @@ struct PredictionPreviewSheet: View {
 
                 HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
                     Text("\(Int((preview.probability * 100).rounded()))%")
-                        .dsText(.heading34).fontWeight(.bold).monospacedDigit()
+                        .dsText(.heading34).monospacedDigit()
                         // A thin book's number is treated gently everywhere it
                         // appears (§83 ②) — same rule as the room's cards.
                         .foregroundStyle(preview.isThin ? DS.textSecondary : DS.textPrimary)

@@ -815,7 +815,7 @@ struct PredictionBrowseSection: View {
                             .dsText(.callout15).foregroundStyle(DS.textSecondary)
                             .lineLimit(1)
                         Text("\(Int((lead.probability * 100).rounded()))%")
-                            .dsText(.heading22).fontWeight(.bold).monospacedDigit()
+                            .dsText(.heading22).monospacedDigit()
                             .foregroundStyle(card.isThin ? DS.textSecondary : DS.textPrimary)
                         if let previous = card.previousProbability {
                             TokenDeltaPill(change: lead.probability - previous,

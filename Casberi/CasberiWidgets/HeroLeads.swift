@@ -128,14 +128,27 @@ struct HeroPostsLead: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
+            // On the ramp since 2026-08-28. These were the file's only raw
+            // sizes — 17 semibold ROUNDED over 12 medium — while every other
+            // lead beside them (`widgetFigure24`, `widgetSubline12`,
+            // `widgetTreemapTerm12`, `widgetRecentTitle12`) went through
+            // `dsText`. Two costs, neither visible in a screenshot of the
+            // default size: they were FROZEN, so at an accessibility size this
+            // lead alone stayed put while the tiles around it grew, and the
+            // rounded face made the one lead that is a SENTENCE wear the money
+            // tier's display face — against Typography's own 2026-07-09 rule
+            // that rounded is display and running text stays SF Pro Text.
+            // `widgetTitle17`/`widgetSubline12` are the tile's own title and
+            // subline pair, which is exactly what this is; `HeroMoneyLead`
+            // beside it draws the identical pair.
             Text(line)
-                .font(.system(size: 17, weight: .semibold, design: .rounded))
+                .dsText(.widgetTitle17)
                 .foregroundStyle(.primary)
                 .lineLimit(3)
                 .minimumScaleFactor(0.8)
                 .multilineTextAlignment(.leading)
             Text("Your posts")
-                .font(.system(size: 12, weight: .medium))
+                .dsText(.widgetSubline12)
                 .foregroundStyle(accent)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)

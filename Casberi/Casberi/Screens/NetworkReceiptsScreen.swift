@@ -191,8 +191,13 @@ private struct ReachCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Space.s3) {
             HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                // `stat24`, not `heading28` (2026-08-28). `heading28` is the
+                // LEDE rung — a sentence — and a figure borrowing it put this
+                // count between the two money rungs either side of it,
+                // matching neither. `stat24` is the ramp's own stat-card rung
+                // and is what every other card-leading figure in the app uses.
                 Text(reach.requests.formatted())
-                    .dsText(.heading28).monospacedDigit()
+                    .dsText(.stat24).monospacedDigit()
                     .foregroundStyle(DS.textPrimary)
                 Text(unit).dsText(.subhead13).foregroundStyle(DS.textSecondary)
                 Spacer(minLength: DS.Space.s2)

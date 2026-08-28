@@ -59,13 +59,28 @@ extension DSTextStyle {
     /// ruling — clean off the first screen. 28 keeps the crown visible while
     /// putting a full step of air between the sentence and the number.
     ///
-    /// One caller, deliberately, the way `price48` is one caller: a second
-    /// would flatten the hierarchy this exists to make.
+    /// **It sets a SENTENCE, never a figure** (prd §506, 2026-08-28). This said "one
+    /// caller, deliberately" and had thirteen, which would be fine — a lede is
+    /// a lede on any sheet, and nine of them were exactly that — except that
+    /// three were NUMBERS: a request count and two tray totals, all
+    /// `monospacedDigit`. That is the flattening the original line was
+    /// reaching for and named wrongly. A figure at 28 sits between `stat24`
+    /// and `price40` matching neither, in an app whose crown is `price48`, so
+    /// the money ramp reads as four rungs where it has three. Those three
+    /// moved to `stat24`; the rule is the kind of content, not the number of
+    /// callers.
     static let heading28 = DSTextStyle(size: 28, weight: .bold,     tracking: 0,    lineHeight: 34, relative: .title1, rounded: true)
     static let heading22 = DSTextStyle(size: 22, weight: .bold,     tracking: 0,    lineHeight: 28, relative: .title2, rounded: true)
-    /// The LONG-POST rung (2026-08-02) — a social post's own words when there
-    /// are enough of them to be a paragraph rather than a statement, and
-    /// nothing else.
+    /// The LONG-FORM rung (2026-08-02) — running prose that is the whole
+    /// point of the surface it sits on: a social post's own words when there
+    /// are enough of them to be a paragraph rather than a statement, a note
+    /// body (§366/§399), a sheet's lead summary.
+    ///
+    /// It read "and nothing else" until prd §506 (2026-08-28) and had seven callers by
+    /// then, every one of them a body of prose leading its sheet — the rung
+    /// generalised honestly and the sentence simply never caught up. What it
+    /// is NOT is a size for labels, figures or rows: it is regular weight at
+    /// 20pt, so anything short set in it reads as a paragraph that stopped.
     ///
     /// It is the one rung ABOVE the reading band that is not display type, and
     /// that's the whole point. A post leads the sheet in the title's slot
@@ -126,11 +141,23 @@ extension DSTextStyle {
     // fat feed row's price. Display-tier rounded bold, and routed through
     // this ramp precisely so they SCALE with Dynamic Type like everything
     // else (raw `.font(.system(size:))` froze while neighbors grew).
-    /// The portfolio rung (prd §157, 2026-07-21) — one step above `price40`,
-    /// for the single biggest number in the app: the wallet room's combined
-    /// total. A money app's confidence lives in its numerals, and at 40 beside
-    /// its own caption the total read as one more label. Nothing else earns
-    /// this size; a second user would flatten the hierarchy it exists to make.
+    /// The CROWN rung (prd §157, 2026-07-21) — one step above `price40`, for
+    /// the single biggest figure on its surface. A money app's confidence
+    /// lives in its numerals, and at 40 beside its own caption the wallet's
+    /// combined total read as one more label.
+    ///
+    /// **One per SURFACE, not one in the app** (prd §506, 2026-08-28). This said
+    /// "nothing else earns this size; a second user would flatten the
+    /// hierarchy it exists to make" and by then had seven callers — the wallet
+    /// crown, two vibenet totals and four hegota cards. The prose was wrong
+    /// about the danger rather than the code being wrong about the rung: the
+    /// hierarchy this makes is WITHIN one surface (the figure against its own
+    /// caption and rows), and you never see two crowns at once, so a second
+    /// room having its own flattens nothing. The rule that actually holds is
+    /// the countable one: on any one card, sheet or room, exactly one figure
+    /// may take this. A second on the same surface is the real defect, and it
+    /// is the one no grep can see — `HegotaRoomCard` carries four correctly
+    /// because they are four cards.
     static let price48 = DSTextStyle(size: 48, weight: .bold, tracking: 0, lineHeight: 52, relative: .largeTitle, rounded: true)
     static let price40 = DSTextStyle(size: 40, weight: .bold, tracking: 0, lineHeight: 44, relative: .largeTitle, rounded: true)
     static let stat24  = DSTextStyle(size: 24, weight: .bold, tracking: 0, lineHeight: 28, relative: .title2, rounded: true)

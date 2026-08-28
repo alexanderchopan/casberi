@@ -360,14 +360,23 @@ struct SettingsScreen: View {
     /// glyphs for, and need the heavier app-embedding licence — for a string
     /// nobody reads twice. Semibold lowercase in the brand hue lands within a
     /// hair of it and stays inside §8.
+    ///
+    /// That claim was FALSE until 2026-08-28: this drew `.system(size: 17,
+    /// weight: .semibold)` and `.footnote` — a frozen size that is not even a
+    /// rung (`heading17` has been 18 since the reading-band pass) and the app's
+    /// only semantic system style. Both were invisible at the default text
+    /// size and neither grew with it, which is the whole reason `dsText`
+    /// exists. The paragraph above described the fix for eleven weeks before
+    /// anything did it; the ramp audit could not see it, because it scopes
+    /// itself to glyphs and marks.
     private var colophon: some View {
         VStack(spacing: DS.Space.s2) {
             CasberiMark(size: 36)
             Text(verbatim: "casberi")
-                .font(.system(size: 17, weight: .semibold))
+                .dsText(.heading17)
                 .foregroundStyle(CasberiMark.pink)
             Text(buildLine)
-                .font(.footnote)
+                .dsText(.subhead13)
                 .foregroundStyle(DS.textTertiary)
         }
         .frame(maxWidth: .infinity)

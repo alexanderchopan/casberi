@@ -5517,7 +5517,7 @@ private struct GenDayLede: View {
                         .lineLimit(1).minimumScaleFactor(0.5)
                     if !el.str(5).isEmpty {
                         Text(el.str(5))
-                            .dsText(.heading17).fontWeight(.semibold)
+                            .dsText(.heading17)
                             .foregroundStyle(toneInk(el.str(6)))
                     }
                 }
