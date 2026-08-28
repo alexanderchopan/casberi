@@ -36503,3 +36503,142 @@ Every one of the five is a frame in the middle of a gesture, and no simulator wa
 opened this session: the build is green, the harness is green, and none of it has
 been looked at. The hero's growth against the sheet's own rise is the one to
 watch first — two springs on one surface, started by different events.
+
+## 503. The Hegotá room's three figures, and six moments (user: "prpose new diagrams for activity, accounts, and nonces. only one per each. think what apple would show" → "look at what the data can support please!" → "hegota is unique tho but has the same bones" → "how would you add surprise and delight to the hegota room and sheets" → "just describe them and build it", 2026-08-27)
+
+§500 landed the seat and its five scopes; every one of its figures was then
+rejected on a device, three times over, and the reason each time was the same
+one. This entry records what the data can actually carry, and what motion it
+earned.
+
+### 1. Nine orders of magnitude is the constraint every figure ran into
+
+A devnet PREFUNDS addresses. One watched account here holds 999,999,898 ETH
+beside another's 1.13 — a ratio of nine hundred million to one — and every
+figure that encoded SIZE failed the same way: a shared axis draws one line on
+the ceiling and one on the floor, a treemap draws one cell and an invisible
+sliver, plain bars draw the account somebody actually USES as nothing.
+
+Two attempts went around it and both were refused by the user, correctly. A
+per-account scale ("each on its own scale") fixes the geometry and produces a
+chart whose entire content is "these are not comparable", drawn twice. A
+shared-time lane chart is honest and legible and nobody could say what it
+meant.
+
+`HegotaScale` is the answer that survived: **plain bars when the set is
+comparable — the ordinary case, and then it is simply a bar chart — a log
+scale when it is not, and the chart SAYS WHICH.** `spreadCeiling` is 100, where
+the smallest bar is still 1% of the largest and therefore a visible sliver;
+past that it is not. Every bar carries its exact figure, which is what makes
+the log case honest: **the lengths rank, the numbers state.** A true zero draws
+NOTHING and a small real value keeps a floor, because a bar of no length is
+indistinguishable from an account that is missing from the chart.
+
+### 2. One figure per scope, each answering its own question
+
+**Activity is the flow band — Wallet's bones, this chain's vocabulary.** The
+user's own instruction ("hegota is unique tho but has the same bones") is the
+ruling. `WalletFlow.Band` is the right SHAPE because the question is identical:
+money crossed this address's edge, from and to somebody. `HegotaFlow` is a
+REDUCTION and not a reuse, the same call `AgentPanelGrid` made about the same
+band — these amounts are ETH quantities with no price behind them, and a view
+that formats dollars would confidently print "$1.00" over one Ether. The lane
+is tinted by the frame mode that did most of its work, which is how frames
+became first-class INSIDE the flow figure rather than instead of it; a lane
+with no frames draws neutral, because colouring an ordinary transfer with a
+step's hue gives it a step it does not have.
+
+**Accounts is where the money SITS, and counts no moves.** The user's
+correction: how much an address does is Activity's subject, and a figure that
+borrows it is two scopes saying one thing. What is left is genuinely an account
+fact and one this chain makes interesting — money here sits in two places at
+once, the balance in the account and the UTXOs in the vault CONTRACT, so they
+are not in that balance at all. The bar is the only place the two are drawn as
+one quantity, which is what a person actually holds. Bars are shares of the
+LARGEST address, never of a total: a total across prefunded devnet accounts is
+a number nobody has.
+
+**Nonces gets no chart, and that is the finding.** Three were built — a pip
+grid, a bar chart, a staircase — and all three were unreadable for one reason:
+a real address keeps two or three counters with one or two sends each. A figure
+invented for two data points is noise wearing a chart's clothes. So: three
+boxed numbers, and specifically the ones the rows underneath are structurally
+incapable of showing. **The list enumerates NAMED keys** — that is what a keyed
+nonce IS — so key 0, the single counter every other chain gives you and usually
+the busiest thing on the account, appears nowhere in it, and a list of per-key
+counts never sums itself.
+
+### 3. The overflow was horizontal, and it had been there all along
+
+Reported four times as "overflow in the slot" and diagnosed twice as vertical
+before the user named it: *"look at wallet, their charts don't go wider than the
+toggle bar."* The visual section was full-bleed, so `DSRoomSlot`'s own 12pt
+`contentInset` was the whole inset, while the switcher below it sits at 20 —
+**the drawing was wider than the control that scopes it**, which is the one
+thing Wallet's room never does. Measured after: figure 30.7→373.3pt inside a
+bar at 18→383.7pt, against Wallet's own 32→370 inside 18→383.
+
+Two vertical faults hid underneath it. `laneStack` held a `Spacer`, and a VStack
+holding one takes whatever height is offered — so the band grew to fill the slot
+and dropped its own caption 80pt below the drawing, onto the face rail. And the
+figures were top-pinned in a fixed 210pt box, pooling every surplus pixel in one
+lump at the bottom; they are centred now, so a two-lane band and a four-lane one
+both look deliberate.
+
+**Standing lesson, and it is the one worth keeping:** two faults in one 210pt
+box read as one fault, and the visible one gets blamed. That is `verify.sh`'s
+"report ALL failures, not the first", one layer up in the debugging loop.
+
+### 4. Six moments
+
+In §501's vocabulary exactly — motion, gestures and one sentence; no drawing
+changed, no card restyled, no colour added.
+
+1. **The transaction runs.** A frame transaction IS a sequence and the sheet's
+   strip already draws it as one, so on open it fills step by step, each
+   segment starting when the ones before it finished. **The delays come off the
+   same gas weights the WIDTHS do**, so a step that burned most of the gas
+   visibly takes most of the time: the drawing and its timing are one fact told
+   twice. Off in the row strip, which is a texture rather than a document.
+2. **A spend deals its pieces.** The coin sheet's siblings arrive staggered in
+   the vault's own order — the UTXO model as a gesture: money went in, and came
+   back out as several countable objects.
+3. **The books balance.** "These UTXOs account for exactly what the vault
+   holds" is a PROOF the app performed — every unspent coin on the chain,
+   summed, equals what the vault contract holds — so it lands after the rows
+   have settled, the way a sum lands after its column. No other room in this app
+   can check its own numbers.
+4. **Three counters, none of them waiting.** The whole content of a keyed nonce
+   is that the queues advance INDEPENDENTLY, and three numbers sitting still say
+   none of it. Each counts on its own clock and they finish at different
+   moments. **The rates are derived from the targets, not random** — random
+   reads as jitter, identical says they are synchronised, which is the one thing
+   the figure exists to deny.
+5. **Press a lane to see its steps.** §386d's press-reveals-a-fact, answered in
+   the caption's OWN slot so the eye is already there and the card never changes
+   height. It is the one fact the band cannot show: a lane is tinted by its
+   LEADING mode, so half-verify-half-UTXO looks exactly like all-UTXO.
+6. **A failed frame pulses once.** Failure is rare by construction, so it stands
+   out by exception rather than by owning a colour — and once, never repeating:
+   a step that keeps flashing is an alarm, and this one already happened.
+
+**REFUSED: no rain.** §501 fenced rain to money that really arrived. This is
+test ETH worth nothing, so celebrating an arrival is §83 in the one room that
+admits the money is fake. Guarded as a negative grep.
+
+### 5. The white launch screen, which was never Hegotá's
+
+Found while measuring this room and fixed here because it was measured here.
+`INFOPLIST_KEY_UILaunchScreen_Generation` with no background colour takes the
+SYSTEM appearance, and the app forces its own dark scheme — so every cold launch
+on a device in Light mode showed a full white screen first. **Present since the
+initial commit (39d3b09a, 2026-07-06)** and invisible to anyone whose phone is
+in Dark. The build setting for the colour never mapped (the generated plist came
+back with an empty `UILaunchScreen` dict); the key had to go into the real
+`Casberi/Casberi/Info.plist`. Measured 249 → 0.5 mean brightness at 0.3s.
+
+### Unverified
+
+Every moment here is gesture- or time-driven and no static check exercises one.
+The three figures have been seen on the simulator and measured against Wallet's
+own insets; no sweep has ever run against the live chain from a device.
