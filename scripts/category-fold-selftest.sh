@@ -1101,11 +1101,17 @@ mutate "chipLabel returns the raw source while folded" \
         return source' || mfail=1
 mutate "members reads only the first group instead of every group the category names" \
   '.filter { category.groups.contains($0.group) }|||.filter { $0.group == category.name }' || mfail=1
+# Deterministically wrong, NOT `Array(filtered)` (amended 2026-08-28).
+# `present` is a Set, so `Array` of it is in hash order — which matched the
+# fixture's expected order often enough that this mutation SURVIVED at random
+# and reddened a Mac run (the cache-free loop) while iOS held a cached green.
+# Reverse-alphabetical is a real order and never the catalog's. Third instance
+# of this trap in one day — see wallet-permissions and hegota-selftest.
 mutate "scopes follows the caller's order instead of catalog order" \
   'return filtered.sorted {
             let ra = rank($0), rb = rank($1)
             return ra != rb ? ra < rb : $0 < $1
-        }|||return Array(filtered)' || mfail=1
+        }|||return filtered.sorted(by: >)' || mfail=1
 mutate "scopes tests the raw member set instead of resolving each present source's own category (THE SHIPPED BUG, a third place)" \
   'BridgeCatalog.category(forSource: $0) == category|||order.contains($0)' || mfail=1
 mutate "landing ignores whether the remembered venue is still present" \
