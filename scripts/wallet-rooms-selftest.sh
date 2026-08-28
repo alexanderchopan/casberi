@@ -166,7 +166,12 @@ if grep -q 'URLSession\|IngestSupport\|getJSON' "$SRC_POOLS" "$CARD_POOLS"; then
   echo "✗ the Privacy Pools room head reaches the network — it composes from landed rows and stored numbers only"; exit 1
 fi
 # §374: a room that states figures must be able to hide them.
-grep -q 'BalancePrivacy.shared.hidden ? BalancePrivacy.mask : nil' "$CARD_POOLS" \
+# `withheld`, not `hidden` (amended 2026-08-28). §501 renamed the gate the
+# cards read: `hidden` is the stored preference, `withheld` is `hidden &&
+# !peeking` — the STRICTER answer, and the only correct one on a card, since a
+# card reading the bare preference stays masked through the peek gesture. The
+# guard demands the current gate rather than accepting either.
+grep -q 'BalancePrivacy.shared.withheld ? BalancePrivacy.mask : nil' "$CARD_POOLS" \
   || { echo "✗ the Privacy Pools card no longer honours hide-balances — §374 figures would stay on screen on the most stood-next-to surface this app has"; exit 1; }
 grep -q 'PrivacyPoolsRoom.holdingsLine(room, mask: mask)' "$CARD_POOLS" \
   || { echo "✗ the card no longer draws what's in the pools, or draws it unmasked"; exit 1; }

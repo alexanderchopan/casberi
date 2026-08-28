@@ -321,6 +321,14 @@ enum BridgeGlyph {
         // precedent) rather than an invented theme icon, in case the asset
         // ever fails to load.
         case "base vibenet": return "character"
+        // Hegotá bundles its own mark too (`brand-ethrex-hegota`), so this is
+        // the same defensive fallback for the same reason — and the same
+        // ANSWER: a neutral letterform rather than an invented theme icon.
+        // A frame or a vault glyph would name one of the chain's readings and
+        // silently rank it above the others, which is a claim a fallback has
+        // no business making. The literal carries the accent in the catalog's
+        // own normalization: Swift compares canonically, the harness does not.
+        case "ethrex hegotá": return "character"
         default:          return "app"
         }
     }

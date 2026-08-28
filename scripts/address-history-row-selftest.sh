@@ -86,7 +86,10 @@ m = re.search(r'private func spineEvents\(.*?\n    \}\n', src, re.S)
 if not m:
     sys.stderr.write("✗ spineEvents no longer exists — the spine's row reduction moved\n"); sys.exit(1)
 body = m.group(0)
-if "BalancePrivacy.shared.hidden" not in body:
+# `withheld`, not `hidden` (amended 2026-08-28) — see the wallet-rooms guard:
+# §501 renamed the gate, and `withheld` (`hidden && !peeking`) is the one a row
+# must read or it stays masked through a peek.
+if "BalancePrivacy.shared.withheld" not in body:
     sys.stderr.write("✗ the spine no longer reads the §374 gate — every amount would render in the clear\n"); sys.exit(1)
 if not re.search(r'hidden:\s*hidden', body):
     sys.stderr.write("✗ the gate the spine read is not what it hands the split — §374 would be read and then ignored\n"); sys.exit(1)
