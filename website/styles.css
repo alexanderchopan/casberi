@@ -196,6 +196,10 @@ nav { display: flex; align-items: center; justify-content: space-between; paddin
 /* Base's own documented blue — no bundled mark, the App Store Connect
    shape: a lone letterform for a seat with no logo to inline. */
 .ai-basevibenet { background: #0052ff; font-size: 23px; }
+/* Ethrex Hegotá — ethrex's own LambdaClass mark, inlined as base64 like every
+   other icon here (a remote icon host renders as a blank slot the day it
+   hiccups). Black ground because the artwork carries its own. */
+.ai-ethrexhegota { background: #000; }
 .ai-sentry    { background: #fff; }
 .ai-vercel    { background: #000; }
 .ai-pagerduty { background: #04ac38; }
@@ -214,7 +218,7 @@ nav { display: flex; align-items: center; justify-content: space-between; paddin
 .ai-walletbeat{ background: #0b0b0d; }
 /* L2BEAT's mark carries its own near-black field, so the tile only matches it. */
 .ai-l2beat{ background: #1b1b1b; }
-.ai-cardpointers { background: #fff; }
+.ai-cardpointers { background: #7e60ed; }
 .ai-cardpointers img { width: 100%; height: 100%; border-radius: inherit; }
 .ai-rss       { background: #f26522; font-size: 24px; }
 .ai-bluesky   { background: #0085ff; }
