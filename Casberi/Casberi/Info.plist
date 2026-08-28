@@ -2,148 +2,10 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<!-- Export compliance: Casberi uses only standard HTTPS (exempt), so
-	     TestFlight/App Store never prompt for an encryption declaration. -->
-	<key>ITSAppUsesNonExemptEncryption</key>
-	<false/>
-	<key>CFBundleURLTypes</key>
-	<array>
-		<dict>
-			<key>CFBundleURLName</key>
-			<string>com.casberi.app</string>
-			<key>CFBundleURLSchemes</key>
-			<array>
-				<string>casberi</string>
-			</array>
-		</dict>
-	</array>
-	<key>UIBackgroundModes</key>
-	<array>
-		<string>remote-notification</string>
-		<!-- BGAppRefreshTask (WalletBackgroundRefresh), two jobs on one task
-		     rather than two competing tasks — iOS budgets background time per
-		     APP, so a second identifier would only split the same allowance and
-		     make both arrive less often. (1) Opportunistic wallet holdings
-		     sampling so the value line densifies between app opens (still
-		     forward-only, still real reads — just more of them). (2) The
-		     notification sweep (prd §306): what among the rows that already
-		     landed deserves telling. The sweep drives NO network reads of its
-		     own — a task that expires is one iOS throttles next time. -->
-		<string>fetch</string>
-	</array>
 	<key>BGTaskSchedulerPermittedIdentifiers</key>
 	<array>
 		<string>com.casberi.app.walletsample</string>
 	</array>
-	<!-- Query-only: lets a hand-off/launcher tile show ONLY when that app is
-	     installed (canOpenURL). Without the scheme here the check always returns
-	     false, so the honest verb/tile would never appear. todoist → thing-sheet
-	     "Add to Todoist"; chatgpt/claude → the + tray tool launcher (open the
-	     app, never a website). wc → the Wallet screen's Connect button. This
-	     entry read as "one scheme covers every wallet" until 2026-08-01, when a
-	     phone with MetaMask on its home screen answered canOpenURL(wc:) FALSE —
-	     modern wallets register universal links and no longer claim the bare
-	     scheme, which is why Connect presents ReownAppKit's own directory now.
-	     It survives as the Mac's honest read and as the SDK's own no-wallet
-	     check — measured 2026-07-16, both `UIApplication.open`'s completion
-	     and SwiftUI's `openURL` report SUCCESS for an unhandled `wc:` URI while
-	     LaunchServices fails it asynchronously in its own daemon
-	     (LSApplicationWorkspaceErrorDomain 115 in the log), so the opened-Bool
-	     cannot tell "no wallet" from "opened fine". photos-redirect → a
-	     screenshot's "Open in Photos" disc (2026-08-02). obsidian → a vault
-	     note's "Open in Obsidian" verb (2026-08-06); connecting a vault proves
-	     the person has a FOLDER, which on iOS says nothing about whether the
-	     app is installed — a vault synced from a Mac through iCloud Drive
-	     reads the same either way. Same reasoning as wc,
-	     and the same failure it had shipped as: the verb opened that scheme
-	     unconditionally, so on a system where nothing claims it the disc did
-	     nothing at all and reported nothing (user: it "doesn't go to the Photos
-	     app"). Declared here so `canOpenURL` can answer, and the verb is now
-	     gated on that answer — the picture itself opens in-app instead.
-
-	     The last four are the recommended wallets' OWN schemes, and they are
-	     what makes the modal's "installed" state real: the SDK's
-	     `fetchAllWalletMetadata` calls canOpenURL on each wallet's `ios_schema`
-	     and flags the matches, so an UNDECLARED scheme reads false and every
-	     wallet renders as if it weren't installed. They must stay in step with
-	     `WalletConnectBridge.recommendedWalletIDs` — a wallet swapped there and
-	     not here still shows, it just can never say it's already on the phone.
-	     Query-only, as with every entry above: nothing here opens a wallet, the
-	     SDK's own deep link does that after the person picks one. -->
-	<key>LSApplicationQueriesSchemes</key>
-	<array>
-		<string>todoist</string>
-		<string>chatgpt</string>
-		<string>claude</string>
-		<string>googlegmail</string>
-		<string>wc</string>
-		<string>photos-redirect</string>
-		<string>youtube</string>
-		<string>obsidian</string>
-		<!-- Calendar / Reminders (2026-08-14). Both ship with iOS, so their
-		     schemes always answer there and both hand-offs were left ungated
-		     for it; Mac Catalyst is where nothing claims them, and App Store
-		     review rejected the Mac build under 2.1(a) for the resulting dead
-		     Calendar button. A scheme absent from this list always reads as
-		     absent, so declaring them here is what lets HandOffState answer
-		     truthfully and drop the verb. -->
-		<string>calshow</string>
-		<string>x-apple-reminderkit</string>
-		<!-- The remaining hand-off targets (2026-08-14). `chatgpt` was already
-		     declared but was absent from HandOffState.candidates, so it could
-		     never be gated; `music`, `spotify` and `mobilenotes` were declared
-		     nowhere. All are reachable from the furnished demo, i.e. from the
-		     walk a reviewer takes. -->
-		<string>music</string>
-		<string>spotify</string>
-		<string>mobilenotes</string>
-		<!-- The Files app (2026-08-19, prd §408). A folder-picked file's thing
-		     sheet offers the folder it is saved in; iOS publishes no public
-		     API that reveals a file, so the door is the Files app's own
-		     scheme, and a scheme absent from this list always reads as absent
-		     — which is what lets HandOffState drop the verb on Mac Catalyst,
-		     where nothing claims it. -->
-		<string>shareddocuments</string>
-		<string>metamask</string>
-		<string>rainbow</string>
-		<string>rabby</string>
-		<string>safe</string>
-	</array>
-	<!-- Claims the org.opml.opml UTI (the de facto identifier every OPML-
-	     capable reader, e.g. NetNewsWire, declares — there is no Apple-owned
-	     one) so AirDrop / Share Sheet "Open in Casberi" offers this app for a
-	     .opml file, routed by RootShell's onOpenURL to the RSS bulk-import
-	     preview (Model/OPMLImport.swift). Viewer + Alternate: Casberi reads
-	     the file to follow feeds, never claims to be the default OPML app. -->
-	<key>UTImportedTypeDeclarations</key>
-	<array>
-		<dict>
-			<key>UTTypeIdentifier</key>
-			<string>org.opml.opml</string>
-			<key>UTTypeDescription</key>
-			<string>OPML feed list</string>
-			<key>UTTypeConformsTo</key>
-			<array>
-				<string>public.xml</string>
-			</array>
-			<key>UTTypeTagSpecification</key>
-			<dict>
-				<key>public.filename-extension</key>
-				<array>
-					<string>opml</string>
-				</array>
-			</dict>
-		</dict>
-	</array>
-	<!-- ITMS-90737 (Apple, build 175): declaring CFBundleDocumentTypes makes
-	     this a document-based app, so one of UISupportsDocumentBrowser /
-	     LSSupportsOpeningDocumentsInPlace MUST be declared. Casberi has no
-	     UIDocumentBrowserViewController, and it reads a handed-in .opml
-	     security-scoped IN PLACE (RSSScreen.parseOPML) rather than needing the
-	     system to stage a copy in Documents/Inbox — so YES (Apple's own
-	     recommendation) is the honest value here. -->
-	<key>LSSupportsOpeningDocumentsInPlace</key>
-	<true/>
 	<key>CFBundleDocumentTypes</key>
 	<array>
 		<dict>
@@ -157,6 +19,72 @@
 			<array>
 				<string>org.opml.opml</string>
 			</array>
+		</dict>
+	</array>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.casberi.app</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>casberi</string>
+			</array>
+		</dict>
+	</array>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>todoist</string>
+		<string>chatgpt</string>
+		<string>claude</string>
+		<string>googlegmail</string>
+		<string>wc</string>
+		<string>photos-redirect</string>
+		<string>youtube</string>
+		<string>obsidian</string>
+		<string>calshow</string>
+		<string>x-apple-reminderkit</string>
+		<string>music</string>
+		<string>spotify</string>
+		<string>mobilenotes</string>
+		<string>shareddocuments</string>
+		<string>metamask</string>
+		<string>rainbow</string>
+		<string>rabby</string>
+		<string>safe</string>
+	</array>
+	<key>LSSupportsOpeningDocumentsInPlace</key>
+	<true/>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+		<string>fetch</string>
+	</array>
+	<key>UILaunchScreen</key>
+	<dict>
+		<key>UIColorName</key>
+		<string>LaunchBackground</string>
+	</dict>
+	<key>UTImportedTypeDeclarations</key>
+	<array>
+		<dict>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.xml</string>
+			</array>
+			<key>UTTypeDescription</key>
+			<string>OPML feed list</string>
+			<key>UTTypeIdentifier</key>
+			<string>org.opml.opml</string>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array>
+					<string>opml</string>
+				</array>
+			</dict>
 		</dict>
 	</array>
 </dict>

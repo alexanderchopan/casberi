@@ -1159,6 +1159,17 @@ harness "Notification pure-logic self-test" "notify self-test" "scripts/notify-s
 # label wearing a control's clothes (§83). None of that fails a build or a sweep.
 harness "Wallet section scopes" "wallet sections" "scripts/wallet-section-selftest.sh" "the wallet section self-test failed — run scripts/wallet-section-selftest.sh"
 
+# Pure-logic self-test for the Ethrex Hegotá seat (the scope strip and the UTXO
+# arithmetic). Nothing on this host can make a coin get spent or a nonce key get
+# used, so this harness is not the best proof these numbers are right, it is the
+# only one. It catches a scope that never appears (indistinguishable from an
+# address that owns no coins), a remembered scope resolving to one nobody
+# picked, the spent bitmap read one storage region over so EVERY coin reads
+# unspent, a missing bit treated as "not spent" — money already gone, drawn as
+# held — and a fee derived from a bad parse, which renders as confidently as a
+# real one. None of that fails a build or a sweep.
+harness "Hegota scopes and coins" "hegota" "scripts/hegota-selftest.sh" "the hegota self-test failed — run scripts/hegota-selftest.sh"
+
 # Pure-logic self-test for the Stripe and PostHog room heads (prd §298). Neither
 # bridge has ever run against a live account from this host, and every failure
 # here is a silent wrong answer: a dispute due tomorrow placed at the far end of

@@ -60,6 +60,11 @@ enum BridgeRouter {
         /// would give it `finishesOnConnect == true` and dismiss the raised
         /// sheet the moment the first watched address registered the seat.
         case vibenet
+        /// Ethrex Hegotá — a WATCH LIST like vibenet's, and its own
+        /// destination for the same reason: riding `.token` would give it
+        /// `finishesOnConnect == true` and dismiss the raised sheet the
+        /// moment the first watched address registered the seat.
+        case hegota
         case shopify
         case deals
         case openFoodFacts
@@ -297,6 +302,7 @@ enum BridgeRouter {
             case .huggingFace:    "huggingface"
             case .radicle:        "radicle"
             case .vibenet:        VibenetIdentity.seatID
+            case .hegota:         HegotaIdentity.seatID
             case .shopify:        "shopify"
             case .deals:          "deals"
             case .openFoodFacts:  "off"
@@ -419,6 +425,7 @@ enum BridgeRouter {
         Row(offer: "Hugging Face", id: "huggingface", destination: .huggingFace),
         Row(offer: "Radicle",    id: "radicle",    destination: .radicle),
         Row(offer: "Base Vibenet", id: VibenetIdentity.seatID, destination: .vibenet),
+        Row(offer: "Ethrex Hegotá", id: HegotaIdentity.seatID, destination: .hegota),
         Row(offer: "Shopify",    id: "shopify",    destination: .shopify),
         Row(offer: "Deals",      id: "deals",      destination: .deals),
         Row(offer: "Open Food Facts", id: "off",   destination: .openFoodFacts),
@@ -586,6 +593,7 @@ struct BridgeDestinationView: View {
         case .huggingFace:    HuggingFaceScreen()
         case .radicle:        RadicleScreen()
         case .vibenet:        VibenetScreen()
+        case .hegota:         HegotaScreen()
         case .shopify:        ShopifyScreen()
         case .deals:          DealsScreen()
         case .openFoodFacts:  OpenFoodFactsScreen()

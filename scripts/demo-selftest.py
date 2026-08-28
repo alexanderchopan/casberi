@@ -148,6 +148,7 @@ DEMO_FILES = {
     # network verbs under check B.
     "WalletWarnings": CASBERI / "Model/WalletWarnings.swift",
     "ExchangeBridge": CASBERI / "Model/ExchangeBridge.swift",
+    "HegotaBridge": CASBERI / "Model/HegotaBridge.swift",
     "WalletPortfolio": CASBERI / "Model/WalletPortfolio.swift",
 }
 
@@ -510,6 +511,13 @@ def check_l_seat_names_resolve_at_runtime(files_text):
 KNOWN_ROWLESS_SEAT = {
     "Aave", "Morpho", "Hyperliquid", "Aerodrome", "Uniswap",
     "Coinbase", "Kraken", "Binance", "Gemini Exchange",
+    # Ethrex Hegotá (prd §500) — rowless for a different reason from the nine
+    # above. Those ride the wallet and land under `source: "Wallet"`; this seat
+    # lands NO `Thing` at all, by ruling: its readings are live chain state and
+    # a devnet test address has no news. So its whole furnishing is the fixture
+    # account `HegotaLiveState.seedDemo` installs, which is what check M holds
+    # it to.
+    "Ethrex Hegotá",
 }
 
 # What proves each rowless seat is really furnished: (file key, regex). Each
@@ -541,6 +549,12 @@ ROWLESS_SEAT_FIXTURE = {
     "Kraken":          ("ExchangeBridge:demoBalances", r'\.kraken\)'),
     "Binance":         ("ExchangeBridge:demoBalances", r'\.binance\)'),
     "Gemini Exchange": ("ExchangeBridge:demoBalances", r'\.geminiExchange\)'),
+    # BOTH halves, the exchanges' rule: the fixture must exist AND something
+    # must install it, since a fixture nothing reads furnishes nothing and that
+    # half-wired state is exactly what a seat table would still claim as
+    # connected. `installDemo` is the only door that writes accounts without a
+    # read, so naming it pins the whole chain.
+    "Ethrex Hegotá": ("HegotaBridge", r'HegotaLiveState\.shared\.installDemo\('),
 }
 
 

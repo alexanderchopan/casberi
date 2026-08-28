@@ -343,6 +343,11 @@ enum DemoSeedAll {
         // not the corpus, and a seat with no Things would otherwise sort
         // to the back of the strip despite reading as "connected".
         "Base Vibenet": 3,
+        // Ethrex Hegotá (prd §500) — landless for the same reason, and more
+        // completely: it lands no `Thing` at all, so its chip has no row to
+        // ride and needs its own weight or it sorts to the back of the strip
+        // while reading as connected.
+        "Ethrex Hegotá": 3,
         // Cloudflare (2026-08-08) — the `runway` figure kind had NO room
         // above the panel's 20-card cap, and the reason wasn't affinity, it
         // was that `runway` could not draw at all: `CloudflareRunwaySource
@@ -474,6 +479,9 @@ enum DemoSeedAll {
         // stronger: the demo fixture's four addresses are not theirs, so a
         // ledger left behind would diff a real roster against a demo's.
         VibenetKeysSeen.forget()
+        // And Hegotá's fixture account — forgotten BY ADDRESS, never a
+        // blanket clear, since a dev install may be watching a real one.
+        HegotaLiveState.forgetDemo()
 
         // Apple Wallet's own bespoke connected flag, and App Store Connect's
         // planted standing — same accepted risk as Cloudflare above: a real
@@ -3342,6 +3350,12 @@ enum DemoSeedAll {
         // the demo drew the problem and withheld the button that answers it.
         // See `VibenetConfig.seedDemo`.
         VibenetConfig.seedDemo()
+        // Hegotá's fixture account (prd §500). A FIXTURE and never a read:
+        // `DemoMode` reaches no network by ruling, and a live sweep would
+        // answer with an empty account and draw the seat as a room with
+        // nothing in it — the "flat curve reads as went to zero" failure by a
+        // different route.
+        HegotaLiveState.seedDemo()
         VibenetValueStore.replace(VibenetDemoHistoryShape.samples(now: .now))
         // Per account too, or picking a face on the rail drops the curve the
         // aggregate just showed — the scoped room reads its OWN series (see
@@ -4820,6 +4834,7 @@ enum DemoSeedAll {
         // list (`VibenetWatch`), the Farcaster/Bluesky/Stocktwits "N watched"
         // shape instead.
         ("Base Vibenet", "4 accounts watched", "Reads which keys can act for a watched account."),
+        ("Ethrex Hegotá", "1 address watched", "Reads an address's coins, transfers and who paid for them."),
         ("Gnosis Pay", "Rides your wallet", "Reads what the card settled onchain."),
         ("ether.fi", "Rides your wallet", "Reads what the card settled onchain."),
         // The five wallet-riding PROTOCOLS (2026-08-26, prd §484). They were

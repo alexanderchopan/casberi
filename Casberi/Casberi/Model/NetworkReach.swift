@@ -269,6 +269,17 @@ enum NetworkReach {
                  reach: .whenConnected(bridge: "Base Vibenet"),
                  purpose: "Reads a watched address's keystore state — is it established, which keys can act for it, is it locked — from vibenet, Base's devnet for testing native account abstraction (EIP-8130). Carries only the address you watch; there is no account and no key, and nothing is ever signed or sent.",
                  hosts: ["rpc.vibes.base.org", "api.vibes.base.org"]),
+        // Ethrex Hegotá (2026-08-27) — a frame-transaction devnet. Unlike
+        // vibenet above, the contracts this app reads are PREDEPLOYS at fixed
+        // spec-assigned addresses rather than redeployable ones, so there is
+        // no config document to fetch and no second host. Three RPC nodes are
+        // listed because the read walks them in order: one being down is a
+        // retry, not an outage.
+        Endpoint(service: "Ethrex Hegot\u{00e1}",
+                 reach: .whenConnected(bridge: "Ethrex Hegot\u{00e1}"),
+                 purpose: "Reads a watched address's balance, its transfers, the unspent coins it holds in the chain's UTXO vault and who paid for its transactions, from Hegot\u{00e1} — a public devnet testing frame transactions. Carries only the address you watch; there is no account and no key, and nothing is ever signed or sent.",
+                 hosts: ["rpc1.hegota.ethrex.xyz", "rpc2.hegota.ethrex.xyz",
+                         "rpc3.hegota.ethrex.xyz"]),
         // Altana (prd §403). Reach is WALLET, not "Altana": the seat rides the
         // watched wallets and its sweep runs whenever a wallet is watched, so
         // gating the disclosure on the seat being "connected" would understate

@@ -5998,6 +5998,83 @@ enum ProbeHooks {
         // addresses headlessly. No resolution needed (there's no name
         // registrar on vibenet) — a plain `0x` hex address is added
         // directly, or reported invalid.
+        // `-hegotaWatch "<0xaddr[,0xaddr]>"` — watch Hegotá addresses
+        // headlessly. Declared BEFORE the probes: hooks run in list order and
+        // a probe must see a watch list that already exists.
+        Hook(key: "hegotaWatch") { value, _ in
+            var watched: [String] = []
+            var rejected: [String] = []
+            for raw in value.split(separator: ",") {
+                let address = raw.trimmingCharacters(in: .whitespaces)
+                guard !address.isEmpty else { continue }
+                if HegotaWatch.shared.add(address) { watched.append(address) }
+                else { rejected.append(address) }
+            }
+            NSLog("[Casberi] hegotaWatch| added=%@ invalidOrDuplicate=%@ watching=%d",
+                  watched.joined(separator: ",").isEmpty ? "-" : watched.joined(separator: ","),
+                  rejected.joined(separator: ",").isEmpty ? "-" : rejected.joined(separator: ","),
+                  HegotaWatch.shared.addresses.count)
+        },
+        // `-hegotaProbe YES` — the whole read, phase by phase, then ONE LINE
+        // PER ACCOUNT and one per scope (the `-todayProbe` truncation lesson:
+        // a joined multi-line NSLog gets cut by the log reader).
+        //
+        // It exists because a blank Hegotá room has SIX causes that render as
+        // one silence and only two are bugs: nothing watched, no host answered,
+        // the address is genuinely one of the 150-odd on this chain that only
+        // ever received a transfer, the coin logs read but a spent bit did not
+        // (so the set was refused), the whole-chain set did not reconcile, or a
+        // parse drifted. The `reached=` / `reconciled=` / `coins=` triple is
+        // what separates them in a single launch.
+        Hook(key: "hegotaProbe") { _, _ in
+            Task { @MainActor in
+                let watched = HegotaWatch.shared.addresses
+                NSLog("[Casberi] hegota| watching=%d", watched.count)
+                guard !watched.isEmpty else {
+                    NSLog("[Casberi] hegota| nothing watched — pass -hegotaWatch first")
+                    return
+                }
+                await HegotaLiveState.shared.refresh()
+                let accounts = HegotaLiveState.shared.accounts
+                for a in accounts {
+                    NSLog("[Casberi] hegotaAccount| %@ reached=%@ balance=%@ moves=%d coins=%d unspent=%@ reconciled=%@ lanes=%d sponsored=%d",
+                          a.address,
+                          a.reached ? "YES" : "NO",
+                          a.balanceWei.map { "\(HegotaCoins.eth($0))" } ?? "unread",
+                          a.moves.count,
+                          a.coins.count,
+                          a.unspent.map { "\($0.count)" } ?? "REFUSED",
+                          a.reconciled ? "YES" : "NO",
+                          a.lanes.count,
+                          a.sponsored.count)
+                    for lane in a.lanes {
+                        NSLog("[Casberi] hegotaLane| %@ key=%@ seq=%@ sends=%d",
+                              a.address, lane.key, lane.seq ?? "-", lane.sends)
+                    }
+                    for coin in (a.unspent ?? []) {
+                        NSLog("[Casberi] hegotaCoin| %@ index=%llu value=%@ change=%@ source=%@",
+                              a.address, coin.index, "\(HegotaCoins.eth(coin.wei))",
+                              coin.isChange ? "YES" : "NO", coin.source)
+                    }
+                    for move in a.moves.prefix(HegotaRPC.frameDepth) {
+                        NSLog("[Casberi] hegotaMove| %@ %@ %@ frames=%@ payer=%@ sponsored=%@",
+                              move.incoming ? "in" : "out",
+                              WalletStore.shortAddress(move.counterparty),
+                              "\(HegotaCoins.eth(move.wei))",
+                              move.frames.map { f in f.map(\.mode.rawValue).joined(separator: ">") } ?? "-",
+                              move.payer ?? "-",
+                              move.isSponsored ? "YES" : "NO")
+                    }
+                }
+                if let head = HegotaRoom.head(accounts) {
+                    NSLog("[Casberi] hegotaHead| lead=%@ reached=%d/%d coins=%d lanes=%d sponsored=%d moves=%d",
+                          head.lead.rawValue, head.reached, head.watched,
+                          head.coinCount, head.laneCount, head.sponsoredCount, head.moveCount)
+                }
+                NSLog("[Casberi] hegotaScopes| %@",
+                      HegotaRoom.sections(accounts).map(\.rawValue).joined(separator: ","))
+            }
+        },
         Hook(key: "vibenetWatch") { value, _ in
             var watched: [String] = []
             var rejected: [String] = []

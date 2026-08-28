@@ -118,6 +118,28 @@ struct RootShell: View {
     /// the same `"agentMorph"` id.
     @Namespace private var agentMorph
 
+
+    /// `-openRoom "<Source>"` scopes the feed to one source's room.
+    ///
+    /// Added 2026-08-27 with the Hegotá seat, and generally useful: a source
+    /// room is reachable ONLY by tapping its chip, and a chip folded into a
+    /// category (§351) sits two taps behind a venue switcher. No headless run
+    /// can make either tap, so until now the only way to look at a room was by
+    /// hand — which is how the Hegotá room reached a device drawing the
+    /// prediction-market book with every static check green.
+    ///
+    /// Takes the real `Thing.source` string, never the catalog's display name
+    /// (`RoomDoor`'s own distinction): the two differ wherever the catalog
+    /// brands a seat more fully than its bridge stamps it, and the wrong one
+    /// lands on a room that can never hold a row.
+    @MainActor
+    private func openRoomIfRequested() {
+        guard let room = UserDefaults.standard.string(forKey: "openRoom"),
+              !room.isEmpty else { return }
+        NSLog("[Casberi] openRoom: %@", room)
+        chrome.sourceRequest = room
+    }
+
     var body: some View {
         // THROWAWAY (2026-07-19): `-summonProto YES` swaps the whole shell for
         // the direction-F prototype. A full swap rather than a cover so the
@@ -568,6 +590,12 @@ struct RootShell: View {
             if UserDefaults.standard.bool(forKey: "openSettings") {
                 sceneState.route.present(.settings)
             }
+            // `-openRoom "<Source>"` scopes the feed to one source's room.
+            // Extracted to a method rather than inlined: adding it inline tipped
+            // this already-enormous view expression past the type-checker's
+            // budget ("unable to type-check this expression in reasonable
+            // time"), which is a compile FAILURE rather than a slow build.
+            openRoomIfRequested()
             // `-openAddressBook YES|vibenet` pushes the address book — the
             // wallet manager's, or vibenet's roster screen. Added 2026-08-27
             // (the address-book unification): both screens are otherwise

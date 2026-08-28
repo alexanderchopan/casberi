@@ -132,6 +132,18 @@ final class ShellChrome {
     /// handles a remembered scope whose content has since gone, and neither
     /// persists across launches — these are facets of one subject, and Holdings
     /// is the front door (§482).
+    /// The Hegotá room's scope, the two lists behind its switcher, and which
+    /// account its rail has scoped to.
+    ///
+    /// **Shell-held, exactly as Wallet's and vibenet's are** — because the
+    /// figure, the rail and the switcher are three separate sections of the
+    /// room rather than children of one card, and three sections cannot share
+    /// a card's `@State`. Holding it in the card was what left this room's
+    /// rails carrying the card's padding instead of the room's.
+    var hegotaSection: HegotaSection?
+    var hegotaSections: [HegotaSection] = []
+    var hegotaScope: String?
+
     var vibenetSection: VibenetSection?
 
     /// Which scopes the vibenet room currently HAS something for. The shell

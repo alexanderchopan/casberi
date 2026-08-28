@@ -18,7 +18,15 @@ struct BridgeIcon: View {
     var circular: Bool = false
 
     private var assetName: String {
+        // DIACRITICS ARE FOLDED (2026-08-27, "Ethrex Hegotá"). An asset
+        // catalog name is a FILENAME, and macOS normalizes those to NFD while
+        // a Swift literal is NFC — so `brand-ethrex-hegotá` is a lookup that
+        // can silently miss on exactly the seats whose names carry an accent,
+        // and the failure renders as the generic glyph rather than as an
+        // error. Folding is a no-op for every existing brand, all of which are
+        // ASCII, and it makes the asset name typeable.
         "brand-" + name.lowercased()
+            .folding(options: .diacriticInsensitive, locale: Locale(identifier: "en_US_POSIX"))
             .replacingOccurrences(of: " ", with: "-")
             .replacingOccurrences(of: ".", with: "")
     }

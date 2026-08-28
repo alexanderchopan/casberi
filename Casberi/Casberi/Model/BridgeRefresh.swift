@@ -525,6 +525,17 @@ enum BridgeRefresh {
                 _ = await VibenetEvents.land(context: context)
             }
         }
+        // Hegotá lands NO `Thing` — every reading is live state on the room,
+        // the `WalletDeFi` shape. A devnet test address has no news: no row a
+        // screenshot would reference, nothing to search for later, and a
+        // balance that is test ETH. So the sweep refreshes the room's state
+        // and inserts nothing into the corpus.
+        if HegotaWatch.shared.connected {
+            let s = slot(); Task { @MainActor in
+                await BridgeRefresh.stagger(s)
+                await HegotaLiveState.shared.refresh()
+            }
+        }
         if OpenSeaStore.shared.connected {
             let s = slot(); Task { @MainActor in
                 await BridgeRefresh.stagger(s)

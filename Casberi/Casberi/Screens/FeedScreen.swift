@@ -360,6 +360,28 @@ struct FeedScreen: View {
         /// on a row resolves to the same presenting controller as this one —
         /// the half-open-then-close bug (ruling 2026-07-28).
         case market(PredictionPreview)
+        /// One Hegotá movement, opened for its FRAME BREAKDOWN (prd §500).
+        ///
+        /// Routed here for `market`'s two reasons at once: the seat lands no
+        /// `Thing` so it cannot ride `.thing`, and its card lives inside this
+        /// List's rows — a `.sheet` there resolves to the same presenting
+        /// controller as this one and half-opens before closing again.
+        /// Carries the OWNING address beside the move: in the All scope
+        /// nothing else can say which of your addresses a transaction was.
+        case hegotaMove(HegotaMove, String)
+        /// One FRAME of a frame transaction — the chain's defining object, and
+        /// until §503 the one thing in this room that could not be opened.
+        /// Carries the whole move and an index rather than the frame alone, so
+        /// the sheet can draw the step in its sequence; a step out of its order
+        /// is a step without its meaning.
+        case hegotaFrame(HegotaMove, Int)
+        /// One watched Hegotá address, opened from the Accounts list — routed
+        /// here for `hegotaMove`'s two reasons: no `Thing` to ride, and a card
+        /// inside this List cannot present its own sheet.
+        case hegotaAccount(HegotaAccount)
+        /// One UTXO, the spend that created it, and which of that spend's
+        /// outputs are still unspent.
+        case hegotaCoin(HegotaCoin, [HegotaCoin], Set<UInt64>)
         /// The NFT picker (prd §387). Routed here rather than presented by the
         /// shelf card, which lives inside this List's rows — a `.sheet` on a row
         /// resolves to the same presenting controller as this one and the picker
@@ -402,6 +424,10 @@ struct FeedScreen: View {
             case .deposits: "deposits"
             case .locks: "locks"
             case .market(let p): "market:\(p.id)"
+            case .hegotaMove(let m, _): "hegotaMove:\(m.id)"
+            case .hegotaFrame(let m, let i): "hegotaFrame:\(m.id)#\(i)"
+            case .hegotaAccount(let a): "hegotaAccount:\(a.address)"
+            case .hegotaCoin(let c, _, _): "hegotaCoin:\(c.index)"
             case .nftPicks(let address, _): "nftPicks:\(address)"
             case .person(let source, let handle): "person:\(source):\(handle)"
             case .vibenetKeys: "vibenetKeys"
@@ -1331,6 +1357,18 @@ struct FeedScreen: View {
                 // almost always lands the row that changed it, and because the
                 // alternative is recomputing the whole chain on a timer.
                 String(chrome.refreshPulse),
+                // **THE ONE SEAT THAT BREAKS THE RESIDUAL ABOVE.** That note
+                // is right about every other bridge: a sweep that changes a
+                // reading almost always lands the row that changed it, so the
+                // corpus revision moves and the head recomputes. Ethrex Hegotá
+                // lands NO row, ever — its whole room is live state — so its
+                // revision is frozen at zero and this key never changed. The
+                // head was therefore computed ONCE, while the sweep had not yet
+                // returned, memoised as nil, and never recomputed: a black
+                // room, permanently, with every other fix in place. Reported
+                // from a device three times before this was found, because
+                // nothing static can see a memo that never invalidates.
+                HegotaRoomSource.identity,
                 String(revision.count), String(revision.signal)]
             .joined(separator: "|")
     }
@@ -2504,6 +2542,76 @@ struct FeedScreen: View {
     /// scoped room and picking a face collapses the strip to one item, the
     /// `shows(…)` gate then hides it, and the control deletes itself the moment
     /// it is used — with no way back to the other wallets.
+    // MARK: - Hegotá's three room sections
+
+    @ViewBuilder private var hegotaVisualSection: some View {
+        if let head = HegotaRoomSource.compose() {
+            Section {
+                HegotaRoomFigure(head: head,
+                                 accounts: HegotaRoomSource.accounts(),
+                                 scoped: chrome.hegotaScope,
+                                 section: HegotaSection.resolve(chrome.hegotaSection,
+                                                                present: chrome.hegotaSections))
+                    // **The chassis inset, NOT full bleed.** `DSRoomSlot` adds
+                    // its own `contentInset` (12pt) and nothing else, so a
+                    // full-bleed row put every figure at 12pt while the toggle
+                    // bar below it sits at 20 — the drawing was wider than the
+                    // control that scopes it, which is the one thing Wallet's
+                    // room never does. Matching the switcher's inset lands the
+                    // figure INSIDE the bar, the way Wallet's chart sits inside
+                    // its own.
+                    .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
+                                              bottom: 0, trailing: DSRoomChassis.inset))
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+            }
+        }
+    }
+
+    /// FULL BLEED (`leading: 0`), Wallet's own inset for this rail: it scrolls
+    /// horizontally, so an inset would stop the faces reaching the edge.
+    @ViewBuilder private var hegotaRailSection: some View {
+        if HegotaScopeRail.shows(source: source,
+                                 watched: HegotaRoomSource.accounts().count) {
+            Section {
+                FaceScopeRail(
+                    items: HegotaScopeRail.items(HegotaRoomSource.accounts().map(\.address)),
+                    scope: chrome.hegotaScope,
+                    compact: false,
+                    matches: HegotaScopeRail.matches,
+                    onPick: { picked in
+                        withAnimation(DS.Motion.standard) {
+                            chrome.hegotaScope = (picked?.isEmpty ?? true) ? nil : picked
+                        }
+                    })
+                    .listRowInsets(EdgeInsets(top: 0, leading: 0,
+                                              bottom: DSRoomChassis.switcherGap,
+                                              trailing: 0))
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+            }
+        }
+    }
+
+    @ViewBuilder private var hegotaSwitcherSection: some View {
+        if HegotaSection.shows(present: chrome.hegotaSections) {
+            Section {
+                DSSectionSwitcher(
+                    sections: chrome.hegotaSections,
+                    active: HegotaSection.resolve(chrome.hegotaSection,
+                                                  present: chrome.hegotaSections),
+                    attention: HegotaSection.attention()) { picked in
+                        chrome.hegotaSection = picked
+                    }
+                    .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
+                                              bottom: DSRoomChassis.contentGap,
+                                              trailing: DSRoomChassis.inset))
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+            }
+        }
+    }
+
     @ViewBuilder
     private var walletScopeRailSection: some View {
         if WalletScopeRail.shows(source: source, watched: wallet.addresses.count) {
@@ -2938,6 +3046,27 @@ struct FeedScreen: View {
             WalletLocksTray(composition: composition)
         case .market(let preview):
             PredictionPreviewSheet(preview: preview)
+        case .hegotaMove(let move, let owner):
+            HegotaMoveSheet(move: move, owner: owner,
+                            watched: HegotaRoomSource.accounts().map(\.address)) { index in
+                // Frame-to-frame through the ONE sheet: replacing the route
+                // swaps the tray's content in place, so the frame rises where
+                // the move was rather than as a second sheet over it.
+                feedSheet = .hegotaFrame(move, index)
+            }
+        case .hegotaFrame(let move, let index):
+            HegotaFrameSheet(move: move, index: index,
+                             watched: HegotaRoomSource.accounts().map(\.address))
+        case .hegotaAccount(let account):
+            HegotaAccountSheet(account: account) { section in
+                // The sheet's facts are doors: scope the room to this account
+                // and open the list the fact names.
+                chrome.hegotaScope = account.address
+                chrome.hegotaSection = section
+                feedSheet = nil
+            }
+        case .hegotaCoin(let coin, let all, let unspent):
+            HegotaCoinSheet(coin: coin, all: all, unspent: unspent)
         case .nftPicks(let address, let label):
             WalletNFTPickerSheet(wallet: address, label: label)
         case .person(let source, let handle):
@@ -3061,6 +3190,49 @@ struct FeedScreen: View {
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
                 .listRowInsets(EdgeInsets())
+        } else if source == HegotaIdentity.source, let head = HegotaRoomSource.compose() {
+            // **A ROOM WITH LIVE CONTENT AND NO ROWS.** Without this branch the
+            // `if/else if` above falls through BOTH arms and renders nothing at
+            // all — a black screen, which is how the Hegotá room reached a
+            // device four times.
+            //
+            // The gap is structural rather than an oversight: `LiveRoomSources`
+            // exists so a room with live content skips the corpus-shaped empty
+            // state, and until now its only members were Kalshi and Polymarket,
+            // whose `predictionBook` draws from a separate path — so for them
+            // the room is never really empty and the missing arm never showed.
+            // Hegotá lands no `Thing` EVER, so its rows are always zero and its
+            // entire content is this head.
+            // **THREE SECTIONS, exactly as Wallet emits them** — figure, rail,
+            // switcher — rather than one card holding all three. They are not
+            // children of a card in this app; the rail is FULL BLEED so it can
+            // scroll edge to edge, and the switcher takes the room's own inset.
+            // Nested inside a card they inherited the card's padding instead,
+            // which is what put this room's rails out of line with Wallet's.
+            // The room publishes what it HAS, so the switcher never offers a
+            // chip that opens nothing — derived from the composed room rather
+            // than the watch list (the face rail's own rule).
+            let _ = { chrome.hegotaSections = HegotaRoomSource.sections() }()
+            hegotaVisualSection
+            hegotaRailSection
+            hegotaSwitcherSection
+            Group {
+                HegotaRoomList(head: head,
+                               accounts: HegotaRoomSource.accounts(),
+                               scoped: chrome.hegotaScope,
+                               section: HegotaSection.resolve(chrome.hegotaSection,
+                                                              present: chrome.hegotaSections)) { move, owner in
+                    feedSheet = .hegotaMove(move, owner)
+                } onOpenAccount: { account in
+                    feedSheet = .hegotaAccount(account)
+                } onOpenCoin: { coin, all, unspent in
+                    feedSheet = .hegotaCoin(coin, all, unspent)
+                }
+            }
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+            .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
+                                      bottom: DS.Space.s4, trailing: DSRoomChassis.inset))
         } else if roomHasContent {
             // Derived ONCE per render and threaded into everything below
             // — the day groups, ledes, and per-row hint/next-event ids
@@ -3167,7 +3339,7 @@ struct FeedScreen: View {
 
     /// reaches the All feed) only on an explicit Follow.
     @ViewBuilder private var predictionBook: some View {
-        if LiveRoomSources.has(source) {
+        if LiveRoomSources.isPredictionVenue(source) {
             PredictionRoomBook(source: source) { feedSheet = .market($0) }
         }
     }
@@ -5773,6 +5945,10 @@ struct FeedScreen: View {
         // `/activity` span strip), and this is the head that entry pointed at.
         case github(GitHubRoom)
         case radicle(RadicleRoom)
+        // Ethrex Hegotá deliberately has NO case here (prd §500). Its room is
+        // four sections of its own — figure, rail, switcher, list — which is
+        // what Wallet does, and what keeps its rails on the ROOM's insets
+        // rather than a card's.
         // The WALLET-RIDING seats that own a source room (2026-08-10, prd
         // §349). Aave/Morpho/Hyperliquid/Aerodrome/Uniswap still land under
         // `source: "Wallet"` and have no room of their own to head; their
@@ -5887,6 +6063,10 @@ struct FeedScreen: View {
         // row can say a patch is still unresolved. See `RadicleRoomSource`.
         case RadicleRoomSource.source:
             return RadicleRoomSource.compose(things: visible).map { .radicle($0) }
+        // Reads no rows at all — this seat lands none. Its subject is chain
+        // state read live (`HegotaLiveState`), so there is nothing in `visible`
+        // for it to replay — and no head CARD either: its room is four sections
+        // of its own, Wallet's shape.
         // Composed from the SNAPSHOT the sweep wrote, not from `visible` — the
         // keys are chain state, not rows, and re-reading them on every draw
         // would spend an `eth_call` per scroll (`AltanaState`).
@@ -9387,7 +9567,7 @@ struct FeedScreen: View {
         // self-reinforcing: the error's obvious remedy is another pull, and
         // another pull reproduced it exactly. Invalidating first makes the
         // reload a genuinely fresh read with nothing to race.
-        if LiveRoomSources.has(source) { await KalshiWatch.invalidateCache() }
+        if LiveRoomSources.isPredictionVenue(source) { await KalshiWatch.invalidateCache() }
         chrome.refreshPulse += 1   // spins the avatar door, deals the berry rain
         await refreshFeed()
     }

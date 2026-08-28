@@ -676,3 +676,35 @@ enum SocialScopeRail {
     /// rule can never be applied here by accident.
     static func matches(_ scope: String, _ id: String) -> Bool { scope == id }
 }
+
+/// The Hegotá room's face rail — the same shape as vibenet's, one chain over.
+///
+/// **Folded into the crown rather than mounted as its own row** (vibenet's
+/// §482 amendment: *"we cannot have four rows of chips"*). The rail lives under
+/// the sparkline, where the strip that scopes the room is the same strip that
+/// says what each account holds — one row doing both jobs instead of two rows
+/// doing one each.
+enum HegotaScopeRail {
+    static func shows(source: String, watched: Int) -> Bool {
+        source == HegotaIdentity.source && watched > 1
+    }
+
+    /// One watched address per face, in the watch list's own order.
+    /// `WalletFace` draws a deterministic identicon for any hex address, so
+    /// these are the SAME faces the room card and the accounts list show — one
+    /// address never reads as two different marks.
+    static func items(_ addresses: [String]) -> [FaceScopeRail.Item] {
+        addresses.map { address in
+            FaceScopeRail.Item(
+                id: address,
+                caption: HegotaWatch.shared.name(for: address)
+                    ?? WalletStore.shortAddress(address),
+                face: .wallet(address: address))
+        }
+    }
+
+    static func matches(_ scope: String?, _ id: String) -> Bool {
+        guard let scope else { return false }
+        return scope.caseInsensitiveCompare(id) == .orderedSame
+    }
+}

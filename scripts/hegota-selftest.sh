@@ -1,0 +1,674 @@
+#!/bin/zsh
+# The Ethrex Hegotá room's SCOPE rules and its UTXO arithmetic, compiled AS SHIPPED.
+#
+# `Model/HegotaSection.swift` and `Model/HegotaCoins.swift` are Foundation-only
+# by design, so this compiles them WHOLE and unmodified — no stubs, no copied
+# logic. Nothing on this host can make a coin get spent or a nonce key get used,
+# so this harness is not the best proof these numbers are right, it is the ONLY
+# one — the grade `journal-room-selftest.sh` describes.
+#
+# Every failure it catches renders as a perfectly ordinary room:
+#   • a scope that never appears, indistinguishable from an address that
+#     genuinely owns no coins
+#   • a remembered scope resolving to the WRONG one, so the room opens somewhere
+#     nobody picked and nothing on screen can explain why
+#   • the spent bitmap read one storage region over, so EVERY coin reads unspent
+#     and the card shows money that is already gone
+#   • a missing bit treated as "not spent", which is the same wrong answer
+#     arriving one coin at a time
+#   • a fee computed from a bad parse, rendering as confidently as a real one
+#
+# None of that fails a build, a screen sweep or a probe.
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+SECTION="Casberi/Casberi/Model/HegotaSection.swift"
+COINS="Casberi/Casberi/Model/HegotaCoins.swift"
+ACCOUNT="Casberi/Casberi/Model/HegotaAccount.swift"
+ROOM="Casberi/Casberi/Model/HegotaRoom.swift"
+VERIFY="scripts/verify.sh"
+
+work=$(mktemp -d)
+trap 'rm -rf "$work"' EXIT
+
+fail() { print -u2 "✗ $1"; exit 1; }
+
+# ── the assertions, run against the shipped source ───────────────────────────
+# Every fixture below is REAL: the logs, topics, values and slots are what
+# rpc1.hegota.ethrex.xyz served on 2026-08-27, not numbers invented to pass.
+cat > "$work/main.swift" <<'SWIFT'
+import Foundation
+
+var failures = 0
+func check(_ ok: Bool, _ what: String) {
+    if !ok { print("  ✗ \(what)"); failures += 1 }
+}
+
+// ─────────────────────────── scopes ───────────────────────────
+
+check(HegotaSection.order == [.home, .activity, .accounts, .coins, .nonces, .sponsors],
+      "order is home → activity → accounts → coins → nonces → sponsors")
+check(HegotaSection.order.count == HegotaSection.allCases.count,
+      "order lists every case — a new scope cannot be silently unlisted")
+check(HegotaSection.order.first == .home, "home leads")
+check(HegotaSection.order.last == .sponsors, "sponsors is last — the rarest scope")
+
+// THE STRUCTURAL RULE, inherited from WalletSection: no unconditional scope may
+// sit after a conditional one, so the strip's stable head never reflows. Coins
+// sitting third satisfies this — home and activity are the only unconditional
+// scopes and both precede it.
+let firstConditional = HegotaSection.order.firstIndex { $0.isConditional }!
+let lastUnconditional = HegotaSection.order.lastIndex { !$0.isConditional }!
+check(lastUnconditional < firstConditional,
+      "no unconditional scope sits after a conditional one")
+check(HegotaSection.order[3] == .coins,
+      "coins leads the conditional tail — this room's headline reading")
+check(HegotaSection.order[2] == .accounts,
+      "accounts closes the unconditional head — every watched address always has one")
+
+check(HegotaSection.home.isAlwaysPresent, "home is always present")
+check(HegotaSection.activity.isAlwaysPresent, "activity is always present")
+check(HegotaSection.accounts.isAlwaysPresent, "accounts is always present")
+for s in [HegotaSection.coins, .nonces, .sponsors] {
+    check(s.isConditional, "\(s.rawValue) is conditional")
+    check(!s.isAlwaysPresent, "\(s.rawValue) is not always present")
+}
+check(!HegotaSection.home.isConditional, "home is not conditional")
+check(!HegotaSection.activity.isConditional, "activity is not conditional")
+check(!HegotaSection.accounts.isConditional, "accounts is not conditional")
+
+// present(): a false flag must not produce a scope, and the two constants must
+// appear even when every flag is false — which is the state of MOST addresses
+// on this chain, so it is the common path rather than an edge one.
+check(HegotaSection.present(coins: false, nonces: false, sponsors: false) == [.home, .activity, .accounts],
+      "all flags false yields the three unconditional scopes alone")
+check(HegotaSection.present(coins: true, nonces: true, sponsors: true) == HegotaSection.order,
+      "all flags true yields the full order")
+
+// Each flag governs its OWN scope and no other — the mapping a careless edit
+// gets wrong in a way nothing else can see.
+check(HegotaSection.present(coins: true, nonces: false, sponsors: false) == [.home, .activity, .accounts, .coins],
+      "coins' flag yields coins alone beside the constants")
+check(HegotaSection.present(coins: false, nonces: true, sponsors: false) == [.home, .activity, .accounts, .nonces],
+      "nonces' flag yields nonces alone beside the constants")
+check(HegotaSection.present(coins: false, nonces: false, sponsors: true) == [.home, .activity, .accounts, .sponsors],
+      "sponsors' flag yields sponsors alone beside the constants")
+
+// present() returns DECLARATION order, not argument order.
+let mixed = HegotaSection.present(coins: true, nonces: false, sponsors: true)
+check(mixed == [.home, .activity, .accounts, .coins, .sponsors], "present() preserves declaration order")
+
+// resolve(): the fallback is home, NEVER "the first present scope". The two
+// differ only when home is absent, which cannot happen — and that is the point,
+// since the wrong fallback silently opens somewhere nobody chose.
+check(HegotaSection.resolve(nil, present: HegotaSection.order) == .home,
+      "nil resolves to home — the room's front door")
+check(HegotaSection.resolve(.coins, present: HegotaSection.order) == .coins,
+      "a present scope resolves to itself")
+check(HegotaSection.resolve(.sponsors, present: [.home, .activity]) == .home,
+      "a scope whose content has gone falls back to home")
+// The fixture that separates "falls back to home" from "falls back to the first
+// present entry" — without it both implementations pass every case above.
+check(HegotaSection.resolve(.sponsors, present: [.coins, .home]) == .home,
+      "falls back to HOME, not to the first entry of `present`")
+
+// shows(): one scope is a label, not a control (§83).
+check(!HegotaSection.shows(present: [.home]), "one scope draws no strip")
+check(!HegotaSection.shows(present: []), "no scopes draw no strip")
+check(HegotaSection.shows(present: [.home, .activity]), "two scopes draw a strip")
+
+// THE NAMING RULING (2026-08-27): the literal term, not a metaphor.
+check(HegotaSection.nonces.label == "Nonces", "the keyed-nonce scope reads Nonces")
+check(HegotaSection.home.label == "Home", "home reads Home")
+check(HegotaSection.activity.label == "Activity", "activity reads Activity")
+check(HegotaSection.coins.label == "UTXOs", "the unspent-output scope reads UTXOs, the chain's own word")
+check(HegotaSection.sponsors.label == "Sponsors", "sponsors reads Sponsors")
+for s in HegotaSection.allCases {
+    check(!s.label.contains(" "), "\(s.rawValue)'s label is ONE word — the strip must not wrap")
+    check(s.label.count <= 11, "\(s.rawValue)'s label is short enough for a chip")
+    check(!s.summary.isEmpty, "\(s.rawValue) carries an accessibility summary")
+    check(s.summary != s.label, "\(s.rawValue)'s summary says more than its label")
+    check(s.id == s.rawValue, "\(s.rawValue)'s id is its raw value — a computed id re-centres the strip on nothing")
+}
+
+// NO DOTS, EVER. Nothing in this room is urgent: no deadline, no liquidation,
+// no expiry, no grant to revoke, and the asset has no price.
+check(HegotaSection.attention().isEmpty, "no scope ever wears an attention dot")
+
+// ─────────────────────────── words off the wire ───────────────────────────
+
+check(HegotaWord.normalized("0x" + String(repeating: "a", count: 64)) != nil,
+      "a 64-nibble word with 0x normalizes")
+check(HegotaWord.normalized(String(repeating: "a", count: 64)) != nil,
+      "a 64-nibble word without 0x normalizes")
+check(HegotaWord.normalized(String(repeating: "a", count: 63)) == nil,
+      "a short word is refused — a shape we did not expect is not one to guess at")
+check(HegotaWord.normalized(String(repeating: "a", count: 65)) == nil, "a long word is refused")
+check(HegotaWord.normalized(String(repeating: "z", count: 64)) == nil, "a non-hex word is refused")
+
+// The real value word off the chain's first UTXO: exactly 1 ETH.
+let oneETH = "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000"
+check(HegotaWord.integer(oneETH) == Decimal(1_000_000_000_000_000_000),
+      "1 ETH parses exactly from its real log word")
+check(HegotaWord.integer("0x" + String(repeating: "f", count: 64)) == nil,
+      "a word too large to hold exactly is REFUSED, never rounded")
+check(HegotaWord.integer("0x" + String(repeating: "0", count: 64)) == Decimal(0),
+      "a zero word is zero, not nil")
+
+check(HegotaWord.index("0x" + String(repeating: "0", count: 62) + "2f") == 47,
+      "a coin index parses from its word")
+check(HegotaWord.index("0x" + String(repeating: "f", count: 64)) == nil,
+      "an index too large for the vault's own layout is refused, never truncated")
+
+// The real source topic off that same log.
+let realTopic = "0x00000000000000000000000056acbd6ef7bb3748fb9cab82f2bbdc4af3d74bfd"
+check(HegotaWord.address(topic: realTopic) == "0x56acbd6ef7bb3748fb9cab82f2bbdc4af3d74bfd",
+      "an address parses out of a real 32-byte topic, lowercased")
+// THE DISCRIMINATING FIXTURE: a topic whose upper bytes are NOT zero is not an
+// address we failed to read, it is a log we have misunderstood — and taking its
+// low 20 bytes anyway invents a counterparty.
+check(HegotaWord.address(topic: "0x00000000000000000000000156acbd6ef7bb3748fb9cab82f2bbdc4af3d74bfd") == nil,
+      "a topic with a non-zero upper byte yields NO address")
+
+// ─────────────────────────── the spent bitmap ───────────────────────────
+
+check(HegotaVaultStorage.word(index: 0) == 0, "coin 0 lives in word 0")
+check(HegotaVaultStorage.word(index: 255) == 0, "one word covers 256 coins")
+check(HegotaVaultStorage.word(index: 256) == 1, "coin 256 starts the next word")
+
+// The real slots, as queried against the live chain.
+check(HegotaVaultStorage.spentSlot(index: 0)
+        == "0x0000000000000000000000000000000200000000000000000000000000000000",
+      "the spent region begins at 2^129")
+check(HegotaVaultStorage.spentSlot(index: 300)
+        == "0x0000000000000000000000000000000200000000000000000000000000000001",
+      "the word index adds into the LOW nibbles, never carrying into the marker bit")
+
+// Bit 0 set, nothing else.
+let bit0 = "0x" + String(repeating: "0", count: 63) + "1"
+check(HegotaVaultStorage.isSpent(index: 0, word: bit0) == true, "bit 0 reads as spent")
+check(HegotaVaultStorage.isSpent(index: 1, word: bit0) == false, "bit 1 reads as unspent")
+// Bit 4 lives in the SECOND nibble from the right — the check that pins which
+// end of the word the bits are counted from.
+let bit4 = "0x" + String(repeating: "0", count: 62) + "10"
+check(HegotaVaultStorage.isSpent(index: 4, word: bit4) == true, "bit 4 reads out of the second nibble")
+check(HegotaVaultStorage.isSpent(index: 0, word: bit4) == false, "bit 0 is clear in that word")
+check(HegotaVaultStorage.isSpent(index: 255, word: "0x8" + String(repeating: "0", count: 63)) == true,
+      "bit 255 reads out of the leading nibble")
+check(HegotaVaultStorage.isSpent(index: 0, word: "nonsense") == nil,
+      "an unreadable word yields nil — never a confident 'not spent'")
+
+// ─────────────────────────── coins ───────────────────────────
+
+let sig = HegotaChain.utxoCreatedTopic
+let alice = "0x00000000000000000000000056acbd6ef7bb3748fb9cab82f2bbdc4af3d74bfd"
+let bob   = "0x00000000000000000000000056ae0bf9c161b74f902c34fc75d9ff17979b2fa9"
+// The real first log: index 0, 1 ETH, alice → bob, block 0x1578d.
+let realData = "0x0000000000000000000000000000000000000000000000000000000000000000"
+             + "0000000000000000000000000000000000000000000000000de0b6b3a7640000"
+let first = HegotaCoins.coin(topics: [sig, alice, bob], data: realData, block: 87949)
+check(first?.index == 0, "the real log's index parses")
+check(first?.wei == Decimal(1_000_000_000_000_000_000), "the real log's value parses")
+check(first?.owner == "0x56ae0bf9c161b74f902c34fc75d9ff17979b2fa9", "the recipient is topic 2")
+check(first?.source == "0x56acbd6ef7bb3748fb9cab82f2bbdc4af3d74bfd", "the creator is topic 1")
+check(first?.isChange == false, "a coin paid to somebody else is not change")
+
+let selfPaid = HegotaCoins.coin(topics: [sig, bob, bob], data: realData, block: 87949)
+check(selfPaid?.isChange == true, "a coin whose source is its owner IS change")
+
+check(HegotaCoins.coin(topics: [HegotaChain.transferTopic, alice, bob], data: realData, block: 1) == nil,
+      "a log wearing the TRANSFER signature is not a coin")
+check(HegotaCoins.coin(topics: [sig, alice], data: realData, block: 1) == nil,
+      "a log missing a topic yields no coin")
+check(HegotaCoins.coin(topics: [sig, alice, bob], data: "0x00", block: 1) == nil,
+      "a truncated data field yields no coin — never a coin of unknown value")
+
+// unspent(): the ordering, and THE refusal.
+func made(_ i: UInt64, _ wei: Int) -> HegotaCoin {
+    HegotaCoin(index: i, wei: Decimal(wei), source: "0xa", owner: "0xb", block: 1)
+}
+let three = [made(2, 500), made(0, 100), made(1, 400)]
+let allClear: [UInt64: String] = [0: "0x" + String(repeating: "0", count: 64)]
+check(HegotaCoins.unspent(three, words: allClear)?.map(\.index) == [0, 1, 2],
+      "unspent coins come back oldest first, by the vault's own counter")
+
+// coin 1 spent (bit 1), coins 0 and 2 clear
+let bit1 = "0x" + String(repeating: "0", count: 63) + "2"
+check(HegotaCoins.unspent(three, words: [0: bit1])?.map(\.index) == [0, 2],
+      "a spent coin is dropped and the rest survive")
+
+// THE LOAD-BEARING REFUSAL: a coin whose word is missing is not "unspent".
+check(HegotaCoins.unspent([made(0, 1), made(300, 1)], words: allClear) == nil,
+      "a coin whose spent bit could not be read refuses the WHOLE set")
+check(HegotaCoins.unspent([], words: [:])?.isEmpty == true,
+      "no coins is an empty set, not a refusal")
+
+// reconciles(): exact, because these are integers off the same chain.
+let two = [made(0, 400), made(1, 600)]
+check(HegotaCoins.reconciles(unspent: two, vaultWei: Decimal(1000)), "an exact sum reconciles")
+check(!HegotaCoins.reconciles(unspent: two, vaultWei: Decimal(1001)),
+      "one wei out does NOT reconcile — a tolerance here would only hide a bug")
+check(!HegotaCoins.reconciles(unspent: two, vaultWei: Decimal(999)), "short by one wei does not reconcile")
+
+// fee(): the REAL split on chain — 1 ETH in, 0.4 + 0.5 out, change back.
+let inputs = [Decimal(1_000_000_000_000_000_000)]
+let outputs = [Decimal(400_000_000_000_000_000),
+               Decimal(500_000_000_000_000_000),
+               Decimal(99_941_393_999_589_758)]
+check(HegotaCoins.fee(inputs: inputs, outputs: outputs) == Decimal(58_606_000_410_242),
+      "the real spend's fee is derived exactly from inputs minus outputs")
+check(HegotaCoins.fee(inputs: inputs, outputs: [Decimal(2_000_000_000_000_000_000)]) == nil,
+      "outputs exceeding inputs yield NO fee — a negative fee is a parse bug wearing a number")
+check(HegotaCoins.fee(inputs: [], outputs: outputs) == nil, "no inputs yields no fee")
+check(HegotaCoins.fee(inputs: inputs, outputs: inputs) == Decimal(0), "a zero fee is zero, not nil")
+
+check(HegotaCoins.total([]) == Decimal(0), "an empty set totals zero")
+check(HegotaCoins.eth(Decimal(1_000_000_000_000_000_000)) == Decimal(1), "1e18 wei is 1 ETH")
+check(HegotaCoins.eth(Decimal(0)) == Decimal(0), "zero wei is zero ETH")
+
+// The predeploys are fixed by spec — verified on chain to carry code.
+check(HegotaChain.vault == "0x0000000000000000000000000000000000008312", "the vault predeploy address")
+check(HegotaChain.nonceManager == "0x0000000000000000000000000000000000008250", "the nonce manager address")
+check(HegotaChain.chainID == 3151908, "the chain id")
+
+// ─────────────────────────── the room head ───────────────────────────
+
+func acct(_ a: String, reached: Bool = true, wei: Int? = 1000,
+          coins: [HegotaCoin] = [], reconciled: Bool = true,
+          lanes: [HegotaNonceLane] = [], moves: [HegotaMove] = []) -> HegotaAccount {
+    var x = HegotaAccount(address: a)
+    x.reached = reached
+    x.balanceWei = wei.map { Decimal($0) }
+    x.coins = coins
+    x.unspent = coins.isEmpty ? [] : coins
+    x.reconciled = reconciled
+    x.lanes = lanes
+    x.moves = moves
+    return x
+}
+func coin(_ i: UInt64, _ wei: Int, change: Bool = false) -> HegotaCoin {
+    HegotaCoin(index: i, wei: Decimal(wei), source: change ? "0xme" : "0xthem",
+               owner: "0xme", block: 1)
+}
+func mv(_ payer: String?, sender: String?) -> HegotaMove {
+    var m = HegotaMove(hash: "0xh", counterparty: "0xc", wei: Decimal(1),
+                       incoming: false, block: 1)
+    m.payer = payer; m.sender = sender
+    return m
+}
+
+check(HegotaRoom.head([]) == nil, "nothing watched is NO room, not an empty one")
+
+// A WATCH LIST WITH NO SWEEP YET IS STILL A ROOM. Reported from a device as an
+// address that "has nothing": it was neither a failure nor an empty account,
+// it was a read that had not run, and returning nil drew a blank room.
+let pending = HegotaRoom.head([], hasRead: false, watching: 2)
+check(pending != nil, "a watched address with no sweep yet is still a room")
+check(pending?.hasRead == false, "…and it says no read has happened")
+check(pending?.watched == 2, "…and how many it is waiting on")
+check(pending?.balanceWei == nil, "…with no total, since nothing has been read")
+// hasRead and everythingUnreached are DIFFERENT facts: not tried yet vs tried
+// and failed. Collapsing them makes a room you just opened claim the chain is
+// unreachable.
+check(HegotaRoom.head([acct("0xa", reached: false, wei: nil)])?.hasRead == true,
+      "a completed sweep that reached nothing still counts as read")
+check(pending?.everythingUnreached == true,
+      "an unread room reports nothing reached — the card must branch on hasRead FIRST")
+
+// THE RANK. Coins leads because it is the reading no other room can draw.
+check(HegotaRoom.head([acct("0xa", coins: [coin(1, 5)])])?.lead == .coins, "coins leads")
+check(HegotaRoom.head([acct("0xa")])?.hasRead == true, "a normal compose reports a read")
+check(HegotaRoom.head([acct("0xa", moves: [mv("0xp", sender: "0xs")])])?.lead == .sponsored,
+      "sponsorship leads when there are no coins")
+check(HegotaRoom.head([acct("0xa", lanes: [HegotaNonceLane(key: "0x1", seq: "0x0", lastBlock: 1, sends: 1)])])?.lead == .nonces,
+      "nonces lead when there are no coins and no sponsor")
+check(HegotaRoom.head([acct("0xa", moves: [mv("0xs", sender: "0xs")])])?.lead == .moves,
+      "a self-paid move leads with moves, never with sponsorship")
+check(HegotaRoom.head([acct("0xa")])?.lead == .nothing, "an account with nothing leads with nothing")
+
+// THE DISCRIMINATING FIXTURES. Each of the five cases above holds exactly ONE
+// candidate, so every one of them passes whatever order the ladder is written
+// in — measured, not assumed: swapping coins and sponsorship left all five
+// green and the mutation survived. A rank is only tested by a fixture that
+// holds BOTH candidates and can therefore fail one ordering.
+let coinsAndSponsor = acct("0xa", coins: [coin(1, 5)], moves: [mv("0xp", sender: "0xs")])
+check(HegotaRoom.head([coinsAndSponsor])?.lead == .coins,
+      "coins beat sponsorship when an account has both")
+check(HegotaRoom.head([coinsAndSponsor])?.sponsoredCount == 1,
+      "…and the sponsorship it did not lead with is still counted")
+let sponsorAndLanes = acct("0xa", lanes: [HegotaNonceLane(key: "0x1", seq: "0x0", lastBlock: 1, sends: 1)],
+                           moves: [mv("0xp", sender: "0xs")])
+check(HegotaRoom.head([sponsorAndLanes])?.lead == .sponsored,
+      "sponsorship beats nonces when an account has both")
+let lanesAndMoves = acct("0xa", lanes: [HegotaNonceLane(key: "0x1", seq: "0x0", lastBlock: 1, sends: 1)],
+                         moves: [mv("0xs", sender: "0xs")])
+check(HegotaRoom.head([lanesAndMoves])?.lead == .nonces,
+      "nonces beat plain moves when an account has both")
+// And the whole ladder at once, which no pair can pin on its own.
+let everything = acct("0xa", coins: [coin(1, 5)],
+                      lanes: [HegotaNonceLane(key: "0x1", seq: "0x0", lastBlock: 1, sends: 1)],
+                      moves: [mv("0xp", sender: "0xs")])
+check(HegotaRoom.head([everything])?.lead == .coins, "coins lead an account that has all four")
+
+// AN UNREACHED ACCOUNT IS NAMED, NEVER FOLDED IN AS ZERO. This is the silent
+// wrong answer the whole seat is built to avoid: a total quietly missing an
+// account reads exactly like money leaving.
+let partialHead = HegotaRoom.head([acct("0xa", wei: 500), acct("0xb", reached: false, wei: nil)])
+check(partialHead?.balanceWei == Decimal(500), "the total sums REACHED accounts only")
+check(partialHead?.reached == 1 && partialHead?.watched == 2, "the head reports how many answered")
+check(partialHead?.partial == true, "a head missing an account says it is partial")
+check(HegotaRoom.head([acct("0xa", reached: false, wei: nil)])?.balanceWei == nil,
+      "nothing reached has NO total — zero would be a claim")
+check(HegotaRoom.head([acct("0xa", reached: false, wei: nil)])?.everythingUnreached == true,
+      "nothing reached says so")
+check(HegotaRoom.head([acct("0xa", wei: 500)])?.partial == false, "a complete head is not partial")
+
+// A SET THAT DID NOT RECONCILE CONTRIBUTES NO COINS — the gate, at the head.
+check(HegotaRoom.head([acct("0xa", coins: [coin(1, 5)], reconciled: false)])?.coinCount == 0,
+      "coins from an unreconciled set are not counted")
+check(HegotaRoom.head([acct("0xa", coins: [coin(1, 5)], reconciled: false)])?.lead != .coins,
+      "an unreconciled set never leads with coins")
+check(acct("0xa", coins: [coin(1, 5)], reconciled: false).coinsWei == nil,
+      "an unreconciled account states no coin total")
+
+// sections() is derived from the ROOM, never the watch list.
+check(HegotaRoom.sections([]) == [], "no accounts offers no scopes")
+check(HegotaRoom.sections([acct("0xa", reached: false, wei: nil)]) == [],
+      "an unreached account offers no scopes — a chip that opens nothing is a dead control")
+check(HegotaRoom.sections([acct("0xa")]) == [.home, .activity, .accounts],
+      "a reached but empty account offers the three constants")
+check(HegotaRoom.sections([acct("0xa", coins: [coin(1, 5)])]) == [.home, .activity, .accounts, .coins],
+      "coins earn their chip")
+
+// split(): derived, and refused when it cannot be derived.
+check(HegotaRoom.split(inputs: [Decimal(1000)], outputs: [coin(1, 400), coin(2, 500)])?.fee == Decimal(100),
+      "a split's fee is inputs minus outputs")
+check(HegotaRoom.split(inputs: [], outputs: [coin(1, 400)]) == nil, "no inputs is no split")
+check(HegotaRoom.split(inputs: [Decimal(1000)], outputs: []) == nil, "no outputs is no split")
+check(HegotaRoom.split(inputs: [Decimal(100)], outputs: [coin(1, 400)]) == nil,
+      "outputs exceeding inputs yield no split")
+check(HegotaRoom.split(inputs: [Decimal(1000)],
+                       outputs: [coin(2, 500), coin(1, 400, change: true)])?.outputs.map(\.index) == [1, 2],
+      "a split's outputs come back in creation order")
+check(HegotaRoom.split(inputs: [Decimal(1000)],
+                       outputs: [coin(1, 400, change: true), coin(2, 500)])?.changeCount == 1,
+      "the change output is counted")
+
+// ───────────────── the bar scale (prd §503) ─────────────────
+// The failure this prevents is specific and severe: a devnet prefunds
+// addresses, so one watched account really holds nine hundred million times
+// another's, and plain bars draw the account somebody USES as nothing.
+check(HegotaScale.of([Decimal(10), Decimal(50)]) == .linear,
+      "a comparable set stays linear — the ordinary case is a plain bar chart")
+check(HegotaScale.of([Decimal(1), Decimal(1_000_000)]) == .logarithmic,
+      "a set spanning six orders takes the log scale")
+check(HegotaScale.of([Decimal(1), Decimal(100)]) == .linear,
+      "exactly at the ceiling is still linear — the smallest bar is 1%, a visible sliver")
+check(HegotaScale.of([Decimal(1), Decimal(101)]) == .logarithmic,
+      "one past the ceiling flips")
+check(HegotaScale.of([]) == .linear, "an empty set has no spread to answer for")
+check(HegotaScale.of([Decimal(0), Decimal(5)]) == .linear,
+      "zeros are excluded from the spread rather than making it infinite")
+let linShare = HegotaScale.share(Decimal(50), in: [Decimal(50), Decimal(100)], scale: .linear)
+check(abs(linShare - 0.5) < 0.001, "a linear share is the plain ratio to the largest")
+check(HegotaScale.share(Decimal(0), in: [Decimal(50)], scale: .linear) == 0,
+      "a true zero draws NOTHING — distinct from a small value's floor")
+check(HegotaScale.share(Decimal(1), in: [Decimal(1), Decimal(1_000_000)], scale: .linear) >= 0.02,
+      "a real value keeps a visible stub — a bar of no length reads as an absent account")
+check(HegotaScale.share(Decimal(1_000_000), in: [Decimal(1), Decimal(1_000_000)], scale: .logarithmic) == 1,
+      "the largest fills the bar on either scale")
+check(HegotaScale.share(Decimal(1), in: [Decimal(1), Decimal(1_000_000)], scale: .logarithmic) >= 0.06,
+      "the log floor keeps the smallest readable")
+
+// ───────────────── the flow band ─────────────────
+func fmv(_ other: String, _ wei: Int, incoming: Bool, modes: [HegotaFrame.Mode] = []) -> HegotaMove {
+    var m = HegotaMove(hash: "0x\(other)\(wei)", counterparty: other, wei: Decimal(wei),
+                       incoming: incoming, block: 1)
+    if !modes.isEmpty {
+        m.frames = modes.map { HegotaFrame(mode: $0, target: nil, wei: 0,
+                                           succeeded: true, gasUsed: 1, stateGasUsed: 0) }
+    }
+    return m
+}
+let band = HegotaFlow.band([fmv("0xa", 100, incoming: true), fmv("0xb", 30, incoming: true),
+                            fmv("0xa", 10, incoming: false)])
+check(band?.inWei == Decimal(130), "the in side sums its own lanes")
+check(band?.outWei == Decimal(10), "the out side sums its own")
+check(band?.scaleWei == Decimal(130), "ONE scale across both sides — the larger of the two")
+check(band?.inLanes.first?.address == "0xa", "lanes rank by AMOUNT, not by count")
+check(HegotaFlow.band([]) == nil, "no moves is no band")
+check(HegotaFlow.band([fmv("0xa", 0, incoming: true)]) == nil,
+      "a zero-value move builds no lane — a bar for money that did not move")
+// The same counterparty on BOTH sides must not net out.
+let twoSided = HegotaFlow.band([fmv("0xv", 50, incoming: true), fmv("0xv", 20, incoming: false)])
+check(twoSided?.inLanes.count == 1 && twoSided?.outLanes.count == 1,
+      "one counterparty on both sides is TWO lanes — netting them draws neither")
+check(twoSided?.inLanes.first?.id != twoSided?.outLanes.first?.id,
+      "the side is part of a lane's identity")
+// Folding: the tail is NAMED, never dropped.
+let many = (1...8).map { fmv("0x\($0)", $0 * 10, incoming: true) }
+let folded = HegotaFlow.band(many)
+check(folded?.inLanes.count == HegotaFlow.laneLimit + 1, "past the limit the tail folds into one lane")
+check(folded?.inLanes.last?.isOther == true, "the folded lane says it is a fold")
+check(folded?.inWei == Decimal(360), "a folded band still totals EVERY move — no silent cap")
+check(HegotaFlow.modes(of: [fmv("0xa", 1, incoming: true, modes: [.utxo, .utxo, .verify])]).first == .utxo,
+      "a lane's leading mode is the one that did most of its work")
+check(HegotaFlow.modes(of: [fmv("0xa", 1, incoming: true)]).isEmpty,
+      "an ordinary transfer reports no modes — it is tinted neutral, not given a step")
+
+// ───────────────── who the other side is ─────────────────
+check(HegotaParty.of(HegotaChain.vault, watched: []) == .vault, "the vault is named, not filed as a stranger")
+check(HegotaParty.of("0xAbC", watched: ["0xabc"]) == .mine("0xabc"),
+      "matching is case-INSENSITIVE — EIP-55 case is a checksum, not an identity")
+check(HegotaParty.of("0xzzz", watched: ["0xabc"]).isMine == false,
+      "an address you do not watch is a stranger")
+
+// ───────────────── sponsors ─────────────────
+func spon(_ payer: String, _ block: UInt64, fee: Int?) -> HegotaMove {
+    var m = HegotaMove(hash: "0x\(payer)\(block)", counterparty: "0xc", wei: Decimal(1),
+                       incoming: true, block: block)
+    m.sender = "0xme"; m.payer = payer
+    m.feeWei = fee.map { Decimal($0) }
+    return m
+}
+let sponsors = HegotaSponsor.group([spon("0xp1", 3, fee: 10), spon("0xp1", 2, fee: 5),
+                                    spon("0xp2", 1, fee: 7)])
+check(sponsors.count == 2, "sponsors group by who PAID")
+check(sponsors.first?.payer == "0xp1", "the sponsor who paid for most leads")
+check(sponsors.first?.feeWei == Decimal(15), "a sponsor's gas is summed")
+check(sponsors.first?.moves.first?.block == 3, "a sponsor's moves come back newest first")
+check(HegotaSponsor.group([spon("0xp1", 1, fee: 10), spon("0xp1", 2, fee: nil)]).first?.feeWei == nil,
+      "one unread fee makes the WHOLE total nil — a partial sum understates a gift, silently")
+check(HegotaSponsor.group([mv(nil, sender: "0xme")]).isEmpty,
+      "a self-paid move has no sponsor")
+
+// ───────────────── the nonce totals ─────────────────
+func keyed(_ key: String, sends: Int) -> HegotaNonceLane {
+    HegotaNonceLane(key: key, seq: "0x0", lastBlock: 1, sends: sends)
+}
+let plain = HegotaMove(hash: "0xp", counterparty: "0xc", wei: Decimal(1), incoming: false, block: 1)
+let inbound = HegotaMove(hash: "0xi", counterparty: "0xc", wei: Decimal(1), incoming: true, block: 1)
+let totals = HegotaNonceTotals.of([plain, plain, inbound], lanes: [keyed("0xbeef", sends: 2)])
+check(totals.ordinarySends == 2,
+      "key 0 counts only what this address SENT — an inbound move was somebody else's nonce")
+check(totals.keyedSends == 2, "named keys sum their own sends")
+check(totals.counters == 2, "key 0 is a counter too — the one the list can never show")
+check(totals.total == 4, "the total spans both kinds")
+check(HegotaNonceTotals.of([inbound], lanes: []).counters == 0,
+      "an address that has never sent keeps no counters")
+
+if failures > 0 { print("\(failures) assertion(s) failed"); exit(1) }
+print("  ok   \(HegotaSection.allCases.count) scopes, words, the spent bitmap, coins, reconciliation, fees")
+SWIFT
+
+build() {
+  swiftc -O -o "$work/run" "$1" "$2" "$3" "$4" "$work/main.swift" 2>"$work/err" || return 1
+}
+
+cp "$SECTION" "$work/HegotaSection.swift"
+cp "$COINS" "$work/HegotaCoins.swift"
+cp "$ACCOUNT" "$work/HegotaAccount.swift"
+cp "$ROOM" "$work/HegotaRoom.swift"
+build "$work/HegotaSection.swift" "$work/HegotaCoins.swift" "$work/HegotaAccount.swift" "$work/HegotaRoom.swift" \
+  || { cat "$work/err"; fail "the shipped source does not compile"; }
+"$work/run" || fail "assertions failed against the shipped source"
+
+# ── mutations ────────────────────────────────────────────────────────────────
+# A check that cannot fail proves nothing. Each of these is a silent wrong
+# answer that renders as an ordinary room.
+mutate() {
+  local why="$1" file="$2" expr="$3"
+  cp "$SECTION" "$work/HegotaSection.swift"
+  cp "$COINS" "$work/HegotaCoins.swift"
+  cp "$ACCOUNT" "$work/HegotaAccount.swift"
+  cp "$ROOM" "$work/HegotaRoom.swift"
+  perl -0pi -e "$expr" "$work/$file"
+  local src="Casberi/Casberi/Model/$file"
+  cmp -s "$src" "$work/$file" && fail "mutation matched nothing: $why"
+  if build "$work/HegotaSection.swift" "$work/HegotaCoins.swift" "$work/HegotaAccount.swift" "$work/HegotaRoom.swift" && "$work/run" >/dev/null 2>&1; then
+    fail "mutation SURVIVED — $why"
+  fi
+  print "  ok   catches  $why"
+}
+
+mutate "a conditional scope moved ahead of an unconditional one (the strip's head reflows)" \
+  HegotaSection.swift 's/\[\.home, \.activity, \.accounts, \.coins, \.nonces, \.sponsors\]/[.home, .coins, .activity, .accounts, .nonces, .sponsors]/'
+mutate "home no longer leads" \
+  HegotaSection.swift 's/\[\.home, \.activity, \.accounts/[.coins, .home, .activity/'
+mutate "resolve falls back to the first present scope instead of home" \
+  HegotaSection.swift 's/guard let wanted, present\.contains\(wanted\) else \{ return \.home \}/guard let wanted, present.contains(wanted) else { return present.first ?? .home }/'
+mutate "shows() lets a single scope draw a control" \
+  HegotaSection.swift 's/present\.count > 1/present.count > 0/'
+mutate "a flag governs the wrong scope (coins reads nonces')" \
+  HegotaSection.swift 's/case \.coins:    return coins/case .coins:    return nonces/'
+mutate "coins is marked unconditional, so the head-reflow rule stops being enforced" \
+  HegotaSection.swift 's/case \.coins, \.nonces, \.sponsors: return true/case .nonces, .sponsors: return true\n        case .coins: return false/'
+mutate "the unspent-output scope goes back to the friendly gloss" \
+  HegotaSection.swift 's/String\(localized: "UTXOs"\)/String(localized: "Coins")/'
+mutate "the literal term becomes a metaphor again" \
+  HegotaSection.swift 's/String\(localized: "Nonces"\)/String(localized: "Queues")/'
+mutate "a scope quietly grows an attention dot nothing here can honestly light" \
+  HegotaSection.swift 's/static func attention\(\) -> Set<HegotaSection> \{ \[\] \}/static func attention() -> Set<HegotaSection> { [.coins] }/'
+
+mutate "the spent bitmap is read one storage region over — EVERY coin reads unspent" \
+  HegotaCoins.swift 's/nibbles\[31\] = "2"/nibbles[30] = "2"/'
+mutate "the word index carries into the marker bit instead of the low nibbles" \
+  HegotaCoins.swift 's/nibbles\[63 - offset\] = ch/nibbles[offset] = ch/'
+mutate "spent bits are counted from the wrong end of the word" \
+  HegotaCoins.swift 's/chars\[63 - bit \/ 4\]/chars[bit \/ 4]/'
+mutate "one word stops covering 256 coins" \
+  HegotaCoins.swift 's/static func word\(index: UInt64\) -> UInt64 \{ index >> 8 \}/static func word(index: UInt64) -> UInt64 { index >> 4 }/'
+mutate "a coin whose spent bit could not be read is treated as UNSPENT (money already gone, shown as held)" \
+  HegotaCoins.swift 's/else \{ return nil \}\n            if !spent \{ out\.append\(coin\) \}/else { continue }\n            if !spent { out.append(coin) }/'
+mutate "unspent coins come back in whatever order the logs arrived" \
+  HegotaCoins.swift 's/return out\.sorted \{ \$0\.index < \$1\.index \}/return out/'
+mutate "reconciliation accepts a near-enough total" \
+  HegotaCoins.swift 's/total\(unspent\) == vaultWei/abs\(total(unspent) - vaultWei) < 1000/'
+mutate "a negative fee is reported as a number" \
+  HegotaCoins.swift 's/return out > spent \? nil : spent - out/return spent - out/'
+mutate "a topic that is not address-shaped still yields an address (an invented counterparty)" \
+  HegotaCoins.swift 's/guard body\.prefix\(24\)\.allSatisfy\(\{ \$0 == "0" \}\) else \{ return nil \}\n        return "0x" \+ body\.suffix\(40\)\.lowercased\(\)/return "0x" + body.suffix(40).lowercased()/'
+mutate "an oversized value word is rounded instead of refused" \
+  HegotaCoins.swift 's/guard body\.prefix\(40\)\.allSatisfy\(\{ \$0 == "0" \}\) else \{ return nil \}/\/\/ removed/'
+mutate "the change coin stops being recognisable" \
+  HegotaCoins.swift 's/var isChange: Bool \{ source == owner \}/var isChange: Bool { false }/'
+mutate "a log wearing any signature at all parses as a coin" \
+  HegotaCoins.swift 's/HegotaWord\.normalized\(topics\[0\]\)\?\.lowercased\(\)\n                == HegotaWord\.normalized\(HegotaChain\.utxoCreatedTopic\)\?\.lowercased\(\),/topics[0].count > 0,/'
+
+mutate "a watched address with no sweep yet draws NO room (the reported blank)" \
+  HegotaRoom.swift 's/guard watching > 0 else \{ return nil \}/return nil; if false {/'
+mutate "an unreached account is folded into the total as zero (reads as money leaving)" \
+  HegotaRoom.swift 's/let balance: Decimal\? = reached\.isEmpty/let balance: Decimal? = accounts.isEmpty/'
+mutate "coins from a set that never reconciled are counted anyway" \
+  HegotaRoom.swift 's/\$0\.hasCoins \? \(\$0\.unspent \?\? \[\]\) : \[\]/(\$0.unspent ?? [])/'
+mutate "the head ranks sponsorship above coins" \
+  HegotaRoom.swift 's/if !coins\.isEmpty \{ lead = \.coins \}\n        else if sponsored > 0 \{ lead = \.sponsored \}/if sponsored > 0 { lead = .sponsored }\n        else if !coins.isEmpty { lead = .coins }/'
+mutate "scopes are derived from every account rather than the reached ones" \
+  HegotaRoom.swift 's/let reached = accounts\.filter\(\\\.reached\)\n        guard !reached\.isEmpty else \{ return \[\] \}/let reached = accounts\n        guard !reached.isEmpty else { return [] }/'
+
+# ── drift guards ─────────────────────────────────────────────────────────────
+# Read from a COMMENT-STRIPPED copy: both files DOCUMENT their rules by naming
+# exactly what they must not do — the rejected scope names, the price that is
+# never shown — so a guard grepping raw source scores prose as compliance (the
+# Obsidian/Cursor lesson).
+strip_comments() { perl -pe 's{//.*$}{}g' "$1"; }
+strip_comments "$SECTION" > "$work/section.bare"
+strip_comments "$COINS" > "$work/coins.bare"
+strip_comments "$ROOM" > "$work/room.bare"
+strip_comments "$ACCOUNT" > "$work/account.bare"
+
+have() { [[ -f "$work/$1" ]] || fail "guard points at a file that was never prepared: $1"; }
+deny() { have "$1"; if grep -q -- "$2" "$work/$1"; then fail "drift: $3"; fi }
+
+# The Foundation-only promise. Without it this harness cannot run at all.
+deny section.bare "import SwiftUI" "HegotaSection imports SwiftUI — it must stay compilable without it"
+deny coins.bare   "import SwiftUI" "HegotaCoins imports SwiftUI — it must stay compilable without it"
+deny room.bare    "import SwiftUI" "HegotaRoom imports SwiftUI — it must stay compilable without it"
+deny room.bare    "usd" "HegotaRoom reaches for a dollar figure — test ETH has no price"
+deny account.bare "import SwiftUI" "HegotaAccount imports SwiftUI — it must stay compilable without it"
+deny account.bare "import Observation" "HegotaAccount imports Observation — the value types must stay Foundation-only or the room's rules leave the harness"
+deny account.bare "URLSession" "HegotaAccount reaches the network — it is value types only"
+
+# THE THREE DEVICE-REPORTED FIXES, as guards rather than as memory. Each was
+# invisible to every check here and visible only by opening the room.
+BRIDGE="Casberi/Casberi/Model/HegotaBridge.swift"
+CARD="Casberi/Casberi/Screens/HegotaRoomCard.swift"
+FEED="Casberi/Casberi/Screens/FeedScreen.swift"
+SCREEN="Casberi/Casberi/Screens/HegotaScreen.swift"
+LIVE="Casberi/Casberi/Model/LiveRoomSources.swift"
+for f in "$BRIDGE" "$CARD" "$SCREEN" "$LIVE" "$FEED"; do
+  strip_comments "$f" > "$work/$(basename $f).bare"
+done
+need() { [[ -f "$work/$1" ]] || fail "guard points at a file never prepared: $1"; \
+         grep -q -- "$2" "$work/$1" || fail "drift: $3"; }
+
+# The seat lands no `Thing`, so without this entry its chip can never appear
+# and the whole room is unreachable.
+need LiveRoomSources.swift.bare "HegotaIdentity.source" \
+  "Hegota left LiveRoomSources — a landless seat with no entry there has no chip and no room"
+# The registry carries TWO sets now and the split IS the fix. Hegota must be in
+# the general one and never in the venue one: gating the browse book on `has`
+# is what drew Kalshi's markets inside the Hegota room on a device.
+deny LiveRoomSources.swift.bare 'predictionVenues.*Hegota' \
+  "Hegota joined predictionVenues — its room would draw the prediction browse book"
+need FeedScreen.swift.bare "LiveRoomSources.isPredictionVenue(source)" \
+  "the prediction book is gated on the general set again — every landless seat draws Kalshi markets"
+# A live sweep in demo mode reads an EMPTY watch list and wipes the fixture.
+need HegotaBridge.swift.bare "DemoMode.isActive" \
+  "the sweep no longer stands down in demo mode — it would wipe the seeded fixture"
+# The room must read for itself, or watching an address lands you in a blank room.
+need HegotaRoomCard.swift.bare "refreshIfStale" \
+  "the room no longer reads on appear — a freshly watched address shows nothing until the next foreground"
+# Reading and unreachable are different sentences.
+need HegotaRoomCard.swift.bare "head.hasRead" \
+  "the card no longer distinguishes 'not read yet' from 'could not reach'"
+# Both worked examples must stay reachable: nobody on this chain has both
+# halves of the room, so losing one loses half the room permanently.
+need HegotaScreen.swift.bare "unwatchedExamples" \
+  "the examples are gated on !connected again — watching one loses the other for good"
+
+# NO PRICE, EVER. This is test ETH; an amount here is a quantity, never a value.
+# A fiat conversion on this card would be §83's fake status in the one place a
+# reader has no way to check us.
+deny coins.bare "usd" "HegotaCoins reaches for a dollar figure — test ETH has no price"
+deny coins.bare "priceValue" "HegotaCoins reaches for a price — test ETH has no price"
+
+# NOTHING HERE IS WORTH A LOCK SCREEN, and the scope strip says so by carrying
+# no dot. A notification would be the same overclaim one surface out.
+deny section.bare "NotifySweep" "the scope model reaches the notification sweep — nothing in this room is urgent"
+deny coins.bare   "NotifySweep" "the coin model reaches the notification sweep — nothing in this room is urgent"
+
+# THE NAMING RULING (2026-08-27), as a mechanical guard rather than a memory:
+# the label is the literal term. Checked on the comment-stripped copy precisely
+# because the source explains the ruling by naming both rejected words.
+deny section.bare 'localized: "Queues"' "the keyed-nonce scope is named Queues again — the ruling is the literal term"
+deny section.bare 'localized: "Lanes"'  "the keyed-nonce scope is named Lanes again — it collides with WalletFlowBand's lanes"
+deny section.bare 'localized: "Orders"' "the keyed-nonce scope is named Orders — that word is spent on trades"
+
+# This harness must stay in verify.sh's hand list (that guard fails the build
+# until it is named WITH its reason, which is the part that gets skipped).
+grep -q "hegota-selftest.sh" "$VERIFY" \
+  || fail "not wired into verify.sh — the completeness guard requires it, with its reason"
+
+print "  ok   drift guards: Foundation-only, no price, no notification, the naming ruling"
+print "✓ hegota: scopes, words, spent bitmap, coins, reconciliation, fees, room head, 24 mutations, 15 drift guards"

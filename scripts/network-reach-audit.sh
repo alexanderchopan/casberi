@@ -29,6 +29,14 @@ KNOWN_NON_REACH=(
   etherscan.io basescan.org arbiscan.io optimistic.etherscan.io
   polygonscan.com solscan.io revoke.cash robinhoodchain.blockscout.com
   gnosisscan.io njump.me
+  # Hegota's explorer and faucet. The explorer is a permalink the PERSON's
+  # browser opens on a transaction row. The faucet is the sharper case: it is
+  # the one door on this chain that WRITES (it mints test ETH on a POST), and
+  # the seat deliberately never touches it — the setup screen links out so the
+  # person claims their own, which is why this is a denylist entry rather than
+  # a registry one. A request to either from HegotaBridge would be a real
+  # finding, and the seat's own self-test fails the build on any write verb.
+  dora.hegota.ethrex.xyz faucet.hegota.ethrex.xyz
   # vibenet's own explorer (VibenetExplorer) — a landed event's permalink
   # and the room's "Explorer" door, both `Link(destination:)` the person's
   # own browser opens; this app never fetches chain.base.org itself.
