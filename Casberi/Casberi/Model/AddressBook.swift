@@ -463,6 +463,30 @@ final class AddressBook {
         return out.isEmpty ? nil : out
     }
 
+    /// True until this initializer returns.
+    ///
+    /// **The mirror may not be touched while `shared` is being built, and
+    /// `persist()` was touching it (crash, build 436, 2026-08-28).** `attach()`
+    /// has always been deferred a runloop turn for exactly this reason — the
+    /// comment at the foot of this initializer says so — but the migrations
+    /// above MUTATE `entries`, whose `didSet` calls `persist()`, whose last act
+    /// is `AddressBookSync.shared.push()`. Building that singleton constructs
+    /// its `KeyValueMirror`, whose `snapshot`/`apply` closures read
+    /// `AddressBook.shared` — which is mid-`dispatch_once` on this very thread.
+    /// libdispatch traps it as "trying to lock recursively" and the app dies on
+    /// launch, before a first frame.
+    ///
+    /// It needs a device to reproduce, which is why nothing here caught it: the
+    /// migration only writes when there is something to migrate, so a clean
+    /// simulator (no `vibenet.watch.addresses.v1`) no-ops through it and every
+    /// build, audit, harness and 10-cycle launch sweep passes. The people who
+    /// crash are exactly the ones with the older build's data.
+    ///
+    /// The LOCAL write still happens — a migration must stick — and only the
+    /// iCloud push is held, which costs nothing: `attach()` fires one runloop
+    /// turn later and syncs the migrated book then.
+    private var initializing = true
+
     private init() {
         if let data = UserDefaults.standard.data(forKey: Self.key),
            let saved = try? JSONDecoder().decode([String: Entry].self, from: data) {
@@ -478,6 +502,11 @@ final class AddressBook {
         // migration flag, because the reconcile is the same pass that keeps
         // the book correct from here on.
         reconcileAliases()
+        // Every migration above has run, so the mirror is safe to reach from
+        // here on. Set BEFORE the async hop, not inside it: the hop is one
+        // runloop turn away and any `persist()` in between would push against a
+        // half-built singleton again.
+        initializing = false
         // The iCloud mirror, one runloop turn later — `attach` reads
         // `AddressBook.shared`, which does not exist until this initializer
         // returns.
@@ -1234,6 +1263,13 @@ final class AddressBook {
         // …and up, when the person has iCloud sync on. A no-op otherwise, and
         // a no-op while a remote merge is being applied, so a pull can't bounce
         // back out as a push.
+        //
+        // NEVER during `init` (see `initializing`): building `AddressBookSync`
+        // constructs a mirror whose closures read `AddressBook.shared`, and
+        // re-entering an in-progress `dispatch_once` on the same thread is a
+        // recursive lock, which libdispatch kills the process for. The local
+        // write above still happened, and `attach()` syncs a runloop later.
+        guard !initializing else { return }
         AddressBookSync.shared.push()
     }
 }

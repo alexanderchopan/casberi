@@ -485,6 +485,37 @@ grep -q 'guard !reduceMotion, token > 0 else { return }' "$TMP/reveal-bare.swift
 [[ $(grep -c 'reduceMotion' "$TMP/views-bare.swift") -eq 0 ]] \
   || { echo "✗ the address card reads Reduce Motion — the address's unfold is a FACT and must not be one of the things that setting removes (§502)"; exit 1; }
 
+# ── THE MIRROR MAY NOT BE TOUCHED WHILE `shared` IS BEING BUILT ──────────────
+# Crash, build 436 (2026-08-28): `init` runs migrations, a migration MUTATES
+# `entries`, `entries.didSet` calls `persist()`, and `persist()` ended in
+# `AddressBookSync.shared.push()` — whose mirror closures read
+# `AddressBook.shared`, mid-`dispatch_once` on the same thread. libdispatch
+# kills the process for that ("trying to lock recursively"), before a first
+# frame.
+#
+# Nothing here could catch it and that is the point of guarding it statically:
+# it needs a device with iCloud sync ON and older vibenet data to migrate, so a
+# signed-out simulator with empty defaults no-ops through the migration and
+# every build, audit, harness and launch sweep passes green.
+#
+# Note `didSet` does NOT fire for an assignment in `init`'s own body — only for
+# one made by a METHOD init calls, which is exactly the shape here. Reproduced
+# and fixed A/B in isolation before shipping (SIGTRAP vs survives).
+book_bare="$TMP/addressbook-bare.swift"
+strip_comments "$BOOK" > "$book_bare"
+grep -q 'guard !initializing else { return }' "$book_bare" \
+  || { echo "✗ AddressBook.persist() no longer holds the iCloud push during init — the mirror re-enters AddressBook.shared's dispatch_once and the app dies on launch (build 436)"; exit 1; }
+# ORDER matters, not just presence: the guard must come BEFORE the push, or it
+# guards nothing. `AddressBookSync.shared.push()` appears once in this file, so
+# plain line numbers settle it.
+guard_line=$(grep -n 'guard !initializing else { return }' "$book_bare" | head -1 | cut -d: -f1)
+push_line=$(grep -n 'AddressBookSync.shared.push()' "$book_bare" | head -1 | cut -d: -f1)
+[[ -n "$guard_line" && -n "$push_line" && "$guard_line" -lt "$push_line" ]] \
+  || { echo "✗ the initializing guard no longer precedes the iCloud push in persist() — the launch deadlock is back"; exit 1; }
+# …and init must CLEAR it, or the book would persist locally and never sync again.
+grep -q 'initializing = false' "$book_bare" \
+  || { echo "✗ init never clears \`initializing\` — the address book would never sync to iCloud again"; exit 1; }
+
 cat > "$TMP/main.swift" <<'SWIFT'
 import Foundation
 
