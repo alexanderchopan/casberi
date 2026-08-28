@@ -36846,3 +36846,98 @@ since this pass. The reset path is **structurally unverifiable from here**: it
 needs the devnet to actually relaunch, so its arithmetic is proven by the
 harness and its copy by reading. Everything else is measured against the live
 chain as of 2026-08-27.
+
+
+## 505. The Hegotá sheets — the coin gets its name back, and three sheets stop dead-ending (user: "how else would you improve the hegota room UI · utxo sheets · frames sheets · account sheets · activity sheets", then "is 'change' the right word or is utxo the right word for the header. i don't know" → "ok, do that and build all the sheets, but also reduce wordiness in the utxo one", 2026-08-27)
+
+§504 rebuilt the room's figures; this is the four sheets under them. Every
+addition below is composed from data the sweep already holds — no new read, no
+new `Thing` field, no CloudKit deploy.
+
+### 1. THE UTXO SHEET'S TITLE IS THE COIN'S IDENTITY, not its origin
+
+It was `Change` / `A UTXO you were sent`, and the question that produced this
+ruling was the right one to ask. Three reasons the origin loses:
+
+**"Change" reads as a VERB before it reads as a noun.** At the top of a sheet,
+in the slot where every other tray in this app names its subject, a word that
+looks like a control it isn't is §83's dead control wearing one syllable.
+
+**The identity was already ruled on, one property up.** This file's own comment
+says the vault's counter IS the coin, and §500's naming ruling put the literal
+term on the room's chip precisely so it would be learnable. `UTXO #33` is what
+the thing is called; a sheet header is where a name goes.
+
+**Nothing is lost, because the origin was never only in the title** — it is the
+clause under the amount and the sibling row's own caption. It moved UP into the
+headline block as a clause (`change from your own spend`), which also retired
+the separate `UTXO #N` label line: the title does that job now.
+
+### 2. Wordiness, cut where the sheet was explaining itself twice
+
+`This came back to you as change from your own spend.` → `change from your own
+spend`, sitting under the figure it describes. `What the spend consumed isn't
+published — a spent UTXO is a bit in the vault's storage, not an event.` → the
+same two facts, eleven words shorter. `It was the only UTXO its spend created.`
+→ `The only UTXO its spend made.` **The refusals all survive verbatim in
+substance** — this cut scaffolding, never a fact.
+
+**And one whole element went: the lifecycle line.** A minted → still-yours rail
+was drawn and then deleted on the finding that it is CONSTANT in every reachable
+state — the coins list draws the unspent set, so the sheet only ever opens on a
+coin that is still yours, and a status that can only say one thing is chrome.
+Recorded because it looked like the most valuable addition right up until the
+reachability was checked.
+
+### 3. What the sheets could not say, and now do
+
+**The UTXO sheet gained a share bar** — this piece among the pieces you hold,
+which is the one fact `UnitTreemap` structurally cannot show (it sizes by RANK,
+not area, and on this chain a set spans orders of magnitude, so six roughly
+equal cells routinely draw over a set whose first piece is nearly all of it).
+Floored, for `HegotaScale`'s reason: dust beside a whole coin is the ordinary
+case here, and a piece at no width is indistinguishable from a piece missing.
+
+**The frames sheet answers "did it run" in ALL THREE states.** It said "This
+step failed" or "its receipt couldn't be paired" and *nothing at all* on
+success — so the first question a single-step sheet raises was answered only in
+the negative, and success was inferred from an absence. One element, three
+states, the dot carrying the reading so the word stays short. It also gained a
+gas SHARE (a raw 36,334 means nothing without the total beside it) and
+**prev/next doors**: the sheet knew its own position in the sequence and offered
+no way along it, so reading a four-step transaction meant closing and reopening
+four times. Each door names the neighbour's MODE, because what somebody wants to
+know is what comes next, not that something does.
+
+**The account sheet draws the split and tells the send story.** The two-places
+bar is a LINEAR stack and that is arithmetic rather than taste: the room's
+accounts figure compares addresses spanning nine orders of magnitude and needs
+`HegotaScale`, while here the two segments are parts of ONE address's holdings,
+so they genuinely add — §504's no-nesting-on-a-log-scale rule does not apply.
+The send story is §504's facts finally scoped to the address you opened, and it
+is nil unless the ordinary nonce was really read, because the derived count
+undercounts by construction.
+
+**The activity sheet draws the crossing.** Two lines of tertiary prose ("in from
+the UTXO vault" / "on your 0x8b54…a013") were the same fact said twice and left
+to the reader to assemble; an arrow between two marks states it in one pass,
+with the sides following the DIRECTION so it always reads the way the money
+went. A predeploy gets a glyph rather than a face — an identicon on the vault
+would give chain machinery a portrait, which is `AssetMark`'s refusal. And "It
+became N UTXOs" stopped being a number with nothing behind it: the pieces are
+drawn, capped at three and NAMED past that.
+
+### 4. Declined
+
+**No torn receipt edge on the activity sheet.** §363's tear means "final", and
+every Hegotá row is final — a tear that is always torn says nothing. **No rename
+on the account sheet**, which §461 puts on the roster rather than here. **No
+sibling navigation from the UTXO sheet**, which would have made the lifecycle
+line honest but wants a route swap this pass did not need.
+
+### Unverified
+
+None of the four has been seen on a device or simulator. The share bar, the gas
+share and the split bar are all sized from data and all wipe in under
+`chartWipe`; the crossing and the neighbour doors are gesture paths no static
+check exercises.

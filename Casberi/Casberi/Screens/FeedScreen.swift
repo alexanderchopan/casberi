@@ -3063,7 +3063,17 @@ struct FeedScreen: View {
             PredictionPreviewSheet(preview: preview)
         case .hegotaMove(let move, let owner):
             HegotaMoveSheet(move: move, owner: owner,
-                            watched: HegotaRoomSource.accounts().map(\.address)) { index in
+                            watched: HegotaRoomSource.accounts().map(\.address),
+                            // The pieces this transaction created — the join
+                            // the row's "became N UTXOs" already makes, handed
+                            // to the sheet so the number has something behind
+                            // it. Every coin the shown accounts have owned,
+                            // spent ones included: a spend that made four and
+                            // has since spent two still made four.
+                            minted: HegotaRoomSource.accounts()
+                                .flatMap(\.coins)
+                                .filter { $0.createdBy?.caseInsensitiveCompare(move.hash)
+                                            == .orderedSame }) { index in
                 // Frame-to-frame through the ONE sheet: replacing the route
                 // swaps the tray's content in place, so the frame rises where
                 // the move was rather than as a second sheet over it.
@@ -3071,7 +3081,10 @@ struct FeedScreen: View {
             }
         case .hegotaFrame(let move, let index):
             HegotaFrameSheet(move: move, index: index,
-                             watched: HegotaRoomSource.accounts().map(\.address))
+                             watched: HegotaRoomSource.accounts().map(\.address)) { next in
+                // Step-to-step, the same route swap that opened this one.
+                feedSheet = .hegotaFrame(move, next)
+            }
         case .hegotaAccount(let account):
             HegotaAccountSheet(account: account) { section in
                 // The sheet's facts are doors: scope the room to this account
