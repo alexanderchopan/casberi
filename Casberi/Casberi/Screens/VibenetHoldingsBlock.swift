@@ -41,7 +41,16 @@ struct VibenetHoldingsBlock: View {
                 let leadWidth = max(0, (proxy.size.width - gap) * 2 / 3)
                 HStack(spacing: gap) {
                     cell(lead, isLead: true, index: 0)
-                        .frame(width: leadWidth)
+                        // **A LONE CELL TAKES THE WHOLE ROW (2026-08-27).**
+                        // The 2/3 split exists to make the lead read as an
+                        // area against the stack beside it — with nothing
+                        // beside it, the same fraction leaves a third of the
+                        // row empty, which reads as a drawing that failed to
+                        // finish rather than as an account holding one asset.
+                        // Reachable only since `VibenetBalanceTreemap.cells`
+                        // stopped suppressing a single cell; before that this
+                        // branch could draw but never with one cell.
+                        .frame(width: rest.isEmpty ? proxy.size.width : leadWidth)
                     if !rest.isEmpty {
                         VStack(spacing: gap) {
                             ForEach(Array(rest.enumerated()), id: \.offset) { index, entry in

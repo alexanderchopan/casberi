@@ -48624,6 +48624,34 @@
         }
       }
     },
+    "Holds nothing" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No tiene nada"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "保有なし"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "보유 없음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "没有持有任何资产"
+          }
+        }
+      }
+    },
     "Home" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -60524,6 +60552,34 @@
         }
       }
     },
+    "None of these accounts could be read on the last refresh." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ninguna de estas cuentas se pudo leer en la última actualización."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "前回の更新時、これらのアカウントはいずれも読み取れませんでした。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "마지막 새로고침에서 이 계정들 중 어느 것도 읽을 수 없었습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "上次刷新时，这些账户均无法读取。"
+          }
+        }
+      }
+    },
     "None of your addresses are connected" : {
       "localizations" : {
         "es" : {
@@ -61670,6 +61726,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "尚未统计任何内容"
+          }
+        }
+      }
+    },
+    "Nothing deployed yet" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aún no desplegado"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "まだ展開されていません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "아직 배포되지 않음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "尚未部署"
           }
         }
       }
@@ -84794,6 +84878,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "始终开启的基础功能，以及你已连接的应用。每个应用只会访问其自身的服务。"
+          }
+        }
+      }
+    },
+    "The chain answered, and none of these accounts holds anything yet." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "La cadena respondió, y ninguna de estas cuentas tiene nada aún."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "チェーンは応答し、これらのアカウントにはまだ何もありません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "체인이 응답했고, 이 계정들 중 아무것도 보유한 것이 없습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "链已响应，这些账户目前均无任何持有。"
+          }
+        }
+      }
+    },
+    "The chain answered, and this account holds nothing yet." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "La cadena respondió, y esta cuenta aún no tiene nada."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "チェーンは応答し、このアカウントにはまだ何もありません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "체인이 응답했고, 이 계정은 아직 아무것도 보유하고 있지 않습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "链已响应，此账户目前没有任何持有。"
           }
         }
       }

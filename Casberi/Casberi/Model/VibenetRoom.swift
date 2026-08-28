@@ -2557,9 +2557,28 @@ enum VibenetBalanceTreemap {
                                           amount: VibenetBalanceFormat.line(total.amount),
                                           share: max(0.14, 0.46 - Double(index) * 0.16)))
         }
-        // A lone cell is not a treemap, it is a rectangle repeating the crown
-        // directly above it — the caller draws nothing rather than that.
-        guard out.count > 1 else { return [] }
+        // **A LONE CELL IS RETURNED, and the caller decides (2026-08-27).**
+        //
+        // This used to `guard out.count > 1 else { return [] }`, and the
+        // reason it gave was a fact about ONE caller's layout: a single
+        // rectangle "repeats the crown directly above it". That was true of
+        // `holdingsCard`, which sits under the crown — and false everywhere
+        // else, because §491 took the total OFF the promoted Holdings scope
+        // (the scope REPLACES the crown rather than sitting under it), so
+        // there is nothing above it to repeat.
+        //
+        // Suppressing here therefore emptied the scope for any account
+        // holding exactly one asset: the figure drew nothing, and
+        // `holdingsList` — which is gated on the same call by §491's
+        // one-derivation rule — drew nothing with it. Scoping the room to
+        // such an account opened a completely blank Holdings, with no
+        // sentence saying why. Two of the demo's four accounts are that
+        // shape, and so is any real wallet holding only ETH.
+        //
+        // The rule was not wrong, it was in the wrong file: whether a
+        // drawing would repeat something ABOVE it is a question only the
+        // view that draws both can answer. `holdingsCard` asks it itself
+        // now; this states what is held and lets each caller decide.
         return Array(out.prefix(maxCells))
     }
 }

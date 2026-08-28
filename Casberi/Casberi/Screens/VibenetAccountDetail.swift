@@ -317,9 +317,16 @@ struct VibenetAccountDetail: View {
                         rangeStrip
                     }
                 }
-                if let scoped = VibenetBalanceAggregation.compose([item]) {
-                    VibenetHoldingsBlock(cells: VibenetBalanceTreemap.cells(scoped),
-                                         reduceMotion: reduceMotion)
+                // A single-asset account draws its one holding here now
+                // (2026-08-27) — `VibenetBalanceTreemap.cells` used to
+                // suppress a lone cell, so this sheet showed nothing at all
+                // for an account holding only ETH. Still nothing when there
+                // is genuinely nothing: an empty block with top padding is a
+                // gap the reader has to interpret.
+                let scopedCells = VibenetBalanceAggregation.compose([item])
+                    .map(VibenetBalanceTreemap.cells) ?? []
+                if !scopedCells.isEmpty {
+                    VibenetHoldingsBlock(cells: scopedCells, reduceMotion: reduceMotion)
                         .padding(.top, DS.Space.s3)
                 }
             }

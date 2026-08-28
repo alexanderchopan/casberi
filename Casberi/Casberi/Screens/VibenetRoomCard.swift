@@ -1180,7 +1180,16 @@ struct VibenetRoomCard: View {
     private var holdingsFigure: some View {
         if let aggregate = VibenetBalanceAggregation.compose(room.items) {
             let cells = VibenetBalanceTreemap.cells(aggregate)
-            if !cells.isEmpty {
+            if cells.isEmpty {
+                // **AN EMPTY HOLDINGS IS AN ANSWER (2026-08-27).** This is
+                // §495's own ruling — *"for empty states or when there is
+                // only one item we need to fill it better"* — reaching the
+                // one scope that pass missed. Accounts and Permissions each
+                // got a figure that says what the silence means; Holdings
+                // drew nothing at all, so scoping the room to an account
+                // with nothing to report opened a blank 210pt box.
+                holdingsEmptyFigure(aggregate)
+            } else {
                 // **NO HEADLINE ON HOLDINGS (user, prd §491: "wallet doesn't
                 // show the total").** Every other scope needs one because it
                 // replaced the crown and would otherwise open on a picture
@@ -1212,6 +1221,84 @@ struct VibenetRoomCard: View {
                 }
             }
         }
+    }
+
+    /// WHAT AN EMPTY HOLDINGS MEANS — and the three causes it separates.
+    ///
+    /// A scope with no cells renders identically whatever the reason, and the
+    /// reasons are not equally interesting: an account the chain did not
+    /// answer for is a fact about the READ, an account that has not deployed
+    /// is a fact about the ACCOUNT, and an account that answered and holds
+    /// nothing is a real reading. Saying "nothing" for all three is the
+    /// difference between "we could not look" and "we looked and there is
+    /// nothing" — the same distinction `VibenetAccountSheet` already draws,
+    /// in the same order, which is why this mirrors that function rather than
+    /// inventing a second ranking of the same three states.
+    ///
+    /// Scoped it speaks about ONE account; unscoped about the set.
+    @ViewBuilder
+    private func holdingsEmptyFigure(_ aggregate: VibenetBalanceAggregate) -> some View {
+        scopeFigure(headline: holdingsEmptyHeadline(aggregate)) {
+            VStack(alignment: .leading, spacing: DS.Space.s4) {
+                // The treemap that is not there, drawn as its own outline —
+                // the dashed circle `accountsEmptyFigure` uses for a missing
+                // counterpart, in the shape this scope would have drawn.
+                RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous)
+                    .strokeBorder(DS.fillLine,
+                                  style: StrokeStyle(lineWidth: 1.4, dash: [3, 3]))
+                    .frame(height: 76)
+                    .opacity(0.6)
+                Text(holdingsEmptyLine(aggregate))
+                    .dsText(.callout15)
+                    .foregroundStyle(DS.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .frame(maxHeight: .infinity, alignment: .top)
+        }
+    }
+
+    /// The empty figure's headline. Never a number: there is nothing to count.
+    private func holdingsEmptyHeadline(_ aggregate: VibenetBalanceAggregate) -> String {
+        if aggregate.unreachedCount == aggregate.accountCount {
+            return String(localized: "Couldn't be read")
+        }
+        if let one = scopedItem, !one.established {
+            return String(localized: "Nothing deployed yet")
+        }
+        return String(localized: "Holds nothing")
+    }
+
+    /// The sentence under it, in `VibenetAccountSheet.detailLine`'s own cause
+    /// order — unread before undeployed before genuinely empty.
+    ///
+    /// `locked` is deliberately NOT a cause here, unlike in that function: a
+    /// locked account still HOLDS what it holds (the demo's own locked
+    /// fixture carries a native balance), so the lock says nothing about why
+    /// this box is empty and naming it would answer a question nobody asked.
+    private func holdingsEmptyLine(_ aggregate: VibenetBalanceAggregate) -> String {
+        if let one = scopedItem {
+            if !one.reached {
+                return String(localized: "This account could not be read on the last refresh.")
+            }
+            if !one.established {
+                return String(localized: "The account deploys with its first transaction — until then there's nothing to read.")
+            }
+            return String(localized: "The chain answered, and this account holds nothing yet.")
+        }
+        if aggregate.unreachedCount == aggregate.accountCount {
+            return String(localized: "None of these accounts could be read on the last refresh.")
+        }
+        return String(localized: "The chain answered, and none of these accounts holds anything yet.")
+    }
+
+    /// The one account this room is scoped to, or nil when it shows the set.
+    ///
+    /// Reads the ROOM rather than `scopedAddress`, so it can never disagree
+    /// with what the figure above it was composed from: the room is already
+    /// filtered by `VibenetRoom.scoped(to:)` before it reaches this card.
+    private var scopedItem: VibenetAccountItem? {
+        guard scopedAddress != nil, room.items.count == 1 else { return nil }
+        return room.items.first
     }
 
     /// A scope figure's frame: its own headline, then the drawing.
@@ -2171,13 +2258,20 @@ struct VibenetRoomCard: View {
     }
 
     /// WHAT THE ACCOUNTS HOLD. Silent for a single asset — the crown above
-    /// already states it, and `VibenetBalanceTreemap` returns nothing there
-    /// for exactly that reason, so this card never draws an empty box.
+    /// already states it, so a lone rectangle here would be the same figure
+    /// twice, once in a form that cannot be broken down.
+    ///
+    /// **THIS CARD OWNS THAT RULE NOW (2026-08-27).** It used to come free
+    /// from `VibenetBalanceTreemap.cells` returning nothing for one cell —
+    /// but that is a fact about THIS card's layout, and the model applied it
+    /// to every caller, which blanked the promoted Holdings scope for any
+    /// single-asset account (see that function's own note). The rule is
+    /// unchanged; it is simply asked by the view that has a crown above it.
     @ViewBuilder
     private var holdingsCard: some View {
         if let aggregate = VibenetBalanceAggregation.compose(room.items) {
             let cells = VibenetBalanceTreemap.cells(aggregate)
-            if !cells.isEmpty, !promoted(.holdings) {
+            if cells.count > 1, !promoted(.holdings) {
                 card {
                     Text(String(localized: "Holdings"))
                         .dsText(.label12)
