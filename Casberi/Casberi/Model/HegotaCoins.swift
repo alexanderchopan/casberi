@@ -347,6 +347,62 @@ struct HegotaCensus: Equatable, Sendable, Codable {
     }
 }
 
+// MARK: - Where a keyed nonce's counter lives
+
+/// The nonce manager's storage layout — MEASURED, because the contract will not
+/// answer a call (prd §509).
+///
+/// **The predeploy's whole runtime is five bytes**, `0x60006000fd` —
+/// `PUSH0 PUSH0 REVERT` — so every `eth_call` against it reverts and there is no
+/// getter to ask. Its state is still public, and reading it directly is the only
+/// way to learn a keyed counter's real value.
+///
+/// **The slot is `keccak256(pad32(address) ‖ pad32(key))`**, confirmed against
+/// the live chain 2026-08-28: the only address on this devnet sending on named
+/// keys reads `0x1` at that slot for BOTH `0xbeef01` and `0x1234`, matching its
+/// one observed send on each. Four other plausible layouts (key-first, the
+/// Solidity nested-mapping form, and two packed forms) all read zero, so the
+/// derivation is pinned by a positive AND four negatives rather than by one
+/// lucky hit.
+///
+/// Why it matters: `HegotaNonceLane.sends` is COUNTED FROM OBSERVED MOVES, which
+/// undercounts by construction — a send that moved no ETH emits no transfer log.
+/// That is the exact gap §504 closed for key 0 with `eth_getTransactionCount`,
+/// and this is the same fix for every other key. The card says "at least"
+/// today precisely because this number was not available.
+enum HegotaNonceStorage {
+    /// The storage slot holding `address`'s counter for one named `key`.
+    ///
+    /// Returns nil rather than a guessed slot when either input is not
+    /// hex-shaped: a wrong slot reads as a legitimate zero, which would report
+    /// "never sent on this key" about a key the room is only listing BECAUSE it
+    /// has been sent on.
+    static func slot(address: String, key: String) -> String? {
+        guard let a = word(address), let k = word(key) else { return nil }
+        return "0x" + Keccak256.hexString(Keccak256.hash(a + k))
+    }
+
+    /// A value as a left-padded 32-byte word. Both halves of the preimage are
+    /// padded — an address is 20 bytes and a key is however many the sender
+    /// chose, and the layout hashes two full words.
+    private static func word(_ hex: String) -> [UInt8]? {
+        var body = Substring(hex.lowercased())
+        if body.hasPrefix("0x") { body = body.dropFirst(2) }
+        guard !body.isEmpty, body.count <= 64, body.allSatisfy(\.isHexDigit) else { return nil }
+        let padded = String(repeating: "0", count: 64 - body.count) + body
+        var out: [UInt8] = []
+        out.reserveCapacity(32)
+        var i = padded.startIndex
+        while i < padded.endIndex {
+            let j = padded.index(i, offsetBy: 2)
+            guard let b = UInt8(padded[i..<j], radix: 16) else { return nil }
+            out.append(b)
+            i = j
+        }
+        return out
+    }
+}
+
 // MARK: - Is this still the same chain?
 
 /// Whether the chain we just read is the chain we read last time.

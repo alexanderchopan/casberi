@@ -1497,9 +1497,14 @@ struct HegotaRoomList: View {
                           // them. The explainer belongs once, in the figure's
                           // caption, and the row says where THIS key is.
                           subtitle: laneSubtitle(lane)) {
-                    Text(lane.sends == 1 ? String(localized: "1 send")
-                                         : String(localized: "\(String(lane.sends)) sends"))
-                        .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                    // **THE CHAIN'S OWN COUNT when we have it (§509).** The
+                    // observed count undercounts by construction — a send that
+                    // moved no ETH emits no transfer log — which is why this
+                    // said "at least" before the counter could be read.
+                    Text(lane.sendCount == 1 ? String(localized: "1 send")
+                                             : String(localized: "\(String(lane.sendCount)) sends"))
+                        .dsText(.subhead13)
+                        .foregroundStyle(lane.countIsExact ? DS.textSecondary : DS.textTertiary)
                 }
             }
         }
@@ -1510,6 +1515,12 @@ struct HegotaRoomList: View {
         if let seq = lane.seq {
             let n = WalletIngest.hexToInt(seq)
             parts.append(String(localized: "at #\(String(n))"))
+        }
+        // The per-key form of §504's valueless sends — the steps this key ran
+        // that paid nobody, which no transfer log can show.
+        if let quiet = lane.valuelessSends {
+            parts.append(quiet == 1 ? String(localized: "1 moved no value")
+                                    : String(localized: "\(String(quiet)) moved no value"))
         }
         if let when = HegotaFormat.time(lastSend(on: lane)) { parts.append(when) }
         return parts.isEmpty
@@ -2565,6 +2576,19 @@ struct HegotaAccountSheet: View {
                 if !account.reached {
                     Text(String(localized: "Couldn't be read — nothing below is current."))
                         .dsText(.subhead13).foregroundStyle(DS.attention)
+                }
+                // **IT PRODUCES THE CHAIN (§509).** Free, off headers the sweep
+                // already reads, and it explains the room's most baffling
+                // number: the sequencer holds nearly the devnet's whole supply,
+                // so an account with 999,999,898 ETH beside one with 1.13 is
+                // not an error in the figure, it is what a sequencer looks
+                // like. Stated only when every header sampled agreed.
+                if account.producesBlocks {
+                    HStack(spacing: DS.Space.s2) {
+                        Image(systemName: "cube").dsGlyph(11).foregroundStyle(DS.tint)
+                        Text(String(localized: "Produces this chain's blocks"))
+                            .dsText(.subhead13).foregroundStyle(DS.tint)
+                    }
                 }
             }
         }

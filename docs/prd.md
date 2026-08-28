@@ -37037,3 +37037,281 @@ Nothing here has been seen on a device or simulator. Every change is a type rung
 or a deleted no-op, so the risk is a size reading wrong rather than a screen
 failing to draw — the three `heading28`→`stat24` figures (28pt → 24pt) are the
 only visible change and none has been photographed.
+
+
+## 509. Hegotá reads one block, and the counter it could not ask for (user: "how else would you improve the hegota room? in terms of technical accuracy and data we can read", then "do all", 2026-08-28)
+
+Six items, all TECHNICAL rather than visual, and every one of them measured
+against the live chain before it was built rather than reasoned about after.
+
+### 1. ONE SWEEP, ONE BLOCK — the correctness hole under everything else
+
+Every read said `"latest"`, and each fails over across three hosts on its own.
+Blocks here are six seconds apart, so a sweep routinely straddled one, and a
+mid-sweep failover could mix a lagging host's answer with a current one. The
+casualty is this seat's own headline proof: the coin logs, the spent bitmap and
+the vault balance are THREE reads, so a spend landing between them makes
+conservation fail and the Coins card blinks off for a pass with nothing actually
+wrong. `HegotaRPC.tip()` is read once per pass and threaded through every read
+(`eth_getBalance`, both log reads, the coin logs, the bitmap batch, the vault
+balance, `eth_getTransactionCount`). **Nil pins nothing and every read falls back
+to `latest`**, so an unreadable tip degrades to exactly the old behaviour rather
+than to no sweep — one extra call per pass, not per read.
+
+### 2. THE KEYED-NONCE COUNTER, read from storage because it cannot be asked
+
+`HegotaNonceLane.sends` was counted from OBSERVED MOVES, which undercounts by
+construction — a send that moved no ETH emits no transfer log. That is exactly
+the gap §504 closed for key 0 with `eth_getTransactionCount`, and the card said
+"at least" precisely because the per-key number was unavailable.
+
+**The manager predeploy cannot be called at all**: its entire runtime is five
+bytes, `0x60006000fd` — `PUSH0 PUSH0 REVERT` — so every `eth_call` reverts and
+there is no getter. Its state is public regardless, and the counter lives at
+
+    keccak256(pad32(address) ‖ pad32(key))
+
+**derived by measurement, not from a spec.** The only address on this devnet
+sending on named keys reads `0x1` there for BOTH `0xbeef01` and `0x1234`,
+matching its one observed send on each, while four rival layouts (key-first, the
+Solidity nested-mapping form, and two packed forms) all read zero. One positive
+and four negatives, rather than one lucky hit.
+
+Read in ONE batch per address. A slot that will not derive, a read that does not
+answer, and a counter of ZERO all leave the lane nil — **zero is a
+contradiction here, not a count**: the key is in the list because a transaction
+named it, so a zero means the derivation is wrong for that shape rather than
+that nothing was sent. The lane then states what it SAW and says so
+(`countIsExact`), and the observed moves stay a FLOOR, because reporting fewer
+sends than the list beneath enumerates is worse than not knowing.
+
+### 3. The clock became total, for free
+
+`HegotaClock` only dates a block sitting BETWEEN two headers it holds, and the
+bounded header read only ever fetches recent ones — so everything below the
+oldest stayed undated. Block 0's header is ALREADY fetched every pass for the
+restart check; keeping its timestamp gives every block on the chain a lower
+bracket at no request cost.
+
+### 4. Fees are structurally invisible to the logs — MEASURED, so it stops being an open question
+
+A frame transaction's receipt carries only its value-move log; nothing sends the
+fee to the coinbase as an EIP-7708 transfer (measured: a 91,201,976-wei fee, one
+log, no match). So a balance line built from logs alone drifts by exactly the gas
+the address spent. `feeWei` is held for the newest moves, so the recent stretch
+is now exact — **and only where THIS address paid**: adding back a sponsor's gas
+would bend the line on precisely the transactions this chain exists to show off.
+
+### 5. The chain's producer is identifiable, and it is the worked example
+
+Block headers carry `miner`, and the sweep already reads them for timestamps.
+It is `0x8943…a776` — the keyed-nonce worked example — which is WHY that account
+holds 999,999,898 ETH: it is the sequencer. One string compare turns the accounts
+figure's most baffling number into a stated fact. **Claimed only when EVERY
+header sampled agrees**: one address across the sample is a sequencer, several is
+a rotating set, and naming one of them would be a claim the sample cannot
+support.
+
+### 6. The state-gas tripwire is armed
+
+§504 recorded "revisit the day `stateGasUsed` goes non-zero" as a note somebody
+had to remember. The nightly's existing frame walk now counts them and WARNS —
+not fails, because a chain that starts pricing state is news, and what it changes
+(the strip's gas weighting) is a decision rather than a bug to fix automatically.
+
+### Coverage
+
+`live-integrations.sh` gains a row for the nonce slot, since it is the one read
+here that is reverse-engineered: a moved layout reads a legitimate ZERO rather
+than an error, so the lane silently falls back and nothing says why (§311's
+go-quiet class). `hegota-selftest.sh` compiles `Keccak256.swift` alongside the
+Foundation-only files so the SHIPPED hash is what gets asserted, and pins both
+live-measured digests.
+
+**Three fixtures in this pass were "the right result for the wrong reason", and
+the mutation caught all three** — the standing lesson, earned again: an operand
+swap fixture that compared `slot(a,k)` against `slot(k,a)` SURVIVED reversing the
+preimage, because reversing swaps both sides; the digest itself had to be pinned.
+A non-hex guard could not be mutated singly because two redundant guards enforce
+it, so the mutation removes BOTH and proves the rule rather than either line. And
+`valueSeries` had NO fixtures at all before today, which is how the sponsored-fee
+case slipped in unnoticed.
+
+### Unverified
+
+No sweep has run against the live chain from a device. The pinned block, the
+producer badge and the per-key counters are all reasoned from measurements taken
+by curl, not observed in the app.
+
+## 507. The vibenet reads the bridge was making and throwing away (user: "how would you improve the vibenet experience in terms of data we can read but aren't using effectively", then "do all", 2026-08-28)
+
+Eight items, and the shape of every one of them is the same: **the read was
+already happening and no surface asked for its answer.** Nothing here needs a
+new host, a new key, a new `Thing` field or a CloudKit deploy; the two reads
+that cost anything new (`Transfer` logs, a historical `eth_getBalance`) are
+bounded and stated as bounded.
+
+`Model/VibenetLedger.swift` is new and Foundation-only — the ledger, the
+pulse, the origin, the runs, the token identity, the backfill's block picker
+and the log-data decode — compiled WHOLE by `scripts/vibenet-selftest.sh`
+beside `VibenetRoom.swift`. Nothing on this host can make a devnet transfer a
+token, halt a chain or run a session key, so that harness is not the best
+proof these numbers are right, it is the only one (§440's standing).
+
+**1. MONEY HAD NO HISTORY.** There was not one `Transfer` topic in the whole
+bridge: balances were read, movement was not. So Activity held key and lock
+events only, Holdings drew a number with no motion behind it, and nobody could
+see who an account pays. `VibenetRead.transfers` reads both directions per
+token — **two calls, not one, and that is forced**: `from` and `to` are
+different indexed positions and `eth_getLogs` ANDs across positions, so a
+single filter naming both asks for self-transfers and nothing else. The log
+appearing in BOTH answers is exactly how a self-move is detected. **The topic
+count decides the decode**: ERC-20 and ERC-721 share the signature
+`Transfer(address,address,uint256)` byte for byte and differ only in whether
+the third argument is indexed, so a fungible decoder reads a 721 move as a
+transfer of ZERO — a real row saying nothing moved. Counterparties rank by
+MOVES and never by amount (two tokens, no shared unit, no price — the
+`PrivacyPoolsRoom` rule), and a self-move lands no row at all: the balance did
+not change, and "sent 5 USDV" for money that never left is a false claim about
+where it went.
+
+**2. THE SPARKLINE WAS A CHART OF WHEN YOU OPENED THE APP.**
+`VibenetValueHistory` records only what it saw while the app was live — six
+readings before it draws, two minutes apart at best, and structurally blind to
+everything before the day you started watching. `eth_getBalance` takes a block
+tag, so a node that keeps state can answer what an account held last week.
+`VibenetBackfill` buys eight such points ONCE per account, ever, and only where
+the local history is too thin to draw. Every point is a real reading; a pruned
+node answers nothing and is recorded as nothing, never as a zero, which would
+draw a cliff. **The ROOM's own series takes one extra rule: a point is kept
+only when EVERY watched account answered at that block** — a total whose
+membership changes between points is not a total, it is a cliff drawn where a
+read failed. Marked done even when it answered nothing: a pruned node will not
+start answering because we asked again.
+
+**3. POLICY RUNS WERE COUNTED AND NEVER SHOWN.** `PolicyExecuted` has been
+read since 2026-08-24 and folded straight into a per-commitment count on one
+line inside one sheet, so a session key running daily produced no row anywhere
+— on a screen called Activity. The runs are kept whole now and land as events;
+the fold (`VibenetPolicyRuns.fold`, pure) still happens, it just happens after.
+**The fold sees every run while the stored array is bounded**, so a key's use
+COUNT stays exact however busy it is and what the cap costs is a date on the
+oldest runs, never a wrong number about a key's authority. The log's
+non-indexed `caller` word is decoded at last — the difference between "4 uses"
+and "used by the account you also watch" — and is named ONLY when every run
+agrees, because a key run by two callers has no single answer and naming the
+newest states a fact about who can spend that is true of one occasion.
+
+**4. THE CHAIN'S OWN PULSE WAS FETCHED EVERY PASS AND DISCARDED.**
+`blockNumber()` has been called on every log walk since the walk learned to
+chunk, used for arithmetic and thrown away — so on the one network whose
+documentation warns it is temporary, "your account is quiet" and "the devnet
+stopped three days ago" rendered identically. `VibenetChainPulse` states the
+tip, when it was mined and a MEASURED rate (across 500 real blocks, because
+the verdict thresholds are multiples of it and a guessed rate moves them
+along). Silent while the chain is moving — "the chain is working" is not worth
+a caption's width, and a marker that is always lit is the chrome §493 deleted
+from this room once already. An unread block time is `.unknown`, never an
+alarm: not knowing and knowing it is dead are different. The block joins the
+room's provenance caption, because on a chain that redeploys weekly it is the
+only coordinate a screenshot carries that still means something afterwards.
+
+**5. THE ACCOUNT'S OWN BIRTHDAY WAS READ FOR STRANGERS ONLY.**
+`AccountCreated` was walked GLOBALLY for the empty state's discovery list and
+never filtered to a watched address, though the account topic is indexed. So
+the Activity timeline began at the first key rather than at the account, and
+no screen could say how old anything was. Its `codeHash` is the fact worth
+having here: two accounts sharing it run the same implementation, and the
+Accounts card says so **only when they really differ** — on a healthy roster
+they never do, and "1 implementation" is a line saying nothing.
+
+**6. A REVOKED KEY LOST ITS IDENTITY, AND ONE QUARTER OF THAT WAS AVOIDABLE.**
+A moment's kind is resolved by matching its actorId against the LIVE roster,
+so a revoked key has none — the file's own comment said it "isn't retrievable
+without an archive node". True of three kinds and not of the fourth: a
+delegate's actorId IS its address, so `VibenetKeyHistory.inferredKind` names it
+with certainty and no read at all. Nil for every other kind, deliberately — a
+P-256 actorId is a hash, and every hash yields a plausible address belonging to
+nobody. **`ActorAuthorized`'s `bytes actorData` is decoded to its ENVELOPE and
+no further**: the ABI framing of a dynamic `bytes` is the specification and is
+certain, what an authenticator packs inside it is not, and naming a key's kind
+out of an unmeasured layout is the confident wrong answer this room's own doc
+bans. `VibenetLogData.dynamicBytes` is reported by the probe and drawn by
+nothing until somebody measures it.
+
+**7. THREE CONFIG FIELDS WERE PARSED AND READ BY NOTHING.** `vibecheck` joins
+USDV and NFV as a token — and is the only one whose symbol the config does not
+state, so it is the only one that pays for a live `symbol()` read, SANITISED
+the way `SmartAccount.vendor` is (letters and digits, 1–12 characters,
+uppercased) because it is an arbitrary contract's string landing in our own
+chrome beside a number; a contract that will not name itself is not shown at
+all rather than named by us. `defaultAccount` and
+`canonicalHighRatePayerAccount` lead the empty state's discovery list, where
+they cost ZERO requests against the global log walk that was buying the same
+kind of thing.
+
+**8. THE MULTICHAIN COMPARISON WAS DEAD BY CONSTRUCTION.**
+`VibenetChainStanding`/`VibenetMultichainSync` were built ready for a second
+chain and called by NOTHING, while `plainLine` could say "Changed 3 times,
+shared across chains" — a sentence with a hole in it, since only one chain is
+ever read and the reader was left to assume we had checked. `scopeNote` says
+so, gated on there being a cross-chain change at all (an account with none has
+nothing to be out of sync about) and nil the moment a second chain is really
+read, where the honest line is the comparison rather than an apology for its
+absence.
+
+**THE SILENT BUG THIS FOUND: an NFT balance was dropped, forever, with nothing
+saying why.** `tokenBalance` gave up on any token whose `decimals()` did not
+answer — the right refusal for an unknown scale and the wrong one for an
+ERC-721, where that call does not exist, reverts, and MEANS "this is a count".
+The demo fixture has shown `NFV: 12` since balances landed while a live NFV
+that is a 721 would have been absent from the room since the day it shipped.
+`VibenetTokenFacts` asks ERC-165 `supportsInterface(0x80ac58cd)` when
+`decimals()` fails, and only then; a contract answering neither is still
+dropped, because "we could not learn the scale" stays a real state and
+assuming one is the lesson this codebase has paid for in Solana SPL and in
+Gnosis Pay's USDCe. A count is drawn whole — "12.0000" claims a divisibility
+the token does not have.
+
+**TWO DEFECTS FOUND ON THE WAY, both structural.** `VibenetRoomSource
+.compose()` had exactly ONE caller in the whole app — the address book
+screen's own `load()` — so the feed's head, the crown, the sparkline and every
+reading on the card were as fresh as the last time somebody happened to open
+that screen; §468 gave the card a "when this was read" line precisely because
+the snapshot could be days old, and this is the other half of that fix. The
+sweep composes now, and the landing READS the composed room rather than
+re-asking the chain for transfers, runs and a creation it fetched moments
+earlier. And `getLogs` asked `eth_blockNumber` on every call — four per
+account, twenty for a five-account room, re-asking a number that cannot have
+moved between them — so `VibenetTipCache` memoises it for fifteen seconds; the
+staleness costs coverage of the present by a block or two, which the next pass
+catches.
+
+**Where the new rows land.** Four `VibenetEventKind` cases (`transferIn`,
+`transferOut`, `policyRun`, `created`), `.event` and never `.transaction`
+because every `.transaction` routes through `MoneyReceiptSource`, whose
+receipt would read "In your wallet" over a devnet balance that is neither —
+the same false claim this bridge corrected once already for key events. **NO
+DATE, NO ROW**: these are historical by construction, and a transfer from four
+months ago stamped today is the wrong-date failure this file has a rule
+against. `landComposed` runs BEFORE the fresh-events early return, because on
+almost every pass there is no new key event and behind that return a transfer
+would only ever land on a pass that happened to be landing something else —
+the placement §473's deadline sweep learned the same way.
+
+**Also: the lock events' own numbers.** `AccountLocked` carries `unlockDelay`
+and `AccountUnlockInitiated` carries `unlocksAt`, both non-indexed, both never
+decoded — so a landed lock said "locked on vibenet" with no timelock and an
+unlock said "started unlocking" without the one thing anybody wants from it.
+`VibenetLogData.uint64` refuses a word too large to hold rather than trapping
+on the conversion, which matters because these are words off a chain anybody
+can emit a log on.
+
+**UNMEASURED, and the grade is unchanged from every other vibenet entry**: no
+sweep has run against the live devnet from a device. The Transfer topic is the
+canonical constant, the ERC-165 and `symbol()` selectors are the standards'
+own, and the `AccountCreated` data layout (`userSalt` then `codeHash`) is
+read from the event's declared signature — none of it observed here. Every
+path fails safe: an unread token is absent rather than guessed, an unread
+origin draws nothing, an unread pulse is `.unknown` rather than an alarm, and
+a bounded read says it is bounded.

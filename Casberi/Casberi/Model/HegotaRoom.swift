@@ -151,7 +151,23 @@ enum HegotaRoom {
             // Undo it: money that came IN was not there before, money that
             // went OUT still was.
             running += move.incoming ? -move.wei : move.wei
-            if running < 0 { running = 0 }   // fees are not in the log; never draw below zero
+            // **AND UNDO THE FEE THIS ADDRESS PAID (§509).** A fee leaves the
+            // balance and emits NO transfer log — measured on this chain: a
+            // frame transaction's receipt carries only its value-move log, and
+            // nothing sends the 91,201,976-wei fee to the coinbase — so a
+            // reconstruction built from logs alone drifts by exactly the gas
+            // this address has spent. `feeWei` is held for the newest
+            // `frameDepth` moves, so the recent stretch is exact and the older
+            // one is unchanged; the clamp below stays as the floor for it.
+            //
+            // Only when THIS address paid: a sponsored transaction cost it
+            // nothing, and adding back somebody else's gas would bend the line
+            // the wrong way on precisely the transactions this chain exists to
+            // show off.
+            if !move.incoming, !move.isSponsored, let fee = move.feeWei {
+                running += fee
+            }
+            if running < 0 { running = 0 }   // an unread fee is still a gap; never draw below zero
             series.append((running as NSDecimalNumber).doubleValue / 1e18)
         }
         return series.count >= 2 ? series.reversed() : nil

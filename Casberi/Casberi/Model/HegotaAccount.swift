@@ -116,7 +116,30 @@ struct HegotaNonceLane: Equatable, Sendable, Identifiable, Codable {
     let key: String
     let seq: String?
     let lastBlock: UInt64
+    /// Sends OBSERVED — the moves whose transactions named this key.
+    ///
+    /// It undercounts by construction, which is why `counter` exists beside it:
+    /// a send that moved no ETH emits no transfer log, so this can only ever
+    /// see the paying ones.
     let sends: Int
+    /// The chain's OWN counter for this key, off the nonce manager's storage
+    /// (§509). Nil when the read did not answer — never zero, since a key the
+    /// room is listing has by definition been sent on at least once, and a
+    /// nil-as-zero would say "never used" about it.
+    var counter: UInt64?
+
+    /// What the room should state: the chain's count when we have it, else
+    /// what we could see. `countIsExact` is what stops the derived number
+    /// being narrated as the chain's.
+    var sendCount: Int { counter.map { max(Int($0), sends) } ?? sends }
+    var countIsExact: Bool { counter != nil }
+    /// Sends on this key that moved no value — the per-key form of §504's
+    /// `valuelessSends`. Nil when unknown or zero, the same two silences.
+    var valuelessSends: Int? {
+        guard let counter else { return nil }
+        let gap = Int(counter) - sends
+        return gap > 0 ? gap : nil
+    }
 
     var id: String { key }
     var looksLikeAddress: Bool {
@@ -163,6 +186,10 @@ struct HegotaAccount: Equatable, Sendable, Identifiable, Codable {
     /// at once — and until now it kept one Bool out of all that and dropped the
     /// rest. Nil unless the set reconciled.
     var census: HegotaCensus?
+    /// True when every block header this sweep read names THIS address as the
+    /// producer (§509) — the devnet's sequencer. Free: the headers are already
+    /// fetched for their timestamps.
+    var producesBlocks = false
 
     var id: String { address }
     var sponsored: [HegotaMove] { moves.filter(\.isSponsored) }

@@ -748,6 +748,19 @@ PY
     warn "Hegotá — the reconciliation walk did not complete; the seat's own gate is unverified tonight"
   fi
 
+  # 4b. **The keyed-nonce slot derivation still holds (§509).** The one read in
+  #     this seat that is reverse-engineered rather than specified — the nonce
+  #     manager cannot be called at all, so its counter is read from storage at
+  #     a slot derived by measurement. A moved layout reads a legitimate ZERO
+  #     rather than an error, so the lane silently falls back to its observed
+  #     count and nothing says why (§311's go-quiet class).
+  heg_nonce=$(python3 scripts/support/hegota-nonce-slot.py 2>/dev/null)
+  if [[ "${heg_nonce:-0}" -eq 2 ]]; then
+    pass "Hegotá — the keyed-nonce storage slot still resolves (both example keys read non-zero)"
+  else
+    fail "Hegotá — the keyed-nonce slot derivation no longer resolves (${heg_nonce:-0}/2); per-key counts fall back to the observed floor with no visible symptom"
+  fi
+
   # 5. **Frame transactions still look like frame transactions.** Everything the
   #    Frames scope draws comes off a type-`0x6` receipt's `frames` array, and
   #    nothing about that shape is contractual.
@@ -774,7 +787,7 @@ seen=set()
 for l in reversed(logs):
     seen.add(l["transactionHash"])
     if len(seen)>=25: break
-typed=framed=paired=payer=keys=0
+typed=framed=paired=payer=keys=stategas=0
 for h in list(seen):
     tx=call("eth_getTransactionByHash",[h]) or {}
     if tx.get("type")!="0x6": continue
@@ -787,19 +800,33 @@ for h in list(seen):
     # a check that cries wolf gets turned off within a week.
     fr=tx.get("frames") or []
     rr=r.get("frameReceipts") or []
+    # §504 recorded "revisit the day stateGasUsed goes non-zero" as a note
+    # somebody had to remember. This is that note as an alarm: the frame
+    # strip weights its widths by execution gas alone, which is correct only
+    # while the second dimension is always zero.
+    for f in rr:
+        try:
+            if int(f.get("stateGasUsed","0x0") or "0x0",16) > 0: stategas+=1
+        except Exception: pass
     if fr: framed+=1
     # The app pairs a frame with its receipt BY POSITION and only when the
     # counts agree, so a divergence is what makes every pip go hollow.
     if fr and len(fr)==len(rr): paired+=1
     if r.get("payer"): payer+=1
     if isinstance(tx.get("nonceKeys"),list): keys+=1
-print(f"{len(logs)} {typed} {framed} {paired} {payer} {keys}")
+print(f"{len(logs)} {typed} {framed} {paired} {payer} {keys} {stategas}")
 PY
 )
   if [[ -n "$heg_frames" ]]; then
-    read -r flogs ftyped fframed fpaired fpayer fkeys <<< "$heg_frames"
+    read -r flogs ftyped fframed fpaired fpayer fkeys fstate <<< "$heg_frames"
     if [[ "$fframed" -gt 0 ]]; then
       pass "Hegotá — frame transactions still carry frames ($fframed of $ftyped sampled; payer on $fpayer, nonceKeys on $fkeys)"
+      if [[ "${fstate:-0}" -gt 0 ]]; then
+        # Not a failure — a chain that started pricing state is NEWS, and the
+        # thing it changes (the strip's gas weighting, §504's stated ceiling)
+        # is a deliberate decision rather than a bug to fix automatically.
+        warn "Hegotá — stateGasUsed is NON-ZERO on $fstate sampled frame(s); §504's gas-weighting ceiling is now live and the strip should weight both dimensions"
+      fi
       if [[ "$fpaired" != "$fframed" ]]; then
         # Counts disagreeing is not a missing field, so it passes every
         # existence check — and in the app it makes EVERY pip draw hollow,

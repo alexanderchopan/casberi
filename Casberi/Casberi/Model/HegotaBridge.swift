@@ -118,12 +118,39 @@ enum HegotaRPC {
         return nil
     }
 
-    static func getBalance(_ address: String) async -> String? {
-        await call(method: "eth_getBalance", params: [address, "latest"]) as? String
+    /// **THE SWEEP'S BLOCK, and why every read below takes one (prd §509).**
+    ///
+    /// Every read used to say `"latest"`, and each one fails over across three
+    /// hosts independently — so a sweep spanning a 6-second block, or one whose
+    /// second call lands on a host a block behind, MIXED TWO CHAIN STATES in a
+    /// single pass. The casualty is this seat's own headline proof: the coin
+    /// logs, the spent bitmap and the vault balance are three reads, and a
+    /// spend landing between them makes conservation fail, so the Coins card
+    /// blinks off for a pass with nothing wrong.
+    ///
+    /// Nil means "read at latest", which is what a caller with no pinned height
+    /// gets and what every read did before — so an unreadable tip degrades to
+    /// exactly the old behaviour rather than to no sweep at all.
+    typealias Block = String?
+
+    /// The height to pin a sweep to. One extra call per pass, not per read.
+    static func tip() async -> Block {
+        guard let hex = await call(method: "eth_blockNumber", params: []) as? String,
+              WalletIngest.hexToInt(hex) > 0
+        else { return nil }
+        return hex
     }
 
-    static func getStorageAt(_ address: String, slot: String) async -> String? {
-        await call(method: "eth_getStorageAt", params: [address, slot, "latest"]) as? String
+    /// What a pinned read passes as its block parameter.
+    private static func at(_ block: Block) -> String { block ?? "latest" }
+
+    static func getBalance(_ address: String, at block: Block = nil) async -> String? {
+        await call(method: "eth_getBalance", params: [address, at(block)]) as? String
+    }
+
+    static func getStorageAt(_ address: String, slot: String,
+                             at block: Block = nil) async -> String? {
+        await call(method: "eth_getStorageAt", params: [address, slot, at(block)]) as? String
     }
 
     /// `eth_getLogs` over the whole chain.
@@ -135,9 +162,10 @@ enum HegotaRPC {
     /// the symptom is the one vibenet already paid for: an established account
     /// reading as unreached, so the caller must keep nil meaning "we could not
     /// look" rather than "there is nothing".
-    static func getLogs(address: String, topics: [Any]) async -> [[String: Any]]? {
+    static func getLogs(address: String, topics: [Any],
+                        at block: Block = nil) async -> [[String: Any]]? {
         let filter: [String: Any] = [
-            "fromBlock": "0x0", "toBlock": "latest", "address": address, "topics": topics,
+            "fromBlock": "0x0", "toBlock": at(block), "address": address, "topics": topics,
         ]
         return await call(method: "eth_getLogs", params: [filter]) as? [[String: Any]]
     }
@@ -155,23 +183,23 @@ enum HegotaRPC {
 
 enum HegotaRead {
     /// Everything the room needs about one address, in one bounded sweep.
-    static func account(_ address: String) async -> HegotaAccount {
+    static func account(_ address: String, at block: HegotaRPC.Block = nil) async -> HegotaAccount {
         var out = HegotaAccount(address: address)
         let addressTopic = HegotaRPC.topic(address)
 
         // 1. The balance, and 2/3. the value history — every ETH movement on
         //    this chain is a log, so both directions are one read each.
-        async let balance = HegotaRPC.getBalance(address)
+        async let balance = HegotaRPC.getBalance(address, at: block)
         async let outgoing = HegotaRPC.getLogs(
             address: HegotaChain.transferLogSource,
-            topics: [HegotaChain.transferTopic, addressTopic])
+            topics: [HegotaChain.transferTopic, addressTopic], at: block)
         async let incoming = HegotaRPC.getLogs(
             address: HegotaChain.transferLogSource,
-            topics: [HegotaChain.transferTopic, NSNull(), addressTopic])
+            topics: [HegotaChain.transferTopic, NSNull(), addressTopic], at: block)
         // 4. The coins this address owns — the recipient is topic 2.
         async let coinLogs = HegotaRPC.getLogs(
             address: HegotaChain.vault,
-            topics: [HegotaChain.utxoCreatedTopic, NSNull(), addressTopic])
+            topics: [HegotaChain.utxoCreatedTopic, NSNull(), addressTopic], at: block)
         // 5. **The ordinary nonce — the one counter we cannot reconstruct.**
         //    Everything above is built from transfer logs, and a transaction
         //    that moved no ETH emits none; on a chain whose whole subject is
@@ -179,7 +207,7 @@ enum HegotaRead {
         //    precisely the interesting kind. This is the chain's own count of
         //    what this address has sent on key 0.
         async let nonce = HegotaRPC.call(method: "eth_getTransactionCount",
-                                         params: [address, "latest"])
+                                         params: [address, block ?? "latest"])
 
         let (bal, outs, ins, coins, sent) = await (balance, outgoing, incoming, coinLogs, nonce)
 
@@ -217,10 +245,11 @@ enum HegotaRead {
                                     tx: log["transactionHash"] as? String)
         }
 
-        await readCoinState(&out)
+        await readCoinState(&out, at: block)
         await readFrames(&out)
         await readTimes(&out)
         out.lanes = lanes(from: out.moves)
+        await readNonceCounters(&out, at: block)
         return out
     }
 
@@ -254,13 +283,29 @@ enum HegotaRead {
         guard let answers = await HegotaRPC.batch(calls) else { return }
 
         var times: [UInt64: Date] = [:]
+        var producers = Set<String>()
         for (i, block) in wanted.enumerated() {
-            guard let header = answers[i] as? [String: Any],
-                  let stamp = header["timestamp"] as? String else { continue }
+            guard let header = answers[i] as? [String: Any] else { continue }
+            // **WHO PRODUCES THIS CHAIN (§509).** Free — the header is already
+            // in hand for its timestamp. On a devnet the sequencer is a single
+            // address, and here it is one of the room's own worked examples,
+            // which is WHY that account holds 999,999,898 ETH. Saying so turns
+            // the accounts figure's most baffling number into a stated fact
+            // instead of an unexplained outlier.
+            if let miner = (header["miner"] as? String)?.lowercased(),
+               miner.count == 42, miner != "0x" + String(repeating: "0", count: 40) {
+                producers.insert(miner)
+            }
+            guard let stamp = header["timestamp"] as? String else { continue }
             let seconds = WalletIngest.hexToInt(stamp)
             guard seconds > 0 else { continue }
             times[block] = Date(timeIntervalSince1970: TimeInterval(seconds))
         }
+        // Only when EVERY header we read agrees. One address across the sample
+        // is a sequencer; several is a rotating set, and calling any one of
+        // them "the producer" would be a claim the sample cannot support.
+        out.producesBlocks = producers.count == 1
+            && producers.first == out.address.lowercased()
         guard !times.isEmpty else { return }
 
         // **Rows past the window are BRACKETED, not left undated (2026-08-27).**
@@ -275,8 +320,17 @@ enum HegotaRead {
         // `timestamp`, because it is not the same kind of fact: a read time
         // states a clock, an estimate states a DAY. Nothing is extrapolated
         // past the newest header, where drift has no measured ceiling.
+        // **THE GENESIS HEADER COMPLETES THE BRACKET (§509).** `HegotaClock`
+        // only dates a block sitting BETWEEN two headers it holds, and this
+        // bounded read only ever fetches recent ones — so everything below the
+        // oldest of them had no lower bracket and stayed undated. Block 0's
+        // timestamp is already read every pass for the restart check, so
+        // adding it here costs nothing and makes every block on the chain
+        // datable.
+        var bracket = times
+        if let genesisAt = await HegotaLiveState.shared.genesisAt { bracket[0] = genesisAt }
         func estimated(_ block: UInt64) -> Date? {
-            times[block] == nil ? HegotaClock.estimate(block: block, from: times) : nil
+            times[block] == nil ? HegotaClock.estimate(block: block, from: bracket) : nil
         }
         out.moves = out.moves.map {
             var m = $0
@@ -310,9 +364,11 @@ enum HegotaRead {
     /// every owner together, so the vault's balance can only be checked against
     /// every unspent coin there is. The address's own coins are then filtered
     /// out of a set already proven complete.
-    private static func readCoinState(_ out: inout HegotaAccount) async {
+    private static func readCoinState(_ out: inout HegotaAccount,
+                                      at block: HegotaRPC.Block = nil) async {
         guard let all = await HegotaRPC.getLogs(address: HegotaChain.vault,
-                                                topics: [HegotaChain.utxoCreatedTopic])
+                                                topics: [HegotaChain.utxoCreatedTopic],
+                                                at: block)
         else { return }
         let every: [HegotaCoin] = all.compactMap { log in
             guard let topics = log["topics"] as? [String],
@@ -329,7 +385,8 @@ enum HegotaRead {
         let calls = words.map { word -> (method: String, params: [Any]) in
             let anyIndex = every.first { HegotaVaultStorage.word(index: $0.index) == word }!.index
             return ("eth_getStorageAt",
-                    [HegotaChain.vault, HegotaVaultStorage.spentSlot(index: anyIndex), "latest"])
+                    [HegotaChain.vault, HegotaVaultStorage.spentSlot(index: anyIndex),
+                     block ?? "latest"])
         }
         guard let answers = await HegotaRPC.batch(calls) else { return }
         var bitmap: [UInt64: String] = [:]
@@ -338,7 +395,7 @@ enum HegotaRead {
         }
 
         guard let unspentEverywhere = HegotaCoins.unspent(every, words: bitmap),
-              let vaultHex = await HegotaRPC.getBalance(HegotaChain.vault),
+              let vaultHex = await HegotaRPC.getBalance(HegotaChain.vault, at: block),
               let vaultWei = HegotaWord.integer(padded(vaultHex))
         else { return }
 
@@ -419,6 +476,55 @@ enum HegotaRead {
                 succeeded: (r?["status"] as? String).map { WalletIngest.hexToInt($0) == 1 },
                 gasUsed: (r?["gasUsed"] as? String).map { UInt64(WalletIngest.hexToInt($0)) },
                 stateGasUsed: (r?["stateGasUsed"] as? String).map { UInt64(WalletIngest.hexToInt($0)) })
+        }
+    }
+
+    /// Each named key's REAL counter, straight out of the nonce manager's
+    /// storage (§509).
+    ///
+    /// **The contract cannot be asked** — its whole runtime is `PUSH0 PUSH0
+    /// REVERT`, so every `eth_call` reverts and there is no getter. Its state is
+    /// public regardless, and `HegotaNonceStorage.slot` derives where each
+    /// counter lives (measured against the live chain, with four rival layouts
+    /// reading zero).
+    ///
+    /// One BATCH for every key, so an address with three lanes costs one
+    /// request. A key whose slot will not derive, or whose read does not answer,
+    /// is left nil — the lane then says what it could SEE, and says so.
+    private static func readNonceCounters(_ out: inout HegotaAccount,
+                                          at block: HegotaRPC.Block = nil) async {
+        guard !out.lanes.isEmpty else { return }
+        var slots: [Int: String] = [:]
+        var calls: [(method: String, params: [Any])] = []
+        for (i, lane) in out.lanes.enumerated() {
+            guard let slot = HegotaNonceStorage.slot(address: out.address, key: lane.key)
+            else { continue }
+            slots[calls.count] = slot
+            calls.append(("eth_getStorageAt",
+                          [HegotaChain.nonceManager, slot, block ?? "latest"]))
+        }
+        guard !calls.isEmpty, let answers = await HegotaRPC.batch(calls) else { return }
+
+        var byLane: [String: UInt64] = [:]
+        var call = 0
+        for lane in out.lanes {
+            guard HegotaNonceStorage.slot(address: out.address, key: lane.key) != nil
+            else { continue }
+            defer { call += 1 }
+            guard let hex = answers[call] as? String else { continue }
+            let value = WalletIngest.hexToInt(padded(hex))
+            // Zero is a real answer here and it is a CONTRADICTION, not a
+            // count: this key is in the list because a transaction named it, so
+            // a counter of zero means the slot derivation is wrong for this
+            // shape rather than that nothing was sent. Left nil so the lane
+            // falls back to what it observed instead of claiming zero.
+            if value > 0 { byLane[lane.key.lowercased()] = UInt64(value) }
+        }
+        guard !byLane.isEmpty else { return }
+        out.lanes = out.lanes.map {
+            var lane = $0
+            lane.counter = byLane[$0.key.lowercased()]
+            return lane
         }
     }
 
@@ -579,6 +685,9 @@ final class HegotaLiveState {
     /// blank worked examples with no error anywhere. Hegotá is an experimental
     /// devnet and being relaunched is a thing it is expected to do.
     private(set) var genesis: HegotaGenesis.Verdict = .unknown
+    /// When block 0 was mined — the clock's floor. Read from the same header
+    /// the restart check already fetches, so it costs nothing.
+    private(set) var genesisAt: Date?
 
     private static let genesisKey = "hegota.genesis.v1"
 
@@ -601,7 +710,19 @@ final class HegotaLiveState {
         let (rawID, rawGenesis) = await (idCall, genesisCall)
 
         let chainID = (rawID as? String).map { WalletIngest.hexToInt($0) }
-        let hash = (rawGenesis as? [String: Any])?["hash"] as? String
+        let header = rawGenesis as? [String: Any]
+        let hash = header?["hash"] as? String
+        // **THE GENESIS TIMESTAMP IS FREE, AND IT COMPLETES THE CLOCK (§509).**
+        // `HegotaClock` can only date a block that sits BETWEEN two headers it
+        // holds, and the bounded header read only ever fetches recent ones — so
+        // everything below the oldest of them stayed undated. This header is
+        // already being fetched every pass for the restart check above; keeping
+        // its timestamp gives every block on the chain a lower bracket, at no
+        // request cost at all.
+        if let stamp = header?["timestamp"] as? String {
+            let seconds = WalletIngest.hexToInt(stamp)
+            if seconds > 0 { genesisAt = Date(timeIntervalSince1970: TimeInterval(seconds)) }
+        }
 
         genesis = HegotaGenesis.verdict(chainID: chainID, genesis: hash,
                                         knownGenesis: known)
@@ -643,9 +764,18 @@ final class HegotaLiveState {
         // reads it causes are interpreted as an empty account.
         await readIdentity()
 
+        // **ONE HEIGHT FOR THE WHOLE PASS (§509).** Blocks are six seconds
+        // apart and each read fails over across three hosts on its own, so an
+        // unpinned sweep could straddle a block or mix a lagging host's answer
+        // with a current one — and this seat's headline proof is a THREE-READ
+        // conservation check that a mid-sweep spend makes fail for no real
+        // reason. A tip that will not read pins nothing and every read falls
+        // back to `latest`, which is exactly the old behaviour.
+        let pinned = await HegotaRPC.tip()
+
         var out: [HegotaAccount] = []
         for address in HegotaWatch.shared.addresses {
-            out.append(await HegotaRead.account(address))
+            out.append(await HegotaRead.account(address, at: pinned))
         }
         // **`readAt` FIRST.** `persist()` fires from `accounts`'s `didSet`, so
         // assigning the timestamp afterwards wrote a snapshot whose read date

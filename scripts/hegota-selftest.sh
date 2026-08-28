@@ -26,6 +26,9 @@ SECTION="Casberi/Casberi/Model/HegotaSection.swift"
 COINS="Casberi/Casberi/Model/HegotaCoins.swift"
 ACCOUNT="Casberi/Casberi/Model/HegotaAccount.swift"
 ROOM="Casberi/Casberi/Model/HegotaRoom.swift"
+# Foundation-only, and the nonce-slot derivation is real keccak — so the harness
+# compiles the SHIPPED hash rather than asserting against a copied digest.
+KECCAK="Casberi/Casberi/Model/Keccak256.swift"
 VERIFY="scripts/verify.sh"
 
 work=$(mktemp -d)
@@ -654,6 +657,110 @@ check(HegotaGenesis.verdict(chainID: HegotaChain.chainID, genesis: "0xnothex",
                             knownGenesis: g1) == .unknown,
       "an unparseable hash claims nothing")
 
+// ───────────── the balance line undoes the fees it can see (§509) ─────────────
+// **This reconstruction had NO fixtures at all before today**, which is how the
+// sponsored case slipped through: a fee leaves the balance and emits no
+// transfer log (measured — a frame transaction's receipt carries only its
+// value-move log), so a line built from logs alone drifts by exactly the gas
+// this address spent. `feeWei` is held for the newest moves, so the recent
+// stretch can be exact.
+func weiOf(_ n: String) -> Decimal { Decimal(string: n)! }
+func paidMove(fee: String?, sponsored: Bool) -> HegotaMove {
+    var m = HegotaMove(hash: "0xfee", counterparty: "0xc",
+                       wei: weiOf("1000000000000000000"), incoming: false, block: 9)
+    m.sender = "0xme"
+    m.payer = sponsored ? "0xsomebodyelse" : "0xme"
+    m.feeWei = fee.map(weiOf)
+    return m
+}
+func lineFor(_ move: HegotaMove) -> [Double]? {
+    var a = HegotaAccount(address: "0xme")
+    a.reached = true
+    a.balanceWei = weiOf("2000000000000000000")   // 2 ETH now
+    a.moves = [move]
+    return HegotaRoom.valueSeries(a)
+}
+// Self-paid: the 0.1 ETH of gas was this address's, so undoing the move has to
+// put it back — the balance before was 2 + 1 + 0.1.
+let ownGasLine = lineFor(paidMove(fee: "100000000000000000", sponsored: false))
+check(ownGasLine?.count == 2, "a line is one point per move plus today")
+check(abs((ownGasLine?.first ?? 0) - 3.1) < 0.000001,
+      "a self-paid fee is undone with the move — the line starts at 3.1")
+check(abs((ownGasLine?.last ?? 0) - 2.0) < 0.000001, "the line ends at today's balance")
+// **THE DISCRIMINATING CASE.** Sponsored: somebody else's gas never left this
+// balance, so adding it back bends the line — on exactly the transactions this
+// chain exists to show off.
+let sponsoredLine = lineFor(paidMove(fee: "100000000000000000", sponsored: true))
+check(abs((sponsoredLine?.first ?? 0) - 3.0) < 0.000001,
+      "a SPONSORED fee is not added back — the line starts at 3.0, not 3.1")
+// An unread fee is a gap we cannot close, not a zero: the line is simply the
+// move, which is what every move past the receipt window gets.
+let noFee = lineFor(paidMove(fee: nil, sponsored: false))
+check(abs((noFee?.first ?? 0) - 3.0) < 0.000001, "an unread fee changes nothing")
+
+// ───────────── where a keyed nonce's counter lives (§509) ─────────────
+// **PINNED TO A LIVE MEASUREMENT.** The nonce manager cannot be called at all
+// (its runtime is PUSH0 PUSH0 REVERT), so this slot was derived by reading the
+// chain: the one address here that sends on named keys reads a non-zero counter
+// at keccak256(pad32(addr) ‖ pad32(key)) for BOTH its keys, while four rival
+// layouts read zero. The expected digest below is that derivation computed over
+// the real address and key — so a changed padding, a swapped operand order or a
+// different hash all move it.
+let nonceAddr = "0x8943545177806ed17b9f23f0a21ee5948ecaa776"
+let beefSlot = HegotaNonceStorage.slot(address: nonceAddr, key: "0xbeef01")
+check(beefSlot != nil, "the slot derives for a real address and key")
+// **THE DIGEST ITSELF, pinned — and only this catches an operand swap.** The
+// first cut asserted `slot(addr, key) != slot(key, addr)`, which SURVIVED a
+// mutation that reversed the preimage: reversing it swaps BOTH sides, so the
+// inequality holds either way. A fixture only tests the rule it names if it
+// fails that rule and passes every other one, so the expected value is the real
+// keccak over the real address and key — the slot that reads non-zero on chain.
+check(beefSlot == "0xda044a8c3d82789bdc1c91449ad8e65d908ba47b4ce2370774f2d7eb18c55aa7",
+      "the slot is keccak256(pad32(address) ‖ pad32(key)) — the live-measured digest")
+check(HegotaNonceStorage.slot(address: nonceAddr, key: "0x1234")
+        == "0x1e300cfea071585e2819c8e9355ad35d312a0dfd1bb2cc4b924f7733aa9b4468",
+      "the second live key's slot matches too — one digest could be a coincidence")
+// Both keys of the same address must differ, or every key would share a counter.
+check(beefSlot != HegotaNonceStorage.slot(address: nonceAddr, key: "0x1234"),
+      "two keys on one address occupy different slots")
+check(HegotaNonceStorage.slot(address: nonceAddr, key: "0xbeef01") == beefSlot,
+      "the derivation is deterministic")
+// The 0x prefix is not part of the preimage — a slot that changed with it would
+// depend on how the caller happened to spell the key.
+check(HegotaNonceStorage.slot(address: nonceAddr, key: "beef01") == beefSlot,
+      "the 0x prefix is not part of the preimage")
+check(beefSlot?.count == 66, "a slot is an 0x-prefixed 32-byte word")
+// REFUSES rather than guesses: a wrong slot reads a legitimate ZERO, which
+// would say "never sent on this key" about a key the room lists BECAUSE it was.
+check(HegotaNonceStorage.slot(address: "0xnothex", key: "0x1") == nil,
+      "a non-hex address yields no slot rather than a guessed one")
+check(HegotaNonceStorage.slot(address: nonceAddr, key: "") == nil,
+      "an empty key yields no slot")
+check(HegotaNonceStorage.slot(address: nonceAddr,
+                              key: String(repeating: "f", count: 65)) == nil,
+      "a key too wide for a word is refused")
+
+// ───────────── a lane says the chain's count, or admits it cannot ─────────────
+func lane(_ sends: Int, counter: UInt64?) -> HegotaNonceLane {
+    var l = HegotaNonceLane(key: "0xbeef01", seq: "0x0", lastBlock: 1, sends: sends)
+    l.counter = counter
+    return l
+}
+check(lane(1, counter: 3).sendCount == 3, "the chain's counter is what the lane states")
+check(lane(1, counter: 3).countIsExact, "a read counter is marked exact")
+check(lane(1, counter: nil).sendCount == 1, "without it the lane falls back to what it saw")
+check(!lane(1, counter: nil).countIsExact,
+      "a derived count is NOT narrated as the chain's own")
+// The observed moves are a FLOOR: every value-moving send also advanced the
+// counter, so a counter below them describes a different address than the logs
+// do, and reporting fewer sends than the list beneath enumerates is worse than
+// not knowing.
+check(lane(4, counter: 2).sendCount == 4, "a counter below the observed keeps the floor")
+check(lane(1, counter: 3).valuelessSends == 2,
+      "the gap is the sends that moved no value")
+check(lane(3, counter: 3).valuelessSends == nil, "no gap says nothing")
+check(lane(1, counter: nil).valuelessSends == nil, "an unread counter claims no gap")
+
 // ───────────────── the predeploys are named ─────────────────
 check(HegotaParty.of(HegotaChain.vault, watched: []) == .vault, "the vault is named")
 check(HegotaParty.of(HegotaChain.nonceManager, watched: []) == .nonceManager,
@@ -668,13 +775,14 @@ print("  ok   \(HegotaSection.allCases.count) scopes, words, the spent bitmap, c
 SWIFT
 
 build() {
-  swiftc -O -o "$work/run" "$1" "$2" "$3" "$4" "$work/main.swift" 2>"$work/err" || return 1
+  swiftc -O -o "$work/run" "$1" "$2" "$3" "$4" "$work/Keccak256.swift" "$work/main.swift" 2>"$work/err" || return 1
 }
 
 cp "$SECTION" "$work/HegotaSection.swift"
 cp "$COINS" "$work/HegotaCoins.swift"
 cp "$ACCOUNT" "$work/HegotaAccount.swift"
 cp "$ROOM" "$work/HegotaRoom.swift"
+cp "$KECCAK" "$work/Keccak256.swift"
 build "$work/HegotaSection.swift" "$work/HegotaCoins.swift" "$work/HegotaAccount.swift" "$work/HegotaRoom.swift" \
   || { cat "$work/err"; fail "the shipped source does not compile"; }
 "$work/run" || fail "assertions failed against the shipped source"
@@ -688,6 +796,7 @@ mutate() {
   cp "$COINS" "$work/HegotaCoins.swift"
   cp "$ACCOUNT" "$work/HegotaAccount.swift"
   cp "$ROOM" "$work/HegotaRoom.swift"
+  cp "$KECCAK" "$work/Keccak256.swift"
   perl -0pi -e "$expr" "$work/$file"
   local src="Casberi/Casberi/Model/$file"
   cmp -s "$src" "$work/$file" && fail "mutation matched nothing: $why"
@@ -796,6 +905,34 @@ mutate "an unreadable genesis reads as the same chain — not knowing becomes kn
   HegotaCoins.swift 's/else \{ return \.unknown \}\n        return seen == known/else { return .same }\n        return seen == known/'
 mutate "a host serving a different chain is reported as a relaunch" \
   HegotaCoins.swift 's/if let chainID, chainID != HegotaChain\.chainID \{ return \.differentChain \}//'
+
+# ── §509: the pinned block, the nonce slot, the lane's counter ───────────────
+# Each renders as an ordinary room. A swapped slot preimage reads a legitimate
+# ZERO and the lane quietly falls back to its observed floor; a lane that
+# believes a counter below what it can already name reports fewer sends than the
+# list beneath it enumerates; and a fee added back on a SPONSORED move bends the
+# balance line on exactly the transactions this chain exists to show off.
+
+mutate "the nonce slot hashes key-then-address (a legitimate-looking zero, and the lane silently falls back)" \
+  HegotaCoins.swift 's/return "0x" \+ Keccak256\.hexString\(Keccak256\.hash\(a \+ k\)\)/return "0x" + Keccak256.hexString(Keccak256.hash(k + a))/'
+mutate "the nonce slot stops padding, so two differently-spelled keys collide" \
+  HegotaCoins.swift 's/let padded = String\(repeating: "0", count: 64 - body\.count\) \+ body/let padded = body.count % 2 == 0 ? String(body) : "0" + body/'
+# BOTH guards, in one mutation, and that is the honest shape here: the
+# `allSatisfy(\.isHexDigit)` early-out and the byte loop's `guard let` refuse the
+# same input, so breaking EITHER alone leaves the other standing and the
+# mutation survives — which is a fact about redundant defence, not a gap. What
+# is load-bearing is the RULE ("a non-hex input yields no slot"), so the
+# mutation removes both and proves the pair enforces it.
+mutate "a non-hex address yields a guessed slot instead of nothing (both guards gone)" \
+  HegotaCoins.swift 's/guard !body\.isEmpty, body\.count <= 64, body\.allSatisfy\(\\.isHexDigit\) else \{ return nil \}/guard !body.isEmpty, body.count <= 64 else { return nil }/; s/guard let b = UInt8\(padded\[i\.\.<j\], radix: 16\) else \{ return nil \}/let b = UInt8(padded[i..<j], radix: 16) ?? 0/'
+mutate "a lane believes a counter BELOW the moves it can already name" \
+  HegotaAccount.swift 's/var sendCount: Int \{ counter\.map \{ max\(Int\(\$0\), sends\) \} \?\? sends \}/var sendCount: Int { counter.map { Int($0) } ?? sends }/'
+mutate "a derived send count is narrated as the chain's own" \
+  HegotaAccount.swift 's/var countIsExact: Bool \{ counter != nil \}/var countIsExact: Bool { true }/'
+mutate "the balance line adds back gas somebody ELSE paid (a sponsored move bends the wrong way)" \
+  HegotaRoom.swift 's/if !move\.incoming, !move\.isSponsored, let fee = move\.feeWei \{/if !move.incoming, let fee = move.feeWei {/'
+mutate "the balance line stops undoing the fee at all (it drifts by the gas this address spent)" \
+  HegotaRoom.swift 's/if !move\.incoming, !move\.isSponsored, let fee = move\.feeWei \{\n                running \+= fee\n            \}//'
 
 # ── drift guards ─────────────────────────────────────────────────────────────
 # Read from a COMMENT-STRIPPED copy: both files DOCUMENT their rules by naming
