@@ -359,3 +359,47 @@ enum AddressBookShape {
         return formatter.string(from: date)
     }
 }
+
+/// THE DECK A PASTED LIST MAKES (2026-08-27, prd §502) — the words and the fan.
+///
+/// Foundation-only and separate from `AddressBookShape` for the same reason
+/// that file gives about itself: it decides ORDER, SECTIONS and WORDS about a
+/// book, and this decides how a paste is PREVIEWED, which is not a property of
+/// the book at all. Both compile whole in `address-book-selftest.sh`.
+enum AddressDeck {
+    /// How many faces are drawn. A fan of forty is a smear, and the deck's job
+    /// is to say "a list, understood", which five says as well as forty does.
+    static let shown = 5
+
+    /// The fan, from a FIXED table rather than arithmetic on the index.
+    ///
+    /// The same instinct `WalletFace`'s twelve grounds are built on: a computed
+    /// angle can land two neighbours a hair apart (which reads as a rendering
+    /// fault rather than as a fan) or swing far enough to clip the face above.
+    /// Five stated angles cannot do either. Small on purpose — a deck of cards
+    /// thrown down, not a hand held up.
+    private static let tilts: [Double] = [-6, 3, -2, 5, -4]
+
+    static func tilt(_ index: Int) -> Double {
+        guard !tilts.isEmpty else { return 0 }
+        // Cycles rather than clamping, so a deck drawn beyond `shown` by some
+        // future caller keeps fanning instead of stacking flat.
+        return tilts[((index % tilts.count) + tilts.count) % tilts.count]
+    }
+
+    /// What the deck says beside itself.
+    ///
+    /// **"read", never "named" or "landed".** Nothing has been written when
+    /// this is on screen — the paste is still in the field, and the verb that
+    /// writes is `Add all`. The whisper underneath says "12 named." AFTER the
+    /// write, and the two words being different is the whole point: one is a
+    /// reading of what you pasted, the other is a report of what happened.
+    ///
+    /// **The total, not the drawn count.** Five faces beside "12 addresses
+    /// read" accounts for the seven not drawn; five beside "5" would be a
+    /// silent truncation wearing a number, which is the one thing a folded tail
+    /// may never be.
+    static func line(count: Int) -> String {
+        String(localized: "\(count) addresses read")
+    }
+}

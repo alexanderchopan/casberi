@@ -1,0 +1,92 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    body { margin: 0; }
+    .ab { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    a { color: #1673e6; } a:hover { color: #4a94ef; }
+
+    .s-bubble { animation: sbub 6s cubic-bezier(.4,.1,.2,1) infinite; }
+    @keyframes sbub { 0%,10% { top: 0; opacity: 0 } 14% { opacity: 1 } 46% { top: 122px; opacity: 1 } 56% { top: 122px; opacity: 0 } 100% { top: 122px; opacity: 0 } }
+    .s-strip span { animation: sdim 6s steps(1,end) infinite; }
+    .s-strip span:nth-child(10) { animation-name: slit; }
+    @keyframes sdim { 0%,100% { color: rgba(235,235,245,0.49) } }
+    @keyframes slit { 0%,40% { color: rgba(235,235,245,0.49) } 42%,56% { color: #1673e6 } 58%,100% { color: rgba(235,235,245,0.49) } }
+
+    .s-list { animation: sscroll 6s cubic-bezier(.4,.1,.2,1) infinite; }
+    @keyframes sscroll { 0%,14% { transform: translateY(0) } 46%,100% { transform: translateY(-296px) } }
+
+    .s-letter { animation: sland 6s ease infinite; }
+    @keyframes sland {
+      0%,46%  { color: rgba(235,235,245,0.49); transform: translateX(0) }
+      50%     { color: #1673e6; transform: translateX(3px) }
+      62%,100%{ color: rgba(235,235,245,0.49); transform: translateX(0) }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .s-bubble, .s-strip span, .s-list, .s-letter { animation: none }
+      .s-bubble { opacity: 0 }
+      .s-list { transform: translateY(-296px) }
+      .s-letter { color: rgba(235,235,245,0.49) }
+    }
+  </style>
+</helmet>
+
+<div class="ab" style="width: 430px; height: 1000px; background: #131315; box-sizing: border-box">
+  <div style="padding: 24px 24px 0 24px">
+    <div style="font-size: 20px; font-weight: 700; color: #ffffff">4 · The scrub lands somewhere</div>
+    <div style="font-size: 14px; line-height: 20px; color: rgba(235,235,245,0.60); margin-top: 4px; max-width: 380px">
+      The bubble tracks the finger and the list jumps, and then nothing at the destination says you arrived. The letter you land on answers once — to the tint and back — so the control and its effect are visibly the same event.
+    </div>
+  </div>
+
+  <div style="margin: 22px 20px 0 20px; width: 390px; height: 844px; background: #000000; border-radius: 40px; overflow: hidden; position: relative">
+    <div style="padding: 62px 20px 0 20px">
+      <div style="font-size: 34px; line-height: 41px; font-weight: 700; color: #ffffff; font-family: ui-rounded, -apple-system, system-ui, sans-serif">Address Book</div>
+    </div>
+
+    <div style="margin: 20px 20px 0 20px; height: 620px; overflow: hidden; position: relative">
+      <div class="s-list">
+        <div style="background: #111113; border-radius: 10px; overflow: hidden">
+          <div style="padding: 8px 14px 4px 14px; font-size: 12px; font-weight: 600; color: rgba(235,235,245,0.49)">A</div>
+          <div style="display:flex;align-items:center;gap:14px;padding:10px 14px"><span style="width:36px;height:36px;border-radius:50%;background:#2C3348;flex:none"></span><div><div style="font-size:18px;font-weight:600;color:#fff;line-height:24px">Alex</div><div style="font-size:14px;color:rgba(235,235,245,0.49);line-height:21px">0x4f2a…22ce · 9 together</div></div></div>
+          <div style="display:flex;align-items:center;gap:14px;padding:10px 14px"><span style="width:36px;height:36px;border-radius:50%;background:#3A3340;flex:none"></span><div><div style="font-size:18px;font-weight:600;color:#fff;line-height:24px">Amara Diallo</div><div style="font-size:14px;color:rgba(235,235,245,0.49);line-height:21px">Contacts</div></div></div>
+          <div style="padding: 12px 14px 4px 14px; font-size: 12px; font-weight: 600; color: rgba(235,235,245,0.49)">C</div>
+          <div style="display:flex;align-items:center;gap:14px;padding:10px 14px"><span style="width:36px;height:36px;border-radius:50%;background:#243A34;flex:none"></span><div><div style="font-size:18px;font-weight:600;color:#fff;line-height:24px">Cold storage</div><div style="font-size:14px;color:rgba(235,235,245,0.49);line-height:21px">0x0f31…9a10</div></div></div>
+          <div style="padding: 12px 14px 4px 14px; font-size: 12px; font-weight: 600; color: rgba(235,235,245,0.49)">M</div>
+          <div style="display:flex;align-items:center;gap:14px;padding:10px 14px"><span style="width:36px;height:36px;border-radius:50%;background:#3E3630;flex:none"></span><div><div style="font-size:18px;font-weight:600;color:#fff;line-height:24px">Mom</div><div style="font-size:14px;color:rgba(235,235,245,0.49);line-height:21px">0x91bd…7f03 · 12 together</div></div></div>
+          <div style="display:flex;align-items:center;gap:14px;padding:10px 14px"><span style="width:36px;height:36px;border-radius:50%;background:#3D2F35;flex:none"></span><div><div style="font-size:18px;font-weight:600;color:#fff;line-height:24px">Maya Okafor</div><div style="font-size:14px;color:rgba(235,235,245,0.49);line-height:21px">Contacts</div></div></div>
+          <div class="s-letter" style="padding: 12px 14px 4px 14px; font-size: 12px; font-weight: 600">S</div>
+          <div style="display:flex;align-items:center;gap:14px;padding:10px 14px"><span style="width:36px;height:36px;border-radius:9px;background:rgba(255,255,255,0.04);flex:none"></span><div><div style="font-size:18px;font-weight:600;color:#fff;line-height:24px">Studio Safe</div><div style="font-size:14px;color:rgba(235,235,245,0.49);line-height:21px">0x7a25…488D · Safe</div></div></div>
+          <div style="display:flex;align-items:center;gap:14px;padding:10px 14px"><span style="width:36px;height:36px;border-radius:50%;background:#2E3A46;flex:none"></span><div><div style="font-size:18px;font-weight:600;color:#fff;line-height:24px">Sena Adeyemi</div><div style="font-size:14px;color:rgba(235,235,245,0.49);line-height:21px">Contacts</div></div></div>
+          <div style="display:flex;align-items:center;gap:14px;padding:10px 14px 14px 14px"><span style="width:36px;height:36px;border-radius:50%;background:#2F3A2E;flex:none"></span><div><div style="font-size:18px;font-weight:600;color:#fff;line-height:24px">sam.eth</div><div style="font-size:14px;color:rgba(235,235,245,0.49);line-height:21px">0xd10c…4b18 · 3 together</div></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- scrubber -->
+    <div class="s-strip" style="position:absolute;right:6px;top:250px;display:flex;flex-direction:column;align-items:center;width:18px">
+      <span style="font-size:10px;font-weight:600;height:13.5px;color:rgba(235,235,245,0.49)">A</span>
+      <span style="font-size:10px;font-weight:600;height:13.5px;color:rgba(235,235,245,0.49)">B</span>
+      <span style="font-size:10px;font-weight:600;height:13.5px;color:rgba(235,235,245,0.49)">C</span>
+      <span style="font-size:10px;font-weight:600;height:13.5px;color:rgba(235,235,245,0.49)">D</span>
+      <span style="font-size:10px;font-weight:600;height:13.5px;color:rgba(235,235,245,0.49)">F</span>
+      <span style="font-size:10px;font-weight:600;height:13.5px;color:rgba(235,235,245,0.49)">H</span>
+      <span style="font-size:10px;font-weight:600;height:13.5px;color:rgba(235,235,245,0.49)">J</span>
+      <span style="font-size:10px;font-weight:600;height:13.5px;color:rgba(235,235,245,0.49)">L</span>
+      <span style="font-size:10px;font-weight:600;height:13.5px;color:rgba(235,235,245,0.49)">M</span>
+      <span style="font-size:10px;font-weight:600;height:13.5px;color:rgba(235,235,245,0.49)">S</span>
+      <span style="font-size:10px;font-weight:600;height:13.5px;color:rgba(235,235,245,0.49)">V</span>
+      <span style="font-size:10px;font-weight:600;height:13.5px;color:rgba(235,235,245,0.49)">#</span>
+    </div>
+    <div class="s-bubble" style="position:absolute;right:34px;top:250px;background:rgba(28,28,30,0.94);border-radius:999px;padding:6px 14px;font-size:16px;font-weight:600;color:#fff;box-shadow:0 8px 20px rgba(0,0,0,.6)">S</div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

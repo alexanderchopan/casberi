@@ -65,6 +65,7 @@ VIEWS="Casberi/Casberi/Screens/AddressBookViews.swift"
 GROUPS="Casberi/Casberi/Screens/AddressGroupViews.swift"
 BAR="Casberi/Casberi/Screens/AddressIndexBar.swift"
 FLIGHT="Casberi/Casberi/Screens/AddressFlight.swift"
+REVEAL="Casberi/Casberi/Screens/AddressReveal.swift"
 SOURCE="Casberi/Casberi/Model/AddressConnectionsSource.swift"
 # The connections MODEL — where §448 cut `headline`/`subhead` out.
 CONN="Casberi/Casberi/Model/AddressConnections.swift"
@@ -100,6 +101,7 @@ strip_comments "$BOOKSCREEN" > "$TMP/book-bare.swift"
 strip_comments "$GROUPS" > "$TMP/groups-bare.swift"
 strip_comments "$VIEWS"  > "$TMP/views-bare.swift"
 strip_comments "$SHAPE"  > "$TMP/shape-bare.swift"
+strip_comments "$REVEAL" > "$TMP/reveal-bare.swift"
 
 # --- drift guards -----------------------------------------------------------
 # Wiring the compiled file cannot prove about itself. A perfect `sections` is
@@ -411,6 +413,78 @@ grep -q 'RoomDoor(name: "Wallet", source: "Wallet")' "$SCREEN" \
 grep -q 'walletLinks' "$SOURCE" \
   || { echo "✗ AddressConnections lost the direct wallet-to-wallet links (§439) — the model half must survive the drawing"; exit 1; }
 
+# --- §502: the five delight moments ------------------------------------------
+# Each of these is motion or a fact that renders as NOTHING when its wiring is
+# cut: the deck simply doesn't draw, the letter simply doesn't answer, the
+# address simply stays folded. A build cannot see any of it, and neither can a
+# screen sweep — every one of them is a frame in the middle of a gesture.
+
+# 1 · THE HERO IS THE FACE THE ROW WAS WEARING. Both ends are RAMP tiers, which
+# is the same rule `AddressFlightOverlay` states about a travelling face: the
+# sizes a growing face passes through have to be sizes the face has really
+# been, and `face-ramp-audit` can only see that when they are named.
+grep -q 'addressHeroArrival(size: Self.identityFace)' "$TMP/views-bare.swift" \
+  || { echo "✗ the address card's hero no longer enters at the row's size — the sheet's 96pt face reads as a picture this screen had rather than as the one you tapped (§502)"; exit 1; }
+grep -q 'DS.Face.list / size' "$TMP/reveal-bare.swift" \
+  || { echo "✗ the hero's entering size is no longer a ramp tier — a literal there is a size the face has never been drawn at (§502)"; exit 1; }
+grep -q 'guard !reduceMotion else { grown = true; return }' "$TMP/reveal-bare.swift" \
+  || { echo "✗ the hero's growth no longer honours Reduce Motion (§299's law, and design-motion-audit only sees appear-triggered animation it can name)"; exit 1; }
+# THE DOOR THAT STAYS SHUT. prd §232 dropped `.navigationTransition(.zoom)` for
+# SHEETS after a deterministic device crash that never reproduced here, and the
+# obvious way to "improve" this moment is to put it back. Read from a
+# comment-stripped copy, because both files explain the decision by naming the
+# API it governs (the Obsidian/Cursor lesson).
+grep -q 'navigationTransition' "$TMP/views-bare.swift" "$TMP/book-bare.swift" "$TMP/reveal-bare.swift" \
+  && { echo "✗ the address book reached for .navigationTransition(.zoom) again — prd §232 dropped it for sheets after a device-specific crash; restore only on a symbolicated stack proving another cause"; exit 1; }
+
+# 2 · THE PASTE'S DECK. It must read the WRITE's own tokenizer, or the preview
+# and the write are two parsers for one format and the deck shows faces the
+# save will not land.
+grep -q 'func bulkAddresses(_ raw: String) -> \[String\]' "$BOOK" \
+  || { echo "✗ AddressBook no longer enumerates a paste's addresses — the deck would need a parser of its own (§502)"; exit 1; }
+[[ $(grep -c 'Self.tokens(in: line)' "$BOOK") -ge 3 ]] \
+  || { echo "✗ the paste's three readers no longer share one tokenizer — the deck, the bulk test and the write would disagree about what a list is (§502)"; exit 1; }
+grep -q 'book.bulkAddresses(draft)' "$TMP/book-bare.swift" \
+  || { echo "✗ the deck no longer reads the paste through the shared tokenizer (§502)"; exit 1; }
+grep -q 'prefix(AddressDeck.shown)' "$TMP/book-bare.swift" \
+  || { echo "✗ the deck no longer caps its faces — a fan of forty is a smear (§502)"; exit 1; }
+grep -q 'AddressDeck.line(count: addresses.count)' "$TMP/book-bare.swift" \
+  || { echo "✗ the deck's count is no longer AddressDeck's — a hand-rolled string here is how the tail stops being named (§300, §502)"; exit 1; }
+
+# 3 · THE FILTER NARROWS RATHER THAN REPLACING, and only when it is a FILTER:
+# while searching the same rows are rewritten on every keystroke, and a lateral
+# slide per character is motion spent on something that is not a decision.
+grep -q '.transition(draft.isEmpty' "$TMP/book-bare.swift" \
+  || { echo "✗ the book's rows no longer distinguish a filter change from a keystroke — every search character would slide the whole list sideways (§502)"; exit 1; }
+grep -q '.opacity.combined(with: .move(edge: .leading))' "$TMP/book-bare.swift" \
+  || { echo "✗ a filtered-out row no longer leaves toward the leading edge — the chip reads as handing you a different book rather than narrowing this one (§502)"; exit 1; }
+
+# 4 · THE SCRUB LANDS SOMEWHERE. Two halves in two functions: the bar's callback
+# records where you arrived, the heading reads it. Either alone is silent.
+grep -q 'landedLetter = letter' "$TMP/book-bare.swift" \
+  || { echo "✗ the scrubber's pick no longer records where it landed — the destination would say nothing again (§502)"; exit 1; }
+grep -q 'landedLetter == letter ? DS.tint : DS.textSecondary' "$TMP/book-bare.swift" \
+  || { echo "✗ the letter you land on no longer answers the scrub (§502)"; exit 1; }
+
+# 5 · WHAT THE COPY TOOK. ONE copy path on the card, so the tile and the reach
+# row cannot answer differently — which is exactly what had happened: the row's
+# own button said "Copied" in place and the tile said nothing at all.
+grep -q 'private func didCopy(_ value: String)' "$VIEWS" \
+  || { echo "✗ the address card's copies no longer run through one path — the tile and the reach row would answer differently again (§502)"; exit 1; }
+[[ $(grep -c 'DSPasteboard.copy(' "$TMP/views-bare.swift") -eq 1 ]] \
+  || { echo "✗ the address card has a second copy call site — one of them will stop answering (§502)"; exit 1; }
+grep -q 'value: hex && !copyOpen ? current.short : current.address' "$TMP/views-bare.swift" \
+  || { echo "✗ a copied address no longer unfolds from the house short form — the one screen whose subject is an address would never show the middle of it (§502)"; exit 1; }
+grep -q 'addressCopySweep(token: copyToken, hue: pourHue)' "$TMP/views-bare.swift" \
+  || { echo "✗ the copy no longer sweeps what it took, in the hue the face is worked out from (§444, §502)"; exit 1; }
+grep -q 'guard !reduceMotion, token > 0 else { return }' "$TMP/reveal-bare.swift" \
+  || { echo "✗ the copy sweep no longer honours Reduce Motion (§299)"; exit 1; }
+# THE UNFOLD IS INFORMATION, THE SWEEP IS DECORATION, and only one of them may
+# be taken away by Reduce Motion. The card holds no such environment value at
+# all, so the unfold cannot be gated on it by accident.
+[[ $(grep -c 'reduceMotion' "$TMP/views-bare.swift") -eq 0 ]] \
+  || { echo "✗ the address card reads Reduce Motion — the address's unfold is a FACT and must not be one of the things that setting removes (§502)"; exit 1; }
+
 cat > "$TMP/main.swift" <<'SWIFT'
 import Foundation
 
@@ -647,6 +721,35 @@ check("a selection whose population vanished falls back to all",
 check("all always settles as itself",
       AddressBookShape.settledFilter(.all, kinds: []) == .all)
 
+// THE PASTE'S DECK (prd §502). Every failure here draws a perfectly ordinary
+// row of faces: a fan that stacks flat, a count that reports what is drawn
+// rather than what was read, or a word that claims a write happened while the
+// paste is still sitting in the field.
+print("")
+print("The deck a pasted list makes")
+check("the deck stays a deck", (3...8).contains(AddressDeck.shown))
+check("the fan cycles rather than clamping",
+      AddressDeck.tilt(0) == AddressDeck.tilt(5)
+        && AddressDeck.tilt(1) == AddressDeck.tilt(6))
+check("neighbours never share an angle",
+      (0..<AddressDeck.shown).allSatisfy { AddressDeck.tilt($0) != AddressDeck.tilt($0 + 1) })
+// A fan, not a hand held up: past about eight degrees the top card clips the
+// one behind it at DS.Face.list and the row reads as a rendering fault.
+check("the fan stays subtle",
+      (0..<12).allSatisfy { abs(AddressDeck.tilt($0)) <= 8 })
+check("a negative index cannot trap",
+      (-6...(-1)).allSatisfy { abs(AddressDeck.tilt($0)) <= 8 })
+// The tail is COUNTED, never dropped: five faces beside "5" is a silent
+// truncation wearing a number.
+check("the line reports the total, not the drawn count",
+      AddressDeck.line(count: 12) != AddressDeck.line(count: AddressDeck.shown))
+check("the line names the number it was given",
+      AddressDeck.line(count: 12).contains("12"))
+// "read", never "named": nothing has been written while this is on screen.
+check("the line claims a reading, not a write",
+      AddressDeck.line(count: 12).lowercased().contains("read")
+        && !AddressDeck.line(count: 12).lowercased().contains("named"))
+
 print("")
 if failures > 0 { print("\(failures) failure(s)"); exit(1) }
 print("all assertions pass")
@@ -777,6 +880,27 @@ mutate "a chip is offered over a population that is not there" \
 mutate "a selection outlives the population it filters" \
   'availableFilters(kinds: kinds).contains(selected) ? selected : .all' \
   'selected'
+
+# THE DECK (prd §502) — each renders as a perfectly ordinary row of faces.
+# A fan that clamps: every card past the fifth lies flat on the fifth's angle,
+# so a long paste's deck stops looking like a deck halfway along.
+mutate "the fan clamps instead of cycling" \
+  'return tilts[((index % tilts.count) + tilts.count) % tilts.count]' \
+  'return tilts[min(index, tilts.count - 1)]'
+# The silent truncation: five faces beside "5 addresses read" on a paste of
+# forty, which is indistinguishable from a paste of five that worked.
+mutate "the count reports what is drawn rather than what was read" \
+  'String(localized: "\(count) addresses read")' \
+  'String(localized: "\(min(count, shown)) addresses read")'
+# The word that claims the write already happened, while the paste is still
+# sitting in the field and `Add all` has not been pressed.
+mutate "the deck claims a write it has not made" \
+  'String(localized: "\(count) addresses read")' \
+  'String(localized: "\(count) addresses named")'
+# A fan wide enough that the top card clips the one behind it.
+mutate "the fan swings wide enough to clip" \
+  'private static let tilts: [Double] = [-6, 3, -2, 5, -4]' \
+  'private static let tilts: [Double] = [-26, 13, -2, 25, -14]'
 
 echo ""
 echo "address-book-selftest: OK — assertions pass and every mutation is caught."

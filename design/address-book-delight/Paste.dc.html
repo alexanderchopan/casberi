@@ -1,0 +1,103 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    body { margin: 0; }
+    .ab { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    a { color: #1673e6; } a:hover { color: #4a94ef; }
+
+    .p-face { opacity: 0; animation: pdeal 7s cubic-bezier(.3,.8,.25,1) infinite; }
+    @keyframes pdeal {
+      0%      { opacity: 0; transform: translate(0,-14px) scale(.5) rotate(0deg) }
+      6%      { opacity: 1; transform: translate(0,0) scale(1) rotate(var(--tilt)) }
+      44%     { opacity: 1; transform: translate(0,0) scale(1) rotate(var(--tilt)) }
+      62%     { opacity: 1; transform: translate(var(--dx), var(--dy)) scale(1) rotate(0deg) }
+      66%,100%{ opacity: 0; transform: translate(var(--dx), var(--dy)) scale(1) rotate(0deg) }
+    }
+    .p-row { opacity: 0; animation: prow 7s ease infinite; }
+    @keyframes prow { 0%,60% { opacity: 0 } 68%,100% { opacity: 1 } }
+    .p-whisper { opacity: 0; animation: pwhis 7s ease infinite; }
+    @keyframes pwhis { 0%,64% { opacity: 0; transform: translateY(4px) } 72%,100% { opacity: 1; transform: none } }
+    .p-count { opacity: 0; animation: pcount 7s ease infinite; }
+    @keyframes pcount { 0%,10% { opacity: 0 } 20%,58% { opacity: 1 } 62%,100% { opacity: 0 } }
+
+    @media (prefers-reduced-motion: reduce) {
+      .p-face, .p-count { animation: none; opacity: 0 }
+      .p-row, .p-whisper { animation: none; opacity: 1; transform: none }
+    }
+  </style>
+</helmet>
+
+<div class="ab" style="width: 430px; height: 1000px; background: #131315; box-sizing: border-box">
+  <div style="padding: 24px 24px 0 24px">
+    <div style="font-size: 20px; font-weight: 700; color: #ffffff">2 · A pasted list deals a deck</div>
+    <div style="font-size: 14px; line-height: 20px; color: rgba(235,235,245,0.60); margin-top: 4px; max-width: 380px">
+      Today a paste of forty says "40 named." The faces the parser already built stack in the field as it reads, then deal into the book — five fly, the rest land under the count. Every face is derived from a real parsed address; nothing is invented.
+    </div>
+  </div>
+
+  <div style="margin: 22px 20px 0 20px; width: 390px; height: 844px; background: #000000; border-radius: 40px; overflow: hidden; position: relative">
+    <div style="padding: 62px 20px 0 20px">
+      <div style="font-size: 34px; line-height: 41px; font-weight: 700; color: #ffffff; font-family: ui-rounded, -apple-system, system-ui, sans-serif">Address Book</div>
+    </div>
+
+    <!-- field, holding a paste -->
+    <div style="margin: 20px 20px 0 20px; background: rgba(255,255,255,0.04); border-radius: 12px; padding: 13px 14px; display: flex; align-items: center; justify-content: space-between">
+      <div style="font-size: 16px; color: #ffffff; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; max-width: 240px">0x4f2a…22ce, 0x91bd…7f03, 0x7a25…</div>
+      <div style="font-size: 12px; font-weight: 600; color: #ffffff; background: #1673e6; padding: 7px 14px; border-radius: 999px">Add all</div>
+    </div>
+
+    <!-- the deck forming in the preview slot -->
+    <div style="margin: 12px 20px 0 20px; background: rgba(255,255,255,0.04); border-radius: 10px; padding: 14px; height: 76px; box-sizing: border-box; position: relative">
+      <div style="display: flex; align-items: center; height: 44px">
+        <span class="p-face" style="--tilt:-8deg; --dx:-8px; --dy:392px; animation-delay:0s;   width:36px;height:36px;border-radius:50%;background:#2C3348;box-shadow:0 0 0 2px #0b0b0c, 0 6px 12px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center"><svg width="17" height="17" viewBox="0 0 100 100"><circle cx="50" cy="35" r="19" fill="#A8B4E0"/><path d="M50 60c-19 0-31 11-31 24 0 4 3 6 8 6h46c5 0 8-2 8-6 0-13-12-24-31-24z" fill="#A8B4E0"/></svg></span>
+        <span class="p-face" style="--tilt:4deg;  --dx:-30px; --dy:454px; animation-delay:.28s; margin-left:-12px; width:36px;height:36px;border-radius:50%;background:#3E3630;box-shadow:0 0 0 2px #0b0b0c, 0 6px 12px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center"><svg width="17" height="17" viewBox="0 0 100 100"><circle cx="50" cy="35" r="19" fill="#D8BA96"/><path d="M50 60c-19 0-31 11-31 24 0 4 3 6 8 6h46c5 0 8-2 8-6 0-13-12-24-31-24z" fill="#D8BA96"/></svg></span>
+        <span class="p-face" style="--tilt:-3deg; --dx:-52px; --dy:516px; animation-delay:.52s; margin-left:-12px; width:36px;height:36px;border-radius:50%;background:#243A34;box-shadow:0 0 0 2px #0b0b0c, 0 6px 12px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center"><svg width="17" height="17" viewBox="0 0 100 100"><circle cx="50" cy="35" r="19" fill="#8FC9AE"/><path d="M50 60c-19 0-31 11-31 24 0 4 3 6 8 6h46c5 0 8-2 8-6 0-13-12-24-31-24z" fill="#8FC9AE"/></svg></span>
+        <span class="p-face" style="--tilt:7deg;  --dx:-74px; --dy:578px; animation-delay:.74s; margin-left:-12px; width:36px;height:36px;border-radius:50%;background:#3A3340;box-shadow:0 0 0 2px #0b0b0c, 0 6px 12px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center"><svg width="17" height="17" viewBox="0 0 100 100"><circle cx="50" cy="35" r="19" fill="#C4A9D6"/><path d="M50 60c-19 0-31 11-31 24 0 4 3 6 8 6h46c5 0 8-2 8-6 0-13-12-24-31-24z" fill="#C4A9D6"/></svg></span>
+        <span class="p-face" style="--tilt:-5deg; --dx:-96px; --dy:640px; animation-delay:.94s; margin-left:-12px; width:36px;height:36px;border-radius:50%;background:#3D2F35;box-shadow:0 0 0 2px #0b0b0c, 0 6px 12px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center"><svg width="17" height="17" viewBox="0 0 100 100"><circle cx="50" cy="35" r="19" fill="#D8A2AE"/><path d="M50 60c-19 0-31 11-31 24 0 4 3 6 8 6h46c5 0 8-2 8-6 0-13-12-24-31-24z" fill="#D8A2AE"/></svg></span>
+        <span class="p-count" style="margin-left: 14px; font-size: 14px; color: rgba(235,235,245,0.60)">and 7 more read</span>
+      </div>
+    </div>
+
+    <!-- whisper -->
+    <div class="p-whisper" style="margin: 12px 20px 0 20px; display: flex; align-items: center; gap: 10px">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#30d158" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m8.5 12.5 2.5 2.5 4.5-5"/></svg>
+      <div style="font-size: 14px; color: rgba(235,235,245,0.60); flex: 1 1 auto">12 named.</div>
+      <div style="font-size: 12px; font-weight: 600; color: #1673e6; background: rgba(22,115,230,0.16); padding: 6px 12px; border-radius: 999px">File them together</div>
+    </div>
+
+    <!-- the book taking them -->
+    <div style="margin: 20px 20px 0 20px; background: #111113; border-radius: 10px; overflow: hidden">
+      <div style="padding: 8px 14px 4px 14px; font-size: 12px; font-weight: 600; color: rgba(235,235,245,0.49)">#</div>
+      <div class="p-row" style="animation-delay:0s; display:flex;align-items:center;gap:14px;padding:10px 14px">
+        <span style="width:36px;height:36px;border-radius:50%;background:#2C3348;display:flex;align-items:center;justify-content:center"><svg width="17" height="17" viewBox="0 0 100 100"><circle cx="50" cy="35" r="19" fill="#A8B4E0"/><path d="M50 60c-19 0-31 11-31 24 0 4 3 6 8 6h46c5 0 8-2 8-6 0-13-12-24-31-24z" fill="#A8B4E0"/></svg></span>
+        <div style="flex:1 1 auto"><div style="font-size:18px;font-weight:600;color:#ffffff;line-height:24px">0x4f2a…22ce</div><div style="font-size:14px;color:rgba(235,235,245,0.49);line-height:21px">Wallet</div></div>
+      </div>
+      <div class="p-row" style="animation-delay:.06s; display:flex;align-items:center;gap:14px;padding:10px 14px">
+        <span style="width:36px;height:36px;border-radius:50%;background:#3E3630;display:flex;align-items:center;justify-content:center"><svg width="17" height="17" viewBox="0 0 100 100"><circle cx="50" cy="35" r="19" fill="#D8BA96"/><path d="M50 60c-19 0-31 11-31 24 0 4 3 6 8 6h46c5 0 8-2 8-6 0-13-12-24-31-24z" fill="#D8BA96"/></svg></span>
+        <div style="flex:1 1 auto"><div style="font-size:18px;font-weight:600;color:#ffffff;line-height:24px">0x91bd…7f03</div><div style="font-size:14px;color:rgba(235,235,245,0.49);line-height:21px">Wallet</div></div>
+      </div>
+      <div class="p-row" style="animation-delay:.12s; display:flex;align-items:center;gap:14px;padding:10px 14px">
+        <span style="width:36px;height:36px;border-radius:50%;background:#243A34;display:flex;align-items:center;justify-content:center"><svg width="17" height="17" viewBox="0 0 100 100"><circle cx="50" cy="35" r="19" fill="#8FC9AE"/><path d="M50 60c-19 0-31 11-31 24 0 4 3 6 8 6h46c5 0 8-2 8-6 0-13-12-24-31-24z" fill="#8FC9AE"/></svg></span>
+        <div style="flex:1 1 auto"><div style="font-size:18px;font-weight:600;color:#ffffff;line-height:24px">0x7a25…488D</div><div style="font-size:14px;color:rgba(235,235,245,0.49);line-height:21px">Wallet</div></div>
+      </div>
+      <div class="p-row" style="animation-delay:.18s; display:flex;align-items:center;gap:14px;padding:10px 14px">
+        <span style="width:36px;height:36px;border-radius:50%;background:#3A3340;display:flex;align-items:center;justify-content:center"><svg width="17" height="17" viewBox="0 0 100 100"><circle cx="50" cy="35" r="19" fill="#C4A9D6"/><path d="M50 60c-19 0-31 11-31 24 0 4 3 6 8 6h46c5 0 8-2 8-6 0-13-12-24-31-24z" fill="#C4A9D6"/></svg></span>
+        <div style="flex:1 1 auto"><div style="font-size:18px;font-weight:600;color:#ffffff;line-height:24px">0x0f31…9a10</div><div style="font-size:14px;color:rgba(235,235,245,0.49);line-height:21px">Wallet</div></div>
+      </div>
+      <div class="p-row" style="animation-delay:.24s; display:flex;align-items:center;gap:14px;padding:10px 14px 14px 14px">
+        <span style="width:36px;height:36px;border-radius:50%;background:#3D2F35;display:flex;align-items:center;justify-content:center"><svg width="17" height="17" viewBox="0 0 100 100"><circle cx="50" cy="35" r="19" fill="#D8A2AE"/><path d="M50 60c-19 0-31 11-31 24 0 4 3 6 8 6h46c5 0 8-2 8-6 0-13-12-24-31-24z" fill="#D8A2AE"/></svg></span>
+        <div style="flex:1 1 auto"><div style="font-size:18px;font-weight:600;color:#ffffff;line-height:24px">0xc4b8…1d77</div><div style="font-size:14px;color:rgba(235,235,245,0.49);line-height:21px">Wallet</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

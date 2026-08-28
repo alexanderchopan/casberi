@@ -871,6 +871,20 @@ struct AddressCard: View {
     /// zero it hasn't earned.
     @State private var exposure: WalletApprovalExposure?
 
+    /// A COPY JUST HAPPENED (2026-08-27, prd §502). Two pieces of state
+    /// because they answer two different questions and one of them is a fact:
+    /// `copyToken` runs the sweep (decoration, dropped under Reduce Motion),
+    /// `copyOpen` unfolds the house short form into the whole address for a
+    /// beat (information, which Reduce Motion must not take away).
+    ///
+    /// The unfold exists because the row draws `current.short` and copies
+    /// `current.address` — deliberately, and its own comment says so — which
+    /// leaves the one screen whose subject is an address never showing the
+    /// middle of it. Copying is the moment that gap matters most, since the
+    /// next thing that string touches is somewhere that moves money.
+    @State private var copyToken = 0
+    @State private var copyOpen = false
+
     init(entry: AddressBook.Entry) { self.entry = entry }
 
     /// Live, so a rename or a kind landing repaints the card.
@@ -1057,6 +1071,11 @@ struct AddressCard: View {
             // first thing, not a thumbnail above a table.
             AddressMark(entry: current, size: Self.identityFace)
                 .addressFaceReveal(hue: pourHue, isFace: current.kind.glyph == nil)
+                // …entering at the size the row was drawing it (prd §502).
+                // OUTSIDE the reveal deliberately, so the ring grows with the
+                // face rather than being drawn at its final radius around a
+                // face that is still arriving.
+                .addressHeroArrival(size: Self.identityFace)
                 .shadow(color: .black.opacity(0.55), radius: 16, y: 8)
             nameField
                 .padding(.top, DS.Space.s3)
@@ -1347,8 +1366,7 @@ struct AddressCard: View {
             VStack(spacing: 0) {
                 ForEach(lines, id: \.value) { line in
                     Button {
-                        DSPasteboard.copy(line.clipboard)
-                        DSHaptic.success()
+                        didCopy(line.clipboard)
                     } label: {
                         HStack(spacing: DS.Space.s3) {
                             Image(systemName: line.glyph)
@@ -1370,6 +1388,10 @@ struct AddressCard: View {
                                     .textSelection(.enabled)
                                     .lineLimit(2)
                                     .truncationMode(.middle)
+                                    // The light runs through the characters
+                                    // that were copied, in the hue the face is
+                                    // worked out from (prd §502).
+                                    .addressCopySweep(token: copyToken, hue: pourHue)
                             }
                             Spacer(minLength: DS.Space.s2)
                             Image(systemName: "doc.on.doc")
@@ -1390,6 +1412,8 @@ struct AddressCard: View {
                         in: RoundedRectangle(cornerRadius: DS.Radius.sheet, style: .continuous))
             .padding(.horizontal, DS.Space.s4)
             .padding(.bottom, DS.Space.s6)
+            // The unfold and the fold back, on the app's own spring.
+            .animation(DS.Motion.standard, value: copyOpen)
         }
     }
 
@@ -1425,8 +1449,12 @@ struct AddressCard: View {
         // it was made: a handle or a pubkey, which has no house short form and
         // is read character by character, is still carried whole.
         let hex = ENS.isHexAddress(current.address)
+        // …EXCEPT for the beat after a copy (prd §502): the short form
+        // unfolds into the whole address, which is what the clipboard just
+        // took. It folds back on its own — this is an answer to a verb, not a
+        // second way to read the card.
         return [ReachLine(label: AddressBookPeople.addressLabel(for: current),
-                          value: hex ? current.short : current.address,
+                          value: hex && !copyOpen ? current.short : current.address,
                           copyValue: current.address,
                           glyph: "cube", monospaced: true)]
     }
@@ -1472,8 +1500,7 @@ struct AddressCard: View {
         HStack(spacing: DS.Space.s2) {
             if let copyValue {
                 actionTile("doc.on.doc", String(localized: "Copy")) {
-                    DSPasteboard.copy(copyValue)
-                    DSHaptic.success()
+                    didCopy(copyValue)
                 }
             }
             if isInBook {
@@ -1497,6 +1524,30 @@ struct AddressCard: View {
         }
         .padding(.horizontal, DS.Space.s4)
         .padding(.bottom, DS.Space.s6)
+    }
+
+    /// EVERY copy on this card runs through here (prd §502) — the tile's and
+    /// the reach row's — so the two most-used verbs on the screen cannot come
+    /// to answer differently, which is exactly what had happened: the row's
+    /// own `CopyAddressButton` says "Copied" in place and the tile said
+    /// nothing at all.
+    private func didCopy(_ value: String) {
+        DSPasteboard.copy(value)
+        DSHaptic.success()
+        copyToken &+= 1
+        // The unfold is offered only where something is actually folded. A
+        // handle, an email or a pubkey is drawn whole already (`reachLines`
+        // elides the HEX short form and nothing else), so opening one would be
+        // an animation that changes no character on screen.
+        guard value == current.address, ENS.isHexAddress(current.address) else { return }
+        let token = copyToken
+        withAnimation(DS.Motion.standard) { copyOpen = true }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.4) {
+            // A second copy inside the window owns the fold — otherwise the
+            // first one's timer closes the second one's answer early.
+            guard copyToken == token else { return }
+            withAnimation(DS.Motion.standard) { copyOpen = false }
+        }
     }
 
     private func actionTile(_ glyph: String, _ title: String,
@@ -2107,7 +2158,7 @@ struct AddressCard: View {
         let live = things.filter(\.isLive)
         let names = walletNames()
         let subject = AddressBook.key(for: current.address)
-        let hidden = BalancePrivacy.shared.hidden
+        let hidden = BalancePrivacy.shared.withheld
         let transfers = live.enumerated().map { index, thing -> AddressSpine.Transfer in
             let parts = AddressHistoryRow.parts(direction: thing.transferDirection,
                                                 amount: thing.transferAmount,

@@ -83,6 +83,10 @@ struct AddressBookScreen: View {
     @State private var savedAddress: String?
     /// The row the save should reveal: scrolled to, then lifted once.
     @State private var pendingReveal: String?
+    /// THE LETTER THE SCRUB LANDED ON (2026-08-27, prd §502). Held for one beat
+    /// after a pick so the heading can answer, then dropped. Nil is the resting
+    /// state and the common one — this is not a selection, it is a reply.
+    @State private var landedLetter: String?
     /// `connectPromote`'s pair — the grammar the star's retirement orphaned
     /// (§461); the row it lifts now is the one you just saved.
     @State private var promotedEntryID: String?
@@ -155,6 +159,22 @@ struct AddressBookScreen: View {
                     AddressIndexBar(letters: AddressBookShape.index(of: sections)) { letter in
                         withAnimation(DS.Motion.standard) {
                             proxy.scrollTo("letter:" + letter, anchor: .top)
+                        }
+                        // THE LANDING ANSWERS (prd §502). The bubble tracks the
+                        // finger and the list jumps, and until now the place you
+                        // arrived said nothing — so a scrub that moved the list
+                        // and a scrub that moved it somewhere else looked the
+                        // same. The heading you land on replies once.
+                        //
+                        // Set unanimated and cleared WITH animation: the arrival
+                        // should be there the instant the scroll lands (a lit
+                        // letter fading in after the list has settled is a
+                        // second event), and the fade back is the part that
+                        // wants to be gentle.
+                        landedLetter = letter
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.55) {
+                            guard landedLetter == letter else { return }
+                            withAnimation(DS.Motion.standard) { landedLetter = nil }
                         }
                     }
                 }
@@ -273,6 +293,9 @@ struct AddressBookScreen: View {
                 // spring plays when the face arrives, not on every keystroke.
                 addressPreview(isBulk: isBulk)
                     .animation(DS.Motion.standard, value: previewAddress)
+                // A PASTED LIST FORMS A DECK (prd §502) — the same proof the
+                // single preview gives, for the paste that most needs it.
+                bulkDeck(isBulk: isBulk)
                 saveWhisperLine
                 // The richer way in (prd §462): a wallet app shares its
                 // accounts and §376's picker goes and finds the Safes they
@@ -436,6 +459,61 @@ struct AddressBookScreen: View {
         query = ""
         fieldFocused = false
         refreshReadings()
+    }
+
+    /// THE DECK A PASTED LIST MAKES (2026-08-27, prd §502).
+    ///
+    /// A single paste has shown its face since §462 — "the proof the app
+    /// understood the paste" — and a paste of forty showed a sentence. So the
+    /// one place the free tier does its most impressive work was also the one
+    /// place it said the least about what it had read.
+    ///
+    /// **It is a READING, not a landing.** Nothing is written and nothing is
+    /// resolved: `bulkAddresses` shares `addBulk`'s tokenizer, so the deck holds
+    /// exactly the addresses the write will land, in the order it will land
+    /// them — but a `.eth` in the list is carried as typed, so a face here is a
+    /// face of the TEXT. The count says "read" for that reason, and the whisper
+    /// under it still says "named" once the write has happened.
+    ///
+    /// **Five faces, then a count.** A fan of forty is a smear, and the deck's
+    /// job is to say "a list, understood", which five says as well as forty.
+    /// The tail is COUNTED rather than dropped (§300's rule for a folded tail).
+    ///
+    /// The removal transition is the deal: `addAll` clears the field, so the
+    /// deck leaves downward toward the rows arriving under it. That is one
+    /// transition rather than a second animation to keep in step with the
+    /// list's own.
+    @ViewBuilder
+    private func bulkDeck(isBulk: Bool) -> some View {
+        let addresses = isBulk && !draftIsUnsafe ? book.bulkAddresses(draft) : []
+        if addresses.count >= 2 {
+            HStack(spacing: DS.Space.s3) {
+                HStack(spacing: -12) {
+                    ForEach(Array(addresses.prefix(AddressDeck.shown).enumerated()),
+                            id: \.offset) { index, address in
+                        WalletFace(address: address, size: DS.Face.list, circular: true)
+                            // Each face punches the page out from under the one
+                            // behind it — the group deck's own separation, since
+                            // nothing in this app draws a line.
+                            .overlay(Circle().strokeBorder(DS.page, lineWidth: 2))
+                            .rotationEffect(.degrees(AddressDeck.tilt(index)))
+                            .staggerIn(index: index, step: 0.05)
+                    }
+                }
+                Text(AddressDeck.line(count: addresses.count))
+                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                    .monospacedDigit()
+                Spacer(minLength: 0)
+            }
+            .padding(.vertical, DS.Space.s2)
+            .padding(.horizontal, DS.Space.s3)
+            .background(DS.fillFaint,
+                        in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+            .transition(.asymmetric(
+                insertion: .opacity.combined(with: .scale(scale: 0.97, anchor: .top)),
+                removal: .opacity.combined(with: .move(edge: .bottom))))
+            .animation(DS.Motion.standard, value: addresses.count)
+        }
     }
 
     /// The one line under the preview's name — what the book already knows.
@@ -872,9 +950,13 @@ struct AddressBookScreen: View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             if isFirst { bookListHeader(count: count, searching: searching) }
             if let letter = section.letter {
+                // The reply is the TINT and a hair of travel toward the strip
+                // that sent you here — never a size change, which would move
+                // the rows under it on a list that has just finished moving.
                 Text(letter)
                     .dsText(.label12).fontWeight(.semibold)
-                    .foregroundStyle(DS.textSecondary)
+                    .foregroundStyle(landedLetter == letter ? DS.tint : DS.textSecondary)
+                    .offset(x: landedLetter == letter ? 3 : 0)
             }
         }
         .id("letter:" + (section.letter ?? "\u{0}all"))
@@ -1017,6 +1099,19 @@ struct AddressBookScreen: View {
         }
         .connectPromote(isTarget: entry.id == promotedEntryID, token: promoteToken)
         .settleIn(delay: Double(min(row, 8)) * 0.02)
+        // THE FILTER NARROWS, IT DOES NOT REPLACE (2026-08-27, prd §502). The
+        // strip is the one control that reshapes the whole list, and a chip
+        // tap swapped one set of rows for another — which reads as being handed
+        // a different book rather than as this one being narrowed. Rows leave
+        // toward the leading edge and come back from it, so the population that
+        // went is visibly the population that returns.
+        //
+        // Plain opacity while SEARCHING, deliberately: a search rewrites the
+        // list on every keystroke, and a lateral slide per character is the
+        // same motion spent on something that is not a decision.
+        .transition(draft.isEmpty
+                    ? .opacity.combined(with: .move(edge: .leading))
+                    : .opacity)
         .listRowBackground(Color.clear)
         .listRowInsets(EdgeInsets(top: 0, leading: DS.Space.s4,
                                   bottom: 0, trailing: DS.Space.s4))

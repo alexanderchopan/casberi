@@ -147,6 +147,108 @@ private struct AddressChunkReveal: ViewModifier {
     }
 }
 
+/// THE HERO IS THE FACE THE ROW WAS WEARING (2026-08-27, prd §502).
+///
+/// The card opens as a sheet, and a sheet arrives as a new surface — so the
+/// 96pt face at the top of it read as a picture this screen had, rather than
+/// as the 36pt face you had your finger on a beat earlier. `AddressMark` draws
+/// the same mark at both sizes off the same address, which is the claim §483
+/// makes about these faces ("just different accounts of the same thing"), and
+/// nothing on screen said it.
+///
+/// So the hero ENTERS AT `DS.Face.list` — the ramp tier the book row draws —
+/// and grows to its own. Both ends are ramp tokens rather than numbers, for
+/// `AddressFlightOverlay`'s stated reason one file over: a travelling or
+/// growing face's ends are the sizes the face has really been, and
+/// `face-ramp-audit` can only see that when they are named.
+///
+/// **What this deliberately is NOT: a flight from the row.** Three doors were
+/// weighed and all three are shut. `.navigationTransition(.zoom)` is out —
+/// prd §232 dropped it for sheets after a device-specific crash that never
+/// reproduced here. `AddressFlightOverlay` cannot cross a presentation
+/// boundary: its two anchors have to resolve in ONE preference space, which is
+/// why §444's filing flight runs wholly inside the move sheet. And measuring
+/// the hero's global frame to interpolate by hand gives a delta that is wrong
+/// by however far the sheet still has to rise, since `onAppear` fires mid
+/// presentation. A scale is the part of the claim that can be made honestly
+/// from here; the travel is not, and a travel aimed at a stale frame is worse
+/// than none.
+///
+/// Reduce Motion lands it at full size — the face is still the face.
+private struct AddressHeroArrival: ViewModifier {
+    /// The hero's own size, so the entering scale is a ratio of two ramp
+    /// tiers rather than a literal.
+    let size: CGFloat
+    @State private var grown = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    func body(content: Content) -> some View {
+        content
+            .scaleEffect(grown ? 1 : DS.Face.list / size)
+            .onAppear {
+                guard !reduceMotion else { grown = true; return }
+                // One turn later, for `AddressFlight`'s own reason: a value
+                // written and animated in the same runloop turn is coalesced,
+                // and the growth never happens.
+                DispatchQueue.main.async {
+                    withAnimation(.spring(duration: 0.5, bounce: 0.18)) { grown = true }
+                }
+            }
+    }
+}
+
+/// WHAT THE COPY TOOK, SWEPT ONCE (2026-08-27, prd §502).
+///
+/// The address card's Copy tile fires a haptic and changes nothing on screen —
+/// the one verb this sheet is most opened for, answering silently, while the
+/// row's own `CopyAddressButton` has said "Copied" in place since it was
+/// written. This is that answer, drawn on the thing that was copied rather
+/// than on the control that copied it.
+///
+/// A shimmer masked by the content itself, in the ADDRESS's own hue: the same
+/// colour the face is worked out from (§444), so the sweep says "this string,
+/// this identity" rather than "an app event happened". One pass, then gone —
+/// a repeating shimmer is a loading state, and nothing here is loading.
+///
+/// Reduce Motion draws nothing at all: the expansion beside it is the fact,
+/// and this is the flourish.
+private struct AddressCopySweep: ViewModifier {
+    /// Bumped by the copy. Changing — not merely non-zero — is what runs it,
+    /// so a second copy sweeps again.
+    let token: Int
+    let hue: Color
+    @State private var phase: CGFloat = 0
+    @State private var sweeping = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    func body(content: Content) -> some View {
+        content
+            .overlay {
+                if sweeping {
+                    GeometryReader { geo in
+                        let band = max(60, geo.size.width * 0.4)
+                        LinearGradient(colors: [hue.opacity(0), hue, hue.opacity(0)],
+                                       startPoint: .leading, endPoint: .trailing)
+                            .frame(width: band)
+                            .offset(x: -band + phase * (geo.size.width + band * 2))
+                    }
+                    // Masked by the very thing that was copied, so the light
+                    // runs through the characters rather than over the row.
+                    .mask(content)
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
+                }
+            }
+            .onChange(of: token) { _, _ in
+                guard !reduceMotion, token > 0 else { return }
+                phase = 0
+                sweeping = true
+                withAnimation(.easeInOut(duration: 0.55)) { phase = 1 }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { sweeping = false }
+            }
+    }
+}
+
 extension View {
     /// The identicon settling with one ring in the address's own hue. A
     /// non-face mark (a contract, a Safe) settles without the ring — see
@@ -162,5 +264,16 @@ extension View {
     /// `AddressChunkReveal`.
     func addressChunkReveal(index: Int, count: Int) -> some View {
         modifier(AddressChunkReveal(index: index, count: count))
+    }
+
+    /// The card's hero entering at the size the row drew it — see
+    /// `AddressHeroArrival`.
+    func addressHeroArrival(size: CGFloat) -> some View {
+        modifier(AddressHeroArrival(size: size))
+    }
+
+    /// One sweep through what a copy just took — see `AddressCopySweep`.
+    func addressCopySweep(token: Int, hue: Color) -> some View {
+        modifier(AddressCopySweep(token: token, hue: hue))
     }
 }

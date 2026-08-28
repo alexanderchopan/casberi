@@ -1,0 +1,19 @@
+{
+  "artboards": [
+    { "file": "Book.dc.html",   "x": 0,    "y": 0,    "w": 430, "h": 1000, "title": "Today" },
+    { "file": "Main.dc.html",   "x": 510,  "y": 0,    "w": 430, "h": 1000, "title": "1 · Opens into its own face" },
+    { "file": "Paste.dc.html",  "x": 1020, "y": 0,    "w": 430, "h": 1000, "title": "2 · Deals a deck" },
+    { "file": "Filter.dc.html", "x": 0,    "y": 1120, "w": 430, "h": 1000, "title": "3 · Narrows, not replaces" },
+    { "file": "Scrub.dc.html",  "x": 510,  "y": 1120, "w": 430, "h": 1000, "title": "4 · The scrub lands" },
+    { "file": "Copy.dc.html",   "x": 1020, "y": 1120, "w": 430, "h": 1000, "title": "5 · Copy sweeps" }
+  ],
+  "annotations": [
+    { "id": "rules", "x": -470, "y": 0, "w": 400,
+      "text": "What this stayed inside\n\nNo balances — the book is a people screen, money lives on the wallet crown.\n\nNo counts on the filter chips (§448), no colour for more or less, no inferred relationships (§295: factual only).\n\nNothing animates an ARRIVAL (§79) — every moment here answers something you just did.\n\nEvery moment lands immediately under Reduce Motion; the boards demonstrate that (view them with Reduce Motion on).\n\nNone of the five needs a new Thing field, a request, or a CloudKit deploy." },
+    { "id": "already", "x": -470, "y": 620, "w": 400,
+      "text": "Already shipped — deliberately not re-proposed\n\nRows settle in staggered on open. The save whispers its rewrite count, scrolls, lifts the row and flies a face into it (§462). The card's face settles under a ring sweep and its address fills from the ends (§444). A filed face is absorbed by the group deck (§441). Copy swaps to a checkmark with a haptic.\n\nAnd the sheet zoom transition is NOT on the table: §232 dropped .navigationTransition(.zoom) for sheets after a device-specific crash. Moment 1 rides the book's own flight overlay instead." },
+    { "id": "cost", "x": -470, "y": 1340, "w": 400,
+      "text": "Cheapest first, if you only want some\n\n4 · The scrub lands — one property on the section header.\n\n5 · Copy sweeps — one phase on chunks that already exist.\n\n3 · Narrows, not replaces — a transition on the row, no new state.\n\n1 · Opens into its own face — reuses AddressFlightOverlay with a new key pair; the reveal becomes the landing.\n\n2 · Deals a deck — the largest: the field's preview slot has to hold five faces, and the deal is the save flight run N times." }
+  ],
+  "launch": { "view": "canvas" }
+}

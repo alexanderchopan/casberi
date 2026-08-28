@@ -1,0 +1,127 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    body { margin: 0; }
+    .ab { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", system-ui, sans-serif;
+          -webkit-font-smoothing: antialiased; }
+    a { color: #1673e6; } a:hover { color: #4a94ef; }
+  </style>
+</helmet>
+
+<div class="ab" style="width: 430px; height: 1000px; background: #131315; box-sizing: border-box; padding: 0;">
+
+  <div style="padding: 24px 24px 0 24px">
+    <div style="font-size: 20px; font-weight: 700; color: #ffffff; letter-spacing: 0">Today</div>
+    <div style="font-size: 14px; line-height: 20px; color: rgba(235,235,245,0.60); margin-top: 4px; max-width: 380px">
+      The book as it ships. Rows already settle in on open; the save already answers. Everything on the other five boards is a moment this screen does not have yet.
+    </div>
+  </div>
+
+  <div style="margin: 22px 20px 0 20px; width: 390px; height: 844px; background: #000000; border-radius: 40px; overflow: hidden; position: relative">
+
+    <!-- nav -->
+    <div style="padding: 62px 20px 0 20px">
+      <div style="font-size: 34px; line-height: 41px; font-weight: 700; color: #ffffff; font-family: ui-rounded, -apple-system, system-ui, sans-serif">Address Book</div>
+    </div>
+
+    <!-- filter strip -->
+    <div style="display: flex; gap: 10px; padding: 14px 20px 0 20px">
+      <div style="font-size: 12px; font-weight: 600; color: #ffffff; background: #1673e6; padding: 7px 14px; border-radius: 999px">All</div>
+      <div style="font-size: 12px; font-weight: 600; color: rgba(235,235,245,0.60); background: rgba(255,255,255,0.04); padding: 7px 14px; border-radius: 999px">Wallets</div>
+      <div style="font-size: 12px; font-weight: 600; color: rgba(235,235,245,0.60); background: rgba(255,255,255,0.04); padding: 7px 14px; border-radius: 999px">Keys</div>
+      <div style="font-size: 12px; font-weight: 600; color: rgba(235,235,245,0.60); background: rgba(255,255,255,0.04); padding: 7px 14px; border-radius: 999px">Contacts</div>
+      <div style="font-size: 12px; font-weight: 600; color: rgba(235,235,245,0.60); background: rgba(255,255,255,0.04); padding: 7px 14px; border-radius: 999px">Social</div>
+    </div>
+
+    <!-- field -->
+    <div style="margin: 16px 20px 0 20px; background: rgba(255,255,255,0.04); border-radius: 12px; padding: 13px 14px; display: flex; align-items: center; justify-content: space-between">
+      <div style="font-size: 16px; color: rgba(235,235,245,0.49)">Search, or paste an address</div>
+      <div style="font-size: 12px; font-weight: 600; color: rgba(235,235,245,0.35)">Save</div>
+    </div>
+
+    <!-- groups strip -->
+    <div style="display: flex; gap: 14px; padding: 20px 0 0 20px; overflow: hidden">
+      <div style="width: 150px; background: #1c1c1e; border-radius: 10px; padding: 14px; box-sizing: border-box">
+        <div style="display: flex; margin-bottom: 14px">
+          <span style="display:inline-block; width:26px; height:26px; border-radius:50%; background:#2E3A46; box-shadow: 0 0 0 1.5px #1c1c1e"></span>
+          <span style="display:inline-block; width:26px; height:26px; border-radius:50%; background:#3E3630; margin-left:-6px; box-shadow: 0 0 0 1.5px #1c1c1e"></span>
+          <span style="display:inline-block; width:26px; height:26px; border-radius:50%; background:#243A34; margin-left:-6px; box-shadow: 0 0 0 1.5px #1c1c1e"></span>
+        </div>
+        <div style="font-size: 14px; font-weight: 600; color: #ffffff">Family</div>
+        <div style="font-size: 12px; font-weight: 500; color: rgba(235,235,245,0.49); margin-top: 1px">3 addresses</div>
+      </div>
+      <div style="width: 150px; background: #1c1c1e; border-radius: 10px; padding: 14px; box-sizing: border-box">
+        <div style="display: flex; margin-bottom: 14px">
+          <span style="display:inline-block; width:26px; height:26px; border-radius:50%; background:#2C3348; box-shadow: 0 0 0 1.5px #1c1c1e"></span>
+          <span style="display:inline-block; width:26px; height:26px; border-radius:50%; background:#3D2F35; margin-left:-6px; box-shadow: 0 0 0 1.5px #1c1c1e"></span>
+        </div>
+        <div style="font-size: 14px; font-weight: 600; color: #ffffff">Cold</div>
+        <div style="font-size: 12px; font-weight: 500; color: rgba(235,235,245,0.49); margin-top: 1px">2 addresses</div>
+      </div>
+    </div>
+
+    <!-- list -->
+    <div style="margin: 22px 20px 0 20px; background: #111113; border-radius: 10px; overflow: hidden">
+      <div style="padding: 8px 14px 4px 14px; font-size: 12px; font-weight: 600; color: rgba(235,235,245,0.49)">A</div>
+      <div style="display: flex; align-items: center; gap: 14px; padding: 10px 14px">
+        <span style="width:36px;height:36px;border-radius:50%;background:#2C3348;display:flex;align-items:center;justify-content:center">
+          <svg width="17" height="17" viewBox="0 0 100 100"><circle cx="50" cy="35" r="19" fill="#A8B4E0"/><path d="M50 60c-19 0-31 11-31 24 0 4 3 6 8 6h46c5 0 8-2 8-6 0-13-12-24-31-24z" fill="#A8B4E0"/></svg>
+        </span>
+        <div style="flex: 1 1 auto; min-width: 0">
+          <div style="font-size: 18px; font-weight: 600; color: #ffffff; line-height: 24px">Alex</div>
+          <div style="font-size: 14px; color: rgba(235,235,245,0.49); line-height: 21px">0x4f2a…22ce · 9 together</div>
+        </div>
+        <div style="font-size: 14px; color: rgba(235,235,245,0.49)">4d ago</div>
+      </div>
+      <div style="padding: 12px 14px 4px 14px; font-size: 12px; font-weight: 600; color: rgba(235,235,245,0.49)">M</div>
+      <div style="display: flex; align-items: center; gap: 14px; padding: 10px 14px">
+        <span style="width:36px;height:36px;border-radius:50%;background:#3E3630;display:flex;align-items:center;justify-content:center">
+          <svg width="17" height="17" viewBox="0 0 100 100"><circle cx="50" cy="35" r="19" fill="#D8BA96"/><path d="M50 60c-19 0-31 11-31 24 0 4 3 6 8 6h46c5 0 8-2 8-6 0-13-12-24-31-24z" fill="#D8BA96"/></svg>
+        </span>
+        <div style="flex: 1 1 auto; min-width: 0">
+          <div style="font-size: 18px; font-weight: 600; color: #ffffff; line-height: 24px">Mom</div>
+          <div style="font-size: 14px; color: rgba(235,235,245,0.49); line-height: 21px">0x91bd…7f03 · 12 together</div>
+        </div>
+        <div style="font-size: 14px; color: rgba(235,235,245,0.49)">2d ago</div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 14px; padding: 10px 14px">
+        <span style="width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.04);display:flex;align-items:center;justify-content:center">
+          <svg width="16" height="16" viewBox="0 0 100 100"><circle cx="50" cy="35" r="19" fill="rgba(235,235,245,0.49)"/><path d="M50 60c-19 0-31 11-31 24 0 4 3 6 8 6h46c5 0 8-2 8-6 0-13-12-24-31-24z" fill="rgba(235,235,245,0.49)"/></svg>
+        </span>
+        <div style="flex: 1 1 auto; min-width: 0">
+          <div style="font-size: 18px; font-weight: 600; color: #ffffff; line-height: 24px">Maya Okafor</div>
+          <div style="font-size: 14px; color: rgba(235,235,245,0.49); line-height: 21px">Contacts</div>
+        </div>
+      </div>
+      <div style="padding: 12px 14px 4px 14px; font-size: 12px; font-weight: 600; color: rgba(235,235,245,0.49)">S</div>
+      <div style="display: flex; align-items: center; gap: 14px; padding: 10px 14px 14px 14px">
+        <span style="width:36px;height:36px;border-radius:9px;background:rgba(255,255,255,0.04);display:flex;align-items:center;justify-content:center">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(235,235,245,0.60)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M8 10h8M8 14h5"/></svg>
+        </span>
+        <div style="flex: 1 1 auto; min-width: 0">
+          <div style="font-size: 18px; font-weight: 600; color: #ffffff; line-height: 24px">Studio Safe</div>
+          <div style="font-size: 14px; color: rgba(235,235,245,0.49); line-height: 21px">0x7a25…488D · Safe</div>
+        </div>
+        <div style="font-size: 14px; color: rgba(235,235,245,0.49)">3w ago</div>
+      </div>
+    </div>
+
+    <!-- scrubber -->
+    <div style="position: absolute; right: 6px; top: 430px; display: flex; flex-direction: column; align-items: center; gap: 0; width: 18px">
+      <span style="font-size:10px;font-weight:600;color:rgba(235,235,245,0.49);height:13.5px">A</span>
+      <span style="font-size:10px;font-weight:600;color:rgba(235,235,245,0.49);height:13.5px">M</span>
+      <span style="font-size:10px;font-weight:600;color:rgba(235,235,245,0.49);height:13.5px">S</span>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

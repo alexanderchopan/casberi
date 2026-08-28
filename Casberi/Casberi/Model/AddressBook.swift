@@ -1059,6 +1059,28 @@ final class AddressBook {
         return landed
     }
 
+    /// Every address a pasted list holds, in the order it holds them.
+    ///
+    /// Shares `addBulk`'s tokenizer rather than re-reading the format, for the
+    /// reason `looksLikeBulk` already gives: two parsers for one format is how
+    /// the preview comes to disagree with the write it is previewing. This is
+    /// the third reader of that one tokenizer and it makes no decisions of its
+    /// own — a name in the paste is dropped here because a name is not a face.
+    ///
+    /// Nothing is written and nothing is resolved: a `.eth` in the list is
+    /// carried as typed, so the face drawn from it is a face of the text, and
+    /// the row that lands may resolve to a different one. The preview says
+    /// "read", never "landed", for exactly that reason.
+    func bulkAddresses(_ raw: String) -> [String] {
+        var found: [String] = []
+        for line in raw.split(separator: "\n") {
+            for token in Self.tokens(in: line) where looksLikeAddress(token) {
+                found.append(token)
+            }
+        }
+        return found
+    }
+
     private static func tokens(in line: some StringProtocol) -> [String] {
         line.split(separator: ",")
             .map { $0.trimmingCharacters(in: .whitespaces) }

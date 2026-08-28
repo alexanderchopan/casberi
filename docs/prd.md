@@ -36108,3 +36108,127 @@ Consumer grammar inverts it, and every change here is one inversion:
 **UNSEEN on a device at the time of writing**: every part of this is compiled
 and mocked, and the mock is what was approved; the built screen has not been
 looked at.
+
+## 502. Five moments the address book did not have, and the one it cannot have (user: "how would you add surprise and delight to the address book", then "do all", 2026-08-27)
+
+Reviewed as six artboards against the shipped §498/§499 screen — the book as it
+is, then one board per moment. **Numbered 502 and not 501**: a sibling session
+had already cited §501 across nine files without writing its heading, which is
+exactly the collision §441's index audit exists to catch; the bare number stays
+with whichever meaning the source already cites, so this took the next one.
+
+**Three of the obvious candidates were struck before they were drawn**, which is
+§418's rule applied on purpose: the star flight, the save's whisper-scroll-lift,
+the face reveal, the group deck's absorb and the row's staggered settle all
+already ship (§441, §444, §462). The five below are what was left.
+
+### 1. The hero is the face the row was wearing
+
+A sheet arrives as a new surface, so the 96pt face at the top of the card read as
+a picture this screen had rather than as the 36pt face you had a finger on a beat
+earlier. It enters at `DS.Face.list` and grows to its own — both ends ramp tiers
+rather than numbers, `AddressFlightOverlay`'s stated rule for a face in motion,
+so `face-ramp-audit` can see them.
+
+**What it deliberately is NOT is a flight from the row, and all three doors are
+shut.** `.navigationTransition(.zoom)` is out by §232, which dropped it for
+sheets after a device-specific crash that never reproduced here — guarded now as
+a negative, since "put the zoom back" is the obvious way to improve this and the
+reason not to is four hundred sections upstream. `AddressFlightOverlay` cannot
+cross a presentation boundary: both anchors must resolve in ONE preference
+space, which is why §444's filing flight runs wholly inside the move sheet. And
+interpolating by hand from a measured global frame gives a delta wrong by however
+far the sheet still has to rise, because `onAppear` fires mid-presentation. A
+scale is the part of the claim that can be made honestly from here. **A travel
+aimed at a stale frame is worse than no travel**, and shipping one unseen on a
+device would have been exactly that.
+
+### 2. A pasted list forms a deck
+
+§462 gave a single paste a face — "the proof the app understood the paste" — and
+a paste of forty got a sentence, so the one place the free tier does its most
+impressive work said the least about what it had read. Up to five faces fan in
+the field as you paste, with the total beside them.
+
+Three rulings. It is a **READING, not a landing**: `AddressBook.bulkAddresses`
+shares `addBulk`'s own tokenizer (the third reader of one parser — two parsers
+for one format is how a preview comes to disagree with the write it previews),
+nothing is written and nothing is resolved, so a `.eth` in the list is carried as
+typed and the face drawn is a face of the TEXT. Hence the word: the deck says
+**"read"**, the whisper underneath still says "named" after the write, and the
+harness fails the build on either word taking the other's place. The tail is
+**counted, never dropped** — five faces beside "5" on a paste of forty is a
+silent truncation wearing a number. And the fan comes from a fixed five-angle
+table rather than arithmetic on the index, `WalletFace`'s twelve-ground instinct
+one screen over: a computed angle can land two neighbours a hair apart, which
+reads as a rendering fault rather than as a fan.
+
+### 3. The filter narrows rather than replacing
+
+The strip is the one control that reshapes the whole list, and a chip tap swapped
+one set of rows for another — being handed a different book rather than having
+this one narrowed. Rows leave toward the leading edge and return from it. **Plain
+opacity while searching**, deliberately: a search rewrites the list on every
+keystroke, and a lateral slide per character is that motion spent on something
+that is not a decision.
+
+### 4. The scrub lands somewhere
+
+The bubble tracks the finger and the list jumps, and the place you arrive said
+nothing — so a scrub that moved the list and a scrub that moved it somewhere else
+looked identical. The heading replies once, in tint, with a hair of travel toward
+the strip that sent you. **Never a size change**: that would move the rows under
+a list which has just finished moving.
+
+### 5. What the copy took
+
+The card's Copy tile fired a haptic and changed nothing on screen — the verb this
+sheet is most opened for, answering silently, while the reach row's own
+`CopyAddressButton` has said "Copied" in place since it was written. Both run
+through one `didCopy` now, so they cannot drift apart again.
+
+And the answer is drawn on the thing that was copied: the house short form
+**unfolds into the whole address** for a beat, then folds back. §499's reach row
+draws `current.short` and copies `current.address` — deliberately, and its own
+comment says so — which leaves the one screen whose subject is an address never
+showing the middle of it. Copying is the moment that gap matters most, since the
+next thing that string touches is somewhere that moves money. A sweep in the
+address's own hue runs through the characters as it opens.
+
+**The two halves are split along Reduce Motion on purpose**: the unfold is a
+FACT and survives it, the sweep is decoration and does not. Guarded as a
+negative — the card reads no `reduceMotion` at all, so the unfold cannot be
+gated on it by accident.
+
+### Found on the way
+
+**§499 orphaned three pieces of §444.** `AddressCard.addressBlock` has no caller
+since the chunked monospace block was replaced by the reach inset, and
+`addressChunkReveal` and `addressEndsFirst` went with it — so the ends-first
+reveal, and the argument it was built to make ("the ends were never the secret"),
+are unreachable. Left in place rather than deleted: whether that reading should
+come back on the reach row is a design call, not a cleanup.
+
+**The comment-stripped copy earned itself again, eighth instance.** The zoom
+guard fires on a raw read of these files, because the file that must never use
+`.navigationTransition(.zoom)` is the file that explains why.
+
+### Guarded
+
+`address-book-selftest.sh` gains `AddressDeck` compiled whole (9 assertions, 4
+mutations) and 20 drift guards across the five moments — every one of which
+renders as NOTHING when its wiring is cut: the deck simply does not draw, the
+letter simply does not answer, the address simply stays folded. **All six of the
+load-bearing guards were mutation-proven against the real tree** in a throwaway
+worktree (a peer session was live, and `git add -A` from another session is how a
+deliberate mutation gets committed).
+
+Costs nothing new: no `Thing` field, no request, no CloudKit deploy. One new
+localized string, which the pre-ship catalog sweep picks up.
+
+### Unverified
+
+Every one of the five is a frame in the middle of a gesture, and no simulator was
+opened this session: the build is green, the harness is green, and none of it has
+been looked at. The hero's growth against the sheet's own rise is the one to
+watch first — two springs on one surface, started by different events.
