@@ -703,11 +703,17 @@ struct HegotaRoomFigure: View {
         VStack(alignment: .leading, spacing: 2) {
             HegotaCountUp(target: Int(value) ?? 0, tint: tint)
             Text(caption)
+                // **THREE lines, and the padding pays for the width.** Three
+                // boxes across a 342pt slot leave each about 60pt of text once
+                // its own inset is paid, and "On the ordinary nonce" wants
+                // three lines at that width — at two it truncated mid-word to
+                // "ordinary no…", which loses the noun the box exists to name.
                 .dsText(.label12).foregroundStyle(DS.textTertiary)
-                .lineLimit(2).fixedSize(horizontal: false, vertical: true)
+                .lineLimit(3).fixedSize(horizontal: false, vertical: true)
+                .minimumScaleFactor(0.9)
         }
-        .frame(maxWidth: .infinity, minHeight: 74, alignment: .topLeading)
-        .padding(.horizontal, DS.Space.s3)
+        .frame(maxWidth: .infinity, minHeight: 88, alignment: .topLeading)
+        .padding(.horizontal, DS.Space.s2)
         .padding(.vertical, DS.Space.s2)
         // A well, so three numbers in a row read as three FACTS rather than as
         // a sentence that lost its words. `surfaceWell` is the ground every
