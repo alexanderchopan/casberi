@@ -4028,7 +4028,7 @@ grep -q 'actor.expiryValue(now: .now)' "Casberi/Casberi/Screens/VibenetKeySheet.
 # Comment-stripped, because the file documents the deletion by naming it.
 sed 's|//.*||' "Casberi/Casberi/Screens/VibenetKeySheet.swift" > "$TMP/keysheet.nc.swift"
 if grep -qE 'RoundedRectangle\(cornerRadius: DS\.Radius\.(widget|card).*\n?.*fill\(DS\.fillFaint\)' "$TMP/keysheet.nc.swift" \
-   || grep -q 'dsWidgetSurface' "$TMP/keysheet.nc.swift"; then
+   || grep -qE 'dsWidgetSurface|dsWell' "$TMP/keysheet.nc.swift"; then
   echo "✗ the key sheet is drawing cards again — prd §495: a slab inside a presented"
   echo "  sheet is a card on a card, and the caption above each block is what gives it"
   echo "  a ground."

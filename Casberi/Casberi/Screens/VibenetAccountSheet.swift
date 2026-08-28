@@ -202,7 +202,11 @@ struct VibenetAccountSheet: View {
                     stamp: item.locked
                         ? String(localized: "Locked")
                         : (item.hasInitiatedUnlock ? String(localized: "Unlocking") : nil),
-                    stampInk: DS.attention,
+                    // Locked is waiting on YOU, unlocking is waiting on the
+                    // chain. Both wear `DS.attention` — the two weights share
+                    // an ink by design — so this states the meaning without
+                    // changing a pixel.
+                    stampWeight: item.locked ? .urgent : .waiting,
                     lead: nil,
                     title: name,
                     secondary: item.actors.count == 1

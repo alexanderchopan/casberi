@@ -100,7 +100,7 @@ struct VibenetEventCard: View {
                 .dsHover()
             },
                         stamp: verbStamp,
-                        stampInk: facts.kind == .locked ? DS.attention : DS.textSecondary,
+                        stampWeight: facts.kind == .locked ? .urgent : .quiet,
                         lead: happenedAt.map {
                             $0.formatted(.dateTime.day().month().hour().minute())
                         },

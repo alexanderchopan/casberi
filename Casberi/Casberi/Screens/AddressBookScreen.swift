@@ -430,8 +430,7 @@ struct AddressBookScreen: View {
             }
             .padding(.vertical, DS.Space.s2)
             .padding(.horizontal, DS.Space.s3)
-            .background(DS.fillFaint,
-                        in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+            .dsWell()
             .transition(.opacity.combined(with: .scale(scale: 0.97, anchor: .top)))
         }
     }
@@ -507,8 +506,7 @@ struct AddressBookScreen: View {
             }
             .padding(.vertical, DS.Space.s2)
             .padding(.horizontal, DS.Space.s3)
-            .background(DS.fillFaint,
-                        in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+            .dsWell()
             .transition(.asymmetric(
                 insertion: .opacity.combined(with: .scale(scale: 0.97, anchor: .top)),
                 removal: .opacity.combined(with: .move(edge: .bottom))))

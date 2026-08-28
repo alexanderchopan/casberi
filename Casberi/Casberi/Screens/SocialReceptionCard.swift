@@ -84,8 +84,7 @@ struct SocialReceptionCard: View {
         }
         .padding(DS.Space.s4)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(DS.fillFaint,
-                    in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+        .dsWell()
     }
 }
 
@@ -221,8 +220,7 @@ struct SocialPersonContent: View {
                 }
                 .padding(DS.Space.s4)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(DS.fillFaint,
-                            in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+                .dsWell()
             }
         }
         .padding(.horizontal, DS.Space.s4)

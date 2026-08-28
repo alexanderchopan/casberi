@@ -74,22 +74,11 @@ struct StarterPackImportSheet: View {
     // MARK: - Search
 
     private var searchField: some View {
-        HStack(spacing: DS.Space.s2) {
-            Image(systemName: "magnifyingglass")
-                .dsGlyph(14, weight: .medium)
-                .foregroundStyle(DS.textTertiary)
-            TextField("Search starter packs", text: $query)
-                .dsText(.body17)
-                .foregroundStyle(DS.textPrimary)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-                .onSubmit { Task { await search() } }
-            if searching { ProgressView().controlSize(.small) }
-        }
-        .padding(.horizontal, DS.Space.s3)
-        .frame(minHeight: 44)
-        .background(DS.surfaceWell,
-                    in: RoundedRectangle(cornerRadius: DS.Radius.control, style: .continuous))
+        DSSlabField(placeholder: String(localized: "Search starter packs"),
+                    text: $query, actionLabel: "",
+                    glyph: "magnifyingglass", clearable: true, busy: searching,
+                    size: .compact, submitLabel: .search,
+                    action: { Task { await search() } })
     }
 
     @ViewBuilder private var results: some View {
@@ -138,7 +127,7 @@ struct StarterPackImportSheet: View {
             }
             .padding(DS.Space.s3)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(DS.fillFaint, in: RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
+            .dsWell(cornerRadius: DS.Radius.widget)
         }
         .buttonStyle(DSTileButtonStyle())
     }

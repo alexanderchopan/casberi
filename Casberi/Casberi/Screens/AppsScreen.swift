@@ -888,33 +888,15 @@ struct AppsScreen: View {
     // MARK: - Search field (prd §200 — leads the page, not a nav-bar pull-down)
 
     private var searchField: some View {
-        HStack(spacing: DS.Space.s2) {
-            Image(systemName: "magnifyingglass")
-                .dsGlyph(15, weight: .medium)
-                .foregroundStyle(DS.textTertiary)
-            TextField("Search apps", text: $query)
-                .dsText(.body17).foregroundStyle(DS.textPrimary)
-                .tint(DS.tint)
-                .focused($searchFocused)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-            if !query.isEmpty {
-                Button {
-                    query = ""
-                    DSHaptic.tap()
-                } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .dsGlyph(15, weight: .regular)
-                        .foregroundStyle(DS.textTertiary)
-                        .dsTapTarget(Circle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(Text("Clear search"))
-            }
-        }
-        .padding(.horizontal, DS.Space.s4)
-        .frame(height: DS.Radius.widget + 36)
-        .background(DS.surfaceWell, in: RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
+        // The slab rung, spelled as itself. It used to say
+        // `height: DS.Radius.widget + 36` — a corner-radius token standing in
+        // for a height, arriving at exactly `DSSlab.height` by coincidence
+        // rather than by agreement (2026-08-28).
+        DSSlabField(placeholder: String(localized: "Search apps"),
+                    text: $query, actionLabel: "",
+                    focus: $searchFocused,
+                    glyph: "magnifyingglass", clearable: true,
+                    size: .slab, submitLabel: .search, action: {})
     }
 
     // MARK: - The wall (prd §200 — a card per category, every app visible at once)
@@ -1159,7 +1141,7 @@ struct AppsScreen: View {
                         }
                     }
                 Text(entry.offer.name)
-                    .dsText(.label12).fontWeight(.medium)
+                    .dsText(.label12)
                     .foregroundStyle(soon ? DS.textSecondary : DS.textPrimary)
                     .multilineTextAlignment(.center)
                     // Names NEVER truncate (user ruling, prd §201). A

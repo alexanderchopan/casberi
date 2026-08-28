@@ -402,33 +402,22 @@ struct NewGroupSheet: View {
     }
 
     private var nameField: some View {
-        TextField("Name (e.g. Family, Cold)", text: $name)
-            .dsText(.body17)
-            .foregroundStyle(DS.textPrimary)
-            .submitLabel(.done)
-            .padding(.horizontal, DS.Space.s3)
-            .frame(minHeight: 44)
-            .background(DS.surfaceWell,
-                        in: RoundedRectangle(cornerRadius: DS.Radius.control, style: .continuous))
+        DSSlabField(placeholder: String(localized: "Name (e.g. Family, Cold)"),
+                    text: $name, actionLabel: "",
+                    size: .compact, submitLabel: .done,
+                    // A group name is somebody's own word, not a credential —
+                    // the slab's `.never` default is for the keys and hexes it
+                    // was born holding.
+                    autocapitalization: .words, action: {})
     }
 
     /// Only for a book big enough to need it — a filter above six rows is
     /// furniture, and this sheet already asks for two things.
     private var filterField: some View {
-        HStack(spacing: DS.Space.s2) {
-            Image(systemName: "magnifyingglass")
-                .dsGlyph(14, weight: .medium)
-                .foregroundStyle(DS.textTertiary)
-            TextField("Filter your addresses", text: $filter)
-                .dsText(.body17)
-                .foregroundStyle(DS.textPrimary)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-        }
-        .padding(.horizontal, DS.Space.s3)
-        .frame(minHeight: 44)
-        .background(DS.surfaceWell,
-                    in: RoundedRectangle(cornerRadius: DS.Radius.control, style: .continuous))
+        DSSlabField(placeholder: String(localized: "Filter your addresses"),
+                    text: $filter, actionLabel: "",
+                    glyph: "magnifyingglass", clearable: true,
+                    size: .compact, action: {})
     }
 
     private var list: some View {
@@ -738,8 +727,7 @@ struct CopyAddressButton: View {
                         .dsGlyph(12)
                         .foregroundStyle(copied ? DS.confirm : DS.textSecondary)
                         .frame(width: 28, height: 28)
-                        .background(DS.fillFaint, in: RoundedRectangle(cornerRadius: 9,
-                                                                       style: .continuous))
+                        .dsWell(cornerRadius: 9)
                 }
             }
             .contentShape(Rectangle())
@@ -1408,8 +1396,7 @@ struct AddressCard: View {
             }
             .padding(.horizontal, DS.Space.s4)
             .padding(.vertical, DS.Space.s1)
-            .background(DS.fillFaint,
-                        in: RoundedRectangle(cornerRadius: DS.Radius.sheet, style: .continuous))
+            .dsWell(cornerRadius: DS.Radius.sheet)
             .padding(.horizontal, DS.Space.s4)
             .padding(.bottom, DS.Space.s6)
             // The unfold and the fold back, on the app's own spring.
@@ -1564,9 +1551,7 @@ struct AddressCard: View {
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, DS.Space.s3 + 2)
-            .background(DS.fillFaint,
-                        in: RoundedRectangle(cornerRadius: DS.Radius.control + 2,
-                                             style: .continuous))
+            .dsWell(cornerRadius: DS.Radius.control + 2)
             .contentShape(Rectangle())
         }
         .buttonStyle(PressSpring())

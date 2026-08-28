@@ -104,12 +104,11 @@ struct NameAddressPrompt: View {
                     DSHaptic.tap()
                     onName()
                 } label: {
-                    Text("Name it")
-                        .dsText(.subhead13).fontWeight(.semibold)
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, DS.Space.s4)
-                        .padding(.vertical, 7)
-                        .background(Capsule().fill(DS.tint))
+                    // The system's own small primary (2026-08-28). This was a
+                    // hand-rolled `Text` in a filled capsule with its own
+                    // padding — the shape `Chip` already is, three rows below
+                    // an `AgentKeyPicker` that draws real ones.
+                    Chip(text: String(localized: "Name it"), style: .primary)
                 }
                 .buttonStyle(PressSpring())
                 Button {

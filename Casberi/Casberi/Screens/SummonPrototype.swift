@@ -392,9 +392,7 @@ private struct AgentSurface: View {
                     }
                     .padding(.horizontal, DS.Space.s3)
                     .padding(.vertical, DS.Space.s2)
-                    .background(DS.fillFaint,
-                                in: RoundedRectangle(cornerRadius: DS.Radius.control,
-                                                     style: .continuous))
+                    .dsWell(cornerRadius: DS.Radius.control)
                 }
                 .buttonStyle(PressSpring())
                 .opacity(ask.id == "recipes" ? 0.55 : 1)   // the decayed example

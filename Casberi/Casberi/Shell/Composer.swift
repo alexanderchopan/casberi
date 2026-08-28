@@ -2337,8 +2337,7 @@ struct Composer: View {
                     }
                 }
                 .padding(DS.Space.s3)
-                .background(DS.fillFaint,
-                            in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+                .dsWell()
                 .padding(.horizontal, DS.Space.s4)
                 .padding(.top, DS.Space.s3)
                 .animation(DS.Motion.standard, value: voice.elapsed)
@@ -4194,7 +4193,7 @@ struct Composer: View {
 
     private func scopeCapsule(_ label: String, glyph: String, on: Bool) -> some View {
         HStack(spacing: DS.Space.s1) {
-            Text(label).dsText(.label12).fontWeight(.medium).lineLimit(1)
+            Text(label).dsText(.label12).lineLimit(1)
             Image(systemName: glyph).dsGlyph(9, weight: .semibold).accessibilityHidden(true)
         }
         .foregroundStyle(on ? DS.tint : DS.textTertiary)
@@ -4700,14 +4699,25 @@ struct ParseCard: View {
             .mountIn()
         }
         .padding(DS.Space.s3)
-        .background(DS.fillFaint,
-                    in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+        .dsWell()
     }
 }
 
 /// A pill chip — the composer's and shell's smallest interactive unit.
 struct Chip: View {
-    enum Style { case tint, neutral }
+    /// `neutral` is a word you can tap, `tint` is one the app is nudging you
+    /// toward, and `primary` is THE verb of the block it sits in — filled,
+    /// white on tint (2026-08-28).
+    ///
+    /// The third rung exists because there was no small primary in the system
+    /// and `NameAddressPrompt` had hand-rolled one: `Text` in a
+    /// `Capsule().fill(DS.tint)` with its own padding, which is the shape this
+    /// type is. `VerbCapsule` was not it — that is the store's closed verb set
+    /// (Connect / Pair / Fix / Open / Soon) and takes a `CapsuleVerb`, not a
+    /// sentence. Deliberately still the chip's own size: a primary chip is a
+    /// chip, and the moment it grows its own metrics it is a button wearing a
+    /// chip's name.
+    enum Style { case tint, neutral, primary }
     let text: String
     var style: Style = .neutral
     var glyph: String? = nil
@@ -4723,17 +4733,32 @@ struct Chip: View {
             // "Try with / your key" inside a 28pt capsule).
             Text(text).dsText(.label12).lineLimit(1)
         }
-        .foregroundStyle(style == .tint ? DS.tint : DS.textPrimary)
+        .foregroundStyle(ink)
         .padding(.horizontal, DS.Space.s3)
         .frame(minHeight: 28)
         .fixedSize(horizontal: true, vertical: false)
-        .background(style == .tint ? DS.tintDim : DS.gray100,
-                    in: Capsule(style: .continuous))
+        .background(wash, in: Capsule(style: .continuous))
         // Folded in HERE rather than at each call site, the same reasoning
         // `dsListCardRow` states: every Chip but `ParseCard`'s status badge is
         // the label of a Button, so a screen that reaches for one gets Mac
         // hover with no separate decision. No tooltip — a chip is a word.
         .dsHover()
+    }
+
+    private var ink: Color {
+        switch style {
+        case .tint:    return DS.tint
+        case .neutral: return DS.textPrimary
+        case .primary: return .white
+        }
+    }
+
+    private var wash: Color {
+        switch style {
+        case .tint:    return DS.tintDim
+        case .neutral: return DS.gray100
+        case .primary: return DS.tint
+        }
     }
 }
 

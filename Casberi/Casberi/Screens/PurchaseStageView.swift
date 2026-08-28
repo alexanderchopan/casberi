@@ -93,8 +93,7 @@ struct PurchaseStageView: View {
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(DS.Space.s3)
-                .background(DS.fillFaint,
-                            in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+                .dsWell()
                 .padding(.top, DS.Space.s3)
         }
         provenanceLine
@@ -275,8 +274,7 @@ struct PurchaseStageView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(DS.Space.s4)
-        .background(DS.fillFaint,
-                    in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+        .dsWell()
     }
 
     @ViewBuilder private var provenanceLine: some View {

@@ -39,7 +39,6 @@ struct MoneyReceiptCard: View {
     /// the disc inert, which is the honesty rule doing its job: a face with
     /// nowhere to go is not a door, and must not look like one.
     var onSubject: ((String) -> Void)?
-    @Environment(\.colorScheme) private var scheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     /// How far the teeth have cut: 0 flat, 1 fully torn.
@@ -60,7 +59,7 @@ struct MoneyReceiptCard: View {
                                  ring: DS.surfaceRaised, onOpen: onSubject)
                 Spacer(minLength: DS.Space.s3)
                 if let stamp = receipt.stamp {
-                    ReceiptStampPill(stamp: stamp)
+                    DSStamp(word: stamp.word, weight: stamp.weight.stampWeight)
                         // Spoken in the composed value below, so hearing it
                         // here as well would say the state twice.
                         .accessibilityHidden(true)
@@ -101,27 +100,15 @@ struct MoneyReceiptCard: View {
             .accessibilityLabel(Text(receipt.spokenLabel))
             .accessibilityValue(Text(receipt.spokenValue))
         }
-        .padding(.horizontal, DS.Space.s4)
-        .padding(.top, DS.Space.s6)
-        // Room under the last line for the teeth to bite into — interpolated
-        // with the cut, or the card would jump a tooth's worth of height at
-        // the instant the animation starts.
-        .padding(.bottom, DS.Space.s6 + (ReceiptPaper.tooth + 2) * tear)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(alignment: .top) {
-            // The pour, clipped to the paper's own silhouette so the hue can
-            // never bleed past a tooth.
-            LinearGradient(
-                colors: [DS.receiptPour(receipt.hue)
-                            .opacity(DS.receiptPourOpacity(scheme)),
-                         DS.receiptPour(receipt.hue).opacity(0)],
-                startPoint: .top, endPoint: .bottom)
-                .frame(height: 150)
-                .frame(maxWidth: .infinity, alignment: .top)
-        }
-        .background(DS.surfaceRaised)
-        .clipShape(ReceiptPaper(tear: tear))
-        .shadow(color: DS.raisedShadow, radius: 10, y: 2)
+        // THE PAPER IS THE SHARED ONE (2026-08-28). This card is where the
+        // silhouette, the pour, the raised ground and the shadow were settled
+        // (§363), `DSReceiptPaper` was lifted out of it (§498) so "the two
+        // rooms cannot drift into two papers" — and this card then went on
+        // spelling the whole stack inline, which is two papers. The only thing
+        // that kept it here was the Bool: the tear ANIMATES on a receipt, so
+        // the shared modifier had to learn a fraction before its own origin
+        // could call it.
+        .dsReceiptPaper(hue: DS.receiptPour(receipt.hue), tear: tear)
         .onAppear {
             tear = torn ? 1 : 0
             settled = true
@@ -348,33 +335,20 @@ struct MoneySubjectDisc: View {
     }
 }
 
-/// The pill on the paper. State in form as well as words.
-struct ReceiptStampPill: View {
-    let stamp: MoneyReceipt.Stamp
-
-    var body: some View {
-        Text(verbatim: stamp.word)
-            .dsText(.label12)
-            .foregroundStyle(ink)
-            .padding(.horizontal, DS.Space.s2)
-            .frame(minHeight: 24)
-            .background(wash, in: Capsule(style: .continuous))
-    }
-
-    private var ink: Color {
-        switch stamp.weight {
-        case .good:     return DS.confirm
-        case .waiting:  return DS.attention
-        case .urgent:   return DS.attention
-        case .quiet:    return DS.textTertiary
-        case .private_: return DS.receiptPour(.shield)
-        }
-    }
-
-    private var wash: Color {
-        switch stamp.weight {
-        case .quiet: return DS.fillFaint
-        default:     return ink.opacity(0.16)
+/// How a receipt's own stamp weight reads as a `DSStamp` weight.
+///
+/// The mapping lives here, in the screen, rather than in `Design/`: the model
+/// knows about refunds and proofs, the component knows about ink, and the one
+/// place allowed to know both is the view that draws one from the other.
+/// `private_` and `shielded` are the same case wearing each layer's own word.
+extension MoneyReceipt.Stamp.Weight {
+    var stampWeight: DSStamp.Weight {
+        switch self {
+        case .good:     return .good
+        case .waiting:  return .waiting
+        case .urgent:   return .urgent
+        case .quiet:    return .quiet
+        case .private_: return .shielded
         }
     }
 }

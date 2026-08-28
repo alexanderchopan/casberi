@@ -172,8 +172,7 @@ struct WalletWatchField: View {
                 }
                 .padding(.vertical, DS.Space.s2)
                 .padding(.horizontal, DS.Space.s3)
-                .background(DS.fillFaint,
-                            in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+                .dsWell()
                 .transition(.opacity.combined(with: .scale(scale: 0.97, anchor: .top)))
             } else if resolving {
                 HStack(spacing: DS.Space.s2) {

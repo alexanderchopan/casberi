@@ -823,8 +823,7 @@ private struct LinkPreviewCard: View {
                 .padding(DS.Space.s3)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(DS.fillFaint,
-                        in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+            .dsWell()
         }
         .buttonStyle(PressSpring())
         // Hover on the CARD, before the padding — the lift belongs to the
@@ -975,8 +974,7 @@ private struct ChatBubbles: View {
                     .dsText(.callout15).foregroundStyle(DS.textPrimary)
                     .padding(.horizontal, DS.Space.s3)
                     .padding(.vertical, DS.Space.s2)
-                    .background(DS.fillFaint,
-                                in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .dsWell(cornerRadius: 14)
             }
             if hiddenCount > 0 {
                 Button {
@@ -1388,8 +1386,7 @@ private struct FileChip: View {
                 Spacer()
             }
             .padding(DS.Space.s3)
-            .background(DS.fillFaint,
-                        in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+            .dsWell()
             if !compact, !note.isEmpty {
                 Text(ProseLinks.rendered(note))
                     .dsText(.subhead13).foregroundStyle(DS.textSecondary)
@@ -1506,8 +1503,7 @@ private struct ReminderDueRow: View {
             Spacer()
         }
         .padding(DS.Space.s3)
-        .background(DS.fillFaint,
-                    in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+        .dsWell()
         .padding(.horizontal, DS.Space.s4)
         .padding(.bottom, DS.Space.s3)
     }
@@ -1525,8 +1521,7 @@ private struct CommandCard: View {
             .lineLimit(6)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(DS.Space.s3)
-            .background(DS.fillFaint,
-                        in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+            .dsWell()
             .padding(.horizontal, DS.Space.s4)
             .padding(.bottom, DS.Space.s3)
     }
@@ -1616,8 +1611,7 @@ private struct MomentStub: View {
                     .padding(.bottom, DS.Space.s2)
             }
         }
-        .background(DS.fillFaint,
-                    in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+        .dsWell()
         .padding(.horizontal, DS.Space.s4)
         .padding(.bottom, DS.Space.s3)
     }
@@ -1682,41 +1676,30 @@ private struct FactRows: View {
     @Environment(\.openURL) private var openURL
 
     var body: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s1) {
+        // `DSSpecTable`, not a hand-rolled 72pt column (2026-08-28). This
+        // table's labels are the one open-ended set in the app — a Contacts
+        // fact is `ThingFact(label(phone.label, fallback: "Phone"), …)`,
+        // whatever the person typed on their own phone, in their own language
+        // — and it had the NARROWEST fixed column of the three sheets drawing
+        // this anatomy, so it is the one that wrapped. The grid sizes the
+        // column to the longest label actually present.
+        //
+        // The tap moved from a wrapping `Button` into the row itself for a
+        // structural reason: a `Button` is one view, so it would collapse both
+        // cells into a single column and take the alignment back out. The
+        // traits `Button` was giving for free are added by hand in
+        // `DSSpecRow`.
+        DSSpecTable {
             ForEach(facts) { fact in
-                if let url = Self.destination(for: fact),
-                   UIApplication.shared.canOpenURL(url) {
-                    Button { openURL(url) } label: { row(fact, actionable: true) }
-                        .buttonStyle(.plain)
-                        .dsHover()
-                } else {
-                    row(fact, actionable: false)
-                }
+                let url = Self.destination(for: fact)
+                let actionable = url.map { UIApplication.shared.canOpenURL($0) } ?? false
+                DSSpecRow(label: Text(verbatim: fact.label),
+                          value: Text(verbatim: fact.value),
+                          tint: actionable ? DS.tint : DS.textPrimary,
+                          glyph: actionable ? "chevron.right" : nil,
+                          action: actionable ? { url.map { openURL($0) } } : nil)
             }
         }
-    }
-
-    private func row(_ fact: ThingFact, actionable: Bool) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s3) {
-            Text(fact.label)
-                .dsText(.label12)
-                .foregroundStyle(DS.textTertiary)
-                .frame(width: 72, alignment: .leading)
-            Text(fact.value)
-                .dsText(.callout15)
-                .foregroundStyle(actionable ? DS.tint : DS.textPrimary)
-                .lineLimit(2)
-                .multilineTextAlignment(.leading)
-            Spacer(minLength: 0)
-            if actionable {
-                Image(systemName: "chevron.right")
-                    .accessibilityHidden(true)
-                    .dsGlyph(11, weight: .semibold)
-                    .foregroundStyle(DS.textTertiary)
-            }
-        }
-        .padding(.vertical, DS.Space.s1)
-        .contentShape(Rectangle())
     }
 
     /// Where a fact's tap lands, or nil when it isn't a hand-off.
@@ -1777,8 +1760,7 @@ private struct MetricBand: View {
         .padding(.vertical, DS.Space.s3)
         .padding(.horizontal, DS.Space.s2)
         .frame(maxWidth: .infinity)
-        .background(DS.fillFaint,
-                    in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+        .dsWell()
         .padding(.horizontal, DS.Space.s4)
         .padding(.bottom, DS.Space.s3)
     }
@@ -1879,9 +1861,7 @@ private struct PersonCard: View {
             if !rows.isEmpty {
                 FactRows(facts: rows)
                     .padding(DS.Space.s3)
-                    .background(DS.fillFaint,
-                                in: RoundedRectangle(cornerRadius: DS.Radius.card,
-                                                     style: .continuous))
+                    .dsWell()
                     .padding(.top, DS.Space.s2)
             }
         }
@@ -1938,9 +1918,7 @@ private struct AccessoryCard: View {
                 FactRows(facts: rest)
                     .padding(DS.Space.s3)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(DS.fillFaint,
-                                in: RoundedRectangle(cornerRadius: DS.Radius.card,
-                                                     style: .continuous))
+                    .dsWell()
             }
             // The ceiling, said out loud. Reachability is about the
             // connection; nothing here reads a lock's bolt.
@@ -2143,9 +2121,7 @@ private struct TokenChartContent: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(DS.Space.s4)
-        .background(DS.fillFaint,
-                    in: RoundedRectangle(cornerRadius: DS.Radius.widget,
-                                         style: .continuous))
+        .dsWell(cornerRadius: DS.Radius.widget)
     }
 }
 

@@ -31,9 +31,14 @@ struct DSSheetHead<Disc: View>: View {
     /// The state word, top-right — "Authorized", "Revoked", "Locked". nil
     /// where the thing has no state worth stamping.
     var stamp: String?
-    /// The stamp's ink. Neutral by default; a caller passes `DS.attention`
-    /// only where the state is one somebody must act on.
-    var stampInk: Color = DS.textSecondary
+    /// What the stamp MEANS — a closed weight, never a colour (2026-08-28).
+    ///
+    /// This was `stampInk: Color`, which is how one component ends up with
+    /// several reds: an open colour asks each caller to pick a shade for a
+    /// state, and `DSStamp`'s own doc has the rest of the reasoning. Quiet by
+    /// default, so a caller that has not thought about it cannot raise an
+    /// alarm by omission.
+    var stampWeight: DSStamp.Weight = .quiet
     /// When it happened, above the title — the receipt's own `lead`.
     var lead: String?
     /// The thing's own words. `heading22`, the receipt's `party` tier.
@@ -82,13 +87,11 @@ struct DSSheetHead<Disc: View>: View {
                     .settleIn()
                 Spacer(minLength: DS.Space.s3)
                 if let stamp {
-                    Text(stamp)
-                        .dsText(.label12)
-                        .foregroundStyle(stampInk)
-                        .padding(.horizontal, DS.Space.s2)
-                        .padding(.vertical, 3)
-                        .background(stampInk.opacity(0.14),
-                                    in: Capsule(style: .continuous))
+                    // Hidden from VoiceOver HERE rather than in `DSStamp`,
+                    // because it is this head that restates the state in its
+                    // own sentence below — the money receipt does not, and
+                    // keeps its pill audible.
+                    DSStamp(word: stamp, weight: stampWeight)
                         .accessibilityHidden(true)
                 }
             }
@@ -154,14 +157,32 @@ struct DSSheetHead<Disc: View>: View {
 /// path is the one every existing sheet already runs.
 struct DSReceiptPaper: ViewModifier {
     var hue: Color?
-    var torn: Bool = true
+    /// HOW FAR THE TEETH HAVE CUT: 0 flat, 1 fully torn — a fraction, not a
+    /// flag (2026-08-28).
+    ///
+    /// It was a `Bool`, and that is the one reason `MoneyReceiptCard` — the
+    /// card this modifier was lifted OUT of, so that "the two rooms cannot
+    /// drift into two papers" — never adopted it and went on spelling the
+    /// whole padding/pour/surface/clip/shadow stack inline. On a receipt the
+    /// tear is a TRANSITION (§363: a pending authorization settling is the
+    /// paper finishing its cut), and a Bool cannot be interpolated, so the
+    /// shared path could not carry the one caller it was extracted from.
+    ///
+    /// The bottom padding interpolates WITH the cut on purpose: at a fixed
+    /// padding the card jumps a tooth's worth of height the instant the
+    /// animation starts.
+    ///
+    /// Every other caller passes 0 or 1 through the `torn:` convenience
+    /// below, where the silhouette is decoration rather than state — see
+    /// `dsReceiptPaper(hue:torn:)`.
+    var tear: CGFloat = 1
     @Environment(\.colorScheme) private var scheme
 
     func body(content: Content) -> some View {
         content
             .padding(.horizontal, DS.Space.s4)
             .padding(.top, DS.Space.s6)
-            .padding(.bottom, DS.Space.s6 + (ReceiptPaper.tooth + 2) * (torn ? 1 : 0))
+            .padding(.bottom, DS.Space.s6 + (ReceiptPaper.tooth + 2) * tear)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(alignment: .top) {
                 if let hue {
@@ -173,13 +194,28 @@ struct DSReceiptPaper: ViewModifier {
                 }
             }
             .background(DS.surfaceRaised)
-            .clipShape(ReceiptPaper(tear: torn ? 1 : 0))
+            .clipShape(ReceiptPaper(tear: tear))
             .shadow(color: DS.raisedShadow, radius: 10, y: 2)
     }
 }
 
 extension View {
+    /// The paper, torn or flat. **The tear is DECORATION on this door** — it
+    /// is the silhouette that makes a head read as an object rather than as
+    /// text on a page (§495), and every caller here passes `true`.
+    ///
+    /// On a money receipt it is STATE (§363: torn means final, flat means the
+    /// paper is still in the machine), and that caller reaches for the
+    /// fraction below instead. The two doors are separate so the distinction
+    /// stays legible: nothing about a vibenet key sheet's edge is claiming to
+    /// mean anything, and nothing should read it as though it does.
     func dsReceiptPaper(hue: Color?, torn: Bool = true) -> some View {
-        modifier(DSReceiptPaper(hue: hue, torn: torn))
+        modifier(DSReceiptPaper(hue: hue, tear: torn ? 1 : 0))
+    }
+
+    /// The paper mid-cut — for the one caller whose edge carries state and
+    /// animates between the two.
+    func dsReceiptPaper(hue: Color?, tear: CGFloat) -> some View {
+        modifier(DSReceiptPaper(hue: hue, tear: tear))
     }
 }

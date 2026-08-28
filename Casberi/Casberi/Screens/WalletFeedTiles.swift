@@ -389,9 +389,13 @@ struct WalletBalanceHeadline: View {
                     // The digits ROLL between values (a scope switch re-keys the
                     // number, and $20K odometer-rolling to $4.2K says "same
                     // instrument, new reading"). Direction rides the value, so
-                    // the roll runs the way the money moved. `price40` is the
-                    // sanctioned big-money rung (prd §102), so it scales with
-                    // Dynamic Type like everything else.
+                    // the roll runs the way the money moved. `price48` is the
+                    // ramp's crown rung — the biggest figure on its surface —
+                    // so it scales with Dynamic Type like everything else.
+                    // (This comment said `price40` while the line below drew
+                    // `price48`; corrected 2026-08-28. The rung named in prd
+                    // §102 is price40, and §157 added price48 above it for
+                    // exactly this number.)
                     Text(WalletValue.money(displayed ?? 0))
                         .dsText(.price48).foregroundStyle(DS.textPrimary)
                         .monospacedDigit()
@@ -532,8 +536,7 @@ struct WalletBalanceHeadline: View {
             }
         }
         .padding(3)
-        .background(DS.fillFaint,
-                    in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+        .dsWell()
         .padding(.top, DS.Space.s2)
     }
 
@@ -635,9 +638,7 @@ struct WalletWarningsStrip: View {
                           subtitle: WalletWatch.summary(visible))
                     .padding(.horizontal, DS.Space.s3)
                     .padding(.vertical, 2)
-                    .background(DS.fillFaint,
-                                in: RoundedRectangle(cornerRadius: DS.Radius.widget,
-                                                     style: .continuous))
+                    .dsWell(cornerRadius: DS.Radius.widget)
             }
             .buttonStyle(PressSpring())
         }
@@ -1007,8 +1008,16 @@ struct WalletDepositsTray: View {
                     // cohesion pass — the money receipt sheet's grammar,
                     // reading before rows). The rows then explain a number
                     // already stated instead of asking the reader to sum.
+                    //
+                    // `stat24`, not `heading28` (2026-08-28) — the same
+                    // correction the locked tray below takes. `heading28` is
+                    // the LEDE rung, sized for a SENTENCE, and a tray figure
+                    // wearing it sat between `stat24` and `price40` matching
+                    // neither, two taps from the crown at `price48`. The
+                    // wallet's own composition strip a few hundred lines up
+                    // has always drawn its figures at `stat24`.
                     Text(WalletValue.money(composition.deposited))
-                        .dsText(.heading28).foregroundStyle(DS.textPrimary)
+                        .dsText(.stat24).foregroundStyle(DS.textPrimary)
                         .monospacedDigit()
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.bottom, DS.Space.s2)
@@ -1085,7 +1094,7 @@ struct WalletLocksTray: View {
                     Text(composition.lockedTotals
                             .map { WalletValue.token($0.amount, $0.symbol) }
                             .joined(separator: " · "))
-                        .dsText(.heading28).foregroundStyle(DS.textPrimary)
+                        .dsText(.stat24).foregroundStyle(DS.textPrimary)
                         .monospacedDigit()
                         .lineLimit(1).minimumScaleFactor(0.6)
                         .frame(maxWidth: .infinity, alignment: .leading)

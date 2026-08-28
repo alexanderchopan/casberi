@@ -169,33 +169,11 @@ struct L2beatDirectoryScreen: View {
 	// MARK: - Search
 
 	private var searchField: some View {
-		HStack(spacing: DS.Space.s2) {
-			Image(systemName: "magnifyingglass")
-				.dsGlyph(15, weight: .medium)
-				.foregroundStyle(DS.textTertiary)
-			TextField(String(localized: "Search chains"), text: $query)
-				.dsText(.body17).foregroundStyle(DS.textPrimary)
-				.tint(DS.tint)
-				.focused($searchFocused)
-				.textInputAutocapitalization(.never)
-				.autocorrectionDisabled()
-			if !query.isEmpty {
-				Button {
-					query = ""
-					DSHaptic.tap()
-				} label: {
-					Image(systemName: "xmark.circle.fill")
-						.dsGlyph(15, weight: .regular)
-						.foregroundStyle(DS.textTertiary)
-						.dsTapTarget(Circle())
-				}
-				.buttonStyle(.plain)
-				.accessibilityLabel(Text("Clear search"))
-			}
-		}
-		.padding(.horizontal, DS.Space.s4)
-		.frame(height: DS.Radius.widget + 36)
-		.background(DS.surfaceWell, in: RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
+		DSSlabField(placeholder: String(localized: "Search chains"),
+					text: $query, actionLabel: "",
+					focus: $searchFocused,
+					glyph: "magnifyingglass", clearable: true,
+					size: .slab, submitLabel: .search, action: {})
 	}
 
 	private var trimmedQuery: String {

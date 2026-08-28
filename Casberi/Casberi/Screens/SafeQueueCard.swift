@@ -45,8 +45,7 @@ struct SafeQueueCard: View {
         }
         .padding(DS.Space.s4)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(DS.fillFaint,
-                    in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+        .dsWell()
     }
 
     // MARK: - Head

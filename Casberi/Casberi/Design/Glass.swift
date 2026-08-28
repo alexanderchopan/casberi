@@ -217,6 +217,35 @@ extension View {
         dsElevatedSurface(cornerRadius: cornerRadius, fillOpacity: fillOpacity)
     }
 
+    /// THE FLAT WELL — a block sunk INTO the page, not lifted off it.
+    ///
+    /// The sibling of `dsWidgetSurface` and deliberately not a variant of it:
+    /// that one is the elevation ladder's raised rung (sheet fill + ambient
+    /// shadow), this is the recessed one (a faint fill, no shadow, no border).
+    /// A spec table, a quote card, an inert preview and a "nothing here yet"
+    /// block all want the second — they gather content without claiming it
+    /// sits above the page.
+    ///
+    /// It exists because it was spelled by hand 64 times (2026-08-28 component
+    /// sweep), 37 of them the byte-identical
+    /// `background(DS.fillFaint, in: RoundedRectangle(cornerRadius: DS.Radius
+    /// .card, style: .continuous))`, and the remainder already drifting: two
+    /// raw literals (`9` and `14`) sitting where a token belongs, which is §8's
+    /// own law ("every value routes through a token") broken in the one place
+    /// nothing was watching. 28 of the 64 were inside the thing-sheet family
+    /// alone, so the surface a person opens most often was also the one most
+    /// able to disagree with itself.
+    ///
+    /// `cornerRadius` is a parameter for the same reason `dsWidgetSurface`'s
+    /// is: a well around a whole spec table takes `.card`, a well behind a
+    /// small inline control legitimately takes something tighter. What is
+    /// shared and NOT negotiable is the fill — one token, so a well can never
+    /// be a shade off a well.
+    func dsWell(cornerRadius: CGFloat = DS.Radius.card) -> some View {
+        background(DS.fillFaint,
+                   in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+    }
+
     /// The shared sheet-fill-plus-shadow recipe. The shadow rides the FILL
     /// SHAPE (a simple rounded rect), not the composited view — so Core
     /// Animation casts it from a cheap path instead of rasterizing each card's

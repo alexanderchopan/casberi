@@ -139,7 +139,7 @@ struct VibenetKeySheet: View {
                     // urgency, never decoration.
                     stamp: actor.expiryStanding(now: .now) == .soon
                         ? String(localized: "Expiring") : nil,
-                    stampInk: DS.attention,
+                    stampWeight: .urgent,
                     lead: nil,
                     title: actor.kind.plainTitle,
                     secondary: actor.kind.plainDetail,
@@ -237,7 +237,7 @@ struct VibenetKeySheet: View {
     private var facts: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             caption(String(localized: "Terms"))
-            VStack(alignment: .leading, spacing: 0) {
+            DSSpecTable {
                 factRow(String(localized: "Expires"),
                         // The VALUE form, not `expiryLabel` — under a label
                         // already reading "Expires" that one made the row say
@@ -263,21 +263,22 @@ struct VibenetKeySheet: View {
         }
     }
 
+    /// `DSSpecTable`'s row, not a fourth hand-rolled column (2026-08-28) —
+    /// this sheet's was 84pt where the thing sheet's was 80 and the fact rows'
+    /// 72. `lineLimit: nil` keeps this table's own answer: a term here is a
+    /// sentence and wraps freely, where a spec value elsewhere is a field and
+    /// stops at two lines.
+    ///
+    /// Every label already arrives `String(localized:)`, so the `Text` is
+    /// verbatim — passing it as a key would look the translated words up in
+    /// the catalog a second time.
     private func factRow(_ label: String, _ value: String,
                          weighted: Bool, tinted: Bool) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s3) {
-            Text(label)
-                .dsText(.label12)
-                .foregroundStyle(DS.textTertiary)
-                .frame(width: 84, alignment: .leading)
-            Text(value)
-                .dsText(.callout15)
-                .fontWeight(weighted ? .semibold : .regular)
-                .foregroundStyle(tinted ? Self.mark : DS.textPrimary)
-                .fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: .infinity, alignment: .leading)
-        }
-        .padding(.vertical, 5)
+        DSSpecRow(label: Text(verbatim: label),
+                  value: Text(verbatim: value),
+                  tint: tinted ? Self.mark : DS.textPrimary,
+                  weight: weighted ? .semibold : nil,
+                  lineLimit: nil)
     }
 
     // MARK: - 4. Which key this is

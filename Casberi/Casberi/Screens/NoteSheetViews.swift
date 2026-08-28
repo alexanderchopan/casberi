@@ -209,9 +209,7 @@ struct NoteProse: View {
             }
             .padding(DS.Space.s3)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(DS.fillFaint,
-                        in: RoundedRectangle(cornerRadius: DS.Radius.widget,
-                                             style: .continuous))
+            .dsWell(cornerRadius: DS.Radius.widget)
         }
     }
 
@@ -425,8 +423,7 @@ struct NoteGraphCounts: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(DS.Space.s3)
-        .background(DS.fillFaint,
-                    in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+        .dsWell()
         .accessibilityElement(children: .combine)
     }
 }
@@ -561,8 +558,7 @@ struct NoteReceptionCard: View {
         }
         .padding(DS.Space.s4)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(DS.fillFaint,
-                    in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+        .dsWell()
     }
 }
 
@@ -719,9 +715,7 @@ struct NoteNeighbourDoors: View {
                 }
                 .padding(DS.Space.s3)
                 .frame(maxWidth: .infinity)
-                .background(DS.fillFaint,
-                            in: RoundedRectangle(cornerRadius: DS.Radius.card,
-                                                 style: .continuous))
+                .dsWell()
                 .contentShape(Rectangle())
             }
             .buttonStyle(PressSpring())

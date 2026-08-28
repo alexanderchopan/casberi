@@ -137,8 +137,7 @@ struct SocialThreadRest: View {
         }
         .padding(DS.Space.s4)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(DS.fillFaint,
-                    in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+        .dsWell()
     }
 }
 
@@ -224,8 +223,7 @@ struct SocialQuoteCard: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(DS.Space.s3)
-        .background(DS.fillFaint,
-                    in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+        .dsWell()
         .contentShape(Rectangle())
     }
 
@@ -381,8 +379,7 @@ struct SocialRepliesSection: View {
         }
         .padding(DS.Space.s4)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(DS.fillFaint,
-                    in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+        .dsWell()
         .sheet(item: $profile) { p in
             SocialProfileCard(profile: p)
         }
@@ -589,8 +586,7 @@ struct SocialProfileCard: View {
                 Spacer(minLength: 0)
             }
             .padding(DS.Space.s3)
-            .background(DS.fillFaint,
-                        in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+            .dsWell()
             .contentShape(Rectangle())
         }
         .buttonStyle(PressSpring())
@@ -626,8 +622,7 @@ struct SocialProfileCard: View {
                 Spacer(minLength: 0)
             }
             .padding(DS.Space.s3)
-            .background(DS.fillFaint,
-                        in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+            .dsWell()
         } else {
             Button {
                 watch()
@@ -641,8 +636,7 @@ struct SocialProfileCard: View {
                     Spacer(minLength: 0)
                 }
                 .padding(DS.Space.s3)
-                .background(DS.fillFaint,
-                            in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+                .dsWell()
                 .contentShape(Rectangle())
             }
             .buttonStyle(PressSpring())
@@ -665,8 +659,7 @@ struct SocialProfileCard: View {
                 Spacer(minLength: 0)
             }
             .padding(DS.Space.s3)
-            .background(DS.fillFaint,
-                        in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+            .dsWell()
             .contentShape(Rectangle())
         }
         .buttonStyle(PressSpring())
@@ -693,9 +686,7 @@ struct SocialProfileCard: View {
                             Spacer(minLength: 0)
                         }
                         .padding(DS.Space.s3)
-                        .background(DS.fillFaint,
-                                    in: RoundedRectangle(cornerRadius: DS.Radius.card,
-                                                         style: .continuous))
+                        .dsWell()
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(PressSpring())

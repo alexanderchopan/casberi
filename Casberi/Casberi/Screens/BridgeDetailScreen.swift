@@ -245,8 +245,7 @@ struct BridgeDetailScreen: View {
                 .dsText(.label12)
                 .foregroundStyle(DS.textTertiary)
             VStack(spacing: 0) { content() }
-                .background(DS.fillFaint,
-                            in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+                .dsWell()
         }
     }
 

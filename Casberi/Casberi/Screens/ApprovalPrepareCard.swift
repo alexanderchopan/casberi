@@ -63,8 +63,7 @@ struct ApprovalPrepareCard: View {
         }
         .padding(DS.Space.s4)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(DS.fillFaint,
-                    in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+        .dsWell()
     }
 
     /// Copy + the brief "Copied" acknowledgment — TokenSetupScreen's

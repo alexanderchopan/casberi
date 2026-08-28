@@ -98,8 +98,7 @@ struct ConnectWalletRow: View {
                 CopyAddressButton(address: uri.absoluteString, style: .inline)
             }
             .padding(DS.Space.s3)
-            .background(DS.fillFaint,
-                        in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+            .dsWell()
         }
         .padding(.top, DS.Space.s1)
     }

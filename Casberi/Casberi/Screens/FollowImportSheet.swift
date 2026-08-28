@@ -109,20 +109,10 @@ struct FollowImportSheet: View {
     /// Filters what's already here — it does NOT search the network, so it
     /// stays instant on the ~1,800-person case and never implies a new read.
     private var filterField: some View {
-        HStack(spacing: DS.Space.s2) {
-            Image(systemName: "magnifyingglass")
-                .dsGlyph(14, weight: .medium)
-                .foregroundStyle(DS.textTertiary)
-            TextField("Filter these people", text: $filter)
-                .dsText(.body17)
-                .foregroundStyle(DS.textPrimary)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-        }
-        .padding(.horizontal, DS.Space.s3)
-        .frame(minHeight: 44)
-        .background(DS.surfaceWell,
-                    in: RoundedRectangle(cornerRadius: DS.Radius.control, style: .continuous))
+        DSSlabField(placeholder: String(localized: "Filter these people"),
+                    text: $filter, actionLabel: "",
+                    glyph: "magnifyingglass", clearable: true,
+                    size: .compact, action: {})
     }
 
     private var list: some View {

@@ -1631,7 +1631,7 @@ struct ThingSheetView: View {
             || hasCounterparty || hasLanded
 
         if anyRow {
-            VStack(alignment: .leading, spacing: DS.Space.s3) {
+            DSSpecTable {
                 // When it happened, on a Work receipt. Every archetype has
                 // one and the hero above never states it — a deploy, a
                 // dispute and an agent run are all "a thing that happened at
@@ -1684,8 +1684,7 @@ struct ThingSheetView: View {
             // gathers them into one readable spec block.
             .padding(DS.Space.s4)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(DS.fillFaint,
-                        in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+            .dsWell()
         }
     }
 
@@ -1717,77 +1716,37 @@ struct ThingSheetView: View {
         if thing.source == "Files", FilesStore.shared.connected,
            HandOffState.installedSchemes.contains(FilesLocation.revealScheme),
            FilesLocation.components(ref: thing.sourceRef) != nil {
-            Button {
+            // The hand-off mark every leaving verb in this app wears — the row
+            // says where you land, the arrow says that you leave.
+            DSSpecRow(label: Text("From"), value: Text(LocalizedStringKey(value)),
+                      glyph: "arrow.up.right") {
                 runVerb(Verb(label: "Show in Files", icon: "folder", action: .showInFiles))
-            } label: {
-                HStack(alignment: .firstTextBaseline, spacing: 0) {
-                    Text("From")
-                        .dsText(.label12)
-                        .foregroundStyle(DS.textTertiary)
-                        .frame(width: 80, alignment: .leading)
-                    Text(LocalizedStringKey(value))
-                        .dsText(.callout15).foregroundStyle(DS.textPrimary)
-                        .lineLimit(2)
-                    // The hand-off mark every leaving verb in this app wears —
-                    // the row says where you land, this says that you leave.
-                    Image(systemName: "arrow.up.right")
-                        .accessibilityHidden(true)
-                        .dsGlyph(12, weight: .regular)
-                        .foregroundStyle(DS.textTertiary)
-                        .padding(.leading, DS.Space.s2)
-                    Spacer(minLength: 0)
-                }
-                .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
-            .dsHover()
         } else {
             specRow("From", value)
         }
     }
 
     private func specRow(_ label: String, _ value: String) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: 0) {
-            Text(LocalizedStringKey(label))
-                .dsText(.label12)
-                .foregroundStyle(DS.textTertiary)
-                .frame(width: 80, alignment: .leading)
-            // Callout, not body — the values were the loudest type on the
-            // sheet ("saved by you" outweighed the title's own facts).
-            Text(LocalizedStringKey(value))
-                .dsText(.callout15).foregroundStyle(DS.textPrimary)
-                .lineLimit(2)
-            Spacer(minLength: 0)
-        }
+        // Callout, not body — the values were the loudest type on the sheet
+        // ("saved by you" outweighed the title's own facts).
+        DSSpecRow(label: Text(LocalizedStringKey(label)),
+                  value: Text(LocalizedStringKey(value)))
     }
 
     /// The counterparty's name (yours if set, else a known contract / watched
     /// handle, else the short hex) with a pencil — tap to name it. What you name
     /// it here rides every future transfer with this address.
+    ///
+    /// No tooltip: the row already says "Who" and shows the name, so the pencil
+    /// is never the only thing a cursor has to go on.
     private func counterpartyRow(_ address: String) -> some View {
-        Button {
-            nameCounterpartyAction?()   // the one entry into the naming flow
-        } label: {
-            HStack(alignment: .firstTextBaseline, spacing: 0) {
-                Text("Who")
-                    .dsText(.label12).foregroundStyle(DS.textTertiary)
-                    .frame(width: 80, alignment: .leading)
-                Text(WalletIngest.knownLabel(for: address) ?? WalletStore.shortAddress(address))
-                    .dsText(.callout15).foregroundStyle(DS.textPrimary)
-                    .lineLimit(1)
-                Image(systemName: "square.and.pencil")
-                    .accessibilityHidden(true)
-                    .dsGlyph(12, weight: .regular)
-                    .foregroundStyle(DS.textTertiary)
-                    .padding(.leading, DS.Space.s2)
-                Spacer(minLength: 0)
-            }
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        // No tooltip: the row already says "Who" and shows the name, so the
-        // pencil is never the only thing a cursor has to go on.
-        .dsHover()
+        DSSpecRow(label: Text("Who"),
+                  value: Text(verbatim: WalletIngest.knownLabel(for: address)
+                              ?? WalletStore.shortAddress(address)),
+                  lineLimit: 1,
+                  glyph: "square.and.pencil",
+                  action: nameCounterpartyAction)
     }
 
     // MARK: - The dial's wiring (stage sheets — B1, 2026-07-16)

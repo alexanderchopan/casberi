@@ -41,6 +41,31 @@ enum DSSlab {
     static var shape: RoundedRectangle {
         RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous)
     }
+
+    /// TWO SIZES, named (2026-08-28 component sweep).
+    ///
+    /// A setup screen's slab is the page's own control and takes the room; a
+    /// filter sitting above a list inside a tray is chrome over the thing you
+    /// came for, and 56pt of it pushes the list down inside a height budget
+    /// the tray already spends carefully. Both existed already — three trays
+    /// had hand-rolled the compact one and two directory screens had
+    /// hand-rolled the slab one, spelling its height as
+    /// `DS.Radius.widget + 36` — so this names the rungs rather than
+    /// inventing one, and there are two so nobody has to hand-tune a third.
+    enum Size {
+        case slab, compact
+
+        var height: CGFloat { self == .slab ? DSSlab.height : DS.Hit.min }
+        var padding: CGFloat { self == .slab ? DS.Space.s4 : DS.Space.s3 }
+        /// The compact rung is a CONTROL, not a slab, and takes the control
+        /// radius — 20 on a 44pt box reads as a capsule that failed.
+        var shape: RoundedRectangle {
+            self == .slab ? DSSlab.shape
+                : RoundedRectangle(cornerRadius: DS.Radius.control, style: .continuous)
+        }
+        /// Off the mark ramp's own reasoning: the glyph tracks the box.
+        var glyphSize: CGFloat { self == .slab ? 15 : 14 }
+    }
 }
 
 /// The field slab — one shape holding both the input and its verb. Replaces
@@ -79,6 +104,30 @@ struct DSSlabField: View {
     var secondaryLabel: String? = nil
     var secondaryArmed = false
     var secondaryAction: () -> Void = { }
+    /// A LEADING glyph inside the well — in practice `magnifyingglass`, which
+    /// is the whole reason five screens hand-rolled this field instead of
+    /// using it (2026-08-28). Absent by default: a setup slab's placeholder
+    /// already says what it wants.
+    var glyph: String? = nil
+    /// Offer an × that empties the field once there is something in it.
+    ///
+    /// Only ever right on a field you FILTER with, never on one you fill in:
+    /// clearing a typed key is a keystroke away and the × would sit where a
+    /// verb belongs. Off by default for that reason.
+    var clearable = false
+    /// A spinner in the trailing slot, for a field whose submit goes to the
+    /// network (`DSSlabButton.busy`'s sibling).
+    var busy = false
+    /// Which rung — `.slab` is the page's own control, `.compact` is a filter
+    /// over a list. See `DSSlab.Size`.
+    var size: DSSlab.Size = .slab
+    /// The return key's word. `.return` everywhere but the fields whose submit
+    /// really does finish something.
+    var submitLabel: SubmitLabel = .return
+    /// `.never` because this slab was born holding API keys, handles and
+    /// addresses, where a capital letter inserted by the keyboard is a wrong
+    /// value. A field that holds a NAME somebody is writing says so.
+    var autocapitalization: TextInputAutocapitalization = .never
     let action: () -> Void
 
     private var armed: Bool {
@@ -86,14 +135,38 @@ struct DSSlabField: View {
         return alwaysEnabled || !text.trimmingCharacters(in: .whitespaces).isEmpty
     }
 
+    private var hasText: Bool { !text.isEmpty }
+
     var body: some View {
+        // Spacing unchanged at `s3` — the glyph joins the row every existing
+        // slab already lays out, rather than the row being re-tuned around it.
         HStack(spacing: DS.Space.s3) {
+            if let glyph {
+                Image(systemName: glyph)
+                    .dsGlyph(size.glyphSize, weight: .medium)
+                    .foregroundStyle(DS.textTertiary)
+                    .accessibilityHidden(true)
+            }
             Group {
                 if let focus {
                     field.focused(focus)
                 } else {
                     field
                 }
+            }
+            if busy { ProgressView().controlSize(.small) }
+            if clearable, hasText {
+                Button {
+                    DSHaptic.tap()
+                    text = ""
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .dsGlyph(size.glyphSize, weight: .regular)
+                        .foregroundStyle(DS.textTertiary)
+                        .dsTapTarget(Circle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(Text("Clear"))
             }
             if let secondaryLabel, secondaryArmed {
                 Button(action: secondaryAction) {
@@ -121,9 +194,9 @@ struct DSSlabField: View {
             }
         }
         .animation(DS.Motion.standard, value: secondaryArmed)
-        .padding(.horizontal, DS.Space.s4)
-        .frame(height: DSSlab.height)
-        .background(DS.surfaceWell, in: DSSlab.shape)
+        .padding(.horizontal, size.padding)
+        .frame(height: size.height)
+        .background(DS.surfaceWell, in: size.shape)
     }
 
     @ViewBuilder private var field: some View {
@@ -138,8 +211,9 @@ struct DSSlabField: View {
         .foregroundStyle(DS.textPrimary)
         .tint(DS.tint)
         .keyboardType(keyboard)
-        .textInputAutocapitalization(.never)
+        .textInputAutocapitalization(autocapitalization)
         .autocorrectionDisabled()
+        .submitLabel(submitLabel)
         .onSubmit(action)
     }
 }
@@ -178,7 +252,7 @@ struct DSSlabButton: View {
                     VStack(spacing: 1) {
                         verb
                         Text(detail)
-                            .dsText(.label12).fontWeight(.medium)
+                            .dsText(.label12)
                             .lineLimit(1)
                             .minimumScaleFactor(0.8)
                             // Quiet against the fill, not a second headline —
