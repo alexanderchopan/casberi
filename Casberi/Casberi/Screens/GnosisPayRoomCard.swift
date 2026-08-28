@@ -54,7 +54,7 @@ struct GnosisPayRoomCard: View {
             // head renders only inside its own source's room, under a chip strip
             // where that source's chip is the lit one — so the card introduced
             // itself with a word already on screen, one row up.
-            Text(GnosisPayRoom.headline(room, mask: BalancePrivacy.shared.hidden ? BalancePrivacy.mask : nil))
+            Text(GnosisPayRoom.headline(room, mask: BalancePrivacy.shared.withheld ? BalancePrivacy.mask : nil))
                 .dsText(.heading22)
                 .foregroundStyle(DS.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -180,7 +180,7 @@ struct GnosisPayRoomCard: View {
                         .foregroundStyle(DS.textPrimary)
                         .lineLimit(1)
                     Spacer(minLength: DS.Space.s2)
-                    Text(GnosisPayRoom.currencyLine(currency, mask: BalancePrivacy.shared.hidden ? BalancePrivacy.mask : nil))
+                    Text(GnosisPayRoom.currencyLine(currency, mask: BalancePrivacy.shared.withheld ? BalancePrivacy.mask : nil))
                         .dsText(.subhead13)
                         .foregroundStyle(DS.textSecondary)
                         .lineLimit(1)
@@ -193,6 +193,6 @@ struct GnosisPayRoomCard: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(Text("\(currency.code), \(GnosisPayRoom.currencyLine(currency, mask: BalancePrivacy.shared.hidden ? BalancePrivacy.mask : nil))"))
+        .accessibilityLabel(Text("\(currency.code), \(GnosisPayRoom.currencyLine(currency, mask: BalancePrivacy.shared.withheld ? BalancePrivacy.mask : nil))"))
     }
 }

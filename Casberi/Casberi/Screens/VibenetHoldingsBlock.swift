@@ -53,11 +53,27 @@ struct VibenetHoldingsBlock: View {
                         .frame(width: rest.isEmpty ? proxy.size.width : leadWidth)
                     if !rest.isEmpty {
                         VStack(spacing: gap) {
-                            ForEach(Array(rest.enumerated()), id: \.offset) { index, entry in
+                            // KEYED BY THE ASSET, NOT THE SLOT (prd §501).
+                            // Scoping the room to one account re-ranks these
+                            // cells, and by slot that swaps their contents in
+                            // place; by symbol the cell that is still USDV
+                            // moves to where USDV now belongs. Same drawing,
+                            // same fills — only the re-rank is watchable.
+                            //
+                            // **Stated limit:** a symbol promoted INTO the
+                            // lead, or dropped out of it, still cuts. The lead
+                            // and the stack are two different containers, so
+                            // carrying identity across them needs a
+                            // `matchedGeometryEffect`, and that is a change to
+                            // how this figure is built rather than to how it
+                            // animates — which is not what this pass is.
+                            ForEach(Array(rest.enumerated()), id: \.element.symbol) { index, entry in
                                 cell(entry, isLead: false, index: index + 1)
                             }
                         }
                         .frame(maxWidth: .infinity)
+                        .animation(reduceMotion ? nil : DS.Motion.standard,
+                                   value: rest.map(\.symbol))
                     }
                 }
             }

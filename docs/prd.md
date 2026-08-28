@@ -36109,6 +36109,277 @@ Consumer grammar inverts it, and every change here is one inversion:
 and mocked, and the mock is what was approved; the built screen has not been
 looked at.
 
+## 500. Ethrex Hegotá — a seat for a chain that publishes what other chains hide (user: "in the same way we had vibenet would it be possible to add this?" → "it is a new network, and it is very important. we would make a seat for it called Ethrex Hegota" → "what i don't know and want your answer on is what would the userflow be?" → "i'd want to know what the output is that we would show before building it" → "spec this out and use the wallet template we have bc i want to know what would be in the toggle row" → "Lanes is weird is there a better term for it?" → "should it be queues or orders or literally 'nonces'" → "decide and build it, but nonces is the literal term", 2026-08-27)
+
+Hegotá is a public devnet testing EIP-8141 frame transactions. Chain id 3151908,
+three keyless RPC hosts, blocks every six seconds. `HegotaBridge`, `HegotaCoins`,
+`HegotaAccount`, `HegotaRoom`, `HegotaSection`, `HegotaRoomSource`, screens
+`HegotaScreen`/`HegotaRoomCard`, seat id `hegota`, group **Wallet**.
+
+**THE FIRST ANSWER WAS WRONG AND THE MEASUREMENT IS WHY.** Asked whether this
+was possible, a sparse block sample said the chain had been dead since 11 Aug
+and the answer was "not worth a seat yet". Reading the LOGS instead: 254
+value-moving transactions, 77 of them type `0x6`, 164 distinct addresses, the
+most recent transfer that same morning. **Sampling 600 blocks out of 307,000 is
+not a measurement of a quiet chain, it is a measurement of sampling.** Read the
+thing that accumulates — the logs — not the thing that is mostly empty.
+
+**WHY IT EARNS A SEAT.** It publishes three things every other chain hides, each
+keyless and with no indexer: every ETH movement is an EIP-7708 log (so the
+balance line is EXACT, where `WalletStore.ValueSample` has to sample every four
+hours); every transaction names its `payer` (so gas sponsorship is a visible
+fact); and every transaction decomposes into frames with per-frame status (so a
+row can say what a transaction DID rather than one opaque success).
+
+**THE TOGGLE ROW: Home · Activity · Coins · Nonces · Sponsors.** `WalletSection`'s
+template, this room's vocabulary. Four of Wallet's names are deliberately absent
+— **Holdings** (one asset, so the crown already says it; Coins IS this room's
+Holdings), **Positions** and **NFTs** (nothing to hold), **Risk** (nothing can
+move against you; the asset is test ETH), and **Permissions** (the nearest thing
+is a sponsor paying your gas, which is a TRANSACTION and not a standing grant —
+nobody holds authority over a Hegotá address but its key, which is the sharp
+break from vibenet). **No attention dots, ever**: nothing in this room is urgent.
+
+**"Nonces", not "Lanes" and not "Queues".** EIP-8250's own term is *keyed
+nonces*, the RPC serves `nonceKeys`/`nonceSeq`, and `SafeBridge` already speaks
+the word to users, so it is not a new register. "Lanes" collides twice in
+wallet-adjacent copy (`WalletFlowBand` speaks its ribbons as lanes; the x402
+screen offers "Watch every lane"). "Queues" named the benefit but reads as
+*things pending* when the scope lists settled history. "Orders" was never
+available — `TokenWatchOrder`, the exchange screens and `MoneyReceiptCard` all
+spend it on trades, one chip from Markets.
+
+**COINS SITS THIRD AND THAT BREAKS NOTHING.** Stated as a cost in the spec and
+then found to be wrong on a careful read of `WalletSection`: the rule is that no
+UNCONDITIONAL scope may sit after a conditional one, so the strip's stable head
+never reflows. `home` and `activity` are the only unconditional scopes and both
+precede `coins`. Asserted in the harness.
+
+**THE READ CHECKS ITSELF, AND IS MADE TO.** The UTXO set is reconstructible from
+public reads alone: the vault emits a `UtxoCreated` LOG3 per coin (`topics =
+[sig, source, recipient]`, `data = index ‖ value`) and keeps a spent BITMAP at
+`2^129 + (index >> 8)`, bit `index & 0xFF`. Verified end to end — the shipped
+Swift, given the live logs and the bitmap word **at the slot it derived
+itself**, reconstructed 28 unspent coins whose total equalled the vault's
+`eth_getBalance` **exactly, to the wei**, twice hours apart at two different
+totals. So `hasCoins` is false unless the whole chain's set reconciles: an
+arithmetic that can prove itself right has to, or the first drifted parse ships
+as a confident wrong number in the largest type on the card.
+
+**EVERY REFUSAL IS DELIBERATE**, because on this card a wrong figure renders
+exactly as well as a right one: a coin whose spent bit could not be read refuses
+the WHOLE set (never "unspent" — that is money already gone, drawn as held); a
+topic that is not address-shaped yields no address rather than an invented
+counterparty; a value too large to hold exactly is refused rather than rounded;
+a spend whose outputs exceed its inputs yields no fee, since a negative fee is a
+parse bug wearing a number; and an UNREACHED account is named rather than folded
+into the total as zero, which would read as money leaving.
+
+**THE FEE IS DERIVED, NEVER REPORTED** — nothing on the wire states a UTXO
+frame's fee, so it is inputs minus outputs, the standard the money receipt
+already holds itself to. The real spend on chain: 1 coin of 1.0000 ETH in →
+0.4000 out, 0.5000 out, 0.099941 change, **0.000059 ETH** to the chain.
+
+**PREDEPLOYS, SO NO CONFIG FETCH.** The inverse of vibenet's standing
+constraint: those contracts redeploy without warning and `VibenetConfig` exists
+to fetch the map before every read. Hegotá's are predeploys at fixed
+spec-assigned addresses (`0x…008312` the vault, `0x…008250` the nonce manager,
+both verified to carry code), so a literal here is the correct spelling rather
+than a hazard.
+
+**LANDS NO `Thing`, so no CloudKit deploy** — the `RadicleRoomSource`/`ASCRoom`
+shape. A devnet address has no news: nothing a screenshot would reference,
+nothing to search for, a balance that is test ETH. The card IS the room, which
+is why it carries all five scopes rather than heading a list, and why the
+section switcher is drawn by the card (`PrivacyPoolsRoomCard`'s shape, §486) so
+the shell holds no Hegotá property at all.
+
+**TWO WORKED EXAMPLES, NOT ONE, AND THE REASON IS MEASURED**: coin owners and
+keyed-nonce senders are **disjoint populations** on this chain — not one address
+does both — so a single example structurally cannot show the room.
+`0x8b54b456…` holds 7 coins across 10 moves; `0x8943545177…` is the only address
+sending on two named keys (`0xbeef01`, `0x1234`). Without them a pasted address
+most often shows Home and Activity and nothing else, which is a correct blank
+that reads as a broken feature.
+
+**SPONSORS SHIPS EMPTY, DELIBERATELY.** All 77 frame transactions so far are
+self-paid, so the scope is absent on every address today and appears the first
+time somebody sponsors one. The FACT also rides the Activity row, which is not a
+duplication: Wallet already treats approvals this way — they land as events AND
+get a Permissions scope.
+
+**WHAT IT NEVER DOES**: no faucet (a write, and the seat's whole claim is that it
+cannot write — it links out so the person claims their own); no simulation
+(`ethrex_simulateFrameTransaction` needs signed bytes we would have to
+construct); no recent-roots card (`derivedSlotTime: null`, so every commit lands
+at slot 0 and no reference resolves — the feature is inert here by the devnet's
+own admission); no prices (test ETH); no notifications; and no status page —
+when an address has nothing the room shows nothing, because three green RPC dots
+is not a reading.
+
+`scripts/hegota-selftest.sh` compiles `HegotaSection`, `HegotaCoins`,
+`HegotaAccount` and `HegotaRoom` WHOLE — mutation-proven, with drift guards for
+the Foundation-only promise, the no-price rule, the no-notification rule and the
+naming ruling itself. **It found two real defects before any device saw them**:
+`HegotaRoom` referenced value types that lived beside the networking, so the
+room's rules could not be compiled by any harness at all (hence
+`HegotaAccount.swift`), and a keypath that would not infer. **UNSEEN on a
+device**: nothing here has been run in a simulator, and the room has never been
+looked at.
+
+
+## 501. Surprise and delight, wallet and vibenet — eleven moments, two of which already shipped (user: "spec out how we can add surprise and delight to wallet and to vibenet rooms and sheets", then "ok, as long as you don't change existing UI how our charts and stuff are do all", 2026-08-27)
+
+Eleven moments were drawn on a canvas first, then built. **The constraint the
+user set with the go-ahead governs every one of them: no drawing changes.** No
+figure was redrawn, no card restyled, no spacing touched and no colour added.
+Everything below is motion, a gesture, or a sentence following a gesture — and
+where a moment could only be had by changing a drawing, it was cut down to the
+half that could not.
+
+### THE ONE THAT MATTERS MOST: TWO OF THE ELEVEN WERE ALREADY BUILT
+
+Spec'd, then found in the source. **§418's lesson, and it recurred in the very
+pass that quotes it**: before proposing a change to a mature room, read that
+room's most recent ledger entry, because the code will not tell you which of
+its gaps were deliberate and a grep will not tell you which were already
+filled.
+
+- **The crown scrub** (§297, 2026-08-03) — press-then-drag on the wallet's
+  sparkline has rolled the figure to a past sample for over three weeks, on
+  touch AND on a Mac cursor. What was actually missing is narrower and is
+  fixed here: the SENTENCE under the figure went on stating the whole window's
+  move while the figure above it had rolled to Tuesday. Two true readings of
+  two different moments, one line apart.
+- **The receipt tearing itself** (§369 amendment) — `ReceiptPaper`'s teeth cut
+  in on `DS.Motion.tear` with a haptic on the same beat. Nothing to add.
+  (The spec had also claimed no haptic belonged there; the file's own note
+  explains why one does, and it stands.)
+
+A third was half-built: **the permission chips already stagger** through
+`chartArrival`, so only the clock half of moment 11 was real work.
+
+### WHAT SHIPPED
+
+**01b · The move sentence follows the scrub** (`WalletBalanceHeadline.moveLine`,
+`VibenetRoomCard.scrubbedMove`). Measured from the window's FIRST sample to the
+one under the finger — the same measurement the resting line makes with a
+different end point, so no second derivation exists to disagree with the first.
+At rest it is byte-identical to what it always drew.
+
+**01a · Vibenet's crown gained the scrub it was built to have.** §475 gave that
+room Wallet's hero; only one of the two let you ask the line what it was worth
+on a given day. The plot owns the whole gesture (`ChartScrubSurface`), so this
+is a handler, not a new interaction, and the drawing is untouched.
+
+**02 · The slot dissolves; the list cuts** (`Design/RoomFigureDissolve.swift`).
+**This narrows §495's "instant" rather than reversing it.** That ruling's stated
+reason was HEIGHT — animating a swap between slots of different natural height
+moves everything below the bar. This animates `opacity` and nothing else, on a
+view already laid out at its final size, so nothing can move. A fade-IN, not a
+crossfade, because a crossfade holds the outgoing view in the hierarchy, which
+is a removal transition, which is layout. Keyed rather than appear-only because
+the two rooms compose their slots differently.
+
+**03 · The holdings map re-composes** (`UnitTreemap.identity`, `GenTagMap`,
+`VibenetHoldingsBlock`). Cells keyed by the ASSET rather than by the slot, so
+scoping to one account moves each cell to its new rank instead of swapping
+contents in a fixed grid. **Opt-in, and every existing map is byte-identical**:
+without `identity` the keys are slots, which is exactly what
+`ForEach(0..<shown, id: \.self)` gave before, so the value never changes and the
+animation cannot fire. Scoped to token mode in `GenTagMap` for the same reason —
+the themes and source maps re-paint with genuinely different sets, and sliding
+unrelated cells past each other claims a continuity that is not there.
+
+**04 · Money that really arrived rains** (`Model/WalletArrival.swift`). Stripe
+has celebrated arrivals since §250 and the wallet never has. Nothing new is
+drawn: it bumps the pulse a pull-to-refresh already bumps, in the receiving
+wallet's own face stop. **Four fences, and the sharpest is §481's**: a duster
+must not be able to make your phone celebrate. (1) A row an insert really
+inserted — announced only AFTER the save, since a landing the store rejected
+must never have rained. (2) Received, and priced above `holdingFloor`. (3)
+Nothing flagged, and nothing whose price could not be READ — the conservative
+direction on purpose, because silence when we cannot tell is cheap and a party
+over a fake token is not. (4) A sync you are present for, which is enforced by
+the room observing `pulse` on CHANGE and never on appear: a pulse raised while
+the room was closed reaches nobody and is not replayed. One pulse per pass,
+never one per transfer.
+
+**05 · Hold to peek** (`Design/HoldToPeek.swift`, `BalancePrivacy.peeking`).
+Press and hold a masked figure and it reads for as long as you hold. **Never
+persisted, and that is the whole safety argument**: the errand it replaces is
+leaving for Privacy, flipping the setting, coming back and remembering to flip
+it again — and a setting left flipped is off when you next hand somebody your
+phone. A reveal that cannot outlive the touch cannot be forgotten in the on
+position. It reveals every withheld figure on screen rather than the one under
+the finger, because `WalletValue`'s gates are static formatters with no idea
+which view is asking, and a room with one figure lit and its own treemap labels
+still masked reads as a rendering fault. `hidden` stays exactly what the toggle
+writes; `withheld` is the transient lens the gates now ask. **`WidgetPublish`
+deliberately still reads `hidden`** — that payload is persisted and transported,
+and a peek must never reach it.
+
+**06 · A key lands on the runway** (`MicroMotion.arrivalWash`). §479 gave a new
+key a chip and a wash on the card and the tray; the runway that says WHEN it
+dies had neither, so the one drawing that places a key in time could not say
+which was new. It reads `keyChanges.added` — the same set the chip spends — so
+runway, chip and count cannot disagree. A wash, not a badge: a marker that
+stays is one you stop reading, which is what §493 deleted the attention dots
+for.
+
+**07 · Hold an account to see what it reaches** (`VibenetAccountWebCard`).
+§482's own complaint was that with two accounts it is hard to tell who can do
+what; the web answers it all at once. Holding a node drops everything it does
+not touch to 18% for as long as you hold. `@GestureState`, so it cannot latch
+on — it resets on lift, on a scroll cancelling the press, and on teardown
+mid-press. §295's same-weight ruling is intact: a transient answer to a
+gesture, never a standing claim. **The dim itself survives Reduce Motion** —
+it is the ANSWER, not the flourish; only its fade is dropped.
+
+**08 · The last ten seconds** (`VibenetAccountItem.unlockClosing`,
+`dsTabularDigits`). §479 landed the crossing and left the approach flat.
+Tabular digits only inside the window, because a proportional "9" is narrower
+than a "0" and a per-second label reflows under the eye exactly when the eye is
+on it — applied for the whole run it would change how every unlock row has
+always been set. The leading edge brightens on the second, in the room's own
+mark rather than a second colour. The haptic at zero already latches; nothing
+here fires per tick.
+
+**09 · The subject arrives on the sheet** (`DSSheetHead`) — **and the FLIGHT the
+spec drew is NOT buildable, which is a platform fact rather than a scoping
+choice.** A flight needs one overlay painting over both endpoints, and a
+`.sheet` is a separate presentation: an `overlayPreferenceValue` in the room
+cannot draw over it. That is exactly why `AddressFlight` works — both of ITS
+endpoints are on one screen. The system zoom would cross that boundary and is
+banned here (§232, a deterministic device-specific crash the simulator never
+reproduced). So what ships is the visible half — the stage settling in — on one
+recipe both rooms read, and the flight proper stays unbuilt with its reason
+written down rather than being quietly dropped.
+
+**11 · The consequence line is a clock** (`VibenetEventCard`). "It expires in 3
+days" was composed once at open, so a sheet left up went on saying it. Inside
+48 hours it ticks, in hours and then minutes. **By the minute, never by the
+second** — the finest thing the sentence says is minutes, and the head carries
+the account's face and the sheet's stamp. Outside the window the clause is
+unchanged: a seconds counter on a key with three weeks left is theatre.
+
+### DECLINED, WITH REASONS
+
+A per-account hue on the crown (refused at §479, and §483 has since moved
+identity off colour onto the name beside the face); the system zoom (above);
+a confetti burst on a big number (a balance is a reading, and `success` belongs
+to a write fired with the toast that names it); an always-lit dot (§493); sound.
+
+### WHAT NOBODY HAS SEEN
+
+**Every moment here is time- or gesture-driven and none has been run on a
+device or in a simulator.** The build is green on iOS, and
+`hide-balances-audit`, `design-motion-audit` and `swiftdata-liveness-audit` are
+green — which proves the gate is intact, that every entrance honours Reduce
+Motion, and that no tombstone is read. None of them can prove a single one of
+these feels right, and no harness here can make a transfer land, a key expire
+or a timelock open.
+
 ## 502. Five moments the address book did not have, and the one it cannot have (user: "how would you add surprise and delight to the address book", then "do all", 2026-08-27)
 
 Reviewed as six artboards against the shipped §498/§499 screen — the book as it

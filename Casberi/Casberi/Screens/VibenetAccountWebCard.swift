@@ -16,6 +16,30 @@ struct VibenetAccountWebCard: View {
     var onWatch: ((String) -> Void)? = nil
     let reduceMotion: Bool
 
+    /// HOLD AN ACCOUNT TO SEE WHAT IT REACHES (prd §501) — the node under the
+    /// finger, or nil at rest.
+    ///
+    /// **The web answers "who can do what" all at once**, which was §482's own
+    /// complaint about this relationship (*"with two accounts its hard to tell
+    /// who can do what"*) and is the reason this drawing replaced the spine.
+    /// Holding one node answers it for that one account: everything it does
+    /// not touch drops back, for exactly as long as you hold.
+    ///
+    /// **`@GestureState`, so it cannot latch on.** It resets itself when the
+    /// finger lifts, when the press is cancelled by a scroll, and when the
+    /// view is torn down mid-press — the three cases a hand-rolled `@State`
+    /// flag gets wrong, and the same reason `HoldToPeek` is built this way.
+    ///
+    /// §295's same-weight ruling survives intact: this is a transient answer
+    /// to a gesture, never a standing claim that one relationship matters more
+    /// than another. Nothing is written and nothing is remembered.
+    @GestureState private var held: String?
+
+    /// How far a node the held one does not touch falls back. Far enough to
+    /// read as "not this", near enough to stay legible — a dimmed row is still
+    /// part of the drawing, not removed from it.
+    private static let dimmed: Double = 0.18
+
     /// The most air allowed between two nodes once the web is filling its
     /// box — see the `Spacer`s in `body`.
     private static let maxSpread: CGFloat = 34
@@ -91,6 +115,11 @@ struct VibenetAccountWebCard: View {
     /// about, which is the whole reason this drawing beat the delegate spine.
     @ViewBuilder
     private func row(_ node: VibenetAccountWeb.Node) -> some View {
+        // Every node hangs off the ONE owner, so the set a held node touches
+        // is itself and the owner — there are no node-to-node links in this
+        // web to follow. Stated rather than computed, because computing it
+        // would imply a graph this drawing does not have.
+        let dim = held != nil && held != node.id
         let body = HStack(spacing: DS.Space.s2) {
             if node.watched {
                 WalletFace(address: node.address, size: DS.Face.rowCircle, circular: true)
@@ -121,18 +150,35 @@ struct VibenetAccountWebCard: View {
             }
             Spacer(minLength: 0)
         }
-        if !node.watched, let onWatch {
-            Button {
-                DSHaptic.selection()
-                onWatch(node.address)
-            } label: { body.contentShape(Rectangle()) }
-                .buttonStyle(.plain)
-                .dsHover()
-                // The combined element above carries the speech; a label here
-                // would be written and never read.
-                .accessibilityHidden(true)
-        } else {
-            body
+        Group {
+            if !node.watched, let onWatch {
+                Button {
+                    DSHaptic.selection()
+                    onWatch(node.address)
+                } label: { body.contentShape(Rectangle()) }
+                    .buttonStyle(.plain)
+                    .dsHover()
+                    // The combined element above carries the speech; a label
+                    // here would be written and never read.
+                    .accessibilityHidden(true)
+            } else {
+                body
+            }
         }
+        .opacity(dim ? Self.dimmed : 1)
+        // The dim itself is NOT dropped under Reduce Motion — it is the
+        // ANSWER to the gesture, not a flourish on top of one. Only its fade
+        // is, which is the line that preference actually draws
+        // (`ChartEntrance`: render the final frame immediately, never a slower
+        // version of the move).
+        .animation(reduceMotion ? nil : .easeOut(duration: 0.2), value: dim)
+        // A hit area first: a `Text` and a face have holes between them, and a
+        // press that lands in one of those does nothing, which reads as the
+        // hold being unreliable rather than as a miss.
+        .contentShape(Rectangle())
+        .gesture(
+            LongPressGesture(minimumDuration: 0.18, maximumDistance: 12)
+                .updating($held) { _, state, _ in state = node.id }
+        )
     }
 }

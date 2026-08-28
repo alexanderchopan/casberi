@@ -54,6 +54,26 @@ struct UnitTreemap<Cell: View>: View {
     /// figure in the app would be the noise the vocabulary exists to prevent.
     var readout: ((Int) -> String?)? = nil
 
+    /// What slot `i` IS, stably, across a re-rank (2026-08-27, prd §501).
+    ///
+    /// **Absent by default, and every existing caller stays byte-identical.**
+    /// Without it the cells are keyed by slot, so a re-rank swaps their
+    /// contents in place — which is right for a map whose rows are unrelated
+    /// between renders (services, terms, sellers). With it they are keyed by
+    /// the THING, so a map that is the same subject re-measured — the wallet's
+    /// holdings under one account rather than all of them — moves its cells to
+    /// their new ranks instead of cutting: the same money rearranging, which
+    /// is what a scope pick actually did.
+    ///
+    /// The caller supplies it because only the caller knows what a cell is; a
+    /// token's symbol is the wallet's answer and would be meaningless here.
+    /// Keys that repeat are disambiguated by slot rather than trusted, since a
+    /// duplicated `ForEach` id silently drops a cell — the failure this map's
+    /// own doc already refuses for a dropped row.
+    var identity: ((Int) -> String)? = nil
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     /// (x, y, w, h) in grid units, per cell count. Sized so a 1- to 6-cell map
     /// always fills the board with no holes.
     static func frames(_ n: Int) -> [(Int, Int, Int, Int)] {
@@ -83,14 +103,34 @@ struct UnitTreemap<Cell: View>: View {
 
     static var maxCells: Int { 6 }
 
+    /// One stable id per drawn slot.
+    ///
+    /// With no `identity` this is the SLOT, which is exactly the identity
+    /// `ForEach(0..<shown, id: \.self)` gave every caller before this existed —
+    /// so a map that does not opt in cannot behave differently, including the
+    /// per-cell `settleIn` stagger, which keys off the index either way.
+    static func keys(_ shown: Int, _ identity: ((Int) -> String)?) -> [String] {
+        guard let identity else { return (0..<shown).map { "slot-\($0)" } }
+        var seen: Set<String> = []
+        return (0..<shown).map { i in
+            let raw = identity(i)
+            // A repeated key would silently drop a cell. Disambiguating by
+            // slot costs that cell its travel and keeps it on screen, which is
+            // the right trade — a map that loses a row looks like a map that
+            // had nothing to show.
+            return seen.insert(raw).inserted ? raw : "\(raw)#\(i)"
+        }
+    }
+
     var body: some View {
         let shown = min(max(count, 0), Self.maxCells)
         let table = Self.frames(shown)
+        let keys = Self.keys(shown, identity)
         GeometryReader { geo in
             let uw = (geo.size.width - gap * 3) / 4
             let uh = (height - gap * 2) / 3
             ZStack(alignment: .topLeading) {
-                ForEach(0..<shown, id: \.self) { i in
+                ForEach(Array(keys.enumerated()), id: \.element) { i, _ in
                     let f = table[i]
                     cell(i)
                         .frame(width: uw * CGFloat(f.2) + gap * CGFloat(f.2 - 1),
@@ -109,6 +149,13 @@ struct UnitTreemap<Cell: View>: View {
                         .dsReadout(readout?(i))
                 }
             }
+            // THE CELLS TRAVEL WHEN THEY ARE THE SAME CELLS (prd §501). Only
+            // a caller that opted into `identity` can reach this: without it
+            // the keys are slots, which never change, so `value` never
+            // changes and the animation is dead weight rather than a
+            // behaviour change for the maps that did not ask for it.
+            .animation(identity == nil || reduceMotion ? nil : DS.Motion.standard,
+                       value: keys)
         }
         .frame(height: height)
     }

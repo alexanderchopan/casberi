@@ -270,3 +270,29 @@ private struct DSGlyphModifier: ViewModifier {
                              weight: weight))
     }
 }
+
+/// Digits that do not reflow, conditionally (2026-08-27, prd §501).
+///
+/// `monospacedDigit()` takes no argument, so a caller that wants tabular
+/// figures only sometimes — a countdown inside its last ten seconds, and
+/// proportional for the hours before that — has no way to say so without
+/// duplicating the whole `Text`. This is that switch.
+///
+/// **Why it is conditional at all.** Tabular digits are wider and slightly
+/// looser than the proportional set, so applying them for a countdown's whole
+/// run changes how every one of those rows has always been set. Applied only
+/// where a per-second label would otherwise reflow under the eye, it fixes a
+/// defect that exists nowhere else.
+private struct TabularDigits: ViewModifier {
+    let on: Bool
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if on { content.monospacedDigit() } else { content }
+    }
+}
+
+extension View {
+    /// Tabular figures while `on`, the font's own digits otherwise.
+    func dsTabularDigits(_ on: Bool) -> some View { modifier(TabularDigits(on: on)) }
+}

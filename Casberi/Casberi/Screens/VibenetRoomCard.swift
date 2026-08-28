@@ -250,6 +250,20 @@ struct VibenetRoomCard: View {
 
     @State private var counted = false
 
+    /// THE SCRUB (prd §501) — the sample under the finger, or nil at rest.
+    ///
+    /// **Wallet has had this since §297 and this room did not**, on a crown
+    /// §475 built to be Wallet's crown. Both draw a `TokenChartPlot` over real
+    /// samples; only one of them let you ask the line what it was worth on a
+    /// given day. The plot owns the whole gesture (`ChartScrubSurface`, press
+    /// then drag, a `nil` on release) — so this is a handler, not a new
+    /// interaction, and the drawing is untouched.
+    ///
+    /// It snaps to samples that were actually recorded and never interpolates
+    /// between two looks, which is `VibenetChartRange`'s own rule one layer
+    /// down: the windows this room offers exist because the readings do.
+    @State private var scrubIndex: Int?
+
     private static let mark = DS.brandHue(for: "Base Vibenet") ?? Color.fixed("#0052ff")
     /// The most rows drawn before the footnote takes over, INCLUDING the
     /// lead — the `StripeRoom`/`ASCRoom` cap shape, so a long watch list
@@ -471,7 +485,7 @@ struct VibenetRoomCard: View {
                     // own Home slot and `reservesHeadline`.
                     DSRoomSlot(headline: nil, reservesHeadline: false) { balanceHero }
                 } else {
-                    scopeVisual
+                    scopeVisualDissolving
                 }
             }
             .padding(.bottom, DSRoomChassis.railGap - DS.Space.s6)
@@ -927,6 +941,34 @@ struct VibenetRoomCard: View {
     /// card (the line's whole job is its shape, and a card's own padding was
     /// stealing width from it), and with the card gone there is nothing left
     /// to cancel — negative insets would now push the curve off the screen.
+    /// The crown's figure while a finger is on the line (prd §501).
+    ///
+    /// Falls back to the count-up's own value at rest, so §479's arrival roll
+    /// is untouched: the two never run at once, because the count-up latches
+    /// on the first pass and the scrub cannot begin before the chart exists.
+    private func scrubbedTotal(_ nativeTotal: Double) -> Double {
+        guard let scrubIndex,
+              let series = VibenetValueHistory.series(windowed),
+              series.indices.contains(scrubIndex) else { return counted ? nativeTotal : 0 }
+        return series[scrubIndex]
+    }
+
+    /// The move sentence's pair while scrubbing — (amount, percent).
+    ///
+    /// Returns the resting pair untouched when nothing is under the finger, so
+    /// a room at rest states exactly what it has always stated.
+    private func scrubbedMove(resting: (Double, Double)) -> (Double, Double) {
+        guard let scrubIndex,
+              let series = VibenetValueHistory.series(windowed),
+              series.indices.contains(scrubIndex),
+              let first = series.first else { return resting }
+        let move = series[scrubIndex] - first
+        // A zero start has no percentage, and inventing one ("+∞%") over
+        // somebody's balance is the §83 confident-wrong-answer this room
+        // spends its honesty rails avoiding.
+        return (move, first == 0 ? 0 : move / abs(first) * 100)
+    }
+
     @ViewBuilder
     private var balanceHero: some View {
         if let aggregate = VibenetBalanceAggregation.compose(room.items) {
@@ -962,7 +1004,7 @@ struct VibenetRoomCard: View {
                     // a re-compose while somebody is reading never re-rolls
                     // the number, and with Reduce Motion on the figure is
                     // simply correct from the first frame.
-                    Text("\(VibenetBalanceFormat.line(counted ? nativeTotal : 0)) ETH")
+                    Text("\(VibenetBalanceFormat.line(scrubbedTotal(nativeTotal))) ETH")
                         .dsText(.price48)
                         .foregroundStyle(DS.textPrimary)
                         .monospacedDigit()
@@ -998,8 +1040,19 @@ struct VibenetRoomCard: View {
                 // parentheses — and its own note says why: the percent alone
                 // cannot say how much, and the amount is what the reader is
                 // actually looking at on the line above.
-                if let change = VibenetValueHistory.delta(windowed),
-                   let move = VibenetValueHistory.move(windowed) {
+                if let resting = VibenetValueHistory.delta(windowed),
+                   let restingMove = VibenetValueHistory.move(windowed) {
+                    // WHILE SCRUBBING IT DESCRIBES THE SCRUBBED SAMPLE
+                    // (prd §501, Wallet's `moveLine` rule, same reasoning):
+                    // the figure above has rolled to a past reading, so a
+                    // sentence still stating the whole window's move puts two
+                    // different moments one line apart. Measured from the
+                    // window's first sample to the one under the finger — the
+                    // same measurement with a different end point, so there is
+                    // no second derivation to disagree with the first.
+                    let scrubbed = scrubbedMove(resting: (restingMove, resting))
+                    let move = scrubbed.0
+                    let change = scrubbed.1
                     HStack(spacing: 5) {
                         Image(systemName: change >= 0 ? "arrowtriangle.up.fill" : "arrowtriangle.down.fill")
                             .dsGlyph(9)
@@ -1093,6 +1146,16 @@ struct VibenetRoomCard: View {
         }
     }
 
+    /// `scopeVisual` with §501's arrival on it.
+    ///
+    /// Wrapped here rather than inside each case so the four figures cannot
+    /// disagree about the beat — the `DSRoomChassis` lesson one layer in: the
+    /// PARTS were already shared and the timing between them was not.
+    @ViewBuilder
+    private var scopeVisualDissolving: some View {
+        scopeVisual.roomFigureDissolve(section ?? .home)
+    }
+
     /// THE VALUE OVER TIME — Home's figure, and it goes through the SLOT
     /// rather than living inside the crown (prd §491).
     ///
@@ -1118,7 +1181,13 @@ struct VibenetRoomCard: View {
                                    change: VibenetValueHistory.delta(windowed) ?? 0, scheme: scheme),
                                // 120, Wallet's own height for this figure.
                                height: 120, pulses: false,
-                               lineWidth: 2.6, fillOpacity: 0.24, endpointDot: true)
+                               lineWidth: 2.6, fillOpacity: 0.24, endpointDot: true,
+                               // THE SCRUB (prd §501) — Wallet's own handler,
+                               // on Wallet's own plot. The cursor and the
+                               // gesture are the plot's; this room only says
+                               // which sample is under it.
+                               cursorIndex: scrubIndex,
+                               onScrub: { scrubIndex = $0 })
                 // **NO RANGE STRIP (user ruling, prd §491: "you still have this
                 // on vibenet but not on wallet remove it please").**
                 //
@@ -1820,6 +1889,17 @@ struct VibenetRoomCard: View {
                     ForEach(Array(shelf.rows.enumerated()), id: \.element.id) { index, row in
                         shelfRow(row)
                             .chartArrival(index: index, reduceMotion: reduceMotion)
+                            // A KEY LANDS ON THE RUNWAY (prd §501). §479 gave
+                            // a new key a chip and a wash on the card and the
+                            // tray; the runway that says WHEN it dies had
+                            // neither, so the one drawing that places a key in
+                            // time could not say which key was the new one.
+                            //
+                            // It reads `keyChanges.added` — the same set the
+                            // chip spends — so the runway, the chip and the
+                            // count cannot disagree about what is new.
+                            .arrivalWash(keyChanges?.added.contains(row.id) == true,
+                                         hue: Self.mark)
                     }
                     if let tail = shelf.tailLine {
                         Text(tail)
@@ -2497,6 +2577,17 @@ struct VibenetRoomCard: View {
                     ForEach(Array(shelf.rows.enumerated()), id: \.element.id) { index, row in
                         shelfRow(row)
                             .chartArrival(index: index, reduceMotion: reduceMotion)
+                            // A KEY LANDS ON THE RUNWAY (prd §501). §479 gave
+                            // a new key a chip and a wash on the card and the
+                            // tray; the runway that says WHEN it dies had
+                            // neither, so the one drawing that places a key in
+                            // time could not say which key was the new one.
+                            //
+                            // It reads `keyChanges.added` — the same set the
+                            // chip spends — so the runway, the chip and the
+                            // count cannot disagree about what is new.
+                            .arrivalWash(keyChanges?.added.contains(row.id) == true,
+                                         hue: Self.mark)
                     }
                 }
                 .padding(.top, DS.Space.s3)
@@ -2648,10 +2739,26 @@ struct VibenetRoomCard: View {
                         // while the detail behind it counts down.
                         TimelineView(.periodic(from: .now, by: 1)) { tick in
                             if let countdown = item.unlockLabel(now: tick.date) {
+                                // THE LAST TEN SECONDS (prd §501). §479 landed
+                                // the crossing and left the approach flat — a
+                                // countdown ten seconds out looked exactly
+                                // like one ten minutes out, on the one moment
+                                // in this room somebody might sit and watch.
+                                //
+                                // **Tabular digits, and only at the end.** A
+                                // proportional "9" is narrower than a "0", so
+                                // a per-second label REFLOWS under the eye
+                                // exactly when the eye is on it. Applied for
+                                // the whole run instead, this would change how
+                                // every unlock row has always been set; inside
+                                // ten seconds it is the fix for a defect that
+                                // only exists there.
+                                let closing = item.unlockClosing(now: tick.date)
                                 Text(countdown)
                                     .dsText(.label12)
                                     .foregroundStyle(DS.textPrimary)
                                     .lineLimit(1)
+                                    .dsTabularDigits(closing)
                                     .contentTransition(.numericText())
                                     .animation(reduceMotion ? nil : DS.Motion.standard, value: countdown)
                                 // Only when BOTH endpoints are known — a bar
@@ -2664,6 +2771,23 @@ struct VibenetRoomCard: View {
                                             Capsule().fill(Self.mark.opacity(0.15))
                                             Capsule().fill(Self.mark)
                                                 .frame(width: geo.size.width * progress)
+                                            // THE LEADING EDGE BRIGHTENS ON
+                                            // THE SECOND, inside ten (prd
+                                            // §501). It rides the SAME mark
+                                            // rather than a second colour —
+                                            // this room spends blue on urgency
+                                            // and only on urgency, and an
+                                            // unlock about to land is exactly
+                                            // that. Off under Reduce Motion,
+                                            // where the bar's own fill already
+                                            // says how far along it is.
+                                            if closing, !reduceMotion {
+                                                Capsule().fill(.white)
+                                                    .frame(width: 4)
+                                                    .offset(x: max(0, geo.size.width * progress - 4))
+                                                    .opacity(Int(tick.date.timeIntervalSince1970) % 2 == 0 ? 0.9 : 0.35)
+                                                    .animation(.easeInOut(duration: 0.5), value: countdown)
+                                            }
                                         }
                                     }
                                     .frame(height: 4)

@@ -62,6 +62,24 @@ struct DSSheetHead<Disc: View>: View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .top, spacing: 0) {
                 disc()
+                    // THE SUBJECT ARRIVES (prd §501). The sheet's stage
+                    // settles in rather than being already there, so opening a
+                    // row reads as that row becoming this page.
+                    //
+                    // **This is the arrival, not the FLIGHT the spec drew, and
+                    // the difference is a platform fact rather than a
+                    // compromise chosen for effort.** A flight needs one
+                    // overlay drawing over both endpoints, and a `.sheet` is a
+                    // separate presentation — an `overlayPreferenceValue` in
+                    // the room cannot paint over it, which is why
+                    // `AddressFlight` works at all: both of ITS endpoints are
+                    // on one screen. The system zoom would cross that boundary
+                    // and is banned here (§232, a deterministic device-
+                    // specific crash the simulator never reproduced). So what
+                    // ships is the visible half, on one recipe both rooms
+                    // read, and the flight proper stays unbuilt with its
+                    // reason written down.
+                    .settleIn()
                 Spacer(minLength: DS.Space.s3)
                 if let stamp {
                     Text(stamp)

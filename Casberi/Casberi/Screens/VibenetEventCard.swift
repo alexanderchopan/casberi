@@ -48,7 +48,35 @@ struct VibenetEventCard: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     private static let mark = DS.brandHue(for: "Base Vibenet") ?? Color.fixed("#0052ff")
 
+    /// Whether the consequence sentence is inside its clock window (prd §501).
+    ///
+    /// **Gated hard, and only on the one kind that has a clock at all.** A
+    /// revocation, a lock and an unlock all state a fact with no deadline in
+    /// it, so ticking them would spend a per-minute redraw on a sentence that
+    /// cannot change. An authorization whose expiry is further out than
+    /// `ticksWithin` is in the same position.
+    private var consequenceTicks: Bool {
+        guard facts.kind == .authorized, let expires = facts.expires else { return false }
+        let seconds = expires.timeIntervalSinceNow
+        return seconds > 0 && seconds < Self.ticksWithin
+    }
+
     var body: some View {
+        // BY THE MINUTE, NEVER BY THE SECOND. The finest thing this sentence
+        // says is minutes, so a per-second tick would redraw the head sixty
+        // times to change nothing — and the head is where the account's face
+        // and the sheet's stamp live. A minute is the resolution of the claim.
+        if consequenceTicks {
+            TimelineView(.periodic(from: .now, by: 60)) { tick in
+                card(now: tick.date)
+            }
+        } else {
+            card(now: .now)
+        }
+    }
+
+    @ViewBuilder
+    private func card(now: Date) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             // **WALLET'S RECEIPT ANATOMY** (prd §495, user: *"the sheet for
             // activity should look in some way like the design we have for
@@ -78,7 +106,7 @@ struct VibenetEventCard: View {
                         },
                         title: title,
                         secondary: subtitle,
-                        sentence: consequence,
+                        sentence: consequence(now: now),
                         // The room's own hue pours behind the paper, the way
                         // a money receipt takes the transaction's.
                         hue: Self.mark)
@@ -216,7 +244,7 @@ struct VibenetEventCard: View {
 
     /// WHAT IT MEANS NOW — one sentence, assembled from stamped facts and
     /// never parsed out of a title.
-    private var consequence: String? {
+    private func consequence(now: Date) -> String? {
         switch facts.kind {
         case .authorized:
             guard let expires = facts.expires else {
@@ -224,9 +252,9 @@ struct VibenetEventCard: View {
                     ? nil
                     : String(localized: "It does not expire.")
             }
-            return expires.timeIntervalSinceNow <= 0
+            return expires.timeIntervalSince(now) <= 0
                 ? String(localized: "It has since expired.")
-                : Self.expiryClause(expires)
+                : Self.expiryClause(expires, now: now)
         case .revoked:
             return String(localized: "It can no longer act for this account.")
         case .locked:
@@ -235,6 +263,12 @@ struct VibenetEventCard: View {
             return String(localized: "When the timelock elapses, this account can be spent from again.")
         }
     }
+
+    /// How close an expiry has to be before the consequence sentence becomes
+    /// a CLOCK rather than a statement (prd §501). Two days, which is the
+    /// span over which "tomorrow" stops being a useful answer and a person
+    /// might reasonably still be deciding whether to act.
+    static let ticksWithin: TimeInterval = 48 * 3600
 
     /// Under a week is worth the brand hue — the same threshold the room's own
     /// soonest-expiry callout uses, so a key reading "urgent" here reads
@@ -258,6 +292,27 @@ struct VibenetEventCard: View {
     /// clause the countdown forms deliberately do not want.
     static func expiryClause(_ date: Date, now: Date = .now) -> String {
         let seconds = date.timeIntervalSince(now)
+        // THE LAST TWO DAYS ARE A CLOCK (prd §501). Rounding up to days is
+        // right for a key with a week left and wrong for one with four hours:
+        // it reads "It expires tomorrow." for the whole of the last day, which
+        // is the sentence a sheet left open for an hour goes on saying after
+        // it has stopped being the useful answer.
+        //
+        // Outside this window the clause is unchanged, deliberately — a
+        // seconds counter on a key with three weeks left is theatre, and the
+        // card would be spending a per-minute redraw on it.
+        if seconds < ticksWithin {
+            let hours = Int(seconds / 3600)
+            if hours >= 1 {
+                return hours == 1
+                    ? String(localized: "It expires in 1 hour.")
+                    : String(localized: "It expires in \(hours) hours.")
+            }
+            let minutes = max(1, Int((seconds / 60).rounded(.up)))
+            return minutes == 1
+                ? String(localized: "It expires in 1 minute.")
+                : String(localized: "It expires in \(minutes) minutes.")
+        }
         if seconds < soon {
             let days = max(1, Int((seconds / 86_400).rounded(.up)))
             return days == 1

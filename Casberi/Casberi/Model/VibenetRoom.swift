@@ -1031,6 +1031,29 @@ struct VibenetAccountItem: Identifiable, Equatable, Codable {
         return at.formatted(.relative(presentation: .named))
     }
 
+    /// THE LAST TEN SECONDS (prd §501) — true only inside `closingWindow` of
+    /// an unlock that has actually been initiated.
+    ///
+    /// It exists because the two things that change at the end are typographic
+    /// and can only be decided per tick: a per-second label set in
+    /// proportional digits REFLOWS under the eye, and the bar's leading edge
+    /// has nothing to say until the moment is nearly here. Both are drawn by
+    /// the view; the decision is here so the harness can hold it.
+    ///
+    /// **Strictly inside the window and never after zero.** Once the timelock
+    /// is up the state is "ready", which is a fact rather than a countdown —
+    /// §479's own reason for latching the landing, one accessor down.
+    func unlockClosing(now: Date) -> Bool {
+        guard let unlocksAt, unlocksAt > 0 else { return false }
+        let remaining = TimeInterval(unlocksAt) - now.timeIntervalSince1970
+        return remaining > 0 && remaining <= Self.closingWindow
+    }
+
+    /// How near the end counts as closing. Ten seconds: long enough to notice
+    /// something changed, short enough that it cannot be mistaken for the
+    /// row's ordinary appearance.
+    static let closingWindow: TimeInterval = 10
+
     /// 0…1 through the unlock timelock, or nil when EITHER endpoint is
     /// unknown — a bar with a guessed start is exactly the fake status §83
     /// bans, so this returns nothing rather than inventing a starting point.

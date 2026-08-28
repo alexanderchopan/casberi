@@ -374,6 +374,9 @@ enum WalletIngest {
                                             knownGood: knownGoodByOwner)
 
         var landed: [Thing] = []
+        /// The first wallet this pass received qualifying money at (prd §501).
+        /// ONE per pass, never one per transfer — see `WalletArrival.pulse`.
+        var arrival: String?
         for key in order {
             let legs = groups[key]!
             let sends = legs.filter { !$0.received }
@@ -454,6 +457,19 @@ enum WalletIngest {
                     // too (see `flagSpoofedSymbol`).
                     WalletSafety.flagSpoofedSymbol(thing, symbols: [leg.asset])
                     landed.append(thing)
+                    // MONEY THAT REALLY ARRIVED (prd §501) — the four fences
+                    // live on `WalletArrival`; three of them are testable
+                    // right here, where the leg's direction, its read price
+                    // and the flag it just took are all in hand. The fourth
+                    // (a sync you are present for) is the room's, by design.
+                    //
+                    // Gathered rather than announced, because "really
+                    // inserted" is only true after the save below: a landing
+                    // that fails to write must not have rained.
+                    if arrival == nil, leg.received, !thing.isFlagged,
+                       let usd = leg.pricedUSD, usd >= Self.holdingFloor {
+                        arrival = leg.address
+                    }
                 }
             }
         }
@@ -472,6 +488,11 @@ enum WalletIngest {
         // before advancing" lesson `WalletApprovals` already learned.
         let saved = added == 0 || context.saveHonestly()
         if saved, !gasJobs.isEmpty { await WalletGas.accumulate(jobs: gasJobs) }
+        // ANNOUNCED ONLY AFTER THE SAVE (prd §501). "Really inserted" is the
+        // first of the arrival fences and it is not knowable before this line:
+        // a landing the store rejected must never have rained, or the shower
+        // celebrates a row that is not there when you look for it.
+        if saved, let arrival { WalletArrival.shared.announce(address: arrival) }
         // Then the already-landed legs this pass re-read (2026-08-02): backfill
         // the price the row may predate, and flag the fictions among them.
         // Separate save — a heal must never be able to lose a landing.

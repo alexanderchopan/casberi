@@ -169,6 +169,20 @@ struct WalletBalanceHeadline: View {
     var onOpenMark: (UUID) -> Void = { _ in }
     @Environment(\.colorScheme) private var scheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(ShellChrome.self) private var chrome
+    /// MONEY THAT REALLY ARRIVED (prd §501) — the room's half of the fence.
+    ///
+    /// **Observed with `onChange` and never on appear, which IS fence 4.** A
+    /// pulse raised while this room was closed reaches nobody and is not
+    /// replayed: the rain is a moment, and a moment you were not there for is
+    /// missed rather than owed. Doing it this way means "a sync you are
+    /// present for" needs no scene-phase test anywhere — the only view that
+    /// can react is one that is on screen.
+    ///
+    /// It lives on the crown rather than on the room because the crown is the
+    /// one view present in every wallet scope, and because the rain's hue is
+    /// the receiving wallet's own face stop, which is this file's vocabulary.
+    @State private var arrivals = WalletArrival.shared
     /// The sparkline's draw-on: 0 → 1 sweeps a mask left to right, so the
     /// line draws itself the way the value accrued — time, moving. Reset
     /// whenever the data itself changes (a scope switch is a new line, and
@@ -384,6 +398,9 @@ struct WalletBalanceHeadline: View {
                         .contentTransition(reduceMotion ? .identity
                                            : .numericText(value: displayed ?? 0))
                         .lineLimit(1).minimumScaleFactor(0.6)
+                        // HOLD TO PEEK (prd §501) — nothing at all unless
+                        // balances are hidden; see `HoldToPeek`.
+                        .holdToPeek()
                     // DIRECTION AS A SENTENCE, not a pill (2026-08-16, the
                     // Apple redraw). Apple Card and Stocks both state the move
                     // in words under the figure — and the sentence carries what
@@ -395,7 +412,7 @@ struct WalletBalanceHeadline: View {
                     // `TokenChartStyle.isFlat`: a move that rounds to nothing
                     // gets no arrow, no colour and no claim.
                     if let chart {
-                        moveLine(chart)
+                        moveLine(chart, upTo: scrubIndex)
                             .opacity(pillShown ? 1 : 0)
                     }
                     if let mover {
@@ -407,6 +424,15 @@ struct WalletBalanceHeadline: View {
                     }
                 }
         .frame(maxWidth: .infinity, alignment: .leading)
+            // THE RAIN, WHERE THE MONEY LANDED (prd §501). Nothing new is
+            // drawn: this is the shower a pull-to-refresh already deals,
+            // poured in the receiving wallet's own face stop so the moment
+            // says WHICH account without a word.
+            .onChange(of: arrivals.pulse) { _, _ in
+                guard let address = arrivals.address else { return }
+                chrome.refreshHue = WalletFace.tint(for: address)
+                chrome.refreshPulse += 1
+            }
     }
 
     /// "▲ $224.51 (1.8%) today" — the move stated the way Apple states it.
@@ -417,22 +443,43 @@ struct WalletBalanceHeadline: View {
     /// `WalletValue.exactMoney`, so §374 hides the figure here exactly as it
     /// hides the total above — a privacy control that covered the crown and
     /// left the delta legible would be no control at all.
+    ///
+    /// **WHILE SCRUBBING IT DESCRIBES THE SCRUBBED SAMPLE (prd §501).** The
+    /// scrub has rolled the figure above to a past reading since §297, and
+    /// this line went on stating the whole window's move — so a finger halfway
+    /// down the line put a number from Tuesday over a sentence about today,
+    /// one line apart. Two readings of two different moments, both true, and
+    /// nothing on screen saying they were not the same one.
+    ///
+    /// The scrubbed form is the move from the window's FIRST sample to the one
+    /// under the finger, which is the same measurement the resting line makes
+    /// with a different end point — so no second derivation exists to disagree
+    /// with the first, and it needs no data the plot does not already hold.
+    /// Percent is recomputed from the same pair for the same reason.
     @ViewBuilder
-    private func moveLine(_ chart: TokenChart) -> some View {
-        let flat = TokenChartStyle.isFlat(chart.change)
-        let delta = (chart.closes.last ?? 0) - (chart.closes.first ?? 0)
+    private func moveLine(_ chart: TokenChart, upTo scrub: Int? = nil) -> some View {
+        let end = scrub.map { min(max($0, 0), chart.closes.count - 1) }
+        let first = chart.closes.first ?? 0
+        let last = end.map { chart.closes[$0] } ?? (chart.closes.last ?? 0)
+        // The scrubbed percent, or the chart's own when at rest — never
+        // recomputed at rest, so the resting line is byte-identical to what
+        // it has always drawn.
+        let change = end == nil ? chart.change
+            : (first == 0 ? 0 : (last - first) / abs(first) * 100)
+        let flat = TokenChartStyle.isFlat(change)
+        let delta = last - first
         let ink = flat ? DS.textSecondary
-                       : TokenChartStyle.accent(change: chart.change, scheme: scheme)
+                       : TokenChartStyle.accent(change: change, scheme: scheme)
         HStack(spacing: 5) {
             if !flat {
-                Image(systemName: chart.change >= 0 ? "arrowtriangle.up.fill"
-                                                    : "arrowtriangle.down.fill")
+                Image(systemName: change >= 0 ? "arrowtriangle.up.fill"
+                                              : "arrowtriangle.down.fill")
                     .dsGlyph(9)
                     .foregroundStyle(ink)
             }
             Text(flat
                  ? String(localized: "No change")
-                 : "\(WalletValue.exactMoney(abs(delta))) (\(TokenChartStyle.changeText(chart.change)))")
+                 : "\(WalletValue.exactMoney(abs(delta))) (\(TokenChartStyle.changeText(change)))")
                 .dsText(.callout15).fontWeight(.semibold)
                 .foregroundStyle(ink)
                 .monospacedDigit()

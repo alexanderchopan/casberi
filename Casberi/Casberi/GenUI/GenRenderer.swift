@@ -3294,8 +3294,25 @@ private struct GenTagMap: View {
         let gap = DS.Space.s2
         let uw = (width - gap * 3) / 4
         let uh = (height - gap * 2) / 3
+        // THE CELLS TRAVEL WHEN THEY ARE THE SAME CELLS (prd §501). Keyed by
+        // the cell's own label rather than by slot, so a re-rank of the same
+        // subject — the wallet's holdings under one account rather than all of
+        // them — moves each cell to its new place instead of swapping contents
+        // in a fixed grid. `UnitTreemap.keys` owns the dedupe, because a
+        // repeated `ForEach` id silently drops a cell.
+        //
+        // **Token mode only.** That is the wallet's holdings map, where a
+        // re-rank is one subject re-measured. The themes map and the source
+        // map re-paint with genuinely different sets between renders, and
+        // sliding unrelated cells past each other claims a continuity that is
+        // not there — so they keep the slot keying they have always had, and
+        // their behaviour is byte-identical.
+        let travels = iconMode == "token"
+        let keys = UnitTreemap<EmptyView>.keys(items.count) { items[$0].tag }
         ZStack(alignment: .topLeading) {
-            ForEach(Array(items.enumerated()), id: \.offset) { i, item in
+            ForEach(Array((travels ? keys : (0..<items.count).map { "slot-\($0)" }).enumerated()),
+                    id: \.element) { i, _ in
+                let item = items[i]
                 let f = frames[i]
                 let w = uw * CGFloat(f.2) + gap * CGFloat(f.2 - 1)
                 let h = uh * CGFloat(f.3) + gap * CGFloat(f.3 - 1)
@@ -3386,6 +3403,10 @@ private struct GenTagMap: View {
                 .zoomSource(id: item.tag, in: zoomNS)
             }
         }
+        // Only a map that opted into travel can reach this: off token mode the
+        // keys are slots and never change, so the value is constant and the
+        // animation cannot fire.
+        .animation(travels && !reduceMotion ? DS.Motion.standard : nil, value: keys)
     }
 
     /// Weekday: 35ms per cell in layout order. Weekend: the fill sweeps

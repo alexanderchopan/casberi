@@ -101,7 +101,7 @@ struct PrivacyPoolsRoomCard: View {
     /// file is Foundation-only and compiled whole by the harness, so it cannot
     /// reach `BalancePrivacy`.
     private var mask: String? {
-        BalancePrivacy.shared.hidden ? BalancePrivacy.mask : nil
+        BalancePrivacy.shared.withheld ? BalancePrivacy.mask : nil
     }
 
     /// Whether a scope's content draws. A nil `section` means the whole room in

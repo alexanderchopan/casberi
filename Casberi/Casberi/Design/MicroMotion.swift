@@ -433,3 +433,51 @@ extension View {
         modifier(SymbolSwap(value: value))
     }
 }
+
+// MARK: - Arrival wash (something NEW lands: one tint pass, then gone)
+
+/// A row that is new washes once (2026-08-27, prd §501).
+///
+/// **A wash, not a badge.** A marker that stays is a marker you stop reading —
+/// which is exactly what §493 deleted vibenet's attention dots for. This says
+/// "this one is new" at the moment you arrive and then gets out of the way,
+/// leaving the row's own standing chrome (a "New" chip, a countdown) to carry
+/// the fact for as long as it is true.
+///
+/// **It fires once per view, not once per render.** `washed` latches, so a
+/// re-compose while somebody is reading — and this room re-composes on every
+/// balance tick — cannot re-wash a row they have already seen.
+///
+/// Reduce Motion draws nothing at all rather than a slower wash: the fact is
+/// carried by the row, and this is the flourish that preference exists to drop.
+private struct ArrivalWash: ViewModifier {
+    let on: Bool
+    var hue: Color = DS.tint
+    @State private var washed = false
+    @State private var lit = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    func body(content: Content) -> some View {
+        content
+            .background(hue.opacity(lit ? 0.16 : 0),
+                        in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+            .task {
+                guard on, !washed, !reduceMotion else { return }
+                washed = true
+                // A beat, so the row's own entrance lands first and the wash
+                // reads as a mark ON a settled row rather than as part of its
+                // arrival — `ChartEntrance.lead`'s reasoning, same number.
+                try? await Task.sleep(nanoseconds: 180_000_000)
+                withAnimation(.easeOut(duration: 0.22)) { lit = true }
+                try? await Task.sleep(nanoseconds: 620_000_000)
+                withAnimation(.easeInOut(duration: 0.5)) { lit = false }
+            }
+    }
+}
+
+extension View {
+    /// One tint pass over a row that has just arrived, then nothing.
+    func arrivalWash(_ on: Bool, hue: Color = DS.tint) -> some View {
+        modifier(ArrivalWash(on: on, hue: hue))
+    }
+}

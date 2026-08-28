@@ -63,7 +63,7 @@ struct RailgunRoomCard: View {
         Array(room.tokens.prefix(RailgunRoomSource.rowCap))
     }
 
-    private var mask: String? { BalancePrivacy.shared.hidden ? BalancePrivacy.mask : nil }
+    private var mask: String? { BalancePrivacy.shared.withheld ? BalancePrivacy.mask : nil }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {

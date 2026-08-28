@@ -60,13 +60,42 @@ final class BalancePrivacy {
 
     private init() { hidden = UserDefaults.standard.bool(forKey: Self.key) }
 
+    /// HOLD TO PEEK (2026-08-27, prd §501) — true only while a finger is down
+    /// on a withheld figure.
+    ///
+    /// **Never persisted, and that is the whole safety argument.** Until this,
+    /// the only way to read one number was to leave for Privacy, flip the
+    /// setting, come back, and remember to flip it again — and a setting left
+    /// flipped is a setting that is off when you next hand somebody your
+    /// phone. A reveal that cannot outlive the touch cannot be forgotten in
+    /// the on position, so it strictly beats the errand it replaces on the
+    /// very threat this feature exists for.
+    ///
+    /// **It reveals every withheld figure on screen, not the one under the
+    /// finger.** `WalletValue`'s gates are static formatters called during a
+    /// body pass with no idea which view is asking, so a per-figure peek would
+    /// mean threading a flag through forty call sites — and the result would be
+    /// worse anyway: a room with one figure lit and its own treemap labels
+    /// still masked reads as a rendering fault rather than as a peek. The
+    /// exposure is unchanged either way, because the whole screen is under the
+    /// same eyes as the figure being held.
+    ///
+    /// `hidden` remains exactly what the Privacy toggle writes and reads; this
+    /// is a transient lens over it, so nothing about the setting's own state,
+    /// its copy, or its persistence changes.
+    var peeking = false
+
+    /// What the gates actually ask. `hidden` is the SETTING; this is whether a
+    /// figure is withheld right now.
+    var withheld: Bool { hidden && !peeking }
+
     /// Four bullets — enough to read as deliberately withheld at a glance, and
     /// narrow enough not to reflow a row built for "$8,924".
     static let mask = "••••"
 
     /// A formatted value on its way to a `Text`. Pass the string the formatter
     /// already produced; this decides whether it survives.
-    func value(_ text: String) -> String { hidden ? Self.mask : text }
+    func value(_ text: String) -> String { withheld ? Self.mask : text }
 
     /// A value that has a UNIT the mask should keep — "0.42 ETH" becomes
     /// "•••• ETH", not "••••".
@@ -78,7 +107,7 @@ final class BalancePrivacy {
     /// AMOUNTS, and turning it into a general redaction would be a different
     /// feature nobody asked for.
     func amount(_ text: String, unit: String?) -> String {
-        guard hidden else { return text }
+        guard withheld else { return text }
         guard let unit, !unit.isEmpty else { return Self.mask }
         return "\(Self.mask) \(unit)"
     }
@@ -93,7 +122,7 @@ final class BalancePrivacy {
     /// masked sentence — "•••• on your card in 30 days" reads like a rendering
     /// bug, where an absent line reads like a setting.
     func sentence(_ text: @autoclosure () -> String) -> String? {
-        hidden ? nil : text()
+        withheld ? nil : text()
     }
 }
 
@@ -179,7 +208,7 @@ enum WalletValue {
     /// number exists solely inside the title. That is a real cost of the
     /// setting, not a bug to be fixed later by parsing.
     static func title(_ thing: Thing) -> String {
-        guard BalancePrivacy.shared.hidden else { return thing.title }
+        guard BalancePrivacy.shared.withheld else { return thing.title }
         if let recomposed = maskedTransferTitle(thing) { return recomposed }
         guard thing.title.contains(where: \.isNumber) else { return thing.title }
         return BalancePrivacy.mask
