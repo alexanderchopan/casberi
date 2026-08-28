@@ -12,8 +12,8 @@ import Foundation
 /// nothing in the corpus and this composes off `HegotaLiveState`.
 ///
 /// The consequence worth stating: the room is EMPTY of rows by construction, so
-/// this card is the whole room. That is why it carries all five scopes rather
-/// than heading a list.
+/// this card is the whole room. That is why it carries every scope rather than
+/// heading a list.
 enum HegotaRoomSource {
     static let source = HegotaIdentity.source
 
@@ -61,7 +61,11 @@ enum HegotaRoomSource {
     @MainActor
     static var identity: String {
         let live = HegotaLiveState.shared
-        return "hegota:\(live.accounts.count):\(live.readAt?.timeIntervalSince1970 ?? 0)"
+        // The genesis verdict is in the key because it changes what the room
+        // SAYS without necessarily changing either of the other two — accepting
+        // a restart resets them together, but a verdict arriving from a sweep
+        // that found the same account count would otherwise be memoised away.
+        return "hegota:\(live.accounts.count):\(live.readAt?.timeIntervalSince1970 ?? 0):\(live.genesis.rawValue)"
     }
 
     @MainActor

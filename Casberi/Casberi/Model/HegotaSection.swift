@@ -45,6 +45,7 @@ enum HegotaSection: String, CaseIterable, Identifiable, Sendable {
     case home
     case activity
     case accounts
+    case frames
     case coins
     case nonces
     case sponsors
@@ -60,14 +61,21 @@ enum HegotaSection: String, CaseIterable, Identifiable, Sendable {
     /// the crown and its line, and opening anywhere else puts a tap between the
     /// crown and its own breakdown.
     ///
-    /// **`coins` sits third, ahead of the two rarer conditionals, and that does
-    /// NOT break Wallet's tail rule.** That rule is that no UNCONDITIONAL scope
-    /// may sit after a conditional one, so the strip's stable head never
-    /// reflows; `home` and `activity` are the only unconditional scopes here
-    /// and both precede `coins`. Within the conditional tail the ordering is
-    /// editorial, and Coins leads it because it is this room's headline — the
-    /// one reading no other room in this app can draw.
-    static let order: [HegotaSection] = [.home, .activity, .accounts, .coins, .nonces, .sponsors]
+    /// **The conditional tail starts at `frames`, and that does NOT break
+    /// Wallet's tail rule.** That rule is that no UNCONDITIONAL scope may sit
+    /// after a conditional one, so the strip's stable head never reflows;
+    /// `home`, `activity` and `accounts` are the only unconditional scopes here
+    /// and all three precede `frames`. Within the conditional tail the ordering
+    /// is editorial.
+    ///
+    /// **`frames` LEADS that tail, ahead of `coins` (2026-08-27).** Coins held
+    /// the position on the grounds of being "the reading no other room in this
+    /// app can draw", which is true of it and truer of this: frame
+    /// transactions are the reason this chain exists and the reason it earned a
+    /// seat. It also reads directly off `activity`, which precedes it — the
+    /// list says what moved, this says what the transactions DID — so the two
+    /// sit adjacent rather than with the vault between them.
+    static let order: [HegotaSection] = [.home, .activity, .accounts, .frames, .coins, .nonces, .sponsors]
 
     /// Everything past `activity` is conditional on the address actually having
     /// the thing. Stated as data rather than left implicit in `present(…)`,
@@ -78,7 +86,12 @@ enum HegotaSection: String, CaseIterable, Identifiable, Sendable {
         // address always has a roster row, even one that says the chain could
         // not be reached, which is itself the answer (vibenet's own rule).
         case .home, .activity, .accounts: return false
-        case .coins, .nonces, .sponsors: return true
+        // `frames` is conditional for a reason worth stating: this chain has
+        // TWO ERAS, and an address whose whole history predates frame
+        // transactions has only type-`0x2` transfers. Its scope is absent
+        // rather than empty, which is also how the strip says which era an
+        // address lived in without a word of copy.
+        case .frames, .coins, .nonces, .sponsors: return true
         }
     }
 
@@ -92,6 +105,13 @@ enum HegotaSection: String, CaseIterable, Identifiable, Sendable {
         case .home:     return String(localized: "Home")
         case .activity: return String(localized: "Activity")
         case .accounts: return String(localized: "Accounts")
+        // **"Frames", the literal term — the Nonces ruling, third application.**
+        // EIP-8141 calls them frames, the receipt field is `frames`, and the
+        // sheet has said "Step 2 of 4" since the seat shipped because a step is
+        // what one frame IS. "Steps" was the friendly gloss and was refused for
+        // `coins`' exact reason: it would leave one room using two words for
+        // one thing, and the chip is where the word gets learned.
+        case .frames:   return String(localized: "Frames")
         // **"UTXOs", not "Coins" — the Nonces ruling, applied consistently.**
         // The chain's own word is UTXO: EIP-8312 names the frame, the predeploy
         // is the UTXO vault, and the RPC says so. "Coins" was the friendly
@@ -115,6 +135,7 @@ enum HegotaSection: String, CaseIterable, Identifiable, Sendable {
         case .home:     return String(localized: "The line, and the last few moves")
         case .activity: return String(localized: "What moved, and what each transaction did")
         case .accounts: return String(localized: "The addresses you watch, and what each holds")
+        case .frames:   return String(localized: "The steps your transactions ran")
         case .coins:    return String(localized: "The unspent outputs this address owns")
         case .nonces:   return String(localized: "Sends that don't wait for each other")
         case .sponsors: return String(localized: "Transactions somebody else paid for")
@@ -132,12 +153,14 @@ enum HegotaSection: String, CaseIterable, Identifiable, Sendable {
     /// frame transaction on this chain so far is self-paid — and that is the
     /// correct output rather than a gap. The scope declines silently and
     /// appears the first time somebody sponsors a transaction.
-    static func present(coins: Bool, nonces: Bool, sponsors: Bool) -> [HegotaSection] {
+    static func present(frames: Bool, coins: Bool, nonces: Bool,
+                        sponsors: Bool) -> [HegotaSection] {
         order.filter { section in
             switch section {
             case .home:     return true
             case .activity: return true
             case .accounts: return true
+            case .frames:   return frames
             case .coins:    return coins
             case .nonces:   return nonces
             case .sponsors: return sponsors

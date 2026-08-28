@@ -180,6 +180,10 @@ struct HegotaCoin: Equatable, Sendable, Codable {
     /// about when.
     var timestamp: Date? = nil
 
+    /// A time interpolated between two headers we read — `HegotaMove`'s own
+    /// field and the same grading rule: an estimate is stated to the day.
+    var estimatedAt: Date? = nil
+
     /// A coin that came back to whoever spent it — the change output, and the
     /// single most explanatory row on the card, because it is the part of the
     /// UTXO model an account-balance reader has no intuition for.
@@ -266,5 +270,183 @@ enum HegotaCoins {
     /// so an amount here is a quantity and never a value.
     static func eth(_ wei: Decimal) -> Decimal {
         wei / Decimal(sign: .plus, exponent: 18, significand: 1)
+    }
+
+    /// How concentrated the set is — the largest piece as a share of the whole.
+    ///
+    /// **The one fact a rank-ordered treemap cannot show.** `UnitTreemap` sizes
+    /// its cells by RANK, not area (its own ruling: true squarified cells
+    /// arrive as slivers too thin to label), and on this chain the set spans
+    /// sixteen orders of magnitude — so the drawing reads as six roughly
+    /// comparable pieces when one of them is very often almost the entire
+    /// balance. The caption is where that gets said, so nil below a share worth
+    /// remarking on rather than narrating an even split as if it were news.
+    static func dominance(_ coins: [HegotaCoin]) -> Double? {
+        guard coins.count > 1 else { return nil }
+        let sum = total(coins)
+        guard sum > 0, let top = coins.map(\.wei).max() else { return nil }
+        let share = NSDecimalNumber(decimal: top / sum).doubleValue
+        return share >= 0.6 ? share : nil
+    }
+}
+
+// MARK: - The whole chain's vault, and what our slice is of it
+
+/// The census the reconciliation already performed and then threw away.
+///
+/// **This costs NOTHING new (2026-08-27).** `readCoinState` reads every
+/// `UtxoCreated` log on the chain and every spent bit, because conservation can
+/// only be checked across all owners at once — and then kept a single Bool. The
+/// set it proved complete holds the answer to "how much of this chain's vault
+/// is mine", which is a reading no other room in this app can make about
+/// anything: not a share we estimated, a share we verified.
+///
+/// It is stated only when the set RECONCILED, for the same reason `coinsWei` is:
+/// an unreconciled census is a denominator nobody should read.
+struct HegotaCensus: Equatable, Sendable, Codable {
+    /// Unspent coins across every owner on the chain.
+    let coins: Int
+    /// Distinct owners holding at least one unspent coin.
+    let owners: Int
+    /// What the whole vault holds — equal to its `eth_getBalance`, which is
+    /// what "reconciled" means.
+    let wei: Decimal
+    /// This room's own slice of it.
+    let mineCoins: Int
+    let mineWei: Decimal
+
+    /// Our share of the vault, 0…1. Nil when the vault is empty — a share of
+    /// nothing is not zero, it is undefined, and drawing it as zero says the
+    /// person holds none of something that does not exist.
+    var share: Double? {
+        guard wei > 0 else { return nil }
+        return NSDecimalNumber(decimal: mineWei / wei).doubleValue
+    }
+
+    /// Whether this address is the only owner in the vault. Worth its own
+    /// sentence: on a devnet it is a real and common state, and "all of it" is
+    /// a different reading from "most of it".
+    var soleOwner: Bool { owners == 1 && mineCoins == coins && mineCoins > 0 }
+
+    /// Compose over the whole chain's proven-unspent set.
+    ///
+    /// Returns nil when the set did not reconcile or holds nothing — the card
+    /// then says nothing rather than a census over numbers we could not check.
+    /// `mine` is matched case-insensitively for `HegotaParty`'s reason: an
+    /// EIP-55 address and an RPC's lowercase answer are one account.
+    static func of(_ all: [HegotaCoin], mine watched: [String],
+                   reconciled: Bool) -> HegotaCensus? {
+        guard reconciled, !all.isEmpty else { return nil }
+        let keys = Set(watched.map { $0.lowercased() })
+        let mine = all.filter { keys.contains($0.owner.lowercased()) }
+        return HegotaCensus(coins: all.count,
+                            owners: Set(all.map { $0.owner.lowercased() }).count,
+                            wei: HegotaCoins.total(all),
+                            mineCoins: mine.count,
+                            mineWei: HegotaCoins.total(mine))
+    }
+}
+
+// MARK: - Is this still the same chain?
+
+/// Whether the chain we just read is the chain we read last time.
+///
+/// **The one failure mode every other refusal in this room misses (2026-08-27).**
+/// Every guard here — an unreached host, a coin whose spent bit would not read,
+/// an account left out of a total — protects against a read that FAILED. A
+/// devnet relaunch is the opposite: all three hosts answer perfectly, quickly,
+/// and with nothing. Balance zero, no transfer logs, no coins, no lanes. Drawn
+/// through the room's ordinary paths that is an account whose money left, on the
+/// screen whose largest number is a balance — and both worked examples, which
+/// are hardcoded addresses, go blank at once. Hegotá is an experimental devnet;
+/// being relaunched from genesis is a thing it is expected to do.
+///
+/// **The signal is the GENESIS HASH, not the tip going backwards.** A tip below
+/// the high-water mark has three causes and only one is a reset: a host serving
+/// a stale view, a reorg, and a relaunch. Genesis is decisive — a new chain has
+/// a new genesis block, and an unchanged one proves the history is still ours
+/// however far behind a particular host happens to be.
+enum HegotaGenesis {
+    enum Verdict: String, Equatable, Sendable {
+        /// Same chain, same history.
+        case same
+        /// The devnet was relaunched. Everything we knew about it is gone —
+        /// not spent, not moved: never happened on this chain.
+        case restarted
+        /// A host answered for some OTHER chain. Different failure, different
+        /// sentence: the reads are wrong rather than the history being gone.
+        case differentChain
+        /// Nothing to compare — a first sweep, or a read that did not answer.
+        /// **Never `same`**: not knowing is not knowing.
+        case unknown
+    }
+
+    /// Compare what a sweep saw against what the device remembers.
+    ///
+    /// Order matters: the chain id is checked FIRST, because if a host is
+    /// serving a different chain then its genesis differing is a consequence
+    /// rather than the finding, and "the devnet restarted" would be the wrong
+    /// sentence to show for it.
+    static func verdict(chainID: Int?, genesis: String?,
+                        knownGenesis: String?) -> Verdict {
+        if let chainID, chainID != HegotaChain.chainID { return .differentChain }
+        guard let seen = genesis.flatMap(HegotaWord.normalized)?.lowercased(),
+              let known = knownGenesis.flatMap(HegotaWord.normalized)?.lowercased()
+        else { return .unknown }
+        return seen == known ? .same : .restarted
+    }
+}
+
+// MARK: - Turning a block number into a time
+
+/// The room's clock past the header window.
+///
+/// **Measured 2026-08-27, and the measurement is what makes this honest.**
+/// Hegotá produces a block every six seconds, and across its whole history —
+/// 310,833 blocks — the timestamps ran a total of 72 seconds ahead of exact
+/// six-second spacing, i.e. twelve missed slots in twenty-one days. So a block
+/// number interpolated between two headers we actually READ is accurate to
+/// within the missed slots inside that bracket, which at this chain's rate is
+/// seconds.
+///
+/// That is what retires the room's old refusal. `readTimes` reads at most
+/// `timeDepth` headers, so anything older carried no time at all and the room
+/// had undated rows by design — correct when a block number was the only clock
+/// we had, and needlessly strict once two real headers bracket the row.
+///
+/// **The estimate is still not the same thing as a reading**, so it is returned
+/// as a distinct case rather than filled into `timestamp`: an interpolated time
+/// is stated to the DAY, and a read one keeps its clock. Anything outside the
+/// bracket is refused rather than extrapolated — beyond the newest header we
+/// hold, drift has no ceiling we have measured.
+enum HegotaClock {
+    /// Seconds per block on this chain.
+    static let slotSeconds: Double = 6
+
+    /// Estimate a block's time from the headers we hold.
+    ///
+    /// Returns nil unless the block sits BETWEEN two known headers. Both
+    /// neighbours are used rather than one plus the slot time, because the
+    /// interpolation then carries the real spacing of that stretch — including
+    /// whatever slots it missed — instead of assuming a rate.
+    static func estimate(block: UInt64, from known: [UInt64: Date]) -> Date? {
+        guard !known.isEmpty else { return nil }
+        if let exact = known[block] { return exact }
+
+        var below: (UInt64, Date)?
+        var above: (UInt64, Date)?
+        for (candidate, when) in known {
+            if candidate < block, below == nil || candidate > below!.0 {
+                below = (candidate, when)
+            }
+            if candidate > block, above == nil || candidate < above!.0 {
+                above = (candidate, when)
+            }
+        }
+        guard let low = below, let high = above, high.0 > low.0 else { return nil }
+        let span = Double(high.0 - low.0)
+        let into = Double(block - low.0)
+        let seconds = high.1.timeIntervalSince(low.1)
+        return low.1.addingTimeInterval(seconds * (into / span))
     }
 }

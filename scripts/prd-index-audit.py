@@ -97,7 +97,14 @@ STRAY_H1 = re.compile(r"^#\s+§(\d{1,3}[a-z]{0,2})\b(.*)$")
 # reference to a DIFFERENT document that happens to be numbered.
 SECTION_REF = re.compile(r"(build-brief |design-principle |agent-brief )?§(\d{1,3}[a-z]{0,2})\b")
 SUPERSEDE_VERB = re.compile(
-    r"\b(supersedes?|superseding|amends?|amending|reverses?|overturns?)\b([^.;]{0,70})", re.I)
+    r"\b(supersedes?|superseding|amends?|amending"
+    # ACTIVE VOICE ONLY, and the omissions are deliberate: "superseded BY §N"
+    # names the entry doing the changing, so demanding a row for it inverts the
+    # rule. `reversing`/`overturning` were simply missing beside their already
+    # present siblings — found when a §504 phrase spelled that way slipped the
+    # check, and adding the past participles alongside them immediately
+    # produced four false findings, which is what proved the narrowing right.
+    r"|reverses?|reversing|overturns?|overturning)\b([^.;]{0,70})", re.I)
 
 
 def headings(text):

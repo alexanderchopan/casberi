@@ -81,6 +81,25 @@ struct HegotaRoomFigure: View {
     private var moves: [HegotaMove] {
         shown.flatMap(\.moves).sorted { $0.block > $1.block }
     }
+    /// The transactions whose frames were actually read, newest first.
+    ///
+    /// Folded by hash across accounts as well as within one: watching both
+    /// sides of a transfer means the same transaction is in two accounts'
+    /// `moves`, and the Frames scope's subject is the TRANSACTION.
+    private var framedMoves: [HegotaMove] {
+        var seen = Set<String>()
+        return moves.filter { move in
+            guard let f = move.frames, !f.isEmpty else { return false }
+            return seen.insert(move.hash.lowercased()).inserted
+        }
+    }
+    /// The census behind the coins figure — chain-wide, and only when the whole
+    /// set reconciled. Taken from the primary account because every account's
+    /// sweep computes the same whole-chain set; they can only disagree if one
+    /// of them failed, and the reconciled gate already excludes that.
+    private var census: HegotaCensus? {
+        shown.filter(\.reached).compactMap(\.census).first
+    }
 
     // MARK: The slot
 
@@ -103,6 +122,14 @@ struct HegotaRoomFigure: View {
         case .nonces:
             return lanes.count == 1 ? String(localized: "1 nonce key")
                                     : String(localized: "\(String(lanes.count)) nonce keys")
+        // **STEPS, not transactions.** The transaction count is already the
+        // Activity scope's headline one chip away, so repeating it here would
+        // make the two scopes look like the same reading twice. What this scope
+        // adds is that those transactions are made of parts.
+        case .frames:
+            guard let mix = HegotaFrameMix.of(framedMoves) else { return nil }
+            return mix.total == 1 ? String(localized: "1 step")
+                                  : String(localized: "\(String(mix.total)) steps")
         }
     }
 
@@ -111,6 +138,7 @@ struct HegotaRoomFigure: View {
         case .home, .sponsors: crownFigure
         case .activity:        activityFigure
         case .accounts:        accountsFigure
+        case .frames:          framesFigure
         case .coins:           coinsFigure
         case .nonces:          noncesFigure
         }
@@ -304,6 +332,10 @@ struct HegotaRoomFigure: View {
         }
         .frame(height: 20)
         .contentShape(Rectangle())
+        // The press that reveals a lane's steps (§503, moment 05) had no trait,
+        // so VoiceOver had nothing to announce and nothing to activate — the
+        // fact was reachable by sighted press alone.
+        .dsTapCard()
         .onTapGesture {
             DSHaptic.selection()
             withAnimation(DS.Motion.standard) { pickedLane = lane }
@@ -345,7 +377,11 @@ struct HegotaRoomFigure: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity,
                        alignment: incoming ? .trailing : .leading)
         }
-        .frame(width: 52)
+        // 44, not 52: the lane mark grew 15 -> 20 when it moved onto the face
+        // ramp's `badge` tier, and it took the width out of the LABEL — which
+        // truncated "0.0313 · vault ×3" to "0.0313 · vault…", dropping the
+        // count. The bar can spare the points; the label could not.
+        .frame(width: 44)
     }
 
     @ViewBuilder private func laneLabelView(_ lane: HegotaFlow.Lane,
@@ -365,9 +401,15 @@ struct HegotaRoomFigure: View {
             Circle().fill(DS.fillFaint).frame(width: 15, height: 15)
         } else if lane.address.caseInsensitiveCompare(HegotaChain.vault) == .orderedSame {
             Image(systemName: "tray.full").dsGlyph(9)
-                .foregroundStyle(DS.tint).frame(width: 15, height: 15)
+                .foregroundStyle(DS.tint)
+                .frame(width: DS.Face.badge, height: DS.Face.badge)
         } else {
-            WalletFace(address: lane.address, size: 15, circular: true)
+            // `badge` — the ramp's own smallest tier, and its definition
+            // exactly ("inside a pill, or beside dense inline text — a mark,
+            // not a portrait"). It was a raw 15 until `face-ramp-audit` named
+            // it; the vault glyph beside it moves with it, or the two marks in
+            // one column stop sharing a baseline.
+            WalletFace(address: lane.address, size: DS.Face.badge, circular: true)
         }
     }
 
@@ -449,6 +491,98 @@ struct HegotaRoomFigure: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
     }
 
+    /// **FRAMES — the shape of your transactions, one row each.**
+    ///
+    /// Small multiples of the strip the sheet already draws, because a frame
+    /// transaction IS a sequence and every alternative throws the sequence
+    /// away: a mode tally says you ran nine UTXO steps and four verifies
+    /// without saying that they came in the same order four times, which is the
+    /// only thing the shape of your usage actually looks like.
+    ///
+    /// **Each row normalises to full width, so the rows compare COMPOSITION,
+    /// not size.** Widths within a row are gas-weighted — the strip's own
+    /// contract — so a step that burned most of the gas is most of the bar.
+    /// Comparing gas ACROSS transactions was tried and refused for
+    /// `HegotaScale`'s reason one figure over: the spread is wide enough that
+    /// every ordinary transaction draws as a sliver beside one heavy one, and
+    /// what the scope is for is what the steps WERE.
+    ///
+    /// The legend names the modes actually present, in the mix's own ranked
+    /// order, so the colours are learnable from the drawing rather than from a
+    /// sheet you have to open first.
+    @ViewBuilder private var framesFigure: some View {
+        if let mix = HegotaFrameMix.of(framedMoves) {
+            let rows = Array(framedMoves.prefix(Self.frameRows))
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                figureCaption(framesCaption(mix))
+                VStack(spacing: 5) {
+                    ForEach(rows) { move in
+                        HegotaFrameStrip(frames: move.frames ?? [], height: 14,
+                                         weighted: true)
+                    }
+                }
+                framesLegend(mix)
+                if framedMoves.count > rows.count {
+                    let rest = framedMoves.count - rows.count
+                    // NAMED, never dropped — the no-silent-caps rule. A scope
+                    // drawing six of nineteen transactions without saying so
+                    // is a claim about how much you do.
+                    Text(rest == 1 ? String(localized: "1 more, in the list below")
+                                   : String(localized: "\(String(rest)) more, in the list below"))
+                        .dsText(.label12).foregroundStyle(DS.textTertiary).lineLimit(1)
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+        }
+    }
+
+    /// What the mix says in one line. The commonest step LEADS, because on this
+    /// chain that is the sentence — an address that mostly moves UTXOs and one
+    /// that mostly verifies are doing different things with the same chain.
+    private func framesCaption(_ mix: HegotaFrameMix) -> String {
+        guard let top = mix.busiest else {
+            return String(localized: "What your transactions ran")
+        }
+        let what = mix.transactions == 1
+            ? String(localized: "1 transaction")
+            : String(localized: "\(String(mix.transactions)) transactions")
+        // A failure is rare here by construction, so it is worth the whole
+        // caption when it happens rather than a share of one.
+        if mix.failed > 0 {
+            return mix.failed == 1
+                ? String(localized: "\(what) · 1 step failed")
+                : String(localized: "\(what) · \(String(mix.failed)) steps failed")
+        }
+        // **NOT lowercased.** A mode label is a NAME, and one of them is an
+        // initialism — `.lowercased()` rendered the chain's own word as
+        // "mostly utxo steps", which is the §500 naming ruling broken by a
+        // string transform rather than by a decision. `allcaps-audit` exempts
+        // UTXO precisely because it is an initialism; lowercasing it here
+        // undoes that from the other side.
+        return String(localized: "\(what) · mostly \(top.mode.label) steps")
+    }
+
+    /// The modes present, in the mix's ranked order, each with its count.
+    ///
+    /// Deliberately NOT every mode the chain defines: a legend listing four
+    /// colours this address has never used teaches the palette and says nothing
+    /// about the person, and it is the same dead-chrome objection §83 makes.
+    @ViewBuilder private func framesLegend(_ mix: HegotaFrameMix) -> some View {
+        HStack(spacing: DS.Space.s3) {
+            ForEach(mix.slices.prefix(4)) { slice in
+                HStack(spacing: 4) {
+                    RoundedRectangle(cornerRadius: 2, style: .continuous)
+                        .fill(HegotaModeStyle.hue(slice.mode).opacity(0.85))
+                        .frame(width: 8, height: 8)
+                    Text("\(slice.mode.label) \(String(slice.count))")
+                        .dsText(.label12).foregroundStyle(DS.textTertiary)
+                        .lineLimit(1)
+                }
+            }
+            Spacer(minLength: 0)
+        }
+    }
+
     /// Everything an address holds — its balance PLUS its unspent coins.
     ///
     /// Coins are only added once the set has RECONCILED against the vault's own
@@ -470,7 +604,7 @@ struct HegotaRoomFigure: View {
             ? NSDecimalNumber(decimal: coins / total).doubleValue : 0
         VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: DS.Space.s2) {
-                WalletFace(address: account.address, size: 18, circular: true)
+                WalletFace(address: account.address, size: DS.Face.badge, circular: true)
                 Text(HegotaWatch.shared.name(for: account.address)
                      ?? WalletStore.shortAddress(account.address))
                     .dsText(.label12).foregroundStyle(DS.textSecondary).lineLimit(1)
@@ -483,15 +617,32 @@ struct HegotaRoomFigure: View {
             GeometryReader { geo in
                 let width = geo.size.width * CGFloat(share)
                 ZStack(alignment: .leading) {
-                    Capsule().fill(DS.fillFaint)
-                    Capsule().fill(DS.tint.opacity(0.8)).frame(width: max(0, width))
-                    // The vault's slice, drawn INSIDE the bar in the room's coin
-                    // blue — it is part of the same money, not a second holding,
-                    // and a bar of its own would read as a second account.
-                    if coinShare > 0 {
-                        Capsule()
-                            .fill(Color(red: 0.30, green: 0.78, blue: 0.92))
-                            .frame(width: max(3, width * CGFloat(coinShare)))
+                    // An UNREACHED account draws a dashed empty track, never a
+                    // bar of zero length. Zero length is what a real zero
+                    // balance draws too, so without this "we could not read
+                    // this address" and "this address holds nothing" are one
+                    // mark — and only one of them is worth acting on.
+                    if account.reached {
+                        Capsule().fill(DS.fillFaint)
+                    } else {
+                        Capsule().strokeBorder(DS.textTertiary.opacity(0.45),
+                                               style: StrokeStyle(lineWidth: 1, dash: [3, 3]))
+                    }
+                    if account.reached {
+                        Capsule().fill(DS.tint.opacity(0.8)).frame(width: max(0, width))
+                        // **THE VAULT'S SLICE IS DRAWN ONLY ON THE PLAIN SCALE,
+                        // and that is arithmetic rather than taste (§504).** The
+                        // bar's own length is a LOG share when the spread is
+                        // wide; multiplying it by a LINEAR fraction gives a
+                        // segment whose length corresponds to no reading at all
+                        // — log lengths do not add, so a nested share of one is
+                        // a mixed unit. On the plain scale the two really are
+                        // parts of one total and the nesting is exactly true.
+                        if scale == .linear, coinShare > 0 {
+                            Capsule()
+                                .fill(Color(red: 0.30, green: 0.78, blue: 0.92))
+                                .frame(width: max(3, width * CGFloat(coinShare)))
+                        }
                     }
                 }
             }
@@ -542,8 +693,39 @@ struct HegotaRoomFigure: View {
                         return String(localized: "\(String(count)) smaller UTXOs — \(HegotaFormat.eth(wei)) together")
                     }
                 })
+                // **THE PROOF, UNDER THE DRAWING.** The sweep already
+                // reconstructs every unspent coin on the chain and checks the
+                // total against the vault's own balance — it has to, since
+                // conservation only holds across all owners at once — and until
+                // now it kept one Bool out of all that. This is the reading no
+                // other room in this app can make about anything: not a share
+                // we estimated, a share we verified.
+                if let line = censusLine {
+                    Text(line)
+                        .dsText(.label12).foregroundStyle(DS.textTertiary)
+                        .lineLimit(2).fixedSize(horizontal: false, vertical: true)
+                }
             }
         }
+    }
+
+    /// What our slice is of the whole vault, and what the treemap cannot say.
+    ///
+    /// Two facts, ranked, one line: how much of the chain's vault is ours, and
+    /// — because `UnitTreemap` sizes by RANK rather than area — whether one
+    /// piece is very nearly the whole balance. On this chain the set spans
+    /// sixteen orders of magnitude, so six roughly equal cells routinely draw
+    /// over a set where the first one IS the money.
+    private var censusLine: String? {
+        let concentration = HegotaCoins.dominance(coins).map {
+            String(localized: "the largest is \(Int(($0 * 100).rounded()))% of them")
+        }
+        guard let census, let share = census.share else { return concentration }
+        let vault = census.soleOwner
+            ? String(localized: "Every UTXO on the chain is yours")
+            : String(localized: "\(Int((share * 100).rounded()))% of everything in the vault, across \(String(census.owners)) owners")
+        guard let concentration else { return vault }
+        return String(localized: "\(vault) · \(concentration)")
     }
 
     /// What a tile holds: one UTXO, or the folded tail.
@@ -681,9 +863,18 @@ struct HegotaRoomFigure: View {
     /// nowhere in it. Nor does any total, because a list of per-key counts
     /// never sums itself.
     @ViewBuilder private var noncesFigure: some View {
-        let totals = HegotaNonceTotals.of(moves, lanes: lanes)
+        // **The ordinary count comes off the CHAIN now (§504).** Every other
+        // reading in this room is reconstructed from transfer logs, and this one
+        // could not be: a transaction that moved no ETH emits no transfer log,
+        // so counting outgoing moves undercounts — on the chain whose whole
+        // subject is transactions that verify, check and call rather than pay,
+        // and in the scope whose entire claim is to count sends.
+        let account = primary
+        let totals = HegotaNonceTotals.of(moves, lanes: lanes,
+                                          nonceCount: account?.nonceCount,
+                                          valuelessSends: account?.valuelessSends)
         VStack(alignment: .leading, spacing: DS.Space.s4) {
-            figureCaption(String(localized: "Each counter sends without waiting on the others"))
+            figureCaption(noncesCaption(totals))
             HStack(alignment: .top, spacing: DS.Space.s2) {
                 stat(String(totals.counters),
                      String(localized: "Counters in all"), tint: DS.textPrimary)
@@ -694,6 +885,26 @@ struct HegotaRoomFigure: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+    }
+
+    /// The line above the three counters.
+    ///
+    /// **The independence sentence is the scope's whole content**, so it is the
+    /// default — three numbers sitting still say none of it, which is why the
+    /// figures count up on their own clocks (§503, moment 04).
+    ///
+    /// It gives way only for the fact that is strictly newer than it: sends the
+    /// chain counted that no transfer log can show. Those are frame
+    /// transactions that verified, checked or called and paid nobody — real
+    /// sends, invisible to every other reading in this room, and the concrete
+    /// evidence for what the Frames scope one chip away is about.
+    private func noncesCaption(_ totals: HegotaNonceTotals) -> String {
+        guard let quiet = totals.valuelessSends else {
+            return String(localized: "Each counter sends without waiting on the others")
+        }
+        return quiet == 1
+            ? String(localized: "1 send moved no value — a step, not a payment")
+            : String(localized: "\(String(quiet)) sends moved no value — steps, not payments")
     }
 
     /// One figure and what it counts. `stat24` is the ramp's own stat size —
@@ -914,6 +1125,12 @@ struct HegotaFrameStrip: View {
                                         .delay(Self.runDuration * offsets[index]),
                                    value: ran)
                         .contentShape(Rectangle())
+                        // Each segment opens that step's own sheet, so it is a
+                        // button and must say so. Named individually rather
+                        // than combined at the strip, or VoiceOver announces
+                        // one control for a sequence of four different steps.
+                        .accessibilityAddTraits(.isButton)
+                        .accessibilityLabel(frame.mode.label)
                         .onTapGesture { onTap?(index) }
                     if index < frames.count - 1 {
                         Rectangle().fill(DS.page).frame(width: 1.5)
@@ -961,6 +1178,75 @@ struct HegotaFrameStrip: View {
             // A frame whose receipt could not be paired is drawn HOLLOW rather
             // than as a success it cannot support.
             .opacity(frame.succeeded == nil ? 0.42 : 1)
+    }
+}
+
+// MARK: - Is this still the same chain?
+
+/// What the room says when the devnet was relaunched.
+///
+/// **The one state every other guard in this seat misses.** All of them protect
+/// against a read that FAILED; a relaunched devnet answers everything perfectly
+/// and with nothing — balance zero, no logs, no coins — so without this the
+/// room draws a zeroed balance in its largest type, and both hardcoded worked
+/// examples go blank at once, with no error anywhere. Hegotá is an experimental
+/// devnet and being relaunched from genesis is a thing it is expected to do.
+///
+/// It sits ABOVE the figure because it governs everything below it: the
+/// readings are all still drawn, and they all describe a history the chain no
+/// longer has.
+struct HegotaChainNotice: View {
+    let verdict: HegotaGenesis.Verdict
+
+    var body: some View {
+        // `.same` and `.unknown` both draw NOTHING, and they are different
+        // silences: one is proof, the other is a first sweep or a read that did
+        // not answer. Neither is worth a line — a banner saying "we checked and
+        // it's fine" is chrome, and one saying "we couldn't check" is an alarm
+        // about our own plumbing on somebody else's screen.
+        if verdict == .restarted || verdict == .differentChain {
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                Text(headline)
+                    .dsText(.subhead13).foregroundStyle(DS.attention)
+                Text(detail)
+                    .dsText(.label12).foregroundStyle(DS.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                if verdict == .restarted {
+                    // The person's own act. Re-baselining on our schedule is how
+                    // a fact nobody was told disappears — and this one costs
+                    // them the readings below, so it is theirs to take.
+                    Button {
+                        DSHaptic.selection()
+                        HegotaLiveState.shared.acceptRestart()
+                    } label: {
+                        Text(String(localized: "Start again from the new chain"))
+                            .dsText(.subhead13).foregroundStyle(DS.tint)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(DS.Space.s4)
+            .background {
+                RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous)
+                    .fill(DS.surfaceWell)
+            }
+        }
+    }
+
+    private var headline: String {
+        verdict == .restarted
+            ? String(localized: "The devnet restarted")
+            : String(localized: "This isn't Hegotá")
+    }
+
+    /// **Says what happened to the money, because that is the question.** Not
+    /// "spent" and not "moved" — the history did not happen on the chain that
+    /// is there now, which is a devnet's normal life and not a loss.
+    private var detail: String {
+        verdict == .restarted
+            ? String(localized: "Everything below is from the old chain — those blocks, balances and UTXOs don't exist on the new one. Nothing was spent; the chain was rebuilt from scratch.")
+            : String(localized: "A host answered for a different chain, so these readings can't be trusted. Nothing here was changed.")
     }
 }
 
@@ -1016,6 +1302,7 @@ struct HegotaRoomList: View {
             case .home:     movesList(Array(moves.prefix(4)))
             case .activity: movesList(moves)
             case .accounts: accountsList
+            case .frames:   framesList
             case .coins:    coinsList
             case .nonces:   noncesList
             case .sponsors: sponsorsList
@@ -1050,6 +1337,45 @@ struct HegotaRoomList: View {
             guard let tx = $0.createdBy else { return false }
             return tx.caseInsensitiveCompare(move.hash) == .orderedSame
         }.count
+    }
+
+    // MARK: Frames
+
+    /// The transactions that ran steps, described by what they DID.
+    ///
+    /// **Not Activity filtered.** Those rows lead with an amount and a
+    /// counterparty, because that is what a transfer is; these lead with the
+    /// sequence, because a frame transaction's subject is what it ran. The same
+    /// transaction appears in both lists saying two different things about
+    /// itself, which is the argument for the scope rather than against it.
+    ///
+    /// Folded by hash for the figure's own reason: a multi-output spend lands as
+    /// several moves and is ONE transaction.
+    @ViewBuilder private var framesList: some View {
+        let list = framedPairs
+        if list.isEmpty {
+            // Reachable: `HegotaRoom.sections` gates this scope on frames
+            // existing, but the scope is remembered across sweeps and a later
+            // one can land before its receipts do.
+            empty(String(localized: "No steps have been read yet."))
+        } else {
+            ForEach(list, id: \.move.id) { pair in
+                HegotaMoveRow(move: pair.move,
+                              watched: watched,
+                              madeCoins: coinsMade(by: pair.move),
+                              leadsWithFrames: true) {
+                    onOpenMove?(pair.move, pair.owner)
+                }
+            }
+        }
+    }
+
+    private var framedPairs: [(move: HegotaMove, owner: String)] {
+        var seen = Set<String>()
+        return moves.filter { pair in
+            guard let f = pair.move.frames, !f.isEmpty else { return false }
+            return seen.insert(pair.move.hash.lowercased()).inserted
+        }
     }
 
     // MARK: Accounts
@@ -1256,6 +1582,8 @@ enum HegotaName {
         switch HegotaParty.of(address, watched: watched) {
         case .vault:
             return String(localized: "the UTXO vault")
+        case .nonceManager:
+            return String(localized: "the nonce manager")
         case .mine(let match), .stranger(let match):
             return HegotaWatch.shared.name(for: match) ?? WalletStore.shortAddress(match)
         }
@@ -1272,6 +1600,11 @@ struct HegotaMoveRow: View {
     var watched: [String] = []
     var madeCoins: Int = 0
     var inset = false
+    /// In the Frames scope the row's subject is the SEQUENCE, so the steps lead
+    /// the subtitle and the anatomy is drawn wide enough to read as a diagram
+    /// rather than as texture. Everywhere else the outcome leads, because there
+    /// the subject is money that moved.
+    var leadsWithFrames = false
     var onTap: (() -> Void)? = nil
 
     var body: some View {
@@ -1308,7 +1641,10 @@ struct HegotaMoveRow: View {
                 // nothing here, so the two eras are told apart at a glance
                 // rather than by reading a joined string of mode names.
                 if let frames = move.frames, !frames.isEmpty {
-                    HegotaFrameStrip(frames: frames).frame(width: 54)
+                    HegotaFrameStrip(frames: frames,
+                                     height: leadsWithFrames ? 9 : 5,
+                                     weighted: leadsWithFrames)
+                        .frame(width: leadsWithFrames ? 78 : 54)
                 }
             }
         }
@@ -1326,6 +1662,9 @@ struct HegotaMoveRow: View {
         case .vault:
             return move.incoming ? String(localized: "Out of the UTXO vault")
                                  : String(localized: "Into the UTXO vault")
+        case .nonceManager:
+            return move.incoming ? String(localized: "Out of the nonce manager")
+                                 : String(localized: "Into the nonce manager")
         case .mine(let address):
             let name = HegotaWatch.shared.name(for: address)
                 ?? WalletStore.shortAddress(address)
@@ -1344,14 +1683,28 @@ struct HegotaMoveRow: View {
     /// the modes are drawn beside it as the strip anyway.
     private var subtitle: String? {
         var parts: [String] = []
-        if madeCoins > 0 {
+        // In the Frames scope the STEPS lead, named in the order they ran —
+        // "Verify → UTXO → Call" is the row's whole subject there, and the
+        // outcome ("became 3 UTXOs") is what the Activity row already leads
+        // with one chip away.
+        if leadsWithFrames, let frames = move.frames, !frames.isEmpty {
+            parts.append(frames.map(\.mode.label).joined(separator: " → "))
+        } else if madeCoins > 0 {
             parts.append(madeCoins == 1 ? String(localized: "became 1 UTXO")
                                         : String(localized: "became \(String(madeCoins)) UTXOs"))
         } else if let frames = move.frames, !frames.isEmpty {
             parts.append(frames.count == 1 ? String(localized: "1 frame")
                                            : String(localized: "\(String(frames.count)) frames"))
         }
-        if let when = HegotaFormat.time(move.timestamp) { parts.append(when) }
+        if let when = HegotaFormat.time(move.timestamp) {
+            parts.append(when)
+        } else if let about = HegotaFormat.approximate(move.estimatedAt) {
+            // **A row past the header window is dated to the DAY, and says so.**
+            // Interpolated between two headers we really read, which on this
+            // chain is honest to seconds — but an estimate is a different grade
+            // of fact from a reading, so it never wears a clock.
+            parts.append(about)
+        }
         return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
 }
@@ -1390,6 +1743,7 @@ struct HegotaMoveSheet: View {
                         .dsText(.subhead13).foregroundStyle(DS.textTertiary)
                 }
                 stamp
+                watchDoor
                 explorer
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -1397,10 +1751,44 @@ struct HegotaMoveSheet: View {
         }
     }
 
+    /// **Watch the address on the other side of this transaction.**
+    ///
+    /// This room's own measurement is the argument for it: coin owners and
+    /// keyed-nonce senders are DISJOINT populations on this chain — not one
+    /// address does both — so the half of Hegotá you are not watching shows up
+    /// in your Activity rows as a stranger, and watching one meant memorising
+    /// forty hex characters, leaving the room and pasting them into a setup
+    /// screen. The address is already on screen; the door belongs beside it.
+    ///
+    /// Offered only for a STRANGER: the vault and the nonce manager are
+    /// contracts rather than accounts, and one of your own addresses is already
+    /// watched, so a button there would do nothing (§83's dead control).
+    @ViewBuilder private var watchDoor: some View {
+        if case .stranger(let address) = party {
+            Button {
+                DSHaptic.selection()
+                if HegotaWatch.shared.add(address) {
+                    // Sweeping immediately is the point — a watch that shows
+                    // nothing until the next foreground pass reads as a button
+                    // that did nothing.
+                    Task { await HegotaLiveState.shared.refresh() }
+                }
+            } label: {
+                Text(String(localized: "Watch \(WalletStore.shortAddress(address))"))
+                    .dsText(.callout15).foregroundStyle(DS.tint)
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
     /// Sized to the frames rather than fixed: a one-frame transfer and a
     /// four-frame sponsored spend are very different documents.
+    ///
+    /// The watch door adds a row for a stranger, so it is paid for here — a
+    /// tray sized for a sheet one line shorter clips its own last control.
     private var trayHeight: CGFloat {
-        min(760, 380 + CGFloat(move.frames?.count ?? 0) * 54)
+        let extra: CGFloat = { if case .stranger = party { return 34 }; return 0 }()
+        return min(760, 380 + extra + CGFloat(move.frames?.count ?? 0) * 54)
     }
 
     private var party: HegotaParty { HegotaParty.of(move.counterparty, watched: watched) }
@@ -1490,7 +1878,8 @@ struct HegotaMoveSheet: View {
         // The block is the chain's own identity for this moment; the date is
         // the only form of it anybody can read. Both, because the block is what
         // you would quote to somebody else.
-        Text(HegotaFormat.stamp(move.timestamp, block: move.block))
+        Text(HegotaFormat.stamp(move.timestamp, block: move.block,
+                                estimated: move.estimatedAt))
             .dsText(.label12).foregroundStyle(DS.textTertiary)
     }
 
@@ -1648,7 +2037,8 @@ struct HegotaFrameSheet: View {
             if let state = frame.stateGasUsed {
                 fact(String(localized: "\(String(state)) state gas"))
             }
-            fact(HegotaFormat.stamp(move.timestamp, block: move.block))
+            fact(HegotaFormat.stamp(move.timestamp, block: move.block,
+                                    estimated: move.estimatedAt))
         }
     }
 
@@ -1720,11 +2110,38 @@ enum HegotaFormat {
         return String(localized: "\(String(weeks / 52))y ago")
     }
 
+    /// An INTERPOLATED time, stated to the day and hedged in words.
+    ///
+    /// **A different grade of fact from `time(_:)`, and drawn as one (§504).**
+    /// Measured on this chain: 310,833 blocks ran 72 seconds ahead of exact
+    /// six-second spacing — twelve missed slots in twenty-one days — so a block
+    /// bracketed between two headers we really read is accurate to seconds. It
+    /// still never wears a clock, because the total drift says how far the
+    /// chain slipped overall and nothing about where the gaps SIT: two of them
+    /// inside one short history would move that row by however long they were.
+    /// The day absorbs that; a minute would not.
+    static func approximate(_ date: Date?) -> String? {
+        guard let date else { return nil }
+        let f = DateFormatter()
+        f.dateStyle = .medium
+        f.timeStyle = .none
+        return String(localized: "around \(f.string(from: date))")
+    }
+
     /// A sheet's dateline. The block is the chain's own identity for the
     /// moment — what you would quote to somebody else — and the date is the
     /// only form of it a person can read, so both.
-    static func stamp(_ date: Date?, block: UInt64) -> String {
-        guard let date else { return String(localized: "Block \(String(block))") }
+    ///
+    /// An estimate is admitted as an estimate rather than promoted: the block
+    /// number beside it is exact either way, so the row still carries something
+    /// quotable even when the time is derived.
+    static func stamp(_ date: Date?, block: UInt64, estimated: Date? = nil) -> String {
+        guard let date else {
+            guard let about = approximate(estimated) else {
+                return String(localized: "Block \(String(block))")
+            }
+            return String(localized: "\(about) · block \(String(block))")
+        }
         let f = DateFormatter()
         f.dateStyle = .medium
         f.timeStyle = .short
@@ -1993,7 +2410,8 @@ struct HegotaCoinSheet: View {
             // The vault's own counter is the coin's IDENTITY; the date beside
             // it is its age. #45 says which coin came first and nothing at all
             // about when, which is why both are here.
-            Text(HegotaFormat.stamp(coin.timestamp, block: coin.block))
+            Text(HegotaFormat.stamp(coin.timestamp, block: coin.block,
+                                    estimated: coin.estimatedAt))
                 .dsText(.subhead13).foregroundStyle(DS.textTertiary)
             Text(String(localized: "UTXO #\(String(coin.index))"))
                 .dsText(.label12).foregroundStyle(DS.textTertiary)
@@ -2011,8 +2429,14 @@ struct HegotaCoinSheet: View {
     @ViewBuilder private var spend: some View {
         if siblings.count > 1 {
             VStack(alignment: .leading, spacing: DS.Space.s3) {
-                Text(String(localized: "One spend made \(String(siblings.count)) of these"))
+                // **What the spend PRODUCED, never what it was worth.** The
+                // outputs sum exactly and are on the wire; the spend's own
+                // total is outputs plus a fee whose inputs are not published,
+                // so "the spend was X" would be a number we cannot support —
+                // which the note at the foot of this list already says.
+                Text(String(localized: "One spend made \(String(siblings.count)) of these, \(HegotaFormat.eth(HegotaCoins.total(siblings))) in all"))
                     .dsText(.label12).foregroundStyle(DS.textTertiary)
+                    .fixedSize(horizontal: false, vertical: true)
                 // **THE SPEND DEALS ITS PIECES** (prd §503, moment 02). The
                 // outputs arrive one after another rather than being present,
                 // which is the UTXO model as a gesture: money went in, and came

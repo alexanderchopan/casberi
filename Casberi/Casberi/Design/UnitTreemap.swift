@@ -74,6 +74,23 @@ struct UnitTreemap<Cell: View>: View {
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
+    /// **THE CALLER FOLDS ITS OWN TAIL, AND THIS TABLE CANNOT MAKE IT**
+    /// (2026-08-27). The contract is stated at the top of this file and NOT in
+    /// the signature, which cost a session an hour: `count` accepts any `Int`
+    /// and `frames` accepts any `Int`, so a room whose data happened to hold
+    /// seven rows read as supported at both doors.
+    ///
+    /// The two doors fail DIFFERENTLY, which is worth knowing before debugging
+    /// either. Through `UnitTreemap` the body clamps to `maxCells`, so a
+    /// seventh cell SILENTLY VANISHES — a chart that drops a row without
+    /// saying so looks exactly like a chart that had nothing to drop. Called
+    /// DIRECTLY, as `GenTagMap` does, the returned table is shorter than the
+    /// caller's own collection, so indexing it past six traps or draws two
+    /// cells into one slot, depending on what the caller does next.
+    ///
+    /// Fold before you get here: rank, take five, and make the sixth say what
+    /// it covers ("9 more"), the way `NetworkReceiptsInsight` does.
+    ///
     /// (x, y, w, h) in grid units, per cell count. Sized so a 1- to 6-cell map
     /// always fills the board with no holes.
     static func frames(_ n: Int) -> [(Int, Int, Int, Int)] {

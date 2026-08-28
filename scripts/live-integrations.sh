@@ -647,6 +647,177 @@ print(staged, five, int(want <= axes), "|".join(sorted(s for s in sent if s not 
 fi
 
 hr
+# ── Ethrex Hegotá (prd §500/§504) ────────────────────────────────────────────
+# **The most drift-prone dependency in the catalog, and it had no row.** This is
+# an experimental devnet with no contract behind anything the seat reads: the
+# EIP-7708 transfer emitter, the `UtxoCreated` topic, `payer` on a type-`0x6`
+# receipt, `nonceKeys`, and two predeploys. When any of it moves the room does
+# not break — it goes QUIET, which from outside is indistinguishable from an
+# address that simply has no history (§311's class).
+#
+# Everything here is keyless and free. The reconciliation row is the sharpest:
+# it is the seat's own self-proof — every unspent coin on the chain, summed,
+# against the vault's balance — run nightly, so a drifted parse or a relaunched
+# devnet is caught by the same arithmetic the app gates its Coins card on.
+print -P "%F{45}Ethrex Hegotá%f (keyless devnet)"
+HEG="https://rpc1.hegota.ethrex.xyz"
+HEG_VAULT="0x0000000000000000000000000000000000008312"
+HEG_NONCE="0x0000000000000000000000000000000000008250"
+HEG_UTXO_TOPIC="0x3b19241465a47bc187f1d9c7db70834855a907183742a4b63aa824c576296f5e"
+
+# 1. All three hosts, and the chain id the app pins (3151908 = 0x301824). A host
+#    answering for some OTHER chain is the failure `HegotaGenesis` exists for.
+heg_up=0
+for h in rpc1 rpc2 rpc3; do
+  id=$(raw "https://$h.hegota.ethrex.xyz" '{"id":1,"jsonrpc":"2.0","method":"eth_chainId","params":[]}' \
+        | python3 -c 'import sys,json;print(json.load(sys.stdin).get("result",""))' 2>/dev/null)
+  [[ "$id" == "0x301824" ]] && (( heg_up++ ))
+done
+if (( heg_up == 3 )); then
+  pass "Hegotá — all three RPC hosts serve chain 3151908"
+elif (( heg_up > 0 )); then
+  warn "Hegotá — only $heg_up of 3 hosts answered with chain 3151908 (the seat retries, so this is survivable)"
+else
+  fail "Hegotá — no host served chain 3151908; the whole seat reads nothing"
+fi
+
+if (( heg_up > 0 )); then
+  # 2. **The genesis hash.** A relaunched devnet answers everything perfectly and
+  #    with NOTHING, so this is the only signal that separates "quiet" from
+  #    "this is a different chain now". Recorded rather than asserted — a change
+  #    is expected eventually and is news, not a failure.
+  gen=$(raw "$HEG" '{"id":1,"jsonrpc":"2.0","method":"eth_getBlockByNumber","params":["0x0",false]}' \
+        | python3 -c 'import sys,json;print((json.load(sys.stdin).get("result") or {}).get("hash",""))' 2>/dev/null)
+  if [[ "$gen" == "0xc2a34ac020910de9fa78b5089eb9eb91b913fb0f95370ec42601ddb95a5cb213" ]]; then
+    pass "Hegotá — same chain as when the seat was built (genesis unchanged)"
+  elif [[ -n "$gen" ]]; then
+    warn "Hegotá — THE DEVNET RESTARTED (genesis is now $gen); watched history is gone and the worked examples need re-measuring"
+  else
+    warn "Hegotá — the genesis header did not read; the restart check could not run"
+  fi
+
+  # 3. Both predeploys still carry code. A predeploy that vanished takes the
+  #    Coins scope and every `sender` frame's counterparty with it.
+  for pair in "vault:$HEG_VAULT" "nonce manager:$HEG_NONCE"; do
+    label="${pair%%:*}"; addr="${pair#*:}"
+    code=$(raw "$HEG" "{\"id\":1,\"jsonrpc\":\"2.0\",\"method\":\"eth_getCode\",\"params\":[\"$addr\",\"latest\"]}" \
+           | python3 -c 'import sys,json;print(json.load(sys.stdin).get("result",""))' 2>/dev/null)
+    if [[ ${#code} -gt 4 ]]; then
+      pass "Hegotá — the $label predeploy still carries code"
+    else
+      fail "Hegotá — the $label predeploy has NO code; the scope it feeds goes silently empty"
+    fi
+  done
+
+  # 4. **The reconciliation — the seat's own gate, run against live state.**
+  #    Reconstructs every unspent coin on the chain from the logs plus the spent
+  #    bitmap and compares the total with the vault's balance, exactly as
+  #    `HegotaCoins.reconciles` does. A mismatch means the topic, the log layout
+  #    or the storage slot moved — and in the app that renders as a Coins card
+  #    that just stops drawing.
+  heg_recon=$(python3 - "$HEG" "$HEG_VAULT" "$HEG_UTXO_TOPIC" <<'PY' 2>/dev/null
+import json,sys,urllib.request
+host,vault,topic=sys.argv[1],sys.argv[2],sys.argv[3]
+def call(m,p):
+    r=urllib.request.urlopen(urllib.request.Request(host,
+        json.dumps({"id":1,"jsonrpc":"2.0","method":m,"params":p}).encode(),
+        {"Content-Type":"application/json"}),timeout=20)
+    return json.load(r).get("result")
+logs=call("eth_getLogs",[{"address":vault,"topics":[topic],"fromBlock":"0x0","toBlock":"latest"}]) or []
+coins=[]
+for l in logs:
+    d=l["data"][2:]
+    coins.append((int(d[0:64],16),int(d[64:128],16),"0x"+l["topics"][2][-40:]))
+words={}
+for w in sorted({i>>8 for i,_,_ in coins}):
+    words[w]=int(call("eth_getStorageAt",[vault,hex((1<<129)+w),"latest"]),16)
+unspent=[c for c in coins if not (words[c[0]>>8]>>(c[0]&0xFF))&1]
+bal=int(call("eth_getBalance",[vault,"latest"]),16)
+total=sum(v for _,v,_ in unspent)
+print(f"{len(coins)} {len(unspent)} {len({o for _,_,o in unspent})} {int(total==bal)}")
+PY
+)
+  if [[ -n "$heg_recon" ]]; then
+    read -r hc hu ho hok <<< "$heg_recon"
+    if [[ "$hok" == "1" ]]; then
+      pass "Hegotá — the UTXO set reconciles to the wei ($hu unspent of $hc, $ho owners)"
+    else
+      fail "Hegotá — the UTXO set NO LONGER reconciles against the vault balance; the Coins card will stop drawing"
+    fi
+  else
+    warn "Hegotá — the reconciliation walk did not complete; the seat's own gate is unverified tonight"
+  fi
+
+  # 5. **Frame transactions still look like frame transactions.** Everything the
+  #    Frames scope draws comes off a type-`0x6` receipt's `frames` array, and
+  #    nothing about that shape is contractual.
+  #
+  #    **READ THE LOGS, NOT THE BLOCKS — §500's own lesson, re-earned here.**
+  #    The first cut of this row walked the newest 600 blocks and found zero
+  #    transactions, then reported the frame shape "unverified". That is exactly
+  #    the mistake §500 records: this chain is mostly idle at the tip, so
+  #    sampling blocks measures the sampling and not the chain. The transfer
+  #    logs are the thing that ACCUMULATES, and every one of them names a
+  #    transaction, so the newest few give real receipts to check.
+  heg_frames=$(python3 - "$HEG" <<'PY' 2>/dev/null
+import json,sys,urllib.request
+host=sys.argv[1]
+def call(m,p):
+    r=urllib.request.urlopen(urllib.request.Request(host,
+        json.dumps({"id":1,"jsonrpc":"2.0","method":m,"params":p}).encode(),
+        {"Content-Type":"application/json"}),timeout=25)
+    return json.load(r).get("result")
+logs=call("eth_getLogs",[{"address":"0xfffffffffffffffffffffffffffffffffffffffe",
+    "topics":["0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"],
+    "fromBlock":"0x0","toBlock":"latest"}]) or []
+seen=set()
+for l in reversed(logs):
+    seen.add(l["transactionHash"])
+    if len(seen)>=25: break
+typed=framed=paired=payer=keys=0
+for h in list(seen):
+    tx=call("eth_getTransactionByHash",[h]) or {}
+    if tx.get("type")!="0x6": continue
+    typed+=1
+    r=call("eth_getTransactionReceipt",[h]) or {}
+    # **`frames` is on the TRANSACTION, `frameReceipts` on the receipt.** Read
+    # straight out of `HegotaRead.frames(tx:receipt:)` rather than guessed: the
+    # first cut of this row looked for `receipt.frames`, found none, and
+    # reported the shape as drifted on a chain where it was perfectly intact —
+    # a check that cries wolf gets turned off within a week.
+    fr=tx.get("frames") or []
+    rr=r.get("frameReceipts") or []
+    if fr: framed+=1
+    # The app pairs a frame with its receipt BY POSITION and only when the
+    # counts agree, so a divergence is what makes every pip go hollow.
+    if fr and len(fr)==len(rr): paired+=1
+    if r.get("payer"): payer+=1
+    if isinstance(tx.get("nonceKeys"),list): keys+=1
+print(f"{len(logs)} {typed} {framed} {paired} {payer} {keys}")
+PY
+)
+  if [[ -n "$heg_frames" ]]; then
+    read -r flogs ftyped fframed fpaired fpayer fkeys <<< "$heg_frames"
+    if [[ "$fframed" -gt 0 ]]; then
+      pass "Hegotá — frame transactions still carry frames ($fframed of $ftyped sampled; payer on $fpayer, nonceKeys on $fkeys)"
+      if [[ "$fpaired" != "$fframed" ]]; then
+        # Counts disagreeing is not a missing field, so it passes every
+        # existence check — and in the app it makes EVERY pip draw hollow,
+        # because a frame whose receipt cannot be paired is never claimed as a
+        # success it cannot support.
+        warn "Hegotá — $((fframed - fpaired)) sampled transaction(s) have frames and frameReceipts of different lengths; their steps draw as unknown"
+      fi
+    elif [[ "$ftyped" -gt 0 ]]; then
+      fail "Hegotá — $ftyped type-0x6 transactions carry NO frames array; the Frames scope goes silently empty"
+    else
+      warn "Hegotá — no type-0x6 transaction among the newest sampled transfers ($flogs logs); the frame shape is unverified tonight"
+    fi
+  else
+    warn "Hegotá — the frame-shape walk did not complete"
+  fi
+fi
+
+hr
 if (( RED == 0 && AMBER == 0 )); then
   print -P "%F{green}All live-integration hosts healthy.%f"
 elif (( RED == 0 )); then

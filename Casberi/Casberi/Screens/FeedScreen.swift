@@ -2544,6 +2544,21 @@ struct FeedScreen: View {
     /// it is used — with no way back to the other wallets.
     // MARK: - Hegotá's three room sections
 
+    /// Above the figure, because it governs everything below it: on a relaunched
+    /// devnet every reading still draws, and every one of them describes a
+    /// history the chain no longer has. Draws nothing in the ordinary case.
+    @ViewBuilder private var hegotaChainNoticeSection: some View {
+        if HegotaRoomSource.compose() != nil {
+            Section {
+                HegotaChainNotice(verdict: HegotaLiveState.shared.genesis)
+                    .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
+                                              bottom: 0, trailing: DSRoomChassis.inset))
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+            }
+        }
+    }
+
     @ViewBuilder private var hegotaVisualSection: some View {
         if let head = HegotaRoomSource.compose() {
             Section {
@@ -3213,6 +3228,7 @@ struct FeedScreen: View {
             // chip that opens nothing — derived from the composed room rather
             // than the watch list (the face rail's own rule).
             let _ = { chrome.hegotaSections = HegotaRoomSource.sections() }()
+            hegotaChainNoticeSection
             hegotaVisualSection
             hegotaRailSection
             hegotaSwitcherSection

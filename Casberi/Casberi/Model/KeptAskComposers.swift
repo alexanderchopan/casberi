@@ -1369,7 +1369,7 @@ enum KeptAskComposers {
         return Result(delta: lines.first ?? "", digest: lines.joined(separator: "|"),
                       doc: ["root = Stack([ins, res])",
                             "ins = Insight(\"\(genSafe(lines.joined(separator: " · ")))\")"]
-                          + Self.rows(Array(recent.prefix(6)), title: "Where it moved"))
+                          + Self.rows(Array(recent.prefix(6)), title: String(localized: "Where it moved")))
     }
 
     /// "How's my card?" / "what's shielded?" / "anything to claim?" — the

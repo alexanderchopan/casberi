@@ -115,7 +115,15 @@ INTERPOLATION = re.compile(r'\\\(.*?\)')
 # or explorer uses, which is a worse §8 outcome than the shout it fixes. The
 # entry is the ticker itself rather than the whole label, so any other ALL-CAPS
 # phrase on that card is still a finding.
-KNOWN_ACRONYMS: set[str] = {"ETH"}
+KNOWN_ACRONYMS: set[str] = {
+    "ETH",
+    # An initialism, and the chain's OWN word for the thing (prd §500): EIP-8312
+    # names the frame, the predeploy is the UTXO vault, and the RPC says so.
+    # "Coins" was the friendly gloss and was deliberately retired — the scope
+    # chip, the frame mode and the sheets all say UTXO, so exempting the word
+    # here is what keeps the ruling and this lint from contradicting each other.
+    "UTXO",
+}
 
 MIN_WORD = 3
 

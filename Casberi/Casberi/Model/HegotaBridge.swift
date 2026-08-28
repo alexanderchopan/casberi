@@ -172,8 +172,16 @@ enum HegotaRead {
         async let coinLogs = HegotaRPC.getLogs(
             address: HegotaChain.vault,
             topics: [HegotaChain.utxoCreatedTopic, NSNull(), addressTopic])
+        // 5. **The ordinary nonce — the one counter we cannot reconstruct.**
+        //    Everything above is built from transfer logs, and a transaction
+        //    that moved no ETH emits none; on a chain whose whole subject is
+        //    transactions that verify, check and call rather than pay, that is
+        //    precisely the interesting kind. This is the chain's own count of
+        //    what this address has sent on key 0.
+        async let nonce = HegotaRPC.call(method: "eth_getTransactionCount",
+                                         params: [address, "latest"])
 
-        let (bal, outs, ins, coins) = await (balance, outgoing, incoming, coinLogs)
+        let (bal, outs, ins, coins, sent) = await (balance, outgoing, incoming, coinLogs, nonce)
 
         // Reached means a host answered SOMETHING. A single successful read is
         // enough to know the chain is there; the others answering nil then
@@ -182,6 +190,13 @@ enum HegotaRead {
         guard out.reached else { return out }
 
         if let bal, let wei = HegotaWord.integer(padded(bal)) { out.balanceWei = wei }
+        // Nil rather than zero on an unread nonce: a fresh address really does
+        // sit at 0, so folding the two together says "never sent" about an
+        // address whose read merely failed.
+        if let hex = sent as? String {
+            let count = WalletIngest.hexToInt(hex)
+            if count >= 0 { out.nonceCount = UInt64(count) }
+        }
 
         var moves: [HegotaMove] = []
         for (logs, incomingSide) in [(outs, false), (ins, true)] {
@@ -248,13 +263,43 @@ enum HegotaRead {
         }
         guard !times.isEmpty else { return }
 
-        out.moves = out.moves.map { var m = $0; m.timestamp = times[$0.block]; return m }
-        out.coins = out.coins.map { var c = $0; c.timestamp = times[$0.block]; return c }
+        // **Rows past the window are BRACKETED, not left undated (2026-08-27).**
+        // The refusal above was right while a block number was the only clock
+        // we had. It stopped being right once two real headers sit either side
+        // of a row: measured on this chain, 310,833 blocks ran a total of 72
+        // seconds ahead of exact six-second spacing — twelve missed slots in
+        // twenty-one days — so a time interpolated between two headers we
+        // actually read is accurate to the seconds those gaps cost.
+        //
+        // The estimate is kept in its own field rather than filled into
+        // `timestamp`, because it is not the same kind of fact: a read time
+        // states a clock, an estimate states a DAY. Nothing is extrapolated
+        // past the newest header, where drift has no measured ceiling.
+        func estimated(_ block: UInt64) -> Date? {
+            times[block] == nil ? HegotaClock.estimate(block: block, from: times) : nil
+        }
+        out.moves = out.moves.map {
+            var m = $0
+            m.timestamp = times[$0.block]
+            m.estimatedAt = estimated($0.block)
+            return m
+        }
+        out.coins = out.coins.map {
+            var c = $0
+            c.timestamp = times[$0.block]
+            c.estimatedAt = estimated($0.block)
+            return c
+        }
         // `unspent` is a FILTERED COPY of `coins`, not a view of it, so it has
         // to be restamped too — leaving it means the Coins list, which draws
         // from `unspent`, stays the one undated list in a now-dated room.
         if let held = out.unspent {
-            out.unspent = held.map { var c = $0; c.timestamp = times[$0.block]; return c }
+            out.unspent = held.map {
+                var c = $0
+                c.timestamp = times[$0.block]
+                c.estimatedAt = estimated($0.block)
+                return c
+            }
         }
     }
 
@@ -300,6 +345,13 @@ enum HegotaRead {
         out.reconciled = HegotaCoins.reconciles(unspent: unspentEverywhere, vaultWei: vaultWei)
         let mine = Set(out.coins.map(\.index))
         out.unspent = unspentEverywhere.filter { mine.contains($0.index) }
+        // **The census costs nothing** — this set is already in hand and already
+        // proven complete, and every previous sweep threw it away after taking
+        // one Bool from it. It is composed from `unspentEverywhere` rather than
+        // from `out.unspent`, so "mine" is measured against the same whole-chain
+        // set the reconciliation ran over.
+        out.census = HegotaCensus.of(unspentEverywhere, mine: [out.address],
+                                     reconciled: out.reconciled)
     }
 
     /// The frames, the payer and the nonce keys for the newest moves.
@@ -519,7 +571,59 @@ final class HegotaLiveState {
     /// rather than drawing an empty account as an answer.
     private(set) var readAt: Date?
 
+    /// Whether the chain we just read is the chain we read last time.
+    ///
+    /// **The state every other guard in this seat misses.** All of them protect
+    /// against a read that failed; a relaunched devnet answers everything
+    /// perfectly and with nothing, so the room draws a zeroed balance and two
+    /// blank worked examples with no error anywhere. Hegotá is an experimental
+    /// devnet and being relaunched is a thing it is expected to do.
+    private(set) var genesis: HegotaGenesis.Verdict = .unknown
+
+    private static let genesisKey = "hegota.genesis.v1"
+
     private var inFlight = false
+
+    /// Read the chain's identity once per sweep and compare it with what this
+    /// device remembers.
+    ///
+    /// Two cheap reads for the whole pass rather than per address — the chain
+    /// is the same chain for every address on it. The remembered hash is
+    /// written on FIRST SIGHT and then only when it agrees, so a relaunch keeps
+    /// reporting itself until the person has been told; silently re-baselining
+    /// would make the state unobservable exactly once, on the sweep that
+    /// discovered it.
+    private func readIdentity() async {
+        let known = UserDefaults.standard.string(forKey: Self.genesisKey)
+        async let idCall = HegotaRPC.call(method: "eth_chainId", params: [])
+        async let genesisCall = HegotaRPC.call(method: "eth_getBlockByNumber",
+                                               params: ["0x0", false])
+        let (rawID, rawGenesis) = await (idCall, genesisCall)
+
+        let chainID = (rawID as? String).map { WalletIngest.hexToInt($0) }
+        let hash = (rawGenesis as? [String: Any])?["hash"] as? String
+
+        genesis = HegotaGenesis.verdict(chainID: chainID, genesis: hash,
+                                        knownGenesis: known)
+        // Remember it on first sight, and never overwrite a hash that
+        // disagrees — the disagreement IS the finding.
+        if known == nil, genesis != .differentChain, let hash {
+            UserDefaults.standard.set(hash, forKey: Self.genesisKey)
+        }
+    }
+
+    /// Accept the relaunched chain as the new baseline.
+    ///
+    /// The person's own act, never ours: the room states the reset and offers
+    /// this, because re-baselining on our own schedule is how a fact nobody was
+    /// told disappears. Forgetting the accounts with it is the point — they
+    /// describe a history that no longer exists.
+    func acceptRestart() {
+        UserDefaults.standard.removeObject(forKey: Self.genesisKey)
+        genesis = .unknown
+        accounts = []
+        readAt = nil
+    }
 
     func refresh() async {
         // **THE DEMO REACHES NOTHING.** Not a nicety — a live sweep here reads
@@ -534,6 +638,10 @@ final class HegotaLiveState {
         inFlight = true
         loading = accounts.isEmpty
         defer { inFlight = false; loading = false }
+
+        // The chain's identity FIRST, so a relaunch is known before the empty
+        // reads it causes are interpreted as an empty account.
+        await readIdentity()
 
         var out: [HegotaAccount] = []
         for address in HegotaWatch.shared.addresses {
@@ -706,6 +814,21 @@ extension HegotaLiveState {
         }
         owner.coins = dated
         owner.unspent = dated
+        // **THE WHOLE CHAIN'S VAULT, measured the same day (§504).** 49
+        // `UtxoCreated` logs, 28 of them still unspent across 11 owners,
+        // summing to exactly the vault's `eth_getBalance` — the reconciliation
+        // this seat gates its Coins card on, run for real and recorded. This
+        // address holds 7 of those 28, about 1% of the vault, which is why the
+        // demo's census line says a share rather than "all of it".
+        owner.census = HegotaCensus(coins: 28, owners: 11,
+                                    wei: Decimal(string: "1120305821009140739")!,
+                                    mineCoins: dated.count,
+                                    mineWei: HegotaCoins.total(dated))
+        // The REAL ordinary nonce. Three sends on key 0 against the two
+        // value-moving ones below, so the demo shows the gap this figure exists
+        // for — one send that moved nothing, which is a step rather than a
+        // payment and appears in no other reading in the room.
+        owner.nonceCount = 3
 
         func move(_ hash: String, _ other: String, _ wei: String,
                   incoming: Bool, block: UInt64) -> HegotaMove {
@@ -790,6 +913,10 @@ extension HegotaLiveState {
         twelve.frames = beef.frames
         sender.moves = [beef, twelve]
         sender.lanes = HegotaRead.lanes(from: sender.moves)
+        // Its real ordinary nonce. Both moves above ride NAMED keys, so none of
+        // these seven touched key 0 — the two counters really are independent,
+        // which is the whole content of the scope.
+        sender.nonceCount = 7
 
         // The sponsored moves are the vault spends above — measured, not
         // invented: this chain's UTXO withdrawals really do carry the vault as

@@ -46,30 +46,38 @@ func check(_ ok: Bool, _ what: String) {
 
 // ─────────────────────────── scopes ───────────────────────────
 
-check(HegotaSection.order == [.home, .activity, .accounts, .coins, .nonces, .sponsors],
-      "order is home → activity → accounts → coins → nonces → sponsors")
+check(HegotaSection.order == [.home, .activity, .accounts, .frames, .coins, .nonces, .sponsors],
+      "order is home → activity → accounts → frames → coins → nonces → sponsors")
+// **`frames` LEADS the conditional tail, ahead of `coins` (§504).** Pinned as
+// its own assertion rather than left implicit in the list above, because it is
+// a RULING — frame transactions are what the chain is for, and the scope reads
+// directly off `activity`, which precedes it.
+check(HegotaSection.order.firstIndex(of: .frames)! < HegotaSection.order.firstIndex(of: .coins)!,
+      "frames leads the conditional tail, ahead of coins")
+check(HegotaSection.order.firstIndex(of: .activity)! + 2 == HegotaSection.order.firstIndex(of: .frames)!,
+      "frames sits as close behind activity as the tail rule permits")
 check(HegotaSection.order.count == HegotaSection.allCases.count,
       "order lists every case — a new scope cannot be silently unlisted")
 check(HegotaSection.order.first == .home, "home leads")
 check(HegotaSection.order.last == .sponsors, "sponsors is last — the rarest scope")
 
 // THE STRUCTURAL RULE, inherited from WalletSection: no unconditional scope may
-// sit after a conditional one, so the strip's stable head never reflows. Coins
-// sitting third satisfies this — home and activity are the only unconditional
-// scopes and both precede it.
+// sit after a conditional one, so the strip's stable head never reflows. Frames
+// opening the tail satisfies this — home, activity and accounts are the only
+// unconditional scopes and all three precede it.
 let firstConditional = HegotaSection.order.firstIndex { $0.isConditional }!
 let lastUnconditional = HegotaSection.order.lastIndex { !$0.isConditional }!
 check(lastUnconditional < firstConditional,
       "no unconditional scope sits after a conditional one")
-check(HegotaSection.order[3] == .coins,
-      "coins leads the conditional tail — this room's headline reading")
+check(HegotaSection.order[3] == .frames,
+      "frames leads the conditional tail — the reading this chain exists for")
 check(HegotaSection.order[2] == .accounts,
       "accounts closes the unconditional head — every watched address always has one")
 
 check(HegotaSection.home.isAlwaysPresent, "home is always present")
 check(HegotaSection.activity.isAlwaysPresent, "activity is always present")
 check(HegotaSection.accounts.isAlwaysPresent, "accounts is always present")
-for s in [HegotaSection.coins, .nonces, .sponsors] {
+for s in [HegotaSection.frames, .coins, .nonces, .sponsors] {
     check(s.isConditional, "\(s.rawValue) is conditional")
     check(!s.isAlwaysPresent, "\(s.rawValue) is not always present")
 }
@@ -80,23 +88,36 @@ check(!HegotaSection.accounts.isConditional, "accounts is not conditional")
 // present(): a false flag must not produce a scope, and the two constants must
 // appear even when every flag is false — which is the state of MOST addresses
 // on this chain, so it is the common path rather than an edge one.
-check(HegotaSection.present(coins: false, nonces: false, sponsors: false) == [.home, .activity, .accounts],
+check(HegotaSection.present(frames: false, coins: false, nonces: false, sponsors: false)
+        == [.home, .activity, .accounts],
       "all flags false yields the three unconditional scopes alone")
-check(HegotaSection.present(coins: true, nonces: true, sponsors: true) == HegotaSection.order,
+check(HegotaSection.present(frames: true, coins: true, nonces: true, sponsors: true) == HegotaSection.order,
       "all flags true yields the full order")
 
 // Each flag governs its OWN scope and no other — the mapping a careless edit
 // gets wrong in a way nothing else can see.
-check(HegotaSection.present(coins: true, nonces: false, sponsors: false) == [.home, .activity, .accounts, .coins],
+check(HegotaSection.present(frames: true, coins: false, nonces: false, sponsors: false)
+        == [.home, .activity, .accounts, .frames],
+      "frames' flag yields frames alone beside the constants")
+check(HegotaSection.present(frames: false, coins: true, nonces: false, sponsors: false)
+        == [.home, .activity, .accounts, .coins],
       "coins' flag yields coins alone beside the constants")
-check(HegotaSection.present(coins: false, nonces: true, sponsors: false) == [.home, .activity, .accounts, .nonces],
+check(HegotaSection.present(frames: false, coins: false, nonces: true, sponsors: false)
+        == [.home, .activity, .accounts, .nonces],
       "nonces' flag yields nonces alone beside the constants")
-check(HegotaSection.present(coins: false, nonces: false, sponsors: true) == [.home, .activity, .accounts, .sponsors],
+check(HegotaSection.present(frames: false, coins: false, nonces: false, sponsors: true)
+        == [.home, .activity, .accounts, .sponsors],
       "sponsors' flag yields sponsors alone beside the constants")
 
 // present() returns DECLARATION order, not argument order.
-let mixed = HegotaSection.present(coins: true, nonces: false, sponsors: true)
+let mixed = HegotaSection.present(frames: false, coins: true, nonces: false, sponsors: true)
 check(mixed == [.home, .activity, .accounts, .coins, .sponsors], "present() preserves declaration order")
+// **The tail's own order, proven by a mix rather than by the full list.** An
+// address with frames and a sponsor but no coins is the shape that would expose
+// a tail reordered by argument position rather than by declaration.
+let tailMix = HegotaSection.present(frames: true, coins: false, nonces: false, sponsors: true)
+check(tailMix == [.home, .activity, .accounts, .frames, .sponsors],
+      "frames precedes sponsors when both are present and coins is not")
 
 // resolve(): the fallback is home, NEVER "the first present scope". The two
 // differ only when home is absent, which cannot happen — and that is the point,
@@ -486,9 +507,15 @@ check(HegotaSponsor.group([mv(nil, sender: "0xme")]).isEmpty,
 func keyed(_ key: String, sends: Int) -> HegotaNonceLane {
     HegotaNonceLane(key: key, seq: "0x0", lastBlock: 1, sends: sends)
 }
-let plain = HegotaMove(hash: "0xp", counterparty: "0xc", wei: Decimal(1), incoming: false, block: 1)
+// **TWO SENDS ARE TWO HASHES.** This fixture used to pass one move twice, which
+// counted 2 only because the implementation counted rows — and a self-payment
+// lands as two moves under ONE hash, so that shape now (correctly) counts 1.
+// A fixture only tests the rule it names if it fails that rule and passes every
+// other one, so the two sends are two transactions, as they are on chain.
+let plain = HegotaMove(hash: "0xp1", counterparty: "0xc", wei: Decimal(1), incoming: false, block: 1)
+let plain2 = HegotaMove(hash: "0xp2", counterparty: "0xc", wei: Decimal(1), incoming: false, block: 2)
 let inbound = HegotaMove(hash: "0xi", counterparty: "0xc", wei: Decimal(1), incoming: true, block: 1)
-let totals = HegotaNonceTotals.of([plain, plain, inbound], lanes: [keyed("0xbeef", sends: 2)])
+let totals = HegotaNonceTotals.of([plain, plain2, inbound], lanes: [keyed("0xbeef", sends: 2)])
 check(totals.ordinarySends == 2,
       "key 0 counts only what this address SENT — an inbound move was somebody else's nonce")
 check(totals.keyedSends == 2, "named keys sum their own sends")
@@ -496,6 +523,145 @@ check(totals.counters == 2, "key 0 is a counter too — the one the list can nev
 check(totals.total == 4, "the total spans both kinds")
 check(HegotaNonceTotals.of([inbound], lanes: []).counters == 0,
       "an address that has never sent keeps no counters")
+
+// **A MULTI-OUTPUT SPEND is one transaction and advanced ONE counter**, and it
+// lands as several OUTGOING moves sharing a hash — which is the ordinary shape
+// of a UTXO spend on this chain, not a corner case (§500's own worked example:
+// 1.0 ETH in, 0.4 out, 0.5 out, 0.099941 change). Counting rows reports three.
+//
+// The first cut of this fixture used a self-payment — one outgoing move and one
+// incoming — and the mutation SURVIVED, because `!move.incoming` already
+// dropped the second one and the hash fold never ran. A fixture only tests the
+// rule it names if it fails that rule and passes every other one.
+let splitA = HegotaMove(hash: "0xsplit", counterparty: "0xr1", wei: Decimal(4),
+                        incoming: false, block: 3)
+let splitB = HegotaMove(hash: "0xsplit", counterparty: "0xr2", wei: Decimal(5),
+                        incoming: false, block: 3)
+check(HegotaNonceTotals.of([splitA, splitB], lanes: []).ordinarySends == 1,
+      "a spend paying two recipients advances ONE ordinary nonce, not two")
+
+// **THE CHAIN'S OWN COUNTER WINS, and the gap is the finding.** A transaction
+// that moved no ETH emits no transfer log, so the observable moves undercount —
+// on the chain whose whole subject is transactions that verify and check.
+let counted = HegotaNonceTotals.of([plain, plain2, inbound], lanes: [],
+                                   nonceCount: 5, valuelessSends: 3)
+check(counted.ordinarySends == 5, "the read nonce is the number of ordinary sends")
+check(counted.nonceRead, "a read nonce is marked as read")
+check(counted.valuelessSends == 3, "the sends that moved nothing are carried")
+check(!HegotaNonceTotals.of([plain], lanes: []).nonceRead,
+      "a derived count is NOT narrated as the chain's own")
+// A counter BELOW what we can already name is impossible on chain, so the
+// observed floor is kept — reporting fewer sends than the list beneath it
+// enumerates is the one output worse than not knowing.
+check(HegotaNonceTotals.of([plain, plain2], lanes: [], nonceCount: 1).ordinarySends == 2,
+      "a nonce below the observed moves keeps the observed floor")
+
+// ───────────────── frames: what the transactions DID ─────────────────
+func framed(_ hash: String, _ modes: [HegotaFrame.Mode],
+            ok: Bool? = true, incoming: Bool = false) -> HegotaMove {
+    var m = HegotaMove(hash: hash, counterparty: "0xc", wei: Decimal(1),
+                       incoming: incoming, block: 1)
+    m.frames = modes.map { HegotaFrame(mode: $0, target: nil, wei: 0,
+                                       succeeded: ok, gasUsed: 1, stateGasUsed: 0) }
+    return m
+}
+check(HegotaFrameMix.of([plain]) == nil,
+      "a transaction whose frames were never read composes NO mix — not an empty one")
+let mix = HegotaFrameMix.of([framed("0xa", [.utxo, .utxo, .verify]),
+                             framed("0xb", [.utxo])])!
+check(mix.transactions == 2, "transactions are counted, not frames")
+check(mix.total == 4, "every frame is counted")
+check(mix.busiest?.mode == .utxo && mix.busiest?.count == 3,
+      "the commonest mode leads the mix")
+check(mix.slices.count == 2, "one slice per distinct mode")
+// Ties break by the mode's own name, so the drawing is stable between opens —
+// a figure that reshuffles over identical data reads as broken.
+let tied = HegotaFrameMix.of([framed("0xt", [.verify, .utxo])])!
+check(tied.slices.map(\.mode) == [.utxo, .verify], "a tie breaks by name, not by chance")
+// A self-payment is ONE transaction here too.
+check(HegotaFrameMix.of([framed("0xs", [.utxo]),
+                         framed("0xs", [.utxo], incoming: true)])!.transactions == 1,
+      "both directions of one transaction count once")
+// Failure and unreadability are different, and the strip draws them differently.
+let broken = HegotaFrameMix.of([framed("0xf", [.utxo], ok: false),
+                                framed("0xu", [.verify], ok: nil)])!
+check(broken.failed == 1, "a failed frame is counted as failed")
+check(broken.unknown == 1, "a frame whose receipt would not pair is NOT counted as failed")
+
+// ───────────────── the chain-wide vault census ─────────────────
+func owned(_ i: UInt64, _ wei: Int, _ who: String) -> HegotaCoin {
+    HegotaCoin(index: i, wei: Decimal(wei), source: "0xsrc", owner: who, block: 1)
+}
+let everyCoin = [owned(1, 70, "0xme"), owned(2, 20, "0xthem"), owned(3, 10, "0xother")]
+check(HegotaCensus.of(everyCoin, mine: ["0xme"], reconciled: false) == nil,
+      "an unreconciled set yields NO census — a denominator nobody should read")
+check(HegotaCensus.of([], mine: ["0xme"], reconciled: true) == nil,
+      "an empty vault yields no census")
+let census = HegotaCensus.of(everyCoin, mine: ["0xME"], reconciled: true)!
+check(census.coins == 3 && census.owners == 3, "the census spans every owner on the chain")
+check(census.mineCoins == 1 && census.mineWei == Decimal(70),
+      "our slice is matched case-insensitively — EIP-55 and an RPC's lowercase are one address")
+check(abs((census.share ?? 0) - 0.7) < 0.0001, "the share is ours over the whole vault")
+check(!census.soleOwner, "a vault with three owners is not solely ours")
+let alone = HegotaCensus.of([owned(1, 5, "0xme")], mine: ["0xme"], reconciled: true)!
+check(alone.soleOwner, "one owner holding every coin is the sole owner")
+check(HegotaCensus(coins: 0, owners: 0, wei: 0, mineCoins: 0, mineWei: 0).share == nil,
+      "a share of an empty vault is undefined, never zero")
+
+// ───────────────── dominance: what a rank-ordered treemap cannot show ────────
+check(HegotaCoins.dominance([coin(1, 100)]) == nil, "one coin has no dominance to report")
+check(HegotaCoins.dominance([coin(1, 50), coin(2, 50)]) == nil,
+      "an even split is not narrated as concentration")
+let heavy = HegotaCoins.dominance([coin(1, 970), coin(2, 20), coin(3, 10)])!
+check(abs(heavy - 0.97) < 0.0001, "the largest piece's share is reported exactly")
+
+// ───────────────── the clock past the header window ─────────────────
+let t0 = Date(timeIntervalSince1970: 1_786_025_702)
+let known: [UInt64: Date] = [100: t0, 200: t0.addingTimeInterval(600)]
+check(HegotaClock.estimate(block: 100, from: known) == t0,
+      "a block we READ returns its own header time")
+check(HegotaClock.estimate(block: 150, from: known)?.timeIntervalSince1970
+        == t0.addingTimeInterval(300).timeIntervalSince1970,
+      "a bracketed block interpolates between the two headers")
+// **NOTHING IS EXTRAPOLATED.** Past the newest header we hold, drift has no
+// measured ceiling — 12 missed slots across 310,833 blocks says how much the
+// chain drifted in total, not where the gaps sit.
+check(HegotaClock.estimate(block: 300, from: known) == nil,
+      "a block past every header is refused, never extrapolated")
+check(HegotaClock.estimate(block: 50, from: known) == nil,
+      "a block before every header is refused")
+check(HegotaClock.estimate(block: 150, from: [:]) == nil, "no headers, no estimate")
+check(HegotaClock.estimate(block: 150, from: [100: t0]) == nil,
+      "one header cannot bracket anything")
+
+// ───────────────── is this still the same chain? ─────────────────
+let g1 = "0x" + String(repeating: "a", count: 64)
+let g2 = "0x" + String(repeating: "b", count: 64)
+check(HegotaGenesis.verdict(chainID: HegotaChain.chainID, genesis: g1, knownGenesis: g1) == .same,
+      "the same genesis is the same chain")
+check(HegotaGenesis.verdict(chainID: HegotaChain.chainID, genesis: g2, knownGenesis: g1) == .restarted,
+      "a new genesis is a relaunched devnet")
+// A host serving some OTHER chain is a different finding from a relaunch, and
+// gets the id check FIRST — its genesis differing is a consequence, not the
+// finding, and "the devnet restarted" would be the wrong sentence to show.
+check(HegotaGenesis.verdict(chainID: 1, genesis: g2, knownGenesis: g1) == .differentChain,
+      "a wrong chain id outranks a differing genesis")
+check(HegotaGenesis.verdict(chainID: nil, genesis: nil, knownGenesis: g1) == .unknown,
+      "a read that did not answer is UNKNOWN, never `same`")
+check(HegotaGenesis.verdict(chainID: HegotaChain.chainID, genesis: g1, knownGenesis: nil) == .unknown,
+      "a first sight has nothing to compare against")
+check(HegotaGenesis.verdict(chainID: HegotaChain.chainID, genesis: "0xnothex",
+                            knownGenesis: g1) == .unknown,
+      "an unparseable hash claims nothing")
+
+// ───────────────── the predeploys are named ─────────────────
+check(HegotaParty.of(HegotaChain.vault, watched: []) == .vault, "the vault is named")
+check(HegotaParty.of(HegotaChain.nonceManager, watched: []) == .nonceManager,
+      "the nonce manager is named, not left as a bare hex counterparty")
+check(HegotaParty.of(HegotaChain.nonceManager.uppercased(), watched: []) == .nonceManager,
+      "the predeploys match case-insensitively")
+check(HegotaParty.of("0xstranger", watched: []) == .stranger("0xstranger"),
+      "an ordinary address is still a stranger")
 
 if failures > 0 { print("\(failures) assertion(s) failed"); exit(1) }
 print("  ok   \(HegotaSection.allCases.count) scopes, words, the spent bitmap, coins, reconciliation, fees")
@@ -532,7 +698,7 @@ mutate() {
 }
 
 mutate "a conditional scope moved ahead of an unconditional one (the strip's head reflows)" \
-  HegotaSection.swift 's/\[\.home, \.activity, \.accounts, \.coins, \.nonces, \.sponsors\]/[.home, .coins, .activity, .accounts, .nonces, .sponsors]/'
+  HegotaSection.swift 's/\[\.home, \.activity, \.accounts, \.frames, \.coins, \.nonces, \.sponsors\]/[.home, .coins, .activity, .accounts, .frames, .nonces, .sponsors]/'
 mutate "home no longer leads" \
   HegotaSection.swift 's/\[\.home, \.activity, \.accounts/[.coins, .home, .activity/'
 mutate "resolve falls back to the first present scope instead of home" \
@@ -542,7 +708,7 @@ mutate "shows() lets a single scope draw a control" \
 mutate "a flag governs the wrong scope (coins reads nonces')" \
   HegotaSection.swift 's/case \.coins:    return coins/case .coins:    return nonces/'
 mutate "coins is marked unconditional, so the head-reflow rule stops being enforced" \
-  HegotaSection.swift 's/case \.coins, \.nonces, \.sponsors: return true/case .nonces, .sponsors: return true\n        case .coins: return false/'
+  HegotaSection.swift 's/case \.frames, \.coins, \.nonces, \.sponsors: return true/case .frames, .nonces, .sponsors: return true\n        case .coins: return false/'
 mutate "the unspent-output scope goes back to the friendly gloss" \
   HegotaSection.swift 's/String\(localized: "UTXOs"\)/String(localized: "Coins")/'
 mutate "the literal term becomes a metaphor again" \
@@ -585,6 +751,51 @@ mutate "the head ranks sponsorship above coins" \
   HegotaRoom.swift 's/if !coins\.isEmpty \{ lead = \.coins \}\n        else if sponsored > 0 \{ lead = \.sponsored \}/if sponsored > 0 { lead = .sponsored }\n        else if !coins.isEmpty { lead = .coins }/'
 mutate "scopes are derived from every account rather than the reached ones" \
   HegotaRoom.swift 's/let reached = accounts\.filter\(\\\.reached\)\n        guard !reached\.isEmpty else \{ return \[\] \}/let reached = accounts\n        guard !reached.isEmpty else { return [] }/'
+
+# ── §504: the frames scope, the census, the clock, the reset ─────────────────
+# Each of these renders as an ordinary room too. A mis-scoped census is a
+# confident share of the wrong denominator; an extrapolated time is a date
+# nobody can tell is invented; a relaunch read as `same` is the whole failure
+# this pass exists to catch, drawn as an account whose money left.
+
+mutate "the ordinary nonce falls back to counting moves even when the chain answered" \
+  HegotaRoom.swift 's/let ordinary = nonceCount\.map \{ max\(Int\(\$0\), observed\) \} \?\? observed/let ordinary = observed/'
+mutate "a nonce BELOW the moves we can already name is believed (fewer sends than the list shows)" \
+  HegotaRoom.swift 's/nonceCount\.map \{ max\(Int\(\$0\), observed\) \}/nonceCount.map { Int($0) }/'
+mutate "a derived send count is narrated as the chain's own counter" \
+  HegotaRoom.swift 's/nonceRead: nonceCount != nil/nonceRead: true/'
+mutate "a self-payment advances the ordinary nonce twice" \
+  HegotaRoom.swift 's/return seen\.insert\(move\.hash\.lowercased\(\)\)\.inserted\n        \}\.count\n        \/\/ \*\*The chain/return true\n        }.count\n        \/\/ **The chain/'
+mutate "frames are counted as transactions" \
+  HegotaRoom.swift 's/transactions: framed\.count/transactions: total/'
+mutate "a frame whose receipt would not pair is counted as FAILED" \
+  HegotaRoom.swift 's/case \.none:        unknown \+= 1/case .none:        failed += 1/'
+# Anchored on `.map { Slice` because `HegotaFlow.modes` carries a byte-identical
+# comparator earlier in this same file, and an unanchored substitution mutates
+# THAT one instead — a mutation that proves a different function than it names.
+# Reversed rather than replaced with `true`: `true` preserves the dictionary's
+# own arbitrary order, which on a two-mode tally happens to be right often
+# enough that the mutation survives at random.
+mutate "the frame mix reshuffles between opens (ties break the wrong way)" \
+  HegotaRoom.swift 's/: \$0\.key\.rawValue < \$1\.key\.rawValue\n        \}\.map \{ Slice/: \$0.key.rawValue > \$1.key.rawValue\n        }.map { Slice/'
+mutate "the nonce manager predeploy goes back to a bare hex counterparty" \
+  HegotaRoom.swift 's/if address\.caseInsensitiveCompare\(HegotaChain\.nonceManager\) == \.orderedSame \{\n            return \.nonceManager\n        \}//'
+mutate "the census measures our share against our own coins instead of the whole vault" \
+  HegotaCoins.swift 's/let mine = all\.filter \{ keys\.contains\(\$0\.owner\.lowercased\(\)\) \}/let mine = all/'
+mutate "a census is composed over a set that never reconciled" \
+  HegotaCoins.swift 's/guard reconciled, !all\.isEmpty else \{ return nil \}/guard !all.isEmpty else { return nil }/'
+mutate "our share of an EMPTY vault reads as zero rather than undefined" \
+  HegotaCoins.swift 's/guard wei > 0 else \{ return nil \}/if wei == 0 { return 0 }/'
+mutate "an even split is narrated as concentration" \
+  HegotaCoins.swift 's/return share >= 0\.6 \? share : nil/return share/'
+mutate "a block past every header we hold is EXTRAPOLATED into a date" \
+  HegotaCoins.swift 's/guard let low = below, let high = above, high\.0 > low\.0 else \{ return nil \}/guard let low = below else { return nil }\n        guard let high = above, high.0 > low.0 else {\n            return low.1.addingTimeInterval(Double(block - low.0) * slotSeconds)\n        }/'
+mutate "a relaunched devnet reads as the same chain (the room draws a zeroed balance)" \
+  HegotaCoins.swift 's/return seen == known \? \.same : \.restarted/return .same/'
+mutate "an unreadable genesis reads as the same chain — not knowing becomes knowing" \
+  HegotaCoins.swift 's/else \{ return \.unknown \}\n        return seen == known/else { return .same }\n        return seen == known/'
+mutate "a host serving a different chain is reported as a relaunch" \
+  HegotaCoins.swift 's/if let chainID, chainID != HegotaChain\.chainID \{ return \.differentChain \}//'
 
 # ── drift guards ─────────────────────────────────────────────────────────────
 # Read from a COMMENT-STRIPPED copy: both files DOCUMENT their rules by naming
@@ -671,4 +882,4 @@ grep -q "hegota-selftest.sh" "$VERIFY" \
   || fail "not wired into verify.sh — the completeness guard requires it, with its reason"
 
 print "  ok   drift guards: Foundation-only, no price, no notification, the naming ruling"
-print "✓ hegota: scopes, words, spent bitmap, coins, reconciliation, fees, room head, 24 mutations, 15 drift guards"
+print "✓ hegota: scopes, words, spent bitmap, coins, reconciliation, fees, room head, frames, census, clock, genesis, 42 mutations, 15 drift guards"

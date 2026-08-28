@@ -103,6 +103,7 @@ enum HegotaRoom {
         let reached = accounts.filter(\.reached)
         guard !reached.isEmpty else { return [] }
         return HegotaSection.present(
+            frames: reached.contains { $0.hasFrames },
             coins: reached.contains { $0.hasCoins },
             nonces: reached.contains { $0.hasLanes },
             sponsors: reached.contains { $0.hasSponsors })
@@ -232,6 +233,15 @@ enum HegotaScale: String, Equatable, Sendable {
 enum HegotaParty: Equatable, Sendable {
     /// The UTXO vault predeploy — money you moved into your own pieces.
     case vault
+    /// The keyed-nonce manager predeploy.
+    ///
+    /// **Named for the vault's own reason (2026-08-27).** Both are predeploys
+    /// at fixed addresses that this room already knows by name, and a frame
+    /// sheet reading "Ran against 0x…8250" makes the person do a lookup the app
+    /// could have done — in the scope named after that very contract. It is the
+    /// counterparty of a `sender` frame, so it turns up on exactly the
+    /// transactions the Nonces scope is about.
+    case nonceManager
     /// Another address this person watches. Carries it so the caller can find
     /// its name, which lives in the watch list rather than here.
     case mine(String)
@@ -244,6 +254,9 @@ enum HegotaParty: Equatable, Sendable {
     /// that they capitalised it when they pasted it.
     static func of(_ address: String, watched: [String]) -> HegotaParty {
         if address.caseInsensitiveCompare(HegotaChain.vault) == .orderedSame { return .vault }
+        if address.caseInsensitiveCompare(HegotaChain.nonceManager) == .orderedSame {
+            return .nonceManager
+        }
         if let match = watched.first(where: { $0.caseInsensitiveCompare(address) == .orderedSame }) {
             return .mine(match)
         }
@@ -381,20 +394,127 @@ enum HegotaFlow {
 /// three attempts at plotting it produced three drawings nobody could read.
 /// Three figures, each a fact the list is missing.
 struct HegotaNonceTotals: Equatable, Sendable {
-    /// Sends on the ordinary nonce — moves this address sent carrying NO named
-    /// key, which is what "sent on key 0" means on the wire.
+    /// Sends on the ordinary nonce.
+    ///
+    /// **The chain's own counter when it was read, and only the observable
+    /// moves when it was not (2026-08-27).** Every other figure in this room is
+    /// reconstructed from transfer logs, and this one cannot be: a transaction
+    /// that moved no ETH emits no transfer log, so counting outgoing moves
+    /// undercounts — on the chain whose entire subject is transactions that
+    /// verify, check and call rather than pay, and in the scope whose whole
+    /// claim is to count sends. `eth_getTransactionCount` IS the ordinary
+    /// nonce, so it is not a better estimate of this number, it is the number.
     let ordinarySends: Int
     let keyedSends: Int
     /// Counters in all: the named keys, plus key 0 when it has ever been used.
     let counters: Int
+    /// Sends on key 0 that moved no value — the ordinary nonce minus the
+    /// outgoing moves that carried no named key.
+    ///
+    /// Nil when the nonce was not read (not knowable) and when the gap is zero
+    /// (nothing to say), which are different silences with the same drawing and
+    /// the caller may not distinguish them — nothing is claimed either way.
+    let valuelessSends: Int?
+    /// Whether `ordinarySends` came off the chain's own counter. The figure
+    /// draws the same number either way; this is what stops a DERIVED count
+    /// being narrated as the chain's, and what a self-test can pin.
+    let nonceRead: Bool
 
     var total: Int { ordinarySends + keyedSends }
 
-    static func of(_ moves: [HegotaMove], lanes: [HegotaNonceLane]) -> HegotaNonceTotals {
-        let ordinary = moves.filter { !$0.incoming && $0.nonceKeys.isEmpty }.count
+    static func of(_ moves: [HegotaMove], lanes: [HegotaNonceLane],
+                   nonceCount: UInt64? = nil, valuelessSends: Int? = nil) -> HegotaNonceTotals {
+        // Fold by hash: a self-payment lands as two moves for one transaction,
+        // and the counter it advanced was one.
+        var seen = Set<String>()
+        let observed = moves.filter { move in
+            guard !move.incoming, move.nonceKeys.isEmpty else { return false }
+            return seen.insert(move.hash.lowercased()).inserted
+        }.count
+        // **The chain's counter can only ever be >= what we observed**, since
+        // every value-moving send also advanced it. A smaller one means the
+        // read describes a different address than the logs do — a reorg, a
+        // reset, or a bug — so the observed floor is kept rather than reporting
+        // fewer sends than we can literally name below.
+        let ordinary = nonceCount.map { max(Int($0), observed) } ?? observed
         let keyed = lanes.reduce(0) { $0 + $1.sends }
         return HegotaNonceTotals(ordinarySends: ordinary, keyedSends: keyed,
-                                 counters: lanes.count + (ordinary > 0 ? 1 : 0))
+                                 counters: lanes.count + (ordinary > 0 ? 1 : 0),
+                                 valuelessSends: valuelessSends,
+                                 nonceRead: nonceCount != nil)
+    }
+}
+
+// MARK: - What the transactions actually DID
+
+/// The Frames scope's figure — the anatomy of this address's transactions.
+///
+/// **The scope exists because Activity structurally cannot answer this.** That
+/// list is built from transfer logs, so it holds transactions that MOVED money
+/// and describes them by amount and counterparty; a frame transaction is a
+/// sequence of named steps, and until this scope the sequence appeared nowhere
+/// as a subject — only as a 5pt texture strip on a row, and inside a sheet you
+/// had to know to open.
+///
+/// The mix is a census over every frame of every transaction whose receipt was
+/// read, and the ORDER is the ranking the figure draws: commonest first, ties
+/// broken by the mode's own name so the drawing is stable between opens.
+struct HegotaFrameMix: Equatable, Sendable {
+    struct Slice: Equatable, Sendable, Identifiable {
+        let mode: HegotaFrame.Mode
+        let count: Int
+        var id: String { mode.rawValue }
+    }
+
+    let slices: [Slice]
+    /// Transactions counted — never the frame count, which is `total`.
+    let transactions: Int
+    /// Frames in all.
+    let total: Int
+    /// How many of those frames FAILED. Failure is rare here by construction,
+    /// so this is normally 0 and the figure says nothing about it.
+    let failed: Int
+    /// Frames whose receipt could not be paired, so their outcome is unknown.
+    /// Kept apart from `failed` for the reason the strip draws them hollow: a
+    /// step we could not read is not a step that went wrong.
+    let unknown: Int
+
+    var busiest: Slice? { slices.first }
+
+    /// Compose over the transactions whose frames were actually read.
+    ///
+    /// Returns nil when there is nothing to draw. **A transaction with exactly
+    /// one frame still counts** — a one-step frame transaction is a real thing
+    /// on this chain and excluding it would make the scope disagree with the
+    /// list underneath it, which is `HegotaRoom.sections`' own gate.
+    static func of(_ moves: [HegotaMove]) -> HegotaFrameMix? {
+        var seen = Set<String>()
+        let framed = moves.filter { move in
+            guard let f = move.frames, !f.isEmpty else { return false }
+            return seen.insert(move.hash.lowercased()).inserted
+        }
+        guard !framed.isEmpty else { return nil }
+
+        var tally: [HegotaFrame.Mode: Int] = [:]
+        var failed = 0, unknown = 0, total = 0
+        for move in framed {
+            for frame in move.frames ?? [] {
+                tally[frame.mode, default: 0] += 1
+                total += 1
+                switch frame.succeeded {
+                case .some(false): failed += 1
+                case .none:        unknown += 1
+                case .some(true):  break
+                }
+            }
+        }
+        let slices = tally.sorted {
+            $0.value != $1.value ? $0.value > $1.value
+                                 : $0.key.rawValue < $1.key.rawValue
+        }.map { Slice(mode: $0.key, count: $0.value) }
+
+        return HegotaFrameMix(slices: slices, transactions: framed.count,
+                              total: total, failed: failed, unknown: unknown)
     }
 }
 

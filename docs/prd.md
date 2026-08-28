@@ -79,6 +79,8 @@ at all.
 
 | Ruling | What it said | Changed by |
 |---|---|---|
+| §503 | Nonces gets no chart, and a Frames scope is refused — a frame is a PART of a move rather than something you own, so a flat list of steps says what Activity says | Frames half reversed by §504 (Activity is built from transfer logs, so a frame transaction that moved no ETH appears nowhere in the room — the scope that could not see them was its largest gap; the no-chart ruling for Nonces STANDS) |
+| §500 | A move past the bounded header window carries no time — a block number is not a clock and nothing substitutes one | amended by §504 (measured: 12 missed slots in 310,833 blocks, so a block BRACKETED between two real headers is honest to seconds; stated to the day, never extrapolated past the newest header) |
 | §408a | The Altana head is a CONSTELLATION — one token per credential, a drawn tie to every account it can sign for, over a dot rail of the deadlines | superseded by §488 (the layout was absolutely positioned and overflowed the card, a 44pt token carried six visual variables, and the rail's now-marker was a constant on an elastic axis; one row per credential, one bar on a fixed window) |
 | §407a | Every watched account draws, each behind its own identicon, as a node the credentials hang off | amended by §488 (accounts are the face rail's scope and the faces ON a shared credential's row — the head obeys the ringed face rather than drawing every account at once) |
 | §420 | The CardPointers head: the soonest offer in full, a card-by-card tally of active offers, and a footnote counting the undated | amended by §487 (all three deleted — row one restated a card higher, a count the module doctrine refuses, and a fact that now sits on the rows it describes; the head is one sentence and a deadline rail) |
@@ -36642,3 +36644,205 @@ back with an empty `UILaunchScreen` dict); the key had to go into the real
 Every moment here is gesture- or time-driven and no static check exercises one.
 The three figures have been seen on the simulator and measured against Wallet's
 own insets; no sweep has ever run against the live chain from a device.
+
+
+## 504. The Hegotá room's other four figures, a scope it refused, and the failure every guard missed (user: "how would you improve the hegota room", then "i figured you would say stuff about design polish and data the chain reads we aren't displaying and better ways to present things", then "are there other toggles that should be on the toggle strip?" → "YES I WANT A FRAMES TOGGLE", then "and would you improve the design of any of the slot charts" → "Home is fine. the others could be improved", 2026-08-27)
+
+§503 landed three figures and recorded that a Frames scope was refused. This
+entry reverses that refusal, fixes a geometry bug in the accounts bars, spends
+data the sweep already had and threw away, and closes the one failure mode this
+seat had no guard for at all.
+
+**Read §500 and §503 first.** Three of the first ideas proposed here were
+already built, which is that pair's own standing lesson: before proposing a UI
+change to a mature room, read its most recent ledger entry — the code will not
+tell you which of its gaps were deliberate.
+
+### 1. Frames becomes a scope — this reverses §503
+
+§503 refused one on the grounds that a frame is a PART of a move rather than
+something you own, so a flat list of steps would say what Activity says. The
+user overruled it, and the measurement makes the reversal right rather than
+merely instructed: **Activity is built from TRANSFER LOGS, so a frame
+transaction that ran four steps and moved no ETH appears nowhere in this room.**
+On a chain whose entire subject is transactions that verify, check and call
+rather than pay, the scope that could not see them was the room's largest gap.
+
+It leads the CONDITIONAL TAIL, ahead of `coins` — the tail rule is untouched
+(`home`, `activity`, `accounts` are the only unconditional scopes and all three
+precede it), and within the tail the ordering is editorial: frame transactions
+are what the chain is for, and the scope reads directly off `activity`, which
+precedes it. Conditional, because this chain has **two eras** and an address
+whose whole history predates frame transactions has only type-`0x2` transfers —
+its scope is absent rather than empty, which is how the strip says which era an
+address lived in with no copy at all.
+
+**The figure is SMALL MULTIPLES of the strip the sheet already draws**, one row
+per transaction, because a frame transaction IS a sequence and every
+alternative throws the sequence away: a mode tally says you ran nine UTXO steps
+and four verifies without saying they arrived in the same order four times,
+which is what the shape of your usage actually looks like. Each row normalises
+to full width, so the rows compare COMPOSITION and not size — comparing gas
+ACROSS transactions was refused for `HegotaScale`'s reason one figure over.
+`HegotaFrameMix` ranks the modes, ties break by name so the drawing is stable
+between opens, and a frame whose receipt could not be paired is counted
+`unknown` rather than `failed`, which is the same distinction the strip already
+draws as a hollow pip.
+
+### 2. The three figures the user asked to improve — and the one to leave alone
+
+Asked which slot charts could be better, the answer was Home; the user's ruling
+was the opposite ("Home is fine. the others could be improved") and Home's
+drawing is untouched. Recorded because the analysis behind the rejected
+proposal is still true and someone will find it again: the crown sums every
+reached account while the curve and its delta are the busiest SINGLE account,
+unlabelled, and `valueSeries` is one point per move connected by diagonals on a
+move-INDEX axis, so six seconds and six weeks of quiet render the same width.
+On the one chain where an exact line is constructible, the flagship figure draws
+an approximation. **Left as it is by ruling.**
+
+**ACCOUNTS had a real geometry bug, not a taste problem.** The bar's length is a
+LOG share when the spread is wide; the vault slice nested inside it was a LINEAR
+fraction of that drawn width — log lengths do not add, so the inner segment's
+length corresponded to no reading at all. It is drawn only on the plain scale
+now, where the two really are parts of one total; on the log scale the fact
+lives in the line beneath, which was already carrying it (the figure's own
+comment conceded the slice is "far too small to read a figure off" at real data,
+about 1% of the bar). Second fix in the same figure: an UNREACHED account drew a
+bar of zero length, which is exactly what a true zero balance draws — a dashed
+empty track now separates "we could not read this" from "this holds nothing".
+
+**COINS gained the proof it was already performing.** `readCoinState` reads
+every `UtxoCreated` log on the chain and every spent bit — it has to, since
+conservation only holds across all owners at once — and then kept ONE BOOL out
+of all of it. `HegotaCensus` keeps the rest, so the card can say what share of
+the whole vault is yours: not a share we estimated, a share we verified, which
+no other room in this app can claim about anything. Beside it, `dominance` says
+the thing a rank-ordered treemap structurally cannot — `UnitTreemap` sizes cells
+by RANK and this set spans sixteen orders of magnitude, so six roughly equal
+cells routinely draw over a set whose first piece IS the money. Both cost
+nothing: no request, no new `Thing` field, no CloudKit deploy.
+
+**NONCES was counting the wrong thing, and the fix is one cheap read.**
+`ordinarySends` was derived from outgoing moves — and a transaction that moved
+no ETH emits no transfer log, so the scope whose entire claim is to count sends
+undercounted exactly the sends this chain is interesting for.
+`eth_getTransactionCount` IS the ordinary nonce: not a better estimate of that
+number, the number. The gap between it and the observable moves is
+`valuelessSends`, which is the Frames scope's premise made concrete and is what
+the caption now leads with. §503's refusal to draw a CHART here stands — a real
+address keeps two or three counters with one or two sends each.
+
+### 3. The failure every guard in this seat missed
+
+Every refusal in §500 protects against a read that FAILED. A relaunched devnet
+is the opposite: all three hosts answer perfectly, quickly, and with nothing —
+balance zero, no logs, no coins — so the room draws a zeroed balance in its
+largest type and both hardcoded worked examples go blank at once, with no error
+anywhere. Hegotá is an experimental devnet; being relaunched from genesis is a
+thing it is expected to do.
+
+**The signal is the GENESIS HASH, not the tip going backwards.** A tip below the
+high-water mark has three causes and only one is a reset (a stale host, a reorg,
+a relaunch); genesis is decisive, and an unchanged one proves the history is
+still ours however far behind a host happens to be. The chain id is checked
+FIRST, so a host serving some other chain gets its own sentence — its genesis
+differing is a consequence, not the finding. `.unknown` is never `.same`: not
+knowing is not knowing. The notice sits ABOVE the figure because it governs
+everything below it, and re-baselining is the person's own act — doing it on our
+schedule is how a fact nobody was told disappears.
+
+### 4. Dating rows past the header window, and the measurement that licenses it
+
+**Measured: 310,833 blocks ran a total of 72 seconds ahead of exact six-second
+spacing — twelve missed slots in twenty-one days.** So a block bracketed between
+two headers we actually read is accurate to the seconds those gaps cost, and
+this amends §500's undated-rows refusal, which was right when a block number was
+the only clock we had and needlessly strict once two real headers bracket a row. `HegotaClock` interpolates between two REAL headers
+and refuses to extrapolate past the newest one, where drift has no measured
+ceiling. The estimate is kept in its own field and stated to the DAY, never a
+clock: the total drift says how far the chain slipped overall and nothing about
+where the gaps SIT, and two of them inside one short history would move that row
+by however long they were.
+
+### 5. Smaller things the data already supported
+
+The nonce manager predeploy is NAMED (`HegotaParty.nonceManager`) — a frame
+sheet reading "Ran against 0x…8250" made the person do a lookup the app could
+do, in the scope named after that contract. A stranger on a move sheet can be
+WATCHED from there, which matters because of this room's own measurement: coin
+owners and keyed-nonce senders are disjoint populations, so the half of the
+chain you are not watching appears in your rows as a stranger and watching one
+meant memorising forty hex characters. And a spend's sheet states what it
+PRODUCED across its outputs — exact and on the wire — while continuing to refuse
+what it CONSUMED, which is not published.
+
+### 5a. REFUSED after measuring: weighting the frame strip by both gas dimensions
+
+The strip's segment widths come off `gasUsed` alone, and this pass proposed
+weighting them by `gasUsed + stateGasUsed` on the reasoning that pricing
+execution and state separately is one of the things this chain is FOR — so a
+value-moving frame that burns no execution gas draws at the `minShare` floor
+while really having done work.
+
+**Measured before building, and the premise is false today: `stateGasUsed` is
+ZERO on all 23 frames sampled across the newest 40 transactions.** The field is
+present on every `frameReceipt` and has never yet been non-zero, so the change
+would alter no drawing on any address that exists — a plausible fix, refuted by
+one cheap read (§318's standing lesson, in a room one chain over).
+
+Left alone deliberately, including the sheet's "0 state gas" fact line: it is
+true, it is the chain's own second dimension, and suppressing a field that is
+about to start varying would be a worse guess than showing a zero. **Revisit the
+day the nightly row sees a non-zero one** — and note that if that day comes, the
+strip's floor is what stops the change mattering visually, not the weight.
+
+### 6. Coverage: the seat had no nightly row at all
+
+The most drift-prone dependency in the catalog — an undocumented devnet with no
+contract behind the transfer emitter, the `UtxoCreated` topic, `payer`,
+`nonceKeys` or either predeploy — and nothing watched it. Six keyless rows in
+`live-integrations.sh` now do, the sharpest being the seat's own self-proof run
+nightly: every unspent coin on the chain, summed, against the vault's balance.
+**Its first cut earned §500's lesson again by making §500's mistake**: it walked
+the newest 600 blocks for a frame transaction, found zero transactions on a
+chain that is mostly idle at the tip, and reported the shape as unverified —
+sampling blocks measures the sampling, so it reads the LOGS, which accumulate.
+Its second cut then reported 9 type-`0x6` transactions carrying no frames, which
+was a false alarm from looking in the wrong place: **`frames` is on the
+TRANSACTION and `frameReceipts` on the receipt**, exactly as
+`HegotaRead.frames(tx:receipt:)` reads them. Verified live: 9 of 9 sampled carry
+both, with `payer` and `nonceKeys` on all nine.
+
+### 7. What the harness caught
+
+`hegota-selftest.sh` is 42 mutations now. Two of its own new fixtures were
+wrong in the way this repo keeps re-learning — **a fixture only tests the rule
+it names if it FAILS that rule and passes every other one.** The nonce fold's
+first fixture used a self-payment (one outgoing move, one incoming), and the
+mutation SURVIVED because `!move.incoming` already dropped the second one and
+the hash fold never ran; the real case is a multi-output spend, which lands as
+several OUTGOING moves sharing a hash and is the ordinary shape of a UTXO spend
+here. And the tie-break mutation was flaky rather than wrong — replacing the
+comparator with `true` preserves the dictionary's arbitrary order, which on a
+two-mode tally is right often enough to survive at random; it reverses the
+comparator instead. The mix's tie-break mutation also had to be ANCHORED on
+`.map { Slice`, because `HegotaFlow.modes` carries a byte-identical comparator
+earlier in the same file and an unanchored substitution mutates that one — a
+mutation that proves a different function than it names.
+
+Three audit failures were found and fixed in passing, all of them predating this
+pass: two untraited tap targets (the press-reveals-a-lane gesture and each frame
+segment — both invisible to VoiceOver), two raw `WalletFace` sizes where the
+ramp has a tier that means exactly what they wanted, and `UTXO` shouting at
+`allcaps-audit`, which is an initialism and the chain's own word, so it joins
+`KNOWN_ACRONYMS` rather than being re-cased against §500's naming ruling.
+
+### Unverified
+
+The Frames figure, the census line, the reset notice and the watch door have
+never been seen on a device or a simulator — the room has not been screenshotted
+since this pass. The reset path is **structurally unverifiable from here**: it
+needs the devnet to actually relaunch, so its arithmetic is proven by the
+harness and its copy by reading. Everything else is measured against the live
+chain as of 2026-08-27.

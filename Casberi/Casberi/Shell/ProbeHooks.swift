@@ -6036,6 +6036,13 @@ enum ProbeHooks {
                 }
                 await HegotaLiveState.shared.refresh()
                 let accounts = HegotaLiveState.shared.accounts
+                // **IS IT STILL THE SAME CHAIN?** First, because it governs how
+                // everything below reads: on a relaunched devnet every account
+                // answers perfectly and with nothing, and `reached=YES
+                // balance=0 moves=0` is otherwise indistinguishable from an
+                // address that never did anything.
+                NSLog("[Casberi] hegotaChain| genesis=%@",
+                      HegotaLiveState.shared.genesis.rawValue)
                 for a in accounts {
                     NSLog("[Casberi] hegotaAccount| %@ reached=%@ balance=%@ moves=%d coins=%d unspent=%@ reconciled=%@ lanes=%d sponsored=%d",
                           a.address,
@@ -6047,6 +6054,25 @@ enum ProbeHooks {
                           a.reconciled ? "YES" : "NO",
                           a.lanes.count,
                           a.sponsored.count)
+                    // The chain's own send counter beside the moves we can see.
+                    // A `valueless=` above zero is the Frames scope's whole
+                    // premise made concrete: sends that verified, checked or
+                    // called and paid nobody, which no transfer log can show.
+                    NSLog("[Casberi] hegotaNonce| %@ chainCount=%@ valueless=%@",
+                          a.address,
+                          a.nonceCount.map { "\($0)" } ?? "unread",
+                          a.valuelessSends.map { "\($0)" } ?? "-")
+                    // The census the reconciliation already proved and used to
+                    // throw away. `share=` is our slice of the WHOLE vault, so
+                    // a share of 100% on a chain with several owners is the
+                    // shape of a mis-scoped denominator.
+                    if let c = a.census {
+                        NSLog("[Casberi] hegotaCensus| %@ chainCoins=%d owners=%d vault=%@ mine=%d share=%@ sole=%@",
+                              a.address, c.coins, c.owners,
+                              "\(HegotaCoins.eth(c.wei))", c.mineCoins,
+                              c.share.map { String(format: "%.4f", $0) } ?? "undefined",
+                              c.soleOwner ? "YES" : "NO")
+                    }
                     for lane in a.lanes {
                         NSLog("[Casberi] hegotaLane| %@ key=%@ seq=%@ sends=%d",
                               a.address, lane.key, lane.seq ?? "-", lane.sends)
@@ -6070,6 +6096,15 @@ enum ProbeHooks {
                     NSLog("[Casberi] hegotaHead| lead=%@ reached=%d/%d coins=%d lanes=%d sponsored=%d moves=%d",
                           head.lead.rawValue, head.reached, head.watched,
                           head.coinCount, head.laneCount, head.sponsoredCount, head.moveCount)
+                }
+                // The frame anatomy across everything whose receipt was read —
+                // the Frames scope's own figure, and the only place its
+                // ranking is observable without a screenshot.
+                if let mix = HegotaFrameMix.of(accounts.flatMap(\.moves)) {
+                    NSLog("[Casberi] hegotaFrames| transactions=%d steps=%d failed=%d unknown=%d mix=%@",
+                          mix.transactions, mix.total, mix.failed, mix.unknown,
+                          mix.slices.map { "\($0.mode.rawValue):\($0.count)" }
+                              .joined(separator: ","))
                 }
                 NSLog("[Casberi] hegotaScopes| %@",
                       HegotaRoom.sections(accounts).map(\.rawValue).joined(separator: ","))
