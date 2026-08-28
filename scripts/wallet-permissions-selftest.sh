@@ -201,9 +201,16 @@ mutate "the eyebrow prints \$0 where there is no amount to state" \
   "return priced.reduce(0, +)"
 mutate "a rung of several carries the first holder's note as if it described them all" \
   "note: group.count == 1 ? group[0].note : nil" "note: group.first?.note"
+# REVERSED, not `byPower.keys` (amended 2026-08-28). The dictionary's key order
+# is nondeterministic in Swift, so on the three-rung fixture that discriminates
+# this rule the mutation landed on the correct order roughly one run in six and
+# SURVIVED — a flaky mutation, which is worse than none: it passes on the
+# machine you test on and fails a nightly nobody is watching. Reversing is
+# deterministically wrong and pins the same rule. (Second instance of this exact
+# trap in one day; see hegota-selftest's frame-mix tie-break.)
 mutate "the rungs come back in the data's order instead of the type's" \
   "return Power.allCases.compactMap { power in" \
-  "return byPower.keys.compactMap { power in"
+  "return Power.allCases.reversed().compactMap { power in"
 mutate "an unpriceable rung starts apologising for having no figure" \
   "self == .unlimitedToken || self == .cappedAmount" "true"
 mutate "a token rung stops expecting a figure, so a failed price read goes silent" \
