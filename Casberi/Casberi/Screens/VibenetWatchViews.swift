@@ -251,6 +251,15 @@ struct VibenetDiscoverySection: View {
         discoveryLoading = true
         defer { discoveryLoading = false; discoveryAttempted = true }
         guard let contracts = await VibenetConfig.current() else { return }
-        discovered = await VibenetDiscovery.recentAccounts(keystore: contracts.keystore)
+        // THE CONFIG'S OWN REFERENCE ACCOUNTS LEAD (prd §507) — they cost no
+        // request, they are the two accounts vibenet itself points at, and
+        // they are here the instant the config is. The log walk still runs and
+        // still fills the rest; what changes is that a slow or failed walk
+        // now leaves a real empty state instead of an empty one.
+        let reference = VibenetDiscovery.reference(contracts)
+        discovered = reference
+        let recent = await VibenetDiscovery.recentAccounts(keystore: contracts.keystore)
+        let known = Set(reference.map { $0.address.lowercased() })
+        discovered = reference + recent.filter { !known.contains($0.address.lowercased()) }
     }
 }

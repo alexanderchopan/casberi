@@ -69,6 +69,38 @@ struct VibenetContracts: Equatable, Codable {
     /// The three DYNAMIC authenticator addresses `VibenetAuthenticatorKind
     /// .identify` compares against — see that type's own doc for why they
     /// may never be literals.
+    /// THE TOKENS THIS CONFIG NAMES (prd §507).
+    ///
+    /// **`vibecheck` IS NOT ONE, and that is measured rather than assumed
+    /// (2026-08-28, against the live devnet).** It was carried through the
+    /// parse unread from the day this seat shipped, and the obvious use for
+    /// an address beside `usdv` and `nfv` is a third balance — so it was
+    /// tried, and the chain answered: `decimals()` REVERTS, ERC-165
+    /// `supportsInterface(0x80ac58cd)` REVERTS, and `symbol()` REVERTS, over a
+    /// contract that does have 1,236 bytes of code. It is a real contract of
+    /// some other kind, and reading it as a token buys two failing `eth_call`s
+    /// per pass forever (a revert is not cached — only a positive answer is)
+    /// in exchange for nothing.
+    ///
+    /// Left in the parse, still unread, for the reason it was left there
+    /// before: a future read of it does not have to re-touch the parse. What
+    /// changed is that the question has an ANSWER now, in the ledger and in
+    /// `-vibenetLedgerProbe`, instead of an open field nobody had asked.
+    ///
+    /// USDV is the fungible one (`decimals()` = **6**, measured — not 18, the
+    /// standing lesson) and NFV is an **ERC-721** (`decimals()` reverts,
+    /// ERC-165 answers true), which is the bug `VibenetTokenFacts` exists for.
+    ///
+    /// `defaultAccount` and `canonicalHighRatePayerAccount` are the other
+    /// unread fields and they are NOT tokens either — they are reference
+    /// accounts, and `VibenetDiscovery.reference` is where they land.
+    var tokenContracts: [(address: String, symbol: String?)] {
+        var out: [(address: String, symbol: String?)] = []
+        if let usdv, !usdv.isEmpty { out.append((usdv, "USDV")) }
+        if let nfv, !nfv.isEmpty { out.append((nfv, "NFV")) }
+        return out
+    }
+
     var knownAuthenticators: VibenetKnownAuthenticators {
         VibenetKnownAuthenticators(p256: p256Authenticator, webAuthn: webAuthnAuthenticator,
                                    delegate: delegateAuthenticator)
@@ -378,6 +410,10 @@ enum VibenetBridge {
         // is a first sight, which seeds silently rather than reporting every
         // key change since as news.
         VibenetKeysSeen.forget()
+        // And the backfill's own ledger (prd §507) — a re-watch is a first
+        // sight there too, and its whole promise is "paid once per account,
+        // ever" against a history store that has just been dropped.
+        VibenetBackfill.forget()
         store.remove(VibenetIdentity.seatID)
     }
 }
@@ -388,6 +424,43 @@ enum VibenetBridge {
 /// table, shrunk to a single chain that isn't in that file's own table
 /// (vibenet isn't a `WalletChainStore` network; a person's wallet holdings
 /// have nothing to do with a devnet test account).
+/// The chain tip, memoised for a few seconds (prd §507).
+///
+/// An `actor` rather than a `nonisolated(unsafe) static` like
+/// `VibenetConfig.memo`, and the difference is real: that one is written only
+/// through two paths on one thread, while this is read by
+/// `IngestSupport.boundedGather`'s concurrent per-account reads by
+/// construction — the whole reason it saves anything.
+actor VibenetTipCache {
+    static let shared = VibenetTipCache()
+    /// SHORT, and short for a stated reason: the tip is used to place the
+    /// NEWEST end of every log walk, so staleness costs coverage of the
+    /// present, which is the half every caller most needs. Seconds, not
+    /// minutes.
+    static let ttl: TimeInterval = 15
+
+    private var tip: Int?
+    private var at: Date?
+
+    func current(now: Date = .now) -> Int? {
+        guard let tip, let at, now.timeIntervalSince(at) < Self.ttl else { return nil }
+        return tip
+    }
+
+    func store(_ value: Int, now: Date = .now) {
+        tip = value
+        at = now
+    }
+
+    /// Dropped when the room is disconnected or a pull-to-refresh asks for a
+    /// genuinely fresh read — a cache nobody can invalidate is a cache that
+    /// makes "refresh" a lie.
+    func forget() {
+        tip = nil
+        at = nil
+    }
+}
+
 enum VibenetChain {
     static let network = "vibenet"
     static let chainID = 84_538_453
@@ -410,6 +483,51 @@ enum VibenetChain {
         return n >= 0 ? n : nil
     }
 
+    /// The tip, at most once every `VibenetTipCache.ttl` (prd §507).
+    ///
+    /// **This is a saving, not an addition.** `getLogs` has asked
+    /// `eth_blockNumber` on every single call since it learned to chunk, and
+    /// one composed read makes four such calls PER ACCOUNT — so a five-account
+    /// room spent twenty round trips re-asking a number that cannot have
+    /// moved meaningfully between them, and this pass adds two more log reads
+    /// per account on top. A few seconds of staleness costs a chunk boundary
+    /// nothing: the walk starts at the tip and reaches backward, so a tip a
+    /// block or two old simply reads one block less of the present, and the
+    /// next pass catches it.
+    static func cachedTip() async -> Int? {
+        if let held = await VibenetTipCache.shared.current() { return held }
+        guard let tip = await blockNumber() else { return nil }
+        await VibenetTipCache.shared.store(tip)
+        return tip
+    }
+
+    /// THE CHAIN'S OWN PULSE (prd §507) — three calls, once per composed read,
+    /// for the fact this room could not state: is this devnet still alive.
+    ///
+    /// The rate is MEASURED across a real span of this chain's own blocks
+    /// rather than assumed, because `VibenetChainPulse`'s verdict thresholds
+    /// are multiples of it and a guessed rate moves them with it. A span too
+    /// short to measure yields a nil rate, which falls back to that type's own
+    /// absolute floors — not to a made-up number.
+    static let pulseSpan = 500
+
+    static func pulse() async -> VibenetChainPulse? {
+        guard let tip = await cachedTip() else { return nil }
+        async let tipTimeTask = blockTime(tip)
+        async let backTimeTask = tip > pulseSpan ? blockTime(tip - pulseSpan) : nil
+        let tipTime = await tipTimeTask
+        let backTime = await backTimeTask
+        var rate: Double?
+        if let tipTime, let backTime {
+            let seconds = tipTime.timeIntervalSince(backTime)
+            // A non-positive span is a node disagreeing with itself; report no
+            // rate rather than a negative one, which would make every verdict
+            // threshold collapse to its floor without saying why.
+            if seconds > 0 { rate = seconds / Double(pulseSpan) }
+        }
+        return VibenetChainPulse(tip: tip, lastBlockAt: tipTime, secondsPerBlock: rate)
+    }
+
     /// Native (vibenet ETH-equivalent) balance — `eth_getBalance`, standard
     /// JSON-RPC rather than an `eth_call`: there's no contract to call, the
     /// node tracks an account's native balance itself. Always 18 decimals
@@ -418,6 +536,20 @@ enum VibenetChain {
     /// `decimals()` read first; see `VibenetRead.account`'s own doc).
     static func getBalance(address: String) async -> String? {
         await call(method: "eth_getBalance", params: [address, "latest"]) as? String
+    }
+
+    /// The same balance AT A PAST BLOCK (prd §507) — what lets the native
+    /// curve start before the day this app was installed.
+    ///
+    /// `eth_getBalance` takes a block tag, so a node that keeps state can
+    /// answer what an account held last week. A PRUNED node cannot, and says
+    /// so by erroring — which arrives here as nil and is recorded as nothing,
+    /// never as a zero: a zero would draw a real cliff on the chart, the
+    /// failure `VibenetValueStore.record` already refuses one line up.
+    static func getBalance(address: String, atBlock block: Int) async -> String? {
+        guard block >= 0 else { return nil }
+        return await call(method: "eth_getBalance",
+                          params: [address, "0x" + String(block, radix: 16)]) as? String
     }
 
     /// MEASURED 2026-08-23: the RPC enforces a 100,000-block ceiling on
@@ -453,9 +585,10 @@ enum VibenetChain {
     /// failure on an OLDER chunk stops the walk there and returns what was
     /// gathered — the same partial-is-better-than-nothing shape `blockTime`
     /// and every other read in this file already uses.
-    static func getLogs(address: String, topics: [Any]) async -> [[String: Any]]? {
-        guard let tip = await blockNumber() else { return nil }
-        let ranges = VibenetLogChunking.ranges(tip: tip, maxRange: maxLogRange, maxChunks: maxLogChunks)
+    static func getLogs(address: String, topics: [Any],
+                        maxChunks: Int = maxLogChunks) async -> [[String: Any]]? {
+        guard let tip = await cachedTip() else { return nil }
+        let ranges = VibenetLogChunking.ranges(tip: tip, maxRange: maxLogRange, maxChunks: maxChunks)
         var gathered: [[String: Any]] = []
         for (index, range) in ranges.enumerated() {
             let params: [String: Any] = [
@@ -523,6 +656,21 @@ enum VibenetTopics {
     /// read filters on rather than an owner topic — there is no owner to
     /// filter by until an address has been named.
     static let accountCreated = "0x934abbffb6906db60a85b076f1e41da9667dfa53c7724f4fe2333298d7b1db8c"
+    /// `Transfer(address indexed from, address indexed to, uint256 value)` —
+    /// the ERC-20 topic, and byte-identical to ERC-721's
+    /// `Transfer(address,address,uint256)` because the two signatures ARE the
+    /// same string. That collision is the whole reason `VibenetRead.transfers`
+    /// decides on the TOPIC COUNT rather than on the contract: three topics is
+    /// a fungible amount in `data`, four is an indexed token id and no data at
+    /// all, and a decoder that assumes one reads the other as a transfer of
+    /// zero.
+    ///
+    /// Not keccak-derived here like the Keystore's five: this is the most
+    /// widely deployed event signature on any EVM chain and its hash is a
+    /// constant every explorer, indexer and wallet in existence pins. The
+    /// harness re-derives it anyway, for the same reason it re-derives the
+    /// others.
+    static let erc20Transfer = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
 }
 
 // MARK: - ABI (hand-rolled, no dynamic types — every return here is fixed-width)
@@ -591,6 +739,27 @@ enum VibenetABI {
         "0x70a08231" + padAddress(address)
     }
 
+    /// `supportsInterface(bytes4)` — 0x01ffc9a7, ERC-165 (prd §507). The
+    /// argument is a `bytes4`, which ABI-encodes LEFT-aligned in its word —
+    /// the opposite of every other value this file pads, and padding it the
+    /// usual way asks about interface `0x00000000`, which every compliant
+    /// contract answers false to. That would read as "not an NFT" for every
+    /// NFT on the chain.
+    static func supportsInterfaceCall(_ interfaceID: String) -> String {
+        var id = interfaceID.lowercased()
+        if id.hasPrefix("0x") { id.removeFirst(2) }
+        guard id.count == 8 else { return "0x01ffc9a7" + String(repeating: "0", count: 64) }
+        return "0x01ffc9a7" + id + String(repeating: "0", count: 56)
+    }
+
+    /// ERC-721's own interface id, from the standard itself.
+    static let erc721InterfaceID = "80ac58cd"
+
+    /// `symbol()` — 0x95d89b41, no arguments. Read only for a token the live
+    /// config named but did not name a symbol FOR (`vibecheck`); USDV and NFV
+    /// take their symbol from the config's own field naming, which is free.
+    static let symbolCall = "0x95d89b41"
+
     /// `decimals()` — 0x313ce567, standard ERC-20, no arguments. Read LIVE
     /// per contract (`VibenetTokenDecimals`) rather than assumed — see that
     /// type's own doc for why 18 is never a safe default here.
@@ -653,6 +822,109 @@ enum VibenetABI {
 /// the install, since a missing `decimals` is exactly what makes a balance
 /// unscaleable (never assumed at 18, the standing lesson: Solana SPL,
 /// Gnosis Pay's USDCe being 6 not 18).
+/// What a token IS, cached forever per contract (prd §507).
+///
+/// **The bug this fixes is silent and shipped**: `tokenBalance` gave up on any
+/// token whose `decimals()` did not answer, which is the right refusal for an
+/// unknown scale and the wrong one for an ERC-721 — where `decimals()` does
+/// not exist, reverts, and means "this is a count". The demo fixture has shown
+/// `NFV: 12` since the day balances landed, while a live NFV that is a 721
+/// would have been absent from the room forever with nothing anywhere saying
+/// why.
+///
+/// Asked in ORDER and never both at once: `decimals()` first because most
+/// tokens are fungible and one answer ends the question, ERC-165 only when it
+/// fails. A contract that answers neither is still dropped — "we could not
+/// learn the scale" stays a real state, and assuming one is the lesson this
+/// codebase has paid for in Solana SPL and in Gnosis Pay's USDCe.
+enum VibenetTokenFacts {
+    struct Facts: Equatable {
+        let identity: VibenetTokenIdentity
+        /// Nil for a collectible, which has no scale by definition.
+        let decimals: Int?
+    }
+
+    private static func key(_ contract: String) -> String {
+        "vibenet.tokenkind.\(contract.lowercased())"
+    }
+
+    static func read(contract: String) async -> Facts? {
+        if let decimals = await VibenetTokenDecimals.read(contract: contract) {
+            return Facts(identity: .fungible, decimals: decimals)
+        }
+        let defaults = UserDefaults.standard
+        if defaults.bool(forKey: key(contract)) {
+            return Facts(identity: .collectible, decimals: nil)
+        }
+        guard let hex = await VibenetChain.ethCall(
+            to: contract, data: VibenetABI.supportsInterfaceCall(VibenetABI.erc721InterfaceID)),
+              VibenetABI.boolWord(hex, at: 0)
+        else { return nil }
+        defaults.set(true, forKey: key(contract))
+        return Facts(identity: .collectible, decimals: nil)
+    }
+
+    static func forget(contract: String) {
+        UserDefaults.standard.removeObject(forKey: key(contract))
+    }
+}
+
+/// A token's own `symbol()`, sanitised (prd §507).
+///
+/// Read ONLY for a contract the live config named without naming a symbol for
+/// it — `vibecheck`, which had been parsed and never read at all. USDV and NFV
+/// keep taking their symbol from the config's field naming, which costs
+/// nothing and cannot be spoofed.
+///
+/// **SANITISED, not merely trimmed**, and for the `SmartAccount.vendor`
+/// reason: this string is returned by an arbitrary contract on a devnet
+/// anybody can deploy to, and it lands in the app's own chrome beside a
+/// number. Letters and digits only, 1–12 characters, uppercased; anything
+/// else yields nil and the balance is simply not shown, because a holding we
+/// cannot name is one we cannot honestly draw.
+enum VibenetTokenSymbol {
+    private static func key(_ contract: String) -> String {
+        "vibenet.tokensymbol.\(contract.lowercased())"
+    }
+
+    static func sanitize(_ raw: String) -> String? {
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+            .trimmingCharacters(in: CharacterSet(charactersIn: "\u{0}"))
+        guard (1...12).contains(trimmed.count),
+              trimmed.allSatisfy({ $0.isLetter || $0.isNumber }) else { return nil }
+        return trimmed.uppercased()
+    }
+
+    /// Hex bytes → text, for both shapes a `symbol()` can return: the modern
+    /// dynamic `string` and the old fixed `bytes32` several long-lived tokens
+    /// still use. Nil rather than mojibake for anything that is not UTF-8.
+    static func decode(_ hex: String) -> String? {
+        var payload = VibenetLogData.dynamicBytes(hex)
+        if payload == nil, let word = VibenetABI.word(hex, at: 0) { payload = "0x" + word }
+        guard var body = payload else { return nil }
+        if body.hasPrefix("0x") { body.removeFirst(2) }
+        var bytes: [UInt8] = []
+        var index = body.startIndex
+        while index < body.endIndex {
+            let next = body.index(index, offsetBy: 2, limitedBy: body.endIndex) ?? body.endIndex
+            guard next > index, let byte = UInt8(body[index..<next], radix: 16) else { return nil }
+            if byte != 0 { bytes.append(byte) }
+            index = next
+        }
+        guard !bytes.isEmpty, let text = String(bytes: bytes, encoding: .utf8) else { return nil }
+        return sanitize(text)
+    }
+
+    static func read(contract: String) async -> String? {
+        let defaults = UserDefaults.standard
+        if let held = defaults.string(forKey: key(contract)) { return held }
+        guard let hex = await VibenetChain.ethCall(to: contract, data: VibenetABI.symbolCall),
+              let symbol = decode(hex) else { return nil }
+        defaults.set(symbol, forKey: key(contract))
+        return symbol
+    }
+}
+
 enum VibenetTokenDecimals {
     static func read(contract: String) async -> Int? {
         let key = "vibenet.decimals.\(contract.lowercased())"
@@ -779,58 +1051,78 @@ enum VibenetRead {
                             policyCommitment: commitment)
     }
 
-    /// Every policy execution this account has made, folded per commitment —
-    /// the count and the most recent time, which is the ONE live fact about a
-    /// session key vibenet publishes (see `VibenetPolicyReadability` for the
-    /// long form of what it deliberately does NOT publish: the spend cap, the
-    /// period and the allowed recipients are committed as a hash, never
-    /// stored, so there is nothing on chain to read them from).
+    /// EVERY POLICY EXECUTION, KEPT WHOLE (prd §507, was `policyUses` since
+    /// 2026-08-24).
     ///
-    /// Read off `PolicyManager`, not the Keystore — a different contract, so
-    /// this cannot ride the account read's own `getLogs`. Returns [] rather
-    /// than nil on failure: a key's own "Never used" is spoken off its
-    /// commitment being absent, and an unreachable read and a genuinely
-    /// unused key are not distinguished HERE because the caller draws neither
-    /// differently — the account-level `reached` flag already carries whether
-    /// this pass reached the chain at all.
-    static func policyUses(account: String, policyManager: String?) async -> [VibenetPolicyUse] {
-        guard let policyManager else { return [] }
+    /// The read is unchanged — one filtered `eth_getLogs` on `PolicyManager`,
+    /// every field it needs indexed — and what changed is that it no longer
+    /// throws the individual runs away. Folding straight to a count meant a
+    /// session key running every day produced a number on one line inside one
+    /// sheet and no row anywhere, on a screen called Activity. The fold still
+    /// happens (`VibenetPolicyRuns.fold`, pure and harness-tested) — it just
+    /// happens after the runs have been kept.
+    ///
+    /// `caller` is the log's own NON-INDEXED word, which nothing decoded: it
+    /// is the difference between "4 uses" and "used by the account you also
+    /// watch". See `VibenetPolicyReadability` for the long form of what this
+    /// event deliberately does NOT publish — the cap, the period and the
+    /// allowed recipients are committed as a hash and are not on chain to
+    /// read.
+    ///
+    /// Returns [] rather than nil on failure, as it always has: a key's own
+    /// "Never used" is spoken off its commitment being absent, and the
+    /// account-level `reached` flag already carries whether this pass got to
+    /// the chain at all.
+    static func policyRuns(account: String, policyManager: String?) async
+        -> (runs: [VibenetPolicyRun], uses: [VibenetPolicyUse]) {
+        guard let policyManager else { return ([], []) }
         guard let logs = await VibenetChain.getLogs(
             address: policyManager,
             topics: [VibenetTopics.policyExecuted, "0x" + VibenetABI.padAddress(account)])
-        else { return [] }
+        else { return ([], []) }
 
-        // commitment → (count, newest block). All three interesting fields
-        // are indexed topics, so nothing here decodes `data`.
-        var counts: [String: Int] = [:]
-        var newestBlock: [String: Int] = [:]
+        var rows: [VibenetPolicyRun] = []
         for log in logs {
             guard (log["removed"] as? Bool) != true,
                   let topics = log["topics"] as? [String], topics.count >= 4,
-                  let blockHex = log["blockNumber"] as? String
+                  let txHash = log["transactionHash"] as? String,
+                  let blockHex = log["blockNumber"] as? String,
+                  let indexHex = log["logIndex"] as? String
             else { continue }
-            let commitment = topics[3].lowercased()
-            counts[commitment, default: 0] += 1
             let block = WalletIngest.hexToInt(blockHex)
-            if block > (newestBlock[commitment] ?? -1) { newestBlock[commitment] = block }
+            let logIndex = WalletIngest.hexToInt(indexHex)
+            guard block >= 0, logIndex >= 0 else { continue }
+            rows.append(VibenetPolicyRun(
+                commitment: topics[3].lowercased(),
+                // The `caller` word, read at last. Nil rather than the account
+                // itself on a failed decode — a fallback there would claim you
+                // ran your own key.
+                caller: (log["data"] as? String).flatMap { VibenetLogData.address($0, at: 0) },
+                at: nil, txHash: txHash, block: block, logIndex: logIndex))
         }
-        guard !counts.isEmpty else { return [] }
+        guard !rows.isEmpty else { return ([], []) }
 
-        // ONE block-time lookup per distinct newest block — several
-        // commitments can share one, and this is the same "never `.now`"
-        // discipline every other dated read in this file keeps.
+        // Newest first, then bounded — the same order-then-cap the ledger
+        // keeps, because capping first drops today's runs to keep last
+        // month's.
+        let all = VibenetPolicyRuns.ordered(rows)
+        let kept = Array(all.prefix(VibenetPolicyRuns.cap))
+        // ONE block-time lookup per distinct block — several runs can share
+        // one, and this is the same "never `.now`" discipline every other
+        // dated read in this file keeps.
         var times: [Int: Date] = [:]
-        for block in Set(newestBlock.values) {
+        for block in Set(kept.map(\.block)) {
             if let date = await VibenetChain.blockTime(block) { times[block] = date }
         }
-        return counts.map { commitment, count in
-            VibenetPolicyUse(commitment: commitment, count: count,
-                             lastUsed: newestBlock[commitment].flatMap { times[$0] })
+        let dated = kept.map {
+            VibenetPolicyRun(commitment: $0.commitment, caller: $0.caller, at: times[$0.block],
+                             txHash: $0.txHash, block: $0.block, logIndex: $0.logIndex)
         }
-        // TOTAL order so a persisted snapshot cannot differ from a fresh read
-        // over an identical chain — `Dictionary` iteration order is not
-        // stable across runs, and this array is `Codable` into `VibenetState`.
-        .sorted { $0.commitment < $1.commitment }
+        // THE FOLD SEES EVERY RUN, the stored array only the newest `cap` —
+        // so a key's use COUNT stays exact however busy it is, and what the
+        // bound costs is a date on the oldest runs, never a wrong number
+        // about a key's authority (see `VibenetPolicyRuns.cap`).
+        return (dated, VibenetPolicyRuns.fold(dated + all.dropFirst(VibenetPolicyRuns.cap)))
     }
 
     /// Every account that authorized `address` as its DELEGATE — Base's own
@@ -912,7 +1204,8 @@ enum VibenetRead {
     /// FIRST call (`isContractEstablished`) failed outright — every other
     /// field then carries its neutral default rather than a half-finished
     /// guess.
-    static func account(_ address: String, contracts: VibenetContracts) async -> VibenetAccountItem {
+    static func account(_ address: String, contracts: VibenetContracts,
+                        tokens: [Token] = []) async -> VibenetAccountItem {
         guard let establishedWord = await VibenetChain.ethCall(
             to: contracts.keystore, data: VibenetABI.isEstablishedCall(address))
         else {
@@ -931,14 +1224,19 @@ enum VibenetRead {
         // apiece, paced by the same `IngestSupport.boundedGather(maxConcurrent: 3)`
         // that already governs how many addresses run at once.
         async let nativeTask = VibenetChain.getBalance(address: address)
-        async let usdvTask = tokenBalance(account: address, contract: contracts.usdv, symbol: "USDV")
-        async let nfvTask = tokenBalance(account: address, contract: contracts.nfv, symbol: "NFV")
+        async let balancesTask = tokenBalances(account: address, tokens: tokens)
+        // WHAT MOVED, and WHERE THIS ACCOUNT CAME FROM (prd §507) — both ride
+        // the same concurrent fan-out as everything above, and each answers a
+        // question the room could not answer at all before: what this account
+        // has actually done with its tokens, and how old it is.
+        async let transfersTask = transfers(account: address, tokens: tokens)
+        async let originTask = origin(account: address, keystore: contracts.keystore)
         // Both 2026-08-24 additions ride the same concurrent fan-out. Each is
         // ONE filtered `eth_getLogs` (plus a bounded block-time lookup), and
         // each answers a question this room could not answer at all before:
         // has a session key actually been used, and what accounts can this
         // address act for.
-        async let policyUsesTask = policyUses(account: address, policyManager: contracts.policyManager)
+        async let policyRunsTask = policyRuns(account: address, policyManager: contracts.policyManager)
         async let subAccountsTask = subAccounts(delegate: address, keystore: contracts.keystore)
         let events = await eventsTask
         let lockRaw = await lockTask
@@ -950,7 +1248,7 @@ enum VibenetRead {
             let d = WalletIngest.hexToDouble(hex)
             return d.isFinite ? d / 1e18 : nil
         }
-        let tokenBalances = [await usdvTask, await nfvTask].compactMap { $0 }
+        let tokenBalances = await balancesTask
 
         var actors: [VibenetActor] = []
         if let events {
@@ -982,7 +1280,15 @@ enum VibenetRead {
             }
             history = VibenetKeyHistory.ordered(newest.map { e in
                 VibenetKeyMoment(block: e.block, logIndex: e.logIndex, authorized: e.authorized,
-                                 kind: e.authorized ? liveKind[e.actorId] : nil,
+                                 // The live roster first; then the one kind
+                                 // a DEAD key can still prove about itself
+                                 // (prd §507) — an address-shaped actorId is
+                                 // a delegate, with no read and no guess.
+                                 // Applies to an authorized moment too: a key
+                                 // authorized and later revoked is absent from
+                                 // the roster exactly like a revoke is.
+                                 kind: liveKind[e.actorId]
+                                     ?? VibenetKeyHistory.inferredKind(actorId: e.actorId),
                                  date: blockDates[e.block],
                                  // prd §473 — what lets one key ask the
                                  // account's history about itself. Free: the
@@ -1003,14 +1309,35 @@ enum VibenetRead {
             unlockDelay = UInt16(truncatingIfNeeded: VibenetABI.uintWord(lockRaw, at: 3))
         }
 
+        let moved = await transfersTask
+        let policy = await policyRunsTask
         return VibenetAccountItem(address: address, reached: true, established: established,
                                   actors: actors, locked: locked,
                                   hasInitiatedUnlock: hasInitiatedUnlock,
                                   unlocksAt: unlocksAt, unlockDelay: unlockDelay,
                                   changeSequences: sequences, history: history,
                                   nativeBalance: nativeBalance, tokenBalances: tokenBalances,
-                                  policyUses: await policyUsesTask,
-                                  subAccounts: await subAccountsTask)
+                                  policyUses: policy.uses,
+                                  subAccounts: await subAccountsTask,
+                                  transfers: moved.rows, transfersCapped: moved.capped,
+                                  origin: await originTask, policyRuns: policy.runs)
+    }
+
+    /// Every named token's balance for one account, concurrently.
+    private static func tokenBalances(account: String, tokens: [Token]) async
+        -> [VibenetTokenBalance] {
+        guard !tokens.isEmpty else { return [] }
+        return await withTaskGroup(of: VibenetTokenBalance?.self) { group in
+            for token in tokens {
+                group.addTask { await tokenBalance(account: account, token: token) }
+            }
+            var out: [VibenetTokenBalance] = []
+            for await balance in group where balance != nil { out.append(balance!) }
+            // A TOTAL order, because a task group answers in completion order
+            // and a room whose token tiles reshuffle between reads over
+            // identical balances reads as broken.
+            return out.sorted { $0.symbol < $1.symbol }
+        }
     }
 
     /// One ERC-20-shaped balance for `account` on `contract` — nil for any
@@ -1020,15 +1347,218 @@ enum VibenetRead {
     /// means "no honest number to show", never "assume zero" or "assume
     /// 18 decimals" (§83, and the standing decimals lesson — see
     /// `VibenetTokenDecimals`'s own doc).
-    private static func tokenBalance(account: String, contract: String?, symbol: String)
-        async -> VibenetTokenBalance? {
-        guard let contract else { return nil }
-        async let balanceTask = VibenetChain.ethCall(to: contract, data: VibenetABI.balanceOfCall(account))
-        async let decimalsTask = VibenetTokenDecimals.read(contract: contract)
-        guard let balanceHex = await balanceTask, let raw = VibenetABI.rawAmountWord(balanceHex),
-              let decimals = await decimalsTask
+    /// One token's balance for one account, against a token whose identity is
+    /// ALREADY RESOLVED (`tokens(_:)`, once per pass).
+    ///
+    /// The resolution moved out of here deliberately: it is per-CONTRACT, not
+    /// per-account, and doing it inside meant every account re-asked what
+    /// USDV was. It also means the balance read and the transfer read below
+    /// can never disagree about whether a contract is fungible — one answer,
+    /// one pass.
+    private static func tokenBalance(account: String, token: Token) async -> VibenetTokenBalance? {
+        guard let balanceHex = await VibenetChain.ethCall(
+            to: token.contract, data: VibenetABI.balanceOfCall(account)),
+              let raw = VibenetABI.rawAmountWord(balanceHex),
+              let amount = token.identity.amount(raw: raw, decimals: token.decimals)
         else { return nil }
-        return VibenetTokenBalance(symbol: symbol, amount: raw / pow(10, Double(decimals)))
+        return VibenetTokenBalance(symbol: token.symbol, amount: amount,
+                                   isCount: token.identity == .collectible)
+    }
+
+    /// One token's identity, resolved once per pass so the transfer read and
+    /// the balance read cannot disagree about what a contract is.
+    struct Token: Equatable {
+        let contract: String
+        let symbol: String
+        let identity: VibenetTokenIdentity
+        let decimals: Int?
+    }
+
+    static func tokens(_ contracts: VibenetContracts) async -> [Token] {
+        var out: [Token] = []
+        for entry in contracts.tokenContracts {
+            guard let facts = await VibenetTokenFacts.read(contract: entry.address) else { continue }
+            // Spelled out rather than `entry.symbol ?? await …`: `??`'s
+            // right-hand side is an autoclosure, which cannot carry an await.
+            var symbol = entry.symbol
+            if symbol == nil { symbol = await VibenetTokenSymbol.read(contract: entry.address) }
+            guard let symbol else { continue }
+            out.append(Token(contract: entry.address, symbol: symbol,
+                             identity: facts.identity, decimals: facts.decimals))
+        }
+        return out
+    }
+
+    // MARK: - What moved (prd §507)
+
+    /// How far back a transfer walk reaches, in `VibenetChain.maxLogRange`
+    /// chunks.
+    ///
+    /// **Deliberately SHALLOWER than the actor walk, and the asymmetry is the
+    /// point.** The roster's own doc says why it must be complete: liveness is
+    /// decided by the LATEST event per actorId, so a missed early
+    /// authorization makes a live key vanish. A ledger has no such property —
+    /// a missed old transfer is a missing row, not a wrong claim — and it is
+    /// the read this pass adds SIX of per account, so it takes the bound. What
+    /// it must never do is present the result as complete: that is
+    /// `transfersCapped` and `VibenetBalanceSeries.isComplete`.
+    static let transferChunks = 3
+
+    /// Every `Transfer` touching this account, across every token the config
+    /// names.
+    ///
+    /// TWO reads per token, and they cannot be one: `from` and `to` are
+    /// different indexed POSITIONS, and `eth_getLogs` ORs within a position
+    /// and ANDs across them, so a single filter naming both asks for the
+    /// transfers an account made TO ITSELF and nothing else. The self-move is
+    /// then the row that appears in both answers, which is exactly how it is
+    /// detected here rather than by comparing strings twice.
+    static func transfers(account: String, tokens: [Token]) async -> (rows: [VibenetTransfer], capped: Bool) {
+        guard !tokens.isEmpty else { return ([], false) }
+        let mine = "0x" + VibenetABI.padAddress(account)
+        var rows: [VibenetTransfer] = []
+        var blocks = Set<Int>()
+        var capped = false
+
+        for token in tokens {
+            async let outTask = VibenetChain.getLogs(
+                address: token.contract, topics: [VibenetTopics.erc20Transfer, mine],
+                maxChunks: transferChunks)
+            async let inTask = VibenetChain.getLogs(
+                address: token.contract, topics: [VibenetTopics.erc20Transfer, NSNull(), mine],
+                maxChunks: transferChunks)
+            let outgoing = await outTask ?? []
+            let incoming = await inTask ?? []
+            // A log appearing in BOTH answers is a self-move — the account is
+            // the `from` and the `to`. Keyed by (tx, index), which is one log
+            // on any EVM chain.
+            var seen: [String: VibenetTransfer] = [:]
+            for (logs, direction) in [(outgoing, VibenetTransferDirection.outgoing),
+                                      (incoming, VibenetTransferDirection.incoming)] {
+                for log in logs {
+                    guard let row = transfer(log, token: token, direction: direction) else { continue }
+                    if let held = seen[row.id], held.direction != direction {
+                        seen[row.id] = VibenetTransfer(
+                            symbol: row.symbol, direction: .selfMove, counterparty: account,
+                            amount: row.amount, at: nil, txHash: row.txHash,
+                            block: row.block, logIndex: row.logIndex, tokenID: row.tokenID)
+                    } else {
+                        seen[row.id] = row
+                    }
+                }
+            }
+            rows.append(contentsOf: seen.values)
+            if outgoing.count >= VibenetLedger.cap || incoming.count >= VibenetLedger.cap {
+                capped = true
+            }
+        }
+
+        let kept = VibenetLedger.capped(rows)
+        capped = capped || rows.count > kept.count
+        // ONE block-time lookup per distinct block — several transfers share
+        // one, and this is the same "never `.now`" discipline every other
+        // dated read in this file keeps. Bounded by the cap above it.
+        for row in kept { blocks.insert(row.block) }
+        var times: [Int: Date] = [:]
+        for block in blocks {
+            if let date = await VibenetChain.blockTime(block) { times[block] = date }
+        }
+        let dated = kept.map { row in
+            VibenetTransfer(symbol: row.symbol, direction: row.direction,
+                            counterparty: row.counterparty, amount: row.amount,
+                            at: times[row.block], txHash: row.txHash, block: row.block,
+                            logIndex: row.logIndex, tokenID: row.tokenID)
+        }
+        return (dated, capped)
+    }
+
+    /// One `Transfer` log, decoded.
+    ///
+    /// **THE TOPIC COUNT DECIDES**, never the contract: ERC-20 and ERC-721
+    /// share the signature `Transfer(address,address,uint256)` byte for byte,
+    /// and differ only in whether that third argument is indexed. Three topics
+    /// is a fungible amount in `data`; four is a token id and empty data,
+    /// which a fungible decoder reads as an amount of ZERO — a transfer of
+    /// nothing, landed as a real row, on a screen about what moved.
+    private static func transfer(_ log: [String: Any], token: Token,
+                                 direction: VibenetTransferDirection) -> VibenetTransfer? {
+        guard (log["removed"] as? Bool) != true,
+              let topics = log["topics"] as? [String], topics.count >= 3,
+              topics[0].lowercased() == VibenetTopics.erc20Transfer,
+              let txHash = log["transactionHash"] as? String,
+              let blockHex = log["blockNumber"] as? String,
+              let indexHex = log["logIndex"] as? String
+        else { return nil }
+        let from = "0x" + topics[1].suffix(40)
+        let to = "0x" + topics[2].suffix(40)
+        let counterparty = direction == .outgoing ? to : from
+        let block = WalletIngest.hexToInt(blockHex)
+        let logIndex = WalletIngest.hexToInt(indexHex)
+        guard block >= 0, logIndex >= 0 else { return nil }
+
+        if topics.count >= 4 {
+            // A token id, not an amount. Rendered as a short id rather than
+            // the full 32-byte word: a 78-digit decimal is not a name.
+            let raw = topics[3].lowercased()
+            let trimmed = String(raw.dropFirst(2).drop(while: { $0 == "0" }))
+            let id = trimmed.isEmpty ? "0" : trimmed
+            guard let value = VibenetLogData.uint(raw, at: 0), value < 1e15 else {
+                return VibenetTransfer(symbol: token.symbol, direction: direction,
+                                       counterparty: counterparty, amount: 1, at: nil,
+                                       txHash: txHash, block: block, logIndex: logIndex,
+                                       tokenID: "…" + String(id.suffix(6)))
+            }
+            return VibenetTransfer(symbol: token.symbol, direction: direction,
+                                   counterparty: counterparty, amount: 1, at: nil,
+                                   txHash: txHash, block: block, logIndex: logIndex,
+                                   tokenID: String(Int(value)))
+        }
+
+        guard let data = log["data"] as? String,
+              let raw = VibenetLogData.uint(data, at: 0),
+              let amount = token.identity.amount(raw: raw, decimals: token.decimals)
+        else { return nil }
+        return VibenetTransfer(symbol: token.symbol, direction: direction,
+                               counterparty: counterparty, amount: amount, at: nil,
+                               txHash: txHash, block: block, logIndex: logIndex)
+    }
+
+    /// WHERE THIS ACCOUNT CAME FROM (prd §507) — one filtered `AccountCreated`
+    /// read, on the topic that has been indexed the whole time.
+    ///
+    /// The event has been read since the seat shipped and only GLOBALLY, for
+    /// the empty state's "recently created" list, so the room could never say
+    /// how old its own accounts were and Activity began at the first key
+    /// rather than at the account.
+    ///
+    /// `codeHash` is the second non-indexed word (`userSalt` is the first) —
+    /// the fact worth having on a chain that redeploys weekly, because two
+    /// accounts sharing it run the same implementation.
+    static func origin(account: String, keystore: String) async -> VibenetOrigin? {
+        guard let logs = await VibenetChain.getLogs(
+            address: keystore,
+            topics: [VibenetTopics.accountCreated, "0x" + VibenetABI.padAddress(account)])
+        else { return nil }
+        // The OLDEST is the creation — an account cannot be created twice, but
+        // a redeployed Keystore can emit for an address that already existed,
+        // and the first one is the one that means "created".
+        var best: (block: Int, index: Int, log: [String: Any])?
+        for log in logs {
+            guard (log["removed"] as? Bool) != true,
+                  let blockHex = log["blockNumber"] as? String,
+                  let indexHex = log["logIndex"] as? String else { continue }
+            let block = WalletIngest.hexToInt(blockHex)
+            let index = WalletIngest.hexToInt(indexHex)
+            if let held = best, (held.block, held.index) <= (block, index) { continue }
+            best = (block, index, log)
+        }
+        guard let best else { return nil }
+        let createdAt = await VibenetChain.blockTime(best.block)
+        let data = best.log["data"] as? String
+        let codeHash = data.flatMap { VibenetLogData.word($0, at: 1) }.map { "0x" + $0 }
+        return VibenetOrigin(createdAt: createdAt, codeHash: codeHash,
+                             txHash: best.log["transactionHash"] as? String,
+                             logIndex: best.index)
     }
 }
 
@@ -1135,9 +1665,20 @@ enum VibenetRoomSource {
         // by the time it's shown.
         let redeployed = VibenetSeenCommit.checkAndAdvance(contracts.commit)
         let addresses = VibenetWatch.shared.addresses
+        // TOKEN IDENTITY IS RESOLVED ONCE PER PASS, not once per account
+        // (prd §507): what USDV is does not vary by who holds it, and asking
+        // per account meant the same `decimals()` round trip for every address
+        // on the list. It also means the balance read and the transfer read
+        // cannot disagree about whether a contract is fungible.
+        let tokens = await VibenetRead.tokens(contracts)
+        // THE CHAIN'S OWN PULSE (prd §507) — three calls for the whole room,
+        // read alongside the accounts rather than after them, because on a
+        // stalled devnet it is the fact that explains every reading below it.
+        async let pulseTask = VibenetChain.pulse()
         let items = await IngestSupport.boundedGather(addresses, maxConcurrent: 3) { address in
-            await VibenetRead.account(address, contracts: contracts)
+            await VibenetRead.account(address, contracts: contracts, tokens: tokens)
         }
+        let pulse = await pulseTask
         // `readAt` — stamped HERE and only here, because this is the only
         // place in the app that has genuinely just read the chain. See
         // `VibenetRoom.readAt` for the defect it closes; `vibenet-selftest.sh`
@@ -1146,8 +1687,14 @@ enum VibenetRoomSource {
         // state with a confident face.
         let room = VibenetRoom.compose(items: items, branch: contracts.branch,
                                        commit: contracts.commit, configReached: true,
-                                       redeployedSinceLastSeen: redeployed, readAt: .now)
+                                       redeployedSinceLastSeen: redeployed, readAt: .now,
+                                       pulse: pulse)
         VibenetState.save(room)
+        // THE CURVE THAT STARTS BEFORE YOU DID (prd §507) — once per account,
+        // ever, and only where the local history is too thin to draw. See
+        // `VibenetNativeBackfill` for why this is worth a handful of calls and
+        // `VibenetBackfillLedger` for why it can only ever be paid once.
+        await VibenetBackfill.run(room: room, tip: pulse?.tip)
         // The line the crown draws under. Recorded here, from the read that
         // already fetched the balances, so the chart is REAL on every device
         // rather than a curve the demo alone knows how to draw.
@@ -1177,7 +1724,18 @@ enum VibenetRoomSource {
 /// state that changes constantly, exactly what this file's own header
 /// says must never become a corpus row.
 enum VibenetState {
-    private static let key = "vibenet.room.snapshot.v1"
+    /// **v2 (prd §507).** The snapshot gained transfers, an origin, policy
+    /// runs and the chain's pulse, and `VibenetAccountItem`'s new arrays are
+    /// non-Optional — Swift's synthesised decoder does not apply a property's
+    /// default for a missing key, so every v1 snapshot on every device would
+    /// have failed to decode. That failure is SILENT here (`try?` → nil → the
+    /// head draws nothing until the next read lands), which is precisely why
+    /// it gets a new key rather than a shrug: a one-off empty head on upgrade
+    /// day is a decision, and a decode that quietly never succeeds again if a
+    /// future field is added wrong is not. The old key is left to be dropped
+    /// by the system rather than migrated — it is a cache of a chain that
+    /// redeploys weekly.
+    private static let key = "vibenet.room.snapshot.v2"
 
     static var saved: VibenetRoom? {
         guard let data = UserDefaults.standard.data(forKey: key) else { return nil }
@@ -1289,6 +1847,134 @@ enum VibenetValueStore {
     }
 }
 
+/// THE NATIVE CURVE, BACKFILLED FROM THE CHAIN (prd §507).
+///
+/// `VibenetValueHistory` can only record what it saw while the app was open:
+/// six readings before it draws a line, two minutes apart at best, and
+/// structurally blind to everything before the day somebody started watching.
+/// So the room's own sparkline was a chart of when you opened the app.
+///
+/// `eth_getBalance` takes a block tag. A node that keeps state can therefore
+/// answer what an account held last week, and those answers are REAL readings
+/// — nothing here interpolates, and a node that will not answer (pruned, or
+/// simply erroring) yields nothing rather than a zero, which would draw a
+/// cliff.
+///
+/// **Paid ONCE per account, ever.** The ledger below is what makes that true;
+/// without it this is eight extra calls per account on every foreground, for
+/// a curve that only needs building once.
+enum VibenetBackfillLedger {
+    private static let key = "vibenet.backfill.done.v1"
+
+    static func done() -> Set<String> {
+        Set(UserDefaults.standard.stringArray(forKey: key) ?? [])
+    }
+
+    static func isDone(_ address: String) -> Bool { done().contains(address.lowercased()) }
+
+    static func mark(_ address: String) {
+        var held = done()
+        held.insert(address.lowercased())
+        UserDefaults.standard.set(Array(held), forKey: key)
+    }
+
+    /// Dropped on disconnect with everything else — and NOT on a redeploy,
+    /// deliberately: the balances a node reports for past blocks are that
+    /// chain's own history, and a new contract deployment does not rewrite it.
+    static func forget() {
+        UserDefaults.standard.removeObject(forKey: key)
+    }
+}
+
+enum VibenetBackfill {
+    /// The room's OWN series is backfilled under one extra rule: a point is
+    /// kept only when EVERY watched account answered at that block.
+    ///
+    /// A total whose membership changes between points is not a total — it is
+    /// a cliff drawn where a read failed, on the crown's own line, which is
+    /// the "flat curve reads as went to zero" failure wearing a different
+    /// shape. The per-account curves have no such problem and keep every
+    /// point they can get.
+    private static let roomKey = "vibenet.backfill.room.v1"
+
+    @discardableResult
+    static func run(room: VibenetRoom, tip: Int?) async -> Int {
+        guard let tip, tip > 0, !room.items.isEmpty else { return 0 }
+        let blocks = VibenetNativeBackfill.blocks(tip: tip)
+        guard !blocks.isEmpty else { return 0 }
+
+        let roomDone = UserDefaults.standard.bool(forKey: roomKey)
+        let roomThin = VibenetValueStore.samples().count < VibenetValueHistory.minimumForCurve
+        let wantRoom = !roomDone && roomThin
+        // Which accounts still need one. An account with a real local history
+        // already has a curve, and buying eight more points for it would spend
+        // requests to redraw a line that is already there.
+        let wanted = room.items.filter { item in
+            item.reached && item.nativeBalance != nil
+                && !VibenetBackfillLedger.isDone(item.address)
+                && VibenetValueStore.samples(for: item.address).count < VibenetValueHistory.minimumForCurve
+        }
+        guard wantRoom || !wanted.isEmpty else { return 0 }
+        // The room's total needs every account at the same block, so when it
+        // is wanted the whole roster is read; otherwise only the thin ones.
+        let subjects = wantRoom ? room.items.filter(\.reached) : wanted
+        guard !subjects.isEmpty else { return 0 }
+
+        var perAccount: [String: [VibenetValueSample]] = [:]
+        var roomSamples: [VibenetValueSample] = []
+        var filled = 0
+        for block in blocks {
+            // ONE block-time lookup per block, shared by every account — the
+            // same discipline every other dated read in this file keeps.
+            guard let at = await VibenetChain.blockTime(block) else { continue }
+            var total = 0.0
+            var answered = 0
+            for item in subjects {
+                guard let hex = await VibenetChain.getBalance(address: item.address, atBlock: block)
+                else { continue }
+                let value = WalletIngest.hexToDouble(hex)
+                guard value.isFinite else { continue }
+                let native = value / 1e18
+                total += native
+                answered += 1
+                guard wanted.contains(where: { $0.address == item.address }) else { continue }
+                perAccount[item.address.lowercased(), default: []]
+                    .append(VibenetValueSample(at: at, native: native))
+                filled += 1
+            }
+            if wantRoom && answered == subjects.count {
+                roomSamples.append(VibenetValueSample(at: at, native: total))
+            }
+        }
+
+        if !perAccount.isEmpty {
+            var book = VibenetValueStore.accountSamples()
+            for (address, chain) in perAccount {
+                book[address] = VibenetValueHistory.merged(local: book[address] ?? [], chain: chain)
+            }
+            VibenetValueStore.replaceAccounts(book)
+        }
+        if wantRoom && !roomSamples.isEmpty {
+            VibenetValueStore.replace(
+                VibenetValueHistory.merged(local: VibenetValueStore.samples(), chain: roomSamples))
+        }
+        // MARKED EVEN WHEN IT ANSWERED NOTHING. A pruned node will not start
+        // answering because we asked again, and re-asking every foreground is
+        // the unbounded crawl this file refuses everywhere else. The cost of
+        // being wrong is a curve that starts today — exactly where it started
+        // before this existed.
+        for item in wanted { VibenetBackfillLedger.mark(item.address) }
+        if wantRoom { UserDefaults.standard.set(true, forKey: roomKey) }
+        return filled
+    }
+
+    static func forget() {
+        UserDefaults.standard.removeObject(forKey: roomKey)
+        VibenetBackfillLedger.forget()
+    }
+}
+
+
 // MARK: - The explorer door
 
 /// Base's own vibenet block explorer — MEASURED, not guessed (2026-08-23):
@@ -1328,7 +2014,7 @@ enum VibenetEvents {
     /// nothing here signs or sends. Called from `BridgeRefresh`, the same
     /// door every other watch-list bridge lands through.
     @MainActor
-    static func land(context: ModelContext) async -> Int {
+    static func land(context: ModelContext, room: VibenetRoom? = nil) async -> Int {
         guard let contracts = await VibenetConfig.current() else { return 0 }
         let addresses = VibenetWatch.shared.addresses
         guard !addresses.isEmpty else { return 0 }
@@ -1343,9 +2029,90 @@ enum VibenetEvents {
         // older than `VibenetLogChunking`'s reach is never revisited.
         let byRef = IngestSupport.thingsByRef(context, source: VibenetIdentity.source)
 
+        // THE COMPOSED ROOM IS THE SOURCE FOR EVERYTHING NEW (prd §507), and
+        // that is a cost decision as much as a design one: transfers, policy
+        // runs and an account's creation are all read by
+        // `VibenetRoomSource.compose()` moments earlier in the same sweep, and
+        // re-reading them here would double this bridge's request count to
+        // learn facts already in hand. The key and lock events still make
+        // their own log reads, because a landed row's ref needs the
+        // TRANSACTION HASH and the composed room's key history carries block
+        // and index but not that.
+        //
+        // Falls back to the saved snapshot when no room is handed in, so a
+        // caller that lands without composing (a probe, an older call site)
+        // still gets the new rows — one pass stale, which for a row that is
+        // already a record of the past is a delay rather than an error.
+        let composed = room ?? VibenetState.saved
         var landed = 0
         for address in addresses {
-            landed += await landAccount(address, contracts: contracts, context: context, existing: byRef)
+            let item = composed?.items.first {
+                $0.address.caseInsensitiveCompare(address) == .orderedSame
+            }
+            landed += await landAccount(address, contracts: contracts, context: context,
+                                        existing: byRef, item: item)
+        }
+        return landed
+    }
+
+    /// The rows that come from the composed room rather than from a log read
+    /// of this pass's own (prd §507).
+    ///
+    /// Every one of them is an EVENT with a clock — tokens arriving, a policy
+    /// key running, the account itself being created — which is the same test
+    /// the four key and lock events already pass. What is deliberately NOT
+    /// here is any reading of STATE: a balance, a roster count, a lock status.
+    /// Those are live and belong to the room, and landing one would be the
+    /// count-as-a-thing failure §223 names.
+    @MainActor
+    private static func landComposed(_ item: VibenetAccountItem, context: ModelContext,
+                                     existing: [String: Thing]) -> Int {
+        let shortAddress = VibenetRoom.shortAddress(item.address)
+        var landed = 0
+
+        func insert(kind: VibenetEventKind, txHash: String, logIndex: Int, at: Date?,
+                    detail: String?, extraTags: [String] = []) {
+            let ref = "vibenet:\(kind.refSegment):\(txHash):\(logIndex)"
+            guard existing[ref] == nil else { return }
+            // NO DATE, NO ROW. Every other landing in this file falls back to
+            // `.now` only where the event is known to have just happened;
+            // these are historical by construction — a transfer from four
+            // months ago stamped today is the wrong-date failure this file
+            // has a rule against, and the row is worth less than the lie.
+            guard let at else { return }
+            let thing = Thing(
+                kind: .event,
+                title: kind.title(shortAddress: shortAddress, keyLabel: nil, detail: detail),
+                content: VibenetExplorer.tx(txHash),
+                source: VibenetIdentity.source,
+                capturedAt: at,
+                sourceRef: ref)
+            thing.authorHandle = item.address
+            thing.summary = kind.phrase(keyLabel: nil, detail: detail)
+            thing.tags = kind.facetTags + extraTags
+            context.insert(thing)
+            landed += 1
+        }
+
+        for transfer in item.transfers {
+            // A SELF-MOVE LANDS NOTHING. It is a real log and it is not news:
+            // the balance did not change, and a row reading "sent 5 USDV" for
+            // money that never left is a false claim about where it went.
+            guard transfer.direction != .selfMove else { continue }
+            let other = VibenetRoom.shortAddress(transfer.counterparty)
+            insert(kind: transfer.direction == .incoming ? .transferIn : .transferOut,
+                   txHash: transfer.txHash, logIndex: transfer.logIndex, at: transfer.at,
+                   detail: transfer.direction == .incoming
+                       ? String(localized: "\(transfer.display) from \(other)")
+                       : String(localized: "\(transfer.display) to \(other)"))
+        }
+        for run in item.policyRuns {
+            insert(kind: .policyRun, txHash: run.txHash, logIndex: run.logIndex, at: run.at,
+                   detail: run.caller.map { String(localized: "by \(VibenetRoom.shortAddress($0))") })
+        }
+        if let origin = item.origin, let txHash = origin.txHash {
+            insert(kind: .created, txHash: txHash, logIndex: origin.logIndex ?? 0,
+                   at: origin.createdAt, detail: nil)
         }
         return landed
     }
@@ -1356,6 +2123,10 @@ enum VibenetEvents {
         let txHash: String
         let logIndex: Int
         let block: Int
+        /// The log's non-indexed half — read for the two LOCK kinds, whose
+        /// one interesting number lives there and was never decoded (prd
+        /// §507, `VibenetLockDetail`).
+        var data: String? = nil
     }
 
     private static func parse(_ log: [String: Any], kind: VibenetEventKind) -> RawEvent? {
@@ -1372,7 +2143,9 @@ enum VibenetEvents {
         let actorId = carriesActor ? (topics.count >= 3 ? topics[2].lowercased() : nil) : nil
         if carriesActor && actorId == nil { return nil }
         return RawEvent(kind: kind, actorId: actorId, txHash: txHash,
-                        logIndex: WalletIngest.hexToInt(indexHex), block: WalletIngest.hexToInt(blockHex))
+                        logIndex: WalletIngest.hexToInt(indexHex),
+                        block: WalletIngest.hexToInt(blockHex),
+                        data: log["data"] as? String)
     }
 
     private static func ref(_ e: RawEvent) -> String {
@@ -1381,7 +2154,8 @@ enum VibenetEvents {
 
     @MainActor
     private static func landAccount(_ address: String, contracts: VibenetContracts,
-                                    context: ModelContext, existing: [String: Thing]) async -> Int {
+                                    context: ModelContext, existing: [String: Thing],
+                                    item: VibenetAccountItem? = nil) async -> Int {
         let ownerTopic = "0x" + VibenetABI.padAddress(address)
         async let actorLogsTask = VibenetChain.getLogs(
             address: contracts.keystore,
@@ -1455,8 +2229,17 @@ enum VibenetEvents {
             }
         }
 
+        // THE COMPOSED ROWS LAND BEFORE THE EARLY RETURN (prd §507), and that
+        // placement is the whole of whether they ever land at all: on almost
+        // every pass there is no new KEY event, so behind the return a
+        // transfer would only ever arrive on a pass that happened to be
+        // landing a key change. The deadline sweep above it is here for the
+        // same reason and learned it the same way.
+        var composedLanded = 0
+        if let item { composedLanded = landComposed(item, context: context, existing: existing) }
+
         let fresh = events.filter { existing[ref($0)] == nil }
-        guard !fresh.isEmpty else { return 0 }
+        guard !fresh.isEmpty else { return composedLanded }
 
         // Block times, ONE call per distinct block among the new events —
         // never `.now` unless the read genuinely fails, the WalletApprovals
@@ -1468,7 +2251,7 @@ enum VibenetEvents {
 
         let known = contracts.knownAuthenticators
         let shortAddress = VibenetRoom.shortAddress(address)
-        var landedCount = 0
+        var landedCount = composedLanded
         for event in fresh {
             var keyLabel: String?
             var expiresAt: Date?
@@ -1499,6 +2282,22 @@ enum VibenetEvents {
                     expiresAt = Date(timeIntervalSince1970: TimeInterval(actor.expiry))
                 }
             }
+            // THE LOCK'S OWN NUMBER (prd §507) — seconds of timelock for a
+            // lock, the moment it opens for an unlock. Both were sitting in
+            // the log's `data` and neither was read, so the two rows a locked
+            // account produces said what happened and not what it means.
+            var detail: String?
+            if let data = event.data {
+                switch event.kind {
+                case .locked:
+                    detail = VibenetLogData.uint64(data, at: 0)
+                        .flatMap { VibenetLockDetail.timelockPhrase(seconds: $0) }
+                case .unlockInitiated:
+                    detail = VibenetLogData.uint64(data, at: 0)
+                        .flatMap { VibenetLockDetail.opensPhrase(unlocksAt: $0) }
+                default: break
+                }
+            }
             let thing = Thing(
                 // `.event`, NOT `.transaction`, and the difference is a
                 // false claim this shipped with: every `.transaction`
@@ -1512,7 +2311,8 @@ enum VibenetEvents {
                 // revoked at a known block time is exactly what `.event`
                 // means: a moment with a clock.
                 kind: .event,
-                title: event.kind.title(shortAddress: shortAddress, keyLabel: keyLabel),
+                title: event.kind.title(shortAddress: shortAddress, keyLabel: keyLabel,
+                                        detail: detail),
                 content: VibenetExplorer.tx(event.txHash),
                 source: VibenetIdentity.source,
                 capturedAt: times[event.block] ?? .now,
@@ -1534,7 +2334,7 @@ enum VibenetEvents {
             // address back out of a localized display title, the exact
             // thing `MoneyReceiptSource`'s own doc forbids. `summary` is
             // display copy this bridge has never used, already deployed.
-            thing.summary = event.kind.phrase(keyLabel: keyLabel)
+            thing.summary = event.kind.phrase(keyLabel: keyLabel, detail: detail)
             // The §308 facets — an existing, already-deployed field, so no
             // CloudKit deploy. See `VibenetEventKind.facetTags` for why a
             // revoke carries two and a lock carries none.
@@ -1559,6 +2359,34 @@ enum VibenetEvents {
 // MARK: - Discovery (the empty-state door)
 
 enum VibenetDiscovery {
+    /// THE TWO REFERENCE ACCOUNTS THE CONFIG NAMES (prd §507).
+    ///
+    /// `defaultAccount` and `canonicalHighRatePayerAccount` have been parsed
+    /// out of the live config since the seat shipped and read by nothing.
+    /// They are exactly what the empty state wants — a real established
+    /// account to look at before you own one — and they cost ZERO requests,
+    /// where `recentAccounts` below pays for a global log walk to find the
+    /// same kind of thing.
+    ///
+    /// Named rather than listed bare, because "0x1f9c…20a1" tells nobody why
+    /// it is being offered; and never presented as YOURS, which is the whole
+    /// distinction the empty state is about.
+    static func reference(_ contracts: VibenetContracts?) -> [VibenetDiscoveredAccount] {
+        guard let contracts else { return [] }
+        var out: [VibenetDiscoveredAccount] = []
+        var seen = Set<String>()
+        for address in [contracts.defaultAccount, contracts.canonicalHighRatePayerAccount] {
+            guard let address, VibenetWatch.isValidAddress(address),
+                  seen.insert(address.lowercased()).inserted else { continue }
+            // `createdAt` nil, and not looked up: these are offered as
+            // examples rather than dated as news, and a block-time read to
+            // put "created 4 months ago" under a demonstration account is a
+            // request bought for decoration.
+            out.append(VibenetDiscoveredAccount(address: address, createdAt: nil))
+        }
+        return out
+    }
+
     /// The most recently created vibenet accounts, straight off
     /// `AccountCreated` — the setup screen's fix for the empty state a
     /// paste-only address field left someone in on a devnet where nothing

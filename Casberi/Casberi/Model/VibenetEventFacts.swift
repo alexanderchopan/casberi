@@ -48,9 +48,51 @@ struct VibenetEventFacts: Equatable {
     /// `MoneyReceiptSource`'s doc forbids.
     enum Kind: String, Equatable, Sendable {
         case authorized, revoked, locked, unlocking
+        /// Tokens moved (prd §507) — the direction lives on `movement`, not
+        /// in two cases, because the sheet's anatomy is identical for both
+        /// and only its verb changes.
+        case moved
+        /// A policy-gated key ran.
+        case policy
+        /// The account itself was created.
+        case created
+
         /// Whether this event is about a KEY as opposed to the account's lock
         /// state. Decides whether a key block is drawn at all.
+        ///
+        /// **A POLICY RUN IS DELIBERATELY NOT ONE.** It is a key acting, so
+        /// the instinct is to say true — but the key block is filled by
+        /// `matchedActor`, whose whole rule is an unambiguous join on the
+        /// event's own `dueAt`, and a policy run has no expiry of its own to
+        /// join with. Saying true would draw a key block that either stays
+        /// empty or, worse, matches whichever key happens to share the
+        /// account's soonest expiry: a claim about who can spend, made
+        /// confidently, in the place a reader cannot check it (§83). The run
+        /// names its key by COMMITMENT instead, on `run` below.
         var concernsKey: Bool { self == .authorized || self == .revoked }
+    }
+
+    /// What a transfer event moved — joined from the room's own ledger by
+    /// the log's identity, never parsed back out of the localized title.
+    struct Movement: Equatable {
+        let symbol: String
+        /// The whole figure as it is read — "12.5 USDV", or "NFV #42" for a
+        /// token id. One string rather than a number and a symbol the caller
+        /// re-joins, so the sheet and the row can never word one move two
+        /// ways (`VibenetTransfer.display` is the single spelling).
+        let display: String
+        let incoming: Bool
+        /// The other side, short — nil for a self-move, where naming the
+        /// account you are already looking at says nothing.
+        let counterparty: String?
+    }
+
+    /// What a policy run did. `caller` is the log's own non-indexed word;
+    /// `runs` is how many times this key has run in all, which is the fact
+    /// that turns one row into a pattern.
+    struct Run: Equatable {
+        let caller: String?
+        let runs: Int
     }
 
     /// The key an event minted, when the join below could name it
@@ -105,6 +147,13 @@ struct VibenetEventFacts: Equatable {
     /// — and it is deliberately the SAME join rather than a looser one, so a
     /// sheet can never name a key it could not name the permissions of.
     let key: Key?
+    /// A transfer's own facts (prd §507), nil for every other kind.
+    let movement: Movement?
+    /// A policy run's own facts, nil for every other kind.
+    let run: Run?
+    /// Where the account came from — drawn on a `.created` event, where it is
+    /// the whole content of the sheet, and nowhere else.
+    let origin: VibenetOrigin?
     /// The transaction this event arrived in, which every landed event
     /// already carries inside its own `sourceRef`
     /// (`vibenet:<kind>:<txHash>:<logIndex>`).
@@ -126,8 +175,13 @@ struct VibenetEventFacts: Equatable {
                         actors: [VibenetActor],
                         dueAt: Date?,
                         kind: Kind,
-                        sourceRef: String?) -> VibenetEventFacts {
+                        sourceRef: String?,
+                        transfers: [VibenetTransfer] = [],
+                        policyRuns: [VibenetPolicyRun] = [],
+                        origin: VibenetOrigin? = nil) -> VibenetEventFacts {
         let matched = kind.concernsKey ? matchedActor(actors: actors, dueAt: dueAt) : nil
+        let transfer = kind == .moved ? matchedTransfer(transfers, sourceRef: sourceRef) : nil
+        let run = kind == .policy ? matchedRun(policyRuns, sourceRef: sourceRef) : nil
         return VibenetEventFacts(
             kind: kind,
             account: account,
@@ -140,7 +194,47 @@ struct VibenetEventFacts: Equatable {
                     shortID: shortActorID($0.actorId),
                     isAdmin: $0.scope.isAdmin)
             },
+            movement: transfer.map { t in
+                Movement(symbol: t.symbol,
+                         display: t.display,
+                         incoming: t.direction == .incoming,
+                         counterparty: t.direction == .selfMove
+                             ? nil : VibenetRoom.shortAddress(t.counterparty))
+            },
+            run: run.map { r in
+                Run(caller: r.caller.map { VibenetRoom.shortAddress($0) },
+                    runs: VibenetPolicyRuns.runs(policyRuns, forCommitment: r.commitment).count)
+            },
+            origin: kind == .created ? origin : nil,
             txHash: transactionHash(sourceRef))
+    }
+
+    /// THE JOIN FROM A LANDED ROW BACK TO THE LOG IT CAME FROM (prd §507).
+    ///
+    /// Exact and free: a ref is `vibenet:<segment>:<txHash>:<logIndex>` and a
+    /// transfer's own identity is `txHash:logIndex`, because one log is one
+    /// (transaction, index) pair on any EVM chain. So the sheet can state the
+    /// amount and the counterparty with no new `Thing` field, no CloudKit
+    /// deploy, and — the part that matters — no parsing of a localized title,
+    /// which is what `MoneyReceiptSource`'s own doc forbids.
+    static func logID(_ sourceRef: String?) -> String? {
+        guard let sourceRef else { return nil }
+        let parts = sourceRef.split(separator: ":", omittingEmptySubsequences: false)
+        guard parts.count == 4, parts[0] == "vibenet" else { return nil }
+        guard let hash = transactionHash(sourceRef) else { return nil }
+        guard let index = Int(parts[3]), index >= 0 else { return nil }
+        return "\(hash):\(index)"
+    }
+
+    static func matchedTransfer(_ transfers: [VibenetTransfer], sourceRef: String?)
+        -> VibenetTransfer? {
+        guard let id = logID(sourceRef) else { return nil }
+        return transfers.first { $0.id.lowercased() == id.lowercased() }
+    }
+
+    static func matchedRun(_ runs: [VibenetPolicyRun], sourceRef: String?) -> VibenetPolicyRun? {
+        guard let id = logID(sourceRef) else { return nil }
+        return runs.first { $0.id.lowercased() == id.lowercased() }
     }
 
     /// The transaction out of `vibenet:<kind>:<txHash>:<logIndex>`.

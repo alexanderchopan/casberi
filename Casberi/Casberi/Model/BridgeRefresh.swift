@@ -522,7 +522,20 @@ enum BridgeRefresh {
         if VibenetWatch.shared.connected {
             let s = slot(); Task { @MainActor in
                 await BridgeRefresh.stagger(s)
-                _ = await VibenetEvents.land(context: context)
+                // THE ROOM IS COMPOSED ON THE SWEEP (prd §507), which it never
+                // was: `VibenetRoomSource.compose()` had exactly ONE caller in
+                // the whole app — the address book screen's own load — so the
+                // feed's head, the crown, the sparkline and every reading on
+                // the card were as fresh as the last time somebody happened to
+                // open that screen. §468 gave the card a "when this was read"
+                // line precisely because the snapshot could be days old; this
+                // is the other half of that fix.
+                //
+                // The landing then reads the composed room instead of asking
+                // the chain again for the transfers, policy runs and creation
+                // it has just fetched.
+                let room = await VibenetRoomSource.compose()
+                _ = await VibenetEvents.land(context: context, room: room)
             }
         }
         // Hegotá lands NO `Thing` — every reading is live state on the room,

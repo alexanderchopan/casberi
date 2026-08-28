@@ -37239,13 +37239,19 @@ out of an unmeasured layout is the confident wrong answer this room's own doc
 bans. `VibenetLogData.dynamicBytes` is reported by the probe and drawn by
 nothing until somebody measures it.
 
-**7. THREE CONFIG FIELDS WERE PARSED AND READ BY NOTHING.** `vibecheck` joins
-USDV and NFV as a token — and is the only one whose symbol the config does not
-state, so it is the only one that pays for a live `symbol()` read, SANITISED
-the way `SmartAccount.vendor` is (letters and digits, 1–12 characters,
-uppercased) because it is an arbitrary contract's string landing in our own
-chrome beside a number; a contract that will not name itself is not shown at
-all rather than named by us. `defaultAccount` and
+**7. THREE CONFIG FIELDS WERE PARSED AND READ BY NOTHING — and the answer for
+one of them is NO.** `vibecheck` was tried as a third token and the chain
+refused it three ways: `decimals()` reverts, `symbol()` reverts, and ERC-165
+reverts, over a contract that really does have 1,236 bytes of code. It is a
+real contract of some other kind, so reading it as a token buys two failing
+`eth_call`s per pass forever (a revert is not cached — only a positive answer
+is) in exchange for nothing. It stays in the parse, still unread, and the
+difference from before is that the question now has a measured ANSWER in the
+ledger and in the probe rather than being an open field nobody had asked.
+`VibenetTokenSymbol` survives for the shape it exists to handle — a live
+`symbol()`, SANITISED the way `SmartAccount.vendor` is (letters and digits,
+1–12 characters, uppercased) because it is an arbitrary contract's string
+landing in our own chrome beside a number. `defaultAccount` and
 `canonicalHighRatePayerAccount` lead the empty state's discovery list, where
 they cost ZERO requests against the global log walk that was buying the same
 kind of thing.
@@ -37307,11 +37313,74 @@ unlock said "started unlocking" without the one thing anybody wants from it.
 on the conversion, which matters because these are words off a chain anybody
 can emit a log on.
 
-**UNMEASURED, and the grade is unchanged from every other vibenet entry**: no
-sweep has run against the live devnet from a device. The Transfer topic is the
-canonical constant, the ERC-165 and `symbol()` selectors are the standards'
-own, and the `AccountCreated` data layout (`userSalt` then `codeHash`) is
-read from the event's declared signature — none of it observed here. Every
-path fails safe: an unread token is absent rather than guessed, an unread
-origin draws nothing, an unread pulse is `.unknown` rather than an alarm, and
-a bounded read says it is bounded.
+## 507a. Every assumption in §507, measured against the live devnet (same session, 2026-08-28)
+
+§507 shipped its reasoning UNMEASURED, in this project's usual sense — doc-
+derived shapes, failing safe. It is measured now, by curl from this host
+against `rpc.vibes.base.org` and `api.vibes.base.org`. **Three assumptions
+confirmed, two corrections, one suspected bug proven real, one non-bug ruled
+out.** In-app it is still unrun: no sweep has executed on a device, so what is
+proven is the SHAPE each read decodes, not that the room draws it correctly.
+
+**CONFIRMED.**
+- The config serves every field the parse names, `PolicyManager`,
+  `SessionPolicy`, `DefaultAccount` and `CanonicalHighRatePayerAccount`
+  included (commit `a9ae95e1b`, the same one the code's own doc quotes).
+- **`AccountCreated` is 2 topics and 2 data words**, `userSalt` then
+  `codeHash` — exactly the layout `VibenetRead.origin` reads word 1 from. 25
+  creations in the last 100k blocks.
+- **`PolicyExecuted` is 4 topics with a single address word in `data`** — the
+  caller, decoded by `VibenetLogData.address(at: 0)` as written. 13 in the
+  last 100k blocks.
+- **The Transfer decode's central rule is real**: USDV logs carry **3 topics
+  with the amount in `data`** (207 in 100k blocks) and NFV logs carry **4
+  topics and `data: "0x"` — completely empty** (16 in 100k blocks). A fungible
+  decoder pointed at the second reads an amount of zero, which is the row this
+  bridge would have landed saying nothing moved.
+
+**THE SUSPECTED BUG IS REAL. NFV is an ERC-721**: `decimals()` REVERTS and
+ERC-165 `supportsInterface(0x80ac58cd)` answers TRUE. So from the day balances
+shipped (2026-08-24) until this pass, a live NFV balance was dropped from
+every room, forever, with nothing anywhere saying why — while the demo fixture
+showed `NFV: 12` the whole time. And **USDV's `decimals()` is 6**, not 18,
+which is the same standing lesson one contract over.
+
+**CORRECTION 1 — `vibecheck` is not a token** (see §507 item 7 above, rewritten
+against this measurement rather than left as the guess it was).
+
+**CORRECTION 2 — a `PolicyExecuted` caller is usually the ACCOUNT ITSELF.**
+Every execution sampled names its own account as the caller, so
+`VibenetPolicyRuns.callerLine` would have printed "Used by …bc3c" on …bc3c's
+own key sheet — the same nothing a self-move row says. It takes the account
+now and returns nil when they match. This is the one finding that changed a
+shipped behaviour rather than confirming it, and no amount of reading would
+have produced it.
+
+**CORRECTION 3 — the backfill's reach was four days.** vibenet produces a
+block every **2.0 seconds** (measured across 500 real blocks), and the chain
+was 489,982 blocks — about eleven days — old, so `reach: 200_000` covered its
+most recent third. 500,000 now. **And the backfill's whole premise is proven:
+this node SERVES historical state** — the faucet reads 89,992 ETH at block
+90,030, 89,941 at the tip and 0 at block 1 — so those curve points are real
+readings rather than a hope about what a devnet keeps.
+
+**THE NON-BUG, recorded so nobody "fixes" it.** `api.vibes.base.org` answers a
+bare `Python-urllib` request **403** while serving 200 to no User-Agent at
+all, to a browser UA, and to URLSession's own CFNetwork string (all four
+measured). It is Cloudflare refusing a scripted client, not a broken endpoint
+and not a missing header in the app — and a naive nightly probe would have
+reported this seat dead every night.
+
+**`scripts/live-integrations.sh` gained a vibenet section** for exactly the
+drift these measurements pin: the config's own shape, USDV's 6 decimals, NFV's
+ERC-165 answer, and the 3-topic Transfer. All four are green tonight. Each is
+a silent failure in the app — when one moves the room does not break, it goes
+QUIET — which is §311's lesson in the room most exposed to it. Warn-only and
+keyless, the file's own contract.
+
+**What is still unmeasured**, and stated rather than implied: no read has run
+in the app on a device, the `ActorAuthorized` `actorData` payload is decoded
+only to its ABI envelope and deliberately no further, and no watched account
+on this host has ever held a vibenet token, so the ledger's own rendering —
+the counterparty list, the reconstructed curve, the landed transfer rows — has
+been proven as arithmetic and not yet seen.

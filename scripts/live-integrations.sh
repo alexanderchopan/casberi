@@ -845,6 +845,118 @@ PY
 fi
 
 hr
+print -P "%F{cyan}Base vibenet — the devnet the room reads (prd §507)%f"
+
+# WHY THIS IS HERE. vibenet's own premise is that it redeploys, and every
+# reading §507 added rests on a SHAPE nobody controls: which fields the config
+# names, how many topics a Transfer carries, whether `decimals()` answers.
+# When one of those moves the room does not break — it goes QUIET, which from
+# outside is indistinguishable from an account that has never moved a token
+# (§311's lesson, in the room most likely to suffer it).
+#
+# Keyless, three requests, zero credits — the file's own contract.
+#
+# The UA matters and is not decoration: `api.vibes.base.org` sits behind
+# Cloudflare, which answers a bare `Python-urllib` 403 while serving 200 to no
+# UA at all, to a browser UA, and to URLSession's own CFNetwork string
+# (measured 2026-08-28, all four). So the app is fine; a naive scripted probe
+# is what gets refused, and this row would otherwise report a healthy endpoint
+# as dead every night.
+VIBE_CFG=$(curl -s --max-time "$TIMEOUT" -A 'Mozilla/5.0 (compatible; Casberi/1.0; +https://casberi.app)' \
+  https://api.vibes.base.org/api/vibenet/contracts 2>/dev/null)
+if [[ -z "$VIBE_CFG" ]]; then
+  warn "vibenet — the contracts config did not answer; every address the room reads comes from it"
+else
+  vibe_shape=$(python3 - "$VIBE_CFG" <<'PY2' 2>/dev/null
+import json, sys
+try: c = json.loads(sys.argv[1])
+except Exception: print("BADJSON"); raise SystemExit
+e = c.get("eip8130", {})
+need = ["Keystore", "P256Authenticator", "WebAuthnAuthenticator", "DelegateAuthenticator"]
+missing = [k for k in need if not e.get(k)]
+# The four fields §507 reads that were parsed-and-unread before it.
+extra = [k for k in ["PolicyManager", "SessionPolicy"] if not e.get(k)]
+tok = [k for k in ["usdv", "nfv"] if not c.get(k)]
+print("MISSING:" + ",".join(missing) if missing else
+      "OK " + (c.get("_commit") or "?") + " " + ("," .join(extra + tok) or "-"))
+PY2
+)
+  case "$vibe_shape" in
+    OK*)
+      # `read -r`, never `set -- $var`: zsh does NOT word-split an unquoted
+      # parameter the way sh does, so that form assigns the whole string to $1
+      # and dies on $3 under `set -u` — which is how this row failed on its
+      # own first run.
+      read -r _vibe_ok vibe_commit vibe_gaps <<< "$vibe_shape"
+      if [[ "$vibe_gaps" == "-" ]]; then
+        pass "vibenet — config serves every address the room reads (commit $vibe_commit)"
+      else
+        # NOT a failure: an absent PolicyManager means gated keys read no
+        # terms, an absent usdv/nfv means that token's balance and its whole
+        # ledger silently disappear. Both are real states of a redeployed
+        # devnet, and both are worth a glance rather than a red run.
+        warn "vibenet — config is missing: $vibe_gaps (commit $vibe_commit); the readings that depend on them go quiet, not broken"
+      fi ;;
+    MISSING:*)
+      fail "vibenet — the config no longer names ${vibe_shape#MISSING:}; every read in the room is built from these" ;;
+    *)
+      warn "vibenet — the contracts config did not parse as the shape the app expects" ;;
+  esac
+
+  # THE TWO TOKEN SHAPES, and the reason this row exists at all: USDV's
+  # `decimals()` is SIX (not 18 — assuming would render every dollar as a
+  # rounding error) and NFV is an ERC-721 whose `decimals()` REVERTS, which
+  # meant its balance was silently dropped from every live room until §507.
+  # If either flips, the room loses a holding with no error anywhere.
+  vibe_tokens=$(python3 - "$VIBE_CFG" <<'PY2' 2>/dev/null
+import json, sys, urllib.request
+UA = "Mozilla/5.0 (compatible; Casberi/1.0; +https://casberi.app)"
+RPC = "https://rpc.vibes.base.org"
+def rpc(m, p):
+    body = json.dumps({"id": 1, "jsonrpc": "2.0", "method": m, "params": p}).encode()
+    req = urllib.request.Request(RPC, data=body,
+                                 headers={"Content-Type": "application/json", "User-Agent": UA})
+    with urllib.request.urlopen(req, timeout=20) as r:
+        return json.loads(r.read())
+try:
+    c = json.loads(sys.argv[1])
+    usdv, nfv = c.get("usdv"), c.get("nfv")
+    d = rpc("eth_call", [{"to": usdv, "data": "0x313ce567"}, "latest"]).get("result")
+    dec = int(d, 16) if d else None
+    i = rpc("eth_call", [{"to": nfv, "data": "0x01ffc9a7" + "80ac58cd" + "0" * 56},
+                         "latest"]).get("result")
+    is721 = bool(i) and int(i, 16) == 1
+    tip = int(rpc("eth_blockNumber", [])["result"], 16)
+    logs = rpc("eth_getLogs", [{"address": usdv, "fromBlock": hex(max(tip - 100_000, 0)),
+                                "toBlock": hex(tip),
+                                "topics": ["0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"]}]).get("result") or []
+    topics = len(logs[-1]["topics"]) if logs else 0
+    print(f"{dec} {int(is721)} {len(logs)} {topics}")
+except Exception:
+    print("")
+PY2
+)
+  if [[ -n "$vibe_tokens" ]]; then
+    read -r vdec v721 vlogs vtopics <<< "$vibe_tokens"
+    [[ "$vdec" == "6" ]] \
+      && pass "vibenet — USDV still reports 6 decimals" \
+      || warn "vibenet — USDV's decimals() now reads '$vdec', not 6; every USDV figure in the room rescales with it"
+    [[ "$v721" == "1" ]] \
+      && pass "vibenet — NFV still answers ERC-165 as an ERC-721 (the read that keeps its balance visible)" \
+      || fail "vibenet — NFV no longer answers ERC-165; its balance and its whole ledger drop out of the room silently"
+    if [[ "${vlogs:-0}" -gt 0 ]]; then
+      [[ "$vtopics" == "3" ]] \
+        && pass "vibenet — USDV Transfer logs still carry 3 topics with the amount in data ($vlogs in the last 100k blocks)" \
+        || fail "vibenet — a USDV Transfer now carries $vtopics topics; the amount decode reads the wrong word"
+    else
+      warn "vibenet — no USDV Transfer in the last 100k blocks; the ledger's shape is unverified tonight"
+    fi
+  else
+    warn "vibenet — the token-shape walk did not complete"
+  fi
+fi
+
+hr
 if (( RED == 0 && AMBER == 0 )); then
   print -P "%F{green}All live-integration hosts healthy.%f"
 elif (( RED == 0 )); then

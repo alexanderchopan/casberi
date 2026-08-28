@@ -49,6 +49,13 @@ ROOM="Casberi/Casberi/Model/VibenetRoom.swift"
 # compiled WHOLE beside it — the expiry join it owns is the one place this
 # feature can state a permission it cannot prove (prd §467).
 FACTS="Casberi/Casberi/Model/VibenetEventFacts.swift"
+# prd §507 — the ledger half: transfers, the chain's pulse, an account's
+# origin, individual policy runs, token identity, the native backfill and the
+# log-data decode. Foundation-only for the same reason `$ROOM` is, and
+# compiled WHOLE beside it: nothing on this host can make a devnet transfer a
+# token, halt a chain or run a session key, so this harness is not the best
+# proof these numbers are right — it is the only one.
+LEDGER="Casberi/Casberi/Model/VibenetLedger.swift"
 BRIDGE="Casberi/Casberi/Model/VibenetBridge.swift"
 CATALOG="Casberi/Casberi/Model/BridgeCatalog.swift"
 REACH="Casberi/Casberi/Model/NetworkReach.swift"
@@ -60,7 +67,7 @@ BOOK="Casberi/Casberi/Screens/VibenetAddressBookScreen.swift"
 FIELD="Casberi/Casberi/Screens/VibenetWatchViews.swift"
 SHELL_SURFACE="Casberi/Casberi/Shell/MainSurface.swift"
 FEED="Casberi/Casberi/Screens/FeedScreen.swift"
-for f in "$ROOM" "$BRIDGE" "$CATALOG" "$REACH" "$ROUTER" "$SETUP" "$BOOK" "$FIELD" "$SHELL_SURFACE" "$FEED"; do
+for f in "$ROOM" "$LEDGER" "$BRIDGE" "$CATALOG" "$REACH" "$ROUTER" "$SETUP" "$BOOK" "$FIELD" "$SHELL_SURFACE" "$FEED"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 
@@ -3341,6 +3348,334 @@ check("a lock is about the ACCOUNT — it carries no key facet at all",
 check("an unlock is its own state",
       VibenetEventKind.unlockInitiated.facetTags == ["Unlocking"])
 
+// MARK: - prd §507: the ledger, the pulse, the origin, the runs
+
+print("")
+print("VibenetLedger — what moved")
+
+let tL = Date(timeIntervalSince1970: 1_700_000_000)
+func ledgerMove(_ symbol: String, _ dir: VibenetTransferDirection, _ other: String, _ amount: Double,
+          _ block: Int, _ index: Int = 0, _ at: Date? = nil, tokenID: String? = nil) -> VibenetTransfer {
+    VibenetTransfer(symbol: symbol, direction: dir, counterparty: other, amount: amount,
+                    at: at, txHash: "0x" + String(repeating: "a", count: 64),
+                    block: block, logIndex: index, tokenID: tokenID)
+}
+
+// ORDER. A total one, because this array is `Codable` into a persisted
+// snapshot and a room whose newest move changes between draws over an
+// identical chain reads as broken.
+let unorderedMoves = [ledgerMove("USDV", .incoming, "0xaa", 1, 100),
+                      ledgerMove("USDV", .outgoing, "0xbb", 2, 300, 1),
+                      ledgerMove("USDV", .incoming, "0xcc", 3, 300, 0)]
+let ordered507 = VibenetLedger.ordered(unorderedMoves)
+check("newest block first",
+      ordered507.first?.block == 300)
+check("within a block, the LATER log index is newer",
+      ordered507[0].logIndex == 1 && ordered507[1].logIndex == 0)
+
+// COUNTERPARTIES. Ranked by MOVES, never by amount — two tokens with no
+// shared unit cannot be compared by size.
+let parties = VibenetLedger.counterparties([
+    ledgerMove("USDV", .incoming, "0xaa", 1_000_000, 100),      // one huge move
+    ledgerMove("USDV", .outgoing, "0xbb", 1, 101),
+    ledgerMove("USDV", .incoming, "0xbb", 1, 102),
+    ledgerMove("NFV", .incoming, "0xbb", 1, 103, 0, nil, tokenID: "7"),
+])
+check("the fixture's own premise: 0xaa's single move is far larger than any of 0xbb's",
+      true)
+check("ranked by MOVES, so three small moves beat one enormous one",
+      parties.first?.address == "0xbb" && parties.first?.moves == 3)
+check("both directions are counted apart",
+      parties.first?.incoming == 2 && parties.first?.outgoing == 1)
+check("a one-sided counterparty says so rather than printing a zero",
+      parties.last?.line.contains("received only") == true)
+check("a SELF-MOVE is not a counterparty — the account is not its own",
+      VibenetLedger.counterparties([ledgerMove("USDV", .selfMove, "0xme", 5, 10)]).isEmpty)
+
+// THE SERIES. Walked BACKWARDS from the current balance over the account's
+// own transfers — every point a real reading, nothing interpolated.
+let series = VibenetLedger.series(
+    symbol: "USDV", current: 100,
+    transfers: [ledgerMove("USDV", .incoming, "0xaa", 30, 300, 0, tL),
+                ledgerMove("USDV", .outgoing, "0xbb", 10, 200, 0, tL.addingTimeInterval(-86_400))],
+    now: tL.addingTimeInterval(3_600))
+check("a curve exists once there are two points",
+      series?.points.count == 3)
+check("oldest first, so it plots left to right",
+      (series?.points.first?.at ?? .distantFuture) < (series?.points.last?.at ?? .distantPast))
+check("the newest point IS the current balance",
+      series?.points.last?.balance == 100)
+check("an incoming transfer means the balance BEFORE it was lower",
+      series?.points[1].balance == 70)
+check("an outgoing one means it was HIGHER before",
+      series?.points.first?.balance == 80)
+check("a complete walk says so",
+      series?.isComplete == true)
+check("a walk that hit the read's own cap is NOT complete — its earliest point is where our reading starts",
+      VibenetLedger.series(symbol: "USDV", current: 100,
+                           transfers: [ledgerMove("USDV", .incoming, "0xaa", 30, 300, 0, tL),
+                                       ledgerMove("USDV", .outgoing, "0xbb", 10, 200, 0, tL)],
+                           now: tL, capReached: true)?.isComplete == false)
+check("an UNDATED transfer cannot be placed, so it is dropped and the walk is incomplete",
+      VibenetLedger.series(symbol: "USDV", current: 100,
+                           transfers: [ledgerMove("USDV", .incoming, "0xaa", 30, 300, 0, tL),
+                                       ledgerMove("USDV", .outgoing, "0xbb", 10, 200, 0, nil)],
+                           now: tL)?.isComplete == false)
+// A room of token-id moves yields NO curve at all: every one is dropped from
+// the walk, which leaves the single current-balance point, and one point is
+// not a line. That is the right answer — an NFT count has no balance history
+// this walk can reconstruct — and it is what the drop has to produce.
+check("a TOKEN ID never enters a balance walk — one NFT is not one token",
+      VibenetLedger.series(symbol: "NFV", current: 3,
+                           transfers: [ledgerMove("NFV", .incoming, "0xaa", 1, 300, 0, tL, tokenID: "7"),
+                                       ledgerMove("NFV", .incoming, "0xbb", 1, 200, 0, tL, tokenID: "8")],
+                           now: tL) == nil)
+check("one point is no curve — a flat line on a balance chart reads as went to zero",
+      VibenetLedger.series(symbol: "ZZZ", current: 1, transfers: [], now: tL) == nil)
+
+print("")
+print("VibenetChainPulse — is this devnet alive")
+
+func pulse(_ idle: TimeInterval, rate: Double?) -> VibenetChainPulse {
+    VibenetChainPulse(tip: 1_000, lastBlockAt: tL.addingTimeInterval(-idle), secondsPerBlock: rate)
+}
+check("a chain producing blocks is MOVING and says nothing",
+      pulse(4, rate: 2).verdict(now: tL) == .moving && pulse(4, rate: 2).line(now: tL) == nil)
+check("silence past twenty expected blocks is SLOW",
+      pulse(20 * 60, rate: 60).verdict(now: tL) == .slow)
+check("silence past nine hundred is STALLED",
+      pulse(40 * 3_600, rate: 60).verdict(now: tL) == .stalled)
+check("a stalled chain says so in words",
+      pulse(40 * 3_600, rate: 60).line(now: tL) != nil)
+check("an unread block time is UNKNOWN, never an alarm — not knowing and knowing it is dead differ",
+      VibenetChainPulse(tip: 1, lastBlockAt: nil, secondsPerBlock: nil).verdict(now: tL) == .unknown)
+check("a tip stamped in the FUTURE is a clock disagreement, never a stalled chain",
+      VibenetChainPulse(tip: 1, lastBlockAt: tL.addingTimeInterval(90), secondsPerBlock: 2)
+        .verdict(now: tL) == .moving)
+check("with no measured rate the ABSOLUTE floors apply — four minutes is still moving",
+      pulse(4 * 60, rate: nil).verdict(now: tL) == .moving)
+check("and six hours with no rate is stalled",
+      pulse(6 * 3_600 + 1, rate: nil).verdict(now: tL) == .stalled)
+check("the block is a fragment and an identifier, never a grouped quantity",
+      VibenetChainPulse(tip: 1_284_003, lastBlockAt: nil, secondsPerBlock: nil).blockLine
+        == "block 1284003")
+check("an unmeasured rate is not printed as a number",
+      VibenetChainPulse(tip: 1, lastBlockAt: nil, secondsPerBlock: nil).rateLine == nil)
+
+print("")
+print("VibenetOrigin — where an account came from")
+
+let originA = VibenetOrigin(createdAt: tL.addingTimeInterval(-86_400),
+                            codeHash: "0x" + String(repeating: "7f", count: 32), txHash: "0x1")
+let originB = VibenetOrigin(createdAt: tL, codeHash: "0x" + String(repeating: "3b", count: 32),
+                            txHash: "0x2")
+check("an implementation is named by its tail, never rendered whole",
+      originA.implementationLabel == "impl …7f7f")
+check("an all-zero code hash names no implementation",
+      VibenetOrigin(createdAt: nil, codeHash: "0x" + String(repeating: "0", count: 64),
+                    txHash: nil).implementationLabel == nil)
+check("two different implementations are counted as two",
+      VibenetOrigins.implementations([originA, originB]) == 2)
+check("an UNREAD origin is not a third implementation — that would report our own missing data as drift",
+      VibenetOrigins.implementations([originA, originB, nil]) == 2)
+check("one implementation draws NO line — a line saying '1 implementation' says nothing",
+      VibenetOrigins.driftLine([originA, originA]) == nil)
+check("two do",
+      VibenetOrigins.driftLine([originA, originB]) != nil)
+check("an age is only stated for a creation in the past",
+      VibenetOrigin(createdAt: tL.addingTimeInterval(86_400), codeHash: nil, txHash: nil)
+        .ageLine(now: tL) == nil)
+
+print("")
+print("VibenetPolicyRuns — a session key's individual runs")
+
+func run507(_ commitment: String, _ caller: String?, _ block: Int, _ at: Date? = nil) -> VibenetPolicyRun {
+    VibenetPolicyRun(commitment: commitment, caller: caller, at: at,
+                     txHash: "0x" + String(repeating: "b", count: 64), block: block, logIndex: 0)
+}
+let runs = [run507("0xc0", "0xAAA", 100, tL.addingTimeInterval(-86_400)),
+            run507("0xc0", "0xaaa", 300, tL),
+            run507("0xd1", nil, 200)]
+check("the fold counts per commitment",
+      VibenetPolicyRuns.fold(runs).first(where: { $0.commitment == "0xc0" })?.count == 2)
+check("and takes the NEWEST date, not the first seen",
+      VibenetPolicyRuns.fold(runs).first(where: { $0.commitment == "0xc0" })?.lastUsed == tL)
+check("a commitment whose runs are all undated is counted and left undated",
+      VibenetPolicyRuns.fold(runs).first(where: { $0.commitment == "0xd1" })?.lastUsed == nil)
+check("the fold's order is TOTAL — it is Codable into a persisted snapshot",
+      VibenetPolicyRuns.fold(runs).map(\.commitment) == ["0xc0", "0xd1"])
+check("runs are matched to a key by commitment, case-folded",
+      VibenetPolicyRuns.runs(runs, forCommitment: "0xC0").count == 2)
+check("a key with no commitment matches nothing, never everything",
+      VibenetPolicyRuns.runs(runs, forCommitment: nil).isEmpty)
+check("one caller across every run is named",
+      VibenetPolicyRuns.callerLine(VibenetPolicyRuns.runs(runs, forCommitment: "0xc0")) != nil)
+check("TWO different callers name NOBODY — a key run by two has no single answer",
+      VibenetPolicyRuns.callerLine([run507("0xc0", "0xaaa", 1), run507("0xc0", "0xbbb", 2)]) == nil)
+// MEASURED against the live devnet 2026-08-28: every PolicyExecuted sampled
+// there names the ACCOUNT ITSELF as the caller, so this is the common case
+// and an ungated version would print "Used by …bc3c" on …bc3c's own sheet.
+check("a caller that IS the account names nobody",
+      VibenetPolicyRuns.callerLine([run507("0xc0", "0xAbC", 1)], account: "0xabc") == nil)
+check("and one that is somebody else still does",
+      VibenetPolicyRuns.callerLine([run507("0xc0", "0xAbC", 1)], account: "0xdef") != nil)
+check("a zero-address caller is not a caller",
+      VibenetPolicyRuns.callerLine([run507("0xc0", "0x" + String(repeating: "0", count: 40), 1)]) == nil)
+
+print("")
+print("VibenetTokenIdentity — what a token IS")
+
+check("a fungible balance is scaled by its own confirmed decimals",
+      VibenetTokenIdentity.fungible.amount(raw: 1_500_000, decimals: 6) == 1.5)
+check("a fungible token with NO confirmed decimals yields nothing — never an assumed 18",
+      VibenetTokenIdentity.fungible.amount(raw: 1_500_000, decimals: nil) == nil)
+check("an ERC-721 balance is a COUNT, unscaled",
+      VibenetTokenIdentity.collectible.amount(raw: 12, decimals: nil) == 12)
+check("a fractional 'count' is not a count — that word is not what we are reading",
+      VibenetTokenIdentity.collectible.amount(raw: 1.5, decimals: nil) == nil)
+check("a count is drawn whole, never to four decimal places",
+      VibenetBalanceFormat.count(12) == "12")
+check("a token balance draws itself by its own identity",
+      VibenetTokenBalance(symbol: "NFV", amount: 12, isCount: true).display == "12")
+check("and a fungible one keeps its decimals",
+      VibenetTokenBalance(symbol: "USDV", amount: 500.25).display == "500.25")
+
+print("")
+print("VibenetLogData — the non-indexed half of a log")
+
+let word0 = String(repeating: "0", count: 62) + "2a"
+let addressWord = String(repeating: "0", count: 24) + String(repeating: "ab", count: 20)
+check("a uint word decodes",
+      VibenetLogData.uint("0x" + word0, at: 0) == 42)
+check("a word past the end is nil, never zero",
+      VibenetLogData.uint("0x" + word0, at: 5) == nil)
+check("an address word decodes",
+      VibenetLogData.address("0x" + addressWord, at: 0) == "0x" + String(repeating: "ab", count: 20))
+check("a HASH is not an address — the high twelve bytes must be zero",
+      VibenetLogData.address("0x" + String(repeating: "cd", count: 32), at: 0) == nil)
+check("the zero address is not an address",
+      VibenetLogData.address("0x" + String(repeating: "0", count: 64), at: 0) == nil)
+check("uint64 refuses a word too large to hold, rather than trapping on the conversion",
+      VibenetLogData.uint64("0x" + String(repeating: "f", count: 64), at: 0) == nil)
+check("and converts one that fits",
+      VibenetLogData.uint64("0x" + word0, at: 0) == 42)
+// The dynamic `bytes` envelope: offset word, length word, payload.
+let envelope = String(repeating: "0", count: 62) + "20"
+    + String(repeating: "0", count: 62) + "02"
+    + "beef" + String(repeating: "0", count: 60)
+check("a dynamic bytes payload decodes to exactly its stated length",
+      VibenetLogData.dynamicBytes("0x" + envelope) == "0xbeef")
+check("a length longer than the log is REFUSED, never a truncated read presented as whole",
+      VibenetLogData.dynamicBytes("0x" + String(repeating: "0", count: 62) + "20"
+                                  + String(repeating: "0", count: 62) + "ff") == nil)
+check("an offset that is not word-aligned is refused",
+      VibenetLogData.dynamicBytes("0x" + String(repeating: "0", count: 62) + "21") == nil)
+
+print("")
+print("VibenetLockDetail — the numbers the lock events carried and nothing read")
+
+check("a timelock is stated in days",
+      VibenetLockDetail.timelockPhrase(seconds: 2 * 86_400) == "2-day timelock")
+check("a sub-day one in hours",
+      VibenetLockDetail.timelockPhrase(seconds: 3 * 3_600) == "3-hour timelock")
+check("ZERO is Keystore's own 'no delay', not a zero-second timelock",
+      VibenetLockDetail.timelockPhrase(seconds: 0) == nil)
+check("an unlock names when it opens",
+      VibenetLockDetail.opensPhrase(unlocksAt: UInt64(tL.addingTimeInterval(86_400).timeIntervalSince1970),
+                                    now: tL) != nil)
+check("a zero unlocksAt is 'not unlocking', never a date in 1970",
+      VibenetLockDetail.opensPhrase(unlocksAt: 0, now: tL) == nil)
+check("a wildly out-of-range word is a bad decode, not a lock opening in the year 40,000",
+      VibenetLockDetail.opensPhrase(unlocksAt: 9_000_000_000_000, now: tL) == nil)
+
+print("")
+print("VibenetNativeBackfill + merged — the curve that starts before you did")
+
+check("sample blocks are evenly spaced and never the tip itself",
+      VibenetNativeBackfill.blocks(tip: 100_000).count == VibenetNativeBackfill.samples
+        && VibenetNativeBackfill.blocks(tip: 100_000).allSatisfy { $0 < 100_000 })
+check("oldest first",
+      (VibenetNativeBackfill.blocks(tip: 100_000).first ?? 0)
+        < (VibenetNativeBackfill.blocks(tip: 100_000).last ?? 0))
+check("a chain too young to span is not sampled — eight readings of one afternoon is not a curve",
+      VibenetNativeBackfill.blocks(tip: 4).isEmpty)
+let local = [VibenetValueSample(at: tL, native: 1)]
+let chain = [VibenetValueSample(at: tL.addingTimeInterval(-86_400), native: 2),
+             VibenetValueSample(at: tL.addingTimeInterval(10), native: 3)]
+check("chain points and local ones MERGE, oldest first",
+      VibenetValueHistory.merged(local: local, chain: chain).map(\.native) == [2, 1])
+check("a chain point within a minute of a local one is the same reading twice, not a step",
+      VibenetValueHistory.merged(local: local, chain: chain).count == 2)
+
+print("")
+print("VibenetKeyHistory.inferredKind — the one kind a dead key can still prove")
+
+check("an address-shaped actorId is a delegate, with no read at all",
+      VibenetKeyHistory.inferredKind(
+        actorId: "0x" + String(repeating: "0", count: 24) + String(repeating: "ab", count: 20))
+        == .delegate)
+check("a HASHED actorId names nothing — never a plausible kind for a key we cannot see",
+      VibenetKeyHistory.inferredKind(actorId: "0x" + String(repeating: "cd", count: 32)) == nil)
+
+print("")
+print("VibenetMultichainSync.scopeNote — what 'shared across chains' is shared WITH")
+
+check("an account with cross-chain changes gets the clause",
+      VibenetMultichainSync.scopeNote(
+        VibenetChangeSequences(multichain: 3, localEpoch: 0, localSequence: 0)) != nil)
+check("one with none does NOT — it has nothing to be out of sync about",
+      VibenetMultichainSync.scopeNote(
+        VibenetChangeSequences(multichain: 0, localEpoch: 0, localSequence: 2)) == nil)
+check("and the clause disappears the moment a second chain is really read",
+      VibenetMultichainSync.scopeNote(
+        VibenetChangeSequences(multichain: 3, localEpoch: 0, localSequence: 0),
+        standings: [VibenetChainStanding(chainName: "a",
+                                         sequences: VibenetChangeSequences(multichain: 3, localEpoch: 0, localSequence: 0)),
+                    VibenetChainStanding(chainName: "b",
+                                         sequences: VibenetChangeSequences(multichain: 2, localEpoch: 0, localSequence: 0))]) == nil)
+
+print("")
+print("The new event kinds")
+
+check("a transfer carries its family AND its direction",
+      VibenetEventKind.transferIn.facetTags == ["Transfer", "Received"]
+        && VibenetEventKind.transferOut.facetTags == ["Transfer", "Sent"])
+check("in and out are two ref segments — the direction is the whole of what the row means",
+      VibenetEventKind.transferIn.refSegment == "in"
+        && VibenetEventKind.transferOut.refSegment == "out")
+check("a policy run is a KEY event as well as a policy one",
+      VibenetEventKind.policyRun.facetTags.contains("Key"))
+check("a creation is not tagged 'Account' — too ordinary a word for a facet",
+      !VibenetEventKind.created.facetTags.contains("Account"))
+check("a transfer's title carries the detail only the log can supply",
+      VibenetEventKind.transferIn.title(shortAddress: "…0b1c", keyLabel: nil,
+                                        detail: "12.5 USDV from …aaaa")
+        .contains("12.5 USDV from …aaaa"))
+check("and degrades to an honest generic without one",
+      !VibenetEventKind.transferIn.title(shortAddress: "…0b1c", keyLabel: nil).isEmpty)
+check("a lock's own timelock reaches its phrase",
+      VibenetEventKind.unlockInitiated.phrase(keyLabel: nil, detail: "opens in 2 days")
+        .contains("opens in 2 days"))
+
+print("")
+print("VibenetEventFacts — the join from a landed row back to its log (prd §507)")
+
+let movedRef = "vibenet:in:0x" + String(repeating: "a", count: 64) + ":3"
+check("a ref names its own log",
+      VibenetEventFacts.logID(movedRef) == "0x" + String(repeating: "a", count: 64) + ":3")
+check("a ref from another bridge names nothing",
+      VibenetEventFacts.logID("wallet:in:0x1:0") == nil)
+check("a transfer is found by that identity",
+      VibenetEventFacts.matchedTransfer(
+        [VibenetTransfer(symbol: "USDV", direction: .incoming, counterparty: "0xaa", amount: 5,
+                         at: tL, txHash: "0x" + String(repeating: "a", count: 64),
+                         block: 1, logIndex: 3)],
+        sourceRef: movedRef)?.amount == 5)
+check("a POLICY RUN is not a key event — its key block would have to be guessed",
+      !VibenetEventFacts.Kind.policy.concernsKey)
+check("nor is a transfer or a creation",
+      !VibenetEventFacts.Kind.moved.concernsKey && !VibenetEventFacts.Kind.created.concernsKey)
+
 if failures == 0 {
     print("✓ vibenet self-test: all assertions passed")
 } else {
@@ -3350,7 +3685,7 @@ if failures == 0 {
 SWIFT
 
 echo "Assertions"
-if ! swiftc -O -o "$TMP/run" "$ROOM" "$FACTS" "$TMP/main.swift" 2>"$TMP/build.log"; then
+if ! swiftc -O -o "$TMP/run" "$ROOM" "$LEDGER" "$FACTS" "$TMP/main.swift" 2>"$TMP/build.log"; then
   echo "✗ VibenetRoom.swift did not compile with the harness"
   tail -25 "$TMP/build.log"
   exit 1
@@ -3387,7 +3722,7 @@ PY
   # word for a mutation the TYPE SYSTEM caught. Thirty-four checks, all green,
   # none of them testing anything. A check that cannot fail proves nothing;
   # this one could not even run.
-  if ! swiftc -O -o "$TMP/mut" "$target" "$FACTS" "$TMP/main.swift" 2>/dev/null; then
+  if ! swiftc -O -o "$TMP/mut" "$target" "$LEDGER" "$FACTS" "$TMP/main.swift" 2>/dev/null; then
     echo "  ✓ $name (rejected at compile)"; return
   fi
   if "$TMP/mut" > /dev/null 2>&1; then
@@ -3413,10 +3748,31 @@ mutateFacts() { # mutateFacts <name> <from> <to>
   then
     echo "  ✗ $name — the mutation did not apply (the shipped source moved)"; exit 1
   fi
-  if ! swiftc -O -o "$TMP/mutf" "$ROOM" "$target" "$TMP/main.swift" 2>/dev/null; then
+  if ! swiftc -O -o "$TMP/mutf" "$ROOM" "$LEDGER" "$target" "$TMP/main.swift" 2>/dev/null; then
     echo "  ✓ $name (rejected at compile)"; return
   fi
   if "$TMP/mutf" > /dev/null 2>&1; then
+    echo "  ✗ $name — the harness still passed, so nothing was testing this"; exit 1
+  fi
+  echo "  ✓ $name"
+}
+
+# The same, against `$LEDGER` (prd §507). A THIRD function rather than a
+# parameter, for the reason `mutateFacts` states: naming the file in the
+# function name makes it unmakeable to mutate a file the copy never touched,
+# which reports ANCHOR-MISSING against source that never moved.
+mutateLedger() { # mutateLedger <name> <from> <to>
+  local name="$1" from="$2" to="$3"
+  local target="$TMP/m-ledger.swift"
+  cp "$LEDGER" "$target"
+  if ! MUT_FROM="$from" MUT_TO="$to" python3 "$TMP/mutapply.py" "$target"
+  then
+    echo "  ✗ $name — the mutation did not apply (the shipped source moved)"; exit 1
+  fi
+  if ! swiftc -O -o "$TMP/mutl" "$ROOM" "$target" "$FACTS" "$TMP/main.swift" 2>/dev/null; then
+    echo "  ✓ $name (rejected at compile)"; return
+  fi
+  if "$TMP/mutl" > /dev/null 2>&1; then
     echo "  ✗ $name — the harness still passed, so nothing was testing this"; exit 1
   fi
   echo "  ✓ $name"
@@ -4064,4 +4420,171 @@ grep -q '\.id(Self.roomTopAnchor)' "Casberi/Casberi/Screens/FeedScreen.swift" \
        echo "  right up until somebody scrolls."; exit 1; }
 
 echo ""
+# --- prd §507 mutations ------------------------------------------------------
+#
+# Every failure below renders as a perfectly ordinary card: a leaderboard in
+# the wrong order, a balance curve bending the wrong way, a devnet reported
+# dead while it is producing blocks, an NFT count with a fraction in it.
+
+mutateLedger "counterparties must rank by MOVES — the descending sort is the ranking" \
+  'if a.moves != b.moves { return a.moves > b.moves }' \
+  'if a.moves != b.moves { return a.moves < b.moves }'
+
+# An account is not its own counterparty, and a self-move moved nothing.
+mutateLedger "a SELF-MOVE must never become a counterparty row" \
+  'for t in transfers where t.direction != .selfMove {' \
+  'for t in transfers {'
+
+# The balance BEFORE a transfer is the balance after it MINUS what it did.
+# Flipped, every curve bends the wrong way and reads as a real history.
+mutateLedger "the backward walk must subtract the transfer it is stepping over" \
+  'running -= t.amount * t.direction.sign' \
+  'running += t.amount * t.direction.sign'
+
+# The bounded read's earliest point is where OUR READING starts, not where the
+# account did — a series that claims otherwise is §307's silent truncation
+# drawn as a picture.
+mutateLedger "a capped read must never report a COMPLETE series" \
+  'isComplete: !dropped && !capReached' \
+  'isComplete: !dropped'
+
+mutateLedger "a token id must never enter a balance walk — one NFT is not one token" \
+  'guard t.tokenID == nil else { dropped = true; continue }' \
+  'guard t.tokenID != nil else { dropped = true; continue }'
+
+mutateLedger "stalled and slow are different verdicts, and the wide one must be checked first" \
+  'if idle >= stalledAt { return .stalled }' \
+  'if idle >= slowAt { return .stalled }'
+
+mutateLedger "a tip stamped in the FUTURE is a clock disagreement, never a stalled chain" \
+  'guard idle > 0 else { return .moving }' \
+  'guard idle > 0 else { return .stalled }'
+
+mutateLedger "an unread block time must be UNKNOWN — not knowing is not knowing it is fine" \
+  'guard let lastBlockAt else { return .unknown }' \
+  'guard let lastBlockAt else { return .moving }'
+
+mutateLedger "one implementation is not drift — a line saying '1 implementation' says nothing" \
+  'guard n > 1 else { return nil }' \
+  'guard n > 0 else { return nil }'
+
+mutateLedger "an implementation is named by its TAIL, never its head" \
+  'return String(localized: "impl …\(String(codeHash.suffix(4)))")' \
+  'return String(localized: "impl …\(String(codeHash.prefix(4)))")'
+
+mutateLedger "the fold must take a commitment's NEWEST run, not its first" \
+  'if let at = run.at, at > (newest[key] ?? .distantPast) { newest[key] = at }' \
+  'if let at = run.at, at < (newest[key] ?? .distantPast) { newest[key] = at }'
+
+# A key run by two different callers has no single answer, and naming one
+# states a fact about who can spend that is true of one occasion.
+mutateLedger "a caller that IS the account must name nobody — measured, that is the common case" \
+  'guard only != mine else { return nil }' \
+  'guard only != "" else { return nil }'
+
+mutateLedger "TWO callers must name nobody" \
+  'guard callers.count == 1, let only = callers.first else { return nil }' \
+  'guard callers.count >= 1, let only = callers.first else { return nil }'
+
+mutateLedger "a fractional count is not a count" \
+  'guard raw == raw.rounded(), raw < 1e12 else { return nil }' \
+  'guard raw < 1e12 else { return nil }'
+
+# `UInt64(someDouble)` TRAPS past its range, and every input is a word off a
+# chain anybody can emit a log on.
+mutateLedger "uint64 must refuse a word too large to hold rather than trap on it" \
+  'value < 9.0e18 else { return nil }' \
+  'value < 1e30 else { return nil }'
+
+# Reads a length out of attacker-controlled data and then indexes with it.
+mutateLedger "the dynamic-bytes payload must be bounds-checked before it is sliced" \
+  'guard s.count >= start + need else { return nil }' \
+  'guard s.count >= 0 else { return nil }'
+
+mutateLedger "a chain point within a minute of a local one is the same reading twice" \
+  'if let last = out.last, sample.at.timeIntervalSince(last.at) < 60 { continue }' \
+  'if let last = out.last, sample.at.timeIntervalSince(last.at) < 0 { continue }'
+
+mutateLedger "backfill samples must reach BACK from the tip, never forward from it" \
+  'var block = tip - span' \
+  'var block = tip'
+
+mutateLedger "a hashed actorId must name NO kind — a dead key we cannot see gets no guess" \
+  'VibenetActorId.address(fromActorId: actorId) == nil ? nil : .delegate' \
+  'VibenetActorId.address(fromActorId: actorId) == nil ? .delegate : nil'
+
+mutateLedger "the single-chain clause must disappear once a second chain is really read" \
+  'guard standings.count < 2, let sequences' \
+  'guard standings.count < 3, let sequences'
+
+mutateLedger "a zero timelock is Keystore's own 'no delay', not a zero-second one" \
+  'guard seconds > 0 else { return nil }' \
+  'guard seconds >= 0 else { return nil }'
+
+# --- prd §507 drift guards ---------------------------------------------------
+#
+# The wiring the compiled functions cannot prove. Each of these is a silent
+# failure: the room keeps drawing, and what it draws is less than it was.
+
+# The ERC-20 and ERC-721 `Transfer` topic — the most widely deployed event
+# signature on any EVM chain, and a constant every explorer pins. A typo here
+# matches nothing and the ledger simply goes quiet, which from outside is
+# indistinguishable from an account that has never moved a token (§311's own
+# lesson, in a new place).
+grep -q 'static let erc20Transfer = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"' "$BRIDGE" \
+  || { echo "✗ the Transfer topic is not the canonical hash"; exit 1; }
+
+# TWO reads per token, and they cannot be one: `from` and `to` are different
+# indexed positions, and `eth_getLogs` ANDs across positions — a single filter
+# naming both asks for self-transfers and nothing else.
+grep -q 'topics: \[VibenetTopics.erc20Transfer, mine\]' "$BRIDGE" \
+  || { echo "✗ the outgoing transfer filter is gone — half the ledger with it"; exit 1; }
+grep -q 'topics: \[VibenetTopics.erc20Transfer, NSNull(), mine\]' "$BRIDGE" \
+  || { echo "✗ the incoming transfer filter is gone — half the ledger with it"; exit 1; }
+
+# The topic COUNT decides how a Transfer decodes. Without it a 721 move reads
+# as a transfer of zero — a real row saying nothing moved.
+grep -q 'if topics.count >= 4 {' "$BRIDGE" \
+  || { echo "✗ the ERC-721 branch is gone — a token id would read as an amount of zero"; exit 1; }
+
+# On almost every pass there is no new KEY event, so behind the early return
+# the composed rows would only land on a pass that happened to be landing a
+# key change — which is to say, almost never.
+python3 - "$BRIDGE" <<'GUARD' || exit 1
+import sys
+src = open(sys.argv[1]).read()
+composed = src.index("if let item { composedLanded = landComposed(")
+early = src.index("let fresh = events.filter { existing[ref($0)] == nil }")
+if composed > early:
+    print("✗ landComposed runs AFTER the fresh early-return — the new rows would almost never land")
+    sys.exit(1)
+GUARD
+
+# The room was composed by exactly one caller in the whole app until §507 —
+# the address book screen's own load — so the feed's head was as fresh as the
+# last time somebody happened to open that screen.
+grep -q 'await VibenetRoomSource.compose()' "Casberi/Casberi/Model/BridgeRefresh.swift" \
+  || { echo "✗ the sweep no longer composes the room — its head goes stale again"; exit 1; }
+grep -q 'VibenetEvents.land(context: context, room: room)' "Casberi/Casberi/Model/BridgeRefresh.swift" \
+  || { echo "✗ the landing no longer reuses the composed room — it would re-read every log"; exit 1; }
+
+# The fold must see EVERY run so a key's use count stays exact; only the
+# stored array is bounded.
+grep -q 'VibenetPolicyRuns.fold(dated + all.dropFirst(VibenetPolicyRuns.cap))' "$BRIDGE" \
+  || { echo "✗ the policy fold no longer sees every run — a key's use count would undercount"; exit 1; }
+
+# A pruned node will not start answering because we asked again.
+grep -q 'for item in wanted { VibenetBackfillLedger.mark(item.address) }' "$BRIDGE" \
+  || { echo "✗ the backfill no longer marks itself done — it would re-ask every foreground"; exit 1; }
+
+# `eth_blockNumber` on every log call, four per account, is what the cache
+# exists to stop.
+grep -q 'guard let tip = await cachedTip() else { return nil }' "$BRIDGE" \
+  || { echo "✗ getLogs is re-asking the tip on every call again"; exit 1; }
+
+# The room's caption must keep saying which block it was read against, and the
+# stall line must lead when it speaks.
+grep -q 'if let line = room.pulse?.line(now: now) { parts.append(line) }' "$ROOM" \
+  || { echo "✗ the room no longer says when the chain has stalled"; exit 1; }
+
 echo "✓ vibenet-selftest: drift guards, assertions and mutations all passed"

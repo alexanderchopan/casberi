@@ -607,6 +607,27 @@ struct VibenetKeyMoment: Identifiable, Equatable, Codable {
 /// one block) has no honest layout on a real clock, so positions are drawn
 /// evenly spaced and only the two endpoint labels carry actual dates.
 enum VibenetKeyHistory {
+    /// THE ONE KIND A DEAD KEY CAN STILL PROVE (prd §507).
+    ///
+    /// `VibenetRead.account` resolves a moment's kind by matching its actorId
+    /// against the LIVE roster, so a key that has since been revoked has no
+    /// kind at all — its `getActorConfig` reads back the zero address, and the
+    /// file's own comment says the kind "isn't retrievable without an archive
+    /// node". True of three of the four kinds and NOT of the fourth: a
+    /// delegate's actorId IS its address (`ActorId.fromAddress`, which is why
+    /// `subAccounts` can filter on it), so an address-shaped id names a
+    /// delegate key with certainty and no read at all.
+    ///
+    /// Nil for everything else, deliberately. A P-256 or WebAuthn actorId is a
+    /// HASH of a public key, and `VibenetActorId.address` already refuses to
+    /// read one as an address for the reason that matters here too: every
+    /// 32-byte hash yields a plausible-looking address belonging to nobody.
+    /// So this can promote a revoked key from "unknown" to "delegate" and can
+    /// never invent the other three.
+    static func inferredKind(actorId: String) -> VibenetAuthenticatorKind? {
+        VibenetActorId.address(fromActorId: actorId) == nil ? nil : .delegate
+    }
+
     /// The most recent moments a card will ever draw — bounding the block-
     /// time lookups `account(_:contracts:)` pays for one per distinct block.
     static let cap = 10
@@ -868,6 +889,27 @@ struct VibenetActor: Identifiable, Equatable, Codable {
 struct VibenetTokenBalance: Equatable, Codable {
     let symbol: String
     let amount: Double
+    /// Whether this is a COUNT of things rather than a fungible amount —
+    /// an ERC-721 balance (prd §507, `VibenetTokenIdentity`). Decides the
+    /// formatting and nothing else: a count printed to four decimal places
+    /// reads as a fraction of an NFT, which is not a thing that exists.
+    ///
+    /// Defaulted, and that default is what lets every existing call site and
+    /// the demo fixture stand unchanged; the snapshot that carries it is
+    /// keyed `.v2` for the reason `VibenetState` states there.
+    var isCount: Bool = false
+
+    init(symbol: String, amount: Double, isCount: Bool = false) {
+        self.symbol = symbol
+        self.amount = amount
+        self.isCount = isCount
+    }
+
+    /// The figure as it is drawn — `VibenetBalanceFormat`'s two shapes, chosen
+    /// here so no caller has to remember which token is which.
+    var display: String {
+        isCount ? VibenetBalanceFormat.count(amount) : VibenetBalanceFormat.line(amount)
+    }
 }
 
 /// A raw chain balance, rounded to a readable number of decimals — NEVER
@@ -882,6 +924,14 @@ enum VibenetBalanceFormat {
     /// beside it carries the direction and printing both says it twice.
     static func percent(_ change: Double) -> String {
         String(format: "%.1f%%", abs(change) * 100)
+    }
+
+    /// A COUNT — whole, never four decimal places. An NFT balance of 12 is
+    /// twelve things; "12.0000" claims a precision the number does not have
+    /// and a divisibility the token does not have.
+    static func count(_ amount: Double) -> String {
+        guard amount.isFinite, amount >= 0, amount < 1e12 else { return "0" }
+        return String(Int(amount.rounded()))
     }
 
     static func line(_ amount: Double) -> String {
@@ -955,6 +1005,28 @@ struct VibenetAccountItem: Identifiable, Equatable, Codable {
     /// address is not a delegate anywhere, which are not distinguished
     /// because none of them has anything to draw.
     let subAccounts: [VibenetSubAccount]
+    /// EVERY TOKEN TRANSFER THIS ACCOUNT HAS MADE OR RECEIVED that the
+    /// bounded log read could see (prd §507) — newest first, capped at
+    /// `VibenetLedger.cap`. Empty when the account has never moved a token,
+    /// when the read failed, or when the live config named no token contract
+    /// at all; none of the three is distinguished here because the room draws
+    /// nothing for any of them, and `reached` already carries whether this
+    /// pass got to the chain.
+    let transfers: [VibenetTransfer]
+    /// Whether that read came back FULL — i.e. whether there is history
+    /// beyond it. Carried apart from `transfers.count` because the cap is a
+    /// constant a future pass may change, and a series that quietly claims to
+    /// begin where our reading begins is the §307 truncation drawn as a curve.
+    let transfersCapped: Bool
+    /// Where this account came from (prd §507) — nil when the `AccountCreated`
+    /// read failed or the account was never created through the Keystore this
+    /// config names, which on a chain that redeploys is a real and ordinary
+    /// state rather than an error.
+    let origin: VibenetOrigin?
+    /// Individual `PolicyExecuted` runs, newest first — the same logs
+    /// `policyUses` folds into counts, kept whole so Activity can carry them
+    /// and so a key can name who ran it.
+    let policyRuns: [VibenetPolicyRun]
 
     /// The one alarm-worthy fact (the task's own ruling): a locked account.
     /// Deliberately NOT "not established" — an account that has never done
@@ -965,7 +1037,9 @@ struct VibenetAccountItem: Identifiable, Equatable, Codable {
          locked: Bool, hasInitiatedUnlock: Bool, unlocksAt: UInt64?, unlockDelay: UInt16?,
          changeSequences: VibenetChangeSequences? = nil, history: [VibenetKeyMoment] = [],
          nativeBalance: Double? = nil, tokenBalances: [VibenetTokenBalance] = [],
-         policyUses: [VibenetPolicyUse] = [], subAccounts: [VibenetSubAccount] = []) {
+         policyUses: [VibenetPolicyUse] = [], subAccounts: [VibenetSubAccount] = [],
+         transfers: [VibenetTransfer] = [], transfersCapped: Bool = false,
+         origin: VibenetOrigin? = nil, policyRuns: [VibenetPolicyRun] = []) {
         self.address = address
         self.reached = reached
         self.established = established
@@ -983,6 +1057,13 @@ struct VibenetAccountItem: Identifiable, Equatable, Codable {
         self.tokenBalances = tokenBalances
         self.policyUses = policyUses
         self.subAccounts = VibenetSubAccounts.ordered(subAccounts)
+        // Ordered and bounded HERE, once, at the boundary — the same rule the
+        // roster keeps two lines up, so no reader has to re-sort and no two
+        // readers can disagree about which move is the newest.
+        self.transfers = VibenetLedger.capped(transfers)
+        self.transfersCapped = transfersCapped || transfers.count >= VibenetLedger.cap
+        self.origin = origin
+        self.policyRuns = VibenetPolicyRuns.ordered(policyRuns)
     }
 
     /// The row's own alarm clock, R2.2 — the soonest FUTURE expiry inside
@@ -1152,6 +1233,19 @@ struct VibenetRoom: Equatable, Codable {
     /// don't know when", which is honest and survives exactly one foreground:
     /// the next composed read stamps it.
     let readAt: Date?
+    /// THE CHAIN'S OWN PULSE (prd §507) — the tip block, when it was mined,
+    /// and how fast this devnet is producing blocks.
+    ///
+    /// Optional for the same load-bearing reason `readAt` is: this type is
+    /// persisted, and Swift synthesises `decodeIfPresent` for an Optional, so
+    /// a snapshot written by an older build decodes with this nil rather than
+    /// failing the decode of the whole room.
+    ///
+    /// A nil is "we did not learn", never "the chain is fine" — every reader
+    /// below draws NOTHING for a nil, which is the same answer it gives for a
+    /// chain that is moving normally, and that symmetry is deliberate: the
+    /// only states worth a line are the ones that are news.
+    let pulse: VibenetChainPulse?
 
     var isEmpty: Bool { items.isEmpty }
     var lockedCount: Int { items.filter(\.alarmed).count }
@@ -1184,7 +1278,13 @@ struct VibenetRoom: Equatable, Codable {
         return VibenetRoom(
             items: items.filter { $0.address.caseInsensitiveCompare(address) == .orderedSame },
             branch: branch, commit: commit, configReached: configReached,
-            redeployedSinceLastSeen: redeployedSinceLastSeen, readAt: readAt)
+            redeployedSinceLastSeen: redeployedSinceLastSeen, readAt: readAt,
+            // The pulse SURVIVES scoping, unlike everything else here: it is a
+            // fact about the chain, not about the account, so a scoped room
+            // that dropped it would stop being able to say the devnet has
+            // stalled exactly when a reader is looking at one account and
+            // wondering why it has gone quiet.
+            pulse: pulse)
     }
 
     /// `readAt` DEFAULTS TO NIL rather than to `.now`, deliberately: a
@@ -1194,10 +1294,25 @@ struct VibenetRoom: Equatable, Codable {
     /// read passes it, and `vibenet-selftest.sh` guards that it still does.
     static func compose(items raw: [VibenetAccountItem], branch: String?, commit: String?,
                          configReached: Bool, redeployedSinceLastSeen: Bool = false,
-                         readAt: Date? = nil) -> VibenetRoom {
+                         readAt: Date? = nil, pulse: VibenetChainPulse? = nil) -> VibenetRoom {
         VibenetRoom(items: ordered(raw), branch: branch, commit: commit, configReached: configReached,
-                    redeployedSinceLastSeen: redeployedSinceLastSeen, readAt: readAt)
+                    redeployedSinceLastSeen: redeployedSinceLastSeen, readAt: readAt, pulse: pulse)
     }
+
+    // MARK: The readings the ledger adds (prd §507)
+
+    /// Every transfer across every watched account, newest first — what the
+    /// Holdings scope ranks its counterparties over.
+    var allTransfers: [VibenetTransfer] { VibenetLedger.ordered(items.flatMap(\.transfers)) }
+
+    /// "3 different account implementations" — nil on the ordinary roster,
+    /// where they all run the same one.
+    var implementationDrift: String? { VibenetOrigins.driftLine(items.map(\.origin)) }
+
+    /// The oldest account's own beginning — the room's age, which on a devnet
+    /// that redeploys is the answer to "is any of this still the chain I
+    /// watched last week".
+    var oldestCreatedAt: Date? { items.compactMap { $0.origin?.createdAt }.min() }
 
     /// A locked account first (the one alarm this room can raise), then an
     /// unreached read (worth more attention than a read that answered and
@@ -1341,7 +1456,23 @@ struct VibenetRoom: Equatable, Codable {
             parts.append(hidden == 1 ? String(localized: "1 more watched")
                                      : String(localized: "\(hidden) more watched"))
         }
+        // THE CHAIN'S OWN STATE LEADS THE CAPTION (prd §507), and only when
+        // it is news: `VibenetChainPulse.line` is silent while the devnet is
+        // producing blocks normally, because "the chain is working" is not a
+        // clause worth a caption's width, and a marker that is always lit is
+        // the chrome §493 already deleted from this room once.
+        //
+        // FIRST when it does speak, because a stalled devnet explains every
+        // other reading on the card — a balance that has not moved and a
+        // roster that has not changed mean something different when nothing
+        // on the chain has moved either.
+        if let line = room.pulse?.line(now: now) { parts.append(line) }
         parts.append(provenanceLine(room))
+        // The block the room was read AGAINST — a commit says what the
+        // contracts were, this says where the chain was, and on a devnet that
+        // redeploys weekly it is the only coordinate a screenshot carries that
+        // still means something afterwards.
+        if let pulse = room.pulse { parts.append(pulse.blockLine) }
         // WHEN, after WHAT — the commit says what the chain was, this says
         // how long ago we looked, and only the pair is a provenance. Last in
         // the join because it is the clause that changes between draws.
@@ -1533,8 +1664,13 @@ struct VibenetRoom: Equatable, Codable {
             // and the hero can draw — a lone account with neither would
             // leave the "does this fold correctly" question untested.
             nativeBalance: 2.5,
+            // NFV IS A COUNT (prd §507). It always was — twelve NFTs, not
+            // 12.0000 of something — and the live read could not say so until
+            // `VibenetTokenFacts` learned to ask ERC-165 when `decimals()`
+            // reverts. The fixture says it now, so the demo draws the same
+            // two shapes the app does rather than one of them twice.
             tokenBalances: [VibenetTokenBalance(symbol: "USDV", amount: 500.25),
-                            VibenetTokenBalance(symbol: "NFV", amount: 12)],
+                            VibenetTokenBalance(symbol: "NFV", amount: 12, isCount: true)],
             // The session key above HAS run — the one demo fixture proving a
             // gated key can say how often it acted while still refusing to
             // state terms it cannot read.
@@ -1552,7 +1688,60 @@ struct VibenetRoom: Equatable, Codable {
                 VibenetSubAccount(address: "0x7f1e2d3c4b5a69788796a5b4c3d2e1f009182736",
                                   watched: false,
                                   authorizedAt: Date.now.addingTimeInterval(-3 * 86_400)),
-            ])
+            ],
+            // WHAT MOVED (prd §507). Every branch the ledger can draw, so
+            // the demo exercises the readings rather than one of them: two
+            // counterparties (one of them the sub-account this row already
+            // knows about), both directions, a fungible amount and a token
+            // id, and one UNDATED move — the state that lands no row at all,
+            // because a transfer stamped with the moment we looked would date
+            // real history to today.
+            transfers: [
+                VibenetTransfer(symbol: "USDV", direction: .incoming,
+                                counterparty: "0x3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d",
+                                amount: 250, at: Date.now.addingTimeInterval(-3 * 86_400),
+                                txHash: "0x" + String(repeating: "a1", count: 32),
+                                block: 340, logIndex: 2),
+                VibenetTransfer(symbol: "USDV", direction: .outgoing,
+                                counterparty: "0x7f1e2d3c4b5a69788796a5b4c3d2e1f009182736",
+                                amount: 40.5, at: Date.now.addingTimeInterval(-6 * 86_400),
+                                txHash: "0x" + String(repeating: "b2", count: 32),
+                                block: 300, logIndex: 0),
+                VibenetTransfer(symbol: "USDV", direction: .incoming,
+                                counterparty: "0x3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d",
+                                amount: 90, at: Date.now.addingTimeInterval(-11 * 86_400),
+                                txHash: "0x" + String(repeating: "c3", count: 32),
+                                block: 260, logIndex: 1),
+                VibenetTransfer(symbol: "NFV", direction: .incoming,
+                                counterparty: "0x7f1e2d3c4b5a69788796a5b4c3d2e1f009182736",
+                                amount: 1, at: Date.now.addingTimeInterval(-8 * 86_400),
+                                txHash: "0x" + String(repeating: "d4", count: 32),
+                                block: 280, logIndex: 4, tokenID: "42"),
+                VibenetTransfer(symbol: "USDV", direction: .outgoing,
+                                counterparty: "0x9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b",
+                                amount: 12, at: nil,
+                                txHash: "0x" + String(repeating: "e5", count: 32),
+                                block: 120, logIndex: 0),
+            ],
+            // WHERE IT CAME FROM. A `codeHash` DIFFERENT from `lockedPlain`'s
+            // below, deliberately: that is what makes the implementation-drift
+            // line draw in demo, and it is the one reading here that a room of
+            // identically-built accounts can never show.
+            origin: VibenetOrigin(createdAt: Date.now.addingTimeInterval(-52 * 86_400),
+                                  codeHash: "0x" + String(repeating: "7f", count: 31) + "2a",
+                                  txHash: "0x" + String(repeating: "f6", count: 32),
+                                  logIndex: 0),
+            // The four runs `policyUses` above already counts, kept whole —
+            // all by ONE caller, which is what lets the key sheet name it
+            // (several callers has no single answer and says nothing).
+            policyRuns: (0..<4).map { i in
+                VibenetPolicyRun(
+                    commitment: "0x00000000000000000000000000000000000000000000000000000000000000c0",
+                    caller: "0x3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d",
+                    at: Date.now.addingTimeInterval(-Double(2 + i * 3) * 86_400),
+                    txHash: "0x" + String(repeating: String(format: "%02x", 0x10 + i), count: 32),
+                    block: 300 - i * 20, logIndex: 3)
+            })
 
         let lockedPlain = VibenetAccountItem(
             address: "0x2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c",
@@ -1606,7 +1795,13 @@ struct VibenetRoom: Equatable, Codable {
             // R2.1's no-strip floor: exactly one moment, so the summary
             // line shows and the dot strip itself does not.
             history: [VibenetKeyMoment(block: 50, logIndex: 0, authorized: true, kind: .secp256k1,
-                                       date: Date.now.addingTimeInterval(-60 * 86_400))])
+                                       date: Date.now.addingTimeInterval(-60 * 86_400))],
+            // A SECOND IMPLEMENTATION (prd §507) — see `rich`'s own origin
+            // for why the two hashes differ.
+            origin: VibenetOrigin(createdAt: Date.now.addingTimeInterval(-70 * 86_400),
+                                  codeHash: "0x" + String(repeating: "3b", count: 31) + "c4",
+                                  txHash: "0x" + String(repeating: "a7", count: 32),
+                                  logIndex: 1))
 
         let notEstablishedYet = VibenetAccountItem(
             address: "0x4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e",
@@ -1619,7 +1814,16 @@ struct VibenetRoom: Equatable, Codable {
         // room draw a staleness note about a read it never made.
         return compose(items: [rich, lockedPlain, unlocking, notEstablishedYet],
                         branch: "main", commit: "a9ae95e1bdemo",
-                        configReached: true, redeployedSinceLastSeen: true, readAt: .now)
+                        configReached: true, redeployedSinceLastSeen: true, readAt: .now,
+                        // A HEALTHY PULSE (prd §507), which is the honest
+                        // common case and the one worth showing: its
+                        // stall line stays SILENT and the caption carries the
+                        // block the room was read against. Seeding a stalled
+                        // devnet here would make every demo open with an
+                        // alarm about a chain that is fine.
+                        pulse: VibenetChainPulse(tip: 1_284_003,
+                                                 lastBlockAt: Date.now.addingTimeInterval(-4),
+                                                 secondsPerBlock: 2))
     }
 }
 
@@ -3759,6 +3963,28 @@ struct VibenetChainStanding: Equatable {
 /// so it says that in as many words rather than defaulting to a silent "all
 /// caught up", which would be a claim about chains this build never read.
 enum VibenetMultichainSync {
+    /// THE CLAUSE THAT MAKES THE CROSS-CHAIN COUNT MEAN SOMETHING (prd §507).
+    ///
+    /// `plainLine` above can say "Changed 3 times, shared across chains" and
+    /// that sentence has a hole in it: shared with WHAT? This type and
+    /// `VibenetChainStanding` were built ready for a second chain and, until
+    /// this pass, were called by nothing at all — dead by construction, since
+    /// only one chain is ever read, so the comparison they exist for could
+    /// never run and the reader was left to assume we had checked.
+    ///
+    /// Gated on `multichain > 0`, and that gate is the whole of why this is
+    /// not chrome: an account with no cross-chain change has nothing to be
+    /// out of sync about, and a standing note under every account would be
+    /// the always-lit marker §493 deleted from this room once already.
+    ///
+    /// Nil the moment a second chain is really read — there the honest line
+    /// is `summary`'s comparison, not this apology for its absence.
+    static func scopeNote(_ sequences: VibenetChangeSequences?,
+                          standings: [VibenetChainStanding] = []) -> String? {
+        guard standings.count < 2, let sequences, sequences.multichain > 0 else { return nil }
+        return String(localized: "Shared changes apply on every chain this account exists on — vibenet is the only one Casberi reads")
+    }
+
     static func summary(_ standings: [VibenetChainStanding]) -> String {
         guard standings.count > 1 else {
             return String(localized: "Only one EIP-8130 chain to compare — nothing to sync yet")
@@ -3803,12 +4029,39 @@ enum VibenetEventKind: Equatable {
     /// room; the event is what reaches a feed somebody scrolls, and of
     /// everything a locked account can do this is the one worth arriving.
     case unlockInitiated
+    /// TOKENS ARRIVED / TOKENS LEFT (prd §507) — the two events this room
+    /// could not land at all, because nothing in the bridge read a `Transfer`
+    /// log. They are the reason Activity on a busy devnet account was a list
+    /// of key changes and nothing else, on the one screen a person opens to
+    /// ask what happened.
+    ///
+    /// Landed as `.event` like every other row here and deliberately NOT
+    /// `.transaction`: every `.transaction` thing routes through
+    /// `MoneyReceiptSource`, whose receipt would read "In your wallet" over a
+    /// devnet balance that is neither money nor the person's wallet — the
+    /// exact false claim this bridge already corrected once for key events.
+    case transferIn
+    case transferOut
+    /// A POLICY-GATED KEY RAN (prd §507). `PolicyExecuted` has been read since
+    /// 2026-08-24 and folded straight into a per-commitment count shown on one
+    /// line inside one sheet, so a session key running every day produced no
+    /// row anywhere. The log was already in hand; only the landing is new.
+    case policyRun
+    /// THE ACCOUNT'S OWN BEGINNING. `AccountCreated` was read globally for the
+    /// empty state's discovery list and never for a watched address, so the
+    /// Activity timeline began at the first key rather than at the account.
+    case created
 
     /// `keyLabel` is the resolved kind ("secp256k1 key") when the live
     /// re-read at landing time could confirm it, nil when the actor was
     /// already gone by the time this ran (revoked-then-landed in the same
     /// pass) — the title still lands, just without a kind it can't prove.
-    func title(shortAddress: String, keyLabel: String?) -> String {
+    /// `detail` is the one clause only the LOG can supply — "12.5 USDV from
+    /// 0xab…cd" for a transfer, the timelock's own length for a lock, the
+    /// caller for a policy run. Optional and defaulted, so every call site
+    /// written before these kinds existed still compiles and still reads
+    /// correctly; a kind with nothing to add ignores it.
+    func title(shortAddress: String, keyLabel: String?, detail: String? = nil) -> String {
         switch self {
         case .actorAuthorized:
             if let keyLabel {
@@ -3820,7 +4073,25 @@ enum VibenetEventKind: Equatable {
         case .locked:
             return String(localized: "\(shortAddress) locked on vibenet")
         case .unlockInitiated:
+            // The timelock's own length, when the log carried it — the lock
+            // event's `unlockDelay` is a non-indexed word this bridge read
+            // past for a year, and "started unlocking" without it is the one
+            // fact a person actually wants: how long until it opens.
+            if let detail {
+                return String(localized: "\(shortAddress) started unlocking on vibenet · \(detail)")
+            }
             return String(localized: "\(shortAddress) started unlocking on vibenet")
+        case .transferIn:
+            if let detail { return String(localized: "\(shortAddress) received \(detail)") }
+            return String(localized: "\(shortAddress) received tokens on vibenet")
+        case .transferOut:
+            if let detail { return String(localized: "\(shortAddress) sent \(detail)") }
+            return String(localized: "\(shortAddress) sent tokens on vibenet")
+        case .policyRun:
+            if let detail { return String(localized: "A policy key ran for \(shortAddress) · \(detail)") }
+            return String(localized: "A policy key ran for \(shortAddress)")
+        case .created:
+            return String(localized: "\(shortAddress) created on vibenet")
         }
     }
 
@@ -3834,6 +4105,16 @@ enum VibenetEventKind: Equatable {
         case .actorAuthorized, .actorRevoked: return "actor"
         case .locked: return "locked"
         case .unlockInitiated: return "unlocking"
+        // IN and OUT are two segments rather than one "transfer" with a tag,
+        // and the split is deliberate: the direction is the whole of what the
+        // row means, a ref is the one thing about a landed row that can never
+        // be re-derived, and §311's lesson here is that a room head matching
+        // the wrong prefix goes QUIET rather than breaking. Two constants,
+        // both read by the stamp and by the sheet.
+        case .transferIn: return "in"
+        case .transferOut: return "out"
+        case .policyRun: return "policy"
+        case .created: return "created"
         }
     }
 
@@ -3859,6 +4140,20 @@ enum VibenetEventKind: Equatable {
         case .actorRevoked: return ["Key", "Revoked"]
         case .locked: return ["Locked"]
         case .unlockInitiated: return ["Unlocking"]
+        // A transfer carries BOTH its family and its direction, the revoke's
+        // own two-tag shape: "transfers on vibenet" must reach it, and the
+        // direction is the narrower question asked on top.
+        case .transferIn: return ["Transfer", "Received"]
+        case .transferOut: return ["Transfer", "Sent"]
+        // A policy run IS a key acting, so it carries `Key` for the same
+        // reason a revoke does, plus the narrower word for the gate it ran
+        // under. NOT "Used" — an ordinary English word this corpus is full
+        // of, and §308's gating rule protects a facet's precision, not its
+        // ambiguity.
+        case .policyRun: return ["Key", "Policy"]
+        // NOT "Account" — the X archive already ruled that word too ordinary
+        // to be a facet, and this is the same word in the same corpus.
+        case .created: return ["Created"]
         }
     }
 
@@ -3872,7 +4167,7 @@ enum VibenetEventKind: Equatable {
     /// the row leads with the account's own face and name, and repeating
     /// the address in the line beneath is §366's "read its first line
     /// twice" — the same fact, twice, one line apart.
-    func phrase(keyLabel: String?) -> String {
+    func phrase(keyLabel: String?, detail: String? = nil) -> String {
         switch self {
         case .actorAuthorized:
             if let keyLabel {
@@ -3884,7 +4179,19 @@ enum VibenetEventKind: Equatable {
         case .locked:
             return String(localized: "Locked on vibenet")
         case .unlockInitiated:
+            if let detail { return String(localized: "Unlock started · \(detail)") }
             return String(localized: "Unlock started")
+        case .transferIn:
+            return detail.map { String(localized: "Received \($0)") }
+                ?? String(localized: "Tokens received")
+        case .transferOut:
+            return detail.map { String(localized: "Sent \($0)") }
+                ?? String(localized: "Tokens sent")
+        case .policyRun:
+            return detail.map { String(localized: "Policy key ran · \($0)") }
+                ?? String(localized: "Policy key ran")
+        case .created:
+            return String(localized: "Account created")
         }
     }
 }

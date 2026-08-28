@@ -194,6 +194,14 @@ struct VibenetEventCard: View {
         case .revoked:    String(localized: "Revoked")
         case .locked:     String(localized: "Locked")
         case .unlocking:  String(localized: "Unlocking")
+        // prd §507 — the three kinds this room could not land until the
+        // ledger existed. A transfer's verb is its DIRECTION, which is the
+        // whole of what the row means, so it reads off `movement` rather than
+        // splitting the kind in two.
+        case .moved:      (facts.movement?.incoming ?? true)
+                              ? String(localized: "Received") : String(localized: "Sent")
+        case .policy:     String(localized: "Policy run")
+        case .created:    String(localized: "Created")
         }
     }
 
@@ -231,6 +239,13 @@ struct VibenetEventCard: View {
         case .revoked:    return String(localized: "A key")
         case .locked:     return String(localized: "This account is locked")
         case .unlocking:  return String(localized: "This account is unlocking")
+        // The figure itself is the subject of a transfer — "12.5 USDV" — and
+        // where the join could not find the log it falls back to the honest
+        // generic rather than to a number we do not have.
+        case .moved:
+            return facts.movement.map(\.display) ?? String(localized: "Tokens moved")
+        case .policy:     return String(localized: "A policy key ran")
+        case .created:    return String(localized: "This account was created")
         }
     }
 
@@ -261,6 +276,29 @@ struct VibenetEventCard: View {
             return String(localized: "No key can act for this account until it is unlocked.")
         case .unlocking:
             return String(localized: "When the timelock elapses, this account can be spent from again.")
+        case .moved:
+            guard let movement = facts.movement else { return nil }
+            guard let other = movement.counterparty else {
+                // A self-move: the account is both sides, and saying "to
+                // itself" is the whole fact — no balance changed.
+                return String(localized: "This account sent it to itself, so its balance is unchanged.")
+            }
+            return movement.incoming
+                ? String(localized: "It came from \(other).")
+                : String(localized: "It went to \(other).")
+        case .policy:
+            guard let run = facts.run else { return nil }
+            let times = run.runs == 1
+                ? String(localized: "This key has run once.")
+                : String(localized: "This key has run \(run.runs) times.")
+            guard let caller = run.caller else { return times }
+            return String(localized: "\(times) It was invoked by \(caller).")
+        case .created:
+            // The implementation, where the creating log named one — the fact
+            // worth having on a chain that redeploys weekly, and the only one
+            // this event carries beyond its own date.
+            guard let label = facts.origin?.implementationLabel else { return nil }
+            return String(localized: "It runs \(label).")
         }
     }
 

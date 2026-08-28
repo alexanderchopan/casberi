@@ -6310,6 +6310,112 @@ enum ProbeHooks {
                       changes.added.count, changes.revokedCount, changes.line ?? "(silent)")
             }
         },
+
+        // `-vibenetLedgerProbe YES` — WHAT MOVED, WHAT THE CHAIN IS DOING,
+        // AND WHERE EACH ACCOUNT CAME FROM (prd §507).
+        //
+        // It exists because every reading this pass added has SEVERAL causes
+        // that render as one silence and only some of them are bugs. An empty
+        // ledger means: the config named no token, this account has never
+        // moved one, the bounded walk did not reach far enough, or the log
+        // read failed. An absent origin means: the account was created under
+        // a Keystore this config no longer names (ordinary on a chain that
+        // redeploys), or the read failed. A missing pulse means the tip or
+        // its block time did not answer — which is NOT the same as a stalled
+        // chain, and this is the one place the difference is visible.
+        //
+        // One NSLog per fact (the `-todayProbe` truncation lesson). Reads the
+        // saved snapshot, so it spends nothing and prints what the room draws
+        // rather than a second opinion.
+        Hook(key: "vibenetLedgerProbe") { _, _ in
+            Task { @MainActor in
+                guard let room = VibenetRoomSource.card() else {
+                    NSLog("[Casberi] vibenetLedger| NO ROOM — not connected, or no read has ever completed here")
+                    return
+                }
+                if let pulse = room.pulse {
+                    NSLog("[Casberi] vibenetPulse| tip=%d lastBlock=%@ rate=%@ verdict=%@ line=%@",
+                          pulse.tip,
+                          pulse.lastBlockAt.map { "\($0)" } ?? "UNREAD",
+                          pulse.rateLine ?? "UNMEASURED",
+                          pulse.verdict().rawValue,
+                          pulse.line() ?? "(silent — the chain is moving)")
+                } else {
+                    NSLog("[Casberi] vibenetPulse| UNREAD — the tip or its block time did not answer. NOT the same as stalled.")
+                }
+                if let contracts = VibenetConfig.cached() {
+                    // The three config fields that were parsed and read by
+                    // nothing until this pass — printed so a run can say which
+                    // of them this deployment actually names.
+                    NSLog("[Casberi] vibenetConfig| tokens=%@ defaultAccount=%@ highRatePayer=%@",
+                          contracts.tokenContracts.map { $0.symbol ?? "(symbol read live)" }
+                            .joined(separator: ",").isEmpty
+                              ? "NONE NAMED"
+                              : contracts.tokenContracts.map { $0.symbol ?? "(live)" }.joined(separator: ","),
+                          contracts.defaultAccount ?? "(none)",
+                          contracts.canonicalHighRatePayerAccount ?? "(none)")
+                }
+                NSLog("[Casberi] vibenetLedger| implementations=%@",
+                      room.implementationDrift ?? "all the same (or unread)")
+
+                for item in room.items {
+                    let short = VibenetRoom.shortAddress(item.address)
+                    NSLog("[Casberi] vibenetOrigin| %@ created=%@ impl=%@ tx=%@",
+                          short,
+                          item.origin?.createdAt.map { "\($0)" } ?? "UNREAD",
+                          item.origin?.implementationLabel ?? "(none)",
+                          item.origin?.txHash ?? "(none)")
+                    NSLog("[Casberi] vibenetLedger| %@ transfers=%d capped=%@ lastMove=%@",
+                          short, item.transfers.count,
+                          item.transfersCapped ? "YES — this is a partial history" : "no",
+                          VibenetLedger.lastMoveLine(item.transfers, now: .now) ?? "(nothing has moved)")
+                    for transfer in item.transfers.prefix(12) {
+                        NSLog("[Casberi] vibenetMove| %@ %@ %@ with=%@ at=%@ tx=%@",
+                              short, transfer.direction.rawValue, transfer.display,
+                              VibenetRoom.shortAddress(transfer.counterparty),
+                              transfer.at.map { "\($0)" } ?? "UNDATED — lands no row",
+                              transfer.txHash)
+                    }
+                    // The balance series the chain can reconstruct, per token
+                    // — `isComplete=NO` is the honest half: the walk is
+                    // bounded, so the earliest point is where our reading
+                    // starts, not where the account did.
+                    for balance in item.tokenBalances {
+                        guard let series = VibenetLedger.series(
+                            symbol: balance.symbol, current: balance.amount,
+                            transfers: item.transfers, now: .now,
+                            capReached: item.transfersCapped) else {
+                            NSLog("[Casberi] vibenetSeries| %@ %@ NO CURVE — under two points",
+                                  short, balance.symbol)
+                            continue
+                        }
+                        NSLog("[Casberi] vibenetSeries| %@ %@ points=%d complete=%@ first=%@ last=%@",
+                              short, balance.symbol, series.points.count,
+                              series.isComplete ? "YES" : "NO — a partial history",
+                              series.points.first.map { VibenetBalanceFormat.line($0.balance) } ?? "-",
+                              series.points.last.map { VibenetBalanceFormat.line($0.balance) } ?? "-")
+                    }
+                    NSLog("[Casberi] vibenetPolicy| %@ runs=%d caller=%@",
+                          short, item.policyRuns.count,
+                          VibenetPolicyRuns.callerLine(item.policyRuns, account: item.address)
+                            ?? "(nobody to name: none, several, or the account itself)")
+                }
+                for party in VibenetLedger.counterparties(room.allTransfers) {
+                    NSLog("[Casberi] vibenetParty| %@ %@",
+                          VibenetRoom.shortAddress(party.address), party.line)
+                }
+                // The backfill's own ledger — an account marked done whose
+                // curve is still thin is a node that would not answer a
+                // historical balance, which is a real and permanent state
+                // rather than a failure to retry.
+                for item in room.items {
+                    NSLog("[Casberi] vibenetBackfill| %@ done=%@ points=%d",
+                          VibenetRoom.shortAddress(item.address),
+                          VibenetBackfillLedger.isDone(item.address) ? "YES" : "no",
+                          VibenetValueStore.samples(for: item.address).count)
+                }
+            }
+        },
     ]
 }
 

@@ -524,6 +524,15 @@ struct VibenetRoomCard: View {
             // list that disagrees with the picture above it is worse than
             // either alone.
             if promoted(.holdings) { holdingsList }
+            // **WHO THESE ACCOUNTS MOVE TOKENS WITH (prd §507).** The room
+            // could say what an account HOLDS and never what MOVED — there
+            // was not one `Transfer` topic in the bridge — so Holdings was a
+            // number with no motion behind it and Activity was key changes
+            // only. Under the list rather than in the figure slot: the
+            // treemap answers "what", this answers "with whom", and the two
+            // are one reading at two grains, the same relation the amounts
+            // list above already has to the map.
+            if promoted(.holdings) { movesList }
             // **THE ATTENTION STRIP IS GONE (2026-08-26, prd §482).** It was
             // added by §479 and re-grammared and re-titled twice in one
             // afternoon before it was deleted the same day, and the churn was
@@ -1241,6 +1250,56 @@ struct VibenetRoomCard: View {
                 }
                 .padding(.horizontal, DSRoomChassis.contentInset)
             }
+        }
+    }
+
+    /// WHO THE TOKENS MOVED WITH (prd §507) — ranked by how many moves, and
+    /// deliberately never by amount.
+    ///
+    /// Two tokens with no shared unit and no price cannot be compared by
+    /// size: ordering by amount would silently rank 500 USDV against 12 NFV,
+    /// the comparison `VibenetBalanceAggregate` refuses one card up and
+    /// `PrivacyPoolsRoom` refuses in its own room. The count is a real
+    /// ordering over a mixed ledger; a total is not.
+    ///
+    /// Silent with nothing to show, like every other list here — and the
+    /// footnote is not decoration: the transfer read is BOUNDED
+    /// (`VibenetRead.transferChunks`), so on a busy account this is a ranking
+    /// over what we could read rather than over everything that ever
+    /// happened, and a ranking that does not say so is the §307 truncation
+    /// wearing a leaderboard.
+    @ViewBuilder
+    private var movesList: some View {
+        let moves = VibenetLedger.counterparties(room.allTransfers)
+        if !moves.isEmpty {
+            VStack(alignment: .leading, spacing: 0) {
+                sectionHeader(String(localized: "Who it moves with"))
+                ForEach(Array(moves.enumerated()), id: \.element.id) { index, party in
+                    HStack(spacing: DS.Space.s3) {
+                        WalletFace(address: party.address, size: DS.Face.list, circular: true)
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(Self.displayName(party.address))
+                                .dsText(.heading17)
+                                .foregroundStyle(DS.textPrimary)
+                                .lineLimit(1)
+                            Text(party.line)
+                                .dsText(.label12)
+                                .foregroundStyle(DS.textTertiary)
+                                .lineLimit(1)
+                        }
+                        Spacer(minLength: DS.Space.s2)
+                    }
+                    .padding(.vertical, DS.Space.s2)
+                    .chartArrival(index: index, reduceMotion: reduceMotion)
+                }
+                if room.items.contains(where: \.transfersCapped) {
+                    Text(String(localized: "Ranked over the transfers this device could read"))
+                        .dsText(.label12)
+                        .foregroundStyle(DS.textTertiary)
+                        .padding(.top, DS.Space.s2)
+                }
+            }
+            .padding(.horizontal, DSRoomChassis.contentInset)
         }
     }
 
@@ -2168,6 +2227,25 @@ struct VibenetRoomCard: View {
                 }
                 // Not when the spine is the scope's own lead — see `promoted`.
                 if !links.isEmpty, !promoted(.accounts) { linkedDisclosure(links) }
+                // **THE ONE FACT A REDEPLOYING CHAIN OWES A ROSTER (prd
+                // §507).** `AccountCreated` carries a `codeHash`, which was
+                // read by nothing: two accounts sharing it run the same
+                // account implementation and two that do not are two
+                // different builds of it — invisible to every other read
+                // here, and on vibenet the thing most likely to be true
+                // without anybody noticing.
+                //
+                // Drawn ONLY when they really differ. On a healthy roster
+                // they never do, and a line reading "1 implementation" is a
+                // line saying nothing — the always-lit marker this room
+                // deleted once already (§493).
+                if let drift = room.implementationDrift {
+                    Text(drift)
+                        .dsText(.label12)
+                        .foregroundStyle(DS.textTertiary)
+                        .padding(.top, DS.Space.s2)
+                        .padding(.horizontal, DSRoomChassis.contentInset)
+                }
             }
         }
     }

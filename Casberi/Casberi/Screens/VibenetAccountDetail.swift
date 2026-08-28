@@ -1280,11 +1280,44 @@ struct VibenetAccountDetail: View {
     /// local, epoch 0"): the EIP's own vocabulary, one of them almost
     /// always a zero that means "this never happened".
     private var syncSection: some View {
-        Group {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            // WHERE THIS ACCOUNT CAME FROM (prd §507). `AccountCreated` was
+            // read globally for the empty state's discovery list and never
+            // for a watched address, though the account topic is indexed —
+            // so this sheet could say what the account holds, who can act for
+            // it and what has changed, and not how old it is.
+            if let origin = item.origin, let age = origin.ageLine() {
+                Text(origin.implementationLabel.map { "\(age) · \($0)" } ?? age)
+                    .dsText(.label12)
+                    .foregroundStyle(DS.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            // WHAT MOVED, most recently (prd §507) — one sentence off the
+            // ledger, never a tally: §223's rule that a count is not a thing
+            // applies to a sheet's own line as much as to a landed row.
+            if let moved = VibenetLedger.lastMoveLine(item.transfers, now: .now) {
+                Text(moved)
+                    .dsText(.label12)
+                    .foregroundStyle(DS.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
             if let line = item.changeSequences?.plainLine {
                 Text(line)
                     .dsText(.label12)
                     .foregroundStyle(DS.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            // THE CLAUSE THAT MAKES THE CROSS-CHAIN COUNT MEAN SOMETHING
+            // (prd §507). "Changed 3 times, shared across chains" has a hole
+            // in it — shared with WHAT — and `VibenetMultichainSync` was
+            // built ready to answer that and called by nothing at all, so the
+            // reader was left to assume we had checked. Gated on there being
+            // a cross-chain change at all, so an account with none carries no
+            // apology for a comparison it does not need.
+            if let scope = VibenetMultichainSync.scopeNote(item.changeSequences) {
+                Text(scope)
+                    .dsText(.label12)
+                    .foregroundStyle(DS.textTertiary)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }

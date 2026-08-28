@@ -277,7 +277,7 @@ struct VibenetKeySheet: View {
         DSSpecRow(label: Text(verbatim: label),
                   value: Text(verbatim: value),
                   tint: tinted ? Self.mark : DS.textPrimary,
-                  weight: weighted ? .semibold : nil,
+                  weight: weighted ? .semibold : .regular,
                   lineLimit: nil)
     }
 
@@ -397,6 +397,21 @@ struct VibenetKeySheet: View {
             out.append(KeyTerm(label: String(localized: "Activity"),
                                value: use?.line(now: .now) ?? String(localized: "Never used"),
                                weighted: true))
+            // WHO RAN IT (prd §507). `PolicyExecuted` carries a `caller` in
+            // its non-indexed word and nothing decoded it, so this sheet
+            // could say a key had run four times and never by whom — on the
+            // one screen whose subject is who can spend.
+            //
+            // Named only when EVERY run agrees: a key run by two different
+            // callers has no single answer, and naming the newest would state
+            // a fact about who can spend that is true of one occasion. The
+            // same unambiguous-join rule `VibenetEventFacts` keeps for
+            // permissions, and for the same reason.
+            if let caller = VibenetPolicyRuns.callerLine(
+                VibenetPolicyRuns.runs(item.policyRuns, forCommitment: actor.policyCommitment),
+                account: item.address) {
+                out.append(KeyTerm(label: String(localized: "Invoked by"), value: caller))
+            }
         }
         if let shared = sharedKeys
             .filter({ $0.actorId.caseInsensitiveCompare(actor.actorId) == .orderedSame })
