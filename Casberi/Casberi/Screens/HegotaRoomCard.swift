@@ -1029,14 +1029,46 @@ struct HegotaRoomFigure: View {
 /// in the row strip, the sheet strip and the frame's own sheet, so the mapping
 /// is learned once and then read everywhere.
 enum HegotaModeStyle {
+    /// **THE ROOM'S OWN HUE — the pour behind every Hegotá sheet head.**
+    ///
+    /// `dsReceiptPaper` needs a colour or it draws the plain raised surface
+    /// with nothing saying which room the paper came out of, and the catalog
+    /// gives this seat no brand mark to take one from: `DS.brandHue(for:)`
+    /// answers nil for a devnet, which is right — there is no logo to be
+    /// faithful to. So the pour is not invented, it is BORROWED from the room:
+    /// this is already `hue(.utxo)`, the colour of the object this chain
+    /// exists to publish.
+    ///
+    /// `hue(.utxo)` reads it below rather than repeating the literal, or the
+    /// pour and the vault segment drift into two cyans that are nearly the
+    /// same — the drift nobody sees in a screenshot of one of them.
+    static let room = Color(red: 0.30, green: 0.78, blue: 0.92)
+
     static func hue(_ mode: HegotaFrame.Mode) -> Color {
         switch mode {
         case .verify:    return Color(red: 0.55, green: 0.47, blue: 0.93)   // the signature check
         case .sender:    return DS.confirm                                   // value actually moving
         case .general:   return DS.tint                                      // a call
         case .assertion: return DS.attention                                 // a condition
-        case .utxo:      return Color(red: 0.30, green: 0.78, blue: 0.92)   // the vault
+        case .utxo:      return room                                         // the vault
         case .unknown:   return DS.textTertiary
+        }
+    }
+
+    /// The step's mark, for a sheet head's disc.
+    ///
+    /// A GLYPH rather than a face: a frame is a piece of machinery, and an
+    /// identicon on one would give it a portrait — the `AssetMark` refusal the
+    /// move sheet's own `endpoint(_:mine:)` already makes for the vault and the
+    /// nonce manager.
+    static func glyph(_ mode: HegotaFrame.Mode) -> String {
+        switch mode {
+        case .verify:    return "checkmark.shield"
+        case .sender:    return "arrow.right"
+        case .general:   return "chevron.left.forwardslash.chevron.right"
+        case .assertion: return "exclamationmark.triangle"
+        case .utxo:      return "tray.full"
+        case .unknown:   return "questionmark"
         }
     }
 
@@ -1821,20 +1853,12 @@ struct HegotaMoveSheet: View {
     var onOpenFrame: ((Int) -> Void)? = nil
 
     var body: some View {
-        DSTray(title: title, height: trayHeight) {
+        DSTray(title: title, height: trayHeight, ink: true) {
             VStack(alignment: .leading, spacing: DS.Space.s6) {
-                amount
-                crossing
+                head
                 becomes
                 frames
-                cost
-                if !move.nonceKeys.isEmpty {
-                    Text(move.nonceKeys.count == 1
-                         ? String(localized: "Sent on nonce key \(move.nonceKeys[0]) — a queue of its own.")
-                         : String(localized: "Sent on \(String(move.nonceKeys.count)) nonce keys at once."))
-                        .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                }
-                stamp
+                facts
                 watchDoor
                 explorer
             }
@@ -1883,7 +1907,12 @@ struct HegotaMoveSheet: View {
         // The crossing is a fixed block; the minted pieces are one more.
         let crossing: CGFloat = 72
         let becomes: CGFloat = minted.isEmpty ? 0 : (minted.count > 3 ? 96 : 78)
-        return min(820, 380 + extra + crossing + becomes
+        // The paper's own chrome — `dsReceiptPaper` pads `s6` at the top and
+        // `s6` plus a tooth at the bottom. The old arithmetic had no term for
+        // it because the head was drawn bare, and a deficit CLIPS.
+        let paper: CGFloat = 60
+        let sponsored: CGFloat = sponsorship == nil ? 0 : 46
+        return min(860, 380 + extra + crossing + becomes + paper + sponsored
                         + CGFloat(move.frames?.count ?? 0) * 54)
     }
 
@@ -1897,10 +1926,117 @@ struct HegotaMoveSheet: View {
         return move.incoming ? String(localized: "Money in") : String(localized: "Money out")
     }
 
+    /// **THE HEAD IS AN OBJECT, NOT A RUN OF TEXT** (prd §495).
+    ///
+    /// This sheet opened with eight bare left-aligned blocks on the tray
+    /// surface — the "jumble of text" §495 named in the vibenet room, and the
+    /// same answer applies: a raised surface, a pour of the room's hue, and
+    /// the receipt silhouette that makes a head read as one moment rather than
+    /// as a column of facts.
+    ///
+    /// **`dsReceiptPaper` directly rather than `DSSheetHead`, and §498 is the
+    /// reason it exists to be composed this way**: that component's title slot
+    /// is `heading22`, and a money sheet leads with its FIGURE. What is shared
+    /// is the paper — the silhouette, the pour, the raised ground and the
+    /// shadow — so this room and Wallet's cannot drift into two papers.
+    ///
+    /// The dateline moved UP here from the foot of the sheet, which is where a
+    /// receipt's dateline belongs and why the old `stamp` block is gone.
+    @ViewBuilder private var head: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(alignment: .top, spacing: DS.Space.s3) {
+                Text(HegotaFormat.stamp(move.timestamp, block: move.block,
+                                        estimated: move.estimatedAt))
+                    .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: 0)
+                if let outcome {
+                    DSStamp(word: outcome.word, weight: outcome.weight)
+                }
+            }
+            amount.padding(.top, 2)
+            crossing.padding(.top, DS.Space.s4)
+            if let sponsorship {
+                Text(sponsorship)
+                    .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, DS.Space.s4)
+            }
+        }
+        .dsReceiptPaper(hue: HegotaModeStyle.room)
+    }
+
+    /// **The transaction's standing, summarised from the steps below it.**
+    ///
+    /// It states nothing this sheet does not already draw — the strip and every
+    /// frame row carry their own outcome — so this is that reading said ONCE at
+    /// the top rather than a new claim. Nil where any step's receipt could not
+    /// be paired: "we cannot see" is not a state worth stamping, and the row it
+    /// belongs to says so itself.
+    private var outcome: (word: String, weight: DSStamp.Weight)? {
+        guard let frames = move.frames, !frames.isEmpty else { return nil }
+        if frames.contains(where: { $0.succeeded == false }) {
+            return (String(localized: "A step failed"), .urgent)
+        }
+        guard frames.allSatisfy({ $0.succeeded == true }) else { return nil }
+        return (String(localized: "Ran"), .good)
+    }
+
+    /// **Sponsorship as the head's closing sentence** — what the old `cost`
+    /// block said, in the slot a receipt keeps for what it means now. The
+    /// amount itself moved to the facts table, where an unsponsored move's
+    /// gas also lives: one place for one fact.
+    private var sponsorship: String? {
+        guard move.isSponsored, let payer = move.payer else { return nil }
+        let who = HegotaName.of(payer, watched: watched)
+        return move.feeWei.map {
+            String(localized: "It cost you nothing — \(who) paid \(HegotaFormat.eth($0)) in gas.")
+        } ?? String(localized: "It cost you nothing — \(who) paid the gas.")
+    }
+
+    /// **The facts as a TABLE, not as four sentences** (`DSSpecTable`).
+    ///
+    /// Gas, who paid it and which queue it was sent on are label/value pairs,
+    /// and setting them as prose at `subhead13` is most of what made this sheet
+    /// read as a wall. The date is not here — it is the head's dateline.
+    @ViewBuilder private var facts: some View {
+        if hasFacts {
+            DSSpecTable {
+                if let fee = move.feeWei {
+                    DSSpecRow(label: Text("Gas"),
+                              value: Text(verbatim: HegotaFormat.eth(fee)))
+                }
+                // Named only when it is NOT you: a receipt telling you that you
+                // paid your own gas is a row that says nothing.
+                if move.isSponsored, let payer = move.payer {
+                    DSSpecRow(label: Text("Paid by"),
+                              value: Text(verbatim: HegotaName.of(payer, watched: watched)))
+                }
+                if !move.nonceKeys.isEmpty {
+                    DSSpecRow(label: Text(move.nonceKeys.count == 1 ? "Nonce key" : "Nonce keys"),
+                              value: Text(move.nonceKeys.count == 1
+                                          ? String(localized: "\(move.nonceKeys[0]) — a queue of its own")
+                                          : String(localized: "\(String(move.nonceKeys.count)) at once")))
+                }
+            }
+        }
+    }
+
+    /// An empty `DSSpecTable` is a zero-height `Grid` that still costs its
+    /// enclosing stack a `DS.Space.s6` gap — a hole in the sheet with nothing
+    /// in it.
+    private var hasFacts: Bool {
+        move.feeWei != nil || move.isSponsored || !move.nonceKeys.isEmpty
+    }
+
     @ViewBuilder private var amount: some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(HegotaFormat.signed(move.wei, incoming: move.incoming))
-                .dsText(.price48)
+                // `price40`, the app's own money-receipt hero (§363).
+                // `price48` is the WALLET CROWN and this is the same object one
+                // room over — the ramp reads as four money rungs where it has
+                // three when a devnet's receipt outsizes the wallet's.
+                .dsText(.price40)
                 .foregroundStyle(move.incoming ? DS.confirm : DS.textPrimary)
                 .monospacedDigit().minimumScaleFactor(0.5).lineLimit(1)
         }
@@ -2048,39 +2184,9 @@ struct HegotaMoveSheet: View {
             // An ordinary type-0x2 transaction has no frames and never will —
             // said rather than left as an empty space.
             Text(String(localized: "An ordinary transaction — it reports one result, not a step for each part."))
-                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
         }
-    }
-
-    /// What it cost, and who paid.
-    ///
-    /// **Sponsorship stops being a sentence and becomes an amount.** "Somebody
-    /// else paid the gas" is a claim; "they paid 0.00006 ETH and you paid
-    /// nothing" is the fact underneath it, and it costs no read — both halves
-    /// are on the receipt the sweep already fetched.
-    @ViewBuilder private var cost: some View {
-        if move.isSponsored, let payer = move.payer {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(String(localized: "Cost you nothing"))
-                    .dsText(.callout15).foregroundStyle(DS.tint)
-                Text(move.feeWei.map {
-                    String(localized: "\(HegotaName.of(payer, watched: watched)) paid \(HegotaFormat.eth($0)) in gas")
-                } ?? String(localized: "\(HegotaName.of(payer, watched: watched)) paid the gas"))
-                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-            }
-        } else if let fee = move.feeWei {
-            Text(String(localized: "Cost \(HegotaFormat.eth(fee)) in gas"))
-                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-        }
-    }
-
-    @ViewBuilder private var stamp: some View {
-        // The block is the chain's own identity for this moment; the date is
-        // the only form of it anybody can read. Both, because the block is what
-        // you would quote to somebody else.
-        Text(HegotaFormat.stamp(move.timestamp, block: move.block,
-                                estimated: move.estimatedAt))
-            .dsText(.label12).foregroundStyle(DS.textTertiary)
     }
 
     /// The chain's own explorer. **The account sheet had a door and this one
@@ -2164,11 +2270,12 @@ struct HegotaFrameSheet: View {
 
     var body: some View {
         DSTray(title: frame?.mode.label ?? String(localized: "Step"),
-               height: total > 1 ? 640 : 560) {
+               // The paper's own chrome (`dsReceiptPaper` pads s6 top and s6
+               // plus a tooth at the bottom) plus the disc it now carries.
+               height: total > 1 ? 720 : 640, ink: true) {
             VStack(alignment: .leading, spacing: DS.Space.s6) {
                 if let frame {
-                    headline(frame)
-                    meaning(frame)
+                    head(frame)
                     position
                     gasShare(frame)
                     facts(frame)
@@ -2183,50 +2290,97 @@ struct HegotaFrameSheet: View {
         }
     }
 
-    @ViewBuilder private func headline(_ frame: HegotaFrame) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            // The VALUE leads when there is one, because that is what a person
-            // came to find out; the mode leads when there isn't, because then
-            // the step's whole content is what it did.
+    /// **THE HEAD IS AN OBJECT** — the move sheet's paper, one level down
+    /// (prd §495), composed through `dsReceiptPaper` for that sheet's stated
+    /// reason: a step that moved value leads with its FIGURE, and
+    /// `DSSheetHead`'s title slot is `heading22`.
+    ///
+    /// **The old `heading28` is gone and that was a real inversion**: it set
+    /// the mode label one rung ABOVE the tray title sitting directly on top of
+    /// it, so the sheet's own name read smaller than a line inside it. A
+    /// valueless step now leads with what it DID, at `reading20` — running
+    /// prose that is the whole point of the surface it sits on, which is that
+    /// rung's own definition — and the mode name is not repeated, because the
+    /// tray title above already carries it.
+    ///
+    /// The mode's hue moved from the type to the DISC and the pour. Colour
+    /// carries identity here, not emphasis, and a bold coloured headline is
+    /// the same fact said louder rather than said better.
+    @ViewBuilder private func head(_ frame: HegotaFrame) -> some View {
+        let tone = HegotaModeStyle.hue(frame.mode)
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(alignment: .top, spacing: DS.Space.s3) {
+                ZStack {
+                    Circle().fill(tone.opacity(0.16))
+                    Image(systemName: HegotaModeStyle.glyph(frame.mode))
+                        .dsGlyph(24).foregroundStyle(tone)
+                }
+                .frame(width: DS.Face.shelf, height: DS.Face.shelf)
+                Spacer(minLength: 0)
+                // **Answered in every case, not only the bad ones** — the
+                // reading the old dot-and-word carried, in the slot every other
+                // sheet in the app keeps for a state. `DSStamp`'s weights are a
+                // closed set with no failure rung, so a failed step wears
+                // `urgent` (attention) rather than `destructive`.
+                DSStamp(word: outcomeWord(frame), weight: outcomeWeight(frame))
+            }
+            Text(lead(frame))
+                .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                .padding(.top, DS.Space.s3)
             if frame.wei > 0 {
                 Text(HegotaFormat.eth(frame.wei))
-                    .dsText(.price48).foregroundStyle(DS.textPrimary)
+                    // `price40`, the money-receipt hero — see the move sheet's
+                    // `amount` for why `price48` left this room.
+                    .dsText(.price40).foregroundStyle(DS.textPrimary)
                     .monospacedDigit().minimumScaleFactor(0.5).lineLimit(1)
-                Text(String(localized: "moved by this step"))
-                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                    .padding(.top, 2)
+                Text(HegotaModeStyle.meaning(frame.mode))
+                    .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, DS.Space.s4)
             } else {
-                Text(frame.mode.label)
-                    .dsText(.heading28).foregroundStyle(HegotaModeStyle.hue(frame.mode))
-                Text(String(localized: "moved no value"))
-                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                Text(HegotaModeStyle.meaning(frame.mode))
+                    .dsText(.reading20).foregroundStyle(DS.textPrimary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, 2)
             }
-            outcome(frame)
+        }
+        .dsReceiptPaper(hue: tone)
+    }
+
+    /// Where the step sat, and whether it carried money — the two facts the
+    /// figure below cannot say for itself. One line rather than two, because a
+    /// step of one is not a sequence and "moved no value" beside a figure of
+    /// zero would be the same fact twice.
+    private func lead(_ frame: HegotaFrame) -> String {
+        let where_ = total > 1
+            ? String(localized: "Step \(String(index + 1)) of \(String(total))")
+            : String(localized: "One step")
+        guard frame.wei > 0 else {
+            return String(localized: "\(where_) · moved no value")
+        }
+        return String(localized: "\(where_) · moved by this step")
+    }
+
+    private func outcomeWord(_ frame: HegotaFrame) -> String {
+        switch frame.succeeded {
+        case .some(true):  return String(localized: "Ran")
+        case .some(false): return String(localized: "Failed")
+        // NOT "failed": a receipt we could not pair is a step whose outcome we
+        // cannot see, and the strip draws it hollow for the same reason.
+        case .none:        return String(localized: "Outcome unknown")
         }
     }
 
-    /// **Did it run — answered in every case, not only the bad ones.**
-    ///
-    /// The sheet used to say "This step failed" or "Its receipt couldn't be
-    /// paired" and NOTHING at all on success, so the first question a
-    /// single-step sheet raises was answered only in the negative — success was
-    /// inferred from an absence, which is the weakest way to state a fact. One
-    /// element in all three states, and the dot carries the reading so the word
-    /// stays short.
-    @ViewBuilder private func outcome(_ frame: HegotaFrame) -> some View {
-        let (tint, word): (Color, String) = {
-            switch frame.succeeded {
-            case .some(true):  return (DS.confirm, String(localized: "Ran"))
-            case .some(false): return (DS.destructive, String(localized: "Failed"))
-            // NOT "failed": a receipt we could not pair is a step whose outcome
-            // we cannot see, and the strip draws it hollow for the same reason.
-            case .none:        return (DS.attention, String(localized: "Outcome unknown"))
-            }
-        }()
-        HStack(spacing: DS.Space.s2) {
-            Circle().fill(tint).frame(width: 7, height: 7)
-            Text(word).dsText(.subhead13).foregroundStyle(tint)
+    /// `quiet` for the unknown, deliberately. It used to wear `DS.attention`,
+    /// which raises an alarm about a reading we simply do not have —
+    /// `DSStamp`'s own doc: quiet is a real answer, not an absence.
+    private func outcomeWeight(_ frame: HegotaFrame) -> DSStamp.Weight {
+        switch frame.succeeded {
+        case .some(true):  return .good
+        case .some(false): return .urgent
+        case .none:        return .quiet
         }
-        .padding(.top, 4)
     }
 
     /// **What this step cost of the whole transaction.**
@@ -2293,7 +2447,7 @@ struct HegotaFrameSheet: View {
                     Text(String(localized: "Step \(String(target + 1))"))
                         .dsText(.label12).foregroundStyle(DS.textTertiary)
                     Text(frame.mode.label)
-                        .dsText(.subhead13)
+                        .dsText(.callout15)
                         .foregroundStyle(HegotaModeStyle.hue(frame.mode))
                 }
                 if !back {
@@ -2304,14 +2458,6 @@ struct HegotaFrameSheet: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-    }
-
-    /// The mode in words. **The reason this sheet exists**: `Verify` is a noun
-    /// somebody has to already know, and this is the reading.
-    @ViewBuilder private func meaning(_ frame: HegotaFrame) -> some View {
-        Text(HegotaModeStyle.meaning(frame.mode))
-            .dsText(.callout15).foregroundStyle(DS.textSecondary)
-            .fixedSize(horizontal: false, vertical: true)
     }
 
     /// Where this step sat in the sequence — the whole strip again, with this
@@ -2328,27 +2474,34 @@ struct HegotaFrameSheet: View {
         }
     }
 
+    /// **Label/value pairs, drawn as label/value pairs** (`DSSpecTable`).
+    ///
+    /// These were four prose sentences — "21000 execution gas" — which is a
+    /// table written out longhand: nothing lines up, and the labels and the
+    /// figures wear the same ink at the same size. The component sizes its
+    /// column to its own longest label, so the two gas rows align with each
+    /// other rather than with some other sheet's table.
     @ViewBuilder private func facts(_ frame: HegotaFrame) -> some View {
-        VStack(alignment: .leading, spacing: DS.Space.s2) {
+        DSSpecTable {
             if let target = frame.target {
-                fact(String(localized: "Ran against \(HegotaName.of(target, watched: watched))"))
+                DSSpecRow(label: Text("Ran against"),
+                          value: Text(verbatim: HegotaName.of(target, watched: watched)))
             }
             // BOTH gas dimensions, and this chain is the reason the distinction
             // is worth a line: it prices execution and state separately, so a
             // step that only moves value really does burn zero execution gas.
             if let gas = frame.gasUsed {
-                fact(String(localized: "\(String(gas)) execution gas"))
+                DSSpecRow(label: Text("Execution gas"),
+                          value: Text(verbatim: String(gas)))
             }
             if let state = frame.stateGasUsed {
-                fact(String(localized: "\(String(state)) state gas"))
+                DSSpecRow(label: Text("State gas"),
+                          value: Text(verbatim: String(state)))
             }
-            fact(HegotaFormat.stamp(move.timestamp, block: move.block,
-                                    estimated: move.estimatedAt))
+            DSSpecRow(label: Text("When"),
+                      value: Text(verbatim: HegotaFormat.stamp(move.timestamp, block: move.block,
+                                                               estimated: move.estimatedAt)))
         }
-    }
-
-    private func fact(_ text: String) -> some View {
-        Text(text).dsText(.callout15).foregroundStyle(DS.textSecondary)
     }
 }
 
@@ -2514,10 +2667,14 @@ struct HegotaAccountSheet: View {
     @State private var copied = false
 
     var body: some View {
-        DSTray(title: name, height: 640 + (showsSplit ? 52 : 0) + (sends == nil ? 0 : 76)) {
+        // The paper's own chrome — `dsReceiptPaper` pads `s6` top and `s6` plus
+        // a tooth at the bottom, which the old height had no term for.
+        DSTray(title: name,
+               height: 700 + (showsSplit ? 52 : 0) + (sends == nil ? 0 : 76),
+               ink: true) {
             VStack(alignment: .leading, spacing: DS.Space.s6) {
-                identity
-                money
+                head
+                vaultDoor
                 sendStory
                 doing
                 explorer
@@ -2564,6 +2721,10 @@ struct HegotaAccountSheet: View {
             }
             .frame(height: 12)
             .chartWipe(reduceMotion: reduceMotion)
+            // Its own top air, rather than a gap in the head's stack: the head
+            // is spaced 0 and pads each element, so an `if`-guarded child must
+            // carry its own or a missing bar leaves a hole.
+            .padding(.top, DS.Space.s3)
         }
     }
 
@@ -2623,88 +2784,113 @@ struct HegotaAccountSheet: View {
             ?? WalletStore.shortAddress(account.address)
     }
 
-    @ViewBuilder private var identity: some View {
-        HStack(spacing: DS.Space.s3) {
-            WalletFace(address: account.address, size: DS.Face.shelf, circular: true)
-            VStack(alignment: .leading, spacing: 2) {
-                // The WHOLE address, not the short form: this is the one screen
-                // where somebody is checking they watched the right thing —
-                // and therefore the one screen where they need to be able to
-                // take it away with them.
-                Button {
-                    DSPasteboard.copySensitive(account.address)
-                    DSHaptic.selection()
-                    copied = true
-                } label: {
-                    HStack(spacing: DS.Space.s2) {
-                        Text(account.address)
-                            .dsText(.mono13).foregroundStyle(DS.textSecondary)
-                            .lineLimit(2).minimumScaleFactor(0.7)
-                            .multilineTextAlignment(.leading)
-                        Image(systemName: copied ? "checkmark" : "doc.on.doc")
-                            .dsGlyph(12)
-                            .foregroundStyle(copied ? DS.confirm : DS.textTertiary)
-                    }
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
+    /// **THE HEAD IS AN OBJECT** — the move sheet's paper (prd §495), and
+    /// `dsReceiptPaper` rather than `DSSheetHead` for §498's own stated reason:
+    /// this head is partly a CONTROL. The address is a copy button, so the
+    /// title cannot be handed over as a `String`.
+    ///
+    /// The address stands in the head's secondary slot rather than beside the
+    /// face, and the balance takes the figure slot — one object saying who this
+    /// is and what they hold, instead of two blocks of text that happened to be
+    /// stacked.
+    @ViewBuilder private var head: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(alignment: .top, spacing: DS.Space.s3) {
+                WalletFace(address: account.address, size: DS.Face.shelf, circular: true)
+                Spacer(minLength: 0)
+                // Waiting on the CHAIN, not on you — the read simply has not
+                // landed, which is why the stamp is `waiting` rather than an
+                // alarm. The sentence below says what it means.
                 if !account.reached {
-                    Text(String(localized: "Couldn't be read — nothing below is current."))
-                        .dsText(.subhead13).foregroundStyle(DS.attention)
-                }
-                // **IT PRODUCES THE CHAIN (§509).** Free, off headers the sweep
-                // already reads, and it explains the room's most baffling
-                // number: the sequencer holds nearly the devnet's whole supply,
-                // so an account with 999,999,898 ETH beside one with 1.13 is
-                // not an error in the figure, it is what a sequencer looks
-                // like. Stated only when every header sampled agreed.
-                if account.producesBlocks {
-                    HStack(spacing: DS.Space.s2) {
-                        Image(systemName: "cube").dsGlyph(11).foregroundStyle(DS.tint)
-                        Text(String(localized: "Produces this chain's blocks"))
-                            .dsText(.subhead13).foregroundStyle(DS.tint)
-                    }
+                    DSStamp(word: String(localized: "Unread"), weight: .waiting)
                 }
             }
+            addressLine.padding(.top, DS.Space.s3)
+            if !account.reached {
+                Text(String(localized: "Couldn't be read — nothing below is current."))
+                    .dsText(.callout15).foregroundStyle(DS.attention)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, 2)
+            }
+            // **IT PRODUCES THE CHAIN (§509).** Free, off headers the sweep
+            // already reads, and it explains the room's most baffling number:
+            // the sequencer holds nearly the devnet's whole supply, so an
+            // account with 999,999,898 ETH beside one with 1.13 is not an error
+            // in the figure, it is what a sequencer looks like. Stated only
+            // when every header sampled agreed.
+            if account.producesBlocks {
+                HStack(spacing: DS.Space.s2) {
+                    Image(systemName: "cube").dsGlyph(13).foregroundStyle(DS.tint)
+                    Text(String(localized: "Produces this chain's blocks"))
+                        .dsText(.callout15).foregroundStyle(DS.tint)
+                }
+                .padding(.top, 2)
+            }
+            Text(account.balanceWei.map { HegotaFormat.crown($0) }
+                 ?? String(localized: "Unread"))
+                // `price40` — see the move sheet's `amount`. `price48` is the
+                // wallet crown, and the room's own crown is on the room card.
+                .dsText(.price40).foregroundStyle(DS.textPrimary)
+                .monospacedDigit().minimumScaleFactor(0.5).lineLimit(1)
+                .padding(.top, DS.Space.s4)
+            Text(String(localized: "in the account"))
+                .dsText(.callout15).foregroundStyle(DS.textSecondary)
+            splitBar
         }
+        .dsReceiptPaper(hue: HegotaModeStyle.room)
     }
 
-    /// **THE SPLIT, stated rather than implied.** Coins live in the vault
-    /// contract, so they are NOT in this address's balance — the two figures
-    /// are different money in different places, and adding them silently would
-    /// be the room inventing a total nobody publishes.
-    @ViewBuilder private var money: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s3) {
-            VStack(alignment: .leading, spacing: 1) {
-                Text(account.balanceWei.map { HegotaFormat.crown($0) }
-                     ?? String(localized: "Unread"))
-                    .dsText(.price48).foregroundStyle(DS.textPrimary)
-                    .monospacedDigit().minimumScaleFactor(0.5).lineLimit(1)
-                Text(String(localized: "in the account"))
-                    .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+    /// The WHOLE address, not the short form: this is the one screen where
+    /// somebody is checking they watched the right thing — and therefore the
+    /// one screen where they need to be able to take it away with them.
+    @ViewBuilder private var addressLine: some View {
+        Button {
+            DSPasteboard.copySensitive(account.address)
+            DSHaptic.selection()
+            copied = true
+        } label: {
+            HStack(spacing: DS.Space.s2) {
+                Text(account.address)
+                    .dsText(.mono13).foregroundStyle(DS.textSecondary)
+                    .lineLimit(2).minimumScaleFactor(0.7)
+                    .multilineTextAlignment(.leading)
+                Image(systemName: copied ? "checkmark" : "doc.on.doc")
+                    .dsGlyph(12)
+                    .foregroundStyle(copied ? DS.confirm : DS.textTertiary)
             }
-            splitBar
-            if let held = account.unspent, !held.isEmpty, account.reconciled {
-                Button {
-                    DSHaptic.selection()
-                    onScope?(.coins)
-                } label: {
-                    HStack(spacing: DS.Space.s2) {
-                        VStack(alignment: .leading, spacing: 1) {
-                            Text(HegotaFormat.eth(HegotaCoins.total(held)))
-                                .dsText(.heading22).foregroundStyle(DS.tint)
-                                .monospacedDigit().minimumScaleFactor(0.6).lineLimit(1)
-                            Text(held.count == 1
-                                 ? String(localized: "held as 1 UTXO in the vault")
-                                 : String(localized: "held as \(String(held.count)) UTXOs in the vault"))
-                                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
-                        }
-                        WalletRowChevron()
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    /// **THE OTHER HALF OF THE MONEY, and a door to it.** Coins live in the
+    /// vault contract, so they are NOT in this address's balance — the two
+    /// figures are different money in different places, and adding them
+    /// silently would be the room inventing a total nobody publishes.
+    ///
+    /// It sits OFF the paper on purpose: the head answers what this address
+    /// holds, and this is somewhere to go.
+    @ViewBuilder private var vaultDoor: some View {
+        if let held = account.unspent, !held.isEmpty, account.reconciled {
+            Button {
+                DSHaptic.selection()
+                onScope?(.coins)
+            } label: {
+                HStack(spacing: DS.Space.s2) {
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(HegotaFormat.eth(HegotaCoins.total(held)))
+                            .dsText(.heading22).foregroundStyle(DS.tint)
+                            .monospacedDigit().minimumScaleFactor(0.6).lineLimit(1)
+                        Text(held.count == 1
+                             ? String(localized: "held as 1 UTXO in the vault")
+                             : String(localized: "held as \(String(held.count)) UTXOs in the vault"))
+                            .dsText(.callout15).foregroundStyle(DS.textSecondary)
                     }
-                    .contentShape(Rectangle())
+                    WalletRowChevron()
                 }
-                .buttonStyle(.plain)
+                .contentShape(Rectangle())
             }
+            .buttonStyle(.plain)
         }
     }
 
@@ -2815,10 +3001,13 @@ struct HegotaCoinSheet: View {
         // the literal term (§500), and the origin is not lost: it is the line
         // under the amount and the sibling row's own caption.
         DSTray(title: String(localized: "UTXO #\(String(coin.index))"),
-               height: min(760, 400 + CGFloat(siblings.count) * 46
-                                + (showsShare ? 64 : 0))) {
+               // +60 for the paper's own chrome (`dsReceiptPaper` pads s6 top
+               // and s6 plus a tooth at the bottom); a deficit clips.
+               height: min(820, 460 + CGFloat(siblings.count) * 46
+                                + (showsShare ? 64 : 0)),
+               ink: true) {
             VStack(alignment: .leading, spacing: DS.Space.s6) {
-                headline
+                head
                 share
                 spend
             }
@@ -2828,27 +3017,61 @@ struct HegotaCoinSheet: View {
         }
     }
 
-    /// The amount, where it came from, and when.
+    /// **THE HEAD IS AN OBJECT** — the move sheet's paper (prd §495), on the
+    /// room's own hue. A piece IS the object this chain publishes, so it gets
+    /// the vault's mark rather than a face: an identicon here would be a
+    /// portrait of a counter (`AssetMark`'s refusal).
     ///
-    /// **The origin moved up here when the title took the identity**, and it is
-    /// one clause rather than a sentence: "Change from your own spend" says
-    /// what "This came back to you as change from your own spend" said, in a
-    /// slot where the coin's own figure is already the subject.
-    @ViewBuilder private var headline: some View {
-        VStack(alignment: .leading, spacing: 2) {
+    /// **The dateline moved to the top**, where a receipt's dateline goes, and
+    /// up from `label12` — it is the coin's AGE, which is a fact rather than a
+    /// caption on the figure above it. The origin clause stays under the
+    /// amount: the title already carries the identity.
+    @ViewBuilder private var head: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(alignment: .top, spacing: DS.Space.s3) {
+                ZStack {
+                    Circle().fill(HegotaModeStyle.room.opacity(0.16))
+                    Image(systemName: "tray.full")
+                        .dsGlyph(24).foregroundStyle(HegotaModeStyle.room)
+                }
+                .frame(width: DS.Face.shelf, height: DS.Face.shelf)
+                Spacer(minLength: 0)
+                if let standing {
+                    DSStamp(word: standing.word, weight: standing.weight)
+                }
+            }
+            Text(HegotaFormat.stamp(coin.timestamp, block: coin.block,
+                                    estimated: coin.estimatedAt))
+                .dsText(.callout15).foregroundStyle(DS.textSecondary)
+                .padding(.top, DS.Space.s3)
             Text(HegotaFormat.eth(coin.wei))
-                .dsText(.price48).foregroundStyle(DS.textPrimary)
+                // `price40` — see the move sheet's `amount`.
+                .dsText(.price40).foregroundStyle(DS.textPrimary)
                 .monospacedDigit().minimumScaleFactor(0.5).lineLimit(1)
+                .padding(.top, 2)
             Text(coin.isChange
                  ? String(localized: "change from your own spend")
                  : String(localized: "sent to you by \(WalletStore.shortAddress(coin.source))"))
-                .dsText(.subhead13).foregroundStyle(DS.textSecondary)
-            // The date is its AGE; the index above is which coin came first and
-            // says nothing about when — which is why the sheet carries both.
-            Text(HegotaFormat.stamp(coin.timestamp, block: coin.block,
-                                    estimated: coin.estimatedAt))
-                .dsText(.label12).foregroundStyle(DS.textTertiary)
+                .dsText(.callout15).foregroundStyle(DS.textSecondary)
         }
+        .dsReceiptPaper(hue: HegotaModeStyle.room)
+    }
+
+    /// **Spent or not — stated only when the sweep has proved a set.**
+    ///
+    /// `unspent` defaults to empty, and an empty set means "nobody passed one"
+    /// exactly as loudly as it means "nothing here is unspent". Stamping a coin
+    /// `Spent` off that would be a state invented from an absence (§83), so the
+    /// stamp is withheld until there is a proven set to test against —
+    /// `showsShare`'s own caution, one property down.
+    ///
+    /// Both wear `quiet`: a spent piece is not a warning and an unspent one is
+    /// not good news, they are the two ordinary states of a UTXO.
+    private var standing: (word: String, weight: DSStamp.Weight)? {
+        guard !unspent.isEmpty else { return nil }
+        return unspent.contains(coin.index)
+            ? (String(localized: "Unspent"), .quiet)
+            : (String(localized: "Spent"), .quiet)
     }
 
     /// **This piece among the pieces — the one thing the room's treemap cannot
@@ -2936,7 +3159,7 @@ struct HegotaCoinSheet: View {
             }
         } else if coin.createdBy != nil {
             Text(String(localized: "The only UTXO its spend made."))
-                .dsText(.subhead13).foregroundStyle(DS.textTertiary)
+                .dsText(.callout15).foregroundStyle(DS.textSecondary)
         }
     }
 

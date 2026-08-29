@@ -553,10 +553,18 @@ grep -q 'Text(timerInterval:' "Casberi/CasberiWidgets/VibenetUnlockActivity.swif
 grep -q 'VibenetRoomSource.card()' "$BOOK" \
   || { echo "✗ the address book no longer seeds from the saved snapshot — prd §472: its first"
        echo "  frame then claims the read failed before it has been attempted (§83)"; exit 1; }
-# …and it must not draw the card over an empty room while a read is in flight,
-# which is the same false failure by the other route (no snapshot yet).
-grep -q 'if connected, !room.items.isEmpty || !loading' "$BOOK" \
-  || { echo "✗ the address book draws its card while the first read is still in flight —"
+# …and it must not draw the roster over an empty room while a read is in
+# flight, which is the same false failure by the other route (no snapshot yet).
+#
+# The GATE'S SHAPE moved with §515/§517 (commit 5319d0b1, "the book is rows on
+# ink"): the roster stopped being `VibenetRoomCard`'s managing mode, so what it
+# withholds on is `accounts` rather than `room.items`, and the `connected`
+# clause went with the card. The INVARIANT is unchanged and is what this guards
+# — on the first-ever open, with nothing seeded, the section is withheld rather
+# than drawn empty. Matched loosely on the two terms that carry it, so the next
+# rename of the roster's array does not fail a screen that is still correct.
+grep -qE 'if !accounts\.isEmpty \|\| !loading' "$BOOK" \
+  || { echo "✗ the address book draws its roster while the first read is still in flight —"
        echo "  prd §472: with no snapshot to seed from that is the failure headline again"; exit 1; }
 
 # THE UNLOCK COUNTDOWN TICKS, in both places that draw it. A timelock is the one
@@ -1165,11 +1173,37 @@ fi
 grep -q 'DSPasteboard.copy(VibenetAccountDebug.text(' "$TMP/detail.nc.swift" \
   || { echo "✗ the 'Copy account state' door is gone — prd §470: the one place spec internals"; echo "  are allowed to go is a paste that is asked for explicitly"; exit 1; }
 
-# THE DOORS MUST WRAP. Every door is .fixedSize(), so a fifth one in an HStack
-# pushes the trailing door off a phone's width — and the row is already four
-# wide on an undeployed account, which is when the faucet door matters most.
-grep -A 2 'private var doorsSection: some View {' "$TMP/detail.nc.swift" | grep -q 'FlowLayout' \
-  || { echo "✗ the doors row is not flowing — prd §470: five fixed-size doors in an HStack"; echo "  clip off the trailing one rather than wrapping"; exit 1; }
+# A FIFTH DOOR MUST NOT CLIP. §470's finding: every door was a `.fixedSize()`
+# chip, so a fifth in an HStack pushed the trailing one off a phone's width —
+# and the run is already four wide on an undeployed account, which is exactly
+# when the faucet door matters most.
+#
+# THE GUARD PINNED THE MECHANISM, NOT THE INVARIANT, and went red the moment
+# the mechanism improved (found 2026-08-29 on a tree where this file is
+# committed and correct). §470 answered the clipping with `FlowLayout` because
+# wrapping was the smaller of the two available fixes; a later pass replaced
+# the chips with FULL-WIDTH ROWS in a VStack, which cannot clip at all — one
+# left edge, one type rung, and no horizontal run to overflow. This guard
+# demanded the word `FlowLayout` and so failed a screen that had strictly
+# improved. Same lesson `markets-fold-selftest.sh` already paid for: pin the
+# invariant, not one call site's spelling.
+#
+# So the assertion is INVERTED. What must hold is that the doors are never
+# laid out as a horizontal run again — a VStack of rows and a FlowLayout of
+# chips both satisfy §470, an HStack does not.
+doors=$(sed -n '/private var doorsSection: some View {/,/^    }$/p' "$TMP/detail.nc.swift")
+[[ -n "$doors" ]] \
+  || { echo "✗ prd §470's door guard could not find doorsSection by its signature —"
+       echo "  a guarded view that moves takes its guard with it"; exit 1; }
+if [[ "$doors" == *"HStack"* ]]; then
+  echo "✗ the doors are a horizontal run again — prd §470: every door is .fixedSize(),"
+  echo "  so a fifth in an HStack pushes the trailing one off a phone's width, and the"
+  echo "  run is already four wide on an undeployed account. Rows or a FlowLayout."
+  exit 1
+fi
+[[ "$doors" == *"VStack"* || "$doors" == *"FlowLayout"* ]] \
+  || { echo "✗ the doors are neither rows nor flowing — prd §470: a fifth door has to go"
+       echo "  somewhere that is not off the trailing edge"; exit 1; }
 
 # A tapped key must still reach its account (prd §470's requirement), but the
 # route changed in §479: a tray row opens the KEY (§478 gave it a sheet), and
@@ -4596,6 +4630,51 @@ grep -q '\.id(Self.roomTopAnchor)' "Casberi/Casberi/Screens/FeedScreen.swift" \
   || { echo "✗ the room head carries no top anchor — prd §495: returnToRoomTop would scroll"
        echo "  to an id that never rendered, which is a no-op and looks like the fix working"
        echo "  right up until somebody scrolls."; exit 1; }
+
+# **EVERY SCOPE'S FIGURE EMITS THE SLOT, INCLUDING WHEN IT HAS NOTHING TO DRAW**
+# (2026-08-29, reported: "the toggle bar moves to different spaces on the screen
+# when you click it").
+#
+# The fourth instance of ONE class, which is why it is mechanical now rather
+# than written down a fifth time: a `@ViewBuilder` that produces nothing has NO
+# LAYOUT PRESENCE, so a figure that declines does not draw an empty
+# `DSRoomSlot` — it removes the slot from the stack entirely, and the account
+# rail, the scope strip and every row below jump a full `visualSlot` (210pt)
+# the moment that chip is picked. The box never moves; it stops existing, which
+# from outside is indistinguishable from the bar moving and reads exactly like
+# the §495 defect that was already fixed.
+#
+# §495 gave Holdings and Accounts an empty figure for precisely this fault and
+# missed Activity, whose own doc explains why it did not look like a declining
+# scope: it had been legitimately empty BY RULING until §491 gave it a drawing.
+# `VibenetChangeFlow.flow` returns nil for any roster with no grant, no
+# revocation and no lock — every freshly watched account — so the ordinary case
+# was the broken one.
+#
+# Named per scope rather than matched loosely: the invariant is that each
+# figure has an EMPTY COUNTERPART it falls to, and a guard that merely counted
+# `else` branches would pass on an `else` that draws nothing.
+for figure in activity holdings accounts permissions; do
+  body=$(sed -n "/private var ${figure}Figure: some View {/,/^    }$/p" "$TMP/card.nc.swift")
+  [[ -n "$body" ]] \
+    || { echo "✗ prd §495's slot guard could not find ${figure}Figure by its signature —"
+         echo "  a guarded figure that moves takes its guard with it"; exit 1; }
+  [[ "$body" == *"${figure}EmptyFigure"* ]] \
+    || { echo "✗ ${figure}Figure can decline without drawing the slot — prd §495: a"
+         echo "  @ViewBuilder that emits nothing has no layout presence, so the 210pt"
+         echo "  visualSlot leaves the stack and the account rail, the scope strip and every"
+         echo "  row below jump a third of a screen when that chip is picked."; exit 1; }
+done
+# …and the empty counterparts must go through `scopeFigure`, which is the one
+# call that applies the slot. An empty figure drawing bare would satisfy the
+# guard above and move the bar exactly as far.
+for figure in activityEmptyFigure holdingsEmptyFigure accountsEmptyFigure permissionsEmptyFigure; do
+  body=$(sed -nE "/private (var|func) $figure/,/^    }$/p" "$TMP/card.nc.swift")
+  [[ "$body" == *"scopeFigure("* ]] \
+    || { echo "✗ $figure does not draw through scopeFigure — prd §495: scopeFigure IS the"
+         echo "  slot, so an empty figure outside it collapses the reserved height it exists"
+         echo "  to hold."; exit 1; }
+done
 
 echo ""
 # --- prd §507 mutations ------------------------------------------------------

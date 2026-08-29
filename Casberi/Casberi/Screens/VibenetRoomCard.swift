@@ -1490,7 +1490,105 @@ struct VibenetRoomCard: View {
                                       onPick: onScope,
                                       reduceMotion: reduceMotion)
             }
+        } else {
+            activityEmptyFigure
         }
+    }
+
+    /// WHAT AN EMPTY ACTIVITY MEANS — and why the toggle bar was walking
+    /// again (2026-08-29, reported: *"the toggle bar moves to different
+    /// spaces on the screen when you click it"*).
+    ///
+    /// **This is the fourth instance of ONE class, and the first three are
+    /// already written down two hundred lines up: a `@ViewBuilder` that
+    /// produces nothing has no layout presence at all.** `scopeVisual`
+    /// emitted NO SLOT on Activity whenever `VibenetChangeFlow.flow` returned
+    /// nil, so `DSRoomChassis.visualSlot` — a fixed 210pt — simply was not in
+    /// the stack, and the account rail, the scope strip and every row under
+    /// them jumped a third of a screen the moment that chip was picked. The
+    /// box never moved; it stopped existing.
+    ///
+    /// And nil is the ORDINARY case, not an edge: `flow` needs an authorized
+    /// or revoked moment or a lock somewhere in the roster, so an account
+    /// whose keys have never changed — every freshly watched one — takes this
+    /// branch. Holdings (§495) and Accounts (§495) were each given an empty
+    /// figure when they had exactly this fault, in the same pass; Activity was
+    /// the one figure that pass missed, for the reason its own doc gives — it
+    /// had been legitimately empty by ruling until §491 gave it a drawing, so
+    /// it did not read as a scope that was declining.
+    ///
+    /// The three causes are separated in `holdingsEmptyLine`'s own order —
+    /// unread, then never deployed, then genuinely quiet — because "we could
+    /// not look" and "we looked and nothing has happened" are different
+    /// answers, and this is the room whose whole subject is who can act for
+    /// your accounts (§83).
+    @ViewBuilder
+    private var activityEmptyFigure: some View {
+        let subject = scopedAddress ?? room.items.first?.address
+        scopeFigure(headline: activityEmptyHeadline) {
+            VStack(alignment: .leading, spacing: DS.Space.s4) {
+                // The band that is not there, drawn as its own outline — the
+                // grammar `holdingsEmptyFigure` states ("the treemap that is
+                // not there") in the shape THIS scope would have drawn: one
+                // flow row, its account's real face and the ribbon's outline
+                // with nothing running through it.
+                //
+                // The ribbon is dashed and EMPTY rather than absent, and it
+                // carries no kind: a ribbon in `authorized`'s colour would
+                // draw a change that never happened, which on this screen is
+                // the §83 failure `accountsEmptyFigure` refuses a connector
+                // for.
+                HStack(spacing: DS.Space.s3) {
+                    if let subject {
+                        WalletFace(address: subject, size: DS.Face.rowCircle, circular: true)
+                    }
+                    Capsule(style: .continuous)
+                        .strokeBorder(DS.fillLine,
+                                      style: StrokeStyle(lineWidth: 1.4, dash: [3, 3]))
+                        .frame(height: 22)
+                        .opacity(0.6)
+                }
+                Text(activityEmptyLine)
+                    .dsText(.callout15)
+                    .foregroundStyle(DS.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .frame(maxHeight: .infinity, alignment: .top)
+        }
+    }
+
+    /// The empty figure's headline. Never a number — `VibenetChangeFlow
+    /// .headline` counts events and there are none to count.
+    ///
+    /// "Nothing has changed" is `VibenetChangeFlow.spoken`'s own sentence for
+    /// this state, reused rather than reworded so the drawing and its spoken
+    /// form cannot say two different things about one reading.
+    private var activityEmptyHeadline: String {
+        if !room.items.isEmpty, room.items.allSatisfy({ !$0.reached }) {
+            return String(localized: "Couldn't be read")
+        }
+        if let one = scopedItem, !one.established {
+            return String(localized: "Nothing deployed yet")
+        }
+        return String(localized: "Nothing has changed")
+    }
+
+    /// The sentence under it. Scoped it speaks about ONE account; unscoped
+    /// about the roster, `holdingsEmptyLine`'s own split.
+    private var activityEmptyLine: String {
+        if let one = scopedItem {
+            if !one.reached {
+                return String(localized: "This account could not be read on the last refresh.")
+            }
+            if !one.established {
+                return String(localized: "The account deploys with its first transaction — until then there's no history to read.")
+            }
+            return String(localized: "The chain answered: no key has been granted or revoked on this account.")
+        }
+        if !room.items.isEmpty, room.items.allSatisfy({ !$0.reached }) {
+            return String(localized: "None of these accounts could be read on the last refresh.")
+        }
+        return String(localized: "The chain answered: no keys have been granted or revoked on these accounts.")
     }
 
     /// WHO CAN ACT FOR WHOM — the delegate spine, lifted out of its
@@ -2073,7 +2171,7 @@ struct VibenetRoomCard: View {
                 // book would point at the same place twice.
                 addTitle: nil,
                 onAdd: nil,
-                bookTitle: String(localized: "Address Book"),
+                bookTitle: String(localized: "Address book"),
                 onOpenBook: onOpenBook)
         }
     }
@@ -2125,7 +2223,7 @@ struct VibenetRoomCard: View {
         }
         .buttonStyle(.plain)
         .dsHover()
-        .accessibilityLabel(Text(String(localized: "Address Book")))
+        .accessibilityLabel(Text(String(localized: "Address book")))
     }
 
     private func accountChip(_ item: VibenetAccountItem, native: Double?) -> some View {
