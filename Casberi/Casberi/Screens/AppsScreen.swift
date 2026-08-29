@@ -1095,7 +1095,9 @@ struct AppsScreen: View {
         }
     }
 
-    /// The catalog — one file of rows under category headers (prd §518).
+    /// The catalog — one file of rows under category headers (prd §518),
+    /// EXCEPT under All (user ruling, 2026-08-29), which flattens to one
+    /// alphabetical directory with no headers at all — see `flatCatalogList`.
     ///
     /// `LazyVStack` over the SECTIONS, each section's rows eager inside its own
     /// card. Making the rows lazy instead would mean giving up the card that
@@ -1104,14 +1106,40 @@ struct AppsScreen: View {
     /// reach them — the wall had this backwards, an eager `ForEach` over bands
     /// wrapping a lazy grid inside each.
     private var catalogList: some View {
-        LazyVStack(alignment: .leading, spacing: DS.Space.s6) {
-            ForEach(listSections, id: \.name) { section in
-                categorySection(section.name, apps: section.apps)
+        Group {
+            if scope.name == nil {
+                flatCatalogList
+            } else {
+                LazyVStack(alignment: .leading, spacing: DS.Space.s6) {
+                    ForEach(listSections, id: \.name) { section in
+                        categorySection(section.name, apps: section.apps)
+                    }
+                }
             }
         }
         // A connect re-sorts its row into the connected tier — the list closes
         // the gap smoothly instead of snapping.
         .animation(DS.Motion.standard, value: store.bridges.count)
+    }
+
+    /// Every connectable/Soon offer, alphabetical by name, no category
+    /// headers — the All chip's own directory (user ruling, 2026-08-29: "if
+    /// a user clicks the 'all' chip should it show all apps in alphabetical
+    /// order, not by category?"). A category chip still narrows to that
+    /// category's own headed section (`categorySection`) — the browse-by-kind
+    /// question ("what's in Wallet") is answered THERE now, not under All.
+    private var allAppsSorted: [Ranked] {
+        ranked.sorted { $0.offer.name.localizedStandardCompare($1.offer.name) == .orderedAscending }
+    }
+
+    private var flatCatalogList: some View {
+        VStack(spacing: DS.Space.s1) {
+            ForEach(Array(allAppsSorted.enumerated()), id: \.element.id) { i, entry in
+                appRow(entry).modifier(StockEntrance(index: i))
+            }
+        }
+        .padding(.vertical, DS.Space.s1)
+        .dsCard()
     }
 
     /// One category: its name and size, then its apps as rows in a card.
