@@ -422,6 +422,24 @@ python3 "$ROOT/scripts/delete-guard-audit.py" \
   || fail "a prune can fire on an empty upstream read — see the output above"
 print -P "%F{green}✓ delete-guard audit%f"
 
+# A wallet-riding seat has NO connect switch (§207) — watching a wallet is the
+# whole consent — so its catalog Connect must route to the wallet manager, and
+# its Open to the room its rows land in. Both live in `BridgeRouter` and NEITHER
+# is a compile-time requirement: `destination(forOffer:)` returns an Optional
+# and `HomeRoute.openSetup` guards out on nil, so a seat missing from that list
+# has a Connect button that does NOTHING AT ALL, silently. Altana shipped
+# exactly that on 2026-08-18 and it was reported ten days later; nothing here
+# could see it, because a missing switch case is not an error, catalog-sync
+# checks the catalog against the WEBSITE, and the screen sweep proves a page
+# painted, never that its button did anything. Mutation-proven three ways
+# against the real tree, including a brand-new seat with neither door.
+step "Wallet-seat route audit"
+python3 "$ROOT/scripts/wallet-seat-route-audit.py" --self-test >/dev/null \
+  || fail "the wallet-seat route audit's own self-test failed — the check is broken, not the code"
+python3 "$ROOT/scripts/wallet-seat-route-audit.py" \
+  || fail "a wallet-riding seat's Connect or Open leads nowhere — see the output above"
+print -P "%F{green}✓ wallet-seat route audit%f"
+
 # The credential tripwire's fixtures (prd §277) — that the shipped patterns and
 # thresholds still hide a recovery phrase and still leave an ordinary shopping
 # list alone. Reads both out of the Swift source, so re-tuning a number here

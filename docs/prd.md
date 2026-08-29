@@ -37498,6 +37498,127 @@ Check K gained the matching assertion: a shape listed as retired must no longer 
 
 **And the head had no chrome.** `CardPointersRoomCard` shipped without the `.padding(s4)` / `.dsWidgetSurface()` / `.padding(.horizontal, s4)` / `.padding(.top, s2)` every other room card wears — `FeedScreen.insightSection` sets `.listRowInsets(EdgeInsets())`, so a head card is edge-to-edge unless it pads itself. The headline sat flush against the screen and `WalletRunwayRail` ran under both bezels, clipping the last deadline dot, which is the one mark whose position is the whole reading.
 
+## 513. Altana's Connect button did nothing, and the seat it guarded had nobody to show (user: "the altana connect button isn't working", then "also should we give someone ability to peek at example accounts or keys like we do with vibenet", then "but if you have an altana key it would work, and we had one before so we can suggest one for them to watch", "same like vibenet", 2026-08-28)
+
+**The button was a silent no-op, and had been since §403 shipped it ten days
+earlier.** Altana is `needsSetup: true`, so its Connect runs
+`HomeRoute.openSetup(forOffer:)`, whose first line is `guard let dest =
+BridgeRouter.destination(forOffer: name) else { return }` — and Altana had no
+`Row` in `BridgeRouter.rows` and no `Destination` of its own, so that returned
+nil and the tap did nothing at all. Not an error, not a flash, not a wrong
+screen: nothing.
+
+**Nothing here could have caught it, which is the part worth keeping.** A
+missing `switch` case is not a compile error when the function returns an
+Optional; `catalog-sync.sh` checks the catalog against the WEBSITE, not against
+the router; and the screen sweep proves a page painted, never that its button
+did anything. `scripts/wallet-seat-route-audit.py` is the mechanical form —
+every `BridgeStore.walletSeats` entry must have a real Connect door AND a real
+Open door, checked in both directions because they fail differently and both
+failed here (Connect nil is a dead control §83; Open nil falls to
+`.detail(id:)`, the generic page, so the seat opens something that is not its
+room). Mutation-proven three ways against the real tree, including a
+brand-new seat with neither door.
+
+**Open took a wrong turn on the way and an existing audit caught it.** The
+first fix routed Altana's Open to its ROOM, on Gnosis Pay's terms — its rows do
+land under a source of their own. `setup-copy-audit.py` failed it: a seat that
+owns a screen and whose room is opened directly makes that screen unreachable,
+because the catalog offers Open and nothing else once connected. It opens the
+SCREEN, which carries a `RoomDoor` — Peer's and vibenet's shape.
+
+### The examples, and the correction that made them worth building
+
+**§403's evidence gate is right and it is why nobody sees this seat.** Most
+wallets hold no keystore entry, so gating on watching would claim a registry
+entry that isn't there (§83). The cost is that a person with no registered key
+taps Connect, watches their wallet, and gets nothing — forever, with nothing on
+screen to say the registry simply has not reached them yet.
+
+**A wrong claim corrected mid-session, and the correction is the lesson.** The
+first answer here was that a peek was not worth building because the registry
+held "one account, the deployer's" — which is §402's ETHEREUM-ONLY measurement,
+superseded the same afternoon by §403 ("18 keys across 7 accounts on BNB"). A
+probe comment carrying a superseded fact read as current. **Re-measured live,
+2026-08-28: 39 keys across 9 accounts**, every one of them somebody else's — the
+registry roughly doubled in ten days, which is itself the argument for live
+discovery over a frozen list.
+
+**`/account/<address>` is the discriminator, and picking the explorer's own
+semantic markup rather than sweeping for hex is the whole of the parse's
+correctness.** Measured on the live page: a raw `0x[0-9a-f]{40}` sweep returns
+**204 distinct addresses** — contracts, `bytes32` key ids, the zero address 86
+times — while the `/account/` links return **9**, and `getKeys` on BNB answered
+3, 2, 18, 3, 1, 3, 4, 1, 4 for them: **9 for 9, zero false positives.** The
+sweep would invite somebody to watch a key id and then show them an empty
+account, on the one screen whose entire job is to prove the seat works. Logs
+remain a dead end (§403: public BSC RPCs gate ranged `eth_getLogs`), which is
+why this reads a page — §403's own door.
+
+**Its own list, not the wallet roster** (`AltanaWatch`), and the sharper of the
+two reasons is arithmetic rather than taste: **`WalletIngest.allChains` has no
+BNB entry**, which is exactly why §403 gave this seat its own registry table
+with its own hosts — so an Altana account watched as a wallet would spend one of
+FIVE capped slots, and a metered Zerion read, on an address that read cannot
+see. The cap is an economics fact (§465 rule 1); this list is keyless and free,
+so it has no cap and never will.
+
+**The seat stays gated on evidence for BOTH populations.** Watching an example
+that turns out to hold no credential still does not light the seat, because
+`AltanaKeystore.evidence` is stamped by the READ, never by the watch — guarded
+in both directions, since a stamp migrating into `AltanaWatch` would light a
+seat for an account nothing has looked at.
+
+**Unioned in the seat's own row, never in `watchedForms()`.** That set is shared
+by eleven wallet-riding seats, so widening it would let an Altana example count
+as a watched wallet for Peer, Railgun and nine others. Guarded as a negative.
+The noun moved `wallet` → `account`: half of them are not yours.
+
+**Two silences, told apart.** `openRoom` reads before it routes
+(`VibenetScreen`'s sequence, for its reason — this room composes off the
+`AltanaState` snapshot, so routing first drops you into a room with nothing to
+draw). But unlike vibenet's there are two empty answers and only one is
+trouble: an account really holding no credential is a TRUE answer, and saying
+"couldn't reach" over it would be the §83 wrong answer. Emptiness of
+`AltanaState.readings` is the reachability question; `landed` is the
+did-it-hold-anything one.
+
+**Disconnect drops the examples and nothing else** — `AltanaState` is
+deliberately not cleared, unlike vibenet's teardown, because this seat also
+rides the wallets you watch and wiping the snapshot would delete a real
+wallet's readings to remove somebody else's example.
+
+**Amends §465**, which checked rather than assumed which seats own an address
+list and answered "exactly two". True when written; what changed is the data,
+not the architecture. It also diverges from §465 on one point with a reason:
+the list stays on the setup screen after connecting, because Altana's roster is
+bounded by the whole registry — nine accounts — and a second screen to hold nine
+rows would be a door onto a list shorter than the door's own explanation.
+
+**Refused:** a key count beside a suggested row (one keystore read per row,
+bought to decorate a list nobody may tap — `VibenetBridge.reference`'s refusal),
+any ranking of the accounts (§403's refusal to judge key count, so page order
+stands), and ENS resolution in the field (a name resolves to a MAINNET address
+while 38 of 39 keys are on BNB — it would quietly answer a different question).
+
+**Measured and NOT a bug, recorded so nobody chases it:** `bsc-rpc.publicnode.com`
+answers **403** to a bare `Python-urllib` User-Agent and **200** to the app's
+own — the block is UA-specific, and the bridge was never affected.
+
+Guarded in `scripts/altana-selftest.sh` (173 checks): the parse compiled WHOLE
+from a new Foundation-only `AltanaDiscovery.swift`, its fixture the live markup
+byte for byte — a hand-written approximation of a scrape's input tests the
+approximation, not the scrape — plus the `/key/0x…` row as the discriminating
+case, since that link is 64 hex INSIDE the same event row and a hex-sweeping
+parse takes its first 40. **Its own first guard survived its own mutation**:
+`grep -q 'AltanaWatch.shared.addresses'` was satisfied by `probeLines`' log
+line while the read it protected was gutted. Anchored to the loop now — the
+standing rule, earned again: **a guard must prove the CONDITION, not that the
+words appear.**
+
+**UNSEEN on a device.** The build is green and every static audit passes; no
+simulator run has walked this screen, and the first-watch routing has never been
+observed to happen.
 ## 514. The Permissions scope lists what it counts, and the NFT slot gets denser instead of taller (user: "the permissions tab doesn't show my permissions in the list. shouldn't it?", then "on NFTs if a user picks more than 4 to show can we make the slot in the wallet that shows 4 resize to show five or six somehow? maybe we show them in tiles in a three by three grid or something?", 2026-08-28)
 
 Two reports against a real wallet on a real device, in two scopes of the same room. Both are a surface failing to carry data the app had already read — the §397 shape.

@@ -157,10 +157,13 @@ enum NetworkReach {
         // so the row names the chains it really talks to.
         Endpoint(service: "Wallet",
                  reach: .whenConnected(bridge: "Wallet"),
-                 purpose: "Reads the public onchain activity, balances, approvals, and DeFi positions of the wallets you watch — across Ethereum, Base, Arbitrum, Optimism, Polygon and Solana. Each request carries only a public address you chose to watch. Block explorers open in your browser, not from here.",
+                 purpose: "Reads the public onchain activity, balances, approvals, and DeFi positions of the wallets you watch — across Ethereum, Base, Arbitrum, Optimism, Polygon, HyperEVM, Monad and Solana. Each request carries only a public address you chose to watch. Block explorers open in your browser, not from here.",
                  hosts: ["api.g.alchemy.com", "eth-mainnet.g.alchemy.com",
                          "base-mainnet.g.alchemy.com", "arb-mainnet.g.alchemy.com",
                          "opt-mainnet.g.alchemy.com", "matic-mainnet.g.alchemy.com",
+                         // HyperEVM (Alchemy names it `hyperliquid-mainnet`)
+                         // and Monad, 2026-08-28.
+                         "hyperliquid-mainnet.g.alchemy.com", "monad-mainnet.g.alchemy.com",
                          "solana-mainnet.g.alchemy.com", "robinhood-mainnet.g.alchemy.com",
                          "api.zerion.io", "coins.llama.fi",
                          "rpc.mevblocker.io", "mainnet.base.org", "mainnet.optimism.io",
@@ -288,9 +291,13 @@ enum NetworkReach {
         // the keys are (38 of 39, measured 2026-08-18).
         Endpoint(service: "Altana",
                  reach: .whenConnected(bridge: "Wallet"),
-                 purpose: "Reads which keys are allowed to sign for the wallets you watch, from Altana's public keystore contracts. Carries only the wallet address you asked about; there is no account and no key, and nothing is ever registered, revoked or signed.",
+                 purpose: "Reads which keys are allowed to sign for the wallets you watch — and for any keystore account you watch here — from Altana's public keystore contracts. Carries only the address you asked about; there is no account and no key, and nothing is ever registered, revoked or signed. The explorer is read once, for the list of accounts the setup screen offers to watch; that request carries nothing of yours.",
                  hosts: ["bsc-rpc.publicnode.com", "bsc-dataseed.binance.org",
-                         "ethereum-rpc.publicnode.com", "rpc.mevblocker.io"]),
+                         "ethereum-rpc.publicnode.com", "rpc.mevblocker.io",
+                         // The setup screen's account list (2026-08-28). A
+                         // GET of one page with no address in it — §403's own
+                         // door, since public BSC RPCs gate ranged eth_getLogs.
+                         "explorer.altana.network"]),
         Endpoint(service: "0xBow Privacy Pools",
                  reach: .whenConnected(bridge: "0xBow Privacy Pools"),
                  purpose: "Reads your Privacy Pools deposits from the public chain and their review status from 0xBow's public API, for the wallets you watch.",

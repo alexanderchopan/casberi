@@ -161,11 +161,20 @@ final class AddressBook {
     enum Network {
         static let vibenet = "vibenet"
         static let hegota = "hegota"
+        /// An account in Altana's onchain keystore (2026-08-28). NOT a devnet
+        /// — these are real addresses on BNB Smart Chain — but it belongs in
+        /// the set below by that set's own definition, because BNB is not one
+        /// of the five chains `AddressKind.detect` reads. §403 gave Altana its
+        /// own registry table with its own hosts for exactly that reason.
+        static let altana = "altana"
 
         /// Chains `AddressKind.detect` must not ask about — its five reads
-        /// are mainnet RPCs, and asking them about a devnet keystore account
-        /// answers "no code anywhere" and confidently mislabels it `.wallet`.
-        private static let devnets: Set<String> = [vibenet, hegota]
+        /// are mainnet RPCs, and asking them about an account on a chain they
+        /// do not cover answers "no code anywhere" and confidently mislabels
+        /// it `.wallet`. A smart account on BNB is the case that made this
+        /// wider than devnets alone; the name is kept because every caller
+        /// spells it, and the question it asks is unchanged.
+        private static let devnets: Set<String> = [vibenet, hegota, altana]
 
         static func isDevnet(_ tag: String) -> Bool { devnets.contains(tag) }
     }

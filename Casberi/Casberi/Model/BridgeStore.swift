@@ -141,8 +141,22 @@ final class BridgeStore {
                    count: { PrivacyPoolsBridge.evidence.count(in: $0) }, noun: "wallet",
                    can: ["Reads Privacy Pools deposits and their screening status for the wallets you watch, from public sources.",
                          "Read-only — never deposits, withdraws, or moves funds."]),
+        // The ONE seat here whose addresses come from two places (2026-08-28):
+        // the wallets you watch, and Altana's own free list of registry
+        // accounts (`AltanaWatch` — see its header for why they cannot share
+        // `WalletStore`). Unioned HERE rather than in `watchedForms()`, which
+        // is shared: widening that would let an Altana example count as a
+        // watched wallet for Peer, Railgun and nine other seats.
+        //
+        // Still gated on EVIDENCE for both, so watching an example that turns
+        // out to hold no credential does not light the seat — `evidence` is
+        // stamped by the read, never by the watch (§403).
+        //
+        // The noun is "account", not "wallet": these are Altana's word for
+        // them, and half of them are not yours.
         WalletSeat(id: "altana", name: "Altana",
-                   count: { AltanaKeystore.evidence.count(in: $0) }, noun: "wallet",
+                   count: { AltanaKeystore.evidence.count(in: $0.union(AltanaWatch.shared.watchedForms)) },
+                   noun: "account",
                    can: ["Reads which keys are allowed to sign for the wallets you watch, from Altana's public keystore.",
                          "Says when a key was granted, when it stops, and when the registry still lists one that can no longer act.",
                          "Read-only — never registers, revokes, or signs."]),

@@ -226,11 +226,34 @@ extension AltanaKeystore {
     ///
     /// The MOMENT rule still holds: only a key that appears while we are
     /// watching is news, and only that one is flagged.
+    /// Every account this device reads the keystore for: the wallets you
+    /// watch, PLUS Altana's own list (2026-08-28, `AltanaWatch`).
+    ///
+    /// Two populations, one read, and they are unioned here rather than merged
+    /// upstream for the reason `BridgeStore.walletSeats` gives: `watchedForms()`
+    /// is shared by eleven seats, and widening it would let an Altana example
+    /// count as a watched wallet for every one of them.
+    ///
+    /// Only the WALLET half is ENS-resolved. An Altana account is already hex
+    /// and a name would resolve to a MAINNET address, while 38 of the 39 keys
+    /// measured on 2026-08-28 are on BNB — resolving would quietly answer a
+    /// different question (`AltanaWatch.isValidAddress`'s own doc).
+    @MainActor
+    private static func readableAddresses() async -> [String] {
+        let watched = WalletStore.shared.addresses.map(\.address)
+        var out = await WalletIngest.resolvedAddresses(watched).filter { ENS.isHexAddress($0) }
+        var seen = Set(out.map { $0.lowercased() })
+        for address in AltanaWatch.shared.addresses where ENS.isHexAddress(address) {
+            guard seen.insert(address.lowercased()).inserted else { continue }
+            out.append(address)
+        }
+        return out
+    }
+
     @MainActor
     @discardableResult
     static func sync(context: ModelContext) async -> Int {
-        let watched = WalletStore.shared.addresses.map(\.address)
-        let addresses = await WalletIngest.resolvedAddresses(watched).filter { ENS.isHexAddress($0) }
+        let addresses = await readableAddresses()
         guard !addresses.isEmpty else { return 0 }
 
         var landed = 0
@@ -437,12 +460,18 @@ extension AltanaKeystore {
     /// are printed even when every wallet reads empty.
     @MainActor
     static func probeLines() async -> [String] {
-        let watched = WalletStore.shared.addresses.map(\.address)
-        let addresses = await WalletIngest.resolvedAddresses(watched).filter { ENS.isHexAddress($0) }
+        // The SAME set `sync` reads (2026-08-28) — a probe that walks a
+        // different population describes a different app, which is the one
+        // thing a probe must never do.
+        let addresses = await readableAddresses()
         var lines: [String] = registries.map {
             "registry| \($0.label) \($0.contract) hosts=\($0.hosts.count)"
         }
-        guard !addresses.isEmpty else { return lines + ["no EVM wallets watched"] }
+        // The two populations are COUNTED APART. "no accounts" has different
+        // remedies depending on which half is empty — watch a wallet, or watch
+        // an example from the setup screen — and one number cannot say which.
+        lines.append("watched| wallets=\(WalletStore.shared.addresses.count) altanaOwn=\(AltanaWatch.shared.addresses.count) reading=\(addresses.count)")
+        guard !addresses.isEmpty else { return lines + ["no accounts to read"] }
 
         for address in addresses {
             let short = WalletStore.shortAddress(address)
@@ -468,5 +497,27 @@ extension AltanaKeystore {
             }
         }
         return lines
+    }
+}
+
+// MARK: - Discovery, the networked half
+
+/// Split from `AltanaDiscovery` for the reason `AltanaKeystoreSource` is split
+/// from `AltanaKeystore`: the parse is the half that silently rots, so it lives
+/// in a Foundation-only file a harness can compile whole and hold the markup
+/// still against.
+extension AltanaDiscovery {
+    /// Accounts the explorer currently lists, newest-page-order preserved.
+    ///
+    /// The cap is a display bound, not a fetch bound — one page is one request
+    /// however many accounts it names.
+    static func recentAccounts(limit: Int = 6) async -> [AltanaDiscoveredAccount] {
+        guard let url = URL(string: explorer),
+              let html = await IngestSupport.getText(
+                url,
+                headers: ["User-Agent": IngestSupport.safariUserAgent],
+                service: "Altana")
+        else { return [] }
+        return parse(html: html, limit: limit)
     }
 }

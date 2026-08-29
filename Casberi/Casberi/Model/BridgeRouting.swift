@@ -23,6 +23,10 @@ enum BridgeRouter {
         /// watching a wallet (§207), and Connect for the "Safe" offer routes
         /// straight to the wallet manager (see `destination(forOffer:)`).
         case safe
+        /// Altana's keystore. A `walletSeats` member that owns addresses too
+        /// (2026-08-28, amending §465) — the registry's own accounts, free and
+        /// uncapped, because they are not your wallets and the read is keyless.
+        case altana
         case exchange(ExchangeBridge.Venue)
         case ethValidators
         case kalshi
@@ -286,6 +290,7 @@ enum BridgeRouter {
             case .privacyPools:   "privacypools"
             case .railgun:        "railgun"
             case .safe:           "safe"
+            case .altana:         "altana"
             // The venue's own raw value IS the seat id ("kraken", "coinbase"),
             // so the Row above and this can't drift apart.
             case .exchange(let venue): venue.rawValue
@@ -375,6 +380,7 @@ enum BridgeRouter {
         Row(offer: "Peer",      id: "peer",   destination: .peer),
         Row(offer: "0xBow Privacy Pools", id: "privacypools", destination: .privacyPools),
         Row(offer: "Railgun", id: "railgun", destination: .railgun),
+        Row(offer: "Altana", id: "altana", destination: .altana),
         Row(offer: "Safe", id: "safe", destination: .safe),
         // Gnosis Pay has no screen of its own (prd §222). CONNECT routes to
         // the wallet manager, because watching the wallet is the only real
@@ -491,6 +497,20 @@ enum BridgeRouter {
         // (recent fills) is unaffected: it's the OPEN/manage path, which resolves
         // through `destination(forID:)` below, and still returns `.peer`/
         // `.privacyPools` once a wallet is watched and the seat reads connected.
+        //
+        // ALTANA IS NOT IN THIS LIST, and the reason is the bug that started
+        // the session. It shipped (prd §403) with no row in `rows` and no
+        // `Destination` of its own, so this returned nil for it — and Connect,
+        // for a `needsSetup` offer, is `HomeRoute.openSetup`, whose first line
+        // is `guard let dest else { return }`. The button was therefore a
+        // SILENT NO-OP on every tap: the dead control the honesty rule forbids,
+        // invisible to every check here because a missing switch case is not a
+        // compile error and the screen sweep proves a page painted, never that
+        // its button did anything. It has a `Row` and an `AltanaScreen` now
+        // (2026-08-28) — routing it here instead would land Connect on the
+        // wallet manager, which for this seat is the wrong screen twice over:
+        // `WalletIngest.allChains` has no BNB entry, and the accounts worth
+        // watching are the registry's, not your wallets'.
         if name == "Peer" || name == "0xBow Privacy Pools" || name == "Safe"
             || name == "Railgun" { return .wallet }
         return rows.first { $0.offer == name }?.destination
@@ -532,10 +552,21 @@ enum BridgeRouter {
     /// manager, and sending it to a room would be the dead control the honesty
     /// rule forbids. Only Open moves.
     ///
-    /// Peer, 0xBow, Railgun, Safe and Altana ride wallets too and are NOT here:
-    /// each owns a screen carrying something the room can't (a fill history, a
+    /// Peer, 0xBow, Railgun and Safe ride wallets too and are NOT here: each
+    /// owns a screen carrying something the room can't (a fill history, a
     /// signature queue, this phone's signer key), so pushing it is not a step
     /// short of anything.
+    ///
+    /// Altana joined them on 2026-08-28 and is NOT here either, though it took
+    /// a wrong turn on the way. It shipped (§403) with no row and no
+    /// `Destination`, so Open fell to `.detail(id:)` — the generic page — while
+    /// the keys the tile advertises sat one room away. The first fix routed it
+    /// HERE, to its room, on Gnosis Pay's terms. `setup-copy-audit.py` caught
+    /// that: it now owns `AltanaScreen`, and a seat whose room is opened
+    /// directly makes its own screen unreachable, since the catalog offers
+    /// Open and nothing else once connected. So it opens the SCREEN, which
+    /// carries a `RoomDoor` — Peer's and vibenet's shape, one door deeper and
+    /// no dead end.
     static func roomSource(forID id: String) -> String? {
         switch id {
         // `WalletIngest` stamps this literal on every row of all five; there
@@ -580,6 +611,7 @@ struct BridgeDestinationView: View {
         case .privacyPools:   PrivacyPoolsScreen()
         case .railgun:        RailgunScreen()
         case .safe:           SafeScreen()
+        case .altana:         AltanaScreen()
         case .ethValidators:  EthValidatorScreen()
         case .kalshi:         KalshiScreen()
         case .polymarket:     PolymarketScreen()

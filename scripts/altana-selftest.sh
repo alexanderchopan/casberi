@@ -24,10 +24,11 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 MODEL="Casberi/Casberi/Model/AltanaKeystore.swift"
+DISC="Casberi/Casberi/Model/AltanaDiscovery.swift"
 ROOM="Casberi/Casberi/Model/AltanaRoom.swift"
 SHEET="Casberi/Casberi/Model/AltanaKeySheet.swift"
 SOURCE="Casberi/Casberi/Model/AltanaKeystoreSource.swift"
-for f in "$MODEL" "$ROOM" "$SHEET" "$SOURCE"; do
+for f in "$MODEL" "$ROOM" "$SHEET" "$SOURCE" "$DISC"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 
@@ -123,6 +124,60 @@ VIB_W=$(grep -o 'static let window: TimeInterval = [0-9_ *]*' "$VIBE" | grep -o 
 # ringed face is the dead control §83 bans.
 grep -q 'AltanaRoom.card(scope: selectedWallet)' "Casberi/Casberi/Screens/FeedScreen.swift" \
   || { echo "✗ the Altana head no longer obeys the wallet scope — prd §488"; exit 1; }
+
+# --- prd §513: the examples, and the two populations -----------------------
+# The seat rides the watched wallets AND owns a free list of registry accounts.
+# Both must reach the read, or watching an example is a control that does
+# nothing — and the failure is silent, because a wallet-only read answers
+# perfectly for somebody who has a registered key and answers nothing for
+# everybody else, which is the state this feature exists to fix.
+SRC=$(sed 's://.*::' "$SOURCE" | sed '/^[[:space:]]*\/\/\//d')
+#
+# ANCHORED TO THE LOOP, not to the file naming the type. The first cut grepped
+# for `AltanaWatch.shared.addresses` anywhere in the file and SURVIVED its own
+# mutation, because `probeLines` prints that same count in its `watched|` line —
+# a guard satisfied by a log statement while the read it protects was gutted.
+# The standing rule, earned again: a guard must prove the CONDITION, not that
+# the words appear.
+print -r -- "$SRC" | grep -q 'for address in AltanaWatch.shared.addresses' \
+  || { echo "✗ the keystore read no longer walks AltanaWatch — a watched example"
+       echo "  account would never be read, and the setup screen's list is a"
+       echo "  control that does nothing (prd §513)"; exit 1; }
+print -r -- "$SRC" | grep -q 'let addresses = await readableAddresses()' \
+  || { echo "✗ sync no longer reads through readableAddresses() — the two"
+       echo "  populations would diverge from what the probe reports"; exit 1; }
+grep -q 'AltanaWatch.shared.watchedForms' "Casberi/Casberi/Model/BridgeStore.swift" \
+  || { echo "✗ the altana seat no longer counts its own accounts — watching an"
+       echo "  example would light no seat (prd §513)"; exit 1; }
+# ...and NEVER by widening the shared set, which would let an Altana example
+# count as a watched wallet for all eleven wallet-riding seats.
+grep -q 'AltanaWatch' "Casberi/Casberi/Model/BridgeStore.swift" \
+  && grep -n 'private static func watchedForms' -A 12 "Casberi/Casberi/Model/BridgeStore.swift" \
+     | grep -q 'AltanaWatch' \
+  && { echo "✗ watchedForms() reaches AltanaWatch — that set is shared by eleven"
+       echo "  seats, so an Altana example would count as a watched wallet for"
+       echo "  Peer, Railgun and nine others (prd §513)"; exit 1; }
+# The evidence gate stands for both populations: a watched example that holds
+# no credential must not light the seat, which is only true while the stamp
+# lives in the READ rather than in the watch.
+print -r -- "$SRC" | grep -q 'evidence.remember' \
+  || { echo "✗ $SOURCE no longer stamps evidence from the read (§403)"; exit 1; }
+WATCHCODE=$(sed 's://.*::' "Casberi/Casberi/Model/AltanaWatch.swift" | sed '/^[[:space:]]*\/\/\//d')
+print -r -- "$WATCHCODE" | grep -q 'evidence' \
+  && { echo "✗ AltanaWatch stamps evidence — the seat would light for an account"
+       echo "  nothing has read yet (§403's gate is the READ, not the watch)"; exit 1; }
+# ONE validator. The field and the account list disagreeing about what an
+# Altana address is renders as a suggested row that refuses its own tap.
+print -r -- "$WATCHCODE" | grep -q 'AltanaDiscovery.isValidAddress' \
+  || { echo "✗ AltanaWatch grew its own address validator — one validator, two"
+       echo "  call sites (prd §513)"; exit 1; }
+# Read-only reaches the explorer too: it is a GET of one page, and a POST here
+# would be this file's conduct guard failing in a new place.
+DISCCODE=$(sed 's://.*::' "$DISC" | sed '/^[[:space:]]*\/\/\//d')
+for verb in postJSON httpMethod deleteJSON; do
+  print -r -- "$DISCCODE" | grep -q "$verb" && {
+    echo "✗ $DISC issues $verb — the explorer read is a GET of one public page"; exit 1; }
+done
 
 TMP=$(mktemp -d /tmp/altana-selftest.XXXXXX)
 trap 'rm -rf "$TMP"' EXIT
@@ -799,6 +854,68 @@ guard let twice = AltanaRoom.compose(readings: [reading("0xaaa", [root, live])],
 check(twice.credentials.filter(\.isGone).count == 1, "one ghost, however many times handed in")
 check(twice.revokedNote?.contains("1 key") == true, "…and the sentence counts it once")
 
+// MARK: - prd §513: the explorer parse
+
+// THE FIXTURE IS THE LIVE MARKUP, byte for byte from explorer.altana.network
+// on 2026-08-28 — a hand-written approximation of a scrape's input tests the
+// approximation, not the scrape.
+let realRow = """
+<div class="EventRow_title__jFqoa">Key registered</div><div class="EventRow_meta__tNuai mono">\
+<a href="/account/0xa847f3bbf69e8a888b59bc8729ce787e0db5be97">0xa847…be97</a> <!-- -->· key<!-- --> \
+<a href="/key/0x48b989ffa9f6600000000000000000000000000000000000000000000000abcd">0x48b9…abcd</a></div>
+"""
+let discRows = AltanaDiscovery.parse(html: realRow)
+check(discRows.count == 1, "one account out of a real event row")
+check(discRows.first?.address.lowercased() == "0xa847f3bbf69e8a888b59bc8729ce787e0db5be97",
+      "…and it is the account, not the key")
+
+// THE KEY LINK IS THE DISCRIMINATING CASE. `/key/0x…` is 64 hex characters and
+// sits INSIDE the same row; a parse keyed on "0x" plus 40 hex rather than on
+// the /account/ path would take its first 40 and offer a bytes32 key id as an
+// account to watch. That renders as a perfectly ordinary row that opens an
+// empty account.
+check(AltanaDiscovery.parse(html:
+  "<a href=\"/key/0x48b989ffa9f6600000000000000000000000000000000000000000000000abcd\">k</a>").isEmpty,
+  "a key link is never offered as an account")
+
+// The ld+json search template names /account/{search_term} on every page.
+check(AltanaDiscovery.parse(html:
+  "\"urlTemplate\":\"https://explorer.altana.network/account/{search_term}\"").isEmpty,
+  "the search template is not an account")
+
+// Dedupe: the measured page links the same account up to 28 times.
+let dupLink = "<a href=\"/account/0xa847f3bbf69e8a888b59bc8729ce787e0db5be97\">a</a>"
+check(AltanaDiscovery.parse(html: dupLink + dupLink).count == 1, "one account however many times linked")
+
+// Order is the page's own. Nothing here ranks accounts, and inventing an order
+// would be a claim about whose keys matter (§403's refusal to judge key count).
+let pair = "<a href=\"/account/0x1111111111111111111111111111111111111111\">a</a>"
+        + "<a href=\"/account/0x2222222222222222222222222222222222222222\">b</a>"
+check(AltanaDiscovery.parse(html: pair).map(\.address) ==
+      ["0x1111111111111111111111111111111111111111",
+       "0x2222222222222222222222222222222222222222"], "page order is preserved")
+
+// The cap is a DISPLAY bound and must actually bind — one page is one request
+// however many accounts it names.
+check(AltanaDiscovery.parse(html: pair, limit: 1).count == 1, "the display cap binds")
+
+// A truncated link must yield nothing rather than a short address. Measured
+// against 39 real hrefs the case never arises; it arises the moment the page
+// is cut mid-download, which is exactly when a wrong answer is least expected.
+check(AltanaDiscovery.parse(html: "<a href=\"/account/0xabc\">").isEmpty,
+      "a truncated address is not an account")
+
+// Never offered as a count. `keyCount` is nil from the parse because the page
+// does not say, and one keystore read per suggested row is a request bought to
+// decorate a list nobody may tap.
+check(discRows.first?.keyCount == nil, "the parse claims no key count")
+
+// The peek address must be a real, valid account — it is the ONE thing on
+// screen when the explorer cannot be reached.
+check(AltanaDiscovery.isValidAddress(AltanaDiscovery.peekAddress), "the peek address is valid")
+check(!AltanaDiscovery.isValidAddress("0xabc"), "…and short hex is not")
+check(!AltanaDiscovery.isValidAddress("vitalik.eth"), "…nor is an ENS name")
+
 print("")
 if failures == 0 {
     print("✓ altana self-test: \(checks) checks passed")
@@ -808,5 +925,5 @@ if failures == 0 {
 }
 SWIFT
 
-swiftc -O -o "$TMP/selftest" "$MODEL" "$ROOM" "$SHEET" "$DRIVER"
+swiftc -O -o "$TMP/selftest" "$MODEL" "$ROOM" "$SHEET" "$DISC" "$DRIVER"
 "$TMP/selftest"
