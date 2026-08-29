@@ -1072,15 +1072,25 @@ struct AppsScreen: View {
     /// The catalog's sections for the active scope: All gives every category in
     /// the ruled catalog order, a picked category gives just its own.
     ///
-    /// The order is `BridgeCatalog.categories`' — never the ranking's, and
-    /// never the strip's tap history. §201 and §322 set that order band by
+    /// The SECTION order is `BridgeCatalog.categories`' — never the ranking's,
+    /// and never the strip's tap history. §201 and §322 set that order band by
     /// band, it is the single source of truth the agent's `category:` ask
     /// reads, and a catalog that reshuffled between visits reads as broken
     /// (`CategoryVenueSwitcher`'s own display-order rule, one screen over).
+    ///
+    /// The APPS inside a section are alphabetical BY NAME (user ruling,
+    /// 2026-08-29 — "that makes it easier for user"), not `ranked`'s tier
+    /// order: a directory you can scan for a known app by its name beats a
+    /// status-triage ordering that reshuffles as bridges connect and
+    /// disconnect. `ranked`'s tiers still decide everything ELSE on the row
+    /// (the Fix/Connect/Open verb, the attention dot, the `troubledScopes`
+    /// filter dot) — only the ORDER within a section is re-sorted here.
     private var listSections: [(name: String, apps: [Ranked])] {
         Self.categories.compactMap { cat in
             if let picked = scope.name, picked != cat.name { return nil }
-            let apps = ranked.filter { category(of: $0.offer) == cat.name }
+            let apps = ranked
+                .filter { category(of: $0.offer) == cat.name }
+                .sorted { $0.offer.name.localizedStandardCompare($1.offer.name) == .orderedAscending }
             return apps.isEmpty ? nil : (cat.name, apps)
         }
     }
